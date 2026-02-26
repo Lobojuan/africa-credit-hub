@@ -1,6 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
-import connectPgSimple from "connect-pg-simple";
+import createMemoryStore from "memorystore";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
@@ -31,12 +31,11 @@ app.use(
 
 app.use(express.urlencoded({ extended: false }));
 
-const PgStore = connectPgSimple(session);
+const MemoryStore = createMemoryStore(session);
 app.use(
   session({
-    store: new PgStore({
-      conString: process.env.DATABASE_URL,
-      createTableIfMissing: true,
+    store: new MemoryStore({
+      checkPeriod: 86400000,
     }),
     secret: process.env.SESSION_SECRET || "credit-registry-dev-secret",
     resave: false,
@@ -79,15 +78,21 @@ app.use((req, res, next) => {
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        const str = JSON.stringify(capturedJsonResponse);
+        logLine += ` :: ${str.length > 200 ? str.slice(0, 200) + "..." : str}`;
       }
 
       log(logLine);
     }
+    capturedJsonResponse = undefined;
   });
 
   next();
 });
+
+process.on("SIGTERM", () => { console.log("Process received SIGTERM"); process.exit(0); });
+process.on("uncaughtException", (err) => { console.error("Uncaught exception:", err); });
+process.on("unhandledRejection", (err) => { console.error("Unhandled rejection:", err); });
 
 (async () => {
   const { seedDatabase } = await import("./seed");

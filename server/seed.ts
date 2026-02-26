@@ -7,7 +7,7 @@ export async function seedDatabase() {
   const [existing] = await db.select({ value: count() }).from(users);
   if (existing.value > 0) return;
 
-  const hash = (pw: string) => bcrypt.hashSync(pw, 10);
+  const hash = (pw: string) => bcrypt.hashSync(pw, 8);
 
   const [admin] = await db.insert(users).values([
     { username: "admin", password: hash("admin123"), fullName: "Tadesse Bekele", email: "tadesse@nbe.gov.et", role: "admin", status: "active", institution: "National Bank of Ethiopia" },
