@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { Plus, Search, Building2, User, Users, ChevronRight } from "lucide-react";
+import { Plus, Search, Building2, User, Users, ChevronRight, Flag } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Borrower } from "@shared/schema";
@@ -32,6 +33,8 @@ export default function BorrowersPage() {
     dateOfBirth: "", gender: "", phone: "", email: "",
     address: "", city: "", region: "",
     employerName: "", occupation: "", businessRegNumber: "", sector: "",
+    isPep: false, pepDetails: "",
+    educationLevel: "", educationInstitution: "", employmentHistory: "",
   });
 
   const createMutation = useMutation({
@@ -43,7 +46,7 @@ export default function BorrowersPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/borrowers"] });
       queryClient.invalidateQueries({ queryKey: ["/api/pending-approvals"] });
       setDialogOpen(false);
-      setFormData({ type: "individual", firstName: "", lastName: "", companyName: "", nationalId: "", dateOfBirth: "", gender: "", phone: "", email: "", address: "", city: "", region: "", employerName: "", occupation: "", businessRegNumber: "", sector: "" });
+      setFormData({ type: "individual", firstName: "", lastName: "", companyName: "", nationalId: "", dateOfBirth: "", gender: "", phone: "", email: "", address: "", city: "", region: "", employerName: "", occupation: "", businessRegNumber: "", sector: "", isPep: false, pepDetails: "", educationLevel: "", educationInstitution: "", employmentHistory: "" });
       toast({ title: data.message || t("borrowers.registerBorrower"), description: t("borrowers.submittedForApproval") });
     },
     onError: (e: Error) => {
@@ -126,6 +129,37 @@ export default function BorrowersPage() {
                 <div><Label>{t("borrowers.region")}</Label><Input data-testid="input-region" value={formData.region} onChange={(e) => setFormData({ ...formData, region: e.target.value })} /></div>
               </div>
               <div><Label>{t("borrowers.sector")}</Label><Input data-testid="input-sector" value={formData.sector} onChange={(e) => setFormData({ ...formData, sector: e.target.value })} /></div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="isPep"
+                  checked={formData.isPep}
+                  onChange={(e) => setFormData({ ...formData, isPep: e.target.checked })}
+                  className="h-4 w-4 rounded border-input"
+                  data-testid="checkbox-pep"
+                />
+                <Label htmlFor="isPep" className="cursor-pointer">{t("borrowers.pepFlag")}</Label>
+              </div>
+              {formData.isPep && (
+                <div><Label>{t("borrowers.pepDetails")}</Label><Input data-testid="input-pep-details" value={formData.pepDetails} onChange={(e) => setFormData({ ...formData, pepDetails: e.target.value })} placeholder={t("borrowers.pepDetailsPlaceholder")} /></div>
+              )}
+              <div>
+                <Label>{t("borrowers.educationLevel")}</Label>
+                <Select value={formData.educationLevel} onValueChange={(v) => setFormData({ ...formData, educationLevel: v })}>
+                  <SelectTrigger data-testid="select-education-level"><SelectValue placeholder={t("creditAccounts.select")} /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{t("borrowers.educationLevels.none")}</SelectItem>
+                    <SelectItem value="primary">{t("borrowers.educationLevels.primary")}</SelectItem>
+                    <SelectItem value="secondary">{t("borrowers.educationLevels.secondary")}</SelectItem>
+                    <SelectItem value="diploma">{t("borrowers.educationLevels.diploma")}</SelectItem>
+                    <SelectItem value="bachelors">{t("borrowers.educationLevels.bachelors")}</SelectItem>
+                    <SelectItem value="masters">{t("borrowers.educationLevels.masters")}</SelectItem>
+                    <SelectItem value="doctorate">{t("borrowers.educationLevels.doctorate")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div><Label>{t("borrowers.educationInstitution")}</Label><Input data-testid="input-education-institution" value={formData.educationInstitution} onChange={(e) => setFormData({ ...formData, educationInstitution: e.target.value })} /></div>
+              <div><Label>{t("borrowers.employmentHistory")}</Label><Textarea data-testid="input-employment-history" value={formData.employmentHistory} onChange={(e) => setFormData({ ...formData, employmentHistory: e.target.value })} placeholder={t("borrowers.employmentHistoryPlaceholder")} className="resize-none" /></div>
               <Button type="submit" className="w-full" disabled={createMutation.isPending} data-testid="button-submit-borrower">
                 {createMutation.isPending ? t("borrowers.registering") : t("borrowers.registerBorrower")}
               </Button>
@@ -181,6 +215,7 @@ export default function BorrowersPage() {
                 </div>
                 <div className="mt-3 flex items-center gap-2 flex-wrap">
                   <Badge variant="secondary" className="text-[10px] capitalize">{borrower.type}</Badge>
+                  {borrower.isPep && <Badge variant="destructive" className="text-[10px]"><Flag className="w-3 h-3 mr-1" />{t("borrowers.pep")}</Badge>}
                   {borrower.sector && <Badge variant="outline" className="text-[10px]">{borrower.sector}</Badge>}
                   {borrower.city && <Badge variant="outline" className="text-[10px]">{borrower.city}</Badge>}
                 </div>

@@ -18,6 +18,7 @@ declare module "express-session" {
   interface SessionData {
     userId: string;
     userRole: string;
+    lastActivity: number;
   }
 }
 
@@ -48,6 +49,21 @@ app.use(
     },
   })
 );
+
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
+app.use((req, res, next) => {
+  if (req.session?.userId && req.session.lastActivity) {
+    const idle = Date.now() - req.session.lastActivity;
+    if (idle > IDLE_TIMEOUT_MS) {
+      req.session.destroy(() => {});
+      return res.status(440).json({ message: "Session expired due to inactivity" });
+    }
+  }
+  if (req.session?.userId) {
+    req.session.lastActivity = Date.now();
+  }
+  next();
+});
 
 app.set("trust proxy", true);
 

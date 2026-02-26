@@ -1,13 +1,15 @@
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useCallback, type ReactNode } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { User } from "@shared/schema";
 
-type AuthUser = Omit<User, "password">;
+type AuthUser = Omit<User, "password"> & { passwordExpired?: boolean };
 
 interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
+  passwordExpired: boolean;
   login: (username: string, password: string) => Promise<AuthUser>;
   logout: () => Promise<void>;
 }
@@ -15,12 +17,37 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const { toast } = useToast();
+
   const { data: user, isLoading } = useQuery<AuthUser | null>({
     queryKey: ["/api/auth/me"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     staleTime: Infinity,
     retry: false,
   });
+
+  const handleIdleTimeout = useCallback(() => {
+    queryClient.setQueryData(["/api/auth/me"], null);
+    queryClient.clear();
+    toast({
+      title: "Session expired due to inactivity",
+      variant: "destructive",
+    });
+  }, [toast]);
+
+  useEffect(() => {
+    const originalFetch = window.fetch;
+    window.fetch = async (...args) => {
+      const response = await originalFetch(...args);
+      if (response.status === 440) {
+        handleIdleTimeout();
+      }
+      return response;
+    };
+    return () => {
+      window.fetch = originalFetch;
+    };
+  }, [handleIdleTimeout]);
 
   const loginMutation = useMutation({
     mutationFn: async ({ username, password }: { username: string; password: string }) => {
@@ -50,8 +77,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await logoutMutation.mutateAsync();
   };
 
+  const passwordExpired = !!(user && (user as AuthUser).passwordExpired);
+
   return (
-    <AuthContext.Provider value={{ user: user ?? null, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user: user ?? null, isLoading, passwordExpired, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

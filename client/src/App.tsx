@@ -9,7 +9,9 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { NotificationBell } from "@/components/notification-bell";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
+import { PasswordChangeDialog } from "@/components/password-change-dialog";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -47,7 +49,7 @@ function Router() {
 }
 
 function AuthenticatedApp() {
-  const { user, isLoading, logout } = useAuth();
+  const { user, isLoading, logout, passwordExpired } = useAuth();
 
   if (isLoading) {
     return (
@@ -78,6 +80,7 @@ function AuthenticatedApp() {
                 {user.fullName} ({user.role})
               </span>
               <LanguageSwitcher />
+              <NotificationBell />
               <ThemeToggle />
               <Button
                 variant="ghost"
@@ -93,6 +96,7 @@ function AuthenticatedApp() {
           <main className="flex-1 overflow-auto">
             <Router />
           </main>
+          {passwordExpired && <PasswordChangeDialog open={true} forced={true} />}
         </div>
       </div>
     </SidebarProvider>

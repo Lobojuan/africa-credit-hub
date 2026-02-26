@@ -15,18 +15,21 @@ A web-based Credit Registry System designed for the National Bank of Ethiopia to
 - **Build**: esbuild bundles server to dist/index.cjs, Vite builds frontend to dist/public/
 
 ## Data Model
-- **users** - System users with roles (admin/regulator/lender/viewer), status, login lockout fields
-- **borrowers** - Individual and corporate borrower records with national ID, TIN, personal/business info
-- **credit_accounts** - Loan/credit facility records with multi-currency support (ETB/USD)
+- **users** - System users with roles (admin/regulator/lender/viewer), status, login lockout, passwordChangedAt, mustChangePassword
+- **borrowers** - Individual and corporate borrower records with national ID, TIN, PEP flag, education, employment history, related party links
+- **credit_accounts** - Loan/credit facility records with multi-currency support (17 currencies)
 - **credit_inquiries** - Search/inquiry records with consent tracking
 - **audit_logs** - Immutable activity logging with IP addresses and timestamps
 - **pending_approvals** - Maker-checker workflow for data change approvals
 - **disputes** - Dispute/grievance management for data corrections
+- **notifications** - In-app notification system for approvals, disputes, system alerts
 
 ## Key Features
-- **Authentication**: Login with bcrypt, 3-attempt lockout, session management, logout
+- **Authentication**: Login with bcrypt, 3-attempt lockout, session management, logout, password policy (8+ chars, uppercase, lowercase, digit, special), 90-day password expiry
+- **Session security**: 30-minute idle timeout with automatic logout, 8-hour max session
+- **Notification system**: In-app bell with unread count badge, auto-notify on approval requests, approval results, dispute filings
 - **Dashboard**: 8 stat cards (borrowers, accounts, outstanding, delinquent, defaults, inquiries, pending approvals, open disputes)
-- **Borrower management**: Register/search/view individual/corporate profiles with TIN
+- **Borrower management**: Register/search/view individual/corporate profiles with TIN, PEP flagging, education/employment tracking, related party linking
 - **Credit accounts**: Loan details, collateral, arrears tracking, multi-currency (17 African/global currencies: ETB, KES, NGN, ZAR, GHS, TZS, UGX, RWF, XOF, XAF, EGP, MAD, BWP, MZN, USD, EUR, GBP)
 - **Credit scoring**: Algorithmic scoring 300-850 based on repayment history
 - **Maker-checker workflow**: Four-eye principle for data changes (different user must approve)
@@ -57,7 +60,7 @@ A web-based Credit Registry System designed for the National Bank of Ethiopia to
 ## API Endpoints
 All prefixed with `/api` and require authentication (except /api/auth/* and /api/health):
 - `GET /health` - Health check
-- `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`
+- `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`, `POST /auth/change-password`
 - `GET/POST /borrowers`, `GET/PATCH /borrowers/:id`
 - `GET/POST /credit-accounts`, `GET/PATCH /credit-accounts/:id`
 - `GET/POST /credit-inquiries`
@@ -68,6 +71,8 @@ All prefixed with `/api` and require authentication (except /api/auth/* and /api
 - `POST /batch-upload/credit-accounts`
 - `GET /audit-logs`
 - `GET /dashboard/stats`
+- `GET /notifications`, `GET /notifications/unread-count`, `PATCH /notifications/:id/read`, `POST /notifications/mark-all-read`
+- `GET /borrowers/:id/related` - Related party borrowers
 
 ## Running
 - **Dev**: `npm run dev` (tsx + Vite HMR, NODE_ENV=development)

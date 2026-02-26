@@ -1,7 +1,7 @@
 import { eq, desc, like, or, sql, count } from "drizzle-orm";
 import { db } from "./db";
 import {
-  users, borrowers, creditAccounts, creditInquiries, auditLogs, pendingApprovals, disputes,
+  users, borrowers, creditAccounts, creditInquiries, auditLogs, pendingApprovals, disputes, notifications,
   type User, type InsertUser,
   type Borrower, type InsertBorrower,
   type CreditAccount, type InsertCreditAccount,
@@ -9,6 +9,7 @@ import {
   type AuditLog, type InsertAuditLog,
   type PendingApproval, type InsertPendingApproval,
   type Dispute, type InsertDispute,
+  type Notification, type InsertNotification,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -50,6 +51,15 @@ export interface IStorage {
   getDispute(id: string): Promise<Dispute | undefined>;
   createDispute(dispute: InsertDispute): Promise<Dispute>;
   updateDispute(id: string, data: Partial<{ status: string; resolution: string }>): Promise<Dispute | undefined>;
+
+  getNotifications(userId: string): Promise<Notification[]>;
+  getUnreadNotificationCount(userId: string): Promise<number>;
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  markNotificationRead(id: string): Promise<void>;
+  markAllNotificationsRead(userId: string): Promise<void>;
+  updatePasswordChangedAt(userId: string): Promise<void>;
+  getRelatedBorrowers(borrowerId: string): Promise<Borrower[]>;
+  getUsersByRole(...roles: string[]): Promise<User[]>;
 
   getDashboardStats(): Promise<{
     totalBorrowers: number;
@@ -230,6 +240,61 @@ export class DatabaseStorage implements IStorage {
     }
     const [updated] = await db.update(disputes).set(updateData).where(eq(disputes.id, id)).returning();
     return updated;
+  }
+
+  async getNotifications(userId: string): Promise<Notification[]> {
+    return db.select().from(notifications)
+      .where(or(eq(notifications.userId, userId), sql`${notifications.userId} IS NULL`))
+      .orderBy(desc(notifications.createdAt))
+      .limit(50);
+  }
+
+  async getUnreadNotificationCount(userId: string): Promise<number> {
+    const [result] = await db.select({ value: count() }).from(notifications)
+      .where(
+        sql`(${notifications.userId} = ${userId} OR ${notifications.userId} IS NULL) AND ${notifications.isRead} = false`
+      );
+    return result.value;
+  }
+
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const [created] = await db.insert(notifications).values(notification).returning();
+    return created;
+  }
+
+  async markNotificationRead(id: string): Promise<void> {
+    await db.update(notifications).set({ isRead: true }).where(eq(notifications.id, id));
+  }
+
+  async markAllNotificationsRead(userId: string): Promise<void> {
+    await db.update(notifications).set({ isRead: true })
+      .where(or(eq(notifications.userId, userId), sql`${notifications.userId} IS NULL`));
+  }
+
+  async updatePasswordChangedAt(userId: string): Promise<void> {
+    await db.update(users).set({ passwordChangedAt: new Date(), mustChangePassword: false }).where(eq(users.id, userId));
+  }
+
+  async getRelatedBorrowers(borrowerId: string): Promise<Borrower[]> {
+    const childLinks = await db.select().from(borrowers).where(eq(borrowers.relatedBorrowerId, borrowerId));
+    const self = await this.getBorrower(borrowerId);
+    if (self?.relatedBorrowerId) {
+      const parent = await this.getBorrower(self.relatedBorrowerId);
+      if (parent) {
+        const alreadyIncluded = childLinks.some(b => b.id === parent.id);
+        if (!alreadyIncluded) {
+          childLinks.push(parent);
+        }
+      }
+    }
+    return childLinks;
+  }
+
+  async getUsersByRole(...roles: string[]): Promise<User[]> {
+    if (roles.length === 0) return [];
+    return db.select().from(users).where(
+      sql`${users.role} IN (${sql.join(roles.map(r => sql`${r}`), sql`, `)})`
+    );
   }
 
   async getDashboardStats() {

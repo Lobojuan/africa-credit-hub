@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, User, Building2, Mail, Phone, MapPin, Briefcase, CreditCard, AlertTriangle, TrendingUp, FileText } from "lucide-react";
+import { ArrowLeft, User, Building2, Mail, Phone, MapPin, Briefcase, CreditCard, AlertTriangle, TrendingUp, FileText, Flag, GraduationCap, Users, Link2 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -53,7 +53,22 @@ export default function BorrowerDetailPage() {
       inquiryCount: number;
     };
   }>({
-    queryKey: [`/api/borrowers/${borrowerId}/credit-report`],
+    queryKey: ['/api/borrowers', borrowerId, 'credit-report'],
+    queryFn: async () => {
+      const res = await fetch(`/api/borrowers/${borrowerId}/credit-report`);
+      if (!res.ok) throw new Error("Failed to fetch");
+      return res.json();
+    },
+    enabled: !!borrowerId,
+  });
+
+  const { data: relatedBorrowers } = useQuery<Borrower[]>({
+    queryKey: ['/api/borrowers', borrowerId, 'related'],
+    queryFn: async () => {
+      const res = await fetch(`/api/borrowers/${borrowerId}/related`);
+      if (!res.ok) throw new Error("Failed to fetch");
+      return res.json();
+    },
     enabled: !!borrowerId,
   });
 
@@ -96,6 +111,12 @@ export default function BorrowerDetailPage() {
           <p className="text-sm text-muted-foreground">{borrower.nationalId}</p>
         </div>
         <Badge variant="secondary" className="ml-2 capitalize">{borrower.type}</Badge>
+        {borrower.isPep && (
+          <Badge variant="destructive" className="ml-1" data-testid="badge-pep">
+            <Flag className="w-3 h-3 mr-1" />
+            {t("borrowerDetail.pepFlag")}
+          </Badge>
+        )}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -251,6 +272,104 @@ export default function BorrowerDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {borrower.isPep && (
+        <Card data-testid="section-pep">
+          <CardHeader className="pb-3">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <Flag className="w-4 h-4 text-destructive" />
+              {t("borrowerDetail.pepFlag")}
+            </h3>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm">{borrower.pepDetails || t("borrowerDetail.pepNoDetails")}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {(borrower.educationLevel || borrower.educationInstitution) && (
+          <Card data-testid="section-education">
+            <CardHeader className="pb-3">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <GraduationCap className="w-4 h-4" />
+                {t("borrowerDetail.education")}
+              </h3>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {borrower.educationLevel && (
+                <InfoRow label={t("borrowerDetail.educationLevel")} value={t(`borrowers.educationLevels.${borrower.educationLevel}`, borrower.educationLevel)} />
+              )}
+              {borrower.educationInstitution && (
+                <InfoRow label={t("borrowerDetail.educationInstitution")} value={borrower.educationInstitution} />
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {borrower.employmentHistory && (
+          <Card data-testid="section-employment-history">
+            <CardHeader className="pb-3">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Briefcase className="w-4 h-4" />
+                {t("borrowerDetail.employmentHistory")}
+              </h3>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm whitespace-pre-wrap">{borrower.employmentHistory}</p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {relatedBorrowers && relatedBorrowers.length > 0 && (
+        <Card data-testid="section-related-parties">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Link2 className="w-4 h-4" />
+                {t("borrowerDetail.relatedParties")}
+              </h3>
+              <Badge variant="secondary" className="text-[10px]">{relatedBorrowers.length}</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="px-0 pb-0">
+            <div className="divide-y">
+              {relatedBorrowers.map((related) => (
+                <div
+                  key={related.id}
+                  className="flex items-center justify-between gap-3 px-5 py-3 cursor-pointer hover-elevate"
+                  onClick={() => navigate(`/borrowers/${related.id}`)}
+                  data-testid={`row-related-${related.id}`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-md bg-accent shrink-0">
+                      {related.type === "corporate" ? (
+                        <Building2 className="w-4 h-4 text-muted-foreground" />
+                      ) : (
+                        <User className="w-4 h-4 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {related.type === "corporate" ? related.companyName : `${related.firstName} ${related.lastName}`}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{related.nationalId}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {related.id === borrower.relatedBorrowerId && borrower.relationshipType ? (
+                      <Badge variant="outline" className="text-[10px] capitalize">{borrower.relationshipType.replace(/_/g, " ")}</Badge>
+                    ) : related.relationshipType ? (
+                      <Badge variant="outline" className="text-[10px] capitalize">{related.relationshipType.replace(/_/g, " ")}</Badge>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

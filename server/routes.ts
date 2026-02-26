@@ -87,6 +87,7 @@ export async function registerRoutes(
 
       req.session.userId = user.id;
       req.session.userRole = user.role;
+      req.session.lastActivity = Date.now();
 
       await storage.createAuditLog({
         action: "LOGIN", entity: "system", userId: user.id,
@@ -94,7 +95,52 @@ export async function registerRoutes(
         ipAddress: req.ip || null,
       });
 
-      res.json(stripPassword(user));
+      let passwordExpired = false;
+      if (user.mustChangePassword) {
+        passwordExpired = true;
+      } else if (user.passwordChangedAt) {
+        const daysSinceChange = (Date.now() - new Date(user.passwordChangedAt).getTime()) / (1000 * 60 * 60 * 24);
+        passwordExpired = daysSinceChange > 90;
+      }
+
+      res.json({ ...stripPassword(user), passwordExpired });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/auth/change-password", async (req, res) => {
+    try {
+      if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
+      const { currentPassword, newPassword } = req.body;
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Current and new passwords are required" });
+      }
+
+      const passwordRules = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+      if (!passwordRules.test(newPassword)) {
+        return res.status(400).json({
+          message: "Password must be at least 8 characters with uppercase, lowercase, digit, and special character"
+        });
+      }
+
+      const user = await storage.getUser(req.session.userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const valid = await bcrypt.compare(currentPassword, user.password);
+      if (!valid) return res.status(401).json({ message: "Current password is incorrect" });
+
+      const hashed = await bcrypt.hash(newPassword, 10);
+      await storage.updateUser(user.id, { password: hashed } as any);
+      await storage.updatePasswordChangedAt(user.id);
+
+      await storage.createAuditLog({
+        action: "PASSWORD_CHANGE", entity: "user", entityId: user.id, userId: user.id,
+        details: "Password changed successfully",
+        ipAddress: req.ip || null,
+      });
+
+      res.json({ message: "Password changed successfully" });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
@@ -121,7 +167,18 @@ export async function registerRoutes(
     }
     const user = await storage.getUser(req.session.userId);
     if (!user) return res.status(401).json({ message: "User not found" });
-    res.json(stripPassword(user));
+    const userData = stripPassword(user);
+
+    const PASSWORD_EXPIRY_DAYS = 90;
+    let passwordExpired = false;
+    if (user.mustChangePassword) {
+      passwordExpired = true;
+    } else if (user.passwordChangedAt) {
+      const daysSinceChange = (Date.now() - new Date(user.passwordChangedAt).getTime()) / (1000 * 60 * 60 * 24);
+      passwordExpired = daysSinceChange > PASSWORD_EXPIRY_DAYS;
+    }
+
+    res.json({ ...userData, passwordExpired });
   });
 
   app.use("/api", (req, res, next) => {
@@ -216,6 +273,22 @@ export async function registerRoutes(
         details: `Submitted new borrower for approval: ${parsed.firstName || parsed.companyName}`,
         ipAddress: req.ip || null,
       });
+
+      try {
+        const reviewers = await storage.getUsersByRole("admin", "regulator");
+        for (const reviewer of reviewers) {
+          if (reviewer.id !== req.session?.userId) {
+            await storage.createNotification({
+              userId: reviewer.id,
+              type: "approval_pending",
+              title: "New approval pending",
+              message: `New borrower registration requires your review: ${parsed.firstName || parsed.companyName}`,
+              link: "/approvals",
+            });
+          }
+        }
+      } catch {}
+
       res.status(201).json({ approval, message: "Submitted for maker-checker approval" });
     } catch (e: any) {
       res.status(400).json({ message: e.message });
@@ -460,6 +533,16 @@ export async function registerRoutes(
         ipAddress: req.ip || null,
       });
 
+      try {
+        await storage.createNotification({
+          userId: approval.requestedBy,
+          type: "approval_result",
+          title: `Request ${status}`,
+          message: `Your ${approval.action} request for ${approval.entityType} has been ${status}.${reviewNotes ? ` Notes: ${reviewNotes}` : ""}`,
+          link: "/approvals",
+        });
+      } catch {}
+
       res.json(updated);
     } catch (e: any) {
       res.status(400).json({ message: e.message });
@@ -498,6 +581,20 @@ export async function registerRoutes(
         details: `Filed ${dispute.disputeType} dispute for borrower ${dispute.borrowerId}`,
         ipAddress: req.ip || null,
       });
+
+      try {
+        const admins = await storage.getUsersByRole("admin");
+        for (const admin of admins) {
+          await storage.createNotification({
+            userId: admin.id,
+            type: "dispute_update",
+            title: "New dispute filed",
+            message: `A ${dispute.disputeType} dispute has been filed for borrower ${dispute.borrowerId}`,
+            link: "/disputes",
+          });
+        }
+      } catch {}
+
       res.status(201).json(dispute);
     } catch (e: any) {
       res.status(400).json({ message: e.message });
@@ -556,6 +653,55 @@ export async function registerRoutes(
       res.json(results);
     } catch (e: any) {
       res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/notifications", async (req, res) => {
+    try {
+      if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
+      const items = await storage.getNotifications(req.session.userId);
+      res.json(items);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/notifications/unread-count", async (req, res) => {
+    try {
+      if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
+      const count = await storage.getUnreadNotificationCount(req.session.userId);
+      res.json({ count });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.patch("/api/notifications/:id/read", async (req, res) => {
+    try {
+      if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
+      await storage.markNotificationRead(req.params.id);
+      res.json({ message: "Marked as read" });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/notifications/mark-all-read", async (req, res) => {
+    try {
+      if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
+      await storage.markAllNotificationsRead(req.session.userId);
+      res.json({ message: "All marked as read" });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/borrowers/:id/related", async (req, res) => {
+    try {
+      const related = await storage.getRelatedBorrowers(req.params.id);
+      res.json(related);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
     }
   });
 
