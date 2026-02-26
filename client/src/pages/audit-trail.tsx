@@ -14,8 +14,15 @@ function getActionColor(action: string) {
     case "UPDATE": return "secondary" as const;
     case "DELETE": return "destructive" as const;
     case "LOGIN": return "outline" as const;
+    case "LOGOUT": return "outline" as const;
     case "SEARCH": return "outline" as const;
     case "VIEW": return "outline" as const;
+    case "APPROVE": return "default" as const;
+    case "REJECT": return "destructive" as const;
+    case "ACCOUNT_LOCKED": return "destructive" as const;
+    case "BATCH_UPLOAD": return "secondary" as const;
+    case "FILE_DISPUTE": return "secondary" as const;
+    case "SUBMIT_APPROVAL": return "secondary" as const;
     default: return "secondary" as const;
   }
 }
@@ -70,6 +77,7 @@ export default function AuditTrailPage() {
                     <TableHead>Action</TableHead>
                     <TableHead>Entity</TableHead>
                     <TableHead>Details</TableHead>
+                    <TableHead>IP Address</TableHead>
                     <TableHead>User ID</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -87,6 +95,7 @@ export default function AuditTrailPage() {
                       </TableCell>
                       <TableCell className="text-sm capitalize">{log.entity}</TableCell>
                       <TableCell className="text-sm max-w-xs truncate">{log.details || "—"}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground font-mono">{log.ipAddress || "—"}</TableCell>
                       <TableCell className="text-xs text-muted-foreground font-mono">
                         {log.userId ? log.userId.substring(0, 8) + "..." : "—"}
                       </TableCell>

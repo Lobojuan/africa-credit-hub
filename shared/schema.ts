@@ -8,6 +8,8 @@ export const userStatusEnum = pgEnum("user_status", ["active", "suspended", "dea
 export const borrowerTypeEnum = pgEnum("borrower_type", ["individual", "corporate"]);
 export const accountStatusEnum = pgEnum("account_status", ["current", "delinquent", "default", "closed", "restructured"]);
 export const inquiryPurposeEnum = pgEnum("inquiry_purpose", ["new_credit", "review", "collection", "regulatory", "portfolio_monitoring"]);
+export const approvalStatusEnum = pgEnum("approval_status", ["pending", "approved", "rejected"]);
+export const disputeStatusEnum = pgEnum("dispute_status", ["open", "under_review", "resolved", "rejected"]);
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -18,6 +20,8 @@ export const users = pgTable("users", {
   role: userRoleEnum("role").notNull().default("viewer"),
   status: userStatusEnum("status").notNull().default("active"),
   institution: text("institution"),
+  failedLoginAttempts: integer("failed_login_attempts").default(0),
+  lockedUntil: timestamp("locked_until"),
   lastLogin: timestamp("last_login"),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -29,6 +33,7 @@ export const borrowers = pgTable("borrowers", {
   lastName: text("last_name"),
   companyName: text("company_name"),
   nationalId: text("national_id").notNull().unique(),
+  tinNumber: text("tin_number"),
   dateOfBirth: text("date_of_birth"),
   gender: text("gender"),
   phone: text("phone"),
@@ -87,11 +92,41 @@ export const auditLogs = pgTable("audit_logs", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, lastLogin: true });
+export const pendingApprovals = pgTable("pending_approvals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  entityType: text("entity_type").notNull(),
+  entityId: varchar("entity_id"),
+  action: text("action").notNull(),
+  payload: text("payload").notNull(),
+  requestedBy: varchar("requested_by").notNull().references(() => users.id),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  status: approvalStatusEnum("status").notNull().default("pending"),
+  reviewNotes: text("review_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  reviewedAt: timestamp("reviewed_at"),
+});
+
+export const disputes = pgTable("disputes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id),
+  creditAccountId: varchar("credit_account_id").references(() => creditAccounts.id),
+  filedBy: varchar("filed_by").notNull().references(() => users.id),
+  disputeType: text("dispute_type").notNull(),
+  description: text("description").notNull(),
+  status: disputeStatusEnum("status").notNull().default("open"),
+  resolution: text("resolution"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  resolvedAt: timestamp("resolved_at"),
+});
+
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, lastLogin: true, failedLoginAttempts: true, lockedUntil: true });
 export const insertBorrowerSchema = createInsertSchema(borrowers).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertCreditAccountSchema = createInsertSchema(creditAccounts).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertCreditInquirySchema = createInsertSchema(creditInquiries).omit({ id: true, createdAt: true });
 export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({ id: true, createdAt: true });
+export const insertPendingApprovalSchema = createInsertSchema(pendingApprovals).omit({ id: true, createdAt: true, reviewedAt: true, reviewedBy: true, status: true });
+export const insertDisputeSchema = createInsertSchema(disputes).omit({ id: true, createdAt: true, updatedAt: true, resolvedAt: true, resolution: true, status: true });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -103,3 +138,7 @@ export type InsertCreditInquiry = z.infer<typeof insertCreditInquirySchema>;
 export type CreditInquiry = typeof creditInquiries.$inferSelect;
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertPendingApproval = z.infer<typeof insertPendingApprovalSchema>;
+export type PendingApproval = typeof pendingApprovals.$inferSelect;
+export type InsertDispute = z.infer<typeof insertDisputeSchema>;
+export type Dispute = typeof disputes.$inferSelect;

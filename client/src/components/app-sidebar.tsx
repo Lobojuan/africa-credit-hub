@@ -8,6 +8,9 @@ import {
   Shield,
   Settings,
   Database,
+  CheckSquare,
+  AlertCircle,
+  Upload,
 } from "lucide-react";
 import {
   Sidebar,
@@ -27,10 +30,13 @@ const mainItems = [
   { title: "Borrowers", url: "/borrowers", icon: Users },
   { title: "Credit Accounts", url: "/credit-accounts", icon: CreditCard },
   { title: "Credit Search", url: "/search", icon: Search },
+  { title: "Batch Upload", url: "/batch-upload", icon: Upload },
 ];
 
 const reportItems = [
   { title: "Credit Reports", url: "/reports", icon: FileText },
+  { title: "Pending Approvals", url: "/approvals", icon: CheckSquare },
+  { title: "Disputes", url: "/disputes", icon: AlertCircle },
   { title: "Audit Trail", url: "/audit", icon: Shield },
 ];
 
@@ -111,7 +117,7 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter className="p-4">
         <div className="text-[11px] text-muted-foreground">
-          v1.0.0 — NBE Credit Registry
+          v2.0.0 — NBE Credit Registry
         </div>
       </SidebarFooter>
     </Sidebar>

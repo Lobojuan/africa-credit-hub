@@ -53,11 +53,12 @@ export default function CreditAccountsPage() {
       const res = await apiRequest("POST", "/api/credit-accounts", data);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/credit-accounts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pending-approvals"] });
       setDialogOpen(false);
-      toast({ title: "Credit account created successfully" });
+      toast({ title: data.message || "Submitted for approval", description: "A different authorized user must approve this change." });
     },
     onError: (e: Error) => {
       toast({ title: "Error", description: e.message, variant: "destructive" });
@@ -137,7 +138,16 @@ export default function CreditAccountsPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div><Label>Interest Rate (%)</Label><Input data-testid="input-interest-rate" type="number" step="0.01" value={formData.interestRate} onChange={(e) => setFormData({ ...formData, interestRate: e.target.value })} /></div>
-                <div><Label>Currency</Label><Input value={formData.currency} onChange={(e) => setFormData({ ...formData, currency: e.target.value })} /></div>
+                <div>
+                  <Label>Currency</Label>
+                  <Select value={formData.currency} onValueChange={(v) => setFormData({ ...formData, currency: v })}>
+                    <SelectTrigger data-testid="select-currency"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ETB">ETB (Ethiopian Birr)</SelectItem>
+                      <SelectItem value="USD">USD (US Dollar)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div><Label>Disbursement Date</Label><Input type="date" value={formData.disbursementDate} onChange={(e) => setFormData({ ...formData, disbursementDate: e.target.value })} /></div>
@@ -182,8 +192,8 @@ export default function CreditAccountsPage() {
                       <TableCell className="font-medium text-sm">{account.accountNumber}</TableCell>
                       <TableCell className="text-sm">{account.lenderInstitution}</TableCell>
                       <TableCell className="text-sm">{account.accountType}</TableCell>
-                      <TableCell className="text-right text-sm">ETB {formatCurrency(account.originalAmount)}</TableCell>
-                      <TableCell className="text-right text-sm font-medium">ETB {formatCurrency(account.currentBalance)}</TableCell>
+                      <TableCell className="text-right text-sm">{account.currency} {formatCurrency(account.originalAmount)}</TableCell>
+                      <TableCell className="text-right text-sm font-medium">{account.currency} {formatCurrency(account.currentBalance)}</TableCell>
                       <TableCell className="text-right text-sm">{account.interestRate || "—"}%</TableCell>
                       <TableCell>
                         <Badge variant={getStatusVariant(account.status)} className="text-[10px] capitalize">{account.status}</Badge>

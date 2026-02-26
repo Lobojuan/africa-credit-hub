@@ -1,16 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
-import { Users, CreditCard, Search, AlertTriangle, DollarSign, ShieldAlert } from "lucide-react";
+import { Users, CreditCard, Search, AlertTriangle, DollarSign, ShieldAlert, CheckSquare, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard } from "@/components/stat-card";
 import type { CreditAccount, AuditLog } from "@shared/schema";
 
-function formatCurrency(value: string | number) {
+function formatCurrency(value: string | number, currency = "ETB") {
   const num = typeof value === "string" ? parseFloat(value) : value;
-  if (num >= 1_000_000) return `ETB ${(num / 1_000_000).toFixed(1)}M`;
-  if (num >= 1_000) return `ETB ${(num / 1_000).toFixed(0)}K`;
-  return `ETB ${num.toFixed(0)}`;
+  const sym = currency === "USD" ? "USD" : "ETB";
+  if (num >= 1_000_000) return `${sym} ${(num / 1_000_000).toFixed(1)}M`;
+  if (num >= 1_000) return `${sym} ${(num / 1_000).toFixed(0)}K`;
+  return `${sym} ${num.toFixed(0)}`;
 }
 
 function getStatusColor(status: string) {
@@ -32,6 +33,8 @@ export default function Dashboard() {
     totalOutstanding: string;
     delinquentAccounts: number;
     defaultAccounts: number;
+    pendingApprovalCount: number;
+    openDisputeCount: number;
   }>({ queryKey: ["/api/dashboard/stats"] });
 
   const { data: recentAccounts, isLoading: accountsLoading } = useQuery<CreditAccount[]>({
@@ -51,19 +54,21 @@ export default function Dashboard() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {statsLoading ? (
-          Array.from({ length: 6 }).map((_, i) => (
+          Array.from({ length: 8 }).map((_, i) => (
             <Card key={i}><CardContent className="p-5"><Skeleton className="h-16 w-full" /></CardContent></Card>
           ))
         ) : stats ? (
           <>
             <StatCard title="Total Borrowers" value={stats.totalBorrowers} icon={Users} testId="stat-borrowers" />
             <StatCard title="Credit Accounts" value={stats.totalAccounts} icon={CreditCard} testId="stat-accounts" />
-            <StatCard title="Inquiries" value={stats.totalInquiries} icon={Search} testId="stat-inquiries" />
             <StatCard title="Outstanding" value={formatCurrency(stats.totalOutstanding)} icon={DollarSign} testId="stat-outstanding" />
             <StatCard title="Delinquent" value={stats.delinquentAccounts} icon={AlertTriangle} testId="stat-delinquent" subtitle="Accounts past due" />
             <StatCard title="Defaults" value={stats.defaultAccounts} icon={ShieldAlert} testId="stat-defaults" subtitle="Non-performing" />
+            <StatCard title="Inquiries" value={stats.totalInquiries} icon={Search} testId="stat-inquiries" />
+            <StatCard title="Pending Approvals" value={stats.pendingApprovalCount} icon={CheckSquare} testId="stat-approvals" subtitle="Awaiting review" />
+            <StatCard title="Open Disputes" value={stats.openDisputeCount} icon={AlertCircle} testId="stat-disputes" subtitle="Active cases" />
           </>
         ) : null}
       </div>
@@ -94,7 +99,7 @@ export default function Dashboard() {
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
                       <div className="text-right">
-                        <p className="text-sm font-medium">{formatCurrency(account.currentBalance)}</p>
+                        <p className="text-sm font-medium">{formatCurrency(account.currentBalance, account.currency)}</p>
                       </div>
                       <Badge variant={getStatusColor(account.status)} className="text-[10px] capitalize">
                         {account.status}
@@ -130,7 +135,10 @@ export default function Dashboard() {
                   <div key={log.id} className="flex items-center justify-between gap-3 px-5 py-3" data-testid={`row-audit-${log.id}`}>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium">{log.details || log.action}</p>
-                      <p className="text-xs text-muted-foreground">{log.entity} &middot; {log.action}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {log.entity} &middot; {log.action}
+                        {log.ipAddress && <span> &middot; {log.ipAddress}</span>}
+                      </p>
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-xs text-muted-foreground">

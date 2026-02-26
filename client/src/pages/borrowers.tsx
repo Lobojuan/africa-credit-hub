@@ -37,11 +37,12 @@ export default function BorrowersPage() {
       const res = await apiRequest("POST", "/api/borrowers", data);
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/borrowers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pending-approvals"] });
       setDialogOpen(false);
       setFormData({ type: "individual", firstName: "", lastName: "", companyName: "", nationalId: "", dateOfBirth: "", gender: "", phone: "", email: "", address: "", city: "", region: "", employerName: "", occupation: "", businessRegNumber: "", sector: "" });
-      toast({ title: "Borrower registered successfully" });
+      toast({ title: data.message || "Submitted for approval", description: "A different authorized user must approve this change." });
     },
     onError: (e: Error) => {
       toast({ title: "Error", description: e.message, variant: "destructive" });

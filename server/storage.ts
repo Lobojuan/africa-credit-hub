@@ -1,12 +1,14 @@
 import { eq, desc, like, or, sql, count } from "drizzle-orm";
 import { db } from "./db";
 import {
-  users, borrowers, creditAccounts, creditInquiries, auditLogs,
+  users, borrowers, creditAccounts, creditInquiries, auditLogs, pendingApprovals, disputes,
   type User, type InsertUser,
   type Borrower, type InsertBorrower,
   type CreditAccount, type InsertCreditAccount,
   type CreditInquiry, type InsertCreditInquiry,
   type AuditLog, type InsertAuditLog,
+  type PendingApproval, type InsertPendingApproval,
+  type Dispute, type InsertDispute,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -15,6 +17,10 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   getUsers(): Promise<User[]>;
   updateUser(id: string, data: Partial<InsertUser>): Promise<User | undefined>;
+  incrementFailedAttempts(userId: string): Promise<void>;
+  resetFailedAttempts(userId: string): Promise<void>;
+  lockUser(userId: string, until: Date): Promise<void>;
+  updateLastLogin(userId: string): Promise<void>;
 
   getBorrower(id: string): Promise<Borrower | undefined>;
   getBorrowers(): Promise<Borrower[]>;
@@ -35,6 +41,16 @@ export interface IStorage {
   getAuditLogs(): Promise<AuditLog[]>;
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
 
+  getPendingApprovals(): Promise<PendingApproval[]>;
+  getPendingApproval(id: string): Promise<PendingApproval | undefined>;
+  createPendingApproval(approval: InsertPendingApproval): Promise<PendingApproval>;
+  updateApprovalStatus(id: string, status: string, reviewedBy: string, reviewNotes?: string): Promise<PendingApproval | undefined>;
+
+  getDisputes(): Promise<Dispute[]>;
+  getDispute(id: string): Promise<Dispute | undefined>;
+  createDispute(dispute: InsertDispute): Promise<Dispute>;
+  updateDispute(id: string, data: Partial<{ status: string; resolution: string }>): Promise<Dispute | undefined>;
+
   getDashboardStats(): Promise<{
     totalBorrowers: number;
     totalAccounts: number;
@@ -42,6 +58,8 @@ export interface IStorage {
     totalOutstanding: string;
     delinquentAccounts: number;
     defaultAccounts: number;
+    pendingApprovalCount: number;
+    openDisputeCount: number;
   }>;
 }
 
@@ -70,6 +88,24 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
+  async incrementFailedAttempts(userId: string): Promise<void> {
+    await db.update(users).set({
+      failedLoginAttempts: sql`COALESCE(${users.failedLoginAttempts}, 0) + 1`,
+    }).where(eq(users.id, userId));
+  }
+
+  async resetFailedAttempts(userId: string): Promise<void> {
+    await db.update(users).set({ failedLoginAttempts: 0, lockedUntil: null }).where(eq(users.id, userId));
+  }
+
+  async lockUser(userId: string, until: Date): Promise<void> {
+    await db.update(users).set({ lockedUntil: until }).where(eq(users.id, userId));
+  }
+
+  async updateLastLogin(userId: string): Promise<void> {
+    await db.update(users).set({ lastLogin: new Date() }).where(eq(users.id, userId));
+  }
+
   async getBorrower(id: string): Promise<Borrower | undefined> {
     const [borrower] = await db.select().from(borrowers).where(eq(borrowers.id, id));
     return borrower;
@@ -87,6 +123,7 @@ export class DatabaseStorage implements IStorage {
         like(borrowers.lastName, searchPattern),
         like(borrowers.companyName, searchPattern),
         like(borrowers.nationalId, searchPattern),
+        like(borrowers.tinNumber, searchPattern),
         like(borrowers.phone, searchPattern),
         like(borrowers.email, searchPattern),
       )
@@ -148,6 +185,53 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
+  async getPendingApprovals(): Promise<PendingApproval[]> {
+    return db.select().from(pendingApprovals).orderBy(desc(pendingApprovals.createdAt));
+  }
+
+  async getPendingApproval(id: string): Promise<PendingApproval | undefined> {
+    const [approval] = await db.select().from(pendingApprovals).where(eq(pendingApprovals.id, id));
+    return approval;
+  }
+
+  async createPendingApproval(approval: InsertPendingApproval): Promise<PendingApproval> {
+    const [created] = await db.insert(pendingApprovals).values(approval).returning();
+    return created;
+  }
+
+  async updateApprovalStatus(id: string, status: string, reviewedBy: string, reviewNotes?: string): Promise<PendingApproval | undefined> {
+    const [updated] = await db.update(pendingApprovals).set({
+      status: status as any,
+      reviewedBy,
+      reviewNotes: reviewNotes || null,
+      reviewedAt: new Date(),
+    }).where(eq(pendingApprovals.id, id)).returning();
+    return updated;
+  }
+
+  async getDisputes(): Promise<Dispute[]> {
+    return db.select().from(disputes).orderBy(desc(disputes.createdAt));
+  }
+
+  async getDispute(id: string): Promise<Dispute | undefined> {
+    const [dispute] = await db.select().from(disputes).where(eq(disputes.id, id));
+    return dispute;
+  }
+
+  async createDispute(dispute: InsertDispute): Promise<Dispute> {
+    const [created] = await db.insert(disputes).values(dispute).returning();
+    return created;
+  }
+
+  async updateDispute(id: string, data: Partial<{ status: string; resolution: string }>): Promise<Dispute | undefined> {
+    const updateData: any = { ...data, updatedAt: new Date() };
+    if (data.status === "resolved" || data.status === "rejected") {
+      updateData.resolvedAt = new Date();
+    }
+    const [updated] = await db.update(disputes).set(updateData).where(eq(disputes.id, id)).returning();
+    return updated;
+  }
+
   async getDashboardStats() {
     const [borrowerCount] = await db.select({ value: count() }).from(borrowers);
     const [accountCount] = await db.select({ value: count() }).from(creditAccounts);
@@ -159,6 +243,10 @@ export class DatabaseStorage implements IStorage {
     );
     const [delinquent] = await db.select({ value: count() }).from(creditAccounts).where(eq(creditAccounts.status, "delinquent"));
     const [defaulted] = await db.select({ value: count() }).from(creditAccounts).where(eq(creditAccounts.status, "default"));
+    const [pendingCount] = await db.select({ value: count() }).from(pendingApprovals).where(eq(pendingApprovals.status, "pending"));
+    const [disputeCount] = await db.select({ value: count() }).from(disputes).where(
+      or(eq(disputes.status, "open"), eq(disputes.status, "under_review"))
+    );
 
     return {
       totalBorrowers: borrowerCount.value,
@@ -167,6 +255,8 @@ export class DatabaseStorage implements IStorage {
       totalOutstanding: outstanding.value || "0",
       delinquentAccounts: delinquent.value,
       defaultAccounts: defaulted.value,
+      pendingApprovalCount: pendingCount.value,
+      openDisputeCount: disputeCount.value,
     };
   }
 }
