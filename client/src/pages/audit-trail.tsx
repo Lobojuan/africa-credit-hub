@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Shield, Search } from "lucide-react";
 import { useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -28,6 +29,7 @@ function getActionColor(action: string) {
 }
 
 export default function AuditTrailPage() {
+  const { t } = useTranslation();
   const [filter, setFilter] = useState("");
 
   const { data: logs, isLoading } = useQuery<AuditLog[]>({
@@ -47,15 +49,15 @@ export default function AuditTrailPage() {
   return (
     <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-audit-title">Audit Trail</h1>
-        <p className="text-sm text-muted-foreground mt-1">Complete activity log of all system operations</p>
+        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-audit-title">{t('audit.title')}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{t('audit.subtitle')}</p>
       </div>
 
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           data-testid="input-filter-audit"
-          placeholder="Filter by action, entity, or details..."
+          placeholder={t('audit.filterPlaceholder')}
           className="pl-9"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
@@ -73,12 +75,12 @@ export default function AuditTrailPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Timestamp</TableHead>
-                    <TableHead>Action</TableHead>
-                    <TableHead>Entity</TableHead>
-                    <TableHead>Details</TableHead>
-                    <TableHead>IP Address</TableHead>
-                    <TableHead>User ID</TableHead>
+                    <TableHead>{t('audit.timestamp')}</TableHead>
+                    <TableHead>{t('audit.action')}</TableHead>
+                    <TableHead>{t('audit.entity')}</TableHead>
+                    <TableHead>{t('audit.details')}</TableHead>
+                    <TableHead>{t('audit.ipAddress')}</TableHead>
+                    <TableHead>{t('audit.userId')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -107,9 +109,9 @@ export default function AuditTrailPage() {
           ) : (
             <div className="p-12 text-center">
               <Shield className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-40" />
-              <h3 className="font-semibold">No audit entries</h3>
+              <h3 className="font-semibold">{t('audit.noEntries')}</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                {filter ? "No entries match your filter" : "System activity will appear here"}
+                {filter ? t('audit.noFilterResults') : t('audit.activityNote')}
               </p>
             </div>
           )}

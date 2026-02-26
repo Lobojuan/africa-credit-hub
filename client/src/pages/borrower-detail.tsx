@@ -1,17 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import { ArrowLeft, User, Building2, Mail, Phone, MapPin, Briefcase, CreditCard, AlertTriangle, TrendingUp, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import { formatCurrency } from "@/lib/currency";
 import type { Borrower, CreditAccount, CreditInquiry } from "@shared/schema";
-
-function formatCurrency(value: string | number) {
-  const num = typeof value === "string" ? parseFloat(value) : value;
-  return new Intl.NumberFormat("en-ET", { style: "decimal", minimumFractionDigits: 2 }).format(num);
-}
 
 function getStatusColor(status: string) {
   switch (status) {
@@ -29,18 +26,19 @@ function getCreditScoreColor(score: number) {
   return "text-red-600 dark:text-red-400";
 }
 
-function getCreditScoreLabel(score: number) {
-  if (score >= 750) return "Excellent";
-  if (score >= 700) return "Good";
-  if (score >= 650) return "Fair";
-  if (score >= 600) return "Poor";
-  return "Very Poor";
-}
-
 export default function BorrowerDetailPage() {
+  const { t } = useTranslation();
   const [, params] = useRoute("/borrowers/:id");
   const [, navigate] = useLocation();
   const borrowerId = params?.id;
+
+  function getCreditScoreLabel(score: number) {
+    if (score >= 750) return t("borrowerDetail.excellent");
+    if (score >= 700) return t("borrowerDetail.good");
+    if (score >= 650) return t("borrowerDetail.fair");
+    if (score >= 600) return t("borrowerDetail.poor");
+    return t("borrowerDetail.veryPoor");
+  }
 
   const { data: report, isLoading } = useQuery<{
     borrower: Borrower;
@@ -75,9 +73,9 @@ export default function BorrowerDetailPage() {
     return (
       <div className="p-6">
         <Button variant="ghost" onClick={() => navigate("/borrowers")} data-testid="button-back">
-          <ArrowLeft className="w-4 h-4 mr-2" />Back
+          <ArrowLeft className="w-4 h-4 mr-2" />{t("borrowerDetail.back")}
         </Button>
-        <Card className="mt-4"><CardContent className="p-12 text-center"><p>Borrower not found</p></CardContent></Card>
+        <Card className="mt-4"><CardContent className="p-12 text-center"><p>{t("borrowerDetail.notFound")}</p></CardContent></Card>
       </div>
     );
   }
@@ -106,28 +104,28 @@ export default function BorrowerDetailPage() {
             <div className={`text-3xl font-bold ${getCreditScoreColor(summary.creditScore)}`} data-testid="text-credit-score">
               {summary.creditScore}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Credit Score</p>
+            <p className="text-xs text-muted-foreground mt-1">{t("borrowerDetail.creditScore")}</p>
             <Badge variant="outline" className="mt-1 text-[10px]">{getCreditScoreLabel(summary.creditScore)}</Badge>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
             <div className="text-2xl font-bold">{summary.totalAccounts}</div>
-            <p className="text-xs text-muted-foreground mt-1">Total Accounts</p>
-            <p className="text-[11px] text-muted-foreground">{summary.activeAccounts} active</p>
+            <p className="text-xs text-muted-foreground mt-1">{t("borrowerDetail.totalAccounts")}</p>
+            <p className="text-[11px] text-muted-foreground">{summary.activeAccounts} {t("borrowerDetail.active")}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold">ETB {formatCurrency(summary.totalDebt)}</div>
-            <p className="text-xs text-muted-foreground mt-1">Total Outstanding</p>
+            <div className="text-2xl font-bold">{formatCurrency(summary.totalDebt)}</div>
+            <p className="text-xs text-muted-foreground mt-1">{t("borrowerDetail.totalOutstanding")}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
             <div className="text-2xl font-bold">{summary.delinquentAccounts}</div>
-            <p className="text-xs text-muted-foreground mt-1">Delinquent</p>
-            <p className="text-[11px] text-muted-foreground">{summary.inquiryCount} inquiries</p>
+            <p className="text-xs text-muted-foreground mt-1">{t("borrowerDetail.delinquent")}</p>
+            <p className="text-[11px] text-muted-foreground">{summary.inquiryCount} {t("borrowerDetail.inquiriesCount")}</p>
           </CardContent>
         </Card>
       </div>
@@ -137,20 +135,20 @@ export default function BorrowerDetailPage() {
           <CardHeader className="pb-3">
             <h3 className="text-sm font-semibold flex items-center gap-2">
               {isIndividual ? <User className="w-4 h-4" /> : <Building2 className="w-4 h-4" />}
-              Personal Information
+              {t("borrowerDetail.personalInfo")}
             </h3>
           </CardHeader>
           <CardContent className="space-y-3">
             {isIndividual && (
               <>
-                <InfoRow label="Date of Birth" value={borrower.dateOfBirth || "—"} />
-                <InfoRow label="Gender" value={borrower.gender || "—"} />
-                <InfoRow label="Employer" value={borrower.employerName || "—"} />
-                <InfoRow label="Occupation" value={borrower.occupation || "—"} />
+                <InfoRow label={t("borrowerDetail.dateOfBirth")} value={borrower.dateOfBirth || "—"} />
+                <InfoRow label={t("borrowerDetail.gender")} value={borrower.gender || "—"} />
+                <InfoRow label={t("borrowerDetail.employer")} value={borrower.employerName || "—"} />
+                <InfoRow label={t("borrowerDetail.occupation")} value={borrower.occupation || "—"} />
               </>
             )}
             {!isIndividual && (
-              <InfoRow label="Business Reg." value={borrower.businessRegNumber || "—"} />
+              <InfoRow label={t("borrowerDetail.businessReg")} value={borrower.businessRegNumber || "—"} />
             )}
             <Separator />
             <div className="flex items-center gap-2 text-sm">
@@ -179,37 +177,40 @@ export default function BorrowerDetailPage() {
             <div className="flex items-center justify-between gap-2">
               <h3 className="text-sm font-semibold flex items-center gap-2">
                 <CreditCard className="w-4 h-4" />
-                Credit Accounts
+                {t("borrowerDetail.creditAccounts")}
               </h3>
-              <Badge variant="secondary" className="text-[10px]">{accounts.length} accounts</Badge>
+              <Badge variant="secondary" className="text-[10px]">{accounts.length} {t("borrowerDetail.accounts")}</Badge>
             </div>
           </CardHeader>
           <CardContent className="px-0 pb-0">
             {accounts.length > 0 ? (
               <div className="divide-y">
-                {accounts.map((account) => (
-                  <div key={account.id} className="px-5 py-4 space-y-2" data-testid={`row-credit-${account.id}`}>
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold">{account.accountNumber}</p>
-                        <p className="text-xs text-muted-foreground">{account.lenderInstitution} &middot; {account.accountType}</p>
+                {accounts.map((account) => {
+                  const currency = (account as any).currency || "ETB";
+                  return (
+                    <div key={account.id} className="px-5 py-4 space-y-2" data-testid={`row-credit-${account.id}`}>
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold">{account.accountNumber}</p>
+                          <p className="text-xs text-muted-foreground">{account.lenderInstitution} &middot; {account.accountType}</p>
+                        </div>
+                        <Badge variant={getStatusColor(account.status)} className="text-[10px] capitalize shrink-0">{account.status}</Badge>
                       </div>
-                      <Badge variant={getStatusColor(account.status)} className="text-[10px] capitalize shrink-0">{account.status}</Badge>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                        <div><span className="text-muted-foreground">{t("borrowerDetail.original")}</span> <span className="font-medium">{formatCurrency(account.originalAmount, currency)}</span></div>
+                        <div><span className="text-muted-foreground">{t("borrowerDetail.balance")}</span> <span className="font-medium">{formatCurrency(account.currentBalance, currency)}</span></div>
+                        <div><span className="text-muted-foreground">{t("borrowerDetail.rate")}</span> <span className="font-medium">{account.interestRate || "—"}%</span></div>
+                        <div><span className="text-muted-foreground">{t("borrowerDetail.arrears")}</span> <span className={`font-medium ${(account.daysInArrears || 0) > 0 ? "text-destructive" : ""}`}>{account.daysInArrears || 0} {t("borrowerDetail.days")}</span></div>
+                      </div>
+                      {account.collateralType && (
+                        <p className="text-xs text-muted-foreground">{t("borrowerDetail.collateral")} {account.collateralType} — {formatCurrency(account.collateralValue || "0", currency)}</p>
+                      )}
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                      <div><span className="text-muted-foreground">Original:</span> <span className="font-medium">ETB {formatCurrency(account.originalAmount)}</span></div>
-                      <div><span className="text-muted-foreground">Balance:</span> <span className="font-medium">ETB {formatCurrency(account.currentBalance)}</span></div>
-                      <div><span className="text-muted-foreground">Rate:</span> <span className="font-medium">{account.interestRate || "—"}%</span></div>
-                      <div><span className="text-muted-foreground">Arrears:</span> <span className={`font-medium ${(account.daysInArrears || 0) > 0 ? "text-destructive" : ""}`}>{account.daysInArrears || 0} days</span></div>
-                    </div>
-                    {account.collateralType && (
-                      <p className="text-xs text-muted-foreground">Collateral: {account.collateralType} — ETB {formatCurrency(account.collateralValue || "0")}</p>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
-              <div className="p-8 text-center text-sm text-muted-foreground">No credit accounts on file</div>
+              <div className="p-8 text-center text-sm text-muted-foreground">{t("borrowerDetail.noAccounts")}</div>
             )}
           </CardContent>
         </Card>
@@ -220,9 +221,9 @@ export default function BorrowerDetailPage() {
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-sm font-semibold flex items-center gap-2">
               <FileText className="w-4 h-4" />
-              Credit Inquiries
+              {t("borrowerDetail.creditInquiries")}
             </h3>
-            <Badge variant="secondary" className="text-[10px]">{inquiries.length} inquiries</Badge>
+            <Badge variant="secondary" className="text-[10px]">{inquiries.length} {t("borrowerDetail.inquiriesCount")}</Badge>
           </div>
         </CardHeader>
         <CardContent className="px-0 pb-0">
@@ -236,7 +237,7 @@ export default function BorrowerDetailPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant={inquiry.consentProvided ? "default" : "destructive"} className="text-[10px]">
-                      {inquiry.consentProvided ? "Consent Given" : "No Consent"}
+                      {inquiry.consentProvided ? t("borrowerDetail.consentGiven") : t("borrowerDetail.noConsent")}
                     </Badge>
                     <span className="text-xs text-muted-foreground">
                       {inquiry.createdAt ? new Date(inquiry.createdAt).toLocaleDateString("en-GB") : ""}
@@ -246,7 +247,7 @@ export default function BorrowerDetailPage() {
               ))}
             </div>
           ) : (
-            <div className="p-8 text-center text-sm text-muted-foreground">No inquiries recorded</div>
+            <div className="p-8 text-center text-sm text-muted-foreground">{t("borrowerDetail.noInquiries")}</div>
           )}
         </CardContent>
       </Card>

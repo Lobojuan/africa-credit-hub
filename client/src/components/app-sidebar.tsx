@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useLocation, Link } from "wouter";
 import {
   LayoutDashboard,
@@ -26,25 +27,26 @@ import {
 } from "@/components/ui/sidebar";
 
 const mainItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Borrowers", url: "/borrowers", icon: Users },
-  { title: "Credit Accounts", url: "/credit-accounts", icon: CreditCard },
-  { title: "Credit Search", url: "/search", icon: Search },
-  { title: "Batch Upload", url: "/batch-upload", icon: Upload },
+  { titleKey: "sidebar.dashboard", url: "/", icon: LayoutDashboard, testId: "nav-dashboard" },
+  { titleKey: "sidebar.borrowers", url: "/borrowers", icon: Users, testId: "nav-borrowers" },
+  { titleKey: "sidebar.creditAccounts", url: "/credit-accounts", icon: CreditCard, testId: "nav-credit-accounts" },
+  { titleKey: "sidebar.creditSearch", url: "/search", icon: Search, testId: "nav-credit-search" },
+  { titleKey: "sidebar.batchUpload", url: "/batch-upload", icon: Upload, testId: "nav-batch-upload" },
 ];
 
 const reportItems = [
-  { title: "Credit Reports", url: "/reports", icon: FileText },
-  { title: "Pending Approvals", url: "/approvals", icon: CheckSquare },
-  { title: "Disputes", url: "/disputes", icon: AlertCircle },
-  { title: "Audit Trail", url: "/audit", icon: Shield },
+  { titleKey: "sidebar.creditReports", url: "/reports", icon: FileText, testId: "nav-credit-reports" },
+  { titleKey: "sidebar.pendingApprovals", url: "/approvals", icon: CheckSquare, testId: "nav-pending-approvals" },
+  { titleKey: "sidebar.disputes", url: "/disputes", icon: AlertCircle, testId: "nav-disputes" },
+  { titleKey: "sidebar.auditTrail", url: "/audit", icon: Shield, testId: "nav-audit-trail" },
 ];
 
 const adminItems = [
-  { title: "User Management", url: "/users", icon: Settings },
+  { titleKey: "sidebar.userManagement", url: "/users", icon: Settings, testId: "nav-user-management" },
 ];
 
 export function AppSidebar() {
+  const { t } = useTranslation();
   const [location] = useLocation();
 
   return (
@@ -56,23 +58,23 @@ export function AppSidebar() {
               <Database className="w-5 h-5 text-primary-foreground" />
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-semibold tracking-tight">Credit Registry</span>
-              <span className="text-[11px] text-muted-foreground">National Bank of Ethiopia</span>
+              <span className="text-sm font-semibold tracking-tight">{t('sidebar.brandTitle')}</span>
+              <span className="text-[11px] text-muted-foreground">{t('sidebar.brandSubtitle')}</span>
             </div>
           </div>
         </Link>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Main</SidebarGroupLabel>
+          <SidebarGroupLabel>{t('sidebar.main')}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {mainItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
+                <SidebarMenuItem key={item.titleKey}>
                   <SidebarMenuButton asChild data-active={location === item.url}>
-                    <Link href={item.url} data-testid={`nav-${item.title.toLowerCase().replace(/\s/g, "-")}`}>
+                    <Link href={item.url} data-testid={item.testId}>
                       <item.icon className="w-4 h-4" />
-                      <span>{item.title}</span>
+                      <span>{t(item.titleKey)}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -81,15 +83,15 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
-          <SidebarGroupLabel>Reports & Compliance</SidebarGroupLabel>
+          <SidebarGroupLabel>{t('sidebar.reportsCompliance')}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {reportItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
+                <SidebarMenuItem key={item.titleKey}>
                   <SidebarMenuButton asChild data-active={location === item.url}>
-                    <Link href={item.url} data-testid={`nav-${item.title.toLowerCase().replace(/\s/g, "-")}`}>
+                    <Link href={item.url} data-testid={item.testId}>
                       <item.icon className="w-4 h-4" />
-                      <span>{item.title}</span>
+                      <span>{t(item.titleKey)}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -98,15 +100,15 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
-          <SidebarGroupLabel>Administration</SidebarGroupLabel>
+          <SidebarGroupLabel>{t('sidebar.administration')}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {adminItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
+                <SidebarMenuItem key={item.titleKey}>
                   <SidebarMenuButton asChild data-active={location === item.url}>
-                    <Link href={item.url} data-testid={`nav-${item.title.toLowerCase().replace(/\s/g, "-")}`}>
+                    <Link href={item.url} data-testid={item.testId}>
                       <item.icon className="w-4 h-4" />
-                      <span>{item.title}</span>
+                      <span>{t(item.titleKey)}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -117,7 +119,7 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter className="p-4">
         <div className="text-[11px] text-muted-foreground">
-          v2.0.0 — NBE Credit Registry
+          {t('sidebar.version')}
         </div>
       </SidebarFooter>
     </Sidebar>

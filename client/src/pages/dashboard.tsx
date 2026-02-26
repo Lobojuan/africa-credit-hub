@@ -1,18 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Users, CreditCard, Search, AlertTriangle, DollarSign, ShieldAlert, CheckSquare, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard } from "@/components/stat-card";
+import { formatCurrency } from "@/lib/currency";
 import type { CreditAccount, AuditLog } from "@shared/schema";
-
-function formatCurrency(value: string | number, currency = "ETB") {
-  const num = typeof value === "string" ? parseFloat(value) : value;
-  const sym = currency === "USD" ? "USD" : "ETB";
-  if (num >= 1_000_000) return `${sym} ${(num / 1_000_000).toFixed(1)}M`;
-  if (num >= 1_000) return `${sym} ${(num / 1_000).toFixed(0)}K`;
-  return `${sym} ${num.toFixed(0)}`;
-}
 
 function getStatusColor(status: string) {
   switch (status) {
@@ -26,6 +20,8 @@ function getStatusColor(status: string) {
 }
 
 export default function Dashboard() {
+  const { t } = useTranslation();
+
   const { data: stats, isLoading: statsLoading } = useQuery<{
     totalBorrowers: number;
     totalAccounts: number;
@@ -48,9 +44,9 @@ export default function Dashboard() {
   return (
     <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-dashboard-title">Dashboard</h1>
+        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-dashboard-title">{t('dashboard.title')}</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Credit Registry System Overview
+          {t('dashboard.subtitle')}
         </p>
       </div>
 
@@ -61,14 +57,14 @@ export default function Dashboard() {
           ))
         ) : stats ? (
           <>
-            <StatCard title="Total Borrowers" value={stats.totalBorrowers} icon={Users} testId="stat-borrowers" />
-            <StatCard title="Credit Accounts" value={stats.totalAccounts} icon={CreditCard} testId="stat-accounts" />
-            <StatCard title="Outstanding" value={formatCurrency(stats.totalOutstanding)} icon={DollarSign} testId="stat-outstanding" />
-            <StatCard title="Delinquent" value={stats.delinquentAccounts} icon={AlertTriangle} testId="stat-delinquent" subtitle="Accounts past due" />
-            <StatCard title="Defaults" value={stats.defaultAccounts} icon={ShieldAlert} testId="stat-defaults" subtitle="Non-performing" />
-            <StatCard title="Inquiries" value={stats.totalInquiries} icon={Search} testId="stat-inquiries" />
-            <StatCard title="Pending Approvals" value={stats.pendingApprovalCount} icon={CheckSquare} testId="stat-approvals" subtitle="Awaiting review" />
-            <StatCard title="Open Disputes" value={stats.openDisputeCount} icon={AlertCircle} testId="stat-disputes" subtitle="Active cases" />
+            <StatCard title={t('dashboard.totalBorrowers')} value={stats.totalBorrowers} icon={Users} testId="stat-borrowers" />
+            <StatCard title={t('dashboard.creditAccounts')} value={stats.totalAccounts} icon={CreditCard} testId="stat-accounts" />
+            <StatCard title={t('dashboard.outstanding')} value={formatCurrency(stats.totalOutstanding, "ETB", { compact: true })} icon={DollarSign} testId="stat-outstanding" />
+            <StatCard title={t('dashboard.delinquent')} value={stats.delinquentAccounts} icon={AlertTriangle} testId="stat-delinquent" subtitle={t('dashboard.delinquentSub')} />
+            <StatCard title={t('dashboard.defaults')} value={stats.defaultAccounts} icon={ShieldAlert} testId="stat-defaults" subtitle={t('dashboard.defaultsSub')} />
+            <StatCard title={t('dashboard.inquiries')} value={stats.totalInquiries} icon={Search} testId="stat-inquiries" />
+            <StatCard title={t('dashboard.pendingApprovals')} value={stats.pendingApprovalCount} icon={CheckSquare} testId="stat-approvals" subtitle={t('dashboard.pendingApprovalsSub')} />
+            <StatCard title={t('dashboard.openDisputes')} value={stats.openDisputeCount} icon={AlertCircle} testId="stat-disputes" subtitle={t('dashboard.openDisputesSub')} />
           </>
         ) : null}
       </div>
@@ -78,10 +74,10 @@ export default function Dashboard() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between gap-2">
               <div>
-                <h3 className="font-semibold text-sm">Recent Credit Accounts</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">Latest loan activity across institutions</p>
+                <h3 className="font-semibold text-sm">{t('dashboard.recentAccounts')}</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">{t('dashboard.recentAccountsSub')}</p>
               </div>
-              <Badge variant="secondary" className="text-[10px]">{recentAccounts?.length || 0} total</Badge>
+              <Badge variant="secondary" className="text-[10px]">{recentAccounts?.length || 0} {t('dashboard.total')}</Badge>
             </div>
           </CardHeader>
           <CardContent className="px-0 pb-0">
@@ -99,7 +95,7 @@ export default function Dashboard() {
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
                       <div className="text-right">
-                        <p className="text-sm font-medium">{formatCurrency(account.currentBalance, account.currency)}</p>
+                        <p className="text-sm font-medium">{formatCurrency(account.currentBalance, account.currency, { compact: true })}</p>
                       </div>
                       <Badge variant={getStatusColor(account.status)} className="text-[10px] capitalize">
                         {account.status}
@@ -109,7 +105,7 @@ export default function Dashboard() {
                 ))}
               </div>
             ) : (
-              <div className="p-8 text-center text-sm text-muted-foreground">No accounts found</div>
+              <div className="p-8 text-center text-sm text-muted-foreground">{t('dashboard.noAccounts')}</div>
             )}
           </CardContent>
         </Card>
@@ -118,10 +114,10 @@ export default function Dashboard() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between gap-2">
               <div>
-                <h3 className="font-semibold text-sm">Recent Activity</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">Audit trail of system operations</p>
+                <h3 className="font-semibold text-sm">{t('dashboard.recentActivity')}</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">{t('dashboard.recentActivitySub')}</p>
               </div>
-              <Badge variant="secondary" className="text-[10px]">{auditLogs?.length || 0} entries</Badge>
+              <Badge variant="secondary" className="text-[10px]">{auditLogs?.length || 0} {t('dashboard.entries')}</Badge>
             </div>
           </CardHeader>
           <CardContent className="px-0 pb-0">
@@ -149,7 +145,7 @@ export default function Dashboard() {
                 ))}
               </div>
             ) : (
-              <div className="p-8 text-center text-sm text-muted-foreground">No activity recorded</div>
+              <div className="p-8 text-center text-sm text-muted-foreground">{t('dashboard.noActivity')}</div>
             )}
           </CardContent>
         </Card>

@@ -9,6 +9,8 @@ A web-based Credit Registry System designed for the National Bank of Ethiopia to
 - **Database**: PostgreSQL (Neon) with Drizzle ORM
 - **Routing**: wouter for client-side, Express for API
 - **Auth**: bcryptjs password hashing, express-session with memorystore
+- **i18n**: react-i18next + i18next-browser-languagedetector, EN/FR translations in `client/src/lib/i18n.ts`
+- **Currency**: `client/src/lib/currency.ts` with `formatCurrency()` and `SUPPORTED_CURRENCIES`
 - **Security**: 3-attempt lockout (15min), session-based auth, IP tracking in audit logs
 - **Build**: esbuild bundles server to dist/index.cjs, Vite builds frontend to dist/public/
 
@@ -25,7 +27,7 @@ A web-based Credit Registry System designed for the National Bank of Ethiopia to
 - **Authentication**: Login with bcrypt, 3-attempt lockout, session management, logout
 - **Dashboard**: 8 stat cards (borrowers, accounts, outstanding, delinquent, defaults, inquiries, pending approvals, open disputes)
 - **Borrower management**: Register/search/view individual/corporate profiles with TIN
-- **Credit accounts**: Loan details, collateral, arrears tracking, multi-currency (ETB/USD)
+- **Credit accounts**: Loan details, collateral, arrears tracking, multi-currency (17 African/global currencies: ETB, KES, NGN, ZAR, GHS, TZS, UGX, RWF, XOF, XAF, EGP, MAD, BWP, MZN, USD, EUR, GBP)
 - **Credit scoring**: Algorithmic scoring 300-850 based on repayment history
 - **Maker-checker workflow**: Four-eye principle for data changes (different user must approve)
 - **Dispute management**: File/track/resolve data disputes with status workflow
@@ -34,6 +36,8 @@ A web-based Credit Registry System designed for the National Bank of Ethiopia to
 - **Audit trail**: Full activity log with IP tracking, timestamps, action types
 - **User management**: Role-based access, status control (active/suspended/deactivated)
 - **RBAC enforcement**: Server-side role checks on sensitive routes (admin-only user management, admin/regulator audit logs and approval review, admin/lender batch upload)
+- **Internationalization (i18n)**: Full French/English language switching with react-i18next, browser language detection, localStorage persistence
+- **Multi-currency**: Pan-African currency support with Intl.NumberFormat formatting (17 currencies with locale-appropriate display)
 - **Dark/light theme**: Full theme support
 - **Health check**: GET /api/health returns { status: "ok" }
 

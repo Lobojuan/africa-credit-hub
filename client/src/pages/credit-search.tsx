@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import { Search, User, Building2, FileText, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { Borrower } from "@shared/schema";
 
 export default function CreditSearchPage() {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [, navigate] = useLocation();
@@ -30,9 +32,9 @@ export default function CreditSearchPage() {
         <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mx-auto mb-4">
           <Search className="w-8 h-8 text-primary" />
         </div>
-        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-search-title">Credit Search</h1>
+        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-search-title">{t('search.title')}</h1>
         <p className="text-sm text-muted-foreground max-w-md mx-auto">
-          Search the credit registry by name, national ID, phone number, or email to generate credit reports
+          {t('search.subtitle')}
         </p>
       </div>
 
@@ -41,20 +43,20 @@ export default function CreditSearchPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             data-testid="input-credit-search"
-            placeholder="Enter name, ID number, phone, or email..."
+            placeholder={t('search.placeholder')}
             className="pl-9"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
-        <Button type="submit" data-testid="button-search">Search</Button>
+        <Button type="submit" data-testid="button-search">{t('search.searchBtn')}</Button>
       </form>
 
       {searchTerm && (
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm text-muted-foreground">
-              {isLoading ? "Searching..." : `${results?.length || 0} results for "${searchTerm}"`}
+              {isLoading ? t('search.searching') : `${results?.length || 0} ${t('search.resultsFor', { term: searchTerm })}`}
             </p>
           </div>
 
@@ -96,7 +98,7 @@ export default function CreditSearchPage() {
                       <div className="flex items-center gap-2 shrink-0">
                         <Button variant="outline" size="sm" data-testid={`button-view-report-${borrower.id}`}>
                           <FileText className="w-3.5 h-3.5 mr-1.5" />
-                          View Report
+                          {t('search.viewReport')}
                         </Button>
                         <ChevronRight className="w-4 h-4 text-muted-foreground" />
                       </div>
@@ -109,8 +111,8 @@ export default function CreditSearchPage() {
             <Card>
               <CardContent className="p-12 text-center">
                 <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-40" />
-                <h3 className="font-semibold">No results found</h3>
-                <p className="text-sm text-muted-foreground mt-1">Try different search terms or register a new borrower</p>
+                <h3 className="font-semibold">{t('search.noResults')}</h3>
+                <p className="text-sm text-muted-foreground mt-1">{t('search.noResultsSub')}</p>
               </CardContent>
             </Card>
           )}
@@ -121,7 +123,7 @@ export default function CreditSearchPage() {
         <Card className="max-w-xl mx-auto">
           <CardContent className="p-8 text-center">
             <p className="text-sm text-muted-foreground">
-              Enter a search query above to find borrowers and generate credit reports. All searches require borrower consent and are logged for audit purposes.
+              {t('search.consentNote')}
             </p>
           </CardContent>
         </Card>

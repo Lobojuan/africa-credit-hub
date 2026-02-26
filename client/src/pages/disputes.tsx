@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { AlertCircle, Plus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,15 +25,16 @@ function getStatusBadge(status: string) {
   }
 }
 
-const disputeTypes = [
-  { value: "data_error", label: "Data Error" },
-  { value: "identity_theft", label: "Identity Theft" },
-  { value: "unauthorized_inquiry", label: "Unauthorized Inquiry" },
-  { value: "duplicate_record", label: "Duplicate Record" },
-  { value: "other", label: "Other" },
-];
+const disputeTypeKeys = [
+  "data_error",
+  "identity_theft",
+  "unauthorized_inquiry",
+  "duplicate_record",
+  "other",
+] as const;
 
 export default function DisputesPage() {
+  const { t } = useTranslation();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [resolveDialogId, setResolveDialogId] = useState<string | null>(null);
   const [resolution, setResolution] = useState("");
@@ -70,10 +72,10 @@ export default function DisputesPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
       setDialogOpen(false);
       setFormData({ borrowerId: "", creditAccountId: "", disputeType: "data_error", description: "" });
-      toast({ title: "Dispute filed successfully" });
+      toast({ title: t('disputes.filedSuccess') });
     },
     onError: (e: Error) => {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+      toast({ title: t('common.error'), description: e.message, variant: "destructive" });
     },
   });
 
@@ -87,10 +89,10 @@ export default function DisputesPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
       setResolveDialogId(null);
       setResolution("");
-      toast({ title: "Dispute updated" });
+      toast({ title: t('disputes.updated') });
     },
     onError: (e: Error) => {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+      toast({ title: t('common.error'), description: e.message, variant: "destructive" });
     },
   });
 
@@ -104,25 +106,25 @@ export default function DisputesPage() {
     <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-disputes-title">Disputes</h1>
-          <p className="text-sm text-muted-foreground mt-1">Manage data disputes and grievances</p>
+          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-disputes-title">{t('disputes.title')}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{t('disputes.subtitle')}</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-file-dispute">
               <Plus className="w-4 h-4 mr-2" />
-              File Dispute
+              {t('disputes.fileDispute')}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>File a Dispute</DialogTitle>
+              <DialogTitle>{t('disputes.fileADispute')}</DialogTitle>
             </DialogHeader>
             <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(formData); }} className="space-y-4" data-testid="form-file-dispute">
               <div>
-                <Label>Borrower</Label>
+                <Label>{t('disputes.borrower')}</Label>
                 <Select value={formData.borrowerId} onValueChange={(v) => setFormData({ ...formData, borrowerId: v })}>
-                  <SelectTrigger data-testid="select-dispute-borrower"><SelectValue placeholder="Select borrower" /></SelectTrigger>
+                  <SelectTrigger data-testid="select-dispute-borrower"><SelectValue placeholder={t('disputes.selectBorrower')} /></SelectTrigger>
                   <SelectContent>
                     {borrowers?.map((b) => (
                       <SelectItem key={b.id} value={b.id}>
@@ -133,9 +135,9 @@ export default function DisputesPage() {
                 </Select>
               </div>
               <div>
-                <Label>Credit Account (optional)</Label>
+                <Label>{t('disputes.creditAccount')}</Label>
                 <Select value={formData.creditAccountId} onValueChange={(v) => setFormData({ ...formData, creditAccountId: v })}>
-                  <SelectTrigger data-testid="select-dispute-account"><SelectValue placeholder="Select account (optional)" /></SelectTrigger>
+                  <SelectTrigger data-testid="select-dispute-account"><SelectValue placeholder={t('disputes.selectAccount')} /></SelectTrigger>
                   <SelectContent>
                     {accounts?.filter(a => !formData.borrowerId || a.borrowerId === formData.borrowerId).map((a) => (
                       <SelectItem key={a.id} value={a.id}>
@@ -146,29 +148,29 @@ export default function DisputesPage() {
                 </Select>
               </div>
               <div>
-                <Label>Dispute Type</Label>
+                <Label>{t('disputes.disputeType')}</Label>
                 <Select value={formData.disputeType} onValueChange={(v) => setFormData({ ...formData, disputeType: v })}>
                   <SelectTrigger data-testid="select-dispute-type"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {disputeTypes.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    {disputeTypeKeys.map((key) => (
+                      <SelectItem key={key} value={key}>{t(`disputes.types.${key}`)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label>Description</Label>
+                <Label>{t('disputes.description')}</Label>
                 <Textarea
                   data-testid="input-dispute-description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Describe the issue in detail..."
+                  placeholder={t('disputes.descriptionPlaceholder')}
                   required
                   rows={4}
                 />
               </div>
               <Button type="submit" className="w-full" disabled={createMutation.isPending || !formData.borrowerId} data-testid="button-submit-dispute">
-                {createMutation.isPending ? "Filing..." : "File Dispute"}
+                {createMutation.isPending ? t('disputes.filing') : t('disputes.fileDispute')}
               </Button>
             </form>
           </DialogContent>
@@ -186,12 +188,12 @@ export default function DisputesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Borrower</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Filed</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>{t('disputes.borrower')}</TableHead>
+                    <TableHead>{t('disputes.disputeType')}</TableHead>
+                    <TableHead>{t('disputes.description')}</TableHead>
+                    <TableHead>{t('approvals.status')}</TableHead>
+                    <TableHead>{t('disputes.filed')}</TableHead>
+                    <TableHead>{t('approvals.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -200,7 +202,7 @@ export default function DisputesPage() {
                       <TableCell className="text-sm font-medium">{getBorrowerName(dispute.borrowerId)}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-[10px] capitalize">
-                          {dispute.disputeType.replace(/_/g, " ")}
+                          {t(`disputes.types.${dispute.disputeType}` as any, { defaultValue: dispute.disputeType.replace(/_/g, " ") })}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm max-w-[200px] truncate">{dispute.description}</TableCell>
@@ -221,7 +223,7 @@ export default function DisputesPage() {
                             onClick={() => { setResolveDialogId(dispute.id); setResolution(""); setResolveStatus("resolved"); }}
                             data-testid={`button-resolve-${dispute.id}`}
                           >
-                            Resolve
+                            {t('disputes.resolve')}
                           </Button>
                         )}
                         {dispute.resolution && (
@@ -236,8 +238,8 @@ export default function DisputesPage() {
           ) : (
             <div className="p-12 text-center">
               <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-40" />
-              <h3 className="font-semibold">No disputes filed</h3>
-              <p className="text-sm text-muted-foreground mt-1">File a dispute to track data issues</p>
+              <h3 className="font-semibold">{t('disputes.noDisputes')}</h3>
+              <p className="text-sm text-muted-foreground mt-1">{t('disputes.noDisputesSub')}</p>
             </div>
           )}
         </CardContent>
@@ -246,27 +248,27 @@ export default function DisputesPage() {
       <Dialog open={!!resolveDialogId} onOpenChange={() => setResolveDialogId(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Resolve Dispute</DialogTitle>
+            <DialogTitle>{t('disputes.resolveDispute')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Status</Label>
+              <Label>{t('approvals.status')}</Label>
               <Select value={resolveStatus} onValueChange={setResolveStatus}>
                 <SelectTrigger data-testid="select-resolve-status"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="under_review">Under Review</SelectItem>
-                  <SelectItem value="resolved">Resolved</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
+                  <SelectItem value="under_review">{t('disputes.underReview')}</SelectItem>
+                  <SelectItem value="resolved">{t('disputes.resolved')}</SelectItem>
+                  <SelectItem value="rejected">{t('disputes.rejected')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label>Resolution Notes</Label>
+              <Label>{t('disputes.resolutionNotes')}</Label>
               <Textarea
                 data-testid="input-resolution"
                 value={resolution}
                 onChange={(e) => setResolution(e.target.value)}
-                placeholder="Enter resolution details..."
+                placeholder={t('disputes.resolutionPlaceholder')}
                 rows={3}
               />
             </div>
@@ -276,7 +278,7 @@ export default function DisputesPage() {
               disabled={resolveMutation.isPending}
               data-testid="button-submit-resolution"
             >
-              {resolveMutation.isPending ? "Updating..." : "Update Dispute"}
+              {resolveMutation.isPending ? t('disputes.updating') : t('disputes.updateDispute')}
             </Button>
           </div>
         </DialogContent>

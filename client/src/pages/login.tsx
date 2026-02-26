@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Database, Lock, AlertTriangle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -14,6 +15,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const { login } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,9 +23,9 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await login(username, password);
-      toast({ title: "Login successful" });
+      toast({ title: t('login.success') });
     } catch (err: any) {
-      const msg = err.message || "Login failed";
+      const msg = err.message || t('common.error');
       const cleaned = msg.replace(/^\d+:\s*/, "").replace(/^"?|"?$/g, "");
       try {
         const parsed = JSON.parse(cleaned);
@@ -44,8 +46,8 @@ export default function LoginPage() {
             <Database className="w-7 h-7 text-primary-foreground" />
           </div>
           <div className="text-center">
-            <h1 className="text-2xl font-bold tracking-tight" data-testid="text-login-title">Credit Registry System</h1>
-            <p className="text-sm text-muted-foreground mt-1">National Bank of Ethiopia</p>
+            <h1 className="text-2xl font-bold tracking-tight" data-testid="text-login-title">{t('login.title')}</h1>
+            <p className="text-sm text-muted-foreground mt-1">{t('login.subtitle')}</p>
           </div>
         </div>
 
@@ -53,7 +55,7 @@ export default function LoginPage() {
           <CardHeader className="pb-4">
             <div className="flex items-center gap-2">
               <Lock className="w-4 h-4 text-muted-foreground" />
-              <h2 className="text-sm font-semibold">Sign In</h2>
+              <h2 className="text-sm font-semibold">{t('login.signIn')}</h2>
             </div>
           </CardHeader>
           <CardContent>
@@ -65,38 +67,38 @@ export default function LoginPage() {
                 </div>
               )}
               <div>
-                <Label htmlFor="username">Username</Label>
+                <Label htmlFor="username">{t('login.username')}</Label>
                 <Input
                   id="username"
                   data-testid="input-username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter username"
+                  placeholder={t('login.enterUsername')}
                   required
                   autoFocus
                 />
               </div>
               <div>
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t('login.password')}</Label>
                 <Input
                   id="password"
                   data-testid="input-password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter password"
+                  placeholder={t('login.enterPassword')}
                   required
                 />
               </div>
               <Button type="submit" className="w-full" disabled={loading} data-testid="button-login">
-                {loading ? "Signing in..." : "Sign In"}
+                {loading ? t('login.signingIn') : t('login.signIn')}
               </Button>
             </form>
           </CardContent>
         </Card>
 
         <p className="text-[11px] text-center text-muted-foreground">
-          Accounts are locked after 3 failed attempts for 15 minutes.
+          {t('login.lockoutWarning')}
         </p>
       </div>
     </div>

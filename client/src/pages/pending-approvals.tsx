@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { CheckSquare, Check, X, Clock, Eye } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ function getStatusBadge(status: string) {
 }
 
 export default function PendingApprovalsPage() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const { user } = useAuth();
   const [selectedApproval, setSelectedApproval] = useState<PendingApproval | null>(null);
@@ -42,10 +44,10 @@ export default function PendingApprovalsPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/audit-logs"] });
       setSelectedApproval(null);
       setReviewNotes("");
-      toast({ title: `Request ${vars.status}` });
+      toast({ title: t('approvals.requestStatus', { status: vars.status }) });
     },
     onError: (e: Error) => {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+      toast({ title: t('common.error'), description: e.message, variant: "destructive" });
     },
   });
 
@@ -57,8 +59,8 @@ export default function PendingApprovalsPage() {
   return (
     <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-approvals-title">Pending Approvals</h1>
-        <p className="text-sm text-muted-foreground mt-1">Maker-checker workflow — review and approve submitted changes</p>
+        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-approvals-title">{t('approvals.title')}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{t('approvals.subtitle')}</p>
       </div>
 
       <Card>
@@ -72,11 +74,11 @@ export default function PendingApprovalsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Entity</TableHead>
-                    <TableHead>Action</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Submitted</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>{t('approvals.entity')}</TableHead>
+                    <TableHead>{t('approvals.action')}</TableHead>
+                    <TableHead>{t('approvals.status')}</TableHead>
+                    <TableHead>{t('approvals.submitted')}</TableHead>
+                    <TableHead>{t('approvals.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -100,7 +102,7 @@ export default function PendingApprovalsPage() {
                           onClick={() => { setSelectedApproval(approval); setReviewNotes(""); }}
                           data-testid={`button-review-${approval.id}`}
                         >
-                          <Eye className="w-3 h-3 mr-1" /> Review
+                          <Eye className="w-3 h-3 mr-1" /> {t('approvals.review')}
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -111,8 +113,8 @@ export default function PendingApprovalsPage() {
           ) : (
             <div className="p-12 text-center">
               <CheckSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-40" />
-              <h3 className="font-semibold">No pending approvals</h3>
-              <p className="text-sm text-muted-foreground mt-1">All changes have been reviewed</p>
+              <h3 className="font-semibold">{t('approvals.noApprovals')}</h3>
+              <p className="text-sm text-muted-foreground mt-1">{t('approvals.noApprovalsSub')}</p>
             </div>
           )}
         </CardContent>
@@ -121,22 +123,22 @@ export default function PendingApprovalsPage() {
       <Dialog open={!!selectedApproval} onOpenChange={() => setSelectedApproval(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Review Change Request</DialogTitle>
+            <DialogTitle>{t('approvals.reviewChangeRequest')}</DialogTitle>
           </DialogHeader>
           {selectedApproval && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <span className="text-muted-foreground">Entity:</span>
+                  <span className="text-muted-foreground">{t('approvals.entity')}:</span>
                   <p className="font-medium capitalize">{selectedApproval.entityType}</p>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Action:</span>
+                  <span className="text-muted-foreground">{t('approvals.action')}:</span>
                   <p className="font-medium capitalize">{selectedApproval.action}</p>
                 </div>
               </div>
               <div>
-                <span className="text-sm text-muted-foreground">Payload:</span>
+                <span className="text-sm text-muted-foreground">{t('approvals.payload')}</span>
                 <pre className="mt-1 p-3 bg-muted rounded-md text-xs overflow-auto max-h-48" data-testid="text-approval-payload">
                   {JSON.stringify(JSON.parse(selectedApproval.payload || "{}"), null, 2)}
                 </pre>
@@ -145,7 +147,7 @@ export default function PendingApprovalsPage() {
                 <>
                   <div>
                     <Textarea
-                      placeholder="Review notes (optional)"
+                      placeholder={t('approvals.reviewNotes')}
                       value={reviewNotes}
                       onChange={(e) => setReviewNotes(e.target.value)}
                       data-testid="input-review-notes"
@@ -158,7 +160,7 @@ export default function PendingApprovalsPage() {
                       disabled={reviewMutation.isPending}
                       data-testid="button-approve"
                     >
-                      <Check className="w-4 h-4 mr-1" /> Approve
+                      <Check className="w-4 h-4 mr-1" /> {t('approvals.approve')}
                     </Button>
                     <Button
                       variant="destructive"
@@ -167,7 +169,7 @@ export default function PendingApprovalsPage() {
                       disabled={reviewMutation.isPending}
                       data-testid="button-reject"
                     >
-                      <X className="w-4 h-4 mr-1" /> Reject
+                      <X className="w-4 h-4 mr-1" /> {t('approvals.reject')}
                     </Button>
                   </div>
                 </>
@@ -175,14 +177,14 @@ export default function PendingApprovalsPage() {
               {selectedApproval.requestedBy === user?.id && selectedApproval.status === "pending" && (
                 <div className="flex items-center gap-2 p-3 bg-muted rounded-md text-sm">
                   <Clock className="w-4 h-4 text-muted-foreground" />
-                  <span>You submitted this request. A different user must review it.</span>
+                  <span>{t('approvals.selfSubmitNote')}</span>
                 </div>
               )}
               {selectedApproval.status !== "pending" && (
                 <div className="text-sm">
                   <Badge variant={getStatusBadge(selectedApproval.status)} className="capitalize">{selectedApproval.status}</Badge>
                   {selectedApproval.reviewNotes && (
-                    <p className="mt-2 text-muted-foreground">Notes: {selectedApproval.reviewNotes}</p>
+                    <p className="mt-2 text-muted-foreground">{t('approvals.notes')} {selectedApproval.reviewNotes}</p>
                   )}
                 </div>
               )}

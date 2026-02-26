@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Upload, FileText, CheckCircle, AlertTriangle, Download } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ const sampleJson = `[
 ]`;
 
 export default function BatchUploadPage() {
+  const { t } = useTranslation();
   const [jsonInput, setJsonInput] = useState("");
   const [result, setResult] = useState<BatchResult | null>(null);
   const { toast } = useToast();
@@ -48,12 +50,12 @@ export default function BatchUploadPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/credit-accounts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
       toast({
-        title: "Batch upload complete",
-        description: `${data.successCount} succeeded, ${data.errorCount} failed`,
+        title: t('batchUpload.complete'),
+        description: t('batchUpload.completeDesc', { success: data.successCount, errors: data.errorCount }),
       });
     },
     onError: (e: Error) => {
-      toast({ title: "Upload failed", description: e.message, variant: "destructive" });
+      toast({ title: t('batchUpload.uploadFailed'), description: e.message, variant: "destructive" });
     },
   });
 
@@ -61,13 +63,13 @@ export default function BatchUploadPage() {
     try {
       const parsed = JSON.parse(jsonInput);
       if (!Array.isArray(parsed)) {
-        toast({ title: "Error", description: "JSON must be an array of records", variant: "destructive" });
+        toast({ title: t('common.error'), description: t('batchUpload.mustBeArray'), variant: "destructive" });
         return;
       }
       setResult(null);
       uploadMutation.mutate(parsed);
     } catch {
-      toast({ title: "Error", description: "Invalid JSON format", variant: "destructive" });
+      toast({ title: t('common.error'), description: t('batchUpload.invalidJson'), variant: "destructive" });
     }
   };
 
@@ -90,7 +92,7 @@ export default function BatchUploadPage() {
           });
           setJsonInput(JSON.stringify(records, null, 2));
         } catch {
-          toast({ title: "Error", description: "Failed to parse CSV", variant: "destructive" });
+          toast({ title: t('common.error'), description: t('batchUpload.csvParseFailed'), variant: "destructive" });
         }
       } else {
         setJsonInput(text);
@@ -121,24 +123,24 @@ export default function BatchUploadPage() {
   return (
     <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-batch-title">Batch Upload</h1>
+        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-batch-title">{t('batchUpload.title')}</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Upload credit account data in bulk via JSON or CSV. Invalid records are rejected with error details.
+          {t('batchUpload.subtitle')}
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader className="pb-3">
-            <h3 className="font-semibold text-sm">Upload Data</h3>
+            <h3 className="font-semibold text-sm">{t('batchUpload.uploadData')}</h3>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
               <label htmlFor="file-upload" className="block">
                 <div className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:bg-muted/50 transition-colors">
                   <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm font-medium">Upload CSV or JSON file</p>
-                  <p className="text-xs text-muted-foreground mt-1">Click to browse or drag and drop</p>
+                  <p className="text-sm font-medium">{t('batchUpload.uploadFile')}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t('batchUpload.uploadFileSub')}</p>
                 </div>
                 <input
                   id="file-upload"
@@ -151,12 +153,12 @@ export default function BatchUploadPage() {
               </label>
             </div>
             <div className="relative">
-              <p className="text-xs text-muted-foreground mb-1">Or paste JSON directly:</p>
+              <p className="text-xs text-muted-foreground mb-1">{t('batchUpload.pasteJson')}</p>
               <Textarea
                 data-testid="input-batch-json"
                 value={jsonInput}
                 onChange={(e) => setJsonInput(e.target.value)}
-                placeholder="Paste JSON array of credit account records..."
+                placeholder={t('batchUpload.pastePlaceholder')}
                 rows={12}
                 className="font-mono text-xs"
               />
@@ -167,7 +169,7 @@ export default function BatchUploadPage() {
               disabled={uploadMutation.isPending || !jsonInput.trim()}
               data-testid="button-submit-batch"
             >
-              {uploadMutation.isPending ? "Processing..." : "Submit Batch"}
+              {uploadMutation.isPending ? t('batchUpload.processing') : t('batchUpload.submitBatch')}
             </Button>
           </CardContent>
         </Card>
@@ -175,7 +177,7 @@ export default function BatchUploadPage() {
         <div className="space-y-4">
           <Card>
             <CardHeader className="pb-3">
-              <h3 className="font-semibold text-sm">Sample Format</h3>
+              <h3 className="font-semibold text-sm">{t('batchUpload.sampleFormat')}</h3>
             </CardHeader>
             <CardContent>
               <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-64" data-testid="text-sample-format">
@@ -188,7 +190,7 @@ export default function BatchUploadPage() {
                 onClick={() => setJsonInput(sampleJson)}
                 data-testid="button-use-sample"
               >
-                Use Sample Data
+                {t('batchUpload.useSample')}
               </Button>
             </CardContent>
           </Card>
@@ -197,10 +199,10 @@ export default function BatchUploadPage() {
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-sm">Upload Results</h3>
+                  <h3 className="font-semibold text-sm">{t('batchUpload.uploadResults')}</h3>
                   {result.errorCount > 0 && (
                     <Button variant="outline" size="sm" className="text-xs" onClick={downloadErrorReport} data-testid="button-download-errors">
-                      <Download className="w-3 h-3 mr-1" /> Error Report
+                      <Download className="w-3 h-3 mr-1" /> {t('batchUpload.errorReport')}
                     </Button>
                   )}
                 </div>
@@ -209,15 +211,15 @@ export default function BatchUploadPage() {
                 <div className="grid grid-cols-3 gap-3 mb-4">
                   <div className="text-center p-3 bg-muted rounded-md">
                     <p className="text-lg font-bold" data-testid="text-total-submitted">{result.totalSubmitted}</p>
-                    <p className="text-xs text-muted-foreground">Submitted</p>
+                    <p className="text-xs text-muted-foreground">{t('batchUpload.submitted')}</p>
                   </div>
                   <div className="text-center p-3 bg-green-500/10 rounded-md">
                     <p className="text-lg font-bold text-green-600" data-testid="text-success-count">{result.successCount}</p>
-                    <p className="text-xs text-muted-foreground">Succeeded</p>
+                    <p className="text-xs text-muted-foreground">{t('batchUpload.succeeded')}</p>
                   </div>
                   <div className="text-center p-3 bg-red-500/10 rounded-md">
                     <p className="text-lg font-bold text-red-600" data-testid="text-error-count">{result.errorCount}</p>
-                    <p className="text-xs text-muted-foreground">Failed</p>
+                    <p className="text-xs text-muted-foreground">{t('batchUpload.failed')}</p>
                   </div>
                 </div>
 
@@ -226,8 +228,8 @@ export default function BatchUploadPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-16">Row</TableHead>
-                          <TableHead>Error</TableHead>
+                          <TableHead className="w-16">{t('batchUpload.row')}</TableHead>
+                          <TableHead>{t('batchUpload.error')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>

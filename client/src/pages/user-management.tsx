@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Plus, Settings, UserCircle } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ function getRoleColor(role: string) {
 }
 
 export default function UserManagementPage() {
+  const { t } = useTranslation();
   const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
 
@@ -54,10 +56,10 @@ export default function UserManagementPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       setDialogOpen(false);
       setFormData({ username: "", password: "", fullName: "", email: "", role: "viewer", status: "active", institution: "" });
-      toast({ title: "User created successfully" });
+      toast({ title: t('users.createdSuccess') });
     },
     onError: (e: Error) => {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+      toast({ title: t('common.error'), description: e.message, variant: "destructive" });
     },
   });
 
@@ -68,7 +70,7 @@ export default function UserManagementPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-      toast({ title: "User status updated" });
+      toast({ title: t('users.statusUpdated') });
     },
   });
 
@@ -76,55 +78,55 @@ export default function UserManagementPage() {
     <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-users-title">User Management</h1>
-          <p className="text-sm text-muted-foreground mt-1">Manage system users, roles, and access levels</p>
+          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-users-title">{t('users.title')}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{t('users.subtitle')}</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-add-user">
               <Plus className="w-4 h-4 mr-2" />
-              Add User
+              {t('users.addUser')}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add New User</DialogTitle>
+              <DialogTitle>{t('users.addNewUser')}</DialogTitle>
             </DialogHeader>
             <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(formData); }} className="space-y-4" data-testid="form-add-user">
               <div className="grid grid-cols-2 gap-3">
-                <div><Label>Username</Label><Input data-testid="input-username" value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} required /></div>
-                <div><Label>Password</Label><Input data-testid="input-password" type="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} required /></div>
+                <div><Label>{t('users.username')}</Label><Input data-testid="input-username" value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} required /></div>
+                <div><Label>{t('users.password')}</Label><Input data-testid="input-password" type="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} required /></div>
               </div>
-              <div><Label>Full Name</Label><Input data-testid="input-fullname" value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} required /></div>
-              <div><Label>Email</Label><Input data-testid="input-email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required /></div>
-              <div><Label>Institution</Label><Input data-testid="input-institution" value={formData.institution} onChange={(e) => setFormData({ ...formData, institution: e.target.value })} /></div>
+              <div><Label>{t('users.fullName')}</Label><Input data-testid="input-fullname" value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} required /></div>
+              <div><Label>{t('users.email')}</Label><Input data-testid="input-email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required /></div>
+              <div><Label>{t('users.institution')}</Label><Input data-testid="input-institution" value={formData.institution} onChange={(e) => setFormData({ ...formData, institution: e.target.value })} /></div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>Role</Label>
+                  <Label>{t('users.role')}</Label>
                   <Select value={formData.role} onValueChange={(v) => setFormData({ ...formData, role: v })}>
                     <SelectTrigger data-testid="select-role"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="regulator">Regulator</SelectItem>
-                      <SelectItem value="lender">Lender</SelectItem>
-                      <SelectItem value="viewer">Viewer</SelectItem>
+                      <SelectItem value="admin">{t('users.roles.admin')}</SelectItem>
+                      <SelectItem value="regulator">{t('users.roles.regulator')}</SelectItem>
+                      <SelectItem value="lender">{t('users.roles.lender')}</SelectItem>
+                      <SelectItem value="viewer">{t('users.roles.viewer')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label>Status</Label>
+                  <Label>{t('users.status')}</Label>
                   <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })}>
                     <SelectTrigger data-testid="select-status"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="suspended">Suspended</SelectItem>
-                      <SelectItem value="deactivated">Deactivated</SelectItem>
+                      <SelectItem value="active">{t('users.statuses.active')}</SelectItem>
+                      <SelectItem value="suspended">{t('users.statuses.suspended')}</SelectItem>
+                      <SelectItem value="deactivated">{t('users.statuses.deactivated')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               <Button type="submit" className="w-full" disabled={createMutation.isPending} data-testid="button-submit-user">
-                {createMutation.isPending ? "Creating..." : "Create User"}
+                {createMutation.isPending ? t('users.creating') : t('users.createUser')}
               </Button>
             </form>
           </DialogContent>
@@ -142,13 +144,13 @@ export default function UserManagementPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>Username</TableHead>
-                    <TableHead>Institution</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>{t('users.user')}</TableHead>
+                    <TableHead>{t('users.username')}</TableHead>
+                    <TableHead>{t('users.institution')}</TableHead>
+                    <TableHead>{t('users.role')}</TableHead>
+                    <TableHead>{t('users.status')}</TableHead>
+                    <TableHead>{t('users.created')}</TableHead>
+                    <TableHead>{t('users.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -180,9 +182,9 @@ export default function UserManagementPage() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="active">Active</SelectItem>
-                            <SelectItem value="suspended">Suspended</SelectItem>
-                            <SelectItem value="deactivated">Deactivated</SelectItem>
+                            <SelectItem value="active">{t('users.statuses.active')}</SelectItem>
+                            <SelectItem value="suspended">{t('users.statuses.suspended')}</SelectItem>
+                            <SelectItem value="deactivated">{t('users.statuses.deactivated')}</SelectItem>
                           </SelectContent>
                         </Select>
                       </TableCell>
@@ -194,8 +196,8 @@ export default function UserManagementPage() {
           ) : (
             <div className="p-12 text-center">
               <UserCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-40" />
-              <h3 className="font-semibold">No users found</h3>
-              <p className="text-sm text-muted-foreground mt-1">Add your first user to get started</p>
+              <h3 className="font-semibold">{t('users.noUsers')}</h3>
+              <p className="text-sm text-muted-foreground mt-1">{t('users.noUsersSub')}</p>
             </div>
           )}
         </CardContent>
