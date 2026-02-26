@@ -33,6 +33,7 @@ A web-based Credit Registry System designed for the National Bank of Ethiopia to
 - **Portfolio reports**: By institution and loan type with NPL ratios
 - **Audit trail**: Full activity log with IP tracking, timestamps, action types
 - **User management**: Role-based access, status control (active/suspended/deactivated)
+- **RBAC enforcement**: Server-side role checks on sensitive routes (admin-only user management, admin/regulator audit logs and approval review, admin/lender batch upload)
 - **Dark/light theme**: Full theme support
 - **Health check**: GET /api/health returns { status: "ok" }
 
@@ -77,8 +78,21 @@ All prefixed with `/api` and require authentication (except /api/auth/* and /api
 - dashen_user / dashen123 (Lender - Dashen)
 - awash_user / awash123 (Lender - Awash)
 
+## RBAC Access Matrix
+| Route | Admin | Regulator | Lender | Viewer |
+|-------|-------|-----------|--------|--------|
+| User Management | ✅ | ❌ | ❌ | ❌ |
+| Audit Logs | ✅ | ✅ | ❌ | ❌ |
+| Approve/Reject Changes | ✅ | ✅ | ❌ | ❌ |
+| Batch Upload | ✅ | ❌ | ✅ | ❌ |
+| Borrowers/Accounts | ✅ | ✅ | ✅ | ✅ |
+| Disputes | ✅ | ✅ | ✅ | ✅ |
+| Dashboard/Reports | ✅ | ✅ | ✅ | ✅ |
+
 ## Important Notes
+- SIGHUP signal is ignored in server process to prevent workflow-triggered termination
 - Session store uses memorystore (not PostgreSQL) to reduce memory pressure
 - Database pool limited to 2 connections for resource efficiency
 - Response logging truncated to 200 chars to reduce I/O
 - static.ts handles both ESM (__dirname) and CJS (import.meta.url) contexts
+- Maker-checker enforcement: server rejects self-approval (requestedBy !== reviewedBy)

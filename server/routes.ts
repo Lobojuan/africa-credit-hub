@@ -17,6 +17,15 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+function requireRole(...roles: string[]) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.session?.userRole || !roles.includes(req.session.userRole)) {
+      return res.status(403).json({ message: "Insufficient permissions" });
+    }
+    next();
+  };
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -129,7 +138,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/users", async (_req, res) => {
+  app.get("/api/users", requireRole("admin"), async (_req, res) => {
     try {
       const users = await storage.getUsers();
       res.json(users.map(stripPassword));
@@ -138,7 +147,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/users", async (req, res) => {
+  app.post("/api/users", requireRole("admin"), async (req, res) => {
     try {
       const parsed = insertUserSchema.parse(req.body);
       const hashedPassword = await bcrypt.hash(parsed.password, 10);
@@ -154,7 +163,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/users/:id", async (req, res) => {
+  app.patch("/api/users/:id", requireRole("admin"), async (req, res) => {
     try {
       const data = { ...req.body };
       if (data.password) {
@@ -368,7 +377,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/audit-logs", async (_req, res) => {
+  app.get("/api/audit-logs", requireRole("admin", "regulator"), async (_req, res) => {
     try {
       const logs = await storage.getAuditLogs();
       res.json(logs);
@@ -405,7 +414,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/pending-approvals/:id", async (req, res) => {
+  app.patch("/api/pending-approvals/:id", requireRole("admin", "regulator"), async (req, res) => {
     try {
       const { status, reviewNotes } = req.body;
       const currentUserId = req.session?.userId;
@@ -510,7 +519,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/batch-upload/credit-accounts", async (req, res) => {
+  app.post("/api/batch-upload/credit-accounts", requireRole("admin", "lender"), async (req, res) => {
     try {
       const { records } = req.body;
       if (!Array.isArray(records)) {

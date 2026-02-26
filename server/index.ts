@@ -90,7 +90,8 @@ app.use((req, res, next) => {
   next();
 });
 
-process.on("SIGTERM", () => { console.log("Process received SIGTERM"); process.exit(0); });
+process.on("SIGHUP", () => { /* ignore hangup signal */ });
+process.on("SIGPIPE", () => { /* ignore broken pipe */ });
 process.on("uncaughtException", (err) => { console.error("Uncaught exception:", err); });
 process.on("unhandledRejection", (err) => { console.error("Unhandled rejection:", err); });
 
