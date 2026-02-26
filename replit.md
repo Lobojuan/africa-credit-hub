@@ -8,8 +8,9 @@ A web-based Credit Registry System designed for the National Bank of Ethiopia to
 - **Backend**: Express.js API server with session-based auth
 - **Database**: PostgreSQL (Neon) with Drizzle ORM
 - **Routing**: wouter for client-side, Express for API
-- **Auth**: bcryptjs password hashing, express-session with connect-pg-simple store
+- **Auth**: bcryptjs password hashing, express-session with memorystore
 - **Security**: 3-attempt lockout (15min), session-based auth, IP tracking in audit logs
+- **Build**: esbuild bundles server to dist/index.cjs, Vite builds frontend to dist/public/
 
 ## Data Model
 - **users** - System users with roles (admin/regulator/lender/viewer), status, login lockout fields
@@ -33,6 +34,7 @@ A web-based Credit Registry System designed for the National Bank of Ethiopia to
 - **Audit trail**: Full activity log with IP tracking, timestamps, action types
 - **User management**: Role-based access, status control (active/suspended/deactivated)
 - **Dark/light theme**: Full theme support
+- **Health check**: GET /api/health returns { status: "ok" }
 
 ## Pages
 - `/` (login required) - Dashboard
@@ -48,7 +50,8 @@ A web-based Credit Registry System designed for the National Bank of Ethiopia to
 - `/users` - User management
 
 ## API Endpoints
-All prefixed with `/api` and require authentication (except /api/auth/*):
+All prefixed with `/api` and require authentication (except /api/auth/* and /api/health):
+- `GET /health` - Health check
 - `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`
 - `GET/POST /borrowers`, `GET/PATCH /borrowers/:id`
 - `GET/POST /credit-accounts`, `GET/PATCH /credit-accounts/:id`
@@ -61,9 +64,21 @@ All prefixed with `/api` and require authentication (except /api/auth/*):
 - `GET /audit-logs`
 - `GET /dashboard/stats`
 
+## Running
+- **Dev**: `npm run dev` (tsx + Vite HMR, NODE_ENV=development)
+- **Build**: `npm run build` (esbuild + Vite)
+- **Prod**: `NODE_ENV=production node dist/index.cjs`
+- **Deploy**: Configured for autoscale with `node ./dist/index.cjs`
+
 ## Seed Credentials
 - admin / admin123 (Admin - NBE)
 - regulator1 / reg123 (Regulator - NBE)
 - cbe_user / cbe123 (Lender - CBE)
 - dashen_user / dashen123 (Lender - Dashen)
 - awash_user / awash123 (Lender - Awash)
+
+## Important Notes
+- Session store uses memorystore (not PostgreSQL) to reduce memory pressure
+- Database pool limited to 2 connections for resource efficiency
+- Response logging truncated to 200 chars to reduce I/O
+- static.ts handles both ESM (__dirname) and CJS (import.meta.url) contexts
