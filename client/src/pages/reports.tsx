@@ -66,6 +66,14 @@ export default function ReportsPage() {
           <h1 className="text-2xl font-bold tracking-tight" data-testid="text-reports-title">{t('reports.title')}</h1>
           <p className="text-sm text-muted-foreground mt-1">{t('reports.subtitle')}</p>
         </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" data-testid="button-export-portfolio" onClick={() => window.open("/api/reports/export?format=csv&type=portfolio", "_blank")}>
+            <Download className="w-4 h-4 mr-2" />{t('reports.exportPortfolio')}
+          </Button>
+          <Button variant="outline" size="sm" data-testid="button-export-borrowers" onClick={() => window.open("/api/reports/export?format=csv&type=borrowers", "_blank")}>
+            <Download className="w-4 h-4 mr-2" />{t('reports.exportBorrowers')}
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

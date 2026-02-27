@@ -1,7 +1,12 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertBorrowerSchema, insertCreditAccountSchema, insertCreditInquirySchema, insertUserSchema, insertPendingApprovalSchema, insertDisputeSchema } from "@shared/schema";
+import {
+  insertBorrowerSchema, insertCreditAccountSchema, insertCreditInquirySchema,
+  insertUserSchema, insertPendingApprovalSchema, insertDisputeSchema,
+  insertCourtJudgmentSchema, insertConsentRecordSchema, insertPaymentHistorySchema,
+  insertInstitutionSchema, insertBillingRecordSchema, insertCreditReportLogSchema,
+} from "@shared/schema";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 
@@ -700,6 +705,410 @@ export async function registerRoutes(
     try {
       const related = await storage.getRelatedBorrowers(req.params.id);
       res.json(related);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/court-judgments", async (req, res) => {
+    try {
+      const borrowerId = req.query.borrowerId as string;
+      const result = borrowerId
+        ? await storage.getCourtJudgmentsByBorrower(borrowerId)
+        : await storage.getAllCourtJudgments();
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/court-judgments", requireRole("admin", "regulator"), async (req, res) => {
+    try {
+      const parsed = insertCourtJudgmentSchema.parse(req.body);
+      const judgment = await storage.createCourtJudgment(parsed);
+      await storage.createAuditLog({
+        action: "CREATE", entity: "court_judgment", entityId: judgment.id, userId: req.session?.userId,
+        details: `Created court judgment: ${judgment.judgmentType} - case ${judgment.caseNumber}`,
+        ipAddress: req.ip || null,
+      });
+      res.status(201).json(judgment);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/consent-records", async (req, res) => {
+    try {
+      const borrowerId = req.query.borrowerId as string;
+      const result = borrowerId
+        ? await storage.getConsentRecordsByBorrower(borrowerId)
+        : await storage.getAllConsentRecords();
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/consent-records", async (req, res) => {
+    try {
+      const receiptNumber = `CR-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      const parsed = insertConsentRecordSchema.parse({ ...req.body, receiptNumber });
+      const record = await storage.createConsentRecord(parsed);
+      await storage.createAuditLog({
+        action: "GRANT_CONSENT", entity: "consent_record", entityId: record.id, userId: req.session?.userId,
+        details: `Consent granted to ${record.grantedTo} for ${record.purpose} (Receipt: ${record.receiptNumber})`,
+        ipAddress: req.ip || null,
+      });
+      res.status(201).json(record);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/consent-records/:id/revoke", async (req, res) => {
+    try {
+      const record = await storage.revokeConsent(req.params.id);
+      if (!record) return res.status(404).json({ message: "Consent record not found" });
+      await storage.createAuditLog({
+        action: "REVOKE_CONSENT", entity: "consent_record", entityId: record.id, userId: req.session?.userId,
+        details: `Consent revoked for ${record.grantedTo} (Receipt: ${record.receiptNumber})`,
+        ipAddress: req.ip || null,
+      });
+      res.json(record);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/payment-history/:creditAccountId", async (req, res) => {
+    try {
+      const history = await storage.getPaymentHistoryByAccount(req.params.creditAccountId);
+      res.json(history);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/payment-history/:creditAccountId", async (req, res) => {
+    try {
+      const parsed = insertPaymentHistorySchema.parse({
+        ...req.body,
+        creditAccountId: req.params.creditAccountId,
+      });
+      const entry = await storage.createPaymentHistory(parsed);
+      res.status(201).json(entry);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/institutions", async (_req, res) => {
+    try {
+      const list = await storage.getInstitutions();
+      res.json(list);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/institutions", async (req, res) => {
+    try {
+      const parsed = insertInstitutionSchema.parse(req.body);
+      const inst = await storage.createInstitution(parsed);
+      await storage.createAuditLog({
+        action: "CREATE", entity: "institution", entityId: inst.id, userId: req.session?.userId,
+        details: `Registered institution: ${inst.name} (${inst.type})`,
+        ipAddress: req.ip || null,
+      });
+      res.status(201).json(inst);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.patch("/api/institutions/:id", requireRole("admin"), async (req, res) => {
+    try {
+      const inst = await storage.updateInstitution(req.params.id, req.body);
+      if (!inst) return res.status(404).json({ message: "Institution not found" });
+      await storage.createAuditLog({
+        action: "UPDATE", entity: "institution", entityId: inst.id, userId: req.session?.userId,
+        details: `Updated institution: ${inst.name}`,
+        ipAddress: req.ip || null,
+      });
+      res.json(inst);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/institutions/:id/approve", requireRole("admin"), async (req, res) => {
+    try {
+      const inst = await storage.approveInstitution(req.params.id, req.session?.userId!);
+      if (!inst) return res.status(404).json({ message: "Institution not found" });
+      await storage.createAuditLog({
+        action: "APPROVE", entity: "institution", entityId: inst.id, userId: req.session?.userId,
+        details: `Approved institution: ${inst.name}`,
+        ipAddress: req.ip || null,
+      });
+      res.json(inst);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/billing", requireRole("admin", "regulator"), async (_req, res) => {
+    try {
+      const records = await storage.getBillingRecords();
+      res.json(records);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/billing", requireRole("admin"), async (req, res) => {
+    try {
+      const parsed = insertBillingRecordSchema.parse(req.body);
+      const record = await storage.createBillingRecord(parsed);
+      await storage.createAuditLog({
+        action: "CREATE", entity: "billing_record", entityId: record.id, userId: req.session?.userId,
+        details: `Created billing record: ${record.invoiceNumber} for ${record.institutionName}`,
+        ipAddress: req.ip || null,
+      });
+      res.status(201).json(record);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/credit-reports/logs", requireRole("admin", "regulator"), async (_req, res) => {
+    try {
+      const logs = await storage.getCreditReportLogs();
+      res.json(logs);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/credit-reports/generate", async (req, res) => {
+    try {
+      const { borrowerId, purpose } = req.body;
+      if (!borrowerId || !purpose) {
+        return res.status(400).json({ message: "borrowerId and purpose are required" });
+      }
+
+      const borrower = await storage.getBorrower(borrowerId);
+      if (!borrower) return res.status(404).json({ message: "Borrower not found" });
+
+      const user = await storage.getUser(req.session?.userId!);
+      const serialNumber = `CR-${new Date().getFullYear()}-${Date.now().toString(36).toUpperCase()}`;
+
+      const accounts = await storage.getCreditAccountsByBorrower(borrowerId);
+      const inquiries = await storage.getCreditInquiriesByBorrower(borrowerId);
+      const judgments = await storage.getCourtJudgmentsByBorrower(borrowerId);
+
+      const totalDebt = accounts.reduce((sum, a) => sum + parseFloat(a.currentBalance || "0"), 0);
+      const delinquentCount = accounts.filter(a => a.status === "delinquent" || a.status === "default").length;
+      const onTimeCount = accounts.filter(a => a.status === "current").length;
+      const writtenOffCount = accounts.filter(a => a.status === "written_off").length;
+      const restructuredCount = accounts.filter(a => a.status === "restructured").length;
+
+      let creditScore = 600;
+      const reasonCodes: string[] = [];
+      if (accounts.length > 0) {
+        const onTimeRatio = onTimeCount / accounts.length;
+        creditScore = Math.round(300 + (onTimeRatio * 500) - (delinquentCount * 50) - (inquiries.length * 5) - (writtenOffCount * 75) - (judgments.length * 40));
+        creditScore = Math.max(300, Math.min(850, creditScore));
+
+        if (delinquentCount > 0) reasonCodes.push("DELINQUENT_ACCOUNTS");
+        if (writtenOffCount > 0) reasonCodes.push("WRITTEN_OFF_ACCOUNTS");
+        if (restructuredCount > 0) reasonCodes.push("RESTRUCTURED_ACCOUNTS");
+        if (inquiries.length > 5) reasonCodes.push("HIGH_INQUIRY_VOLUME");
+        if (totalDebt > 1000000) reasonCodes.push("HIGH_DEBT_LEVEL");
+        if (judgments.length > 0) reasonCodes.push("COURT_JUDGMENTS_PRESENT");
+        if (borrower.isPep) reasonCodes.push("POLITICALLY_EXPOSED_PERSON");
+        if (onTimeRatio > 0.8) reasonCodes.push("STRONG_REPAYMENT_HISTORY");
+        if (accounts.length >= 3 && onTimeRatio === 1) reasonCodes.push("EXCELLENT_PAYMENT_RECORD");
+      } else {
+        reasonCodes.push("THIN_FILE_LIMITED_HISTORY");
+      }
+
+      const log = await storage.createCreditReportLog({
+        borrowerId,
+        requestedBy: req.session?.userId!,
+        institution: user?.institution || "Unknown",
+        purpose,
+        serialNumber,
+      });
+
+      await storage.createAuditLog({
+        action: "GENERATE_REPORT", entity: "credit_report", entityId: log.id, userId: req.session?.userId,
+        details: `Generated credit report serial ${serialNumber} for ${borrower.firstName || borrower.companyName}`,
+        ipAddress: req.ip || null,
+      });
+
+      res.json({
+        serialNumber,
+        generatedAt: new Date().toISOString(),
+        borrower,
+        accounts,
+        inquiries,
+        courtJudgments: judgments,
+        summary: {
+          totalAccounts: accounts.length,
+          activeAccounts: accounts.filter(a => a.status !== "closed").length,
+          totalDebt: totalDebt.toFixed(2),
+          delinquentAccounts: delinquentCount,
+          writtenOffAccounts: writtenOffCount,
+          restructuredAccounts: restructuredCount,
+          creditScore,
+          reasonCodes,
+          inquiryCount: inquiries.length,
+          judgmentCount: judgments.length,
+          isPep: borrower.isPep,
+        },
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/credit-search/bulk", async (req, res) => {
+    try {
+      const { identifiers } = req.body;
+      if (!Array.isArray(identifiers) || identifiers.length === 0) {
+        return res.status(400).json({ message: "identifiers array is required" });
+      }
+
+      const results: any[] = [];
+      for (const id of identifiers) {
+        const borrowersFound = await storage.searchBorrowers(id);
+        if (borrowersFound.length > 0) {
+          const borrower = borrowersFound[0];
+          const accounts = await storage.getCreditAccountsByBorrower(borrower.id);
+          results.push({
+            searchTerm: id,
+            found: true,
+            borrower,
+            accountCount: accounts.length,
+            totalDebt: accounts.reduce((sum, a) => sum + parseFloat(a.currentBalance || "0"), 0).toFixed(2),
+          });
+        } else {
+          results.push({ searchTerm: id, found: false });
+        }
+      }
+
+      await storage.createAuditLog({
+        action: "BULK_SEARCH", entity: "credit_search", userId: req.session?.userId,
+        details: `Bulk credit search for ${identifiers.length} identifiers, ${results.filter(r => r.found).length} found`,
+        ipAddress: req.ip || null,
+      });
+
+      res.json({ totalSearched: identifiers.length, totalFound: results.filter(r => r.found).length, results });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/reports/export", requireRole("admin", "regulator"), async (req, res) => {
+    try {
+      const format = (req.query.format as string) || "csv";
+      const type = (req.query.type as string) || "portfolio";
+
+      const accounts = await storage.getAllCreditAccounts();
+      const borrowersList = await storage.getBorrowers();
+
+      if (format === "csv") {
+        let csv = "";
+        if (type === "portfolio") {
+          csv = "Account Number,Borrower ID,Institution,Type,Original Amount,Current Balance,Currency,Status,Days in Arrears,Interest Free,Grace Period,Restructure Count\n";
+          for (const a of accounts) {
+            csv += `"${a.accountNumber}","${a.borrowerId}","${a.lenderInstitution}","${a.accountType}","${a.originalAmount}","${a.currentBalance}","${a.currency}","${a.status}","${a.daysInArrears}","${a.isInterestFree}","${a.gracePeriodMonths || ''}","${a.restructureCount}"\n`;
+          }
+        } else if (type === "borrowers") {
+          csv = "Name,Type,National ID,TIN,Gender,City,Region,PEP,Education,Sector\n";
+          for (const b of borrowersList) {
+            const name = b.type === "individual" ? `${b.firstName} ${b.lastName}` : b.companyName;
+            csv += `"${name}","${b.type}","${b.nationalId}","${b.tinNumber || ''}","${b.gender || ''}","${b.city || ''}","${b.region || ''}","${b.isPep}","${b.educationLevel || ''}","${b.sector || ''}"\n`;
+          }
+        }
+
+        res.setHeader("Content-Type", "text/csv");
+        res.setHeader("Content-Disposition", `attachment; filename=${type}_report_${Date.now()}.csv`);
+        res.send(csv);
+      } else {
+        res.status(400).json({ message: "Unsupported format. Use csv." });
+      }
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/reports/regulatory", requireRole("admin", "regulator"), async (_req, res) => {
+    try {
+      const accounts = await storage.getAllCreditAccounts();
+      const borrowersList = await storage.getBorrowers();
+      const disputeList = await storage.getDisputes();
+      const approvals = await storage.getPendingApprovals();
+      const instList = await storage.getInstitutions();
+
+      const totalOutstanding = accounts.reduce((sum, a) => sum + parseFloat(a.currentBalance || "0"), 0);
+      const nplAccounts = accounts.filter(a => a.status === "delinquent" || a.status === "default" || a.status === "written_off");
+      const nplRatio = accounts.length > 0 ? (nplAccounts.length / accounts.length * 100).toFixed(2) : "0";
+
+      const byInstitution: Record<string, { count: number; outstanding: number; npl: number }> = {};
+      for (const a of accounts) {
+        if (!byInstitution[a.lenderInstitution]) {
+          byInstitution[a.lenderInstitution] = { count: 0, outstanding: 0, npl: 0 };
+        }
+        byInstitution[a.lenderInstitution].count++;
+        byInstitution[a.lenderInstitution].outstanding += parseFloat(a.currentBalance || "0");
+        if (a.status === "delinquent" || a.status === "default" || a.status === "written_off") {
+          byInstitution[a.lenderInstitution].npl++;
+        }
+      }
+
+      const byType: Record<string, number> = {};
+      for (const a of accounts) {
+        byType[a.accountType] = (byType[a.accountType] || 0) + 1;
+      }
+
+      const openDisputes = disputeList.filter(d => d.status === "open" || d.status === "under_review");
+      const slaBreach = openDisputes.filter(d => d.slaDeadline && new Date(d.slaDeadline) < new Date());
+
+      res.json({
+        summary: {
+          totalBorrowers: borrowersList.length,
+          individualBorrowers: borrowersList.filter(b => b.type === "individual").length,
+          corporateBorrowers: borrowersList.filter(b => b.type === "corporate").length,
+          pepBorrowers: borrowersList.filter(b => b.isPep).length,
+          totalAccounts: accounts.length,
+          totalOutstanding: totalOutstanding.toFixed(2),
+          nplAccounts: nplAccounts.length,
+          nplRatio: `${nplRatio}%`,
+          interestFreeAccounts: accounts.filter(a => a.isInterestFree).length,
+          restructuredAccounts: accounts.filter(a => a.status === "restructured").length,
+          writtenOffAccounts: accounts.filter(a => a.status === "written_off").length,
+        },
+        disputes: {
+          total: disputeList.length,
+          open: openDisputes.length,
+          resolved: disputeList.filter(d => d.status === "resolved").length,
+          slaBreaches: slaBreach.length,
+        },
+        approvals: {
+          total: approvals.length,
+          pending: approvals.filter(a => a.status === "pending").length,
+          approved: approvals.filter(a => a.status === "approved").length,
+          rejected: approvals.filter(a => a.status === "rejected").length,
+        },
+        institutions: {
+          total: instList.length,
+          active: instList.filter(i => i.status === "active").length,
+          pending: instList.filter(i => i.status === "pending").length,
+        },
+        portfolioByInstitution: byInstitution,
+        portfolioByType: byType,
+      });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }

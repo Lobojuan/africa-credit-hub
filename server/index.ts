@@ -50,7 +50,7 @@ app.use(
   })
 );
 
-const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
+const IDLE_TIMEOUT_MS = 15 * 60 * 1000;
 app.use((req, res, next) => {
   if (req.session?.userId && req.session.lastActivity) {
     const idle = Date.now() - req.session.lastActivity;

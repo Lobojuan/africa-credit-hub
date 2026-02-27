@@ -6,10 +6,16 @@ import { z } from "zod";
 export const userRoleEnum = pgEnum("user_role", ["admin", "regulator", "lender", "viewer"]);
 export const userStatusEnum = pgEnum("user_status", ["active", "suspended", "deactivated"]);
 export const borrowerTypeEnum = pgEnum("borrower_type", ["individual", "corporate"]);
-export const accountStatusEnum = pgEnum("account_status", ["current", "delinquent", "default", "closed", "restructured"]);
+export const accountStatusEnum = pgEnum("account_status", ["current", "delinquent", "default", "closed", "restructured", "written_off"]);
 export const inquiryPurposeEnum = pgEnum("inquiry_purpose", ["new_credit", "review", "collection", "regulatory", "portfolio_monitoring"]);
 export const approvalStatusEnum = pgEnum("approval_status", ["pending", "approved", "rejected"]);
 export const disputeStatusEnum = pgEnum("dispute_status", ["open", "under_review", "resolved", "rejected"]);
+export const judgmentTypeEnum = pgEnum("judgment_type", ["lien", "bankruptcy", "lawsuit", "civil_judgment", "criminal_conviction"]);
+export const judgmentStatusEnum = pgEnum("judgment_status", ["active", "resolved", "appealed"]);
+export const consentStatusEnum = pgEnum("consent_status", ["active", "revoked"]);
+export const paymentStatusEnum = pgEnum("payment_status", ["on_time", "late", "missed", "partial"]);
+export const institutionStatusEnum = pgEnum("institution_status", ["pending", "active", "suspended"]);
+export const billingStatusEnum = pgEnum("billing_status", ["pending", "paid", "overdue"]);
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -76,6 +82,11 @@ export const creditAccounts = pgTable("credit_accounts", {
   collateralValue: decimal("collateral_value", { precision: 15, scale: 2 }),
   lastPaymentDate: text("last_payment_date"),
   lastPaymentAmount: decimal("last_payment_amount", { precision: 15, scale: 2 }),
+  isInterestFree: boolean("is_interest_free").default(false),
+  gracePeriodMonths: integer("grace_period_months"),
+  restructureCount: integer("restructure_count").default(0),
+  writtenOffDate: text("written_off_date"),
+  reinstatedDate: text("reinstated_date"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -124,6 +135,8 @@ export const disputes = pgTable("disputes", {
   description: text("description").notNull(),
   status: disputeStatusEnum("status").notNull().default("open"),
   resolution: text("resolution"),
+  correctionType: text("correction_type"),
+  slaDeadline: timestamp("sla_deadline"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   resolvedAt: timestamp("resolved_at"),
@@ -140,6 +153,83 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const courtJudgments = pgTable("court_judgments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id),
+  caseNumber: text("case_number").notNull(),
+  court: text("court").notNull(),
+  judgmentType: judgmentTypeEnum("judgment_type").notNull(),
+  amount: decimal("amount", { precision: 15, scale: 2 }),
+  currency: text("currency").default("ETB"),
+  judgmentDate: text("judgment_date").notNull(),
+  status: judgmentStatusEnum("status").notNull().default("active"),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const consentRecords = pgTable("consent_records", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id),
+  grantedTo: text("granted_to").notNull(),
+  purpose: text("purpose").notNull(),
+  consentType: text("consent_type").notNull(),
+  status: consentStatusEnum("status").notNull().default("active"),
+  grantedAt: timestamp("granted_at").defaultNow(),
+  revokedAt: timestamp("revoked_at"),
+  receiptNumber: text("receipt_number").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const paymentHistory = pgTable("payment_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  creditAccountId: varchar("credit_account_id").notNull().references(() => creditAccounts.id),
+  period: text("period").notNull(),
+  amountDue: decimal("amount_due", { precision: 15, scale: 2 }).notNull(),
+  amountPaid: decimal("amount_paid", { precision: 15, scale: 2 }).notNull(),
+  status: paymentStatusEnum("status").notNull().default("on_time"),
+  daysLate: integer("days_late").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const institutions = pgTable("institutions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  type: text("type").notNull(),
+  registrationNumber: text("registration_number"),
+  country: text("country").notNull().default("Ethiopia"),
+  contactEmail: text("contact_email"),
+  contactPhone: text("contact_phone"),
+  address: text("address"),
+  status: institutionStatusEnum("status").notNull().default("pending"),
+  submissionFrequency: text("submission_frequency").default("monthly"),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const billingRecords = pgTable("billing_records", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  institutionName: text("institution_name").notNull(),
+  serviceType: text("service_type").notNull(),
+  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("ETB"),
+  status: billingStatusEnum("status").notNull().default("pending"),
+  invoiceNumber: text("invoice_number").notNull(),
+  periodStart: text("period_start"),
+  periodEnd: text("period_end"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const creditReportLogs = pgTable("credit_report_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id),
+  requestedBy: varchar("requested_by").notNull().references(() => users.id),
+  institution: text("institution").notNull(),
+  purpose: text("purpose").notNull(),
+  serialNumber: text("serial_number").notNull().unique(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, lastLogin: true, failedLoginAttempts: true, lockedUntil: true, passwordChangedAt: true, mustChangePassword: true });
 export const insertBorrowerSchema = createInsertSchema(borrowers).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertCreditAccountSchema = createInsertSchema(creditAccounts).omit({ id: true, createdAt: true, updatedAt: true });
@@ -148,6 +238,12 @@ export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({ id: tru
 export const insertPendingApprovalSchema = createInsertSchema(pendingApprovals).omit({ id: true, createdAt: true, reviewedAt: true, reviewedBy: true, status: true });
 export const insertDisputeSchema = createInsertSchema(disputes).omit({ id: true, createdAt: true, updatedAt: true, resolvedAt: true, resolution: true, status: true });
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true, isRead: true });
+export const insertCourtJudgmentSchema = createInsertSchema(courtJudgments).omit({ id: true, createdAt: true });
+export const insertConsentRecordSchema = createInsertSchema(consentRecords).omit({ id: true, createdAt: true, revokedAt: true });
+export const insertPaymentHistorySchema = createInsertSchema(paymentHistory).omit({ id: true, createdAt: true });
+export const insertInstitutionSchema = createInsertSchema(institutions).omit({ id: true, createdAt: true, approvedBy: true, approvedAt: true });
+export const insertBillingRecordSchema = createInsertSchema(billingRecords).omit({ id: true, createdAt: true });
+export const insertCreditReportLogSchema = createInsertSchema(creditReportLogs).omit({ id: true, createdAt: true });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -165,3 +261,15 @@ export type InsertDispute = z.infer<typeof insertDisputeSchema>;
 export type Dispute = typeof disputes.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type Notification = typeof notifications.$inferSelect;
+export type InsertCourtJudgment = z.infer<typeof insertCourtJudgmentSchema>;
+export type CourtJudgment = typeof courtJudgments.$inferSelect;
+export type InsertConsentRecord = z.infer<typeof insertConsentRecordSchema>;
+export type ConsentRecord = typeof consentRecords.$inferSelect;
+export type InsertPaymentHistory = z.infer<typeof insertPaymentHistorySchema>;
+export type PaymentHistory = typeof paymentHistory.$inferSelect;
+export type InsertInstitution = z.infer<typeof insertInstitutionSchema>;
+export type Institution = typeof institutions.$inferSelect;
+export type InsertBillingRecord = z.infer<typeof insertBillingRecordSchema>;
+export type BillingRecord = typeof billingRecords.$inferSelect;
+export type InsertCreditReportLog = z.infer<typeof insertCreditReportLogSchema>;
+export type CreditReportLog = typeof creditReportLogs.$inferSelect;

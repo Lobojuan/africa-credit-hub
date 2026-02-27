@@ -58,6 +58,7 @@ export default function DisputesPage() {
     creditAccountId: "",
     disputeType: "data_error",
     description: "",
+    correctionType: "non_financial",
   });
 
   const createMutation = useMutation({
@@ -71,7 +72,7 @@ export default function DisputesPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/disputes"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
       setDialogOpen(false);
-      setFormData({ borrowerId: "", creditAccountId: "", disputeType: "data_error", description: "" });
+      setFormData({ borrowerId: "", creditAccountId: "", disputeType: "data_error", description: "", correctionType: "non_financial" });
       toast({ title: t('disputes.filedSuccess') });
     },
     onError: (e: Error) => {
@@ -169,6 +170,16 @@ export default function DisputesPage() {
                   rows={4}
                 />
               </div>
+              <div>
+                <Label>{t('disputes.correctionType')}</Label>
+                <Select value={formData.correctionType} onValueChange={(v) => setFormData({ ...formData, correctionType: v })}>
+                  <SelectTrigger data-testid="select-correction-type"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="financial">{t('disputes.financial')}</SelectItem>
+                    <SelectItem value="non_financial">{t('disputes.nonFinancial')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <Button type="submit" className="w-full" disabled={createMutation.isPending || !formData.borrowerId} data-testid="button-submit-dispute">
                 {createMutation.isPending ? t('disputes.filing') : t('disputes.fileDispute')}
               </Button>
@@ -192,6 +203,8 @@ export default function DisputesPage() {
                     <TableHead>{t('disputes.disputeType')}</TableHead>
                     <TableHead>{t('disputes.description')}</TableHead>
                     <TableHead>{t('approvals.status')}</TableHead>
+                    <TableHead>{t('disputes.correctionType')}</TableHead>
+                    <TableHead>{t('disputes.slaDeadline')}</TableHead>
                     <TableHead>{t('disputes.filed')}</TableHead>
                     <TableHead>{t('approvals.actions')}</TableHead>
                   </TableRow>
@@ -210,6 +223,21 @@ export default function DisputesPage() {
                         <Badge variant={getStatusBadge(dispute.status)} className="text-[10px] capitalize">
                           {dispute.status.replace(/_/g, " ")}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {(dispute as any).correctionType ? (
+                          <Badge variant="outline" className="text-[10px] capitalize">{(dispute as any).correctionType.replace(/_/g, " ")}</Badge>
+                        ) : "—"}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {(dispute as any).slaDeadline ? (
+                          <span className={new Date((dispute as any).slaDeadline) < new Date() ? "text-destructive font-medium" : "text-muted-foreground"}>
+                            {new Date((dispute as any).slaDeadline).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                            {new Date((dispute as any).slaDeadline) < new Date() && (dispute.status === "open" || dispute.status === "under_review") && (
+                              <Badge variant="destructive" className="ml-1 text-[9px]">{t('disputes.breached')}</Badge>
+                            )}
+                          </span>
+                        ) : "—"}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {dispute.createdAt ? new Date(dispute.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}

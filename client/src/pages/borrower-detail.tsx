@@ -8,7 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { formatCurrency } from "@/lib/currency";
-import type { Borrower, CreditAccount, CreditInquiry } from "@shared/schema";
+import type { Borrower, CreditAccount, CreditInquiry, CourtJudgment, ConsentRecord } from "@shared/schema";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Gavel, FileCheck } from "lucide-react";
 
 function getStatusColor(status: string) {
   switch (status) {
@@ -66,6 +68,26 @@ export default function BorrowerDetailPage() {
     queryKey: ['/api/borrowers', borrowerId, 'related'],
     queryFn: async () => {
       const res = await fetch(`/api/borrowers/${borrowerId}/related`);
+      if (!res.ok) throw new Error("Failed to fetch");
+      return res.json();
+    },
+    enabled: !!borrowerId,
+  });
+
+  const { data: courtJudgments } = useQuery<CourtJudgment[]>({
+    queryKey: ['/api/court-judgments', borrowerId],
+    queryFn: async () => {
+      const res = await fetch(`/api/court-judgments?borrowerId=${borrowerId}`);
+      if (!res.ok) throw new Error("Failed to fetch");
+      return res.json();
+    },
+    enabled: !!borrowerId,
+  });
+
+  const { data: consentRecords } = useQuery<ConsentRecord[]>({
+    queryKey: ['/api/consent-records', borrowerId],
+    queryFn: async () => {
+      const res = await fetch(`/api/consent-records?borrowerId=${borrowerId}`);
       if (!res.ok) throw new Error("Failed to fetch");
       return res.json();
     },
@@ -321,6 +343,94 @@ export default function BorrowerDetailPage() {
           </Card>
         )}
       </div>
+
+      {courtJudgments && courtJudgments.length > 0 && (
+        <Card data-testid="section-court-judgments">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Gavel className="w-4 h-4 text-destructive" />
+                {t("borrowerDetail.courtJudgments")}
+              </h3>
+              <Badge variant="destructive" className="text-[10px]">{courtJudgments.length}</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="px-0 pb-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("borrowerDetail.caseNumber")}</TableHead>
+                  <TableHead>{t("borrowerDetail.court")}</TableHead>
+                  <TableHead>{t("borrowerDetail.judgmentType")}</TableHead>
+                  <TableHead>{t("borrowerDetail.amount")}</TableHead>
+                  <TableHead>{t("borrowerDetail.judgmentDate")}</TableHead>
+                  <TableHead>{t("approvals.status")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {courtJudgments.map((j) => (
+                  <TableRow key={j.id} data-testid={`row-judgment-${j.id}`}>
+                    <TableCell className="text-sm font-medium">{j.caseNumber}</TableCell>
+                    <TableCell className="text-sm">{j.court}</TableCell>
+                    <TableCell><Badge variant="outline" className="text-[10px] capitalize">{j.judgmentType.replace(/_/g, " ")}</Badge></TableCell>
+                    <TableCell className="text-sm">{j.amount ? formatCurrency(j.amount) : "—"}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{j.judgmentDate || "—"}</TableCell>
+                    <TableCell>
+                      <Badge variant={j.status === "active" ? "destructive" : j.status === "resolved" ? "default" : "secondary"} className="text-[10px] capitalize">
+                        {j.status}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {consentRecords && consentRecords.length > 0 && (
+        <Card data-testid="section-consent-records">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <FileCheck className="w-4 h-4" />
+                {t("borrowerDetail.consentRecords")}
+              </h3>
+              <Badge variant="secondary" className="text-[10px]">{consentRecords.length}</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="px-0 pb-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("borrowerDetail.grantedTo")}</TableHead>
+                  <TableHead>{t("borrowerDetail.purpose")}</TableHead>
+                  <TableHead>{t("borrowerDetail.consentType")}</TableHead>
+                  <TableHead>{t("approvals.status")}</TableHead>
+                  <TableHead>{t("borrowerDetail.receiptNumber")}</TableHead>
+                  <TableHead>{t("borrowerDetail.grantedAt")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {consentRecords.map((c) => (
+                  <TableRow key={c.id} data-testid={`row-consent-${c.id}`}>
+                    <TableCell className="text-sm font-medium">{c.grantedTo}</TableCell>
+                    <TableCell className="text-sm">{c.purpose}</TableCell>
+                    <TableCell><Badge variant="outline" className="text-[10px] capitalize">{c.consentType}</Badge></TableCell>
+                    <TableCell>
+                      <Badge variant={c.status === "active" ? "default" : "destructive"} className="text-[10px] capitalize">{c.status}</Badge>
+                    </TableCell>
+                    <TableCell className="text-xs font-mono">{c.receiptNumber}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {c.grantedAt ? new Date(c.grantedAt).toLocaleDateString("en-GB") : "—"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       {relatedBorrowers && relatedBorrowers.length > 0 && (
         <Card data-testid="section-related-parties">

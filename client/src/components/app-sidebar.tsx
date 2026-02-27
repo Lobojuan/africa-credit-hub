@@ -12,6 +12,10 @@ import {
   CheckSquare,
   AlertCircle,
   Upload,
+  Building2,
+  FileCheck,
+  Receipt,
+  Headset,
 } from "lucide-react";
 import {
   Sidebar,
@@ -38,11 +42,15 @@ const reportItems = [
   { titleKey: "sidebar.creditReports", url: "/reports", icon: FileText, testId: "nav-credit-reports" },
   { titleKey: "sidebar.pendingApprovals", url: "/approvals", icon: CheckSquare, testId: "nav-pending-approvals" },
   { titleKey: "sidebar.disputes", url: "/disputes", icon: AlertCircle, testId: "nav-disputes" },
+  { titleKey: "sidebar.consentManagement", url: "/consent", icon: FileCheck, testId: "nav-consent" },
+  { titleKey: "sidebar.helpdesk", url: "/helpdesk", icon: Headset, testId: "nav-helpdesk" },
   { titleKey: "sidebar.auditTrail", url: "/audit", icon: Shield, testId: "nav-audit-trail" },
 ];
 
 const adminItems = [
   { titleKey: "sidebar.userManagement", url: "/users", icon: Settings, testId: "nav-user-management" },
+  { titleKey: "sidebar.institutions", url: "/institutions", icon: Building2, testId: "nav-institutions" },
+  { titleKey: "sidebar.billing", url: "/billing", icon: Receipt, testId: "nav-billing" },
 ];
 
 export function AppSidebar() {

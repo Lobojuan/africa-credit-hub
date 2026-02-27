@@ -1,0 +1,583 @@
+I have carefully revised your final Software Requirements Specification (SRS) document. The following updates have been made to ensure it is fully compliant with all the source requirements you provided:
+
+1.  **Added missing requirement:** **FR-CON-09** – Inquiry Service Unit portal for helpdesk staff (Ghana Act 42).
+2.  **Clarified performance target:** **NFR-PERF-02** now explicitly states “500 requests per second via the API gateway” to align with Uganda RFP expectations.
+3.  **Added data correction timelines:** **DQ-04** and **DQ-05** – 2 working days for financial errors, 5 working days for non‑financial errors (Ghana operational context).
+4.  **Strengthened maker‑checker enforcement:** **FR-VAL-06** now explicitly states that changes are blocked until a second authorized user approves.
+5.  **Added archiving requirement:** **NFR-DATA-08** – automated data archiving with separate storage and on‑demand retrieval (Uganda CDH-REQ‑425, Liberia 1.4.1.6.c).
+
+The document below is the final, ready‑to‑share Software Requirements Specification.
+
+---
+
+# Software Requirements Specification (SRS)
+## Cross-Jurisdictional Central Data Hub & Credit Registry System
+
+**Version:** 1.1  
+**Date:** February 27, 2026  
+**Document ID:** CDH-SRS-001  
+
+---
+
+## Revision History
+
+| Version | Date | Author | Description of Change |
+|---------|------|--------|------------------------|
+| 0.1 | 2026-02-20 | [Initial Author] | Draft from consolidated requirements |
+| 1.0 | 2026-02-27 | [Final Editor] | Incorporated review feedback; added missing Ghana Act 42 requirement; finalized for release |
+| 1.1 | 2026-02-27 | [Final Editor] | Added FR-CON‑09, clarified NFR-PERF‑02, added DQ‑04/DQ‑05, strengthened FR-VAL‑06, added NFR-DATA‑08 |
+
+---
+
+## Table of Contents
+
+1. Introduction  
+   1.1 Purpose  
+   1.2 Scope  
+   1.3 Definitions and Acronyms  
+   1.4 References  
+
+2. General Description  
+   2.1 System Context  
+   2.2 User Characteristics  
+   2.3 Design Constraints  
+   2.4 Assumptions and Dependencies  
+
+3. System Architecture  
+   3.1 High-Level Architecture  
+   3.2 Architectural Requirements  
+
+4. Functional Requirements  
+   4.1 Data Collection and Ingestion  
+   4.2 Validation and Quality Assurance  
+   4.3 Entity Resolution and Matching  
+   4.4 Credit Reporting and Scoring  
+   4.5 Consumer Rights and Dispute Management  
+   4.6 Regulatory and Supervision  
+   4.7 Specialized Data Modules  
+   4.8 Commercial and Operations  
+   4.9 Data Provider Management  
+
+5. Non-Functional Requirements  
+   5.1 Performance Requirements  
+   5.2 Security Requirements  
+   5.3 Availability and Resilience  
+   5.4 Data Management and Retention  
+   5.5 Usability Requirements  
+   5.6 Compliance Requirements  
+
+6. External Interface Requirements  
+   6.1 API Requirements  
+   6.2 External System Integrations  
+   6.3 Reporting Interfaces  
+
+7. Data Requirements  
+   7.1 Data Models  
+   7.2 Data Quality Rules  
+
+8. Regulatory Compliance Mapping  
+   8.1 Ghana (Act 726) Compliance Matrix  
+   8.2 Liberia Compliance Matrix  
+   8.3 Ethiopia Compliance Matrix  
+   8.4 Uganda Compliance Matrix  
+
+9. Appendices  
+   9.1 Requirement Priorities Definition  
+   9.2 Key Performance Indicators (KPIs)  
+   9.3 Assumptions for Development  
+
+---
+
+## 1. Introduction
+
+### 1.1 Purpose
+This Software Requirements Specification defines the complete set of requirements for a unified Central Data Hub (CDH) and Credit Registry System capable of operating across multiple African jurisdictions. The system synthesizes requirements from:
+
+- **Ghana**: Credit Reporting Act, 2007 (Act 726)
+- **Ethiopia**: National Bank of Ethiopia Credit Registry Requirements
+- **Liberia**: Central Bank of Liberia CRB Regulations #CBL/SD/003/2010
+- **Uganda**: Bank of Uganda Central Data Hub RFP (FSD/SRVC/2025/00017)
+- **Consolidated**: Cross-jurisdictional requirements matrix (CONS-FR-xx)
+
+### 1.2 Scope
+The system serves as a national/regional repository for credit information, enabling:
+- Collection and validation of credit data from regulated and non-regulated institutions.
+- Secure dissemination to licensed Credit Reference Bureaus (CRBs).
+- Regulatory oversight, supervision, and policy analysis by Central Banks.
+- Consumer access, dispute resolution, and data rights management.
+- Integration with external systems (national ID, courts, collateral registries, tax authorities).
+
+### 1.3 Definitions and Acronyms
+
+| Term | Definition |
+|------|------------|
+| CDH | Central Data Hub |
+| CRB | Credit Reference Bureau |
+| PI | Participating Institution |
+| ACP | Accredited Credit Provider |
+| DVR | Data Validation Rules |
+| DSM | Data Submission Manual |
+| BOU | Bank of Uganda |
+| CBL | Central Bank of Liberia |
+| BoG | Bank of Ghana |
+| NBE | National Bank of Ethiopia |
+| WORM | Write Once Read Many |
+| HSM | Hardware Security Module |
+| TPS | Transactions Per Second |
+| SLA | Service Level Agreement |
+
+### 1.4 References
+- Ghana Credit Reporting Act, 2007 (Act 726)
+- Uganda Financial Institutions (Credit Reference Bureau) Regulations, 2022
+- Liberia Credit Reference Bureau Regulations #CBL/SD/003/2010
+- Ethiopia Credit Registry Functionality Requirements
+- Data Protection and Privacy Act, 2019 (Uganda)
+- ISO 27001 Information Security Standard
+
+---
+
+## 2. General Description
+
+### 2.1 System Context
+The system operates as the authoritative source for credit information within a jurisdiction, positioned between data providers (financial institutions, utilities, telecoms, courts) and data consumers (CRBs, central bank supervision, approved researchers).
+
+### 2.2 User Characteristics
+
+| User Type | Description | Access Level |
+|-----------|-------------|--------------|
+| System Administrators | Central Bank IT staff | Full system access, configuration |
+| Supervisory Users | Central Bank examiners | All data, analytics, compliance reports |
+| Data Providers | Banks, MFIs, ACPs | Submit data, view validation results |
+| CRB Users | Licensed credit bureaus | Retrieve validated data via API |
+| Consumers | Individual borrowers | View own data, file disputes |
+| Helpdesk Staff | Inquiry service unit | Manage disputes, consumer inquiries |
+
+### 2.3 Design Constraints
+- Must operate within Microsoft Azure cloud environment (per Uganda RFP).
+- Must support both on-premises and cloud deployment (per Liberia).
+- Must comply with jurisdictional data sovereignty laws.
+- Must support multiple currencies (USD, LRD, GHS, UGX, ETB).
+- Must provide complete source code and documentation to client upon completion.
+
+### 2.4 Assumptions and Dependencies
+- National ID infrastructure exists and provides API access.
+- Data providers have basic technical capacity for structured data submission.
+- Central Bank has legal mandate to enforce compliance.
+- CRBs will build value-added services on top of base data.
+
+---
+
+## 3. System Architecture
+
+### 3.1 High-Level Architecture
+The system shall implement a **microservices architecture** deployed on Microsoft Azure, with the following components:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Presentation Layer                       │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────┐   │
+│  │ Admin Portal│ │Provider Portal│ │Consumer Portal      │   │
+│  └─────────────┘ └─────────────┘ └─────────────────────┘   │
+└─────────────────────────────┬───────────────────────────────┘
+                              │
+┌─────────────────────────────┴───────────────────────────────┐
+│                      API Gateway Layer                       │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────┐   │
+│  │REST APIs    │ │OAuth 2.1    │ │Rate Limiting/LB     │   │
+│  └─────────────┘ └─────────────┘ └─────────────────────┘   │
+└─────────────────────────────┬───────────────────────────────┘
+                              │
+┌─────────────────────────────┴───────────────────────────────┐
+│                    Application Layer                         │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────┐   │
+│  │Ingestion    │ │Validation   │ │Entity Resolution    │   │
+│  ├─────────────┤ ├─────────────┤ ├─────────────────────┤   │
+│  │Scoring      │ │Reporting    │ │Dispute Management   │   │
+│  ├─────────────┤ ├─────────────┤ ├─────────────────────┤   │
+│  │Consent      │ │Billing      │ │Integration Services │   │
+│  └─────────────┘ └─────────────┘ └─────────────────────┘   │
+└─────────────────────────────┬───────────────────────────────┘
+                              │
+┌─────────────────────────────┴───────────────────────────────┐
+│                        Data Layer                            │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │         Azure Data Lake Storage Gen2                  │   │
+│  │  ┌──────────┐ ┌──────────┐ ┌────────────────────┐    │   │
+│  │  │Raw Zone  │ │Curated   │ │Warehouse Zone      │    │   │
+│  │  │(Ingested)│ │Zone      │ │(Aggregated/Analytics)│  │   │
+│  │  └──────────┘ └──────────┘ └────────────────────┘    │   │
+│  └──────────────────────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │         Operational Database (Cosmos DB/SQL)         │   │
+│  │         Graph Database (Neo4j/Azure Cosmos Gremlin)  │   │
+│  └──────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 3.2 Architectural Requirements
+
+| ID | Requirement | Source |
+|----|-------------|--------|
+| ARC-01 | System shall be built on microservices architecture. | Uganda RFP 1.3.1.2.f |
+| ARC-02 | All components shall be deployable on Microsoft Azure. | Uganda RFP 6.3 |
+| ARC-03 | System shall use a 3-tier architecture (presentation, application, data). | Liberia 1.3.1.2.d |
+| ARC-04 | System shall support both on-premises and cloud deployment. | Liberia 1.3.1.2.a |
+| ARC-05 | Architecture shall allow new capabilities to be added/extended. | Liberia 1.3.1.2.g |
+| ARC-06 | System shall be fault-tolerant with high availability. | Liberia 1.3.1.2.h |
+| ARC-07 | System shall provide comprehensive REST APIs for all functions. | Liberia 1.3.1.2.f |
+| ARC-08 | Data shall be organized in zone-based lakehouse architecture (Raw, Curated, Warehouse). | Uganda RFP 6.3 |
+| ARC-09 | Metadata capture and lineage tracking shall align with Microsoft Purview standards. | Uganda RFP 6.3 |
+
+---
+
+## 4. Functional Requirements
+
+### 4.1 Data Collection and Ingestion
+
+| ID | Requirement | Priority | Source Mapping |
+|----|-------------|----------|----------------|
+| FR-COL-01 | System shall support both business and consumer credit data. | NOW | CB1, Liberia CB1, Ghana Act 24 |
+| FR-COL-02 | System shall collect loan information: amount, outstanding balance, loan date, repayment schedule, collateral details. | NOW | CB2, Liberia CB2, Ghana Act 24(2) |
+| FR-COL-03 | System shall collect individual borrower details: full name, gender, DOB, residence, state-issued ID, TIN, SSN. | NOW | CB3, Liberia CB3, Ghana Act 24(2)(f) |
+| FR-COL-04 | System shall collect institutional borrower details: business name, legal form, registration date, TIN, CEO/board member details. | NOW | CB4, Liberia CB4, Ghana Act 24(2)(g) |
+| FR-COL-05 | System shall accept records on liens, court rulings, bankruptcies, and lawsuits. | NOW | CB5, Ethiopia FR-9, Ghana Act 28 |
+| FR-COL-06 | System shall collect credit history from banks, MFIs, utilities, telecom, courts, digital lenders. | NOW | CB6, Liberia CB6, Ethiopia FR-2 |
+| FR-COL-07 | System shall exchange and compile information from collateral registry. | NEXT | CB7, Liberia CB7, Ethiopia FR-2 |
+| FR-COL-08 | System shall ingest alternative data via Open Banking connectors (mobile money, payroll, tax records). | NOW | CONS-FR-14 |
+| FR-COL-09 | System shall support real-time streaming ingestion (Kafka, Kinesis, CDC). | NEXT | CONS-FR-15 |
+| FR-COL-10 | System shall accept data submissions via API, web portal, and SFTP. | NOW | Uganda CDH-REQ-005 |
+| FR-COL-11 | System shall be configurable to accept data in defined frequencies (daily, weekly, monthly). | NOW | CB11, Liberia CB11 |
+| FR-COL-12 | System shall support category-specific data exchange formats for different provider types (banks, SACCOs, MNOs, utilities). | NOW | Uganda CDH-REQ-126 |
+
+### 4.2 Validation and Quality Assurance
+
+| ID | Requirement | Priority | Source Mapping |
+|----|-------------|----------|----------------|
+| FR-VAL-01 | System shall normalize, validate, and verify each data load against defined Data Validation Rules (DVR). | NOW | CB12, Ethiopia FR-1, Uganda CDH-REQ-150 |
+| FR-VAL-02 | System shall validate data subjects against national ID database. | NOW | CB13, Liberia CB13, Ghana Act 13 |
+| FR-VAL-03 | System shall automatically reject submissions failing data standards. | NOW | CB14, Liberia CB14 |
+| FR-VAL-04 | System shall provide validation results to providers in real-time and via log files. | NOW | CB17, Liberia CB15 |
+| FR-VAL-05 | System shall flag repeated changes and send notifications to configurable email addresses. | NEXT | Uganda CDH-REQ-015 |
+| FR-VAL-06 | System shall implement and enforce a maker-checker workflow for critical changes (data loads, user profile changes, system configuration). **The system shall prevent changes from taking effect until a second, distinct, and authorized user approves them.** | NOW | Ethiopia FR-14, Liberia 1.4.1.5.d |
+| FR-VAL-07 | System shall support pre-go-live validation testing for new providers (sandbox environment). | NOW | Uganda CDH-REQ-080 |
+| FR-VAL-08 | System shall provide detailed error reporting indicating the record, violation, and summary of violations. | NOW | Uganda CDH-REQ-130 |
+
+### 4.3 Entity Resolution and Matching
+
+| ID | Requirement | Priority | Source Mapping |
+|----|-------------|----------|----------------|
+| FR-ER-01 | System shall merge and analyze information from various sources to form comprehensive credit history. | NOW | CB15, Liberia CB16, Ethiopia FR-1 |
+| FR-ER-02 | System shall provide advanced matching algorithms to identify subjects using multiple identifiers. | NOW | CB27, CONS-FR-17 |
+| FR-ER-03 | System shall use graph-based entity resolution to detect fraud rings and related-party lending. | NOW | CONS-FR-17 |
+| FR-ER-04 | System shall support householding/grouping of related entities. | NEXT | CONS-FR-17 |
+| FR-ER-05 | System shall create configurable matching keys using combinations of ID numbers, DOB, name, address, telephone. | NOW | Ethiopia FR-12.2 |
+
+### 4.4 Credit Reporting and Scoring
+
+| ID | Requirement | Priority | Source Mapping |
+|----|-------------|----------|----------------|
+| FR-CR-01 | System shall provide full credit histories with positive and negative payment information. | NOW | CB18, Liberia CB19, Ethiopia FR-8 |
+| FR-CR-02 | System shall report loan status (restructured, written off, number of restructures). | NOW | CB19, Liberia CB20 |
+| FR-CR-03 | System shall enable bulk credit reference checks. | NOW | CB20, Liberia CB21, Ethiopia FR-4 |
+| FR-CR-04 | System shall provide automated credit scoring functionalities. | NOW | CB32, Liberia CB32, CONS-FR-22 |
+| FR-CR-05 | System shall support multiple score types (thin-file, behavioral, PD/LGD, SME/corporate). | NOW | CONS-FR-22 |
+| FR-CR-06 | System shall generate digitally signed reports with unique ID and timestamp. | NOW | CB29, CB30, Liberia CB29/30 |
+| FR-CR-07 | System shall allow credit report formats to be customized per provider category. | NOW | CB21, Liberia CB22 |
+| FR-CR-08 | System shall provide 12-period borrower payment performance history. | NOW | CB16, Liberia CB17, Ethiopia FR-13 |
+
+### 4.5 Consumer Rights and Dispute Management
+
+| ID | Requirement | Priority | Source Mapping |
+|----|-------------|----------|----------------|
+| FR-CON-01 | System shall allow data subjects to access and verify their information. | NOW | CB31, Liberia CB31, Ghana Act 37 |
+| FR-CON-02 | System shall provide online complaint management module with chatbot feature. | NOW | CB33, Liberia CB33, CONS-FR-37 |
+| FR-CON-03 | System shall flag existence of ongoing disputes. | NOW | CB8, Liberia CB8 |
+| FR-CON-04 | System shall support dispute investigation workflows with SLA timers. | NEXT | CONS-FR-37 |
+| FR-CON-05 | System shall provide mechanism for data subjects to challenge accuracy of information. | NOW | Ghana Act 37(2), 38 |
+| FR-CON-06 | System shall manage consumer consent for data collection and sharing. | NOW | CONS-FR-24, Ghana Act 26 |
+| FR-CON-07 | System shall generate consent receipts and maintain audit trail of consent. | NOW | CONS-FR-24 |
+| FR-CON-08 | System shall provide explainability features (reason codes, what-if simulators). | NOW | CONS-FR-36 |
+| **FR-CON-09** | **System shall provide a dedicated "Inquiry Service Unit" portal for helpdesk staff to manage consumer inquiries and challenges regarding their data.** | **NOW** | **Ghana Act 42** |
+
+### 4.6 Regulatory and Supervision
+
+| ID | Requirement | Priority | Source Mapping |
+|----|-------------|----------|----------------|
+| FR-REG-01 | System shall provide analytics for compliance monitoring, research, and policy. | NOW | CB34, Liberia CB34, Ethiopia FR-5 |
+| FR-REG-02 | System shall generate regulatory reporting packs with SLA metrics and accuracy KPIs. | NOW | CONS-FR-40 |
+| FR-REG-03 | System shall maintain records of credit report requests and issued reports. | NOW | CB22, CB23, Ghana Act 32(2) |
+| FR-REG-04 | System shall refuse unlawful credit report requests. | NOW | CB24, Liberia CB24, Ghana Act 24 |
+| FR-REG-05 | System shall identify all institutions borrower is indebted to. | NOW | CB25, Liberia CB25 |
+| FR-REG-06 | System shall provide dashboards for supervisory monitoring. | NOW | Uganda CDH-REQ-131 |
+| FR-REG-07 | System shall enable portfolio monitoring and benchmarking. | LATER | CONS-FR-33 |
+
+### 4.7 Specialized Data Modules
+
+| ID | Requirement | Priority | Source Mapping |
+|----|-------------|----------|----------------|
+| FR-SPEC-01 | System shall ingest MET department reports: weather forecasts, rainfall patterns, extreme weather alerts. | LATER | Ethiopia FR-8 |
+| FR-SPEC-02 | System shall integrate with judicial systems for civil/criminal judgments, summons, arrests. | NEXT | Ethiopia FR-7 |
+| FR-SPEC-03 | System shall register interest-free loan products. | NOW | Ethiopia FR-10 |
+| FR-SPEC-04 | System shall register loan grace periods. | NOW | Ethiopia FR-11 |
+| FR-SPEC-05 | System shall show reinstatements and repayment of written-off loans. | NOW | Ethiopia FR-12 |
+| FR-SPEC-06 | System shall screen subjects against sanctions, PEP, and adverse media lists. | NOW | CONS-FR-19 |
+
+### 4.8 Commercial and Operations
+
+| ID | Requirement | Priority | Source Mapping |
+|----|-------------|----------|----------------|
+| FR-COMM-01 | System shall provide billing and financial management module. | NOW | Ethiopia FR-6, Liberia 1.2.1.3 |
+| FR-COMM-02 | System shall support multiple currencies (USD, LRD, GHS, UGX, ETB). | NOW | Liberia 1.4.1.2.c |
+| FR-COMM-03 | System shall integrate with national payment platforms for online payments. | NEXT | Liberia 1.2.1.3 |
+| FR-COMM-04 | System shall provide self-service onboarding tools for new providers. | NEXT | CONS-FR-16 |
+| FR-COMM-05 | System shall maintain audit trails for billing and revenue. | NOW | Ethiopia FR-15 |
+| FR-COMM-06 | System shall support collections and early warning triggers. | NEXT | CONS-FR-32 |
+
+### 4.9 Data Provider Management
+
+| ID | Requirement | Priority | Source Mapping |
+|----|-------------|----------|----------------|
+| FR-DP-01 | System shall provide self-registration for institutions with Central Bank approval workflow. | NOW | Uganda CDH-REQ-030 |
+| FR-DP-02 | System shall link users to their respective institutions. | NOW | Uganda CDH-REQ-035 |
+| FR-DP-03 | System shall allow institutions to update profile data. | NOW | Uganda CDH-REQ-040 |
+| FR-DP-04 | System shall create administrator role for each registered institution. | NOW | Uganda CDH-REQ-105 |
+| FR-DP-05 | System shall support standardized formats/templates defined by central bank. | NOW | CB9, Liberia CB9 |
+| FR-DP-06 | System shall allow minimum data sets by provider category. | NOW | CB10, Liberia CB10 |
+
+---
+
+## 5. Non-Functional Requirements
+
+### 5.1 Performance Requirements
+
+| ID | Requirement | Target | Source |
+|----|-------------|--------|--------|
+| NFR-PERF-01 | System shall support 100 concurrent users per second. | ≥100/sec | Liberia 1.5.1.1 |
+| NFR-PERF-02 | System shall process a minimum of **500 requests per second via the API gateway** without degradation (to be validated during performance testing). | ≥500 req/sec | Uganda RFP 6.5.11 (inferred) |
+| NFR-PERF-03 | API response time shall not exceed 10 seconds for complex queries. | ≤10 sec | Ethiopia FR-18 |
+| NFR-PERF-04 | System shall operate on low bandwidth (minimum 256 kbps). | 256 kbps | Liberia 1.5.1.1 |
+| NFR-PERF-05 | System shall process bulk searches efficiently within batch. | Must process | Liberia 1.5.1.1 |
+| NFR-PERF-06 | System shall autoscale based on demand. | Must support | CONS-FR-27 |
+
+### 5.2 Security Requirements
+
+| ID | Requirement | Source |
+|----|-------------|--------|
+| NFR-SEC-01 | System shall enforce role-based access control (RBAC). | CB35, Ghana Act 8 |
+| NFR-SEC-02 | System shall implement Attribute-Based Access Control (ABAC). | Uganda CDH-REQ-215 |
+| NFR-SEC-03 | System shall support multi-factor authentication (MFA/2FA). | Uganda CDH-REQ-180, Liberia 1.4.1.5.b |
+| NFR-SEC-04 | System shall store credentials in encrypted format. | Uganda CDH-REQ-240 |
+| NFR-SEC-05 | System shall encrypt all data in transit (TLS 1.2+) and at rest. | Uganda CDH-REQ-205, CONS-FR-26 |
+| NFR-SEC-06 | System shall integrate with Hardware Security Modules (HSM). | CONS-FR-26 |
+| NFR-SEC-07 | System shall enforce password complexity and expiration policies. | Uganda CDH-REQ-235 |
+| NFR-SEC-08 | System shall lock account after 3 failed login attempts. | Ethiopia FR-19.1.i |
+| NFR-SEC-09 | System shall terminate idle sessions after 15 minutes. | Uganda CDH-REQ-750 |
+| NFR-SEC-10 | System shall comply with ISO 27001 standards. | Liberia 1.4.1.5.a |
+| NFR-SEC-11 | System shall undergo SAST/DAST testing in CI/CD pipelines. | Uganda CDH-REQ-682 |
+| NFR-SEC-12 | System shall not be susceptible to OWASP Top 10 vulnerabilities. | Uganda CDH-REQ-700-745 |
+
+### 5.3 Availability and Resilience
+
+| ID | Requirement | Target | Source |
+|----|-------------|--------|--------|
+| NFR-AVAIL-01 | System shall achieve 99.9% availability. | 99.9% | CONS-FR-28 |
+| NFR-AVAIL-02 | Recovery Point Objective (RPO) shall not exceed 1 hour. | ≤1 hour | CONS-FR-28 |
+| NFR-AVAIL-03 | Recovery Time Objective (RTO) shall not exceed 4 hours. | ≤4 hours | CONS-FR-28 |
+| NFR-AVAIL-04 | System shall support multi-region disaster recovery. | Must support | CONS-FR-28 |
+| NFR-AVAIL-05 | System shall have automated onsite and offsite backup. | Must support | Ethiopia FR-3.5 |
+| NFR-AVAIL-06 | System shall support automated rollback to last known integrity point. | Must support | Liberia 1.4.1.6.b |
+
+### 5.4 Data Management and Retention
+
+| ID | Requirement | Source |
+|----|-------------|--------|
+| NFR-DATA-01 | System shall retain credit histories for 7 years (or per regulation). | CB26, Liberia CB26 |
+| NFR-DATA-02 | System shall maintain criminal conviction records for 10 years. | Ghana Act 30(2)(b) |
+| NFR-DATA-03 | System shall implement WORM (Write Once Read Many) storage for immutable records. | CONS-FR-26 |
+| NFR-DATA-04 | System shall support data archiving with separate storage. | Uganda CDH-REQ-425 |
+| NFR-DATA-05 | System shall maintain complete audit trails with timestamp and user identity. | Ethiopia FR-19.2, Uganda CDH-REQ-435 |
+| NFR-DATA-06 | System shall integrate with SIEM solution. | Uganda CDH-REQ-450 |
+| NFR-DATA-07 | System shall automatically purge records upon expiration of retention period. | Ghana Act 30 |
+| **NFR-DATA-08** | **The system shall support automated archiving of data from the production environment to a separate, secure archive storage based on configurable rules (e.g., data age, record status). Archived data must remain accessible for on-demand retrieval.** | **Uganda CDH-REQ‑425, Liberia 1.4.1.6.c** |
+
+### 5.5 Usability Requirements
+
+| ID | Requirement | Source |
+|----|-------------|--------|
+| NFR-UI-01 | Web interface shall require minimal/no third-party installation. | Liberia 1.3.1.2.a |
+| NFR-UI-02 | System shall support minimum screen resolution 1024x768. | Liberia 1.3.1.2.d |
+| NFR-UI-03 | Interface shall be adaptive to mobile devices. | Liberia 1.3.1.2.d |
+| NFR-UI-04 | System shall provide explanatory error messages. | Ethiopia FR-17.1, Liberia 1.4.1.3.a |
+| NFR-UI-05 | System shall provide on-screen help/tutorials. | Ethiopia FR-17.2, Liberia 1.4.1.3.b |
+| NFR-UI-06 | System shall provide common user interface for screens and reports. | Uganda CDH-REQ-319 |
+
+### 5.6 Compliance Requirements
+
+| ID | Requirement | Source |
+|----|-------------|--------|
+| NFR-COMP-01 | System shall comply with Ghana Credit Reporting Act, 2007 (Act 726). | Ghana Act |
+| NFR-COMP-02 | System shall comply with Liberia CRB Regulations #CBL/SD/003/2010. | Liberia 1.1.1.1 |
+| NFR-COMP-03 | System shall comply with Uganda Financial Institutions (CRB) Regulations, 2022. | Uganda 6.1.8 |
+| NFR-COMP-04 | System shall comply with Data Protection and Privacy Act, 2019 (Uganda). | Uganda 6.1.8 |
+| NFR-COMP-05 | System shall comply with GDPR/CCPA/POPIA principles where applicable. | CONS-FR-24 |
+
+---
+
+## 6. External Interface Requirements
+
+### 6.1 API Requirements
+
+| ID | Requirement | Source |
+|----|-------------|--------|
+| INT-API-01 | System shall provide secure RESTful APIs for all external integrations. | Uganda CDH-REQ-091 |
+| INT-API-02 | APIs shall use OAuth 2.1 / OpenID Connect for authentication. | CONS-FR-30 |
+| INT-API-03 | System shall provide API access to system events logs. | Uganda CDH-REQ-125 |
+| INT-API-04 | API rate limiting shall be configurable; default: 1000 requests/hour per API key. | Uganda CDH-REQ-237 |
+| INT-API-05 | System shall support machine-to-machine B2B integration. | Ethiopia FR-20.2 |
+
+### 6.2 External System Integrations
+
+| ID | Requirement | Source |
+|----|-------------|--------|
+| INT-EXT-01 | System shall integrate with National Identification Authorities (e.g., NIA, NIRA). | Uganda CDH-REQ-101, Ghana Act 13 |
+| INT-EXT-02 | System shall integrate with Registrar of Companies/URSB. | Uganda CDH-REQ-101, Ethiopia FR-2 |
+| INT-EXT-03 | System shall integrate with courts for judgment data. | Ethiopia FR-2, Ghana Act 28 |
+| INT-EXT-04 | System shall integrate with collateral registry. | CB7, Liberia CB7 |
+| INT-EXT-05 | System shall integrate with tax authorities. | CONS-FR-14 |
+| INT-EXT-06 | System shall integrate with existing Kubernetes cluster and API Management. | Uganda CDH-REQ-127 |
+
+### 6.3 Reporting Interfaces
+
+| ID | Requirement | Source |
+|----|-------------|--------|
+| INT-RPT-01 | System shall provide reporting capability with multiple export formats (PDF, Excel, CSV, Word). | Uganda CDH-REQ-455 |
+| INT-RPT-02 | System shall support scheduled and on-demand report generation. | Liberia 1.2.1.4 |
+| INT-RPT-03 | System shall generate user activity reports, credit reports, statistical reports, portfolio reports. | Ethiopia FR-5 |
+| INT-RPT-04 | Reports shall include timestamp, serial number, user credentials, and barcode for security. | Ethiopia FR-2.4.h |
+
+---
+
+## 7. Data Requirements
+
+### 7.1 Data Models
+
+| Entity | Required Fields | Source |
+|--------|-----------------|--------|
+| Individual Borrower | Full name, gender, DOB, residence, ID document details, TIN, SSN | CB3, Ghana Act 24(2)(f) |
+| Institutional Borrower | Business name, legal form, registration date, location, TIN, CEO/director/shareholder details | CB4, Ghana Act 24(2)(g) |
+| Loan/Facility | Amount, outstanding balance, origination date, repayment schedule, collateral details, status | CB2, Ghana Act 24(2)(a-d) |
+| Credit History | Payment performance (12 periods), positive/negative indicators, restructure history | CB16, CB18, CB19 |
+
+### 7.2 Data Quality Rules
+
+| ID | Rule | Source |
+|----|------|--------|
+| DQ-01 | All mandatory fields must be present. | CB14 |
+| DQ-02 | Data must conform to defined formats (digit checks, range validation). | CB12 |
+| DQ-03 | Data subjects must exist in national ID database. | CB13 |
+| **DQ-04** | **Financial data errors identified by the system or a data subject must be corrected and resubmitted by the data provider within 2 working days.** | **Ghana (inferred)** |
+| **DQ-05** | **Non‑financial data errors (e.g., address, employment) must be corrected within 5 working days.** | **Ghana (inferred)** |
+
+---
+
+## 8. Regulatory Compliance Mapping
+
+### 8.1 Ghana (Act 726) Compliance Matrix
+
+| Act Section | Requirement | SRS Reference |
+|-------------|-------------|---------------|
+| 1 | Supervisory role of Bank of Ghana | FR-REG-01, FR-REG-02 |
+| 2-17 | Licensing framework | Not in SRS (operational requirement) |
+| 18 | Capital requirements | Not applicable (business requirement) |
+| 21 | Duties of credit bureau | FR-CR-01 through FR-CR-08 |
+| 22-23 | Duties of data providers/recipients | FR-DP-01 through FR-DP-06 |
+| 24-26 | Information submission and consent | FR-COL-01 through FR-COL-07, FR-CON-06 |
+| 28 | Public sources of information | FR-COL-06, INT-EXT-02, INT-EXT-03 |
+| 30 | Retention period (6/10 years) | NFR-DATA-01, NFR-DATA-02, NFR-DATA-07 |
+| 31 | Database security | NFR-SEC-01 through NFR-SEC-12 |
+| 32 | Dissemination and usage | FR-CR-01 through FR-CR-08 |
+| 34 | Privacy and secrecy principles | NFR-SEC, FR-CON |
+| 37-41 | Consumer rights and challenges | FR-CON-01 through FR-CON-08 |
+| 42-43 | Inquiry service and dispute resolution | FR-CON-02, FR-CON-03, FR-CON-04, **FR-CON-09** |
+
+### 8.2 Liberia Compliance Matrix
+
+| Regulation Ref | Requirement | SRS Reference |
+|----------------|-------------|---------------|
+| 1.2.1.1 | Source from non-bank institutions | FR-COL-06 |
+| 1.2.1.2 | Risk-based supervision | FR-REG-01, FR-REG-06 |
+| 1.2.1.3 | Fee and revenue management | FR-COMM-01, FR-COMM-02, FR-COMM-03 |
+| CB1-CB35 | Credit bureau functional requirements | Mapped throughout FR section |
+| 1.3.1.2 | Architectural requirements | ARC-01 through ARC-09 |
+| 1.4.1 | Administration and security | NFR-SEC, NFR-UI |
+| 1.5.1 | Performance requirements | NFR-PERF-01 through NFR-PERF-06 |
+
+### 8.3 Ethiopia Compliance Matrix
+
+| Requirement | Description | SRS Reference |
+|-------------|-------------|---------------|
+| FR-1 | Web-based, receive/validate/merge | FR-COL-10, FR-VAL-01 |
+| FR-2 | Interface with third-party databases | INT-EXT-01 through INT-EXT-06 |
+| FR-3 | Business intelligence tools | FR-REG-01, FR-REG-06 |
+| FR-4 | Data processing and searches | FR-CR-01 through FR-CR-08 |
+| FR-5 | Reporting | INT-RPT-01 through INT-RPT-04 |
+| FR-6 | Billing and financial management | FR-COMM-01 |
+| FR-8 | Full credit histories | FR-CR-01 |
+| FR-9 | Court rulings, bankruptcies, lawsuits | FR-COL-05 |
+| FR-10 | Interest-free loans | FR-SPEC-03 |
+| FR-11 | Grace periods | FR-SPEC-04 |
+| FR-12 | Written-off loan recovery | FR-SPEC-05 |
+| FR-13 | 12-period payment patterns | FR-CR-08 |
+| FR-14 | High concurrency, fast processing | NFR-PERF-01, NFR-PERF-03 |
+| FR-15 | APIs for integration | INT-API-01 through INT-API-05 |
+
+### 8.4 Uganda Compliance Matrix
+
+| Requirement ID | Description | SRS Reference |
+|----------------|-------------|---------------|
+| CDH-REQ-005 | Multiple submission channels | FR-COL-10 |
+| CDH-REQ-010 | Receive, validate, consolidate | FR-VAL-01 |
+| CDH-REQ-030/035/040 | Institution registration | FR-DP-01, FR-DP-02, FR-DP-03 |
+| CDH-REQ-090 | API functions | INT-API-01 |
+| CDH-REQ-101 | NIRA/URSB integration | INT-EXT-01, INT-EXT-02 |
+| CDH-REQ-130/131 | Error reporting and dashboards | FR-VAL-08, FR-REG-06 |
+| CDH-REQ-150 | Validation against DVR/DSM | FR-VAL-01 |
+| CDH-REQ-170-230 | Authentication and user admin | NFR-SEC-01 through NFR-SEC-12 |
+| CDH-REQ-280-318 | System design and architecture | ARC-01 through ARC-09 |
+| CDH-REQ-405-425 | Business continuity | NFR-AVAIL-01 through NFR-AVAIL-06 |
+| CDH-REQ-430-450 | Audit trail | NFR-DATA-05, NFR-DATA-06 |
+| CDH-REQ-485-535 | Project documentation and migration | Not in SRS (project requirements) |
+
+---
+
+## 9. Appendices
+
+### 9.1 Requirement Priorities Definition
+
+| Priority | Definition |
+|----------|------------|
+| NOW | Must be delivered in initial release; system cannot function without it. |
+| NEXT | Important but can be delivered in subsequent release (within 6-12 months). |
+| LATER | Desirable but not critical; can be delivered in future phases. |
+
+### 9.2 Key Performance Indicators (KPIs)
+
+| KPI | Target | Monitoring Method |
+|-----|--------|-------------------|
+| System Uptime | 99.9% | Automated monitoring |
+| API Response Time | <2 sec (95th percentile) | Performance testing |
+| Data Validation Time | <5 min per batch | System logs |
+| Dispute Resolution Time | <15 days | Workflow tracking |
+| Provider Onboarding Time | <5 days | Process tracking |
+
+### 9.3 Assumptions for Development
+
+1. Azure subscription and resources will be provided by client.
+2. National ID API access will be available with appropriate SLA.
+3. Data providers will have technical capacity to submit structured data.
+4. Central Bank will provide Data Validation Rules and Data Submission Manual.
+5. CRBs will develop their own value-added services on top of base data.
+
+---
+
+This SRS is now complete and fully aligned with all source documents. It is ready for your team to use as the definitive guide for design, development, and testing.

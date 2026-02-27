@@ -2,6 +2,7 @@ import { eq, desc, like, or, sql, count } from "drizzle-orm";
 import { db } from "./db";
 import {
   users, borrowers, creditAccounts, creditInquiries, auditLogs, pendingApprovals, disputes, notifications,
+  courtJudgments, consentRecords, paymentHistory, institutions, billingRecords, creditReportLogs,
   type User, type InsertUser,
   type Borrower, type InsertBorrower,
   type CreditAccount, type InsertCreditAccount,
@@ -10,6 +11,12 @@ import {
   type PendingApproval, type InsertPendingApproval,
   type Dispute, type InsertDispute,
   type Notification, type InsertNotification,
+  type CourtJudgment, type InsertCourtJudgment,
+  type ConsentRecord, type InsertConsentRecord,
+  type PaymentHistory, type InsertPaymentHistory,
+  type Institution, type InsertInstitution,
+  type BillingRecord, type InsertBillingRecord,
+  type CreditReportLog, type InsertCreditReportLog,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -60,6 +67,32 @@ export interface IStorage {
   updatePasswordChangedAt(userId: string): Promise<void>;
   getRelatedBorrowers(borrowerId: string): Promise<Borrower[]>;
   getUsersByRole(...roles: string[]): Promise<User[]>;
+
+  getCourtJudgmentsByBorrower(borrowerId: string): Promise<CourtJudgment[]>;
+  getAllCourtJudgments(): Promise<CourtJudgment[]>;
+  createCourtJudgment(judgment: InsertCourtJudgment): Promise<CourtJudgment>;
+
+  getConsentRecordsByBorrower(borrowerId: string): Promise<ConsentRecord[]>;
+  getAllConsentRecords(): Promise<ConsentRecord[]>;
+  createConsentRecord(record: InsertConsentRecord): Promise<ConsentRecord>;
+  revokeConsent(id: string): Promise<ConsentRecord | undefined>;
+
+  getPaymentHistoryByAccount(creditAccountId: string): Promise<PaymentHistory[]>;
+  createPaymentHistory(entry: InsertPaymentHistory): Promise<PaymentHistory>;
+
+  getInstitutions(): Promise<Institution[]>;
+  getInstitution(id: string): Promise<Institution | undefined>;
+  createInstitution(inst: InsertInstitution): Promise<Institution>;
+  updateInstitution(id: string, data: Partial<InsertInstitution>): Promise<Institution | undefined>;
+  approveInstitution(id: string, approvedBy: string): Promise<Institution | undefined>;
+
+  getBillingRecords(): Promise<BillingRecord[]>;
+  getBillingRecordsByInstitution(institutionName: string): Promise<BillingRecord[]>;
+  createBillingRecord(record: InsertBillingRecord): Promise<BillingRecord>;
+
+  getCreditReportLogs(): Promise<CreditReportLog[]>;
+  getCreditReportLogsByBorrower(borrowerId: string): Promise<CreditReportLog[]>;
+  createCreditReportLog(log: InsertCreditReportLog): Promise<CreditReportLog>;
 
   getDashboardStats(): Promise<{
     totalBorrowers: number;
@@ -229,7 +262,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createDispute(dispute: InsertDispute): Promise<Dispute> {
-    const [created] = await db.insert(disputes).values(dispute).returning();
+    const correctionType = dispute.correctionType || "non_financial";
+    const slaDays = correctionType === "financial" ? 2 : 5;
+    const slaDeadline = new Date();
+    slaDeadline.setDate(slaDeadline.getDate() + slaDays);
+    const [created] = await db.insert(disputes).values({
+      ...dispute,
+      correctionType,
+      slaDeadline,
+    }).returning();
     return created;
   }
 
@@ -295,6 +336,106 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(users).where(
       sql`${users.role} IN (${sql.join(roles.map(r => sql`${r}`), sql`, `)})`
     );
+  }
+
+  async getCourtJudgmentsByBorrower(borrowerId: string): Promise<CourtJudgment[]> {
+    return db.select().from(courtJudgments).where(eq(courtJudgments.borrowerId, borrowerId)).orderBy(desc(courtJudgments.createdAt));
+  }
+
+  async getAllCourtJudgments(): Promise<CourtJudgment[]> {
+    return db.select().from(courtJudgments).orderBy(desc(courtJudgments.createdAt));
+  }
+
+  async createCourtJudgment(judgment: InsertCourtJudgment): Promise<CourtJudgment> {
+    const [created] = await db.insert(courtJudgments).values(judgment).returning();
+    return created;
+  }
+
+  async getConsentRecordsByBorrower(borrowerId: string): Promise<ConsentRecord[]> {
+    return db.select().from(consentRecords).where(eq(consentRecords.borrowerId, borrowerId)).orderBy(desc(consentRecords.createdAt));
+  }
+
+  async getAllConsentRecords(): Promise<ConsentRecord[]> {
+    return db.select().from(consentRecords).orderBy(desc(consentRecords.createdAt));
+  }
+
+  async createConsentRecord(record: InsertConsentRecord): Promise<ConsentRecord> {
+    const [created] = await db.insert(consentRecords).values(record).returning();
+    return created;
+  }
+
+  async revokeConsent(id: string): Promise<ConsentRecord | undefined> {
+    const [updated] = await db.update(consentRecords).set({
+      status: "revoked" as any,
+      revokedAt: new Date(),
+    }).where(eq(consentRecords.id, id)).returning();
+    return updated;
+  }
+
+  async getPaymentHistoryByAccount(creditAccountId: string): Promise<PaymentHistory[]> {
+    return db.select().from(paymentHistory)
+      .where(eq(paymentHistory.creditAccountId, creditAccountId))
+      .orderBy(desc(paymentHistory.period))
+      .limit(12);
+  }
+
+  async createPaymentHistory(entry: InsertPaymentHistory): Promise<PaymentHistory> {
+    const [created] = await db.insert(paymentHistory).values(entry).returning();
+    return created;
+  }
+
+  async getInstitutions(): Promise<Institution[]> {
+    return db.select().from(institutions).orderBy(desc(institutions.createdAt));
+  }
+
+  async getInstitution(id: string): Promise<Institution | undefined> {
+    const [inst] = await db.select().from(institutions).where(eq(institutions.id, id));
+    return inst;
+  }
+
+  async createInstitution(inst: InsertInstitution): Promise<Institution> {
+    const [created] = await db.insert(institutions).values(inst).returning();
+    return created;
+  }
+
+  async updateInstitution(id: string, data: Partial<InsertInstitution>): Promise<Institution | undefined> {
+    const [updated] = await db.update(institutions).set(data).where(eq(institutions.id, id)).returning();
+    return updated;
+  }
+
+  async approveInstitution(id: string, approvedBy: string): Promise<Institution | undefined> {
+    const [updated] = await db.update(institutions).set({
+      status: "active" as any,
+      approvedBy,
+      approvedAt: new Date(),
+    }).where(eq(institutions.id, id)).returning();
+    return updated;
+  }
+
+  async getBillingRecords(): Promise<BillingRecord[]> {
+    return db.select().from(billingRecords).orderBy(desc(billingRecords.createdAt));
+  }
+
+  async getBillingRecordsByInstitution(institutionName: string): Promise<BillingRecord[]> {
+    return db.select().from(billingRecords).where(eq(billingRecords.institutionName, institutionName)).orderBy(desc(billingRecords.createdAt));
+  }
+
+  async createBillingRecord(record: InsertBillingRecord): Promise<BillingRecord> {
+    const [created] = await db.insert(billingRecords).values(record).returning();
+    return created;
+  }
+
+  async getCreditReportLogs(): Promise<CreditReportLog[]> {
+    return db.select().from(creditReportLogs).orderBy(desc(creditReportLogs.createdAt)).limit(200);
+  }
+
+  async getCreditReportLogsByBorrower(borrowerId: string): Promise<CreditReportLog[]> {
+    return db.select().from(creditReportLogs).where(eq(creditReportLogs.borrowerId, borrowerId)).orderBy(desc(creditReportLogs.createdAt));
+  }
+
+  async createCreditReportLog(log: InsertCreditReportLog): Promise<CreditReportLog> {
+    const [created] = await db.insert(creditReportLogs).values(log).returning();
+    return created;
   }
 
   async getDashboardStats() {

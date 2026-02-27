@@ -44,11 +44,17 @@ export default function CreditAccountsPage() {
     originalAmount: "", currentBalance: "", currency: "ETB",
     interestRate: "", disbursementDate: "", maturityDate: "",
     status: "current" as string, collateralType: "", collateralValue: "",
+    isInterestFree: false, gracePeriodMonths: "", restructureCount: "0",
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      const res = await apiRequest("POST", "/api/credit-accounts", data);
+      const payload = {
+        ...data,
+        gracePeriodMonths: data.gracePeriodMonths ? parseInt(data.gracePeriodMonths) : null,
+        restructureCount: data.restructureCount ? parseInt(data.restructureCount) : 0,
+      };
+      const res = await apiRequest("POST", "/api/credit-accounts", payload);
       return res.json();
     },
     onSuccess: (data) => {
@@ -159,6 +165,14 @@ export default function CreditAccountsPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div><Label>{t("creditAccounts.collateralType")}</Label><Input value={formData.collateralType} onChange={(e) => setFormData({ ...formData, collateralType: e.target.value })} /></div>
                 <div><Label>{t("creditAccounts.collateralValue")} ({formData.currency})</Label><Input type="number" step="0.01" value={formData.collateralValue} onChange={(e) => setFormData({ ...formData, collateralValue: e.target.value })} /></div>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="flex items-center gap-2 pt-5">
+                  <input type="checkbox" id="isInterestFree" checked={formData.isInterestFree} onChange={(e) => setFormData({ ...formData, isInterestFree: e.target.checked })} data-testid="checkbox-interest-free" className="h-4 w-4" />
+                  <Label htmlFor="isInterestFree" className="text-sm">{t("creditAccounts.interestFree")}</Label>
+                </div>
+                <div><Label>{t("creditAccounts.gracePeriod")}</Label><Input data-testid="input-grace-period" type="number" min="0" value={formData.gracePeriodMonths} onChange={(e) => setFormData({ ...formData, gracePeriodMonths: e.target.value })} placeholder={t("creditAccounts.months")} /></div>
+                <div><Label>{t("creditAccounts.restructureCount")}</Label><Input data-testid="input-restructure-count" type="number" min="0" value={formData.restructureCount} onChange={(e) => setFormData({ ...formData, restructureCount: e.target.value })} /></div>
               </div>
               <Button type="submit" className="w-full" disabled={createMutation.isPending} data-testid="button-submit-account">
                 {createMutation.isPending ? t("creditAccounts.creating") : t("creditAccounts.createAccount")}

@@ -28,6 +28,10 @@ import UserManagementPage from "@/pages/user-management";
 import PendingApprovalsPage from "@/pages/pending-approvals";
 import DisputesPage from "@/pages/disputes";
 import BatchUploadPage from "@/pages/batch-upload";
+import InstitutionsPage from "@/pages/institutions";
+import ConsentManagementPage from "@/pages/consent-management";
+import BillingPage from "@/pages/billing";
+import HelpdeskPage from "@/pages/helpdesk";
 
 function Router() {
   return (
@@ -43,6 +47,10 @@ function Router() {
       <Route path="/approvals" component={PendingApprovalsPage} />
       <Route path="/disputes" component={DisputesPage} />
       <Route path="/batch-upload" component={BatchUploadPage} />
+      <Route path="/institutions" component={InstitutionsPage} />
+      <Route path="/consent" component={ConsentManagementPage} />
+      <Route path="/billing" component={BillingPage} />
+      <Route path="/helpdesk" component={HelpdeskPage} />
       <Route component={NotFound} />
     </Switch>
   );

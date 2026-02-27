@@ -1,7 +1,8 @@
 # Credit Registry System - National Bank of Ethiopia
+# Cross-Jurisdictional Central Data Hub & Credit Registry System v1.1
 
 ## Overview
-A web-based Credit Registry System designed for the National Bank of Ethiopia to manage credit information, borrower records, and credit risk assessment across commercial banks and microfinance institutions. Adheres to pan-African deployment SRS covering fault-tolerant architecture, security compliance, and regulatory workflows.
+A web-based Credit Registry System designed for the National Bank of Ethiopia to manage credit information, borrower records, and credit risk assessment across commercial banks and microfinance institutions. Adheres to pan-African deployment SRS (v1.1) covering Ghana, Ethiopia, Liberia, and Uganda regulatory requirements with fault-tolerant architecture, security compliance, and regulatory workflows.
 
 ## Architecture
 - **Frontend**: React + TypeScript with Vite, Tailwind CSS, shadcn/ui components
@@ -11,51 +12,70 @@ A web-based Credit Registry System designed for the National Bank of Ethiopia to
 - **Auth**: bcryptjs password hashing, express-session with memorystore
 - **i18n**: react-i18next + i18next-browser-languagedetector, EN/FR translations in `client/src/lib/i18n.ts`
 - **Currency**: `client/src/lib/currency.ts` with `formatCurrency()` and `SUPPORTED_CURRENCIES`
-- **Security**: 3-attempt lockout (15min), session-based auth, IP tracking in audit logs
+- **Security**: 3-attempt lockout (15min), 15-min session timeout (NFR-SEC-09), IP tracking in audit logs
 - **Build**: esbuild bundles server to dist/index.cjs, Vite builds frontend to dist/public/
 
-## Data Model
+## Data Model (14 tables)
 - **users** - System users with roles (admin/regulator/lender/viewer), status, login lockout, passwordChangedAt, mustChangePassword
 - **borrowers** - Individual and corporate borrower records with national ID, TIN, PEP flag, education, employment history, related party links
-- **credit_accounts** - Loan/credit facility records with multi-currency support (17 currencies)
+- **credit_accounts** - Loan/credit records with multi-currency, isInterestFree, gracePeriodMonths, restructureCount, writtenOffDate, reinstatedDate
 - **credit_inquiries** - Search/inquiry records with consent tracking
 - **audit_logs** - Immutable activity logging with IP addresses and timestamps
 - **pending_approvals** - Maker-checker workflow for data change approvals
-- **disputes** - Dispute/grievance management for data corrections
+- **disputes** - Dispute/grievance management with SLA deadline, correctionType (financial/non_financial)
 - **notifications** - In-app notification system for approvals, disputes, system alerts
+- **court_judgments** - Court judgments, bankruptcies, liens (FR-COL-05)
+- **consent_records** - Data subject consent management with receipt numbers (FR-CON-06/07)
+- **payment_history** - 12-period payment performance history per account (FR-CR-08)
+- **institutions** - Data provider institution registration with approval workflow (FR-DP-01/04)
+- **billing_records** - Billing/fee management for institutions (FR-COMM-01/05)
+- **credit_report_logs** - Credit report generation logs with serial numbers (FR-CR-06)
 
 ## Key Features
 - **Authentication**: Login with bcrypt, 3-attempt lockout, session management, logout, password policy (8+ chars, uppercase, lowercase, digit, special), 90-day password expiry
-- **Session security**: 30-minute idle timeout with automatic logout, 8-hour max session
-- **Notification system**: In-app bell with unread count badge, auto-notify on approval requests, approval results, dispute filings
+- **Session security**: 15-minute idle timeout (NFR-SEC-09) with automatic logout, 8-hour max session
+- **Notification system**: In-app bell with unread count badge, auto-notify on approval requests, results, dispute filings
 - **Dashboard**: 8 stat cards (borrowers, accounts, outstanding, delinquent, defaults, inquiries, pending approvals, open disputes)
 - **Borrower management**: Register/search/view individual/corporate profiles with TIN, PEP flagging, education/employment tracking, related party linking
-- **Credit accounts**: Loan details, collateral, arrears tracking, multi-currency (17 African/global currencies: ETB, KES, NGN, ZAR, GHS, TZS, UGX, RWF, XOF, XAF, EGP, MAD, BWP, MZN, USD, EUR, GBP)
-- **Credit scoring**: Algorithmic scoring 300-850 based on repayment history
+- **Credit accounts**: Loan details, collateral, arrears tracking, multi-currency (17 currencies), interest-free loan support, grace periods, restructure tracking
+- **Credit scoring**: Algorithmic scoring 300-850 with reason codes (DELINQUENT_ACCOUNTS, WRITTEN_OFF_ACCOUNTS, etc.)
+- **Credit reports**: Serial numbered reports (CR-{YEAR}-{ID}), reason codes for score explainability (FR-CON-08)
 - **Maker-checker workflow**: Four-eye principle for data changes (different user must approve)
-- **Dispute management**: File/track/resolve data disputes with status workflow
-- **Batch upload**: JSON/CSV bulk data ingestion with per-record validation and error reporting
+- **Dispute management**: File/track/resolve disputes with SLA timers (2-day financial, 5-day non-financial), correction type tracking (DQ-04/05)
+- **Court judgments**: Track liens, bankruptcies, lawsuits, civil/criminal judgments per borrower (FR-COL-05)
+- **Consent management**: Grant/revoke data subject consent with receipt numbers (FR-CON-06/07)
+- **Institution management**: Self-registration with admin approval workflow (FR-DP-01/04)
+- **Billing**: Invoice management, fee schedules for data providers (FR-COMM-01/05)
+- **Helpdesk**: Inquiry Service Unit portal for consumer dispute/consent management (FR-CON-02/09)
+- **Bulk credit search**: Multi-identifier batch search (FR-CR-03)
+- **CSV export**: Portfolio and borrower data export (INT-RPT-01/04)
+- **Regulatory analytics**: NPL ratios, portfolio breakdowns, SLA breach tracking (FR-REG-01/02/03)
+- **Batch upload**: JSON/CSV bulk data ingestion with per-record validation
 - **Portfolio reports**: By institution and loan type with NPL ratios
 - **Audit trail**: Full activity log with IP tracking, timestamps, action types
 - **User management**: Role-based access, status control (active/suspended/deactivated)
-- **RBAC enforcement**: Server-side role checks on sensitive routes (admin-only user management, admin/regulator audit logs and approval review, admin/lender batch upload)
-- **Internationalization (i18n)**: Full French/English language switching with react-i18next, browser language detection, localStorage persistence
-- **Multi-currency**: Pan-African currency support with Intl.NumberFormat formatting (17 currencies with locale-appropriate display)
+- **RBAC enforcement**: Server-side role checks on sensitive routes
+- **Internationalization (i18n)**: Full French/English language switching
+- **Multi-currency**: Pan-African currency support (17 currencies)
 - **Dark/light theme**: Full theme support
 - **Health check**: GET /api/health returns { status: "ok" }
 
 ## Pages
-- `/` (login required) - Dashboard
+- `/` - Dashboard
 - `/borrowers` - Borrower list + registration
-- `/borrowers/:id` - Borrower detail with credit report
-- `/credit-accounts` - Credit accounts table + creation
+- `/borrowers/:id` - Borrower detail with credit report, court judgments, consent records
+- `/credit-accounts` - Credit accounts table + creation (with interest-free, grace period, restructure fields)
 - `/search` - Credit search
 - `/batch-upload` - Batch data upload (JSON/CSV)
-- `/reports` - Portfolio analytics
+- `/reports` - Portfolio analytics with CSV export
 - `/approvals` - Pending approvals (maker-checker)
-- `/disputes` - Dispute management
+- `/disputes` - Dispute management with SLA deadlines and correction types
 - `/audit` - Audit trail with IP tracking
 - `/users` - User management
+- `/institutions` - Institution management with approval workflow
+- `/consent` - Consent management with receipt numbers
+- `/billing` - Billing and invoice management
+- `/helpdesk` - Inquiry Service Unit portal
 
 ## API Endpoints
 All prefixed with `/api` and require authentication (except /api/auth/* and /api/health):
@@ -65,6 +85,7 @@ All prefixed with `/api` and require authentication (except /api/auth/* and /api
 - `GET/POST /credit-accounts`, `GET/PATCH /credit-accounts/:id`
 - `GET/POST /credit-inquiries`
 - `GET /borrowers/:id/credit-report`
+- `GET /borrowers/:id/related` - Related party borrowers
 - `GET/POST /users`, `PATCH /users/:id`
 - `GET/POST /pending-approvals`, `PATCH /pending-approvals/:id`
 - `GET/POST /disputes`, `GET/PATCH /disputes/:id`
@@ -72,7 +93,18 @@ All prefixed with `/api` and require authentication (except /api/auth/* and /api
 - `GET /audit-logs`
 - `GET /dashboard/stats`
 - `GET /notifications`, `GET /notifications/unread-count`, `PATCH /notifications/:id/read`, `POST /notifications/mark-all-read`
-- `GET /borrowers/:id/related` - Related party borrowers
+- `GET/POST /court-judgments` - Court judgments (with ?borrowerId filter)
+- `GET/POST /consent-records` - Consent management (with ?borrowerId filter)
+- `POST /consent-records/:id/revoke` - Revoke consent
+- `GET/POST /payment-history/:creditAccountId` - Payment history
+- `GET/POST /institutions`, `PATCH /institutions/:id`
+- `POST /institutions/:id/approve` - Institution approval
+- `GET/POST /billing` - Billing records
+- `GET /credit-reports/logs` - Report generation logs
+- `POST /credit-reports/generate` - Generate credit report with serial number + reason codes
+- `POST /credit-search/bulk` - Bulk credit reference checks
+- `GET /reports/export?format=csv&type=portfolio|borrowers` - CSV export
+- `GET /reports/regulatory` - Regulatory analytics
 
 ## Running
 - **Dev**: `npm run dev` (tsx + Vite HMR, NODE_ENV=development)
@@ -90,13 +122,25 @@ All prefixed with `/api` and require authentication (except /api/auth/* and /api
 ## RBAC Access Matrix
 | Route | Admin | Regulator | Lender | Viewer |
 |-------|-------|-----------|--------|--------|
-| User Management | ✅ | ❌ | ❌ | ❌ |
-| Audit Logs | ✅ | ✅ | ❌ | ❌ |
-| Approve/Reject Changes | ✅ | ✅ | ❌ | ❌ |
-| Batch Upload | ✅ | ❌ | ✅ | ❌ |
-| Borrowers/Accounts | ✅ | ✅ | ✅ | ✅ |
-| Disputes | ✅ | ✅ | ✅ | ✅ |
-| Dashboard/Reports | ✅ | ✅ | ✅ | ✅ |
+| User Management | Yes | No | No | No |
+| Institutions | Yes | No | No | No |
+| Billing | Yes | Yes | No | No |
+| Audit Logs | Yes | Yes | No | No |
+| Approve/Reject Changes | Yes | Yes | No | No |
+| Court Judgments (create) | Yes | Yes | No | No |
+| Batch Upload | Yes | No | Yes | No |
+| Borrowers/Accounts | Yes | Yes | Yes | Yes |
+| Disputes | Yes | Yes | Yes | Yes |
+| Consent | Yes | Yes | Yes | Yes |
+| Dashboard/Reports | Yes | Yes | Yes | Yes |
+| Helpdesk | Yes | Yes | Yes | Yes |
+
+## SRS Compliance Notes
+- Session timeout: 15 min (NFR-SEC-09)
+- SLA deadlines: 2 working days financial, 5 working days non-financial (DQ-04/05)
+- Credit report serial format: CR-{YEAR}-{timestamp_base36}
+- Consent receipt format: CR-{timestamp}-{random}
+- Reason codes: DELINQUENT_ACCOUNTS, WRITTEN_OFF_ACCOUNTS, RESTRUCTURED_ACCOUNTS, HIGH_INQUIRY_VOLUME, HIGH_DEBT_LEVEL, COURT_JUDGMENTS_PRESENT, POLITICALLY_EXPOSED_PERSON, STRONG_REPAYMENT_HISTORY, EXCELLENT_PAYMENT_RECORD, THIN_FILE_LIMITED_HISTORY
 
 ## Important Notes
 - SIGHUP signal is ignored in server process to prevent workflow-triggered termination
@@ -105,3 +149,4 @@ All prefixed with `/api` and require authentication (except /api/auth/* and /api
 - Response logging truncated to 200 chars to reduce I/O
 - static.ts handles both ESM (__dirname) and CJS (import.meta.url) contexts
 - Maker-checker enforcement: server rejects self-approval (requestedBy !== reviewedBy)
+- New tables created via direct SQL (db:push has interactive prompt issues with session table rename)
