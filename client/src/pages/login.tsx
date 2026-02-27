@@ -87,7 +87,7 @@ export default function LoginPage() {
               National Bank of Ethiopia &middot; Cross-Jurisdictional CDH v1.1
             </p>
             <p className="text-white/40">
-              Credit system provided by <span className="text-white/60 font-medium">Thomas Ghana Software Bank</span>
+              Credit system provided by <span className="text-white/60 font-medium">Systems In Motion Limited</span>
             </p>
           </div>
         </div>
