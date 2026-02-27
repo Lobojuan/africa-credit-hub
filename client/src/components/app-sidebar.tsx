@@ -130,7 +130,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-4">
+      <SidebarFooter className="p-4 space-y-2">
         <div className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.05)" }}>
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
@@ -139,6 +139,12 @@ export function AppSidebar() {
           <div className="text-[10px] text-sidebar-foreground/50 mt-1">
             {t('sidebar.version')}
           </div>
+        </div>
+        <div className="px-1">
+          <p className="text-[10px] text-sidebar-foreground/40 leading-relaxed" data-testid="text-provider-credit">
+            Credit system provided by{" "}
+            <span className="text-sidebar-foreground/60 font-medium">Thomas Ghana Software Bank</span>
+          </p>
         </div>
       </SidebarFooter>
     </Sidebar>
