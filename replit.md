@@ -57,7 +57,8 @@ A web-based Credit Registry System designed for the National Bank of Ethiopia to
 - **RBAC enforcement**: Server-side role checks on sensitive routes
 - **Internationalization (i18n)**: Full French/English language switching
 - **Multi-currency**: Pan-African currency support (17 currencies)
-- **Dark/light theme**: Full theme support
+- **Dark/light theme**: Full theme support with pan-African color palette
+- **Visual design**: Inter font, warm teal + gold accent palette (culturally resonant for Ghana/Uganda/Ethiopia), gradient page header bars, split-panel login hero, gradient stat card icons, dark teal sidebar with gold branding, system status indicator, custom scrollbars, fade/slide animations
 - **Health check**: GET /api/health returns { status: "ok" }
 
 ## Pages

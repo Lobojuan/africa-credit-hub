@@ -8,7 +8,6 @@ import {
   FileText,
   Shield,
   Settings,
-  Database,
   CheckSquare,
   AlertCircle,
   Upload,
@@ -16,6 +15,7 @@ import {
   FileCheck,
   Receipt,
   Headset,
+  Globe,
 } from "lucide-react";
 import {
   Sidebar,
@@ -59,22 +59,27 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
-      <SidebarHeader className="p-4">
+      <SidebarHeader className="p-4 pb-6">
         <Link href="/">
-          <div className="flex items-center gap-3 cursor-pointer">
-            <div className="flex items-center justify-center w-9 h-9 rounded-md bg-primary">
-              <Database className="w-5 h-5 text-primary-foreground" />
+          <div className="flex items-center gap-3 cursor-pointer group">
+            <div
+              className="flex items-center justify-center w-10 h-10 rounded-xl shadow-md transition-transform group-hover:scale-105"
+              style={{
+                background: "linear-gradient(135deg, hsl(43 80% 55%) 0%, hsl(33 75% 48%) 100%)"
+              }}
+            >
+              <Globe className="w-5 h-5 text-white" />
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-semibold tracking-tight">{t('sidebar.brandTitle')}</span>
-              <span className="text-[11px] text-muted-foreground">{t('sidebar.brandSubtitle')}</span>
+              <span className="text-sm font-bold tracking-tight text-sidebar-foreground">{t('sidebar.brandTitle')}</span>
+              <span className="text-[10px] font-medium text-sidebar-foreground/50">{t('sidebar.brandSubtitle')}</span>
             </div>
           </div>
         </Link>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>{t('sidebar.main')}</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sidebar-foreground/40 text-[10px] font-semibold uppercase tracking-widest px-3">{t('sidebar.main')}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {mainItems.map((item) => (
@@ -91,7 +96,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
-          <SidebarGroupLabel>{t('sidebar.reportsCompliance')}</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sidebar-foreground/40 text-[10px] font-semibold uppercase tracking-widest px-3">{t('sidebar.reportsCompliance')}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {reportItems.map((item) => (
@@ -108,7 +113,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
-          <SidebarGroupLabel>{t('sidebar.administration')}</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sidebar-foreground/40 text-[10px] font-semibold uppercase tracking-widest px-3">{t('sidebar.administration')}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {adminItems.map((item) => (
@@ -126,8 +131,14 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="p-4">
-        <div className="text-[11px] text-muted-foreground">
-          {t('sidebar.version')}
+        <div className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.05)" }}>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+            <span className="text-[11px] font-medium text-sidebar-foreground/70">System Online</span>
+          </div>
+          <div className="text-[10px] text-sidebar-foreground/50 mt-1">
+            {t('sidebar.version')}
+          </div>
         </div>
       </SidebarFooter>
     </Sidebar>

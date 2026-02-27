@@ -92,8 +92,11 @@ export default function BillingPage() {
     <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-billing-title">{t("billing.title")}</h1>
-          <p className="text-sm text-muted-foreground mt-1">{t("billing.subtitle")}</p>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="page-header-bar" />
+            <h1 className="text-2xl font-extrabold tracking-tight" data-testid="text-billing-title">{t("billing.title")}</h1>
+          </div>
+          <p className="text-sm text-muted-foreground ml-4">{t("billing.subtitle")}</p>
         </div>
         {isAdmin && (
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
