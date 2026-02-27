@@ -57,10 +57,11 @@ export default function HelpdeskPage() {
     consentType: "inquiry",
   });
 
-  const { data: searchResults, isLoading: searchLoading } = useQuery<Borrower[]>({
-    queryKey: [search.length >= 2 ? `/api/borrowers?search=${encodeURIComponent(search)}` : "/api/borrowers"],
+  const { data: rawSearchResults, isLoading: searchLoading } = useQuery<Borrower[] | { data: Borrower[]; total: number }>({
+    queryKey: [search.length >= 2 ? `/api/borrowers?search=${encodeURIComponent(search)}` : "/api/borrowers?page=1&limit=50"],
     enabled: search.length >= 2 || search.length === 0,
   });
+  const searchResults = Array.isArray(rawSearchResults) ? rawSearchResults : rawSearchResults?.data;
 
   const { data: allDisputes, isLoading: disputesLoading } = useQuery<Dispute[]>({
     queryKey: ["/api/disputes"],

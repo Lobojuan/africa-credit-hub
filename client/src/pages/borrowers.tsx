@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { Plus, Search, Building2, User, Users, ChevronRight, Flag } from "lucide-react";
+import { Plus, Search, Building2, User, Users, ChevronRight, ChevronLeft, Flag } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,16 +16,25 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Borrower } from "@shared/schema";
 
+const PAGE_SIZE = 50;
+
 export default function BorrowersPage() {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [, navigate] = useLocation();
   const { toast } = useToast();
 
-  const { data: borrowers, isLoading } = useQuery<Borrower[]>({
-    queryKey: [search ? `/api/borrowers?search=${encodeURIComponent(search)}` : "/api/borrowers"],
+  const { data: paginatedResult, isLoading } = useQuery<{ data: Borrower[]; total: number } | Borrower[]>({
+    queryKey: search
+      ? [`/api/borrowers?search=${encodeURIComponent(search)}`]
+      : [`/api/borrowers?page=${page}&limit=${PAGE_SIZE}`],
   });
+
+  const borrowers = Array.isArray(paginatedResult) ? paginatedResult : paginatedResult?.data;
+  const totalBorrowers = Array.isArray(paginatedResult) ? paginatedResult.length : paginatedResult?.total ?? 0;
+  const totalPages = Math.ceil(totalBorrowers / PAGE_SIZE);
 
   const [formData, setFormData] = useState({
     type: "individual" as "individual" | "corporate",
@@ -43,7 +52,7 @@ export default function BorrowersPage() {
       return res.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/borrowers"] });
+      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string)?.startsWith?.("/api/borrowers") });
       queryClient.invalidateQueries({ queryKey: ["/api/pending-approvals"] });
       setDialogOpen(false);
       setFormData({ type: "individual", firstName: "", lastName: "", companyName: "", nationalId: "", dateOfBirth: "", gender: "", phone: "", email: "", address: "", city: "", region: "", employerName: "", occupation: "", businessRegNumber: "", sector: "", isPep: false, pepDetails: "", educationLevel: "", educationInstitution: "", employmentHistory: "" });
@@ -178,7 +187,7 @@ export default function BorrowersPage() {
           placeholder={t("borrowers.searchPlaceholder")}
           className="pl-9"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
         />
       </div>
 
@@ -236,6 +245,39 @@ export default function BorrowersPage() {
             </p>
           </CardContent>
         </Card>
+      )}
+
+      {!search && totalPages > 1 && (
+        <div className="flex items-center justify-between pt-2" data-testid="pagination-controls">
+          <p className="text-sm text-muted-foreground">
+            {t("common.showing")} {((page - 1) * PAGE_SIZE) + 1}–{Math.min(page * PAGE_SIZE, totalBorrowers)} {t("common.of")} {totalBorrowers.toLocaleString()}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => setPage(p => p - 1)}
+              data-testid="button-prev-page"
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              {t("common.previous")}
+            </Button>
+            <span className="text-sm font-medium px-2">
+              {page} / {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages}
+              onClick={() => setPage(p => p + 1)}
+              data-testid="button-next-page"
+            >
+              {t("common.next")}
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+        </div>
       )}
     </div>
   );

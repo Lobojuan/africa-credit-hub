@@ -247,8 +247,15 @@ export async function registerRoutes(
   app.get("/api/borrowers", async (req, res) => {
     try {
       const search = req.query.search as string;
-      const result = search ? await storage.searchBorrowers(search) : await storage.getBorrowers();
-      res.json(result);
+      if (search) {
+        const data = await storage.searchBorrowers(search);
+        res.json(data);
+      } else {
+        const page = Math.max(1, parseInt(req.query.page as string) || 1);
+        const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50));
+        const result = await storage.getBorrowers(page, limit);
+        res.json(result);
+      }
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
@@ -1015,7 +1022,7 @@ export async function registerRoutes(
       const type = (req.query.type as string) || "portfolio";
 
       const accounts = await storage.getAllCreditAccounts();
-      const borrowersList = await storage.getBorrowers();
+      const { data: borrowersList } = await storage.getBorrowers(1, 200);
 
       if (format === "csv") {
         let csv = "";
@@ -1046,7 +1053,7 @@ export async function registerRoutes(
   app.get("/api/reports/regulatory", requireRole("admin", "regulator"), async (_req, res) => {
     try {
       const accounts = await storage.getAllCreditAccounts();
-      const borrowersList = await storage.getBorrowers();
+      const { data: borrowersList, total: totalBorrowers } = await storage.getBorrowers(1, 200);
       const disputeList = await storage.getDisputes();
       const approvals = await storage.getPendingApprovals();
       const instList = await storage.getInstitutions();
@@ -1077,7 +1084,7 @@ export async function registerRoutes(
 
       res.json({
         summary: {
-          totalBorrowers: borrowersList.length,
+          totalBorrowers,
           individualBorrowers: borrowersList.filter(b => b.type === "individual").length,
           corporateBorrowers: borrowersList.filter(b => b.type === "corporate").length,
           pepBorrowers: borrowersList.filter(b => b.isPep).length,

@@ -31,7 +31,7 @@ export interface IStorage {
   updateLastLogin(userId: string): Promise<void>;
 
   getBorrower(id: string): Promise<Borrower | undefined>;
-  getBorrowers(): Promise<Borrower[]>;
+  getBorrowers(page?: number, limit?: number): Promise<{ data: Borrower[]; total: number }>;
   searchBorrowers(query: string): Promise<Borrower[]>;
   createBorrower(borrower: InsertBorrower): Promise<Borrower>;
   updateBorrower(id: string, data: Partial<InsertBorrower>): Promise<Borrower | undefined>;
@@ -154,8 +154,12 @@ export class DatabaseStorage implements IStorage {
     return borrower;
   }
 
-  async getBorrowers(): Promise<Borrower[]> {
-    return db.select().from(borrowers).orderBy(desc(borrowers.createdAt));
+  async getBorrowers(page: number = 1, limit: number = 50): Promise<{ data: Borrower[]; total: number }> {
+    const safeLimit = Math.min(limit, 200);
+    const offset = (page - 1) * safeLimit;
+    const [totalResult] = await db.select({ value: count() }).from(borrowers);
+    const data = await db.select().from(borrowers).orderBy(desc(borrowers.createdAt)).limit(safeLimit).offset(offset);
+    return { data, total: totalResult.value };
   }
 
   async searchBorrowers(query: string): Promise<Borrower[]> {
@@ -170,7 +174,7 @@ export class DatabaseStorage implements IStorage {
         like(borrowers.phone, searchPattern),
         like(borrowers.email, searchPattern),
       )
-    ).orderBy(desc(borrowers.createdAt));
+    ).orderBy(desc(borrowers.createdAt)).limit(200);
   }
 
   async createBorrower(borrower: InsertBorrower): Promise<Borrower> {
@@ -193,7 +197,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllCreditAccounts(): Promise<CreditAccount[]> {
-    return db.select().from(creditAccounts).orderBy(desc(creditAccounts.createdAt));
+    return db.select().from(creditAccounts).orderBy(desc(creditAccounts.createdAt)).limit(200);
   }
 
   async createCreditAccount(account: InsertCreditAccount): Promise<CreditAccount> {
@@ -211,7 +215,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllCreditInquiries(): Promise<CreditInquiry[]> {
-    return db.select().from(creditInquiries).orderBy(desc(creditInquiries.createdAt));
+    return db.select().from(creditInquiries).orderBy(desc(creditInquiries.createdAt)).limit(200);
   }
 
   async createCreditInquiry(inquiry: InsertCreditInquiry): Promise<CreditInquiry> {
@@ -253,7 +257,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getDisputes(): Promise<Dispute[]> {
-    return db.select().from(disputes).orderBy(desc(disputes.createdAt));
+    return db.select().from(disputes).orderBy(desc(disputes.createdAt)).limit(200);
   }
 
   async getDispute(id: string): Promise<Dispute | undefined> {
@@ -343,7 +347,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllCourtJudgments(): Promise<CourtJudgment[]> {
-    return db.select().from(courtJudgments).orderBy(desc(courtJudgments.createdAt));
+    return db.select().from(courtJudgments).orderBy(desc(courtJudgments.createdAt)).limit(200);
   }
 
   async createCourtJudgment(judgment: InsertCourtJudgment): Promise<CourtJudgment> {
@@ -356,7 +360,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllConsentRecords(): Promise<ConsentRecord[]> {
-    return db.select().from(consentRecords).orderBy(desc(consentRecords.createdAt));
+    return db.select().from(consentRecords).orderBy(desc(consentRecords.createdAt)).limit(200);
   }
 
   async createConsentRecord(record: InsertConsentRecord): Promise<ConsentRecord> {

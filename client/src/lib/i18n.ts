@@ -534,6 +534,10 @@ const en = {
     language: "Language",
     english: "English",
     french: "Français",
+    showing: "Showing",
+    of: "of",
+    previous: "Previous",
+    next: "Next",
   },
 };
 
@@ -1069,6 +1073,10 @@ const fr: typeof en = {
     language: "Langue",
     english: "English",
     french: "Français",
+    showing: "Affichage",
+    of: "sur",
+    previous: "Précédent",
+    next: "Suivant",
   },
 };
 

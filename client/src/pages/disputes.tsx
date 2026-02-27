@@ -45,9 +45,10 @@ export default function DisputesPage() {
     queryKey: ["/api/disputes"],
   });
 
-  const { data: borrowers } = useQuery<Borrower[]>({
-    queryKey: ["/api/borrowers"],
+  const { data: borrowersResult } = useQuery<{ data: Borrower[]; total: number }>({
+    queryKey: ["/api/borrowers?page=1&limit=200"],
   });
+  const borrowers = borrowersResult?.data;
 
   const { data: accounts } = useQuery<CreditAccount[]>({
     queryKey: ["/api/credit-accounts"],
