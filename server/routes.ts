@@ -809,10 +809,12 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/institutions", async (_req, res) => {
+  app.get("/api/institutions", async (req, res) => {
     try {
-      const list = await storage.getInstitutions();
-      res.json(list);
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50));
+      const result = await storage.getInstitutions(page, limit);
+      res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
@@ -1056,7 +1058,7 @@ export async function registerRoutes(
       const { data: borrowersList, total: totalBorrowers } = await storage.getBorrowers(1, 200);
       const disputeList = await storage.getDisputes();
       const approvals = await storage.getPendingApprovals();
-      const instList = await storage.getInstitutions();
+      const { data: instList, total: totalInstitutions } = await storage.getInstitutions(1, 200);
 
       const totalOutstanding = accounts.reduce((sum, a) => sum + parseFloat(a.currentBalance || "0"), 0);
       const nplAccounts = accounts.filter(a => a.status === "delinquent" || a.status === "default" || a.status === "written_off");

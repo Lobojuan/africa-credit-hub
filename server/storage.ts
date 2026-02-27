@@ -80,7 +80,7 @@ export interface IStorage {
   getPaymentHistoryByAccount(creditAccountId: string): Promise<PaymentHistory[]>;
   createPaymentHistory(entry: InsertPaymentHistory): Promise<PaymentHistory>;
 
-  getInstitutions(): Promise<Institution[]>;
+  getInstitutions(page?: number, limit?: number): Promise<{ data: Institution[]; total: number }>;
   getInstitution(id: string): Promise<Institution | undefined>;
   createInstitution(inst: InsertInstitution): Promise<Institution>;
   updateInstitution(id: string, data: Partial<InsertInstitution>): Promise<Institution | undefined>;
@@ -388,8 +388,12 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async getInstitutions(): Promise<Institution[]> {
-    return db.select().from(institutions).orderBy(desc(institutions.createdAt));
+  async getInstitutions(page: number = 1, limit: number = 50): Promise<{ data: Institution[]; total: number }> {
+    const safeLimit = Math.min(limit, 200);
+    const offset = (page - 1) * safeLimit;
+    const [totalResult] = await db.select({ value: count() }).from(institutions);
+    const data = await db.select().from(institutions).orderBy(desc(institutions.createdAt)).limit(safeLimit).offset(offset);
+    return { data, total: totalResult.value };
   }
 
   async getInstitution(id: string): Promise<Institution | undefined> {

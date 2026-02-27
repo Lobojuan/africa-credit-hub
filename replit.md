@@ -143,6 +143,20 @@ All prefixed with `/api` and require authentication (except /api/auth/* and /api
 - Consent receipt format: CR-{timestamp}-{random}
 - Reason codes: DELINQUENT_ACCOUNTS, WRITTEN_OFF_ACCOUNTS, RESTRUCTURED_ACCOUNTS, HIGH_INQUIRY_VOLUME, HIGH_DEBT_LEVEL, COURT_JUDGMENTS_PRESENT, POLITICALLY_EXPOSED_PERSON, STRONG_REPAYMENT_HISTORY, EXCELLENT_PAYMENT_RECORD, THIN_FILE_LIMITED_HISTORY
 
+## Database Seed Data
+- 100,005 borrowers (Ethiopian, Ghanaian, Ugandan names aligned to correct countries/cities)
+- 100,020 institutions (banks, MFIs, SACCOs, telecoms, utilities, digital lenders across 3 countries)
+- 166,673 credit accounts
+- 120,000 payment history records
+- 25,004 credit inquiries
+- 15,000 consent records
+- 5,063 audit logs
+- 3,000 disputes
+- 2,000 court judgments
+- 120 billing records
+- 6 system users
+- Server-side pagination on borrowers and institutions endpoints (page/limit query params, returns {data, total})
+
 ## Important Notes
 - SIGHUP signal is ignored in server process to prevent workflow-triggered termination
 - Session store uses memorystore (not PostgreSQL) to reduce memory pressure

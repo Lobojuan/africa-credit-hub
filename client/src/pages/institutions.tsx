@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Plus, Building2, CheckCircle } from "lucide-react";
+import { Plus, Building2, CheckCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,16 +35,22 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+const PAGE_SIZE = 50;
+
 export default function InstitutionsPage() {
   const { t } = useTranslation();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [page, setPage] = useState(1);
   const { toast } = useToast();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
 
-  const { data: institutions, isLoading } = useQuery<Institution[]>({
-    queryKey: ["/api/institutions"],
+  const { data: paginatedResult, isLoading } = useQuery<{ data: Institution[]; total: number }>({
+    queryKey: [`/api/institutions?page=${page}&limit=${PAGE_SIZE}`],
   });
+  const institutions = paginatedResult?.data;
+  const totalInstitutions = paginatedResult?.total ?? 0;
+  const totalPages = Math.ceil(totalInstitutions / PAGE_SIZE);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -76,7 +82,7 @@ export default function InstitutionsPage() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/institutions"] });
+      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string)?.startsWith?.("/api/institutions") });
       setDialogOpen(false);
       resetForm();
       toast({ title: t("institutions.registered"), description: t("institutions.registeredDesc") });
@@ -92,7 +98,7 @@ export default function InstitutionsPage() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/institutions"] });
+      queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string)?.startsWith?.("/api/institutions") });
       toast({ title: t("institutions.approved"), description: t("institutions.approvedDesc") });
     },
     onError: (e: Error) => {
@@ -305,6 +311,25 @@ export default function InstitutionsPage() {
             <p className="text-sm text-muted-foreground mt-1">{t("institutions.getStarted")}</p>
           </CardContent>
         </Card>
+      )}
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-2" data-testid="pagination-institutions">
+          <p className="text-sm text-muted-foreground">
+            {t("common.showing")} {((page - 1) * PAGE_SIZE) + 1}–{Math.min(page * PAGE_SIZE, totalInstitutions)} {t("common.of")} {totalInstitutions.toLocaleString()}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)} data-testid="button-inst-prev">
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              {t("common.previous")}
+            </Button>
+            <span className="text-sm font-medium px-2">{page} / {totalPages}</span>
+            <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} data-testid="button-inst-next">
+              {t("common.next")}
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+        </div>
       )}
     </div>
   );
