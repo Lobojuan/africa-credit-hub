@@ -16,6 +16,7 @@ import {
   Receipt,
   Headset,
   Globe,
+  Key,
 } from "lucide-react";
 import {
   Sidebar,
@@ -51,6 +52,7 @@ const adminItems = [
   { titleKey: "sidebar.userManagement", url: "/users", icon: Settings, testId: "nav-user-management" },
   { titleKey: "sidebar.institutions", url: "/institutions", icon: Building2, testId: "nav-institutions" },
   { titleKey: "sidebar.billing", url: "/billing", icon: Receipt, testId: "nav-billing" },
+  { titleKey: "sidebar.apiKeys", url: "/api-keys", icon: Key, testId: "nav-api-keys" },
 ];
 
 export function AppSidebar() {

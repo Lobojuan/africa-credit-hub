@@ -230,6 +230,24 @@ export const creditReportLogs = pgTable("credit_report_logs", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const apiKeyStatusEnum = pgEnum("api_key_status", ["active", "revoked"]);
+
+export const apiKeys = pgTable("api_keys", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  institutionId: varchar("institution_id").notNull().references(() => institutions.id),
+  keyHash: text("key_hash").notNull(),
+  keyPrefix: text("key_prefix").notNull(),
+  label: text("label").notNull(),
+  status: apiKeyStatusEnum("status").notNull().default("active"),
+  permissions: text("permissions").notNull().default("submit"),
+  lastUsedAt: timestamp("last_used_at"),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  revokedAt: timestamp("revoked_at"),
+});
+
+export const insertApiKeySchema = createInsertSchema(apiKeys).omit({ id: true, createdAt: true, lastUsedAt: true, revokedAt: true });
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, lastLogin: true, failedLoginAttempts: true, lockedUntil: true, passwordChangedAt: true, mustChangePassword: true });
 export const insertBorrowerSchema = createInsertSchema(borrowers).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertCreditAccountSchema = createInsertSchema(creditAccounts).omit({ id: true, createdAt: true, updatedAt: true });
@@ -273,3 +291,5 @@ export type InsertBillingRecord = z.infer<typeof insertBillingRecordSchema>;
 export type BillingRecord = typeof billingRecords.$inferSelect;
 export type InsertCreditReportLog = z.infer<typeof insertCreditReportLogSchema>;
 export type CreditReportLog = typeof creditReportLogs.$inferSelect;
+export type InsertApiKey = z.infer<typeof insertApiKeySchema>;
+export type ApiKey = typeof apiKeys.$inferSelect;

@@ -9,6 +9,7 @@ import {
 } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { registerExternalApi, generateApiKey } from "./external-api";
 
 function stripPassword(user: any) {
   const { password, ...safe } = user;
@@ -187,7 +188,7 @@ export async function registerRoutes(
   });
 
   app.use("/api", (req, res, next) => {
-    if (req.path.startsWith("/auth")) return next();
+    if (req.path.startsWith("/auth") || req.path.startsWith("/external")) return next();
     requireAuth(req, res, next);
   });
 
@@ -1143,6 +1144,85 @@ export async function registerRoutes(
       res.status(500).json({ message: e.message });
     }
   });
+
+  app.get("/api/api-keys", requireAuth, requireRole("admin"), async (_req, res) => {
+    try {
+      const keys = await storage.getAllApiKeys();
+      const keysWithInstitution = await Promise.all(keys.map(async (k) => {
+        const inst = await storage.getInstitution(k.institutionId);
+        return { ...k, institutionName: inst?.name || "Unknown" };
+      }));
+      res.json(keysWithInstitution);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  const createApiKeyBodySchema = z.object({
+    institutionId: z.string().min(1, "institutionId is required"),
+    label: z.string().min(1, "label is required").max(100),
+    permissions: z.enum(["submit", "read", "full"]).default("submit"),
+  });
+
+  app.post("/api/api-keys", requireAuth, requireRole("admin"), async (req, res) => {
+    try {
+      const parsed = createApiKeyBodySchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: parsed.error.errors.map(e => e.message).join(", ") });
+      }
+      const { institutionId, label, permissions } = parsed.data;
+
+      const institution = await storage.getInstitution(institutionId);
+      if (!institution) return res.status(404).json({ message: "Institution not found" });
+      if (institution.status !== "active") return res.status(400).json({ message: "Institution must be active to generate API keys" });
+
+      const { fullKey, prefix, hash } = generateApiKey();
+      const apiKey = await storage.createApiKey({
+        institutionId,
+        keyHash: hash,
+        keyPrefix: prefix,
+        label,
+        permissions: permissions || "submit",
+        status: "active",
+        createdBy: req.session!.userId!,
+      });
+
+      await storage.createAuditLog({
+        userId: req.session!.userId,
+        action: "CREATE",
+        entity: "api_key",
+        entityId: apiKey.id,
+        details: `API key generated for ${institution.name} (${label})`,
+        ipAddress: req.ip || "unknown",
+      });
+
+      res.status(201).json({ ...apiKey, fullKey });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/api-keys/:id/revoke", requireAuth, requireRole("admin"), async (req, res) => {
+    try {
+      const revoked = await storage.revokeApiKey(req.params.id);
+      if (!revoked) return res.status(404).json({ message: "API key not found" });
+
+      await storage.createAuditLog({
+        userId: req.session!.userId,
+        action: "UPDATE",
+        entity: "api_key",
+        entityId: revoked.id,
+        details: `API key revoked: ${revoked.label}`,
+        ipAddress: req.ip || "unknown",
+      });
+
+      res.json(revoked);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  registerExternalApi(app);
 
   return httpServer;
 }

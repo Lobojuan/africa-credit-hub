@@ -2,7 +2,7 @@ import { eq, desc, like, or, sql, count } from "drizzle-orm";
 import { db } from "./db";
 import {
   users, borrowers, creditAccounts, creditInquiries, auditLogs, pendingApprovals, disputes, notifications,
-  courtJudgments, consentRecords, paymentHistory, institutions, billingRecords, creditReportLogs,
+  courtJudgments, consentRecords, paymentHistory, institutions, billingRecords, creditReportLogs, apiKeys,
   type User, type InsertUser,
   type Borrower, type InsertBorrower,
   type CreditAccount, type InsertCreditAccount,
@@ -17,6 +17,7 @@ import {
   type Institution, type InsertInstitution,
   type BillingRecord, type InsertBillingRecord,
   type CreditReportLog, type InsertCreditReportLog,
+  type ApiKey, type InsertApiKey,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -105,6 +106,14 @@ export interface IStorage {
     openDisputeCount: number;
   }>;
   getDashboardDetails(type: string): Promise<Record<string, any>>;
+
+  getApiKeysByInstitution(institutionId: string): Promise<ApiKey[]>;
+  getAllApiKeys(): Promise<ApiKey[]>;
+  getApiKeyByHash(keyHash: string): Promise<ApiKey | undefined>;
+  createApiKey(key: InsertApiKey): Promise<ApiKey>;
+  revokeApiKey(id: string): Promise<ApiKey | undefined>;
+  updateApiKeyLastUsed(id: string): Promise<void>;
+  getInstitutionByName(name: string): Promise<Institution | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -579,6 +588,38 @@ export class DatabaseStorage implements IStorage {
       pendingApprovalCount: pendingCount.value,
       openDisputeCount: disputeCount.value,
     };
+  }
+
+  async getApiKeysByInstitution(institutionId: string): Promise<ApiKey[]> {
+    return db.select().from(apiKeys).where(eq(apiKeys.institutionId, institutionId)).orderBy(desc(apiKeys.createdAt));
+  }
+
+  async getAllApiKeys(): Promise<ApiKey[]> {
+    return db.select().from(apiKeys).orderBy(desc(apiKeys.createdAt));
+  }
+
+  async getApiKeyByHash(keyHash: string): Promise<ApiKey | undefined> {
+    const [key] = await db.select().from(apiKeys).where(eq(apiKeys.keyHash, keyHash));
+    return key;
+  }
+
+  async createApiKey(key: InsertApiKey): Promise<ApiKey> {
+    const [created] = await db.insert(apiKeys).values(key).returning();
+    return created;
+  }
+
+  async revokeApiKey(id: string): Promise<ApiKey | undefined> {
+    const [revoked] = await db.update(apiKeys).set({ status: "revoked", revokedAt: new Date() }).where(eq(apiKeys.id, id)).returning();
+    return revoked;
+  }
+
+  async updateApiKeyLastUsed(id: string): Promise<void> {
+    await db.update(apiKeys).set({ lastUsedAt: new Date() }).where(eq(apiKeys.id, id));
+  }
+
+  async getInstitutionByName(name: string): Promise<Institution | undefined> {
+    const [inst] = await db.select().from(institutions).where(eq(institutions.name, name));
+    return inst;
   }
 }
 

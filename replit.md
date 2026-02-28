@@ -15,7 +15,7 @@ A web-based Credit Registry System developed by Systems In Motion Limited to man
 - **Security**: 3-attempt lockout (15min), 15-min session timeout (NFR-SEC-09), IP tracking in audit logs
 - **Build**: esbuild bundles server to dist/index.cjs, Vite builds frontend to dist/public/
 
-## Data Model (14 tables)
+## Data Model (15 tables)
 - **users** - System users with roles (admin/regulator/lender/viewer), status, login lockout, passwordChangedAt, mustChangePassword
 - **borrowers** - Individual and corporate borrower records with national ID, TIN, PEP flag, education, employment history, related party links
 - **credit_accounts** - Loan/credit records with multi-currency, isInterestFree, gracePeriodMonths, restructureCount, writtenOffDate, reinstatedDate
@@ -30,6 +30,7 @@ A web-based Credit Registry System developed by Systems In Motion Limited to man
 - **institutions** - Data provider institution registration with approval workflow (FR-DP-01/04)
 - **billing_records** - Billing/fee management for institutions (FR-COMM-01/05)
 - **credit_report_logs** - Credit report generation logs with serial numbers (FR-CR-06)
+- **api_keys** - External API key management with SHA-256 hashing, permissions (submit/read/full), institution binding, revocation tracking
 
 ## Key Features
 - **Authentication**: Login with bcrypt, 3-attempt lockout, session management, logout, password policy (8+ chars, uppercase, lowercase, digit, special), 90-day password expiry
@@ -60,6 +61,9 @@ A web-based Credit Registry System developed by Systems In Motion Limited to man
 - **Multi-currency**: Pan-African currency support (17 currencies)
 - **Dark/light theme**: Full theme support with pan-African color palette
 - **Visual design**: Inter font, warm teal + gold accent palette (culturally resonant for Ghana/Uganda/Ethiopia), gradient page header bars, split-panel login hero, gradient stat card icons, dark teal sidebar with gold branding, system status indicator, custom scrollbars, fade/slide animations
+- **External API**: REST API for institutions to programmatically submit borrowers, credit accounts, payment history, court judgments; search borrowers; generate credit reports — authenticated via X-API-Key header with SHA-256 hashed keys, batch submission support, full audit trail logging
+- **API key management**: Generate/revoke API keys per institution with permission levels (submit/read/full), key prefix display, last-used tracking
+- **API documentation**: In-app reference guide for external API endpoints, authentication, batch submission, response format, error codes
 - **Health check**: GET /api/health returns { status: "ok" }
 
 ## Pages
@@ -79,9 +83,11 @@ A web-based Credit Registry System developed by Systems In Motion Limited to man
 - `/billing` - Billing and invoice management
 - `/helpdesk` - Inquiry Service Unit portal
 - `/credit-report/:borrowerId` - Full credit report generation with serial number, print support
+- `/api-keys` - API key management (generate, revoke, view usage)
+- `/api-docs` - External API documentation reference
 
 ## API Endpoints
-All prefixed with `/api` and require authentication (except /api/auth/* and /api/health):
+All prefixed with `/api` and require authentication (except /api/auth/*, /api/health, and /api/external/*):
 - `GET /health` - Health check
 - `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`, `POST /auth/change-password`
 - `GET/POST /borrowers`, `GET/PATCH /borrowers/:id`
@@ -108,6 +114,18 @@ All prefixed with `/api` and require authentication (except /api/auth/* and /api
 - `POST /credit-search/bulk` - Bulk credit reference checks
 - `GET /reports/export?format=csv&type=portfolio|borrowers` - CSV export
 - `GET /reports/regulatory` - Regulatory analytics
+- `GET/POST /api-keys` - API key management (admin only)
+- `POST /api-keys/:id/revoke` - Revoke an API key
+
+### External API (authenticated via X-API-Key header)
+- `GET /external/v1/health` - Health check (no auth required)
+- `POST /external/v1/borrowers` - Create borrower(s) — single or batch array
+- `GET /external/v1/borrowers/search?nationalId=&name=&q=` - Search borrowers
+- `GET /external/v1/borrowers/:id/credit-report` - Full credit report with score
+- `POST /external/v1/credit-accounts` - Submit credit account(s) — single or batch
+- `GET /external/v1/credit-accounts/:borrowerId` - Get accounts by borrower
+- `POST /external/v1/payment-history` - Submit payment history records
+- `POST /external/v1/court-judgments` - Submit court judgment
 
 ## Running
 - **Dev**: `npm run dev` (tsx + Vite HMR, NODE_ENV=development)
@@ -137,6 +155,7 @@ All prefixed with `/api` and require authentication (except /api/auth/* and /api
 | Consent | Yes | Yes | Yes | Yes |
 | Dashboard/Reports | Yes | Yes | Yes | Yes |
 | Helpdesk | Yes | Yes | Yes | Yes |
+| API Keys | Yes | No | No | No |
 
 ## SRS Compliance Notes
 - Session timeout: 15 min (NFR-SEC-09)
