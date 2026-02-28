@@ -149,7 +149,10 @@ export function AppSidebar() {
         <div className="px-1">
           <p className="text-[10px] text-sidebar-foreground/40 leading-relaxed" data-testid="text-provider-credit">
             Credit system provided by{" "}
-            <span className="text-sidebar-foreground/60 font-medium">Systems In Motion Limited</span>
+            <span className="text-sidebar-foreground/60 font-medium">Systems In Motion Limited™</span>
+          </p>
+          <p className="text-[9px] text-sidebar-foreground/30 mt-1" data-testid="text-copyright">
+            © 2026 Systems In Motion Limited. All rights reserved.
           </p>
         </div>
       </SidebarFooter>

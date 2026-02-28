@@ -76,7 +76,7 @@ export default function DocumentationPage() {
     printWindow.document.write(`<!DOCTYPE html>
 <html>
 <head>
-<title>${docTitle} — Systems In Motion Limited</title>
+<title>${docTitle} — Systems In Motion Limited™</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -120,7 +120,8 @@ export default function DocumentationPage() {
   <div class="header-bar"></div>
   ${docHtml}
   <div class="footer">
-    <p>Systems In Motion Limited — Cross-Jurisdictional Central Data Hub & Credit Registry System v1.1</p>
+    <p>Systems In Motion Limited™ — Cross-Jurisdictional Central Data Hub & Credit Registry System v1.1</p>
+    <p>© 2026 Systems In Motion Limited. All rights reserved.</p>
     <p>Generated on ${new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}</p>
   </div>
 </body>

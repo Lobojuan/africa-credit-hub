@@ -84,7 +84,10 @@ export default function LoginPage() {
 
           <div className="text-xs space-y-1">
             <p className="text-white/50">
-              Systems In Motion Limited &middot; Cross-Jurisdictional CDH v1.1
+              Systems In Motion Limited™ &middot; Cross-Jurisdictional CDH v1.1
+            </p>
+            <p className="text-white/30 text-[10px]">
+              © 2026 Systems In Motion Limited. All rights reserved.
             </p>
           </div>
         </div>
