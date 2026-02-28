@@ -96,7 +96,12 @@ export default function CreditSearchPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <Button variant="outline" size="sm" data-testid={`button-view-report-${borrower.id}`}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          data-testid={`button-view-report-${borrower.id}`}
+                          onClick={(e) => { e.stopPropagation(); navigate(`/credit-report/${borrower.id}`); }}
+                        >
                           <FileText className="w-3.5 h-3.5 mr-1.5" />
                           {t('search.viewReport')}
                         </Button>

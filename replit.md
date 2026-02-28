@@ -35,11 +35,11 @@ A web-based Credit Registry System developed by Systems In Motion Limited to man
 - **Authentication**: Login with bcrypt, 3-attempt lockout, session management, logout, password policy (8+ chars, uppercase, lowercase, digit, special), 90-day password expiry
 - **Session security**: 15-minute idle timeout (NFR-SEC-09) with automatic logout, 8-hour max session
 - **Notification system**: In-app bell with unread count badge, auto-notify on approval requests, results, dispute filings
-- **Dashboard**: 8 stat cards (borrowers, accounts, outstanding, delinquent, defaults, inquiries, pending approvals, open disputes)
+- **Dashboard**: 8 clickable stat cards with detail drill-down drawers (borrowers, accounts, outstanding, delinquent, defaults, inquiries, pending approvals, open disputes); clickable list items navigate to detail pages
 - **Borrower management**: Register/search/view individual/corporate profiles with TIN, PEP flagging, education/employment tracking, related party linking
 - **Credit accounts**: Loan details, collateral, arrears tracking, multi-currency (17 currencies), interest-free loan support, grace periods, restructure tracking
 - **Credit scoring**: Algorithmic scoring 300-850 with reason codes (DELINQUENT_ACCOUNTS, WRITTEN_OFF_ACCOUNTS, etc.)
-- **Credit reports**: Serial numbered reports (CR-{YEAR}-{ID}), reason codes for score explainability (FR-CON-08)
+- **Credit reports**: Full printable credit reports with serial numbers (CR-{YEAR}-{ID}), credit score analysis, reason codes, payment performance history, court judgments, consent records, personal/company info, and footer disclaimer. Accessible from credit search and borrower detail pages.
 - **Maker-checker workflow**: Four-eye principle for data changes (different user must approve)
 - **Dispute management**: File/track/resolve disputes with SLA timers (2-day financial, 5-day non-financial), correction type tracking (DQ-04/05)
 - **Court judgments**: Track liens, bankruptcies, lawsuits, civil/criminal judgments per borrower (FR-COL-05)
@@ -77,6 +77,7 @@ A web-based Credit Registry System developed by Systems In Motion Limited to man
 - `/consent` - Consent management with receipt numbers
 - `/billing` - Billing and invoice management
 - `/helpdesk` - Inquiry Service Unit portal
+- `/credit-report/:borrowerId` - Full credit report generation with serial number, print support
 
 ## API Endpoints
 All prefixed with `/api` and require authentication (except /api/auth/* and /api/health):

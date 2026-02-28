@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, User, Building2, Mail, Phone, MapPin, Briefcase, CreditCard, AlertTriangle, TrendingUp, FileText, Flag, GraduationCap, Users, Link2 } from "lucide-react";
+import { ArrowLeft, User, Building2, Mail, Phone, MapPin, Briefcase, CreditCard, AlertTriangle, TrendingUp, FileText, Flag, GraduationCap, Users, Link2, ClipboardList } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -139,6 +139,16 @@ export default function BorrowerDetailPage() {
             {t("borrowerDetail.pepFlag")}
           </Badge>
         )}
+        <div className="ml-auto">
+          <Button
+            size="sm"
+            onClick={() => navigate(`/credit-report/${borrowerId}`)}
+            data-testid="button-generate-full-report"
+          >
+            <ClipboardList className="w-4 h-4 mr-2" />
+            Full Credit Report
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

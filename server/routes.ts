@@ -923,6 +923,15 @@ export async function registerRoutes(
       const accounts = await storage.getCreditAccountsByBorrower(borrowerId);
       const inquiries = await storage.getCreditInquiriesByBorrower(borrowerId);
       const judgments = await storage.getCourtJudgmentsByBorrower(borrowerId);
+      const consents = await storage.getConsentRecordsByBorrower(borrowerId);
+
+      const paymentHistoryMap: Record<string, any[]> = {};
+      for (const account of accounts) {
+        const history = await storage.getPaymentHistoryByAccount(account.id);
+        if (history.length > 0) {
+          paymentHistoryMap[account.id] = history.slice(0, 12);
+        }
+      }
 
       const totalDebt = accounts.reduce((sum, a) => sum + parseFloat(a.currentBalance || "0"), 0);
       const delinquentCount = accounts.filter(a => a.status === "delinquent" || a.status === "default").length;
@@ -971,6 +980,9 @@ export async function registerRoutes(
         accounts,
         inquiries,
         courtJudgments: judgments,
+        consentRecords: consents,
+        paymentHistory: paymentHistoryMap,
+        requestedBy: user ? { fullName: user.fullName, institution: user.institution } : null,
         summary: {
           totalAccounts: accounts.length,
           activeAccounts: accounts.filter(a => a.status !== "closed").length,

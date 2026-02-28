@@ -32,6 +32,7 @@ import InstitutionsPage from "@/pages/institutions";
 import ConsentManagementPage from "@/pages/consent-management";
 import BillingPage from "@/pages/billing";
 import HelpdeskPage from "@/pages/helpdesk";
+import CreditReportPage from "@/pages/credit-report";
 
 function Router() {
   return (
@@ -51,6 +52,7 @@ function Router() {
       <Route path="/consent" component={ConsentManagementPage} />
       <Route path="/billing" component={BillingPage} />
       <Route path="/helpdesk" component={HelpdeskPage} />
+      <Route path="/credit-report/:borrowerId" component={CreditReportPage} />
       <Route component={NotFound} />
     </Switch>
   );
