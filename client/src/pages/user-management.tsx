@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Plus, Settings, UserCircle } from "lucide-react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Plus, Pencil, UserCircle } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +36,8 @@ function getRoleColor(role: string) {
 export default function UserManagementPage() {
   const { t } = useTranslation();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const { toast } = useToast();
 
   const { data: users, isLoading } = useQuery<User[]>({
@@ -45,6 +47,10 @@ export default function UserManagementPage() {
   const [formData, setFormData] = useState({
     username: "", password: "", fullName: "", email: "",
     role: "viewer" as string, status: "active" as string, institution: "",
+  });
+
+  const [editFormData, setEditFormData] = useState({
+    fullName: "", email: "", role: "", status: "", institution: "", password: "",
   });
 
   const createMutation = useMutation({
@@ -63,16 +69,47 @@ export default function UserManagementPage() {
     },
   });
 
-  const statusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const res = await apiRequest("PATCH", `/api/users/${id}`, { status });
+  const editMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Record<string, string> }) => {
+      const payload: Record<string, string> = {};
+      if (data.fullName) payload.fullName = data.fullName;
+      if (data.email) payload.email = data.email;
+      if (data.role) payload.role = data.role;
+      if (data.status) payload.status = data.status;
+      if (data.institution !== undefined) payload.institution = data.institution;
+      if (data.password) payload.password = data.password;
+      const res = await apiRequest("PATCH", `/api/users/${id}`, payload);
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-      toast({ title: t('users.statusUpdated') });
+      setEditDialogOpen(false);
+      setEditingUser(null);
+      toast({ title: t('users.updatedSuccess') });
+    },
+    onError: (e: Error) => {
+      toast({ title: t('common.error'), description: e.message, variant: "destructive" });
     },
   });
+
+  const openEditDialog = (user: User) => {
+    setEditingUser(user);
+    setEditFormData({
+      fullName: user.fullName,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      institution: user.institution || "",
+      password: "",
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    editMutation.mutate({ id: editingUser.id, data: editFormData });
+  };
 
   return (
     <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
@@ -136,6 +173,60 @@ export default function UserManagementPage() {
         </Dialog>
       </div>
 
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('users.editUser')}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="space-y-4" data-testid="form-edit-user">
+            <div>
+              <Label>{t('users.fullName')}</Label>
+              <Input data-testid="input-edit-fullname" value={editFormData.fullName} onChange={(e) => setEditFormData({ ...editFormData, fullName: e.target.value })} required />
+            </div>
+            <div>
+              <Label>{t('users.email')}</Label>
+              <Input data-testid="input-edit-email" type="email" value={editFormData.email} onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })} required />
+            </div>
+            <div>
+              <Label>{t('users.institution')}</Label>
+              <Input data-testid="input-edit-institution" value={editFormData.institution} onChange={(e) => setEditFormData({ ...editFormData, institution: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>{t('users.role')}</Label>
+                <Select value={editFormData.role} onValueChange={(v) => setEditFormData({ ...editFormData, role: v })}>
+                  <SelectTrigger data-testid="select-edit-role"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">{t('users.roles.admin')}</SelectItem>
+                    <SelectItem value="regulator">{t('users.roles.regulator')}</SelectItem>
+                    <SelectItem value="lender">{t('users.roles.lender')}</SelectItem>
+                    <SelectItem value="viewer">{t('users.roles.viewer')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>{t('users.status')}</Label>
+                <Select value={editFormData.status} onValueChange={(v) => setEditFormData({ ...editFormData, status: v })}>
+                  <SelectTrigger data-testid="select-edit-status"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">{t('users.statuses.active')}</SelectItem>
+                    <SelectItem value="suspended">{t('users.statuses.suspended')}</SelectItem>
+                    <SelectItem value="deactivated">{t('users.statuses.deactivated')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label>{t('users.newPassword')}</Label>
+              <Input data-testid="input-edit-password" type="password" value={editFormData.password} onChange={(e) => setEditFormData({ ...editFormData, password: e.target.value })} placeholder={t('users.leaveBlankPassword')} />
+            </div>
+            <Button type="submit" className="w-full" disabled={editMutation.isPending} data-testid="button-save-edit">
+              {editMutation.isPending ? t('users.saving') : t('users.saveChanges')}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <Card>
         <CardContent className="p-0">
           {isLoading ? (
@@ -177,19 +268,15 @@ export default function UserManagementPage() {
                         {user.createdAt ? new Date(user.createdAt).toLocaleDateString("en-GB") : "—"}
                       </TableCell>
                       <TableCell>
-                        <Select
-                          value={user.status}
-                          onValueChange={(v) => statusMutation.mutate({ id: user.id, status: v })}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openEditDialog(user)}
+                          data-testid={`button-edit-user-${user.id}`}
                         >
-                          <SelectTrigger className="w-28 h-8 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="active">{t('users.statuses.active')}</SelectItem>
-                            <SelectItem value="suspended">{t('users.statuses.suspended')}</SelectItem>
-                            <SelectItem value="deactivated">{t('users.statuses.deactivated')}</SelectItem>
-                          </SelectContent>
-                        </Select>
+                          <Pencil className="w-3.5 h-3.5 mr-1" />
+                          {t('common.edit')}
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
