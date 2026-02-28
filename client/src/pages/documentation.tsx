@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { FileText, Download, Eye, ArrowLeft, Printer, X } from "lucide-react";
+import { FileText, Download, Eye, ArrowLeft, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -70,66 +70,8 @@ export default function DocumentationPage() {
     setLoading(false);
   };
 
-  const printDocument = () => {
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
-    printWindow.document.write(`<!DOCTYPE html>
-<html>
-<head>
-<title>${docTitle} — Systems In Motion Limited™</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    font-family: 'Inter', -apple-system, sans-serif;
-    font-size: 11pt;
-    line-height: 1.6;
-    color: #1a1a1a;
-    padding: 40px;
-    max-width: 800px;
-    margin: 0 auto;
-  }
-  h1 { font-size: 22pt; font-weight: 700; margin: 0 0 8px 0; color: #0d4a42; }
-  h2 { font-size: 16pt; font-weight: 700; margin: 28px 0 12px 0; color: #0d4a42; border-bottom: 2px solid #e0e0e0; padding-bottom: 6px; }
-  h3 { font-size: 13pt; font-weight: 600; margin: 20px 0 8px 0; color: #333; }
-  h4 { font-size: 11pt; font-weight: 600; margin: 16px 0 6px 0; color: #555; }
-  p { margin: 0 0 10px 0; }
-  ul, ol { margin: 0 0 10px 0; padding-left: 24px; }
-  li { margin-bottom: 3px; }
-  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 9.5pt; }
-  th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; vertical-align: top; }
-  th { background: #f5f5f5; font-weight: 600; }
-  tr:nth-child(even) td { background: #fafafa; }
-  code { font-family: 'Courier New', monospace; background: #f4f4f4; padding: 1px 4px; border-radius: 3px; font-size: 9.5pt; }
-  pre { background: #f4f4f4; padding: 12px; border-radius: 4px; overflow-x: auto; margin: 10px 0; font-size: 9pt; }
-  pre code { background: none; padding: 0; }
-  blockquote { border-left: 3px solid #0d4a42; margin: 10px 0; padding: 8px 16px; background: #f9f9f9; }
-  strong { font-weight: 600; }
-  hr { border: none; border-top: 1px solid #e0e0e0; margin: 20px 0; }
-  .header-bar { width: 60px; height: 4px; background: linear-gradient(90deg, #0d4a42, #d4a843); border-radius: 2px; margin-bottom: 16px; }
-  .footer { margin-top: 40px; padding-top: 16px; border-top: 2px solid #0d4a42; font-size: 9pt; color: #888; text-align: center; }
-  @media print {
-    body { padding: 20px; }
-    h2 { page-break-after: avoid; }
-    table { page-break-inside: auto; }
-    tr { page-break-inside: avoid; }
-  }
-</style>
-</head>
-<body>
-  <div class="header-bar"></div>
-  ${docHtml}
-  <div class="footer">
-    <p>Systems In Motion Limited™ — Cross-Jurisdictional Central Data Hub & Credit Registry System v1.1</p>
-    <p>© 2026 Systems In Motion Limited. All rights reserved.</p>
-    <p>Generated on ${new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}</p>
-  </div>
-</body>
-</html>`);
-    printWindow.document.close();
-    setTimeout(() => {
-      printWindow.print();
-    }, 500);
+  const downloadPdf = (docId: string) => {
+    window.open(`/api/docs/${docId}/pdf`, "_blank");
   };
 
   return (
@@ -142,8 +84,8 @@ export default function DocumentationPage() {
         <p className="text-sm text-muted-foreground ml-4">{t("docs.subtitle")}</p>
       </div>
 
-      <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-        <p className="text-sm text-amber-800 dark:text-amber-200">
+      <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4">
+        <p className="text-sm text-emerald-800 dark:text-emerald-200">
           <strong>{t("docs.pdfTip")}</strong> {t("docs.pdfTipDesc")}
         </p>
       </div>
@@ -183,6 +125,16 @@ export default function DocumentationPage() {
                       <Eye className="w-3.5 h-3.5" />
                       {t("docs.view")}
                     </Button>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="h-8 text-xs gap-1.5"
+                      onClick={(e) => { e.stopPropagation(); downloadPdf(doc.id); }}
+                      data-testid={`button-download-${doc.id}`}
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      PDF
+                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -205,8 +157,8 @@ export default function DocumentationPage() {
                 variant="default"
                 size="sm"
                 className="h-8 text-xs gap-1.5"
-                onClick={printDocument}
-                disabled={loading || !docHtml}
+                onClick={() => viewingDoc && downloadPdf(viewingDoc)}
+                disabled={loading}
                 data-testid="button-download-pdf"
               >
                 <Download className="w-3.5 h-3.5" />

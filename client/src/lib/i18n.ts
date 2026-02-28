@@ -627,8 +627,8 @@ const en = {
     subtitle: "Download project documentation as PDF",
     view: "View",
     downloadPdf: "Download PDF",
-    pdfTip: "PDF Download:",
-    pdfTipDesc: "Click any document to preview it, then use the \"Download PDF\" button. Your browser's print dialog will open — select \"Save as PDF\" as the destination.",
+    pdfTip: "Direct PDF Download:",
+    pdfTipDesc: "Click the \"PDF\" button on any document card to download it instantly as a formatted PDF file. You can also preview a document first, then download from the viewer.",
   },
   common: {
     error: "Error",
@@ -1274,8 +1274,8 @@ const fr: typeof en = {
     subtitle: "Télécharger la documentation du projet en PDF",
     view: "Voir",
     downloadPdf: "Télécharger PDF",
-    pdfTip: "Téléchargement PDF :",
-    pdfTipDesc: "Cliquez sur un document pour le prévisualiser, puis utilisez le bouton \"Télécharger PDF\". La boîte de dialogue d'impression de votre navigateur s'ouvrira — sélectionnez \"Enregistrer en PDF\" comme destination.",
+    pdfTip: "Téléchargement PDF direct :",
+    pdfTipDesc: "Cliquez sur le bouton \"PDF\" de n'importe quelle carte de document pour le télécharger instantanément en PDF formaté. Vous pouvez aussi prévisualiser un document, puis le télécharger depuis la visionneuse.",
   },
   common: {
     error: "Erreur",

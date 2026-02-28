@@ -1279,6 +1279,25 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/docs/:id/pdf", requireAuth, async (req, res) => {
+    const doc = DOCS_LIST.find(d => d.id === req.params.id);
+    if (!doc) return res.status(404).json({ message: "Document not found" });
+    try {
+      const filePath = path.join(DOCS_DIR, doc.filename);
+      const content = fs.readFileSync(filePath, "utf-8");
+      const { PassThrough } = await import("stream");
+      const { generatePdfFromMarkdown } = await import("./pdf-generator");
+      const stream = new PassThrough();
+      const safeName = doc.title.replace(/[^a-zA-Z0-9_\- ]/g, "").replace(/\s+/g, "_");
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="${safeName}.pdf"`);
+      stream.pipe(res);
+      generatePdfFromMarkdown(content, doc.title, stream);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   registerExternalApi(app);
 
   return httpServer;
