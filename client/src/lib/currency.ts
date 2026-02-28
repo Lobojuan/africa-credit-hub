@@ -1,3 +1,16 @@
+export interface CountryInfo {
+  code: string;
+  name: string;
+  nameFr: string;
+}
+
+export const SUPPORTED_COUNTRIES: CountryInfo[] = [
+  { code: "GH", name: "Ghana", nameFr: "Ghana" },
+  { code: "ET", name: "Ethiopia", nameFr: "Éthiopie" },
+  { code: "UG", name: "Uganda", nameFr: "Ouganda" },
+  { code: "LR", name: "Liberia", nameFr: "Libéria" },
+];
+
 export interface CurrencyInfo {
   code: string;
   name: string;
@@ -20,6 +33,7 @@ export const SUPPORTED_CURRENCIES: CurrencyInfo[] = [
   { code: "MAD", name: "Moroccan Dirham", nameFr: "Dirham marocain", symbol: "MAD" },
   { code: "BWP", name: "Botswana Pula", nameFr: "Pula du Botswana", symbol: "P" },
   { code: "MZN", name: "Mozambican Metical", nameFr: "Metical mozambicain", symbol: "MT" },
+  { code: "LRD", name: "Liberian Dollar", nameFr: "Dollar libérien", symbol: "L$" },
   { code: "USD", name: "US Dollar", nameFr: "Dollar américain", symbol: "$" },
   { code: "EUR", name: "Euro", nameFr: "Euro", symbol: "€" },
   { code: "GBP", name: "British Pound", nameFr: "Livre sterling", symbol: "£" },
@@ -29,7 +43,7 @@ const currencyLocaleMap: Record<string, string> = {
   ETB: "en-ET", KES: "en-KE", NGN: "en-NG", ZAR: "en-ZA",
   GHS: "en-GH", TZS: "en-TZ", UGX: "en-UG", RWF: "rw-RW",
   XOF: "fr-SN", XAF: "fr-CM", EGP: "ar-EG", MAD: "fr-MA",
-  BWP: "en-BW", MZN: "pt-MZ", USD: "en-US", EUR: "fr-FR", GBP: "en-GB",
+  BWP: "en-BW", MZN: "pt-MZ", LRD: "en-LR", USD: "en-US", EUR: "fr-FR", GBP: "en-GB",
 };
 
 export function formatCurrency(

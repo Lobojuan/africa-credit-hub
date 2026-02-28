@@ -15,6 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
+import { SUPPORTED_COUNTRIES } from "@/lib/currency";
 import type { Institution } from "@shared/schema";
 
 const institutionTypes = ["bank", "mfi", "utility", "telecom", "digital_lender", "sacco"] as const;
@@ -39,7 +40,8 @@ function StatusBadge({ status }: { status: string }) {
 const PAGE_SIZE = 50;
 
 export default function InstitutionsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isFr = i18n.language === "fr";
   const [dialogOpen, setDialogOpen] = useState(false);
   const [page, setPage] = useState(1);
   const { toast } = useToast();
@@ -171,11 +173,16 @@ export default function InstitutionsPage() {
               </div>
               <div>
                 <Label>{t("institutions.country")}</Label>
-                <Input
-                  data-testid="input-country"
-                  value={formData.country}
-                  onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                />
+                <Select value={formData.country} onValueChange={(v) => setFormData({ ...formData, country: v })}>
+                  <SelectTrigger data-testid="select-country"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {SUPPORTED_COUNTRIES.map((c) => (
+                      <SelectItem key={c.code} value={c.name}>
+                        {isFr ? c.nameFr : c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

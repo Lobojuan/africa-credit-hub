@@ -15,6 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
+import { SUPPORTED_CURRENCIES } from "@/lib/currency";
 import type { BillingRecord } from "@shared/schema";
 
 function StatusBadge({ status }: { status: string }) {
@@ -32,7 +33,8 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function BillingPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isFr = i18n.language === "fr";
   const { toast } = useToast();
   const { user } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -151,11 +153,11 @@ export default function BillingPage() {
                     <Select value={formData.currency} onValueChange={(v) => setFormData({ ...formData, currency: v })}>
                       <SelectTrigger data-testid="select-currency"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="ETB">ETB</SelectItem>
-                        <SelectItem value="USD">USD</SelectItem>
-                        <SelectItem value="KES">KES</SelectItem>
-                        <SelectItem value="GHS">GHS</SelectItem>
-                        <SelectItem value="UGX">UGX</SelectItem>
+                        {SUPPORTED_CURRENCIES.map((c) => (
+                          <SelectItem key={c.code} value={c.code}>
+                            {c.code} ({isFr ? c.nameFr : c.name})
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

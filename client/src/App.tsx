@@ -104,7 +104,15 @@ function AuthenticatedApp() {
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8"
-                onClick={logout}
+                onClick={async (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  try {
+                    await logout();
+                  } catch {
+                    window.location.href = "/";
+                  }
+                }}
                 data-testid="button-logout"
               >
                 <LogOut className="w-4 h-4" />
