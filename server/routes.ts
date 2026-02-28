@@ -10,6 +10,8 @@ import {
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { registerExternalApi, generateApiKey } from "./external-api";
+import fs from "fs";
+import path from "path";
 
 function stripPassword(user: any) {
   const { password, ...safe } = user;
@@ -1217,6 +1219,43 @@ export async function registerRoutes(
       });
 
       res.json(revoked);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  const DOCS_DIR = path.resolve(process.cwd(), "docs");
+  const DOCS_LIST = [
+    { id: "uat", filename: "UAT_Test_Document.md", title: "UAT Test Document", description: "187 test cases across 22 modules with SRS traceability" },
+    { id: "systems", filename: "Systems_Documentation.md", title: "Systems Documentation", description: "Technical architecture, data model, API catalog, security, deployment" },
+    { id: "users-manual", filename: "Users_Manual.md", title: "Users Manual", description: "Step-by-step user guide for all roles with 24 sections" },
+    { id: "srs-matrix", filename: "SRS_Traceability_Matrix.md", title: "SRS Traceability Matrix", description: "57 SRS requirements mapped to implementation status" },
+    { id: "data-dictionary", filename: "Data_Dictionary.md", title: "Data Dictionary", description: "Field-level documentation for all 15 tables" },
+    { id: "deployment", filename: "Deployment_Guide.md", title: "Deployment Guide", description: "Step-by-step deployment instructions" },
+    { id: "security", filename: "Security_Compliance_Report.md", title: "Security & Compliance Report", description: "Security controls with NFR-SEC compliance matrix" },
+  ];
+
+  app.get("/api/docs", requireAuth, (_req, res) => {
+    const docsWithSize = DOCS_LIST.map(doc => {
+      try {
+        const stats = fs.statSync(path.join(DOCS_DIR, doc.filename));
+        return { ...doc, size: stats.size };
+      } catch {
+        return { ...doc, size: 0 };
+      }
+    });
+    res.json(docsWithSize);
+  });
+
+  app.get("/api/docs/:id", requireAuth, async (req, res) => {
+    const doc = DOCS_LIST.find(d => d.id === req.params.id);
+    if (!doc) return res.status(404).json({ message: "Document not found" });
+    try {
+      const filePath = path.join(DOCS_DIR, doc.filename);
+      const content = fs.readFileSync(filePath, "utf-8");
+      const { marked } = await import("marked");
+      const html = marked(content);
+      res.json({ ...doc, content, html });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }

@@ -36,6 +36,7 @@ import CreditReportPage from "@/pages/credit-report";
 import ApiKeysPage from "@/pages/api-keys";
 import ApiDocsPage from "@/pages/api-docs";
 import OnlineManualPage from "@/pages/online-manual";
+import DocumentationPage from "@/pages/documentation";
 
 function Router() {
   return (
@@ -59,6 +60,7 @@ function Router() {
       <Route path="/api-keys" component={ApiKeysPage} />
       <Route path="/api-docs" component={ApiDocsPage} />
       <Route path="/help" component={OnlineManualPage} />
+      <Route path="/documentation" component={DocumentationPage} />
       <Route component={NotFound} />
     </Switch>
   );

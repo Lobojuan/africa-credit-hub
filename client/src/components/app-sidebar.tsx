@@ -18,6 +18,7 @@ import {
   Globe,
   Key,
   HelpCircle,
+  BookOpen,
 } from "lucide-react";
 import {
   Sidebar,
@@ -55,6 +56,7 @@ const adminItems = [
   { titleKey: "sidebar.institutions", url: "/institutions", icon: Building2, testId: "nav-institutions" },
   { titleKey: "sidebar.billing", url: "/billing", icon: Receipt, testId: "nav-billing" },
   { titleKey: "sidebar.apiKeys", url: "/api-keys", icon: Key, testId: "nav-api-keys" },
+  { titleKey: "sidebar.documentation", url: "/documentation", icon: BookOpen, testId: "nav-documentation" },
 ];
 
 export function AppSidebar() {
