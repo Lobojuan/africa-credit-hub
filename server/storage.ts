@@ -104,6 +104,7 @@ export interface IStorage {
     pendingApprovalCount: number;
     openDisputeCount: number;
   }>;
+  getDashboardDetails(type: string): Promise<Record<string, any>>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -444,6 +445,112 @@ export class DatabaseStorage implements IStorage {
   async createCreditReportLog(log: InsertCreditReportLog): Promise<CreditReportLog> {
     const [created] = await db.insert(creditReportLogs).values(log).returning();
     return created;
+  }
+
+  async getDashboardDetails(type: string) {
+    switch (type) {
+      case "borrowers": {
+        const byCountry = await db.select({
+          city: sql<string>`COALESCE(${borrowers.city}, 'Unknown')`,
+          count: count(),
+        }).from(borrowers).groupBy(sql`COALESCE(${borrowers.city}, 'Unknown')`).orderBy(desc(count())).limit(10);
+        const byType = await db.select({
+          type: borrowers.type,
+          count: count(),
+        }).from(borrowers).groupBy(borrowers.type);
+        const [pepCount] = await db.select({ value: count() }).from(borrowers).where(eq(borrowers.isPep, true));
+        const recent = await db.select().from(borrowers).orderBy(desc(borrowers.createdAt)).limit(10);
+        return { byCity: byCountry, byType, pepCount: pepCount.value, recent };
+      }
+      case "accounts": {
+        const byStatus = await db.select({
+          status: creditAccounts.status,
+          count: count(),
+        }).from(creditAccounts).groupBy(creditAccounts.status);
+        const byType = await db.select({
+          type: creditAccounts.accountType,
+          count: count(),
+        }).from(creditAccounts).groupBy(creditAccounts.accountType).orderBy(desc(count())).limit(10);
+        const byInstitution = await db.select({
+          institution: creditAccounts.lenderInstitution,
+          count: count(),
+          total: sql<string>`COALESCE(SUM(${creditAccounts.currentBalance}::numeric), 0)::text`,
+        }).from(creditAccounts).groupBy(creditAccounts.lenderInstitution).orderBy(desc(count())).limit(10);
+        return { byStatus, byType, byInstitution };
+      }
+      case "outstanding": {
+        const byCurrency = await db.select({
+          currency: creditAccounts.currency,
+          total: sql<string>`COALESCE(SUM(${creditAccounts.currentBalance}::numeric), 0)::text`,
+          count: count(),
+        }).from(creditAccounts).where(
+          or(eq(creditAccounts.status, "current"), eq(creditAccounts.status, "delinquent"), eq(creditAccounts.status, "restructured"))
+        ).groupBy(creditAccounts.currency).orderBy(desc(sql`SUM(${creditAccounts.currentBalance}::numeric)`));
+        const byInstitution = await db.select({
+          institution: creditAccounts.lenderInstitution,
+          total: sql<string>`COALESCE(SUM(${creditAccounts.currentBalance}::numeric), 0)::text`,
+          count: count(),
+        }).from(creditAccounts).where(
+          or(eq(creditAccounts.status, "current"), eq(creditAccounts.status, "delinquent"), eq(creditAccounts.status, "restructured"))
+        ).groupBy(creditAccounts.lenderInstitution).orderBy(desc(sql`SUM(${creditAccounts.currentBalance}::numeric)`)).limit(10);
+        return { byCurrency, byInstitution };
+      }
+      case "delinquent": {
+        const accounts = await db.select().from(creditAccounts).where(eq(creditAccounts.status, "delinquent")).orderBy(desc(creditAccounts.daysInArrears)).limit(20);
+        const byInstitution = await db.select({
+          institution: creditAccounts.lenderInstitution,
+          count: count(),
+          totalOverdue: sql<string>`COALESCE(SUM(${creditAccounts.currentBalance}::numeric), 0)::text`,
+        }).from(creditAccounts).where(eq(creditAccounts.status, "delinquent")).groupBy(creditAccounts.lenderInstitution).orderBy(desc(count())).limit(10);
+        return { accounts, byInstitution };
+      }
+      case "defaults": {
+        const accounts = await db.select().from(creditAccounts).where(eq(creditAccounts.status, "default")).orderBy(desc(creditAccounts.currentBalance)).limit(20);
+        const byInstitution = await db.select({
+          institution: creditAccounts.lenderInstitution,
+          count: count(),
+          totalDefaulted: sql<string>`COALESCE(SUM(${creditAccounts.currentBalance}::numeric), 0)::text`,
+        }).from(creditAccounts).where(eq(creditAccounts.status, "default")).groupBy(creditAccounts.lenderInstitution).orderBy(desc(count())).limit(10);
+        return { accounts, byInstitution };
+      }
+      case "inquiries": {
+        const byPurpose = await db.select({
+          purpose: creditInquiries.purpose,
+          count: count(),
+        }).from(creditInquiries).groupBy(creditInquiries.purpose);
+        const byInstitution = await db.select({
+          institution: creditInquiries.institution,
+          count: count(),
+        }).from(creditInquiries).groupBy(creditInquiries.institution).orderBy(desc(count())).limit(10);
+        const recent = await db.select().from(creditInquiries).orderBy(desc(creditInquiries.createdAt)).limit(15);
+        return { byPurpose, byInstitution, recent };
+      }
+      case "approvals": {
+        const items = await db.select().from(pendingApprovals).where(eq(pendingApprovals.status, "pending")).orderBy(desc(pendingApprovals.createdAt)).limit(20);
+        const byType = await db.select({
+          type: pendingApprovals.entityType,
+          count: count(),
+        }).from(pendingApprovals).where(eq(pendingApprovals.status, "pending")).groupBy(pendingApprovals.entityType);
+        return { items, byType };
+      }
+      case "disputes": {
+        const items = await db.select().from(disputes).where(
+          or(eq(disputes.status, "open"), eq(disputes.status, "under_review"))
+        ).orderBy(desc(disputes.createdAt)).limit(20);
+        const byType = await db.select({
+          type: disputes.disputeType,
+          count: count(),
+        }).from(disputes).where(
+          or(eq(disputes.status, "open"), eq(disputes.status, "under_review"))
+        ).groupBy(disputes.disputeType);
+        const [slaBreached] = await db.select({ value: count() }).from(disputes).where(
+          sql`${disputes.status} IN ('open', 'under_review') AND ${disputes.slaDeadline} < NOW()`
+        );
+        return { items, byType, slaBreached: slaBreached.value };
+      }
+      default:
+        return {};
+    }
   }
 
   async getDashboardStats() {

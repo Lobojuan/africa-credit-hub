@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { type LucideIcon } from "lucide-react";
+import { type LucideIcon, ChevronRight } from "lucide-react";
 
 interface StatCardProps {
   title: string;
@@ -9,6 +9,7 @@ interface StatCardProps {
   trend?: "up" | "down" | "neutral";
   testId?: string;
   colorIndex?: number;
+  onClick?: () => void;
 }
 
 const iconStyles = [
@@ -22,11 +23,18 @@ const iconStyles = [
   { bg: "linear-gradient(135deg, hsl(175 40% 35%) 0%, hsl(185 35% 28%) 100%)" },
 ];
 
-export function StatCard({ title, value, subtitle, icon: Icon, testId, colorIndex = 0 }: StatCardProps) {
+export function StatCard({ title, value, subtitle, icon: Icon, testId, colorIndex = 0, onClick }: StatCardProps) {
   const style = iconStyles[colorIndex % iconStyles.length];
 
   return (
-    <Card data-testid={testId} className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 border border-border/60">
+    <Card
+      data-testid={testId}
+      className={`group hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 border border-border/60 ${onClick ? "cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 outline-none" : ""}`}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined}
+    >
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
@@ -36,11 +44,16 @@ export function StatCard({ title, value, subtitle, icon: Icon, testId, colorInde
               <p className="text-[11px] text-muted-foreground mt-1.5">{subtitle}</p>
             )}
           </div>
-          <div
-            className="flex items-center justify-center w-11 h-11 rounded-xl shadow-sm"
-            style={{ background: style.bg }}
-          >
-            <Icon className="w-5 h-5 text-white" />
+          <div className="flex flex-col items-center gap-2">
+            <div
+              className="flex items-center justify-center w-11 h-11 rounded-xl shadow-sm"
+              style={{ background: style.bg }}
+            >
+              <Icon className="w-5 h-5 text-white" />
+            </div>
+            {onClick && (
+              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 group-hover:text-primary transition-colors" />
+            )}
           </div>
         </div>
       </CardContent>

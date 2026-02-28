@@ -200,6 +200,15 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/dashboard/details/:type", async (req, res) => {
+    try {
+      const details = await storage.getDashboardDetails(req.params.type);
+      res.json(details);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   app.get("/api/users", requireRole("admin"), async (_req, res) => {
     try {
       const users = await storage.getUsers();
