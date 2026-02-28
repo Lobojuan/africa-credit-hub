@@ -86,7 +86,7 @@ export default function PendingApprovalsPage() {
                 </TableHeader>
                 <TableBody>
                   {approvals.map((approval) => (
-                    <TableRow key={approval.id} data-testid={`row-approval-${approval.id}`}>
+                    <TableRow key={approval.id} data-testid={`row-approval-${approval.id}`} className="cursor-pointer hover:bg-muted/50" onClick={() => { setSelectedApproval(approval); setReviewNotes(""); }}>
                       <TableCell className="text-sm font-medium capitalize">{approval.entityType}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-[10px] capitalize">{approval.action}</Badge>
@@ -102,7 +102,7 @@ export default function PendingApprovalsPage() {
                           size="sm"
                           variant="ghost"
                           className="h-7 text-xs"
-                          onClick={() => { setSelectedApproval(approval); setReviewNotes(""); }}
+                          onClick={(e) => { e.stopPropagation(); setSelectedApproval(approval); setReviewNotes(""); }}
                           data-testid={`button-review-${approval.id}`}
                         >
                           <Eye className="w-3 h-3 mr-1" /> {t('approvals.review')}

@@ -215,7 +215,7 @@ export default function DisputesPage() {
                 </TableHeader>
                 <TableBody>
                   {disputeList.map((dispute) => (
-                    <TableRow key={dispute.id} data-testid={`row-dispute-${dispute.id}`}>
+                    <TableRow key={dispute.id} data-testid={`row-dispute-${dispute.id}`} className="cursor-pointer hover:bg-muted/50" onClick={() => { setResolveDialogId(dispute.id); setResolution(dispute.resolution || ""); setResolveStatus(dispute.status); }}>
                       <TableCell className="text-sm font-medium">{getBorrowerName(dispute.borrowerId)}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-[10px] capitalize">
@@ -252,7 +252,7 @@ export default function DisputesPage() {
                             size="sm"
                             variant="ghost"
                             className="h-7 text-xs"
-                            onClick={() => { setResolveDialogId(dispute.id); setResolution(""); setResolveStatus("resolved"); }}
+                            onClick={(e) => { e.stopPropagation(); setResolveDialogId(dispute.id); setResolution(""); setResolveStatus("resolved"); }}
                             data-testid={`button-resolve-${dispute.id}`}
                           >
                             {t('disputes.resolve')}

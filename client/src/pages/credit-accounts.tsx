@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Plus, CreditCard } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ function getStatusVariant(status: string) {
 
 export default function CreditAccountsPage() {
   const { t, i18n } = useTranslation();
+  const [, navigate] = useLocation();
   const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
 
@@ -209,7 +211,7 @@ export default function CreditAccountsPage() {
                 </TableHeader>
                 <TableBody>
                   {accounts.map((account) => (
-                    <TableRow key={account.id} data-testid={`row-account-${account.id}`}>
+                    <TableRow key={account.id} data-testid={`row-account-${account.id}`} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/borrowers/${account.borrowerId}`)}>
                       <TableCell className="font-medium text-sm">{account.accountNumber}</TableCell>
                       <TableCell className="text-sm">{account.lenderInstitution}</TableCell>
                       <TableCell className="text-sm">{account.accountType}</TableCell>

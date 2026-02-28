@@ -52,6 +52,7 @@ A web-based Credit Registry System developed by Systems In Motion Limited to man
 - **Regulatory analytics**: NPL ratios, portfolio breakdowns, SLA breach tracking (FR-REG-01/02/03)
 - **Batch upload**: JSON/CSV bulk data ingestion with per-record validation
 - **Portfolio reports**: By institution and loan type with NPL ratios
+- **Clickable table rows**: All data tables across every page feature clickable rows — credit accounts navigate to borrower detail, institutions/billing/audit trail open inline detail dialogs, disputes open resolve dialog, consent records navigate to borrower detail, pending approvals open review dialog. Action buttons (approve, revoke, resolve) use stopPropagation to avoid conflicts.
 - **Audit trail**: Full activity log with IP tracking, timestamps, action types
 - **User management**: Role-based access, status control (active/suspended/deactivated)
 - **RBAC enforcement**: Server-side role checks on sensitive routes

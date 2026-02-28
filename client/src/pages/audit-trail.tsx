@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { AuditLog } from "@shared/schema";
 
@@ -31,6 +33,7 @@ function getActionColor(action: string) {
 export default function AuditTrailPage() {
   const { t } = useTranslation();
   const [filter, setFilter] = useState("");
+  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
 
   const { data: logs, isLoading } = useQuery<AuditLog[]>({
     queryKey: ["/api/audit-logs"],
@@ -88,7 +91,7 @@ export default function AuditTrailPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredLogs.map((log) => (
-                    <TableRow key={log.id} data-testid={`row-audit-${log.id}`}>
+                    <TableRow key={log.id} data-testid={`row-audit-${log.id}`} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedLog(log)}>
                       <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                         {log.createdAt ? new Date(log.createdAt).toLocaleString("en-GB", {
                           day: "2-digit", month: "short", year: "numeric",
@@ -120,6 +123,53 @@ export default function AuditTrailPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={!!selectedLog} onOpenChange={() => setSelectedLog(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="w-5 h-5" />
+              {t('audit.logDetail')}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedLog && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Badge variant={getActionColor(selectedLog.action)} className="text-xs">{selectedLog.action}</Badge>
+                <span className="text-xs text-muted-foreground capitalize">{selectedLog.entity}</span>
+              </div>
+              <Separator />
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs text-muted-foreground">{t('audit.timestamp')}</p>
+                  <p className="text-sm font-medium" data-testid="text-detail-timestamp">
+                    {selectedLog.createdAt ? new Date(selectedLog.createdAt).toLocaleString("en-GB", {
+                      day: "2-digit", month: "long", year: "numeric",
+                      hour: "2-digit", minute: "2-digit", second: "2-digit",
+                    }) : "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">{t('audit.details')}</p>
+                  <p className="text-sm font-medium break-words" data-testid="text-detail-details">{selectedLog.details || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">{t('audit.entityId')}</p>
+                  <p className="text-sm font-mono" data-testid="text-detail-entity-id">{selectedLog.entityId || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">{t('audit.ipAddress')}</p>
+                  <p className="text-sm font-mono" data-testid="text-detail-ip">{selectedLog.ipAddress || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">{t('audit.userId')}</p>
+                  <p className="text-sm font-mono" data-testid="text-detail-user-id">{selectedLog.userId || "—"}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

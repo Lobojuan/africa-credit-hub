@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Plus, Building2, CheckCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Building2, CheckCircle, ChevronLeft, ChevronRight, Mail, Phone, MapPin, Calendar, Hash } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
@@ -44,6 +45,7 @@ export default function InstitutionsPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
+  const [selectedInstitution, setSelectedInstitution] = useState<Institution | null>(null);
 
   const { data: paginatedResult, isLoading } = useQuery<{ data: Institution[]; total: number }>({
     queryKey: [`/api/institutions?page=${page}&limit=${PAGE_SIZE}`],
@@ -260,7 +262,7 @@ export default function InstitutionsPage() {
               </TableHeader>
               <TableBody>
                 {institutions.map((inst) => (
-                  <TableRow key={inst.id} data-testid={`row-institution-${inst.id}`}>
+                  <TableRow key={inst.id} data-testid={`row-institution-${inst.id}`} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedInstitution(inst)}>
                     <TableCell className="font-medium" data-testid={`text-institution-name-${inst.id}`}>
                       {inst.name}
                     </TableCell>
@@ -287,7 +289,7 @@ export default function InstitutionsPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => approveMutation.mutate(inst.id)}
+                            onClick={(e) => { e.stopPropagation(); approveMutation.mutate(inst.id); }}
                             disabled={approveMutation.isPending}
                             data-testid={`button-approve-${inst.id}`}
                           >
@@ -312,6 +314,100 @@ export default function InstitutionsPage() {
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={!!selectedInstitution} onOpenChange={() => setSelectedInstitution(null)}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Building2 className="w-5 h-5" />
+              {selectedInstitution?.name}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedInstitution && (
+            <div className="space-y-5 mt-6">
+              <div className="flex items-center gap-2">
+                <StatusBadge status={selectedInstitution.status} />
+                <Badge variant="outline" className="capitalize">{t(`institutions.types.${selectedInstitution.type}`)}</Badge>
+              </div>
+              <Separator />
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <Hash className="w-4 h-4 mt-0.5 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">{t("institutions.registrationNumber")}</p>
+                    <p className="text-sm font-medium" data-testid="text-detail-reg-number">{selectedInstitution.registrationNumber || "—"}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <MapPin className="w-4 h-4 mt-0.5 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">{t("institutions.country")}</p>
+                    <p className="text-sm font-medium" data-testid="text-detail-country">{selectedInstitution.country}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <MapPin className="w-4 h-4 mt-0.5 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">{t("institutions.address")}</p>
+                    <p className="text-sm font-medium" data-testid="text-detail-address">{selectedInstitution.address || "—"}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Mail className="w-4 h-4 mt-0.5 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">{t("institutions.contactEmail")}</p>
+                    <p className="text-sm font-medium" data-testid="text-detail-email">{selectedInstitution.contactEmail || "—"}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Phone className="w-4 h-4 mt-0.5 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">{t("institutions.contactPhone")}</p>
+                    <p className="text-sm font-medium" data-testid="text-detail-phone">{selectedInstitution.contactPhone || "—"}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Calendar className="w-4 h-4 mt-0.5 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">{t("institutions.submissionFrequency")}</p>
+                    <p className="text-sm font-medium capitalize" data-testid="text-detail-frequency">{selectedInstitution.submissionFrequency ? t(`institutions.frequencies.${selectedInstitution.submissionFrequency}`) : "—"}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Calendar className="w-4 h-4 mt-0.5 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">{t("institutions.registeredOn")}</p>
+                    <p className="text-sm font-medium" data-testid="text-detail-created">{selectedInstitution.createdAt ? new Date(selectedInstitution.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" }) : "—"}</p>
+                  </div>
+                </div>
+                {selectedInstitution.approvedAt && (
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="w-4 h-4 mt-0.5 text-green-600" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">{t("institutions.approvedOn")}</p>
+                      <p className="text-sm font-medium" data-testid="text-detail-approved">{new Date(selectedInstitution.approvedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              {isAdmin && selectedInstitution.status === "pending" && (
+                <>
+                  <Separator />
+                  <Button
+                    className="w-full"
+                    onClick={() => { approveMutation.mutate(selectedInstitution.id); setSelectedInstitution(null); }}
+                    disabled={approveMutation.isPending}
+                    data-testid="button-detail-approve"
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    {t("institutions.approve")}
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between pt-2" data-testid="pagination-institutions">

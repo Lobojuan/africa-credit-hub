@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Plus, Receipt, DollarSign, Clock, AlertTriangle } from "lucide-react";
+import { Plus, Receipt, DollarSign, Clock, AlertTriangle, Building2, Calendar, Hash, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
@@ -37,6 +38,7 @@ export default function BillingPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const isAdmin = user?.role === "admin" || user?.role === "regulator";
+  const [selectedRecord, setSelectedRecord] = useState<BillingRecord | null>(null);
 
   const { data: billingRecords, isLoading } = useQuery<BillingRecord[]>({
     queryKey: ["/api/billing"],
@@ -264,7 +266,7 @@ export default function BillingPage() {
                 </TableHeader>
                 <TableBody>
                   {billingRecords.map((record) => (
-                    <TableRow key={record.id} data-testid={`row-billing-${record.id}`}>
+                    <TableRow key={record.id} data-testid={`row-billing-${record.id}`} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedRecord(record)}>
                       <TableCell className="font-medium" data-testid={`text-invoice-${record.id}`}>{record.invoiceNumber}</TableCell>
                       <TableCell>{record.institutionName}</TableCell>
                       <TableCell>{t(`billing.serviceTypes.${record.serviceType}`, record.serviceType)}</TableCell>
@@ -290,6 +292,51 @@ export default function BillingPage() {
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={!!selectedRecord} onOpenChange={() => setSelectedRecord(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Receipt className="w-5 h-5" />
+              {selectedRecord?.invoiceNumber}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedRecord && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <StatusBadge status={selectedRecord.status} />
+              </div>
+              <Separator />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">{t("billing.institutionName")}</p>
+                  <p className="text-sm font-medium" data-testid="text-detail-institution">{selectedRecord.institutionName}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">{t("billing.serviceType")}</p>
+                  <p className="text-sm font-medium" data-testid="text-detail-service">{t(`billing.serviceTypes.${selectedRecord.serviceType}`, selectedRecord.serviceType)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">{t("billing.amount")}</p>
+                  <p className="text-sm font-bold" data-testid="text-detail-amount">{parseFloat(selectedRecord.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })} {selectedRecord.currency}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">{t("billing.createdAt")}</p>
+                  <p className="text-sm font-medium" data-testid="text-detail-created">{selectedRecord.createdAt ? new Date(selectedRecord.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" }) : "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">{t("billing.periodStart")}</p>
+                  <p className="text-sm font-medium" data-testid="text-detail-start">{selectedRecord.periodStart || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">{t("billing.periodEnd")}</p>
+                  <p className="text-sm font-medium" data-testid="text-detail-end">{selectedRecord.periodEnd || "—"}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

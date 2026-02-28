@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { useLocation } from "wouter";
 import { Plus, ShieldCheck, Search } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import type { ConsentRecord } from "@shared/schema";
 export default function ConsentManagementPage() {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [filterBorrowerId, setFilterBorrowerId] = useState("");
 
@@ -184,7 +186,7 @@ export default function ConsentManagementPage() {
               </TableHeader>
               <TableBody>
                 {records.map((record) => (
-                  <TableRow key={record.id} data-testid={`row-consent-${record.id}`}>
+                  <TableRow key={record.id} data-testid={`row-consent-${record.id}`} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/borrowers/${record.borrowerId}`)}>
                     <TableCell data-testid={`text-borrower-id-${record.id}`}>
                       {record.borrowerId}
                     </TableCell>
@@ -220,7 +222,7 @@ export default function ConsentManagementPage() {
                           variant="destructive"
                           size="sm"
                           disabled={revokeMutation.isPending}
-                          onClick={() => revokeMutation.mutate(record.id)}
+                          onClick={(e) => { e.stopPropagation(); revokeMutation.mutate(record.id); }}
                           data-testid={`button-revoke-${record.id}`}
                         >
                           {t("consent.revoke")}
