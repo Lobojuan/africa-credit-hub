@@ -4,7 +4,7 @@
 
 **Prepared for:** Systems In Motion Limited  
 **Document Version:** 1.0  
-**Date:** January 2025
+**Date:** February 2026
 
 ---
 
@@ -140,11 +140,11 @@ This document provides field-level documentation for all 15 database tables in t
 | status | user_status | NOT NULL, DEFAULT 'active' | Account status | `active` |
 | institution | text | NULLABLE | Associated institution name | `National Bank of Ethiopia` |
 | failed_login_attempts | integer | DEFAULT 0 | Counter for failed login attempts | `2` |
-| locked_until | timestamp | NULLABLE | Account lock expiration time | `2025-01-15T10:30:00Z` |
-| last_login | timestamp | NULLABLE | Last successful login timestamp | `2025-01-15T09:00:00Z` |
-| password_changed_at | timestamp | NULLABLE | Last password change timestamp | `2025-01-01T00:00:00Z` |
+| locked_until | timestamp | NULLABLE | Account lock expiration time | `2026-02-28T10:30:00Z` |
+| last_login | timestamp | NULLABLE | Last successful login timestamp | `2026-02-28T09:00:00Z` |
+| password_changed_at | timestamp | NULLABLE | Last password change timestamp | `2026-02-28T00:00:00Z` |
 | must_change_password | boolean | DEFAULT false | Force password change on next login | `false` |
-| created_at | timestamp | DEFAULT NOW() | Record creation timestamp | `2025-01-01T00:00:00Z` |
+| created_at | timestamp | DEFAULT NOW() | Record creation timestamp | `2026-02-28T00:00:00Z` |
 
 ---
 
@@ -179,8 +179,8 @@ This document provides field-level documentation for all 15 database tables in t
 | education_level | text | NULLABLE | Highest education level | `bachelors` |
 | education_institution | text | NULLABLE | Education institution name | `Addis Ababa University` |
 | employment_history | text | NULLABLE | Employment history details | `5 years at Ethiopian Airlines` |
-| created_at | timestamp | DEFAULT NOW() | Record creation timestamp | `2025-01-01T00:00:00Z` |
-| updated_at | timestamp | DEFAULT NOW() | Last update timestamp | `2025-01-15T10:00:00Z` |
+| created_at | timestamp | DEFAULT NOW() | Record creation timestamp | `2026-02-28T00:00:00Z` |
+| updated_at | timestamp | DEFAULT NOW() | Last update timestamp | `2026-02-28T10:00:00Z` |
 
 ---
 
@@ -205,15 +205,15 @@ This document provides field-level documentation for all 15 database tables in t
 | days_in_arrears | integer | DEFAULT 0 | Number of days in arrears | `0` |
 | collateral_type | text | NULLABLE | Type of collateral pledged | `real_estate` |
 | collateral_value | decimal(15,2) | NULLABLE | Collateral value | `750000.00` |
-| last_payment_date | text | NULLABLE | Date of last payment | `2025-01-01` |
+| last_payment_date | text | NULLABLE | Date of last payment | `2026-02-28` |
 | last_payment_amount | decimal(15,2) | NULLABLE | Amount of last payment | `15000.00` |
 | is_interest_free | boolean | DEFAULT false | Interest-free loan flag | `false` |
 | grace_period_months | integer | NULLABLE | Grace period in months | `6` |
 | restructure_count | integer | DEFAULT 0 | Number of restructures | `0` |
 | written_off_date | text | NULLABLE | Date account was written off | `null` |
 | reinstated_date | text | NULLABLE | Date account was reinstated | `null` |
-| created_at | timestamp | DEFAULT NOW() | Record creation timestamp | `2025-01-01T00:00:00Z` |
-| updated_at | timestamp | DEFAULT NOW() | Last update timestamp | `2025-01-15T10:00:00Z` |
+| created_at | timestamp | DEFAULT NOW() | Record creation timestamp | `2026-02-28T00:00:00Z` |
+| updated_at | timestamp | DEFAULT NOW() | Last update timestamp | `2026-02-28T10:00:00Z` |
 
 ---
 
@@ -229,7 +229,7 @@ This document provides field-level documentation for all 15 database tables in t
 | purpose | inquiry_purpose | NOT NULL | Purpose of credit inquiry | `new_credit` |
 | institution | text | NOT NULL | Institution making inquiry | `Commercial Bank of Ethiopia` |
 | consent_provided | boolean | NOT NULL, DEFAULT false | Whether borrower consent was obtained | `true` |
-| created_at | timestamp | DEFAULT NOW() | Inquiry timestamp | `2025-01-15T09:30:00Z` |
+| created_at | timestamp | DEFAULT NOW() | Inquiry timestamp | `2026-02-28T09:30:00Z` |
 
 ---
 
@@ -246,7 +246,7 @@ This document provides field-level documentation for all 15 database tables in t
 | entity_id | varchar | NULLABLE | ID of affected entity | `b2c3d4e5-f6a7-8901-bcde-f23456789012` |
 | details | text | NULLABLE | Human-readable action details | `Created user: John Doe` |
 | ip_address | text | NULLABLE | Client IP address | `192.168.1.100` |
-| created_at | timestamp | DEFAULT NOW() | Log entry timestamp | `2025-01-15T09:30:00Z` |
+| created_at | timestamp | DEFAULT NOW() | Log entry timestamp | `2026-02-28T09:30:00Z` |
 
 ---
 
@@ -265,8 +265,8 @@ This document provides field-level documentation for all 15 database tables in t
 | reviewed_by | varchar | NULLABLE, FK -> users.id | User who reviewed the request | `c3d4e5f6-a7b8-9012-cdef-345678901234` |
 | status | approval_status | NOT NULL, DEFAULT 'pending' | Current approval status | `pending` |
 | review_notes | text | NULLABLE | Reviewer's notes/comments | `Approved - verified documentation` |
-| created_at | timestamp | DEFAULT NOW() | Request submission timestamp | `2025-01-15T09:30:00Z` |
-| reviewed_at | timestamp | NULLABLE | Review timestamp | `2025-01-15T10:00:00Z` |
+| created_at | timestamp | DEFAULT NOW() | Request submission timestamp | `2026-02-28T09:30:00Z` |
+| reviewed_at | timestamp | NULLABLE | Review timestamp | `2026-02-28T10:00:00Z` |
 
 ---
 
@@ -285,10 +285,10 @@ This document provides field-level documentation for all 15 database tables in t
 | status | dispute_status | NOT NULL, DEFAULT 'open' | Current dispute status | `open` |
 | resolution | text | NULLABLE | Resolution description | `Balance corrected to 350,000 ETB` |
 | correction_type | text | NULLABLE | Financial or non-financial correction | `financial` |
-| sla_deadline | timestamp | NULLABLE | SLA deadline (2 days financial, 5 days non-financial) | `2025-01-17T09:30:00Z` |
-| created_at | timestamp | DEFAULT NOW() | Dispute filing timestamp | `2025-01-15T09:30:00Z` |
-| updated_at | timestamp | DEFAULT NOW() | Last update timestamp | `2025-01-15T10:00:00Z` |
-| resolved_at | timestamp | NULLABLE | Resolution timestamp | `2025-01-16T14:00:00Z` |
+| sla_deadline | timestamp | NULLABLE | SLA deadline (2 days financial, 5 days non-financial) | `2026-03-02T09:30:00Z` |
+| created_at | timestamp | DEFAULT NOW() | Dispute filing timestamp | `2026-02-28T09:30:00Z` |
+| updated_at | timestamp | DEFAULT NOW() | Last update timestamp | `2026-02-28T10:00:00Z` |
+| resolved_at | timestamp | NULLABLE | Resolution timestamp | `2026-02-28T14:00:00Z` |
 
 ---
 
@@ -305,7 +305,7 @@ This document provides field-level documentation for all 15 database tables in t
 | message | text | NOT NULL | Notification body | `New borrower registration requires your review` |
 | is_read | boolean | DEFAULT false | Read status flag | `false` |
 | link | text | NULLABLE | Navigation link | `/approvals` |
-| created_at | timestamp | DEFAULT NOW() | Notification timestamp | `2025-01-15T09:30:00Z` |
+| created_at | timestamp | DEFAULT NOW() | Notification timestamp | `2026-02-28T09:30:00Z` |
 
 ---
 
@@ -325,7 +325,7 @@ This document provides field-level documentation for all 15 database tables in t
 | judgment_date | text | NOT NULL | Date judgment was issued | `2024-06-15` |
 | status | judgment_status | NOT NULL, DEFAULT 'active' | Current judgment status | `active` |
 | description | text | NULLABLE | Judgment details | `Civil judgment for unpaid commercial loan` |
-| created_at | timestamp | DEFAULT NOW() | Record creation timestamp | `2025-01-15T09:30:00Z` |
+| created_at | timestamp | DEFAULT NOW() | Record creation timestamp | `2026-02-28T09:30:00Z` |
 
 ---
 
@@ -341,10 +341,10 @@ This document provides field-level documentation for all 15 database tables in t
 | purpose | text | NOT NULL | Purpose of consent | `credit_check`, `data_sharing` |
 | consent_type | text | NOT NULL | Type of consent | `one_time`, `recurring` |
 | status | consent_status | NOT NULL, DEFAULT 'active' | Current consent status | `active` |
-| granted_at | timestamp | DEFAULT NOW() | Consent grant timestamp | `2025-01-15T09:30:00Z` |
+| granted_at | timestamp | DEFAULT NOW() | Consent grant timestamp | `2026-02-28T09:30:00Z` |
 | revoked_at | timestamp | NULLABLE | Consent revocation timestamp | `null` |
 | receipt_number | text | NOT NULL | Unique consent receipt number | `CR-1705312200000-abc123` |
-| created_at | timestamp | DEFAULT NOW() | Record creation timestamp | `2025-01-15T09:30:00Z` |
+| created_at | timestamp | DEFAULT NOW() | Record creation timestamp | `2026-02-28T09:30:00Z` |
 
 ---
 
@@ -356,12 +356,12 @@ This document provides field-level documentation for all 15 database tables in t
 |------------|-----------|-------------|-------------|---------------|
 | id | varchar | PRIMARY KEY, DEFAULT gen_random_uuid() | Unique payment record identifier | `f2a3b4c5-d6e7-8901-5678-234567890123` |
 | credit_account_id | varchar | NOT NULL, FK -> credit_accounts.id | Associated credit account | `d4e5f6a7-b8c9-0123-def0-456789012345` |
-| period | text | NOT NULL | Payment period (YYYY-MM format) | `2025-01` |
+| period | text | NOT NULL | Payment period (YYYY-MM format) | `2026-02` |
 | amount_due | decimal(15,2) | NOT NULL | Amount due for the period | `15000.00` |
 | amount_paid | decimal(15,2) | NOT NULL | Amount actually paid | `15000.00` |
 | status | payment_status | NOT NULL, DEFAULT 'on_time' | Payment status for the period | `on_time` |
 | days_late | integer | DEFAULT 0 | Number of days payment was late | `0` |
-| created_at | timestamp | DEFAULT NOW() | Record creation timestamp | `2025-01-15T09:30:00Z` |
+| created_at | timestamp | DEFAULT NOW() | Record creation timestamp | `2026-02-28T09:30:00Z` |
 
 ---
 
@@ -382,8 +382,8 @@ This document provides field-level documentation for all 15 database tables in t
 | status | institution_status | NOT NULL, DEFAULT 'pending' | Registration status | `active` |
 | submission_frequency | text | DEFAULT 'monthly' | Data submission frequency | `monthly` |
 | approved_by | varchar | NULLABLE, FK -> users.id | Admin who approved | `a1b2c3d4-e5f6-7890-abcd-ef1234567890` |
-| approved_at | timestamp | NULLABLE | Approval timestamp | `2025-01-15T10:00:00Z` |
-| created_at | timestamp | DEFAULT NOW() | Registration timestamp | `2025-01-01T00:00:00Z` |
+| approved_at | timestamp | NULLABLE | Approval timestamp | `2026-02-28T10:00:00Z` |
+| created_at | timestamp | DEFAULT NOW() | Registration timestamp | `2026-02-28T00:00:00Z` |
 
 ---
 
@@ -400,9 +400,9 @@ This document provides field-level documentation for all 15 database tables in t
 | currency | text | NOT NULL, DEFAULT 'ETB' | Invoice currency | `ETB` |
 | status | billing_status | NOT NULL, DEFAULT 'pending' | Payment status | `pending` |
 | invoice_number | text | NOT NULL | Unique invoice number | `INV-2025-001234` |
-| period_start | text | NULLABLE | Billing period start date | `2025-01-01` |
-| period_end | text | NULLABLE | Billing period end date | `2025-01-31` |
-| created_at | timestamp | DEFAULT NOW() | Invoice creation timestamp | `2025-01-15T09:30:00Z` |
+| period_start | text | NULLABLE | Billing period start date | `2026-02-28` |
+| period_end | text | NULLABLE | Billing period end date | `2026-02-28` |
+| created_at | timestamp | DEFAULT NOW() | Invoice creation timestamp | `2026-02-28T09:30:00Z` |
 
 ---
 
@@ -418,7 +418,7 @@ This document provides field-level documentation for all 15 database tables in t
 | institution | text | NOT NULL | Requesting institution | `Commercial Bank of Ethiopia` |
 | purpose | text | NOT NULL | Purpose of report generation | `new_credit` |
 | serial_number | text | NOT NULL, UNIQUE | Unique report serial number | `CR-2025-M1A2B3C4` |
-| created_at | timestamp | DEFAULT NOW() | Report generation timestamp | `2025-01-15T09:30:00Z` |
+| created_at | timestamp | DEFAULT NOW() | Report generation timestamp | `2026-02-28T09:30:00Z` |
 
 ---
 
@@ -435,9 +435,9 @@ This document provides field-level documentation for all 15 database tables in t
 | label | text | NOT NULL | Human-readable key label | `Production API Key` |
 | status | api_key_status | NOT NULL, DEFAULT 'active' | Key status | `active` |
 | permissions | text | NOT NULL, DEFAULT 'submit' | Permission level | `submit`, `read`, `full` |
-| last_used_at | timestamp | NULLABLE | Last API call timestamp | `2025-01-15T14:30:00Z` |
+| last_used_at | timestamp | NULLABLE | Last API call timestamp | `2026-02-28T14:30:00Z` |
 | created_by | varchar | NOT NULL, FK -> users.id | Admin who created the key | `a1b2c3d4-e5f6-7890-abcd-ef1234567890` |
-| created_at | timestamp | DEFAULT NOW() | Key creation timestamp | `2025-01-15T09:30:00Z` |
+| created_at | timestamp | DEFAULT NOW() | Key creation timestamp | `2026-02-28T09:30:00Z` |
 | revoked_at | timestamp | NULLABLE | Key revocation timestamp | `null` |
 
 ---
