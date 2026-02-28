@@ -1,0 +1,1197 @@
+# Credit Registry System — Users Manual v1.1
+
+**Cross-Jurisdictional Central Data Hub & Credit Registry System**
+
+**Prepared for:** Systems In Motion Limited
+
+**Version:** 1.1
+
+**Date:** January 2025
+
+---
+
+## Table of Contents
+
+1. [Introduction](#1-introduction)
+2. [Getting Started](#2-getting-started)
+3. [Dashboard](#3-dashboard)
+4. [Borrower Management](#4-borrower-management)
+5. [Credit Accounts](#5-credit-accounts)
+6. [Credit Search & Reports](#6-credit-search--reports)
+7. [Maker-Checker Workflow](#7-maker-checker-workflow)
+8. [Dispute Management](#8-dispute-management)
+9. [Court Judgments](#9-court-judgments)
+10. [Consent Management](#10-consent-management)
+11. [Institution Management](#11-institution-management)
+12. [Billing](#12-billing)
+13. [Helpdesk](#13-helpdesk)
+14. [Batch Upload](#14-batch-upload)
+15. [Audit Trail](#15-audit-trail)
+16. [User Management](#16-user-management)
+17. [API Keys](#17-api-keys)
+18. [Reports & Export](#18-reports--export)
+19. [Notifications](#19-notifications)
+20. [FAQ / "How Do I...?"](#20-faq--how-do-i)
+21. [Appendix A: Seed Credentials](#appendix-a-seed-credentials)
+22. [Appendix B: Role Access Matrix](#appendix-b-role-access-matrix)
+23. [Appendix C: Supported Currencies](#appendix-c-supported-currencies)
+24. [Appendix D: Glossary of Terms](#appendix-d-glossary-of-terms)
+
+---
+
+## 1. Introduction
+
+### 1.1 System Purpose
+
+The Credit Registry System is a web-based application developed by Systems In Motion Limited for managing credit information, borrower records, and credit risk assessment across commercial banks, microfinance institutions, and other financial service providers. It serves as a Cross-Jurisdictional Central Data Hub (CDH) that enables regulatory oversight, credit risk management, and consumer protection.
+
+### 1.2 Supported Jurisdictions
+
+The system supports deployment across multiple African jurisdictions:
+
+- **Ghana** (GHS — Ghanaian Cedi)
+- **Ethiopia** (ETB — Ethiopian Birr)
+- **Uganda** (UGX — Ugandan Shilling)
+- **Liberia** (USD — US Dollar)
+
+### 1.3 Supported Languages
+
+The system supports two languages:
+
+- **English (EN)** — Default language
+- **French (FR)** — Full French translation available
+
+Users can switch between languages at any time using the language switcher in the application header.
+
+---
+
+## 2. Getting Started
+
+### 2.1 Accessing the System
+
+Open a modern web browser (Chrome, Firefox, Safari, or Edge) and navigate to the system URL provided by your administrator. The login page will be displayed.
+
+### 2.2 Logging In
+
+1. On the login page, enter your **Username** in the username field.
+2. Enter your **Password** in the password field.
+3. Click the **Sign In** button.
+4. Upon successful authentication, you will be redirected to the Dashboard.
+
+**Important Notes:**
+- Accounts are locked for **15 minutes** after **3 consecutive failed login attempts**.
+- If your account is locked, wait for the lockout period to expire before trying again.
+- If your account is suspended or deactivated, contact your system administrator.
+
+### 2.3 First-Time Password Change
+
+If your administrator has flagged your account for a mandatory password change (or if your password is older than 90 days), you will be prompted to change your password upon login.
+
+**Password Requirements:**
+- Minimum 8 characters
+- At least one uppercase letter (A-Z)
+- At least one lowercase letter (a-z)
+- At least one digit (0-9)
+- At least one special character (!@#$%^&* etc.)
+
+To change your password:
+1. A password change dialog will appear automatically if required.
+2. Enter your **Current Password**.
+3. Enter your **New Password** meeting the requirements above.
+4. Click **Change Password**.
+
+You can also change your password at any time by clicking the password change option in the sidebar.
+
+### 2.4 Language Switching (EN/FR)
+
+To switch the interface language:
+1. Locate the language switcher button in the top header bar (shows "EN" or "FR").
+2. Click the button to toggle between English and French.
+3. The entire interface will update immediately to the selected language.
+
+### 2.5 Theme Toggle (Light/Dark)
+
+The system supports both light and dark themes:
+1. Click the theme toggle icon (sun/moon) in the top header bar.
+2. The interface will switch between light and dark mode.
+3. Your preference is saved in your browser's local storage.
+
+### 2.6 Understanding the Sidebar Navigation
+
+The sidebar provides access to all system modules, organized into three sections:
+
+**Main:**
+- Dashboard
+- Borrowers
+- Credit Accounts
+- Credit Search
+- Batch Upload
+
+**Reports & Compliance:**
+- Pending Approvals
+- Disputes
+- Audit Trail
+- Consent Management
+- Billing
+- Helpdesk
+
+**Administration:**
+- User Management (Admin only)
+- Institutions (Admin only)
+- API Keys (Admin only)
+
+The sidebar can be collapsed by clicking the sidebar toggle button in the header. In collapsed mode, only icons are visible. On mobile devices, the sidebar opens as a slide-out panel.
+
+### 2.7 Session Timeout (15-Minute Auto-Logout)
+
+For security compliance (NFR-SEC-09), the system automatically logs you out after **15 minutes of inactivity**. When a session times out:
+- You will be redirected to the login page.
+- Any unsaved work will be lost.
+- A maximum session duration of **8 hours** applies regardless of activity.
+
+---
+
+## 3. Dashboard
+
+The Dashboard provides an at-a-glance overview of the Credit Registry System's key metrics and recent activity.
+
+### 3.1 Understanding the 8 Stat Cards
+
+The Dashboard displays 8 interactive stat cards:
+
+| Card | Description |
+|------|-------------|
+| **Total Borrowers** | Total number of registered borrower records (individual and corporate) |
+| **Credit Accounts** | Total number of credit/loan accounts in the system |
+| **Outstanding** | Total outstanding balance across all active accounts |
+| **Delinquent** | Number of accounts with past-due payments |
+| **Defaults** | Number of non-performing / defaulted accounts |
+| **Inquiries** | Total number of credit inquiries/searches performed |
+| **Pending Approvals** | Number of pending maker-checker approval requests |
+| **Open Disputes** | Number of currently open dispute cases |
+
+### 3.2 Clicking Cards for Drill-Down Detail Sheets
+
+Each stat card is clickable. Clicking a card opens a detail sheet that shows the underlying records for that metric:
+
+1. Click any stat card (e.g., "Delinquent").
+2. A slide-out panel will appear showing a list of the relevant records.
+3. Click individual items in the list to navigate to the detailed record page.
+4. Close the detail sheet by clicking the close button or clicking outside the panel.
+
+### 3.3 Recent Activity Section
+
+Below the stat cards, the Dashboard displays recent system activity including:
+- Recently created borrower records
+- New credit accounts
+- Recent approval actions
+- Dispute filings and resolutions
+
+---
+
+## 4. Borrower Management
+
+The Borrower Management module allows you to register, search, and manage borrower profiles.
+
+### 4.1 Searching Borrowers (Name/ID)
+
+1. Navigate to **Borrowers** from the sidebar.
+2. Use the search bar at the top of the page.
+3. Type a borrower's name, national ID, or other identifying information.
+4. Results will filter automatically as you type.
+5. Click on a borrower card to view their full details.
+
+### 4.2 Registering an Individual Borrower
+
+1. Click the **Register Borrower** button (top-right).
+2. Select borrower type: **Individual**.
+3. Fill in the required fields:
+   - **First Name** (required)
+   - **Last Name** (required)
+   - **National ID** (required, must be unique)
+   - **Date of Birth**
+   - **Gender** (Male/Female)
+   - **Phone**
+   - **Email**
+   - **Address**, **City**, **Region**
+   - **Employer Name**, **Occupation**
+   - **Sector**
+4. Optionally check the **PEP Flag** checkbox if the borrower is a Politically Exposed Person.
+   - If PEP is checked, provide **PEP Details** describing the nature of the political exposure.
+5. Select **Education Level** (None, Primary, Secondary, Diploma, Bachelors, Masters, Doctorate).
+6. Enter **Education Institution** name.
+7. Enter **Employment History** in the text area.
+8. Click **Register Borrower** to submit.
+9. The registration will be submitted for **maker-checker approval** (see Section 7).
+
+### 4.3 Registering a Corporate Borrower
+
+1. Click the **Register Borrower** button.
+2. Select borrower type: **Corporate**.
+3. Fill in the required fields:
+   - **Company Name** (required)
+   - **National ID** (required, must be unique)
+   - **Business Registration Number**
+   - **Phone**, **Email**
+   - **Address**, **City**, **Region**
+   - **Sector**
+4. Optionally set the PEP flag and provide details.
+5. Click **Register Borrower** to submit for approval.
+
+### 4.4 PEP Flagging
+
+A Politically Exposed Person (PEP) flag indicates that a borrower holds a prominent public position or is closely associated with someone who does. To flag a borrower as PEP:
+
+1. During registration or when editing a borrower, check the **PEP Flag** checkbox.
+2. Enter details in the **PEP Details** field explaining the nature of the political exposure.
+3. PEP-flagged borrowers display a red PEP badge on their profile card.
+
+### 4.5 Viewing Borrower Details
+
+1. Click on any borrower card in the borrower list.
+2. The borrower detail page displays:
+   - Personal/company information
+   - All linked credit accounts
+   - Credit report access
+   - Court judgments
+   - Consent records
+   - Related parties
+
+### 4.6 Related Party Linking
+
+Borrowers can be linked to related parties (e.g., guarantors, directors, family members):
+
+1. On the borrower detail page, view the **Related Parties** section.
+2. Related borrowers are displayed with their relationship type.
+3. Click on a related party to navigate to their borrower profile.
+
+### 4.7 Understanding Maker-Checker (Changes Need Approval)
+
+All borrower creation and modification requests go through a maker-checker workflow:
+
+- When you submit a new borrower or edit an existing one, a **pending approval** is created.
+- A different authorized user (Admin or Regulator) must review and approve the change.
+- You will receive a notification when your request is approved or rejected.
+- See Section 7 for full details on the maker-checker workflow.
+
+### 4.8 Pagination
+
+The borrower list is paginated to handle large datasets (100,000+ records):
+- Use the **Previous** and **Next** buttons to navigate between pages.
+- The current page number and total count are displayed at the bottom.
+- Default page size is 50 records per page.
+
+---
+
+## 5. Credit Accounts
+
+The Credit Accounts module manages loan and credit facilities associated with borrowers.
+
+### 5.1 Adding Credit Accounts
+
+1. Navigate to **Credit Accounts** from the sidebar.
+2. Click the **Add Account** button.
+3. Fill in the required fields:
+   - **Borrower** — Select from the dropdown list
+   - **Lender Institution** — Name of the lending institution
+   - **Account Number** — Unique account identifier
+   - **Account Type** — Select from: Personal Loan, Mortgage, Vehicle Loan, Business Loan, Corporate Loan, Overdraft, Credit Card, Microfinance
+   - **Original Amount** — Original loan/facility amount
+   - **Current Balance** — Current outstanding balance
+   - **Currency** — Select from 17 supported currencies
+   - **Interest Rate** — Annual interest rate percentage
+   - **Status** — Current, Delinquent, Default, Closed, Restructured
+   - **Disbursement Date** — When the loan was disbursed
+   - **Maturity Date** — When the loan matures
+   - **Collateral Type** — Type of collateral (e.g., Property, Vehicle, Cash)
+   - **Collateral Value** — Value of the collateral
+4. Additional fields:
+   - **Interest-Free** — Check if this is a Sharia-compliant or interest-free facility
+   - **Grace Period (Months)** — Number of months of grace period
+   - **Restructure Count** — Number of times the account has been restructured
+5. Click **Create Account** to submit for maker-checker approval.
+
+### 5.2 Understanding Account Statuses
+
+| Status | Description |
+|--------|-------------|
+| **Current** | Account is performing normally; all payments are up to date |
+| **Delinquent** | Account has past-due payments but has not yet defaulted |
+| **Default** | Account has been classified as non-performing |
+| **Closed** | Account has been fully repaid or closed |
+| **Restructured** | Loan terms have been modified/restructured |
+| **Written Off** | Account has been written off as a loss |
+
+### 5.3 Multi-Currency Support
+
+The system supports 17 currencies across African and international markets. When creating or viewing credit accounts:
+- Select the appropriate currency from the dropdown.
+- Amounts are displayed with proper formatting for the selected currency.
+- See Appendix C for the complete list of supported currencies.
+
+### 5.4 Viewing Payment History (12-Period Grid)
+
+Each credit account has an associated payment history showing a 12-period performance grid:
+
+1. Navigate to a borrower's detail page.
+2. Click on a credit account to view its details.
+3. The payment history grid shows:
+   - **Period** — Month/Year
+   - **Amount Due** — Scheduled payment amount
+   - **Amount Paid** — Actual payment received
+   - **Status** — On Time, Late, Missed, or Partial
+   - **Days Late** — Number of days payment was late (if applicable)
+
+---
+
+## 6. Credit Search & Reports
+
+### 6.1 Single Borrower Search
+
+1. Navigate to **Credit Search** from the sidebar.
+2. Enter a borrower's **National ID** or **Name** in the search field.
+3. Select the **Purpose** for the inquiry:
+   - New Credit
+   - Review
+   - Collection
+   - Regulatory
+   - Portfolio Monitoring
+4. Confirm that **Consent** has been provided.
+5. Click **Search** to perform the credit reference check.
+6. Results display the borrower's credit summary including active accounts, credit score, and inquiry history.
+
+### 6.2 Bulk Credit Search (Multiple IDs)
+
+1. Navigate to **Credit Search**.
+2. Select the **Bulk Search** option.
+3. Enter multiple national IDs (one per line or comma-separated).
+4. Select the inquiry purpose.
+5. Click **Submit** to perform batch credit reference checks.
+6. Results are returned for each identifier, showing found/not-found status.
+
+### 6.3 Generating Credit Reports
+
+1. From a borrower's detail page or the credit search results, click **Generate Credit Report**.
+2. Select the **Purpose** for the report.
+3. The system generates a comprehensive credit report containing:
+   - Borrower personal/company information
+   - Credit score (300-850 range)
+   - Reason codes explaining the score
+   - All credit accounts with status and balances
+   - Payment performance history
+   - Credit inquiries
+   - Court judgments
+   - Consent records
+   - Report serial number
+
+### 6.4 Understanding Credit Scores (300-850)
+
+The credit scoring algorithm assigns a score between 300 and 850:
+
+| Score Range | Rating | Description |
+|-------------|--------|-------------|
+| 750-850 | Excellent | Very low credit risk |
+| 700-749 | Good | Low credit risk |
+| 650-699 | Fair | Moderate credit risk |
+| 550-649 | Poor | High credit risk |
+| 300-549 | Very Poor | Very high credit risk |
+
+Factors that affect the credit score include:
+- On-time payment ratio
+- Number of delinquent accounts
+- Written-off accounts
+- Number of recent inquiries
+- Court judgments
+- Debt levels
+
+### 6.5 Reason Codes Explained
+
+Credit reports include reason codes that explain the primary factors affecting a borrower's credit score:
+
+| Reason Code | Description |
+|-------------|-------------|
+| DELINQUENT_ACCOUNTS | Borrower has one or more delinquent accounts |
+| WRITTEN_OFF_ACCOUNTS | Borrower has accounts that have been written off |
+| RESTRUCTURED_ACCOUNTS | Borrower has restructured loan facilities |
+| HIGH_INQUIRY_VOLUME | High number of recent credit inquiries |
+| HIGH_DEBT_LEVEL | Total debt level is elevated |
+| COURT_JUDGMENTS_PRESENT | Active court judgments exist against the borrower |
+| POLITICALLY_EXPOSED_PERSON | Borrower is flagged as a PEP |
+| STRONG_REPAYMENT_HISTORY | Consistent on-time payment history (positive) |
+| EXCELLENT_PAYMENT_RECORD | Outstanding payment track record (positive) |
+| THIN_FILE_LIMITED_HISTORY | Limited credit history available |
+
+### 6.6 Report Serial Numbers
+
+Each generated credit report is assigned a unique serial number in the format:
+
+```
+CR-{YEAR}-{unique_identifier}
+```
+
+Example: `CR-2025-k8f3x2m1`
+
+This serial number serves as a reference for the report and can be used for audit and tracking purposes.
+
+### 6.7 Printing Reports
+
+1. After generating a credit report, click the **Print** button.
+2. The report opens in a print-friendly format.
+3. Use your browser's print dialog to print or save as PDF.
+4. The printed report includes all sections, the serial number, generation timestamp, and a footer disclaimer.
+
+---
+
+## 7. Maker-Checker Workflow
+
+The maker-checker (four-eye principle) workflow ensures data integrity by requiring a second authorized user to approve changes.
+
+### 7.1 How Changes Are Submitted
+
+When you create or modify a borrower or credit account:
+
+1. Your change is **not applied immediately**.
+2. Instead, a **pending approval request** is created.
+3. You will see a confirmation message: "Submitted for maker-checker approval."
+4. Authorized reviewers (Admin and Regulator roles) receive a notification.
+
+### 7.2 Reviewing Pending Approvals
+
+1. Navigate to **Pending Approvals** from the sidebar.
+2. The page displays all pending approval requests with:
+   - Entity type (borrower or credit account)
+   - Action (Create or Update)
+   - Requester name
+   - Submission date
+   - Current status
+3. Click on a pending request to review the details.
+
+### 7.3 Approving/Rejecting with Notes
+
+1. Open a pending approval request.
+2. Review the submitted data carefully.
+3. Choose one of the following actions:
+   - **Approve** — The change will be applied to the database.
+   - **Reject** — The change will be discarded.
+4. Optionally enter **Review Notes** explaining your decision.
+5. Click the appropriate button to submit your decision.
+6. The requester will receive a notification about the decision.
+
+### 7.4 Self-Approval Prevention Rule
+
+The system enforces a strict rule: **you cannot approve your own requests**. This means:
+- If you submitted a borrower registration, a different Admin or Regulator must approve it.
+- Attempting to approve your own request will result in an error message.
+- This ensures true four-eye principle compliance.
+
+---
+
+## 8. Dispute Management
+
+The Dispute Management module handles borrower complaints and data correction requests.
+
+### 8.1 Filing a Dispute
+
+1. Navigate to **Disputes** from the sidebar.
+2. Click the **File Dispute** button.
+3. Fill in the required fields:
+   - **Borrower** — Select the borrower from the dropdown
+   - **Credit Account** — Optionally select the specific account in question
+   - **Dispute Type** — Select from:
+     - Data Error
+     - Identity Theft
+     - Unauthorized Inquiry
+     - Duplicate Record
+     - Other
+   - **Description** — Provide a detailed description of the issue
+   - **Correction Type** — Select:
+     - Financial (2-day SLA)
+     - Non-Financial (5-day SLA)
+4. Click **File Dispute** to submit.
+
+### 8.2 SLA Tracking (2-Day Financial, 5-Day Non-Financial)
+
+The system automatically calculates and tracks SLA deadlines:
+
+- **Financial corrections**: Must be resolved within **2 working days** (DQ-04)
+- **Non-financial corrections**: Must be resolved within **5 working days** (DQ-05)
+
+The SLA deadline is displayed in the disputes table. If the deadline has passed and the dispute is still open, a red "Breached" badge is shown.
+
+### 8.3 Resolving Disputes
+
+1. In the disputes table, click the **Resolve** button next to an open dispute (or click the row to open the resolve dialog).
+2. Select the new status:
+   - **Under Review** — Investigation in progress
+   - **Resolved** — Issue has been corrected
+   - **Rejected** — Dispute was found to be invalid
+3. Enter **Resolution Notes** describing the outcome.
+4. Click **Update Dispute** to save.
+
+### 8.4 Viewing Dispute History
+
+The disputes table shows all disputes with their current status, type, SLA deadline, and filing date. You can review the full history of disputes including resolutions and timestamps.
+
+---
+
+## 9. Court Judgments
+
+The Court Judgments module tracks legal proceedings and court orders against borrowers (FR-COL-05).
+
+### 9.1 Adding Court Judgments
+
+1. Navigate to a borrower's detail page.
+2. In the **Court Judgments** section, click **Add Judgment**.
+3. Fill in the required fields:
+   - **Case Number** — Court case reference number
+   - **Court** — Name of the court
+   - **Judgment Type** — Select from:
+     - Lien
+     - Bankruptcy
+     - Lawsuit
+     - Civil Judgment
+     - Criminal Conviction
+   - **Amount** — Monetary value of the judgment (if applicable)
+   - **Currency** — Currency of the judgment amount
+   - **Judgment Date** — Date the judgment was issued
+   - **Status** — Active, Resolved, or Appealed
+   - **Description** — Additional details about the judgment
+4. Click **Submit** to create the judgment record.
+
+### 9.2 Viewing Judgments by Borrower
+
+Court judgments are displayed on the borrower's detail page and are included in credit reports. Each judgment shows:
+- Case number and court name
+- Judgment type and status
+- Amount and currency
+- Date of judgment
+
+### 9.3 Judgment Types
+
+| Type | Description |
+|------|-------------|
+| **Lien** | A legal claim against property as security for a debt |
+| **Bankruptcy** | Formal declaration of inability to pay debts |
+| **Lawsuit** | A pending or concluded civil legal action |
+| **Civil Judgment** | A court order in a civil case (e.g., debt recovery) |
+| **Criminal Conviction** | A criminal court finding relevant to financial matters |
+
+---
+
+## 10. Consent Management
+
+The Consent Management module manages data subject consent for sharing credit information (FR-CON-06/07).
+
+### 10.1 Granting Consent
+
+1. Navigate to **Consent Management** from the sidebar.
+2. Click the **Grant Consent** button.
+3. Fill in the required fields:
+   - **Borrower** — Select the borrower granting consent
+   - **Granted To** — Name of the institution or party receiving consent
+   - **Purpose** — Reason for data sharing (e.g., credit assessment, regulatory review)
+   - **Consent Type** — Type of consent (e.g., inquiry, data sharing, full access)
+4. Click **Grant Consent** to create the consent record.
+
+### 10.2 Receipt Numbers
+
+Each consent record is automatically assigned a unique receipt number in the format:
+
+```
+CR-{timestamp}-{random_identifier}
+```
+
+This receipt number serves as proof of consent and can be provided to the borrower or requesting institution.
+
+### 10.3 Revoking Consent
+
+1. In the consent records table, find the active consent record.
+2. Click the **Revoke** button.
+3. The consent status will be changed to "Revoked" and the revocation timestamp will be recorded.
+4. Once revoked, the institution can no longer access the borrower's credit data under this consent.
+
+### 10.4 Viewing Consent Records
+
+The consent management page displays all consent records with:
+- Borrower name and ID
+- Institution the consent is granted to
+- Purpose and consent type
+- Status (Active or Revoked)
+- Receipt number
+- Grant date and revocation date (if applicable)
+
+---
+
+## 11. Institution Management (Admin Only)
+
+The Institution Management module is available only to users with the **Admin** role.
+
+### 11.1 Registering Institutions
+
+1. Navigate to **Institutions** from the sidebar.
+2. Click the **Register** button.
+3. Fill in the required fields:
+   - **Name** — Institution name
+   - **Type** — Select from:
+     - Bank
+     - MFI (Microfinance Institution)
+     - Utility
+     - Telecom
+     - Digital Lender
+     - SACCO (Savings and Credit Cooperative)
+   - **Registration Number** — Official registration/license number
+   - **Country** — Country of operation
+   - **Contact Email** — Primary email address
+   - **Contact Phone** — Primary phone number
+   - **Address** — Physical address
+   - **Submission Frequency** — How often the institution submits data:
+     - Daily
+     - Weekly
+     - Monthly
+4. Click **Register** to submit the institution for approval.
+
+### 11.2 Approving Institutions
+
+Newly registered institutions have a "Pending" status and require admin approval:
+
+1. In the institutions table, locate institutions with "Pending" status.
+2. Click the **Approve** button.
+3. The institution status will change to "Active."
+4. Active institutions can then be assigned API keys for data submission.
+
+### 11.3 Configuring Submission Frequency
+
+The submission frequency determines how often an institution is expected to submit credit data. This can be set during registration and is displayed in the institution details.
+
+### 11.4 Institution Types
+
+| Type | Description |
+|------|-------------|
+| **Bank** | Commercial or retail bank |
+| **MFI** | Microfinance institution |
+| **Utility** | Utility service provider |
+| **Telecom** | Telecommunications company |
+| **Digital Lender** | Digital/mobile lending platform |
+| **SACCO** | Savings and Credit Cooperative Organization |
+
+### 11.5 Pagination
+
+The institutions list supports pagination for large datasets:
+- Use **Previous** and **Next** buttons to navigate pages.
+- 50 records are displayed per page.
+
+---
+
+## 12. Billing (Admin/Regulator)
+
+The Billing module manages invoices and fee tracking for data provider institutions. It is accessible to users with **Admin** or **Regulator** roles.
+
+### 12.1 Creating Invoices
+
+1. Navigate to **Billing** from the sidebar.
+2. Click the **Create Invoice** button.
+3. Fill in the required fields:
+   - **Institution Name** — Name of the institution being billed
+   - **Service Type** — Select from:
+     - Data Submission
+     - Credit Report
+     - API Access
+     - Subscription
+   - **Amount** — Invoice amount
+   - **Currency** — Currency (ETB, USD, KES, GHS, UGX)
+   - **Invoice Number** — Unique invoice reference number
+   - **Period Start** — Billing period start date
+   - **Period End** — Billing period end date
+4. Click **Create Invoice** to save.
+
+### 12.2 Tracking Payment Status
+
+The billing page displays three summary cards:
+- **Total Revenue** — Sum of all invoice amounts
+- **Pending Amount** — Sum of unpaid invoices
+- **Overdue Amount** — Sum of overdue invoices
+
+Invoice statuses:
+| Status | Description |
+|--------|-------------|
+| **Pending** | Invoice has been issued but not yet paid |
+| **Paid** | Invoice has been paid in full |
+| **Overdue** | Invoice is past its due date and unpaid |
+
+### 12.3 Service Types
+
+| Service Type | Description |
+|-------------|-------------|
+| **Data Submission** | Fee for submitting credit data to the registry |
+| **Credit Report** | Fee for generating credit reports |
+| **API Access** | Fee for external API usage |
+| **Subscription** | Periodic subscription fee |
+
+### 12.4 Viewing Invoice Details
+
+Click on any row in the billing table to open a detailed view showing:
+- Invoice number and status
+- Institution name
+- Service type
+- Amount and currency
+- Billing period dates
+- Creation date
+
+---
+
+## 13. Helpdesk
+
+The Helpdesk (Inquiry Service Unit) portal provides a unified interface for consumer service operations.
+
+### 13.1 Searching for Borrowers
+
+1. Navigate to **Helpdesk** from the sidebar.
+2. Review the summary cards showing:
+   - Open Inquiries count
+   - SLA Breaches count
+   - Resolved Today count
+3. Enter a borrower's name or national ID in the search field.
+4. Results appear as clickable cards below the search field.
+5. Click on a borrower card to select them and view their details.
+
+### 13.2 Viewing Borrower Information, Disputes, and Consent
+
+Once a borrower is selected, the helpdesk displays:
+- **Borrower Information** — National ID, phone, email, type
+- **Disputes** — All disputes associated with the borrower, including type, description, status, SLA deadline, and filing date
+- **Consent Records** — All consent records for the borrower, showing granted-to institution, purpose, consent type, status, receipt number, and grant date
+
+### 13.3 Filing Disputes from Helpdesk
+
+1. With a borrower selected, click the **File Dispute** button.
+2. The borrower name is pre-populated.
+3. Fill in:
+   - **Credit Account ID** (optional)
+   - **Dispute Type** — Incorrect Balance, Wrong Status, Identity Error, Unauthorized Inquiry, Other
+   - **Correction Type** — Financial or Non-Financial
+   - **Description** — Detailed description of the issue
+4. Click **File Dispute** to submit.
+
+### 13.4 Granting Consent from Helpdesk
+
+1. With a borrower selected, click the **Grant Consent** button.
+2. Fill in:
+   - **Granted To** — Institution or party name
+   - **Purpose** — Reason for data sharing
+   - **Consent Type** — Type of consent being granted
+3. Click **Grant Consent** to create the record.
+4. A receipt number is automatically generated and assigned.
+
+---
+
+## 14. Batch Upload
+
+The Batch Upload module allows bulk data ingestion through JSON or CSV file uploads.
+
+### 14.1 Preparing JSON Data
+
+Create a JSON file containing an array of credit account records. Each record should include:
+
+```json
+[
+  {
+    "borrowerId": "borrower-uuid",
+    "lenderInstitution": "Bank Name",
+    "accountNumber": "ACC-001",
+    "accountType": "Personal Loan",
+    "originalAmount": "50000.00",
+    "currentBalance": "35000.00",
+    "currency": "ETB",
+    "interestRate": "12.50",
+    "status": "current"
+  }
+]
+```
+
+### 14.2 Preparing CSV Data
+
+Create a CSV file with headers matching the required fields:
+
+```csv
+borrowerId,lenderInstitution,accountNumber,accountType,originalAmount,currentBalance,currency,interestRate,status
+uuid-1,Bank A,ACC-001,Personal Loan,50000.00,35000.00,ETB,12.50,current
+uuid-2,Bank B,ACC-002,Mortgage,200000.00,180000.00,ETB,9.00,current
+```
+
+### 14.3 Uploading Files
+
+1. Navigate to **Batch Upload** from the sidebar.
+2. Select the file type (JSON or CSV).
+3. Click the **Upload** button or drag and drop your file into the upload area.
+4. The system processes the file and validates each record.
+
+### 14.4 Reviewing Validation Results
+
+After upload, the system displays:
+- **Total Records** — Number of records in the file
+- **Successful** — Records that passed validation and were imported
+- **Failed** — Records that had validation errors
+
+### 14.5 Downloading Error Reports
+
+If any records fail validation:
+1. Review the error details showing which records failed and why.
+2. Each error includes the record number, field name, and error description.
+3. Correct the errors in your source file and re-upload.
+
+---
+
+## 15. Audit Trail (Admin/Regulator)
+
+The Audit Trail provides an immutable log of all system activities. It is accessible to users with **Admin** or **Regulator** roles.
+
+### 15.1 Viewing System Activity
+
+1. Navigate to **Audit Trail** from the sidebar.
+2. The audit log displays entries with:
+   - **Timestamp** — When the action occurred
+   - **User** — Who performed the action
+   - **Action** — Type of action performed
+   - **Entity** — What type of entity was affected
+   - **Entity ID** — Identifier of the affected record
+   - **Details** — Description of what happened
+   - **IP Address** — IP address of the user
+
+### 15.2 Understanding Action Types
+
+| Action | Description |
+|--------|-------------|
+| LOGIN | User logged into the system |
+| LOGOUT | User logged out |
+| LOGIN_FAILED | Failed login attempt |
+| ACCOUNT_LOCKED | Account was locked after failed attempts |
+| CREATE | New record was created |
+| UPDATE | Existing record was modified |
+| VIEW | Record was viewed/accessed |
+| SUBMIT_APPROVAL | Change was submitted for maker-checker approval |
+| APPROVE | Pending approval was approved |
+| REJECT | Pending approval was rejected |
+| FILE_DISPUTE | New dispute was filed |
+| RESOLVE_DISPUTE | Dispute was resolved |
+| PASSWORD_CHANGE | User changed their password |
+
+### 15.3 Filtering Entries
+
+The audit trail can be filtered and searched by:
+- Date range
+- User
+- Action type
+- Entity type
+- IP address
+
+---
+
+## 16. User Management (Admin Only)
+
+The User Management module is available only to users with the **Admin** role.
+
+### 16.1 Creating Users
+
+1. Navigate to **User Management** from the sidebar.
+2. Click the **Add User** button.
+3. Fill in the required fields:
+   - **Username** — Unique login username
+   - **Password** — Initial password (must meet complexity requirements)
+   - **Full Name** — User's full name
+   - **Email** — User's email address
+   - **Role** — Select from Admin, Regulator, Lender, or Viewer
+   - **Institution** — Associated institution name (optional)
+4. Click **Create User** to save.
+
+### 16.2 Assigning Roles
+
+Each user is assigned one of four roles:
+
+| Role | Description |
+|------|-------------|
+| **Admin** | Full system access including user management, institutions, and API keys |
+| **Regulator** | Access to most modules including approvals, audit trail, and billing |
+| **Lender** | Access to borrowers, credit accounts, disputes, and batch upload |
+| **Viewer** | Read-only access to borrowers, credit accounts, and reports |
+
+### 16.3 Changing User Status
+
+User accounts can have one of three statuses:
+
+| Status | Description |
+|--------|-------------|
+| **Active** | User can log in and access the system normally |
+| **Suspended** | User is temporarily blocked from logging in |
+| **Deactivated** | User is permanently blocked from logging in |
+
+To change a user's status:
+1. In the user management table, click the **Edit** action on the target user.
+2. Update the status field.
+3. Click **Save** to apply the change.
+
+### 16.4 Understanding Role Permissions
+
+See **Appendix B: Role Access Matrix** for a complete breakdown of what each role can access.
+
+---
+
+## 17. API Keys (Admin Only)
+
+The API Keys module allows administrators to manage external API access for institutions.
+
+### 17.1 Generating API Keys for Institutions
+
+1. Navigate to **API Keys** from the sidebar.
+2. Click the **Generate Key** button.
+3. Fill in the required fields:
+   - **Institution** — Select an active institution from the dropdown
+   - **Label** — A descriptive name for the key (e.g., "Production Key")
+   - **Permissions** — Select the permission level:
+     - **Submit** — Can submit borrowers, accounts, and payment data
+     - **Read** — Can search borrowers and retrieve credit reports
+     - **Full** — Both submit and read permissions
+4. Click **Generate Key**.
+5. The generated API key will be displayed **once only**. Copy it immediately.
+
+### 17.2 Understanding Permission Levels
+
+| Permission | Capabilities |
+|-----------|-------------|
+| **Submit** | POST borrowers, credit accounts, payment history, court judgments |
+| **Read** | GET borrower search, credit reports, credit accounts |
+| **Full** | All submit and read capabilities combined |
+
+### 17.3 Revoking Keys
+
+1. In the API keys table, find the key you want to revoke.
+2. Click the **Revoke** button.
+3. The key status will change to "Revoked" and it can no longer be used for API authentication.
+4. Revocation is irreversible; a new key must be generated if access is needed again.
+
+### 17.4 Viewing Usage
+
+The API keys table shows:
+- **Key Prefix** — First few characters of the key for identification
+- **Label** — Descriptive name
+- **Institution** — Associated institution
+- **Permissions** — Permission level
+- **Status** — Active or Revoked
+- **Last Used** — Last time the key was used for API authentication
+- **Created** — When the key was generated
+
+---
+
+## 18. Reports & Export
+
+The Reports module provides analytical views and data export capabilities.
+
+### 18.1 CSV Export (Portfolio/Borrowers)
+
+1. Navigate to **Reports** from the sidebar (via Credit Reports).
+2. Select the export type:
+   - **Portfolio Export** — All credit accounts with balances and statuses
+   - **Borrowers Export** — All borrower records
+3. Click **Export CSV**.
+4. The CSV file will be downloaded to your computer.
+
+### 18.2 Regulatory Analytics View
+
+The regulatory analytics section provides:
+- **NPL Ratios** — Non-Performing Loan ratios by institution and loan type
+- **Portfolio Breakdowns** — Distribution of credit by type, status, and currency
+- **SLA Breach Tracking** — Disputes that have exceeded their SLA deadlines
+- **Data submission compliance** — Institutions meeting their submission frequency requirements
+
+---
+
+## 19. Notifications
+
+The notification system keeps you informed about important events in the system.
+
+### 19.1 Notification Bell
+
+The notification bell icon is located in the top header bar. It provides quick access to your notifications.
+
+### 19.2 Unread Count Badge
+
+A red badge on the notification bell shows the number of unread notifications. The badge disappears when all notifications are read.
+
+### 19.3 Marking as Read
+
+1. Click the notification bell to open the notifications panel.
+2. Click on an individual notification to mark it as read.
+3. Clicking a notification may also navigate you to the relevant page (e.g., Pending Approvals).
+
+### 19.4 Mark All Read
+
+Click the **Mark All as Read** button in the notifications panel to mark all notifications as read at once.
+
+### 19.5 Notification Types
+
+| Type | Trigger |
+|------|---------|
+| **Approval Pending** | A new maker-checker request requires your review |
+| **Approval Result** | Your submitted request has been approved or rejected |
+| **Dispute Filed** | A new dispute has been filed |
+| **System Alert** | Important system notifications |
+
+---
+
+## 20. FAQ / "How Do I...?"
+
+### Q: How do I reset my password?
+A: Click the password change option in the sidebar, enter your current password and new password, then click Change Password. If you've forgotten your password, contact your system administrator.
+
+### Q: How do I register a new borrower?
+A: Navigate to Borrowers, click "Register Borrower", fill in the form, and submit. Your request will go through maker-checker approval before the borrower is created.
+
+### Q: Why can't I approve my own submission?
+A: The system enforces a maker-checker (four-eye) principle. A different authorized user must approve your submissions to ensure data integrity.
+
+### Q: What happens when my session times out?
+A: After 15 minutes of inactivity, you are automatically logged out. Navigate to the login page and sign in again. Any unsaved changes will be lost.
+
+### Q: How do I search for a borrower?
+A: Use the search bar on the Borrowers page. You can search by name, national ID, or other identifying information.
+
+### Q: What is a PEP flag?
+A: PEP stands for Politically Exposed Person. This flag indicates that a borrower holds or has held a prominent public position.
+
+### Q: How long do I have to resolve a dispute?
+A: Financial corrections must be resolved within 2 working days. Non-financial corrections must be resolved within 5 working days.
+
+### Q: How do I generate a credit report?
+A: Navigate to a borrower's detail page and click "Generate Credit Report", or use the Credit Search page to search for a borrower and then generate the report.
+
+### Q: Can I export data from the system?
+A: Yes. Navigate to Reports and use the CSV Export feature to download portfolio or borrower data.
+
+### Q: How do I switch languages?
+A: Click the language toggle button (EN/FR) in the top header bar. The interface will switch immediately.
+
+### Q: How do I switch between light and dark mode?
+A: Click the theme toggle icon (sun/moon) in the header bar.
+
+### Q: How do I grant consent for a borrower?
+A: Navigate to Consent Management and click "Grant Consent", or use the Helpdesk module to grant consent for a selected borrower.
+
+### Q: What are the API keys used for?
+A: API keys enable external institutions to programmatically submit data and retrieve credit reports through the External API.
+
+### Q: How do I upload data in bulk?
+A: Use the Batch Upload page. Prepare your data in JSON or CSV format and upload the file. The system validates each record and reports any errors.
+
+### Q: Who can approve pending requests?
+A: Users with the Admin or Regulator role can approve or reject pending requests, as long as they did not submit the request themselves.
+
+### Q: How do I add a court judgment?
+A: Navigate to a borrower's detail page, find the Court Judgments section, and click "Add Judgment." Only Admin and Regulator users can create court judgments.
+
+### Q: What currencies does the system support?
+A: The system supports 17 currencies. See Appendix C for the complete list.
+
+---
+
+## Appendix A: Seed Credentials
+
+The following credentials are pre-configured in the system for testing and demonstration purposes:
+
+| Username | Password | Role | Institution |
+|----------|----------|------|-------------|
+| admin | admin123 | Admin | NBE |
+| regulator1 | reg123 | Regulator | NBE |
+| cbe_user | cbe123 | Lender | CBE (Commercial Bank of Ethiopia) |
+| dashen_user | dashen123 | Lender | Dashen Bank |
+| awash_user | awash123 | Lender | Awash Bank |
+
+**Important:** These credentials should be changed immediately in a production environment. All passwords should meet the system's password complexity requirements.
+
+---
+
+## Appendix B: Role Access Matrix
+
+| Module / Feature | Admin | Regulator | Lender | Viewer |
+|-----------------|-------|-----------|--------|--------|
+| Dashboard | Full Access | Full Access | Full Access | Full Access |
+| Borrower Management | Full Access | Full Access | Full Access | Read Only |
+| Credit Accounts | Full Access | Full Access | Full Access | Read Only |
+| Credit Search & Reports | Full Access | Full Access | Full Access | Read Only |
+| Pending Approvals (Review) | Approve/Reject | Approve/Reject | View Only | View Only |
+| Dispute Management | Full Access | Full Access | Full Access | Read Only |
+| Court Judgments (Create) | Yes | Yes | No | No |
+| Consent Management | Full Access | Full Access | Full Access | Read Only |
+| Audit Trail | Full Access | Full Access | No Access | No Access |
+| Billing | Full Access | Full Access | No Access | No Access |
+| Helpdesk | Full Access | Full Access | Full Access | Full Access |
+| Batch Upload | Full Access | No Access | Full Access | No Access |
+| User Management | Full Access | No Access | No Access | No Access |
+| Institution Management | Full Access | No Access | No Access | No Access |
+| API Keys | Full Access | No Access | No Access | No Access |
+| Reports & Export | Full Access | Full Access | Full Access | Full Access |
+| Notifications | Full Access | Full Access | Full Access | Full Access |
+
+---
+
+## Appendix C: Supported Currencies
+
+The system supports the following 17 currencies:
+
+| Code | Currency Name | Symbol | Region |
+|------|--------------|--------|--------|
+| ETB | Ethiopian Birr | Br | East Africa |
+| KES | Kenyan Shilling | KSh | East Africa |
+| UGX | Ugandan Shilling | USh | East Africa |
+| TZS | Tanzanian Shilling | TSh | East Africa |
+| RWF | Rwandan Franc | FRw | East Africa |
+| GHS | Ghanaian Cedi | ₵ | West Africa |
+| NGN | Nigerian Naira | ₦ | West Africa |
+| XOF | West African CFA Franc | CFA | West Africa |
+| XAF | Central African CFA Franc | FCFA | Central Africa |
+| ZAR | South African Rand | R | Southern Africa |
+| BWP | Botswana Pula | P | Southern Africa |
+| MZN | Mozambican Metical | MT | Southern Africa |
+| EGP | Egyptian Pound | E£ | North Africa |
+| MAD | Moroccan Dirham | MAD | North Africa |
+| USD | US Dollar | $ | International |
+| EUR | Euro | € | International |
+| GBP | British Pound | £ | International |
+
+---
+
+## Appendix D: Glossary of Terms
+
+| Term | Definition |
+|------|-----------|
+| **Borrower** | An individual or corporate entity that has obtained credit from a financial institution |
+| **CDH** | Central Data Hub — the centralized repository for credit data across jurisdictions |
+| **Consent** | Authorization granted by a data subject (borrower) for their credit information to be accessed |
+| **Credit Account** | A loan, credit facility, or financial obligation associated with a borrower |
+| **Credit Bureau** | An organization that collects and provides credit information |
+| **Credit Inquiry** | A search/request for a borrower's credit information |
+| **Credit Report** | A comprehensive summary of a borrower's credit history and creditworthiness |
+| **Credit Score** | A numerical value (300-850) representing a borrower's creditworthiness |
+| **Delinquent** | An account with past-due payments |
+| **Default** | An account classified as non-performing due to prolonged non-payment |
+| **Dispute** | A formal complaint about the accuracy of credit information |
+| **Four-Eye Principle** | A control mechanism requiring two independent parties to verify an action (maker-checker) |
+| **Grace Period** | A period after loan disbursement during which no payments are required |
+| **ISU** | Inquiry Service Unit — the helpdesk function for consumer inquiries |
+| **Lien** | A legal claim against property used as security for a debt |
+| **Maker-Checker** | A workflow requiring one user to create/modify data and another to approve it |
+| **MFI** | Microfinance Institution |
+| **NPL** | Non-Performing Loan — a loan where the borrower is in default or close to default |
+| **PEP** | Politically Exposed Person — someone holding or having held a prominent public position |
+| **RBAC** | Role-Based Access Control — security model restricting access based on user roles |
+| **Receipt Number** | A unique identifier issued when consent is granted |
+| **Restructured** | A loan whose terms have been modified to provide relief to the borrower |
+| **SACCO** | Savings and Credit Cooperative Organization |
+| **Serial Number** | A unique identifier assigned to each generated credit report |
+| **SLA** | Service Level Agreement — the agreed timeframe for resolving disputes |
+| **SRS** | Software Requirements Specification |
+| **TIN** | Tax Identification Number |
+| **UAT** | User Acceptance Testing |
+| **Written Off** | An account that has been classified as uncollectible and removed from active portfolios |
+
+---
+
+*This document is confidential and intended for authorized users of the Credit Registry System only. For technical support, contact Systems In Motion Limited.*

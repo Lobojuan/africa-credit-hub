@@ -85,6 +85,7 @@ A web-based Credit Registry System developed by Systems In Motion Limited to man
 - `/credit-report/:borrowerId` - Full credit report generation with serial number, print support
 - `/api-keys` - API key management (generate, revoke, view usage)
 - `/api-docs` - External API documentation reference
+- `/help` - In-app online manual with searchable help topics and accordion sections
 
 ## API Endpoints
 All prefixed with `/api` and require authentication (except /api/auth/*, /api/health, and /api/external/*):
@@ -186,3 +187,13 @@ All prefixed with `/api` and require authentication (except /api/auth/*, /api/he
 - static.ts handles both ESM (__dirname) and CJS (import.meta.url) contexts
 - Maker-checker enforcement: server rejects self-approval (requestedBy !== reviewedBy)
 - New tables created via direct SQL (db:push has interactive prompt issues with session table rename)
+
+## Project Documentation (docs/ directory)
+- `docs/UAT_Test_Document.md` — 187 test cases across 22 modules with SRS traceability
+- `docs/Systems_Documentation.md` — Full technical architecture, data model, API catalog, security, deployment
+- `docs/Users_Manual.md` — Step-by-step user guide for all roles with 24 sections and appendices
+- `docs/SRS_Traceability_Matrix.md` — 57 SRS requirements mapped to implementation status
+- `docs/Data_Dictionary.md` — Field-level documentation for all 15 tables with enums and relationships
+- `docs/Deployment_Guide.md` — Step-by-step deployment for Replit, Docker, and general Linux
+- `docs/Security_Compliance_Report.md` — All security controls with NFR-SEC compliance matrix
+- In-app Online Manual at `/help` — searchable help page with accordion sections for all modules

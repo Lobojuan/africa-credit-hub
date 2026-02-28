@@ -17,6 +17,7 @@ import {
   Headset,
   Globe,
   Key,
+  HelpCircle,
 } from "lucide-react";
 import {
   Sidebar,
@@ -37,6 +38,7 @@ const mainItems = [
   { titleKey: "sidebar.creditAccounts", url: "/credit-accounts", icon: CreditCard, testId: "nav-credit-accounts" },
   { titleKey: "sidebar.creditSearch", url: "/search", icon: Search, testId: "nav-credit-search" },
   { titleKey: "sidebar.batchUpload", url: "/batch-upload", icon: Upload, testId: "nav-batch-upload" },
+  { titleKey: "sidebar.help", url: "/help", icon: HelpCircle, testId: "nav-help" },
 ];
 
 const reportItems = [
