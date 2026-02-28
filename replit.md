@@ -1,8 +1,8 @@
-# Credit Registry System - National Bank of Ethiopia
+# Credit Registry System - Systems In Motion Limited
 # Cross-Jurisdictional Central Data Hub & Credit Registry System v1.1
 
 ## Overview
-A web-based Credit Registry System designed for the National Bank of Ethiopia to manage credit information, borrower records, and credit risk assessment across commercial banks and microfinance institutions. Adheres to pan-African deployment SRS (v1.1) covering Ghana, Ethiopia, Liberia, and Uganda regulatory requirements with fault-tolerant architecture, security compliance, and regulatory workflows.
+A web-based Credit Registry System developed by Systems In Motion Limited to manage credit information, borrower records, and credit risk assessment across commercial banks and microfinance institutions. Adheres to pan-African deployment SRS (v1.1) covering Ghana, Ethiopia, Liberia, and Uganda regulatory requirements with fault-tolerant architecture, security compliance, and regulatory workflows.
 
 ## Architecture
 - **Frontend**: React + TypeScript with Vite, Tailwind CSS, shadcn/ui components

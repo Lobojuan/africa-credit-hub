@@ -10,8 +10,8 @@ export async function seedDatabase() {
   const hash = (pw: string) => bcrypt.hashSync(pw, 8);
 
   const [admin] = await db.insert(users).values([
-    { username: "admin", password: hash("admin123"), fullName: "Tadesse Bekele", email: "tadesse@nbe.gov.et", role: "admin", status: "active", institution: "National Bank of Ethiopia" },
-    { username: "regulator1", password: hash("reg123"), fullName: "Almaz Haile", email: "almaz@nbe.gov.et", role: "regulator", status: "active", institution: "National Bank of Ethiopia" },
+    { username: "admin", password: hash("admin123"), fullName: "Tadesse Bekele", email: "tadesse@systemsinmotionlimited.com", role: "admin", status: "active", institution: "Systems In Motion Limited" },
+    { username: "regulator1", password: hash("reg123"), fullName: "Almaz Haile", email: "almaz@systemsinmotionlimited.com", role: "regulator", status: "active", institution: "Systems In Motion Limited" },
     { username: "cbe_user", password: hash("cbe123"), fullName: "Yohannes Gebre", email: "yohannes@cbe.com.et", role: "lender", status: "active", institution: "Commercial Bank of Ethiopia" },
     { username: "dashen_user", password: hash("dashen123"), fullName: "Sara Mengistu", email: "sara@dashenbank.com.et", role: "lender", status: "active", institution: "Dashen Bank" },
     { username: "awash_user", password: hash("awash123"), fullName: "Kebede Worku", email: "kebede@awashbank.com", role: "lender", status: "active", institution: "Awash International Bank" },
@@ -105,7 +105,7 @@ export async function seedDatabase() {
   await db.insert(creditInquiries).values([
     { borrowerId: createdBorrowers[0].id, inquiredBy: admin.id, purpose: "new_credit", institution: "Commercial Bank of Ethiopia", consentProvided: true },
     { borrowerId: createdBorrowers[1].id, inquiredBy: admin.id, purpose: "review", institution: "Awash International Bank", consentProvided: true },
-    { borrowerId: createdBorrowers[2].id, inquiredBy: admin.id, purpose: "regulatory", institution: "National Bank of Ethiopia", consentProvided: true },
+    { borrowerId: createdBorrowers[2].id, inquiredBy: admin.id, purpose: "regulatory", institution: "Systems In Motion Limited", consentProvided: true },
     { borrowerId: createdBorrowers[3].id, inquiredBy: admin.id, purpose: "portfolio_monitoring", institution: "Dashen Bank", consentProvided: true },
   ]);
 

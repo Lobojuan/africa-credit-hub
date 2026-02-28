@@ -84,10 +84,7 @@ export default function LoginPage() {
 
           <div className="text-xs space-y-1">
             <p className="text-white/50">
-              National Bank of Ethiopia &middot; Cross-Jurisdictional CDH v1.1
-            </p>
-            <p className="text-white/40">
-              Credit system provided by <span className="text-white/60 font-medium">Systems In Motion Limited</span>
+              Systems In Motion Limited &middot; Cross-Jurisdictional CDH v1.1
             </p>
           </div>
         </div>
