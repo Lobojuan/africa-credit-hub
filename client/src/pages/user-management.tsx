@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Plus, Pencil, UserCircle } from "lucide-react";
+import { Plus, Pencil, Trash2, UserCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
 import type { User } from "@shared/schema";
 
 function getStatusColor(status: string) {
@@ -38,7 +39,9 @@ export default function UserManagementPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [deleteConfirmUser, setDeleteConfirmUser] = useState<User | null>(null);
   const { toast } = useToast();
+  const { user: currentUser } = useAuth();
 
   const { data: users, isLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],
@@ -86,6 +89,20 @@ export default function UserManagementPage() {
       setEditDialogOpen(false);
       setEditingUser(null);
       toast({ title: t('users.updatedSuccess') });
+    },
+    onError: (e: Error) => {
+      toast({ title: t('common.error'), description: e.message, variant: "destructive" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/users/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      setDeleteConfirmUser(null);
+      toast({ title: t('users.deletedSuccess') });
     },
     onError: (e: Error) => {
       toast({ title: t('common.error'), description: e.message, variant: "destructive" });
@@ -268,15 +285,29 @@ export default function UserManagementPage() {
                         {user.createdAt ? new Date(user.createdAt).toLocaleDateString("en-GB") : "—"}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openEditDialog(user)}
-                          data-testid={`button-edit-user-${user.id}`}
-                        >
-                          <Pencil className="w-3.5 h-3.5 mr-1" />
-                          {t('common.edit')}
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openEditDialog(user)}
+                            data-testid={`button-edit-user-${user.id}`}
+                          >
+                            <Pencil className="w-3.5 h-3.5 mr-1" />
+                            {t('common.edit')}
+                          </Button>
+                          {user.id !== currentUser?.id && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                              onClick={() => setDeleteConfirmUser(user)}
+                              data-testid={`button-delete-user-${user.id}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5 mr-1" />
+                              {t('common.delete')}
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -292,6 +323,30 @@ export default function UserManagementPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={!!deleteConfirmUser} onOpenChange={(open) => !open && setDeleteConfirmUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('users.confirmDelete')}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground" data-testid="text-delete-confirm-message">
+            {t('users.confirmDeleteMessage', { name: deleteConfirmUser?.fullName })}
+          </p>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setDeleteConfirmUser(null)} data-testid="button-cancel-delete">
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteMutation.isPending}
+              onClick={() => deleteConfirmUser && deleteMutation.mutate(deleteConfirmUser.id)}
+              data-testid="button-confirm-delete"
+            >
+              {deleteMutation.isPending ? t('users.deleting') : t('common.delete')}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

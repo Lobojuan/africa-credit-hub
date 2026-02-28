@@ -256,6 +256,24 @@ export async function registerRoutes(
     }
   });
 
+  app.delete("/api/users/:id", requireRole("admin"), async (req, res) => {
+    try {
+      if (req.params.id === req.session?.userId) {
+        return res.status(400).json({ message: "Cannot delete your own account" });
+      }
+      const deleted = await storage.deleteUser(req.params.id);
+      if (!deleted) return res.status(404).json({ message: "User not found" });
+      await storage.createAuditLog({
+        action: "DELETE", entity: "user", entityId: req.params.id, userId: req.session?.userId,
+        details: `Deleted user ID: ${req.params.id}`,
+        ipAddress: req.ip || null,
+      });
+      res.json({ message: "User deleted" });
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
   app.get("/api/borrowers", async (req, res) => {
     try {
       const search = req.query.search as string;
