@@ -1,7 +1,7 @@
 # Credit Registry System - Systems In Motion Limited
 
 ## Overview
-This project is a web-based Credit Registry System developed by Systems In Motion Limited. Its primary purpose is to manage credit information, borrower records, and facilitate credit risk assessment for commercial banks and microfinance institutions. The system is designed for pan-African deployment, specifically adhering to regulatory requirements in Ghana, Ethiopia, Liberia, and Uganda. Key capabilities include robust security, regulatory workflow compliance, and a fault-tolerant architecture. The system aims to provide a centralized data hub for credit information, enhancing financial stability and responsible lending practices across these regions.
+This project is a web-based Pan-African Credit Registry System developed by Systems In Motion Limited. Its primary purpose is to manage credit information, borrower records, and facilitate credit risk assessment for commercial banks and microfinance institutions across all 54 African countries. The system supports 42+ African currencies plus USD/EUR/GBP, and provides jurisdiction-specific retention policies, regulatory compliance, and cross-border entity resolution. Key capabilities include robust security, regulatory workflow compliance, and a fault-tolerant architecture. The system aims to provide a centralized data hub for credit information, enhancing financial stability and responsible lending practices continent-wide.
 
 ## User Preferences
 I prefer clear and concise communication.

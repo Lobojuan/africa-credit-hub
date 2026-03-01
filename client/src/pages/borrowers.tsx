@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { Plus, Search, Building2, User, Users, ChevronRight, ChevronLeft, Flag, AlertTriangle } from "lucide-react";
+import { SUPPORTED_COUNTRIES } from "@/lib/currency";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -204,10 +205,9 @@ export default function BorrowersPage() {
                 <Select value={formData.country} onValueChange={(v) => setFormData({ ...formData, country: v })}>
                   <SelectTrigger data-testid="select-country"><SelectValue placeholder={t("creditAccounts.select")} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Ghana">Ghana</SelectItem>
-                    <SelectItem value="Ethiopia">Ethiopia</SelectItem>
-                    <SelectItem value="Uganda">Uganda</SelectItem>
-                    <SelectItem value="Liberia">Liberia</SelectItem>
+                    {SUPPORTED_COUNTRIES.map(c => (
+                      <SelectItem key={c.code} value={c.name}>{c.name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

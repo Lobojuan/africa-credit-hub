@@ -13,10 +13,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { SUPPORTED_COUNTRIES } from "@/lib/currency";
 import type { RetentionPolicy } from "@shared/schema";
 
 const ENTITY_TYPES = ["borrower", "credit_account", "audit_log", "dispute", "consent_record", "court_judgment", "payment_history"];
-const COUNTRIES = ["Ghana", "Ethiopia", "Uganda", "Liberia", "All"];
+const COUNTRIES = ["All", ...SUPPORTED_COUNTRIES.map(c => c.name)];
 
 const DEFAULT_FORM = {
   country: "",

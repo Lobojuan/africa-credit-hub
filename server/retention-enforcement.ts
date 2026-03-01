@@ -12,7 +12,19 @@ const VALID_TABLES: Record<string, string> = {
   payment_history: "payment_history",
 };
 
-const VALID_COUNTRIES = new Set(["Ghana", "Ethiopia", "Uganda", "Liberia", "All"]);
+const AFRICAN_COUNTRIES = [
+  "Algeria", "Angola", "Benin", "Botswana", "Burkina Faso", "Burundi",
+  "Cabo Verde", "Cameroon", "Central African Republic", "Chad", "Comoros",
+  "Congo", "DR Congo", "Côte d'Ivoire", "Djibouti", "Egypt",
+  "Equatorial Guinea", "Eritrea", "Eswatini", "Ethiopia", "Gabon", "Gambia",
+  "Ghana", "Guinea", "Guinea-Bissau", "Kenya", "Lesotho", "Liberia",
+  "Libya", "Madagascar", "Malawi", "Mali", "Mauritania", "Mauritius",
+  "Morocco", "Mozambique", "Namibia", "Niger", "Nigeria", "Rwanda",
+  "São Tomé and Príncipe", "Senegal", "Seychelles", "Sierra Leone",
+  "Somalia", "South Africa", "South Sudan", "Sudan", "Tanzania", "Togo",
+  "Tunisia", "Uganda", "Zambia", "Zimbabwe", "All",
+];
+const VALID_COUNTRIES = new Set(AFRICAN_COUNTRIES);
 
 type Resolver = "country" | "borrower_id" | "credit_account_id" | "global";
 

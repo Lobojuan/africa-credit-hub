@@ -15,11 +15,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { SUPPORTED_COUNTRIES } from "@/lib/currency";
 import type { ApiConfiguration } from "@shared/schema";
 
 const categories = ["all", "weather", "judicial", "payment_gateway", "exchange_rate", "custom"] as const;
 const authTypes = ["api_key", "oauth2", "bearer", "basic", "none"] as const;
-const countries = ["Ghana", "Ethiopia", "Uganda", "Liberia"] as const;
+const countries = SUPPORTED_COUNTRIES.map(c => c.name);
 
 function getCategoryColor(category: string) {
   switch (category) {
