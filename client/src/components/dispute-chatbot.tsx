@@ -21,7 +21,7 @@ type Step = "greeting" | "issue_type" | "borrower_search" | "select_borrower" | 
 const DISPUTE_TYPES = ["incorrect_balance", "wrong_status", "identity_error", "unauthorized_inquiry", "other"];
 
 export function DisputeChatbot() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>("greeting");
@@ -69,6 +69,12 @@ export function DisputeChatbot() {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    if (open) {
+      startChat();
+    }
+  }, [i18n.language]);
 
   const addBot = (text: string, options?: string[]) => {
     setMessages((m) => [...m, { role: "bot", text, options }]);
@@ -121,7 +127,7 @@ export function DisputeChatbot() {
         : `${selectedBorrower?.firstName} ${selectedBorrower?.lastName}`;
       addBot(
         t("chatbot.confirmSummary", {
-          type: t(`helpdesk.disputeTypes.${disputeType}`),
+          type: t(`disputes.types.${disputeType}`),
           borrower: borrowerName,
           account: selectedAccount?.accountNumber || t("chatbot.noAccount"),
           description: text,
