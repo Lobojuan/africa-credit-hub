@@ -15,6 +15,7 @@ import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { PasswordChangeDialog } from "@/components/password-change-dialog";
 import { Button } from "@/components/ui/button";
 import { LogOut, Loader2 } from "lucide-react";
+import { DisputeChatbot } from "@/components/dispute-chatbot";
 import { Skeleton } from "@/components/ui/skeleton";
 import LoginPage from "@/pages/login";
 import NotFound from "@/pages/not-found";
@@ -137,6 +138,7 @@ function AuthenticatedApp() {
           {passwordExpired && <PasswordChangeDialog open={true} forced={true} />}
         </div>
       </div>
+      <DisputeChatbot />
     </SidebarProvider>
   );
 }

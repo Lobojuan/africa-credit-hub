@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Borrower, Dispute, ConsentRecord } from "@shared/schema";
-import { DisputeChatbot } from "@/components/dispute-chatbot";
+
 
 const disputeTypeOptions = [
   "incorrect_balance",
@@ -425,8 +425,6 @@ export default function HelpdeskPage() {
           </Card>
         </div>
       )}
-
-      <DisputeChatbot />
 
       <Dialog open={disputeDialogOpen} onOpenChange={setDisputeDialogOpen}>
         <DialogContent>
