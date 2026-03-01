@@ -32,36 +32,57 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
+import { useAuth } from "@/hooks/use-auth";
+import type { LucideIcon } from "lucide-react";
 
-const mainItems = [
+type NavItem = {
+  titleKey: string;
+  url: string;
+  icon: LucideIcon;
+  testId: string;
+  roles?: string[];
+};
+
+const mainItems: NavItem[] = [
   { titleKey: "sidebar.dashboard", url: "/", icon: LayoutDashboard, testId: "nav-dashboard" },
   { titleKey: "sidebar.borrowers", url: "/borrowers", icon: Users, testId: "nav-borrowers" },
   { titleKey: "sidebar.creditAccounts", url: "/credit-accounts", icon: CreditCard, testId: "nav-credit-accounts" },
   { titleKey: "sidebar.creditSearch", url: "/search", icon: Search, testId: "nav-credit-search" },
-  { titleKey: "sidebar.batchUpload", url: "/batch-upload", icon: Upload, testId: "nav-batch-upload" },
+  { titleKey: "sidebar.batchUpload", url: "/batch-upload", icon: Upload, testId: "nav-batch-upload", roles: ["admin", "lender"] },
   { titleKey: "sidebar.help", url: "/help", icon: HelpCircle, testId: "nav-help" },
 ];
 
-const reportItems = [
+const reportItems: NavItem[] = [
   { titleKey: "sidebar.creditReports", url: "/reports", icon: FileText, testId: "nav-credit-reports" },
-  { titleKey: "sidebar.pendingApprovals", url: "/approvals", icon: CheckSquare, testId: "nav-pending-approvals" },
+  { titleKey: "sidebar.pendingApprovals", url: "/approvals", icon: CheckSquare, testId: "nav-pending-approvals", roles: ["admin", "regulator"] },
   { titleKey: "sidebar.disputes", url: "/disputes", icon: AlertCircle, testId: "nav-disputes" },
   { titleKey: "sidebar.consentManagement", url: "/consent", icon: FileCheck, testId: "nav-consent" },
   { titleKey: "sidebar.helpdesk", url: "/helpdesk", icon: Headset, testId: "nav-helpdesk" },
-  { titleKey: "sidebar.auditTrail", url: "/audit", icon: Shield, testId: "nav-audit-trail" },
+  { titleKey: "sidebar.auditTrail", url: "/audit", icon: Shield, testId: "nav-audit-trail", roles: ["admin", "regulator"] },
 ];
 
-const adminItems = [
-  { titleKey: "sidebar.userManagement", url: "/users", icon: Settings, testId: "nav-user-management" },
-  { titleKey: "sidebar.institutions", url: "/institutions", icon: Building2, testId: "nav-institutions" },
-  { titleKey: "sidebar.billing", url: "/billing", icon: Receipt, testId: "nav-billing" },
-  { titleKey: "sidebar.apiKeys", url: "/api-keys", icon: Key, testId: "nav-api-keys" },
+const adminItems: NavItem[] = [
+  { titleKey: "sidebar.userManagement", url: "/users", icon: Settings, testId: "nav-user-management", roles: ["admin"] },
+  { titleKey: "sidebar.institutions", url: "/institutions", icon: Building2, testId: "nav-institutions", roles: ["admin"] },
+  { titleKey: "sidebar.billing", url: "/billing", icon: Receipt, testId: "nav-billing", roles: ["admin", "regulator"] },
+  { titleKey: "sidebar.apiKeys", url: "/api-keys", icon: Key, testId: "nav-api-keys", roles: ["admin"] },
   { titleKey: "sidebar.documentation", url: "/documentation", icon: BookOpen, testId: "nav-documentation" },
 ];
+
+function filterByRole(items: NavItem[], role: string | undefined): NavItem[] {
+  if (!role) return items.filter(item => !item.roles);
+  return items.filter(item => !item.roles || item.roles.includes(role));
+}
 
 export function AppSidebar() {
   const { t } = useTranslation();
   const [location] = useLocation();
+  const { user } = useAuth();
+  const role = user?.role;
+
+  const visibleMainItems = filterByRole(mainItems, role);
+  const visibleReportItems = filterByRole(reportItems, role);
+  const visibleAdminItems = filterByRole(adminItems, role);
 
   return (
     <Sidebar>
@@ -88,7 +109,7 @@ export function AppSidebar() {
           <SidebarGroupLabel className="text-sidebar-foreground/40 text-[10px] font-semibold uppercase tracking-widest px-3">{t('sidebar.main')}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainItems.map((item) => (
+              {visibleMainItems.map((item) => (
                 <SidebarMenuItem key={item.titleKey}>
                   <SidebarMenuButton asChild data-active={location === item.url}>
                     <Link href={item.url} data-testid={item.testId}>
@@ -105,7 +126,7 @@ export function AppSidebar() {
           <SidebarGroupLabel className="text-sidebar-foreground/40 text-[10px] font-semibold uppercase tracking-widest px-3">{t('sidebar.reportsCompliance')}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {reportItems.map((item) => (
+              {visibleReportItems.map((item) => (
                 <SidebarMenuItem key={item.titleKey}>
                   <SidebarMenuButton asChild data-active={location === item.url}>
                     <Link href={item.url} data-testid={item.testId}>
@@ -118,11 +139,12 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        {visibleAdminItems.length > 0 && (
         <SidebarGroup>
           <SidebarGroupLabel className="text-sidebar-foreground/40 text-[10px] font-semibold uppercase tracking-widest px-3">{t('sidebar.administration')}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {adminItems.map((item) => (
+              {visibleAdminItems.map((item) => (
                 <SidebarMenuItem key={item.titleKey}>
                   <SidebarMenuButton asChild data-active={location === item.url}>
                     <Link href={item.url} data-testid={item.testId}>
@@ -135,6 +157,7 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        )}
       </SidebarContent>
       <SidebarFooter className="p-4 space-y-2">
         <div className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.05)" }}>

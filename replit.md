@@ -26,6 +26,7 @@ The system employs a modern full-stack architecture:
     -   **Regulatory Compliance**: Features consent management, court judgment tracking, and robust audit trails with IP tracking.
     -   **Institutional Management**: Supports self-registration and approval workflows for data providers, along with billing and fee management.
     -   **Reporting & Analytics**: Provides regulatory analytics (NPL ratios, portfolio breakdowns), CSV export capabilities, and bulk data upload functionality.
+    -   **RBAC Sidebar**: Navigation items are filtered by user role — admin-only items (User Management, Institutions, API Keys) are hidden from lender/viewer roles; admin+regulator items (Pending Approvals, Audit Trail, Billing) are hidden from lenders/viewers. Backend enforces RBAC via `requireRole` middleware on all sensitive API routes.
     -   **User Experience**: Features a dashboard with drill-down capabilities, in-app notifications, dark/light theme support, and a Pan-African cultural aesthetic using a warm teal and gold palette.
     -   **External API**: A REST API allows external institutions to programmatically interact with the system for data submission and credit report generation, secured via API keys with granular permissions.
 
