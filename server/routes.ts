@@ -1501,6 +1501,16 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/admin/seed-test-data", requireAuth, requireRole("admin"), async (_req, res) => {
+    try {
+      const { seedTestData } = await import("./seed-test-data");
+      await seedTestData();
+      res.json({ message: "Test data seeded successfully" });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   registerExternalApi(app);
 
   return httpServer;
