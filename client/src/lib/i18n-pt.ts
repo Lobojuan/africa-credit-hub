@@ -22,6 +22,8 @@ const pt = {
     apiAdmin: "Administração API",
     retentionPolicies: "Políticas de Retenção",
     regulatoryCompliance: "Conformidade Regulatória",
+    systemConfig: "Sistema",
+    integrations: "Integrações",
     help: "Ajuda e Guia",
     documentation: "Documentação",
     brandTitle: "Registo de Crédito",

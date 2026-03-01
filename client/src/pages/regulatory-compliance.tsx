@@ -3,9 +3,9 @@ import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { StatCard } from "@/components/stat-card";
 import {
   CheckCircle2,
   AlertTriangle,
@@ -256,54 +256,52 @@ export default function RegulatoryCompliancePage() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold flex items-center gap-2" data-testid="text-page-title">
-          <Scale className="w-6 h-6 text-primary" />
-          {t("compliance.title", "Regulatory Compliance Dashboard")}
-        </h1>
-        <p className="text-muted-foreground" data-testid="text-page-description">
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-[1400px] mx-auto">
+      <div>
+        <div className="flex items-center gap-2 mb-1">
+          <div className="page-header-bar" />
+          <h1 className="text-2xl font-extrabold tracking-tight" data-testid="text-page-title">
+            {t("compliance.title", "Regulatory Compliance Dashboard")}
+          </h1>
+        </div>
+        <p className="text-sm text-muted-foreground ml-4" data-testid="text-page-description">
           {t("compliance.description", "SRS traceability, jurisdiction alignment, and regulatory gap analysis across all 54 African countries.")}
         </p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card data-testid="stat-srs-compliance">
-          <CardContent className="p-4 text-center">
-            <div className="flex items-center justify-center mb-2">
-              <CheckCircle2 className="w-8 h-8 text-green-500" />
-            </div>
-            <div className="text-2xl font-bold text-green-600">{stats.compliant}/{stats.total}</div>
-            <div className="text-xs text-muted-foreground">SRS Requirements Compliant</div>
-          </CardContent>
-        </Card>
-        <Card data-testid="stat-dp-enacted">
-          <CardContent className="p-4 text-center">
-            <div className="flex items-center justify-center mb-2">
-              <Shield className="w-8 h-8 text-blue-500" />
-            </div>
-            <div className="text-2xl font-bold text-blue-600">{stats.dpEnacted}/{stats.totalCountries}</div>
-            <div className="text-xs text-muted-foreground">Data Protection Laws Enacted</div>
-          </CardContent>
-        </Card>
-        <Card data-testid="stat-credit-bureaus">
-          <CardContent className="p-4 text-center">
-            <div className="flex items-center justify-center mb-2">
-              <Building2 className="w-8 h-8 text-purple-500" />
-            </div>
-            <div className="text-2xl font-bold text-purple-600">{stats.withBureau}/{stats.totalCountries}</div>
-            <div className="text-xs text-muted-foreground">Countries with Credit Bureaus</div>
-          </CardContent>
-        </Card>
-        <Card data-testid="stat-jurisdictions">
-          <CardContent className="p-4 text-center">
-            <div className="flex items-center justify-center mb-2">
-              <Globe className="w-8 h-8 text-amber-500" />
-            </div>
-            <div className="text-2xl font-bold text-amber-600">{stats.totalCountries}</div>
-            <div className="text-xs text-muted-foreground">African Jurisdictions Covered</div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="SRS Requirements"
+          value={`${stats.compliant}/${stats.total}`}
+          subtitle="All compliant"
+          icon={CheckCircle2}
+          testId="stat-srs-compliance"
+          colorIndex={3}
+        />
+        <StatCard
+          title="Data Protection Laws"
+          value={`${stats.dpEnacted}/${stats.totalCountries}`}
+          subtitle="Enacted"
+          icon={Shield}
+          testId="stat-dp-enacted"
+          colorIndex={4}
+        />
+        <StatCard
+          title="Credit Bureaus"
+          value={`${stats.withBureau}/${stats.totalCountries}`}
+          subtitle="Countries covered"
+          icon={Building2}
+          testId="stat-credit-bureaus"
+          colorIndex={5}
+        />
+        <StatCard
+          title="Jurisdictions"
+          value={String(stats.totalCountries)}
+          subtitle="African countries"
+          icon={Globe}
+          testId="stat-jurisdictions"
+          colorIndex={1}
+        />
       </div>
 
       <Tabs defaultValue="srs" className="space-y-4">
