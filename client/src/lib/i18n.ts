@@ -507,6 +507,7 @@ const en = {
     noResults: "No results found",
     noResultsSub: "Try different search terms or register a new borrower",
     consentNote: "Enter a search query above to find borrowers and generate credit reports. All searches require borrower consent and are logged for audit purposes.",
+    allCountries: "All Countries",
   },
   batchUpload: {
     title: "Batch Upload",
@@ -1037,6 +1038,7 @@ const en = {
     of: "of",
     previous: "Previous",
     next: "Next",
+    clear: "Clear",
   },
 };
 
@@ -1544,6 +1546,7 @@ const fr: typeof en = {
     noResults: "Aucun résultat trouvé",
     noResultsSub: "Essayez d'autres termes de recherche ou enregistrez un nouvel emprunteur",
     consentNote: "Entrez une requête ci-dessus pour trouver des emprunteurs et générer des rapports. Toutes les recherches nécessitent le consentement de l'emprunteur et sont enregistrées à des fins d'audit.",
+    allCountries: "Tous les pays",
   },
   batchUpload: {
     title: "Import en lot",
@@ -2074,6 +2077,7 @@ const fr: typeof en = {
     of: "sur",
     previous: "Précédent",
     next: "Suivant",
+    clear: "Effacer",
   },
 };
 

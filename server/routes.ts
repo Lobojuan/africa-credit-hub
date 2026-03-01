@@ -397,8 +397,9 @@ export async function registerRoutes(
   app.get("/api/borrowers", async (req, res) => {
     try {
       const search = req.query.search as string;
+      const country = req.query.country as string;
       if (search) {
-        const data = await storage.searchBorrowers(search);
+        const data = await storage.searchBorrowers(search, country || undefined);
         res.json(data);
       } else {
         const page = Math.max(1, parseInt(req.query.page as string) || 1);

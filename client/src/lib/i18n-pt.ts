@@ -561,6 +561,7 @@ const pt = {
     noResults: "Nenhum resultado encontrado",
     noResultsSub: "Tente termos de pesquisa diferentes ou registe um novo mutuário",
     consentNote: "Introduza uma consulta acima para encontrar mutuários e gerar relatórios de crédito. Todas as pesquisas requerem consentimento do mutuário e são registadas para auditoria.",
+    allCountries: "Todos os Países",
   },
   reports: {
     title: "Relatórios de Crédito",
@@ -1108,6 +1109,7 @@ const pt = {
     of: "de",
     previous: "Anterior",
     next: "Seguinte",
+    clear: "Limpar",
   },
 };
 

@@ -1,29 +1,46 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { Search, User, Building2, FileText, ChevronRight } from "lucide-react";
+import { Search, User, Building2, FileText, ChevronRight, Globe } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SUPPORTED_COUNTRIES } from "@/lib/currency";
 import type { Borrower } from "@shared/schema";
 
 export default function CreditSearchPage() {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [country, setCountry] = useState("");
+  const [activeCountry, setActiveCountry] = useState("");
   const [, navigate] = useLocation();
 
+  const buildSearchUrl = () => {
+    const params = new URLSearchParams();
+    if (searchTerm) params.set("search", searchTerm);
+    if (activeCountry) params.set("country", activeCountry);
+    return `/api/borrowers?${params.toString()}`;
+  };
+
   const { data: results, isLoading } = useQuery<Borrower[]>({
-    queryKey: [`/api/borrowers?search=${encodeURIComponent(searchTerm)}`],
+    queryKey: ["/api/borrowers", searchTerm, activeCountry],
+    queryFn: async () => {
+      const res = await fetch(buildSearchUrl());
+      if (!res.ok) throw new Error("Search failed");
+      return res.json();
+    },
     enabled: searchTerm.length > 0,
   });
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setSearchTerm(query);
+    setActiveCountry(country === "all" ? "" : country);
   };
 
   return (
@@ -38,18 +55,39 @@ export default function CreditSearchPage() {
         </p>
       </div>
 
-      <form onSubmit={handleSearch} className="flex gap-2 max-w-xl mx-auto" data-testid="form-credit-search">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            data-testid="input-credit-search"
-            placeholder={t('search.placeholder')}
-            className="pl-9"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
+      <form onSubmit={handleSearch} className="space-y-3 max-w-xl mx-auto" data-testid="form-credit-search">
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              data-testid="input-credit-search"
+              placeholder={t('search.placeholder')}
+              className="pl-9"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </div>
+          <Button type="submit" data-testid="button-search">{t('search.searchBtn')}</Button>
         </div>
-        <Button type="submit" data-testid="button-search">{t('search.searchBtn')}</Button>
+        <div className="flex items-center gap-2">
+          <Globe className="w-4 h-4 text-muted-foreground shrink-0" />
+          <Select value={country} onValueChange={setCountry}>
+            <SelectTrigger className="w-full" data-testid="select-search-country">
+              <SelectValue placeholder={t('search.allCountries')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('search.allCountries')}</SelectItem>
+              {SUPPORTED_COUNTRIES.map(c => (
+                <SelectItem key={c.code} value={c.name}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {country && country !== "all" && (
+            <Button type="button" variant="ghost" size="sm" className="text-xs shrink-0" onClick={() => { setCountry(""); setActiveCountry(""); }} data-testid="button-clear-country">
+              {t('common.clear')}
+            </Button>
+          )}
+        </div>
       </form>
 
       {searchTerm && (

@@ -1,4 +1,4 @@
-import { eq, desc, like, or, sql, count, ilike } from "drizzle-orm";
+import { eq, desc, like, or, and, sql, count, ilike } from "drizzle-orm";
 import crypto from "crypto";
 import { db } from "./db";
 import {
@@ -39,7 +39,7 @@ export interface IStorage {
 
   getBorrower(id: string): Promise<Borrower | undefined>;
   getBorrowers(page?: number, limit?: number): Promise<{ data: Borrower[]; total: number }>;
-  searchBorrowers(query: string): Promise<Borrower[]>;
+  searchBorrowers(query: string, country?: string): Promise<Borrower[]>;
   createBorrower(borrower: InsertBorrower): Promise<Borrower>;
   updateBorrower(id: string, data: Partial<InsertBorrower>): Promise<Borrower | undefined>;
 
@@ -202,28 +202,30 @@ export class DatabaseStorage implements IStorage {
     return { data, total: totalResult.value };
   }
 
-  async searchBorrowers(query: string): Promise<Borrower[]> {
+  async searchBorrowers(query: string, country?: string): Promise<Borrower[]> {
     const searchPattern = `%${query}%`;
-    return db.select().from(borrowers).where(
-      or(
-        ilike(borrowers.firstName, searchPattern),
-        ilike(borrowers.lastName, searchPattern),
-        ilike(borrowers.companyName, searchPattern),
-        ilike(borrowers.nationalId, searchPattern),
-        ilike(borrowers.tinNumber, searchPattern),
-        ilike(borrowers.phone, searchPattern),
-        ilike(borrowers.email, searchPattern),
-        ilike(borrowers.city, searchPattern),
-        ilike(borrowers.region, searchPattern),
-        ilike(borrowers.address, searchPattern),
-        ilike(borrowers.sector, searchPattern),
-        ilike(borrowers.occupation, searchPattern),
-        ilike(borrowers.employerName, searchPattern),
-        ilike(borrowers.businessRegNumber, searchPattern),
-        ilike(borrowers.country, searchPattern),
-        ilike(borrowers.passportNumber, searchPattern),
-      )
-    ).orderBy(desc(borrowers.createdAt)).limit(200);
+    const searchCondition = or(
+      ilike(borrowers.firstName, searchPattern),
+      ilike(borrowers.lastName, searchPattern),
+      ilike(borrowers.companyName, searchPattern),
+      ilike(borrowers.nationalId, searchPattern),
+      ilike(borrowers.tinNumber, searchPattern),
+      ilike(borrowers.phone, searchPattern),
+      ilike(borrowers.email, searchPattern),
+      ilike(borrowers.city, searchPattern),
+      ilike(borrowers.region, searchPattern),
+      ilike(borrowers.address, searchPattern),
+      ilike(borrowers.sector, searchPattern),
+      ilike(borrowers.occupation, searchPattern),
+      ilike(borrowers.employerName, searchPattern),
+      ilike(borrowers.businessRegNumber, searchPattern),
+      ilike(borrowers.country, searchPattern),
+      ilike(borrowers.passportNumber, searchPattern),
+    );
+    const conditions = country
+      ? and(searchCondition, eq(borrowers.country, country))
+      : searchCondition;
+    return db.select().from(borrowers).where(conditions!).orderBy(desc(borrowers.createdAt)).limit(200);
   }
 
   async createBorrower(borrower: InsertBorrower): Promise<Borrower> {
