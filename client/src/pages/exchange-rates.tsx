@@ -57,7 +57,7 @@ export default function ExchangeRatesPage() {
       );
     },
     onError: (e: Error) => {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+      toast({ title: t("common.error"), description: e.message, variant: "destructive" });
     },
   });
 
@@ -74,10 +74,10 @@ export default function ExchangeRatesPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/exchange-rates"] });
       setAddDialogOpen(false);
       resetForm();
-      toast({ title: "Success", description: "Exchange rate added successfully." });
+      toast({ title: t("exchangeRates.created") });
     },
     onError: (e: Error) => {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+      toast({ title: t("common.error"), description: e.message, variant: "destructive" });
     },
   });
 
@@ -95,10 +95,10 @@ export default function ExchangeRatesPage() {
       setEditDialogOpen(false);
       setSelectedRate(null);
       resetForm();
-      toast({ title: "Success", description: "Exchange rate updated successfully." });
+      toast({ title: t("exchangeRates.updated") });
     },
     onError: (e: Error) => {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+      toast({ title: t("common.error"), description: e.message, variant: "destructive" });
     },
   });
 
@@ -110,10 +110,10 @@ export default function ExchangeRatesPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/exchange-rates"] });
       setDeleteDialogOpen(false);
       setSelectedRate(null);
-      toast({ title: "Success", description: "Exchange rate deleted successfully." });
+      toast({ title: t("exchangeRates.deleted") });
     },
     onError: (e: Error) => {
-      toast({ title: "Error", description: e.message, variant: "destructive" });
+      toast({ title: t("common.error"), description: e.message, variant: "destructive" });
     },
   });
 
@@ -158,7 +158,7 @@ export default function ExchangeRatesPage() {
     return (
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
-          <Label>Base Currency</Label>
+          <Label>{t("exchangeRates.baseCurrency")}</Label>
           <Select value={formData.baseCurrency} onValueChange={(v) => setFormData({ ...formData, baseCurrency: v })}>
             <SelectTrigger data-testid="select-base-currency"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -171,7 +171,7 @@ export default function ExchangeRatesPage() {
           </Select>
         </div>
         <div>
-          <Label>Target Currency</Label>
+          <Label>{t("exchangeRates.targetCurrency")}</Label>
           <Select value={formData.targetCurrency} onValueChange={(v) => setFormData({ ...formData, targetCurrency: v })}>
             <SelectTrigger data-testid="select-target-currency"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -184,7 +184,7 @@ export default function ExchangeRatesPage() {
           </Select>
         </div>
         <div>
-          <Label>Rate</Label>
+          <Label>{t("exchangeRates.rate")}</Label>
           <Input
             data-testid="input-rate"
             type="number"
@@ -195,7 +195,7 @@ export default function ExchangeRatesPage() {
           />
         </div>
         <div>
-          <Label>Effective Date</Label>
+          <Label>{t("exchangeRates.effectiveDate")}</Label>
           <Input
             data-testid="input-effective-date"
             type="date"
@@ -205,7 +205,7 @@ export default function ExchangeRatesPage() {
           />
         </div>
         <Button type="submit" className="w-full" disabled={isPending}>
-          {isPending ? "Saving..." : submitLabel}
+          {isPending ? t("common.processing") : submitLabel}
         </Button>
       </form>
     );
@@ -218,23 +218,23 @@ export default function ExchangeRatesPage() {
           <div className="flex items-center gap-2 mb-1">
             <div className="page-header-bar" />
             <h1 className="text-2xl font-extrabold tracking-tight" data-testid="text-page-title">
-              Exchange Rate Management
+              {t("exchangeRates.title")}
             </h1>
           </div>
-          <p className="text-sm text-muted-foreground ml-4">Manage currency exchange rates and convert between currencies</p>
+          <p className="text-sm text-muted-foreground ml-4">{t("exchangeRates.subtitle")}</p>
         </div>
         <Dialog open={addDialogOpen} onOpenChange={(open) => { setAddDialogOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
             <Button data-testid="button-add-rate">
               <Plus className="w-4 h-4 mr-2" />
-              Add Rate
+              {t("exchangeRates.addRate")}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Add Exchange Rate</DialogTitle>
+              <DialogTitle>{t("exchangeRates.addRate")}</DialogTitle>
             </DialogHeader>
-            {renderRateForm(handleAddSubmit, createMutation.isPending, "Add Rate")}
+            {renderRateForm(handleAddSubmit, createMutation.isPending, t("exchangeRates.addRate"))}
           </DialogContent>
         </Dialog>
       </div>
@@ -243,24 +243,24 @@ export default function ExchangeRatesPage() {
         <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
           <div className="flex items-center gap-2">
             <ArrowRightLeft className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Currency Converter</span>
+            <span className="text-sm font-medium">{t("exchangeRates.converter")}</span>
           </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
             <div>
-              <Label>Amount</Label>
+              <Label>{t("exchangeRates.amount")}</Label>
               <Input
                 data-testid="input-amount"
                 type="number"
                 step="0.01"
-                placeholder="Enter amount"
+                placeholder={t("exchangeRates.amount")}
                 value={convertAmount}
                 onChange={(e) => setConvertAmount(e.target.value)}
               />
             </div>
             <div>
-              <Label>From</Label>
+              <Label>{t("exchangeRates.baseCurrency")}</Label>
               <Select value={convertFrom} onValueChange={setConvertFrom}>
                 <SelectTrigger data-testid="select-from"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -273,7 +273,7 @@ export default function ExchangeRatesPage() {
               </Select>
             </div>
             <div>
-              <Label>To</Label>
+              <Label>{t("exchangeRates.targetCurrency")}</Label>
               <Select value={convertTo} onValueChange={setConvertTo}>
                 <SelectTrigger data-testid="select-to"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -291,7 +291,7 @@ export default function ExchangeRatesPage() {
               disabled={!convertAmount || convertMutation.isPending}
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${convertMutation.isPending ? "animate-spin" : ""}`} />
-              Convert
+              {t("exchangeRates.convert")}
             </Button>
           </div>
           {convertResult && (
@@ -318,12 +318,12 @@ export default function ExchangeRatesPage() {
               <Table data-testid="table-exchange-rates">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Base Currency</TableHead>
-                    <TableHead>Target Currency</TableHead>
-                    <TableHead>Rate</TableHead>
-                    <TableHead>Effective Date</TableHead>
-                    <TableHead>Source</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>{t("exchangeRates.baseCurrency")}</TableHead>
+                    <TableHead>{t("exchangeRates.targetCurrency")}</TableHead>
+                    <TableHead>{t("exchangeRates.rate")}</TableHead>
+                    <TableHead>{t("exchangeRates.effectiveDate")}</TableHead>
+                    <TableHead>{t("exchangeRates.source")}</TableHead>
+                    <TableHead>{t("exchangeRates.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -340,7 +340,9 @@ export default function ExchangeRatesPage() {
                       </TableCell>
                       <TableCell data-testid={`text-date-${rate.id}`}>{rate.effectiveDate}</TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className="text-xs">{rate.source}</Badge>
+                        <Badge variant="secondary" className="text-xs">
+                          {rate.source === "manual" ? t("exchangeRates.manual") : t("exchangeRates.api")}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
@@ -373,8 +375,8 @@ export default function ExchangeRatesPage() {
         <Card>
           <CardContent className="p-12 text-center">
             <DollarSign className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-40" />
-            <h3 className="font-semibold">No exchange rates found</h3>
-            <p className="text-sm text-muted-foreground mt-1">Add your first exchange rate to get started.</p>
+            <h3 className="font-semibold">{t("exchangeRates.noRates")}</h3>
+            <p className="text-sm text-muted-foreground mt-1">{t("exchangeRates.noRatesSub")}</p>
           </CardContent>
         </Card>
       )}
@@ -382,31 +384,30 @@ export default function ExchangeRatesPage() {
       <Dialog open={editDialogOpen} onOpenChange={(open) => { setEditDialogOpen(open); if (!open) { setSelectedRate(null); resetForm(); } }}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Exchange Rate</DialogTitle>
+            <DialogTitle>{t("exchangeRates.editRate")}</DialogTitle>
           </DialogHeader>
-          {renderRateForm(handleEditSubmit, updateMutation.isPending, "Update Rate")}
+          {renderRateForm(handleEditSubmit, updateMutation.isPending, t("common.save"))}
         </DialogContent>
       </Dialog>
 
       <Dialog open={deleteDialogOpen} onOpenChange={(open) => { setDeleteDialogOpen(open); if (!open) setSelectedRate(null); }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Confirm Delete</DialogTitle>
+            <DialogTitle>{t("exchangeRates.deleteConfirm")}</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Are you sure you want to delete the exchange rate{" "}
-            <span className="font-semibold">{selectedRate?.baseCurrency} to {selectedRate?.targetCurrency}</span>?
-            This action cannot be undone.
+            {t("exchangeRates.deleteConfirm")}{" "}
+            <span className="font-semibold">{selectedRate?.baseCurrency} → {selectedRate?.targetCurrency}</span>
           </p>
           <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>{t("common.cancel")}</Button>
             <Button
               variant="destructive"
               onClick={() => selectedRate && deleteMutation.mutate(selectedRate.id)}
               disabled={deleteMutation.isPending}
               data-testid="button-confirm-delete"
             >
-              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+              {deleteMutation.isPending ? t("common.processing") : t("common.delete")}
             </Button>
           </div>
         </DialogContent>

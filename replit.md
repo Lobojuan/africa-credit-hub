@@ -40,9 +40,11 @@ The system employs a modern full-stack architecture:
 -   **Tamper-Evident Audit Logs**: SHA-256 hash chain on audit log entries with integrity verification badge
 -   **Exchange Rate Management**: Multi-currency conversion with 18-currency support, cross-rate via USD routing, admin CRUD for rate pairs
 -   **API Administration Module**: Centralized external API configuration management (weather, judicial, payment gateway, exchange rate) with connection testing
--   **Data Retention Policies**: Jurisdiction-specific retention periods (REQ-RET-01), admin/regulator CRUD for policy management
--   **Cross-Border Entity Resolution**: Passport number field on borrowers for cross-jurisdictional identity matching
+-   **Data Retention Policies**: Jurisdiction-specific retention periods (REQ-RET-01), admin/regulator CRUD for policy management, automatic enforcement scheduler (24hr cycle) + manual trigger via Run Enforcement button
+-   **Retention Enforcement Engine**: Background scheduler auto-archives/expunges records based on per-country retention policies; supports borrower-linked, credit-account-linked, and global entity types; audit-logged enforcement results
+-   **Cross-Border Entity Resolution**: Passport number field on borrowers for cross-jurisdictional identity matching; related party linking with 7 relationship types (spouse, guarantor, director, shareholder, beneficial_owner, subsidiary, parent_company)
 -   **Portuguese i18n**: Full PT translation covering all UI strings, language switcher updated with PT option
+-   **i18n Wired on Admin Pages**: Exchange Rates, API Admin, and Retention Policies pages fully use t() translation hooks for EN/FR/PT
 
 ## External Dependencies
 -   **Database**: PostgreSQL (specifically Neon for hosting)

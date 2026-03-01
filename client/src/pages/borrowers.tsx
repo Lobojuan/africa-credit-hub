@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Borrower } from "@shared/schema";
@@ -45,6 +46,7 @@ export default function BorrowersPage() {
     employerName: "", occupation: "", businessRegNumber: "", sector: "",
     isPep: false, pepDetails: "",
     educationLevel: "", educationInstitution: "", employmentHistory: "",
+    relatedBorrowerId: "", relationshipType: "",
   });
 
   const [fuzzyMatches, setFuzzyMatches] = useState<any[]>([]);
@@ -89,7 +91,7 @@ export default function BorrowersPage() {
       queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string)?.startsWith?.("/api/borrowers") });
       queryClient.invalidateQueries({ queryKey: ["/api/pending-approvals"] });
       setDialogOpen(false);
-      setFormData({ type: "individual", firstName: "", lastName: "", companyName: "", nationalId: "", tinNumber: "", passportNumber: "", dateOfBirth: "", gender: "", phone: "", email: "", address: "", country: "", city: "", region: "", employerName: "", occupation: "", businessRegNumber: "", sector: "", isPep: false, pepDetails: "", educationLevel: "", educationInstitution: "", employmentHistory: "" });
+      setFormData({ type: "individual", firstName: "", lastName: "", companyName: "", nationalId: "", tinNumber: "", passportNumber: "", dateOfBirth: "", gender: "", phone: "", email: "", address: "", country: "", city: "", region: "", employerName: "", occupation: "", businessRegNumber: "", sector: "", isPep: false, pepDetails: "", educationLevel: "", educationInstitution: "", employmentHistory: "", relatedBorrowerId: "", relationshipType: "" });
       toast({ title: data.message || t("borrowers.registerBorrower"), description: t("borrowers.submittedForApproval") });
     },
     onError: (e: Error) => {
@@ -241,6 +243,26 @@ export default function BorrowersPage() {
               </div>
               <div><Label>{t("borrowers.educationInstitution")}</Label><Input data-testid="input-education-institution" value={formData.educationInstitution} onChange={(e) => setFormData({ ...formData, educationInstitution: e.target.value })} /></div>
               <div><Label>{t("borrowers.employmentHistory")}</Label><Textarea data-testid="input-employment-history" value={formData.employmentHistory} onChange={(e) => setFormData({ ...formData, employmentHistory: e.target.value })} placeholder={t("borrowers.employmentHistoryPlaceholder")} className="resize-none" /></div>
+              <Separator className="my-2" />
+              <p className="text-sm font-medium">{t("borrowers.relatedPartyLinking")}</p>
+              <div>
+                <Label>{t("borrowers.relationshipType")}</Label>
+                <Select value={formData.relationshipType} onValueChange={(v) => setFormData({ ...formData, relationshipType: v })}>
+                  <SelectTrigger data-testid="select-relationship-type"><SelectValue placeholder={t("creditAccounts.select")} /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="spouse">{t("borrowers.relationshipTypes.spouse")}</SelectItem>
+                    <SelectItem value="guarantor">{t("borrowers.relationshipTypes.guarantor")}</SelectItem>
+                    <SelectItem value="director">{t("borrowers.relationshipTypes.director")}</SelectItem>
+                    <SelectItem value="shareholder">{t("borrowers.relationshipTypes.shareholder")}</SelectItem>
+                    <SelectItem value="beneficial_owner">{t("borrowers.relationshipTypes.beneficialOwner")}</SelectItem>
+                    <SelectItem value="subsidiary">{t("borrowers.relationshipTypes.subsidiary")}</SelectItem>
+                    <SelectItem value="parent_company">{t("borrowers.relationshipTypes.parentCompany")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {formData.relationshipType && (
+                <div><Label>{t("borrowers.relatedBorrowerId")}</Label><Input data-testid="input-related-borrower-id" value={formData.relatedBorrowerId} onChange={(e) => setFormData({ ...formData, relatedBorrowerId: e.target.value })} placeholder={t("borrowers.relatedBorrowerIdPlaceholder")} /></div>
+              )}
               <Button type="submit" className="w-full" disabled={createMutation.isPending} data-testid="button-submit-borrower">
                 {createMutation.isPending ? t("borrowers.registering") : t("borrowers.registerBorrower")}
               </Button>

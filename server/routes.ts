@@ -1561,6 +1561,23 @@ export async function registerRoutes(
   });
 
   // Retention Policies
+  app.post("/api/retention-policies/enforce", requireAuth, requireRole("admin"), async (req, res) => {
+    try {
+      const { enforceRetentionPolicies } = await import("./retention-enforcement");
+      const results = await enforceRetentionPolicies();
+      await storage.createAuditLog({
+        userId: req.session.userId,
+        action: "manual_retention_enforcement",
+        entity: "system",
+        details: JSON.stringify({ results }),
+        ipAddress: req.ip,
+      });
+      res.json({ message: "Retention enforcement completed", results });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   app.get("/api/retention-policies", requireRole("admin", "regulator"), async (_req, res) => {
     try {
       const policies = await storage.getRetentionPolicies();

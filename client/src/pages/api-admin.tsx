@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Plus, Pencil, Trash2, Plug, TestTube2, CheckCircle, XCircle, Globe, Cloud, Gavel, CreditCard, Settings2 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,17 +31,6 @@ function getCategoryColor(category: string) {
   }
 }
 
-function getCategoryLabel(category: string) {
-  switch (category) {
-    case "weather": return "Weather";
-    case "judicial": return "Judicial";
-    case "payment_gateway": return "Payment Gateway";
-    case "exchange_rate": return "Exchange Rate";
-    case "custom": return "Custom";
-    default: return category;
-  }
-}
-
 function getCategoryIcon(category: string) {
   switch (category) {
     case "weather": return <Cloud className="w-4 h-4" />;
@@ -63,6 +53,7 @@ const defaultFormData = {
 };
 
 export default function ApiAdminPage() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -87,7 +78,7 @@ export default function ApiAdminPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/api-configurations"] });
       setDialogOpen(false);
       setFormData(defaultFormData);
-      toast({ title: "API configuration created successfully" });
+      toast({ title: t("apiAdmin.created") });
     },
     onError: (e: Error) => {
       toast({ title: "Error", description: e.message, variant: "destructive" });
@@ -104,7 +95,7 @@ export default function ApiAdminPage() {
       setDialogOpen(false);
       setEditingId(null);
       setFormData(defaultFormData);
-      toast({ title: "API configuration updated successfully" });
+      toast({ title: t("apiAdmin.updated") });
     },
     onError: (e: Error) => {
       toast({ title: "Error", description: e.message, variant: "destructive" });
@@ -118,7 +109,7 @@ export default function ApiAdminPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/api-configurations"] });
       setDeleteConfirmId(null);
-      toast({ title: "API configuration deleted" });
+      toast({ title: t("apiAdmin.deleted") });
     },
     onError: (e: Error) => {
       toast({ title: "Error", description: e.message, variant: "destructive" });
@@ -133,13 +124,13 @@ export default function ApiAdminPage() {
     onSuccess: (data: { status: string; message?: string }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/api-configurations"] });
       if (data.status === "success") {
-        toast({ title: "Connection successful", description: data.message || "API is reachable" });
+        toast({ title: t("apiAdmin.testSuccess"), description: data.message || t("apiAdmin.testSuccess") });
       } else {
-        toast({ title: "Connection failed", description: data.message || "API is not reachable", variant: "destructive" });
+        toast({ title: t("apiAdmin.testFailed"), description: data.message || t("apiAdmin.testFailed"), variant: "destructive" });
       }
     },
     onError: (e: Error) => {
-      toast({ title: "Test failed", description: e.message, variant: "destructive" });
+      toast({ title: t("apiAdmin.testFailed"), description: e.message, variant: "destructive" });
     },
   });
 
@@ -181,16 +172,16 @@ export default function ApiAdminPage() {
             <div className="page-header-bar" />
             <Plug className="w-6 h-6" />
             <h1 className="text-2xl font-extrabold tracking-tight" data-testid="text-api-admin-title">
-              API Administration
+              {t("apiAdmin.title")}
             </h1>
           </div>
           <p className="text-sm text-muted-foreground ml-4">
-            Configure external API integrations for weather data, judicial records, payment gateways, and exchange rates
+            {t("apiAdmin.subtitle")}
           </p>
         </div>
         <Button onClick={openCreate} data-testid="button-add-api">
           <Plus className="w-4 h-4 mr-2" />
-          Add API Configuration
+          {t("apiAdmin.addConfig")}
         </Button>
       </div>
 
@@ -204,7 +195,7 @@ export default function ApiAdminPage() {
             className="toggle-elevate"
             data-testid={`filter-${cat}`}
           >
-            {cat === "all" ? "All" : getCategoryLabel(cat)}
+            {t(`apiAdmin.categories.${cat}`)}
           </Button>
         ))}
       </div>
@@ -235,7 +226,7 @@ export default function ApiAdminPage() {
                   className={getCategoryColor(config.category)}
                   data-testid={`badge-category-${config.id}`}
                 >
-                  {getCategoryLabel(config.category)}
+                  {t(`apiAdmin.categories.${config.category}`)}
                 </Badge>
               </CardHeader>
               <CardContent className="space-y-3 pt-0">
@@ -245,15 +236,15 @@ export default function ApiAdminPage() {
                   </p>
                   <div className="flex items-center gap-2 flex-wrap">
                     <Badge variant="outline" className="text-[10px]">
-                      {config.authType}
+                      {t(`apiAdmin.authTypes.${config.authType}`)}
                     </Badge>
                     <Badge variant="outline" className="text-[10px]">
-                      {config.country || "Global"}
+                      {config.country || t("apiAdmin.global")}
                     </Badge>
                   </div>
                   <div className="flex items-center gap-1.5" data-testid={`badge-status-${config.id}`}>
                     <span className={`inline-block w-2 h-2 rounded-full ${config.isActive ? "bg-green-500" : "bg-red-500"}`} />
-                    <span className="text-xs">{config.isActive ? "Active" : "Inactive"}</span>
+                    <span className="text-xs">{config.isActive ? t("apiAdmin.active") : t("apiAdmin.inactive")}</span>
                   </div>
                   {config.lastTestStatus && (
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -263,7 +254,7 @@ export default function ApiAdminPage() {
                         <XCircle className="w-3.5 h-3.5 text-red-500" />
                       )}
                       <span>
-                        {config.lastTestStatus === "success" ? "Passed" : "Failed"}
+                        {config.lastTestStatus === "success" ? t("apiAdmin.testSuccess") : t("apiAdmin.testFailed")}
                         {config.lastTestedAt && ` - ${new Date(config.lastTestedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`}
                       </span>
                     </div>
@@ -278,7 +269,7 @@ export default function ApiAdminPage() {
                     data-testid={`button-test-${config.id}`}
                   >
                     <TestTube2 className="w-3.5 h-3.5 mr-1" />
-                    Test
+                    {testMutation.isPending ? t("apiAdmin.testing") : t("apiAdmin.testConnection")}
                   </Button>
                   <Button
                     variant="outline"
@@ -287,7 +278,7 @@ export default function ApiAdminPage() {
                     data-testid={`button-edit-api-${config.id}`}
                   >
                     <Pencil className="w-3.5 h-3.5 mr-1" />
-                    Edit
+                    {t("common.edit")}
                   </Button>
                   <Button
                     variant="outline"
@@ -296,7 +287,7 @@ export default function ApiAdminPage() {
                     data-testid={`button-delete-api-${config.id}`}
                   >
                     <Trash2 className="w-3.5 h-3.5 mr-1" />
-                    Delete
+                    {t("common.delete")}
                   </Button>
                 </div>
               </CardContent>
@@ -307,11 +298,9 @@ export default function ApiAdminPage() {
         <Card>
           <CardContent className="p-12 text-center">
             <Plug className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-40" />
-            <h3 className="font-semibold">No API configurations found</h3>
+            <h3 className="font-semibold">{t("apiAdmin.noConfigs")}</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              {selectedCategory === "all"
-                ? "Add your first API configuration to get started"
-                : `No ${getCategoryLabel(selectedCategory)} configurations found`}
+              {t("apiAdmin.noConfigsSub")}
             </p>
           </CardContent>
         </Card>
@@ -320,34 +309,34 @@ export default function ApiAdminPage() {
       <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setEditingId(null); setFormData(defaultFormData); } }}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingId ? "Edit API Configuration" : "Add API Configuration"}</DialogTitle>
+            <DialogTitle>{editingId ? t("apiAdmin.editConfig") : t("apiAdmin.addConfig")}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4" data-testid="form-api-config">
             <div>
-              <Label>Name</Label>
+              <Label>{t("apiAdmin.name")}</Label>
               <Input
                 data-testid="input-api-name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="API service name"
+                placeholder={t("apiAdmin.name")}
                 required
               />
             </div>
             <div>
-              <Label>Category</Label>
+              <Label>{t("apiAdmin.category")}</Label>
               <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}>
                 <SelectTrigger data-testid="select-api-category"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="weather">Weather</SelectItem>
-                  <SelectItem value="judicial">Judicial</SelectItem>
-                  <SelectItem value="payment_gateway">Payment Gateway</SelectItem>
-                  <SelectItem value="exchange_rate">Exchange Rate</SelectItem>
-                  <SelectItem value="custom">Custom</SelectItem>
+                  <SelectItem value="weather">{t("apiAdmin.categories.weather")}</SelectItem>
+                  <SelectItem value="judicial">{t("apiAdmin.categories.judicial")}</SelectItem>
+                  <SelectItem value="payment_gateway">{t("apiAdmin.categories.payment_gateway")}</SelectItem>
+                  <SelectItem value="exchange_rate">{t("apiAdmin.categories.exchange_rate")}</SelectItem>
+                  <SelectItem value="custom">{t("apiAdmin.categories.custom")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label>Base URL</Label>
+              <Label>{t("apiAdmin.baseUrl")}</Label>
               <Input
                 data-testid="input-api-base-url"
                 value={formData.baseUrl}
@@ -357,20 +346,20 @@ export default function ApiAdminPage() {
               />
             </div>
             <div>
-              <Label>Auth Type</Label>
+              <Label>{t("apiAdmin.authType")}</Label>
               <Select value={formData.authType} onValueChange={(v) => setFormData({ ...formData, authType: v })}>
                 <SelectTrigger data-testid="select-api-auth-type"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="api_key">API Key</SelectItem>
-                  <SelectItem value="oauth2">OAuth2</SelectItem>
-                  <SelectItem value="bearer">Bearer Token</SelectItem>
-                  <SelectItem value="basic">Basic Auth</SelectItem>
-                  <SelectItem value="none">None</SelectItem>
+                  <SelectItem value="api_key">{t("apiAdmin.authTypes.api_key")}</SelectItem>
+                  <SelectItem value="oauth2">{t("apiAdmin.authTypes.oauth2")}</SelectItem>
+                  <SelectItem value="bearer">{t("apiAdmin.authTypes.bearer")}</SelectItem>
+                  <SelectItem value="basic">{t("apiAdmin.authTypes.basic")}</SelectItem>
+                  <SelectItem value="none">{t("apiAdmin.authTypes.none")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label>API Key Header Name</Label>
+              <Label>{t("apiAdmin.apiKeyHeader")}</Label>
               <Input
                 data-testid="input-api-key-header"
                 value={formData.apiKeyHeaderName}
@@ -379,11 +368,11 @@ export default function ApiAdminPage() {
               />
             </div>
             <div>
-              <Label>Country</Label>
+              <Label>{t("apiAdmin.country")}</Label>
               <Select value={formData.country || "global"} onValueChange={(v) => setFormData({ ...formData, country: v === "global" ? "" : v })}>
-                <SelectTrigger data-testid="select-api-country"><SelectValue placeholder="Global" /></SelectTrigger>
+                <SelectTrigger data-testid="select-api-country"><SelectValue placeholder={t("apiAdmin.global")} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="global">Global</SelectItem>
+                  <SelectItem value="global">{t("apiAdmin.global")}</SelectItem>
                   {countries.map((c) => (
                     <SelectItem key={c} value={c}>{c}</SelectItem>
                   ))}
@@ -391,17 +380,17 @@ export default function ApiAdminPage() {
               </Select>
             </div>
             <div>
-              <Label>Description</Label>
+              <Label>{t("apiAdmin.description")}</Label>
               <Textarea
                 data-testid="input-api-description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Brief description of the API integration"
+                placeholder={t("apiAdmin.description")}
                 className="resize-none"
               />
             </div>
             <div className="flex items-center justify-between">
-              <Label>Active</Label>
+              <Label>{t("apiAdmin.active")}</Label>
               <Switch
                 data-testid="switch-api-active"
                 checked={formData.isActive}
@@ -415,8 +404,8 @@ export default function ApiAdminPage() {
               data-testid="button-submit-api"
             >
               {(createMutation.isPending || updateMutation.isPending)
-                ? "Saving..."
-                : editingId ? "Update Configuration" : "Add Configuration"}
+                ? t("common.save") + "..."
+                : editingId ? t("apiAdmin.editConfig") : t("apiAdmin.addConfig")}
             </Button>
           </form>
         </DialogContent>
@@ -425,14 +414,14 @@ export default function ApiAdminPage() {
       <Dialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Delete API Configuration</DialogTitle>
+            <DialogTitle>{t("common.delete")}</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Are you sure you want to delete this API configuration? This action cannot be undone.
+            {t("apiAdmin.deleteConfirm")}
           </p>
           <div className="flex items-center justify-end gap-2 pt-4">
             <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -440,7 +429,7 @@ export default function ApiAdminPage() {
               disabled={deleteMutation.isPending}
               data-testid="button-confirm-delete"
             >
-              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+              {deleteMutation.isPending ? t("common.delete") + "..." : t("common.delete")}
             </Button>
           </div>
         </DialogContent>
