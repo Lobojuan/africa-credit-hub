@@ -36,10 +36,13 @@
 22. [Chatbot de Litiges](#22-chatbot-de-litiges)
 23. [Téléversement XBRL](#23-téléversement-xbrl)
 24. [Vérification de l'Intégrité du Journal d'Audit](#24-vérification-de-lintégrité-du-journal-daudit)
-25. [Annexe A : Identifiants de Démonstration](#annexe-a-identifiants-de-démonstration)
-26. [Annexe B : Matrice d'Accès par Rôle](#annexe-b-matrice-daccès-par-rôle)
-27. [Annexe C : Devises Prises en Charge](#annexe-c-devises-prises-en-charge)
-28. [Annexe D : Glossaire des Termes](#annexe-d-glossaire-des-termes)
+25. [Gestion des Taux de Change](#25-gestion-des-taux-de-change)
+26. [Administration des API](#26-administration-des-api)
+27. [Politiques de Rétention des Données](#27-politiques-de-rétention-des-données)
+28. [Annexe A : Identifiants de Démonstration](#annexe-a-identifiants-de-démonstration)
+29. [Annexe B : Matrice d'Accès par Rôle](#annexe-b-matrice-daccès-par-rôle)
+30. [Annexe C : Devises Prises en Charge](#annexe-c-devises-prises-en-charge)
+31. [Annexe D : Glossaire des Termes](#annexe-d-glossaire-des-termes)
 
 ---
 
@@ -60,12 +63,13 @@ Le système prend en charge le déploiement dans plusieurs juridictions africain
 
 ### 1.3 Langues Prises en Charge
 
-Le système prend en charge deux langues :
+Le système prend en charge trois langues :
 
 - **Anglais (EN)** — Langue par défaut
 - **Français (FR)** — Traduction française complète disponible
+- **Portugais (PT)** — Traduction portugaise complète disponible
 
-Les utilisateurs peuvent changer de langue à tout moment en utilisant le sélecteur de langue dans l'en-tête de l'application.
+Les utilisateurs peuvent changer de langue à tout moment en utilisant le sélecteur de langue disponible sur la page de connexion et dans l'en-tête de l'application.
 
 ---
 
@@ -77,10 +81,11 @@ Ouvrez un navigateur web moderne (Chrome, Firefox, Safari ou Edge) et accédez �
 
 ### 2.2 Connexion
 
-1. Sur la page de connexion, saisissez votre **Nom d'utilisateur** dans le champ correspondant.
-2. Saisissez votre **Mot de passe** dans le champ correspondant.
-3. Cliquez sur le bouton **Se Connecter**.
-4. Après une authentification réussie, vous serez redirigé vers le Tableau de Bord.
+1. Sur la page de connexion, sélectionnez votre **langue préférée** (EN/FR/PT) à l'aide du sélecteur de langue si désiré.
+2. Saisissez votre **Nom d'utilisateur** dans le champ correspondant.
+3. Saisissez votre **Mot de passe** dans le champ correspondant.
+4. Cliquez sur le bouton **Se Connecter**.
+5. Après une authentification réussie, vous serez redirigé vers le Tableau de Bord.
 
 **Notes importantes :**
 - Les comptes sont verrouillés pendant **15 minutes** après **3 tentatives de connexion échouées consécutives**.
@@ -106,11 +111,11 @@ Pour changer votre mot de passe :
 
 Vous pouvez également changer votre mot de passe à tout moment en cliquant sur l'option de changement de mot de passe dans la barre latérale.
 
-### 2.4 Changement de Langue (EN/FR)
+### 2.4 Changement de Langue (EN/FR/PT)
 
 Pour changer la langue de l'interface :
-1. Localisez le bouton de changement de langue dans la barre d'en-tête supérieure (affiche « EN » ou « FR »).
-2. Cliquez sur le bouton pour basculer entre l'anglais et le français.
+1. Localisez le bouton de changement de langue dans la barre d'en-tête supérieure ou sur la page de connexion (affiche « EN », « FR » ou « PT »).
+2. Cliquez sur le bouton pour basculer entre l'anglais, le français et le portugais.
 3. L'ensemble de l'interface se mettra à jour immédiatement dans la langue sélectionnée.
 
 ### 2.5 Basculement de Thème (Clair/Sombre)
@@ -143,6 +148,9 @@ La barre latérale donne accès à tous les modules du système, organisés en t
 - Gestion des Utilisateurs (Admin uniquement)
 - Institutions (Admin uniquement)
 - Clés API (Admin uniquement)
+- Taux de Change (Admin uniquement)
+- Administration des API (Admin uniquement)
+- Politiques de Rétention (Admin/Régulateur)
 
 La barre latérale peut être réduite en cliquant sur le bouton de basculement de la barre latérale dans l'en-tête. En mode réduit, seules les icônes sont visibles. Sur les appareils mobiles, la barre latérale s'ouvre sous forme de panneau coulissant.
 
@@ -272,7 +280,7 @@ Un indicateur de Personne Politiquement Exposée (PPE) indique qu'un emprunteur 
 
 ### 4.6 Liaison des Parties Liées
 
-Les emprunteurs peuvent être liés à des parties liées (ex. garants, directeurs, membres de la famille) :
+Les emprunteurs peuvent être liés à des parties liées avec les types de relations suivants : conjoint, garant, directeur, actionnaire, bénéficiaire_effectif, filiale et société_mère :
 
 1. Sur la page de détails de l'emprunteur, consultez la section **Parties Liées**.
 2. Les emprunteurs liés sont affichés avec leur type de relation.
@@ -311,7 +319,7 @@ Le module Comptes de Crédit gère les prêts et les facilités de crédit assoc
    - **Type de Compte** — Sélectionnez parmi : Prêt Personnel, Hypothèque, Prêt Véhicule, Prêt Commercial, Prêt Corporatif, Découvert, Carte de Crédit, Microfinance
    - **Montant Initial** — Montant initial du prêt/de la facilité
    - **Solde Actuel** — Solde impayé actuel
-   - **Devise** — Sélectionnez parmi 17 devises prises en charge
+   - **Devise** — Sélectionnez parmi 18 devises prises en charge
    - **Taux d'Intérêt** — Pourcentage du taux d'intérêt annuel
    - **Statut** — En cours, Impayé, Défaut, Fermé, Restructuré
    - **Date de Décaissement** — Date de décaissement du prêt
@@ -337,7 +345,7 @@ Le module Comptes de Crédit gère les prêts et les facilités de crédit assoc
 
 ### 5.3 Support Multi-Devises
 
-Le système prend en charge 17 devises sur les marchés africains et internationaux. Lors de la création ou de la consultation de comptes de crédit :
+Le système prend en charge 18 devises sur les marchés africains et internationaux. Lors de la création ou de la consultation de comptes de crédit :
 - Sélectionnez la devise appropriée dans la liste déroulante.
 - Les montants sont affichés avec le formatage approprié pour la devise sélectionnée.
 - Voir l'Annexe C pour la liste complète des devises prises en charge.
@@ -1080,7 +1088,7 @@ R : Accédez à la page de détails d'un emprunteur et cliquez sur « Générer 
 R : Oui. Accédez à Rapports et utilisez la fonctionnalité d'Exportation CSV pour télécharger les données de portefeuille ou d'emprunteurs.
 
 ### Q : Comment changer de langue ?
-R : Cliquez sur le bouton de basculement de langue (EN/FR) dans la barre d'en-tête supérieure. L'interface changera immédiatement.
+R : Cliquez sur le bouton de basculement de langue (EN/FR/PT) dans la barre d'en-tête supérieure ou sur la page de connexion. L'interface changera immédiatement.
 
 ### Q : Comment basculer entre le mode clair et le mode sombre ?
 R : Cliquez sur l'icône de basculement de thème (soleil/lune) dans la barre d'en-tête.
@@ -1113,7 +1121,7 @@ R : Les utilisateurs ayant le rôle Admin ou Régulateur peuvent approuver ou re
 R : Accédez à la page de détails d'un emprunteur, trouvez la section Jugements Judiciaires et cliquez sur « Ajouter un Jugement ». Seuls les utilisateurs Admin et Régulateur peuvent créer des jugements judiciaires.
 
 ### Q : Quelles devises le système prend-il en charge ?
-R : Le système prend en charge 17 devises. Voir l'Annexe C pour la liste complète.
+R : Le système prend en charge 18 devises. Voir l'Annexe C pour la liste complète.
 
 ---
 
@@ -1250,6 +1258,155 @@ Si une entrée est modifiée, supprimée ou insérée dans le désordre, la cha�
 
 ---
 
+## 25. Gestion des Taux de Change
+
+Le module de Gestion des Taux de Change permet aux administrateurs de configurer et gérer les taux de change des devises utilisés dans l'ensemble du système.
+
+### 25.1 Consultation des Taux de Change
+
+1. Accédez aux **Taux de Change** depuis la section Administration dans la barre latérale (accès Admin requis).
+2. La page affiche un tableau de tous les taux de change configurés, incluant :
+   - **Devise de Base** — La devise source
+   - **Devise Cible** — La devise de destination
+   - **Taux** — Le taux de change actuel
+   - **Date d'Effet** — La date à laquelle le taux est devenu effectif
+3. Utilisez les contrôles de recherche ou de filtre pour localiser des paires de devises spécifiques.
+
+### 25.2 Ajout d'un Nouveau Taux de Change
+
+1. Cliquez sur le bouton **Ajouter un Taux** en haut de la page des Taux de Change.
+2. Remplissez les champs obligatoires :
+   - **Devise de Base** — Sélectionnez la devise source dans la liste déroulante
+   - **Devise Cible** — Sélectionnez la devise de destination dans la liste déroulante
+   - **Taux** — Saisissez la valeur du taux de change
+3. Cliquez sur **Enregistrer** pour créer l'enregistrement du taux de change.
+
+### 25.3 Modification d'un Taux de Change
+
+1. Localisez le taux de change que vous souhaitez mettre à jour dans le tableau.
+2. Cliquez sur le bouton **Modifier** (icône de crayon) sur la ligne correspondante.
+3. Modifiez la valeur du taux selon les besoins.
+4. Cliquez sur **Enregistrer** pour appliquer les modifications.
+
+### 25.4 Suppression d'un Taux de Change
+
+1. Localisez le taux de change que vous souhaitez supprimer dans le tableau.
+2. Cliquez sur le bouton **Supprimer** (icône de corbeille) sur la ligne correspondante.
+3. Confirmez la suppression lorsque vous y êtes invité.
+4. L'enregistrement du taux de change sera définitivement supprimé.
+
+### 25.5 Widget de Conversion de Devises
+
+La page des Taux de Change comprend un widget de conversion de devises intégré :
+
+1. Dans la section de conversion, sélectionnez la devise **De**.
+2. Sélectionnez la devise **Vers**.
+3. Saisissez le **Montant** que vous souhaitez convertir.
+4. Le montant converti est affiché automatiquement en fonction des taux de change configurés.
+5. Si aucun taux de change n'existe pour la paire de devises sélectionnée, un message indiquera que le taux n'est pas disponible.
+
+---
+
+## 26. Administration des API
+
+Le module d'Administration des API permet aux administrateurs de configurer et gérer les connexions API externes utilisées par le système pour les intégrations avec des services tiers.
+
+### 26.1 Accéder à l'Administration des API
+
+1. Accédez à **Administration des API** depuis la section Administration dans la barre latérale (accès Admin requis).
+2. La page affiche toutes les connexions API configurées, organisées par catégorie.
+
+### 26.2 Catégories d'API
+
+Les API externes sont organisées dans les catégories suivantes :
+
+- **Météo** — Services de données météorologiques pour les informations régionales
+- **Judiciaire** — Services de consultation des registres judiciaires et juridiques
+- **Passerelle de Paiement** — Intégrations de traitement des paiements
+- **Autre** — Intégrations de services externes supplémentaires
+
+### 26.3 Ajout d'une Nouvelle Connexion API
+
+1. Cliquez sur le bouton **Ajouter une API**.
+2. Remplissez les champs obligatoires :
+   - **Nom** — Un nom descriptif pour la connexion API
+   - **Catégorie** — Sélectionnez la catégorie de l'API (Météo, Judiciaire, Passerelle de Paiement, Autre)
+   - **URL de Base** — L'URL racine de l'API externe
+   - **Clé API** — La clé d'authentification pour le service externe (si requise)
+   - **Description** — Une brève description de l'objectif de l'API
+3. Cliquez sur **Enregistrer** pour créer la connexion API.
+
+### 26.4 Modification d'une Connexion API
+
+1. Localisez la connexion API dans la liste.
+2. Cliquez sur le bouton **Modifier** pour modifier sa configuration.
+3. Mettez à jour les champs selon les besoins (nom, URL, clé API, catégorie, description).
+4. Cliquez sur **Enregistrer** pour appliquer les modifications.
+
+### 26.5 Test des Connexions API
+
+1. Localisez la connexion API que vous souhaitez tester.
+2. Cliquez sur le bouton **Tester la Connexion**.
+3. Le système tentera d'atteindre l'URL configurée et de vérifier la connectivité.
+4. Un message de succès ou d'échec sera affiché indiquant si l'API est joignable.
+
+### 26.6 Gestion des Catégories d'API
+
+Les catégories d'API aident à organiser les connexions par leur fonction. Lors de l'ajout ou de la modification d'une connexion API, sélectionnez la catégorie appropriée pour maintenir les configurations organisées et facilement repérables par les autres administrateurs.
+
+---
+
+## 27. Politiques de Rétention des Données
+
+Le module de Politiques de Rétention des Données permet aux administrateurs et aux régulateurs de définir la durée de conservation des données de crédit par pays, en conformité avec les réglementations juridictionnelles.
+
+### 27.1 Consultation des Politiques de Rétention
+
+1. Accédez aux **Politiques de Rétention** depuis la section Administration dans la barre latérale (accès Admin ou Régulateur requis).
+2. La page affiche un tableau de toutes les politiques de rétention configurées, incluant :
+   - **Pays** — La juridiction à laquelle la politique s'applique
+   - **Période d'Archivage (Mois)** — Durée de conservation des données dans un état archivé avant toute action ultérieure
+   - **Période de Suppression (Mois)** — Durée après l'archivage avant la suppression définitive des données
+   - **Statut** — Si la politique est active ou inactive
+   - **Dates de création/mise à jour**
+
+### 27.2 Comprendre les Périodes d'Archivage et de Suppression
+
+- **Période d'Archivage** : Après ce nombre de mois, les dossiers de crédit du pays spécifié sont déplacés vers un état archivé. Les dossiers archivés ne sont plus inclus dans les recherches de crédit actives mais peuvent toujours être récupérés à des fins réglementaires ou d'audit.
+- **Période de Suppression** : Après ce nombre de mois supplémentaires suivant l'archivage, les données sont définitivement supprimées (expurgées) du système. Une fois supprimées, les données ne peuvent pas être récupérées.
+
+Par exemple, si un pays a une période d'archivage de 60 mois et une période de suppression de 24 mois, les dossiers seront archivés après 5 ans et définitivement supprimés 2 ans après l'archivage (7 ans au total).
+
+### 27.3 Ajout d'une Politique de Rétention
+
+1. Cliquez sur le bouton **Ajouter une Politique** en haut de la page des Politiques de Rétention.
+2. Remplissez les champs obligatoires :
+   - **Pays** — Saisissez le nom ou le code du pays
+   - **Période d'Archivage (Mois)** — Nombre de mois avant l'archivage des données
+   - **Période de Suppression (Mois)** — Nombre de mois après l'archivage avant la suppression des données
+3. Cliquez sur **Enregistrer** pour créer la politique de rétention.
+
+### 27.4 Modification d'une Politique de Rétention
+
+1. Localisez la politique de rétention dans le tableau.
+2. Cliquez sur le bouton **Modifier** sur la ligne correspondante.
+3. Modifiez la période d'archivage, la période de suppression ou d'autres paramètres selon les besoins.
+4. Cliquez sur **Enregistrer** pour appliquer les modifications.
+
+### 27.5 Exécution de l'Application de la Rétention
+
+Le bouton **Exécuter l'Application** déclenche le processus d'application de la rétention :
+
+1. Cliquez sur le bouton **Exécuter l'Application** en haut de la page des Politiques de Rétention.
+2. Le système évaluera toutes les politiques de rétention actives par rapport aux données actuelles.
+3. Les dossiers ayant dépassé leur période d'archivage seront déplacés vers le statut archivé.
+4. Les dossiers ayant dépassé leur période de suppression seront définitivement supprimés.
+5. Un message de confirmation affichera les résultats de l'exécution de l'application, incluant le nombre de dossiers archivés et supprimés.
+
+**Important :** L'exécution de l'application est une action irréversible pour les dossiers supprimés. Assurez-vous que les périodes de rétention sont correctement configurées avant d'exécuter l'application.
+
+---
+
 ## Annexe A : Identifiants de Démonstration
 
 Les identifiants suivants sont pré-configurés dans le système à des fins de test et de démonstration :
@@ -1294,7 +1451,7 @@ Les identifiants suivants sont pré-configurés dans le système à des fins de 
 
 ## Annexe C : Devises Prises en Charge
 
-Le système prend en charge les 17 devises suivantes :
+Le système prend en charge les 18 devises suivantes :
 
 | Code | Nom de la Devise | Symbole | Région |
 |------|-----------------|---------|--------|
@@ -1304,6 +1461,7 @@ Le système prend en charge les 17 devises suivantes :
 | TZS | Shilling tanzanien | TSh | Afrique de l'Est |
 | RWF | Franc rwandais | FRw | Afrique de l'Est |
 | GHS | Cedi ghanéen | ₵ | Afrique de l'Ouest |
+| LRD | Dollar libérien | L$ | Afrique de l'Ouest |
 | NGN | Naira nigérian | ₦ | Afrique de l'Ouest |
 | XOF | Franc CFA ouest-africain | CFA | Afrique de l'Ouest |
 | XAF | Franc CFA d'Afrique centrale | FCFA | Afrique Centrale |

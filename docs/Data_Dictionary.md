@@ -10,7 +10,7 @@
 
 ## 1. Overview
 
-This document provides field-level documentation for all 15 database tables in the Credit Registry System. The database uses PostgreSQL with Drizzle ORM for schema management.
+This document provides field-level documentation for all 18 database tables in the Credit Registry System. The database uses PostgreSQL with Drizzle ORM for schema management.
 
 **Enterprise Enhancements (v1.1) — Schema Impact Summary:**
 
@@ -180,16 +180,18 @@ This document provides field-level documentation for all 15 database tables in t
 | phone | text | NULLABLE | Phone number | `+251911234567` |
 | email | text | NULLABLE | Email address | `abebe@example.com` |
 | address | text | NULLABLE | Street address | `Bole Road, Addis Ababa` |
+| country | text | NULLABLE | Jurisdiction country | `Ethiopia` |
 | city | text | NULLABLE | City | `Addis Ababa` |
 | region | text | NULLABLE | Region/state | `Addis Ababa` |
 | employer_name | text | NULLABLE | Current employer | `Ethiopian Airlines` |
 | occupation | text | NULLABLE | Occupation/job title | `Engineer` |
 | business_reg_number | text | NULLABLE | Business registration number (corporate) | `BR-2024-001` |
 | sector | text | NULLABLE | Business sector (corporate) | `Technology` |
+| passport_number | text | NULLABLE | Passport number for cross-border entity resolution | `EP1234567` |
 | is_pep | boolean | DEFAULT false | Politically Exposed Person flag | `false` |
 | pep_details | text | NULLABLE | PEP details/description | `Former government minister` |
 | related_borrower_id | varchar | NULLABLE | Related/linked borrower ID | `c3d4e5f6-a7b8-9012-cdef-345678901234` |
-| relationship_type | text | NULLABLE | Relationship to related borrower | `spouse` |
+| relationship_type | text | NULLABLE | Relationship to related borrower (spouse, guarantor, director, shareholder, beneficial_owner, subsidiary, parent_company) | `spouse` |
 | education_level | text | NULLABLE | Highest education level | `bachelors` |
 | education_institution | text | NULLABLE | Education institution name | `Addis Ababa University` |
 | employment_history | text | NULLABLE | Employment history details | `5 years at Ethiopian Airlines` |
@@ -458,6 +460,63 @@ This document provides field-level documentation for all 15 database tables in t
 
 ---
 
+### 3.16 exchange_rates
+
+**Description:** Exchange rate records for multi-currency support across jurisdictions.
+
+| Field Name | Data Type | Constraints | Description | Example Value |
+|------------|-----------|-------------|-------------|---------------|
+| id | varchar | PRIMARY KEY, DEFAULT gen_random_uuid() | Unique identifier | `e7f8a9b0-c1d2-3456-0123-789012345678` |
+| base_currency | text | NOT NULL | Base currency code (e.g., USD) | `USD` |
+| target_currency | text | NOT NULL | Target currency code (e.g., ETB) | `ETB` |
+| rate | decimal(15,6) | NOT NULL | Exchange rate value | `56.123456` |
+| effective_date | text | NULLABLE | Date rate is effective | `2026-03-01` |
+| source | text | NULLABLE | Rate source (manual, api) | `manual` |
+| created_by | varchar | NULLABLE, FK -> users.id | User who created the rate | `a1b2c3d4-e5f6-7890-abcd-ef1234567890` |
+| created_at | timestamp | DEFAULT NOW() | Creation timestamp | `2026-02-28T09:30:00Z` |
+
+---
+
+### 3.17 retention_policies
+
+**Description:** Data retention policy configuration per jurisdiction and entity type.
+
+| Field Name | Data Type | Constraints | Description | Example Value |
+|------------|-----------|-------------|-------------|---------------|
+| id | varchar | PRIMARY KEY, DEFAULT gen_random_uuid() | Unique identifier | `f8a9b0c1-d2e3-4567-1234-890123456789` |
+| country | text | NOT NULL | Jurisdiction (Ghana, Ethiopia, Uganda, Liberia) | `Ethiopia` |
+| entity_type | text | NOT NULL | Type: borrower, credit_account, audit_log, dispute, consent_record, court_judgment, payment_history | `borrower` |
+| retention_years | integer | NOT NULL | Years before record expunging | `7` |
+| archive_after_years | integer | NULLABLE | Years before record archiving | `5` |
+| description | text | NULLABLE | Policy description | `Retain borrower records for 7 years per NBE regulation` |
+| is_active | boolean | DEFAULT true | Whether policy is active | `true` |
+| created_at | timestamp | DEFAULT NOW() | Creation timestamp | `2026-02-28T09:30:00Z` |
+| updated_at | timestamp | DEFAULT NOW() | Last update timestamp | `2026-02-28T10:00:00Z` |
+
+---
+
+### 3.18 api_configurations
+
+**Description:** External API integration configuration for weather, judicial, payment, and exchange rate services.
+
+| Field Name | Data Type | Constraints | Description | Example Value |
+|------------|-----------|-------------|-------------|---------------|
+| id | varchar | PRIMARY KEY, DEFAULT gen_random_uuid() | Unique identifier | `a9b0c1d2-e3f4-5678-2345-901234567890` |
+| name | text | NOT NULL | Configuration name | `Ethiopia Weather API` |
+| category | text | NOT NULL | Category: weather, judicial, payment_gateway, exchange_rate, custom | `weather` |
+| base_url | text | NOT NULL | API base URL | `https://api.weather.example.com/v1` |
+| api_key_header_name | text | DEFAULT 'X-API-Key' | Header name for API key | `X-API-Key` |
+| auth_type | text | NOT NULL | Auth: api_key, oauth2, bearer, basic, none | `api_key` |
+| country | text | NULLABLE | Target country or "All" | `Ethiopia` |
+| is_active | boolean | DEFAULT true | Whether config is active | `true` |
+| description | text | NULLABLE | Configuration description | `Weather data for agricultural loan risk assessment` |
+| last_tested_at | timestamp | NULLABLE | Last connection test time | `2026-02-28T14:00:00Z` |
+| last_test_status | text | NULLABLE | Last test result (reachable, unreachable) | `reachable` |
+| created_at | timestamp | DEFAULT NOW() | Creation timestamp | `2026-02-28T09:30:00Z` |
+| updated_at | timestamp | DEFAULT NOW() | Last update timestamp | `2026-02-28T10:00:00Z` |
+
+---
+
 ## 4. Relationship Diagram (Text-Based)
 
 ```
@@ -472,6 +531,7 @@ users
   +--< credit_report_logs (requested_by -> users.id)
   +--< api_keys (created_by -> users.id)
   +--< institutions (approved_by -> users.id)
+  +--< exchange_rates (created_by -> users.id)
 
 borrowers
   |
@@ -542,3 +602,6 @@ institutions
 | billing_records | id (PK) | B-tree |
 | credit_report_logs | id (PK), borrower_id (FK), requested_by (FK), serial_number (UNIQUE) | B-tree |
 | api_keys | id (PK), institution_id (FK), created_by (FK) | B-tree |
+| exchange_rates | id (PK), created_by (FK) | B-tree |
+| retention_policies | id (PK) | B-tree |
+| api_configurations | id (PK) | B-tree |

@@ -413,12 +413,14 @@ export async function registerRoutes(
 
   app.get("/api/borrowers/fuzzy-match", async (req, res) => {
     try {
-      const { firstName, lastName, nationalId, companyName } = req.query;
+      const { firstName, lastName, nationalId, companyName, passportNumber, tinNumber } = req.query;
       const results = await storage.fuzzyMatchBorrowers({
         firstName: firstName as string,
         lastName: lastName as string,
         nationalId: nationalId as string,
         companyName: companyName as string,
+        passportNumber: passportNumber as string,
+        tinNumber: tinNumber as string,
       });
       res.json(results);
     } catch (e: any) {

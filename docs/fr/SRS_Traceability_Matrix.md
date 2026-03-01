@@ -28,11 +28,12 @@ Ce document fait correspondre chaque exigence de la Spécification des Exigences
 
 | Réf. SRS | Description de l'Exigence | Statut | Module/Composant | Notes d'Implémentation | Cas de Test UAT |
 |-----------|--------------------------|--------|-------------------|------------------------|-----------------|
-| FR-COL-01 | Le système doit collecter les données démographiques de l'emprunteur (nom, date de naissance, genre, identifiant national, NIF, adresse, téléphone, courriel) | Implémenté | Gestion des Emprunteurs (table `borrowers`, `borrowers.tsx`) | Tous les champs démographiques sont capturés dans le formulaire d'enregistrement de l'emprunteur ; types individuel et entreprise pris en charge | TC-BOR-001 à TC-BOR-005 |
+| FR-COL-01 | Le système doit collecter les données démographiques de l'emprunteur (nom, date de naissance, genre, identifiant national, passeport, NIF, adresse, téléphone, courriel) | Implémenté | Gestion des Emprunteurs (table `borrowers`, `borrowers.tsx`) | Tous les champs démographiques sont capturés dans le formulaire d'enregistrement de l'emprunteur ; types individuel et entreprise pris en charge | TC-BOR-001 à TC-BOR-005 |
 | FR-COL-02 | Le système doit collecter les données des comptes de crédit (type de compte, montants, dates, statut, garantie, arriérés) | Implémenté | Comptes de Crédit (table `credit_accounts`, `credit-accounts.tsx`) | Création complète de comptes de crédit avec tous les champs requis, y compris multi-devises, sans intérêt, période de grâce, suivi de restructuration | TC-CA-001 à TC-CA-005 |
 | FR-COL-03 | Le système doit prendre en charge l'ingestion de données en masse (JSON/CSV) | Implémenté | Téléchargement par Lots (`batch-upload.tsx`, `/api/batch-upload/credit-accounts`) | Téléchargement de fichiers JSON et CSV avec validation par enregistrement et rapport d'erreurs | TC-BATCH-001 à TC-BATCH-004 |
 | FR-COL-04 | Le système doit valider la qualité des données au point d'entrée | Implémenté | Routes Serveur (`routes.ts`), Schémas Zod (`schema.ts`) | Validation par schéma Zod sur toutes les opérations d'insertion ; contraintes au niveau des champs appliquées | TC-DQ-001, TC-DQ-002 |
 | FR-COL-05 | Le système doit collecter les informations sur les jugements de tribunal et les privilèges | Implémenté | Jugements de Tribunal (table `court_judgments`, `borrower-detail.tsx`) | Jugements de tribunal avec numéro de dossier, tribunal, type (privilège/faillite/procès/civil/pénal), montant, date, statut | TC-CJ-001 à TC-CJ-003 |
+| FR-COL-06 | Résolution d'Entités Transfrontalières | Numéro de passeport, NIF, correspondance floue des noms pour l'identité inter-juridictionnelle | shared/schema.ts, server/storage.ts | 7 types de relations dont beneficial_owner | TC-BOR-013 |
 
 ---
 
@@ -96,7 +97,7 @@ Ce document fait correspondre chaque exigence de la Spécification des Exigences
 | FR-COMM-01 | Le système doit prendre en charge la facturation et la gestion des frais | Implémenté | Facturation (table `billing_records`, `billing.tsx`) | Création de factures avec type de service, montant, devise, période | TC-BIL-001, TC-BIL-002 |
 | FR-COMM-02 | Le système doit suivre le statut de paiement des factures | Implémenté | Enregistrements de Facturation (`billingStatusEnum`) | Suivi du statut : en attente, payé, en retard | TC-BIL-003 |
 | FR-COMM-03 | Le système doit prendre en charge plusieurs types de services | Implémenté | Enregistrements de Facturation (champ `serviceType`) | Types de services : soumission de données, rapport de crédit, accès API, abonnement | TC-BIL-001 |
-| FR-COMM-04 | Le système doit prendre en charge la facturation multi-devises | Implémenté | Enregistrements de Facturation (champ `currency`) | 17 devises prises en charge dans 4 juridictions | TC-BIL-001 |
+| FR-COMM-04 | Le système doit prendre en charge la facturation multi-devises | Implémenté | Enregistrements de Facturation (champ `currency`) | 18 devises prises en charge dans 4 juridictions | TC-BIL-001 |
 | FR-COMM-05 | Le système doit générer des numéros de facture uniques | Implémenté | Facturation (champ `invoiceNumber`) | Numéros de facture uniques par enregistrement de facturation | TC-BIL-002 |
 
 ---
@@ -148,6 +149,7 @@ Ce document fait correspondre chaque exigence de la Spécification des Exigences
 | NFR-SEC-07 | Le système doit appliquer le principe de double validation (principe des quatre yeux) | Implémenté | Approbations en Attente (vérification d'auto-approbation dans `routes.ts`) | Application côté serveur : `requestedBy !== reviewedBy` ; erreur 403 en cas de tentative d'auto-approbation | TC-MC-004 |
 | NFR-SEC-08 | Le système doit appliquer l'expiration du mot de passe à 90 jours | Implémenté | Connexion/Auth (`passwordChangedAt`, `mustChangePassword`) | Vérification de l'âge du mot de passe à la connexion ; dialogue de changement forcé lorsqu'expiré | TC-AUTH-008 |
 | NFR-SEC-09 | Le système doit appliquer un délai d'expiration de session inactive de 15 minutes | Implémenté | Middleware de Session (`server/index.ts`) | `IDLE_TIMEOUT_MS = 15 * 60 * 1000` ; destruction automatique de la session ; code de statut 440 retourné | TC-AUTH-004 |
+| NFR-SEC-10 | Protection SSRF | Validation des URL et blocage des noms d'hôte dans le point de terminaison de test API | server/routes.ts | Bloque les IP privées, les points de terminaison de métadonnées | TC-SEC-010 |
 
 ---
 
@@ -155,13 +157,16 @@ Ce document fait correspondre chaque exigence de la Spécification des Exigences
 
 | Réf. SRS | Description de l'Exigence | Statut | Module/Composant | Notes d'Implémentation | Cas de Test UAT |
 |-----------|--------------------------|--------|-------------------|------------------------|-----------------|
-| ENT-01 | Le système doit prendre en charge l'Authentification Multi-Facteurs (AMF) basée sur TOTP | Implémenté | AMF (`mfaSecret`, `mfaEnabled` sur `users` ; `mfa-setup.tsx` ; `/api/auth/mfa/*`) | TOTP via la bibliothèque `otpauth` ; la configuration retourne l'URI QR ; points de terminaison de vérification/désactivation/connexion ; la connexion retourne l'indicateur `requireMfa` lorsque activé ; i18n EN+FR | TC-ENT-001 à TC-ENT-005 |
+| ENT-01 | Le système doit prendre en charge l'Authentification Multi-Facteurs (AMF) basée sur TOTP | Implémenté | AMF (`mfaSecret`, `mfaEnabled` sur `users` ; `mfa-setup.tsx` ; `/api/auth/mfa/*`) | TOTP via la bibliothèque `otpauth` ; la configuration retourne l'URI QR ; points de terminaison de vérification/désactivation/connexion ; la connexion retourne l'indicateur `requireMfa` lorsque activé ; i18n EN, FR et PT | TC-ENT-001 à TC-ENT-005 |
 | ENT-02 | Le système doit effectuer une correspondance floue des entités pour détecter les emprunteurs potentiellement en double | Implémenté | Correspondance Floue (extension `pg_trgm` ; `fuzzyMatchBorrowers` dans `storage.ts` ; `/api/borrowers/fuzzy-match`) | Similarité par trigrammes PostgreSQL via `pg_trgm` ; seuil ≥ 0.3 ; avertissement de doublon affiché dans le formulaire d'enregistrement de l'emprunteur | TC-ENT-006, TC-ENT-007 |
-| ENT-03 | Le système doit fournir un assistant chatbot guidé pour le dépôt de litiges | Implémenté | Chatbot de Litiges (`dispute-chatbot.tsx` ; `helpdesk.tsx`) | Flux guidé multi-étapes : type de problème → recherche d'emprunteur → sélection de compte → description → soumission automatique ; i18n EN+FR | TC-ENT-008 à TC-ENT-010 |
+| ENT-03 | Le système doit fournir un assistant chatbot guidé pour le dépôt de litiges | Implémenté | Chatbot de Litiges (`dispute-chatbot.tsx` ; `helpdesk.tsx`) | Flux guidé multi-étapes : type de problème → recherche d'emprunteur → sélection de compte → description → soumission automatique ; i18n EN, FR et PT | TC-ENT-008 à TC-ENT-010 |
 | ENT-04 | Le système doit prendre en charge l'authentification par jeton porteur OAuth 2.1 pour l'API externe | Implémenté | OAuth 2.1 (`/api/external/oauth/token` ; `external-api.ts` ; `api-docs.tsx`) | Octroi d'identifiants client ; jetons porteurs JWT en complément de X-API-Key ; bibliothèque `jsonwebtoken` ; documenté dans la page de documentation de l'API | TC-ENT-011 à TC-ENT-013 |
 | ENT-05 | Le système doit implémenter des optimisations pour faible bande passante (compression, découpage du code) | Implémenté | Performance (middleware `compression` dans `server/index.ts` ; `React.lazy` dans `App.tsx`) | Compression gzip pour toutes les réponses HTTP ; composants de route chargés dynamiquement avec spinner de repli `Suspense` | TC-ENT-014, TC-ENT-015 |
 | ENT-06 | Le système doit prendre en charge le format de fichier XBRL/XML pour les téléchargements de données par lots | Implémenté | Téléchargement XBRL (onglet XBRL dans `batch-upload.tsx` ; `/api/batch-upload/credit-accounts`) | Analyse XBRL/XML dans le point de terminaison de téléchargement par lots ; interface à onglets (JSON/CSV et XBRL) ; format d'exemple fourni | TC-ENT-016, TC-ENT-017 |
 | ENT-07 | Le système doit implémenter des journaux d'audit inviolables avec chaîne de hachage SHA-256 | Implémenté | Intégrité de l'Audit (`previousHash`, `currentHash` sur `audit_logs` ; `verifyAuditIntegrity` dans `storage.ts` ; `/api/audit/verify-integrity` ; `audit-trail.tsx`) | Chaque entrée de journal hachée avec SHA-256 liée à l'entrée précédente ; point de terminaison de vérification d'intégrité ; badge visuel sur la page de piste d'audit | TC-ENT-018 à TC-ENT-020 |
+| ENT-08 | Application de la Rétention des Données (REQ-RET-01) | Archivage/suppression automatisé basé sur les politiques spécifiques à chaque juridiction | server/retention-enforcement.ts, client/src/pages/retention-policies.tsx | Planificateur 24h + déclenchement manuel | TC-RET-001 |
+| ENT-09 | Module de Gestion des Taux de Change | CRUD administrateur pour les paires de taux croisés de devises avec routage USD | client/src/pages/exchange-rates.tsx, server/routes.ts | 18 devises, widget convertisseur | TC-EXR-001 |
+| ENT-10 | Module d'Administration API | Configuration centralisée des points de terminaison de services externes | client/src/pages/api-admin.tsx, server/routes.ts | Météo, judiciaire, passerelle de paiement | TC-API-ADM-001 |
 
 ---
 
@@ -169,7 +174,7 @@ Ce document fait correspondre chaque exigence de la Spécification des Exigences
 
 | Catégorie | Total des Exigences | Implémentées | Partielles | Non Implémentées |
 |-----------|---------------------|--------------|------------|------------------|
-| FR-COL (Collecte de Données) | 5 | 5 | 0 | 0 |
+| FR-COL (Collecte de Données) | 6 | 6 | 0 | 0 |
 | FR-CR (Rapport de Crédit) | 8 | 8 | 0 | 0 |
 | FR-CON (Consentement et Litiges) | 9 | 9 | 0 | 0 |
 | FR-REG (Réglementaire) | 3 | 3 | 0 | 0 |
@@ -178,9 +183,9 @@ Ce document fait correspondre chaque exigence de la Spécification des Exigences
 | FR-DP (Fournisseurs de Données) | 4 | 4 | 0 | 0 |
 | INT-RPT (Intégration et Reporting) | 4 | 4 | 0 | 0 |
 | DQ (Qualité des Données) | 5 | 5 | 0 | 0 |
-| NFR-SEC (Sécurité) | 9 | 9 | 0 | 0 |
-| ENT (Améliorations d'Entreprise) | 7 | 7 | 0 | 0 |
-| **Total** | **64** | **64** | **0** | **0** |
+| NFR-SEC (Sécurité) | 10 | 10 | 0 | 0 |
+| ENT (Améliorations d'Entreprise) | 10 | 10 | 0 | 0 |
+| **Total** | **71** | **71** | **0** | **0** |
 
 ---
 

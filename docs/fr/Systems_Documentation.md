@@ -41,7 +41,7 @@ Le système est conçu pour un déploiement panafricain couvrant quatre juridict
 
 ### 1.3 Capacités Clés
 
-- **Gestion des Emprunteurs** — Enregistrement des emprunteurs individuels et corporatifs avec signalement PEP, suivi de l'éducation/emploi et liaison des parties liées
+- **Gestion des Emprunteurs** — Enregistrement des emprunteurs individuels et corporatifs avec signalement PEP, suivi de l'éducation/emploi et liaison des parties liées (7 types incluant beneficial_owner)
 - **Gestion des Comptes de Crédit** — Suivi des prêts multi-devises avec prise en charge des prêts sans intérêt, périodes de grâce, restructuration et gestion des radiations
 - **Notation de Crédit** — Notation algorithmique (plage 300–850) avec codes de justification
 - **Rapports de Crédit** — Rapports de crédit complets imprimables avec numéros de série, historique de paiement, jugements de tribunal et enregistrements de consentement
@@ -54,8 +54,8 @@ Le système est conçu pour un déploiement panafricain couvrant quatre juridict
 - **Téléversement par Lots** — Ingestion en masse de données JSON/CSV avec validation par enregistrement
 - **API REST Externe** — Accès programmatique pour les institutions avec authentification par clé API
 - **Analyses Réglementaires** — Ratios NPL, ventilations de portefeuille, suivi des violations SLA, exportation CSV
-- **Internationalisation** — Prise en charge complète des langues anglaise et française
-- **Multi-Devises** — 17 devises panafricaines prises en charge
+- **Internationalisation** — Prise en charge complète des langues anglaise, française et portugaise
+- **Multi-Devises** — 18 devises panafricaines prises en charge
 - **Piste d'Audit** — Journalisation complète des activités avec suivi des adresses IP et chaîne de hachage SHA-256 inviolable
 - **Authentification Multi-Facteurs** — AMF basée sur TOTP via la bibliothèque otpauth
 - **Correspondance Floue d'Entités** — Similarité par trigrammes PostgreSQL pg_trgm pour la détection des emprunteurs en double
@@ -79,7 +79,7 @@ Le système suit une architecture monolithique moderne full-stack avec une sépa
 │  │          React SPA (Vite + TypeScript)             │   │
 │  │  ┌──────────┐  ┌──────────┐  ┌───────────────┐   │   │
 │  │  │  wouter   │  │ TanStack │  │  react-i18next │   │   │
-│  │  │ (routage) │  │  Query   │  │   (EN / FR)    │   │   │
+│  │  │ (routage) │  │  Query   │  │   (EN / FR / PT)    │   │   │
 │  │  └──────────┘  └──────────┘  └───────────────┘   │   │
 │  │  ┌──────────────────────────────────────────────┐ │   │
 │  │  │        shadcn/ui + Tailwind CSS              │ │   │
@@ -105,7 +105,7 @@ Le système suit une architecture monolithique moderne full-stack avec une sépa
 ┌──────────────────────────▼──────────────────────────────┐
 │              Base de Données PostgreSQL (Neon)            │
 │  ┌─────────────────────────────────────────────────────┐ │
-│  │               Drizzle ORM (15 tables)               │ │
+│  │               Drizzle ORM (18 tables)               │ │
 │  └─────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -117,7 +117,7 @@ Le système suit une architecture monolithique moderne full-stack avec une sépa
 - **Stylisation :** Tailwind CSS avec la bibliothèque de composants shadcn/ui
 - **Routage :** wouter — routage côté client léger
 - **Gestion d'État :** TanStack Query v5 pour la gestion d'état serveur avec mise en cache et invalidation
-- **Internationalisation :** react-i18next avec i18next-browser-languagedetector pour EN/FR
+- **Internationalisation :** react-i18next avec i18next-browser-languagedetector pour EN/FR/PT/PT
 - **Thème :** Mode sombre/clair avec propriétés personnalisées CSS et basculement par classe Tailwind
 - **Police :** Inter (Google Fonts)
 - **Système de Design :** Palette vert sarcelle chaud + accent doré (culturellement adapté pour le Ghana/Ouganda/Éthiopie)
@@ -152,9 +152,9 @@ Le système suit une architecture monolithique moderne full-stack avec une sépa
 ### 2.6 Internationalisation
 
 - **Bibliothèque :** react-i18next + i18next-browser-languagedetector
-- **Langues :** Anglais (en), Français (fr)
+- **Langues :** Anglais (en), Français (fr), Portugais (pt)
 - **Source de Traduction :** Ressources JSON intégrées dans `client/src/lib/i18n.ts`
-- **Détection :** Détection automatique de la langue du navigateur avec persistance localStorage
+- **Détection :** Détection automatique de la langue du navigateur avec persistance localStorage ; sélecteur manuel disponible sur la page de connexion et l'en-tête principal
 
 ### 2.7 Routage
 
@@ -193,7 +193,7 @@ Le système suit une architecture monolithique moderne full-stack avec une sépa
 
 ## 4. Modèle de Données
 
-Le système utilise 15 tables PostgreSQL avec Drizzle ORM pour un accès typé. Toutes les clés primaires sont des chaînes UUID v4 générées via `gen_random_uuid()`.
+Le système utilise 18 tables PostgreSQL avec Drizzle ORM pour un accès typé. Toutes les clés primaires sont des chaînes UUID v4 générées via `gen_random_uuid()`.
 
 ### 4.1 Table : `users`
 
@@ -245,7 +245,7 @@ Enregistrements des emprunteurs individuels et corporatifs avec données d'ident
 | `is_pep` | boolean | défaut `false` | Indicateur de Personne Politiquement Exposée |
 | `pep_details` | text | nullable | Détails/description PEP |
 | `related_borrower_id` | varchar | nullable | CE vers `borrowers.id` (partie liée) |
-| `relationship_type` | text | nullable | Type de relation (conjoint, garant, etc.) |
+| `relationship_type` | text | nullable | Type de relation (spouse, guarantor, director, shareholder, beneficial_owner, subsidiary, parent_company) |
 | `education_level` | text | nullable | Niveau d'éducation le plus élevé |
 | `education_institution` | text | nullable | Établissement d'enseignement |
 | `employment_history` | text | nullable | Historique d'emploi (JSON ou texte) |
@@ -265,7 +265,7 @@ Enregistrements de prêts et de facilités de crédit avec prise en charge multi
 | `account_type` | text | NOT NULL | Type de prêt (term_loan, overdraft, mortgage, etc.) |
 | `original_amount` | decimal(15,2) | NOT NULL | Montant original du prêt |
 | `current_balance` | decimal(15,2) | NOT NULL | Solde impayé actuel |
-| `currency` | text | NOT NULL, défaut `'ETB'` | Code de devise (17 prises en charge) |
+| `currency` | text | NOT NULL, défaut `'ETB'` | Code de devise (18 prises en charge) |
 | `interest_rate` | decimal(5,2) | nullable | Taux d'intérêt annuel |
 | `disbursement_date` | text | nullable | Date de décaissement du prêt |
 | `maturity_date` | text | nullable | Date d'échéance du prêt |
@@ -486,7 +486,58 @@ Gestion des clés API externes avec hachage SHA-256 et niveaux de permissions.
 | `created_at` | timestamp | défaut `now()` | Horodatage de création de la clé |
 | `revoked_at` | timestamp | nullable | Horodatage de la révocation |
 
-### 4.16 Types d'Énumération
+### 4.16 Table : `exchange_rates`
+
+  Enregistrements des taux de change pour la conversion multi-devises avec routage de taux croisés via USD.
+
+  | Colonne | Type | Contraintes | Description |
+  |---------|------|-------------|-------------|
+  | `id` | varchar | CP, défaut `gen_random_uuid()` | Identifiant unique du taux |
+  | `base_currency` | text | NOT NULL | Code de la devise de base |
+  | `target_currency` | text | NOT NULL | Code de la devise cible |
+  | `rate` | decimal(15,6) | NOT NULL | Valeur du taux de change |
+  | `effective_date` | text | NOT NULL | Date d'entrée en vigueur du taux |
+  | `source` | text | NOT NULL, défaut `'manual'` | Source du taux (manual, api, etc.) |
+  | `created_by` | varchar | nullable, CE → `users.id` | Administrateur ayant saisi le taux |
+  | `created_at` | timestamp | défaut `now()` | Horodatage de création de l'enregistrement |
+
+  ### 4.17 Table : `retention_policies`
+
+  Configuration des politiques de rétention des données par pays pour la conformité réglementaire.
+
+  | Colonne | Type | Contraintes | Description |
+  |---------|------|-------------|-------------|
+  | `id` | varchar | CP, défaut `gen_random_uuid()` | Identifiant unique de la politique |
+  | `country` | text | NOT NULL | Nom du pays |
+  | `entity_type` | text | NOT NULL | Type d'entité soumis à la rétention |
+  | `retention_years` | integer | NOT NULL | Nombre d'années de conservation des données |
+  | `archive_after_years` | integer | nullable | Années après lesquelles archiver |
+  | `description` | text | nullable | Description de la politique |
+  | `is_active` | boolean | défaut `true` | Indique si la politique est active |
+  | `created_at` | timestamp | défaut `now()` | Horodatage de création de l'enregistrement |
+  | `updated_at` | timestamp | défaut `now()` | Horodatage de la dernière mise à jour |
+
+  ### 4.18 Table : `api_configurations`
+
+  Gestion centralisée de la configuration des API externes par pays.
+
+  | Colonne | Type | Contraintes | Description |
+  |---------|------|-------------|-------------|
+  | `id` | varchar | CP, défaut `gen_random_uuid()` | Identifiant unique de la configuration |
+  | `name` | text | NOT NULL | Nom de la configuration API |
+  | `category` | text | NOT NULL | Catégorie de l'API (weather, judicial, payment_gateway, exchange_rate) |
+  | `base_url` | text | NOT NULL | URL de base de l'API |
+  | `api_key_header_name` | text | défaut `'X-API-Key'` | Nom de l'en-tête pour l'authentification par clé API |
+  | `auth_type` | text | NOT NULL, défaut `'none'` | Type d'authentification (none, api_key, bearer, basic) |
+  | `country` | text | nullable | Pays auquel cette configuration s'applique |
+  | `is_active` | boolean | défaut `true` | Indique si la configuration est active |
+  | `description` | text | nullable | Description de la configuration |
+  | `last_tested_at` | timestamp | nullable | Horodatage du dernier test de connexion |
+  | `last_test_status` | text | nullable | Résultat du dernier test de connexion |
+  | `created_at` | timestamp | défaut `now()` | Horodatage de création de l'enregistrement |
+  | `updated_at` | timestamp | défaut `now()` | Horodatage de la dernière mise à jour |
+
+  ### 4.19 Types d'Énumération
 
 | Nom de l'Enum | Valeurs |
 |---------------|---------|
@@ -505,7 +556,7 @@ Gestion des clés API externes avec hachage SHA-256 et niveaux de permissions.
 | `billing_status` | `pending`, `paid`, `overdue` |
 | `api_key_status` | `active`, `revoked` |
 
-### 4.17 Relations entre Entités
+### 4.20 Relations entre Entités
 
 ```
 users ──────────────┐
@@ -536,6 +587,10 @@ credit_accounts ────┐
 institutions ───────┐
   │                 │
   └─→ api_keys.institution_id
+
+users ──────────────┐
+  │                 │
+  └─→ exchange_rates.created_by
 ```
 
 ---
@@ -743,7 +798,37 @@ institutions ───────┐
 }
 ```
 
----
+### 5.23 Points d'Accès des Taux de Change (Admin Uniquement)
+
+  | Méthode | Chemin | Description | Notes |
+  |---------|--------|-------------|-------|
+  | `GET` | `/api/exchange-rates` | Lister tous les taux de change | Retourne tous les enregistrements de taux |
+  | `POST` | `/api/exchange-rates` | Créer un taux de change | Corps : schéma InsertExchangeRate |
+  | `PATCH` | `/api/exchange-rates/:id` | Mettre à jour un taux de change | Champs de taux partiels |
+  | `DELETE` | `/api/exchange-rates/:id` | Supprimer un taux de change | Suppression définitive |
+  | `POST` | `/api/exchange-rates/convert` | Convertir entre devises | Corps : `{ from, to, amount }` ; utilise le routage de taux croisés via USD |
+
+  ### 5.24 Points d'Accès des Politiques de Rétention (Admin Uniquement)
+
+  | Méthode | Chemin | Description | Notes |
+  |---------|--------|-------------|-------|
+  | `GET` | `/api/retention-policies` | Lister toutes les politiques de rétention | Retourne les politiques par pays |
+  | `POST` | `/api/retention-policies` | Créer une politique de rétention | Corps : schéma InsertRetentionPolicy |
+  | `PATCH` | `/api/retention-policies/:id` | Mettre à jour une politique de rétention | Champs de politique partiels |
+  | `DELETE` | `/api/retention-policies/:id` | Supprimer une politique de rétention | Suppression définitive |
+  | `POST` | `/api/retention-policies/enforce` | Déclencher l'application de la rétention | Déclenche manuellement le moteur d'application de la rétention ; retourne les résultats journalisés dans l'audit |
+
+  ### 5.25 Points d'Accès de Configuration API (Admin Uniquement)
+
+  | Méthode | Chemin | Description | Notes |
+  |---------|--------|-------------|-------|
+  | `GET` | `/api/api-configurations` | Lister toutes les configurations API | Retourne les configurations API par pays |
+  | `POST` | `/api/api-configurations` | Créer une configuration API | Corps : schéma InsertApiConfiguration |
+  | `PATCH` | `/api/api-configurations/:id` | Mettre à jour une configuration API | Champs de configuration partiels |
+  | `DELETE` | `/api/api-configurations/:id` | Supprimer une configuration API | Suppression définitive |
+  | `POST` | `/api/api-configurations/:id/test` | Tester la connexion API | Teste la connectivité vers le point d'accès configuré ; protection SSRF appliquée |
+
+  ---
 
 ## 6. Architecture de Sécurité
 
@@ -1325,7 +1410,7 @@ Les conditions d'erreur sont journalisées via `console.error()` pour :
 - **Schéma :** Colonnes `mfaSecret` (varchar, nullable) et `mfaEnabled` (boolean, défaut false) sur la table `users`
 - **Points d'Accès :** `POST /api/auth/mfa/setup`, `POST /api/auth/mfa/verify`, `POST /api/auth/mfa/disable`, `POST /api/auth/mfa/login`
 - **Frontend :** Composant `mfa-setup.tsx` avec affichage de l'URI QR code et saisie de vérification
-- **i18n :** Traductions complètes EN/FR sous les clés `mfa.*` et `login.mfa*`
+- **i18n :** Traductions complètes EN/FR/PT sous les clés `mfa.*` et `login.mfa*`
 
 **Flux :**
 1. L'utilisateur active l'AMF via la boîte de dialogue de configuration → le serveur génère le secret TOTP → le client affiche l'URI `otpauth://`
@@ -1351,7 +1436,7 @@ Les conditions d'erreur sont journalisées via `console.error()` pour :
 - **Composant :** `client/src/components/dispute-chatbot.tsx`
 - **Intégration :** Intégré dans la page du centre d'aide (`helpdesk.tsx`)
 - **Étapes du Flux :** Sélection du type de problème → Recherche d'emprunteur → Sélection du compte → Saisie de la description → Confirmation → Soumission automatique
-- **i18n :** Traductions complètes EN/FR sous les clés `chatbot.*` (askBorrower, searching, confirmSummary, cancelled, startNew)
+- **i18n :** Traductions complètes EN/FR/PT sous les clés `chatbot.*` (askBorrower, searching, confirmSummary, cancelled, startNew)
 - **Types de Litiges :** Utilise les clés i18n `disputes.types.*` pour les noms de types localisés
 
 ### 13.4 Authentification par Jeton Bearer OAuth 2.1 (ENT-04)
@@ -1385,7 +1470,7 @@ Les conditions d'erreur sont journalisées via `console.error()` pour :
 - **Serveur :** Logique d'analyse XBRL/XML dans le point d'accès `POST /api/batch-upload/credit-accounts`
 - **Frontend :** Interface à onglets utilisant le composant shadcn `Tabs` (onglet JSON/CSV avec `data-testid="tab-json"` et onglet XBRL avec `data-testid="tab-xbrl"`)
 - **Format d'Exemple :** Structure XML XBRL d'exemple affichée dans l'onglet XBRL (`data-testid="text-xbrl-sample"`)
-- **i18n :** Traductions EN/FR sous les clés `batchUpload.xbrl*`
+- **i18n :** Traductions EN/FR/PT sous les clés `batchUpload.xbrl*`
 
 ### 13.7 Chaîne de Hachage Inviolable du Journal d'Audit (ENT-07)
 
@@ -1398,8 +1483,69 @@ Les conditions d'erreur sont journalisées via `console.error()` pour :
 - **Méthode de Stockage :** `verifyAuditIntegrity()` dans `IStorage` / `DatabaseStorage` — récupère toutes les entrées ordonnées par `created_at ASC`, recalcule les hachages et valide la chaîne
 - **Point d'Accès :** `GET /api/audit/verify-integrity` — retourne `{ valid, totalEntries, checkedEntries, brokenAt }`
 - **Frontend :** Badge d'intégrité (`data-testid="badge-integrity-status"`) et bouton de vérification (`data-testid="button-verify-integrity"`) sur la page de piste d'audit
-- **i18n :** Traductions EN/FR sous les clés `audit.integrityValid`, `audit.integrityBroken`, `audit.verify`, `audit.hashChain`
+- **i18n :** Traductions EN/FR/PT sous les clés `audit.integrityValid`, `audit.integrityBroken`, `audit.verify`, `audit.hashChain`
 
+
+  ### 13.8 Gestion des Taux de Change (ENT-08)
+
+  **Objectif :** Fournir la prise en charge de 18 devises avec conversion par taux croisés via routage USD, opérations CRUD d'administration et un widget de conversion de devises.
+
+  **Architecture :**
+  - **Schéma :** Table `exchange_rates` avec `base_currency`, `target_currency`, `rate` (decimal 15,6), `effective_date`, `source`, `created_by`
+  - **Routage par Taux Croisés :** Lorsqu'un taux direct n'est pas disponible, le système convertit via USD comme intermédiaire (ex. : GHS → USD → ETB)
+  - **Points d'Accès :** `GET /api/exchange-rates`, `POST /api/exchange-rates`, `PATCH /api/exchange-rates/:id`, `DELETE /api/exchange-rates/:id`, `POST /api/exchange-rates/convert`
+  - **Frontend :** Page `exchange-rates.tsx` avec interface CRUD d'administration et widget de conversion de devises prenant en charge les 18 devises panafricaines
+  - **Devises :** GHS, ETB, UGX, LRD, NGN, KES, ZAR, EGP, MAD, TZS, RWF, XOF, XAF, MZN, AOA, BWP, ZMW, USD
+
+  ### 13.9 Module d'Administration API (ENT-09)
+
+  **Objectif :** Gestion centralisée de la configuration des API externes (météo, judiciaire, passerelle de paiement, taux de change) par pays avec test de connexion et protection SSRF.
+
+  **Architecture :**
+  - **Schéma :** Table `api_configurations` avec `name`, `category`, `base_url`, `api_key_header_name`, `auth_type`, `country`, `is_active`, `last_tested_at`, `last_test_status`
+  - **Catégories :** weather, judicial, payment_gateway, exchange_rate
+  - **Types d'Authentification :** none, api_key, bearer, basic
+  - **Points d'Accès :** `GET /api/api-configurations`, `POST /api/api-configurations`, `PATCH /api/api-configurations/:id`, `DELETE /api/api-configurations/:id`, `POST /api/api-configurations/:id/test`
+  - **Protection SSRF :** Le test de connexion valide les URLs contre les plages de réseau internes/privées avant d'effectuer les requêtes sortantes
+  - **Frontend :** Page `api-admin.tsx` avec gestion de la configuration API par pays et interface de test de connexion
+
+  ### 13.10 Moteur d'Application de la Rétention (ENT-10)
+
+  **Objectif :** Application automatisée et manuelle de la rétention des données avec politiques par pays, résultats journalisés dans l'audit et SQL paramétré pour une exécution sécurisée.
+
+  **Architecture :**
+  - **Schéma :** Table `retention_policies` avec `country`, `entity_type`, `retention_years`, `archive_after_years`, `is_active`
+  - **Planificateur :** Application automatisée à intervalle de 24 heures via `server/retention-enforcement.ts`
+  - **Déclenchement Manuel :** Point d'accès `POST /api/retention-policies/enforce` pour l'exécution à la demande
+  - **Politiques par Pays :**
+    - Ghana : rétention de 10 ans
+    - Libéria : rétention de 7 ans
+    - Éthiopie : rétention de 7 ans
+    - Ouganda : rétention de 7 ans
+  - **Points d'Accès :** `GET /api/retention-policies`, `POST /api/retention-policies`, `PATCH /api/retention-policies/:id`, `DELETE /api/retention-policies/:id`, `POST /api/retention-policies/enforce`
+  - **Sécurité :** Toutes les requêtes de base de données utilisent du SQL paramétré pour prévenir les injections ; les résultats de l'application sont journalisés dans l'audit
+  - **Frontend :** Page `retention-policies.tsx` avec CRUD des politiques et déclenchement manuel de l'application
+
+  ### 13.11 Résolution d'Entités Transfrontalière (ENT-11)
+
+  **Objectif :** Identification améliorée des emprunteurs transfrontaliers utilisant les numéros de passeport, des types de relation étendus et la correspondance floue sur plusieurs champs d'identité.
+
+  **Architecture :**
+  - **Champ Passeport :** Colonne `passport_number` (text, nullable) sur la table `borrowers` pour l'identification inter-juridictionnelle
+  - **Types de Relation :** 7 types pris en charge — `spouse`, `guarantor`, `director`, `shareholder`, `beneficial_owner`, `subsidiary`, `parent_company`
+  - **Correspondance Floue :** Similarité par trigrammes PostgreSQL `pg_trgm` étendue pour correspondre sur le numéro de passeport, le NIF et les champs de nom
+  - **Point d'Accès :** `GET /api/borrowers/fuzzy-match?name=<requête>` — retourne les doublons potentiels avec scores de similarité sur tous les champs d'identité
+
+  ### 13.12 Prise en Charge de la Langue Portugaise (ENT-12)
+
+  **Objectif :** Localisation complète en portugais (pt) pour toutes les interfaces système, étendant les traductions existantes en anglais/français.
+
+  **Architecture :**
+  - **Fichier de Traduction :** `client/src/lib/i18n-pt.ts` — ressource de traduction PT complète couvrant toutes les chaînes de l'interface
+  - **Intégration :** Enregistré comme ressource de langue `pt` dans la configuration i18next de `client/src/lib/i18n.ts`
+  - **Sélecteur de Langue :** Sélecteur de langue manuel disponible sur la page de connexion et l'en-tête principal de l'application (`client/src/components/language-switcher.tsx`)
+  - **Couverture :** Toute la navigation, les formulaires, les messages d'erreur, les libellés du tableau de bord et les clés spécifiques aux fonctionnalités (AMF, chatbot, téléversement par lots, litiges, etc.)
+  
 ---
 
 *Fin de la Documentation Système*

@@ -28,11 +28,12 @@ This document maps every Software Requirements Specification (SRS) requirement t
 
 | SRS Ref | Requirement Description | Status | Module/Component | Implementation Notes | UAT Test Case |
 |---------|------------------------|--------|------------------|---------------------|----------------|
-| FR-COL-01 | System shall collect borrower demographic data (name, DOB, gender, national ID, TIN, address, phone, email) | Implemented | Borrower Management (`borrowers` table, `borrowers.tsx`) | All demographic fields captured in borrower registration form; individual and corporate types supported | TC-BOR-001 through TC-BOR-005 |
+| FR-COL-01 | System shall collect borrower demographic data (name, DOB, gender, national ID, passport, TIN, address, phone, email) | Implemented | Borrower Management (`borrowers` table, `borrowers.tsx`) | All demographic fields captured in borrower registration form; individual and corporate types supported | TC-BOR-001 through TC-BOR-005 |
 | FR-COL-02 | System shall collect credit account data (account type, amounts, dates, status, collateral, arrears) | Implemented | Credit Accounts (`credit_accounts` table, `credit-accounts.tsx`) | Full credit account creation with all required fields including multi-currency, interest-free, grace period, restructure tracking | TC-CA-001 through TC-CA-005 |
 | FR-COL-03 | System shall support bulk data ingestion (JSON/CSV) | Implemented | Batch Upload (`batch-upload.tsx`, `/api/batch-upload/credit-accounts`) | JSON and CSV file upload with per-record validation and error reporting | TC-BATCH-001 through TC-BATCH-004 |
 | FR-COL-04 | System shall validate data quality at point of entry | Implemented | Server Routes (`routes.ts`), Zod Schemas (`schema.ts`) | Zod schema validation on all insert operations; field-level constraints enforced | TC-DQ-001, TC-DQ-002 |
 | FR-COL-05 | System shall collect court judgment and lien information | Implemented | Court Judgments (`court_judgments` table, `borrower-detail.tsx`) | Court judgments with case number, court, type (lien/bankruptcy/lawsuit/civil/criminal), amount, date, status | TC-CJ-001 through TC-CJ-003 |
+| FR-COL-06 | Cross-Border Entity Resolution | Passport number, TIN, fuzzy name matching for cross-jurisdictional identity | shared/schema.ts, server/storage.ts | 7 relationship types incl. beneficial_owner | TC-BOR-013 |
 
 ---
 
@@ -96,7 +97,7 @@ This document maps every Software Requirements Specification (SRS) requirement t
 | FR-COMM-01 | System shall support billing and fee management | Implemented | Billing (`billing_records` table, `billing.tsx`) | Invoice creation with service type, amount, currency, period | TC-BIL-001, TC-BIL-002 |
 | FR-COMM-02 | System shall track invoice payment status | Implemented | Billing Records (`billingStatusEnum`) | Status tracking: pending, paid, overdue | TC-BIL-003 |
 | FR-COMM-03 | System shall support multiple service types | Implemented | Billing Records (`serviceType` field) | Service types: data_submission, credit_report, api_access, subscription | TC-BIL-001 |
-| FR-COMM-04 | System shall support multi-currency billing | Implemented | Billing Records (`currency` field) | 17 supported currencies across 4 jurisdictions | TC-BIL-001 |
+| FR-COMM-04 | System shall support multi-currency billing | Implemented | Billing Records (`currency` field) | 18 supported currencies across 4 jurisdictions | TC-BIL-001 |
 | FR-COMM-05 | System shall generate unique invoice numbers | Implemented | Billing (`invoiceNumber` field) | Unique invoice numbers per billing record | TC-BIL-002 |
 
 ---
@@ -148,6 +149,7 @@ This document maps every Software Requirements Specification (SRS) requirement t
 | NFR-SEC-07 | System shall enforce maker-checker (four-eye principle) | Implemented | Pending Approvals (`routes.ts` self-approval check) | Server-side enforcement: `requestedBy !== reviewedBy`; 403 error on self-approval attempt | TC-MC-004 |
 | NFR-SEC-08 | System shall enforce 90-day password expiry | Implemented | Login/Auth (`passwordChangedAt`, `mustChangePassword`) | Password age check on login; forced change dialog when expired | TC-AUTH-008 |
 | NFR-SEC-09 | System shall enforce 15-minute idle session timeout | Implemented | Session Middleware (`server/index.ts`) | `IDLE_TIMEOUT_MS = 15 * 60 * 1000`; automatic session destruction; 440 status code returned | TC-AUTH-004 |
+| NFR-SEC-10 | SSRF Protection | URL validation and hostname blocking in API test endpoint | server/routes.ts | Blocks private IPs, metadata endpoints | TC-SEC-010 |
 
 ---
 
@@ -155,13 +157,16 @@ This document maps every Software Requirements Specification (SRS) requirement t
 
 | SRS Ref | Requirement Description | Status | Module/Component | Implementation Notes | UAT Test Case |
 |---------|------------------------|--------|------------------|---------------------|----------------|
-| ENT-01 | System shall support TOTP-based Multi-Factor Authentication (MFA) | Implemented | MFA (`mfaSecret`, `mfaEnabled` on `users`; `mfa-setup.tsx`; `/api/auth/mfa/*`) | TOTP via `otpauth` library; setup returns QR URI; verify/disable/login endpoints; login returns `requireMfa` flag when enabled; i18n EN+FR | TC-ENT-001 through TC-ENT-005 |
+| ENT-01 | System shall support TOTP-based Multi-Factor Authentication (MFA) | Implemented | MFA (`mfaSecret`, `mfaEnabled` on `users`; `mfa-setup.tsx`; `/api/auth/mfa/*`) | TOTP via `otpauth` library; setup returns QR URI; verify/disable/login endpoints; login returns `requireMfa` flag when enabled; i18n EN, FR, and PT | TC-ENT-001 through TC-ENT-005 |
 | ENT-02 | System shall perform fuzzy entity matching to detect potential duplicate borrowers | Implemented | Fuzzy Matching (`pg_trgm` extension; `fuzzyMatchBorrowers` in `storage.ts`; `/api/borrowers/fuzzy-match`) | PostgreSQL trigram similarity via `pg_trgm`; threshold ≥ 0.3; duplicate warning shown on borrower registration form | TC-ENT-006, TC-ENT-007 |
-| ENT-03 | System shall provide a guided chatbot assistant for dispute filing | Implemented | Dispute Chatbot (`dispute-chatbot.tsx`; `helpdesk.tsx`) | Multi-step guided flow: issue type → borrower search → account selection → description → auto-submit; i18n EN+FR | TC-ENT-008 through TC-ENT-010 |
+| ENT-03 | System shall provide a guided chatbot assistant for dispute filing | Implemented | Dispute Chatbot (`dispute-chatbot.tsx`; `helpdesk.tsx`) | Multi-step guided flow: issue type → borrower search → account selection → description → auto-submit; i18n EN, FR, and PT | TC-ENT-008 through TC-ENT-010 |
 | ENT-04 | System shall support OAuth 2.1 Bearer token authentication for the external API | Implemented | OAuth 2.1 (`/api/external/oauth/token`; `external-api.ts`; `api-docs.tsx`) | Client credentials grant; JWT Bearer tokens alongside X-API-Key; `jsonwebtoken` library; documented in API docs page | TC-ENT-011 through TC-ENT-013 |
 | ENT-05 | System shall implement low-bandwidth optimizations (compression, code-splitting) | Implemented | Performance (`compression` middleware in `server/index.ts`; `React.lazy` in `App.tsx`) | gzip compression for all HTTP responses; lazy-loaded route components with `Suspense` fallback spinner | TC-ENT-014, TC-ENT-015 |
 | ENT-06 | System shall support XBRL/XML file format for batch data uploads | Implemented | XBRL Upload (`batch-upload.tsx` XBRL tab; `/api/batch-upload/credit-accounts`) | XBRL/XML parsing in batch upload endpoint; tabbed UI (JSON/CSV and XBRL); sample format provided | TC-ENT-016, TC-ENT-017 |
 | ENT-07 | System shall implement tamper-evident audit logs with SHA-256 hash chain | Implemented | Audit Integrity (`previousHash`, `currentHash` on `audit_logs`; `verifyAuditIntegrity` in `storage.ts`; `/api/audit/verify-integrity`; `audit-trail.tsx`) | Each log entry hashed with SHA-256 linking to previous entry; integrity verification endpoint; visual badge on audit trail page | TC-ENT-018 through TC-ENT-020 |
+| ENT-08 | Data Retention Enforcement (REQ-RET-01) | Automated archiving/expunging based on jurisdiction-specific policies | server/retention-enforcement.ts, client/src/pages/retention-policies.tsx | 24hr scheduler + manual trigger | TC-RET-001 |
+| ENT-09 | Exchange Rate Management Module | Admin CRUD for currency cross-rate pairs with USD routing | client/src/pages/exchange-rates.tsx, server/routes.ts | 18 currencies, converter widget | TC-EXR-001 |
+| ENT-10 | API Administration Module | Centralized config for external service endpoints | client/src/pages/api-admin.tsx, server/routes.ts | Weather, judicial, payment gateway | TC-API-ADM-001 |
 
 ---
 
@@ -169,7 +174,7 @@ This document maps every Software Requirements Specification (SRS) requirement t
 
 | Category | Total Requirements | Implemented | Partial | Not Implemented |
 |----------|-------------------|-------------|---------|-----------------|
-| FR-COL (Data Collection) | 5 | 5 | 0 | 0 |
+| FR-COL (Data Collection) | 6 | 6 | 0 | 0 |
 | FR-CR (Credit Reporting) | 8 | 8 | 0 | 0 |
 | FR-CON (Consent & Disputes) | 9 | 9 | 0 | 0 |
 | FR-REG (Regulatory) | 3 | 3 | 0 | 0 |
@@ -178,9 +183,9 @@ This document maps every Software Requirements Specification (SRS) requirement t
 | FR-DP (Data Providers) | 4 | 4 | 0 | 0 |
 | INT-RPT (Integration & Reporting) | 4 | 4 | 0 | 0 |
 | DQ (Data Quality) | 5 | 5 | 0 | 0 |
-| NFR-SEC (Security) | 9 | 9 | 0 | 0 |
-| ENT (Enterprise Enhancements) | 7 | 7 | 0 | 0 |
-| **Total** | **64** | **64** | **0** | **0** |
+| NFR-SEC (Security) | 10 | 10 | 0 | 0 |
+| ENT (Enterprise Enhancements) | 10 | 10 | 0 | 0 |
+| **Total** | **71** | **71** | **0** | **0** |
 
 ---
 

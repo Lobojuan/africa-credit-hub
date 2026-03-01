@@ -50,7 +50,7 @@
 | Devises Supportées | 18 (ETB, GHS, UGX, LRD, USD, EUR, GBP, KES, NGN, ZAR, TZS, RWF, XOF, XAF, EGP, MAD, BWP, MZN) |
 | Améliorations Entreprise | MFA, Correspondance Floue, Chatbot de Litiges, OAuth 2.1, Faible Bande Passante, Téléchargement XBRL, Audit Inviolable |
 | Juridictions | Ghana, Éthiopie, Ouganda, Libéria |
-| Langues | Anglais, Français |
+| Langues | Anglais, Français, Portugais |
 | Données de Test | 100 000+ emprunteurs, 166 000+ comptes de crédit, 120 000 enregistrements d'historique de paiement |
 
 ### 1.2 Identifiants de Test
@@ -142,7 +142,7 @@
 | TC-BOR-004 | Gestion des Emprunteurs | Rechercher des emprunteurs par Numéro d'Identité Nationale | L'utilisateur est connecté, des données d'emprunteurs existent | 1. Naviguer vers la page Emprunteurs. 2. Saisir un Numéro d'Identité Nationale dans le champ de recherche. 3. Rechercher. | Le(s) emprunteur(s) correspondant(s) affiché(s). | | FR-COL-02 |
 | TC-BOR-005 | Gestion des Emprunteurs | Signalement PEP sur un emprunteur | L'utilisateur est connecté avec les permissions de création | 1. Naviguer vers le formulaire d'Ajout d'Emprunteur. 2. Remplir les champs requis. 3. Activer le drapeau « Personne Politiquement Exposée » (PEP). 4. Saisir les détails PEP. 5. Soumettre. | L'emprunteur est soumis avec isPep = true et pepDetails renseigné. Indicateur PEP visible sur la fiche de l'emprunteur. | | FR-COL-03 |
 | TC-BOR-006 | Gestion des Emprunteurs | Consulter la page de détail d'un emprunteur | L'utilisateur est connecté, l'emprunteur existe | 1. Naviguer vers la page Emprunteurs. 2. Cliquer sur une ligne d'emprunteur pour accéder au détail. | La page de détail de l'emprunteur (`/borrowers/:id`) se charge avec toutes les informations : données personnelles/entreprise, comptes de crédit, consultations, jugements judiciaires, enregistrements de consentement. | | FR-COL-01 |
-| TC-BOR-007 | Gestion des Emprunteurs | Liaison des parties liées | L'utilisateur est connecté avec les permissions de création | 1. Naviguer vers le formulaire d'Ajout d'Emprunteur. 2. Remplir les champs requis. 3. Définir l'ID de l'Emprunteur Lié et le Type de Relation. 4. Soumettre. | Emprunteur créé avec relatedBorrowerId et relationshipType renseignés. Les parties liées sont visibles dans le détail de l'emprunteur. | | FR-COL-04 |
+| TC-BOR-007 | Gestion des Emprunteurs | Liaison des parties liées | L'utilisateur est connecté avec les permissions de création | 1. Naviguer vers le formulaire d'Ajout d'Emprunteur. 2. Remplir les champs requis. 3. Définir l'ID de l'Emprunteur Lié et le Type de Relation (l'un des 7 types : Conjoint, Garant, Directeur, Actionnaire, Bénéficiaire Effectif, Filiale, Société Mère). 4. Soumettre. | Emprunteur créé avec relatedBorrowerId et relationshipType renseignés. Les parties liées sont visibles dans le détail de l'emprunteur. Les 7 types de relation sont disponibles dans le menu déroulant. | | FR-COL-04 |
 | TC-BOR-008 | Gestion des Emprunteurs | La mise à jour d'un emprunteur déclenche le maker-checker | L'utilisateur est connecté | 1. Naviguer vers la page de détail de l'emprunteur. 2. Modifier un champ (ex. : numéro de téléphone). 3. Soumettre la mise à jour. | La mise à jour est soumise pour approbation maker-checker (enregistrement pending_approvals créé avec action : UPDATE). L'utilisateur voit un message de confirmation. | | FR-COL-01 |
 | TC-BOR-009 | Gestion des Emprunteurs | Prévention des doublons de Numéro d'Identité Nationale | L'utilisateur est connecté | 1. Naviguer vers Ajouter un Emprunteur. 2. Saisir un Numéro d'Identité Nationale déjà existant dans le système. 3. Soumettre. | Message d'erreur indiquant un doublon de Numéro d'Identité Nationale. Enregistrement rejeté. | | FR-COL-01 |
 | TC-BOR-010 | Gestion des Emprunteurs | Pagination sur la liste des emprunteurs | L'utilisateur est connecté, de nombreux emprunteurs existent | 1. Naviguer vers la page Emprunteurs. 2. Observer les contrôles de pagination. 3. Naviguer vers la page 2. | La page charge le lot suivant d'emprunteurs. Les contrôles de pagination affichent les bons numéros de page. | | FR-COL-02 |
@@ -439,6 +439,7 @@
 | TC-I18N-004 | i18n | Étiquettes de formulaire en français | La langue est définie sur le français | 1. Naviguer vers un formulaire (ex. : Ajouter un Emprunteur). | Les étiquettes des champs du formulaire s'affichent en français. | | FR-REG-01 |
 | TC-I18N-005 | i18n | Contenu du tableau de bord en français | La langue est définie sur le français | 1. Naviguer vers le Tableau de Bord. | Les titres et descriptions des cartes statistiques sont en français. | | FR-REG-01 |
 | TC-I18N-006 | i18n | Persistance de la langue | L'utilisateur passe en français | 1. Passer en français. 2. Naviguer entre les pages. | La langue française persiste lors de la navigation entre les pages au sein de la session. | | FR-REG-01 |
+| TC-I18N-007 | i18n | Changer la langue en portugais | L'utilisateur est connecté | 1. Localiser le sélecteur de langue dans l'en-tête/barre latérale. 2. Cliquer pour passer de l'anglais au portugais (PT). | Tout le texte de l'interface passe en traductions portugaises. Les libellés de la barre latérale, les titres de page, le texte des boutons et les étiquettes de formulaire sont tous en portugais. | | FR-REG-01 |
 
 ---
 
@@ -565,6 +566,52 @@
 | TC-ENT-018 | Intégrité de l'Audit | Badge d'intégrité affiché | Admin/Régulateur connecté, des journaux d'audit existent | 1. Naviguer vers la page Piste d'Audit. | Le badge de statut d'intégrité est visible (`data-testid="badge-integrity-status"`). Affiche le statut « Valide » ou « Rompu ». | | ENT-07 |
 | TC-ENT-019 | Intégrité de l'Audit | Bouton de vérification d'intégrité | Admin/Régulateur sur la page Piste d'Audit | 1. Cliquer sur le bouton « Vérifier l'Intégrité » (`data-testid="button-verify-integrity"`). | La vérification de la chaîne de hachage s'exécute. Le badge se met à jour pour afficher le résultat. L'appel API à `GET /api/audit/verify-integrity` retourne `{ valid: true/false, totalEntries, checkedEntries }`. | | ENT-07 |
 | TC-ENT-020 | Intégrité de l'Audit | Intégrité de la chaîne de hachage valide | Les journaux d'audit n'ont pas été altérés | 1. Cliquer sur « Vérifier l'Intégrité ». | Le badge affiche le statut vert « Valide ». `valid: true` dans la réponse. Toutes les entrées passent la vérification de la chaîne de hachage. | | ENT-07 |
+
+---
+
+## 32. Module de Gestion des Taux de Change
+
+| ID-CT | Module | Nom du Cas de Test | Pré-conditions | Étapes de Test | Résultat Attendu | Réussi/Échoué | Référence SRS |
+|-------|--------|-------------------|----------------|----------------|------------------|---------------|---------------|
+| TC-EXR-001 | Taux de Change | Consulter les taux de change | Utilisateur Admin connecté | 1. Naviguer vers `/exchange-rates`. | Le tableau des taux de change s'affiche avec les paires de taux prédéfinies. | | FR-CR-02 |
+| TC-EXR-002 | Taux de Change | Ajouter un taux de change | Utilisateur Admin connecté | 1. Cliquer sur « Ajouter un Taux ». 2. Remplir le taux USD/ETB 57.5. 3. Soumettre. | Le nouveau taux apparaît dans le tableau, notification de succès affichée. | | FR-CR-02 |
+| TC-EXR-003 | Taux de Change | Convertisseur de devises | Utilisateur Admin connecté | 1. Saisir le montant 100. 2. Sélectionner USD vers ETB. 3. Cliquer sur Convertir. | Le montant converti s'affiche correctement. | | FR-CR-02 |
+| TC-EXR-004 | Taux de Change | Modifier un taux de change | Utilisateur Admin connecté, un taux existe | 1. Cliquer sur modifier sur un taux existant. 2. Changer la valeur du taux. 3. Enregistrer. | Le taux est mis à jour, notification de succès affichée. | | FR-CR-02 |
+| TC-EXR-005 | Taux de Change | Supprimer un taux de change | Utilisateur Admin connecté, un taux existe | 1. Cliquer sur supprimer sur un taux. 2. Confirmer la suppression. | Le taux est supprimé du tableau. | | FR-CR-02 |
+
+---
+
+## 33. Module d'Administration des API
+
+| ID-CT | Module | Nom du Cas de Test | Pré-conditions | Étapes de Test | Résultat Attendu | Réussi/Échoué | Référence SRS |
+|-------|--------|-------------------|----------------|----------------|------------------|---------------|---------------|
+| TC-API-ADM-001 | Administration API | Consulter les configurations API | Utilisateur Admin connecté | 1. Naviguer vers `/api-admin`. | Les cartes de configuration API s'affichent avec les données prédéfinies. | | FR-API-01 |
+| TC-API-ADM-002 | Administration API | Filtrer par catégorie | Utilisateur Admin connecté | 1. Cliquer sur le filtre de catégorie « Météo ». | Seules les configurations API météo sont affichées. | | FR-API-01 |
+| TC-API-ADM-003 | Administration API | Tester la connexion | Utilisateur Admin connecté | 1. Cliquer sur « Tester la Connexion » sur une configuration. | La notification du résultat du test s'affiche (accessible/inaccessible). | | FR-API-01 |
+| TC-API-ADM-004 | Administration API | Ajouter une configuration API | Utilisateur Admin connecté | 1. Cliquer sur « Ajouter ». 2. Remplir le nom, l'URL, le type d'authentification. 3. Soumettre. | La nouvelle configuration apparaît, notification de succès. | | FR-API-01 |
+
+---
+
+## 34. Module de Politiques de Rétention des Données
+
+| ID-CT | Module | Nom du Cas de Test | Pré-conditions | Étapes de Test | Résultat Attendu | Réussi/Échoué | Référence SRS |
+|-------|--------|-------------------|----------------|----------------|------------------|---------------|---------------|
+| TC-RET-001 | Politiques de Rétention | Consulter les politiques de rétention | Utilisateur Admin connecté | 1. Naviguer vers `/retention-policies`. | Le tableau des politiques s'affiche avec les politiques prédéfinies. | | FR-RET-01 |
+| TC-RET-002 | Politiques de Rétention | Cartes récapitulatives | Utilisateur Admin connecté | 1. Consulter les cartes récapitulatives sur la page de rétention. | Le total des politiques, les pays couverts et la rétention moyenne sont affichés. | | FR-RET-01 |
+| TC-RET-003 | Politiques de Rétention | Exécuter l'application des règles | Utilisateur Admin connecté | 1. Cliquer sur le bouton « Exécuter l'Application ». | L'application des règles se termine, notification de succès avec le nombre d'enregistrements. | | FR-RET-01 |
+| TC-RET-004 | Politiques de Rétention | Ajouter une politique de rétention | Utilisateur Admin connecté | 1. Cliquer sur « Ajouter une Politique ». 2. Remplir Ghana/emprunteur/10 ans. 3. Soumettre. | La nouvelle politique apparaît dans le tableau. | | FR-RET-01 |
+| TC-RET-005 | Politiques de Rétention | Modifier une politique de rétention | Utilisateur Admin connecté, une politique existe | 1. Cliquer sur modifier sur une politique. 2. Changer les années. 3. Enregistrer. | La politique est mise à jour, notification de succès. | | FR-RET-01 |
+
+---
+
+## 35. Module de Sélecteur de Langue sur la Page de Connexion
+
+| ID-CT | Module | Nom du Cas de Test | Pré-conditions | Étapes de Test | Résultat Attendu | Réussi/Échoué | Référence SRS |
+|-------|--------|-------------------|----------------|----------------|------------------|---------------|---------------|
+| TC-LANG-001 | Langue de Connexion | Sélecteur de langue visible sur la page de connexion | Aucune | 1. Naviguer vers `/auth`. | Le menu déroulant de langue est visible dans le coin supérieur droit. | | FR-REG-01 |
+| TC-LANG-002 | Langue de Connexion | Passer en français sur la page de connexion | Aucune | 1. Sélectionner FR dans le sélecteur de langue sur la page de connexion. | Les libellés de connexion passent en français. | | FR-REG-01 |
+| TC-LANG-003 | Langue de Connexion | Passer en portugais sur la page de connexion | Aucune | 1. Sélectionner PT dans le sélecteur de langue sur la page de connexion. | Les libellés de connexion passent en portugais. | | FR-REG-01 |
+| TC-LANG-004 | Langue de Connexion | La langue persiste après la connexion | Aucune | 1. Sélectionner FR dans le sélecteur de langue. 2. Se connecter en tant qu'admin. | Le Tableau de Bord s'affiche en français après la connexion. | | FR-REG-01 |
 
 ---
 

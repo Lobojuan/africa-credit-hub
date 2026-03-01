@@ -11,7 +11,7 @@
 
 ## 1. Résumé Exécutif
 
-Ce document fournit une évaluation complète des contrôles de sécurité mis en œuvre dans le Système de Registre de Crédit par rapport aux exigences définies dans la Spécification des Exigences Logicielles (SRS) v1.1. Le système traite des données financières et personnelles sensibles dans quatre juridictions (Ghana, Éthiopie, Ouganda, Libéria) et doit se conformer aux exigences réglementaires en matière de protection des données et de réglementation financière.
+Ce document fournit une évaluation complète des contrôles de sécurité mis en œuvre dans le Système de Registre de Crédit par rapport aux exigences définies dans la Spécification des Exigences Logicielles (SRS) v1.1. Le système traite des données financières et personnelles sensibles dans quatre juridictions (Ghana, Éthiopie, Ouganda, Libéria) et prend en charge trois langues (anglais, français, portugais) et doit se conformer aux exigences réglementaires en matière de protection des données et de réglementation financière.
 
 Les neuf exigences de sécurité non fonctionnelles (NFR-SEC-01 à NFR-SEC-09) ont été mises en œuvre, ainsi que sept améliorations de sécurité entreprise (ENT-01 à ENT-07) incluant l'authentification multifacteur TOTP, l'échange de jetons porteur OAuth 2.1, les chaînes de hachage de journaux d'audit à preuve de falsification, la correspondance floue d'entités, le chatbot de litiges, les optimisations pour faible bande passante et la prise en charge du téléchargement XBRL. Ce rapport détaille chaque contrôle de sécurité, sa mise en œuvre et son statut de conformité.
 
@@ -60,7 +60,7 @@ Les neuf exigences de sécurité non fonctionnelles (NFR-SEC-01 à NFR-SEC-09) o
 | Flux de connexion | `POST /api/auth/login` retourne `{ requireMfa: true }` lorsque l'AMF est activée ; le client demande le code TOTP |
 | Point d'accès de connexion AMF | `POST /api/auth/mfa/login` — valide le code TOTP et complète l'authentification |
 | Composant frontend | `mfa-setup.tsx` — dialogue de configuration avec affichage du code QR et champ de saisie de vérification |
-| Support i18n | Traductions complètes EN/FR sous les clés `mfa.*` et `login.mfa*` |
+| Support i18n | Traductions complètes EN/FR/PT sous les clés `mfa.*` et `login.mfa*` |
 
 **Flux de Connexion AMF :**
 1. L'utilisateur soumet son nom d'utilisateur/mot de passe via `POST /api/auth/login`
@@ -281,6 +281,27 @@ function generateApiKey() {
 7. Mettre à jour l'horodatage `last_used_at`
 8. Poursuivre avec la requête
 
+### 5.5 Atténuation SSRF
+
+Le module d'Administration d'API inclut une protection contre les attaques SSRF (Server-Side Request Forgery) via la fonctionnalité « Tester la Connexion », afin de prévenir l'abus des requêtes HTTP sortantes.
+
+| Contrôle | Mise en Œuvre |
+|----------|--------------|
+| Validation d'URL | Bloque les requêtes vers les adresses réseau internes/privées avant d'effectuer des requêtes sortantes |
+| Hôtes bloqués | `localhost`, `127.0.0.1`, `169.254.169.254` (point d'accès des métadonnées cloud) |
+| Plages IP bloquées | Plages IP privées : `10.x.x.x`, `192.168.x.x`, `172.16-31.x.x` |
+| Restriction de protocole | Seuls les protocoles `HTTP` et `HTTPS` sont autorisés ; tous les autres schémas sont rejetés |
+| Mise en œuvre | Logique de validation d'URL dans `server/routes.ts` validant toutes les URL fournies par l'utilisateur avant d'effectuer des requêtes sortantes |
+
+**Flux de Validation SSRF :**
+1. L'utilisateur soumet une URL via la fonctionnalité « Tester la Connexion » dans le module d'Administration d'API
+2. Le serveur analyse l'URL et extrait le nom d'hôte et le protocole
+3. Le protocole est vérifié par rapport à la liste autorisée (HTTP/HTTPS uniquement)
+4. Le nom d'hôte est vérifié par rapport à la liste de blocage (localhost, 127.0.0.1, point d'accès des métadonnées)
+5. Le nom d'hôte est vérifié par rapport aux plages IP privées (10.x, 192.168.x, 172.16-31.x)
+6. Si une vérification échoue, la requête est rejetée avec un message d'erreur approprié
+7. Si toutes les vérifications réussissent, la requête sortante est effectuée et la réponse est retournée à l'utilisateur
+
 ---
 
 ## 6. Protection des Données
@@ -320,7 +341,7 @@ const parsed = insertBorrowerSchema.parse(req.body);
 - Validation des types (string, number, boolean, valeurs d'énumération)
 - Application des champs obligatoires
 - Restriction des valeurs d'énumération
-- Prévention de l'injection SQL via des requêtes paramétrées (Drizzle ORM)
+- Prévention de l'injection SQL via des requêtes paramétrées (Drizzle ORM), y compris dans le Moteur d'Application des Politiques de Rétention et les modules de Configuration d'API
 
 ---
 
@@ -494,6 +515,8 @@ if (approval.requestedBy === currentUserId) {
 | ENT-05 | Optimisations pour faible bande passante | CONFORME | Middleware `compression` gzip ; découpage de code `React.lazy()` avec repli `Suspense` pour tous les composants de route. |
 | ENT-06 | Prise en charge du téléchargement par lots XBRL/XML | CONFORME | Analyse de fichiers XBRL/XML dans le point d'accès de téléchargement par lots ; frontend à onglets (JSON/CSV + XBRL) ; format d'exemple fourni. |
 | ENT-07 | Chaîne de hachage de journal d'audit à preuve de falsification | CONFORME | Chaîne de hachage SHA-256 (colonnes `previousHash`/`currentHash`) ; point d'accès `GET /api/audit/verify-integrity` ; badge visuel d'intégrité sur la page de piste d'audit. |
+| REQ-RET-01 | Rétention des données | CONFORME | Politiques de rétention par pays appliquées (Ghana 10 ans, Éthiopie/Ouganda/Libéria 7 ans, journaux d'audit 10 ans globalement). Moteur d'Application de Rétention avec planificateur automatisé de 24 heures et déclenchement manuel réservé aux administrateurs. SQL paramétré via Drizzle ORM ; noms de tables validés par rapport à la liste autorisée `VALID_TABLES` ; valeurs de pays validées par rapport à l'ensemble `VALID_COUNTRIES`. |
+| SLA-RET-01 | SLA d'application de la rétention | CONFORME | Cycle d'application automatisé de 24 heures assurant une gestion opportune du cycle de vie des données. Déclenchement manuel via `POST /api/retention-policies/enforce` (réservé aux administrateurs, protégé par RBAC). Toutes les actions d'application sont journalisées dans l'audit avec les détails complets des résultats. |
 
 ---
 
@@ -545,7 +568,52 @@ process.on("unhandledRejection", (err) => { console.error("Unhandled rejection:"
 
 ---
 
-## 13. Approbation
+## 13. Cycle de Vie des Données et Sécurité de la Rétention
+
+### 13.1 Moteur d'Application de Rétention
+
+Le système inclut un Moteur d'Application de Rétention automatisé responsable de l'application des politiques de cycle de vie des données conformément aux exigences réglementaires par pays.
+
+| Contrôle | Mise en Œuvre |
+|----------|--------------|
+| Planificateur | Cycle automatisé de 24 heures ; le moteur s'exécute une fois toutes les 24 heures |
+| Déclenchement manuel | `POST /api/retention-policies/enforce` — réservé aux administrateurs, protégé par RBAC via `requireRole("admin")` |
+| Emplacement du moteur | `server/retention-enforcement.ts` |
+
+### 13.2 Politiques de Rétention par Pays
+
+| Pays | Période de rétention | Remarques |
+|------|----------------------|-----------|
+| Ghana | 10 ans | Conforme aux exigences de la loi ghanéenne sur la protection des données |
+| Éthiopie | 7 ans | Rétention standard des données financières |
+| Ouganda | 7 ans | Rétention standard des données financières |
+| Libéria | 7 ans | Rétention standard des données financières |
+| Journaux d'audit | 10 ans (global) | Appliqué uniformément dans toutes les juridictions |
+
+### 13.3 Prévention de l'Injection SQL dans le Moteur de Rétention
+
+Le Moteur d'Application de Rétention emploie plusieurs couches de protection contre l'injection SQL :
+
+| Contrôle | Mise en Œuvre |
+|----------|--------------|
+| SQL paramétré | Utilise exclusivement les modèles balisés `sql` de Drizzle ORM — aucune interpolation de chaînes dans les requêtes |
+| Validation des noms de tables | Les noms de tables sont validés par rapport à une liste autorisée codée en dur (constante `VALID_TABLES`) ; tout nom de table absent de la liste est rejeté |
+| Validation des valeurs de pays | Les valeurs de pays sont validées par rapport à un ensemble `VALID_COUNTRIES` avant utilisation dans les requêtes |
+| Intégration ORM | Toutes les requêtes sont construites via Drizzle ORM, qui applique l'exécution de requêtes paramétrées |
+
+### 13.4 Journalisation d'Audit des Actions de Rétention
+
+Toutes les actions d'application de rétention sont entièrement journalisées dans l'audit :
+
+- Chaque exécution d'application crée une entrée de journal d'audit avec le type d'action `RETENTION_ENFORCEMENT`
+- Les résultats incluent le nombre d'enregistrements évalués, supprimés et conservés par table et par pays
+- Les déclenchements manuels journalisent l'utilisateur administrateur initiateur
+- Les exécutions automatisées journalisent le système comme acteur
+- Les détails complets des résultats sont stockés dans le champ `details` du journal d'audit
+
+---
+
+## 14. Approbation
 
 | Rôle | Nom | Signature | Date |
 |------|-----|-----------|------|

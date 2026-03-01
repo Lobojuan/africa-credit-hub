@@ -11,7 +11,7 @@
 
 ## 1. Executive Summary
 
-This document provides a comprehensive assessment of the security controls implemented in the Credit Registry System against the requirements defined in the Software Requirements Specification (SRS) v1.1. The system handles sensitive financial and personal data across four jurisdictions (Ghana, Ethiopia, Uganda, Liberia) and must comply with data protection and financial regulatory requirements.
+This document provides a comprehensive assessment of the security controls implemented in the Credit Registry System against the requirements defined in the Software Requirements Specification (SRS) v1.1. The system handles sensitive financial and personal data across four jurisdictions (Ghana, Ethiopia, Uganda, Liberia) and supports three languages (English, French, Portuguese) and must comply with data protection and financial regulatory requirements.
 
 All nine non-functional security requirements (NFR-SEC-01 through NFR-SEC-09) have been implemented, along with seven enterprise security enhancements (ENT-01 through ENT-07) including TOTP multi-factor authentication, OAuth 2.1 Bearer token exchange, tamper-evident audit log hash chains, fuzzy entity matching, dispute chatbot, low-bandwidth optimizations, and XBRL upload support. This report details each security control, its implementation, and compliance status.
 
@@ -60,7 +60,7 @@ All nine non-functional security requirements (NFR-SEC-01 through NFR-SEC-09) ha
 | Login Flow | `POST /api/auth/login` returns `{ requireMfa: true }` when MFA is enabled; client prompts for TOTP code |
 | MFA Login Endpoint | `POST /api/auth/mfa/login` — validates TOTP code and completes authentication |
 | Frontend Component | `mfa-setup.tsx` — setup dialog with QR code display and verification input |
-| i18n Support | Full EN/FR translations under `mfa.*` and `login.mfa*` keys |
+| i18n Support | Full EN/FR/PT translations under `mfa.*` and `login.mfa*` keys |
 
 **MFA Login Flow:**
 1. User submits username/password via `POST /api/auth/login`
@@ -281,6 +281,27 @@ function generateApiKey() {
 7. Update `last_used_at` timestamp
 8. Proceed with request
 
+### 5.5 SSRF Mitigation
+
+The API Administration module's "Test Connection" feature includes Server-Side Request Forgery (SSRF) protection to prevent abuse of outbound HTTP requests.
+
+| Control | Implementation |
+|---------|---------------|
+| URL Validation | Blocks requests to internal/private network addresses before making outbound requests |
+| Blocked Hosts | `localhost`, `127.0.0.1`, `169.254.169.254` (cloud metadata endpoint) |
+| Blocked IP Ranges | Private IP ranges: `10.x.x.x`, `192.168.x.x`, `172.16-31.x.x` |
+| Protocol Restriction | Only `HTTP` and `HTTPS` protocols are allowed; all other schemes are rejected |
+| Implementation | URL validation logic in `server/routes.ts` validates all user-supplied URLs before making outbound requests |
+
+**SSRF Validation Flow:**
+1. User submits a URL via the "Test Connection" feature in the API Administration module
+2. Server parses the URL and extracts the hostname and protocol
+3. Protocol is checked against the allowlist (HTTP/HTTPS only)
+4. Hostname is checked against the blocklist (localhost, 127.0.0.1, metadata endpoint)
+5. Hostname is checked against private IP ranges (10.x, 192.168.x, 172.16-31.x)
+6. If any check fails, the request is rejected with an appropriate error message
+7. If all checks pass, the outbound request is made and the response is returned to the user
+
 ---
 
 ## 6. Data Protection
@@ -320,7 +341,7 @@ const parsed = insertBorrowerSchema.parse(req.body);
 - Type validation (string, number, boolean, enum values)
 - Required field enforcement
 - Enum value restriction
-- SQL injection prevention via parameterized queries (Drizzle ORM)
+- SQL injection prevention via parameterized queries (Drizzle ORM), including within the Retention Enforcement Engine and API Configuration modules
 
 ---
 
@@ -494,6 +515,8 @@ if (approval.requestedBy === currentUserId) {
 | ENT-05 | Low-bandwidth optimizations | COMPLIANT | gzip `compression` middleware; `React.lazy()` code-splitting with `Suspense` fallback for all route components. |
 | ENT-06 | XBRL/XML batch upload support | COMPLIANT | XBRL/XML file parsing in batch upload endpoint; tabbed frontend (JSON/CSV + XBRL); sample format provided. |
 | ENT-07 | Tamper-evident audit log hash chain | COMPLIANT | SHA-256 hash chain (`previousHash`/`currentHash` columns); `GET /api/audit/verify-integrity` endpoint; visual integrity badge on audit trail page. |
+| REQ-RET-01 | Data Retention | COMPLIANT | Per-country retention policies enforced (Ghana 10yr, Ethiopia/Uganda/Liberia 7yr, audit logs 10yr globally). Retention Enforcement Engine with 24-hour automated scheduler and admin-only manual trigger. Parameterized SQL via Drizzle ORM; table names validated against `VALID_TABLES` allowlist; country values validated against `VALID_COUNTRIES` set. |
+| SLA-RET-01 | Retention Enforcement SLA | COMPLIANT | Automated 24-hour enforcement cycle ensures timely data lifecycle management. Manual trigger via `POST /api/retention-policies/enforce` (admin-only, RBAC-protected). All enforcement actions audit-logged with full result details. |
 
 ---
 
@@ -545,7 +568,52 @@ process.on("unhandledRejection", (err) => { console.error("Unhandled rejection:"
 
 ---
 
-## 13. Sign-Off
+## 13. Data Lifecycle & Retention Security
+
+### 13.1 Retention Enforcement Engine
+
+The system includes an automated Retention Enforcement Engine responsible for enforcing data lifecycle policies in compliance with per-country regulatory requirements.
+
+| Control | Implementation |
+|---------|---------------|
+| Scheduler | Automated 24-hour cycle; engine runs once every 24 hours |
+| Manual Trigger | `POST /api/retention-policies/enforce` — admin-only, RBAC-protected via `requireRole("admin")` |
+| Engine Location | `server/retention-enforcement.ts` |
+
+### 13.2 Per-Country Retention Policies
+
+| Country | Retention Period | Notes |
+|---------|-----------------|-------|
+| Ghana | 10 years | Aligned with Ghana Data Protection Act requirements |
+| Ethiopia | 7 years | Standard financial data retention |
+| Uganda | 7 years | Standard financial data retention |
+| Liberia | 7 years | Standard financial data retention |
+| Audit Logs | 10 years (global) | Applied uniformly across all jurisdictions |
+
+### 13.3 SQL Injection Prevention in Retention Engine
+
+The Retention Enforcement Engine employs multiple layers of protection against SQL injection:
+
+| Control | Implementation |
+|---------|---------------|
+| Parameterized SQL | Uses Drizzle ORM `sql` tagged templates exclusively — no string interpolation in queries |
+| Table Name Validation | Table names validated against a hardcoded allowlist (`VALID_TABLES` constant); any table name not in the allowlist is rejected |
+| Country Value Validation | Country values validated against a `VALID_COUNTRIES` set before use in queries |
+| ORM Integration | All queries constructed via Drizzle ORM, which enforces parameterized query execution |
+
+### 13.4 Audit Logging of Retention Actions
+
+All retention enforcement actions are fully audit-logged:
+
+- Each enforcement run creates an audit log entry with action type `RETENTION_ENFORCEMENT`
+- Results include the number of records evaluated, deleted, and retained per table and country
+- Manual triggers log the initiating admin user
+- Automated runs log the system as the actor
+- Full result details are stored in the audit log `details` field
+
+---
+
+## 14. Sign-Off
 
 | Role | Name | Signature | Date |
 |------|------|-----------|------|

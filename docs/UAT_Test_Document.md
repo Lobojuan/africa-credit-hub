@@ -50,7 +50,7 @@
 | Supported Currencies | 18 (ETB, GHS, UGX, LRD, USD, EUR, GBP, KES, NGN, ZAR, TZS, RWF, XOF, XAF, EGP, MAD, BWP, MZN) |
 | Enterprise Enhancements | MFA, Fuzzy Matching, Dispute Chatbot, OAuth 2.1, Low-Bandwidth, XBRL Upload, Tamper-Evident Audit |
 | Jurisdictions | Ghana, Ethiopia, Uganda, Liberia |
-| Languages | English, French |
+| Languages | English, French, Portuguese |
 | Seed Data | 100K+ borrowers, 166K+ credit accounts, 120K payment history records |
 
 ### 1.2 Seed Credentials
@@ -142,7 +142,7 @@
 | TC-BOR-004 | Borrower Management | Search borrowers by National ID | User is logged in, borrower data exists | 1. Navigate to Borrowers page. 2. Enter a National ID in the search field. 3. Search. | Matching borrower(s) displayed. | | FR-COL-02 |
 | TC-BOR-005 | Borrower Management | PEP flagging on borrower | User is logged in with create permissions | 1. Navigate to Add Borrower form. 2. Fill required fields. 3. Toggle "Politically Exposed Person" (PEP) flag to ON. 4. Enter PEP details. 5. Submit. | Borrower is submitted with isPep = true and pepDetails populated. Visible PEP indicator on borrower record. | | FR-COL-03 |
 | TC-BOR-006 | Borrower Management | View borrower detail page | User is logged in, borrower exists | 1. Navigate to Borrowers page. 2. Click on a borrower row to navigate to detail. | Borrower detail page (`/borrowers/:id`) loads with full borrower information: personal/company data, credit accounts, inquiries, court judgments, consent records. | | FR-COL-01 |
-| TC-BOR-007 | Borrower Management | Related party linking | User is logged in with create permissions | 1. Navigate to Add Borrower form. 2. Fill required fields. 3. Set Related Borrower ID and Relationship Type. 4. Submit. | Borrower created with relatedBorrowerId and relationshipType populated. Related parties visible on borrower detail. | | FR-COL-04 |
+| TC-BOR-007 | Borrower Management | Related party linking | User is logged in with create permissions | 1. Navigate to Add Borrower form. 2. Fill required fields. 3. Set Related Borrower ID and Relationship Type (one of 7 types: Spouse, Guarantor, Director, Shareholder, Beneficial Owner, Subsidiary, Parent Company). 4. Submit. | Borrower created with relatedBorrowerId and relationshipType populated. Related parties visible on borrower detail. All 7 relationship types available in dropdown. | | FR-COL-04 |
 | TC-BOR-008 | Borrower Management | Borrower update triggers maker-checker | User is logged in | 1. Navigate to borrower detail page. 2. Edit a field (e.g., phone number). 3. Submit update. | Update submitted for maker-checker approval (pending_approvals record created with action: UPDATE). User sees confirmation message. | | FR-COL-01 |
 | TC-BOR-009 | Borrower Management | Duplicate National ID prevention | User is logged in | 1. Navigate to Add Borrower. 2. Enter a National ID that already exists in the system. 3. Submit. | Error message indicating duplicate National ID. Registration rejected. | | FR-COL-01 |
 | TC-BOR-010 | Borrower Management | Pagination on borrower list | User is logged in, many borrowers exist | 1. Navigate to Borrowers page. 2. Observe pagination controls. 3. Navigate to page 2. | Page loads next set of borrowers. Pagination controls show correct page numbers. | | FR-COL-02 |
@@ -439,6 +439,7 @@
 | TC-I18N-004 | i18n | French form labels | Language set to French | 1. Navigate to a form (e.g., Add Borrower). | Form field labels display in French. | | FR-REG-01 |
 | TC-I18N-005 | i18n | French dashboard content | Language set to French | 1. Navigate to Dashboard. | Stat card titles and descriptions in French. | | FR-REG-01 |
 | TC-I18N-006 | i18n | Language persistence | User switches to French | 1. Switch to French. 2. Navigate between pages. | French language persists across page navigation within the session. | | FR-REG-01 |
+| TC-I18N-007 | i18n | Switch language to Portuguese | User is logged in | 1. Locate the language switcher in the header/sidebar. 2. Click to switch from English to Portuguese (PT). | All UI text changes to Portuguese translations. Sidebar labels, page titles, button text, and form labels all in Portuguese. | | FR-REG-01 |
 
 ---
 
@@ -565,6 +566,52 @@
 | TC-ENT-018 | Audit Integrity | Integrity badge displayed | Admin/Regulator logged in, audit logs exist | 1. Navigate to Audit Trail page. | Integrity status badge visible (`data-testid="badge-integrity-status"`). Shows "Valid" or "Broken" status. | | ENT-07 |
 | TC-ENT-019 | Audit Integrity | Verify integrity button | Admin/Regulator on Audit Trail page | 1. Click "Verify Integrity" button (`data-testid="button-verify-integrity"`). | Hash chain verification runs. Badge updates to show result. API call to `GET /api/audit/verify-integrity` returns `{ valid: true/false, totalEntries, checkedEntries }`. | | ENT-07 |
 | TC-ENT-020 | Audit Integrity | Hash chain integrity valid | Audit logs have not been tampered with | 1. Click "Verify Integrity". | Badge shows green "Valid" status. `valid: true` in response. All entries pass hash chain verification. | | ENT-07 |
+
+---
+
+## 32. Exchange Rate Management Module
+
+| TC-ID | Module | Test Case Name | Pre-conditions | Test Steps | Expected Result | Pass/Fail | SRS Reference |
+|-------|--------|---------------|----------------|------------|-----------------|-----------|---------------|
+| TC-EXR-001 | Exchange Rates | View exchange rates | Admin user logged in | 1. Navigate to `/exchange-rates`. | Exchange rates table displays with seeded rate pairs. | | FR-CR-02 |
+| TC-EXR-002 | Exchange Rates | Add exchange rate | Admin user logged in | 1. Click "Add Rate". 2. Fill USD/ETB rate 57.5. 3. Submit. | New rate appears in table, success toast shown. | | FR-CR-02 |
+| TC-EXR-003 | Exchange Rates | Currency converter | Admin user logged in | 1. Enter amount 100. 2. Select USD to ETB. 3. Click Convert. | Converted amount displays correctly. | | FR-CR-02 |
+| TC-EXR-004 | Exchange Rates | Edit exchange rate | Admin user logged in, rate exists | 1. Click edit on existing rate. 2. Change rate value. 3. Save. | Rate updated, success toast shown. | | FR-CR-02 |
+| TC-EXR-005 | Exchange Rates | Delete exchange rate | Admin user logged in, rate exists | 1. Click delete on rate. 2. Confirm deletion. | Rate removed from table. | | FR-CR-02 |
+
+---
+
+## 33. API Administration Module
+
+| TC-ID | Module | Test Case Name | Pre-conditions | Test Steps | Expected Result | Pass/Fail | SRS Reference |
+|-------|--------|---------------|----------------|------------|-----------------|-----------|---------------|
+| TC-API-ADM-001 | API Admin | View API configurations | Admin user logged in | 1. Navigate to `/api-admin`. | API config cards display with seeded stubs. | | FR-API-01 |
+| TC-API-ADM-002 | API Admin | Filter by category | Admin user logged in | 1. Click "Weather" category filter. | Only weather API configs shown. | | FR-API-01 |
+| TC-API-ADM-003 | API Admin | Test connection | Admin user logged in | 1. Click "Test Connection" on a config. | Test result toast shown (reachable/unreachable). | | FR-API-01 |
+| TC-API-ADM-004 | API Admin | Add API configuration | Admin user logged in | 1. Click "Add". 2. Fill name, URL, auth type. 3. Submit. | New config appears, success toast. | | FR-API-01 |
+
+---
+
+## 34. Data Retention Policies Module
+
+| TC-ID | Module | Test Case Name | Pre-conditions | Test Steps | Expected Result | Pass/Fail | SRS Reference |
+|-------|--------|---------------|----------------|------------|-----------------|-----------|---------------|
+| TC-RET-001 | Retention Policies | View retention policies | Admin user logged in | 1. Navigate to `/retention-policies`. | Policies table displays with seeded policies. | | FR-RET-01 |
+| TC-RET-002 | Retention Policies | Summary cards | Admin user logged in | 1. View summary cards on retention page. | Total policies, countries covered, avg retention shown. | | FR-RET-01 |
+| TC-RET-003 | Retention Policies | Run enforcement | Admin user logged in | 1. Click "Run Enforcement" button. | Enforcement completes, success toast with record count. | | FR-RET-01 |
+| TC-RET-004 | Retention Policies | Add retention policy | Admin user logged in | 1. Click "Add Policy". 2. Fill Ghana/borrower/10yr. 3. Submit. | New policy appears in table. | | FR-RET-01 |
+| TC-RET-005 | Retention Policies | Edit retention policy | Admin user logged in, policy exists | 1. Click edit on policy. 2. Change years. 3. Save. | Policy updated, success toast. | | FR-RET-01 |
+
+---
+
+## 35. Language Switcher on Login Module
+
+| TC-ID | Module | Test Case Name | Pre-conditions | Test Steps | Expected Result | Pass/Fail | SRS Reference |
+|-------|--------|---------------|----------------|------------|-----------------|-----------|---------------|
+| TC-LANG-001 | Login Language | Language switcher visible on login | None | 1. Navigate to `/auth`. | Language dropdown visible in top-right corner. | | FR-REG-01 |
+| TC-LANG-002 | Login Language | Switch to French on login | None | 1. Select FR from language switcher on login page. | Login labels change to French. | | FR-REG-01 |
+| TC-LANG-003 | Login Language | Switch to Portuguese on login | None | 1. Select PT from language switcher on login page. | Login labels change to Portuguese. | | FR-REG-01 |
+| TC-LANG-004 | Login Language | Language persists after login | None | 1. Select FR from language switcher. 2. Log in as admin. | Dashboard shows in French after login. | | FR-REG-01 |
 
 ---
 

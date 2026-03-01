@@ -87,7 +87,7 @@ The application uses Drizzle ORM for schema management. On first startup, the ap
 
 1. Connect to the database using `DATABASE_URL`
 2. Enable the `pg_trgm` extension for fuzzy matching
-3. Push the schema using Drizzle (15 tables)
+3. Push the schema using Drizzle (18 tables)
 4. Seed initial data (users, borrowers, credit accounts, etc.)
 
 To manually push the schema:
@@ -525,7 +525,29 @@ The following additional packages were added for enterprise enhancements (v1.1):
 
 ---
 
-## 16. Version Information
+## 16. Key Features and Capabilities
+
+The Credit Registry System includes the following modules and capabilities:
+
+| Feature | Description |
+|---------|-------------|
+| Multi-Currency Processing | Support for 18 currencies across jurisdictions |
+| Internationalization (i18n) | Three languages supported: English (EN), French (FR), and Portuguese (PT) |
+| Login Page Language Switcher | Users can select their preferred language directly from the login screen |
+| Exchange Rate Management | Module for managing and updating currency exchange rates across supported currencies |
+| API Administration | Administrative interface for managing API keys, monitoring usage, and configuring external API access |
+| Data Retention Policies | Configurable retention policies with an automated enforcement engine for regulatory compliance |
+| MFA Authentication | Multi-factor authentication using TOTP for admin and regulator accounts (ENT-01) |
+| Fuzzy Entity Matching | Trigram-based borrower search using pg_trgm (ENT-02) |
+| Dispute Chatbot | Interactive chatbot for guided dispute filing (ENT-03) |
+| OAuth 2.1 External API | JWT-secured REST API for third-party integrations (ENT-04) |
+| Low-Bandwidth Optimization | gzip compression and code-splitting for constrained networks (ENT-05) |
+| Batch Upload (XBRL/XML) | Bulk data ingestion via structured file formats (ENT-06) |
+| Tamper-Evident Audit Trail | Hash-chained audit logs with integrity verification (ENT-07) |
+
+---
+
+## 17. Version Information
 
 | Component | Version |
 |-----------|---------|

@@ -41,7 +41,7 @@ The system is designed for pan-African deployment across four jurisdictions:
 
 ### 1.3 Key Capabilities
 
-- **Borrower Management** — Individual and corporate borrower registration with PEP flagging, education/employment tracking, and related party linking
+- **Borrower Management** — Individual and corporate borrower registration with PEP flagging, education/employment tracking, and related party linking (7 types including beneficial_owner)
 - **Credit Account Management** — Multi-currency loan tracking with interest-free support, grace periods, restructuring, and write-off management
 - **Credit Scoring** — Algorithmic scoring (300–850 range) with reason codes
 - **Credit Reporting** — Full printable credit reports with serial numbers, payment history, court judgments, and consent records
@@ -54,8 +54,8 @@ The system is designed for pan-African deployment across four jurisdictions:
 - **Batch Upload** — JSON/CSV bulk data ingestion with per-record validation
 - **External REST API** — Programmatic access for institutions with API key authentication
 - **Regulatory Analytics** — NPL ratios, portfolio breakdowns, SLA breach tracking, CSV export
-- **Internationalization** — Full English/French language support
-- **Multi-Currency** — 17 pan-African currencies supported
+- **Internationalization** — Full English, French, and Portuguese language support
+- **Multi-Currency** — 18 pan-African currencies supported
 - **Audit Trail** — Comprehensive activity logging with IP tracking and tamper-evident SHA-256 hash chain
 - **Multi-Factor Authentication** — TOTP-based MFA via otpauth library
 - **Fuzzy Entity Matching** — PostgreSQL pg_trgm trigram similarity for duplicate borrower detection
@@ -79,7 +79,7 @@ The system follows a modern monolithic full-stack architecture with clear separa
 │  │          React SPA (Vite + TypeScript)             │   │
 │  │  ┌──────────┐  ┌──────────┐  ┌───────────────┐   │   │
 │  │  │  wouter   │  │ TanStack │  │  react-i18next │   │   │
-│  │  │ (routing) │  │  Query   │  │   (EN / FR)    │   │   │
+│  │  │ (routing) │  │  Query   │  │   (EN / FR / PT) │   │   │
 │  │  └──────────┘  └──────────┘  └───────────────┘   │   │
 │  │  ┌──────────────────────────────────────────────┐ │   │
 │  │  │        shadcn/ui + Tailwind CSS              │ │   │
@@ -105,7 +105,7 @@ The system follows a modern monolithic full-stack architecture with clear separa
 ┌──────────────────────────▼──────────────────────────────┐
 │              PostgreSQL Database (Neon)                   │
 │  ┌─────────────────────────────────────────────────────┐ │
-│  │               Drizzle ORM (15 tables)               │ │
+│  │               Drizzle ORM (18 tables)               │ │
 │  └─────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -117,7 +117,7 @@ The system follows a modern monolithic full-stack architecture with clear separa
 - **Styling:** Tailwind CSS with shadcn/ui component library
 - **Routing:** wouter — lightweight client-side routing
 - **State Management:** TanStack Query v5 for server state management with caching and invalidation
-- **Internationalization:** react-i18next with i18next-browser-languagedetector for EN/FR
+- **Internationalization:** react-i18next with i18next-browser-languagedetector for EN/FR/PT
 - **Theme:** Dark/light mode with CSS custom properties and Tailwind class-based toggling
 - **Font:** Inter (Google Fonts)
 - **Design System:** Warm teal + gold accent palette (culturally resonant for Ghana/Uganda/Ethiopia)
@@ -152,9 +152,9 @@ The system follows a modern monolithic full-stack architecture with clear separa
 ### 2.6 Internationalization
 
 - **Library:** react-i18next + i18next-browser-languagedetector
-- **Languages:** English (en), French (fr)
+- **Languages:** English (en), French (fr), Portuguese (pt)
 - **Translation Source:** Inline JSON resources in `client/src/lib/i18n.ts`
-- **Detection:** Browser language auto-detection with localStorage persistence
+- **Detection:** Browser language auto-detection with localStorage persistence; manual switcher available on the login page and main header
 
 ### 2.7 Routing
 
@@ -193,7 +193,7 @@ The system follows a modern monolithic full-stack architecture with clear separa
 
 ## 4. Data Model
 
-The system uses 15 PostgreSQL tables with Drizzle ORM for type-safe access. All primary keys are UUID v4 strings generated via `gen_random_uuid()`.
+The system uses 18 PostgreSQL tables with Drizzle ORM for type-safe access. All primary keys are UUID v4 strings generated via `gen_random_uuid()`.
 
 ### 4.1 Table: `users`
 
@@ -245,7 +245,7 @@ Individual and corporate borrower records with identification, demographic, and 
 | `is_pep` | boolean | default `false` | Politically Exposed Person flag |
 | `pep_details` | text | nullable | PEP details/description |
 | `related_borrower_id` | varchar | nullable | FK to `borrowers.id` (related party) |
-| `relationship_type` | text | nullable | Type of relationship (spouse, guarantor, etc.) |
+| `relationship_type` | text | nullable | Type of relationship (spouse, guarantor, director, shareholder, beneficial_owner, subsidiary, parent_company) |
 | `education_level` | text | nullable | Highest education level |
 | `education_institution` | text | nullable | Educational institution |
 | `employment_history` | text | nullable | Employment history (JSON or text) |
@@ -265,7 +265,7 @@ Loan and credit facility records with multi-currency support and special loan fe
 | `account_type` | text | NOT NULL | Loan type (term_loan, overdraft, mortgage, etc.) |
 | `original_amount` | decimal(15,2) | NOT NULL | Original loan amount |
 | `current_balance` | decimal(15,2) | NOT NULL | Current outstanding balance |
-| `currency` | text | NOT NULL, default `'ETB'` | Currency code (17 supported) |
+| `currency` | text | NOT NULL, default `'ETB'` | Currency code (18 supported) |
 | `interest_rate` | decimal(5,2) | nullable | Annual interest rate |
 | `disbursement_date` | text | nullable | Loan disbursement date |
 | `maturity_date` | text | nullable | Loan maturity date |
@@ -486,7 +486,58 @@ External API key management with SHA-256 hashing and permission levels.
 | `created_at` | timestamp | default `now()` | Key creation timestamp |
 | `revoked_at` | timestamp | nullable | Revocation timestamp |
 
-### 4.16 Enumeration Types
+### 4.16 Table: `exchange_rates`
+
+Exchange rate records for multi-currency conversion with cross-rate routing via USD.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | varchar | PK, default `gen_random_uuid()` | Unique rate identifier |
+| `base_currency` | text | NOT NULL | Base currency code |
+| `target_currency` | text | NOT NULL | Target currency code |
+| `rate` | decimal(15,6) | NOT NULL | Exchange rate value |
+| `effective_date` | text | NOT NULL | Date the rate is effective |
+| `source` | text | NOT NULL, default `'manual'` | Rate source (manual, api, etc.) |
+| `created_by` | varchar | nullable, FK → `users.id` | Admin who entered the rate |
+| `created_at` | timestamp | default `now()` | Record creation timestamp |
+
+### 4.17 Table: `retention_policies`
+
+Per-country data retention policy configuration for regulatory compliance.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | varchar | PK, default `gen_random_uuid()` | Unique policy identifier |
+| `country` | text | NOT NULL | Country name |
+| `entity_type` | text | NOT NULL | Entity type subject to retention |
+| `retention_years` | integer | NOT NULL | Number of years to retain data |
+| `archive_after_years` | integer | nullable | Years after which to archive |
+| `description` | text | nullable | Policy description |
+| `is_active` | boolean | default `true` | Whether the policy is active |
+| `created_at` | timestamp | default `now()` | Record creation timestamp |
+| `updated_at` | timestamp | default `now()` | Last update timestamp |
+
+### 4.18 Table: `api_configurations`
+
+Centralized external API configuration management per country.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | varchar | PK, default `gen_random_uuid()` | Unique configuration identifier |
+| `name` | text | NOT NULL | API configuration name |
+| `category` | text | NOT NULL | API category (weather, judicial, payment_gateway, exchange_rate) |
+| `base_url` | text | NOT NULL | API base URL |
+| `api_key_header_name` | text | default `'X-API-Key'` | Header name for API key authentication |
+| `auth_type` | text | NOT NULL, default `'none'` | Authentication type (none, api_key, bearer, basic) |
+| `country` | text | nullable | Country this configuration applies to |
+| `is_active` | boolean | default `true` | Whether the configuration is active |
+| `description` | text | nullable | Configuration description |
+| `last_tested_at` | timestamp | nullable | Last connection test timestamp |
+| `last_test_status` | text | nullable | Result of last connection test |
+| `created_at` | timestamp | default `now()` | Record creation timestamp |
+| `updated_at` | timestamp | default `now()` | Last update timestamp |
+
+### 4.19 Enumeration Types
 
 | Enum Name | Values |
 |-----------|--------|
@@ -536,6 +587,10 @@ credit_accounts ────┐
 institutions ───────┐
   │                 │
   └─→ api_keys.institution_id
+
+users ──────────────┐
+  │                 │
+  └─→ exchange_rates.created_by
 ```
 
 ---
@@ -742,6 +797,36 @@ institutions ───────┐
   "timestamp": "2026-02-28T00:00:00.000Z"
 }
 ```
+
+### 5.23 Exchange Rate Endpoints (Admin Only)
+
+| Method | Path | Description | Notes |
+|--------|------|-------------|-------|
+| `GET` | `/api/exchange-rates` | List all exchange rates | Returns all rate records |
+| `POST` | `/api/exchange-rates` | Create exchange rate | Body: InsertExchangeRate schema |
+| `PATCH` | `/api/exchange-rates/:id` | Update exchange rate | Partial rate fields |
+| `DELETE` | `/api/exchange-rates/:id` | Delete exchange rate | Hard delete |
+| `POST` | `/api/exchange-rates/convert` | Convert between currencies | Body: `{ from, to, amount }`; uses cross-rate via USD routing |
+
+### 5.24 Retention Policy Endpoints (Admin Only)
+
+| Method | Path | Description | Notes |
+|--------|------|-------------|-------|
+| `GET` | `/api/retention-policies` | List all retention policies | Returns per-country policies |
+| `POST` | `/api/retention-policies` | Create retention policy | Body: InsertRetentionPolicy schema |
+| `PATCH` | `/api/retention-policies/:id` | Update retention policy | Partial policy fields |
+| `DELETE` | `/api/retention-policies/:id` | Delete retention policy | Hard delete |
+| `POST` | `/api/retention-policies/enforce` | Trigger retention enforcement | Manually triggers the retention enforcement engine; returns audit-logged results |
+
+### 5.25 API Configuration Endpoints (Admin Only)
+
+| Method | Path | Description | Notes |
+|--------|------|-------------|-------|
+| `GET` | `/api/api-configurations` | List all API configurations | Returns per-country API configs |
+| `POST` | `/api/api-configurations` | Create API configuration | Body: InsertApiConfiguration schema |
+| `PATCH` | `/api/api-configurations/:id` | Update API configuration | Partial config fields |
+| `DELETE` | `/api/api-configurations/:id` | Delete API configuration | Hard delete |
+| `POST` | `/api/api-configurations/:id/test` | Test API connection | Tests connectivity to configured endpoint; SSRF protection enforced |
 
 ---
 
@@ -1326,7 +1411,7 @@ Error conditions are logged via `console.error()` for:
 - **Schema:** `mfaSecret` (varchar, nullable) and `mfaEnabled` (boolean, default false) columns on `users` table
 - **Endpoints:** `POST /api/auth/mfa/setup`, `POST /api/auth/mfa/verify`, `POST /api/auth/mfa/disable`, `POST /api/auth/mfa/login`
 - **Frontend:** `mfa-setup.tsx` component with QR code URI display and verification input
-- **i18n:** Full EN/FR translations under `mfa.*` and `login.mfa*` keys
+- **i18n:** Full EN/FR/PT translations under `mfa.*` and `login.mfa*` keys
 
 **Flow:**
 1. User enables MFA via setup dialog → server generates TOTP secret → client shows `otpauth://` URI
@@ -1352,7 +1437,7 @@ Error conditions are logged via `console.error()` for:
 - **Component:** `client/src/components/dispute-chatbot.tsx`
 - **Integration:** Embedded in the helpdesk page (`helpdesk.tsx`)
 - **Flow Steps:** Issue type selection → Borrower search → Account selection → Description entry → Confirmation → Auto-submit
-- **i18n:** Full EN/FR translations under `chatbot.*` keys (askBorrower, searching, confirmSummary, cancelled, startNew)
+- **i18n:** Full EN/FR/PT translations under `chatbot.*` keys (askBorrower, searching, confirmSummary, cancelled, startNew)
 - **Dispute Types:** Uses `disputes.types.*` i18n keys for localized type names
 
 ### 13.4 OAuth 2.1 Bearer Token Authentication (ENT-04)
@@ -1400,6 +1485,66 @@ Error conditions are logged via `console.error()` for:
 - **Endpoint:** `GET /api/audit/verify-integrity` — returns `{ valid, totalEntries, checkedEntries, brokenAt }`
 - **Frontend:** Integrity badge (`data-testid="badge-integrity-status"`) and verify button (`data-testid="button-verify-integrity"`) on audit trail page
 - **i18n:** EN/FR translations under `audit.integrityValid`, `audit.integrityBroken`, `audit.verify`, `audit.hashChain`
+
+### 13.8 Exchange Rate Management (ENT-08)
+
+**Purpose:** Provides 18-currency support with cross-rate conversion via USD routing, admin CRUD operations, and a currency converter widget.
+
+**Architecture:**
+- **Schema:** `exchange_rates` table with `base_currency`, `target_currency`, `rate` (decimal 15,6), `effective_date`, `source`, `created_by`
+- **Cross-Rate Routing:** When a direct rate is unavailable, the system converts through USD as an intermediary (e.g., GHS → USD → ETB)
+- **Endpoints:** `GET /api/exchange-rates`, `POST /api/exchange-rates`, `PATCH /api/exchange-rates/:id`, `DELETE /api/exchange-rates/:id`, `POST /api/exchange-rates/convert`
+- **Frontend:** `exchange-rates.tsx` page with admin CRUD interface and currency converter widget supporting all 18 pan-African currencies
+- **Currencies:** GHS, ETB, UGX, LRD, NGN, KES, ZAR, EGP, MAD, TZS, RWF, XOF, XAF, MZN, AOA, BWP, ZMW, USD
+
+### 13.9 API Administration Module (ENT-09)
+
+**Purpose:** Centralized configuration management for external APIs (weather, judicial, payment gateway, exchange rate) per country with connection testing and SSRF protection.
+
+**Architecture:**
+- **Schema:** `api_configurations` table with `name`, `category`, `base_url`, `api_key_header_name`, `auth_type`, `country`, `is_active`, `last_tested_at`, `last_test_status`
+- **Categories:** weather, judicial, payment_gateway, exchange_rate
+- **Auth Types:** none, api_key, bearer, basic
+- **Endpoints:** `GET /api/api-configurations`, `POST /api/api-configurations`, `PATCH /api/api-configurations/:id`, `DELETE /api/api-configurations/:id`, `POST /api/api-configurations/:id/test`
+- **SSRF Protection:** Connection testing validates URLs against internal/private network ranges before making outbound requests
+- **Frontend:** `api-admin.tsx` page with per-country API configuration management and connection test interface
+
+### 13.10 Retention Enforcement Engine (ENT-10)
+
+**Purpose:** Automated and manual data retention enforcement with per-country policies, audit-logged results, and parameterized SQL for safe execution.
+
+**Architecture:**
+- **Schema:** `retention_policies` table with `country`, `entity_type`, `retention_years`, `archive_after_years`, `is_active`
+- **Scheduler:** 24-hour interval automated enforcement via `server/retention-enforcement.ts`
+- **Manual Trigger:** `POST /api/retention-policies/enforce` endpoint for on-demand execution
+- **Per-Country Policies:**
+  - Ghana: 10-year retention
+  - Liberia: 7-year retention
+  - Ethiopia: 7-year retention
+  - Uganda: 7-year retention
+- **Endpoints:** `GET /api/retention-policies`, `POST /api/retention-policies`, `PATCH /api/retention-policies/:id`, `DELETE /api/retention-policies/:id`, `POST /api/retention-policies/enforce`
+- **Security:** All database queries use parameterized SQL to prevent injection; enforcement results are audit-logged
+- **Frontend:** `retention-policies.tsx` page with policy CRUD and manual enforcement trigger
+
+### 13.11 Cross-Border Entity Resolution (ENT-11)
+
+**Purpose:** Enhanced cross-border borrower identification using passport numbers, expanded relationship types, and fuzzy matching across multiple identity fields.
+
+**Architecture:**
+- **Passport Field:** `passport_number` (text, nullable) column on `borrowers` table for cross-jurisdictional identification
+- **Relationship Types:** 7 types supported — `spouse`, `guarantor`, `director`, `shareholder`, `beneficial_owner`, `subsidiary`, `parent_company`
+- **Fuzzy Matching:** PostgreSQL `pg_trgm` trigram similarity extended to match on passport number, TIN, and name fields
+- **Endpoint:** `GET /api/borrowers/fuzzy-match?name=<query>` — returns potential duplicates with similarity scores across all identity fields
+
+### 13.12 Portuguese Language Support (ENT-12)
+
+**Purpose:** Complete Portuguese (pt) localization for all system interfaces, extending the existing English/French translations.
+
+**Architecture:**
+- **Translation File:** `client/src/lib/i18n-pt.ts` — complete PT translation resource covering all UI strings
+- **Integration:** Registered as `pt` language resource in `client/src/lib/i18n.ts` i18next configuration
+- **Language Switcher:** Manual language selector available on the login page and main application header (`client/src/components/language-switcher.tsx`)
+- **Coverage:** All navigation, forms, error messages, dashboard labels, and feature-specific keys (MFA, chatbot, batch upload, disputes, etc.)
 
 ---
 

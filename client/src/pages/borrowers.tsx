@@ -61,6 +61,8 @@ export default function BorrowersPage() {
       if (data.companyName) params.set("companyName", data.companyName);
     }
     if (data.nationalId) params.set("nationalId", data.nationalId);
+    if (data.passportNumber) params.set("passportNumber", data.passportNumber);
+    if (data.tinNumber) params.set("tinNumber", data.tinNumber);
     if (params.toString().length === 0) { setFuzzyMatches([]); return; }
     setFuzzyChecking(true);
     try {
@@ -75,12 +77,14 @@ export default function BorrowersPage() {
   useEffect(() => {
     if (!dialogOpen) return;
     const hasData = formData.nationalId.length >= 3 ||
+      (formData.passportNumber || "").length >= 3 ||
+      (formData.tinNumber || "").length >= 3 ||
       (formData.type === "individual" && (formData.firstName.length >= 2 || formData.lastName.length >= 2)) ||
       (formData.type === "corporate" && (formData.companyName || "").length >= 2);
     if (!hasData) { setFuzzyMatches([]); return; }
     const timer = setTimeout(() => checkFuzzyMatch(formData), 500);
     return () => clearTimeout(timer);
-  }, [formData.firstName, formData.lastName, formData.nationalId, formData.companyName, formData.type, dialogOpen, checkFuzzyMatch]);
+  }, [formData.firstName, formData.lastName, formData.nationalId, formData.companyName, formData.passportNumber, formData.tinNumber, formData.type, dialogOpen, checkFuzzyMatch]);
 
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {

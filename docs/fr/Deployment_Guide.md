@@ -87,7 +87,7 @@ L'application utilise Drizzle ORM pour la gestion du schéma. Au premier démarr
 
 1. Connexion à la base de données via `DATABASE_URL`
 2. Activation de l'extension `pg_trgm` pour la correspondance floue
-3. Déploiement du schéma via Drizzle (15 tables)
+3. Déploiement du schéma via Drizzle (18 tables)
 4. Insertion des données initiales (utilisateurs, emprunteurs, comptes de crédit, etc.)
 
 Pour déployer manuellement le schéma :
@@ -525,7 +525,29 @@ Les paquets supplémentaires suivants ont été ajoutés pour les améliorations
 
 ---
 
-## 16. Informations de Version
+## 16. Fonctionnalités et Capacités Clés
+
+Le Système de Registre de Crédit comprend les modules et capacités suivants :
+
+| Fonctionnalité | Description |
+|----------------|-------------|
+| Traitement Multi-Devises | Prise en charge de 18 devises à travers les juridictions |
+| Internationalisation (i18n) | Trois langues prises en charge : Anglais (EN), Français (FR) et Portugais (PT) |
+| Sélecteur de Langue sur la Page de Connexion | Les utilisateurs peuvent sélectionner leur langue préférée directement depuis l'écran de connexion |
+| Gestion des Taux de Change | Module de gestion et de mise à jour des taux de change des devises prises en charge |
+| Administration API | Interface d'administration pour la gestion des clés API, la surveillance de l'utilisation et la configuration de l'accès API externe |
+| Politiques de Rétention des Données | Politiques de rétention configurables avec un moteur d'application automatisé pour la conformité réglementaire |
+| Authentification AMF | Authentification multi-facteurs utilisant TOTP pour les comptes administrateurs et régulateurs (ENT-01) |
+| Correspondance Floue des Entités | Recherche d'emprunteurs basée sur les trigrammes utilisant pg_trgm (ENT-02) |
+| Chatbot de Litiges | Chatbot interactif pour le dépôt guidé de litiges (ENT-03) |
+| API Externe OAuth 2.1 | API REST sécurisée par JWT pour les intégrations tierces (ENT-04) |
+| Optimisation Faible Bande Passante | Compression gzip et découpage de code pour les réseaux contraints (ENT-05) |
+| Téléversement par Lots (XBRL/XML) | Ingestion de données en masse via des formats de fichiers structurés (ENT-06) |
+| Piste d'Audit Inviolable | Journaux d'audit chaînés par hachage avec vérification d'intégrité (ENT-07) |
+
+---
+
+## 17. Informations de Version
 
 | Composant | Version |
 |-----------|---------|

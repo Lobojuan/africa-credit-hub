@@ -36,10 +36,13 @@
 22. [Dispute Chatbot](#22-dispute-chatbot)
 23. [XBRL Upload](#23-xbrl-upload)
 24. [Audit Log Integrity Verification](#24-audit-log-integrity-verification)
-25. [Appendix A: Seed Credentials](#appendix-a-seed-credentials)
-26. [Appendix B: Role Access Matrix](#appendix-b-role-access-matrix)
-27. [Appendix C: Supported Currencies](#appendix-c-supported-currencies)
-28. [Appendix D: Glossary of Terms](#appendix-d-glossary-of-terms)
+25. [Exchange Rate Management](#25-exchange-rate-management)
+26. [API Administration](#26-api-administration)
+27. [Data Retention Policies](#27-data-retention-policies)
+28. [Appendix A: Seed Credentials](#appendix-a-seed-credentials)
+29. [Appendix B: Role Access Matrix](#appendix-b-role-access-matrix)
+30. [Appendix C: Supported Currencies](#appendix-c-supported-currencies)
+31. [Appendix D: Glossary of Terms](#appendix-d-glossary-of-terms)
 
 ---
 
@@ -60,12 +63,13 @@ The system supports deployment across multiple African jurisdictions:
 
 ### 1.3 Supported Languages
 
-The system supports two languages:
+The system supports three languages:
 
 - **English (EN)** — Default language
 - **French (FR)** — Full French translation available
+- **Portuguese (PT)** — Full Portuguese translation available
 
-Users can switch between languages at any time using the language switcher in the application header.
+Users can switch between languages at any time using the language switcher available on the login page and in the application header.
 
 ---
 
@@ -77,10 +81,11 @@ Open a modern web browser (Chrome, Firefox, Safari, or Edge) and navigate to the
 
 ### 2.2 Logging In
 
-1. On the login page, enter your **Username** in the username field.
-2. Enter your **Password** in the password field.
-3. Click the **Sign In** button.
-4. Upon successful authentication, you will be redirected to the Dashboard.
+1. On the login page, select your **preferred language** (EN/FR/PT) using the language switcher if desired.
+2. Enter your **Username** in the username field.
+3. Enter your **Password** in the password field.
+4. Click the **Sign In** button.
+5. Upon successful authentication, you will be redirected to the Dashboard.
 
 **Important Notes:**
 - Accounts are locked for **15 minutes** after **3 consecutive failed login attempts**.
@@ -106,11 +111,11 @@ To change your password:
 
 You can also change your password at any time by clicking the password change option in the sidebar.
 
-### 2.4 Language Switching (EN/FR)
+### 2.4 Language Switching (EN/FR/PT)
 
 To switch the interface language:
-1. Locate the language switcher button in the top header bar (shows "EN" or "FR").
-2. Click the button to toggle between English and French.
+1. Locate the language switcher button in the top header bar or on the login page (shows "EN", "FR", or "PT").
+2. Click the button to cycle between English, French, and Portuguese.
 3. The entire interface will update immediately to the selected language.
 
 ### 2.5 Theme Toggle (Light/Dark)
@@ -143,6 +148,9 @@ The sidebar provides access to all system modules, organized into three sections
 - User Management (Admin only)
 - Institutions (Admin only)
 - API Keys (Admin only)
+- Exchange Rates (Admin only)
+- API Administration (Admin only)
+- Retention Policies (Admin/Regulator)
 
 The sidebar can be collapsed by clicking the sidebar toggle button in the header. In collapsed mode, only icons are visible. On mobile devices, the sidebar opens as a slide-out panel.
 
@@ -272,7 +280,7 @@ A Politically Exposed Person (PEP) flag indicates that a borrower holds a promin
 
 ### 4.6 Related Party Linking
 
-Borrowers can be linked to related parties (e.g., guarantors, directors, family members):
+Borrowers can be linked to related parties with the following relationship types: spouse, guarantor, director, shareholder, beneficial_owner, subsidiary, and parent_company:
 
 1. On the borrower detail page, view the **Related Parties** section.
 2. Related borrowers are displayed with their relationship type.
@@ -311,7 +319,7 @@ The Credit Accounts module manages loan and credit facilities associated with bo
    - **Account Type** — Select from: Personal Loan, Mortgage, Vehicle Loan, Business Loan, Corporate Loan, Overdraft, Credit Card, Microfinance
    - **Original Amount** — Original loan/facility amount
    - **Current Balance** — Current outstanding balance
-   - **Currency** — Select from 17 supported currencies
+   - **Currency** — Select from 18 supported currencies
    - **Interest Rate** — Annual interest rate percentage
    - **Status** — Current, Delinquent, Default, Closed, Restructured
    - **Disbursement Date** — When the loan was disbursed
@@ -337,7 +345,7 @@ The Credit Accounts module manages loan and credit facilities associated with bo
 
 ### 5.3 Multi-Currency Support
 
-The system supports 17 currencies across African and international markets. When creating or viewing credit accounts:
+The system supports 18 currencies across African and international markets. When creating or viewing credit accounts:
 - Select the appropriate currency from the dropdown.
 - Amounts are displayed with proper formatting for the selected currency.
 - See Appendix C for the complete list of supported currencies.
@@ -1080,7 +1088,7 @@ A: Navigate to a borrower's detail page and click "Generate Credit Report", or u
 A: Yes. Navigate to Reports and use the CSV Export feature to download portfolio or borrower data.
 
 ### Q: How do I switch languages?
-A: Click the language toggle button (EN/FR) in the top header bar. The interface will switch immediately.
+A: Click the language toggle button (EN/FR/PT) in the top header bar or on the login page. The interface will switch immediately.
 
 ### Q: How do I switch between light and dark mode?
 A: Click the theme toggle icon (sun/moon) in the header bar.
@@ -1113,7 +1121,7 @@ A: Users with the Admin or Regulator role can approve or reject pending requests
 A: Navigate to a borrower's detail page, find the Court Judgments section, and click "Add Judgment." Only Admin and Regulator users can create court judgments.
 
 ### Q: What currencies does the system support?
-A: The system supports 17 currencies. See Appendix C for the complete list.
+A: The system supports 18 currencies. See Appendix C for the complete list.
 
 ---
 
@@ -1250,6 +1258,155 @@ If any entry is modified, deleted, or inserted out of order, the hash chain brea
 
 ---
 
+## 25. Exchange Rate Management
+
+The Exchange Rate Management module allows administrators to configure and manage currency exchange rates used throughout the system.
+
+### 25.1 Viewing Exchange Rates
+
+1. Navigate to **Exchange Rates** from the Administration section in the sidebar (Admin access required).
+2. The page displays a table of all configured exchange rates, including:
+   - **Base Currency** — The source currency
+   - **Target Currency** — The destination currency
+   - **Rate** — The current exchange rate
+   - **Effective Date** — When the rate became effective
+3. Use the search or filter controls to locate specific currency pairs.
+
+### 25.2 Adding a New Exchange Rate
+
+1. Click the **Add Rate** button at the top of the Exchange Rates page.
+2. Fill in the required fields:
+   - **Base Currency** — Select the source currency from the dropdown
+   - **Target Currency** — Select the destination currency from the dropdown
+   - **Rate** — Enter the exchange rate value
+3. Click **Save** to create the exchange rate record.
+
+### 25.3 Editing an Exchange Rate
+
+1. Locate the exchange rate you wish to update in the table.
+2. Click the **Edit** button (pencil icon) on the corresponding row.
+3. Modify the rate value as needed.
+4. Click **Save** to apply the changes.
+
+### 25.4 Deleting an Exchange Rate
+
+1. Locate the exchange rate you wish to remove in the table.
+2. Click the **Delete** button (trash icon) on the corresponding row.
+3. Confirm the deletion when prompted.
+4. The exchange rate record will be permanently removed.
+
+### 25.5 Currency Converter Widget
+
+The Exchange Rates page includes a built-in currency converter widget:
+
+1. In the converter section, select the **From** currency.
+2. Select the **To** currency.
+3. Enter the **Amount** you wish to convert.
+4. The converted amount is displayed automatically based on the configured exchange rates.
+5. If no exchange rate exists for the selected currency pair, a message will indicate that the rate is unavailable.
+
+---
+
+## 26. API Administration
+
+The API Administration module allows administrators to configure and manage external API connections used by the system for integrations with third-party services.
+
+### 26.1 Accessing API Administration
+
+1. Navigate to **API Administration** from the Administration section in the sidebar (Admin access required).
+2. The page displays all configured API connections organized by category.
+
+### 26.2 API Categories
+
+External APIs are organized into the following categories:
+
+- **Weather** — Weather data services for regional information
+- **Judicial** — Court and legal records lookup services
+- **Payment Gateway** — Payment processing integrations
+- **Other** — Additional external service integrations
+
+### 26.3 Adding a New API Connection
+
+1. Click the **Add API** button.
+2. Fill in the required fields:
+   - **Name** — A descriptive name for the API connection
+   - **Category** — Select the API category (Weather, Judicial, Payment Gateway, Other)
+   - **Base URL** — The root URL of the external API
+   - **API Key** — The authentication key for the external service (if required)
+   - **Description** — A brief description of the API's purpose
+3. Click **Save** to create the API connection.
+
+### 26.4 Editing an API Connection
+
+1. Locate the API connection in the list.
+2. Click the **Edit** button to modify its configuration.
+3. Update the fields as needed (name, URL, API key, category, description).
+4. Click **Save** to apply changes.
+
+### 26.5 Testing API Connections
+
+1. Locate the API connection you wish to test.
+2. Click the **Test Connection** button.
+3. The system will attempt to reach the configured URL and verify connectivity.
+4. A success or failure message will be displayed indicating whether the API is reachable.
+
+### 26.6 Managing API Categories
+
+API categories help organize connections by their functional purpose. When adding or editing an API connection, select the appropriate category to keep configurations organized and easily discoverable by other administrators.
+
+---
+
+## 27. Data Retention Policies
+
+The Data Retention Policies module allows administrators and regulators to define how long credit data is retained per country, in compliance with jurisdictional regulations.
+
+### 27.1 Viewing Retention Policies
+
+1. Navigate to **Retention Policies** from the Administration section in the sidebar (Admin or Regulator access required).
+2. The page displays a table of all configured retention policies, including:
+   - **Country** — The jurisdiction the policy applies to
+   - **Archive Period (Months)** — How long data is kept in an archived state before further action
+   - **Expunge Period (Months)** — How long after archiving before data is permanently deleted
+   - **Status** — Whether the policy is active or inactive
+   - **Created/Updated dates**
+
+### 27.2 Understanding Archive vs. Expunge Periods
+
+- **Archive Period**: After this number of months, credit records for the specified country are moved to an archived state. Archived records are no longer included in active credit searches but can still be retrieved for regulatory or audit purposes.
+- **Expunge Period**: After this additional number of months following archival, data is permanently deleted (expunged) from the system. Once expunged, data cannot be recovered.
+
+For example, if a country has an archive period of 60 months and an expunge period of 24 months, records will be archived after 5 years and permanently deleted 2 years after archival (7 years total).
+
+### 27.3 Adding a Retention Policy
+
+1. Click the **Add Policy** button at the top of the Retention Policies page.
+2. Fill in the required fields:
+   - **Country** — Enter the country name or code
+   - **Archive Period (Months)** — Number of months before data is archived
+   - **Expunge Period (Months)** — Number of months after archiving before data is expunged
+3. Click **Save** to create the retention policy.
+
+### 27.4 Editing a Retention Policy
+
+1. Locate the retention policy in the table.
+2. Click the **Edit** button on the corresponding row.
+3. Modify the archive period, expunge period, or other settings as needed.
+4. Click **Save** to apply the changes.
+
+### 27.5 Running Retention Enforcement
+
+The **Run Enforcement** button triggers the retention enforcement process:
+
+1. Click the **Run Enforcement** button at the top of the Retention Policies page.
+2. The system will evaluate all active retention policies against current data.
+3. Records that have exceeded their archive period will be moved to archived status.
+4. Records that have exceeded their expunge period will be permanently deleted.
+5. A confirmation message will display the results of the enforcement run, including the number of records archived and expunged.
+
+**Important:** Running enforcement is an irreversible action for expunged records. Ensure retention periods are correctly configured before running enforcement.
+
+---
+
 ## Appendix A: Seed Credentials
 
 The following credentials are pre-configured in the system for testing and demonstration purposes:
@@ -1294,7 +1451,7 @@ The following credentials are pre-configured in the system for testing and demon
 
 ## Appendix C: Supported Currencies
 
-The system supports the following 17 currencies:
+The system supports the following 18 currencies:
 
 | Code | Currency Name | Symbol | Region |
 |------|--------------|--------|--------|
@@ -1304,6 +1461,7 @@ The system supports the following 17 currencies:
 | TZS | Tanzanian Shilling | TSh | East Africa |
 | RWF | Rwandan Franc | FRw | East Africa |
 | GHS | Ghanaian Cedi | ₵ | West Africa |
+| LRD | Liberian Dollar | L$ | West Africa |
 | NGN | Nigerian Naira | ₦ | West Africa |
 | XOF | West African CFA Franc | CFA | West Africa |
 | XAF | Central African CFA Franc | FCFA | Central Africa |

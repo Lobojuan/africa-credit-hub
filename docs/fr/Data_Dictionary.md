@@ -10,7 +10,7 @@
 
 ## 1. Aperçu
 
-Ce document fournit une documentation au niveau des champs pour les 15 tables de la base de données du Système de Registre de Crédit. La base de données utilise PostgreSQL avec Drizzle ORM pour la gestion du schéma.
+Ce document fournit une documentation au niveau des champs pour les 18 tables de la base de données du Système de Registre de Crédit. La base de données utilise PostgreSQL avec Drizzle ORM pour la gestion du schéma.
 
 **Améliorations Entreprise (v1.1) — Résumé de l'Impact sur le Schéma :**
 
@@ -180,16 +180,18 @@ Ce document fournit une documentation au niveau des champs pour les 15 tables de
 | phone | text | NULLABLE | Numéro de téléphone | `+251911234567` |
 | email | text | NULLABLE | Adresse e-mail | `abebe@example.com` |
 | address | text | NULLABLE | Adresse postale | `Bole Road, Addis Ababa` |
+| country | text | NULLABLE | Pays de juridiction | `Ethiopia` |
 | city | text | NULLABLE | Ville | `Addis Ababa` |
 | region | text | NULLABLE | Région/État | `Addis Ababa` |
 | employer_name | text | NULLABLE | Employeur actuel | `Ethiopian Airlines` |
 | occupation | text | NULLABLE | Profession/Titre du poste | `Engineer` |
 | business_reg_number | text | NULLABLE | Numéro d'enregistrement commercial (corporatif) | `BR-2024-001` |
 | sector | text | NULLABLE | Secteur d'activité (corporatif) | `Technology` |
+| passport_number | text | NULLABLE | Numéro de passeport pour la résolution d'entités transfrontalières | `EP1234567` |
 | is_pep | boolean | DEFAULT false | Indicateur de Personne Politiquement Exposée | `false` |
 | pep_details | text | NULLABLE | Détails/description PPE | `Former government minister` |
 | related_borrower_id | varchar | NULLABLE | ID de l'emprunteur lié/associé | `c3d4e5f6-a7b8-9012-cdef-345678901234` |
-| relationship_type | text | NULLABLE | Relation avec l'emprunteur lié | `spouse` |
+| relationship_type | text | NULLABLE | Relation avec l'emprunteur lié (spouse, guarantor, director, shareholder, beneficial_owner, subsidiary, parent_company) | `spouse` |
 | education_level | text | NULLABLE | Niveau d'éducation le plus élevé | `bachelors` |
 | education_institution | text | NULLABLE | Nom de l'établissement d'enseignement | `Addis Ababa University` |
 | employment_history | text | NULLABLE | Historique professionnel | `5 years at Ethiopian Airlines` |
@@ -458,6 +460,63 @@ Ce document fournit une documentation au niveau des champs pour les 15 tables de
 
 ---
 
+### 3.16 exchange_rates
+
+**Description :** Enregistrements des taux de change pour le support multi-devises entre juridictions.
+
+| Nom du Champ | Type de Données | Contraintes | Description | Valeur Exemple |
+|--------------|-----------------|-------------|-------------|----------------|
+| id | varchar | PRIMARY KEY, DEFAULT gen_random_uuid() | Identifiant unique | `e7f8a9b0-c1d2-3456-0123-789012345678` |
+| base_currency | text | NOT NULL | Code de la devise de base (ex. USD) | `USD` |
+| target_currency | text | NOT NULL | Code de la devise cible (ex. ETB) | `ETB` |
+| rate | decimal(15,6) | NOT NULL | Valeur du taux de change | `56.123456` |
+| effective_date | text | NULLABLE | Date d'entrée en vigueur du taux | `2026-03-01` |
+| source | text | NULLABLE | Source du taux (manual, api) | `manual` |
+| created_by | varchar | NULLABLE, FK -> users.id | Utilisateur ayant créé le taux | `a1b2c3d4-e5f6-7890-abcd-ef1234567890` |
+| created_at | timestamp | DEFAULT NOW() | Horodatage de création | `2026-02-28T09:30:00Z` |
+
+---
+
+### 3.17 retention_policies
+
+**Description :** Configuration des politiques de rétention des données par juridiction et type d'entité.
+
+| Nom du Champ | Type de Données | Contraintes | Description | Valeur Exemple |
+|--------------|-----------------|-------------|-------------|----------------|
+| id | varchar | PRIMARY KEY, DEFAULT gen_random_uuid() | Identifiant unique | `f8a9b0c1-d2e3-4567-1234-890123456789` |
+| country | text | NOT NULL | Juridiction (Ghana, Ethiopia, Uganda, Liberia) | `Ethiopia` |
+| entity_type | text | NOT NULL | Type : borrower, credit_account, audit_log, dispute, consent_record, court_judgment, payment_history | `borrower` |
+| retention_years | integer | NOT NULL | Années avant la suppression de l'enregistrement | `7` |
+| archive_after_years | integer | NULLABLE | Années avant l'archivage de l'enregistrement | `5` |
+| description | text | NULLABLE | Description de la politique | `Retain borrower records for 7 years per NBE regulation` |
+| is_active | boolean | DEFAULT true | Indique si la politique est active | `true` |
+| created_at | timestamp | DEFAULT NOW() | Horodatage de création | `2026-02-28T09:30:00Z` |
+| updated_at | timestamp | DEFAULT NOW() | Horodatage de la dernière mise à jour | `2026-02-28T10:00:00Z` |
+
+---
+
+### 3.18 api_configurations
+
+**Description :** Configuration d'intégration d'API externes pour les services météorologiques, judiciaires, de paiement et de taux de change.
+
+| Nom du Champ | Type de Données | Contraintes | Description | Valeur Exemple |
+|--------------|-----------------|-------------|-------------|----------------|
+| id | varchar | PRIMARY KEY, DEFAULT gen_random_uuid() | Identifiant unique | `a9b0c1d2-e3f4-5678-2345-901234567890` |
+| name | text | NOT NULL | Nom de la configuration | `Ethiopia Weather API` |
+| category | text | NOT NULL | Catégorie : weather, judicial, payment_gateway, exchange_rate, custom | `weather` |
+| base_url | text | NOT NULL | URL de base de l'API | `https://api.weather.example.com/v1` |
+| api_key_header_name | text | DEFAULT 'X-API-Key' | Nom de l'en-tête pour la clé API | `X-API-Key` |
+| auth_type | text | NOT NULL | Authentification : api_key, oauth2, bearer, basic, none | `api_key` |
+| country | text | NULLABLE | Pays cible ou "All" | `Ethiopia` |
+| is_active | boolean | DEFAULT true | Indique si la configuration est active | `true` |
+| description | text | NULLABLE | Description de la configuration | `Weather data for agricultural loan risk assessment` |
+| last_tested_at | timestamp | NULLABLE | Horodatage du dernier test de connexion | `2026-02-28T14:00:00Z` |
+| last_test_status | text | NULLABLE | Résultat du dernier test (reachable, unreachable) | `reachable` |
+| created_at | timestamp | DEFAULT NOW() | Horodatage de création | `2026-02-28T09:30:00Z` |
+| updated_at | timestamp | DEFAULT NOW() | Horodatage de la dernière mise à jour | `2026-02-28T10:00:00Z` |
+
+---
+
 ## 4. Diagramme de Relations (Basé sur le Texte)
 
 ```
@@ -472,6 +531,7 @@ users
   +--< credit_report_logs (requested_by -> users.id)
   +--< api_keys (created_by -> users.id)
   +--< institutions (approved_by -> users.id)
+  +--< exchange_rates (created_by -> users.id)
 
 borrowers
   |
@@ -542,3 +602,6 @@ institutions
 | billing_records | id (PK) | B-tree |
 | credit_report_logs | id (PK), borrower_id (FK), requested_by (FK), serial_number (UNIQUE) | B-tree |
 | api_keys | id (PK), institution_id (FK), created_by (FK) | B-tree |
+| exchange_rates | id (PK), created_by (FK) | B-tree |
+| retention_policies | id (PK) | B-tree |
+| api_configurations | id (PK) | B-tree |

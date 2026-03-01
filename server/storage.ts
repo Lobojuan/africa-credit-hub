@@ -56,7 +56,7 @@ export interface IStorage {
   getAuditLogs(): Promise<AuditLog[]>;
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
   verifyAuditIntegrity(): Promise<{ valid: boolean; totalChecked: number; brokenAt?: string }>;
-  fuzzyMatchBorrowers(params: { firstName?: string; lastName?: string; nationalId?: string; companyName?: string }): Promise<Array<any>>;
+  fuzzyMatchBorrowers(params: { firstName?: string; lastName?: string; nationalId?: string; companyName?: string; passportNumber?: string; tinNumber?: string }): Promise<Array<any>>;
 
   getPendingApprovals(): Promise<PendingApproval[]>;
   getPendingApproval(id: string): Promise<PendingApproval | undefined>;
@@ -306,7 +306,7 @@ export class DatabaseStorage implements IStorage {
     return { valid: true, totalChecked };
   }
 
-  async fuzzyMatchBorrowers(params: { firstName?: string; lastName?: string; nationalId?: string; companyName?: string }): Promise<Array<any>> {
+  async fuzzyMatchBorrowers(params: { firstName?: string; lastName?: string; nationalId?: string; companyName?: string; passportNumber?: string; tinNumber?: string }): Promise<Array<any>> {
     const conditions: any[] = [];
     if (params.firstName) {
       conditions.push(sql`similarity(${borrowers.firstName}, ${params.firstName}) > 0.2`);
@@ -324,6 +324,14 @@ export class DatabaseStorage implements IStorage {
       conditions.push(sql`similarity(COALESCE(${borrowers.companyName}, ''), ${params.companyName}) > 0.2`);
       conditions.push(ilike(borrowers.companyName, `%${params.companyName}%`));
     }
+    if (params.passportNumber) {
+      conditions.push(sql`similarity(COALESCE(${borrowers.passportNumber}, ''), ${params.passportNumber}) > 0.3`);
+      conditions.push(ilike(borrowers.passportNumber, `%${params.passportNumber}%`));
+    }
+    if (params.tinNumber) {
+      conditions.push(sql`similarity(COALESCE(${borrowers.tinNumber}, ''), ${params.tinNumber}) > 0.3`);
+      conditions.push(ilike(borrowers.tinNumber, `%${params.tinNumber}%`));
+    }
     if (conditions.length === 0) return [];
     const results = await db.select({
       id: borrowers.id,
@@ -332,20 +340,26 @@ export class DatabaseStorage implements IStorage {
       lastName: borrowers.lastName,
       companyName: borrowers.companyName,
       nationalId: borrowers.nationalId,
+      passportNumber: borrowers.passportNumber,
+      tinNumber: borrowers.tinNumber,
       phone: borrowers.phone,
       email: borrowers.email,
       similarity: sql<number>`GREATEST(
         ${params.firstName ? sql`similarity(COALESCE(${borrowers.firstName}, ''), ${params.firstName})` : sql`0`},
         ${params.lastName ? sql`similarity(COALESCE(${borrowers.lastName}, ''), ${params.lastName})` : sql`0`},
         ${params.nationalId ? sql`similarity(COALESCE(${borrowers.nationalId}, ''), ${params.nationalId})` : sql`0`},
-        ${params.companyName ? sql`similarity(COALESCE(${borrowers.companyName}, ''), ${params.companyName})` : sql`0`}
+        ${params.companyName ? sql`similarity(COALESCE(${borrowers.companyName}, ''), ${params.companyName})` : sql`0`},
+        ${params.passportNumber ? sql`similarity(COALESCE(${borrowers.passportNumber}, ''), ${params.passportNumber})` : sql`0`},
+        ${params.tinNumber ? sql`similarity(COALESCE(${borrowers.tinNumber}, ''), ${params.tinNumber})` : sql`0`}
       )`,
     }).from(borrowers).where(or(...conditions))
       .orderBy(sql`GREATEST(
         ${params.firstName ? sql`similarity(COALESCE(${borrowers.firstName}, ''), ${params.firstName})` : sql`0`},
         ${params.lastName ? sql`similarity(COALESCE(${borrowers.lastName}, ''), ${params.lastName})` : sql`0`},
         ${params.nationalId ? sql`similarity(COALESCE(${borrowers.nationalId}, ''), ${params.nationalId})` : sql`0`},
-        ${params.companyName ? sql`similarity(COALESCE(${borrowers.companyName}, ''), ${params.companyName})` : sql`0`}
+        ${params.companyName ? sql`similarity(COALESCE(${borrowers.companyName}, ''), ${params.companyName})` : sql`0`},
+        ${params.passportNumber ? sql`similarity(COALESCE(${borrowers.passportNumber}, ''), ${params.passportNumber})` : sql`0`},
+        ${params.tinNumber ? sql`similarity(COALESCE(${borrowers.tinNumber}, ''), ${params.tinNumber})` : sql`0`}
       ) DESC`).limit(20);
     return results;
   }

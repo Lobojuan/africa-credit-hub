@@ -32,7 +32,7 @@ The system employs a modern full-stack architecture:
 
 ## Enterprise Enhancements (v2.1)
 -   **TOTP MFA**: Users can enable two-factor authentication via authenticator apps; login flow supports MFA challenge step
--   **Fuzzy Entity Matching**: pg_trgm trigram similarity on borrower registration warns about potential duplicates
+-   **Fuzzy Entity Matching**: pg_trgm trigram similarity on borrower registration warns about potential duplicates; matches on firstName, lastName, nationalId, companyName, passportNumber, and tinNumber
 -   **Dispute Chatbot**: Full Credit Registry Assistant with 3 modes: dispute filing, FAQ browsing (15 categories, 50+ Q&A pairs), and keyword search — all in EN/FR
 -   **OAuth 2.1 Token Exchange**: External API supports client_credentials grant for Bearer token auth alongside X-API-Key
 -   **Low-Bandwidth Optimizations**: gzip compression middleware, React.lazy route code-splitting with Suspense
