@@ -23,7 +23,7 @@ The system employs a modern full-stack architecture:
     -   **Comprehensive Credit Management**: Includes borrower and credit account management with multi-currency support, collateral tracking, and arrears.
     -   **Credit Scoring & Reporting**: Algorithmic credit scoring (300-850) with detailed reason codes and printable credit reports with serial numbers.
     -   **Workflow & Approvals**: Implements a maker-checker workflow for data changes and a dispute management system with SLA tracking.
-    -   **Regulatory Compliance**: Features consent management, court judgment tracking, and robust audit trails with IP tracking.
+    -   **Regulatory Compliance**: Features consent management, court judgment tracking, robust audit trails with IP tracking, and a Regulatory Compliance Dashboard (`/regulatory-compliance`) with SRS traceability matrix (71 requirements), per-country regulatory data for all 54 African jurisdictions, regional bloc analysis, and gap analysis.
     -   **Institutional Management**: Supports self-registration and approval workflows for data providers, along with billing and fee management.
     -   **Reporting & Analytics**: Provides regulatory analytics (NPL ratios, portfolio breakdowns), CSV export capabilities, and bulk data upload functionality.
     -   **RBAC Sidebar**: Navigation items are filtered by user role — admin-only items (User Management, Institutions, API Keys) are hidden from lender/viewer roles; admin+regulator items (Pending Approvals, Audit Trail, Billing) are hidden from lenders/viewers. Backend enforces RBAC via `requireRole` middleware on all sensitive API routes.

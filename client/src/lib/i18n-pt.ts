@@ -21,6 +21,7 @@ const pt = {
     exchangeRates: "Taxas de Câmbio",
     apiAdmin: "Administração API",
     retentionPolicies: "Políticas de Retenção",
+    regulatoryCompliance: "Conformidade Regulatória",
     help: "Ajuda e Guia",
     documentation: "Documentação",
     brandTitle: "Registo de Crédito",
