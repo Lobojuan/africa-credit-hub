@@ -27,6 +27,8 @@ export default function CreditSearchPage() {
     return `/api/borrowers?${params.toString()}`;
   };
 
+  const hasActiveSearch = searchTerm.length > 0 || activeCountry.length > 0;
+
   const { data: results, isLoading } = useQuery<Borrower[]>({
     queryKey: ["/api/borrowers", searchTerm, activeCountry],
     queryFn: async () => {
@@ -34,7 +36,7 @@ export default function CreditSearchPage() {
       if (!res.ok) throw new Error("Search failed");
       return res.json();
     },
-    enabled: searchTerm.length > 0,
+    enabled: hasActiveSearch,
   });
 
   const handleSearch = (e: React.FormEvent) => {
@@ -90,11 +92,11 @@ export default function CreditSearchPage() {
         </div>
       </form>
 
-      {searchTerm && (
+      {hasActiveSearch && (
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm text-muted-foreground">
-              {isLoading ? t('search.searching') : `${results?.length || 0} ${t('search.resultsFor', { term: searchTerm })}`}
+              {isLoading ? t('search.searching') : `${results?.length || 0} ${searchTerm ? t('search.resultsFor', { term: searchTerm }) : t('search.resultsForCountry', { country: activeCountry })}`}
             </p>
           </div>
 
@@ -164,7 +166,7 @@ export default function CreditSearchPage() {
         </div>
       )}
 
-      {!searchTerm && (
+      {!hasActiveSearch && (
         <Card className="max-w-xl mx-auto">
           <CardContent className="p-8 text-center">
             <p className="text-sm text-muted-foreground">

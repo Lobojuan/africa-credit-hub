@@ -203,6 +203,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchBorrowers(query: string, country?: string): Promise<Borrower[]> {
+    const countryCondition = country ? eq(borrowers.country, country) : undefined;
+
+    if (!query) {
+      return db.select().from(borrowers)
+        .where(countryCondition)
+        .orderBy(desc(borrowers.createdAt)).limit(200);
+    }
+
     const searchPattern = `%${query}%`;
     const searchCondition = or(
       ilike(borrowers.firstName, searchPattern),
@@ -222,8 +230,8 @@ export class DatabaseStorage implements IStorage {
       ilike(borrowers.country, searchPattern),
       ilike(borrowers.passportNumber, searchPattern),
     );
-    const conditions = country
-      ? and(searchCondition, eq(borrowers.country, country))
+    const conditions = countryCondition
+      ? and(searchCondition, countryCondition)
       : searchCondition;
     return db.select().from(borrowers).where(conditions!).orderBy(desc(borrowers.createdAt)).limit(200);
   }

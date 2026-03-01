@@ -398,8 +398,8 @@ export async function registerRoutes(
     try {
       const search = req.query.search as string;
       const country = req.query.country as string;
-      if (search) {
-        const data = await storage.searchBorrowers(search, country || undefined);
+      if (search || country) {
+        const data = await storage.searchBorrowers(search || "", country || undefined);
         res.json(data);
       } else {
         const page = Math.max(1, parseInt(req.query.page as string) || 1);
