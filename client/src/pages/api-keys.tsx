@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
@@ -114,6 +114,7 @@ export default function ApiKeysPage() {
             <DialogContent className="max-w-lg">
               <DialogHeader>
                 <DialogTitle>{t("apiKeys.generateNewKey")}</DialogTitle>
+                <DialogDescription className="sr-only">{t("apiKeys.generateNewKey")}</DialogDescription>
               </DialogHeader>
               {generatedKey ? (
                 <div className="space-y-4">

@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
@@ -311,6 +311,7 @@ export default function ApiAdminPage() {
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingId ? t("apiAdmin.editConfig") : t("apiAdmin.addConfig")}</DialogTitle>
+            <DialogDescription className="sr-only">{editingId ? t("apiAdmin.editConfig") : t("apiAdmin.addConfig")}</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4" data-testid="form-api-config">
             <div>
@@ -416,10 +417,8 @@ export default function ApiAdminPage() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>{t("common.delete")}</DialogTitle>
+            <DialogDescription>{t("apiAdmin.deleteConfirm")}</DialogDescription>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            {t("apiAdmin.deleteConfirm")}
-          </p>
           <div className="flex items-center justify-end gap-2 pt-4">
             <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>
               {t("common.cancel")}
