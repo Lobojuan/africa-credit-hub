@@ -28,7 +28,7 @@ export default function ApiDocsPage() {
   const baseUrl = window.location.origin;
 
   return (
-    <div className="p-6 space-y-6 max-w-[1000px] mx-auto">
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-[1000px] mx-auto">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate("/api-keys")} data-testid="button-back">
           <ArrowLeft className="w-5 h-5" />

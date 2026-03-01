@@ -102,7 +102,7 @@ export default function BorrowersPage() {
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-[1400px] mx-auto">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -135,11 +135,11 @@ export default function BorrowersPage() {
               </div>
               {formData.type === "individual" ? (
                 <>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div><Label>{t("borrowers.firstName")}</Label><Input data-testid="input-first-name" value={formData.firstName} onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} required /></div>
                     <div><Label>{t("borrowers.lastName")}</Label><Input data-testid="input-last-name" value={formData.lastName} onChange={(e) => setFormData({ ...formData, lastName: e.target.value })} required /></div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div><Label>{t("borrowers.dateOfBirth")}</Label><Input data-testid="input-dob" type="date" value={formData.dateOfBirth} onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })} /></div>
                     <div>
                       <Label>{t("borrowers.gender")}</Label>
@@ -152,7 +152,7 @@ export default function BorrowersPage() {
                       </Select>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div><Label>{t("borrowers.employer")}</Label><Input data-testid="input-employer" value={formData.employerName} onChange={(e) => setFormData({ ...formData, employerName: e.target.value })} /></div>
                     <div><Label>{t("borrowers.occupation")}</Label><Input data-testid="input-occupation" value={formData.occupation} onChange={(e) => setFormData({ ...formData, occupation: e.target.value })} /></div>
                   </div>
@@ -183,12 +183,12 @@ export default function BorrowersPage() {
                   </div>
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><Label>{t("borrowers.phone")}</Label><Input data-testid="input-phone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} /></div>
                 <div><Label>{t("borrowers.email")}</Label><Input data-testid="input-email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} /></div>
               </div>
               <div><Label>{t("borrowers.address")}</Label><Input data-testid="input-address" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} /></div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><Label>{t("borrowers.city")}</Label><Input data-testid="input-city" value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} /></div>
                 <div><Label>{t("borrowers.region")}</Label><Input data-testid="input-region" value={formData.region} onChange={(e) => setFormData({ ...formData, region: e.target.value })} /></div>
               </div>
@@ -300,7 +300,7 @@ export default function BorrowersPage() {
       )}
 
       {!search && totalPages > 1 && (
-        <div className="flex items-center justify-between pt-2" data-testid="pagination-controls">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2" data-testid="pagination-controls">
           <p className="text-sm text-muted-foreground">
             {t("common.showing")} {((page - 1) * PAGE_SIZE) + 1}–{Math.min(page * PAGE_SIZE, totalBorrowers)} {t("common.of")} {totalBorrowers.toLocaleString()}
           </p>

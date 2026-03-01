@@ -32,7 +32,7 @@ The system employs a modern full-stack architecture:
 ## Enterprise Enhancements (v2.1)
 -   **TOTP MFA**: Users can enable two-factor authentication via authenticator apps; login flow supports MFA challenge step
 -   **Fuzzy Entity Matching**: pg_trgm trigram similarity on borrower registration warns about potential duplicates
--   **Dispute Chatbot**: Chat-guided assistant for filing disputes (multi-step: issue type → borrower search → account → description → submit)
+-   **Dispute Chatbot**: Full Credit Registry Assistant with 3 modes: dispute filing, FAQ browsing (15 categories, 50+ Q&A pairs), and keyword search — all in EN/FR
 -   **OAuth 2.1 Token Exchange**: External API supports client_credentials grant for Bearer token auth alongside X-API-Key
 -   **Low-Bandwidth Optimizations**: gzip compression middleware, React.lazy route code-splitting with Suspense
 -   **XBRL Upload**: Batch upload page supports XBRL/XML format tab with sample and parsing endpoint
@@ -44,3 +44,15 @@ The system employs a modern full-stack architecture:
 -   **Backend Libraries**: Express.js, bcryptjs, express-session, Drizzle ORM, compression, jsonwebtoken, otpauth
 -   **Internationalization**: `react-i18next`, `i18next`
 -   **Deployment**: Configured for autoscale environments with Node.js.
+
+## Mobile Responsiveness
+-   **Viewport**: `viewport-fit=cover` for safe-area support on iPhone notch devices
+-   **Page Padding**: All pages use `p-3 sm:p-6` for tighter mobile padding, relaxed on desktop
+-   **Form Grids**: All 2-column form grids use `grid-cols-1 sm:grid-cols-2` to stack on mobile
+-   **Data Tables**: All tables wrapped in `overflow-x-auto` for horizontal scrolling; reduced font on mobile
+-   **Sidebar**: Uses `Sheet` (drawer overlay) on screens under 768px; 18rem mobile width
+-   **Header**: Compact gaps on mobile; user name hidden below `md` breakpoint
+-   **Chatbot**: Full-width on mobile (`left-3 right-3`), fixed 400px on desktop; safe-area-inset-bottom support
+-   **Dialogs**: Capped at `calc(100vw - 1.5rem)` on mobile with `max-height: 90vh`
+-   **Touch**: Min 36px touch targets on touch devices via `pointer: coarse` media query
+-   **Pagination**: Stacks vertically on mobile (`flex-col sm:flex-row`)

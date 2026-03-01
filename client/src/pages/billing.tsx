@@ -93,7 +93,7 @@ export default function BillingPage() {
   const overdueAmount = billingRecords?.filter(r => r.status === "overdue").reduce((sum, r) => sum + parseFloat(r.amount), 0) ?? 0;
 
   return (
-    <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-[1400px] mx-auto">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -136,7 +136,7 @@ export default function BillingPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <Label>{t("billing.amount")}</Label>
                     <Input
@@ -171,7 +171,7 @@ export default function BillingPage() {
                     required
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <Label>{t("billing.periodStart")}</Label>
                     <Input
@@ -309,7 +309,7 @@ export default function BillingPage() {
                 <StatusBadge status={selectedRecord.status} />
               </div>
               <Separator />
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-muted-foreground">{t("billing.institutionName")}</p>
                   <p className="text-sm font-medium" data-testid="text-detail-institution">{selectedRecord.institutionName}</p>

@@ -96,7 +96,7 @@ export default function BorrowerDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="p-6 space-y-6 max-w-[1200px] mx-auto">
+      <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-[1200px] mx-auto">
         <Skeleton className="h-8 w-48" />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Skeleton className="h-64" />
@@ -121,7 +121,7 @@ export default function BorrowerDetailPage() {
   const isIndividual = borrower.type === "individual";
 
   return (
-    <div className="p-6 space-y-6 max-w-[1200px] mx-auto">
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-[1200px] mx-auto">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate("/borrowers")} data-testid="button-back">
           <ArrowLeft className="w-4 h-4" />

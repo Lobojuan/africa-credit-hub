@@ -152,7 +152,7 @@ export default function HelpdeskPage() {
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-[1400px] mx-auto">
       <div>
         <div className="flex items-center gap-2 mb-1">
           <div className="page-header-bar" />

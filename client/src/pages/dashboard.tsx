@@ -389,7 +389,7 @@ export default function Dashboard() {
   const DetailIcon = config?.icon;
 
   return (
-    <div className="p-6 lg:p-8 space-y-8 max-w-[1400px] mx-auto">
+    <div className="p-3 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 max-w-[1400px] mx-auto">
       <div className="flex items-end justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">

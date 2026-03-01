@@ -129,7 +129,7 @@ export default function UserManagementPage() {
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-[1400px] mx-auto">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -150,14 +150,14 @@ export default function UserManagementPage() {
               <DialogTitle>{t('users.addNewUser')}</DialogTitle>
             </DialogHeader>
             <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(formData); }} className="space-y-4" data-testid="form-add-user">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><Label>{t('users.username')}</Label><Input data-testid="input-username" value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} required /></div>
                 <div><Label>{t('users.password')}</Label><Input data-testid="input-password" type="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} required /></div>
               </div>
               <div><Label>{t('users.fullName')}</Label><Input data-testid="input-fullname" value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} required /></div>
               <div><Label>{t('users.email')}</Label><Input data-testid="input-email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required /></div>
               <div><Label>{t('users.institution')}</Label><Input data-testid="input-institution" value={formData.institution} onChange={(e) => setFormData({ ...formData, institution: e.target.value })} /></div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <Label>{t('users.role')}</Label>
                   <Select value={formData.role} onValueChange={(v) => setFormData({ ...formData, role: v })}>
@@ -208,7 +208,7 @@ export default function UserManagementPage() {
               <Label>{t('users.institution')}</Label>
               <Input data-testid="input-edit-institution" value={editFormData.institution} onChange={(e) => setEditFormData({ ...editFormData, institution: e.target.value })} />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label>{t('users.role')}</Label>
                 <Select value={editFormData.role} onValueChange={(v) => setEditFormData({ ...editFormData, role: v })}>

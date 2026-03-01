@@ -72,7 +72,7 @@ export default function ConsentManagementPage() {
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-[1400px] mx-auto">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -171,6 +171,7 @@ export default function ConsentManagementPage() {
               ))}
             </div>
           ) : records && records.length > 0 ? (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -233,6 +234,7 @@ export default function ConsentManagementPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           ) : (
             <div className="p-12 text-center">
               <ShieldCheck className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-40" />

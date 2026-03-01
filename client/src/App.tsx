@@ -103,10 +103,10 @@ function AuthenticatedApp() {
       <div className="flex h-screen w-full">
         <AppSidebar />
         <div className="flex flex-col flex-1 min-w-0">
-          <header className="flex items-center justify-between gap-2 p-2 border-b shrink-0">
+          <header className="flex items-center justify-between gap-1 sm:gap-2 p-2 border-b shrink-0">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-muted-foreground hidden sm:inline" data-testid="text-current-user">
+            <div className="flex items-center gap-1 sm:gap-3">
+              <span className="text-xs text-muted-foreground hidden md:inline" data-testid="text-current-user">
                 {user.fullName} ({user.role})
               </span>
               <LanguageSwitcher />

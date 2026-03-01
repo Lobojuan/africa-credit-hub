@@ -57,7 +57,7 @@ export default function PendingApprovalsPage() {
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-[1400px] mx-auto">
       <div>
         <div className="flex items-center gap-2 mb-1">
             <div className="page-header-bar" />
@@ -130,7 +130,7 @@ export default function PendingApprovalsPage() {
           </DialogHeader>
           {selectedApproval && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                 <div>
                   <span className="text-muted-foreground">{t('approvals.entity')}:</span>
                   <p className="font-medium capitalize">{selectedApproval.entityType}</p>

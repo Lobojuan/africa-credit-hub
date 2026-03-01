@@ -129,8 +129,8 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center p-6 bg-background">
-        <div className="w-full max-w-[400px] space-y-8">
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 bg-background">
+        <div className="w-full max-w-[400px] space-y-6 sm:space-y-8">
           <div className="lg:hidden flex items-center justify-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary">
               <Globe className="w-5 h-5 text-primary-foreground" />

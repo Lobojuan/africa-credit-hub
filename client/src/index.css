@@ -317,6 +317,34 @@
   animation: slideIn 0.25s ease-out;
 }
 
+@media (max-width: 640px) {
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  [data-radix-dialog-content] {
+    max-width: calc(100vw - 1.5rem) !important;
+    max-height: 90vh !important;
+  }
+
+  table {
+    font-size: 0.8125rem;
+  }
+}
+
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  button, [role="button"], a, .cursor-pointer {
+    min-height: 36px;
+  }
+}
+
 ::selection {
   background: hsl(175 55% 28% / 0.2);
 }

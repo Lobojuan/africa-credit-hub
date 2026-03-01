@@ -441,7 +441,7 @@ export function DisputeChatbot() {
   if (!open) {
     return (
       <Button
-        className="fixed bottom-6 right-6 rounded-full h-14 w-14 shadow-lg z-50"
+        className="fixed bottom-6 right-6 rounded-full h-14 w-14 shadow-lg z-50" style={{ bottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}
         onClick={() => { setOpen(true); showMainMenu(); }}
         data-testid="button-open-chatbot"
       >
@@ -451,7 +451,7 @@ export function DisputeChatbot() {
   }
 
   return (
-    <Card className="fixed bottom-6 right-6 w-[400px] h-[560px] flex flex-col shadow-2xl z-50 overflow-hidden" data-testid="chatbot-container">
+    <Card className="fixed bottom-3 right-3 left-3 sm:left-auto sm:bottom-6 sm:right-6 sm:w-[400px] h-[80vh] sm:h-[560px] max-h-[600px] flex flex-col shadow-2xl z-50 overflow-hidden" style={{ bottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }} data-testid="chatbot-container">
       <div className="flex items-center justify-between p-3 border-b bg-primary text-primary-foreground">
         <div className="flex items-center gap-2">
           <Bot className="w-5 h-5" />

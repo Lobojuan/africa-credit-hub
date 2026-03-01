@@ -75,7 +75,7 @@ export default function CreditAccountsPage() {
   const isFr = i18n.language === "fr";
 
   return (
-    <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-[1400px] mx-auto">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -109,11 +109,11 @@ export default function CreditAccountsPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><Label>{t("creditAccounts.lenderInstitution")}</Label><Input data-testid="input-lender" value={formData.lenderInstitution} onChange={(e) => setFormData({ ...formData, lenderInstitution: e.target.value })} required /></div>
                 <div><Label>{t("creditAccounts.accountNumber")}</Label><Input data-testid="input-account-number" value={formData.accountNumber} onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })} required /></div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <Label>{t("creditAccounts.accountType")}</Label>
                   <Select value={formData.accountType} onValueChange={(v) => setFormData({ ...formData, accountType: v })}>
@@ -144,11 +144,11 @@ export default function CreditAccountsPage() {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><Label>{t("creditAccounts.originalAmount")} ({formData.currency})</Label><Input data-testid="input-original-amount" type="number" step="0.01" value={formData.originalAmount} onChange={(e) => setFormData({ ...formData, originalAmount: e.target.value })} required /></div>
                 <div><Label>{t("creditAccounts.currentBalance")} ({formData.currency})</Label><Input data-testid="input-current-balance" type="number" step="0.01" value={formData.currentBalance} onChange={(e) => setFormData({ ...formData, currentBalance: e.target.value })} required /></div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><Label>{t("creditAccounts.interestRate")}</Label><Input data-testid="input-interest-rate" type="number" step="0.01" value={formData.interestRate} onChange={(e) => setFormData({ ...formData, interestRate: e.target.value })} /></div>
                 <div>
                   <Label>{t("creditAccounts.currency")}</Label>
@@ -164,15 +164,15 @@ export default function CreditAccountsPage() {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><Label>{t("creditAccounts.disbursementDate")}</Label><Input type="date" value={formData.disbursementDate} onChange={(e) => setFormData({ ...formData, disbursementDate: e.target.value })} /></div>
                 <div><Label>{t("creditAccounts.maturityDate")}</Label><Input type="date" value={formData.maturityDate} onChange={(e) => setFormData({ ...formData, maturityDate: e.target.value })} /></div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><Label>{t("creditAccounts.collateralType")}</Label><Input value={formData.collateralType} onChange={(e) => setFormData({ ...formData, collateralType: e.target.value })} /></div>
                 <div><Label>{t("creditAccounts.collateralValue")} ({formData.currency})</Label><Input type="number" step="0.01" value={formData.collateralValue} onChange={(e) => setFormData({ ...formData, collateralValue: e.target.value })} /></div>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="flex items-center gap-2 pt-5">
                   <input type="checkbox" id="isInterestFree" checked={formData.isInterestFree} onChange={(e) => setFormData({ ...formData, isInterestFree: e.target.checked })} data-testid="checkbox-interest-free" className="h-4 w-4" />
                   <Label htmlFor="isInterestFree" className="text-sm">{t("creditAccounts.interestFree")}</Label>
