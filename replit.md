@@ -17,7 +17,7 @@ The system employs a modern full-stack architecture:
 -   **Database**: PostgreSQL, hosted on Neon, is used as the primary data store, managed with Drizzle ORM.
 -   **Routing**: `wouter` is used for client-side navigation, while Express handles API routing.
 -   **Authentication**: Features bcryptjs for password hashing and `express-session` with memorystore for session management. Security measures include a 3-attempt login lockout, 15-minute session timeout, and IP tracking in audit logs. Password policies enforce strong passwords and 90-day expiry.
--   **Internationalization**: Supports English, French, and Portuguese using `react-i18next` and `i18next-browser-languagedetector`. Portuguese translations in `client/src/lib/i18n-pt.ts`.
+-   **Internationalization**: Supports English, French, and Portuguese using `react-i18next` and `i18next-browser-languagedetector`. Portuguese translations in `client/src/lib/i18n-pt.ts`. Language switcher available on login page (pre-auth) and in the main app header (post-auth).
 -   **Data Model**: Comprises 18 core tables including `users`, `borrowers`, `credit_accounts`, `audit_logs`, `pending_approvals`, `disputes`, `institutions`, `api_keys`, `exchange_rates`, `retention_policies`, and `api_configurations`, designed to capture comprehensive credit and operational data.
 -   **Key Features**:
     -   **Comprehensive Credit Management**: Includes borrower and credit account management with multi-currency support, collateral tracking, and arrears.
