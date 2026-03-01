@@ -768,6 +768,12 @@ export class DatabaseStorage implements IStorage {
     }).from(creditAccounts).where(
       or(eq(creditAccounts.status, "current"), eq(creditAccounts.status, "delinquent"), eq(creditAccounts.status, "restructured"))
     );
+    const outstandingByCurrency = await db.select({
+      currency: creditAccounts.currency,
+      total: sql<string>`COALESCE(SUM(${creditAccounts.currentBalance}::numeric), 0)::text`,
+    }).from(creditAccounts).where(
+      or(eq(creditAccounts.status, "current"), eq(creditAccounts.status, "delinquent"), eq(creditAccounts.status, "restructured"))
+    ).groupBy(creditAccounts.currency);
     const [delinquent] = await db.select({ value: count() }).from(creditAccounts).where(eq(creditAccounts.status, "delinquent"));
     const [defaulted] = await db.select({ value: count() }).from(creditAccounts).where(eq(creditAccounts.status, "default"));
     const [pendingCount] = await db.select({ value: count() }).from(pendingApprovals).where(eq(pendingApprovals.status, "pending"));
@@ -780,6 +786,7 @@ export class DatabaseStorage implements IStorage {
       totalAccounts: accountCount.value,
       totalInquiries: inquiryCount.value,
       totalOutstanding: outstanding.value || "0",
+      outstandingByCurrency,
       delinquentAccounts: delinquent.value,
       defaultAccounts: defaulted.value,
       pendingApprovalCount: pendingCount.value,

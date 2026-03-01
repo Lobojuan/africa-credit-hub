@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
@@ -12,9 +12,48 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatCard } from "@/components/stat-card";
 import { formatCurrency } from "@/lib/currency";
-import type { CreditAccount, AuditLog } from "@shared/schema";
+import type { CreditAccount, AuditLog, ExchangeRate } from "@shared/schema";
+
+const DISPLAY_CURRENCIES = [
+  { code: "USD", label: "USD ($)", symbol: "$" },
+  { code: "EUR", label: "EUR (€)", symbol: "€" },
+  { code: "GBP", label: "GBP (£)", symbol: "£" },
+  { code: "ETB", label: "ETB (Br)", symbol: "Br" },
+  { code: "KES", label: "KES (KSh)", symbol: "KSh" },
+  { code: "NGN", label: "NGN (₦)", symbol: "₦" },
+  { code: "ZAR", label: "ZAR (R)", symbol: "R" },
+  { code: "EGP", label: "EGP (E£)", symbol: "E£" },
+  { code: "GHS", label: "GHS (₵)", symbol: "₵" },
+  { code: "TZS", label: "TZS (TSh)", symbol: "TSh" },
+  { code: "UGX", label: "UGX (USh)", symbol: "USh" },
+  { code: "XAF", label: "XAF (FCFA)", symbol: "FCFA" },
+  { code: "XOF", label: "XOF (CFA)", symbol: "CFA" },
+  { code: "MAD", label: "MAD", symbol: "MAD" },
+  { code: "RWF", label: "RWF (FRw)", symbol: "FRw" },
+];
+
+function buildRateMap(rates: ExchangeRate[]): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const r of rates) {
+    map.set(`${r.fromCurrency}-${r.toCurrency}`, parseFloat(r.rate));
+    const inv = parseFloat(r.rate);
+    if (inv > 0) map.set(`${r.toCurrency}-${r.fromCurrency}`, 1 / inv);
+  }
+  return map;
+}
+
+function convertViaUSD(amount: number, from: string, to: string, rateMap: Map<string, number>): number | null {
+  if (from === to) return amount;
+  const direct = rateMap.get(`${from}-${to}`);
+  if (direct) return amount * direct;
+  const toUSD = from === "USD" ? 1 : rateMap.get(`${from}-USD`);
+  const fromUSD = to === "USD" ? 1 : rateMap.get(`USD-${to}`);
+  if (toUSD && fromUSD) return amount * toUSD * fromUSD;
+  return null;
+}
 
 function getStatusColor(status: string) {
   switch (status) {
@@ -360,17 +399,54 @@ export default function Dashboard() {
   const { t } = useTranslation();
   const [, navigate] = useLocation();
   const [selectedDetail, setSelectedDetail] = useState<DetailType>(null);
+  const [displayCurrency, setDisplayCurrency] = useState(() => {
+    return localStorage.getItem("dashboard_currency") || "USD";
+  });
 
   const { data: stats, isLoading: statsLoading } = useQuery<{
     totalBorrowers: number;
     totalAccounts: number;
     totalInquiries: number;
     totalOutstanding: string;
+    outstandingByCurrency: { currency: string; total: string }[];
     delinquentAccounts: number;
     defaultAccounts: number;
     pendingApprovalCount: number;
     openDisputeCount: number;
   }>({ queryKey: ["/api/dashboard/stats"] });
+
+  const { data: exchangeRates } = useQuery<ExchangeRate[]>({
+    queryKey: ["/api/exchange-rates"],
+  });
+
+  const rateMap = useMemo(() => buildRateMap(exchangeRates || []), [exchangeRates]);
+
+  const convertedOutstanding = useMemo(() => {
+    if (!stats?.outstandingByCurrency || rateMap.size === 0) return null;
+    let total = 0;
+    let hasConversion = false;
+    for (const bucket of stats.outstandingByCurrency) {
+      const amount = parseFloat(bucket.total);
+      if (amount === 0) continue;
+      const converted = convertViaUSD(amount, bucket.currency, displayCurrency, rateMap);
+      if (converted !== null) {
+        total += converted;
+        hasConversion = true;
+      }
+    }
+    return hasConversion ? total : null;
+  }, [stats?.outstandingByCurrency, displayCurrency, rateMap]);
+
+  const convertAmount = useCallback((value: string | number, fromCurrency: string) => {
+    const num = typeof value === "string" ? parseFloat(value) : value;
+    if (isNaN(num) || rateMap.size === 0) return null;
+    return convertViaUSD(num, fromCurrency, displayCurrency, rateMap);
+  }, [displayCurrency, rateMap]);
+
+  const handleCurrencyChange = (val: string) => {
+    setDisplayCurrency(val);
+    localStorage.setItem("dashboard_currency", val);
+  };
 
   const { data: detailData, isLoading: detailLoading } = useQuery({
     queryKey: [`/api/dashboard/details/${selectedDetail}`],
@@ -400,9 +476,24 @@ export default function Dashboard() {
             {t('dashboard.subtitle')}
           </p>
         </div>
-        <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground">
-          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          <span>Live Data</span>
+        <div className="flex items-center gap-3">
+          <Select value={displayCurrency} onValueChange={handleCurrencyChange}>
+            <SelectTrigger className="w-[140px] h-8 text-xs" data-testid="select-dashboard-currency">
+              <Banknote className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {DISPLAY_CURRENCIES.map(c => (
+                <SelectItem key={c.code} value={c.code} data-testid={`currency-option-${c.code}`}>
+                  {c.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <span>Live Data</span>
+          </div>
         </div>
       </div>
 
