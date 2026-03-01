@@ -1,5 +1,5 @@
 import "./lib/i18n";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -14,7 +14,6 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { NotificationBell } from "@/components/notification-bell";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { PasswordChangeDialog } from "@/components/password-change-dialog";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { LogOut, Loader2, MessageCircle } from "lucide-react";
 import { DisputeChatbot } from "@/components/dispute-chatbot";
@@ -92,7 +91,11 @@ function Router() {
 function AuthenticatedApp() {
   const { user, isLoading, logout, passwordExpired } = useAuth();
   const [chatbotOpen, setChatbotOpen] = useState(false);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+
+  useEffect(() => {
+    document.documentElement.dir = i18n.language === "ar" ? "rtl" : "ltr";
+  }, [i18n.language]);
 
   if (isLoading) {
     return (

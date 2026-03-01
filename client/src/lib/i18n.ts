@@ -2,6 +2,8 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 import pt from "./i18n-pt";
+import ar from "./i18n-ar";
+import sw from "./i18n-sw";
 
 const en = {
   sidebar: {
@@ -1057,6 +1059,8 @@ const en = {
     english: "English",
     french: "Français",
     portuguese: "Português",
+    arabic: "العربية",
+    swahili: "Kiswahili",
     showing: "Showing",
     of: "of",
     previous: "Previous",
@@ -2119,6 +2123,8 @@ const fr: typeof en = {
     english: "English",
     french: "Français",
     portuguese: "Português",
+    arabic: "العربية",
+    swahili: "Kiswahili",
     showing: "Affichage",
     of: "sur",
     previous: "Précédent",
@@ -2135,6 +2141,8 @@ i18n
       en: { translation: en },
       fr: { translation: fr },
       pt: { translation: pt },
+      ar: { translation: ar },
+      sw: { translation: sw },
     },
     fallbackLng: "en",
     interpolation: {

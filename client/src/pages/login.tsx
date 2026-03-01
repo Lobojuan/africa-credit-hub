@@ -161,7 +161,7 @@ export default function LoginPage() {
                 { label: t('login.jurisdictions'), val: t('login.fourCountries') },
                 { label: t('login.currencies'), val: t('login.eighteenSupported') },
                 { label: t('login.compliance'), val: "SRS v1.1" },
-                { label: t('login.languages'), val: "EN / FR / PT" },
+                { label: t('login.languages'), val: "EN / FR / PT / AR / SW" },
               ].map((item) => (
                 <div key={item.label} className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.06)", backdropFilter: "blur(8px)" }}>
                   <p className="text-white/60 text-xs font-medium uppercase tracking-wider">{item.label}</p>

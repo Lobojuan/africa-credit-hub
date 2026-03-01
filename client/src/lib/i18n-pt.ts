@@ -1128,6 +1128,8 @@ const pt = {
     english: "English",
     french: "Français",
     portuguese: "Português",
+    arabic: "العربية",
+    swahili: "Kiswahili",
     showing: "A mostrar",
     of: "de",
     previous: "Anterior",
