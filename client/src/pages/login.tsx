@@ -3,12 +3,43 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, AlertTriangle, ArrowRight, Globe, ArrowLeft } from "lucide-react";
+import { Shield, AlertTriangle, ArrowRight, Globe, ArrowLeft, Play, Eye, Users, Building2, ShieldCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { LanguageSwitcher } from "@/components/language-switcher";
+
+const DEMO_ACCOUNTS = [
+  {
+    role: "Admin",
+    username: "admin",
+    password: "admin123",
+    description: "Full system access — manage users, settings, all modules",
+    icon: ShieldCheck,
+    color: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
+    badgeColor: "bg-amber-500",
+  },
+  {
+    role: "Regulator",
+    username: "regulator1",
+    password: "reg123",
+    description: "Regulatory oversight — compliance dashboard, approvals, audit trails",
+    icon: Eye,
+    color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+    badgeColor: "bg-blue-500",
+  },
+  {
+    role: "Bank Officer",
+    username: "cbe_user",
+    password: "cbe123",
+    description: "Institutional user — submit credit data, search borrowers, file disputes",
+    icon: Building2,
+    color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+    badgeColor: "bg-green-500",
+  },
+];
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -17,6 +48,8 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [mfaRequired, setMfaRequired] = useState(false);
   const [mfaCode, setMfaCode] = useState("");
+  const [showDemo, setShowDemo] = useState(false);
+  const [demoLoading, setDemoLoading] = useState<string | null>(null);
   const { login } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -72,6 +105,26 @@ export default function LoginPage() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDemoLogin = async (account: typeof DEMO_ACCOUNTS[0]) => {
+    setDemoLoading(account.username);
+    setError("");
+    try {
+      await login(account.username, account.password);
+      toast({ title: `${t('login.success')} — ${account.role} Demo` });
+    } catch (err: any) {
+      const msg = err.message || t('common.error');
+      const cleaned = msg.replace(/^\d+:\s*/, "").replace(/^"?|"?$/g, "");
+      try {
+        const parsed = JSON.parse(cleaned);
+        setError(parsed.message || cleaned);
+      } catch {
+        setError(cleaned);
+      }
+    } finally {
+      setDemoLoading(null);
     }
   };
 
@@ -133,7 +186,7 @@ export default function LoginPage() {
         <div className="absolute top-4 right-4" data-testid="login-language-switcher">
           <LanguageSwitcher />
         </div>
-        <div className="w-full max-w-[400px] space-y-6 sm:space-y-8">
+        <div className="w-full max-w-[420px] space-y-6 sm:space-y-8">
           <div className="lg:hidden flex items-center justify-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary">
               <Globe className="w-5 h-5 text-primary-foreground" />
@@ -141,121 +194,215 @@ export default function LoginPage() {
             <span className="font-semibold text-lg tracking-tight">CDH Registry</span>
           </div>
 
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight" data-testid="text-login-title">
-              {mfaRequired ? t('mfa.verification') : t('login.title')}
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {mfaRequired ? t('mfa.enterCodePrompt') : t('login.subtitle')}
-            </p>
-          </div>
+          {showDemo ? (
+            <>
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <Play className="w-5 h-5 text-primary" />
+                  <h1 className="text-2xl font-bold tracking-tight" data-testid="text-demo-title">
+                    {t('login.demoTitle')}
+                  </h1>
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {t('login.demoSubtitle')}
+                </p>
+              </div>
 
-          <Card className="border-0 shadow-lg">
-            <CardContent className="p-6">
-              {mfaRequired ? (
-                <form onSubmit={handleMfaSubmit} className="space-y-5" data-testid="form-mfa-login">
-                  {error && (
-                    <div className="flex items-start gap-2.5 p-3.5 rounded-lg bg-destructive/8 border border-destructive/20 text-destructive text-sm" data-testid="text-mfa-error">
-                      <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                      <span>{error}</span>
-                    </div>
-                  )}
-                  <div className="space-y-2">
-                    <Label htmlFor="mfa-code" className="text-sm font-medium">{t('mfa.code')}</Label>
-                    <Input
-                      id="mfa-code"
-                      data-testid="input-mfa-code"
-                      value={mfaCode}
-                      onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                      placeholder="000000"
-                      className="text-center text-lg tracking-[0.5em] font-mono h-12"
-                      maxLength={6}
-                      autoFocus
-                      required
-                    />
-                  </div>
-                  <Button type="submit" className="w-full h-11 font-semibold gap-2" disabled={loading || mfaCode.length !== 6} data-testid="button-mfa-submit">
-                    {loading ? (
-                      <span className="flex items-center gap-2">
-                        <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                        {t('mfa.verifying')}
-                      </span>
-                    ) : (
-                      <>
-                        {t('mfa.verifyAndLogin')}
-                        <ArrowRight className="w-4 h-4" />
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="w-full text-sm"
-                    onClick={() => { setMfaRequired(false); setMfaCode(""); setError(""); }}
-                    data-testid="button-back-to-login"
-                  >
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    {t('mfa.backToLogin')}
-                  </Button>
-                </form>
-              ) : (
-                <form onSubmit={handleSubmit} className="space-y-5" data-testid="form-login">
-                  {error && (
-                    <div className="flex items-start gap-2.5 p-3.5 rounded-lg bg-destructive/8 border border-destructive/20 text-destructive text-sm" data-testid="text-login-error">
-                      <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                      <span>{error}</span>
-                    </div>
-                  )}
-                  <div className="space-y-2">
-                    <Label htmlFor="username" className="text-sm font-medium">{t('login.username')}</Label>
-                    <Input
-                      id="username"
-                      data-testid="input-username"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      placeholder={t('login.enterUsername')}
-                      required
-                      autoFocus
-                      className="h-11"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="password" className="text-sm font-medium">{t('login.password')}</Label>
-                    <Input
-                      id="password"
-                      data-testid="input-password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder={t('login.enterPassword')}
-                      required
-                      className="h-11"
-                    />
-                  </div>
-                  <Button type="submit" className="w-full h-11 font-semibold gap-2" disabled={loading} data-testid="button-login">
-                    {loading ? (
-                      <span className="flex items-center gap-2">
-                        <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                        {t('login.signingIn')}
-                      </span>
-                    ) : (
-                      <>
-                        {t('login.signIn')}
-                        <ArrowRight className="w-4 h-4" />
-                      </>
-                    )}
-                  </Button>
-                </form>
+              <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/30 p-3 flex items-start gap-2.5" data-testid="demo-disclaimer">
+                <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed">
+                  {t('login.demoDisclaimer')}
+                </p>
+              </div>
+
+              {error && (
+                <div className="flex items-start gap-2.5 p-3.5 rounded-lg bg-destructive/8 border border-destructive/20 text-destructive text-sm" data-testid="text-demo-error">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{error}</span>
+                </div>
               )}
-            </CardContent>
-          </Card>
 
-          <div className="flex items-center gap-2 justify-center text-muted-foreground">
-            <Shield className="w-3.5 h-3.5" />
-            <p className="text-[11px]">
-              {t('login.lockoutWarning')}
-            </p>
-          </div>
+              <div className="space-y-3">
+                {DEMO_ACCOUNTS.map((account) => (
+                  <Card
+                    key={account.username}
+                    className="cursor-pointer transition-all hover:shadow-md hover:scale-[1.01] active:scale-[0.99] border"
+                    onClick={() => handleDemoLogin(account)}
+                    data-testid={`button-demo-${account.role.toLowerCase().replace(/\s+/g, "-")}`}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-4">
+                        <div className={`flex items-center justify-center w-11 h-11 rounded-lg shrink-0 ${account.color}`}>
+                          <account.icon className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-semibold" data-testid={`text-demo-role-${account.username}`}>{account.role}</p>
+                            <Badge variant="outline" className="text-[10px] font-mono">{account.username}</Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{account.description}</p>
+                        </div>
+                        <div className="shrink-0">
+                          {demoLoading === account.username ? (
+                            <span className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin block" />
+                          ) : (
+                            <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              <Button
+                variant="ghost"
+                className="w-full text-sm"
+                onClick={() => { setShowDemo(false); setError(""); }}
+                data-testid="button-back-to-login"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                {t('login.backToLogin')}
+              </Button>
+            </>
+          ) : (
+            <>
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight" data-testid="text-login-title">
+                  {mfaRequired ? t('mfa.verification') : t('login.title')}
+                </h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {mfaRequired ? t('mfa.enterCodePrompt') : t('login.subtitle')}
+                </p>
+              </div>
+
+              <Card className="border-0 shadow-lg">
+                <CardContent className="p-6">
+                  {mfaRequired ? (
+                    <form onSubmit={handleMfaSubmit} className="space-y-5" data-testid="form-mfa-login">
+                      {error && (
+                        <div className="flex items-start gap-2.5 p-3.5 rounded-lg bg-destructive/8 border border-destructive/20 text-destructive text-sm" data-testid="text-mfa-error">
+                          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                          <span>{error}</span>
+                        </div>
+                      )}
+                      <div className="space-y-2">
+                        <Label htmlFor="mfa-code" className="text-sm font-medium">{t('mfa.code')}</Label>
+                        <Input
+                          id="mfa-code"
+                          data-testid="input-mfa-code"
+                          value={mfaCode}
+                          onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                          placeholder="000000"
+                          className="text-center text-lg tracking-[0.5em] font-mono h-12"
+                          maxLength={6}
+                          autoFocus
+                          required
+                        />
+                      </div>
+                      <Button type="submit" className="w-full h-11 font-semibold gap-2" disabled={loading || mfaCode.length !== 6} data-testid="button-mfa-submit">
+                        {loading ? (
+                          <span className="flex items-center gap-2">
+                            <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                            {t('mfa.verifying')}
+                          </span>
+                        ) : (
+                          <>
+                            {t('mfa.verifyAndLogin')}
+                            <ArrowRight className="w-4 h-4" />
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="w-full text-sm"
+                        onClick={() => { setMfaRequired(false); setMfaCode(""); setError(""); }}
+                        data-testid="button-back-to-login"
+                      >
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        {t('mfa.backToLogin')}
+                      </Button>
+                    </form>
+                  ) : (
+                    <form onSubmit={handleSubmit} className="space-y-5" data-testid="form-login">
+                      {error && (
+                        <div className="flex items-start gap-2.5 p-3.5 rounded-lg bg-destructive/8 border border-destructive/20 text-destructive text-sm" data-testid="text-login-error">
+                          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                          <span>{error}</span>
+                        </div>
+                      )}
+                      <div className="space-y-2">
+                        <Label htmlFor="username" className="text-sm font-medium">{t('login.username')}</Label>
+                        <Input
+                          id="username"
+                          data-testid="input-username"
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value)}
+                          placeholder={t('login.enterUsername')}
+                          required
+                          autoFocus
+                          className="h-11"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="password" className="text-sm font-medium">{t('login.password')}</Label>
+                        <Input
+                          id="password"
+                          data-testid="input-password"
+                          type="password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder={t('login.enterPassword')}
+                          required
+                          className="h-11"
+                        />
+                      </div>
+                      <Button type="submit" className="w-full h-11 font-semibold gap-2" disabled={loading} data-testid="button-login">
+                        {loading ? (
+                          <span className="flex items-center gap-2">
+                            <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                            {t('login.signingIn')}
+                          </span>
+                        ) : (
+                          <>
+                            {t('login.signIn')}
+                            <ArrowRight className="w-4 h-4" />
+                          </>
+                        )}
+                      </Button>
+                    </form>
+                  )}
+                </CardContent>
+              </Card>
+
+              <div className="flex items-center gap-2 justify-center text-muted-foreground">
+                <Shield className="w-3.5 h-3.5" />
+                <p className="text-[11px]">
+                  {t('login.lockoutWarning')}
+                </p>
+              </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-3 text-muted-foreground">{t('login.orSeparator')}</span>
+                </div>
+              </div>
+
+              <Button
+                variant="outline"
+                className="w-full h-12 font-semibold gap-3 border-2 border-dashed hover:border-solid hover:border-primary/50 transition-all"
+                onClick={() => setShowDemo(true)}
+                data-testid="button-try-demo"
+              >
+                <Play className="w-4 h-4 text-primary" />
+                {t('login.tryDemo')}
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </div>

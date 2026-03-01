@@ -53,6 +53,13 @@ const pt = {
     eighteenSupported: "42+ Suportadas",
     compliance: "Conformidade",
     languages: "Idiomas",
+    orSeparator: "ou",
+    tryDemo: "Experimentar demonstração interativa",
+    demoTitle: "Demonstração interativa",
+    demoSubtitle: "Escolha um papel abaixo para explorar o sistema instantaneamente — sem credenciais necessárias.",
+    demoDisclaimer: "Este é um ambiente de demonstração com dados fictícios. Todos os nomes, identificações, valores financeiros e instituições são gerados sinteticamente e não representam qualquer pessoa, empresa ou entidade governamental real.",
+    backToLogin: "Voltar ao início de sessão",
+    demoBanner: "AMBIENTE DE DEMONSTRAÇÃO — Todos os dados são fictícios e gerados sinteticamente",
   },
   mfa: {
     setup: "Configurar MFA",

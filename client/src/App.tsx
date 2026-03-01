@@ -5,6 +5,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useTranslation } from "react-i18next";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -91,6 +92,7 @@ function Router() {
 function AuthenticatedApp() {
   const { user, isLoading, logout, passwordExpired } = useAuth();
   const [chatbotOpen, setChatbotOpen] = useState(false);
+  const { t } = useTranslation();
 
   if (isLoading) {
     return (
@@ -109,11 +111,18 @@ function AuthenticatedApp() {
     "--sidebar-width-icon": "3rem",
   };
 
+  const isDemoUser = ["admin", "regulator1", "cbe_user", "dashen_user", "awash_user"].includes(user.username);
+
   return (
     <SidebarProvider style={style as React.CSSProperties}>
       <div className="flex h-screen w-full">
         <AppSidebar />
         <div className="flex flex-col flex-1 min-w-0">
+          {isDemoUser && (
+            <div className="bg-amber-500 text-white text-center text-xs font-semibold py-1 px-3 shrink-0" data-testid="banner-demo">
+              {t('login.demoBanner')}
+            </div>
+          )}
           <header className="flex items-center justify-between gap-1 sm:gap-2 p-2 border-b shrink-0">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
             <div className="flex items-center gap-1 sm:gap-3">
