@@ -1,4 +1,4 @@
-# Système de Hub Central de Données Inter-Juridictionnel et Registre de Crédit v1.1 — Documentation Système
+# Système de Hub Central de Données Inter-Juridictionnel et Registre de Crédit v1.2 — Documentation Système
 
 **Préparé pour :** Systems In Motion Limited  
 **Version du Document :** 1.2  
@@ -32,12 +32,13 @@ Le Système de Hub Central de Données Inter-Juridictionnel et Registre de Créd
 
 ### 1.2 Juridictions Couvertes
 
-Le système est conçu pour un déploiement panafricain couvrant quatre juridictions :
+Le système est conçu pour un déploiement panafricain couvrant les 54 pays africains, organisés en cinq blocs économiques régionaux :
 
-- **Ghana** — Cadre réglementaire de la Banque du Ghana
-- **Éthiopie** — Cadre réglementaire de la Banque Nationale d'Éthiopie
-- **Ouganda** — Cadre réglementaire de la Banque d'Ouganda
-- **Libéria** — Cadre réglementaire de la Banque Centrale du Libéria
+- **CEDEAO (Communauté Économique des États de l'Afrique de l'Ouest)** — Ghana, Nigéria, Sénégal, Côte d'Ivoire, Sierra Leone, Libéria, Guinée, Mali, Burkina Faso, Niger, Togo, Bénin, Gambie, Guinée-Bissau, Cap-Vert
+- **CAE (Communauté d'Afrique de l'Est)** — Kenya, Ouganda, Tanzanie, Rwanda, Burundi, Soudan du Sud, République Démocratique du Congo
+- **SADC (Communauté de Développement de l'Afrique Australe)** — Afrique du Sud, Mozambique, Zambie, Zimbabwe, Botswana, Namibie, Angola, Malawi, Madagascar, Maurice, Eswatini, Lesotho, Seychelles, Comores
+- **CEMAC (Communauté Économique et Monétaire de l'Afrique Centrale)** — Cameroun, Gabon, Tchad, République Centrafricaine, République du Congo, Guinée Équatoriale
+- **UMA (Union du Maghreb Arabe)** — Maroc, Algérie, Tunisie, Libye, Mauritanie, Égypte, Soudan, Érythrée, Éthiopie, Djibouti, Somalie
 
 ### 1.3 Capacités Clés
 
@@ -55,7 +56,13 @@ Le système est conçu pour un déploiement panafricain couvrant quatre juridict
 - **API REST Externe** — Accès programmatique pour les institutions avec authentification par clé API
 - **Analyses Réglementaires** — Ratios NPL, ventilations de portefeuille, suivi des violations SLA, exportation CSV
 - **Internationalisation** — Prise en charge complète des langues anglaise, française et portugaise
-- **Multi-Devises** — 18 devises panafricaines prises en charge
+- **Multi-Devises** — Plus de 42 devises africaines plus USD, EUR, GBP prises en charge
+- **Gestion des Taux de Change** — Plus de 42 devises avec récupération des taux en direct via open.er-api.com, conversion par taux croisés via routage USD, opérations CRUD d'administration et widget de conversion de devises
+- **Administration API** — Gestion centralisée de la configuration des intégrations API externes avec test de connexion, paramètres par pays et protection SSRF
+- **Politiques de Rétention des Données** — Périodes de rétention spécifiques par juridiction avec planificateur d'application automatique (intervalle de 24 heures) et déclenchement manuel
+- **Recherche Globale** — Recherche inter-entités sur les emprunteurs, les institutions et les comptes de crédit simultanément via `/api/global-search` avec filtrage par pays
+- **Photos d'Identité et Documents** — Avatars DiceBear auto-générés pour les profils d'emprunteurs, téléversement de photos et de documents d'identité via multer avec service authentifié depuis `/uploads`
+- **Environnement de Démonstration** — Démonstration en un clic pour investisseurs avec trois cartes de rôle (Admin, Régulateur, Agent Bancaire), bannière ambre ENVIRONNEMENT DE DÉMONSTRATION et avertissement de données fictives
 - **Piste d'Audit** — Journalisation complète des activités avec suivi des adresses IP et chaîne de hachage SHA-256 inviolable
 - **Authentification Multi-Facteurs** — AMF basée sur TOTP via la bibliothèque otpauth
 - **Correspondance Floue d'Entités** — Similarité par trigrammes PostgreSQL pg_trgm pour la détection des emprunteurs en double
@@ -105,7 +112,7 @@ Le système suit une architecture monolithique moderne full-stack avec une sépa
 ┌──────────────────────────▼──────────────────────────────┐
 │              Base de Données PostgreSQL (Neon)            │
 │  ┌─────────────────────────────────────────────────────┐ │
-│  │               Drizzle ORM (18 tables)               │ │
+│  │               Drizzle ORM (21 tables)               │ │
 │  └─────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -193,7 +200,7 @@ Le système suit une architecture monolithique moderne full-stack avec une sépa
 
 ## 4. Modèle de Données
 
-Le système utilise 18 tables PostgreSQL avec Drizzle ORM pour un accès typé. Toutes les clés primaires sont des chaînes UUID v4 générées via `gen_random_uuid()`.
+Le système utilise 21 tables PostgreSQL avec Drizzle ORM pour un accès typé. Toutes les clés primaires sont des chaînes UUID v4 générées via `gen_random_uuid()`.
 
 ### 4.1 Table : `users`
 
@@ -1341,15 +1348,15 @@ Le système est amorcé avec des volumes de données représentatifs de la produ
 
 | Entité | Nombre |
 |--------|--------|
-| Emprunteurs | 100 005 |
+| Emprunteurs | 102 462 |
 | Institutions | 100 020 |
-| Comptes de Crédit | 166 673 |
+| Comptes de Crédit | 172 359 |
 | Historique de Paiement | 120 000 |
 | Demandes de Crédit | 25 004 |
 | Enregistrements de Consentement | 15 000 |
 | Journaux d'Audit | 5 063 |
-| Litiges | 3 000 |
-| Jugements de Tribunal | 2 000 |
+| Litiges | 3 218 |
+| Jugements de Tribunal | 2 147 |
 | Enregistrements de Facturation | 120 |
 | Utilisateurs Système | 6 |
 
@@ -1399,7 +1406,7 @@ Les conditions d'erreur sont journalisées via `console.error()` pour :
 
 ---
 
-## 13. Améliorations Entreprise (v1.1)
+## 13. Améliorations Entreprise
 
 ### 13.1 Authentification Multi-Facteurs TOTP (ENT-01)
 
@@ -1488,14 +1495,14 @@ Les conditions d'erreur sont journalisées via `console.error()` pour :
 
   ### 13.8 Gestion des Taux de Change (ENT-08)
 
-  **Objectif :** Fournir la prise en charge de 18 devises avec conversion par taux croisés via routage USD, opérations CRUD d'administration et un widget de conversion de devises.
+  **Objectif :** Fournir la prise en charge de plus de 42 devises africaines avec conversion par taux croisés via routage USD, récupération des taux en direct via open.er-api.com, opérations CRUD d'administration et un widget de conversion de devises.
 
   **Architecture :**
   - **Schéma :** Table `exchange_rates` avec `base_currency`, `target_currency`, `rate` (decimal 15,6), `effective_date`, `source`, `created_by`
   - **Routage par Taux Croisés :** Lorsqu'un taux direct n'est pas disponible, le système convertit via USD comme intermédiaire (ex. : GHS → USD → ETB)
   - **Points d'Accès :** `GET /api/exchange-rates`, `POST /api/exchange-rates`, `PATCH /api/exchange-rates/:id`, `DELETE /api/exchange-rates/:id`, `POST /api/exchange-rates/convert`
-  - **Frontend :** Page `exchange-rates.tsx` avec interface CRUD d'administration et widget de conversion de devises prenant en charge les 18 devises panafricaines
-  - **Devises :** GHS, ETB, UGX, LRD, NGN, KES, ZAR, EGP, MAD, TZS, RWF, XOF, XAF, MZN, AOA, BWP, ZMW, USD
+  - **Frontend :** Page `exchange-rates.tsx` avec interface CRUD d'administration et widget de conversion de devises prenant en charge plus de 42 devises africaines plus USD, EUR, GBP
+  - **Source de Taux en Direct :** open.er-api.com pour la récupération automatique des taux de change
 
   ### 13.9 Module d'Administration API (ENT-09)
 
@@ -1536,7 +1543,39 @@ Les conditions d'erreur sont journalisées via `console.error()` pour :
   - **Correspondance Floue :** Similarité par trigrammes PostgreSQL `pg_trgm` étendue pour correspondre sur le numéro de passeport, le NIF et les champs de nom
   - **Point d'Accès :** `GET /api/borrowers/fuzzy-match?name=<requête>` — retourne les doublons potentiels avec scores de similarité sur tous les champs d'identité
 
-  ### 13.12 Prise en Charge de la Langue Portugaise (ENT-12)
+  ### 13.12 Recherche Globale (ENT-11)
+
+  **Objectif :** Fournir une recherche inter-entités sur les emprunteurs, les institutions et les comptes de crédit simultanément avec filtrage optionnel par pays.
+
+  **Architecture :**
+  - **Point d'Accès :** `GET /api/global-search?q=<terme>&country=<pays>`
+  - **Entités Recherchées :** Emprunteurs (nom, identifiant national, NIF), institutions (nom), comptes de crédit (numéro de compte)
+  - **Filtrage :** Filtre optionnel par pays pour restreindre les résultats à une juridiction spécifique
+  - **Frontend :** Intégré dans la page de recherche de crédit (`credit-search.tsx`) avec résultats catégorisés par type d'entité
+
+  ### 13.13 Photos d'Identité et Téléversement de Documents (ENT-12)
+
+  **Objectif :** Permettre le téléversement de photos de profil et de documents d'identité pour les emprunteurs, avec des avatars DiceBear auto-générés comme valeur par défaut.
+
+  **Architecture :**
+  - **Schéma :** Colonnes `photo_url` (text, nullable) et `id_document_url` (text, nullable) sur la table `borrowers`
+  - **Téléversement :** Middleware `multer` pour le traitement des fichiers avec limites de taille (5 Mo pour les photos, 10 Mo pour les documents), validation des types MIME et noms de fichiers aléatoires
+  - **Points d'Accès :** `POST /api/borrowers/:id/photo` (téléversement de photo), `POST /api/borrowers/:id/id-document` (téléversement de document d'identité)
+  - **Service des Fichiers :** Route `/uploads` protégée par authentification pour le service des fichiers téléversés
+  - **Avatars DiceBear :** Avatars auto-générés via `api.dicebear.com` pour les emprunteurs sans photo téléversée (PII-safe, pas de données personnelles transmises)
+  - **Journalisation :** Actions `UPLOAD_PHOTO` et `UPLOAD_ID_DOCUMENT` journalisées dans l'audit
+
+  ### 13.14 Environnement de Démonstration (ENT-13)
+
+  **Objectif :** Fournir un environnement de démonstration en un clic pour les investisseurs avec connexion par cartes de rôle et indicateurs visuels de mode démonstration.
+
+  **Architecture :**
+  - **Page de Connexion :** Bouton « Essayer la Démo Interactive » avec trois cartes de rôle (Admin, Régulateur, Agent Bancaire)
+  - **Bannière de Démonstration :** Bannière ambre « ENVIRONNEMENT DE DÉMONSTRATION » visible sur toutes les pages lorsque connecté via la démo
+  - **Avertissement :** Avertissement de données fictives affiché dans l'environnement de démonstration
+  - **Sécurité :** Utilise l'infrastructure d'authentification et d'autorisation existante
+
+  ### 13.15 Prise en Charge de la Langue Portugaise
 
   **Objectif :** Localisation complète en portugais (pt) pour toutes les interfaces système, étendant les traductions existantes en anglais/français.
 
@@ -1551,4 +1590,4 @@ Les conditions d'erreur sont journalisées via `console.error()` pour :
 *Fin de la Documentation Système*
 
 *Document préparé par Systems In Motion Limited*  
-*Système de Hub Central de Données Inter-Juridictionnel et Registre de Crédit v1.1*
+*Système de Hub Central de Données Inter-Juridictionnel et Registre de Crédit v1.2*

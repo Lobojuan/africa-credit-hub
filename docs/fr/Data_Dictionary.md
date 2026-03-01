@@ -1,18 +1,18 @@
 # Dictionnaire de Données
 
-## Système de Hub Central de Données Inter-Juridictionnel et Registre de Crédit v1.1
+## Système de Hub Central de Données Inter-Juridictionnel et Registre de Crédit v1.2
 
 **Préparé pour :** Systems In Motion Limited  
-**Version du Document :** 1.1  
+**Version du Document :** 1.2  
 **Date :** Mars 2026
 
 ---
 
 ## 1. Aperçu
 
-Ce document fournit une documentation au niveau des champs pour les 18 tables de la base de données du Système de Registre de Crédit. La base de données utilise PostgreSQL avec Drizzle ORM pour la gestion du schéma.
+Ce document fournit une documentation au niveau des champs pour les 21 tables de la base de données du Système de Registre de Crédit. Le système prend en charge les 54 pays africains avec plus de 42 devises africaines ainsi que le USD, l'EUR et la GBP. La base de données utilise PostgreSQL avec Drizzle ORM pour la gestion du schéma.
 
-**Améliorations Entreprise (v1.1) — Résumé de l'Impact sur le Schéma :**
+**Améliorations Entreprise — Résumé de l'Impact sur le Schéma :**
 
 | Amélioration | Modifications du Schéma |
 |--------------|------------------------|
@@ -23,6 +23,12 @@ Ce document fournit une documentation au niveau des champs pour les 18 tables de
 | ENT-05 (Faible Bande Passante) | Aucune modification du schéma ; la compression et le fractionnement de code sont des optimisations au niveau applicatif |
 | ENT-06 (Téléversement XBRL) | Aucune nouvelle table/colonne ; les enregistrements XBRL/XML sont analysés et insérés dans la table `credit_accounts` existante via le téléversement par lot |
 | ENT-07 (Chaîne de Hachage) | Ajout des colonnes `previous_hash` et `current_hash` à la table `audit_logs` |
+| ENT-08 (Taux de Change) | Nouvelle table `exchange_rates` pour la gestion des taux multi-devises sur plus de 42 devises africaines |
+| ENT-09 (Administration API) | Nouvelle table `api_configurations` pour la gestion centralisée des intégrations API externes |
+| ENT-10 (Rétention) | Nouvelle table `retention_policies` pour la configuration des périodes de rétention des données par juridiction |
+| ENT-11 (Recherche Globale) | Aucune modification du schéma ; la recherche inter-entités utilise les tables existantes via le point d'accès `/api/global-search` |
+| ENT-12 (Photos d'Identité) | Ajout des colonnes `photo_url` et `id_document_url` à la table `borrowers` pour les photos de profil et les scans de documents d'identité |
+| ENT-13 (Environnement de Démonstration) | Aucune modification du schéma ; mode de démonstration pour investisseurs avec cartes de connexion par rôle utilisant le schéma existant |
 
 ---
 
@@ -188,6 +194,8 @@ Ce document fournit une documentation au niveau des champs pour les 18 tables de
 | business_reg_number | text | NULLABLE | Numéro d'enregistrement commercial (corporatif) | `BR-2024-001` |
 | sector | text | NULLABLE | Secteur d'activité (corporatif) | `Technology` |
 | passport_number | text | NULLABLE | Numéro de passeport pour la résolution d'entités transfrontalières | `EP1234567` |
+| photo_url | text | NULLABLE | URL de la photo de profil de l'emprunteur (téléversée ou avatar DiceBear auto-généré) | `/uploads/photos/abc123.jpg` |
+| id_document_url | text | NULLABLE | URL du scan du document d'identité téléversé (image ou PDF, max 10 Mo) | `/uploads/documents/def456.pdf` |
 | is_pep | boolean | DEFAULT false | Indicateur de Personne Politiquement Exposée | `false` |
 | pep_details | text | NULLABLE | Détails/description PPE | `Former government minister` |
 | related_borrower_id | varchar | NULLABLE | ID de l'emprunteur lié/associé | `c3d4e5f6-a7b8-9012-cdef-345678901234` |

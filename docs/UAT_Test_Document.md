@@ -1,9 +1,9 @@
 # User Acceptance Testing (UAT) Test Document
 
-## Cross-Jurisdictional Central Data Hub & Credit Registry System v1.1
+## Cross-Jurisdictional Central Data Hub & Credit Registry System v1.2
 
 **Prepared for:** Systems In Motion Limited  
-**Document Version:** 1.1  
+**Document Version:** 1.2  
 **Date:** March 2026  
 **Classification:** Confidential
 
@@ -35,6 +35,20 @@
 22. [Internationalization (i18n) Module](#22-internationalization-i18n-module)
 23. [Theme Module](#23-theme-module)
 24. [Sign-Off](#24-sign-off)
+25. [Enterprise Enhancement: MFA Module (ENT-01)](#25-enterprise-enhancement-mfa-module-ent-01)
+26. [Enterprise Enhancement: Fuzzy Entity Matching Module (ENT-02)](#26-enterprise-enhancement-fuzzy-entity-matching-module-ent-02)
+27. [Enterprise Enhancement: Dispute Chatbot Module (ENT-03)](#27-enterprise-enhancement-dispute-chatbot-module-ent-03)
+28. [Enterprise Enhancement: OAuth 2.1 Module (ENT-04)](#28-enterprise-enhancement-oauth-21-module-ent-04)
+29. [Enterprise Enhancement: Low-Bandwidth Optimizations Module (ENT-05)](#29-enterprise-enhancement-low-bandwidth-optimizations-module-ent-05)
+30. [Enterprise Enhancement: XBRL Upload Module (ENT-06)](#30-enterprise-enhancement-xbrl-upload-module-ent-06)
+31. [Enterprise Enhancement: Tamper-Evident Audit Logs Module (ENT-07)](#31-enterprise-enhancement-tamper-evident-audit-logs-module-ent-07)
+32. [Exchange Rate Management Module](#32-exchange-rate-management-module)
+33. [API Administration Module](#33-api-administration-module)
+34. [Data Retention Policies Module](#34-data-retention-policies-module)
+35. [Global Search Module](#35-global-search-module)
+36. [ID Photos & Document Upload Module](#36-id-photos--document-upload-module)
+37. [Demo Environment Module](#37-demo-environment-module)
+38. [Language Switcher on Login Module](#38-language-switcher-on-login-module)
 
 ---
 
@@ -44,14 +58,14 @@
 
 | Item | Detail |
 |------|--------|
-| Application | Cross-Jurisdictional Central Data Hub & Credit Registry System v1.1 |
-| Database | PostgreSQL with 15 tables |
+| Application | Cross-Jurisdictional Central Data Hub & Credit Registry System v1.2 |
+| Database | PostgreSQL with 21 tables |
 | User Roles | Admin, Regulator, Lender, Viewer |
-| Supported Currencies | 18 (ETB, GHS, UGX, LRD, USD, EUR, GBP, KES, NGN, ZAR, TZS, RWF, XOF, XAF, EGP, MAD, BWP, MZN) |
-| Enterprise Enhancements | MFA, Fuzzy Matching, Dispute Chatbot, OAuth 2.1, Low-Bandwidth, XBRL Upload, Tamper-Evident Audit |
-| Jurisdictions | Ghana, Ethiopia, Uganda, Liberia |
+| Supported Currencies | 42+ African currencies plus USD, EUR, GBP |
+| Enterprise Enhancements | MFA, Fuzzy Matching, Dispute Chatbot, OAuth 2.1, Low-Bandwidth, XBRL Upload, Tamper-Evident Audit, Exchange Rate Management, API Administration, Data Retention Policies, Global Search, ID Photos & Documents, Demo Environment |
+| Jurisdictions | All 54 African countries |
 | Languages | English, French, Portuguese |
-| Seed Data | 100K+ borrowers, 166K+ credit accounts, 120K payment history records |
+| Seed Data | 102K+ borrowers, 172K+ credit accounts, 120K payment history records, 3,218 disputes, 2,147 court judgments |
 
 ### 1.2 Seed Credentials
 
@@ -463,7 +477,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total Test Cases | 187 |
+| Total Test Cases | 197 |
 | Passed | |
 | Failed | |
 | Blocked | |
@@ -604,7 +618,35 @@
 
 ---
 
-## 35. Language Switcher on Login Module
+## 35. Global Search Module
+
+| TC-ID | Module | Test Case Name | Pre-conditions | Test Steps | Expected Result | Pass/Fail | SRS Reference |
+|-------|--------|---------------|----------------|------------|-----------------|-----------|---------------|
+| TC-GS-001 | Global Search | Cross-entity search | User is logged in | 1. Navigate to `/search`. 2. Enter a search term in the search box. 3. Submit search. | Results displayed across three categories: borrowers, institutions, and credit accounts. Matching records shown with relevant details. | | FR-COL-08 |
+| TC-GS-002 | Global Search | Country filter | User is logged in | 1. Navigate to `/search`. 2. Enter a search term. 3. Select a country from the country filter dropdown. 4. Submit search. | Results filtered to only show records from the selected country. | | FR-COL-08 |
+
+---
+
+## 36. ID Photos & Document Upload Module
+
+| TC-ID | Module | Test Case Name | Pre-conditions | Test Steps | Expected Result | Pass/Fail | SRS Reference |
+|-------|--------|---------------|----------------|------------|-----------------|-----------|---------------|
+| TC-PHOTO-001 | ID Photos | Upload borrower photo | User is logged in, borrower exists | 1. Navigate to borrower detail page. 2. Click photo upload area/camera icon on the borrower avatar. 3. Select an image file (under 5MB). 4. Upload. | Photo uploaded successfully. Borrower avatar updates to show uploaded photo. Audit log entry created for UPLOAD_PHOTO. | | FR-COL-07 |
+| TC-PHOTO-002 | ID Photos | Upload ID document | User is logged in, borrower exists | 1. Navigate to borrower detail page. 2. Locate ID Document section. 3. Click upload button. 4. Select an image or PDF file (under 10MB). 5. Upload. | ID document uploaded successfully. Document preview/link shown on borrower detail. Audit log entry created for UPLOAD_ID_DOCUMENT. | | FR-COL-07 |
+| TC-PHOTO-003 | ID Photos | DiceBear avatar display | User is logged in, borrower exists without uploaded photo | 1. Navigate to borrower detail page for a borrower without an uploaded photo. | Auto-generated DiceBear avatar displayed as the borrower's profile photo. | | FR-COL-07 |
+
+---
+
+## 37. Demo Environment Module
+
+| TC-ID | Module | Test Case Name | Pre-conditions | Test Steps | Expected Result | Pass/Fail | SRS Reference |
+|-------|--------|---------------|----------------|------------|-----------------|-----------|---------------|
+| TC-DEMO-001 | Demo Environment | Demo login from login page | Application is accessible | 1. Navigate to login page. 2. Click "Try Interactive Demo" button. 3. Select a role card (Admin, Regulator, or Bank Officer). | User is logged in with the selected demo role. Amber DEMO ENVIRONMENT banner visible at top of application. | | ENT-13 |
+| TC-DEMO-002 | Demo Environment | Demo banner visibility | User logged in via demo | 1. Log in via demo environment. 2. Navigate between pages. | Amber DEMO ENVIRONMENT banner remains visible on all pages. Fictional data disclaimer shown. | | ENT-13 |
+
+---
+
+## 38. Language Switcher on Login Module
 
 | TC-ID | Module | Test Case Name | Pre-conditions | Test Steps | Expected Result | Pass/Fail | SRS Reference |
 |-------|--------|---------------|----------------|------------|-----------------|-----------|---------------|
@@ -617,7 +659,7 @@
 
 **Document End**
 
-*This UAT Test Document covers all modules of the Cross-Jurisdictional Central Data Hub & Credit Registry System v1.1, including the 7 enterprise enhancements (ENT-01 through ENT-07). Each test case is designed to validate functional and non-functional requirements as defined in the Software Requirements Specification (SRS).*
+*This UAT Test Document covers all modules of the Cross-Jurisdictional Central Data Hub & Credit Registry System v1.2, including the 13 enterprise enhancements (ENT-01 through ENT-13). Each test case is designed to validate functional and non-functional requirements as defined in the Software Requirements Specification (SRS).*
 
 *Prepared by: Systems In Motion Limited*  
 *Classification: Confidential*

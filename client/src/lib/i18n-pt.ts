@@ -414,7 +414,6 @@ const pt = {
     creditInquiries: "Consultas de Crédito",
     consentGiven: "Consentimento Dado",
     noInquiries: "Nenhuma consulta registada",
-    noConsent: "Sem Consentimento",
     pepFlag: "Pessoa Politicamente Exposta",
     pepNoDetails: "Sem detalhes adicionais fornecidos",
     photoUploaded: "Foto de perfil atualizada com sucesso",

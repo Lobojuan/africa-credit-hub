@@ -1,9 +1,9 @@
 # Deployment Guide
 
-## Cross-Jurisdictional Central Data Hub & Credit Registry System v1.1
+## Cross-Jurisdictional Central Data Hub & Credit Registry System v1.2
 
 **Prepared for:** Systems In Motion Limited  
-**Document Version:** 1.1  
+**Document Version:** 1.2  
 **Date:** March 2026
 
 ---
@@ -31,7 +31,7 @@ This guide provides step-by-step deployment instructions for the Credit Registry
 |----------|---------|-------------|
 | CPU | 1 vCPU | 2+ vCPU |
 | RAM | 512 MB | 2 GB+ |
-| Disk | 1 GB | 5 GB+ |
+| Disk | 1 GB | 5 GB+ (additional space required for uploaded photos and ID documents in `uploads/` directory) |
 | Network | 1 Mbps | 10 Mbps+ |
 
 ### 2.3 Network Requirements
@@ -39,6 +39,8 @@ This guide provides step-by-step deployment instructions for the Credit Registry
 - Outbound access to PostgreSQL database (port 5432 or provider-specific)
 - Inbound access on application port (default 5000)
 - HTTPS termination (via reverse proxy or platform-provided)
+- Outbound HTTPS access to `api.dicebear.com` (auto-generated borrower avatars)
+- Outbound HTTPS access to `open.er-api.com` (live exchange rate fetching)
 
 ---
 
@@ -87,7 +89,7 @@ The application uses Drizzle ORM for schema management. On first startup, the ap
 
 1. Connect to the database using `DATABASE_URL`
 2. Enable the `pg_trgm` extension for fuzzy matching
-3. Push the schema using Drizzle (18 tables)
+3. Push the schema using Drizzle (21 tables)
 4. Seed initial data (users, borrowers, credit accounts, etc.)
 
 To manually push the schema:
@@ -101,15 +103,15 @@ npx drizzle-kit push
 The seed process (`server/seed.ts`) creates:
 
 - 6 system users with predefined credentials
-- 100,005 borrowers (Ethiopian, Ghanaian, Ugandan names)
+- 102,462 borrowers across all 54 African countries
 - 100,020 institutions
-- 166,673 credit accounts
+- 172,359 credit accounts
 - 120,000 payment history records
 - 25,004 credit inquiries
 - 15,000 consent records
 - 5,063 audit logs
-- 3,000 disputes
-- 2,000 court judgments
+- 3,218 disputes
+- 2,147 court judgments
 - 120 billing records
 
 **Default Credentials (change in production):**
@@ -164,7 +166,12 @@ dist/
     assets/
       *.js            # JavaScript bundles
       *.css           # Stylesheet bundles
+uploads/              # User-uploaded files (created at runtime)
+  photos/             # Borrower profile photos (max 5MB each)
+  documents/          # Borrower ID documents (max 10MB each)
 ```
+
+> **Note:** The `uploads/` directory is created automatically at application startup. Ensure the application process has write permissions to the working directory. For Docker deployments, consider mounting a persistent volume at the `uploads/` path to preserve uploaded files across container restarts.
 
 ---
 
@@ -288,6 +295,8 @@ services:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://postgres:password@db:5432/credit_registry
       - SESSION_SECRET=your-production-secret-here
+    volumes:
+      - uploads:/app/uploads
     depends_on:
       - db
     restart: unless-stopped
@@ -305,6 +314,7 @@ services:
 
 volumes:
   pgdata:
+  uploads:
 ```
 
 ### 8.3 Build and Run
@@ -338,7 +348,7 @@ curl http://localhost:5000/api/external/v1/health
 ```json
 {
   "status": "ok",
-  "version": "1.1",
+  "version": "1.2",
   "service": "Systems In Motion Credit Registry API"
 }
 ```
@@ -512,13 +522,14 @@ psql $DATABASE_URL -c "\dt"
 
 ## 15. Enterprise Enhancement Dependencies
 
-The following additional packages were added for enterprise enhancements (v1.1):
+The following additional packages were added for enterprise enhancements (v1.1 and v1.2):
 
 | Package | Purpose | Enhancement |
 |---------|---------|-------------|
 | `otpauth` | TOTP secret generation and verification | ENT-01 (MFA) |
 | `jsonwebtoken` | JWT signing and verification for Bearer tokens | ENT-04 (OAuth 2.1) |
 | `compression` | gzip compression middleware | ENT-05 (Low-Bandwidth) |
+| `multer` | Multipart/form-data file upload handling | ENT-12 (ID Photos & Documents) |
 
 **PostgreSQL Extension:**
 - `pg_trgm` — Required for fuzzy entity matching (ENT-02). Automatically created at startup.
@@ -531,7 +542,7 @@ The Credit Registry System includes the following modules and capabilities:
 
 | Feature | Description |
 |---------|-------------|
-| Multi-Currency Processing | Support for 18 currencies across jurisdictions |
+| Multi-Currency Processing | Support for 42+ African currencies plus USD, EUR, GBP across 54 jurisdictions |
 | Internationalization (i18n) | Three languages supported: English (EN), French (FR), and Portuguese (PT) |
 | Login Page Language Switcher | Users can select their preferred language directly from the login screen |
 | Exchange Rate Management | Module for managing and updating currency exchange rates across supported currencies |
@@ -544,6 +555,9 @@ The Credit Registry System includes the following modules and capabilities:
 | Low-Bandwidth Optimization | gzip compression and code-splitting for constrained networks (ENT-05) |
 | Batch Upload (XBRL/XML) | Bulk data ingestion via structured file formats (ENT-06) |
 | Tamper-Evident Audit Trail | Hash-chained audit logs with integrity verification (ENT-07) |
+| Global Search | Cross-entity search across borrowers, institutions, and credit accounts (ENT-11) |
+| ID Photos & Documents | DiceBear auto-generated avatars with multer-based photo/document upload (ENT-12) |
+| Demo Environment | Investor-facing one-click demo with role cards and DEMO banner (ENT-13) |
 
 ---
 
@@ -551,7 +565,7 @@ The Credit Registry System includes the following modules and capabilities:
 
 | Component | Version |
 |-----------|---------|
-| Application | v1.1 (Enterprise Enhancements) |
+| Application | v1.2 (Enterprise Enhancements) |
 | Node.js Runtime | 20.x LTS |
 | Express.js | 4.x |
 | Drizzle ORM | Latest |

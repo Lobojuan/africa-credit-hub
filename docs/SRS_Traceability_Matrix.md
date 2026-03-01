@@ -1,9 +1,9 @@
 # SRS Traceability Matrix
 
-## Cross-Jurisdictional Central Data Hub & Credit Registry System v1.1
+## Cross-Jurisdictional Central Data Hub & Credit Registry System v1.2
 
 **Prepared for:** Systems In Motion Limited  
-**Document Version:** 1.1  
+**Document Version:** 1.2  
 **Date:** March 2026
 
 ---
@@ -34,6 +34,8 @@ This document maps every Software Requirements Specification (SRS) requirement t
 | FR-COL-04 | System shall validate data quality at point of entry | Implemented | Server Routes (`routes.ts`), Zod Schemas (`schema.ts`) | Zod schema validation on all insert operations; field-level constraints enforced | TC-DQ-001, TC-DQ-002 |
 | FR-COL-05 | System shall collect court judgment and lien information | Implemented | Court Judgments (`court_judgments` table, `borrower-detail.tsx`) | Court judgments with case number, court, type (lien/bankruptcy/lawsuit/civil/criminal), amount, date, status | TC-CJ-001 through TC-CJ-003 |
 | FR-COL-06 | Cross-Border Entity Resolution | Passport number, TIN, fuzzy name matching for cross-jurisdictional identity | shared/schema.ts, server/storage.ts | 7 relationship types incl. beneficial_owner | TC-BOR-013 |
+| FR-COL-07 | System shall support ID photo and document upload for borrowers | Implemented | Borrower Management (`photoUrl`, `idDocumentUrl` fields, multer upload endpoints, auth-protected serving) | Photo upload (5MB limit, images only) and ID document upload (10MB limit, images/PDF) with randomized filenames; files served via authenticated `/uploads` route | TC-PHOTO-001 through TC-PHOTO-003 |
+| FR-COL-08 | System shall provide global cross-entity search across borrowers, institutions, and credit accounts | Implemented | Global Search (`/api/global-search`, `credit-search.tsx`) | Searches borrowers, institutions, and credit accounts simultaneously with optional country filter | TC-GS-001, TC-GS-002 |
 
 ---
 
@@ -97,7 +99,7 @@ This document maps every Software Requirements Specification (SRS) requirement t
 | FR-COMM-01 | System shall support billing and fee management | Implemented | Billing (`billing_records` table, `billing.tsx`) | Invoice creation with service type, amount, currency, period | TC-BIL-001, TC-BIL-002 |
 | FR-COMM-02 | System shall track invoice payment status | Implemented | Billing Records (`billingStatusEnum`) | Status tracking: pending, paid, overdue | TC-BIL-003 |
 | FR-COMM-03 | System shall support multiple service types | Implemented | Billing Records (`serviceType` field) | Service types: data_submission, credit_report, api_access, subscription | TC-BIL-001 |
-| FR-COMM-04 | System shall support multi-currency billing | Implemented | Billing Records (`currency` field) | 18 supported currencies across 4 jurisdictions | TC-BIL-001 |
+| FR-COMM-04 | System shall support multi-currency billing | Implemented | Billing Records (`currency` field) | 42+ African currencies plus USD, EUR, GBP across 54 jurisdictions | TC-BIL-001 |
 | FR-COMM-05 | System shall generate unique invoice numbers | Implemented | Billing (`invoiceNumber` field) | Unique invoice numbers per billing record | TC-BIL-002 |
 
 ---
@@ -167,6 +169,9 @@ This document maps every Software Requirements Specification (SRS) requirement t
 | ENT-08 | Data Retention Enforcement (REQ-RET-01) | Automated archiving/expunging based on jurisdiction-specific policies | server/retention-enforcement.ts, client/src/pages/retention-policies.tsx | 24hr scheduler + manual trigger | TC-RET-001 |
 | ENT-09 | Exchange Rate Management Module | Admin CRUD for currency cross-rate pairs with USD routing | client/src/pages/exchange-rates.tsx, server/routes.ts | 18 currencies, converter widget | TC-EXR-001 |
 | ENT-10 | API Administration Module | Centralized config for external service endpoints | client/src/pages/api-admin.tsx, server/routes.ts | Weather, judicial, payment gateway | TC-API-ADM-001 |
+| ENT-11 | Global cross-entity search | Implemented | Global Search (`/api/global-search`, `credit-search.tsx`) | Searches across borrowers, institutions, and credit accounts with optional country filter; no schema changes required | TC-GS-001, TC-GS-002 |
+| ENT-12 | ID photo and document upload for borrowers | Implemented | ID Photos (`photoUrl`, `idDocumentUrl` fields on `borrowers`, multer upload endpoints) | DiceBear auto-generated avatars as default; multer-based photo/document upload with auth-protected serving | TC-PHOTO-001 through TC-PHOTO-003 |
+| ENT-13 | Investor demo environment | Implemented | Demo Environment (login page demo cards, DEMO banner) | One-click demo login with 3 role cards (Admin, Regulator, Bank Officer); amber DEMO ENVIRONMENT banner; fictional data disclaimer | TC-DEMO-001, TC-DEMO-002 |
 
 ---
 
@@ -174,7 +179,7 @@ This document maps every Software Requirements Specification (SRS) requirement t
 
 | Category | Total Requirements | Implemented | Partial | Not Implemented |
 |----------|-------------------|-------------|---------|-----------------|
-| FR-COL (Data Collection) | 6 | 6 | 0 | 0 |
+| FR-COL (Data Collection) | 8 | 8 | 0 | 0 |
 | FR-CR (Credit Reporting) | 8 | 8 | 0 | 0 |
 | FR-CON (Consent & Disputes) | 9 | 9 | 0 | 0 |
 | FR-REG (Regulatory) | 3 | 3 | 0 | 0 |
@@ -184,8 +189,8 @@ This document maps every Software Requirements Specification (SRS) requirement t
 | INT-RPT (Integration & Reporting) | 4 | 4 | 0 | 0 |
 | DQ (Data Quality) | 5 | 5 | 0 | 0 |
 | NFR-SEC (Security) | 10 | 10 | 0 | 0 |
-| ENT (Enterprise Enhancements) | 10 | 10 | 0 | 0 |
-| **Total** | **71** | **71** | **0** | **0** |
+| ENT (Enterprise Enhancements) | 13 | 13 | 0 | 0 |
+| **Total** | **77** | **77** | **0** | **0** |
 
 ---
 

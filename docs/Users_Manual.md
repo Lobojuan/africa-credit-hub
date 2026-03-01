@@ -1,4 +1,4 @@
-# Credit Registry System — Users Manual v1.1
+# Credit Registry System — Users Manual v1.2
 
 **Cross-Jurisdictional Central Data Hub & Credit Registry System**
 
@@ -39,10 +39,13 @@
 25. [Exchange Rate Management](#25-exchange-rate-management)
 26. [API Administration](#26-api-administration)
 27. [Data Retention Policies](#27-data-retention-policies)
-28. [Appendix A: Seed Credentials](#appendix-a-seed-credentials)
-29. [Appendix B: Role Access Matrix](#appendix-b-role-access-matrix)
-30. [Appendix C: Supported Currencies](#appendix-c-supported-currencies)
-31. [Appendix D: Glossary of Terms](#appendix-d-glossary-of-terms)
+28. [Global Search](#28-global-search)
+29. [ID Photos & Document Upload](#29-id-photos--document-upload)
+30. [Demo Environment](#30-demo-environment)
+31. [Appendix A: Seed Credentials](#appendix-a-seed-credentials)
+32. [Appendix B: Role Access Matrix](#appendix-b-role-access-matrix)
+33. [Appendix C: Supported Currencies](#appendix-c-supported-currencies)
+34. [Appendix D: Glossary of Terms](#appendix-d-glossary-of-terms)
 
 ---
 
@@ -54,12 +57,22 @@ The Credit Registry System is a web-based application developed by Systems In Mo
 
 ### 1.2 Supported Jurisdictions
 
-The system supports deployment across multiple African jurisdictions:
+The system supports deployment across all **54 African countries**, grouped by region:
 
-- **Ghana** (GHS — Ghanaian Cedi)
-- **Ethiopia** (ETB — Ethiopian Birr)
-- **Uganda** (UGX — Ugandan Shilling)
-- **Liberia** (USD — US Dollar)
+**West Africa (ECOWAS):**
+Benin, Burkina Faso, Cabo Verde, Côte d'Ivoire, Gambia, Ghana, Guinea, Guinea-Bissau, Liberia, Mali, Niger, Nigeria, Senegal, Sierra Leone, Togo
+
+**East Africa (EAC):**
+Burundi, DR Congo, Ethiopia, Kenya, Rwanda, South Sudan, Tanzania, Uganda
+
+**Southern Africa (SADC):**
+Angola, Botswana, Eswatini, Lesotho, Madagascar, Malawi, Mauritius, Mozambique, Namibia, Seychelles, South Africa, Zambia, Zimbabwe
+
+**Central Africa (CEMAC):**
+Cameroon, Central African Republic, Chad, Congo, Equatorial Guinea, Gabon, São Tomé and Príncipe
+
+**North Africa (AMU):**
+Algeria, Djibouti, Egypt, Eritrea, Libya, Mauritania, Morocco, Somalia, Sudan, Tunisia, Comoros
 
 ### 1.3 Supported Languages
 
@@ -271,12 +284,14 @@ A Politically Exposed Person (PEP) flag indicates that a borrower holds a promin
 
 1. Click on any borrower card in the borrower list.
 2. The borrower detail page displays:
+   - **Profile photo** — An auto-generated avatar (via DiceBear) is displayed by default; a custom photo can be uploaded by hovering over the avatar and clicking the camera icon
    - Personal/company information
    - All linked credit accounts
    - Credit report access
    - Court judgments
    - Consent records
    - Related parties
+   - **ID Document section** — Shows the uploaded ID scan (passport or national ID) or an upload prompt if none has been uploaded yet. Click the "Upload ID" button in the header or the upload area in the personal info card to attach a document.
 
 ### 4.6 Related Party Linking
 
@@ -297,7 +312,7 @@ All borrower creation and modification requests go through a maker-checker workf
 
 ### 4.8 Pagination
 
-The borrower list is paginated to handle large datasets (100,000+ records):
+The borrower list is paginated to handle large datasets (102,000+ records across 54 countries):
 - Use the **Previous** and **Next** buttons to navigate between pages.
 - The current page number and total count are displayed at the bottom.
 - Default page size is 50 records per page.
@@ -319,7 +334,7 @@ The Credit Accounts module manages loan and credit facilities associated with bo
    - **Account Type** — Select from: Personal Loan, Mortgage, Vehicle Loan, Business Loan, Corporate Loan, Overdraft, Credit Card, Microfinance
    - **Original Amount** — Original loan/facility amount
    - **Current Balance** — Current outstanding balance
-   - **Currency** — Select from 18 supported currencies
+   - **Currency** — Select from 45+ supported currencies (42 African plus USD, EUR, GBP)
    - **Interest Rate** — Annual interest rate percentage
    - **Status** — Current, Delinquent, Default, Closed, Restructured
    - **Disbursement Date** — When the loan was disbursed
@@ -345,7 +360,7 @@ The Credit Accounts module manages loan and credit facilities associated with bo
 
 ### 5.3 Multi-Currency Support
 
-The system supports 18 currencies across African and international markets. When creating or viewing credit accounts:
+The system supports 42+ African currencies plus USD, EUR, and GBP (45+ total) across all African and international markets. When creating or viewing credit accounts:
 - Select the appropriate currency from the dropdown.
 - Amounts are displayed with proper formatting for the selected currency.
 - See Appendix C for the complete list of supported currencies.
@@ -1121,7 +1136,7 @@ A: Users with the Admin or Regulator role can approve or reject pending requests
 A: Navigate to a borrower's detail page, find the Court Judgments section, and click "Add Judgment." Only Admin and Regulator users can create court judgments.
 
 ### Q: What currencies does the system support?
-A: The system supports 18 currencies. See Appendix C for the complete list.
+A: The system supports 42+ African currencies plus USD, EUR, and GBP (45+ total). See Appendix C for the complete list.
 
 ---
 
@@ -1407,6 +1422,129 @@ The **Run Enforcement** button triggers the retention enforcement process:
 
 ---
 
+## 28. Global Search
+
+The Global Search feature provides a unified search experience across all entity types in the system.
+
+### 28.1 Accessing Global Search
+
+1. Navigate to **Credit Search** from the sidebar, or click the search icon in the header.
+2. The search page displays a central search bar with a country filter dropdown.
+
+### 28.2 Performing a Search
+
+1. Enter your search term in the search field (borrower name, national ID, institution name, or account number).
+2. Optionally select a **Country** from the dropdown to narrow results to a specific jurisdiction.
+3. Click **Search** to execute the query.
+4. The system searches simultaneously across:
+   - **Borrowers** — Matches on name, national ID, passport number, company name
+   - **Institutions** — Matches on institution name, registration number, contact email
+   - **Credit Accounts** — Matches on account number, lender institution
+
+### 28.3 Understanding Search Results
+
+Results are displayed in categorized sections:
+
+- **Borrowers** — Each result shows the borrower's profile photo (auto-generated avatar or uploaded photo), name, national ID, type (individual/corporate), country, city, and sector. Click a result to navigate to the borrower's detail page. A "View Report" button provides quick access to the borrower's credit report.
+- **Institutions** — Each result shows the institution name, registration number, contact email, type, country, and status. Click a result to navigate to the Institutions page.
+- **Credit Accounts** — Each result shows the lender institution, account number, account type, currency and balance, and account status. Click a result to navigate to the associated borrower's detail page.
+
+### 28.4 Country Filter
+
+The country filter dropdown lists all 54 supported African countries. When a country is selected:
+- Only results from that country are returned.
+- A "Clear" button appears to remove the country filter.
+- The filter works in combination with the text search term.
+
+---
+
+## 29. ID Photos & Document Upload
+
+The system supports profile photos and identification document uploads for borrowers.
+
+### 29.1 Auto-Generated Profile Photos
+
+Every borrower in the system automatically receives a profile photo generated by DiceBear. These avatars are:
+- Unique to each borrower (generated from the borrower's ID as a seed)
+- Displayed on borrower cards in search results and lists
+- Displayed prominently on the borrower detail page
+- Different styles for individual borrowers (person avatars) and corporate borrowers (initials)
+
+### 29.2 Uploading a Custom Photo
+
+To replace the auto-generated avatar with a real photo:
+
+1. Navigate to a borrower's detail page.
+2. Hover over the borrower's profile photo in the page header.
+3. A **camera icon overlay** appears over the photo.
+4. Click the camera icon to open a file picker.
+5. Select an image file (JPEG, PNG, or other standard image formats).
+6. **File size limit:** Maximum **5 MB** per photo.
+7. The photo is uploaded and immediately replaces the auto-generated avatar.
+8. A success toast notification confirms the upload.
+
+### 29.3 Uploading an ID Document
+
+To upload a scanned copy of a borrower's passport or national ID:
+
+1. Navigate to a borrower's detail page.
+2. Click the **Upload ID** button in the top-right header area, **or** click the upload prompt in the Personal Info card's ID Document section.
+3. Select a file:
+   - **Supported formats:** Images (JPEG, PNG) and PDF documents
+   - **File size limit:** Maximum **10 MB** per document
+4. The document is uploaded and displayed in the ID Document section of the Personal Info card.
+5. A success toast notification confirms the upload.
+
+### 29.4 Viewing and Replacing an ID Document
+
+Once an ID document has been uploaded:
+- It is displayed as a preview image in the Personal Info card.
+- Hover over the document preview to reveal a **Replace** button.
+- Click **Replace** to upload a new document, which overwrites the previous one.
+
+### 29.5 File Storage
+
+Uploaded files are stored server-side:
+- Photos are saved in the `uploads/photos/` directory.
+- ID documents are saved in the `uploads/documents/` directory.
+- Files are served via authenticated routes — only logged-in users can access uploaded files.
+- Filenames are randomized for security.
+
+---
+
+## 30. Demo Environment
+
+The Demo Environment provides an interactive demonstration mode for stakeholders, investors, and evaluators to explore the system without needing pre-configured credentials.
+
+### 30.1 Accessing the Demo
+
+1. On the login page, locate the **"Try Interactive Demo"** button below the login form.
+2. Click the button to enter the demo selection screen.
+
+### 30.2 Choosing a Demo Role
+
+The demo screen presents **3 role cards**, each representing a different user perspective:
+
+| Role | Username | Description |
+|------|----------|-------------|
+| **Admin** | admin | Full system access — manage users, settings, all modules |
+| **Regulator** | regulator1 | Regulatory oversight — compliance dashboard, approvals, audit trails |
+| **Bank Officer** | cbe_user | Institutional user — submit credit data, search borrowers, file disputes |
+
+Click any role card to instantly log in as that user.
+
+### 30.3 Demo Environment Indicators
+
+When using the demo environment:
+- A **disclaimer notice** with an amber/warning background is displayed on the demo selection page, informing users that this is a demonstration environment with fictional data.
+- All data in the demo environment is seeded test data (102,462 borrowers, 172,359 credit accounts, 3,218 disputes, 2,147 court judgments across 54 African countries).
+
+### 30.4 Returning to Standard Login
+
+From the demo selection screen, click the **"Back to Login"** button to return to the standard username/password login form.
+
+---
+
 ## Appendix A: Seed Credentials
 
 The following credentials are pre-configured in the system for testing and demonstration purposes:
@@ -1444,6 +1582,10 @@ The following credentials are pre-configured in the system for testing and demon
 | User Management | Full Access | No Access | No Access | No Access |
 | Institution Management | Full Access | No Access | No Access | No Access |
 | API Keys | Full Access | No Access | No Access | No Access |
+| Exchange Rates | Full Access | No Access | No Access | No Access |
+| API Administration | Full Access | No Access | No Access | No Access |
+| Retention Policies | Full Access | Full Access | No Access | No Access |
+| Global Search | Full Access | Full Access | Full Access | Read Only |
 | Reports & Export | Full Access | Full Access | Full Access | Full Access |
 | Notifications | Full Access | Full Access | Full Access | Full Access |
 
@@ -1451,28 +1593,82 @@ The following credentials are pre-configured in the system for testing and demon
 
 ## Appendix C: Supported Currencies
 
-The system supports the following 18 currencies:
+The system supports **42+ African currencies** plus USD, EUR, and GBP (45+ total), organized by region:
 
-| Code | Currency Name | Symbol | Region |
-|------|--------------|--------|--------|
-| ETB | Ethiopian Birr | Br | East Africa |
-| KES | Kenyan Shilling | KSh | East Africa |
-| UGX | Ugandan Shilling | USh | East Africa |
-| TZS | Tanzanian Shilling | TSh | East Africa |
-| RWF | Rwandan Franc | FRw | East Africa |
-| GHS | Ghanaian Cedi | ₵ | West Africa |
-| LRD | Liberian Dollar | L$ | West Africa |
-| NGN | Nigerian Naira | ₦ | West Africa |
-| XOF | West African CFA Franc | CFA | West Africa |
-| XAF | Central African CFA Franc | FCFA | Central Africa |
-| ZAR | South African Rand | R | Southern Africa |
-| BWP | Botswana Pula | P | Southern Africa |
-| MZN | Mozambican Metical | MT | Southern Africa |
-| EGP | Egyptian Pound | E£ | North Africa |
-| MAD | Moroccan Dirham | MAD | North Africa |
-| USD | US Dollar | $ | International |
-| EUR | Euro | € | International |
-| GBP | British Pound | £ | International |
+### East Africa
+
+| Code | Currency Name | Symbol |
+|------|--------------|--------|
+| BIF | Burundian Franc | FBu |
+| CDF | Congolese Franc | FC |
+| DJF | Djiboutian Franc | Fdj |
+| ERN | Eritrean Nakfa | Nfk |
+| ETB | Ethiopian Birr | Br |
+| KES | Kenyan Shilling | KSh |
+| KMF | Comorian Franc | CF |
+| RWF | Rwandan Franc | FRw |
+| SOS | Somali Shilling | Sh |
+| SSP | South Sudanese Pound | £ |
+| TZS | Tanzanian Shilling | TSh |
+| UGX | Ugandan Shilling | USh |
+
+### West Africa
+
+| Code | Currency Name | Symbol |
+|------|--------------|--------|
+| CVE | Cape Verdean Escudo | Esc |
+| GHS | Ghanaian Cedi | ₵ |
+| GMD | Gambian Dalasi | D |
+| GNF | Guinean Franc | FG |
+| LRD | Liberian Dollar | L$ |
+| NGN | Nigerian Naira | ₦ |
+| SLL | Sierra Leonean Leone | Le |
+| XOF | West African CFA Franc | CFA |
+
+### Southern Africa
+
+| Code | Currency Name | Symbol |
+|------|--------------|--------|
+| AOA | Angolan Kwanza | Kz |
+| BWP | Botswana Pula | P |
+| LSL | Lesotho Loti | L |
+| MGA | Malagasy Ariary | Ar |
+| MUR | Mauritian Rupee | ₨ |
+| MWK | Malawian Kwacha | MK |
+| MZN | Mozambican Metical | MT |
+| NAD | Namibian Dollar | N$ |
+| SCR | Seychellois Rupee | ₨ |
+| SZL | Swazi Lilangeni | E |
+| ZAR | South African Rand | R |
+| ZMW | Zambian Kwacha | ZK |
+| ZWL | Zimbabwean Dollar | Z$ |
+
+### Central Africa
+
+| Code | Currency Name | Symbol |
+|------|--------------|--------|
+| STN | São Tomé Dobra | Db |
+| XAF | Central African CFA Franc | FCFA |
+
+### North Africa
+
+| Code | Currency Name | Symbol |
+|------|--------------|--------|
+| DZD | Algerian Dinar | د.ج |
+| EGP | Egyptian Pound | E£ |
+| LYD | Libyan Dinar | ل.د |
+| MAD | Moroccan Dirham | MAD |
+| MRU | Mauritanian Ouguiya | UM |
+| SDG | Sudanese Pound | ج.س |
+| TND | Tunisian Dinar | د.ت |
+
+### International
+
+| Code | Currency Name | Symbol |
+|------|--------------|--------|
+| USD | US Dollar | $ |
+| EUR | Euro | € |
+| GBP | British Pound | £ |
 
 ---
 

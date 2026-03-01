@@ -1,9 +1,9 @@
 # Guide de Déploiement
 
-## Système Central de Hub de Données Inter-Juridictionnel et Registre de Crédit v1.1
+## Système Central de Hub de Données Inter-Juridictionnel et Registre de Crédit v1.2
 
 **Préparé pour :** Systems In Motion Limited  
-**Version du Document :** 1.1  
+**Version du Document :** 1.2  
 **Date :** Mars 2026
 
 ---
@@ -31,7 +31,7 @@ Ce guide fournit des instructions de déploiement étape par étape pour le Syst
 |-----------|---------|------------|
 | CPU | 1 vCPU | 2+ vCPU |
 | RAM | 512 Mo | 2 Go+ |
-| Disque | 1 Go | 5 Go+ |
+| Disque | 1 Go | 5 Go+ (espace supplémentaire requis pour les photos et documents d'identité téléversés dans le répertoire `uploads/`) |
 | Réseau | 1 Mbps | 10 Mbps+ |
 
 ### 2.3 Exigences Réseau
@@ -39,6 +39,8 @@ Ce guide fournit des instructions de déploiement étape par étape pour le Syst
 - Accès sortant vers la base de données PostgreSQL (port 5432 ou spécifique au fournisseur)
 - Accès entrant sur le port de l'application (par défaut 5000)
 - Terminaison HTTPS (via un proxy inverse ou fournie par la plateforme)
+- Accès HTTPS sortant vers `api.dicebear.com` (avatars auto-générés pour les emprunteurs)
+- Accès HTTPS sortant vers `open.er-api.com` (récupération des taux de change en direct)
 
 ---
 
@@ -87,7 +89,7 @@ L'application utilise Drizzle ORM pour la gestion du schéma. Au premier démarr
 
 1. Connexion à la base de données via `DATABASE_URL`
 2. Activation de l'extension `pg_trgm` pour la correspondance floue
-3. Déploiement du schéma via Drizzle (18 tables)
+3. Déploiement du schéma via Drizzle (21 tables)
 4. Insertion des données initiales (utilisateurs, emprunteurs, comptes de crédit, etc.)
 
 Pour déployer manuellement le schéma :
@@ -101,15 +103,15 @@ npx drizzle-kit push
 Le processus d'insertion (`server/seed.ts`) crée :
 
 - 6 utilisateurs système avec des identifiants prédéfinis
-- 100 005 emprunteurs (noms éthiopiens, ghanéens, ougandais)
+- 102 462 emprunteurs à travers les 54 pays africains
 - 100 020 institutions
-- 166 673 comptes de crédit
+- 172 359 comptes de crédit
 - 120 000 enregistrements d'historique de paiement
 - 25 004 demandes de renseignements de crédit
 - 15 000 enregistrements de consentement
 - 5 063 journaux d'audit
-- 3 000 litiges
-- 2 000 jugements de tribunal
+- 3 218 litiges
+- 2 147 jugements de tribunal
 - 120 enregistrements de facturation
 
 **Identifiants par défaut (à modifier en production) :**
@@ -507,18 +509,23 @@ psql $DATABASE_URL -c "\dt"
 - [ ] S'assurer que l'extension `pg_trgm` (ENT-02) est disponible dans le PostgreSQL de production
 - [ ] Vérifier que les téléversements par lots XBRL/XML (ENT-06) fonctionnent avec les tailles de fichiers attendues ; aucune bibliothèque d'analyse supplémentaire n'est requise au-delà du traitement XML intégré
 - [ ] Le chatbot de litiges (ENT-03) ne nécessite aucune configuration supplémentaire ; il utilise les points de terminaison existants de dépôt de litiges
+- [ ] Créer et configurer les répertoires de téléversement (`uploads/photos/`, `uploads/documents/`) avec les permissions d'écriture appropriées
+- [ ] Vérifier l'accès réseau sortant vers `api.dicebear.com` pour les avatars auto-générés
+- [ ] Vérifier l'accès réseau sortant vers `open.er-api.com` pour la récupération des taux de change en direct
+- [ ] Configurer les politiques de rétention des données par juridiction selon les exigences réglementaires locales
 
 ---
 
 ## 15. Dépendances des Améliorations Entreprise
 
-Les paquets supplémentaires suivants ont été ajoutés pour les améliorations entreprise (v1.1) :
+Les paquets supplémentaires suivants ont été ajoutés pour les améliorations entreprise :
 
 | Paquet | Objectif | Amélioration |
 |--------|----------|--------------|
 | `otpauth` | Génération et vérification de secrets TOTP | ENT-01 (AMF) |
 | `jsonwebtoken` | Signature et vérification JWT pour les jetons Bearer | ENT-04 (OAuth 2.1) |
 | `compression` | Middleware de compression gzip | ENT-05 (Faible Bande Passante) |
+| `multer` | Middleware de téléversement de fichiers pour photos et documents d'identité | ENT-12 (Photos d'Identité) |
 
 **Extension PostgreSQL :**
 - `pg_trgm` — Requise pour la correspondance floue des entités (ENT-02). Créée automatiquement au démarrage.
@@ -531,7 +538,7 @@ Le Système de Registre de Crédit comprend les modules et capacités suivants :
 
 | Fonctionnalité | Description |
 |----------------|-------------|
-| Traitement Multi-Devises | Prise en charge de 18 devises à travers les juridictions |
+| Traitement Multi-Devises | Prise en charge de plus de 42 devises africaines plus USD, EUR, GBP à travers les 54 juridictions |
 | Internationalisation (i18n) | Trois langues prises en charge : Anglais (EN), Français (FR) et Portugais (PT) |
 | Sélecteur de Langue sur la Page de Connexion | Les utilisateurs peuvent sélectionner leur langue préférée directement depuis l'écran de connexion |
 | Gestion des Taux de Change | Module de gestion et de mise à jour des taux de change des devises prises en charge |
@@ -544,6 +551,9 @@ Le Système de Registre de Crédit comprend les modules et capacités suivants :
 | Optimisation Faible Bande Passante | Compression gzip et découpage de code pour les réseaux contraints (ENT-05) |
 | Téléversement par Lots (XBRL/XML) | Ingestion de données en masse via des formats de fichiers structurés (ENT-06) |
 | Piste d'Audit Inviolable | Journaux d'audit chaînés par hachage avec vérification d'intégrité (ENT-07) |
+| Recherche Globale | Recherche inter-entités sur les emprunteurs, institutions et comptes de crédit (ENT-11) |
+| Photos d'Identité et Documents | Téléversement de photos de profil et de documents d'identité via multer avec avatars DiceBear (ENT-12) |
+| Environnement de Démonstration | Mode de démonstration en un clic pour investisseurs avec cartes de rôle et bannière de démonstration (ENT-13) |
 
 ---
 
@@ -551,7 +561,7 @@ Le Système de Registre de Crédit comprend les modules et capacités suivants :
 
 | Composant | Version |
 |-----------|---------|
-| Application | v1.1 (Améliorations Entreprise) |
+| Application | v1.2 (Améliorations Entreprise) |
 | Environnement d'exécution Node.js | 20.x LTS |
 | Express.js | 4.x |
 | Drizzle ORM | Dernière version |
@@ -562,3 +572,4 @@ Le Système de Registre de Crédit comprend les modules et capacités suivants :
 | otpauth | Dernière version (ENT-01) |
 | jsonwebtoken | Dernière version (ENT-04) |
 | compression | Dernière version (ENT-05) |
+| multer | Dernière version (ENT-12) |

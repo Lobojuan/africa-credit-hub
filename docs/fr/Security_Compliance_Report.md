@@ -1,9 +1,9 @@
 # Rapport de Conformité Sécuritaire
 
-## Système de Hub Central de Données Inter-Juridictionnel & Registre de Crédit v1.1
+## Système de Hub Central de Données Inter-Juridictionnel & Registre de Crédit v1.2
 
 **Préparé pour :** Systems In Motion Limited  
-**Version du Document :** 1.1  
+**Version du Document :** 1.2  
 **Date :** Mars 2026  
 **Classification :** Confidentiel
 
@@ -11,9 +11,9 @@
 
 ## 1. Résumé Exécutif
 
-Ce document fournit une évaluation complète des contrôles de sécurité mis en œuvre dans le Système de Registre de Crédit par rapport aux exigences définies dans la Spécification des Exigences Logicielles (SRS) v1.1. Le système traite des données financières et personnelles sensibles dans quatre juridictions (Ghana, Éthiopie, Ouganda, Libéria) et prend en charge trois langues (anglais, français, portugais) et doit se conformer aux exigences réglementaires en matière de protection des données et de réglementation financière.
+Ce document fournit une évaluation complète des contrôles de sécurité mis en œuvre dans le Système de Registre de Crédit par rapport aux exigences définies dans la Spécification des Exigences Logicielles (SRS) v1.2. Le système traite des données financières et personnelles sensibles à travers les 54 pays africains et prend en charge trois langues (anglais, français, portugais) et doit se conformer aux exigences réglementaires en matière de protection des données et de réglementation financière.
 
-Les neuf exigences de sécurité non fonctionnelles (NFR-SEC-01 à NFR-SEC-09) ont été mises en œuvre, ainsi que sept améliorations de sécurité entreprise (ENT-01 à ENT-07) incluant l'authentification multifacteur TOTP, l'échange de jetons porteur OAuth 2.1, les chaînes de hachage de journaux d'audit à preuve de falsification, la correspondance floue d'entités, le chatbot de litiges, les optimisations pour faible bande passante et la prise en charge du téléchargement XBRL. Ce rapport détaille chaque contrôle de sécurité, sa mise en œuvre et son statut de conformité.
+Les dix exigences de sécurité non fonctionnelles (NFR-SEC-01 à NFR-SEC-10) ont été mises en œuvre, ainsi que treize améliorations de sécurité entreprise (ENT-01 à ENT-13) incluant l'authentification multifacteur TOTP, l'échange de jetons porteur OAuth 2.1, les chaînes de hachage de journaux d'audit à preuve de falsification, la correspondance floue d'entités, le chatbot de litiges, les optimisations pour faible bande passante, la prise en charge du téléchargement XBRL, l'application de la rétention des données, la gestion des taux de change, l'administration API, la recherche globale, le téléversement de photos/documents d'identité et l'environnement de démonstration pour investisseurs. Ce rapport détaille chaque contrôle de sécurité, sa mise en œuvre et son statut de conformité.
 
 ---
 
@@ -515,7 +515,10 @@ if (approval.requestedBy === currentUserId) {
 | ENT-05 | Optimisations pour faible bande passante | CONFORME | Middleware `compression` gzip ; découpage de code `React.lazy()` avec repli `Suspense` pour tous les composants de route. |
 | ENT-06 | Prise en charge du téléchargement par lots XBRL/XML | CONFORME | Analyse de fichiers XBRL/XML dans le point d'accès de téléchargement par lots ; frontend à onglets (JSON/CSV + XBRL) ; format d'exemple fourni. |
 | ENT-07 | Chaîne de hachage de journal d'audit à preuve de falsification | CONFORME | Chaîne de hachage SHA-256 (colonnes `previousHash`/`currentHash`) ; point d'accès `GET /api/audit/verify-integrity` ; badge visuel d'intégrité sur la page de piste d'audit. |
-| REQ-RET-01 | Rétention des données | CONFORME | Politiques de rétention par pays appliquées (Ghana 10 ans, Éthiopie/Ouganda/Libéria 7 ans, journaux d'audit 10 ans globalement). Moteur d'Application de Rétention avec planificateur automatisé de 24 heures et déclenchement manuel réservé aux administrateurs. SQL paramétré via Drizzle ORM ; noms de tables validés par rapport à la liste autorisée `VALID_TABLES` ; valeurs de pays validées par rapport à l'ensemble `VALID_COUNTRIES`. |
+| REQ-RET-01 | Rétention des données | CONFORME | Politiques de rétention par pays appliquées à travers les 54 juridictions africaines (Ghana 10 ans, Éthiopie/Ouganda/Libéria 7 ans, autres configurables ; journaux d'audit 10 ans globalement). Moteur d'Application de Rétention avec planificateur automatisé de 24 heures et déclenchement manuel réservé aux administrateurs. SQL paramétré via Drizzle ORM ; noms de tables validés par rapport à la liste autorisée `VALID_TABLES` ; valeurs de pays validées par rapport à l'ensemble `VALID_COUNTRIES`. |
+| ENT-11 | Recherche Globale | CONFORME | Recherche inter-entités sur les emprunteurs, institutions et comptes de crédit via le point d'accès `/api/global-search`. Filtre optionnel par pays. Aucune exposition de données sensibles au-delà du niveau d'accès de l'utilisateur authentifié. |
+| ENT-12 | Sécurité des Téléversements de Fichiers | CONFORME | Téléversement basé sur multer avec limites de taille de fichier (5 Mo photos, 10 Mo documents), validation des types MIME, noms de fichiers aléatoires, service protégé par authentification via la route `/uploads`. Tous les téléversements sont journalisés dans l'audit. |
+| ENT-13 | Environnement de Démonstration | CONFORME | Démonstration pour investisseurs avec cartes de rôle pré-configurées. Bannière ambre indiquant le mode démonstration. Utilise l'infrastructure d'authentification et d'autorisation existante. Données fictives uniquement. |
 | SLA-RET-01 | SLA d'application de la rétention | CONFORME | Cycle d'application automatisé de 24 heures assurant une gestion opportune du cycle de vie des données. Déclenchement manuel via `POST /api/retention-policies/enforce` (réservé aux administrateurs, protégé par RBAC). Toutes les actions d'application sont journalisées dans l'audit avec les détails complets des résultats. |
 
 ---
@@ -582,12 +585,15 @@ Le système inclut un Moteur d'Application de Rétention automatisé responsable
 
 ### 13.2 Politiques de Rétention par Pays
 
+Les politiques de rétention sont configurables par juridiction à travers les 54 pays africains. Les politiques par défaut incluent :
+
 | Pays | Période de rétention | Remarques |
 |------|----------------------|-----------|
 | Ghana | 10 ans | Conforme aux exigences de la loi ghanéenne sur la protection des données |
 | Éthiopie | 7 ans | Rétention standard des données financières |
 | Ouganda | 7 ans | Rétention standard des données financières |
 | Libéria | 7 ans | Rétention standard des données financières |
+| Autres pays africains | Configurable | Les administrateurs peuvent définir les politiques par pays via la table retention_policies |
 | Journaux d'audit | 10 ans (global) | Appliqué uniformément dans toutes les juridictions |
 
 ### 13.3 Prévention de l'Injection SQL dans le Moteur de Rétention

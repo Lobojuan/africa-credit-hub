@@ -1,4 +1,4 @@
-# Cross-Jurisdictional Central Data Hub & Credit Registry System v1.1 — Systems Documentation
+# Cross-Jurisdictional Central Data Hub & Credit Registry System v1.2 — Systems Documentation
 
 **Prepared for:** Systems In Motion Limited  
 **Document Version:** 1.2  
@@ -32,12 +32,13 @@ The Cross-Jurisdictional Central Data Hub & Credit Registry System is a web-base
 
 ### 1.2 Jurisdictions Covered
 
-The system is designed for pan-African deployment across four jurisdictions:
+The system is designed for pan-African deployment across all 54 African countries, organized into five regional economic blocs:
 
-- **Ghana** — Bank of Ghana regulatory framework
-- **Ethiopia** — National Bank of Ethiopia regulatory framework
-- **Uganda** — Bank of Uganda regulatory framework
-- **Liberia** — Central Bank of Liberia regulatory framework
+- **ECOWAS (Economic Community of West African States)** — Ghana, Nigeria, Senegal, Côte d'Ivoire, Sierra Leone, Liberia, Guinea, Mali, Burkina Faso, Niger, Togo, Benin, The Gambia, Guinea-Bissau, Cape Verde
+- **EAC (East African Community)** — Kenya, Uganda, Tanzania, Rwanda, Burundi, South Sudan, Democratic Republic of Congo
+- **SADC (Southern African Development Community)** — South Africa, Mozambique, Zambia, Zimbabwe, Botswana, Namibia, Angola, Malawi, Madagascar, Mauritius, Eswatini, Lesotho, Seychelles, Comoros
+- **CEMAC (Central African Economic and Monetary Community)** — Cameroon, Gabon, Chad, Central African Republic, Republic of Congo, Equatorial Guinea
+- **AMU (Arab Maghreb Union)** — Morocco, Algeria, Tunisia, Libya, Mauritania, Egypt, Sudan, Eritrea, Ethiopia, Djibouti, Somalia
 
 ### 1.3 Key Capabilities
 
@@ -55,7 +56,13 @@ The system is designed for pan-African deployment across four jurisdictions:
 - **External REST API** — Programmatic access for institutions with API key authentication
 - **Regulatory Analytics** — NPL ratios, portfolio breakdowns, SLA breach tracking, CSV export
 - **Internationalization** — Full English, French, and Portuguese language support
-- **Multi-Currency** — 18 pan-African currencies supported
+- **Multi-Currency** — 42+ African currencies plus USD, EUR, GBP supported
+- **Exchange Rate Management** — 42+ currencies with live rate fetching via open.er-api.com, cross-rate conversion via USD routing, admin CRUD operations, and currency converter widget
+- **API Administration** — Centralized external API configuration management with connection testing, per-country settings, and SSRF protection
+- **Data Retention Policies** — Jurisdiction-specific retention periods with automatic enforcement scheduler (24-hour interval) and manual trigger
+- **Global Search** — Cross-entity search across borrowers, institutions, and credit accounts simultaneously via `/api/global-search` with country filtering
+- **ID Photos & Documents** — DiceBear auto-generated avatars for borrower profiles, multer-based photo and ID document upload with authentication-protected serving from `/uploads`
+- **Demo Environment** — Investor-facing one-click demo with three role cards (Admin, Regulator, Bank Officer), amber DEMO ENVIRONMENT banner, and fictional data disclaimer
 - **Audit Trail** — Comprehensive activity logging with IP tracking and tamper-evident SHA-256 hash chain
 - **Multi-Factor Authentication** — TOTP-based MFA via otpauth library
 - **Fuzzy Entity Matching** — PostgreSQL pg_trgm trigram similarity for duplicate borrower detection
@@ -105,7 +112,7 @@ The system follows a modern monolithic full-stack architecture with clear separa
 ┌──────────────────────────▼──────────────────────────────┐
 │              PostgreSQL Database (Neon)                   │
 │  ┌─────────────────────────────────────────────────────┐ │
-│  │               Drizzle ORM (18 tables)               │ │
+│  │               Drizzle ORM (21 tables)               │ │
 │  └─────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -120,7 +127,7 @@ The system follows a modern monolithic full-stack architecture with clear separa
 - **Internationalization:** react-i18next with i18next-browser-languagedetector for EN/FR/PT
 - **Theme:** Dark/light mode with CSS custom properties and Tailwind class-based toggling
 - **Font:** Inter (Google Fonts)
-- **Design System:** Warm teal + gold accent palette (culturally resonant for Ghana/Uganda/Ethiopia)
+- **Design System:** Warm teal + gold accent palette (culturally resonant across pan-African deployment covering 54 countries)
 
 ### 2.3 Backend Architecture
 
@@ -188,12 +195,13 @@ The system follows a modern monolithic full-stack architecture with clear separa
 | **DB Driver** | pg (node-postgres) | 8.x | PostgreSQL client driver |
 | **Server Bundler** | esbuild | Latest | Server-side TypeScript bundling |
 | **Schema Tooling** | drizzle-kit | Latest | Database schema management |
+| **File Upload** | multer | 1.x | Multipart form-data file upload handling |
 
 ---
 
 ## 4. Data Model
 
-The system uses 18 PostgreSQL tables with Drizzle ORM for type-safe access. All primary keys are UUID v4 strings generated via `gen_random_uuid()`.
+The system uses 21 PostgreSQL tables with Drizzle ORM for type-safe access. All primary keys are UUID v4 strings generated via `gen_random_uuid()`.
 
 ### 4.1 Table: `users`
 
@@ -265,7 +273,7 @@ Loan and credit facility records with multi-currency support and special loan fe
 | `account_type` | text | NOT NULL | Loan type (term_loan, overdraft, mortgage, etc.) |
 | `original_amount` | decimal(15,2) | NOT NULL | Original loan amount |
 | `current_balance` | decimal(15,2) | NOT NULL | Current outstanding balance |
-| `currency` | text | NOT NULL, default `'ETB'` | Currency code (18 supported) |
+| `currency` | text | NOT NULL, default `'ETB'` | Currency code (42+ African currencies plus USD, EUR, GBP) |
 | `interest_rate` | decimal(5,2) | nullable | Annual interest rate |
 | `disbursement_date` | text | nullable | Loan disbursement date |
 | `maturity_date` | text | nullable | Loan maturity date |
@@ -828,6 +836,19 @@ users ──────────────┐
 | `DELETE` | `/api/api-configurations/:id` | Delete API configuration | Hard delete |
 | `POST` | `/api/api-configurations/:id/test` | Test API connection | Tests connectivity to configured endpoint; SSRF protection enforced |
 
+### 5.26 Global Search Endpoint (Authenticated)
+
+| Method | Path | Description | Notes |
+|--------|------|-------------|-------|
+| `GET` | `/api/global-search?q=TERM&country=COUNTRY` | Cross-entity search | Searches borrowers, institutions, and credit accounts simultaneously; returns categorized results; optional country filter |
+
+### 5.27 Photo & Document Upload Endpoints (Authenticated)
+
+| Method | Path | Description | Notes |
+|--------|------|-------------|-------|
+| `POST` | `/api/borrowers/:id/photo` | Upload borrower photo | `multipart/form-data` with field name `photo`; max 5MB; images only; randomized filename |
+| `POST` | `/api/borrowers/:id/id-document` | Upload borrower ID document | `multipart/form-data` with field name `document`; max 10MB; images or PDF; randomized filename |
+
 ---
 
 ## 6. Security Architecture
@@ -1029,7 +1050,37 @@ The internal batch upload feature (`POST /api/batch-upload/credit-accounts`) acc
 }
 ```
 
-### 8.3 CSV Export
+### 8.3 DiceBear Avatar Service
+
+The system integrates with the DiceBear API (`https://api.dicebear.com`) for auto-generated borrower profile avatars:
+
+- **Usage:** Default profile photos for borrowers who have not uploaded a custom photo
+- **Seed Value:** Borrower ID is used as the avatar seed — no personally identifiable information (PII) is transmitted
+- **Style:** Deterministic avatar generation ensuring consistent avatars for the same borrower across sessions
+- **Privacy:** No authentication required; only a hash/ID seed is sent to the service
+
+### 8.4 Exchange Rate API
+
+The system integrates with the Open Exchange Rate API (`https://open.er-api.com`) for live currency rate fetching:
+
+- **Usage:** Fetching current exchange rates for 42+ African currencies plus USD, EUR, GBP
+- **Authentication:** No API key required (free tier)
+- **Endpoint:** `GET https://open.er-api.com/v6/latest/{BASE_CURRENCY}`
+- **Refresh:** Rates can be refreshed manually via `POST /api/exchange-rates/refresh` or fetched on-demand
+- **Fallback:** Manual rate entry is supported when the external API is unavailable
+
+### 8.5 File Upload Architecture
+
+Borrower photos and ID documents are stored on the local filesystem:
+
+- **Photo uploads:** Stored in `uploads/photos/` (max 5MB, images only)
+- **Document uploads:** Stored in `uploads/documents/` (max 10MB, images or PDF)
+- **Filename generation:** Randomized filenames using timestamp and random base-36 string to prevent collisions and enumeration
+- **MIME type validation:** Server-side validation via multer file filter (images only for photos; images or PDF for documents)
+- **Serving:** Static files served via authenticated `/uploads` route with `requireAuth` middleware
+- **Audit logging:** All uploads are recorded in the audit log with uploader user ID and borrower reference
+
+### 8.6 CSV Export
 
 The reporting module supports CSV export for portfolio and borrower data:
 
@@ -1248,6 +1299,9 @@ All incoming request bodies are validated using Zod schemas derived from Drizzle
 - `insertBillingRecordSchema` — Billing record creation
 - `insertCreditReportLogSchema` — Credit report log creation
 - `insertApiKeySchema` — API key creation
+- `insertExchangeRateSchema` — Exchange rate creation
+- `insertRetentionPolicySchema` — Retention policy creation
+- `insertApiConfigurationSchema` — API configuration creation
 
 Validation failures return HTTP 400 with the Zod error message.
 
@@ -1342,15 +1396,15 @@ The system is seeded with production-representative data volumes:
 
 | Entity | Count |
 |--------|-------|
-| Borrowers | 100,005 |
+| Borrowers | 102,462 |
 | Institutions | 100,020 |
-| Credit Accounts | 166,673 |
+| Credit Accounts | 172,359 |
 | Payment History | 120,000 |
 | Credit Inquiries | 25,004 |
 | Consent Records | 15,000 |
 | Audit Logs | 5,063 |
-| Disputes | 3,000 |
-| Court Judgments | 2,000 |
+| Disputes | 3,218 |
+| Court Judgments | 2,147 |
 | Billing Records | 120 |
 | System Users | 6 |
 
@@ -1370,7 +1424,7 @@ All significant system actions are recorded in the `audit_logs` table. The audit
 - **Details** — Human-readable description of the action
 
 **Action Types:**
-`LOGIN`, `LOGIN_FAILED`, `ACCOUNT_LOCKED`, `LOGOUT`, `PASSWORD_CHANGE`, `CREATE`, `UPDATE`, `SUBMIT_APPROVAL`, `APPROVE`, `REJECT`, `FILE_DISPUTE`, `UPDATE_DISPUTE`, `GRANT_CONSENT`, `REVOKE_CONSENT`, `VIEW`, `GENERATE_REPORT`, `BATCH_UPLOAD`, `BULK_SEARCH`, `API_SUBMIT`, `API_BATCH_SUBMIT`, `API_CREDIT_REPORT`
+`LOGIN`, `LOGIN_FAILED`, `ACCOUNT_LOCKED`, `LOGOUT`, `PASSWORD_CHANGE`, `CREATE`, `UPDATE`, `SUBMIT_APPROVAL`, `APPROVE`, `REJECT`, `FILE_DISPUTE`, `UPDATE_DISPUTE`, `GRANT_CONSENT`, `REVOKE_CONSENT`, `VIEW`, `GENERATE_REPORT`, `BATCH_UPLOAD`, `BULK_SEARCH`, `API_SUBMIT`, `API_BATCH_SUBMIT`, `API_CREDIT_REPORT`, `UPLOAD_PHOTO`, `UPLOAD_ID_DOCUMENT`, `MFA_ENABLED`, `MFA_DISABLED`
 
 ### 12.2 API Request Logging
 
@@ -1400,7 +1454,7 @@ Error conditions are logged via `console.error()` for:
 
 ---
 
-## 13. Enterprise Enhancements (v1.1)
+## 13. Enterprise Enhancements (v1.1 — v1.2)
 
 ### 13.1 TOTP Multi-Factor Authentication (ENT-01)
 
@@ -1488,14 +1542,15 @@ Error conditions are logged via `console.error()` for:
 
 ### 13.8 Exchange Rate Management (ENT-08)
 
-**Purpose:** Provides 18-currency support with cross-rate conversion via USD routing, admin CRUD operations, and a currency converter widget.
+**Purpose:** Provides 42+ African currency support (plus USD, EUR, GBP) with cross-rate conversion via USD routing, live rate fetching from open.er-api.com, admin CRUD operations, and a currency converter widget.
 
 **Architecture:**
 - **Schema:** `exchange_rates` table with `base_currency`, `target_currency`, `rate` (decimal 15,6), `effective_date`, `source`, `created_by`
 - **Cross-Rate Routing:** When a direct rate is unavailable, the system converts through USD as an intermediary (e.g., GHS → USD → ETB)
 - **Endpoints:** `GET /api/exchange-rates`, `POST /api/exchange-rates`, `PATCH /api/exchange-rates/:id`, `DELETE /api/exchange-rates/:id`, `POST /api/exchange-rates/convert`
-- **Frontend:** `exchange-rates.tsx` page with admin CRUD interface and currency converter widget supporting all 18 pan-African currencies
-- **Currencies:** GHS, ETB, UGX, LRD, NGN, KES, ZAR, EGP, MAD, TZS, RWF, XOF, XAF, MZN, AOA, BWP, ZMW, USD
+- **Live Rate Fetching:** Integration with open.er-api.com for automatic rate updates; manual refresh via `POST /api/exchange-rates/refresh`
+- **Frontend:** `exchange-rates.tsx` page with admin CRUD interface and currency converter widget supporting all 42+ African currencies plus USD, EUR, GBP
+- **Currencies:** GHS, ETB, UGX, LRD, NGN, KES, ZAR, EGP, MAD, TZS, RWF, XOF, XAF, MZN, AOA, BWP, ZMW, DZD, TND, LYD, MRU, SDG, ERN, DJF, SOS, SCR, MUR, MWK, ZWL, NAD, SZL, LSL, KMF, BIF, GMD, GNF, SLL, CVE, STN, CDF, SSP, USD, EUR, GBP
 
 ### 13.9 API Administration Module (ENT-09)
 
@@ -1517,7 +1572,7 @@ Error conditions are logged via `console.error()` for:
 - **Schema:** `retention_policies` table with `country`, `entity_type`, `retention_years`, `archive_after_years`, `is_active`
 - **Scheduler:** 24-hour interval automated enforcement via `server/retention-enforcement.ts`
 - **Manual Trigger:** `POST /api/retention-policies/enforce` endpoint for on-demand execution
-- **Per-Country Policies:**
+- **Per-Country Policies:** Configurable retention periods per country across all 54 African jurisdictions. Default seed policies:
   - Ghana: 10-year retention
   - Liberia: 7-year retention
   - Ethiopia: 7-year retention
@@ -1551,4 +1606,4 @@ Error conditions are logged via `console.error()` for:
 *End of Systems Documentation*
 
 *Document prepared by Systems In Motion Limited*  
-*Cross-Jurisdictional Central Data Hub & Credit Registry System v1.1*
+*Cross-Jurisdictional Central Data Hub & Credit Registry System v1.2*

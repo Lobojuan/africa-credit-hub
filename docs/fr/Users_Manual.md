@@ -1,4 +1,4 @@
-# Système de Registre de Crédit — Manuel de l'Utilisateur v1.1
+# Système de Registre de Crédit — Manuel de l'Utilisateur v1.2
 
 **Hub Central de Données Inter-Juridictionnel & Système de Registre de Crédit**
 
@@ -39,10 +39,13 @@
 25. [Gestion des Taux de Change](#25-gestion-des-taux-de-change)
 26. [Administration des API](#26-administration-des-api)
 27. [Politiques de Rétention des Données](#27-politiques-de-rétention-des-données)
-28. [Annexe A : Identifiants de Démonstration](#annexe-a-identifiants-de-démonstration)
-29. [Annexe B : Matrice d'Accès par Rôle](#annexe-b-matrice-daccès-par-rôle)
-30. [Annexe C : Devises Prises en Charge](#annexe-c-devises-prises-en-charge)
-31. [Annexe D : Glossaire des Termes](#annexe-d-glossaire-des-termes)
+28. [Recherche Globale](#28-recherche-globale)
+29. [Photos d'Identité et Téléversement de Documents](#29-photos-didentité-et-téléversement-de-documents)
+30. [Environnement de Démonstration](#30-environnement-de-démonstration)
+31. [Annexe A : Identifiants de Démonstration](#annexe-a-identifiants-de-démonstration)
+32. [Annexe B : Matrice d'Accès par Rôle](#annexe-b-matrice-daccès-par-rôle)
+33. [Annexe C : Devises Prises en Charge](#annexe-c-devises-prises-en-charge)
+34. [Annexe D : Glossaire des Termes](#annexe-d-glossaire-des-termes)
 
 ---
 
@@ -54,12 +57,22 @@ Le Système de Registre de Crédit est une application web développée par Syst
 
 ### 1.2 Juridictions Prises en Charge
 
-Le système prend en charge le déploiement dans plusieurs juridictions africaines :
+Le système prend en charge le déploiement à travers les **54 pays africains**, regroupés par région :
 
-- **Ghana** (GHS — Cedi ghanéen)
-- **Éthiopie** (ETB — Birr éthiopien)
-- **Ouganda** (UGX — Shilling ougandais)
-- **Libéria** (USD — Dollar américain)
+**Afrique de l'Ouest (CEDEAO) :**
+Bénin, Burkina Faso, Cap-Vert, Côte d'Ivoire, Gambie, Ghana, Guinée, Guinée-Bissau, Libéria, Mali, Niger, Nigéria, Sénégal, Sierra Leone, Togo
+
+**Afrique de l'Est (CAE) :**
+Burundi, RD Congo, Éthiopie, Kenya, Rwanda, Soudan du Sud, Tanzanie, Ouganda
+
+**Afrique Australe (SADC) :**
+Angola, Botswana, Eswatini, Lesotho, Madagascar, Malawi, Maurice, Mozambique, Namibie, Seychelles, Afrique du Sud, Zambie, Zimbabwe
+
+**Afrique Centrale (CEMAC) :**
+Cameroun, République Centrafricaine, Tchad, Congo, Guinée Équatoriale, Gabon, São Tomé-et-Príncipe
+
+**Afrique du Nord (UMA) :**
+Algérie, Djibouti, Égypte, Érythrée, Libye, Mauritanie, Maroc, Somalie, Soudan, Tunisie, Comores
 
 ### 1.3 Langues Prises en Charge
 
@@ -319,7 +332,7 @@ Le module Comptes de Crédit gère les prêts et les facilités de crédit assoc
    - **Type de Compte** — Sélectionnez parmi : Prêt Personnel, Hypothèque, Prêt Véhicule, Prêt Commercial, Prêt Corporatif, Découvert, Carte de Crédit, Microfinance
    - **Montant Initial** — Montant initial du prêt/de la facilité
    - **Solde Actuel** — Solde impayé actuel
-   - **Devise** — Sélectionnez parmi 18 devises prises en charge
+   - **Devise** — Sélectionnez parmi plus de 42 devises africaines plus USD, EUR, GBP
    - **Taux d'Intérêt** — Pourcentage du taux d'intérêt annuel
    - **Statut** — En cours, Impayé, Défaut, Fermé, Restructuré
    - **Date de Décaissement** — Date de décaissement du prêt
@@ -345,7 +358,7 @@ Le module Comptes de Crédit gère les prêts et les facilités de crédit assoc
 
 ### 5.3 Support Multi-Devises
 
-Le système prend en charge 18 devises sur les marchés africains et internationaux. Lors de la création ou de la consultation de comptes de crédit :
+Le système prend en charge plus de 42 devises africaines plus USD, EUR et GBP sur les marchés africains et internationaux. Lors de la création ou de la consultation de comptes de crédit :
 - Sélectionnez la devise appropriée dans la liste déroulante.
 - Les montants sont affichés avec le formatage approprié pour la devise sélectionnée.
 - Voir l'Annexe C pour la liste complète des devises prises en charge.
@@ -1121,7 +1134,7 @@ R : Les utilisateurs ayant le rôle Admin ou Régulateur peuvent approuver ou re
 R : Accédez à la page de détails d'un emprunteur, trouvez la section Jugements Judiciaires et cliquez sur « Ajouter un Jugement ». Seuls les utilisateurs Admin et Régulateur peuvent créer des jugements judiciaires.
 
 ### Q : Quelles devises le système prend-il en charge ?
-R : Le système prend en charge 18 devises. Voir l'Annexe C pour la liste complète.
+R : Le système prend en charge plus de 42 devises africaines plus USD, EUR et GBP. Voir l'Annexe C pour la liste complète.
 
 ---
 
@@ -1407,6 +1420,81 @@ Le bouton **Exécuter l'Application** déclenche le processus d'application de l
 
 ---
 
+## 28. Recherche Globale
+
+### 28.1 Aperçu
+
+La fonctionnalité de Recherche Globale permet aux utilisateurs de rechercher simultanément dans toutes les entités du système — emprunteurs, institutions et comptes de crédit — en utilisant un seul terme de recherche.
+
+### 28.2 Effectuer une Recherche Globale
+
+1. Naviguez vers la page de **Recherche** (`/search`).
+2. Saisissez votre terme de recherche dans le champ de recherche (nom, identifiant national, NIF, nom d'institution ou numéro de compte).
+3. Optionnellement, sélectionnez un **pays** dans le menu déroulant de filtre pour restreindre les résultats à une juridiction spécifique.
+4. Cliquez sur **Rechercher** ou appuyez sur Entrée.
+
+### 28.3 Résultats de Recherche
+
+Les résultats sont organisés en trois catégories :
+- **Emprunteurs** — correspondances sur le nom, l'identifiant national ou le NIF
+- **Institutions** — correspondances sur le nom de l'institution
+- **Comptes de Crédit** — correspondances sur le numéro de compte
+
+Chaque résultat affiche les détails pertinents et un lien vers la page de détail de l'entité.
+
+---
+
+## 29. Photos d'Identité et Téléversement de Documents
+
+### 29.1 Aperçu
+
+Le système prend en charge le téléversement de photos de profil et de scans de documents d'identité pour les emprunteurs. Les emprunteurs sans photo téléversée affichent un avatar DiceBear auto-généré.
+
+### 29.2 Téléverser une Photo de Profil
+
+1. Naviguez vers la page de **détails de l'emprunteur**.
+2. Cliquez sur la zone de l'avatar / l'icône de caméra sur la photo de profil de l'emprunteur.
+3. Sélectionnez un fichier image (JPEG, PNG ou GIF, maximum 5 Mo).
+4. La photo sera téléversée et l'avatar sera immédiatement mis à jour.
+
+### 29.3 Téléverser un Document d'Identité
+
+1. Naviguez vers la page de **détails de l'emprunteur**.
+2. Localisez la section **Document d'Identité**.
+3. Cliquez sur le bouton de téléversement.
+4. Sélectionnez un fichier image ou PDF (maximum 10 Mo).
+5. Le document sera téléversé et un aperçu/lien sera affiché.
+
+### 29.4 Avatars DiceBear
+
+Pour les emprunteurs sans photo téléversée, le système affiche automatiquement un avatar généré via le service DiceBear (`api.dicebear.com`). Aucune donnée personnelle n'est transmise au service — les avatars sont générés de manière sécurisée.
+
+---
+
+## 30. Environnement de Démonstration
+
+### 30.1 Aperçu
+
+Le système inclut un environnement de démonstration conçu pour les présentations aux investisseurs et les évaluations du système.
+
+### 30.2 Accéder à la Démonstration
+
+1. Naviguez vers la **page de connexion**.
+2. Cliquez sur le bouton **« Essayer la Démo Interactive »**.
+3. Trois cartes de rôle sont présentées :
+   - **Admin** — Accès complet à l'administration du système
+   - **Régulateur** — Accès à la supervision réglementaire et aux analyses
+   - **Agent Bancaire** — Accès aux opérations de prêt et à la gestion des emprunteurs
+4. Cliquez sur une carte de rôle pour vous connecter instantanément avec ce rôle.
+
+### 30.3 Indicateurs de Mode Démonstration
+
+- Une **bannière ambre « ENVIRONNEMENT DE DÉMONSTRATION »** est affichée en haut de toutes les pages.
+- Un **avertissement de données fictives** est affiché pour indiquer que toutes les données présentées sont fictives.
+- La bannière et l'avertissement restent visibles sur toutes les pages lors de la navigation.
+
+---
+
 ## Annexe A : Identifiants de Démonstration
 
 Les identifiants suivants sont pré-configurés dans le système à des fins de test et de démonstration :
@@ -1451,7 +1539,7 @@ Les identifiants suivants sont pré-configurés dans le système à des fins de 
 
 ## Annexe C : Devises Prises en Charge
 
-Le système prend en charge les 18 devises suivantes :
+Le système prend en charge plus de 42 devises africaines plus les devises internationales majeures :
 
 | Code | Nom de la Devise | Symbole | Région |
 |------|-----------------|---------|--------|
@@ -1460,16 +1548,43 @@ Le système prend en charge les 18 devises suivantes :
 | UGX | Shilling ougandais | USh | Afrique de l'Est |
 | TZS | Shilling tanzanien | TSh | Afrique de l'Est |
 | RWF | Franc rwandais | FRw | Afrique de l'Est |
+| BIF | Franc burundais | FBu | Afrique de l'Est |
+| SSP | Livre sud-soudanaise | £ | Afrique de l'Est |
+| CDF | Franc congolais | FC | Afrique de l'Est |
 | GHS | Cedi ghanéen | ₵ | Afrique de l'Ouest |
 | LRD | Dollar libérien | L$ | Afrique de l'Ouest |
 | NGN | Naira nigérian | ₦ | Afrique de l'Ouest |
 | XOF | Franc CFA ouest-africain | CFA | Afrique de l'Ouest |
+| SLL | Leone sierra-léonais | Le | Afrique de l'Ouest |
+| GMD | Dalasi gambien | D | Afrique de l'Ouest |
+| GNF | Franc guinéen | FG | Afrique de l'Ouest |
+| CVE | Escudo cap-verdien | $ | Afrique de l'Ouest |
 | XAF | Franc CFA d'Afrique centrale | FCFA | Afrique Centrale |
 | ZAR | Rand sud-africain | R | Afrique Australe |
 | BWP | Pula botswanais | P | Afrique Australe |
 | MZN | Metical mozambicain | MT | Afrique Australe |
+| AOA | Kwanza angolais | Kz | Afrique Australe |
+| ZMW | Kwacha zambien | ZK | Afrique Australe |
+| ZWL | Dollar zimbabwéen | Z$ | Afrique Australe |
+| NAD | Dollar namibien | N$ | Afrique Australe |
+| SZL | Lilangeni swazi | E | Afrique Australe |
+| LSL | Loti lesothan | L | Afrique Australe |
+| MGA | Ariary malgache | Ar | Afrique Australe |
+| MWK | Kwacha malawien | MK | Afrique Australe |
+| MUR | Roupie mauricienne | ₨ | Afrique Australe |
+| SCR | Roupie seychelloise | ₨ | Afrique Australe |
+| KMF | Franc comorien | CF | Afrique Australe |
 | EGP | Livre égyptienne | E£ | Afrique du Nord |
 | MAD | Dirham marocain | MAD | Afrique du Nord |
+| DZD | Dinar algérien | د.ج | Afrique du Nord |
+| TND | Dinar tunisien | د.ت | Afrique du Nord |
+| LYD | Dinar libyen | ل.د | Afrique du Nord |
+| MRU | Ouguiya mauritanien | UM | Afrique du Nord |
+| SDG | Livre soudanaise | ج.س | Afrique du Nord |
+| ERN | Nakfa érythréen | Nfk | Afrique du Nord |
+| DJF | Franc djiboutien | Fdj | Afrique du Nord |
+| SOS | Shilling somalien | Sh | Afrique du Nord |
+| STN | Dobra santoméen | Db | Afrique Centrale |
 | USD | Dollar américain | $ | International |
 | EUR | Euro | € | International |
 | GBP | Livre sterling | £ | International |

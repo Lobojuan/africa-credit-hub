@@ -1,18 +1,18 @@
 # Data Dictionary
 
-## Cross-Jurisdictional Central Data Hub & Credit Registry System v1.1
+## Cross-Jurisdictional Central Data Hub & Credit Registry System v1.2
 
 **Prepared for:** Systems In Motion Limited  
-**Document Version:** 1.1  
+**Document Version:** 1.2  
 **Date:** March 2026
 
 ---
 
 ## 1. Overview
 
-This document provides field-level documentation for all 18 database tables in the Credit Registry System. The database uses PostgreSQL with Drizzle ORM for schema management.
+This document provides field-level documentation for all 21 database tables in the Credit Registry System. The system supports all 54 African countries with 42+ African currencies plus USD, EUR, and GBP. The database uses PostgreSQL with Drizzle ORM for schema management.
 
-**Enterprise Enhancements (v1.1) — Schema Impact Summary:**
+**Enterprise Enhancements — Schema Impact Summary:**
 
 | Enhancement | Schema Changes |
 |-------------|---------------|
@@ -23,6 +23,12 @@ This document provides field-level documentation for all 18 database tables in t
 | ENT-05 (Low-Bandwidth) | No schema changes; compression and code-splitting are application-layer optimizations |
 | ENT-06 (XBRL Upload) | No new tables/columns; XBRL/XML records are parsed and inserted into existing `credit_accounts` table via batch upload |
 | ENT-07 (Hash Chain) | Added `previous_hash` and `current_hash` columns to `audit_logs` table |
+| ENT-08 (Exchange Rates) | New `exchange_rates` table for multi-currency rate management across 42+ African currencies |
+| ENT-09 (API Admin) | New `api_configurations` table for centralized external API integration management |
+| ENT-10 (Retention) | New `retention_policies` table for jurisdiction-specific data retention period configuration |
+| ENT-11 (Global Search) | No schema changes; cross-entity search uses existing tables via `/api/global-search` endpoint |
+| ENT-12 (ID Photos) | Added `photo_url` and `id_document_url` columns to `borrowers` table for profile photos and ID document scans |
+| ENT-13 (Demo Environment) | No schema changes; investor-facing demo mode with role-based login cards using existing schema |
 
 ---
 
@@ -188,6 +194,8 @@ This document provides field-level documentation for all 18 database tables in t
 | business_reg_number | text | NULLABLE | Business registration number (corporate) | `BR-2024-001` |
 | sector | text | NULLABLE | Business sector (corporate) | `Technology` |
 | passport_number | text | NULLABLE | Passport number for cross-border entity resolution | `EP1234567` |
+| photo_url | text | NULLABLE | URL/path to borrower profile photo (auto-generated via DiceBear or uploaded via multer) (ENT-12) | `/uploads/photos/abc123.jpg` |
+| id_document_url | text | NULLABLE | URL/path to uploaded ID document scan (passport, national ID) (ENT-12) | `/uploads/documents/def456.pdf` |
 | is_pep | boolean | DEFAULT false | Politically Exposed Person flag | `false` |
 | pep_details | text | NULLABLE | PEP details/description | `Former government minister` |
 | related_borrower_id | varchar | NULLABLE | Related/linked borrower ID | `c3d4e5f6-a7b8-9012-cdef-345678901234` |
@@ -462,7 +470,7 @@ This document provides field-level documentation for all 18 database tables in t
 
 ### 3.16 exchange_rates
 
-**Description:** Exchange rate records for multi-currency support across jurisdictions.
+**Description:** Exchange rate records for multi-currency support across all 54 African jurisdictions, supporting 42+ African currencies plus USD, EUR, GBP. Rates can be entered manually or fetched live from open.er-api.com with cross-rate conversion via USD routing (ENT-08).
 
 | Field Name | Data Type | Constraints | Description | Example Value |
 |------------|-----------|-------------|-------------|---------------|
@@ -470,8 +478,8 @@ This document provides field-level documentation for all 18 database tables in t
 | base_currency | text | NOT NULL | Base currency code (e.g., USD) | `USD` |
 | target_currency | text | NOT NULL | Target currency code (e.g., ETB) | `ETB` |
 | rate | decimal(15,6) | NOT NULL | Exchange rate value | `56.123456` |
-| effective_date | text | NULLABLE | Date rate is effective | `2026-03-01` |
-| source | text | NULLABLE | Rate source (manual, api) | `manual` |
+| effective_date | text | NOT NULL | Date rate is effective | `2026-03-01` |
+| source | text | NOT NULL, DEFAULT 'manual' | Rate source (manual, api, open.er-api.com) | `manual` |
 | created_by | varchar | NULLABLE, FK -> users.id | User who created the rate | `a1b2c3d4-e5f6-7890-abcd-ef1234567890` |
 | created_at | timestamp | DEFAULT NOW() | Creation timestamp | `2026-02-28T09:30:00Z` |
 
@@ -479,12 +487,12 @@ This document provides field-level documentation for all 18 database tables in t
 
 ### 3.17 retention_policies
 
-**Description:** Data retention policy configuration per jurisdiction and entity type.
+**Description:** Data retention policy configuration per jurisdiction and entity type, with automatic enforcement scheduling. Supports all 54 African countries with jurisdiction-specific retention periods (ENT-10).
 
 | Field Name | Data Type | Constraints | Description | Example Value |
 |------------|-----------|-------------|-------------|---------------|
 | id | varchar | PRIMARY KEY, DEFAULT gen_random_uuid() | Unique identifier | `f8a9b0c1-d2e3-4567-1234-890123456789` |
-| country | text | NOT NULL | Jurisdiction (Ghana, Ethiopia, Uganda, Liberia) | `Ethiopia` |
+| country | text | NOT NULL | Jurisdiction (any of the 54 African countries) | `Ethiopia` |
 | entity_type | text | NOT NULL | Type: borrower, credit_account, audit_log, dispute, consent_record, court_judgment, payment_history | `borrower` |
 | retention_years | integer | NOT NULL | Years before record expunging | `7` |
 | archive_after_years | integer | NULLABLE | Years before record archiving | `5` |
@@ -497,7 +505,7 @@ This document provides field-level documentation for all 18 database tables in t
 
 ### 3.18 api_configurations
 
-**Description:** External API integration configuration for weather, judicial, payment, and exchange rate services.
+**Description:** Centralized external API integration configuration for weather, judicial, payment, exchange rate, and custom services. Provides connection testing and status tracking for all configured integrations (ENT-09).
 
 | Field Name | Data Type | Constraints | Description | Example Value |
 |------------|-----------|-------------|-------------|---------------|
@@ -561,25 +569,82 @@ institutions
 
 ## 5. Supported Currencies
 
+The system supports 42+ African currencies plus 3 international reserve currencies, covering all 54 African countries.
+
+### 5.1 International Reserve Currencies
+
 | Code | Currency Name | Jurisdictions |
 |------|--------------|---------------|
-| ETB | Ethiopian Birr | Ethiopia |
-| GHS | Ghanaian Cedi | Ghana |
-| UGX | Ugandan Shilling | Uganda |
-| LRD | Liberian Dollar | Liberia |
 | USD | US Dollar | All |
 | EUR | Euro | All |
 | GBP | British Pound | All |
-| KES | Kenyan Shilling | Regional |
-| NGN | Nigerian Naira | Regional |
-| ZAR | South African Rand | Regional |
-| TZS | Tanzanian Shilling | Regional |
-| RWF | Rwandan Franc | Regional |
-| XOF | West African CFA Franc | Regional |
-| XAF | Central African CFA Franc | Regional |
-| EGP | Egyptian Pound | Regional |
-| MAD | Moroccan Dirham | Regional |
-| BWP | Botswana Pula | Regional |
+
+### 5.2 West African Currencies (ECOWAS)
+
+| Code | Currency Name | Country/Region |
+|------|--------------|----------------|
+| NGN | Nigerian Naira | Nigeria |
+| GHS | Ghanaian Cedi | Ghana |
+| XOF | West African CFA Franc | Benin, Burkina Faso, Ivory Coast, Guinea-Bissau, Mali, Niger, Senegal, Togo |
+| LRD | Liberian Dollar | Liberia |
+| SLL | Sierra Leonean Leone | Sierra Leone |
+| GMD | Gambian Dalasi | Gambia |
+| GNF | Guinean Franc | Guinea |
+| CVE | Cape Verdean Escudo | Cape Verde |
+
+### 5.3 East African Currencies (EAC)
+
+| Code | Currency Name | Country/Region |
+|------|--------------|----------------|
+| KES | Kenyan Shilling | Kenya |
+| UGX | Ugandan Shilling | Uganda |
+| TZS | Tanzanian Shilling | Tanzania |
+| RWF | Rwandan Franc | Rwanda |
+| BIF | Burundian Franc | Burundi |
+| ETB | Ethiopian Birr | Ethiopia |
+| SSP | South Sudanese Pound | South Sudan |
+| SDG | Sudanese Pound | Sudan |
+| SOS | Somali Shilling | Somalia |
+| DJF | Djiboutian Franc | Djibouti |
+| ERN | Eritrean Nakfa | Eritrea |
+
+### 5.4 Southern African Currencies (SADC)
+
+| Code | Currency Name | Country/Region |
+|------|--------------|----------------|
+| ZAR | South African Rand | South Africa, Lesotho, Eswatini, Namibia |
+| BWP | Botswana Pula | Botswana |
+| MWK | Malawian Kwacha | Malawi |
+| ZMW | Zambian Kwacha | Zambia |
+| MZN | Mozambican Metical | Mozambique |
+| AOA | Angolan Kwanza | Angola |
+| MGA | Malagasy Ariary | Madagascar |
+| MUR | Mauritian Rupee | Mauritius |
+| SCR | Seychellois Rupee | Seychelles |
+| KMF | Comorian Franc | Comoros |
+| ZWL | Zimbabwean Dollar | Zimbabwe |
+| LSL | Lesotho Loti | Lesotho |
+| NAD | Namibian Dollar | Namibia |
+| SZL | Eswatini Lilangeni | Eswatini |
+
+### 5.5 Central African Currencies (CEMAC)
+
+| Code | Currency Name | Country/Region |
+|------|--------------|----------------|
+| XAF | Central African CFA Franc | Cameroon, Central African Republic, Chad, Republic of the Congo, Equatorial Guinea, Gabon |
+| CDF | Congolese Franc | Democratic Republic of the Congo |
+| STN | Sao Tome and Principe Dobra | Sao Tome and Principe |
+
+### 5.6 North African Currencies (AMU)
+
+| Code | Currency Name | Country/Region |
+|------|--------------|----------------|
+| EGP | Egyptian Pound | Egypt |
+| MAD | Moroccan Dirham | Morocco |
+| TND | Tunisian Dinar | Tunisia |
+| DZD | Algerian Dinar | Algeria |
+| LYD | Libyan Dinar | Libya |
+| MRU | Mauritanian Ouguiya | Mauritania |
 
 ---
 

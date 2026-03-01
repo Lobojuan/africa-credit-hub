@@ -1,9 +1,9 @@
 # Matrice de Traçabilité SRS
 
-## Système Central de Hub de Données Inter-Juridictionnel & Registre de Crédit v1.1
+## Système Central de Hub de Données Inter-Juridictionnel & Registre de Crédit v1.2
 
 **Préparé pour :** Systems In Motion Limited  
-**Version du Document :** 1.1  
+**Version du Document :** 1.2  
 **Date :** Mars 2026
 
 ---
@@ -34,6 +34,8 @@ Ce document fait correspondre chaque exigence de la Spécification des Exigences
 | FR-COL-04 | Le système doit valider la qualité des données au point d'entrée | Implémenté | Routes Serveur (`routes.ts`), Schémas Zod (`schema.ts`) | Validation par schéma Zod sur toutes les opérations d'insertion ; contraintes au niveau des champs appliquées | TC-DQ-001, TC-DQ-002 |
 | FR-COL-05 | Le système doit collecter les informations sur les jugements de tribunal et les privilèges | Implémenté | Jugements de Tribunal (table `court_judgments`, `borrower-detail.tsx`) | Jugements de tribunal avec numéro de dossier, tribunal, type (privilège/faillite/procès/civil/pénal), montant, date, statut | TC-CJ-001 à TC-CJ-003 |
 | FR-COL-06 | Résolution d'Entités Transfrontalières | Numéro de passeport, NIF, correspondance floue des noms pour l'identité inter-juridictionnelle | shared/schema.ts, server/storage.ts | 7 types de relations dont beneficial_owner | TC-BOR-013 |
+| FR-COL-07 | Le système doit prendre en charge le téléversement de photos d'identité et de documents pour les emprunteurs | Implémenté | Gestion des Emprunteurs (champs `photoUrl`, `idDocumentUrl`, points d'accès de téléversement multer, service protégé par authentification) | Téléversement de photos (limite 5 Mo, images uniquement) et téléversement de documents d'identité (limite 10 Mo, images/PDF) avec noms de fichiers aléatoires ; fichiers servis via la route authentifiée `/uploads` | TC-PHOTO-001 à TC-PHOTO-003 |
+| FR-COL-08 | Le système doit fournir une recherche globale inter-entités sur les emprunteurs, les institutions et les comptes de crédit | Implémenté | Recherche Globale (`/api/global-search`, `credit-search.tsx`) | Recherche simultanée sur les emprunteurs, institutions et comptes de crédit avec filtre optionnel par pays | TC-GS-001, TC-GS-002 |
 
 ---
 
@@ -97,7 +99,7 @@ Ce document fait correspondre chaque exigence de la Spécification des Exigences
 | FR-COMM-01 | Le système doit prendre en charge la facturation et la gestion des frais | Implémenté | Facturation (table `billing_records`, `billing.tsx`) | Création de factures avec type de service, montant, devise, période | TC-BIL-001, TC-BIL-002 |
 | FR-COMM-02 | Le système doit suivre le statut de paiement des factures | Implémenté | Enregistrements de Facturation (`billingStatusEnum`) | Suivi du statut : en attente, payé, en retard | TC-BIL-003 |
 | FR-COMM-03 | Le système doit prendre en charge plusieurs types de services | Implémenté | Enregistrements de Facturation (champ `serviceType`) | Types de services : soumission de données, rapport de crédit, accès API, abonnement | TC-BIL-001 |
-| FR-COMM-04 | Le système doit prendre en charge la facturation multi-devises | Implémenté | Enregistrements de Facturation (champ `currency`) | 18 devises prises en charge dans 4 juridictions | TC-BIL-001 |
+| FR-COMM-04 | Le système doit prendre en charge la facturation multi-devises | Implémenté | Enregistrements de Facturation (champ `currency`) | Plus de 42 devises africaines plus USD, EUR, GBP à travers 54 juridictions | TC-BIL-001 |
 | FR-COMM-05 | Le système doit générer des numéros de facture uniques | Implémenté | Facturation (champ `invoiceNumber`) | Numéros de facture uniques par enregistrement de facturation | TC-BIL-002 |
 
 ---
@@ -165,8 +167,11 @@ Ce document fait correspondre chaque exigence de la Spécification des Exigences
 | ENT-06 | Le système doit prendre en charge le format de fichier XBRL/XML pour les téléchargements de données par lots | Implémenté | Téléchargement XBRL (onglet XBRL dans `batch-upload.tsx` ; `/api/batch-upload/credit-accounts`) | Analyse XBRL/XML dans le point de terminaison de téléchargement par lots ; interface à onglets (JSON/CSV et XBRL) ; format d'exemple fourni | TC-ENT-016, TC-ENT-017 |
 | ENT-07 | Le système doit implémenter des journaux d'audit inviolables avec chaîne de hachage SHA-256 | Implémenté | Intégrité de l'Audit (`previousHash`, `currentHash` sur `audit_logs` ; `verifyAuditIntegrity` dans `storage.ts` ; `/api/audit/verify-integrity` ; `audit-trail.tsx`) | Chaque entrée de journal hachée avec SHA-256 liée à l'entrée précédente ; point de terminaison de vérification d'intégrité ; badge visuel sur la page de piste d'audit | TC-ENT-018 à TC-ENT-020 |
 | ENT-08 | Application de la Rétention des Données (REQ-RET-01) | Archivage/suppression automatisé basé sur les politiques spécifiques à chaque juridiction | server/retention-enforcement.ts, client/src/pages/retention-policies.tsx | Planificateur 24h + déclenchement manuel | TC-RET-001 |
-| ENT-09 | Module de Gestion des Taux de Change | CRUD administrateur pour les paires de taux croisés de devises avec routage USD | client/src/pages/exchange-rates.tsx, server/routes.ts | 18 devises, widget convertisseur | TC-EXR-001 |
+| ENT-09 | Module de Gestion des Taux de Change | CRUD administrateur pour les paires de taux croisés de devises avec routage USD | client/src/pages/exchange-rates.tsx, server/routes.ts | Plus de 42 devises, widget convertisseur | TC-EXR-001 |
 | ENT-10 | Module d'Administration API | Configuration centralisée des points de terminaison de services externes | client/src/pages/api-admin.tsx, server/routes.ts | Météo, judiciaire, passerelle de paiement | TC-API-ADM-001 |
+| ENT-11 | Recherche globale inter-entités | Implémenté | Recherche Globale (`/api/global-search`, `credit-search.tsx`) | Recherche simultanée sur les emprunteurs, institutions et comptes de crédit avec filtre optionnel par pays ; aucune modification du schéma requise | TC-GS-001, TC-GS-002 |
+| ENT-12 | Téléversement de photos d'identité et documents pour les emprunteurs | Implémenté | Photos d'Identité (champs `photoUrl`, `idDocumentUrl` sur `borrowers`, points d'accès de téléversement multer) | Avatars DiceBear auto-générés par défaut ; téléversement multer de photos/documents avec service protégé par authentification | TC-PHOTO-001 à TC-PHOTO-003 |
+| ENT-13 | Environnement de démonstration pour investisseurs | Implémenté | Environnement de Démonstration (cartes de connexion démo sur la page de connexion, bannière DEMO) | Connexion démo en un clic avec 3 cartes de rôle (Admin, Régulateur, Agent Bancaire) ; bannière ambre ENVIRONNEMENT DE DÉMONSTRATION ; avertissement de données fictives | TC-DEMO-001, TC-DEMO-002 |
 
 ---
 
@@ -174,7 +179,7 @@ Ce document fait correspondre chaque exigence de la Spécification des Exigences
 
 | Catégorie | Total des Exigences | Implémentées | Partielles | Non Implémentées |
 |-----------|---------------------|--------------|------------|------------------|
-| FR-COL (Collecte de Données) | 6 | 6 | 0 | 0 |
+| FR-COL (Collecte de Données) | 8 | 8 | 0 | 0 |
 | FR-CR (Rapport de Crédit) | 8 | 8 | 0 | 0 |
 | FR-CON (Consentement et Litiges) | 9 | 9 | 0 | 0 |
 | FR-REG (Réglementaire) | 3 | 3 | 0 | 0 |
@@ -184,8 +189,8 @@ Ce document fait correspondre chaque exigence de la Spécification des Exigences
 | INT-RPT (Intégration et Reporting) | 4 | 4 | 0 | 0 |
 | DQ (Qualité des Données) | 5 | 5 | 0 | 0 |
 | NFR-SEC (Sécurité) | 10 | 10 | 0 | 0 |
-| ENT (Améliorations d'Entreprise) | 10 | 10 | 0 | 0 |
-| **Total** | **71** | **71** | **0** | **0** |
+| ENT (Améliorations d'Entreprise) | 13 | 13 | 0 | 0 |
+| **Total** | **77** | **77** | **0** | **0** |
 
 ---
 

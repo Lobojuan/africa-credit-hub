@@ -1,9 +1,9 @@
 # Security Compliance Report
 
-## Cross-Jurisdictional Central Data Hub & Credit Registry System v1.1
+## Cross-Jurisdictional Central Data Hub & Credit Registry System v1.2
 
 **Prepared for:** Systems In Motion Limited  
-**Document Version:** 1.1  
+**Document Version:** 1.2  
 **Date:** March 2026  
 **Classification:** Confidential
 
@@ -11,9 +11,9 @@
 
 ## 1. Executive Summary
 
-This document provides a comprehensive assessment of the security controls implemented in the Credit Registry System against the requirements defined in the Software Requirements Specification (SRS) v1.1. The system handles sensitive financial and personal data across four jurisdictions (Ghana, Ethiopia, Uganda, Liberia) and supports three languages (English, French, Portuguese) and must comply with data protection and financial regulatory requirements.
+This document provides a comprehensive assessment of the security controls implemented in the Credit Registry System against the requirements defined in the Software Requirements Specification (SRS) v1.2. The system handles sensitive financial and personal data across all 54 African countries and supports three languages (English, French, Portuguese) and must comply with data protection and financial regulatory requirements.
 
-All nine non-functional security requirements (NFR-SEC-01 through NFR-SEC-09) have been implemented, along with seven enterprise security enhancements (ENT-01 through ENT-07) including TOTP multi-factor authentication, OAuth 2.1 Bearer token exchange, tamper-evident audit log hash chains, fuzzy entity matching, dispute chatbot, low-bandwidth optimizations, and XBRL upload support. This report details each security control, its implementation, and compliance status.
+All ten non-functional security requirements (NFR-SEC-01 through NFR-SEC-10) have been implemented, along with thirteen enterprise security enhancements (ENT-01 through ENT-13) including TOTP multi-factor authentication, OAuth 2.1 Bearer token exchange, tamper-evident audit log hash chains, fuzzy entity matching, dispute chatbot, low-bandwidth optimizations, XBRL upload support, data retention enforcement, exchange rate management, API administration, global search, ID photo/document upload, and investor demo environment. This report details each security control, its implementation, and compliance status.
 
 ---
 
@@ -493,6 +493,28 @@ if (approval.requestedBy === currentUserId) {
 | Flow | Issue type → borrower search → account selection → description → auto-submit |
 | i18n | Full EN/FR translations under `chatbot.*` keys |
 
+### 9.5 File Upload Security — ENT-12
+
+| Control | Implementation |
+|---------|---------------|
+| Upload Library | `multer` — multipart/form-data handling for file uploads |
+| Photo Size Limit | 5 MB maximum file size for borrower photos |
+| Document Size Limit | 10 MB maximum file size for ID documents |
+| Photo MIME Validation | Only `image/*` MIME types accepted for photos |
+| Document MIME Validation | Only `image/*` and `application/pdf` MIME types accepted for ID documents |
+| Filename Randomization | Uploaded files receive randomized filenames (`{timestamp}-{random}{ext}`) to prevent path traversal and enumeration |
+| Storage Location | Photos stored in `uploads/photos/`, ID documents in `uploads/documents/` |
+| Auth-Protected Serving | `/uploads` static route protected by `requireAuth` middleware — unauthenticated users cannot access uploaded files |
+| Audit Logging | All photo and document uploads create audit log entries (`UPLOAD_PHOTO`, `UPLOAD_ID_DOCUMENT`) with borrower ID and user ID |
+| Endpoints | `POST /api/borrowers/:id/photo` (multipart/form-data, field: `photo`), `POST /api/borrowers/:id/id-document` (multipart/form-data, field: `document`) |
+
+### 9.6 External Service Integrations
+
+| Service | Purpose | Security Notes |
+|---------|---------|---------------|
+| DiceBear (`api.dicebear.com`) | Auto-generated borrower profile avatars | No PII sent to DiceBear — only the borrower ID is used as a seed for avatar generation; no authentication required |
+| Open Exchange Rates (`open.er-api.com`) | Live currency exchange rate fetching | No authentication required; no sensitive data transmitted; only currency codes sent in requests |
+
 ---
 
 ## 10. Compliance Matrix (NFR-SEC + ENT)
@@ -515,7 +537,10 @@ if (approval.requestedBy === currentUserId) {
 | ENT-05 | Low-bandwidth optimizations | COMPLIANT | gzip `compression` middleware; `React.lazy()` code-splitting with `Suspense` fallback for all route components. |
 | ENT-06 | XBRL/XML batch upload support | COMPLIANT | XBRL/XML file parsing in batch upload endpoint; tabbed frontend (JSON/CSV + XBRL); sample format provided. |
 | ENT-07 | Tamper-evident audit log hash chain | COMPLIANT | SHA-256 hash chain (`previousHash`/`currentHash` columns); `GET /api/audit/verify-integrity` endpoint; visual integrity badge on audit trail page. |
-| REQ-RET-01 | Data Retention | COMPLIANT | Per-country retention policies enforced (Ghana 10yr, Ethiopia/Uganda/Liberia 7yr, audit logs 10yr globally). Retention Enforcement Engine with 24-hour automated scheduler and admin-only manual trigger. Parameterized SQL via Drizzle ORM; table names validated against `VALID_TABLES` allowlist; country values validated against `VALID_COUNTRIES` set. |
+| REQ-RET-01 | Data Retention | COMPLIANT | Per-country retention policies enforced across all 54 African jurisdictions (Ghana 10yr, Ethiopia/Uganda/Liberia 7yr, others configurable; audit logs 10yr globally). Retention Enforcement Engine with 24-hour automated scheduler and admin-only manual trigger. Parameterized SQL via Drizzle ORM; table names validated against `VALID_TABLES` allowlist; country values validated against `VALID_COUNTRIES` set. |
+| ENT-11 | Global Search | COMPLIANT | Cross-entity search across borrowers, institutions, and credit accounts via `/api/global-search` endpoint. Optional country filter. No sensitive data exposure beyond authenticated user's access level. |
+| ENT-12 | File Upload Security | COMPLIANT | Multer-based upload with file size limits (5MB photos, 10MB documents), MIME type validation, randomized filenames, auth-protected serving via `/uploads` route. All uploads audit-logged. |
+| ENT-13 | Demo Environment | COMPLIANT | Investor-facing demo with pre-configured role cards. Amber banner indicates demo mode. Uses existing authentication and authorization infrastructure. Fictional data only. |
 | SLA-RET-01 | Retention Enforcement SLA | COMPLIANT | Automated 24-hour enforcement cycle ensures timely data lifecycle management. Manual trigger via `POST /api/retention-policies/enforce` (admin-only, RBAC-protected). All enforcement actions audit-logged with full result details. |
 
 ---
@@ -582,12 +607,15 @@ The system includes an automated Retention Enforcement Engine responsible for en
 
 ### 13.2 Per-Country Retention Policies
 
+Retention policies are configurable per jurisdiction across all 54 African countries. Default policies include:
+
 | Country | Retention Period | Notes |
 |---------|-----------------|-------|
 | Ghana | 10 years | Aligned with Ghana Data Protection Act requirements |
 | Ethiopia | 7 years | Standard financial data retention |
 | Uganda | 7 years | Standard financial data retention |
 | Liberia | 7 years | Standard financial data retention |
+| Other African Countries | Configurable | Administrators can set per-country policies via the retention_policies table |
 | Audit Logs | 10 years (global) | Applied uniformly across all jurisdictions |
 
 ### 13.3 SQL Injection Prevention in Retention Engine

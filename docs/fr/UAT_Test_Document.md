@@ -1,9 +1,9 @@
 # Document de Tests d'Acceptation Utilisateur (UAT)
 
-## Système de Hub Central de Données Inter-Juridictionnel & Registre de Crédit v1.1
+## Système de Hub Central de Données Inter-Juridictionnel & Registre de Crédit v1.2
 
 **Préparé pour :** Systems In Motion Limited  
-**Version du Document :** 1.1  
+**Version du Document :** 1.2  
 **Date :** Mars 2026  
 **Classification :** Confidentiel
 
@@ -35,6 +35,20 @@
 22. [Module d'Internationalisation (i18n)](#22-module-dinternationalisation-i18n)
 23. [Module de Thème](#23-module-de-thème)
 24. [Approbation Finale](#24-approbation-finale)
+25. [Module d'Authentification Multi-Facteurs (ENT-01)](#25-module-dauthentification-multi-facteurs-ent-01)
+26. [Module de Correspondance Floue d'Entités (ENT-02)](#26-module-de-correspondance-floue-dentités-ent-02)
+27. [Module du Chatbot de Litiges (ENT-03)](#27-module-du-chatbot-de-litiges-ent-03)
+28. [Module OAuth 2.1 (ENT-04)](#28-module-oauth-21-ent-04)
+29. [Module d'Optimisations Faible Bande Passante (ENT-05)](#29-module-doptimisations-faible-bande-passante-ent-05)
+30. [Module de Téléchargement XBRL (ENT-06)](#30-module-de-téléchargement-xbrl-ent-06)
+31. [Module de Journaux d'Audit Inviolables (ENT-07)](#31-module-de-journaux-daudit-inviolables-ent-07)
+32. [Module de Gestion des Taux de Change](#32-module-de-gestion-des-taux-de-change)
+33. [Module d'Administration des API](#33-module-dadministration-des-api)
+34. [Module de Politiques de Rétention des Données](#34-module-de-politiques-de-rétention-des-données)
+35. [Module de Recherche Globale](#35-module-de-recherche-globale)
+36. [Module de Photos d'Identité et Téléversement de Documents](#36-module-de-photos-didentité-et-téléversement-de-documents)
+37. [Module d'Environnement de Démonstration](#37-module-denvironnement-de-démonstration)
+38. [Module de Sélecteur de Langue sur la Page de Connexion](#38-module-de-sélecteur-de-langue-sur-la-page-de-connexion)
 
 ---
 
@@ -44,14 +58,14 @@
 
 | Élément | Détail |
 |---------|--------|
-| Application | Système de Hub Central de Données Inter-Juridictionnel & Registre de Crédit v1.1 |
-| Base de Données | PostgreSQL avec 15 tables |
+| Application | Système de Hub Central de Données Inter-Juridictionnel & Registre de Crédit v1.2 |
+| Base de Données | PostgreSQL avec 21 tables |
 | Rôles Utilisateur | Admin, Régulateur, Prêteur, Observateur |
-| Devises Supportées | 18 (ETB, GHS, UGX, LRD, USD, EUR, GBP, KES, NGN, ZAR, TZS, RWF, XOF, XAF, EGP, MAD, BWP, MZN) |
-| Améliorations Entreprise | MFA, Correspondance Floue, Chatbot de Litiges, OAuth 2.1, Faible Bande Passante, Téléchargement XBRL, Audit Inviolable |
-| Juridictions | Ghana, Éthiopie, Ouganda, Libéria |
+| Devises Supportées | Plus de 42 devises africaines plus USD, EUR, GBP |
+| Améliorations Entreprise | MFA, Correspondance Floue, Chatbot de Litiges, OAuth 2.1, Faible Bande Passante, Téléchargement XBRL, Audit Inviolable, Gestion des Taux de Change, Administration API, Politiques de Rétention des Données, Recherche Globale, Photos d'Identité et Documents, Environnement de Démonstration |
+| Juridictions | Les 54 pays africains |
 | Langues | Anglais, Français, Portugais |
-| Données de Test | 100 000+ emprunteurs, 166 000+ comptes de crédit, 120 000 enregistrements d'historique de paiement |
+| Données de Test | 102 000+ emprunteurs, 172 000+ comptes de crédit, 120 000 enregistrements d'historique de paiement, 3 218 litiges, 2 147 jugements de tribunal |
 
 ### 1.2 Identifiants de Test
 
@@ -604,7 +618,35 @@
 
 ---
 
-## 35. Module de Sélecteur de Langue sur la Page de Connexion
+## 35. Module de Recherche Globale
+
+| ID-CT | Module | Nom du Cas de Test | Pré-conditions | Étapes de Test | Résultat Attendu | Réussi/Échoué | Référence SRS |
+|-------|--------|-------------------|----------------|----------------|------------------|---------------|---------------|
+| TC-GS-001 | Recherche Globale | Recherche inter-entités | L'utilisateur est connecté | 1. Naviguer vers `/search`. 2. Saisir un terme de recherche dans le champ de recherche. 3. Soumettre la recherche. | Les résultats s'affichent dans trois catégories : emprunteurs, institutions et comptes de crédit. Les enregistrements correspondants sont affichés avec les détails pertinents. | | FR-COL-08 |
+| TC-GS-002 | Recherche Globale | Filtre par pays | L'utilisateur est connecté | 1. Naviguer vers `/search`. 2. Saisir un terme de recherche. 3. Sélectionner un pays dans le menu déroulant de filtre par pays. 4. Soumettre la recherche. | Les résultats sont filtrés pour n'afficher que les enregistrements du pays sélectionné. | | FR-COL-08 |
+
+---
+
+## 36. Module de Photos d'Identité et Téléversement de Documents
+
+| ID-CT | Module | Nom du Cas de Test | Pré-conditions | Étapes de Test | Résultat Attendu | Réussi/Échoué | Référence SRS |
+|-------|--------|-------------------|----------------|----------------|------------------|---------------|---------------|
+| TC-PHOTO-001 | Photos d'Identité | Téléverser une photo d'emprunteur | L'utilisateur est connecté, un emprunteur existe | 1. Naviguer vers la page de détails de l'emprunteur. 2. Cliquer sur la zone de téléversement de photo / l'icône de caméra sur l'avatar de l'emprunteur. 3. Sélectionner un fichier image (moins de 5 Mo). 4. Téléverser. | La photo est téléversée avec succès. L'avatar de l'emprunteur est mis à jour pour afficher la photo téléversée. Une entrée de journal d'audit est créée pour UPLOAD_PHOTO. | | FR-COL-07 |
+| TC-PHOTO-002 | Photos d'Identité | Téléverser un document d'identité | L'utilisateur est connecté, un emprunteur existe | 1. Naviguer vers la page de détails de l'emprunteur. 2. Localiser la section Document d'Identité. 3. Cliquer sur le bouton de téléversement. 4. Sélectionner un fichier image ou PDF (moins de 10 Mo). 5. Téléverser. | Le document d'identité est téléversé avec succès. L'aperçu/lien du document est affiché sur la page de détails de l'emprunteur. Une entrée de journal d'audit est créée pour UPLOAD_ID_DOCUMENT. | | FR-COL-07 |
+| TC-PHOTO-003 | Photos d'Identité | Affichage de l'avatar DiceBear | L'utilisateur est connecté, un emprunteur existe sans photo téléversée | 1. Naviguer vers la page de détails de l'emprunteur pour un emprunteur sans photo téléversée. | Un avatar DiceBear auto-généré est affiché comme photo de profil de l'emprunteur. | | FR-COL-07 |
+
+---
+
+## 37. Module d'Environnement de Démonstration
+
+| ID-CT | Module | Nom du Cas de Test | Pré-conditions | Étapes de Test | Résultat Attendu | Réussi/Échoué | Référence SRS |
+|-------|--------|-------------------|----------------|----------------|------------------|---------------|---------------|
+| TC-DEMO-001 | Environnement de Démonstration | Connexion démo depuis la page de connexion | L'application est accessible | 1. Naviguer vers la page de connexion. 2. Cliquer sur le bouton « Essayer la Démo Interactive ». 3. Sélectionner une carte de rôle (Admin, Régulateur ou Agent Bancaire). | L'utilisateur est connecté avec le rôle de démonstration sélectionné. La bannière ambre ENVIRONNEMENT DE DÉMONSTRATION est visible en haut de l'application. | | ENT-13 |
+| TC-DEMO-002 | Environnement de Démonstration | Visibilité de la bannière de démonstration | L'utilisateur est connecté via la démo | 1. Se connecter via l'environnement de démonstration. 2. Naviguer entre les pages. | La bannière ambre ENVIRONNEMENT DE DÉMONSTRATION reste visible sur toutes les pages. L'avertissement de données fictives est affiché. | | ENT-13 |
+
+---
+
+## 38. Module de Sélecteur de Langue sur la Page de Connexion
 
 | ID-CT | Module | Nom du Cas de Test | Pré-conditions | Étapes de Test | Résultat Attendu | Réussi/Échoué | Référence SRS |
 |-------|--------|-------------------|----------------|----------------|------------------|---------------|---------------|
@@ -617,7 +659,7 @@
 
 **Fin du Document**
 
-*Ce document de test UAT couvre tous les modules du Système de Hub Central de Données Inter-Juridictionnel & Registre de Crédit v1.1, y compris les 7 améliorations entreprise (ENT-01 à ENT-07). Chaque cas de test est conçu pour valider les exigences fonctionnelles et non fonctionnelles telles que définies dans la Spécification des Exigences Logicielles (SRS).*
+*Ce document de test UAT couvre tous les modules du Système de Hub Central de Données Inter-Juridictionnel & Registre de Crédit v1.2, y compris les 13 améliorations entreprise (ENT-01 à ENT-13). Chaque cas de test est conçu pour valider les exigences fonctionnelles et non fonctionnelles telles que définies dans la Spécification des Exigences Logicielles (SRS).*
 
 *Préparé par : Systems In Motion Limited*  
 *Classification : Confidentiel*
