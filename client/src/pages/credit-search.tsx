@@ -90,7 +90,8 @@ export default function CreditSearchPage() {
                           <p className="text-xs text-muted-foreground">{borrower.nationalId}</p>
                           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                             <Badge variant="secondary" className="text-[10px] capitalize">{borrower.type}</Badge>
-                            {borrower.city && <Badge variant="outline" className="text-[10px]">{borrower.city}</Badge>}
+                            {borrower.country && <Badge variant="outline" className="text-[10px]">{borrower.country}</Badge>}
+                            {borrower.city && <Badge variant="outline" className="text-[10px]">{borrower.city}{borrower.region ? `, ${borrower.region}` : ""}</Badge>}
                             {borrower.sector && <Badge variant="outline" className="text-[10px]">{borrower.sector}</Badge>}
                           </div>
                         </div>

@@ -192,6 +192,8 @@ export default function BorrowerDetailPage() {
             </h3>
           </CardHeader>
           <CardContent className="space-y-3">
+            <InfoRow label={t("borrowerDetail.country")} value={borrower.country || "—"} />
+            <InfoRow label={t("borrowerDetail.tinNumber")} value={borrower.tinNumber || "—"} />
             {isIndividual && (
               <>
                 <InfoRow label={t("borrowerDetail.dateOfBirth")} value={borrower.dateOfBirth || "—"} />
@@ -214,7 +216,7 @@ export default function BorrowerDetailPage() {
             </div>
             <div className="flex items-center gap-2 text-sm">
               <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
-              <span>{[borrower.address, borrower.city, borrower.region].filter(Boolean).join(", ") || "—"}</span>
+              <span>{[borrower.address, borrower.city, borrower.region, borrower.country].filter(Boolean).join(", ") || "—"}</span>
             </div>
             {borrower.sector && (
               <div className="flex items-center gap-2 text-sm">

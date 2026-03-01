@@ -39,8 +39,9 @@ export default function BorrowersPage() {
   const [formData, setFormData] = useState({
     type: "individual" as "individual" | "corporate",
     firstName: "", lastName: "", companyName: "", nationalId: "",
+    tinNumber: "",
     dateOfBirth: "", gender: "", phone: "", email: "",
-    address: "", city: "", region: "",
+    address: "", country: "", city: "", region: "",
     employerName: "", occupation: "", businessRegNumber: "", sector: "",
     isPep: false, pepDetails: "",
     educationLevel: "", educationInstitution: "", employmentHistory: "",
@@ -88,7 +89,7 @@ export default function BorrowersPage() {
       queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string)?.startsWith?.("/api/borrowers") });
       queryClient.invalidateQueries({ queryKey: ["/api/pending-approvals"] });
       setDialogOpen(false);
-      setFormData({ type: "individual", firstName: "", lastName: "", companyName: "", nationalId: "", dateOfBirth: "", gender: "", phone: "", email: "", address: "", city: "", region: "", employerName: "", occupation: "", businessRegNumber: "", sector: "", isPep: false, pepDetails: "", educationLevel: "", educationInstitution: "", employmentHistory: "" });
+      setFormData({ type: "individual", firstName: "", lastName: "", companyName: "", nationalId: "", tinNumber: "", dateOfBirth: "", gender: "", phone: "", email: "", address: "", country: "", city: "", region: "", employerName: "", occupation: "", businessRegNumber: "", sector: "", isPep: false, pepDetails: "", educationLevel: "", educationInstitution: "", employmentHistory: "" });
       toast({ title: data.message || t("borrowers.registerBorrower"), description: t("borrowers.submittedForApproval") });
     },
     onError: (e: Error) => {
@@ -163,7 +164,10 @@ export default function BorrowersPage() {
                   <div><Label>{t("borrowers.businessRegNo")}</Label><Input data-testid="input-business-reg" value={formData.businessRegNumber} onChange={(e) => setFormData({ ...formData, businessRegNumber: e.target.value })} /></div>
                 </>
               )}
-              <div><Label>{t("borrowers.nationalId")}</Label><Input data-testid="input-national-id" value={formData.nationalId} onChange={(e) => setFormData({ ...formData, nationalId: e.target.value })} required /></div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div><Label>{t("borrowers.nationalId")}</Label><Input data-testid="input-national-id" value={formData.nationalId} onChange={(e) => setFormData({ ...formData, nationalId: e.target.value })} required /></div>
+                <div><Label>{t("borrowers.tinNumber")}</Label><Input data-testid="input-tin" value={formData.tinNumber} onChange={(e) => setFormData({ ...formData, tinNumber: e.target.value })} /></div>
+              </div>
               {fuzzyMatches.length > 0 && (
                 <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20" data-testid="alert-fuzzy-matches">
                   <div className="flex items-center gap-2 mb-2">
@@ -188,6 +192,18 @@ export default function BorrowersPage() {
                 <div><Label>{t("borrowers.email")}</Label><Input data-testid="input-email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} /></div>
               </div>
               <div><Label>{t("borrowers.address")}</Label><Input data-testid="input-address" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} /></div>
+              <div>
+                <Label>{t("borrowers.country")}</Label>
+                <Select value={formData.country} onValueChange={(v) => setFormData({ ...formData, country: v })}>
+                  <SelectTrigger data-testid="select-country"><SelectValue placeholder={t("creditAccounts.select")} /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Ghana">Ghana</SelectItem>
+                    <SelectItem value="Ethiopia">Ethiopia</SelectItem>
+                    <SelectItem value="Uganda">Uganda</SelectItem>
+                    <SelectItem value="Liberia">Liberia</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><Label>{t("borrowers.city")}</Label><Input data-testid="input-city" value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} /></div>
                 <div><Label>{t("borrowers.region")}</Label><Input data-testid="input-region" value={formData.region} onChange={(e) => setFormData({ ...formData, region: e.target.value })} /></div>
@@ -280,8 +296,9 @@ export default function BorrowersPage() {
                 <div className="mt-3 flex items-center gap-2 flex-wrap">
                   <Badge variant="secondary" className="text-[10px] capitalize">{borrower.type}</Badge>
                   {borrower.isPep && <Badge variant="destructive" className="text-[10px]"><Flag className="w-3 h-3 mr-1" />{t("borrowers.pep")}</Badge>}
+                  {borrower.country && <Badge variant="outline" className="text-[10px]">{borrower.country}</Badge>}
+                  {borrower.city && <Badge variant="outline" className="text-[10px]">{borrower.city}{borrower.region ? `, ${borrower.region}` : ""}</Badge>}
                   {borrower.sector && <Badge variant="outline" className="text-[10px]">{borrower.sector}</Badge>}
-                  {borrower.city && <Badge variant="outline" className="text-[10px]">{borrower.city}</Badge>}
                 </div>
               </CardContent>
             </Card>

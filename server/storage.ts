@@ -199,6 +199,7 @@ export class DatabaseStorage implements IStorage {
         ilike(borrowers.occupation, searchPattern),
         ilike(borrowers.employerName, searchPattern),
         ilike(borrowers.businessRegNumber, searchPattern),
+        ilike(borrowers.country, searchPattern),
       )
     ).orderBy(desc(borrowers.createdAt)).limit(200);
   }

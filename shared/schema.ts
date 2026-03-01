@@ -49,6 +49,7 @@ export const borrowers = pgTable("borrowers", {
   phone: text("phone"),
   email: text("email"),
   address: text("address"),
+  country: text("country"),
   city: text("city"),
   region: text("region"),
   employerName: text("employer_name"),
