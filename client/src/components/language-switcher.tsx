@@ -14,7 +14,7 @@ export function LanguageSwitcher() {
 
   return (
     <Select
-      value={i18n.language?.startsWith("fr") ? "fr" : "en"}
+      value={i18n.language?.startsWith("fr") ? "fr" : i18n.language?.startsWith("pt") ? "pt" : "en"}
       onValueChange={(lang) => i18n.changeLanguage(lang)}
     >
       <SelectTrigger
@@ -27,6 +27,7 @@ export function LanguageSwitcher() {
       <SelectContent>
         <SelectItem value="en" data-testid="option-lang-en">EN</SelectItem>
         <SelectItem value="fr" data-testid="option-lang-fr">FR</SelectItem>
+        <SelectItem value="pt" data-testid="option-lang-pt">PT</SelectItem>
       </SelectContent>
     </Select>
   );

@@ -6,6 +6,7 @@ import {
   insertUserSchema, insertPendingApprovalSchema, insertDisputeSchema,
   insertCourtJudgmentSchema, insertConsentRecordSchema, insertPaymentHistorySchema,
   insertInstitutionSchema, insertBillingRecordSchema, insertCreditReportLogSchema,
+  insertExchangeRateSchema, insertRetentionPolicySchema, insertApiConfigurationSchema,
 } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
@@ -1509,6 +1510,172 @@ export async function registerRoutes(
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
+  });
+
+  // Exchange Rate Management
+  app.get("/api/exchange-rates", requireAuth, async (_req, res) => {
+    try {
+      const rates = await storage.getExchangeRates();
+      res.json(rates);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.post("/api/exchange-rates", requireRole("admin"), async (req, res) => {
+    try {
+      const parsed = insertExchangeRateSchema.parse({ ...req.body, createdBy: (req as any).user.id });
+      const rate = await storage.createExchangeRate(parsed);
+      await storage.createAuditLog({ userId: (req as any).user.id, action: "CREATE", entity: "exchange_rate", entityId: rate.id, details: `Created rate ${parsed.baseCurrency}/${parsed.targetCurrency}: ${parsed.rate}`, ipAddress: req.ip });
+      res.status(201).json(rate);
+    } catch (e: any) {
+      if (e instanceof z.ZodError) return res.status(400).json({ message: "Validation error", errors: e.errors });
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.patch("/api/exchange-rates/:id", requireRole("admin"), async (req, res) => {
+    try {
+      const rate = await storage.updateExchangeRate(req.params.id, req.body);
+      if (!rate) return res.status(404).json({ message: "Rate not found" });
+      await storage.createAuditLog({ userId: (req as any).user.id, action: "UPDATE", entity: "exchange_rate", entityId: req.params.id, details: JSON.stringify(req.body), ipAddress: req.ip });
+      res.json(rate);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.delete("/api/exchange-rates/:id", requireRole("admin"), async (req, res) => {
+    try {
+      const deleted = await storage.deleteExchangeRate(req.params.id);
+      if (!deleted) return res.status(404).json({ message: "Rate not found" });
+      await storage.createAuditLog({ userId: (req as any).user.id, action: "DELETE", entity: "exchange_rate", entityId: req.params.id, details: "Deleted exchange rate", ipAddress: req.ip });
+      res.json({ message: "Deleted" });
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.get("/api/exchange-rates/convert", requireAuth, async (req, res) => {
+    try {
+      const { amount, from, to } = req.query;
+      if (!amount || !from || !to) return res.status(400).json({ message: "amount, from, to required" });
+      const result = await storage.convertCurrency(parseFloat(amount as string), from as string, to as string);
+      if (!result) return res.status(404).json({ message: "No exchange rate found for this pair" });
+      res.json(result);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  // Retention Policies
+  app.get("/api/retention-policies", requireRole("admin", "regulator"), async (_req, res) => {
+    try {
+      const policies = await storage.getRetentionPolicies();
+      res.json(policies);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.post("/api/retention-policies", requireRole("admin"), async (req, res) => {
+    try {
+      const parsed = insertRetentionPolicySchema.parse(req.body);
+      const policy = await storage.createRetentionPolicy(parsed);
+      await storage.createAuditLog({ userId: (req as any).user.id, action: "CREATE", entity: "retention_policy", entityId: policy.id, details: `Created retention policy: ${parsed.country} - ${parsed.entityType}`, ipAddress: req.ip });
+      res.status(201).json(policy);
+    } catch (e: any) {
+      if (e instanceof z.ZodError) return res.status(400).json({ message: "Validation error", errors: e.errors });
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.patch("/api/retention-policies/:id", requireRole("admin"), async (req, res) => {
+    try {
+      const policy = await storage.updateRetentionPolicy(req.params.id, req.body);
+      if (!policy) return res.status(404).json({ message: "Policy not found" });
+      await storage.createAuditLog({ userId: (req as any).user.id, action: "UPDATE", entity: "retention_policy", entityId: req.params.id, details: JSON.stringify(req.body), ipAddress: req.ip });
+      res.json(policy);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.delete("/api/retention-policies/:id", requireRole("admin"), async (req, res) => {
+    try {
+      const deleted = await storage.deleteRetentionPolicy(req.params.id);
+      if (!deleted) return res.status(404).json({ message: "Policy not found" });
+      await storage.createAuditLog({ userId: (req as any).user.id, action: "DELETE", entity: "retention_policy", entityId: req.params.id, details: "Deleted retention policy", ipAddress: req.ip });
+      res.json({ message: "Deleted" });
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  // API Configurations
+  app.get("/api/api-configurations", requireRole("admin"), async (_req, res) => {
+    try {
+      const configs = await storage.getApiConfigurations();
+      res.json(configs);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.get("/api/api-configurations/:id", requireRole("admin"), async (req, res) => {
+    try {
+      const config = await storage.getApiConfiguration(req.params.id);
+      if (!config) return res.status(404).json({ message: "Configuration not found" });
+      res.json(config);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.post("/api/api-configurations", requireRole("admin"), async (req, res) => {
+    try {
+      const parsed = insertApiConfigurationSchema.parse(req.body);
+      const config = await storage.createApiConfiguration(parsed);
+      await storage.createAuditLog({ userId: (req as any).user.id, action: "CREATE", entity: "api_configuration", entityId: config.id, details: `Created API config: ${parsed.name}`, ipAddress: req.ip });
+      res.status(201).json(config);
+    } catch (e: any) {
+      if (e instanceof z.ZodError) return res.status(400).json({ message: "Validation error", errors: e.errors });
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.patch("/api/api-configurations/:id", requireRole("admin"), async (req, res) => {
+    try {
+      const config = await storage.updateApiConfiguration(req.params.id, req.body);
+      if (!config) return res.status(404).json({ message: "Configuration not found" });
+      await storage.createAuditLog({ userId: (req as any).user.id, action: "UPDATE", entity: "api_configuration", entityId: req.params.id, details: JSON.stringify(req.body), ipAddress: req.ip });
+      res.json(config);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.delete("/api/api-configurations/:id", requireRole("admin"), async (req, res) => {
+    try {
+      const deleted = await storage.deleteApiConfiguration(req.params.id);
+      if (!deleted) return res.status(404).json({ message: "Configuration not found" });
+      await storage.createAuditLog({ userId: (req as any).user.id, action: "DELETE", entity: "api_configuration", entityId: req.params.id, details: "Deleted API configuration", ipAddress: req.ip });
+      res.json({ message: "Deleted" });
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.post("/api/api-configurations/:id/test", requireRole("admin"), async (req, res) => {
+    try {
+      const config = await storage.getApiConfiguration(req.params.id);
+      if (!config) return res.status(404).json({ message: "Configuration not found" });
+      let testStatus = "success";
+      let testMessage = "Connection test passed";
+      try {
+        const url = new URL(config.baseUrl);
+        const blockedHosts = ["localhost", "127.0.0.1", "0.0.0.0", "::1", "169.254.169.254", "metadata.google.internal"];
+        if (blockedHosts.includes(url.hostname) || url.hostname.startsWith("10.") || url.hostname.startsWith("192.168.") || url.hostname.startsWith("172.")) {
+          testStatus = "blocked";
+          testMessage = "Internal/private URLs are not allowed for security reasons";
+        } else if (!["http:", "https:"].includes(url.protocol)) {
+          testStatus = "blocked";
+          testMessage = "Only HTTP/HTTPS protocols are allowed";
+        } else {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 10000);
+          const response = await fetch(config.baseUrl, { method: "HEAD", signal: controller.signal, redirect: "manual" }).catch(() => null);
+          clearTimeout(timeout);
+          if (!response || !response.ok) {
+            testStatus = "unreachable";
+            testMessage = `Endpoint returned ${response?.status || 'no response'} - API may require authentication credentials`;
+          }
+        }
+      } catch {
+        testStatus = "unreachable";
+        testMessage = "Endpoint unreachable - this is expected for stub configurations";
+      }
+      await storage.updateApiConfiguration(req.params.id, { lastTestedAt: new Date() as any, lastTestStatus: testStatus } as any);
+      res.json({ status: testStatus, message: testMessage });
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
   });
 
   registerExternalApi(app);

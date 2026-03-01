@@ -56,6 +56,7 @@ export const borrowers = pgTable("borrowers", {
   occupation: text("occupation"),
   businessRegNumber: text("business_reg_number"),
   sector: text("sector"),
+  passportNumber: text("passport_number"),
   isPep: boolean("is_pep").default(false),
   pepDetails: text("pep_details"),
   relatedBorrowerId: varchar("related_borrower_id"),
@@ -235,6 +236,45 @@ export const creditReportLogs = pgTable("credit_report_logs", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const exchangeRates = pgTable("exchange_rates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  baseCurrency: text("base_currency").notNull(),
+  targetCurrency: text("target_currency").notNull(),
+  rate: decimal("rate", { precision: 15, scale: 6 }).notNull(),
+  effectiveDate: text("effective_date").notNull(),
+  source: text("source").notNull().default("manual"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const retentionPolicies = pgTable("retention_policies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  country: text("country").notNull(),
+  entityType: text("entity_type").notNull(),
+  retentionYears: integer("retention_years").notNull(),
+  archiveAfterYears: integer("archive_after_years"),
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const apiConfigurations = pgTable("api_configurations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  category: text("category").notNull(),
+  baseUrl: text("base_url").notNull(),
+  apiKeyHeaderName: text("api_key_header_name").default("X-API-Key"),
+  authType: text("auth_type").notNull().default("none"),
+  country: text("country"),
+  isActive: boolean("is_active").default(true),
+  description: text("description"),
+  lastTestedAt: timestamp("last_tested_at"),
+  lastTestStatus: text("last_test_status"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const apiKeyStatusEnum = pgEnum("api_key_status", ["active", "revoked"]);
 
 export const apiKeys = pgTable("api_keys", {
@@ -267,6 +307,9 @@ export const insertPaymentHistorySchema = createInsertSchema(paymentHistory).omi
 export const insertInstitutionSchema = createInsertSchema(institutions).omit({ id: true, createdAt: true, approvedBy: true, approvedAt: true });
 export const insertBillingRecordSchema = createInsertSchema(billingRecords).omit({ id: true, createdAt: true });
 export const insertCreditReportLogSchema = createInsertSchema(creditReportLogs).omit({ id: true, createdAt: true });
+export const insertExchangeRateSchema = createInsertSchema(exchangeRates).omit({ id: true, createdAt: true });
+export const insertRetentionPolicySchema = createInsertSchema(retentionPolicies).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertApiConfigurationSchema = createInsertSchema(apiConfigurations).omit({ id: true, createdAt: true, updatedAt: true, lastTestedAt: true, lastTestStatus: true });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -298,3 +341,9 @@ export type InsertCreditReportLog = z.infer<typeof insertCreditReportLogSchema>;
 export type CreditReportLog = typeof creditReportLogs.$inferSelect;
 export type InsertApiKey = z.infer<typeof insertApiKeySchema>;
 export type ApiKey = typeof apiKeys.$inferSelect;
+export type InsertExchangeRate = z.infer<typeof insertExchangeRateSchema>;
+export type ExchangeRate = typeof exchangeRates.$inferSelect;
+export type InsertRetentionPolicy = z.infer<typeof insertRetentionPolicySchema>;
+export type RetentionPolicy = typeof retentionPolicies.$inferSelect;
+export type InsertApiConfiguration = z.infer<typeof insertApiConfigurationSchema>;
+export type ApiConfiguration = typeof apiConfigurations.$inferSelect;

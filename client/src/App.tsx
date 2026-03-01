@@ -41,6 +41,9 @@ const ApiKeysPage = lazy(() => import("@/pages/api-keys"));
 const ApiDocsPage = lazy(() => import("@/pages/api-docs"));
 const OnlineManualPage = lazy(() => import("@/pages/online-manual"));
 const DocumentationPage = lazy(() => import("@/pages/documentation"));
+const ExchangeRatesPage = lazy(() => import("@/pages/exchange-rates"));
+const ApiAdminPage = lazy(() => import("@/pages/api-admin"));
+const RetentionPoliciesPage = lazy(() => import("@/pages/retention-policies"));
 
 function LazyFallback() {
   return (
@@ -74,6 +77,9 @@ function Router() {
         <Route path="/api-docs" component={ApiDocsPage} />
         <Route path="/help" component={OnlineManualPage} />
         <Route path="/documentation" component={DocumentationPage} />
+        <Route path="/exchange-rates" component={ExchangeRatesPage} />
+        <Route path="/api-admin" component={ApiAdminPage} />
+        <Route path="/retention-policies" component={RetentionPoliciesPage} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>

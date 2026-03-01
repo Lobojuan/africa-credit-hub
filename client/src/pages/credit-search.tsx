@@ -88,6 +88,7 @@ export default function CreditSearchPage() {
                             {borrower.type === "corporate" ? borrower.companyName : `${borrower.firstName} ${borrower.lastName}`}
                           </p>
                           <p className="text-xs text-muted-foreground">{borrower.nationalId}</p>
+                          {borrower.passportNumber && <p className="text-xs text-muted-foreground">Passport: {borrower.passportNumber}</p>}
                           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                             <Badge variant="secondary" className="text-[10px] capitalize">{borrower.type}</Badge>
                             {borrower.country && <Badge variant="outline" className="text-[10px]">{borrower.country}</Badge>}

@@ -194,6 +194,7 @@ export default function BorrowerDetailPage() {
           <CardContent className="space-y-3">
             <InfoRow label={t("borrowerDetail.country")} value={borrower.country || "—"} />
             <InfoRow label={t("borrowerDetail.tinNumber")} value={borrower.tinNumber || "—"} />
+            <InfoRow label={t("borrowerDetail.passportNumber")} value={borrower.passportNumber || "—"} />
             {isIndividual && (
               <>
                 <InfoRow label={t("borrowerDetail.dateOfBirth")} value={borrower.dateOfBirth || "—"} />

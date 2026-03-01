@@ -4,6 +4,7 @@ import { db } from "./db";
 import {
   users, borrowers, creditAccounts, creditInquiries, auditLogs, pendingApprovals, disputes, notifications,
   courtJudgments, consentRecords, paymentHistory, institutions, billingRecords, creditReportLogs, apiKeys,
+  exchangeRates, retentionPolicies, apiConfigurations,
   type User, type InsertUser,
   type Borrower, type InsertBorrower,
   type CreditAccount, type InsertCreditAccount,
@@ -19,6 +20,9 @@ import {
   type BillingRecord, type InsertBillingRecord,
   type CreditReportLog, type InsertCreditReportLog,
   type ApiKey, type InsertApiKey,
+  type ExchangeRate, type InsertExchangeRate,
+  type RetentionPolicy, type InsertRetentionPolicy,
+  type ApiConfiguration, type InsertApiConfiguration,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -118,6 +122,23 @@ export interface IStorage {
   revokeApiKey(id: string): Promise<ApiKey | undefined>;
   updateApiKeyLastUsed(id: string): Promise<void>;
   getInstitutionByName(name: string): Promise<Institution | undefined>;
+
+  getExchangeRates(): Promise<ExchangeRate[]>;
+  createExchangeRate(data: InsertExchangeRate): Promise<ExchangeRate>;
+  updateExchangeRate(id: string, data: Partial<InsertExchangeRate>): Promise<ExchangeRate | undefined>;
+  deleteExchangeRate(id: string): Promise<boolean>;
+  convertCurrency(amount: number, fromCurrency: string, toCurrency: string): Promise<{ convertedAmount: number; rate: number } | null>;
+
+  getRetentionPolicies(): Promise<RetentionPolicy[]>;
+  createRetentionPolicy(data: InsertRetentionPolicy): Promise<RetentionPolicy>;
+  updateRetentionPolicy(id: string, data: Partial<InsertRetentionPolicy>): Promise<RetentionPolicy | undefined>;
+  deleteRetentionPolicy(id: string): Promise<boolean>;
+
+  getApiConfigurations(): Promise<ApiConfiguration[]>;
+  getApiConfiguration(id: string): Promise<ApiConfiguration | undefined>;
+  createApiConfiguration(data: InsertApiConfiguration): Promise<ApiConfiguration>;
+  updateApiConfiguration(id: string, data: Partial<InsertApiConfiguration>): Promise<ApiConfiguration | undefined>;
+  deleteApiConfiguration(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -200,6 +221,7 @@ export class DatabaseStorage implements IStorage {
         ilike(borrowers.employerName, searchPattern),
         ilike(borrowers.businessRegNumber, searchPattern),
         ilike(borrowers.country, searchPattern),
+        ilike(borrowers.passportNumber, searchPattern),
       )
     ).orderBy(desc(borrowers.createdAt)).limit(200);
   }
@@ -706,6 +728,90 @@ export class DatabaseStorage implements IStorage {
   async getInstitutionByName(name: string): Promise<Institution | undefined> {
     const [inst] = await db.select().from(institutions).where(eq(institutions.name, name));
     return inst;
+  }
+
+  async getExchangeRates(): Promise<ExchangeRate[]> {
+    return db.select().from(exchangeRates).orderBy(desc(exchangeRates.createdAt));
+  }
+
+  async createExchangeRate(data: InsertExchangeRate): Promise<ExchangeRate> {
+    const [created] = await db.insert(exchangeRates).values(data).returning();
+    return created;
+  }
+
+  async updateExchangeRate(id: string, data: Partial<InsertExchangeRate>): Promise<ExchangeRate | undefined> {
+    const [updated] = await db.update(exchangeRates).set(data).where(eq(exchangeRates.id, id)).returning();
+    return updated;
+  }
+
+  async deleteExchangeRate(id: string): Promise<boolean> {
+    const result = await db.delete(exchangeRates).where(eq(exchangeRates.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async convertCurrency(amount: number, fromCurrency: string, toCurrency: string): Promise<{ convertedAmount: number; rate: number } | null> {
+    if (fromCurrency === toCurrency) return { convertedAmount: amount, rate: 1 };
+    const [direct] = await db.select().from(exchangeRates)
+      .where(sql`${exchangeRates.baseCurrency} = ${fromCurrency} AND ${exchangeRates.targetCurrency} = ${toCurrency}`)
+      .orderBy(desc(exchangeRates.createdAt)).limit(1);
+    if (direct) {
+      const rate = parseFloat(direct.rate);
+      return { convertedAmount: amount * rate, rate };
+    }
+    const [viaUsd1] = await db.select().from(exchangeRates)
+      .where(sql`${exchangeRates.baseCurrency} = ${fromCurrency} AND ${exchangeRates.targetCurrency} = 'USD'`)
+      .orderBy(desc(exchangeRates.createdAt)).limit(1);
+    const [viaUsd2] = await db.select().from(exchangeRates)
+      .where(sql`${exchangeRates.baseCurrency} = 'USD' AND ${exchangeRates.targetCurrency} = ${toCurrency}`)
+      .orderBy(desc(exchangeRates.createdAt)).limit(1);
+    if (viaUsd1 && viaUsd2) {
+      const rate = parseFloat(viaUsd1.rate) * parseFloat(viaUsd2.rate);
+      return { convertedAmount: amount * rate, rate };
+    }
+    return null;
+  }
+
+  async getRetentionPolicies(): Promise<RetentionPolicy[]> {
+    return db.select().from(retentionPolicies).orderBy(retentionPolicies.country);
+  }
+
+  async createRetentionPolicy(data: InsertRetentionPolicy): Promise<RetentionPolicy> {
+    const [created] = await db.insert(retentionPolicies).values(data).returning();
+    return created;
+  }
+
+  async updateRetentionPolicy(id: string, data: Partial<InsertRetentionPolicy>): Promise<RetentionPolicy | undefined> {
+    const [updated] = await db.update(retentionPolicies).set({ ...data, updatedAt: new Date() }).where(eq(retentionPolicies.id, id)).returning();
+    return updated;
+  }
+
+  async deleteRetentionPolicy(id: string): Promise<boolean> {
+    const result = await db.delete(retentionPolicies).where(eq(retentionPolicies.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getApiConfigurations(): Promise<ApiConfiguration[]> {
+    return db.select().from(apiConfigurations).orderBy(apiConfigurations.category, apiConfigurations.name);
+  }
+
+  async getApiConfiguration(id: string): Promise<ApiConfiguration | undefined> {
+    const [config] = await db.select().from(apiConfigurations).where(eq(apiConfigurations.id, id));
+    return config;
+  }
+
+  async createApiConfiguration(data: InsertApiConfiguration): Promise<ApiConfiguration> {
+    const [created] = await db.insert(apiConfigurations).values(data).returning();
+    return created;
+  }
+
+  async updateApiConfiguration(id: string, data: Partial<InsertApiConfiguration>): Promise<ApiConfiguration | undefined> {
+    const [updated] = await db.update(apiConfigurations).set({ ...data, updatedAt: new Date() }).where(eq(apiConfigurations.id, id)).returning();
+    return updated;
+  }
+
+  async deleteApiConfiguration(id: string): Promise<boolean> {
+    const result = await db.delete(apiConfigurations).where(eq(apiConfigurations.id, id)).returning();
+    return result.length > 0;
   }
 }
 

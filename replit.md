@@ -17,8 +17,8 @@ The system employs a modern full-stack architecture:
 -   **Database**: PostgreSQL, hosted on Neon, is used as the primary data store, managed with Drizzle ORM.
 -   **Routing**: `wouter` is used for client-side navigation, while Express handles API routing.
 -   **Authentication**: Features bcryptjs for password hashing and `express-session` with memorystore for session management. Security measures include a 3-attempt login lockout, 15-minute session timeout, and IP tracking in audit logs. Password policies enforce strong passwords and 90-day expiry.
--   **Internationalization**: Supports English and French using `react-i18next` and `i18next-browser-languagedetector`.
--   **Data Model**: Comprises 15 core tables including `users`, `borrowers`, `credit_accounts`, `audit_logs`, `pending_approvals`, `disputes`, `institutions`, and `api_keys`, designed to capture comprehensive credit and operational data.
+-   **Internationalization**: Supports English, French, and Portuguese using `react-i18next` and `i18next-browser-languagedetector`. Portuguese translations in `client/src/lib/i18n-pt.ts`.
+-   **Data Model**: Comprises 18 core tables including `users`, `borrowers`, `credit_accounts`, `audit_logs`, `pending_approvals`, `disputes`, `institutions`, `api_keys`, `exchange_rates`, `retention_policies`, and `api_configurations`, designed to capture comprehensive credit and operational data.
 -   **Key Features**:
     -   **Comprehensive Credit Management**: Includes borrower and credit account management with multi-currency support, collateral tracking, and arrears.
     -   **Credit Scoring & Reporting**: Algorithmic credit scoring (300-850) with detailed reason codes and printable credit reports with serial numbers.
@@ -38,6 +38,11 @@ The system employs a modern full-stack architecture:
 -   **Low-Bandwidth Optimizations**: gzip compression middleware, React.lazy route code-splitting with Suspense
 -   **XBRL Upload**: Batch upload page supports XBRL/XML format tab with sample and parsing endpoint
 -   **Tamper-Evident Audit Logs**: SHA-256 hash chain on audit log entries with integrity verification badge
+-   **Exchange Rate Management**: Multi-currency conversion with 18-currency support, cross-rate via USD routing, admin CRUD for rate pairs
+-   **API Administration Module**: Centralized external API configuration management (weather, judicial, payment gateway, exchange rate) with connection testing
+-   **Data Retention Policies**: Jurisdiction-specific retention periods (REQ-RET-01), admin/regulator CRUD for policy management
+-   **Cross-Border Entity Resolution**: Passport number field on borrowers for cross-jurisdictional identity matching
+-   **Portuguese i18n**: Full PT translation covering all UI strings, language switcher updated with PT option
 
 ## External Dependencies
 -   **Database**: PostgreSQL (specifically Neon for hosting)

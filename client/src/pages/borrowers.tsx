@@ -39,7 +39,7 @@ export default function BorrowersPage() {
   const [formData, setFormData] = useState({
     type: "individual" as "individual" | "corporate",
     firstName: "", lastName: "", companyName: "", nationalId: "",
-    tinNumber: "",
+    tinNumber: "", passportNumber: "",
     dateOfBirth: "", gender: "", phone: "", email: "",
     address: "", country: "", city: "", region: "",
     employerName: "", occupation: "", businessRegNumber: "", sector: "",
@@ -89,7 +89,7 @@ export default function BorrowersPage() {
       queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string)?.startsWith?.("/api/borrowers") });
       queryClient.invalidateQueries({ queryKey: ["/api/pending-approvals"] });
       setDialogOpen(false);
-      setFormData({ type: "individual", firstName: "", lastName: "", companyName: "", nationalId: "", tinNumber: "", dateOfBirth: "", gender: "", phone: "", email: "", address: "", country: "", city: "", region: "", employerName: "", occupation: "", businessRegNumber: "", sector: "", isPep: false, pepDetails: "", educationLevel: "", educationInstitution: "", employmentHistory: "" });
+      setFormData({ type: "individual", firstName: "", lastName: "", companyName: "", nationalId: "", tinNumber: "", passportNumber: "", dateOfBirth: "", gender: "", phone: "", email: "", address: "", country: "", city: "", region: "", employerName: "", occupation: "", businessRegNumber: "", sector: "", isPep: false, pepDetails: "", educationLevel: "", educationInstitution: "", employmentHistory: "" });
       toast({ title: data.message || t("borrowers.registerBorrower"), description: t("borrowers.submittedForApproval") });
     },
     onError: (e: Error) => {
@@ -167,6 +167,7 @@ export default function BorrowersPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><Label>{t("borrowers.nationalId")}</Label><Input data-testid="input-national-id" value={formData.nationalId} onChange={(e) => setFormData({ ...formData, nationalId: e.target.value })} required /></div>
                 <div><Label>{t("borrowers.tinNumber")}</Label><Input data-testid="input-tin" value={formData.tinNumber} onChange={(e) => setFormData({ ...formData, tinNumber: e.target.value })} /></div>
+                <div><Label>{t("borrowers.passportNumber")}</Label><Input data-testid="input-passport" value={formData.passportNumber} onChange={(e) => setFormData({ ...formData, passportNumber: e.target.value })} placeholder={t("borrowers.passportNumber")} /></div>
               </div>
               {fuzzyMatches.length > 0 && (
                 <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20" data-testid="alert-fuzzy-matches">
