@@ -634,17 +634,19 @@ function padId(n: number): string { return String(n).padStart(5, "0"); }
 export async function seedTestData() {
   const allCountries = Object.keys(countryData);
 
-  const [existingBorrowers] = await db.select({ value: count() }).from(borrowers);
+  const MIN_BORROWERS_PER_COUNTRY = 30;
+  const TARGET_INDIVIDUALS = 24;
+  const TARGET_CORPORATES = 8;
 
-  const missingCountries: string[] = [];
+  const thinCountries: string[] = [];
   for (const c of allCountries) {
     const prefix = countryData[c].idPrefix;
     const [check] = await db.select({ value: count() }).from(borrowers).where(like(borrowers.nationalId, `${prefix}%`));
-    if (check.value === 0) missingCountries.push(c);
+    if (Number(check.value) < MIN_BORROWERS_PER_COUNTRY) thinCountries.push(c);
   }
 
-  if (missingCountries.length === 0) {
-    console.log(`All ${allCountries.length} countries already have borrower data, skipping`);
+  if (thinCountries.length === 0) {
+    console.log(`All ${allCountries.length} countries have ${MIN_BORROWERS_PER_COUNTRY}+ borrowers, skipping`);
     return;
   }
 
@@ -654,6 +656,7 @@ export async function seedTestData() {
     return;
   }
 
+  const missingCountries = thinCountries;
   console.log(`Seeding test data for ${missingCountries.length} countries: ${missingCountries.join(", ")}...`);
 
   const BATCH_SIZE = 200;
@@ -666,26 +669,34 @@ export async function seedTestData() {
     const cfg = countryData[country];
     const borrowerValues: any[] = [];
 
-    for (let i = 0; i < 12; i++) {
+    const streetNames = ["Main St", "Market Rd", "Independence Ave", "Liberation Blvd", "Commerce Lane", "Unity Drive", "Constitution Ave", "Victoria St", "Republic Rd", "Freedom Way"];
+    const employerSuffixes = ["Ltd", "Holdings", "Group", "Corp", "Services", "International", "& Co"];
+
+    for (let i = 0; i < TARGET_INDIVIDUALS; i++) {
       const cityIdx = i % cfg.cities.length;
       const fn = pick(cfg.firstNames);
       const ln = pick(cfg.lastNames);
       idCounter++;
+      const hasPassport = Math.random() < 0.3;
+      const employer = Math.random() < 0.5
+        ? pick(cfg.banks)
+        : `${pick(cfg.companies).split(" ")[0]} ${pick(employerSuffixes)}`;
       borrowerValues.push({
         type: "individual" as const,
         firstName: fn,
         lastName: ln,
         nationalId: `${cfg.idPrefix}-ID-${padId(idCounter)}`,
         tinNumber: `TIN-${cfg.idPrefix}-${padId(idCounter)}`,
+        passportNumber: hasPassport ? `${cfg.idPrefix.slice(0, 2)}${randInt(100000, 999999)}` : null,
         dateOfBirth: pastDate(40),
         gender: pick(genders),
         phone: `${cfg.phones}${randInt(700000000, 999999999)}`,
         email: `${fn.toLowerCase().replace(/[^a-z]/g, "")}.${ln.toLowerCase().replace(/[^a-z]/g, "")}${randInt(1, 99)}@mail.com`,
-        address: `${randInt(1, 200)} ${pick(["Main St", "Market Rd", "Independence Ave", "Liberation Blvd", "Commerce Lane", "Unity Drive"])}`,
+        address: `${randInt(1, 200)} ${pick(streetNames)}, ${cfg.cities[cityIdx]}`,
         country,
         city: cfg.cities[cityIdx],
         region: cfg.regions[cityIdx],
-        employerName: `${pick(["National", "Regional", "City", "Central", "Metro"])} ${pick(["Bank", "Hospital", "School", "Office", "Corp"])}`,
+        employerName: employer,
         occupation: pick(occupations),
         sector: pick(sectors),
         isPep: Math.random() < 0.08,
@@ -693,7 +704,7 @@ export async function seedTestData() {
       });
     }
 
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < TARGET_CORPORATES; i++) {
       let companyName = pick(cfg.companies);
       let attempts = 0;
       while (usedCompanies.has(companyName) && attempts < 5) {
@@ -727,7 +738,7 @@ export async function seedTestData() {
     const statuses: Array<"current" | "delinquent" | "default" | "closed" | "restructured" | "written_off"> = ["current", "current", "current", "current", "delinquent", "default", "closed", "restructured", "written_off"];
 
     for (const b of createdBorrowers) {
-      const numAccounts = randInt(1, 3);
+      const numAccounts = randInt(1, 4);
       for (let a = 0; a < numAccounts; a++) {
         const status = pick(statuses);
         const isCorporate = b.type === "corporate";
@@ -768,18 +779,22 @@ export async function seedTestData() {
   console.log(`  Created ${totalBorrowers} borrowers across ${missingCountries.length} countries`);
   console.log(`  Created ${totalAccounts} credit accounts`);
 
-  const allCreatedBorrowers = await db.select().from(borrowers).where(
-    like(borrowers.nationalId, `%-ID-%`)
-  );
+  const allCreatedBorrowers: any[] = [];
+  for (const c of missingCountries) {
+    const prefix = countryData[c].idPrefix;
+    const rows = await db.select().from(borrowers).where(like(borrowers.nationalId, `${prefix}%`));
+    allCreatedBorrowers.push(...rows);
+  }
 
   const paymentValues: any[] = [];
   const paymentStatuses: Array<"on_time" | "late" | "missed" | "partial"> = ["on_time", "on_time", "on_time", "on_time", "late", "missed", "partial"];
-  const sampleAccounts = await db.select().from(creditAccounts);
-  const accountSubset = sampleAccounts.slice(0, Math.min(200, sampleAccounts.length));
+  const newAccountIds = new Set(allCreatedBorrowers.map(b => b.id));
+  const newAccounts = (await db.select().from(creditAccounts)).filter(a => newAccountIds.has(a.borrowerId));
+  const accountSubset = newAccounts.slice(0, Math.min(500, newAccounts.length));
 
   for (const acc of accountSubset) {
-    if (paymentValues.length > 1000) break;
-    const numPayments = randInt(2, 5);
+    if (paymentValues.length > 2500) break;
+    const numPayments = randInt(2, 6);
     for (let p = 0; p < numPayments; p++) {
       const d = new Date();
       d.setMonth(d.getMonth() - p - 1);
@@ -809,10 +824,22 @@ export async function seedTestData() {
   const disputeTypes = ["incorrect_balance", "wrong_account_status", "identity_theft", "duplicate_entry", "incorrect_personal_info", "unauthorized_inquiry"];
   const disputeValues: any[] = [];
   const adminUser2 = (await db.select().from(users).limit(1))[0];
-  const sampleBorrowers = allCreatedBorrowers.slice(0, 100);
 
-  for (let d = 0; d < Math.min(40, sampleBorrowers.length); d++) {
-    const b = pick(sampleBorrowers);
+  const disputesPerCountry = 3;
+  const shuffledBorrowers = allCreatedBorrowers.sort(() => Math.random() - 0.5);
+  const countryBorrowerMap = new Map<string, any[]>();
+  for (const b of shuffledBorrowers) {
+    const c = b.country || "Unknown";
+    if (!countryBorrowerMap.has(c)) countryBorrowerMap.set(c, []);
+    countryBorrowerMap.get(c)!.push(b);
+  }
+  const sampleBorrowers: any[] = [];
+  for (const [, cBorrowers] of countryBorrowerMap) {
+    sampleBorrowers.push(...cBorrowers.slice(0, disputesPerCountry));
+  }
+
+  for (let d = 0; d < sampleBorrowers.length; d++) {
+    const b = sampleBorrowers[d];
     const status = pick(disputeStatuses);
     const now = new Date();
     const slaDeadline = new Date(now);
@@ -843,8 +870,13 @@ export async function seedTestData() {
   const judgmentStatuses: Array<"active" | "resolved" | "appealed"> = ["active", "active", "resolved", "appealed"];
   const judgmentValues: any[] = [];
 
-  for (let j = 0; j < Math.min(30, sampleBorrowers.length); j++) {
-    const b = pick(sampleBorrowers);
+  const judgmentSample: any[] = [];
+  for (const [, cBorrowers] of countryBorrowerMap) {
+    judgmentSample.push(...cBorrowers.slice(0, 2));
+  }
+
+  for (let j = 0; j < judgmentSample.length; j++) {
+    const b = judgmentSample[j];
     const bCountry = b.country || "Ethiopia";
     const cfg = countryData[bCountry] || countryData["Ethiopia"];
     judgmentValues.push({
@@ -873,7 +905,11 @@ export async function seedTestData() {
 
   const consentValues: any[] = [];
   let receiptCounter = 80000 + randInt(0, 10000);
-  for (const b of sampleBorrowers.slice(0, 80)) {
+  const consentSample: any[] = [];
+  for (const [, cBorrowers] of countryBorrowerMap) {
+    consentSample.push(...cBorrowers.slice(0, 4));
+  }
+  for (const b of consentSample) {
     const bCountry = b.country || "Ethiopia";
     const cfg = countryData[bCountry] || countryData["Ethiopia"];
     receiptCounter++;
@@ -928,8 +964,8 @@ export async function seedTestData() {
 
   for (const country of missingCountries) {
     const cfg = countryData[country];
-    for (const bank of cfg.banks.slice(0, 3)) {
-      for (let m = 0; m < 2; m++) {
+    for (const bank of cfg.banks.slice(0, 4)) {
+      for (let m = 0; m < 3; m++) {
         invoiceCounter++;
         const d = new Date();
         d.setMonth(d.getMonth() - m);
