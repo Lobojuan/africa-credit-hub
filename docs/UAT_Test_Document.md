@@ -3,8 +3,8 @@
 ## Cross-Jurisdictional Central Data Hub & Credit Registry System v1.1
 
 **Prepared for:** Systems In Motion Limited  
-**Document Version:** 1.0  
-**Date:** June 2025  
+**Document Version:** 1.1  
+**Date:** March 2026  
 **Classification:** Confidential
 
 ---
@@ -47,7 +47,8 @@
 | Application | Cross-Jurisdictional Central Data Hub & Credit Registry System v1.1 |
 | Database | PostgreSQL with 15 tables |
 | User Roles | Admin, Regulator, Lender, Viewer |
-| Supported Currencies | 17 (ETB, GHS, UGX, LRD, USD, EUR, GBP, KES, NGN, ZAR, TZS, RWF, XOF, XAF, EGP, MAD, BWP) |
+| Supported Currencies | 18 (ETB, GHS, UGX, LRD, USD, EUR, GBP, KES, NGN, ZAR, TZS, RWF, XOF, XAF, EGP, MAD, BWP, MZN) |
+| Enterprise Enhancements | MFA, Fuzzy Matching, Dispute Chatbot, OAuth 2.1, Low-Bandwidth, XBRL Upload, Tamper-Evident Audit |
 | Jurisdictions | Ghana, Ethiopia, Uganda, Liberia |
 | Languages | English, French |
 | Seed Data | 100K+ borrowers, 166K+ credit accounts, 120K payment history records |
@@ -498,9 +499,78 @@
 
 ---
 
+## 25. Enterprise Enhancement: MFA Module (ENT-01)
+
+| TC-ID | Module | Test Case Name | Pre-conditions | Test Steps | Expected Result | Pass/Fail | SRS Reference |
+|-------|--------|---------------|----------------|------------|-----------------|-----------|---------------|
+| TC-ENT-001 | MFA | MFA setup - generate TOTP secret | User is logged in | 1. Navigate to user profile or MFA setup. 2. Click "Enable MFA" or equivalent. | TOTP secret generated. `otpauth://` URI returned for QR code display. Setup dialog shows URI/QR. | | ENT-01 |
+| TC-ENT-002 | MFA | MFA verify - enable MFA with valid code | MFA setup completed (TC-ENT-001) | 1. Enter valid 6-digit TOTP code from authenticator app. 2. Click "Verify". | MFA enabled for user. `mfaEnabled` = true. Success message displayed. | | ENT-01 |
+| TC-ENT-003 | MFA | MFA login - require code after password | User has MFA enabled | 1. Navigate to login page. 2. Enter username and password. 3. Click "Login". | Login returns `requireMfa: true`. TOTP code input field appears. | | ENT-01 |
+| TC-ENT-004 | MFA | MFA login - complete with valid code | MFA code prompt displayed (TC-ENT-003) | 1. Enter valid 6-digit TOTP code. 2. Click "Verify". | Authentication completes. User redirected to Dashboard. Session established. | | ENT-01 |
+| TC-ENT-005 | MFA | MFA disable | User has MFA enabled, is logged in | 1. Navigate to MFA settings. 2. Click "Disable MFA". | MFA disabled. `mfaEnabled` = false. `mfaSecret` cleared. | | ENT-01 |
+
+---
+
+## 26. Enterprise Enhancement: Fuzzy Entity Matching Module (ENT-02)
+
+| TC-ID | Module | Test Case Name | Pre-conditions | Test Steps | Expected Result | Pass/Fail | SRS Reference |
+|-------|--------|---------------|----------------|------------|-----------------|-----------|---------------|
+| TC-ENT-006 | Fuzzy Matching | Duplicate warning on registration | User is logged in, existing borrower "Abebe Bekele" exists | 1. Navigate to Borrowers. 2. Click "Register Borrower". 3. Enter first name "Abebe" and last name "Bekele". | Warning banner appears showing potential duplicate borrowers with similarity scores. | | ENT-02 |
+| TC-ENT-007 | Fuzzy Matching | Fuzzy match API endpoint | Borrowers exist in database | 1. Call `GET /api/borrowers/fuzzy-match?name=Abebe`. | Returns list of matching borrowers with trigram similarity scores ≥ 0.3. | | ENT-02 |
+
+---
+
+## 27. Enterprise Enhancement: Dispute Chatbot Module (ENT-03)
+
+| TC-ID | Module | Test Case Name | Pre-conditions | Test Steps | Expected Result | Pass/Fail | SRS Reference |
+|-------|--------|---------------|----------------|------------|-----------------|-----------|---------------|
+| TC-ENT-008 | Chatbot | Start chatbot guided flow | User is logged in, on Helpdesk page | 1. Navigate to Helpdesk. 2. Locate and open the dispute chatbot. | Chatbot interface appears with initial prompt asking for dispute type. | | ENT-03 |
+| TC-ENT-009 | Chatbot | Complete chatbot dispute filing | Chatbot open (TC-ENT-008) | 1. Select issue type. 2. Search for and select borrower. 3. Optionally select credit account. 4. Enter description. 5. Confirm submission. | Dispute auto-filed via API. Success message shown. Dispute appears in disputes list. | | ENT-03 |
+| TC-ENT-010 | Chatbot | Cancel chatbot flow | Chatbot in progress | 1. Click cancel/close during any step. | Chatbot resets. "Cancelled" message shown. User can start new flow. | | ENT-03 |
+
+---
+
+## 28. Enterprise Enhancement: OAuth 2.1 Module (ENT-04)
+
+| TC-ID | Module | Test Case Name | Pre-conditions | Test Steps | Expected Result | Pass/Fail | SRS Reference |
+|-------|--------|---------------|----------------|------------|-----------------|-----------|---------------|
+| TC-ENT-011 | OAuth 2.1 | Token exchange - valid credentials | Active API key exists | 1. Send `POST /api/external/oauth/token` with `{ grant_type: "client_credentials", client_id: "<prefix>", client_secret: "<full_key>" }`. | Returns `{ access_token: "<jwt>", token_type: "Bearer", expires_in: 3600 }`. | | ENT-04 |
+| TC-ENT-012 | OAuth 2.1 | Bearer token authentication | Valid Bearer token obtained (TC-ENT-011) | 1. Send `GET /api/external/v1/borrowers/search?name=test` with `Authorization: Bearer <token>` header. | Request authenticated. Borrower search results returned. | | ENT-04 |
+| TC-ENT-013 | OAuth 2.1 | API docs OAuth section | User is logged in | 1. Navigate to API Documentation page. | OAuth 2.1 section visible with token exchange example and Bearer token usage instructions. Element with `data-testid="text-oauth-example"` present. | | ENT-04 |
+
+---
+
+## 29. Enterprise Enhancement: Low-Bandwidth Optimizations Module (ENT-05)
+
+| TC-ID | Module | Test Case Name | Pre-conditions | Test Steps | Expected Result | Pass/Fail | SRS Reference |
+|-------|--------|---------------|----------------|------------|-----------------|-----------|---------------|
+| TC-ENT-014 | Performance | Gzip compression active | Application is running | 1. Send any API request. 2. Check response headers. | `Content-Encoding: gzip` header present on responses. Response body is compressed. | | ENT-05 |
+| TC-ENT-015 | Performance | Lazy-loaded routes render correctly | User is logged in | 1. Navigate to various pages (Borrowers, Credit Accounts, Disputes, etc.). | Pages load with brief spinner (Suspense fallback). Content renders correctly after load. No errors. | | ENT-05 |
+
+---
+
+## 30. Enterprise Enhancement: XBRL Upload Module (ENT-06)
+
+| TC-ID | Module | Test Case Name | Pre-conditions | Test Steps | Expected Result | Pass/Fail | SRS Reference |
+|-------|--------|---------------|----------------|------------|-----------------|-----------|---------------|
+| TC-ENT-016 | XBRL Upload | XBRL tab visible on batch upload | Admin/Lender logged in | 1. Navigate to Batch Upload page. | Two tabs visible: "JSON/CSV" (`data-testid="tab-json"`) and "XBRL" (`data-testid="tab-xbrl"`). | | ENT-06 |
+| TC-ENT-017 | XBRL Upload | XBRL sample format displayed | Admin/Lender on Batch Upload page | 1. Click the "XBRL" tab. | XBRL sample XML format displayed (`data-testid="text-xbrl-sample"`). Upload area for .xbrl/.xml files shown. | | ENT-06 |
+
+---
+
+## 31. Enterprise Enhancement: Tamper-Evident Audit Logs Module (ENT-07)
+
+| TC-ID | Module | Test Case Name | Pre-conditions | Test Steps | Expected Result | Pass/Fail | SRS Reference |
+|-------|--------|---------------|----------------|------------|-----------------|-----------|---------------|
+| TC-ENT-018 | Audit Integrity | Integrity badge displayed | Admin/Regulator logged in, audit logs exist | 1. Navigate to Audit Trail page. | Integrity status badge visible (`data-testid="badge-integrity-status"`). Shows "Valid" or "Broken" status. | | ENT-07 |
+| TC-ENT-019 | Audit Integrity | Verify integrity button | Admin/Regulator on Audit Trail page | 1. Click "Verify Integrity" button (`data-testid="button-verify-integrity"`). | Hash chain verification runs. Badge updates to show result. API call to `GET /api/audit/verify-integrity` returns `{ valid: true/false, totalEntries, checkedEntries }`. | | ENT-07 |
+| TC-ENT-020 | Audit Integrity | Hash chain integrity valid | Audit logs have not been tampered with | 1. Click "Verify Integrity". | Badge shows green "Valid" status. `valid: true` in response. All entries pass hash chain verification. | | ENT-07 |
+
+---
+
 **Document End**
 
-*This UAT Test Document covers all modules of the Cross-Jurisdictional Central Data Hub & Credit Registry System v1.1. Each test case is designed to validate functional and non-functional requirements as defined in the Software Requirements Specification (SRS).*
+*This UAT Test Document covers all modules of the Cross-Jurisdictional Central Data Hub & Credit Registry System v1.1, including the 7 enterprise enhancements (ENT-01 through ENT-07). Each test case is designed to validate functional and non-functional requirements as defined in the Software Requirements Specification (SRS).*
 
 *Prepared by: Systems In Motion Limited*  
 *Classification: Confidential*

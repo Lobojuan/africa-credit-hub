@@ -3,8 +3,8 @@
 ## Cross-Jurisdictional Central Data Hub & Credit Registry System v1.1
 
 **Prepared for:** Systems In Motion Limited  
-**Document Version:** 1.0  
-**Date:** February 2026
+**Document Version:** 1.1  
+**Date:** March 2026
 
 ---
 
@@ -70,13 +70,25 @@ The system requires a PostgreSQL database. Options include:
 - **Self-hosted PostgreSQL** on Linux servers
 - **Docker PostgreSQL** for containerized deployments
 
-### 4.2 Schema Initialization
+### 4.2 PostgreSQL Extensions
+
+The application requires the following PostgreSQL extension:
+
+- **pg_trgm** — Trigram similarity for fuzzy entity matching (ENT-02). Automatically enabled at application startup via `CREATE EXTENSION IF NOT EXISTS pg_trgm`.
+
+Ensure the PostgreSQL user has permission to create extensions, or pre-create it:
+```sql
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+```
+
+### 4.3 Schema Initialization
 
 The application uses Drizzle ORM for schema management. On first startup, the application will automatically:
 
 1. Connect to the database using `DATABASE_URL`
-2. Push the schema using Drizzle (15 tables)
-3. Seed initial data (users, borrowers, credit accounts, etc.)
+2. Enable the `pg_trgm` extension for fuzzy matching
+3. Push the schema using Drizzle (15 tables)
+4. Seed initial data (users, borrowers, credit accounts, etc.)
 
 To manually push the schema:
 
@@ -469,8 +481,9 @@ psql $DATABASE_URL -c "\dt"
 - Increase database pool size for higher concurrency
 - Enable PostgreSQL connection pooling (PgBouncer)
 - Use a CDN for static frontend assets
-- Enable gzip compression in reverse proxy
+- gzip compression is built into the application via the `compression` middleware (ENT-05); reverse proxy compression is optional
 - Monitor and index frequently queried columns
+- React.lazy code-splitting reduces initial bundle size for faster page loads (ENT-05)
 
 ---
 
@@ -488,14 +501,35 @@ psql $DATABASE_URL -c "\dt"
 - [ ] Review and restrict CORS if needed
 - [ ] Set up monitoring and alerting
 - [ ] Conduct security audit before go-live
+- [ ] Enforce MFA (ENT-01) for admin and regulator accounts
+- [ ] Rotate OAuth JWT signing keys periodically (ENT-04)
+- [ ] Verify audit log integrity (ENT-07) as part of routine security checks
+- [ ] Ensure `pg_trgm` extension (ENT-02) is available in production PostgreSQL
+- [ ] Verify XBRL/XML batch uploads (ENT-06) work with expected file sizes; no additional parsing libraries required beyond built-in XML handling
+- [ ] Dispute chatbot (ENT-03) requires no additional configuration; it uses existing dispute filing endpoints
 
 ---
 
-## 15. Version Information
+## 15. Enterprise Enhancement Dependencies
+
+The following additional packages were added for enterprise enhancements (v1.1):
+
+| Package | Purpose | Enhancement |
+|---------|---------|-------------|
+| `otpauth` | TOTP secret generation and verification | ENT-01 (MFA) |
+| `jsonwebtoken` | JWT signing and verification for Bearer tokens | ENT-04 (OAuth 2.1) |
+| `compression` | gzip compression middleware | ENT-05 (Low-Bandwidth) |
+
+**PostgreSQL Extension:**
+- `pg_trgm` — Required for fuzzy entity matching (ENT-02). Automatically created at startup.
+
+---
+
+## 16. Version Information
 
 | Component | Version |
 |-----------|---------|
-| Application | v1.1 |
+| Application | v1.1 (Enterprise Enhancements) |
 | Node.js Runtime | 20.x LTS |
 | Express.js | 4.x |
 | Drizzle ORM | Latest |
@@ -503,3 +537,6 @@ psql $DATABASE_URL -c "\dt"
 | React | 18.x |
 | PostgreSQL | 14+ |
 | TypeScript | 5.x |
+| otpauth | Latest (ENT-01) |
+| jsonwebtoken | Latest (ENT-04) |
+| compression | Latest (ENT-05) |

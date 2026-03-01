@@ -4,9 +4,9 @@
 
 **Prepared for:** Systems In Motion Limited
 
-**Version:** 1.1
+**Version:** 1.2
 
-**Date:** February 2026
+**Date:** March 2026
 
 ---
 
@@ -32,10 +32,14 @@
 18. [Reports & Export](#18-reports--export)
 19. [Notifications](#19-notifications)
 20. [FAQ / "How Do I...?"](#20-faq--how-do-i)
-21. [Appendix A: Seed Credentials](#appendix-a-seed-credentials)
-22. [Appendix B: Role Access Matrix](#appendix-b-role-access-matrix)
-23. [Appendix C: Supported Currencies](#appendix-c-supported-currencies)
-24. [Appendix D: Glossary of Terms](#appendix-d-glossary-of-terms)
+21. [Multi-Factor Authentication (MFA)](#21-multi-factor-authentication-mfa)
+22. [Dispute Chatbot](#22-dispute-chatbot)
+23. [XBRL Upload](#23-xbrl-upload)
+24. [Audit Log Integrity Verification](#24-audit-log-integrity-verification)
+25. [Appendix A: Seed Credentials](#appendix-a-seed-credentials)
+26. [Appendix B: Role Access Matrix](#appendix-b-role-access-matrix)
+27. [Appendix C: Supported Currencies](#appendix-c-supported-currencies)
+28. [Appendix D: Glossary of Terms](#appendix-d-glossary-of-terms)
 
 ---
 
@@ -142,7 +146,16 @@ The sidebar provides access to all system modules, organized into three sections
 
 The sidebar can be collapsed by clicking the sidebar toggle button in the header. In collapsed mode, only icons are visible. On mobile devices, the sidebar opens as a slide-out panel.
 
-### 2.7 Session Timeout (15-Minute Auto-Logout)
+### 2.7 Multi-Factor Authentication (MFA)
+
+The system supports optional TOTP-based Multi-Factor Authentication for enhanced security. When MFA is enabled:
+1. After entering your username and password, you will be prompted for a 6-digit code.
+2. Open your authenticator app (Google Authenticator, Authy, etc.) to get the code.
+3. Enter the code and click **Verify** to complete login.
+
+See Section 21 for detailed MFA setup instructions.
+
+### 2.8 Session Timeout (15-Minute Auto-Logout)
 
 For security compliance (NFR-SEC-09), the system automatically logs you out after **15 minutes of inactivity**. When a session times out:
 - You will be redirected to the login page.
@@ -1079,7 +1092,19 @@ A: Navigate to Consent Management and click "Grant Consent", or use the Helpdesk
 A: API keys enable external institutions to programmatically submit data and retrieve credit reports through the External API.
 
 ### Q: How do I upload data in bulk?
-A: Use the Batch Upload page. Prepare your data in JSON or CSV format and upload the file. The system validates each record and reports any errors.
+A: Use the Batch Upload page. Prepare your data in JSON, CSV, or XBRL format and upload the file. The system validates each record and reports any errors.
+
+### Q: How do I enable MFA?
+A: Go to your profile settings and click "Enable MFA." You will be shown a QR code or setup URI to scan with your authenticator app. Enter the 6-digit code to verify and activate MFA.
+
+### Q: How do I verify audit log integrity?
+A: Navigate to the Audit Trail page and click the "Verify Integrity" button. The system will validate the SHA-256 hash chain and display whether the logs are intact.
+
+### Q: What is the dispute chatbot?
+A: The dispute chatbot is a guided assistant available on the Helpdesk page. It walks you through filing a dispute step by step: selecting the issue type, finding the borrower, choosing the account, entering a description, and submitting.
+
+### Q: Can I use OAuth tokens instead of API keys?
+A: Yes. You can exchange your API key for a Bearer token using the OAuth 2.1 token endpoint. The token is valid for 1 hour and can be used in the `Authorization: Bearer` header.
 
 ### Q: Who can approve pending requests?
 A: Users with the Admin or Regulator role can approve or reject pending requests, as long as they did not submit the request themselves.
@@ -1089,6 +1114,139 @@ A: Navigate to a borrower's detail page, find the Court Judgments section, and c
 
 ### Q: What currencies does the system support?
 A: The system supports 17 currencies. See Appendix C for the complete list.
+
+---
+
+## 21. Multi-Factor Authentication (MFA)
+
+> This section covers ENT-01. For other enterprise enhancements, see: Fuzzy Matching (§21.4), Dispute Chatbot (§22), XBRL Upload (§23), Audit Integrity (§24), OAuth 2.1 (§21.5), Low-Bandwidth (§21.6).
+
+The system supports TOTP-based Multi-Factor Authentication (MFA) for enhanced login security.
+
+### 21.1 Enabling MFA
+
+1. Log in to the system normally.
+2. Navigate to your profile or MFA settings (accessible from the sidebar or user menu).
+3. Click **Enable MFA** or **Set Up MFA**.
+4. The system generates a TOTP secret and displays an `otpauth://` URI.
+5. Scan the QR code or manually enter the secret into your authenticator app (Google Authenticator, Authy, Microsoft Authenticator, etc.).
+6. Enter the 6-digit code displayed by your authenticator app.
+7. Click **Verify** to activate MFA.
+8. A success message confirms MFA is now enabled.
+
+### 21.2 Logging In with MFA
+
+1. Enter your username and password on the login page.
+2. Click **Sign In**.
+3. If MFA is enabled, a second screen appears asking for your TOTP code.
+4. Open your authenticator app and enter the current 6-digit code.
+5. Click **Verify** to complete login.
+
+### 21.3 Disabling MFA
+
+1. Log in to the system.
+2. Navigate to MFA settings.
+3. Click **Disable MFA**.
+4. MFA is immediately disabled. Future logins will only require username and password.
+
+### 21.4 Fuzzy Entity Matching (ENT-02)
+
+When registering a new borrower, the system automatically checks for potential duplicates using fuzzy name matching. If similar borrowers are found:
+
+1. A **warning banner** appears on the registration form listing borrowers with similar names and their similarity scores.
+2. Review the listed matches to determine if the borrower already exists in the system.
+3. If the borrower is genuinely new, proceed with registration. If a duplicate, cancel and use the existing record.
+
+This feature helps prevent duplicate records and potential identity fraud across jurisdictions.
+
+### 21.5 OAuth 2.1 Bearer Tokens (ENT-04)
+
+For institutions using the External API, OAuth 2.1 Bearer tokens provide an alternative to API key authentication:
+
+1. Navigate to the **API Documentation** page from the sidebar.
+2. Scroll to the **OAuth 2.1** section for token exchange instructions and example code.
+3. Use `POST /api/external/oauth/token` with your API key credentials to obtain a Bearer token.
+4. Include the token in the `Authorization: Bearer <token>` header on API requests.
+5. Tokens expire after **1 hour** and must be refreshed by requesting a new token.
+
+### 21.6 Low-Bandwidth Optimizations (ENT-05)
+
+The system includes built-in optimizations for users on slower or constrained networks:
+
+- **Compressed responses** — All server responses are gzip-compressed, reducing data transfer.
+- **Lazy-loaded pages** — Navigation pages load on demand rather than all at once, resulting in a brief loading spinner when visiting a page for the first time.
+- No user action is required; these optimizations are always active.
+
+---
+
+## 22. Dispute Chatbot
+
+The Dispute Chatbot provides a guided, chat-style interface for filing disputes.
+
+### 22.1 Accessing the Chatbot
+
+1. Navigate to **Helpdesk** from the sidebar.
+2. Look for the chatbot interface or button on the helpdesk page.
+
+### 22.2 Using the Chatbot
+
+The chatbot walks you through dispute filing in the following steps:
+
+1. **Select Issue Type** — Choose the type of dispute (e.g., Data Error, Identity Theft, Unauthorized Inquiry, Duplicate Record, Other).
+2. **Find Borrower** — Search for the affected borrower by name or national ID.
+3. **Select Account** — Optionally select the specific credit account related to the dispute.
+4. **Describe the Issue** — Enter a detailed description of the problem.
+5. **Confirm and Submit** — Review the summary and confirm to auto-file the dispute.
+
+### 22.3 Cancelling
+
+You can cancel the chatbot flow at any time. The interface will reset and you can start a new guided flow.
+
+---
+
+## 23. XBRL Upload
+
+The Batch Upload module supports XBRL/XML file format in addition to JSON and CSV.
+
+### 23.1 Accessing XBRL Upload
+
+1. Navigate to **Batch Upload** from the sidebar.
+2. Click the **XBRL** tab (next to the JSON/CSV tab).
+
+### 23.2 Preparing XBRL Data
+
+The XBRL tab displays a sample XML format showing the expected structure for credit account records. Use this sample as a template when preparing your XBRL file.
+
+### 23.3 Uploading XBRL Files
+
+1. On the XBRL tab, click the upload area or drag and drop your `.xbrl` or `.xml` file.
+2. The system parses the XML and validates each record.
+3. Results are displayed showing successful imports and any validation errors.
+
+---
+
+## 24. Audit Log Integrity Verification
+
+The Audit Trail includes a tamper-evident hash chain that provides cryptographic proof that no log entries have been modified or deleted.
+
+### 24.1 Checking Integrity
+
+1. Navigate to **Audit Trail** from the sidebar (Admin/Regulator access required).
+2. Look for the integrity badge at the top of the page, showing "Valid" (green) or "Broken" (red).
+3. Click the **Verify Integrity** button to run a fresh verification.
+
+### 24.2 Understanding Results
+
+- **Valid** — All audit log entries pass hash chain verification. No tampering detected.
+- **Broken** — The hash chain is broken at a specific entry, indicating potential tampering or data corruption.
+
+### 24.3 How It Works
+
+Each audit log entry contains a SHA-256 hash computed from:
+- The previous entry's hash (creating a chain)
+- The action, entity, details, and timestamp of the current entry
+
+If any entry is modified, deleted, or inserted out of order, the hash chain breaks and the integrity check fails.
 
 ---
 
@@ -1109,6 +1267,8 @@ The following credentials are pre-configured in the system for testing and demon
 ---
 
 ## Appendix B: Role Access Matrix
+
+> **Note:** MFA setup/disable is available to all authenticated users. Audit integrity verification requires Admin or Regulator role. The dispute chatbot and XBRL upload follow the same access rules as Helpdesk and Batch Upload respectively.
 
 | Module / Feature | Admin | Regulator | Lender | Viewer |
 |-----------------|-------|-----------|--------|--------|

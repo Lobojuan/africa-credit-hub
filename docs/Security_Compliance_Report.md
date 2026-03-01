@@ -3,8 +3,8 @@
 ## Cross-Jurisdictional Central Data Hub & Credit Registry System v1.1
 
 **Prepared for:** Systems In Motion Limited  
-**Document Version:** 1.0  
-**Date:** February 2026  
+**Document Version:** 1.1  
+**Date:** March 2026  
 **Classification:** Confidential
 
 ---
@@ -13,7 +13,7 @@
 
 This document provides a comprehensive assessment of the security controls implemented in the Credit Registry System against the requirements defined in the Software Requirements Specification (SRS) v1.1. The system handles sensitive financial and personal data across four jurisdictions (Ghana, Ethiopia, Uganda, Liberia) and must comply with data protection and financial regulatory requirements.
 
-All nine non-functional security requirements (NFR-SEC-01 through NFR-SEC-09) have been implemented. This report details each security control, its implementation, and compliance status.
+All nine non-functional security requirements (NFR-SEC-01 through NFR-SEC-09) have been implemented, along with seven enterprise security enhancements (ENT-01 through ENT-07) including TOTP multi-factor authentication, OAuth 2.1 Bearer token exchange, tamper-evident audit log hash chains, fuzzy entity matching, dispute chatbot, low-bandwidth optimizations, and XBRL upload support. This report details each security control, its implementation, and compliance status.
 
 ---
 
@@ -47,7 +47,32 @@ All nine non-functional security requirements (NFR-SEC-01 through NFR-SEC-09) ha
 ^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$
 ```
 
-### 2.3 Account Lockout
+### 2.3 Multi-Factor Authentication (MFA) — ENT-01
+
+| Control | Implementation |
+|---------|---------------|
+| MFA Method | TOTP (Time-Based One-Time Password) via `otpauth` library |
+| Secret Storage | `mfaSecret` column (varchar, nullable) on `users` table; stored as base32-encoded secret |
+| Enable Flag | `mfaEnabled` column (boolean, default false) on `users` table |
+| Setup Endpoint | `POST /api/auth/mfa/setup` — generates TOTP secret, returns `otpauth://` URI for QR code |
+| Verify Endpoint | `POST /api/auth/mfa/verify` — validates 6-digit TOTP code and enables MFA |
+| Disable Endpoint | `POST /api/auth/mfa/disable` — disables MFA for the authenticated user |
+| Login Flow | `POST /api/auth/login` returns `{ requireMfa: true }` when MFA is enabled; client prompts for TOTP code |
+| MFA Login Endpoint | `POST /api/auth/mfa/login` — validates TOTP code and completes authentication |
+| Frontend Component | `mfa-setup.tsx` — setup dialog with QR code display and verification input |
+| i18n Support | Full EN/FR translations under `mfa.*` and `login.mfa*` keys |
+
+**MFA Login Flow:**
+1. User submits username/password via `POST /api/auth/login`
+2. If user has `mfaEnabled = true`, server returns `{ requireMfa: true, userId }` without creating a session
+3. Client shows TOTP code input field
+4. User enters 6-digit code from authenticator app
+5. Client sends `POST /api/auth/mfa/login` with `{ userId, code }`
+6. Server validates TOTP code against stored secret
+7. If valid, session is created and user is authenticated
+8. If invalid, HTTP 401 returned with "Invalid MFA code" error
+
+### 2.4 Account Lockout
 
 | Control | Value |
 |---------|-------|
@@ -186,7 +211,35 @@ app.use("/api", (req, res, next) => {
 
 ### 5.2 External API Authentication
 
-External API endpoints use API key authentication:
+External API endpoints support two authentication methods:
+
+#### 5.2.1 X-API-Key Authentication
+
+API key authentication via the `X-API-Key` HTTP header (original method):
+
+#### 5.2.2 OAuth 2.1 Bearer Token Authentication — ENT-04
+
+| Control | Implementation |
+|---------|---------------|
+| Grant Type | `client_credentials` |
+| Token Endpoint | `POST /api/external/oauth/token` |
+| Token Format | JWT (JSON Web Token) signed with HS256 |
+| Token Library | `jsonwebtoken` |
+| Token Expiry | 1 hour (3600 seconds) |
+| Request Format | `{ "grant_type": "client_credentials", "client_id": "<api_key_prefix>", "client_secret": "<full_api_key>" }` |
+| Response Format | `{ "access_token": "<jwt>", "token_type": "Bearer", "expires_in": 3600 }` |
+| Usage | `Authorization: Bearer <access_token>` header on external API endpoints |
+
+**OAuth 2.1 Token Flow:**
+1. Client sends `POST /api/external/oauth/token` with API key credentials
+2. Server validates the API key via SHA-256 hash lookup
+3. Server generates a JWT containing `institutionId`, `permissions`, and `apiKeyId`
+4. JWT is signed with the session secret and returned to the client
+5. Client includes the JWT in the `Authorization: Bearer <token>` header on subsequent requests
+6. Server validates the JWT signature and expiry on each request
+7. Both X-API-Key and Bearer token authentication are accepted on all external API endpoints
+
+External API endpoints also use API key authentication:
 
 | Control | Implementation |
 |---------|---------------|
@@ -299,12 +352,34 @@ const parsed = insertBorrowerSchema.parse(req.body);
 | ip_address | Client IP address (via `req.ip` with trust proxy enabled) |
 | created_at | Timestamp of the action |
 
-### 7.3 Audit Log Immutability
+### 7.3 Tamper-Evident Hash Chain — ENT-07
+
+| Control | Implementation |
+|---------|---------------|
+| Hashing Algorithm | SHA-256 (via Node.js `crypto` module) |
+| Hash Fields | `previousHash` and `currentHash` columns on `audit_logs` table |
+| Chain Construction | Each new log entry's `currentHash` = SHA-256(`previousHash` + `action` + `entity` + `details` + `timestamp`) |
+| First Entry | `previousHash` = `"genesis"` for the first log entry in the chain |
+| Verification Endpoint | `GET /api/audit/verify-integrity` — validates the entire hash chain |
+| Frontend Indicator | Integrity badge on audit trail page (`data-testid="badge-integrity-status"`) |
+| Verification Button | `data-testid="button-verify-integrity"` triggers chain verification |
+
+**Hash Chain Verification Process:**
+1. Client calls `GET /api/audit/verify-integrity`
+2. Server retrieves all audit log entries ordered by `created_at ASC`
+3. For each entry, server recomputes the expected `currentHash` from `previousHash` + entry data
+4. Server verifies that `currentHash` matches the stored value
+5. Server verifies that `previousHash` matches the prior entry's `currentHash`
+6. Returns `{ valid: true/false, totalEntries, checkedEntries, brokenAt }` 
+7. Frontend displays green "Valid" badge or red "Broken" badge accordingly
+
+### 7.4 Audit Log Immutability
 
 - Audit logs are append-only (INSERT operations only)
 - No UPDATE or DELETE endpoints exist for audit logs
 - Logs are ordered by `created_at DESC` for display
 - Latest 200 entries returned via API (with pagination potential)
+- Hash chain provides cryptographic tamper evidence (ENT-07)
 
 ### 7.4 IP Address Tracking
 
@@ -357,7 +432,49 @@ if (approval.requestedBy === currentUserId) {
 
 ---
 
-## 9. Compliance Matrix (NFR-SEC)
+## 9. Enterprise Enhancement Security Controls
+
+### 9.1 Fuzzy Entity Matching — ENT-02
+
+| Control | Implementation |
+|---------|---------------|
+| Extension | `pg_trgm` (PostgreSQL trigram similarity) |
+| Activation | `CREATE EXTENSION IF NOT EXISTS pg_trgm` at pool initialization in `server/db.ts` |
+| Endpoint | `GET /api/borrowers/fuzzy-match?name=<query>` |
+| Threshold | Similarity score ≥ 0.3 |
+| Purpose | Detects potential duplicate borrowers during registration to prevent identity fraud |
+| Frontend Integration | Warning banner shown on borrower registration form when duplicates detected |
+
+### 9.2 Low-Bandwidth Optimizations — ENT-05
+
+| Control | Implementation |
+|---------|---------------|
+| Compression | `compression` middleware (gzip) applied to all HTTP responses |
+| Code Splitting | `React.lazy()` for all route components except Dashboard, Login, and NotFound |
+| Lazy Loading | `Suspense` wrapper with spinner fallback component (`LazyFallback`) |
+| Effect | Reduced initial bundle size; compressed API responses for bandwidth-constrained environments |
+
+### 9.3 XBRL Upload Support — ENT-06
+
+| Control | Implementation |
+|---------|---------------|
+| File Format | XBRL/XML files accepted via batch upload endpoint |
+| Frontend | Tabbed interface (JSON/CSV tab and XBRL tab) on batch upload page |
+| Sample | XBRL sample format provided in UI for data preparers |
+| Parsing | Server-side XBRL/XML parsing in `POST /api/batch-upload/credit-accounts` |
+
+### 9.4 Dispute Chatbot — ENT-03
+
+| Control | Implementation |
+|---------|---------------|
+| Component | `dispute-chatbot.tsx` — guided chat interface |
+| Integration | Accessible from helpdesk page |
+| Flow | Issue type → borrower search → account selection → description → auto-submit |
+| i18n | Full EN/FR translations under `chatbot.*` keys |
+
+---
+
+## 10. Compliance Matrix (NFR-SEC + ENT)
 
 | SRS Ref | Requirement | Status | Implementation Details |
 |---------|-------------|--------|----------------------|
@@ -370,10 +487,17 @@ if (approval.requestedBy === currentUserId) {
 | NFR-SEC-07 | Maker-checker (four-eye principle) | COMPLIANT | Pending approval workflow for borrower and credit account changes. Self-approval prevention enforced server-side with HTTP 403. |
 | NFR-SEC-08 | 90-day password expiry | COMPLIANT | `passwordChangedAt` timestamp checked on login. `mustChangePassword` flag for forced change. Password change dialog presented to user. |
 | NFR-SEC-09 | 15-minute idle session timeout | COMPLIANT | `lastActivity` timestamp updated on each request. Session destroyed when idle exceeds 15 minutes (900,000 ms). HTTP 440 returned. |
+| ENT-01 | TOTP Multi-Factor Authentication | COMPLIANT | TOTP via `otpauth` library; setup/verify/disable/login endpoints; `mfaSecret` and `mfaEnabled` fields on users table; full login flow integration. |
+| ENT-02 | Fuzzy entity matching for duplicate detection | COMPLIANT | `pg_trgm` PostgreSQL extension enabled at startup; trigram similarity search with threshold ≥ 0.3; duplicate warning on borrower registration. |
+| ENT-03 | Guided dispute chatbot assistant | COMPLIANT | Multi-step chat flow: issue type → borrower search → account selection → description → auto-submit; full EN/FR i18n. |
+| ENT-04 | OAuth 2.1 Bearer token authentication | COMPLIANT | Client credentials grant; JWT tokens signed with HS256; 1-hour expiry; dual auth (Bearer + X-API-Key) on external API. |
+| ENT-05 | Low-bandwidth optimizations | COMPLIANT | gzip `compression` middleware; `React.lazy()` code-splitting with `Suspense` fallback for all route components. |
+| ENT-06 | XBRL/XML batch upload support | COMPLIANT | XBRL/XML file parsing in batch upload endpoint; tabbed frontend (JSON/CSV + XBRL); sample format provided. |
+| ENT-07 | Tamper-evident audit log hash chain | COMPLIANT | SHA-256 hash chain (`previousHash`/`currentHash` columns); `GET /api/audit/verify-integrity` endpoint; visual integrity badge on audit trail page. |
 
 ---
 
-## 10. Signal Handling and Resilience
+## 11. Signal Handling and Resilience
 
 The application implements defensive signal handling:
 
@@ -390,9 +514,9 @@ process.on("unhandledRejection", (err) => { console.error("Unhandled rejection:"
 
 ---
 
-## 11. Known Limitations and Recommendations
+## 12. Known Limitations and Recommendations
 
-### 11.1 Current Limitations
+### 12.1 Current Limitations
 
 | Area | Limitation | Risk Level | Recommendation |
 |------|-----------|------------|----------------|
@@ -401,11 +525,10 @@ process.on("unhandledRejection", (err) => { console.error("Unhandled rejection:"
 | Rate Limiting | Not implemented on API endpoints | Medium | Add rate limiting middleware (e.g., express-rate-limit) |
 | CORS | Not explicitly configured | Low | Configure CORS headers if frontend is served from different origin |
 | CSP | No Content Security Policy headers | Low | Add CSP headers via middleware or reverse proxy |
-| MFA | Not implemented | Medium | Consider adding TOTP-based multi-factor authentication |
 | Password History | Not tracked | Low | Track previous password hashes to prevent reuse |
 | Session Clustering | MemoryStore is single-node only | High | Use Redis for multi-node deployments |
 
-### 11.2 Production Hardening Recommendations
+### 12.2 Production Hardening Recommendations
 
 1. **Enable HTTPS** and set `cookie.secure = true`
 2. **Replace MemoryStore** with Redis for session storage in multi-node environments
@@ -417,10 +540,12 @@ process.on("unhandledRejection", (err) => { console.error("Unhandled rejection:"
 8. **Conduct penetration testing** before go-live
 9. **Implement database encryption at rest** if required by jurisdiction
 10. **Review and rotate** all default credentials and secrets
+11. **Enforce MFA** for admin and regulator roles in production
+12. **Rotate OAuth JWT signing keys** periodically
 
 ---
 
-## 12. Sign-Off
+## 13. Sign-Off
 
 | Role | Name | Signature | Date |
 |------|------|-----------|------|

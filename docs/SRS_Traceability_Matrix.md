@@ -3,8 +3,8 @@
 ## Cross-Jurisdictional Central Data Hub & Credit Registry System v1.1
 
 **Prepared for:** Systems In Motion Limited  
-**Document Version:** 1.0  
-**Date:** February 2026
+**Document Version:** 1.1  
+**Date:** March 2026
 
 ---
 
@@ -151,7 +151,21 @@ This document maps every Software Requirements Specification (SRS) requirement t
 
 ---
 
-## 13. Summary
+## 13. Enterprise Enhancement Requirements (ENT)
+
+| SRS Ref | Requirement Description | Status | Module/Component | Implementation Notes | UAT Test Case |
+|---------|------------------------|--------|------------------|---------------------|----------------|
+| ENT-01 | System shall support TOTP-based Multi-Factor Authentication (MFA) | Implemented | MFA (`mfaSecret`, `mfaEnabled` on `users`; `mfa-setup.tsx`; `/api/auth/mfa/*`) | TOTP via `otpauth` library; setup returns QR URI; verify/disable/login endpoints; login returns `requireMfa` flag when enabled; i18n EN+FR | TC-ENT-001 through TC-ENT-005 |
+| ENT-02 | System shall perform fuzzy entity matching to detect potential duplicate borrowers | Implemented | Fuzzy Matching (`pg_trgm` extension; `fuzzyMatchBorrowers` in `storage.ts`; `/api/borrowers/fuzzy-match`) | PostgreSQL trigram similarity via `pg_trgm`; threshold ≥ 0.3; duplicate warning shown on borrower registration form | TC-ENT-006, TC-ENT-007 |
+| ENT-03 | System shall provide a guided chatbot assistant for dispute filing | Implemented | Dispute Chatbot (`dispute-chatbot.tsx`; `helpdesk.tsx`) | Multi-step guided flow: issue type → borrower search → account selection → description → auto-submit; i18n EN+FR | TC-ENT-008 through TC-ENT-010 |
+| ENT-04 | System shall support OAuth 2.1 Bearer token authentication for the external API | Implemented | OAuth 2.1 (`/api/external/oauth/token`; `external-api.ts`; `api-docs.tsx`) | Client credentials grant; JWT Bearer tokens alongside X-API-Key; `jsonwebtoken` library; documented in API docs page | TC-ENT-011 through TC-ENT-013 |
+| ENT-05 | System shall implement low-bandwidth optimizations (compression, code-splitting) | Implemented | Performance (`compression` middleware in `server/index.ts`; `React.lazy` in `App.tsx`) | gzip compression for all HTTP responses; lazy-loaded route components with `Suspense` fallback spinner | TC-ENT-014, TC-ENT-015 |
+| ENT-06 | System shall support XBRL/XML file format for batch data uploads | Implemented | XBRL Upload (`batch-upload.tsx` XBRL tab; `/api/batch-upload/credit-accounts`) | XBRL/XML parsing in batch upload endpoint; tabbed UI (JSON/CSV and XBRL); sample format provided | TC-ENT-016, TC-ENT-017 |
+| ENT-07 | System shall implement tamper-evident audit logs with SHA-256 hash chain | Implemented | Audit Integrity (`previousHash`, `currentHash` on `audit_logs`; `verifyAuditIntegrity` in `storage.ts`; `/api/audit/verify-integrity`; `audit-trail.tsx`) | Each log entry hashed with SHA-256 linking to previous entry; integrity verification endpoint; visual badge on audit trail page | TC-ENT-018 through TC-ENT-020 |
+
+---
+
+## 14. Summary
 
 | Category | Total Requirements | Implemented | Partial | Not Implemented |
 |----------|-------------------|-------------|---------|-----------------|
@@ -165,7 +179,8 @@ This document maps every Software Requirements Specification (SRS) requirement t
 | INT-RPT (Integration & Reporting) | 4 | 4 | 0 | 0 |
 | DQ (Data Quality) | 5 | 5 | 0 | 0 |
 | NFR-SEC (Security) | 9 | 9 | 0 | 0 |
-| **Total** | **57** | **57** | **0** | **0** |
+| ENT (Enterprise Enhancements) | 7 | 7 | 0 | 0 |
+| **Total** | **64** | **64** | **0** | **0** |
 
 ---
 

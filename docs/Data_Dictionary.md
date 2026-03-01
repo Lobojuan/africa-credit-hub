@@ -3,14 +3,26 @@
 ## Cross-Jurisdictional Central Data Hub & Credit Registry System v1.1
 
 **Prepared for:** Systems In Motion Limited  
-**Document Version:** 1.0  
-**Date:** February 2026
+**Document Version:** 1.1  
+**Date:** March 2026
 
 ---
 
 ## 1. Overview
 
 This document provides field-level documentation for all 15 database tables in the Credit Registry System. The database uses PostgreSQL with Drizzle ORM for schema management.
+
+**Enterprise Enhancements (v1.1) — Schema Impact Summary:**
+
+| Enhancement | Schema Changes |
+|-------------|---------------|
+| ENT-01 (MFA) | Added `mfa_secret` and `mfa_enabled` columns to `users` table |
+| ENT-02 (Fuzzy Matching) | No new tables/columns; uses PostgreSQL `pg_trgm` extension on existing `borrowers.first_name`/`borrowers.last_name` columns |
+| ENT-03 (Dispute Chatbot) | No new tables/columns; uses existing `disputes` table for auto-filed disputes |
+| ENT-04 (OAuth 2.1) | No new tables/columns; JWT tokens are stateless and signed in-memory using existing `api_keys` for validation |
+| ENT-05 (Low-Bandwidth) | No schema changes; compression and code-splitting are application-layer optimizations |
+| ENT-06 (XBRL Upload) | No new tables/columns; XBRL/XML records are parsed and inserted into existing `credit_accounts` table via batch upload |
+| ENT-07 (Hash Chain) | Added `previous_hash` and `current_hash` columns to `audit_logs` table |
 
 ---
 
@@ -144,6 +156,8 @@ This document provides field-level documentation for all 15 database tables in t
 | last_login | timestamp | NULLABLE | Last successful login timestamp | `2026-02-28T09:00:00Z` |
 | password_changed_at | timestamp | NULLABLE | Last password change timestamp | `2026-02-28T00:00:00Z` |
 | must_change_password | boolean | DEFAULT false | Force password change on next login | `false` |
+| mfa_secret | varchar | NULLABLE | TOTP MFA secret (base32-encoded); populated when MFA is set up (ENT-01) | `JBSWY3DPEHPK3PXP` |
+| mfa_enabled | boolean | DEFAULT false | Whether TOTP MFA is enabled for the user (ENT-01) | `false` |
 | created_at | timestamp | DEFAULT NOW() | Record creation timestamp | `2026-02-28T00:00:00Z` |
 
 ---
@@ -246,6 +260,8 @@ This document provides field-level documentation for all 15 database tables in t
 | entity_id | varchar | NULLABLE | ID of affected entity | `b2c3d4e5-f6a7-8901-bcde-f23456789012` |
 | details | text | NULLABLE | Human-readable action details | `Created user: John Doe` |
 | ip_address | text | NULLABLE | Client IP address | `192.168.1.100` |
+| previous_hash | text | NULLABLE | SHA-256 hash of the previous audit log entry in the hash chain (ENT-07); `"genesis"` for the first entry | `genesis` or `a1b2c3d4...` |
+| current_hash | text | NULLABLE | SHA-256 hash of this audit log entry computed from `previousHash` + `action` + `entity` + `details` + `timestamp` (ENT-07) | `e3b0c44298fc1c14...` |
 | created_at | timestamp | DEFAULT NOW() | Log entry timestamp | `2026-02-28T09:30:00Z` |
 
 ---

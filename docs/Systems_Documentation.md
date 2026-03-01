@@ -1,8 +1,8 @@
 # Cross-Jurisdictional Central Data Hub & Credit Registry System v1.1 — Systems Documentation
 
 **Prepared for:** Systems In Motion Limited  
-**Document Version:** 1.1  
-**Date:** February 2026  
+**Document Version:** 1.2  
+**Date:** March 2026  
 **Classification:** Confidential
 
 ---
@@ -56,7 +56,13 @@ The system is designed for pan-African deployment across four jurisdictions:
 - **Regulatory Analytics** — NPL ratios, portfolio breakdowns, SLA breach tracking, CSV export
 - **Internationalization** — Full English/French language support
 - **Multi-Currency** — 17 pan-African currencies supported
-- **Audit Trail** — Comprehensive activity logging with IP tracking
+- **Audit Trail** — Comprehensive activity logging with IP tracking and tamper-evident SHA-256 hash chain
+- **Multi-Factor Authentication** — TOTP-based MFA via otpauth library
+- **Fuzzy Entity Matching** — PostgreSQL pg_trgm trigram similarity for duplicate borrower detection
+- **Dispute Chatbot** — Guided multi-step chat assistant for dispute filing
+- **OAuth 2.1** — Bearer token authentication (client_credentials grant) for external API
+- **Low-Bandwidth Optimization** — gzip compression and React.lazy code-splitting
+- **XBRL Upload** — XBRL/XML file format support for batch data uploads
 
 ---
 
@@ -208,6 +214,8 @@ System users with role-based access control, login tracking, and password policy
 | `last_login` | timestamp | nullable | Last successful login timestamp |
 | `password_changed_at` | timestamp | nullable | Last password change timestamp (90-day expiry) |
 | `must_change_password` | boolean | default `false` | Force password change on next login |
+| `mfa_secret` | varchar | nullable | TOTP MFA secret (base32-encoded) for authenticator app (ENT-01) |
+| `mfa_enabled` | boolean | default `false` | Whether TOTP MFA is enabled for the user (ENT-01) |
 | `created_at` | timestamp | default `now()` | Record creation timestamp |
 
 ### 4.2 Table: `borrowers`
@@ -302,6 +310,8 @@ Immutable activity logging with IP address tracking for security and compliance.
 | `entity_id` | varchar | nullable | Specific entity identifier |
 | `details` | text | nullable | Human-readable description |
 | `ip_address` | text | nullable | Client IP address |
+| `previous_hash` | text | nullable | SHA-256 hash of the previous entry in the hash chain; `"genesis"` for the first entry (ENT-07) |
+| `current_hash` | text | nullable | SHA-256 hash of this entry computed from previousHash + action + entity + details + timestamp (ENT-07) |
 | `created_at` | timestamp | default `now()` | Log entry timestamp |
 
 ### 4.6 Table: `pending_approvals`
@@ -540,6 +550,10 @@ institutions ───────┐
 | `POST` | `/api/auth/logout` | User logout | — | `{ message }` |
 | `GET` | `/api/auth/me` | Get current user | — | User object + `passwordExpired` flag |
 | `POST` | `/api/auth/change-password` | Change password | `{ currentPassword, newPassword }` | `{ message }` |
+| `POST` | `/api/auth/mfa/setup` | Generate TOTP secret for MFA setup (ENT-01) | — | `{ secret, uri }` |
+| `POST` | `/api/auth/mfa/verify` | Verify TOTP code and enable MFA (ENT-01) | `{ code }` | `{ message }` |
+| `POST` | `/api/auth/mfa/disable` | Disable MFA for authenticated user (ENT-01) | — | `{ message }` |
+| `POST` | `/api/auth/mfa/login` | Complete MFA login with TOTP code (ENT-01) | `{ userId, code }` | User object |
 
 ### 5.2 Health Check (No Auth Required)
 
@@ -572,6 +586,7 @@ institutions ───────┐
 | `PATCH` | `/api/borrowers/:id` | Update borrower | Creates pending approval (maker-checker) |
 | `GET` | `/api/borrowers/:id/related` | Get related borrowers | Returns parent and child relationships |
 | `GET` | `/api/borrowers/:id/credit-report` | Legacy credit report | Basic report without serial number |
+| `GET` | `/api/borrowers/fuzzy-match` | Fuzzy entity matching (ENT-02) | Query: `?name=<search_term>`; returns potential duplicates with similarity scores |
 
 ### 5.6 Credit Account Endpoints (Authenticated)
 
@@ -672,6 +687,7 @@ institutions ───────┐
 | Method | Path | Role | Description |
 |--------|------|------|-------------|
 | `GET` | `/api/audit-logs` | Admin, Regulator | List audit log entries (200 most recent) |
+| `GET` | `/api/audit/verify-integrity` | Admin, Regulator | Verify audit log hash chain integrity (ENT-07) |
 
 ### 5.19 Reports & Export Endpoints
 
@@ -688,7 +704,13 @@ institutions ───────┐
 | `POST` | `/api/api-keys` | Generate new API key |
 | `POST` | `/api/api-keys/:id/revoke` | Revoke an API key |
 
-### 5.21 External API Endpoints (API Key Auth via `X-API-Key` Header)
+### 5.21 OAuth 2.1 Token Endpoint (ENT-04)
+
+| Method | Path | Description | Request Body | Response |
+|--------|------|-------------|-------------|----------|
+| `POST` | `/api/external/oauth/token` | Exchange API key for Bearer token | `{ grant_type: "client_credentials", client_id, client_secret }` | `{ access_token, token_type: "Bearer", expires_in: 3600 }` |
+
+### 5.22 External API Endpoints (X-API-Key or Bearer Token Auth)
 
 | Method | Path | Permission | Description |
 |--------|------|-----------|-------------|
@@ -1290,6 +1312,94 @@ Error conditions are logged via `console.error()` for:
 - Internal server errors
 - Seed database errors
 - Maker-checker application errors
+
+---
+
+## 13. Enterprise Enhancements (v1.1)
+
+### 13.1 TOTP Multi-Factor Authentication (ENT-01)
+
+**Purpose:** Adds a second authentication factor using Time-Based One-Time Passwords (TOTP) compatible with authenticator apps (Google Authenticator, Authy, etc.).
+
+**Architecture:**
+- **Library:** `otpauth` for TOTP generation and validation
+- **Schema:** `mfaSecret` (varchar, nullable) and `mfaEnabled` (boolean, default false) columns on `users` table
+- **Endpoints:** `POST /api/auth/mfa/setup`, `POST /api/auth/mfa/verify`, `POST /api/auth/mfa/disable`, `POST /api/auth/mfa/login`
+- **Frontend:** `mfa-setup.tsx` component with QR code URI display and verification input
+- **i18n:** Full EN/FR translations under `mfa.*` and `login.mfa*` keys
+
+**Flow:**
+1. User enables MFA via setup dialog → server generates TOTP secret → client shows `otpauth://` URI
+2. User scans QR code with authenticator app → enters 6-digit code → server verifies and sets `mfaEnabled = true`
+3. On subsequent logins, `POST /api/auth/login` returns `{ requireMfa: true }` → client shows code input → `POST /api/auth/mfa/login` completes authentication
+
+### 13.2 Fuzzy Entity Matching (ENT-02)
+
+**Purpose:** Detects potential duplicate borrowers during registration using trigram similarity matching.
+
+**Architecture:**
+- **Extension:** `pg_trgm` enabled via `CREATE EXTENSION IF NOT EXISTS pg_trgm` at pool initialization in `server/db.ts`
+- **Storage Method:** `fuzzyMatchBorrowers(name: string)` in `IStorage` / `DatabaseStorage`
+- **Endpoint:** `GET /api/borrowers/fuzzy-match?name=<query>`
+- **Algorithm:** PostgreSQL trigram similarity with threshold ≥ 0.3 combined with ILIKE fallback
+- **Frontend:** Warning banner displayed on borrower registration form when potential duplicates are found
+
+### 13.3 Dispute Chatbot (ENT-03)
+
+**Purpose:** Guided chat-like assistant that walks users through the dispute filing process step by step.
+
+**Architecture:**
+- **Component:** `client/src/components/dispute-chatbot.tsx`
+- **Integration:** Embedded in the helpdesk page (`helpdesk.tsx`)
+- **Flow Steps:** Issue type selection → Borrower search → Account selection → Description entry → Confirmation → Auto-submit
+- **i18n:** Full EN/FR translations under `chatbot.*` keys (askBorrower, searching, confirmSummary, cancelled, startNew)
+- **Dispute Types:** Uses `disputes.types.*` i18n keys for localized type names
+
+### 13.4 OAuth 2.1 Bearer Token Authentication (ENT-04)
+
+**Purpose:** Provides OAuth 2.1 client credentials token exchange as an alternative to X-API-Key authentication for the external API.
+
+**Architecture:**
+- **Library:** `jsonwebtoken` for JWT signing and verification
+- **Endpoint:** `POST /api/external/oauth/token`
+- **Grant Type:** `client_credentials`
+- **Token Format:** JWT signed with HS256 using SESSION_SECRET
+- **Token Payload:** `{ institutionId, permissions, apiKeyId }`
+- **Token Expiry:** 3600 seconds (1 hour)
+- **Dual Auth:** Both `X-API-Key` header and `Authorization: Bearer <token>` accepted on all external API endpoints
+- **Frontend:** OAuth documentation section on API docs page with example code
+
+### 13.5 Low-Bandwidth Optimizations (ENT-05)
+
+**Purpose:** Reduces bandwidth consumption and improves load times for users on constrained networks.
+
+**Architecture:**
+- **Server Compression:** `compression` npm package applied as Express middleware in `server/index.ts`; gzip encoding for all HTTP responses
+- **Code Splitting:** All route page components wrapped with `React.lazy()` in `client/src/App.tsx` (except Dashboard, Login, and NotFound which are eagerly loaded)
+- **Suspense Fallback:** `LazyFallback` spinner component defined in `App.tsx` displayed while lazy-loaded components are fetching
+
+### 13.6 XBRL Upload Support (ENT-06)
+
+**Purpose:** Extends batch upload to accept XBRL/XML file format alongside JSON and CSV.
+
+**Architecture:**
+- **Server:** XBRL/XML parsing logic in `POST /api/batch-upload/credit-accounts` endpoint
+- **Frontend:** Tabbed interface using shadcn `Tabs` component (JSON/CSV tab with `data-testid="tab-json"` and XBRL tab with `data-testid="tab-xbrl"`)
+- **Sample Format:** XBRL sample XML structure displayed in the XBRL tab (`data-testid="text-xbrl-sample"`)
+- **i18n:** EN/FR translations under `batchUpload.xbrl*` keys
+
+### 13.7 Tamper-Evident Audit Log Hash Chain (ENT-07)
+
+**Purpose:** Provides cryptographic proof of audit log integrity through a SHA-256 hash chain.
+
+**Architecture:**
+- **Schema:** `previousHash` (text, nullable) and `currentHash` (text, nullable) columns on `audit_logs` table
+- **Hash Computation:** SHA-256 of `previousHash + action + entity + details + timestamp` using Node.js `crypto` module
+- **Genesis:** First entry uses `previousHash = "genesis"`
+- **Storage Method:** `verifyAuditIntegrity()` in `IStorage` / `DatabaseStorage` — retrieves all entries ordered by `created_at ASC`, recomputes hashes, and validates chain
+- **Endpoint:** `GET /api/audit/verify-integrity` — returns `{ valid, totalEntries, checkedEntries, brokenAt }`
+- **Frontend:** Integrity badge (`data-testid="badge-integrity-status"`) and verify button (`data-testid="button-verify-integrity"`) on audit trail page
+- **i18n:** EN/FR translations under `audit.integrityValid`, `audit.integrityBroken`, `audit.verify`, `audit.hashChain`
 
 ---
 
