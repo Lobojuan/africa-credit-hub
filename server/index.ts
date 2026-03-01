@@ -122,6 +122,13 @@ process.on("unhandledRejection", (err) => { console.error("Unhandled rejection:"
     console.error("Seed error (may be expected on first run):", e);
   }
 
+  try {
+    const { seedTestData } = await import("./seed-test-data");
+    await seedTestData();
+  } catch (e) {
+    console.error("Test data seed error:", e);
+  }
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {

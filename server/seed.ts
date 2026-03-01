@@ -117,4 +117,11 @@ export async function seedDatabase() {
   ]);
 
   console.log("Database seeded successfully");
+
+  try {
+    const { seedTestData } = await import("./seed-test-data");
+    await seedTestData();
+  } catch (e) {
+    console.error("Test data seed error:", e);
+  }
 }
