@@ -13,8 +13,9 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { NotificationBell } from "@/components/notification-bell";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { PasswordChangeDialog } from "@/components/password-change-dialog";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { LogOut, Loader2 } from "lucide-react";
+import { LogOut, Loader2, MessageCircle } from "lucide-react";
 import { DisputeChatbot } from "@/components/dispute-chatbot";
 import { Skeleton } from "@/components/ui/skeleton";
 import LoginPage from "@/pages/login";
@@ -81,6 +82,7 @@ function Router() {
 
 function AuthenticatedApp() {
   const { user, isLoading, logout, passwordExpired } = useAuth();
+  const [chatbotOpen, setChatbotOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -112,6 +114,16 @@ function AuthenticatedApp() {
               </span>
               <LanguageSwitcher />
               <NotificationBell />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setChatbotOpen(true)}
+                data-testid="button-open-chatbot"
+                title="Help Assistant"
+              >
+                <MessageCircle className="w-4 h-4" />
+              </Button>
               <ThemeToggle />
               <Button
                 variant="ghost"
@@ -138,7 +150,7 @@ function AuthenticatedApp() {
           {passwordExpired && <PasswordChangeDialog open={true} forced={true} />}
         </div>
       </div>
-      <DisputeChatbot />
+      <DisputeChatbot open={chatbotOpen} onOpenChange={setChatbotOpen} />
     </SidebarProvider>
   );
 }

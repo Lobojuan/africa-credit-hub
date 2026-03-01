@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Bot, User, Send, X, MessageCircle, HelpCircle, FileWarning } from "lucide-react";
+import { Bot, User, Send, HelpCircle, FileWarning } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Borrower, CreditAccount } from "@shared/schema";
@@ -161,10 +161,14 @@ function buildFaqData(t: (key: string) => string): Record<string, { label: strin
   };
 }
 
-export function DisputeChatbot() {
+interface ChatbotProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export function DisputeChatbot({ open, onOpenChange }: ChatbotProps) {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
-  const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("menu");
   const [disputeStep, setDisputeStep] = useState<DisputeStep>("issue_type");
   const [faqStep, setFaqStep] = useState<FaqStep>("categories");
@@ -215,6 +219,12 @@ export function DisputeChatbot() {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    if (open && messages.length === 0) {
+      showMainMenu();
+    }
+  }, [open]);
 
   useEffect(() => {
     if (open) {
@@ -438,136 +448,123 @@ export function DisputeChatbot() {
   const showInput = (mode === "dispute" && (disputeStep === "borrower_search" || disputeStep === "description")) ||
     (mode === "faq" && (faqStep === "search" || faqStep === "search_results"));
 
-  if (!open) {
-    return (
-      <Button
-        className="fixed bottom-6 right-6 rounded-full h-14 w-14 shadow-lg z-50" style={{ bottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}
-        onClick={() => { setOpen(true); showMainMenu(); }}
-        data-testid="button-open-chatbot"
-      >
-        <MessageCircle className="w-6 h-6" />
-      </Button>
-    );
-  }
-
   return (
-    <Card className="fixed bottom-3 right-3 left-3 sm:left-auto sm:bottom-6 sm:right-6 sm:w-[400px] h-[80vh] sm:h-[560px] max-h-[600px] flex flex-col shadow-2xl z-50 overflow-hidden" style={{ bottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))" }} data-testid="chatbot-container">
-      <div className="flex items-center justify-between p-3 border-b bg-primary text-primary-foreground">
-        <div className="flex items-center gap-2">
-          <Bot className="w-5 h-5" />
-          <span className="font-semibold text-sm">{t("chatbot.title")}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-primary-foreground hover:bg-primary/80" onClick={showMainMenu} data-testid="button-chatbot-home" title={t("chatbot.faqBackToMenu")}>
-            <HelpCircle className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-primary-foreground hover:bg-primary/80" onClick={() => setOpen(false)} data-testid="button-close-chatbot">
-            <X className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-full sm:w-[420px] p-0 flex flex-col" data-testid="chatbot-container">
+        <SheetHeader className="p-3 pb-2 border-b bg-primary text-primary-foreground rounded-none shrink-0">
+          <div className="flex items-center justify-between">
+            <SheetTitle className="flex items-center gap-2 text-primary-foreground text-sm font-semibold">
+              <Bot className="w-5 h-5" />
+              {t("chatbot.title")}
+            </SheetTitle>
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-primary-foreground hover:bg-primary/80" onClick={showMainMenu} data-testid="button-chatbot-home" title={t("chatbot.faqBackToMenu")}>
+              <HelpCircle className="w-4 h-4" />
+            </Button>
+          </div>
+        </SheetHeader>
 
-      <div ref={scrollRef} className="flex-1 overflow-auto p-3 space-y-3">
-        {messages.map((msg, i) => (
-          <div key={i} className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-            {msg.role === "bot" && (
-              <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <Bot className="w-4 h-4 text-primary" />
+        <div ref={scrollRef} className="flex-1 overflow-auto p-3 space-y-3">
+          {messages.map((msg, i) => (
+            <div key={i} className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+              {msg.role === "bot" && (
+                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <Bot className="w-4 h-4 text-primary" />
+                </div>
+              )}
+              <div className={`max-w-[85%] ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"} rounded-lg p-2.5`}>
+                <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+                {msg.options && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {msg.options.map((opt) => (
+                      <Badge
+                        key={opt}
+                        variant="outline"
+                        className="cursor-pointer hover:bg-primary hover:text-primary-foreground text-xs px-2 py-0.5"
+                        onClick={() => handleOptionClick(opt)}
+                        data-testid={`button-option-${opt.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`}
+                      >
+                        {opt}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-            <div className={`max-w-[85%] ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"} rounded-lg p-2.5`}>
-              <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
-              {msg.options && (
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {msg.options.map((opt) => (
-                    <Badge
-                      key={opt}
-                      variant="outline"
-                      className="cursor-pointer hover:bg-primary hover:text-primary-foreground text-xs px-2 py-0.5"
-                      onClick={() => handleOptionClick(opt)}
-                      data-testid={`button-option-${opt.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`}
-                    >
-                      {opt}
-                    </Badge>
-                  ))}
+              {msg.role === "user" && (
+                <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0">
+                  <User className="w-4 h-4 text-muted-foreground" />
                 </div>
               )}
             </div>
-            {msg.role === "user" && (
-              <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0">
-                <User className="w-4 h-4 text-muted-foreground" />
-              </div>
-            )}
-          </div>
-        ))}
+          ))}
 
-        {mode === "dispute" && disputeStep === "select_borrower" && searchResults && searchResults.length > 0 && (
-          <div className="space-y-1.5">
-            {(Array.isArray(searchResults) ? searchResults : []).slice(0, 5).map((b) => (
-              <div
-                key={b.id}
-                className="p-2 rounded-md border cursor-pointer hover:bg-muted text-sm"
-                onClick={() => handleBorrowerSelect(b)}
-                data-testid={`chatbot-borrower-${b.id}`}
-              >
-                <p className="font-medium">{b.type === "corporate" ? b.companyName : `${b.firstName} ${b.lastName}`}</p>
-                <p className="text-xs text-muted-foreground">{b.nationalId}</p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {mode === "dispute" && disputeStep === "select_account" && accounts && (
-          <div className="space-y-1.5">
-            {accounts.map((a) => (
-              <div
-                key={a.id}
-                className="p-2 rounded-md border cursor-pointer hover:bg-muted text-sm"
-                onClick={() => handleAccountSelect(a)}
-                data-testid={`chatbot-account-${a.id}`}
-              >
-                <p className="font-medium">{a.accountNumber}</p>
-                <p className="text-xs text-muted-foreground">{a.accountType} - {a.status}</p>
-              </div>
-            ))}
-            <div
-              className="p-2 rounded-md border cursor-pointer hover:bg-muted text-sm text-muted-foreground"
-              onClick={() => handleAccountSelect(null)}
-              data-testid="chatbot-skip-account"
-            >
-              {t("chatbot.skipAccount")}
+          {mode === "dispute" && disputeStep === "select_borrower" && searchResults && searchResults.length > 0 && (
+            <div className="space-y-1.5">
+              {(Array.isArray(searchResults) ? searchResults : []).slice(0, 5).map((b) => (
+                <div
+                  key={b.id}
+                  className="p-2 rounded-md border cursor-pointer hover:bg-muted text-sm"
+                  onClick={() => handleBorrowerSelect(b)}
+                  data-testid={`chatbot-borrower-${b.id}`}
+                >
+                  <p className="font-medium">{b.type === "corporate" ? b.companyName : `${b.firstName} ${b.lastName}`}</p>
+                  <p className="text-xs text-muted-foreground">{b.nationalId}</p>
+                </div>
+              ))}
             </div>
+          )}
+
+          {mode === "dispute" && disputeStep === "select_account" && accounts && (
+            <div className="space-y-1.5">
+              {accounts.map((a) => (
+                <div
+                  key={a.id}
+                  className="p-2 rounded-md border cursor-pointer hover:bg-muted text-sm"
+                  onClick={() => handleAccountSelect(a)}
+                  data-testid={`chatbot-account-${a.id}`}
+                >
+                  <p className="font-medium">{a.accountNumber}</p>
+                  <p className="text-xs text-muted-foreground">{a.accountType} - {a.status}</p>
+                </div>
+              ))}
+              <div
+                className="p-2 rounded-md border cursor-pointer hover:bg-muted text-sm text-muted-foreground"
+                onClick={() => handleAccountSelect(null)}
+                data-testid="chatbot-skip-account"
+              >
+                {t("chatbot.skipAccount")}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {showInput && (
+          <div className="p-3 border-t flex gap-2 shrink-0">
+            <Input
+              data-testid="input-chatbot-message"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSend()}
+              placeholder={
+                mode === "faq" ? t("chatbot.faqSearchPlaceholder") :
+                disputeStep === "borrower_search" ? t("chatbot.searchPlaceholder") :
+                t("chatbot.describePlaceholder")
+              }
+              className="h-9 text-sm"
+            />
+            <Button size="icon" className="h-9 w-9 shrink-0" onClick={handleSend} data-testid="button-chatbot-send">
+              <Send className="w-4 h-4" />
+            </Button>
           </div>
         )}
-      </div>
 
-      {showInput && (
-        <div className="p-3 border-t flex gap-2">
-          <Input
-            data-testid="input-chatbot-message"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            placeholder={
-              mode === "faq" ? t("chatbot.faqSearchPlaceholder") :
-              disputeStep === "borrower_search" ? t("chatbot.searchPlaceholder") :
-              t("chatbot.describePlaceholder")
-            }
-            className="h-9 text-sm"
-          />
-          <Button size="icon" className="h-9 w-9 shrink-0" onClick={handleSend} data-testid="button-chatbot-send">
-            <Send className="w-4 h-4" />
-          </Button>
-        </div>
-      )}
-
-      {mode === "dispute" && disputeStep === "done" && (
-        <div className="p-3 border-t flex gap-2">
-          <Button className="flex-1" variant="outline" size="sm" onClick={showMainMenu} data-testid="button-chatbot-restart">
-            {t("chatbot.faqBackToMenu")}
-          </Button>
-        </div>
-      )}
-    </Card>
+        {mode === "dispute" && disputeStep === "done" && (
+          <div className="p-3 border-t flex gap-2 shrink-0">
+            <Button className="flex-1" variant="outline" size="sm" onClick={showMainMenu} data-testid="button-chatbot-restart">
+              {t("chatbot.faqBackToMenu")}
+            </Button>
+          </div>
+        )}
+      </SheetContent>
+    </Sheet>
   );
 }
