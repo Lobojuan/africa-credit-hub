@@ -43,6 +43,13 @@ const pt = {
     mfaVerify: "Verificar",
     mfaVerifying: "A verificar...",
     mfaInvalid: "Código MFA inválido",
+    heroDescription: "Registo de crédito unificado ao serviço do Gana, Etiópia, Uganda e Libéria. Promover a inclusão financeira em todo o continente.",
+    jurisdictions: "Jurisdições",
+    fourCountries: "4 Países",
+    currencies: "Moedas",
+    eighteenSupported: "18 Suportadas",
+    compliance: "Conformidade",
+    languages: "Idiomas",
   },
   mfa: {
     setup: "Configurar MFA",

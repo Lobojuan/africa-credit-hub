@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Shield, AlertTriangle, ArrowRight, Globe, ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -99,16 +100,15 @@ export default function LoginPage() {
               <span style={{ color: "hsl(43 80% 65%)" }}>Credit Data Hub</span>
             </h2>
             <p className="text-white/60 mt-4 text-base leading-relaxed">
-              Unified credit registry serving Ghana, Ethiopia, Uganda & Liberia.
-              Empowering financial inclusion across the continent.
+              {t('login.heroDescription')}
             </p>
 
             <div className="mt-10 grid grid-cols-2 gap-4">
               {[
-                { label: "Jurisdictions", val: "4 Countries" },
-                { label: "Currencies", val: "17 Supported" },
-                { label: "Compliance", val: "SRS v1.1" },
-                { label: "Languages", val: "EN / FR" },
+                { label: t('login.jurisdictions'), val: t('login.fourCountries') },
+                { label: t('login.currencies'), val: t('login.eighteenSupported') },
+                { label: t('login.compliance'), val: "SRS v1.1" },
+                { label: t('login.languages'), val: "EN / FR / PT" },
               ].map((item) => (
                 <div key={item.label} className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.06)", backdropFilter: "blur(8px)" }}>
                   <p className="text-white/60 text-xs font-medium uppercase tracking-wider">{item.label}</p>
@@ -129,7 +129,10 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 bg-background">
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 bg-background relative">
+        <div className="absolute top-4 right-4" data-testid="login-language-switcher">
+          <LanguageSwitcher />
+        </div>
         <div className="w-full max-w-[400px] space-y-6 sm:space-y-8">
           <div className="lg:hidden flex items-center justify-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary">
