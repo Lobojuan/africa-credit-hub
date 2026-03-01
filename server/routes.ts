@@ -412,6 +412,20 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/global-search", async (req, res) => {
+    try {
+      const query = (req.query.q as string) || "";
+      const country = (req.query.country as string) || undefined;
+      if (!query && !country) {
+        return res.json({ borrowers: [], institutions: [], creditAccounts: [] });
+      }
+      const results = await storage.globalSearch(query, country);
+      res.json(results);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   app.get("/api/borrowers/fuzzy-match", async (req, res) => {
     try {
       const { firstName, lastName, nationalId, companyName, passportNumber, tinNumber } = req.query;

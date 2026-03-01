@@ -45,6 +45,7 @@ The system employs a modern full-stack architecture:
 -   **Cross-Border Entity Resolution**: Passport number field on borrowers for cross-jurisdictional identity matching; related party linking with 7 relationship types (spouse, guarantor, director, shareholder, beneficial_owner, subsidiary, parent_company)
 -   **Portuguese i18n**: Full PT translation covering all UI strings, language switcher updated with PT option
 -   **i18n Wired on Admin Pages**: Exchange Rates, API Admin, and Retention Policies pages fully use t() translation hooks for EN/FR/PT
+-   **Global Search**: Credit Search page upgraded to a true global search (`/api/global-search?q=TERM&country=COUNTRY`) that searches across borrowers, institutions, and credit accounts simultaneously. Results displayed in categorized sections (Borrowers, Institutions, Credit Accounts) with badges, country filters, and direct navigation to detail pages
 
 ## External Dependencies
 -   **Database**: PostgreSQL (specifically Neon for hosting)

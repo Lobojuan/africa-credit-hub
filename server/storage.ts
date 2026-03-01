@@ -1,4 +1,4 @@
-import { eq, desc, like, or, and, sql, count, ilike } from "drizzle-orm";
+import { eq, desc, like, or, and, sql, count, ilike, inArray } from "drizzle-orm";
 import crypto from "crypto";
 import { db } from "./db";
 import {
@@ -40,6 +40,7 @@ export interface IStorage {
   getBorrower(id: string): Promise<Borrower | undefined>;
   getBorrowers(page?: number, limit?: number): Promise<{ data: Borrower[]; total: number }>;
   searchBorrowers(query: string, country?: string): Promise<Borrower[]>;
+  globalSearch(query: string, country?: string): Promise<{ borrowers: Borrower[]; institutions: Institution[]; creditAccounts: CreditAccount[] }>;
   createBorrower(borrower: InsertBorrower): Promise<Borrower>;
   updateBorrower(id: string, data: Partial<InsertBorrower>): Promise<Borrower | undefined>;
 
@@ -234,6 +235,70 @@ export class DatabaseStorage implements IStorage {
       ? and(searchCondition, countryCondition)
       : searchCondition;
     return db.select().from(borrowers).where(conditions!).orderBy(desc(borrowers.createdAt)).limit(200);
+  }
+
+  async globalSearch(query: string, country?: string): Promise<{ borrowers: Borrower[]; institutions: Institution[]; creditAccounts: CreditAccount[] }> {
+    const countryCondition = country ? eq(borrowers.country, country) : undefined;
+    const instCountryCondition = country ? eq(institutions.country, country) : undefined;
+
+    let borrowerResults: Borrower[] = [];
+    let institutionResults: Institution[] = [];
+    let creditAccountResults: CreditAccount[] = [];
+
+    if (query) {
+      const searchPattern = `%${query}%`;
+
+      const borrowerSearch = or(
+        ilike(borrowers.firstName, searchPattern),
+        ilike(borrowers.lastName, searchPattern),
+        ilike(borrowers.companyName, searchPattern),
+        ilike(borrowers.nationalId, searchPattern),
+        ilike(borrowers.tinNumber, searchPattern),
+        ilike(borrowers.phone, searchPattern),
+        ilike(borrowers.email, searchPattern),
+        ilike(borrowers.city, searchPattern),
+        ilike(borrowers.region, searchPattern),
+        ilike(borrowers.country, searchPattern),
+        ilike(borrowers.passportNumber, searchPattern),
+      );
+      const bConditions = countryCondition ? and(borrowerSearch, countryCondition) : borrowerSearch;
+      borrowerResults = await db.select().from(borrowers).where(bConditions!).orderBy(desc(borrowers.createdAt)).limit(50);
+
+      const instSearch = or(
+        ilike(institutions.name, searchPattern),
+        ilike(institutions.type, searchPattern),
+        ilike(institutions.country, searchPattern),
+        ilike(institutions.registrationNumber, searchPattern),
+        ilike(institutions.contactEmail, searchPattern),
+      );
+      const iConditions = instCountryCondition ? and(instSearch, instCountryCondition) : instSearch;
+      institutionResults = await db.select().from(institutions).where(iConditions!).orderBy(institutions.name).limit(20);
+
+      const accSearch = or(
+        ilike(creditAccounts.lenderInstitution, searchPattern),
+        ilike(creditAccounts.accountNumber, searchPattern),
+        ilike(creditAccounts.accountType, searchPattern),
+      );
+      if (country) {
+        const countryBorrowerIds = await db.select({ id: borrowers.id }).from(borrowers).where(eq(borrowers.country, country));
+        const ids = countryBorrowerIds.map(b => b.id);
+        if (ids.length > 0) {
+          creditAccountResults = await db.select().from(creditAccounts).where(and(accSearch, inArray(creditAccounts.borrowerId, ids))!).orderBy(desc(creditAccounts.createdAt)).limit(20);
+        }
+      } else {
+        creditAccountResults = await db.select().from(creditAccounts).where(accSearch!).orderBy(desc(creditAccounts.createdAt)).limit(20);
+      }
+    } else if (country) {
+      borrowerResults = await db.select().from(borrowers).where(countryCondition).orderBy(desc(borrowers.createdAt)).limit(50);
+      institutionResults = await db.select().from(institutions).where(instCountryCondition).orderBy(institutions.name).limit(20);
+      const countryBorrowerIds = await db.select({ id: borrowers.id }).from(borrowers).where(eq(borrowers.country, country));
+      const ids = countryBorrowerIds.map(b => b.id);
+      if (ids.length > 0) {
+        creditAccountResults = await db.select().from(creditAccounts).where(inArray(creditAccounts.borrowerId, ids)).orderBy(desc(creditAccounts.createdAt)).limit(20);
+      }
+    }
+
+    return { borrowers: borrowerResults, institutions: institutionResults, creditAccounts: creditAccountResults };
   }
 
   async createBorrower(borrower: InsertBorrower): Promise<Borrower> {
