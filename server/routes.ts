@@ -1552,6 +1552,15 @@ export async function registerRoutes(
     } catch (e: any) { res.status(500).json({ message: e.message }); }
   });
 
+  app.post("/api/exchange-rates/refresh", requireRole("admin"), async (req, res) => {
+    try {
+      const { fetchAndUpdateRates } = await import("./exchange-rate-scheduler");
+      const result = await fetchAndUpdateRates();
+      await storage.createAuditLog({ userId: req.session.userId, action: "REFRESH", entity: "exchange_rates", details: `Manual refresh: ${result.updated} updated, ${result.failed} failed`, ipAddress: req.ip });
+      res.json({ message: "Exchange rates refreshed", ...result });
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
   app.get("/api/exchange-rates/convert", requireAuth, async (req, res) => {
     try {
       const { amount, from, to } = req.query;

@@ -117,6 +117,20 @@ export default function ExchangeRatesPage() {
     },
   });
 
+  const refreshMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/exchange-rates/refresh");
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/exchange-rates"] });
+      toast({ title: t("exchangeRates.refreshed", "Rates Updated"), description: `${data.updated} ${t("exchangeRates.pairsUpdated", "currency pairs updated from live API")}` });
+    },
+    onError: (e: Error) => {
+      toast({ title: t("common.error"), description: e.message, variant: "destructive" });
+    },
+  });
+
   function resetForm() {
     setFormData({
       baseCurrency: "USD",
@@ -223,7 +237,17 @@ export default function ExchangeRatesPage() {
           </div>
           <p className="text-sm text-muted-foreground ml-4">{t("exchangeRates.subtitle")}</p>
         </div>
-        <Dialog open={addDialogOpen} onOpenChange={(open) => { setAddDialogOpen(open); if (!open) resetForm(); }}>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            data-testid="button-refresh-rates"
+            onClick={() => refreshMutation.mutate()}
+            disabled={refreshMutation.isPending}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${refreshMutation.isPending ? "animate-spin" : ""}`} />
+            {refreshMutation.isPending ? t("exchangeRates.refreshing", "Refreshing...") : t("exchangeRates.refreshRates", "Refresh Rates")}
+          </Button>
+          <Dialog open={addDialogOpen} onOpenChange={(open) => { setAddDialogOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
             <Button data-testid="button-add-rate">
               <Plus className="w-4 h-4 mr-2" />
@@ -237,6 +261,7 @@ export default function ExchangeRatesPage() {
             {renderRateForm(handleAddSubmit, createMutation.isPending, t("exchangeRates.addRate"))}
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <Card>

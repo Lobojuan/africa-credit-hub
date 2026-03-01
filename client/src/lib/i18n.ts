@@ -933,6 +933,11 @@ const en = {
     deleted: "Exchange rate deleted",
     manual: "Manual",
     api: "API",
+    refreshRates: "Refresh Rates",
+    refreshing: "Refreshing...",
+    refreshed: "Rates Updated",
+    pairsUpdated: "currency pairs updated from live API",
+    autoUpdated: "Auto-updated every 6 hours",
   },
   apiAdmin: {
     title: "API Administration",
@@ -1965,6 +1970,11 @@ const fr: typeof en = {
     deleted: "Taux de change supprimé",
     manual: "Manuel",
     api: "API",
+    refreshRates: "Actualiser les taux",
+    refreshing: "Actualisation...",
+    refreshed: "Taux mis à jour",
+    pairsUpdated: "paires de devises mises à jour depuis l'API",
+    autoUpdated: "Mise à jour automatique toutes les 6 heures",
   },
   apiAdmin: {
     title: "Administration API",

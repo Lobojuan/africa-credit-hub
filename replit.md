@@ -38,7 +38,7 @@ The system employs a modern full-stack architecture:
 -   **Low-Bandwidth Optimizations**: gzip compression middleware, React.lazy route code-splitting with Suspense
 -   **XBRL Upload**: Batch upload page supports XBRL/XML format tab with sample and parsing endpoint
 -   **Tamper-Evident Audit Logs**: SHA-256 hash chain on audit log entries with integrity verification badge
--   **Exchange Rate Management**: Multi-currency conversion with 18-currency support, cross-rate via USD routing, admin CRUD for rate pairs
+-   **Exchange Rate Management**: Multi-currency conversion with 44-currency support (42 African + EUR/GBP), cross-rate via USD routing, admin CRUD for rate pairs, automatic live rate fetching every 6 hours via open.er-api.com, manual "Refresh Rates" button for on-demand updates
 -   **API Administration Module**: Centralized external API configuration management (weather, judicial, payment gateway, exchange rate) with connection testing
 -   **Data Retention Policies**: Jurisdiction-specific retention periods (REQ-RET-01), admin/regulator CRUD for policy management, automatic enforcement scheduler (24hr cycle) + manual trigger via Run Enforcement button
 -   **Retention Enforcement Engine**: Background scheduler auto-archives/expunges records based on per-country retention policies; supports borrower-linked, credit-account-linked, and global entity types; audit-logged enforcement results

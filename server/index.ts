@@ -147,6 +147,9 @@ process.on("unhandledRejection", (err) => { console.error("Unhandled rejection:"
   const { startRetentionScheduler } = await import("./retention-enforcement");
   startRetentionScheduler(24);
 
+  const { startExchangeRateScheduler } = await import("./exchange-rate-scheduler");
+  startExchangeRateScheduler();
+
   const port = parseInt(process.env.PORT || "5000", 10);
   httpServer.listen(port, "0.0.0.0", () => {
     log(`serving on port ${port}`);
