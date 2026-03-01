@@ -14,26 +14,24 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatCard } from "@/components/stat-card";
-import { formatCurrency } from "@/lib/currency";
+import { formatCurrency, detectLocalCurrency, SUPPORTED_CURRENCIES } from "@/lib/currency";
 import type { CreditAccount, AuditLog, ExchangeRate } from "@shared/schema";
 
-const DISPLAY_CURRENCIES = [
-  { code: "USD", label: "USD ($)", symbol: "$" },
-  { code: "EUR", label: "EUR (€)", symbol: "€" },
-  { code: "GBP", label: "GBP (£)", symbol: "£" },
-  { code: "ETB", label: "ETB (Br)", symbol: "Br" },
-  { code: "KES", label: "KES (KSh)", symbol: "KSh" },
-  { code: "NGN", label: "NGN (₦)", symbol: "₦" },
-  { code: "ZAR", label: "ZAR (R)", symbol: "R" },
-  { code: "EGP", label: "EGP (E£)", symbol: "E£" },
-  { code: "GHS", label: "GHS (₵)", symbol: "₵" },
-  { code: "TZS", label: "TZS (TSh)", symbol: "TSh" },
-  { code: "UGX", label: "UGX (USh)", symbol: "USh" },
-  { code: "XAF", label: "XAF (FCFA)", symbol: "FCFA" },
-  { code: "XOF", label: "XOF (CFA)", symbol: "CFA" },
-  { code: "MAD", label: "MAD", symbol: "MAD" },
-  { code: "RWF", label: "RWF (FRw)", symbol: "FRw" },
-];
+const POPULAR_CODES = ["USD", "EUR", "GBP", "ETB", "KES", "NGN", "ZAR", "EGP", "GHS", "TZS", "UGX", "XAF", "XOF", "MAD", "RWF"];
+
+function getDisplayCurrencies(detectedCode: string) {
+  const codes = new Set(POPULAR_CODES);
+  codes.add(detectedCode);
+  return SUPPORTED_CURRENCIES
+    .filter(c => codes.has(c.code))
+    .sort((a, b) => {
+      if (a.code === detectedCode) return -1;
+      if (b.code === detectedCode) return 1;
+      const ai = POPULAR_CODES.indexOf(a.code);
+      const bi = POPULAR_CODES.indexOf(b.code);
+      return ai - bi;
+    });
+}
 
 function buildRateMap(rates: ExchangeRate[]): Map<string, number> {
   const map = new Map<string, number>();
@@ -68,7 +66,7 @@ function getStatusColor(status: string) {
 
 function BreakdownTable({ data, columns }: {
   data: any[];
-  columns: { key: string; label: string; format?: (v: any) => string }[];
+  columns: { key: string; label: string; format?: (v: any, row?: any) => string }[];
 }) {
   if (!data || data.length === 0) return <p className="text-sm text-muted-foreground py-4 text-center">No data available</p>;
   return (
@@ -86,7 +84,7 @@ function BreakdownTable({ data, columns }: {
             <tr key={i} className="hover:bg-muted/20 transition-colors">
               {columns.map(col => (
                 <td key={col.key} className="px-3 py-2.5 text-sm">
-                  {col.format ? col.format(row[col.key]) : (row[col.key] ?? "—")}
+                  {col.format ? col.format(row[col.key], row) : (row[col.key] ?? "—")}
                 </td>
               ))}
             </tr>
@@ -148,8 +146,12 @@ const detailConfig: Record<string, { title: string; icon: any; navigateTo: strin
   disputes: { title: "Open Disputes", icon: AlertCircle, navigateTo: "/disputes" },
 };
 
-function DetailContent({ type, data }: { type: DetailType; data: any }) {
+function DetailContent({ type, data, displayCurrency, convertAmount }: { type: DetailType; data: any; displayCurrency: string; convertAmount: (v: string | number, from: string) => number | null }) {
   if (!data || !type) return <Skeleton className="h-40 w-full" />;
+  const fmtConverted = (v: any, fromCurrency = "ETB") => {
+    const converted = convertAmount(v, fromCurrency);
+    return converted !== null ? formatCurrency(converted, displayCurrency, { compact: true }) : formatCurrency(v, fromCurrency, { compact: true });
+  };
 
   switch (type) {
     case "borrowers":
@@ -204,7 +206,7 @@ function DetailContent({ type, data }: { type: DetailType; data: any }) {
               columns={[
                 { key: "institution", label: "Institution" },
                 { key: "count", label: "Accounts", format: (v: any) => Number(v).toLocaleString() },
-                { key: "total", label: "Total Balance", format: (v: any) => formatCurrency(v, "ETB", { compact: true }) },
+                { key: "total", label: `Total Balance (${displayCurrency})`, format: (v: any) => fmtConverted(v) },
               ]}
             />
           </div>
@@ -221,7 +223,10 @@ function DetailContent({ type, data }: { type: DetailType; data: any }) {
               columns={[
                 { key: "currency", label: "Currency" },
                 { key: "count", label: "Accounts", format: (v: any) => Number(v).toLocaleString() },
-                { key: "total", label: "Outstanding", format: (v: any) => Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) },
+                { key: "total", label: `Outstanding (${displayCurrency})`, format: (v: any, row: any) => {
+                  const rowCurrency = row?.currency || "ETB";
+                  return fmtConverted(v, rowCurrency);
+                }},
               ]}
             />
           </div>
@@ -232,7 +237,7 @@ function DetailContent({ type, data }: { type: DetailType; data: any }) {
               columns={[
                 { key: "institution", label: "Institution" },
                 { key: "count", label: "Accounts", format: (v: any) => Number(v).toLocaleString() },
-                { key: "total", label: "Outstanding", format: (v: any) => formatCurrency(v, "ETB", { compact: true }) },
+                { key: "total", label: `Outstanding (${displayCurrency})`, format: (v: any) => fmtConverted(v) },
               ]}
             />
           </div>
@@ -249,7 +254,7 @@ function DetailContent({ type, data }: { type: DetailType; data: any }) {
               columns={[
                 { key: "institution", label: "Institution" },
                 { key: "count", label: "Delinquent", format: (v: any) => Number(v).toLocaleString() },
-                { key: "totalOverdue", label: "Total Overdue", format: (v: any) => formatCurrency(v, "ETB", { compact: true }) },
+                { key: "totalOverdue", label: `Total Overdue (${displayCurrency})`, format: (v: any) => fmtConverted(v) },
               ]}
             />
           </div>
@@ -262,7 +267,7 @@ function DetailContent({ type, data }: { type: DetailType; data: any }) {
                   { key: "accountNumber", label: "Account" },
                   { key: "lenderInstitution", label: "Institution" },
                   { key: "daysInArrears", label: "Days Late", format: (v: any) => `${v} days` },
-                  { key: "currentBalance", label: "Balance", format: (v: any) => formatCurrency(v, "ETB", { compact: true }) },
+                  { key: "currentBalance", label: `Balance (${displayCurrency})`, format: (v: any) => fmtConverted(v) },
                 ]}
               />
             </div>
@@ -280,7 +285,7 @@ function DetailContent({ type, data }: { type: DetailType; data: any }) {
               columns={[
                 { key: "institution", label: "Institution" },
                 { key: "count", label: "Defaulted", format: (v: any) => Number(v).toLocaleString() },
-                { key: "totalDefaulted", label: "Total Defaulted", format: (v: any) => formatCurrency(v, "ETB", { compact: true }) },
+                { key: "totalDefaulted", label: `Total Defaulted (${displayCurrency})`, format: (v: any) => fmtConverted(v) },
               ]}
             />
           </div>
@@ -292,7 +297,7 @@ function DetailContent({ type, data }: { type: DetailType; data: any }) {
                 columns={[
                   { key: "accountNumber", label: "Account" },
                   { key: "lenderInstitution", label: "Institution" },
-                  { key: "currentBalance", label: "Default Amount", format: (v: any) => formatCurrency(v, "ETB", { compact: true }) },
+                  { key: "currentBalance", label: `Default Amount (${displayCurrency})`, format: (v: any) => fmtConverted(v) },
                   { key: "accountType", label: "Type" },
                 ]}
               />
@@ -399,9 +404,11 @@ export default function Dashboard() {
   const { t } = useTranslation();
   const [, navigate] = useLocation();
   const [selectedDetail, setSelectedDetail] = useState<DetailType>(null);
+  const [detectedCurrency] = useState(() => detectLocalCurrency());
   const [displayCurrency, setDisplayCurrency] = useState(() => {
-    return localStorage.getItem("dashboard_currency") || "USD";
+    return localStorage.getItem("dashboard_currency") || detectedCurrency;
   });
+  const currencyOptions = useMemo(() => getDisplayCurrencies(detectedCurrency), [detectedCurrency]);
 
   const { data: stats, isLoading: statsLoading } = useQuery<{
     totalBorrowers: number;
@@ -433,6 +440,19 @@ export default function Dashboard() {
         total += converted;
         hasConversion = true;
       }
+    }
+    return hasConversion ? total : null;
+  }, [stats?.outstandingByCurrency, displayCurrency, rateMap]);
+
+  const usdOutstanding = useMemo(() => {
+    if (!stats?.outstandingByCurrency || rateMap.size === 0 || displayCurrency === "USD") return null;
+    let total = 0;
+    let hasConversion = false;
+    for (const bucket of stats.outstandingByCurrency) {
+      const amount = parseFloat(bucket.total);
+      if (amount === 0) continue;
+      const converted = convertViaUSD(amount, bucket.currency, "USD", rateMap);
+      if (converted !== null) { total += converted; hasConversion = true; }
     }
     return hasConversion ? total : null;
   }, [stats?.outstandingByCurrency, displayCurrency, rateMap]);
@@ -478,14 +498,14 @@ export default function Dashboard() {
         </div>
         <div className="flex items-center gap-3">
           <Select value={displayCurrency} onValueChange={handleCurrencyChange}>
-            <SelectTrigger className="w-[140px] h-8 text-xs" data-testid="select-dashboard-currency">
+            <SelectTrigger className="w-[150px] h-8 text-xs" data-testid="select-dashboard-currency">
               <Banknote className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {DISPLAY_CURRENCIES.map(c => (
+              {currencyOptions.map((c, i) => (
                 <SelectItem key={c.code} value={c.code} data-testid={`currency-option-${c.code}`}>
-                  {c.label}
+                  {c.code === detectedCurrency && i === 0 ? `${c.symbol} ${c.code} (Local)` : `${c.symbol} ${c.code}`}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -506,7 +526,15 @@ export default function Dashboard() {
           <>
             <StatCard title={t('dashboard.totalBorrowers')} value={stats.totalBorrowers.toLocaleString()} icon={Users} testId="stat-borrowers" colorIndex={0} onClick={() => setSelectedDetail("borrowers")} />
             <StatCard title={t('dashboard.creditAccounts')} value={stats.totalAccounts.toLocaleString()} icon={CreditCard} testId="stat-accounts" colorIndex={1} onClick={() => setSelectedDetail("accounts")} />
-            <StatCard title={t('dashboard.outstanding')} value={formatCurrency(stats.totalOutstanding, "ETB", { compact: true })} icon={DollarSign} testId="stat-outstanding" colorIndex={2} onClick={() => setSelectedDetail("outstanding")} />
+            <StatCard
+              title={t('dashboard.outstanding')}
+              value={convertedOutstanding !== null ? formatCurrency(convertedOutstanding, displayCurrency, { compact: true }) : formatCurrency(stats.totalOutstanding, displayCurrency, { compact: true })}
+              icon={DollarSign}
+              testId="stat-outstanding"
+              colorIndex={2}
+              onClick={() => setSelectedDetail("outstanding")}
+              subtitle={usdOutstanding !== null ? `≈ ${formatCurrency(usdOutstanding, "USD", { compact: true })}` : undefined}
+            />
             <StatCard title={t('dashboard.delinquent')} value={stats.delinquentAccounts.toLocaleString()} icon={AlertTriangle} testId="stat-delinquent" subtitle={t('dashboard.delinquentSub')} colorIndex={3} onClick={() => setSelectedDetail("delinquent")} />
             <StatCard title={t('dashboard.defaults')} value={stats.defaultAccounts.toLocaleString()} icon={ShieldAlert} testId="stat-defaults" subtitle={t('dashboard.defaultsSub')} colorIndex={4} onClick={() => setSelectedDetail("defaults")} />
             <StatCard title={t('dashboard.inquiries')} value={stats.totalInquiries.toLocaleString()} icon={Search} testId="stat-inquiries" colorIndex={5} onClick={() => setSelectedDetail("inquiries")} />
@@ -660,7 +688,7 @@ export default function Dashboard() {
                 <Skeleton className="h-24 w-full" />
               </div>
             ) : (
-              <DetailContent type={selectedDetail} data={detailData} />
+              <DetailContent type={selectedDetail} data={detailData} displayCurrency={displayCurrency} convertAmount={convertAmount} />
             )}
           </div>
           {config && (

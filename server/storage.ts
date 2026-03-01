@@ -109,6 +109,7 @@ export interface IStorage {
     totalAccounts: number;
     totalInquiries: number;
     totalOutstanding: string;
+    outstandingByCurrency: { currency: string; total: string }[];
     delinquentAccounts: number;
     defaultAccounts: number;
     pendingApprovalCount: number;

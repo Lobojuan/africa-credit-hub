@@ -156,6 +156,78 @@ export function formatCurrency(
   }
 }
 
+const TIMEZONE_TO_CURRENCY: Record<string, string> = {
+  "Africa/Algiers": "DZD",
+  "Africa/Luanda": "AOA",
+  "Africa/Porto-Novo": "XOF", "Africa/Cotonou": "XOF",
+  "Africa/Gaborone": "BWP",
+  "Africa/Ouagadougou": "XOF",
+  "Africa/Bujumbura": "BIF",
+  "Atlantic/Cape_Verde": "CVE",
+  "Africa/Douala": "XAF",
+  "Africa/Bangui": "XAF",
+  "Africa/Ndjamena": "XAF",
+  "Indian/Comoro": "KMF",
+  "Africa/Brazzaville": "XAF",
+  "Africa/Kinshasa": "CDF", "Africa/Lubumbashi": "CDF",
+  "Africa/Abidjan": "XOF",
+  "Africa/Djibouti": "DJF",
+  "Africa/Cairo": "EGP",
+  "Africa/Malabo": "XAF",
+  "Africa/Asmara": "ERN", "Africa/Asmera": "ERN",
+  "Africa/Mbabane": "SZL",
+  "Africa/Addis_Ababa": "ETB",
+  "Africa/Libreville": "XAF",
+  "Africa/Banjul": "GMD",
+  "Africa/Accra": "GHS",
+  "Africa/Conakry": "GNF",
+  "Africa/Bissau": "XOF",
+  "Africa/Nairobi": "KES",
+  "Africa/Maseru": "LSL",
+  "Africa/Monrovia": "LRD",
+  "Africa/Tripoli": "LYD",
+  "Indian/Antananarivo": "MGA",
+  "Africa/Blantyre": "MWK",
+  "Africa/Bamako": "XOF",
+  "Africa/Nouakchott": "MRU",
+  "Indian/Mauritius": "MUR",
+  "Africa/Casablanca": "MAD",
+  "Africa/Maputo": "MZN",
+  "Africa/Windhoek": "NAD",
+  "Africa/Niamey": "XOF",
+  "Africa/Lagos": "NGN",
+  "Africa/Kigali": "RWF",
+  "Africa/Sao_Tome": "STN",
+  "Africa/Dakar": "XOF",
+  "Indian/Mahe": "SCR",
+  "Africa/Freetown": "SLL",
+  "Africa/Mogadishu": "SOS",
+  "Africa/Johannesburg": "ZAR",
+  "Africa/Juba": "SSP",
+  "Africa/Khartoum": "SDG",
+  "Africa/Dar_es_Salaam": "TZS",
+  "Africa/Lome": "XOF",
+  "Africa/Tunis": "TND",
+  "Africa/Kampala": "UGX",
+  "Africa/Lusaka": "ZMW",
+  "Africa/Harare": "ZWL",
+  "Europe/London": "GBP",
+  "Europe/Paris": "EUR", "Europe/Berlin": "EUR", "Europe/Rome": "EUR",
+  "Europe/Madrid": "EUR", "Europe/Amsterdam": "EUR", "Europe/Brussels": "EUR",
+  "Europe/Lisbon": "EUR", "Europe/Vienna": "EUR", "Europe/Dublin": "EUR",
+  "America/New_York": "USD", "America/Chicago": "USD", "America/Denver": "USD",
+  "America/Los_Angeles": "USD", "America/Phoenix": "USD",
+  "Asia/Dubai": "USD", "Asia/Riyadh": "USD",
+};
+
+export function detectLocalCurrency(): string {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (tz && TIMEZONE_TO_CURRENCY[tz]) return TIMEZONE_TO_CURRENCY[tz];
+  } catch {}
+  return "USD";
+}
+
 export function formatCurrencyValue(
   value: string | number,
   currencyCode = "ETB"
