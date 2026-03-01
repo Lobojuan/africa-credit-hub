@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Bot, User, Send, X, MessageCircle } from "lucide-react";
+import { Bot, User, Send, X, MessageCircle, HelpCircle, FileWarning } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -16,15 +16,159 @@ interface Message {
   options?: string[];
 }
 
-type Step = "greeting" | "issue_type" | "borrower_search" | "select_borrower" | "select_account" | "description" | "confirm" | "done";
+type Mode = "menu" | "dispute" | "faq";
+type DisputeStep = "issue_type" | "borrower_search" | "select_borrower" | "select_account" | "description" | "confirm" | "done";
+type FaqStep = "categories" | "questions" | "answer" | "search";
 
 const DISPUTE_TYPES = ["incorrect_balance", "wrong_status", "identity_error", "unauthorized_inquiry", "other"];
+
+interface FaqItem {
+  q: string;
+  a: string;
+}
+
+function buildFaqData(t: (key: string) => string): Record<string, { label: string; items: FaqItem[] }> {
+  return {
+    getting_started: {
+      label: t("faq.categories.getting_started"),
+      items: [
+        { q: t("faq.gs.q1"), a: t("faq.gs.a1") },
+        { q: t("faq.gs.q2"), a: t("faq.gs.a2") },
+        { q: t("faq.gs.q3"), a: t("faq.gs.a3") },
+        { q: t("faq.gs.q4"), a: t("faq.gs.a4") },
+        { q: t("faq.gs.q5"), a: t("faq.gs.a5") },
+      ],
+    },
+    borrowers: {
+      label: t("faq.categories.borrowers"),
+      items: [
+        { q: t("faq.bor.q1"), a: t("faq.bor.a1") },
+        { q: t("faq.bor.q2"), a: t("faq.bor.a2") },
+        { q: t("faq.bor.q3"), a: t("faq.bor.a3") },
+        { q: t("faq.bor.q4"), a: t("faq.bor.a4") },
+        { q: t("faq.bor.q5"), a: t("faq.bor.a5") },
+      ],
+    },
+    credit_accounts: {
+      label: t("faq.categories.credit_accounts"),
+      items: [
+        { q: t("faq.ca.q1"), a: t("faq.ca.a1") },
+        { q: t("faq.ca.q2"), a: t("faq.ca.a2") },
+        { q: t("faq.ca.q3"), a: t("faq.ca.a3") },
+        { q: t("faq.ca.q4"), a: t("faq.ca.a4") },
+      ],
+    },
+    credit_reports: {
+      label: t("faq.categories.credit_reports"),
+      items: [
+        { q: t("faq.cr.q1"), a: t("faq.cr.a1") },
+        { q: t("faq.cr.q2"), a: t("faq.cr.a2") },
+        { q: t("faq.cr.q3"), a: t("faq.cr.a3") },
+        { q: t("faq.cr.q4"), a: t("faq.cr.a4") },
+      ],
+    },
+    disputes: {
+      label: t("faq.categories.disputes"),
+      items: [
+        { q: t("faq.dis.q1"), a: t("faq.dis.a1") },
+        { q: t("faq.dis.q2"), a: t("faq.dis.a2") },
+        { q: t("faq.dis.q3"), a: t("faq.dis.a3") },
+        { q: t("faq.dis.q4"), a: t("faq.dis.a4") },
+      ],
+    },
+    approvals: {
+      label: t("faq.categories.approvals"),
+      items: [
+        { q: t("faq.appr.q1"), a: t("faq.appr.a1") },
+        { q: t("faq.appr.q2"), a: t("faq.appr.a2") },
+        { q: t("faq.appr.q3"), a: t("faq.appr.a3") },
+      ],
+    },
+    security: {
+      label: t("faq.categories.security"),
+      items: [
+        { q: t("faq.sec.q1"), a: t("faq.sec.a1") },
+        { q: t("faq.sec.q2"), a: t("faq.sec.a2") },
+        { q: t("faq.sec.q3"), a: t("faq.sec.a3") },
+        { q: t("faq.sec.q4"), a: t("faq.sec.a4") },
+        { q: t("faq.sec.q5"), a: t("faq.sec.a5") },
+      ],
+    },
+    batch_upload: {
+      label: t("faq.categories.batch_upload"),
+      items: [
+        { q: t("faq.bu.q1"), a: t("faq.bu.a1") },
+        { q: t("faq.bu.q2"), a: t("faq.bu.a2") },
+        { q: t("faq.bu.q3"), a: t("faq.bu.a3") },
+      ],
+    },
+    institutions: {
+      label: t("faq.categories.institutions"),
+      items: [
+        { q: t("faq.inst.q1"), a: t("faq.inst.a1") },
+        { q: t("faq.inst.q2"), a: t("faq.inst.a2") },
+        { q: t("faq.inst.q3"), a: t("faq.inst.a3") },
+      ],
+    },
+    billing: {
+      label: t("faq.categories.billing"),
+      items: [
+        { q: t("faq.bill.q1"), a: t("faq.bill.a1") },
+        { q: t("faq.bill.q2"), a: t("faq.bill.a2") },
+      ],
+    },
+    consent: {
+      label: t("faq.categories.consent"),
+      items: [
+        { q: t("faq.con.q1"), a: t("faq.con.a1") },
+        { q: t("faq.con.q2"), a: t("faq.con.a2") },
+        { q: t("faq.con.q3"), a: t("faq.con.a3") },
+      ],
+    },
+    court_judgments: {
+      label: t("faq.categories.court_judgments"),
+      items: [
+        { q: t("faq.cj.q1"), a: t("faq.cj.a1") },
+        { q: t("faq.cj.q2"), a: t("faq.cj.a2") },
+      ],
+    },
+    api: {
+      label: t("faq.categories.api"),
+      items: [
+        { q: t("faq.api.q1"), a: t("faq.api.a1") },
+        { q: t("faq.api.q2"), a: t("faq.api.a2") },
+        { q: t("faq.api.q3"), a: t("faq.api.a3") },
+        { q: t("faq.api.q4"), a: t("faq.api.a4") },
+      ],
+    },
+    audit: {
+      label: t("faq.categories.audit"),
+      items: [
+        { q: t("faq.aud.q1"), a: t("faq.aud.a1") },
+        { q: t("faq.aud.q2"), a: t("faq.aud.a2") },
+        { q: t("faq.aud.q3"), a: t("faq.aud.a3") },
+      ],
+    },
+    general: {
+      label: t("faq.categories.general"),
+      items: [
+        { q: t("faq.gen.q1"), a: t("faq.gen.a1") },
+        { q: t("faq.gen.q2"), a: t("faq.gen.a2") },
+        { q: t("faq.gen.q3"), a: t("faq.gen.a3") },
+        { q: t("faq.gen.q4"), a: t("faq.gen.a4") },
+      ],
+    },
+  };
+}
 
 export function DisputeChatbot() {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState<Step>("greeting");
+  const [mode, setMode] = useState<Mode>("menu");
+  const [disputeStep, setDisputeStep] = useState<DisputeStep>("issue_type");
+  const [faqStep, setFaqStep] = useState<FaqStep>("categories");
+  const [faqCategory, setFaqCategory] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [disputeType, setDisputeType] = useState("");
@@ -34,14 +178,16 @@ export function DisputeChatbot() {
   const [searchQuery, setSearchQuery] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const faqData = useMemo(() => buildFaqData(t), [t, i18n.language]);
+
   const { data: searchResults } = useQuery<Borrower[]>({
     queryKey: [`/api/borrowers?search=${encodeURIComponent(searchQuery)}`],
-    enabled: searchQuery.length >= 2 && step === "select_borrower",
+    enabled: searchQuery.length >= 2 && mode === "dispute" && disputeStep === "select_borrower",
   });
 
   const { data: accounts } = useQuery<CreditAccount[]>({
     queryKey: [`/api/credit-accounts?borrowerId=${selectedBorrower?.id}`],
-    enabled: !!selectedBorrower && step === "select_account",
+    enabled: !!selectedBorrower && mode === "dispute" && disputeStep === "select_account",
   });
 
   const submitMutation = useMutation({
@@ -59,7 +205,7 @@ export function DisputeChatbot() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/disputes"] });
       addBot(t("chatbot.success"));
-      setStep("done");
+      setDisputeStep("done");
     },
     onError: (e: Error) => {
       addBot(t("chatbot.error") + ": " + e.message);
@@ -72,7 +218,7 @@ export function DisputeChatbot() {
 
   useEffect(() => {
     if (open) {
-      startChat();
+      showMainMenu();
     }
   }, [i18n.language]);
 
@@ -84,28 +230,131 @@ export function DisputeChatbot() {
     setMessages((m) => [...m, { role: "user", text }]);
   };
 
-  const startChat = () => {
+  const showMainMenu = () => {
     setMessages([]);
-    setStep("greeting");
+    setMode("menu");
+    setDisputeStep("issue_type");
+    setFaqStep("categories");
+    setFaqCategory("");
     setDisputeType("");
     setSelectedBorrower(null);
     setSelectedAccount(null);
     setDescription("");
     setSearchQuery("");
     setInput("");
-    addBot(t("chatbot.greeting"), DISPUTE_TYPES.map((d) => t(`disputes.types.${d}`)));
-    setStep("issue_type");
+    addBot(t("chatbot.mainMenu"), [t("chatbot.menuDispute"), t("chatbot.menuFaq"), t("chatbot.menuSearch")]);
   };
 
-  const handleOptionClick = (option: string) => {
-    if (step === "issue_type") {
-      const idx = DISPUTE_TYPES.findIndex((d) => t(`disputes.types.${d}`) === option);
-      if (idx >= 0) {
-        setDisputeType(DISPUTE_TYPES[idx]);
+  const startDispute = () => {
+    setMode("dispute");
+    setDisputeStep("issue_type");
+    addBot(t("chatbot.greeting"), DISPUTE_TYPES.map((d) => t(`disputes.types.${d}`)));
+  };
+
+  const startFaq = () => {
+    setMode("faq");
+    setFaqStep("categories");
+    const cats = Object.keys(faqData).map((k) => faqData[k].label);
+    addBot(t("chatbot.faqSelectCategory"), cats);
+  };
+
+  const startSearch = () => {
+    setMode("faq");
+    setFaqStep("search");
+    addBot(t("chatbot.faqSearchPrompt"));
+  };
+
+  const handleMainMenuClick = (option: string) => {
+    addUser(option);
+    if (option === t("chatbot.menuDispute")) {
+      startDispute();
+    } else if (option === t("chatbot.menuFaq")) {
+      startFaq();
+    } else if (option === t("chatbot.menuSearch")) {
+      startSearch();
+    }
+  };
+
+  const handleFaqCategoryClick = (option: string) => {
+    const catKey = Object.keys(faqData).find((k) => faqData[k].label === option);
+    if (catKey) {
+      setFaqCategory(catKey);
+      setFaqStep("questions");
+      addUser(option);
+      const questions = faqData[catKey].items.map((item) => item.q);
+      addBot(t("chatbot.faqSelectQuestion"), questions);
+    }
+  };
+
+  const handleFaqQuestionClick = (option: string) => {
+    const cat = faqData[faqCategory];
+    if (cat) {
+      const item = cat.items.find((i) => i.q === option);
+      if (item) {
         addUser(option);
-        addBot(t("chatbot.askBorrower"));
-        setStep("borrower_search");
+        setFaqStep("answer");
+        addBot(item.a, [t("chatbot.faqAnotherQuestion"), t("chatbot.faqAnotherCategory"), t("chatbot.faqBackToMenu")]);
       }
+    }
+  };
+
+  const handleFaqNavClick = (option: string) => {
+    addUser(option);
+    if (option === t("chatbot.faqAnotherQuestion")) {
+      setFaqStep("questions");
+      const questions = faqData[faqCategory].items.map((item) => item.q);
+      addBot(t("chatbot.faqSelectQuestion"), questions);
+    } else if (option === t("chatbot.faqAnotherCategory")) {
+      setFaqStep("categories");
+      const cats = Object.keys(faqData).map((k) => faqData[k].label);
+      addBot(t("chatbot.faqSelectCategory"), cats);
+    } else if (option === t("chatbot.faqBackToMenu")) {
+      showMainMenu();
+    }
+  };
+
+  const handleFaqSearch = (query: string) => {
+    const lowerQuery = query.toLowerCase();
+    const results: { category: string; item: FaqItem }[] = [];
+    for (const [catKey, cat] of Object.entries(faqData)) {
+      for (const item of cat.items) {
+        if (item.q.toLowerCase().includes(lowerQuery) || item.a.toLowerCase().includes(lowerQuery)) {
+          results.push({ category: cat.label, item });
+        }
+      }
+    }
+
+    if (results.length === 0) {
+      addBot(t("chatbot.faqNoResults"), [t("chatbot.faqAnotherCategory"), t("chatbot.faqBackToMenu")]);
+      setFaqStep("answer");
+    } else {
+      const topResults = results.slice(0, 5);
+      const questions = topResults.map((r) => r.item.q);
+      addBot(t("chatbot.faqSearchResults", { count: String(results.length) }), questions);
+      setFaqStep("search_results");
+    }
+  };
+
+  const handleSearchResultClick = (option: string) => {
+    for (const [catKey, cat] of Object.entries(faqData)) {
+      const item = cat.items.find((i) => i.q === option);
+      if (item) {
+        setFaqCategory(catKey);
+        addUser(option);
+        setFaqStep("answer");
+        addBot(item.a, [t("chatbot.faqAnotherQuestion"), t("chatbot.faqAnotherCategory"), t("chatbot.faqBackToMenu")]);
+        return;
+      }
+    }
+  };
+
+  const handleDisputeOptionClick = (option: string) => {
+    const idx = DISPUTE_TYPES.findIndex((d) => t(`disputes.types.${d}`) === option);
+    if (idx >= 0) {
+      setDisputeType(DISPUTE_TYPES[idx]);
+      addUser(option);
+      addBot(t("chatbot.askBorrower"));
+      setDisputeStep("borrower_search");
     }
   };
 
@@ -114,27 +363,35 @@ export function DisputeChatbot() {
     const text = input.trim();
     setInput("");
 
-    if (step === "borrower_search") {
+    if (mode === "faq" && (faqStep === "search" || faqStep === "search_results")) {
       addUser(text);
-      setSearchQuery(text);
-      addBot(t("chatbot.searching"));
-      setStep("select_borrower");
-    } else if (step === "description") {
-      addUser(text);
-      setDescription(text);
-      const borrowerName = selectedBorrower?.type === "corporate"
-        ? selectedBorrower.companyName
-        : `${selectedBorrower?.firstName} ${selectedBorrower?.lastName}`;
-      addBot(
-        t("chatbot.confirmSummary", {
-          type: t(`disputes.types.${disputeType}`),
-          borrower: borrowerName,
-          account: selectedAccount?.accountNumber || t("chatbot.noAccount"),
-          description: text,
-        }),
-        [t("chatbot.submit"), t("chatbot.cancel")]
-      );
-      setStep("confirm");
+      handleFaqSearch(text);
+      return;
+    }
+
+    if (mode === "dispute") {
+      if (disputeStep === "borrower_search") {
+        addUser(text);
+        setSearchQuery(text);
+        addBot(t("chatbot.searching"));
+        setDisputeStep("select_borrower");
+      } else if (disputeStep === "description") {
+        addUser(text);
+        setDescription(text);
+        const borrowerName = selectedBorrower?.type === "corporate"
+          ? selectedBorrower.companyName
+          : `${selectedBorrower?.firstName} ${selectedBorrower?.lastName}`;
+        addBot(
+          t("chatbot.confirmSummary", {
+            type: t(`disputes.types.${disputeType}`),
+            borrower: borrowerName,
+            account: selectedAccount?.accountNumber || t("chatbot.noAccount"),
+            description: text,
+          }),
+          [t("chatbot.submit"), t("chatbot.cancel")]
+        );
+        setDisputeStep("confirm");
+      }
     }
   };
 
@@ -143,14 +400,14 @@ export function DisputeChatbot() {
     const name = borrower.type === "corporate" ? borrower.companyName : `${borrower.firstName} ${borrower.lastName}`;
     addUser(name || "");
     addBot(t("chatbot.askAccount"));
-    setStep("select_account");
+    setDisputeStep("select_account");
   };
 
   const handleAccountSelect = (account: CreditAccount | null) => {
     setSelectedAccount(account);
     addUser(account ? account.accountNumber : t("chatbot.skipAccount"));
     addBot(t("chatbot.askDescription"));
-    setStep("description");
+    setDisputeStep("description");
   };
 
   const handleConfirmAction = (action: string) => {
@@ -160,15 +417,32 @@ export function DisputeChatbot() {
     } else {
       addUser(t("chatbot.cancel"));
       addBot(t("chatbot.cancelled"));
-      setStep("done");
+      setDisputeStep("done");
     }
   };
+
+  const handleOptionClick = (option: string) => {
+    if (mode === "menu") {
+      handleMainMenuClick(option);
+    } else if (mode === "faq") {
+      if (faqStep === "categories") handleFaqCategoryClick(option);
+      else if (faqStep === "questions") handleFaqQuestionClick(option);
+      else if (faqStep === "answer") handleFaqNavClick(option);
+      else if (faqStep === "search_results") handleSearchResultClick(option);
+    } else if (mode === "dispute") {
+      if (disputeStep === "issue_type") handleDisputeOptionClick(option);
+      else if (disputeStep === "confirm") handleConfirmAction(option);
+    }
+  };
+
+  const showInput = (mode === "dispute" && (disputeStep === "borrower_search" || disputeStep === "description")) ||
+    (mode === "faq" && (faqStep === "search" || faqStep === "search_results"));
 
   if (!open) {
     return (
       <Button
         className="fixed bottom-6 right-6 rounded-full h-14 w-14 shadow-lg z-50"
-        onClick={() => { setOpen(true); startChat(); }}
+        onClick={() => { setOpen(true); showMainMenu(); }}
         data-testid="button-open-chatbot"
       >
         <MessageCircle className="w-6 h-6" />
@@ -177,15 +451,20 @@ export function DisputeChatbot() {
   }
 
   return (
-    <Card className="fixed bottom-6 right-6 w-[380px] h-[520px] flex flex-col shadow-2xl z-50 overflow-hidden" data-testid="chatbot-container">
+    <Card className="fixed bottom-6 right-6 w-[400px] h-[560px] flex flex-col shadow-2xl z-50 overflow-hidden" data-testid="chatbot-container">
       <div className="flex items-center justify-between p-3 border-b bg-primary text-primary-foreground">
         <div className="flex items-center gap-2">
           <Bot className="w-5 h-5" />
           <span className="font-semibold text-sm">{t("chatbot.title")}</span>
         </div>
-        <Button variant="ghost" size="icon" className="h-7 w-7 text-primary-foreground hover:bg-primary/80" onClick={() => setOpen(false)} data-testid="button-close-chatbot">
-          <X className="w-4 h-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="h-7 w-7 text-primary-foreground hover:bg-primary/80" onClick={showMainMenu} data-testid="button-chatbot-home" title={t("chatbot.faqBackToMenu")}>
+            <HelpCircle className="w-4 h-4" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 text-primary-foreground hover:bg-primary/80" onClick={() => setOpen(false)} data-testid="button-close-chatbot">
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-auto p-3 space-y-3">
@@ -196,7 +475,7 @@ export function DisputeChatbot() {
                 <Bot className="w-4 h-4 text-primary" />
               </div>
             )}
-            <div className={`max-w-[80%] ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"} rounded-lg p-2.5`}>
+            <div className={`max-w-[85%] ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"} rounded-lg p-2.5`}>
               <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
               {msg.options && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
@@ -205,11 +484,8 @@ export function DisputeChatbot() {
                       key={opt}
                       variant="outline"
                       className="cursor-pointer hover:bg-primary hover:text-primary-foreground text-xs px-2 py-0.5"
-                      onClick={() => {
-                        if (step === "issue_type") handleOptionClick(opt);
-                        else if (step === "confirm") handleConfirmAction(opt);
-                      }}
-                      data-testid={`button-option-${opt.toLowerCase().replace(/\s+/g, "-")}`}
+                      onClick={() => handleOptionClick(opt)}
+                      data-testid={`button-option-${opt.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`}
                     >
                       {opt}
                     </Badge>
@@ -225,7 +501,7 @@ export function DisputeChatbot() {
           </div>
         ))}
 
-        {step === "select_borrower" && searchResults && searchResults.length > 0 && (
+        {mode === "dispute" && disputeStep === "select_borrower" && searchResults && searchResults.length > 0 && (
           <div className="space-y-1.5">
             {(Array.isArray(searchResults) ? searchResults : []).slice(0, 5).map((b) => (
               <div
@@ -241,7 +517,7 @@ export function DisputeChatbot() {
           </div>
         )}
 
-        {step === "select_account" && accounts && (
+        {mode === "dispute" && disputeStep === "select_account" && accounts && (
           <div className="space-y-1.5">
             {accounts.map((a) => (
               <div
@@ -265,14 +541,18 @@ export function DisputeChatbot() {
         )}
       </div>
 
-      {(step === "borrower_search" || step === "description") && (
+      {showInput && (
         <div className="p-3 border-t flex gap-2">
           <Input
             data-testid="input-chatbot-message"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            placeholder={step === "borrower_search" ? t("chatbot.searchPlaceholder") : t("chatbot.describePlaceholder")}
+            placeholder={
+              mode === "faq" ? t("chatbot.faqSearchPlaceholder") :
+              disputeStep === "borrower_search" ? t("chatbot.searchPlaceholder") :
+              t("chatbot.describePlaceholder")
+            }
             className="h-9 text-sm"
           />
           <Button size="icon" className="h-9 w-9 shrink-0" onClick={handleSend} data-testid="button-chatbot-send">
@@ -281,10 +561,10 @@ export function DisputeChatbot() {
         </div>
       )}
 
-      {step === "done" && (
-        <div className="p-3 border-t">
-          <Button className="w-full" variant="outline" size="sm" onClick={startChat} data-testid="button-chatbot-restart">
-            {t("chatbot.startNew")}
+      {mode === "dispute" && disputeStep === "done" && (
+        <div className="p-3 border-t flex gap-2">
+          <Button className="flex-1" variant="outline" size="sm" onClick={showMainMenu} data-testid="button-chatbot-restart">
+            {t("chatbot.faqBackToMenu")}
           </Button>
         </div>
       )}
