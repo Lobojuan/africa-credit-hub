@@ -185,13 +185,20 @@ export class DatabaseStorage implements IStorage {
     const searchPattern = `%${query}%`;
     return db.select().from(borrowers).where(
       or(
-        like(borrowers.firstName, searchPattern),
-        like(borrowers.lastName, searchPattern),
-        like(borrowers.companyName, searchPattern),
-        like(borrowers.nationalId, searchPattern),
-        like(borrowers.tinNumber, searchPattern),
-        like(borrowers.phone, searchPattern),
-        like(borrowers.email, searchPattern),
+        ilike(borrowers.firstName, searchPattern),
+        ilike(borrowers.lastName, searchPattern),
+        ilike(borrowers.companyName, searchPattern),
+        ilike(borrowers.nationalId, searchPattern),
+        ilike(borrowers.tinNumber, searchPattern),
+        ilike(borrowers.phone, searchPattern),
+        ilike(borrowers.email, searchPattern),
+        ilike(borrowers.city, searchPattern),
+        ilike(borrowers.region, searchPattern),
+        ilike(borrowers.address, searchPattern),
+        ilike(borrowers.sector, searchPattern),
+        ilike(borrowers.occupation, searchPattern),
+        ilike(borrowers.employerName, searchPattern),
+        ilike(borrowers.businessRegNumber, searchPattern),
       )
     ).orderBy(desc(borrowers.createdAt)).limit(200);
   }

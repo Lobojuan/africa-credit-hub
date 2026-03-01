@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { borrowers, creditAccounts, courtJudgments, consentRecords, paymentHistory, institutions, billingRecords, disputes, users } from "@shared/schema";
-import { count } from "drizzle-orm";
+import { count, like } from "drizzle-orm";
 
 const ghanaFirstNames = ["Kwame", "Ama", "Kofi", "Akua", "Kwesi", "Abena", "Yaw", "Efua", "Kojo", "Adwoa", "Nana", "Afia", "Kwaku", "Adjoa"];
 const ghanaLastNames = ["Mensah", "Asante", "Boateng", "Osei", "Annan", "Agyeman", "Appiah", "Frimpong", "Darko", "Addai", "Owusu", "Acheampong"];
@@ -69,10 +69,15 @@ const countryLastNames: Record<string, string[]> = { Ghana: ghanaLastNames, Ethi
 const countryCompanies: Record<string, string[]> = { Ghana: ghanaCompanies, Ethiopia: ethiopiaCompanies, Uganda: ugandaCompanies, Liberia: liberiaCompanies };
 
 export async function seedTestData() {
+  const liberiaCheck = await db.select({ value: count() }).from(borrowers).where(like(borrowers.nationalId, 'LBR%'));
   const [existingBorrowers] = await db.select({ value: count() }).from(borrowers);
-  if (existingBorrowers.value > 20) {
-    console.log(`Already have ${existingBorrowers.value} borrowers, skipping test data seed`);
+  const hasLiberia = liberiaCheck[0]?.value > 0;
+  if (existingBorrowers.value > 20 && hasLiberia) {
+    console.log(`Already have ${existingBorrowers.value} borrowers (incl. Liberia), skipping test data seed`);
     return;
+  }
+  if (existingBorrowers.value > 20 && !hasLiberia) {
+    console.log(`Have ${existingBorrowers.value} borrowers but missing Liberia — adding Liberia data only`);
   }
 
   const [adminUser] = await db.select().from(users).limit(1);
@@ -81,9 +86,21 @@ export async function seedTestData() {
     return;
   }
 
-  console.log("Seeding ~100 test borrowers with credit accounts, disputes, judgments, consent, payments, institutions, and billing...");
-
-  const countries = ["Ghana", "Ethiopia", "Uganda", "Liberia"];
+  const allCountries = ["Ghana", "Ethiopia", "Uganda", "Liberia"];
+  let countries = allCountries;
+  if (existingBorrowers.value > 20) {
+    countries = [];
+    for (const c of allCountries) {
+      const prefix = countryConfig[c].idPrefix;
+      const [check] = await db.select({ value: count() }).from(borrowers).where(like(borrowers.nationalId, `${prefix}%`));
+      if (check.value === 0) countries.push(c);
+    }
+    if (countries.length === 0) {
+      console.log("All countries already have data, skipping");
+      return;
+    }
+  }
+  console.log(`Seeding test data for: ${countries.join(", ")}...`);
   const allBorrowerValues: any[] = [];
   let idCounter = 30000;
   const usedCompanies = new Set<string>();
