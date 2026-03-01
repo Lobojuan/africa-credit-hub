@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Upload, FileText, CheckCircle, AlertTriangle, Download } from "lucide-react";
+import { Upload, FileText, CheckCircle, AlertTriangle, Download, FileCode } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,9 +35,29 @@ const sampleJson = `[
   }
 ]`;
 
+const sampleXbrl = `<?xml version="1.0" encoding="UTF-8"?>
+<creditRegistry xmlns="urn:cdh:credit:1.1">
+  <creditAccount>
+    <borrowerId>BORROWER_ID</borrowerId>
+    <lenderInstitution>Commercial Bank of Ethiopia</lenderInstitution>
+    <accountNumber>CBE-LN-2025-001</accountNumber>
+    <accountType>Personal Loan</accountType>
+    <originalAmount>500000.00</originalAmount>
+    <currentBalance>450000.00</currentBalance>
+    <currency>ETB</currency>
+    <interestRate>12.50</interestRate>
+    <disbursementDate>2025-01-15</disbursementDate>
+    <maturityDate>2028-01-15</maturityDate>
+    <status>current</status>
+    <daysInArrears>0</daysInArrears>
+  </creditAccount>
+</creditRegistry>`;
+
 export default function BatchUploadPage() {
   const { t } = useTranslation();
   const [jsonInput, setJsonInput] = useState("");
+  const [xbrlInput, setXbrlInput] = useState("");
+  const [uploadTab, setUploadTab] = useState("json");
   const [result, setResult] = useState<BatchResult | null>(null);
   const { toast } = useToast();
 
@@ -58,6 +79,31 @@ export default function BatchUploadPage() {
       toast({ title: t('batchUpload.uploadFailed'), description: e.message, variant: "destructive" });
     },
   });
+
+  const xbrlUploadMutation = useMutation({
+    mutationFn: async (xml: string) => {
+      const res = await apiRequest("POST", "/api/batch-upload/xbrl", { xml });
+      return res.json() as Promise<BatchResult>;
+    },
+    onSuccess: (data) => {
+      setResult(data);
+      queryClient.invalidateQueries({ queryKey: ["/api/credit-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      toast({
+        title: t('batchUpload.complete'),
+        description: t('batchUpload.completeDesc', { success: data.successCount, errors: data.errorCount }),
+      });
+    },
+    onError: (e: Error) => {
+      toast({ title: t('batchUpload.uploadFailed'), description: e.message, variant: "destructive" });
+    },
+  });
+
+  const handleXbrlSubmit = () => {
+    if (!xbrlInput.trim()) return;
+    setResult(null);
+    xbrlUploadMutation.mutate(xbrlInput);
+  };
 
   const handleSubmit = () => {
     try {
@@ -132,71 +178,78 @@ export default function BatchUploadPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader className="pb-3">
-            <h3 className="font-semibold text-sm">{t('batchUpload.uploadData')}</h3>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label htmlFor="file-upload" className="block">
-                <div className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:bg-muted/50 transition-colors">
-                  <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm font-medium">{t('batchUpload.uploadFile')}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{t('batchUpload.uploadFileSub')}</p>
-                </div>
-                <input
-                  id="file-upload"
-                  type="file"
-                  accept=".json,.csv"
-                  className="hidden"
-                  onChange={handleFileUpload}
-                  data-testid="input-file-upload"
-                />
-              </label>
-            </div>
-            <div className="relative">
-              <p className="text-xs text-muted-foreground mb-1">{t('batchUpload.pasteJson')}</p>
-              <Textarea
-                data-testid="input-batch-json"
-                value={jsonInput}
-                onChange={(e) => setJsonInput(e.target.value)}
-                placeholder={t('batchUpload.pastePlaceholder')}
-                rows={12}
-                className="font-mono text-xs"
-              />
-            </div>
-            <Button
-              className="w-full"
-              onClick={handleSubmit}
-              disabled={uploadMutation.isPending || !jsonInput.trim()}
-              data-testid="button-submit-batch"
-            >
-              {uploadMutation.isPending ? t('batchUpload.processing') : t('batchUpload.submitBatch')}
-            </Button>
-          </CardContent>
-        </Card>
+      <Tabs value={uploadTab} onValueChange={setUploadTab} className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="json" data-testid="tab-json"><FileText className="w-3.5 h-3.5 mr-1.5" /> JSON / CSV</TabsTrigger>
+          <TabsTrigger value="xbrl" data-testid="tab-xbrl"><FileCode className="w-3.5 h-3.5 mr-1.5" /> XBRL / XML</TabsTrigger>
+        </TabsList>
 
-        <div className="space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <h3 className="font-semibold text-sm">{t('batchUpload.sampleFormat')}</h3>
-            </CardHeader>
-            <CardContent>
-              <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-64" data-testid="text-sample-format">
-                {sampleJson}
-              </pre>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-3 text-xs"
-                onClick={() => setJsonInput(sampleJson)}
-                data-testid="button-use-sample"
-              >
-                {t('batchUpload.useSample')}
-              </Button>
-            </CardContent>
-          </Card>
+        <TabsContent value="json">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader className="pb-3">
+                <h3 className="font-semibold text-sm">{t('batchUpload.uploadData')}</h3>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label htmlFor="file-upload" className="block">
+                    <div className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:bg-muted/50 transition-colors">
+                      <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm font-medium">{t('batchUpload.uploadFile')}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{t('batchUpload.uploadFileSub')}</p>
+                    </div>
+                    <input
+                      id="file-upload"
+                      type="file"
+                      accept=".json,.csv"
+                      className="hidden"
+                      onChange={handleFileUpload}
+                      data-testid="input-file-upload"
+                    />
+                  </label>
+                </div>
+                <div className="relative">
+                  <p className="text-xs text-muted-foreground mb-1">{t('batchUpload.pasteJson')}</p>
+                  <Textarea
+                    data-testid="input-batch-json"
+                    value={jsonInput}
+                    onChange={(e) => setJsonInput(e.target.value)}
+                    placeholder={t('batchUpload.pastePlaceholder')}
+                    rows={12}
+                    className="font-mono text-xs"
+                  />
+                </div>
+                <Button
+                  className="w-full"
+                  onClick={handleSubmit}
+                  disabled={uploadMutation.isPending || !jsonInput.trim()}
+                  data-testid="button-submit-batch"
+                >
+                  {uploadMutation.isPending ? t('batchUpload.processing') : t('batchUpload.submitBatch')}
+                </Button>
+              </CardContent>
+            </Card>
+
+            <div className="space-y-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <h3 className="font-semibold text-sm">{t('batchUpload.sampleFormat')}</h3>
+                </CardHeader>
+                <CardContent>
+                  <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-64" data-testid="text-sample-format">
+                    {sampleJson}
+                  </pre>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-3 text-xs"
+                    onClick={() => setJsonInput(sampleJson)}
+                    data-testid="button-use-sample"
+                  >
+                    {t('batchUpload.useSample')}
+                  </Button>
+                </CardContent>
+              </Card>
 
           {result && (
             <Card>
@@ -249,8 +302,117 @@ export default function BatchUploadPage() {
               </CardContent>
             </Card>
           )}
+          </div>
         </div>
-      </div>
+      </TabsContent>
+
+      <TabsContent value="xbrl">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader className="pb-3">
+                <h3 className="font-semibold text-sm">{t('batchUpload.xbrlUpload')}</h3>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label htmlFor="xbrl-file-upload" className="block">
+                    <div className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:bg-muted/50 transition-colors">
+                      <FileCode className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm font-medium">{t('batchUpload.uploadXbrlFile')}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{t('batchUpload.uploadXbrlFileSub')}</p>
+                    </div>
+                    <input
+                      id="xbrl-file-upload"
+                      type="file"
+                      accept=".xbrl,.xml"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = (ev) => setXbrlInput(ev.target?.result as string);
+                        reader.readAsText(file);
+                      }}
+                      data-testid="input-xbrl-file-upload"
+                    />
+                  </label>
+                </div>
+                <div className="relative">
+                  <p className="text-xs text-muted-foreground mb-1">{t('batchUpload.pasteXbrl')}</p>
+                  <Textarea
+                    data-testid="input-batch-xbrl"
+                    value={xbrlInput}
+                    onChange={(e) => setXbrlInput(e.target.value)}
+                    placeholder={t('batchUpload.xbrlPlaceholder')}
+                    rows={12}
+                    className="font-mono text-xs"
+                  />
+                </div>
+                <Button
+                  className="w-full"
+                  onClick={handleXbrlSubmit}
+                  disabled={xbrlUploadMutation.isPending || !xbrlInput.trim()}
+                  data-testid="button-submit-xbrl"
+                >
+                  {xbrlUploadMutation.isPending ? t('batchUpload.processing') : t('batchUpload.submitXbrl')}
+                </Button>
+              </CardContent>
+            </Card>
+
+            <div className="space-y-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <h3 className="font-semibold text-sm">{t('batchUpload.xbrlSampleFormat')}</h3>
+                </CardHeader>
+                <CardContent>
+                  <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-64" data-testid="text-xbrl-sample">
+                    {sampleXbrl}
+                  </pre>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-3 text-xs"
+                    onClick={() => setXbrlInput(sampleXbrl)}
+                    data-testid="button-use-xbrl-sample"
+                  >
+                    {t('batchUpload.useSample')}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {result && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-sm">{t('batchUpload.uploadResults')}</h3>
+                      {result.errorCount > 0 && (
+                        <Button variant="outline" size="sm" className="text-xs" onClick={downloadErrorReport} data-testid="button-download-xbrl-errors">
+                          <Download className="w-3 h-3 mr-1" /> {t('batchUpload.errorReport')}
+                        </Button>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="text-center p-3 bg-muted rounded-md">
+                        <p className="text-lg font-bold">{result.totalSubmitted}</p>
+                        <p className="text-xs text-muted-foreground">{t('batchUpload.submitted')}</p>
+                      </div>
+                      <div className="text-center p-3 bg-green-500/10 rounded-md">
+                        <p className="text-lg font-bold text-green-600">{result.successCount}</p>
+                        <p className="text-xs text-muted-foreground">{t('batchUpload.succeeded')}</p>
+                      </div>
+                      <div className="text-center p-3 bg-red-500/10 rounded-md">
+                        <p className="text-lg font-bold text-red-600">{result.errorCount}</p>
+                        <p className="text-xs text-muted-foreground">{t('batchUpload.failed')}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+          </div>
+        </div>
+      </TabsContent>
+      </Tabs>
     </div>
   );
 }

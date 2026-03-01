@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Shield, Search } from "lucide-react";
+import { Shield, Search, ShieldCheck, ShieldAlert, RefreshCw, Hash } from "lucide-react";
 import { useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
@@ -39,6 +40,10 @@ export default function AuditTrailPage() {
     queryKey: ["/api/audit-logs"],
   });
 
+  const { data: integrity, isLoading: integrityLoading, refetch: refetchIntegrity } = useQuery<{ valid: boolean; totalChecked: number; brokenAt?: string }>({
+    queryKey: ["/api/audit/verify-integrity"],
+  });
+
   const filteredLogs = logs?.filter((log) => {
     if (!filter) return true;
     const search = filter.toLowerCase();
@@ -51,12 +56,48 @@ export default function AuditTrailPage() {
 
   return (
     <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
-      <div>
-        <div className="flex items-center gap-2 mb-1">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
             <div className="page-header-bar" />
             <h1 className="text-2xl font-extrabold tracking-tight" data-testid="text-audit-title">{t('audit.title')}</h1>
           </div>
           <p className="text-sm text-muted-foreground ml-4">{t('audit.subtitle')}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {integrityLoading ? (
+            <Skeleton className="h-8 w-40" />
+          ) : integrity ? (
+            <div
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium ${
+                integrity.valid
+                  ? "bg-green-500/10 border-green-500/20 text-green-700 dark:text-green-400"
+                  : "bg-red-500/10 border-red-500/20 text-red-700 dark:text-red-400"
+              }`}
+              data-testid="badge-integrity-status"
+            >
+              {integrity.valid ? (
+                <ShieldCheck className="w-4 h-4" />
+              ) : (
+                <ShieldAlert className="w-4 h-4" />
+              )}
+              <span>
+                {integrity.valid
+                  ? t("audit.integrityValid", { count: integrity.totalChecked })
+                  : t("audit.integrityBroken")}
+              </span>
+            </div>
+          ) : null}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetchIntegrity()}
+            data-testid="button-verify-integrity"
+          >
+            <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+            {t("audit.verify")}
+          </Button>
+        </div>
       </div>
 
       <div className="relative max-w-sm">
@@ -165,6 +206,14 @@ export default function AuditTrailPage() {
                   <p className="text-xs text-muted-foreground">{t('audit.userId')}</p>
                   <p className="text-sm font-mono" data-testid="text-detail-user-id">{selectedLog.userId || "—"}</p>
                 </div>
+                {selectedLog.currentHash && (
+                  <div>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1"><Hash className="w-3 h-3" />{t('audit.hashChain')}</p>
+                    <p className="text-[10px] font-mono text-muted-foreground break-all mt-0.5" data-testid="text-detail-hash">
+                      {selectedLog.currentHash}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}

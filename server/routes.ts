@@ -12,6 +12,7 @@ import { z } from "zod";
 import { registerExternalApi, generateApiKey } from "./external-api";
 import fs from "fs";
 import path from "path";
+import * as OTPAuth from "otpauth";
 
 function stripPassword(user: any) {
   const { password, ...safe } = user;
@@ -93,6 +94,11 @@ export async function registerRoutes(
       await storage.resetFailedAttempts(user.id);
       await storage.updateLastLogin(user.id);
 
+      if (user.mfaEnabled && user.mfaSecret) {
+        req.session.mfaPendingUserId = user.id;
+        return res.json({ requireMfa: true, userId: user.id });
+      }
+
       req.session.userId = user.id;
       req.session.userRole = user.role;
       req.session.lastActivity = Date.now();
@@ -167,6 +173,119 @@ export async function registerRoutes(
       }
       res.json({ message: "Logged out" });
     });
+  });
+
+  app.post("/api/auth/mfa/login", async (req, res) => {
+    try {
+      const { code } = req.body;
+      const pendingUserId = req.session?.mfaPendingUserId;
+      if (!pendingUserId) {
+        return res.status(401).json({ message: "No MFA session pending" });
+      }
+      const user = await storage.getUser(pendingUserId);
+      if (!user || !user.mfaSecret) {
+        return res.status(401).json({ message: "Invalid MFA session" });
+      }
+      const totp = new OTPAuth.TOTP({
+        issuer: "CDH Credit Registry",
+        label: user.username,
+        algorithm: "SHA1",
+        digits: 6,
+        period: 30,
+        secret: OTPAuth.Secret.fromBase32(user.mfaSecret),
+      });
+      const delta = totp.validate({ token: code, window: 1 });
+      if (delta === null) {
+        return res.status(401).json({ message: "Invalid MFA code" });
+      }
+      delete req.session.mfaPendingUserId;
+      req.session.userId = user.id;
+      req.session.userRole = user.role;
+      req.session.lastActivity = Date.now();
+      await storage.createAuditLog({
+        action: "LOGIN", entity: "system", userId: user.id,
+        details: `${user.fullName} logged in (MFA verified)`,
+        ipAddress: req.ip || null,
+      });
+      let passwordExpired = false;
+      if (user.mustChangePassword) {
+        passwordExpired = true;
+      } else if (user.passwordChangedAt) {
+        const daysSinceChange = (Date.now() - new Date(user.passwordChangedAt).getTime()) / (1000 * 60 * 60 * 24);
+        passwordExpired = daysSinceChange > 90;
+      }
+      res.json({ ...stripPassword(user), passwordExpired });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/auth/mfa/setup", async (req, res) => {
+    try {
+      if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
+      const user = await storage.getUser(req.session.userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      const secret = new OTPAuth.Secret({ size: 20 });
+      const totp = new OTPAuth.TOTP({
+        issuer: "CDH Credit Registry",
+        label: user.username,
+        algorithm: "SHA1",
+        digits: 6,
+        period: 30,
+        secret,
+      });
+      await storage.updateUser(user.id, { mfaSecret: secret.base32 } as any);
+      res.json({ secret: secret.base32, uri: totp.toString() });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/auth/mfa/verify", async (req, res) => {
+    try {
+      if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
+      const { code } = req.body;
+      const user = await storage.getUser(req.session.userId);
+      if (!user || !user.mfaSecret) return res.status(400).json({ message: "MFA not set up" });
+      const totp = new OTPAuth.TOTP({
+        issuer: "CDH Credit Registry",
+        label: user.username,
+        algorithm: "SHA1",
+        digits: 6,
+        period: 30,
+        secret: OTPAuth.Secret.fromBase32(user.mfaSecret),
+      });
+      const delta = totp.validate({ token: code, window: 1 });
+      if (delta === null) {
+        return res.status(400).json({ message: "Invalid code. Please try again." });
+      }
+      await storage.updateUser(user.id, { mfaEnabled: true } as any);
+      await storage.createAuditLog({
+        action: "MFA_ENABLED", entity: "user", entityId: user.id, userId: user.id,
+        details: `MFA enabled for ${user.fullName}`,
+        ipAddress: req.ip || null,
+      });
+      res.json({ message: "MFA enabled successfully" });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/auth/mfa/disable", async (req, res) => {
+    try {
+      if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
+      const user = await storage.getUser(req.session.userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+      await storage.updateUser(user.id, { mfaEnabled: false, mfaSecret: null } as any);
+      await storage.createAuditLog({
+        action: "MFA_DISABLED", entity: "user", entityId: user.id, userId: user.id,
+        details: `MFA disabled for ${user.fullName}`,
+        ipAddress: req.ip || null,
+      });
+      res.json({ message: "MFA disabled" });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
   });
 
   app.get("/api/auth/me", async (req, res) => {
@@ -286,6 +405,21 @@ export async function registerRoutes(
         const result = await storage.getBorrowers(page, limit);
         res.json(result);
       }
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/borrowers/fuzzy-match", async (req, res) => {
+    try {
+      const { firstName, lastName, nationalId, companyName } = req.query;
+      const results = await storage.fuzzyMatchBorrowers({
+        firstName: firstName as string,
+        lastName: lastName as string,
+        nationalId: nationalId as string,
+        companyName: companyName as string,
+      });
+      res.json(results);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
@@ -501,6 +635,15 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/audit/verify-integrity", requireRole("admin", "regulator"), async (_req, res) => {
+    try {
+      const result = await storage.verifyAuditIntegrity();
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   app.get("/api/pending-approvals", async (_req, res) => {
     try {
       const approvals = await storage.getPendingApprovals();
@@ -689,6 +832,66 @@ export async function registerRoutes(
       await storage.createAuditLog({
         action: "BATCH_UPLOAD", entity: "credit_account", userId: req.session?.userId,
         details: `Batch upload: ${results.successCount} succeeded, ${results.errorCount} failed out of ${results.totalSubmitted}`,
+        ipAddress: req.ip || null,
+      });
+
+      res.json(results);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/batch-upload/xbrl", requireRole("admin", "lender"), async (req, res) => {
+    try {
+      const { xml: xmlContent } = req.body;
+      if (!xmlContent || typeof xmlContent !== "string") {
+        return res.status(400).json({ message: "Request body must contain an 'xml' string field with XBRL/XML content" });
+      }
+
+      const records: any[] = [];
+      const accountRegex = /<creditAccount>([\s\S]*?)<\/creditAccount>/gi;
+      let match;
+      while ((match = accountRegex.exec(xmlContent)) !== null) {
+        const block = match[1];
+        const extract = (tag: string) => {
+          const m = new RegExp(`<${tag}>([^<]*)</${tag}>`, "i").exec(block);
+          return m ? m[1].trim() : "";
+        };
+        records.push({
+          borrowerId: extract("borrowerId"),
+          lenderInstitution: extract("lenderInstitution"),
+          accountNumber: extract("accountNumber"),
+          accountType: extract("accountType"),
+          originalAmount: extract("originalAmount"),
+          currentBalance: extract("currentBalance"),
+          currency: extract("currency") || "ETB",
+          interestRate: extract("interestRate") || "0",
+          disbursementDate: extract("disbursementDate"),
+          maturityDate: extract("maturityDate"),
+          status: extract("status") || "current",
+          daysInArrears: parseInt(extract("daysInArrears") || "0", 10),
+        });
+      }
+
+      if (records.length === 0) {
+        return res.status(400).json({ message: "No <creditAccount> elements found in XBRL content" });
+      }
+
+      const results = { totalSubmitted: records.length, successCount: 0, errorCount: 0, errors: [] as Array<{ index: number; message: string }> };
+      for (let i = 0; i < records.length; i++) {
+        try {
+          const parsed = insertCreditAccountSchema.parse(records[i]);
+          await storage.createCreditAccount(parsed);
+          results.successCount++;
+        } catch (err: any) {
+          results.errorCount++;
+          results.errors.push({ index: i, message: err.message || "Validation failed" });
+        }
+      }
+
+      await storage.createAuditLog({
+        action: "BATCH_UPLOAD_XBRL", entity: "credit_account", userId: req.session?.userId,
+        details: `XBRL upload: ${results.successCount} succeeded, ${results.errorCount} failed out of ${results.totalSubmitted}`,
         ipAddress: req.ip || null,
       });
 

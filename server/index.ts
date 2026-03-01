@@ -1,11 +1,13 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import createMemoryStore from "memorystore";
+import compression from "compression";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 
 const app = express();
+app.use(compression());
 const httpServer = createServer(app);
 
 declare module "http" {
@@ -19,6 +21,7 @@ declare module "express-session" {
     userId: string;
     userRole: string;
     lastActivity: number;
+    mfaPendingUserId: string;
   }
 }
 

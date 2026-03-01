@@ -1,4 +1,5 @@
-import { eq, desc, like, or, sql, count } from "drizzle-orm";
+import { eq, desc, like, or, sql, count, ilike } from "drizzle-orm";
+import crypto from "crypto";
 import { db } from "./db";
 import {
   users, borrowers, creditAccounts, creditInquiries, auditLogs, pendingApprovals, disputes, notifications,
@@ -50,6 +51,8 @@ export interface IStorage {
 
   getAuditLogs(): Promise<AuditLog[]>;
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
+  verifyAuditIntegrity(): Promise<{ valid: boolean; totalChecked: number; brokenAt?: string }>;
+  fuzzyMatchBorrowers(params: { firstName?: string; lastName?: string; nationalId?: string; companyName?: string }): Promise<Array<any>>;
 
   getPendingApprovals(): Promise<PendingApproval[]>;
   getPendingApproval(id: string): Promise<PendingApproval | undefined>;
@@ -244,8 +247,77 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAuditLog(log: InsertAuditLog): Promise<AuditLog> {
-    const [created] = await db.insert(auditLogs).values(log).returning();
+    const [lastLog] = await db.select({ currentHash: auditLogs.currentHash })
+      .from(auditLogs).orderBy(desc(auditLogs.createdAt)).limit(1);
+    const previousHash = lastLog?.currentHash || "GENESIS";
+    const timestamp = new Date().toISOString();
+    const payload = `${previousHash}|${log.action}|${log.entity}|${log.details || ""}|${timestamp}`;
+    const currentHash = crypto.createHash("sha256").update(payload).digest("hex");
+    const [created] = await db.insert(auditLogs).values({
+      ...log,
+      previousHash,
+      currentHash,
+    }).returning();
     return created;
+  }
+
+  async verifyAuditIntegrity(): Promise<{ valid: boolean; totalChecked: number; brokenAt?: string }> {
+    const allLogs = await db.select().from(auditLogs).orderBy(auditLogs.createdAt);
+    let totalChecked = 0;
+    for (let i = 0; i < allLogs.length; i++) {
+      const log = allLogs[i];
+      if (!log.currentHash) continue;
+      totalChecked++;
+      const expectedPrev = i === 0 ? "GENESIS" : (allLogs[i - 1].currentHash || "GENESIS");
+      if (log.previousHash !== expectedPrev) {
+        return { valid: false, totalChecked, brokenAt: log.id };
+      }
+    }
+    return { valid: true, totalChecked };
+  }
+
+  async fuzzyMatchBorrowers(params: { firstName?: string; lastName?: string; nationalId?: string; companyName?: string }): Promise<Array<any>> {
+    const conditions: any[] = [];
+    if (params.firstName) {
+      conditions.push(sql`similarity(${borrowers.firstName}, ${params.firstName}) > 0.2`);
+      conditions.push(ilike(borrowers.firstName, `%${params.firstName}%`));
+    }
+    if (params.lastName) {
+      conditions.push(sql`similarity(${borrowers.lastName}, ${params.lastName}) > 0.2`);
+      conditions.push(ilike(borrowers.lastName, `%${params.lastName}%`));
+    }
+    if (params.nationalId) {
+      conditions.push(sql`similarity(${borrowers.nationalId}, ${params.nationalId}) > 0.3`);
+      conditions.push(ilike(borrowers.nationalId, `%${params.nationalId}%`));
+    }
+    if (params.companyName) {
+      conditions.push(sql`similarity(COALESCE(${borrowers.companyName}, ''), ${params.companyName}) > 0.2`);
+      conditions.push(ilike(borrowers.companyName, `%${params.companyName}%`));
+    }
+    if (conditions.length === 0) return [];
+    const results = await db.select({
+      id: borrowers.id,
+      type: borrowers.type,
+      firstName: borrowers.firstName,
+      lastName: borrowers.lastName,
+      companyName: borrowers.companyName,
+      nationalId: borrowers.nationalId,
+      phone: borrowers.phone,
+      email: borrowers.email,
+      similarity: sql<number>`GREATEST(
+        ${params.firstName ? sql`similarity(COALESCE(${borrowers.firstName}, ''), ${params.firstName})` : sql`0`},
+        ${params.lastName ? sql`similarity(COALESCE(${borrowers.lastName}, ''), ${params.lastName})` : sql`0`},
+        ${params.nationalId ? sql`similarity(COALESCE(${borrowers.nationalId}, ''), ${params.nationalId})` : sql`0`},
+        ${params.companyName ? sql`similarity(COALESCE(${borrowers.companyName}, ''), ${params.companyName})` : sql`0`}
+      )`,
+    }).from(borrowers).where(or(...conditions))
+      .orderBy(sql`GREATEST(
+        ${params.firstName ? sql`similarity(COALESCE(${borrowers.firstName}, ''), ${params.firstName})` : sql`0`},
+        ${params.lastName ? sql`similarity(COALESCE(${borrowers.lastName}, ''), ${params.lastName})` : sql`0`},
+        ${params.nationalId ? sql`similarity(COALESCE(${borrowers.nationalId}, ''), ${params.nationalId})` : sql`0`},
+        ${params.companyName ? sql`similarity(COALESCE(${borrowers.companyName}, ''), ${params.companyName})` : sql`0`}
+      ) DESC`).limit(20);
+    return results;
   }
 
   async getPendingApprovals(): Promise<PendingApproval[]> {

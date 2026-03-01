@@ -5,6 +5,10 @@ import {
   insertCourtJudgmentSchema, insertConsentRecordSchema,
 } from "@shared/schema";
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
+
+const JWT_SECRET = process.env.SESSION_SECRET || "credit-registry-jwt-secret";
+const TOKEN_EXPIRY = "1h";
 
 function hashApiKey(key: string): string {
   return crypto.createHash("sha256").update(key).digest("hex");
@@ -19,9 +23,31 @@ export function generateApiKey(): { fullKey: string; prefix: string; hash: strin
 }
 
 async function requireApiKey(req: Request, res: Response, next: NextFunction) {
+  const authHeader = req.headers["authorization"] as string;
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    try {
+      const token = authHeader.substring(7);
+      const decoded = jwt.verify(token, JWT_SECRET) as any;
+      const apiKey = await storage.getApiKeyByHash(decoded.keyHash);
+      if (!apiKey || apiKey.status !== "active") {
+        return res.status(401).json({ error: "Invalid or revoked token" });
+      }
+      const institution = await storage.getInstitution(apiKey.institutionId);
+      if (!institution || institution.status !== "active") {
+        return res.status(403).json({ error: "Institution is not active" });
+      }
+      storage.updateApiKeyLastUsed(apiKey.id).catch(() => {});
+      (req as any).apiKey = apiKey;
+      (req as any).institution = institution;
+      return next();
+    } catch {
+      return res.status(401).json({ error: "Invalid or expired Bearer token" });
+    }
+  }
+
   const apiKeyHeader = req.headers["x-api-key"] as string;
   if (!apiKeyHeader) {
-    return res.status(401).json({ error: "Missing X-API-Key header" });
+    return res.status(401).json({ error: "Missing X-API-Key or Authorization Bearer header" });
   }
 
   const hash = hashApiKey(apiKeyHeader);
@@ -67,6 +93,44 @@ function wrapError(error: string, details?: any) {
 }
 
 export function registerExternalApi(app: Express) {
+
+  app.post("/api/external/oauth/token", async (req: Request, res: Response) => {
+    try {
+      const { grant_type, client_id, client_secret } = req.body;
+      if (grant_type !== "client_credentials") {
+        return res.status(400).json({ error: "unsupported_grant_type", error_description: "Only client_credentials grant type is supported" });
+      }
+      if (!client_id || !client_secret) {
+        return res.status(400).json({ error: "invalid_request", error_description: "client_id and client_secret are required" });
+      }
+      const hash = hashApiKey(client_secret);
+      const apiKey = await storage.getApiKeyByHash(hash);
+      if (!apiKey || !apiKey.keyPrefix.startsWith(client_id)) {
+        return res.status(401).json({ error: "invalid_client", error_description: "Invalid client credentials" });
+      }
+      if (apiKey.status !== "active") {
+        return res.status(403).json({ error: "invalid_client", error_description: "API key has been revoked" });
+      }
+      const institution = await storage.getInstitution(apiKey.institutionId);
+      if (!institution || institution.status !== "active") {
+        return res.status(403).json({ error: "invalid_client", error_description: "Institution is not active" });
+      }
+      const token = jwt.sign(
+        { keyHash: hash, institutionId: apiKey.institutionId, permissions: apiKey.permissions },
+        JWT_SECRET,
+        { expiresIn: TOKEN_EXPIRY }
+      );
+      storage.updateApiKeyLastUsed(apiKey.id).catch(() => {});
+      res.json({
+        access_token: token,
+        token_type: "Bearer",
+        expires_in: 3600,
+        scope: apiKey.permissions,
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: "server_error", error_description: e.message });
+    }
+  });
 
   app.get("/api/external/v1/health", (_req, res) => {
     res.json({ status: "ok", version: "1.1", service: "Systems In Motion Credit Registry API" });

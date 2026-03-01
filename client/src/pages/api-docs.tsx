@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
-import { ArrowLeft, Code2, Lock, Send, Search, FileText, CreditCard, Gavel, Clock } from "lucide-react";
+import { ArrowLeft, Code2, Lock, Send, Search, FileText, CreditCard, Gavel, Clock, KeyRound } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -55,6 +55,34 @@ export default function ApiDocsPage() {
             <code className="text-sm font-mono block" data-testid="text-auth-header">X-API-Key: sim_xxxxxxxx_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</code>
           </div>
           <p className="text-xs text-muted-foreground">{t("apiDocs.authNote")}</p>
+
+          <div className="mt-4 pt-4 border-t">
+            <div className="flex items-center gap-2 mb-3">
+              <KeyRound className="w-4 h-4 text-muted-foreground" />
+              <h3 className="text-sm font-semibold">{t("apiDocs.oauthTitle")}</h3>
+              <Badge variant="outline" className="text-[10px]">OAuth 2.1</Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mb-3">{t("apiDocs.oauthDescription")}</p>
+            <div className="bg-muted p-4 rounded-lg space-y-2">
+              <p className="text-xs text-muted-foreground">{t("apiDocs.oauthStep1")}</p>
+              <pre className="text-xs font-mono whitespace-pre-wrap" data-testid="text-oauth-example">{`POST /api/external/oauth/token
+Content-Type: application/json
+
+{
+  "grant_type": "client_credentials",
+  "client_id": "sim_xxxxxxxx",
+  "client_secret": "sim_xxxxxxxx_xxxx...full_key"
+}`}</pre>
+              <p className="text-xs text-muted-foreground mt-3">{t("apiDocs.oauthStep2")}</p>
+              <pre className="text-xs font-mono whitespace-pre-wrap">{`{
+  "access_token": "eyJhbGciOiJI...",
+  "token_type": "Bearer",
+  "expires_in": 3600
+}`}</pre>
+              <p className="text-xs text-muted-foreground mt-3">{t("apiDocs.oauthStep3")}</p>
+              <pre className="text-xs font-mono whitespace-pre-wrap">{`Authorization: Bearer eyJhbGciOiJI...`}</pre>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

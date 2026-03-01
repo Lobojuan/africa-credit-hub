@@ -5,14 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, AlertTriangle, ArrowRight, Globe } from "lucide-react";
+import { Shield, AlertTriangle, ArrowRight, Globe, ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [mfaCode, setMfaCode] = useState("");
   const { login } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -22,7 +25,40 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      await login(username, password);
+      const result = await login(username, password);
+      if ((result as any)?.requireMfa) {
+        setMfaRequired(true);
+        setLoading(false);
+        return;
+      }
+      toast({ title: t('login.success') });
+    } catch (err: any) {
+      const msg = err.message || t('common.error');
+      const cleaned = msg.replace(/^\d+:\s*/, "").replace(/^"?|"?$/g, "");
+      try {
+        const parsed = JSON.parse(cleaned);
+        if (parsed.requireMfa) {
+          setMfaRequired(true);
+          setLoading(false);
+          return;
+        }
+        setError(parsed.message || cleaned);
+      } catch {
+        setError(cleaned);
+      }
+    } finally {
+      if (!mfaRequired) setLoading(false);
+    }
+  };
+
+  const handleMfaSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const res = await apiRequest("POST", "/api/auth/mfa/login", { code: mfaCode });
+      const userData = await res.json();
+      queryClient.setQueryData(["/api/auth/me"], userData);
       toast({ title: t('login.success') });
     } catch (err: any) {
       const msg = err.message || t('common.error');
@@ -103,59 +139,111 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <h1 className="text-2xl font-bold tracking-tight" data-testid="text-login-title">{t('login.title')}</h1>
-            <p className="text-sm text-muted-foreground mt-1">{t('login.subtitle')}</p>
+            <h1 className="text-2xl font-bold tracking-tight" data-testid="text-login-title">
+              {mfaRequired ? t('mfa.verification') : t('login.title')}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              {mfaRequired ? t('mfa.enterCodePrompt') : t('login.subtitle')}
+            </p>
           </div>
 
           <Card className="border-0 shadow-lg">
             <CardContent className="p-6">
-              <form onSubmit={handleSubmit} className="space-y-5" data-testid="form-login">
-                {error && (
-                  <div className="flex items-start gap-2.5 p-3.5 rounded-lg bg-destructive/8 border border-destructive/20 text-destructive text-sm" data-testid="text-login-error">
-                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                    <span>{error}</span>
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <Label htmlFor="username" className="text-sm font-medium">{t('login.username')}</Label>
-                  <Input
-                    id="username"
-                    data-testid="input-username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder={t('login.enterUsername')}
-                    required
-                    autoFocus
-                    className="h-11"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-sm font-medium">{t('login.password')}</Label>
-                  <Input
-                    id="password"
-                    data-testid="input-password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder={t('login.enterPassword')}
-                    required
-                    className="h-11"
-                  />
-                </div>
-                <Button type="submit" className="w-full h-11 font-semibold gap-2" disabled={loading} data-testid="button-login">
-                  {loading ? (
-                    <span className="flex items-center gap-2">
-                      <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                      {t('login.signingIn')}
-                    </span>
-                  ) : (
-                    <>
-                      {t('login.signIn')}
-                      <ArrowRight className="w-4 h-4" />
-                    </>
+              {mfaRequired ? (
+                <form onSubmit={handleMfaSubmit} className="space-y-5" data-testid="form-mfa-login">
+                  {error && (
+                    <div className="flex items-start gap-2.5 p-3.5 rounded-lg bg-destructive/8 border border-destructive/20 text-destructive text-sm" data-testid="text-mfa-error">
+                      <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span>{error}</span>
+                    </div>
                   )}
-                </Button>
-              </form>
+                  <div className="space-y-2">
+                    <Label htmlFor="mfa-code" className="text-sm font-medium">{t('mfa.code')}</Label>
+                    <Input
+                      id="mfa-code"
+                      data-testid="input-mfa-code"
+                      value={mfaCode}
+                      onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      placeholder="000000"
+                      className="text-center text-lg tracking-[0.5em] font-mono h-12"
+                      maxLength={6}
+                      autoFocus
+                      required
+                    />
+                  </div>
+                  <Button type="submit" className="w-full h-11 font-semibold gap-2" disabled={loading || mfaCode.length !== 6} data-testid="button-mfa-submit">
+                    {loading ? (
+                      <span className="flex items-center gap-2">
+                        <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                        {t('mfa.verifying')}
+                      </span>
+                    ) : (
+                      <>
+                        {t('mfa.verifyAndLogin')}
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full text-sm"
+                    onClick={() => { setMfaRequired(false); setMfaCode(""); setError(""); }}
+                    data-testid="button-back-to-login"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    {t('mfa.backToLogin')}
+                  </Button>
+                </form>
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-5" data-testid="form-login">
+                  {error && (
+                    <div className="flex items-start gap-2.5 p-3.5 rounded-lg bg-destructive/8 border border-destructive/20 text-destructive text-sm" data-testid="text-login-error">
+                      <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span>{error}</span>
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <Label htmlFor="username" className="text-sm font-medium">{t('login.username')}</Label>
+                    <Input
+                      id="username"
+                      data-testid="input-username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder={t('login.enterUsername')}
+                      required
+                      autoFocus
+                      className="h-11"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password" className="text-sm font-medium">{t('login.password')}</Label>
+                    <Input
+                      id="password"
+                      data-testid="input-password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder={t('login.enterPassword')}
+                      required
+                      className="h-11"
+                    />
+                  </div>
+                  <Button type="submit" className="w-full h-11 font-semibold gap-2" disabled={loading} data-testid="button-login">
+                    {loading ? (
+                      <span className="flex items-center gap-2">
+                        <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                        {t('login.signingIn')}
+                      </span>
+                    ) : (
+                      <>
+                        {t('login.signIn')}
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </Button>
+                </form>
+              )}
             </CardContent>
           </Card>
 

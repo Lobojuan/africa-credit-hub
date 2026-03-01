@@ -1,4 +1,5 @@
 import "./lib/i18n";
+import { lazy, Suspense } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -13,56 +14,67 @@ import { NotificationBell } from "@/components/notification-bell";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { PasswordChangeDialog } from "@/components/password-change-dialog";
 import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
+import { LogOut, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import LoginPage from "@/pages/login";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
-import BorrowersPage from "@/pages/borrowers";
-import BorrowerDetailPage from "@/pages/borrower-detail";
-import CreditAccountsPage from "@/pages/credit-accounts";
-import CreditSearchPage from "@/pages/credit-search";
-import ReportsPage from "@/pages/reports";
-import AuditTrailPage from "@/pages/audit-trail";
-import UserManagementPage from "@/pages/user-management";
-import PendingApprovalsPage from "@/pages/pending-approvals";
-import DisputesPage from "@/pages/disputes";
-import BatchUploadPage from "@/pages/batch-upload";
-import InstitutionsPage from "@/pages/institutions";
-import ConsentManagementPage from "@/pages/consent-management";
-import BillingPage from "@/pages/billing";
-import HelpdeskPage from "@/pages/helpdesk";
-import CreditReportPage from "@/pages/credit-report";
-import ApiKeysPage from "@/pages/api-keys";
-import ApiDocsPage from "@/pages/api-docs";
-import OnlineManualPage from "@/pages/online-manual";
-import DocumentationPage from "@/pages/documentation";
+
+const BorrowersPage = lazy(() => import("@/pages/borrowers"));
+const BorrowerDetailPage = lazy(() => import("@/pages/borrower-detail"));
+const CreditAccountsPage = lazy(() => import("@/pages/credit-accounts"));
+const CreditSearchPage = lazy(() => import("@/pages/credit-search"));
+const ReportsPage = lazy(() => import("@/pages/reports"));
+const AuditTrailPage = lazy(() => import("@/pages/audit-trail"));
+const UserManagementPage = lazy(() => import("@/pages/user-management"));
+const PendingApprovalsPage = lazy(() => import("@/pages/pending-approvals"));
+const DisputesPage = lazy(() => import("@/pages/disputes"));
+const BatchUploadPage = lazy(() => import("@/pages/batch-upload"));
+const InstitutionsPage = lazy(() => import("@/pages/institutions"));
+const ConsentManagementPage = lazy(() => import("@/pages/consent-management"));
+const BillingPage = lazy(() => import("@/pages/billing"));
+const HelpdeskPage = lazy(() => import("@/pages/helpdesk"));
+const CreditReportPage = lazy(() => import("@/pages/credit-report"));
+const ApiKeysPage = lazy(() => import("@/pages/api-keys"));
+const ApiDocsPage = lazy(() => import("@/pages/api-docs"));
+const OnlineManualPage = lazy(() => import("@/pages/online-manual"));
+const DocumentationPage = lazy(() => import("@/pages/documentation"));
+
+function LazyFallback() {
+  return (
+    <div className="flex items-center justify-center h-64">
+      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+    </div>
+  );
+}
 
 function Router() {
   return (
-    <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/borrowers" component={BorrowersPage} />
-      <Route path="/borrowers/:id" component={BorrowerDetailPage} />
-      <Route path="/credit-accounts" component={CreditAccountsPage} />
-      <Route path="/search" component={CreditSearchPage} />
-      <Route path="/reports" component={ReportsPage} />
-      <Route path="/audit" component={AuditTrailPage} />
-      <Route path="/users" component={UserManagementPage} />
-      <Route path="/approvals" component={PendingApprovalsPage} />
-      <Route path="/disputes" component={DisputesPage} />
-      <Route path="/batch-upload" component={BatchUploadPage} />
-      <Route path="/institutions" component={InstitutionsPage} />
-      <Route path="/consent" component={ConsentManagementPage} />
-      <Route path="/billing" component={BillingPage} />
-      <Route path="/helpdesk" component={HelpdeskPage} />
-      <Route path="/credit-report/:borrowerId" component={CreditReportPage} />
-      <Route path="/api-keys" component={ApiKeysPage} />
-      <Route path="/api-docs" component={ApiDocsPage} />
-      <Route path="/help" component={OnlineManualPage} />
-      <Route path="/documentation" component={DocumentationPage} />
-      <Route component={NotFound} />
-    </Switch>
+    <Suspense fallback={<LazyFallback />}>
+      <Switch>
+        <Route path="/" component={Dashboard} />
+        <Route path="/borrowers" component={BorrowersPage} />
+        <Route path="/borrowers/:id" component={BorrowerDetailPage} />
+        <Route path="/credit-accounts" component={CreditAccountsPage} />
+        <Route path="/search" component={CreditSearchPage} />
+        <Route path="/reports" component={ReportsPage} />
+        <Route path="/audit" component={AuditTrailPage} />
+        <Route path="/users" component={UserManagementPage} />
+        <Route path="/approvals" component={PendingApprovalsPage} />
+        <Route path="/disputes" component={DisputesPage} />
+        <Route path="/batch-upload" component={BatchUploadPage} />
+        <Route path="/institutions" component={InstitutionsPage} />
+        <Route path="/consent" component={ConsentManagementPage} />
+        <Route path="/billing" component={BillingPage} />
+        <Route path="/helpdesk" component={HelpdeskPage} />
+        <Route path="/credit-report/:borrowerId" component={CreditReportPage} />
+        <Route path="/api-keys" component={ApiKeysPage} />
+        <Route path="/api-docs" component={ApiDocsPage} />
+        <Route path="/help" component={OnlineManualPage} />
+        <Route path="/documentation" component={DocumentationPage} />
+        <Route component={NotFound} />
+      </Switch>
+    </Suspense>
   );
 }
 

@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { Plus, Search, Building2, User, Users, ChevronRight, ChevronLeft, Flag } from "lucide-react";
+import { Plus, Search, Building2, User, Users, ChevronRight, ChevronLeft, Flag, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +45,39 @@ export default function BorrowersPage() {
     isPep: false, pepDetails: "",
     educationLevel: "", educationInstitution: "", employmentHistory: "",
   });
+
+  const [fuzzyMatches, setFuzzyMatches] = useState<any[]>([]);
+  const [fuzzyChecking, setFuzzyChecking] = useState(false);
+
+  const checkFuzzyMatch = useCallback(async (data: typeof formData) => {
+    const params = new URLSearchParams();
+    if (data.type === "individual") {
+      if (data.firstName) params.set("firstName", data.firstName);
+      if (data.lastName) params.set("lastName", data.lastName);
+    } else {
+      if (data.companyName) params.set("companyName", data.companyName);
+    }
+    if (data.nationalId) params.set("nationalId", data.nationalId);
+    if (params.toString().length === 0) { setFuzzyMatches([]); return; }
+    setFuzzyChecking(true);
+    try {
+      const res = await fetch(`/api/borrowers/fuzzy-match?${params}`, { credentials: "include" });
+      if (res.ok) {
+        const matches = await res.json();
+        setFuzzyMatches(matches);
+      }
+    } catch {} finally { setFuzzyChecking(false); }
+  }, []);
+
+  useEffect(() => {
+    if (!dialogOpen) return;
+    const hasData = formData.nationalId.length >= 3 ||
+      (formData.type === "individual" && (formData.firstName.length >= 2 || formData.lastName.length >= 2)) ||
+      (formData.type === "corporate" && (formData.companyName || "").length >= 2);
+    if (!hasData) { setFuzzyMatches([]); return; }
+    const timer = setTimeout(() => checkFuzzyMatch(formData), 500);
+    return () => clearTimeout(timer);
+  }, [formData.firstName, formData.lastName, formData.nationalId, formData.companyName, formData.type, dialogOpen, checkFuzzyMatch]);
 
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -131,6 +164,25 @@ export default function BorrowersPage() {
                 </>
               )}
               <div><Label>{t("borrowers.nationalId")}</Label><Input data-testid="input-national-id" value={formData.nationalId} onChange={(e) => setFormData({ ...formData, nationalId: e.target.value })} required /></div>
+              {fuzzyMatches.length > 0 && (
+                <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20" data-testid="alert-fuzzy-matches">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-600" />
+                    <p className="text-sm font-medium text-amber-700 dark:text-amber-400">{t("borrowers.potentialDuplicates", { count: fuzzyMatches.length })}</p>
+                  </div>
+                  <div className="space-y-1.5 max-h-32 overflow-auto">
+                    {fuzzyMatches.slice(0, 5).map((m: any) => (
+                      <div key={m.id} className="flex items-center justify-between text-xs p-1.5 rounded bg-background/60">
+                        <span className="font-medium">{m.type === "corporate" ? m.companyName : `${m.firstName} ${m.lastName}`}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">{m.nationalId}</span>
+                          <Badge variant="outline" className="text-[9px]">{Math.round((m.similarity || 0) * 100)}%</Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <div><Label>{t("borrowers.phone")}</Label><Input data-testid="input-phone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} /></div>
                 <div><Label>{t("borrowers.email")}</Label><Input data-testid="input-email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} /></div>

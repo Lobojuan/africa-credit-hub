@@ -31,6 +31,8 @@ export const users = pgTable("users", {
   lastLogin: timestamp("last_login"),
   passwordChangedAt: timestamp("password_changed_at"),
   mustChangePassword: boolean("must_change_password").default(false),
+  mfaSecret: text("mfa_secret"),
+  mfaEnabled: boolean("mfa_enabled").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -109,6 +111,8 @@ export const auditLogs = pgTable("audit_logs", {
   entityId: varchar("entity_id"),
   details: text("details"),
   ipAddress: text("ip_address"),
+  previousHash: text("previous_hash"),
+  currentHash: text("current_hash"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -248,7 +252,7 @@ export const apiKeys = pgTable("api_keys", {
 
 export const insertApiKeySchema = createInsertSchema(apiKeys).omit({ id: true, createdAt: true, lastUsedAt: true, revokedAt: true });
 
-export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, lastLogin: true, failedLoginAttempts: true, lockedUntil: true, passwordChangedAt: true, mustChangePassword: true });
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, lastLogin: true, failedLoginAttempts: true, lockedUntil: true, passwordChangedAt: true, mustChangePassword: true, mfaSecret: true, mfaEnabled: true });
 export const insertBorrowerSchema = createInsertSchema(borrowers).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertCreditAccountSchema = createInsertSchema(creditAccounts).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertCreditInquirySchema = createInsertSchema(creditInquiries).omit({ id: true, createdAt: true });

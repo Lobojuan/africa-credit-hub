@@ -29,9 +29,18 @@ The system employs a modern full-stack architecture:
     -   **User Experience**: Features a dashboard with drill-down capabilities, in-app notifications, dark/light theme support, and a Pan-African cultural aesthetic using a warm teal and gold palette.
     -   **External API**: A REST API allows external institutions to programmatically interact with the system for data submission and credit report generation, secured via API keys with granular permissions.
 
+## Enterprise Enhancements (v2.1)
+-   **TOTP MFA**: Users can enable two-factor authentication via authenticator apps; login flow supports MFA challenge step
+-   **Fuzzy Entity Matching**: pg_trgm trigram similarity on borrower registration warns about potential duplicates
+-   **Dispute Chatbot**: Chat-guided assistant for filing disputes (multi-step: issue type → borrower search → account → description → submit)
+-   **OAuth 2.1 Token Exchange**: External API supports client_credentials grant for Bearer token auth alongside X-API-Key
+-   **Low-Bandwidth Optimizations**: gzip compression middleware, React.lazy route code-splitting with Suspense
+-   **XBRL Upload**: Batch upload page supports XBRL/XML format tab with sample and parsing endpoint
+-   **Tamper-Evident Audit Logs**: SHA-256 hash chain on audit log entries with integrity verification badge
+
 ## External Dependencies
 -   **Database**: PostgreSQL (specifically Neon for hosting)
 -   **Frontend Libraries**: React, TypeScript, Vite, Tailwind CSS, shadcn/ui
--   **Backend Libraries**: Express.js, bcryptjs, express-session, Drizzle ORM
+-   **Backend Libraries**: Express.js, bcryptjs, express-session, Drizzle ORM, compression, jsonwebtoken, otpauth
 -   **Internationalization**: `react-i18next`, `i18next`
 -   **Deployment**: Configured for autoscale environments with Node.js.
