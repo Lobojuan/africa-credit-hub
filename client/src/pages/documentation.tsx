@@ -46,14 +46,21 @@ function DocIcon({ id }: { id: string }) {
 }
 
 export default function DocumentationPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [viewingDoc, setViewingDoc] = useState<string | null>(null);
   const [docHtml, setDocHtml] = useState<string>("");
   const [docTitle, setDocTitle] = useState<string>("");
   const [loading, setLoading] = useState(false);
 
+  const currentLang = i18n.language?.startsWith("fr") ? "fr" : i18n.language?.startsWith("ar") ? "ar" : i18n.language?.startsWith("sw") ? "sw" : i18n.language?.startsWith("pt") ? "pt" : "en";
+
   const { data: docs, isLoading } = useQuery<DocMeta[]>({
-    queryKey: ["/api/docs"],
+    queryKey: ["/api/docs", currentLang],
+    queryFn: async () => {
+      const res = await fetch(`/api/docs?lang=${currentLang}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch docs");
+      return res.json();
+    },
   });
 
   const viewDocument = async (doc: DocMeta) => {
@@ -61,7 +68,7 @@ export default function DocumentationPage() {
     setDocTitle(doc.title);
     setViewingDoc(doc.id);
     try {
-      const res = await apiRequest("GET", `/api/docs/${doc.id}`);
+      const res = await apiRequest("GET", `/api/docs/${doc.id}?lang=${currentLang}`);
       const detail: DocDetail = await res.json();
       setDocHtml(detail.html);
     } catch {
@@ -71,7 +78,7 @@ export default function DocumentationPage() {
   };
 
   const downloadPdf = (docId: string) => {
-    window.open(`/api/docs/${docId}/pdf`, "_blank");
+    window.open(`/api/docs/${docId}/pdf?lang=${currentLang}`, "_blank");
   };
 
   return (

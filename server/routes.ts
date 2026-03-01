@@ -1531,6 +1531,7 @@ export async function registerRoutes(
   });
 
   const DOCS_DIR = path.resolve(process.cwd(), "docs");
+  const SUPPORTED_DOC_LANGS = ["en", "fr", "ar", "sw"];
   const DOCS_LIST = [
     { id: "uat", filename: "UAT_Test_Document.md", title: "UAT Test Document", description: "187 test cases across 22 modules with SRS traceability" },
     { id: "systems", filename: "Systems_Documentation.md", title: "Systems Documentation", description: "Technical architecture, data model, API catalog, security, deployment" },
@@ -1541,10 +1542,20 @@ export async function registerRoutes(
     { id: "security", filename: "Security_Compliance_Report.md", title: "Security & Compliance Report", description: "Security controls with NFR-SEC compliance matrix" },
   ];
 
-  app.get("/api/docs", requireAuth, (_req, res) => {
+  function resolveDocPath(filename: string, lang?: string): string {
+    if (lang && lang !== "en" && SUPPORTED_DOC_LANGS.includes(lang)) {
+      const localizedPath = path.join(DOCS_DIR, lang, filename);
+      if (fs.existsSync(localizedPath)) return localizedPath;
+    }
+    return path.join(DOCS_DIR, filename);
+  }
+
+  app.get("/api/docs", requireAuth, (req, res) => {
+    const lang = (req.query.lang as string) || "en";
     const docsWithSize = DOCS_LIST.map(doc => {
       try {
-        const stats = fs.statSync(path.join(DOCS_DIR, doc.filename));
+        const filePath = resolveDocPath(doc.filename, lang);
+        const stats = fs.statSync(filePath);
         return { ...doc, size: stats.size };
       } catch {
         return { ...doc, size: 0 };
@@ -1557,7 +1568,8 @@ export async function registerRoutes(
     const doc = DOCS_LIST.find(d => d.id === req.params.id);
     if (!doc) return res.status(404).json({ message: "Document not found" });
     try {
-      const filePath = path.join(DOCS_DIR, doc.filename);
+      const lang = (req.query.lang as string) || "en";
+      const filePath = resolveDocPath(doc.filename, lang);
       const content = fs.readFileSync(filePath, "utf-8");
       const { marked } = await import("marked");
       const html = marked(content);
@@ -1571,7 +1583,8 @@ export async function registerRoutes(
     const doc = DOCS_LIST.find(d => d.id === req.params.id);
     if (!doc) return res.status(404).json({ message: "Document not found" });
     try {
-      const filePath = path.join(DOCS_DIR, doc.filename);
+      const lang = (req.query.lang as string) || "en";
+      const filePath = resolveDocPath(doc.filename, lang);
       const content = fs.readFileSync(filePath, "utf-8");
       const { PassThrough } = await import("stream");
       const { generatePdfFromMarkdown } = await import("./pdf-generator");

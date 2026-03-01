@@ -66,3 +66,12 @@ The system employs a modern full-stack architecture:
 -   **Dialogs**: Capped at `calc(100vw - 1.5rem)` on mobile with `max-height: 90vh`
 -   **Touch**: Min 36px touch targets on touch devices via `pointer: coarse` media query
 -   **Pagination**: Stacks vertically on mobile (`flex-col sm:flex-row`)
+
+## Documentation System
+-   **Multi-Language Docs API**: `/api/docs`, `/api/docs/:id`, and `/api/docs/:id/pdf` all accept `?lang=` query parameter (en/fr/ar/sw). Backend uses `resolveDocPath()` helper that checks `docs/{lang}/filename.md` first, falls back to `docs/filename.md` (English default). Frontend documentation page passes current i18n language automatically.
+-   **Translated Documentation**: All 7 docs (UAT_Test_Document, Systems_Documentation, Users_Manual, SRS_Traceability_Matrix, Data_Dictionary, Deployment_Guide, Security_Compliance_Report) are available in:
+    - `docs/` — English (original)
+    - `docs/fr/` — French
+    - `docs/ar/` — Arabic (Modern Standard Arabic)
+    - `docs/sw/` — Swahili (Kiswahili sanifu)
+-   **Translation Conventions**: Section headings, descriptions, and prose are translated. Technical terms (table names, column names, API endpoints, test case IDs, code snippets, status values, role names) are kept in English.
