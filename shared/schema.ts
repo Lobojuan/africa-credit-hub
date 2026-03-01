@@ -57,6 +57,8 @@ export const borrowers = pgTable("borrowers", {
   businessRegNumber: text("business_reg_number"),
   sector: text("sector"),
   passportNumber: text("passport_number"),
+  photoUrl: text("photo_url"),
+  idDocumentUrl: text("id_document_url"),
   isPep: boolean("is_pep").default(false),
   pepDetails: text("pep_details"),
   relatedBorrowerId: varchar("related_borrower_id"),

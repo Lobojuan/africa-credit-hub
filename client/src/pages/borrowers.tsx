@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { Plus, Search, Building2, User, Users, ChevronRight, ChevronLeft, Flag, AlertTriangle } from "lucide-react";
+import { Plus, Search, Building2, User, Users, ChevronRight, ChevronLeft, Flag, AlertTriangle, Camera } from "lucide-react";
 import { SUPPORTED_COUNTRIES } from "@/lib/currency";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Borrower } from "@shared/schema";
+import { getBorrowerAvatarUrl } from "@/lib/avatar";
 
 const PAGE_SIZE = 50;
 
@@ -304,13 +305,12 @@ export default function BorrowersPage() {
               <CardContent className="p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-md bg-accent shrink-0">
-                      {borrower.type === "corporate" ? (
-                        <Building2 className="w-5 h-5 text-muted-foreground" />
-                      ) : (
-                        <User className="w-5 h-5 text-muted-foreground" />
-                      )}
-                    </div>
+                    <img
+                      src={(borrower as any).photoUrl || getBorrowerAvatarUrl(borrower.id, borrower.type === "corporate" ? (borrower.companyName || "") : `${borrower.firstName} ${borrower.lastName}`, borrower.type as "individual" | "corporate")}
+                      alt=""
+                      className="w-10 h-10 rounded-full object-cover border border-border shrink-0"
+                      data-testid={`img-avatar-${borrower.id}`}
+                    />
                     <div className="min-w-0">
                       <p className="text-sm font-semibold truncate">
                         {borrower.type === "corporate" ? borrower.companyName : `${borrower.firstName} ${borrower.lastName}`}

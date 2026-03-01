@@ -1,3 +1,4 @@
+import express from "express";
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
@@ -14,6 +15,7 @@ import { registerExternalApi, generateApiKey } from "./external-api";
 import fs from "fs";
 import path from "path";
 import * as OTPAuth from "otpauth";
+import multer from "multer";
 
 function stripPassword(user: any) {
   const { password, ...safe } = user;
@@ -506,6 +508,71 @@ export async function registerRoutes(
         ipAddress: req.ip || null,
       });
       res.json({ approval, message: "Update submitted for maker-checker approval" });
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  const uploadsDir = path.join(process.cwd(), "uploads");
+  fs.mkdirSync(path.join(uploadsDir, "photos"), { recursive: true });
+  fs.mkdirSync(path.join(uploadsDir, "documents"), { recursive: true });
+
+  const photoStorage = multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, path.join(uploadsDir, "photos")),
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname) || ".jpg";
+      cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+    },
+  });
+  const docStorage = multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, path.join(uploadsDir, "documents")),
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname) || ".jpg";
+      cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+    },
+  });
+  const uploadPhoto = multer({ storage: photoStorage, limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) cb(null, true);
+    else cb(new Error("Only image files allowed"));
+  }});
+  const uploadDoc = multer({ storage: docStorage, limits: { fileSize: 10 * 1024 * 1024 }, fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith("image/") || file.mimetype === "application/pdf") cb(null, true);
+    else cb(new Error("Only image or PDF files allowed"));
+  }});
+
+  app.use("/uploads", requireAuth, express.static(uploadsDir));
+
+  app.post("/api/borrowers/:id/photo", requireAuth, uploadPhoto.single("photo"), async (req, res) => {
+    try {
+      const borrower = await storage.getBorrower(req.params.id);
+      if (!borrower) return res.status(404).json({ message: "Borrower not found" });
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+      const photoUrl = `/uploads/photos/${req.file.filename}`;
+      await storage.updateBorrower(req.params.id, { photoUrl });
+      await storage.createAuditLog({
+        action: "UPLOAD_PHOTO", entity: "borrower", entityId: req.params.id, userId: req.session?.userId,
+        details: `Uploaded ID photo for borrower: ${borrower.firstName || borrower.companyName}`,
+        ipAddress: req.ip || null,
+      });
+      res.json({ photoUrl });
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/borrowers/:id/id-document", requireAuth, uploadDoc.single("document"), async (req, res) => {
+    try {
+      const borrower = await storage.getBorrower(req.params.id);
+      if (!borrower) return res.status(404).json({ message: "Borrower not found" });
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+      const idDocumentUrl = `/uploads/documents/${req.file.filename}`;
+      await storage.updateBorrower(req.params.id, { idDocumentUrl });
+      await storage.createAuditLog({
+        action: "UPLOAD_ID_DOCUMENT", entity: "borrower", entityId: req.params.id, userId: req.session?.userId,
+        details: `Uploaded ID document for borrower: ${borrower.firstName || borrower.companyName}`,
+        ipAddress: req.ip || null,
+      });
+      res.json({ idDocumentUrl });
     } catch (e: any) {
       res.status(400).json({ message: e.message });
     }

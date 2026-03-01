@@ -46,6 +46,7 @@ The system employs a modern full-stack architecture:
 -   **Portuguese i18n**: Full PT translation covering all UI strings, language switcher updated with PT option
 -   **i18n Wired on Admin Pages**: Exchange Rates, API Admin, and Retention Policies pages fully use t() translation hooks for EN/FR/PT
 -   **Global Search**: Credit Search page upgraded to a true global search (`/api/global-search?q=TERM&country=COUNTRY`) that searches across borrowers, institutions, and credit accounts simultaneously. Results displayed in categorized sections (Borrowers, Institutions, Credit Accounts) with badges, country filters, and direct navigation to detail pages
+-   **ID Photos & Documents**: Every borrower has a unique auto-generated avatar photo via DiceBear (deterministic by borrower ID). Borrower detail page shows profile photo with camera overlay for upload, plus ID document section for uploading scanned passport/national ID cards. Upload endpoints at `POST /api/borrowers/:id/photo` and `POST /api/borrowers/:id/id-document` with multer file handling. Photos stored in `uploads/photos/` and `uploads/documents/`, served via `/uploads` static route. Schema fields: `photoUrl` and `idDocumentUrl` on borrowers table. Avatars displayed on borrower list cards, search results, and detail pages
 
 ## External Dependencies
 -   **Database**: PostgreSQL (specifically Neon for hosting)

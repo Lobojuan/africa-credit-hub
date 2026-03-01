@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { Search, User, Building2, FileText, ChevronRight, Globe, Landmark, CreditCard } from "lucide-react";
+import { Search, User, Building2, FileText, ChevronRight, Globe, Landmark, CreditCard, Camera } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SUPPORTED_COUNTRIES } from "@/lib/currency";
 import type { Borrower, Institution, CreditAccount } from "@shared/schema";
+import { getBorrowerAvatarUrl } from "@/lib/avatar";
 
 interface GlobalSearchResults {
   borrowers: Borrower[];
@@ -132,13 +133,12 @@ export default function CreditSearchPage() {
                       <CardContent className="p-5">
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-4 min-w-0">
-                            <div className="flex items-center justify-center w-11 h-11 rounded-md bg-accent shrink-0">
-                              {borrower.type === "corporate" ? (
-                                <Building2 className="w-5 h-5 text-muted-foreground" />
-                              ) : (
-                                <User className="w-5 h-5 text-muted-foreground" />
-                              )}
-                            </div>
+                            <img
+                              src={(borrower as any).photoUrl || getBorrowerAvatarUrl(borrower.id, borrower.type === "corporate" ? (borrower.companyName || "") : `${borrower.firstName} ${borrower.lastName}`, borrower.type as "individual" | "corporate")}
+                              alt=""
+                              className="w-11 h-11 rounded-full object-cover border border-border shrink-0"
+                              data-testid={`img-search-avatar-${borrower.id}`}
+                            />
                             <div className="min-w-0">
                               <p className="text-sm font-semibold truncate">
                                 {borrower.type === "corporate" ? borrower.companyName : `${borrower.firstName} ${borrower.lastName}`}

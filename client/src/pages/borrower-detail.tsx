@@ -1,16 +1,20 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState, useRef } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, User, Building2, Mail, Phone, MapPin, Briefcase, CreditCard, AlertTriangle, TrendingUp, FileText, Flag, GraduationCap, Users, Link2, ClipboardList } from "lucide-react";
+import { ArrowLeft, User, Building2, Mail, Phone, MapPin, Briefcase, CreditCard, AlertTriangle, TrendingUp, FileText, Flag, GraduationCap, Users, Link2, ClipboardList, Camera, Upload, IdCard } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { formatCurrency } from "@/lib/currency";
+import { getBorrowerAvatarUrl } from "@/lib/avatar";
 import type { Borrower, CreditAccount, CreditInquiry, CourtJudgment, ConsentRecord } from "@shared/schema";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Gavel, FileCheck } from "lucide-react";
+import { queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 function getStatusColor(status: string) {
   switch (status) {
@@ -33,6 +37,41 @@ export default function BorrowerDetailPage() {
   const [, params] = useRoute("/borrowers/:id");
   const [, navigate] = useLocation();
   const borrowerId = params?.id;
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const docInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  const uploadPhotoMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("photo", file);
+      const res = await fetch(`/api/borrowers/${borrowerId}/photo`, {
+        method: "POST", body: formData, credentials: "include",
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/borrowers', borrowerId, 'credit-report'] });
+      toast({ title: t("borrowerDetail.photoUploaded") });
+    },
+  });
+
+  const uploadDocMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("document", file);
+      const res = await fetch(`/api/borrowers/${borrowerId}/id-document`, {
+        method: "POST", body: formData, credentials: "include",
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/borrowers', borrowerId, 'credit-report'] });
+      toast({ title: t("borrowerDetail.documentUploaded") });
+    },
+  });
 
   function getCreditScoreLabel(score: number) {
     if (score >= 750) return t("borrowerDetail.excellent");
@@ -119,16 +158,42 @@ export default function BorrowerDetailPage() {
 
   const { borrower, accounts, inquiries, summary } = report;
   const isIndividual = borrower.type === "individual";
+  const displayName = isIndividual ? `${borrower.firstName} ${borrower.lastName}` : (borrower.companyName || "");
+  const avatarUrl = (borrower as any).photoUrl || getBorrowerAvatarUrl(borrower.id, displayName, borrower.type as "individual" | "corporate");
 
   return (
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-[1200px] mx-auto">
-      <div className="flex items-center gap-3">
+      <input type="file" ref={photoInputRef} className="hidden" accept="image/*"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadPhotoMutation.mutate(f); }}
+        data-testid="input-upload-photo"
+      />
+      <input type="file" ref={docInputRef} className="hidden" accept="image/*,application/pdf"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadDocMutation.mutate(f); }}
+        data-testid="input-upload-document"
+      />
+
+      <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate("/borrowers")} data-testid="button-back">
           <ArrowLeft className="w-4 h-4" />
         </Button>
+        <div className="relative group">
+          <img
+            src={avatarUrl}
+            alt={displayName}
+            className="w-16 h-16 rounded-full object-cover border-2 border-border shadow-sm"
+            data-testid="img-borrower-photo"
+          />
+          <button
+            onClick={() => photoInputRef.current?.click()}
+            className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+            data-testid="button-change-photo"
+          >
+            <Camera className="w-5 h-5 text-white" />
+          </button>
+        </div>
         <div>
           <h1 className="text-2xl font-bold tracking-tight" data-testid="text-borrower-name">
-            {isIndividual ? `${borrower.firstName} ${borrower.lastName}` : borrower.companyName}
+            {displayName}
           </h1>
           <p className="text-sm text-muted-foreground">{borrower.nationalId}</p>
         </div>
@@ -139,7 +204,17 @@ export default function BorrowerDetailPage() {
             {t("borrowerDetail.pepFlag")}
           </Badge>
         )}
-        <div className="ml-auto">
+        <div className="ml-auto flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => docInputRef.current?.click()}
+            disabled={uploadDocMutation.isPending}
+            data-testid="button-upload-id-document"
+          >
+            <IdCard className="w-4 h-4 mr-2" />
+            {uploadDocMutation.isPending ? t("borrowerDetail.uploading") : t("borrowerDetail.uploadIdDoc")}
+          </Button>
           <Button
             size="sm"
             onClick={() => navigate(`/credit-report/${borrowerId}`)}
@@ -225,6 +300,37 @@ export default function BorrowerDetailPage() {
                 <span>{borrower.sector}</span>
               </div>
             )}
+            <Separator />
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+                <IdCard className="w-3.5 h-3.5" />
+                {t("borrowerDetail.idDocument")}
+              </p>
+              {(borrower as any).idDocumentUrl ? (
+                <div className="relative group rounded-lg overflow-hidden border">
+                  <img
+                    src={(borrower as any).idDocumentUrl}
+                    alt="ID Document"
+                    className="w-full h-auto max-h-48 object-contain bg-muted"
+                    data-testid="img-id-document"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <Button size="sm" variant="secondary" onClick={() => docInputRef.current?.click()} data-testid="button-replace-document">
+                      <Upload className="w-3.5 h-3.5 mr-1" />{t("borrowerDetail.replace")}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => docInputRef.current?.click()}
+                  className="w-full border-2 border-dashed rounded-lg p-6 text-center hover:border-primary/50 hover:bg-accent/50 transition-colors"
+                  data-testid="button-upload-first-document"
+                >
+                  <IdCard className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-xs text-muted-foreground">{t("borrowerDetail.uploadIdDocPrompt")}</p>
+                </button>
+              )}
+            </div>
           </CardContent>
         </Card>
 
