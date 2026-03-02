@@ -114,14 +114,14 @@ function AuthenticatedApp() {
     "--sidebar-width-icon": "3rem",
   };
 
-  const isDemoUser = ["admin", "regulator1", "cbe_user", "dashen_user", "awash_user"].includes(user.username);
+  const isDemoLogin = sessionStorage.getItem("demo_login") === "true";
 
   return (
     <SidebarProvider style={style as React.CSSProperties}>
       <div className="flex h-screen w-full">
         <AppSidebar />
         <div className="flex flex-col flex-1 min-w-0">
-          {isDemoUser && (
+          {isDemoLogin && (
             <div className="bg-amber-500 text-white text-center text-xs font-semibold py-1 px-3 shrink-0" data-testid="banner-demo">
               {t('login.demoBanner')}
             </div>
@@ -153,6 +153,7 @@ function AuthenticatedApp() {
                   e.preventDefault();
                   e.stopPropagation();
                   try {
+                    sessionStorage.removeItem("demo_login");
                     await logout();
                   } catch {
                     window.location.href = "/";

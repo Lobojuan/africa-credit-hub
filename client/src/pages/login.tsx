@@ -113,6 +113,7 @@ export default function LoginPage() {
     setError("");
     try {
       await login(account.username, account.password);
+      sessionStorage.setItem("demo_login", "true");
       toast({ title: `${t('login.success')} — ${account.role} Demo` });
     } catch (err: any) {
       const msg = err.message || t('common.error');
