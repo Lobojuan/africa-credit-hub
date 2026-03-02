@@ -25,6 +25,7 @@ import {
   Archive,
   Scale,
   ChevronDown,
+  History,
 } from "lucide-react";
 import {
   Sidebar,
@@ -84,6 +85,7 @@ const integrationItems: NavItem[] = [
 const resourceItems: NavItem[] = [
   { titleKey: "sidebar.help", url: "/help", icon: HelpCircle, testId: "nav-help" },
   { titleKey: "sidebar.documentation", url: "/documentation", icon: BookOpen, testId: "nav-documentation" },
+  { titleKey: "sidebar.versionHistory", url: "/version-history", icon: History, testId: "nav-version-history" },
 ];
 
 function filterByRole(items: NavItem[], role: string | undefined): NavItem[] {
