@@ -140,10 +140,11 @@ function CollapsibleSection({
 }
 
 export function AppSidebar() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [location] = useLocation();
   const { user } = useAuth();
   const role = user?.role;
+  const isRtl = i18n.language === "ar";
 
   const visibleCore = filterByRole(coreItems, role);
   const visibleReports = filterByRole(reportItems, role);
@@ -152,7 +153,7 @@ export function AppSidebar() {
   const visibleResources = filterByRole(resourceItems, role);
 
   return (
-    <Sidebar>
+    <Sidebar side={isRtl ? "right" : "left"}>
       <SidebarHeader className="p-4 pb-4">
         <Link href="/">
           <div className="flex items-center gap-3 cursor-pointer group">
