@@ -1185,6 +1185,60 @@ const pt = {
       f9: { title: "Trilha de Auditoria", desc: "Cadeia de hash SHA-256 inviolável em todas as ações do sistema" },
     },
   },
+  demoTour: {
+    startTour: "Fazer o Tour",
+    stepOf: "Passo {{current}} de {{total}}",
+    next: "Próximo",
+    prev: "Voltar",
+    finish: "Começar a Explorar",
+    skip: "Saltar tour",
+    steps: {
+      welcome: {
+        title: "Bem-vindo ao Registo de Crédito",
+        desc: "Este tour interativo irá guiá-lo pelas funcionalidades principais do Sistema Pan-Africano de Registo de Crédito. Está autenticado como Admin com acesso total.",
+      },
+      dashboard: {
+        title: "Painel em Tempo Real",
+        desc: "O seu centro de comando — 8 cartões estatísticos em tempo real mostrando mutuários, contas de crédito, disputas e mais nos 54 países africanos. Clique em qualquer cartão para detalhar.",
+      },
+      borrowers: {
+        title: "Gestão de Mutuários",
+        desc: "Pesquise, visualize e gira mais de 100K perfis de mutuários com fotos de identificação, resolução de entidades transfronteiriça e registos multi-jurisdição.",
+      },
+      creditAccounts: {
+        title: "Contas de Crédito",
+        desc: "Acompanhe empréstimos em mais de 42 moedas africanas com fluxos de aprovação maker-checker. Cada alteração requer autorização dupla.",
+      },
+      search: {
+        title: "Pesquisa de Crédito",
+        desc: "Pesquisa global em todos os mutuários e instituições com filtros avançados. Gere relatórios de crédito conformes com SRS instantaneamente.",
+      },
+      makerChecker: {
+        title: "Aprovações Maker-Checker",
+        desc: "Fluxo de controlo duplo — cada alteração de dados requer um segundo utilizador autorizado para aprovar antes de entrar em vigor.",
+      },
+      disputes: {
+        title: "Gestão de Disputas",
+        desc: "Ciclo de vida de disputas com rastreamento SLA e escalação automática. Monitorize tempos de resolução e conformidade regulatória.",
+      },
+      chatbot: {
+        title: "Assistente de Ajuda",
+        desc: "Assistente com IA para ajudar a navegar no sistema, responder a perguntas e guiá-lo em tarefas comuns.",
+      },
+      language: {
+        title: "5 Línguas da UA",
+        desc: "Alterne entre Inglês, Francês, Português, Árabe (com layout RTL completo) e Suaíli — todas as línguas de trabalho da União Africana.",
+      },
+      theme: {
+        title: "Modo Escuro / Claro",
+        desc: "Alterne entre temas claro e escuro. A sua preferência é guardada automaticamente.",
+      },
+      explore: {
+        title: "Está Pronto!",
+        desc: "Explore a barra lateral para descobrir mais: trilhas de auditoria, carregamentos em lote, taxas de câmbio, gestão de API, conformidade regulatória e muito mais.",
+      },
+    },
+  },
 };
 
 export default pt;

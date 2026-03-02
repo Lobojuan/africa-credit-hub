@@ -1116,6 +1116,60 @@ const en = {
       f9: { title: "Audit Trail", desc: "Tamper-evident SHA-256 hash chain on all system actions" },
     },
   },
+  demoTour: {
+    startTour: "Take a Tour",
+    stepOf: "Step {{current}} of {{total}}",
+    next: "Next",
+    prev: "Back",
+    finish: "Start Exploring",
+    skip: "Skip tour",
+    steps: {
+      welcome: {
+        title: "Welcome to the Credit Registry",
+        desc: "This interactive tour will walk you through the key features of the Pan-African Credit Registry System. You're logged in as an Admin with full access.",
+      },
+      dashboard: {
+        title: "Real-Time Dashboard",
+        desc: "Your command center — 8 live stat cards showing borrowers, credit accounts, disputes, and more across all 54 African nations. Click any card to drill down.",
+      },
+      borrowers: {
+        title: "Borrower Management",
+        desc: "Search, view, and manage 100K+ borrower profiles with ID photos, cross-border entity resolution, and multi-jurisdiction records.",
+      },
+      creditAccounts: {
+        title: "Credit Accounts",
+        desc: "Track loans across 42+ African currencies with maker-checker approval workflows. Every change requires dual authorization.",
+      },
+      search: {
+        title: "Credit Search",
+        desc: "Global search across all borrowers and institutions with advanced filters. Generate SRS-compliant credit reports instantly.",
+      },
+      makerChecker: {
+        title: "Maker-Checker Approvals",
+        desc: "Dual-control workflow — every data change requires a second authorized user to approve before it takes effect.",
+      },
+      disputes: {
+        title: "Dispute Management",
+        desc: "SLA-tracked dispute lifecycle with automatic escalation. Monitor resolution times and regulatory compliance.",
+      },
+      chatbot: {
+        title: "Help Assistant",
+        desc: "AI-powered assistant to help navigate the system, answer questions, and guide you through common tasks.",
+      },
+      language: {
+        title: "5 AU Languages",
+        desc: "Switch between English, French, Portuguese, Arabic (with full RTL layout), and Swahili — all African Union working languages.",
+      },
+      theme: {
+        title: "Dark / Light Mode",
+        desc: "Toggle between light and dark themes. Your preference is saved automatically.",
+      },
+      explore: {
+        title: "You're Ready!",
+        desc: "Explore the sidebar to discover more: audit trails, batch uploads, exchange rates, API management, regulatory compliance, and much more.",
+      },
+    },
+  },
 };
 
 const fr: typeof en = {
@@ -2227,6 +2281,60 @@ const fr: typeof en = {
       f7: { title: "API Externe", desc: "API REST avec authentification par clé API pour soumission de données et rapports" },
       f8: { title: "Facturation & Consentement", desc: "Facturation par abonnement et gestion du consentement des emprunteurs" },
       f9: { title: "Piste d'Audit", desc: "Chaîne de hachage SHA-256 inviolable sur toutes les actions système" },
+    },
+  },
+  demoTour: {
+    startTour: "Faire le Tour",
+    stepOf: "Étape {{current}} sur {{total}}",
+    next: "Suivant",
+    prev: "Retour",
+    finish: "Commencer à Explorer",
+    skip: "Passer le tour",
+    steps: {
+      welcome: {
+        title: "Bienvenue au Registre de Crédit",
+        desc: "Ce tour interactif vous guidera à travers les fonctionnalités clés du Système Pan-Africain de Registre de Crédit. Vous êtes connecté en tant qu'Admin avec un accès complet.",
+      },
+      dashboard: {
+        title: "Tableau de Bord en Temps Réel",
+        desc: "Votre centre de commande — 8 cartes statistiques en direct montrant les emprunteurs, les comptes de crédit, les litiges et plus dans les 54 pays africains. Cliquez sur n'importe quelle carte pour les détails.",
+      },
+      borrowers: {
+        title: "Gestion des Emprunteurs",
+        desc: "Recherchez, visualisez et gérez plus de 100K profils d'emprunteurs avec photos d'identité, résolution d'entités transfrontalières et dossiers multi-juridictionnels.",
+      },
+      creditAccounts: {
+        title: "Comptes de Crédit",
+        desc: "Suivez les prêts dans plus de 42 devises africaines avec des flux d'approbation maker-checker. Chaque modification nécessite une double autorisation.",
+      },
+      search: {
+        title: "Recherche de Crédit",
+        desc: "Recherche globale sur tous les emprunteurs et institutions avec des filtres avancés. Générez des rapports de crédit conformes SRS instantanément.",
+      },
+      makerChecker: {
+        title: "Approbations Maker-Checker",
+        desc: "Flux de double contrôle — chaque modification de données nécessite un second utilisateur autorisé pour approuver avant prise d'effet.",
+      },
+      disputes: {
+        title: "Gestion des Litiges",
+        desc: "Cycle de vie des litiges avec suivi SLA et escalade automatique. Surveillez les délais de résolution et la conformité réglementaire.",
+      },
+      chatbot: {
+        title: "Assistant d'Aide",
+        desc: "Assistant IA pour vous aider à naviguer dans le système, répondre aux questions et vous guider dans les tâches courantes.",
+      },
+      language: {
+        title: "5 Langues de l'UA",
+        desc: "Basculez entre Anglais, Français, Portugais, Arabe (avec mise en page RTL complète) et Swahili — toutes les langues de travail de l'Union Africaine.",
+      },
+      theme: {
+        title: "Mode Sombre / Clair",
+        desc: "Basculez entre les thèmes clair et sombre. Votre préférence est sauvegardée automatiquement.",
+      },
+      explore: {
+        title: "Vous êtes Prêt !",
+        desc: "Explorez la barre latérale pour découvrir plus : pistes d'audit, téléchargements par lots, taux de change, gestion API, conformité réglementaire et bien plus.",
+      },
     },
   },
 };

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useSidebar } from "@/components/ui/sidebar";
 import {
   X, ChevronRight, ChevronLeft, Sparkles,
   LayoutDashboard, Users, CreditCard, Search, Shield,
@@ -28,7 +29,7 @@ const TOUR_STEPS: TourStep[] = [
     titleKey: "demoTour.steps.dashboard.title",
     descriptionKey: "demoTour.steps.dashboard.desc",
     icon: LayoutDashboard,
-    target: "[data-testid='stat-card-0']",
+    target: "[data-testid='stat-borrowers']",
     navigateTo: "/",
   },
   {
@@ -53,7 +54,7 @@ const TOUR_STEPS: TourStep[] = [
     titleKey: "demoTour.steps.makerChecker.title",
     descriptionKey: "demoTour.steps.makerChecker.desc",
     icon: Shield,
-    target: "[data-testid='nav-approvals']",
+    target: "[data-testid='nav-pending-approvals']",
   },
   {
     titleKey: "demoTour.steps.disputes.title",
@@ -91,8 +92,11 @@ export function DemoTour({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState(0);
   const [highlightRect, setHighlightRect] = useState<DOMRect | null>(null);
   const [, navigate] = useLocation();
+  const { setOpen, setOpenMobile, isMobile } = useSidebar();
   const currentStep = TOUR_STEPS[step];
   const totalSteps = TOUR_STEPS.length;
+
+  const isSidebarTarget = currentStep.target?.includes("nav-");
 
   const updateHighlight = useCallback(() => {
     if (!currentStep.target) {
@@ -110,12 +114,18 @@ export function DemoTour({ onClose }: { onClose: () => void }) {
   }, [currentStep.target]);
 
   useEffect(() => {
+    if (isSidebarTarget) {
+      if (isMobile) setOpenMobile(true);
+      else setOpen(true);
+    } else if (isMobile) {
+      setOpenMobile(false);
+    }
     if (currentStep.navigateTo) {
       navigate(currentStep.navigateTo);
     }
-    const timer = setTimeout(updateHighlight, 300);
+    const timer = setTimeout(updateHighlight, 400);
     return () => clearTimeout(timer);
-  }, [step, currentStep.navigateTo, navigate, updateHighlight]);
+  }, [step, currentStep.navigateTo, navigate, updateHighlight, isSidebarTarget, isMobile, setOpen, setOpenMobile]);
 
   useEffect(() => {
     window.addEventListener("resize", updateHighlight);

@@ -1198,6 +1198,60 @@ const sw: Record<string, any> = {
       f9: { title: "Njia ya Ukaguzi", desc: "Mnyororo wa hash SHA-256 usioweza kughushiwa kwa vitendo vyote vya mfumo" },
     },
   },
+  demoTour: {
+    startTour: "Fanya Ziara",
+    stepOf: "Hatua {{current}} ya {{total}}",
+    next: "Ifuatayo",
+    prev: "Nyuma",
+    finish: "Anza Kuchunguza",
+    skip: "Ruka ziara",
+    steps: {
+      welcome: {
+        title: "Karibu kwenye Sajili ya Mikopo",
+        desc: "Ziara hii ya maingiliano itakuongoza kupitia vipengele muhimu vya Mfumo wa Sajili ya Mikopo ya Afrika yote. Umeingia kama Admin wenye ufikiaji kamili.",
+      },
+      dashboard: {
+        title: "Dashibodi ya Wakati Halisi",
+        desc: "Kituo chako cha amri — kadi 8 za takwimu za moja kwa moja zinazoonyesha wakopaji, akaunti za mikopo, migogoro na zaidi katika nchi 54 za Afrika. Bofya kadi yoyote kwa maelezo zaidi.",
+      },
+      borrowers: {
+        title: "Usimamizi wa Wakopaji",
+        desc: "Tafuta, tazama na simamia wasifu 100K+ wa wakopaji na picha za kitambulisho, utatuzi wa vyombo vya kuvuka mipaka, na rekodi za mamlaka nyingi.",
+      },
+      creditAccounts: {
+        title: "Akaunti za Mikopo",
+        desc: "Fuatilia mikopo katika sarafu 42+ za Afrika na mtiririko wa idhini ya maker-checker. Kila mabadiliko yanahitaji idhini mbili.",
+      },
+      search: {
+        title: "Utafutaji wa Mikopo",
+        desc: "Utafutaji wa kimataifa kwa wakopaji na taasisi zote na vichujio vya hali ya juu. Tengeneza ripoti za mikopo zinazozingatia SRS mara moja.",
+      },
+      makerChecker: {
+        title: "Idhini za Maker-Checker",
+        desc: "Mtiririko wa udhibiti maradufu — kila mabadiliko ya data yanahitaji mtumiaji wa pili aliyeidhinishwa kuthibitisha kabla ya kuanza kutumika.",
+      },
+      disputes: {
+        title: "Usimamizi wa Migogoro",
+        desc: "Mzunguko wa maisha wa migogoro na ufuatiliaji wa SLA na kupandisha kiwango kiotomatiki. Fuatilia nyakati za utatuzi na uzingatiaji wa udhibiti.",
+      },
+      chatbot: {
+        title: "Msaidizi wa Usaidizi",
+        desc: "Msaidizi wa AI kusaidia kupitia mfumo, kujibu maswali na kukuongoza kupitia kazi za kawaida.",
+      },
+      language: {
+        title: "Lugha 5 za AU",
+        desc: "Badili kati ya Kiingereza, Kifaransa, Kireno, Kiarabu (na mpangilio kamili wa RTL), na Kiswahili — lugha zote za kazi za Umoja wa Afrika.",
+      },
+      theme: {
+        title: "Hali ya Giza / Nuru",
+        desc: "Badili kati ya mandhari ya nuru na giza. Upendeleo wako huhifadhiwa kiotomatiki.",
+      },
+      explore: {
+        title: "Uko Tayari!",
+        desc: "Chunguza upau wa kando kugundua zaidi: njia za ukaguzi, upakiaji wa kundi, viwango vya ubadilishaji, usimamizi wa API, uzingatiaji wa udhibiti, na mengi zaidi.",
+      },
+    },
+  },
 };
 
 export default sw;
