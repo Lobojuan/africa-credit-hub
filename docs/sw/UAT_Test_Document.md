@@ -213,6 +213,10 @@
 | TC-RPT-008 | Ripoti za Mikopo | Misimbo ya sababu - rekodi bora ya malipo | Mkopaji ana akaunti zote za current | 1. Tengeneza ripoti ya mkopo kwa mkopaji mwenye akaunti za hali ya "current" pekee. | Msimbo wa sababu "EXCELLENT_PAYMENT_RECORD" au "STRONG_REPAYMENT_HISTORY" unaonekana. Alama ya mkopo ya juu. | | FR-CR-06 |
 | TC-RPT-009 | Ripoti za Mikopo | Uundaji wa nambari ya mfululizo | Mtumiaji anatengeneza ripoti ya mkopo | 1. Tengeneza ripoti ya mkopo. 2. Angalia nambari ya mfululizo. | Nambari ya mfululizo inafuata umbizo: CR-{YEAR}-{UNIQUE_ID}. Nambari ya mfululizo ni ya kipekee. Rekodi imeundwa katika jedwali la credit_report_logs. | | FR-CR-06 |
 | TC-RPT-010 | Ripoti za Mikopo | Kuchapisha ripoti ya mkopo | Ripoti ya mkopo inaonyeshwa | 1. Tengeneza ripoti ya mkopo. 2. Bonyeza kitufe cha "Print". | Kisanduku cha kuchapisha cha kivinjari kinafunguka. Ripoti imeandaliwa kwa uchapishaji ikiwa na kichwa, taarifa za mkopaji, akaunti, alama, nambari ya mfululizo, na kijachini cha kanusho. | | FR-CR-06 |
+| TC-RPT-011 | Ripoti za Mikopo | Ripoti ya mkopo inajumuisha historia ya malipo | Mkopaji ana akaunti zenye historia ya malipo | 1. Tengeneza ripoti ya mkopo. | Sehemu ya historia ya utendaji wa malipo inaonyeshwa katika ripoti. | | FR-CR-08 |
+| TC-RPT-012 | Ripoti za Mikopo | Ripoti ya mkopo inajumuisha hukumu za mahakama | Mkopaji ana hukumu za mahakama | 1. Tengeneza ripoti ya mkopo. | Sehemu ya hukumu za mahakama inaonyeshwa na maelezo ya kesi. | | FR-COL-05 |
+| TC-RPT-013 | Ripoti za Mikopo | Ripoti ya mkopo inajumuisha rekodi za ridhaa | Mkopaji ana rekodi za ridhaa | 1. Tengeneza ripoti ya mkopo. | Sehemu ya rekodi za ridhaa inaonyeshwa katika ripoti. | | FR-CON-06 |
+| TC-RPT-014 | Ripoti za Mikopo | Ufuatiliaji wa kumbukumbu za ripoti ya mkopo | Mtumiaji anatengeneza ripoti ya mkopo | 1. Tengeneza ripoti ya mkopo. 2. Nenda kwenye kumbukumbu za ripoti ya mkopo. | Rekodi ipo katika credit_report_logs ikiwa na borrowerId, requestedBy, institution, purpose, serialNumber, na muhuri wa wakati. | | FR-CR-06 |
 
 ---
 
@@ -226,6 +230,8 @@
 | TC-MC-004 | Maker-Checker | Kukataa ombi na maelezo | Mtumiaji wa Admin ameingia, idhini inayosubiri ipo | 1. Nenda kwenye Pending Approvals. 2. Bonyeza idhini inayosubiri. 3. Ingiza maelezo ya ukataji. 4. Bonyeza "Reject". | Idhini imekataliwa. Hali inabadilika kuwa "rejected". Maelezo ya ukaguzi yamehifadhiwa. Rekodi ya awali haisasishwi. | | FR-COL-01 |
 | TC-MC-005 | Maker-Checker | Kanuni ya kuzuia kuidhinisha mwenyewe | Mtumiaji wa Admin ameingia, ameunda ombi mwenyewe | 1. Nenda kwenye Pending Approvals. 2. Jaribu kupitisha ombi ambalo uliwasilisha mwenyewe. | Ujumbe wa hitilafu: "You cannot approve your own request." Idhini inazuiwa. | | FR-COL-01 |
 | TC-MC-006 | Maker-Checker | Ombi lililoidhinishwa linatekelezwa | Idhini ya kuunda mkopaji imeidhinishwa | 1. Nenda kwenye Borrowers. 2. Tafuta mkopaji aliyeidhinishwa hivi karibuni. | Rekodi ya mkopaji ipo katika hifadhidata na data sahihi. | | FR-COL-01 |
+| TC-MC-007 | Maker-Checker | Jukumu lisilo na kutosha kwa idhini | Mtumiaji wa Lender ameingia | 1. Jaribu kupitisha ombi linalosubiri kupitia API. | 403 Forbidden: "Insufficient permissions." | | FR-COL-01 |
+| TC-MC-008 | Maker-Checker | Kuwasilisha akaunti ya mkopo kunaanzisha idhini | Mtumiaji ameingia | 1. Wasilisha akaunti mpya ya mkopo. | Idhini inayosubiri imeundwa na entityType = "credit_account". | | FR-COL-01 |
 
 ---
 
@@ -240,6 +246,7 @@
 | TC-DIS-005 | Usimamizi wa Migogoro | Kukataa mgogoro | Mgogoro umefunguka | 1. Nenda kwenye Disputes. 2. Bonyeza "Resolve". 3. Chagua hali: Rejected. 4. Ingiza maelezo ya kukataa. 5. Wasilisha. | Hali ya mgogoro inabadilika kuwa "rejected". | | FR-CON-04 |
 | TC-DIS-006 | Usimamizi wa Migogoro | Kiashiria cha ukiukaji wa SLA | Mgogoro umezidi muda wa mwisho wa SLA | 1. Angalia mgogoro ambao muda wake umepita katika jedwali la migogoro. | Beji nyekundu ya "Breached" inaonyeshwa kwenye mgogoro. | | DQ-04 |
 | TC-DIS-007 | Usimamizi wa Migogoro | Aina za migogoro | Mtumiaji ameingia | 1. Bonyeza "File Dispute". 2. Angalia chaguzi za aina ya mgogoro katika menyu. | Aina zifuatazo zinapatikana: Data Error, Identity Theft, Unauthorized Inquiry, Duplicate Record, Other. | | FR-CON-04 |
+| TC-DIS-008 | Usimamizi wa Migogoro | Kuona maelezo ya mgogoro binafsi | Mgogoro upo | 1. Bonyeza safu ya mgogoro. | Kisanduku cha maelezo ya mgogoro kinafunguka kikionyesha sehemu zote: mkopaji, akaunti, aina, maelezo, hali, aina ya marekebisho, muda wa mwisho wa SLA, utatuzi, mihuri ya wakati. | | FR-CON-04 |
 
 ---
 
@@ -251,6 +258,10 @@
 | TC-CJ-002 | Hukumu za Mahakama | Aina za hukumu | Mtumiaji ameingia kama Admin | 1. Bonyeza "Add Judgment". 2. Angalia chaguzi za aina ya hukumu katika menyu. | Aina zifuatazo zinapatikana: Lien, Bankruptcy, Lawsuit, Civil Judgment, Criminal Conviction. | | FR-COL-05 |
 | TC-CJ-003 | Hukumu za Mahakama | Hukumu inaonekana kwenye ripoti ya mkopo | Mkopaji ana hukumu ya mahakama | 1. Tengeneza ripoti ya mkopo kwa mkopaji huyu. | Hukumu za mahakama zimejumuishwa katika sehemu ya ripoti ya mkopo. | | FR-CR-06 |
 | TC-CJ-004 | Hukumu za Mahakama | Kizuizi cha jukumu - Lender hawezi kuunda | Mtumiaji ameingia kama Lender | 1. Nenda kwenye ukurasa wa maelezo ya mkopaji. 2. Jaribu kuunda hukumu ya mahakama. | Mtumiaji wa Lender hajioni chaguo la kuongeza hukumu au anazuiwa kutoka kuwasilisha. | | FR-COL-05 |
+| TC-CJ-005 | Hukumu za Mahakama | Kuunda hatia ya jinai | Admin/Regulator ameingia | 1. Ongeza hukumu ya mahakama na aina: "criminal_conviction". | Hukumu ya mahakama imeundwa. | | FR-COL-05 |
+| TC-CJ-006 | Hukumu za Mahakama | Ufuatiliaji wa hali ya hukumu | Hukumu ya mahakama ipo | 1. Angalia hukumu. 2. Thibitisha chaguzi za hali. | Hali inaweza kuwa: active, resolved, au appealed. | | FR-COL-05 |
+| TC-CJ-007 | Hukumu za Mahakama | Kuona hukumu kwa mkopaji | Mkopaji ana hukumu za mahakama | 1. Nenda kwenye ukurasa wa maelezo ya mkopaji. 2. Angalia sehemu ya hukumu za mahakama. | Hukumu zote za mahakama za mkopaji zinaonyeshwa na nambari ya kesi, mahakama, aina, kiasi, sarafu, tarehe, hali, maelezo. | | FR-COL-05 |
+| TC-CJ-008 | Hukumu za Mahakama | Kuchuja hukumu kwa kitambulisho cha mkopaji | Hukumu za mahakama zipo | 1. Tafuta hukumu za mahakama kupitia API na kichujio cha ?borrowerId. | Hukumu za mkopaji aliyebainishwa pekee zinarudishwa. | | FR-COL-05 |
 
 ---
 
@@ -262,6 +273,10 @@
 | TC-CON-002 | Usimamizi wa Ridhaa | Umbizo la nambari ya risiti | Ridhaa imetolewa | 1. Angalia nambari ya risiti kwenye rekodi ya ridhaa iliyoundwa hivi karibuni. | Nambari ya risiti inafuata umbizo: CR-{timestamp}-{random_id}. Ni ya kipekee. | | FR-CON-07 |
 | TC-CON-003 | Usimamizi wa Ridhaa | Kufuta ridhaa | Ridhaa hai ipo | 1. Nenda kwenye Consent Management. 2. Tafuta rekodi ya ridhaa hai. 3. Bonyeza "Revoke". | Hali ya ridhaa inabadilika kuwa "revoked". Muhuri wa tarehe ya kufutwa umewekwa. | | FR-CON-06 |
 | TC-CON-004 | Usimamizi wa Ridhaa | Kuona rekodi za ridhaa | Rekodi za ridhaa zipo | 1. Nenda kwenye Consent Management. 2. Angalia jedwali la ridhaa. | Jedwali linaonyesha: jina la mkopaji, taasisi, madhumuni, aina ya ridhaa, hali, nambari ya risiti, tarehe za kutoa na kufuta. | | FR-CON-06 |
+| TC-CON-005 | Usimamizi wa Ridhaa | Kuchuja ridhaa kwa mkopaji | Mkopaji ana rekodi za ridhaa | 1. Tafuta rekodi za ridhaa na kichujio cha ?borrowerId. | Rekodi za ridhaa za mkopaji aliyebainishwa pekee zinarudishwa. | | FR-CON-06 |
+| TC-CON-006 | Usimamizi wa Ridhaa | Kuona ridhaa kwenye maelezo ya mkopaji | Mkopaji ana rekodi za ridhaa | 1. Nenda kwenye ukurasa wa maelezo ya mkopaji. 2. Angalia sehemu ya ridhaa. | Rekodi za ridhaa za mkopaji zinaonyeshwa. | | FR-CON-06 |
+| TC-CON-007 | Usimamizi wa Ridhaa | Kuzuia ridhaa hai inayojirudia | Ridhaa hai ipo kwa mkopaji yule yule + grantedTo + madhumuni | 1. Jaribu kuunda ridhaa inayojirudia. | Mfumo unashughulikia ipasavyo (unazuia au kuruhusu nyingi). | | FR-CON-08 |
+| TC-CON-008 | Usimamizi wa Ridhaa | Kuelekeza kutoka ridhaa kwenda kwa mkopaji | Rekodi ya ridhaa inaonyeshwa kwenye jedwali | 1. Bonyeza safu ya rekodi ya ridhaa. | Inaelekeza kwenye ukurasa wa maelezo ya mkopaji anayehusika. | | FR-CON-09 |
 
 ---
 
@@ -273,6 +288,13 @@
 | TC-INST-002 | Usimamizi wa Taasisi | Kupitisha taasisi | Taasisi yenye hali "pending" ipo | 1. Nenda kwenye Institutions. 2. Tafuta taasisi inayosubiri. 3. Bonyeza "Approve". | Hali ya taasisi inabadilika kuwa "active". | | FR-INST-01 |
 | TC-INST-003 | Usimamizi wa Taasisi | Aina za taasisi | Mtumiaji ameingia kama Admin | 1. Bonyeza "Register". 2. Angalia chaguzi za aina katika menyu. | Aina zifuatazo zinapatikana: Bank, MFI, Utility, Telecom, Digital Lender, SACCO. | | FR-INST-01 |
 | TC-INST-004 | Usimamizi wa Taasisi | Kizuizi cha jukumu - wasio Admin hawana ufikiaji | Mtumiaji ameingia kama Lender | 1. Jaribu kuelekeza kwenye Institutions. | Kipengele cha Institutions hakionekani kwenye mwambao au ufikiaji umezuiwa. | | NFR-SEC-06 |
+| TC-INST-005 | Usimamizi wa Taasisi | Kusajili mkopeshaji wa kidijitali | Admin ameingia | 1. Ongeza taasisi na aina: "digital_lender". | Taasisi imeundwa. | | FR-DP-01 |
+| TC-INST-006 | Usimamizi wa Taasisi | Kusajili SACCO | Admin ameingia | 1. Ongeza taasisi na aina: "sacco". | Taasisi imeundwa. | | FR-DP-01 |
+| TC-INST-007 | Usimamizi wa Taasisi | Kupitisha taasisi (idhini) | Admin ameingia, taasisi inayosubiri ipo | 1. Nenda kwenye Institutions. 2. Chagua taasisi inayosubiri. 3. Bonyeza "Approve". | Hali ya taasisi inabadilika kuwa "active". Sehemu za approvedBy na approvedAt zimejazwa. | | FR-DP-04 |
+| TC-INST-008 | Usimamizi wa Taasisi | Kusanidi masafa ya uwasilishaji | Admin ameingia, taasisi hai ipo | 1. Nenda kwenye maelezo ya taasisi. 2. Weka masafa ya uwasilishaji (k.m., "monthly", "weekly"). 3. Hifadhi. | Masafa ya uwasilishaji yamesasishwa. | | FR-DP-01 |
+| TC-INST-009 | Usimamizi wa Taasisi | Msaada wa nchi nyingi | Admin ameingia | 1. Unda taasisi zenye nchi tofauti: Ethiopia, Ghana, Uganda, Liberia. | Taasisi zimeundwa na ugawaji sahihi wa nchi. | | FR-DP-01 |
+| TC-INST-010 | Usimamizi wa Taasisi | Kurasa za taasisi | Taasisi nyingi zipo | 1. Nenda kwenye ukurasa wa Institutions. 2. Angalia kurasa. | Kurasa za upande wa seva zinafanya kazi. Vidhibiti vya ukurasa/kikomo vinafanya kazi. | | FR-DP-01 |
+| TC-INST-011 | Usimamizi wa Taasisi | Safu za taasisi zinazobonyezwa | Taasisi zimeorodheshwa kwenye jedwali | 1. Bonyeza safu ya taasisi. | Kisanduku cha maelezo ya taasisi kinafunguka kikionyesha taarifa zote za taasisi. | | FR-DP-01 |
 
 ---
 
@@ -283,6 +305,11 @@
 | TC-BILL-001 | Malipo | Kuunda ankara | Mtumiaji ameingia kama Admin au Regulator | 1. Nenda kwenye Billing. 2. Bonyeza "Create Invoice". 3. Jaza: Institution Name, Service Type (Data Submission), Amount, Currency, Invoice Number, Period Start, Period End. 4. Wasilisha. | Ankara imeundwa na hali "pending". Inaonekana katika orodha ya ankara. | | FR-BILL-01 |
 | TC-BILL-002 | Malipo | Kadi za muhtasari wa malipo | Mtumiaji ameingia, ankara zipo | 1. Nenda kwenye Billing. 2. Angalia kadi za muhtasari. | Kadi 3 za muhtasari zinaonekana: Total Revenue, Pending Amount, Overdue Amount na thamani sahihi. | | FR-BILL-01 |
 | TC-BILL-003 | Malipo | Aina za huduma | Mtumiaji ameingia | 1. Bonyeza "Create Invoice". 2. Angalia chaguzi za aina ya huduma. | Aina zifuatazo zinapatikana: Data Submission, Credit Report, API Access, Subscription. | | FR-BILL-01 |
+| TC-BIL-004 | Malipo | Kuunda ankara - usajili | Admin/Regulator ameingia | 1. Unda ankara na aina ya huduma: "subscription". | Rekodi ya ankara imeundwa. | | FR-COMM-01 |
+| TC-BIL-005 | Malipo | Kufuatilia hali ya malipo | Rekodi za ankara zipo | 1. Angalia rekodi za ankara. 2. Angalia thamani za hali. | Hali zinaonyeshwa: pending, paid, overdue. | | FR-COMM-05 |
+| TC-BIL-006 | Malipo | Ankara za sarafu nyingi | Admin/Regulator ameingia | 1. Unda ankara katika sarafu tofauti (ETB, GHS, UGX, USD). | Ankara zimeundwa na sarafu sahihi. Kiasi kimefomatiwa kwa kila sarafu. | | FR-COMM-01 |
+| TC-BIL-007 | Malipo | Safu za ankara zinazobonyezwa | Rekodi za ankara zimeorodheshwa | 1. Bonyeza safu ya rekodi ya ankara. | Kisanduku cha maelezo ya ankara kinafunguka kikionyesha taarifa kamili za ankara. | | FR-COMM-01 |
+| TC-BIL-008 | Malipo | Kizuizi cha ufikiaji kwa Lender/Viewer | Mtumiaji wa Lender au Viewer ameingia | 1. Jaribu kufikia ukurasa wa Billing. | Ufikiaji umekataliwa au ukurasa hauonekani kwenye mwambao wa urambazaji. | | FR-COMM-01 |
 
 ---
 
@@ -294,6 +321,8 @@
 | TC-HD-002 | Dawati la Msaada | Kuona taarifa za mkopaji, migogoro, na ridhaa | Mkopaji amechaguliwa katika dawati la msaada | 1. Bonyeza kadi ya mkopaji ili kumchagua. | Maelezo ya mkopaji yanaonyesha: taarifa za kibinafsi, migogoro (aina, maelezo, hali, muda wa SLA), rekodi za ridhaa (taasisi, madhumuni, hali, risiti). | | FR-CON-04 |
 | TC-HD-003 | Dawati la Msaada | Kuwasilisha mgogoro kutoka dawati la msaada | Mkopaji amechaguliwa katika dawati la msaada | 1. Bonyeza "File Dispute". 2. Jina la mkopaji limejazwa tayari. 3. Jaza: Dispute Type, Correction Type, Description. 4. Wasilisha. | Mgogoro umeundwa kwa mkopaji aliyechaguliwa. Ujumbe wa mafanikio unaonyeshwa. | | FR-CON-04 |
 | TC-HD-004 | Dawati la Msaada | Kutoa ridhaa kutoka dawati la msaada | Mkopaji amechaguliwa katika dawati la msaada | 1. Bonyeza "Grant Consent". 2. Jaza: Granted To, Purpose, Consent Type. 3. Wasilisha. | Rekodi ya ridhaa imeundwa. Nambari ya risiti imezalishwa moja kwa moja. | | FR-CON-06 |
+| TC-HD-005 | Dawati la Msaada | Kuona migogoro ya mkopaji kutoka dawati la msaada | Mkopaji ana migogoro | 1. Tafuta mkopaji. 2. Angalia sehemu ya migogoro. | Migogoro yote ya mkopaji inaonyeshwa. | | FR-CON-02 |
+| TC-HD-006 | Dawati la Msaada | Kuona ridhaa ya mkopaji kutoka dawati la msaada | Mkopaji ana rekodi za ridhaa | 1. Tafuta mkopaji. 2. Angalia sehemu ya ridhaa. | Rekodi zote za ridhaa za mkopaji zinaonyeshwa. | | FR-CON-02 |
 
 ---
 
@@ -305,6 +334,9 @@
 | TC-BU-002 | Upakiaji wa Kundi | Upakiaji wa faili ya CSV | Mtumiaji ameingia kama Admin au Lender | 1. Nenda kwenye Batch Upload. 2. Chagua aina ya faili: CSV. 3. Pakia faili ya CSV yenye rekodi sahihi. | Faili imechakatwa kwa mafanikio. Rekodi zimeingizwa katika mfumo. | | FR-BATCH-01 |
 | TC-BU-003 | Upakiaji wa Kundi | Hitilafu za uthibitishaji kwenye upakiaji | Mtumiaji ameingia | 1. Pakia faili yenye data batili (sehemu zinazohitajika zimekosekana). | Matokeo ya uthibitishaji yanaonyesha rekodi zilizoshindwa na maelezo ya hitilafu (nambari ya rekodi, sehemu, maelezo ya hitilafu). | | FR-BATCH-01 |
 | TC-BU-004 | Upakiaji wa Kundi | Kizuizi cha jukumu - Regulator hawezi kupakia | Mtumiaji ameingia kama Regulator | 1. Jaribu kuelekeza kwenye Batch Upload. | Ufikiaji umezuiwa kwa jukumu la Regulator. | | NFR-SEC-06 |
+| TC-BU-005 | Upakiaji wa Kundi | Kupakua ripoti ya hitilafu | Upakiaji umekamilika na hitilafu | 1. Kamilisha upakiaji na hitilafu fulani. 2. Bonyeza "Download Error Report" au sawa. | Ripoti ya hitilafu inapakuliwa ikiwa na maelezo ya rekodi zilizoshindwa na hitilafu zao za uthibitishaji. | | FR-COL-01 |
+| TC-BU-006 | Upakiaji wa Kundi | Upakiaji wa faili tupu | Admin/Lender ameingia | 1. Pakia faili tupu. | Ujumbe unaofaa wa hitilafu: "Request body must contain a 'records' array" au sawa. | | FR-COL-01 |
+| TC-BU-007 | Upakiaji wa Kundi | Kizuizi cha ufikiaji kwa Viewer/Regulator | Viewer au Regulator ameingia | 1. Jaribu kufikia Batch Upload. | Ufikiaji umekataliwa au ukurasa haupatikani. | | FR-COL-01 |
 
 ---
 
@@ -316,6 +348,13 @@
 | TC-AUD-002 | Njia ya Ukaguzi | Kuingia kunaunda rekodi ya ukaguzi | Mtumiaji anaweza kuingia | 1. Ingia kwa mafanikio. 2. Nenda kwenye Audit Trail (kama Admin). 3. Tafuta kuingia kwa hivi karibuni. | Rekodi ya ukaguzi ipo na action: LOGIN, jina la mtumiaji, muhuri wa wakati, na anwani ya IP. | | NFR-SEC-08 |
 | TC-AUD-003 | Njia ya Ukaguzi | Kuingia kushindwa kunaunda rekodi ya ukaguzi | — | 1. Jaribu kuingia na vitambulisho batili. 2. Ingia kama Admin na angalia Audit Trail. | Rekodi ya ukaguzi ipo na action: LOGIN_FAILED. | | NFR-SEC-08 |
 | TC-AUD-004 | Njia ya Ukaguzi | Kizuizi cha jukumu - Lender hana ufikiaji | Mtumiaji ameingia kama Lender | 1. Jaribu kuelekeza kwenye Audit Trail. | Ufikiaji umezuiwa. Ukurasa wa Audit Trail hauonekani kwenye mwambao kwa jukumu la Lender. | | NFR-SEC-06 |
+| TC-AUD-005 | Njia ya Ukaguzi | Kufungwa kwa akaunti kunaandikwa | Akaunti imefungwa | 1. Anzisha kufungwa kwa akaunti (majaribio 3 yaliyoshindwa). 2. Angalia Njia ya Ukaguzi. | Tukio la ACCOUNT_LOCKED limeandikwa. | | NFR-SEC-06 |
+| TC-AUD-006 | Njia ya Ukaguzi | Operesheni za CRUD zinaandikwa | Kitendo chochote cha kuunda/kusasisha/kufuta | 1. Fanya operesheni ya data (k.m., wasilisha mkopaji). 2. Angalia Njia ya Ukaguzi. | Tukio la SUBMIT_APPROVAL au CREATE limeandikwa na maelezo ya huluki. | | NFR-SEC-06 |
+| TC-AUD-007 | Njia ya Ukaguzi | Ufuatiliaji wa anwani ya IP | Kitendo chochote kimefanywa | 1. Fanya vitendo mbalimbali. 2. Angalia rekodi za Njia ya Ukaguzi. | Kila rekodi ina sehemu ya ipAddress iliyojazwa. | | NFR-SEC-07 |
+| TC-AUD-008 | Njia ya Ukaguzi | Kubadili nenosiri kunaandikwa | Mtumiaji anabadili nenosiri | 1. Badili nenosiri. 2. Angalia Njia ya Ukaguzi. | Tukio la PASSWORD_CHANGE limeandikwa. | | NFR-SEC-06 |
+| TC-AUD-009 | Njia ya Ukaguzi | Kutengeneza ripoti ya mkopo kunaandikwa | Ripoti ya mkopo imetengenezwa | 1. Tengeneza ripoti ya mkopo. 2. Angalia Njia ya Ukaguzi. | Tukio la VIEW au API_CREDIT_REPORT limeandikwa na maelezo ya mkopaji. | | NFR-SEC-06 |
+| TC-AUD-010 | Njia ya Ukaguzi | Kizuizi cha ufikiaji kwa Lender/Viewer | Lender au Viewer ameingia | 1. Jaribu kufikia ukurasa wa Audit Trail. | Ufikiaji umezuiwa au ukurasa hauonekani kwenye mwambao. | | NFR-SEC-06 |
+| TC-AUD-011 | Njia ya Ukaguzi | Safu za njia ya ukaguzi zinazobonyezwa | Rekodi za ukaguzi zimeorodheshwa | 1. Bonyeza rekodi ya njia ya ukaguzi. | Kisanduku cha maelezo kinafunguka kikionyesha taarifa kamili za rekodi ya ukaguzi. | | NFR-SEC-06 |
 
 ---
 
@@ -327,6 +366,13 @@
 | TC-UM-002 | Usimamizi wa Watumiaji | Kupata majukumu | Admin ameingia | 1. Bonyeza "Add User". 2. Angalia chaguzi za jukumu katika menyu. | Majukumu yafuatayo yanapatikana: Admin, Regulator, Lender, Viewer. | | NFR-SEC-05 |
 | TC-UM-003 | Usimamizi wa Watumiaji | Kubadili hali ya mtumiaji | Admin ameingia, mtumiaji yupo | 1. Nenda kwenye User Management. 2. Bonyeza "Edit" kwenye mtumiaji. 3. Badili hali kuwa "suspended". 4. Hifadhi. | Hali ya mtumiaji inabadilika kuwa "suspended". Mtumiaji hawezi kuingia. | | NFR-SEC-02 |
 | TC-UM-004 | Usimamizi wa Watumiaji | Kizuizi cha jukumu - wasio Admin hawana ufikiaji | Mtumiaji ameingia kama Regulator | 1. Jaribu kuelekeza kwenye User Management. | Kipengele cha User Management hakionekani kwenye mwambao au ufikiaji umezuiwa. | | NFR-SEC-06 |
+| TC-UM-005 | Usimamizi wa Watumiaji | Kupewa jukumu la Viewer | Admin ameingia | 1. Unda mtumiaji na jukumu: "viewer". | Mtumiaji ameundwa na jukumu la viewer. Ufikiaji wa kusoma pekee. | | NFR-SEC-02 |
+| TC-UM-006 | Usimamizi wa Watumiaji | Kusimamisha mtumiaji | Admin ameingia, mtumiaji hai yupo | 1. Nenda kwenye User Management. 2. Chagua mtumiaji. 3. Badili hali kuwa "suspended". | Hali ya mtumiaji imebadilika kuwa suspended. Mtumiaji hawezi kuingia tena. Rekodi ya ukaguzi. | | NFR-SEC-02 |
+| TC-UM-007 | Usimamizi wa Watumiaji | Kuzima mtumiaji | Admin ameingia, mtumiaji hai yupo | 1. Chagua mtumiaji. 2. Badili hali kuwa "deactivated". | Hali ya mtumiaji imebadilika kuwa deactivated. Mtumiaji hawezi kuingia. | | NFR-SEC-02 |
+| TC-UM-008 | Usimamizi wa Watumiaji | Kuwezesha tena mtumiaji | Admin ameingia, mtumiaji aliyesimamishwa/aliyezimwa yupo | 1. Chagua mtumiaji. 2. Badili hali kuwa "active". | Hali ya mtumiaji imebadilika kuwa active. Mtumiaji anaweza kuingia tena. | | NFR-SEC-02 |
+| TC-UM-009 | Usimamizi wa Watumiaji | Kusasisha maelezo ya mtumiaji | Admin ameingia | 1. Chagua mtumiaji. 2. Hariri Full Name na Email. 3. Hifadhi. | Maelezo ya mtumiaji yamesasishwa. Rekodi ya ukaguzi. | | NFR-SEC-02 |
+| TC-UM-010 | Usimamizi wa Watumiaji | Kizuizi cha ufikiaji kwa wasio admin | Regulator/Lender/Viewer ameingia | 1. Jaribu kufikia ukurasa wa User Management. | Ufikiaji umezuiwa au ukurasa hauonekani kwenye mwambao. | | NFR-SEC-02 |
+| TC-UM-011 | Usimamizi wa Watumiaji | Kuweka upya nenosiri la mtumiaji | Admin ameingia | 1. Chagua mtumiaji. 2. Weka nenosiri jipya. 3. Hifadhi. | Nenosiri limesasishwa (limeandikwa kwa bcrypt). Mtumiaji anaweza kuingia na nenosiri jipya. | | NFR-SEC-04 |
 
 ---
 
@@ -337,6 +383,10 @@
 | TC-API-001 | Funguo za API | Kuzalisha funguo ya API | Admin ameingia, taasisi hai ipo | 1. Nenda kwenye API Keys. 2. Bonyeza "Generate Key". 3. Chagua taasisi. 4. Ingiza lebo. 5. Chagua ruhusa: Full. 6. Wasilisha. | Funguo ya API imezalishwa na kuonyeshwa (mara moja tu). Funguo inaonekana katika orodha na hali "active". | | FR-API-01 |
 | TC-API-002 | Funguo za API | Kufuta funguo ya API | Admin ameingia, funguo hai ipo | 1. Nenda kwenye API Keys. 2. Tafuta funguo unayotaka kufuta. 3. Bonyeza "Revoke". | Hali ya funguo inabadilika kuwa "revoked". Haitumiki tena kwa uthibitishaji wa API. | | FR-API-01 |
 | TC-API-003 | Funguo za API | Viwango vya ruhusa | Admin ameingia | 1. Bonyeza "Generate Key". 2. Angalia chaguzi za ruhusa. | Chaguzi zifuatazo zinapatikana: Submit, Read, Full. | | FR-API-01 |
+| TC-API-004 | Funguo za API | Kufuta funguo ya API | Admin ameingia, funguo hai ya API ipo | 1. Nenda kwenye API Keys. 2. Chagua funguo hai. 3. Bonyeza "Revoke". | Hali ya funguo imebadilika kuwa "revoked". Muhuri wa revokedAt umewekwa. Funguo haiwezi kutumika tena kwa uthibitishaji wa API. | | NFR-SEC-08 |
+| TC-API-005 | Funguo za API | Kuona matumizi ya funguo ya API | Admin ameingia, funguo ya API imetumika | 1. Nenda kwenye API Keys. 2. Angalia maelezo ya funguo. | Muhuri wa wakati wa matumizi ya mwisho unaonyeshwa. Kiambishi awali cha funguo kinaonyeshwa kwa utambulisho. | | NFR-SEC-08 |
+| TC-API-006 | Funguo za API | Kizuizi cha ufikiaji kwa wasio admin | Regulator/Lender/Viewer ameingia | 1. Jaribu kufikia ukurasa wa API Keys. | Ufikiaji umezuiwa au ukurasa hauonekani. | | NFR-SEC-08 |
+| TC-API-007 | Funguo za API | Uhifadhi wa funguo kwa SHA-256 | Funguo ya API imezalishwa | 1. Zalisha funguo ya API. 2. Thibitisha uhifadhi. | Funguo kamili haihifadhiwi. Hash ya SHA-256 pekee imehifadhiwa katika hifadhidata. Kiambishi awali cha funguo kimehifadhiwa tofauti kwa kuonyesha. | | NFR-SEC-08 |
 
 ---
 
@@ -344,11 +394,24 @@
 
 | TC-ID | Moduli | Jina la Jaribio | Masharti ya Awali | Hatua za Jaribio | Matokeo Yanayotarajiwa | Imefaulu/Imeshindwa | Rejea ya SRS |
 |-------|--------|---------------|----------------|------------|-----------------|-----------|---------------|
-| TC-EAPI-001 | API ya Nje | Uthibitishaji wa funguo ya API | Funguo hai ya API ipo | 1. Tuma ombi la GET kwenye `/api/external/borrowers/search` na kichwa: `X-API-Key: {valid_key}`. | Ombi limeidhinishwa. Jibu la 200 limerudishwa. | | FR-API-02 |
 | TC-EAPI-002 | API ya Nje | Uthibitishaji wa funguo batili ya API | — | 1. Tuma ombi la GET na kichwa: `X-API-Key: invalid_key_123`. | Jibu la 401 Unauthorized limerudishwa: "Invalid or revoked API key." | | FR-API-02 |
 | TC-EAPI-003 | API ya Nje | Kutafuta mkopaji kupitia API | Funguo hai ya API yenye ruhusa ya Read ipo | 1. Tuma GET `/api/external/borrowers/search?nationalId={id}`. | Jibu la 200 na data ya mkopaji limerudishwa. | | FR-API-02 |
 | TC-EAPI-004 | API ya Nje | Kuwasilisha mkopaji kupitia API | Funguo hai ya API yenye ruhusa ya Submit ipo | 1. Tuma POST `/api/external/borrowers` na mwili wa JSON wenye data ya mkopaji. | Jibu la 201 Created limerudishwa. Mkopaji ameundwa. | | FR-API-02 |
 | TC-EAPI-005 | API ya Nje | Kukaguliwa kwa ruhusa - Read pekee haiwezi kuwasilisha | Funguo ya API yenye ruhusa ya Read pekee | 1. Tuma POST `/api/external/borrowers` na funguo ya Read-pekee. | Jibu la 403 Forbidden: "Insufficient permissions." | | FR-API-02 |
+| TC-EAPI-006 | API ya Nje | Sehemu ya ukaguzi wa afya | API inapatikana | 1. Tuma ombi la GET kwenye `/api/external/v1/health`. | Jibu: `{ "status": "ok", "version": "1.1", "service": "Systems In Motion Credit Registry API" }`. Hakuna uthibitishaji unaohitajika. | | NFR-SEC-08 |
+| TC-EAPI-008 | API ya Nje | Kuwasilisha wakopaji kwa wingi | Funguo hai ya API yenye ruhusa ya "submit" | 1. Tuma POST kwenye `/api/external/v1/borrowers` na safu ya vitu vya wakopaji. | Jibu na matokeo ya kundi: idadi iliyowasilishwa, idadi iliyoshindwa, matokeo na hitilafu binafsi. Ukaguzi: API_BATCH_SUBMIT. | | FR-COL-01 |
+| TC-EAPI-009 | API ya Nje | Kuwasilisha akaunti ya mkopo | Funguo hai ya API yenye ruhusa ya "submit" | 1. Tuma POST kwenye `/api/external/v1/credit-accounts` na JSON ya akaunti ya mkopo. | 201 Created. Akaunti ya mkopo imeundwa. Taasisi ya mkopeshaji inachukua thamani ya taasisi ya funguo ya API ikiwa haijabainishwa. | | FR-CR-01 |
+| TC-EAPI-010 | API ya Nje | Kuwasilisha akaunti za mikopo kwa wingi | Funguo hai ya API yenye ruhusa ya "submit" | 1. Tuma POST kwenye `/api/external/v1/credit-accounts` na safu ya akaunti za mikopo. | Matokeo ya uchakataji wa kundi yamerudishwa. | | FR-CR-01 |
+| TC-EAPI-011 | API ya Nje | Kuwasilisha historia ya malipo | Funguo hai ya API yenye ruhusa ya "submit" | 1. Tuma POST kwenye `/api/external/v1/payment-history` na rekodi za historia ya malipo. | Rekodi za historia ya malipo zimeundwa. Inasaidia uwasilishaji wa moja na kundi. | | FR-CR-08 |
+| TC-EAPI-012 | API ya Nje | Kuwasilisha hukumu ya mahakama | Funguo hai ya API yenye ruhusa ya "submit" | 1. Tuma POST kwenye `/api/external/v1/court-judgments` na data ya hukumu. | Hukumu ya mahakama imeundwa. Rekodi ya ukaguzi. | | FR-COL-05 |
+| TC-EAPI-014 | API ya Nje | Kutafuta wakopaji kwa jina | Funguo hai ya API yenye ruhusa ya "read" | 1. Tuma GET kwenye `/api/external/v1/borrowers/search?name={name}`. | Wakopaji wanaolingana wamerudishwa. | | FR-CR-01 |
+| TC-EAPI-015 | API ya Nje | Kupata ripoti ya mkopo | Funguo hai ya API yenye ruhusa ya "read" | 1. Tuma GET kwenye `/api/external/v1/borrowers/{id}/credit-report`. | Ripoti kamili ya mkopo imerudishwa na: nambari ya mfululizo, alama ya mkopo, misimbo ya sababu, akaunti, maswali, hukumu za mahakama, rekodi za ridhaa. Rekodi ya ripoti imeundwa. | | FR-CR-06 |
+| TC-EAPI-016 | API ya Nje | Kupata akaunti za mikopo kwa mkopaji | Funguo hai ya API yenye ruhusa ya "read" | 1. Tuma GET kwenye `/api/external/v1/credit-accounts/{borrowerId}`. | Akaunti za mikopo za mkopaji zimerudishwa. | | FR-CR-01 |
+| TC-EAPI-017 | API ya Nje | Kichwa cha funguo ya API hakipo | Hakuna kichwa cha X-API-Key | 1. Tuma ombi lolote kwenye API ya nje bila kichwa cha X-API-Key. | 401 Unauthorized: `{ "error": "Missing X-API-Key header" }`. | | NFR-SEC-08 |
+| TC-EAPI-019 | API ya Nje | Funguo ya API iliyofutwa | Funguo ya API iliyofutwa | 1. Tuma ombi na funguo ya API iliyofutwa. | 403 Forbidden: `{ "error": "API key has been revoked" }`. | | NFR-SEC-08 |
+| TC-EAPI-021 | API ya Nje | Funguo ya API ya taasisi isiyo hai | Funguo ya API kwa taasisi iliyosimamishwa/inayosubiri | 1. Tuma ombi na funguo inayohusiana na taasisi isiyo hai. | 403 Forbidden: `{ "error": "Institution is not active" }`. | | NFR-SEC-08 |
+| TC-EAPI-022 | API ya Nje | Hitilafu ya uthibitishaji kwenye uwasilishaji | Funguo hai ya API | 1. Tuma POST na data batili (sehemu zinazohitajika hazipo). | 400 Bad Request na maelezo ya hitilafu za uthibitishaji. | | FR-COL-01 |
+| TC-EAPI-023 | API ya Nje | Ufuatiliaji wa matumizi ya mwisho kwenye funguo ya API | Funguo hai ya API | 1. Fanya ombi lolote la API lililothibitishwa. 2. Angalia rekodi ya funguo ya API. | Muhuri wa lastUsedAt umesasishwa kwenye funguo ya API. | | NFR-SEC-08 |
 
 ---
 
@@ -358,6 +421,10 @@
 |-------|--------|---------------|----------------|------------|-----------------|-----------|---------------|
 | TC-RPX-001 | Ripoti na Usafirishaji | Kusafirisha CSV ya kwingineko | Mtumiaji ameingia | 1. Nenda kwenye Reports. 2. Chagua Portfolio Export. 3. Bonyeza "Export CSV". | Faili ya CSV inapakuliwa na data ya akaunti za mikopo ikiwa na: akaunti, salio, hali, sarafu. | | FR-REP-01 |
 | TC-RPX-002 | Ripoti na Usafirishaji | Kusafirisha CSV ya wakopaji | Mtumiaji ameingia | 1. Nenda kwenye Reports. 2. Chagua Borrowers Export. 3. Bonyeza "Export CSV". | Faili ya CSV inapakuliwa na data ya wakopaji. | | FR-REP-01 |
+| TC-RPX-003 | Ripoti na Usafirishaji | Mwonekano wa uchambuzi wa udhibiti | Mtumiaji ameingia | 1. Nenda kwenye Reports. 2. Angalia sehemu ya uchambuzi wa udhibiti. | Uchambuzi unaonyeshwa: uwiano wa NPL, mgawanyo wa kwingineko kwa taasisi/aina ya mkopo, ufuatiliaji wa ukiukaji wa SLA. | | FR-REG-01 |
+| TC-RPX-004 | Ripoti na Usafirishaji | Mgawanyo wa kwingineko kwa taasisi | Data ipo kwa taasisi nyingi | 1. Angalia uchambuzi wa udhibiti. | Data ya kwingineko imegawanywa kwa taasisi ikionyesha kiasi cha mikopo, kiasi kilichobaki, na uwiano wa NPL. | | FR-REG-02 |
+| TC-RPX-005 | Ripoti na Usafirishaji | Ufuatiliaji wa ukiukaji wa SLA | Migogoro yenye muda wa mwisho wa SLA uliopitishwa ipo | 1. Angalia uchambuzi wa udhibiti. | Ukiukaji wa SLA umetambuliwa na kuhesabiwa. | | FR-REG-03 |
+| TC-RPX-006 | Ripoti na Usafirishaji | Mwonekano wa kumbukumbu za ripoti ya mkopo | Ripoti za mkopo zimetengenezwa | 1. Nenda kwenye kumbukumbu za ripoti ya mkopo (kupitia API au sehemu ya ripoti). | Rekodi za kumbukumbu zinaonyesha: mkopaji, requestedBy, taasisi, madhumuni, nambari ya mfululizo, muhuri wa wakati. | | FR-CR-06 |
 
 ---
 
@@ -368,6 +435,11 @@
 | TC-NOT-001 | Arifa | Beji ya idadi ya arifa ambazo hazijasomwa | Mtumiaji ameingia, arifa ambazo hazijasomwa zipo | 1. Angalia aikoni ya kengele ya arifa katika kichwa. | Beji nyekundu inaonyesha idadi ya arifa ambazo hazijasomwa. | | FR-NOT-01 |
 | TC-NOT-002 | Arifa | Kusoma arifa | Arifa ambazo hazijasomwa zipo | 1. Bonyeza kengele ya arifa. 2. Bonyeza arifa binafsi. | Arifa imewekwa alama ya kusomwa. Beji inasasishwa. | | FR-NOT-01 |
 | TC-NOT-003 | Arifa | Kusoma arifa zote | Arifa nyingi ambazo hazijasomwa zipo | 1. Bonyeza kengele ya arifa. 2. Bonyeza "Mark All as Read". | Arifa zote zimewekwa alama ya kusomwa. Beji inatoweka. | | FR-NOT-01 |
+| TC-NOT-004 | Arifa | Kuweka alama ya arifa moja kama imesomwa | Mtumiaji ana arifa ambazo hazijasomwa | 1. Bonyeza kengele ya arifa. 2. Bonyeza arifa ambayo haijasomwa. | Arifa imewekwa alama ya kusomwa. Idadi ya arifa hazijasomwa inapungua kwa 1. | | FR-CON-02 |
+| TC-NOT-005 | Arifa | Kuona orodha ya arifa | Mtumiaji ana arifa | 1. Bonyeza kengele ya arifa. | Orodha ya arifa inafunguka ikionyesha kichwa, ujumbe, muhuri wa wakati, na hali ya kusomwa/kutosomwa. | | FR-CON-02 |
+| TC-NOT-006 | Arifa | Arifa moja kwa moja kwa ombi la idhini | Mtumiaji anawasilisha mkopaji kwa idhini | 1. Ingia kama Lender. 2. Wasilisha mkopaji mpya. 3. Toka nje. 4. Ingia kama Admin. 5. Angalia arifa. | Admin ana arifa kuhusu ombi la idhini linalosubiri. | | FR-CON-02 |
+| TC-NOT-007 | Arifa | Arifa moja kwa moja kwa matokeo ya idhini | Admin anapitisha/kukataa ombi | 1. Admin anapitisha ombi linalosubiri. 2. Toka nje. 3. Ingia kama mwombaji. 4. Angalia arifa. | Mwombaji ana arifa kuhusu matokeo ya kupitishwa/kukataliwa. | | FR-CON-02 |
+| TC-NOT-008 | Arifa | Arifa moja kwa moja kwa kuwasilisha mgogoro | Mtumiaji anawasilisha mgogoro | 1. Wasilisha mgogoro. 2. Ingia kama Admin. 3. Angalia arifa. | Admin amearifiwa kuhusu mgogoro mpya. | | FR-CON-02 |
 
 ---
 
@@ -379,6 +451,9 @@
 | TC-I18N-002 | Kimataifa | Kubadili lugha kuwa Kireno | Mtumiaji ameingia | 1. Bonyeza kitufe cha kubadili lugha. 2. Chagua "PT". | Kiolesura kinabadilika kuwa Kireno. Lebo zote za mwambao na kiolesura zimetafsiriwa. | | NFR-ACC-01 |
 | TC-I18N-003 | Kimataifa | Kurudi Kiingereza | Mtumiaji ameingia, lugha imewekwa kuwa FR au PT | 1. Bonyeza kitufe cha kubadili lugha. 2. Chagua "EN". | Kiolesura kinarudi kuwa Kiingereza. Tafsiri zote sahihi. | | NFR-ACC-01 |
 | TC-I18N-004 | Kimataifa | Kubadili lugha kwenye ukurasa wa kuingia | Hakuna kipindi hai | 1. Nenda kwenye ukurasa wa kuingia. 2. Angalia chaguzi za kubadili lugha. 3. Badili kuwa "FR". | Fomu ya kuingia inaonyeshwa kwa Kifaransa. Lebo, kitufe, na maandishi ya kisheria yametafsiriwa. | | NFR-ACC-01 |
+| TC-I18N-005 | Kimataifa | Maudhui ya dashibodi kwa Kifaransa | Lugha imewekwa kuwa Kifaransa | 1. Nenda kwenye Dashibodi. | Vichwa vya kadi za takwimu na maelezo yake kwa Kifaransa. | | FR-REG-01 |
+| TC-I18N-006 | Kimataifa | Kuendelea kwa lugha | Mtumiaji anabadili kuwa Kifaransa | 1. Badili kuwa Kifaransa. 2. Nenda kwenye kurasa tofauti. | Lugha ya Kifaransa inaendelea katika urambazaji wote wa kurasa ndani ya kipindi. | | FR-REG-01 |
+| TC-I18N-007 | Kimataifa | Kubadili lugha kuwa Kireno | Mtumiaji ameingia | 1. Tafuta kitufe cha kubadili lugha katika kichwa/mwambao. 2. Bonyeza kubadili kuwa Kireno (PT). | Maandishi yote ya kiolesura yanabadilika kuwa tafsiri za Kireno. Lebo za mwambao, vichwa vya kurasa, maandishi ya vitufe, na lebo za fomu zote kwa Kireno. | | FR-REG-01 |
 
 ---
 
@@ -389,6 +464,10 @@
 | TC-THM-001 | Mandhari | Kubadili kuwa mandhari ya giza | Mtumiaji ameingia, mandhari angavu | 1. Bonyeza aikoni ya kubadili mandhari (jua/mwezi) katika kichwa. | Kiolesura kinabadilika kuwa mandhari ya giza. Msingi giza, maandishi meupe/mekundu. | | NFR-ACC-02 |
 | TC-THM-002 | Mandhari | Kubadili kuwa mandhari angavu | Mtumiaji ameingia, mandhari ya giza | 1. Bonyeza aikoni ya kubadili mandhari tena. | Kiolesura kinarudi kuwa mandhari angavu. | | NFR-ACC-02 |
 | TC-THM-003 | Mandhari | Chaguo la mandhari linaendelea | Mtumiaji ameweka mandhari ya giza | 1. Weka mandhari ya giza. 2. Unda upya ukurasa. | Mandhari ya giza inaendelea baada ya kuunda upya (imehifadhiwa katika localStorage). | | NFR-ACC-02 |
+| TC-THM-004 | Mandhari | Mandhari ya giza - mwambao | Mandhari ya giza hai | 1. Angalia mwambao katika mandhari ya giza. | Rangi za mwambao zinabadilika ipasavyo. Maandishi yanasomeka. Aikoni zinaonekana. Kipengele hai kinatofautiana. | | NFR-SEC-01 |
+| TC-THM-005 | Mandhari | Mandhari ya giza - fomu na pembejeo | Mandhari ya giza hai | 1. Nenda kwenye fomu. | Sehemu za pembejeo, lebo, mipaka, na mandhari yote yanabadilika kwa mandhari ya giza. Maandishi yanasomeka. | | NFR-SEC-01 |
+| TC-THM-006 | Mandhari | Mandhari ya giza - majedwali | Mandhari ya giza hai | 1. Nenda kwenye ukurasa wenye jedwali la data. | Vichwa vya jedwali, safu, mipaka, na maandishi yote yanabadilika kwa mandhari ya giza. Rangi za safu mbadala (ikiwepo) zimesasishwa. | | NFR-SEC-01 |
+| TC-THM-007 | Mandhari | Mandhari ya giza - kadi za takwimu | Mandhari ya giza hai | 1. Nenda kwenye Dashibodi. | Kadi za takwimu zinabadilika kwa mandhari ya giza na utofautishaji unaofaa. | | NFR-SEC-01 |
 
 ---
 
@@ -419,6 +498,7 @@
 | TC-MFA-002 | MFA | Kuingia na MFA | MFA imewezeshwa kwa mtumiaji | 1. Nenda kwenye ukurasa wa kuingia. 2. Ingiza jina la mtumiaji na nenosiri. 3. Bonyeza "Sign In". 4. Skrini ya pili inaonekana ikiomba msimbo wa TOTP. 5. Ingiza msimbo wa tarakimu 6 kutoka kwa programu ya authenticator. 6. Bonyeza "Verify". | Kuingia kumekamilika kwa mafanikio. Mtumiaji ameelekezwa kwenye Dashibodi. | | ENT-01 |
 | TC-MFA-003 | MFA | Kuzima MFA | MFA imewezeshwa, mtumiaji ameingia | 1. Nenda kwenye mipangilio ya MFA. 2. Bonyeza "Disable MFA". | MFA imezimwa. Kuingia kwa baadaye kunahitaji jina la mtumiaji na nenosiri pekee. | | ENT-01 |
 | TC-MFA-004 | MFA | Msimbo batili wa TOTP | MFA imewezeshwa kwa mtumiaji | 1. Ingiza jina la mtumiaji na nenosiri. 2. Kwenye skrini ya MFA, ingiza msimbo usio sahihi wa tarakimu 6. 3. Bonyeza "Verify". | Ujumbe wa hitilafu: msimbo batili wa MFA. Kuingia kunashindwa. | | ENT-01 |
+| TC-MFA-005 | MFA | Kuzima MFA | Mtumiaji ana MFA imewezeshwa, ameingia | 1. Nenda kwenye mipangilio ya MFA. 2. Bonyeza "Disable MFA". | MFA imezimwa. `mfaEnabled` = false. `mfaSecret` imefutwa. | | ENT-01 |
 
 ---
 
@@ -437,6 +517,7 @@
 |-------|--------|---------------|----------------|------------|-----------------|-----------|---------------|
 | TC-BOT-001 | Chatbot ya Migogoro | Mchakato unaongozwa wa kuwasilisha mgogoro | Mtumiaji ameingia, kwenye ukurasa wa Helpdesk | 1. Anza chatbot ya migogoro. 2. Chagua aina ya tatizo (k.m., Data Error). 3. Tafuta na chagua mkopaji. 4. Chagua akaunti (hiari). 5. Ingiza maelezo ya tatizo. 6. Thibitisha na uwasilishe. | Chatbot inaongoza kupitia hatua zote kwa mafanikio. Mgogoro unaundwa moja kwa moja ukikamilika. | | ENT-03 |
 | TC-BOT-002 | Chatbot ya Migogoro | Kughairi mchakato wa chatbot | Mtumiaji ameingia, chatbot imefunguliwa | 1. Anza mchakato wa chatbot. 2. Bonyeza "Cancel" au funga chatbot katika hatua yoyote. | Mchakato wa chatbot umesitishwa. Hakuna mgogoro uliowasilishwa. Kiolesura kinarudishwa. | | ENT-03 |
+| TC-BOT-003 | Chatbot ya Migogoro | Kughairi mchakato wa chatbot | Chatbot inaendelea | 1. Bonyeza kughairi/kufunga wakati wa hatua yoyote. | Chatbot inarudishwa. Ujumbe wa "Cancelled" unaonyeshwa. Mtumiaji anaweza kuanza mchakato mpya. | | ENT-03 |
 
 ---
 
@@ -474,6 +555,7 @@
 |-------|--------|---------------|----------------|------------|-----------------|-----------|---------------|
 | TC-TAMP-001 | Ukaguzi Unaostahimili Uharibifu | Kuthibitisha uadilifu wa mnyororo wa hash | Mtumiaji ameingia kama Admin au Regulator | 1. Nenda kwenye Audit Trail. 2. Bonyeza "Verify Integrity". | Matokeo ya uthibitishaji yanaonyeshwa: beji ya "Valid" (kijani) ikionyesha mnyororo wa hash wa SHA-256 haujaharibiwa. | | ENT-07 |
 | TC-TAMP-002 | Ukaguzi Unaostahimili Uharibifu | Beji ya hali ya uadilifu | Mtumiaji ameingia kama Admin | 1. Nenda kwenye Audit Trail. 2. Angalia beji ya uadilifu juu ya ukurasa. | Beji ya uadilifu inaonekana ikionyesha "Valid" (kijani) au "Broken" (nyekundu). | | ENT-07 |
+| TC-TAMP-003 | Ukaguzi Unaostahimili Uharibifu | Uadilifu wa mnyororo wa hash ni sahihi | Kumbukumbu za ukaguzi hazijaharibiwa | 1. Bonyeza "Verify Integrity". | Beji inaonyesha hali ya kijani "Valid". `valid: true` katika jibu. Rekodi zote zimepita uthibitishaji wa mnyororo wa hash. | | ENT-07 |
 
 ---
 
@@ -508,6 +590,7 @@
 | TC-RET-002 | Sera za Uhifadhi | Kuongeza sera ya uhifadhi | Admin ameingia | 1. Bonyeza "Add Policy". 2. Ingiza: Country, Archive Period (Months), Expunge Period (Months). 3. Bonyeza "Save". | Sera ya uhifadhi imeundwa na inaonekana katika jedwali. | | FR-RET-01 |
 | TC-RET-003 | Sera za Uhifadhi | Kuhariri sera ya uhifadhi | Admin ameingia, sera ya uhifadhi ipo | 1. Bonyeza "Edit" kwenye sera. 2. Badili vipindi vya kuhifadhi na kufuta. 3. Bonyeza "Save". | Sera imesasishwa na thamani mpya. | | FR-RET-01 |
 | TC-RET-004 | Sera za Uhifadhi | Kuendesha utekelezaji wa uhifadhi | Admin ameingia, sera za uhifadhi zipo | 1. Bonyeza "Run Enforcement". 2. Thibitisha kitendo. | Mchakato wa utekelezaji unaendesha. Ujumbe wa uthibitisho unaonyesha idadi ya rekodi zilizohifadhiwa na kufutwa. | | FR-RET-01 |
+| TC-RET-005 | Sera za Uhifadhi | Kuhariri sera ya uhifadhi | Admin ameingia, sera ya uhifadhi ipo | 1. Bonyeza "Edit" kwenye sera. 2. Badili miaka. 3. Hifadhi. | Sera imesasishwa, arifa ya mafanikio. | | FR-RET-01 |
 
 ---
 
@@ -515,10 +598,8 @@
 
 | TC-ID | Moduli | Jina la Jaribio | Masharti ya Awali | Hatua za Jaribio | Matokeo Yanayotarajiwa | Imefaulu/Imeshindwa | Rejea ya SRS |
 |-------|--------|---------------|----------------|------------|-----------------|-----------|---------------|
-| TC-GS-001 | Utafutaji wa Jumla | Kutafuta kwenye aina nyingi za huluki | Mtumiaji ameingia, data ipo | 1. Nenda kwenye Credit Search. 2. Ingiza neno la utafutaji linalolingana na mkopaji, taasisi, na akaunti ya mkopo. 3. Bonyeza "Search". | Matokeo yanaonyeshwa katika sehemu zilizogawanywa: Borrowers, Institutions, Credit Accounts. | | FR-GS-01 |
-| TC-GS-002 | Utafutaji wa Jumla | Kichujio cha nchi | Mtumiaji ameingia | 1. Nenda kwenye Credit Search. 2. Ingiza neno la utafutaji. 3. Chagua nchi kutoka menyu ya kichujio. 4. Bonyeza "Search". | Matokeo tu kutoka nchi iliyochaguliwa yanaonyeshwa. | | FR-GS-01 |
-| TC-GS-003 | Utafutaji wa Jumla | Matokeo ya utafutaji wa mkopaji yanaonyesha picha za wasifu | Mtumiaji ameingia, wakopaji wapo | 1. Fanya utafutaji unaorudisha wakopaji. | Kila matokeo ya mkopaji yanaonyesha picha ya wasifu (avatar iliyotengenezwa moja kwa moja au picha iliyopakiwa), jina, National ID, aina, nchi. | | FR-GS-01 |
-| TC-GS-004 | Utafutaji wa Jumla | Kuelekeza kwenye maelezo kutoka matokeo ya utafutaji | Mtumiaji ameingia, matokeo ya utafutaji yameonyeshwa | 1. Bonyeza matokeo ya mkopaji katika matokeo ya utafutaji. | Inaelekeza kwenye ukurasa wa maelezo ya mkopaji. | | FR-GS-01 |
+| TC-GS-001 | Utafutaji wa Jumla | Kutafuta kwenye aina nyingi za huluki | Mtumiaji ameingia, data ipo | 1. Nenda kwenye `/search`. 2. Ingiza neno la utafutaji katika kisanduku cha utafutaji. 3. Wasilisha utafutaji. | Matokeo yanaonyeshwa katika makundi matatu: wakopaji, taasisi, na akaunti za mikopo. Rekodi zinazolingana zinaonyeshwa na maelezo husika. | | FR-COL-08 |
+| TC-GS-002 | Utafutaji wa Jumla | Kichujio cha nchi | Mtumiaji ameingia | 1. Nenda kwenye `/search`. 2. Ingiza neno la utafutaji. 3. Chagua nchi kutoka menyu ya kichujio cha nchi. 4. Wasilisha utafutaji. | Matokeo yamechujwa kuonyesha rekodi kutoka nchi iliyochaguliwa pekee. | | FR-COL-08 |
 
 ---
 
@@ -528,8 +609,7 @@
 |-------|--------|---------------|----------------|------------|-----------------|-----------|---------------|
 | TC-PHOTO-001 | Picha za Kitambulisho | Kupakia picha ya wasifu | Mtumiaji ameingia, kwenye ukurasa wa maelezo ya mkopaji | 1. Elekeza juu ya picha ya wasifu ya mkopaji. 2. Bonyeza aikoni ya kamera inayoonekana. 3. Chagua faili ya picha (JPEG/PNG, ≤5MB). | Picha imepakiwa na inachukua nafasi ya avatar iliyotengenezwa moja kwa moja. Arifa ya mafanikio inaonyeshwa. | | FR-PHOTO-01 |
 | TC-PHOTO-002 | Picha za Kitambulisho | Kupakia hati ya kitambulisho | Mtumiaji ameingia, kwenye ukurasa wa maelezo ya mkopaji | 1. Bonyeza kitufe cha "Upload ID" au sehemu ya kupakia katika kadi ya Personal Info. 2. Chagua faili (JPEG/PNG/PDF, ≤10MB). | Hati ya kitambulisho imepakiwa na inaonyeshwa katika sehemu ya ID Document ya kadi ya Personal Info. Arifa ya mafanikio inaonyeshwa. | | FR-PHOTO-01 |
-| TC-PHOTO-003 | Picha za Kitambulisho | Kizuizi cha ukubwa wa faili | Mtumiaji ameingia | 1. Jaribu kupakia picha ya zaidi ya 5MB au hati ya zaidi ya 10MB. | Ujumbe wa hitilafu unaoonyesha kizuizi cha ukubwa wa faili. Upakiaji umekataliwa. | | FR-PHOTO-01 |
-| TC-PHOTO-004 | Picha za Kitambulisho | Kubadilisha hati ya kitambulisho | Mtumiaji ameingia, hati ya kitambulisho ipo tayari | 1. Elekeza juu ya picha ya hati iliyopo. 2. Bonyeza "Replace". 3. Chagua hati mpya. | Hati mpya inachukua nafasi ya ile ya zamani. Arifa ya mafanikio inaonyeshwa. | | FR-PHOTO-01 |
+| TC-PHOTO-003 | Picha za Kitambulisho | Kuonyesha avatar ya DiceBear | Mtumiaji ameingia, mkopaji yupo bila picha iliyopakiwa | 1. Nenda kwenye ukurasa wa maelezo ya mkopaji ambaye hana picha iliyopakiwa. | Avatar iliyotengenezwa moja kwa moja ya DiceBear inaonyeshwa kama picha ya wasifu ya mkopaji. | | FR-COL-07 |
 
 ---
 
@@ -537,10 +617,8 @@
 
 | TC-ID | Moduli | Jina la Jaribio | Masharti ya Awali | Hatua za Jaribio | Matokeo Yanayotarajiwa | Imefaulu/Imeshindwa | Rejea ya SRS |
 |-------|--------|---------------|----------------|------------|-----------------|-----------|---------------|
-| TC-DEMO-001 | Mazingira ya Maonyesho | Kitufe cha "Try Interactive Demo" kwenye kuingia | Hakuna kipindi hai | 1. Nenda kwenye ukurasa wa kuingia. 2. Angalia kitufe cha "Try Interactive Demo" chini ya fomu ya kuingia. | Kitufe kinaonekana na kinabonyezwa. | | FR-DEMO-01 |
-| TC-DEMO-002 | Mazingira ya Maonyesho | Skrini ya kuchagua jukumu la maonyesho | Kwenye ukurasa wa kuingia | 1. Bonyeza "Try Interactive Demo". | Skrini ya kuchagua maonyesho inaonyeshwa na kadi 3 za majukumu: Admin, Regulator, Bank Officer. Kanusho la onyo linaonyeshwa. | | FR-DEMO-01 |
-| TC-DEMO-003 | Mazingira ya Maonyesho | Kuingia moja kwa moja kwa kadi ya jukumu | Kwenye skrini ya kuchagua maonyesho | 1. Bonyeza kadi ya jukumu la "Admin". | Mtumiaji ameingia moja kwa moja kama `admin` na ameelekezwa kwenye Dashibodi. Hakuna kuingia kwa mikono kunachohitajika. | | FR-DEMO-01 |
-| TC-DEMO-004 | Mazingira ya Maonyesho | Kurudi kwenye kuingia kwa kawaida | Kwenye skrini ya kuchagua maonyesho | 1. Bonyeza "Back to Login". | Fomu ya kawaida ya jina la mtumiaji/nenosiri inarejeshwa. | | FR-DEMO-01 |
+| TC-DEMO-001 | Mazingira ya Maonyesho | Kuingia kwa maonyesho kutoka ukurasa wa kuingia | Programu inapatikana | 1. Nenda kwenye ukurasa wa kuingia. 2. Bonyeza kitufe cha "Try Interactive Demo". 3. Chagua kadi ya jukumu (Admin, Regulator, au Bank Officer). | Mtumiaji ameingia na jukumu la maonyesho lililochaguliwa. Bango la DEMO ENVIRONMENT la rangi ya kaharabu linaonekana juu ya programu. | | ENT-13 |
+| TC-DEMO-002 | Mazingira ya Maonyesho | Kuonekana kwa bango la maonyesho | Mtumiaji ameingia kupitia maonyesho | 1. Ingia kupitia mazingira ya maonyesho. 2. Nenda kwenye kurasa tofauti. | Bango la DEMO ENVIRONMENT la rangi ya kaharabu linaendelea kuonekana kwenye kurasa zote. Kanusho la data ya uongo linaonyeshwa. | | ENT-13 |
 
 ---
 
@@ -551,6 +629,7 @@
 | TC-LNG-001 | Kubadili Lugha | Kubadili lugha kwenye ukurasa wa kuingia | Hakuna kipindi hai | 1. Nenda kwenye ukurasa wa kuingia. 2. Angalia kitufe/menyu ya kubadili lugha. 3. Bonyeza kubadili kuwa "FR". | Ukurasa wa kuingia unaonyeshwa kwa Kifaransa. Lebo za fomu, kitufe cha kuingia, na maandishi yametafsiriwa. | | NFR-ACC-01 |
 | TC-LNG-002 | Kubadili Lugha | Chaguo la lugha linaendelea baada ya kuingia | Lugha imewekwa kuwa FR kwenye kuingia | 1. Badili lugha kuwa FR kwenye kuingia. 2. Ingia kwa mafanikio. | Baada ya kuingia, kiolesura kinaendelea kuonyeshwa kwa Kifaransa. Mwambao, dashibodi, na moduli zote kwa Kifaransa. | | NFR-ACC-01 |
 | TC-LNG-003 | Kubadili Lugha | Takwimu za lugha kwenye kuingia | Hakuna kipindi hai | 1. Nenda kwenye ukurasa wa kuingia. 2. Angalia maandishi ya kitakwimu. | Ukurasa wa kuingia unaonyesha takwimu: nchi 54 za Afrika, sarafu 42+, taasisi 100+, na lugha 5 za kazi za AU. | | NFR-ACC-01 |
+| TC-LNG-004 | Kubadili Lugha | Lugha inaendelea baada ya kuingia | Hakuna | 1. Chagua FR kutoka kitufe cha kubadili lugha. 2. Ingia kama admin. | Dashibodi inaonyeshwa kwa Kifaransa baada ya kuingia. | | FR-REG-01 |
 
 ---
 
