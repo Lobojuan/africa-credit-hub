@@ -220,7 +220,7 @@ export default function CreditReportPage() {
                     <Shield className="w-6 h-6" />
                     <h1 className="text-xl font-bold print:text-base">Credit Registry Report</h1>
                   </div>
-                  <p className="text-sm text-white/70 print:text-[10px]">Cross-Jurisdictional Central Data Hub v1.1</p>
+                  <p className="text-sm text-white/70 print:text-[10px]">Cross-Jurisdictional Central Data Hub v1.2</p>
                   <p className="text-xs text-white/50 mt-1 print:text-[8px]">Systems In Motion Limited™</p>
                 </div>
                 <div className="text-right">

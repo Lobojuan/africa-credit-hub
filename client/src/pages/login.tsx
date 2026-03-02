@@ -161,7 +161,7 @@ export default function LoginPage() {
               {[
                 { label: t('login.jurisdictions'), val: t('login.fourCountries') },
                 { label: t('login.currencies'), val: t('login.eighteenSupported') },
-                { label: t('login.compliance'), val: "SRS v1.1" },
+                { label: t('login.compliance'), val: "SRS v1.2" },
                 { label: t('login.languages'), val: "EN / FR / PT / AR / SW" },
               ].map((item) => (
                 <div key={item.label} className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.06)", backdropFilter: "blur(8px)" }}>
@@ -174,7 +174,7 @@ export default function LoginPage() {
 
           <div className="text-xs space-y-1">
             <p className="text-white/50">
-              Systems In Motion Limited™ &middot; Cross-Jurisdictional CDH v1.1
+              Systems In Motion Limited™ &middot; Cross-Jurisdictional CDH v1.2
             </p>
             <p className="text-white/30 text-[10px]">
               © 2026 Systems In Motion Limited. All rights reserved.
