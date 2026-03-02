@@ -153,16 +153,6 @@ function AuthenticatedApp() {
               </span>
               <LanguageSwitcher />
               <NotificationBell />
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setChatbotOpen(true)}
-                data-testid="button-open-chatbot"
-                title="Help Assistant"
-              >
-                <MessageCircle className="w-4 h-4" />
-              </Button>
               <ThemeToggle />
               <Button
                 variant="ghost"
@@ -190,6 +180,17 @@ function AuthenticatedApp() {
           {passwordExpired && <PasswordChangeDialog open={true} forced={true} />}
         </div>
       </div>
+      {!chatbotOpen && (
+        <button
+          onClick={() => setChatbotOpen(true)}
+          data-testid="button-open-chatbot"
+          title={t('chatbot.title')}
+          className="fixed bottom-5 right-5 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-xl active:scale-95 bg-primary text-primary-foreground"
+          style={{ boxShadow: "0 4px 14px rgba(0,0,0,0.25)" }}
+        >
+          <MessageCircle className="w-6 h-6" />
+        </button>
+      )}
       <DisputeChatbot open={chatbotOpen} onOpenChange={setChatbotOpen} />
       {showTour && <DemoTour onClose={() => setShowTour(false)} />}
     </SidebarProvider>
