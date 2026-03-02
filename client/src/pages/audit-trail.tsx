@@ -119,34 +119,34 @@ export default function AuditTrailPage() {
             </div>
           ) : filteredLogs && filteredLogs.length > 0 ? (
             <div className="overflow-x-auto">
-              <Table>
+              <Table className="table-fixed w-full">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t('audit.timestamp')}</TableHead>
-                    <TableHead>{t('audit.action')}</TableHead>
-                    <TableHead>{t('audit.entity')}</TableHead>
+                    <TableHead className="w-[130px]">{t('audit.timestamp')}</TableHead>
+                    <TableHead className="w-[90px]">{t('audit.action')}</TableHead>
+                    <TableHead className="w-[80px]">{t('audit.entity')}</TableHead>
                     <TableHead>{t('audit.details')}</TableHead>
-                    <TableHead>{t('audit.ipAddress')}</TableHead>
-                    <TableHead>{t('audit.userId')}</TableHead>
+                    <TableHead className="w-[100px]">{t('audit.ipAddress')}</TableHead>
+                    <TableHead className="w-[90px]">{t('audit.userId')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredLogs.map((log) => (
                     <TableRow key={log.id} data-testid={`row-audit-${log.id}`} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedLog(log)}>
-                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                      <TableCell className="text-xs text-muted-foreground">
                         {log.createdAt ? new Date(log.createdAt).toLocaleString("en-GB", {
-                          day: "2-digit", month: "short", year: "numeric",
-                          hour: "2-digit", minute: "2-digit", second: "2-digit",
+                          day: "2-digit", month: "short", year: "2-digit",
+                          hour: "2-digit", minute: "2-digit",
                         }) : "—"}
                       </TableCell>
                       <TableCell>
                         <Badge variant={getActionColor(log.action)} className="text-[10px]">{log.action}</Badge>
                       </TableCell>
-                      <TableCell className="text-sm capitalize">{log.entity}</TableCell>
-                      <TableCell className="text-sm max-w-xs truncate">{log.details || "—"}</TableCell>
+                      <TableCell className="text-xs capitalize">{log.entity}</TableCell>
+                      <TableCell className="text-xs truncate">{log.details || "—"}</TableCell>
                       <TableCell className="text-xs text-muted-foreground font-mono">{log.ipAddress || "—"}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground font-mono">
-                        {log.userId ? log.userId.substring(0, 8) + "..." : "—"}
+                      <TableCell className="text-xs text-muted-foreground font-mono truncate">
+                        {log.userId ? log.userId.substring(0, 8) : "—"}
                       </TableCell>
                     </TableRow>
                   ))}
