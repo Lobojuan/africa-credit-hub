@@ -7,6 +7,11 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 
 const app = express();
+
+app.get("/health", (_req, res) => {
+  res.status(200).send("ok");
+});
+
 app.use(compression());
 const httpServer = createServer(app);
 
@@ -151,14 +156,14 @@ process.on("unhandledRejection", (err) => { console.error("Unhandled rejection:"
     await setupVite(httpServer, app);
   }
 
-  const { startRetentionScheduler } = await import("./retention-enforcement");
-  startRetentionScheduler(24);
-
-  const { startExchangeRateScheduler } = await import("./exchange-rate-scheduler");
-  startExchangeRateScheduler();
-
   const port = parseInt(process.env.PORT || "5000", 10);
-  httpServer.listen(port, "0.0.0.0", () => {
+  httpServer.listen(port, "0.0.0.0", async () => {
     log(`serving on port ${port}`);
+
+    const { startRetentionScheduler } = await import("./retention-enforcement");
+    startRetentionScheduler(24);
+
+    const { startExchangeRateScheduler } = await import("./exchange-rate-scheduler");
+    startExchangeRateScheduler();
   });
 })();
