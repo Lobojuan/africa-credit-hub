@@ -479,7 +479,7 @@
 
 | Métrique | Nombre |
 |----------|--------|
-| Total des Cas de Test | 273 |
+| Total des Cas de Test | 311 |
 | Réussis | |
 | Échoués | |
 | Bloqués | |

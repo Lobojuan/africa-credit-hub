@@ -1344,7 +1344,17 @@ Hali za makosa zinarekodwa kupitia `console.error()` kwa:
 - **Uanzishaji wa Mkono:** `POST /api/retention-policies/enforce` kwa utekelezaji kwa mkono
 - **Kitendo:** Rekodi zilizopita tarehe ya uhifadhi zimeondolewa (kufutwa laini au ngumu kulingana na sera)
 
-### 13.10 Uchambuzi wa Kuona wa Dashibodi (ENT-14)
+### 13.10 Mazingira ya Maonyesho ya Wawekezaji (ENT-13)
+
+**Madhumuni:** Ufikiaji wa maonyesho kwa kubonyeza mara moja kwa wawekezaji, watathimini, na wadau kuchunguza mfumo kamili kwa kutumia vitambulisho vilivyosanidiwa mapema kulingana na majukumu bila kuhitaji usanidi wa akaunti.
+
+**Usanifu:**
+- **Ukurasa wa Kuingia:** Kitufe cha "Try Interactive Demo" kinaonyesha kadi 3 za majukumu (Admin, Regulator, Bank Officer) kwa kuingia papo hapo
+- **Bango la Maonyesho:** Bango la rangi ya kaharabu la "DEMO ENVIRONMENT" linaendelea kwenye kurasa zote, likionyesha hali ya data ya kubuni
+- **Kanusho la Data:** Taarifa ya onyo kwenye ukurasa wa uchaguzi wa maonyesho inaarifu watumiaji kuwa data yote ni data ya majaribio iliyopandwa (wakopaji 102,462, akaunti za mikopo 172,359 katika nchi 54)
+- **Ushughulikiaji wa Kipindi:** Kuingia kwa maonyesho kunatumia mtiririko wa kawaida wa uthibitishaji na vitambulisho vilivyopandwa mapema
+
+### 13.11 Uchambuzi wa Kuona wa Dashibodi (ENT-14)
 
 **Madhumuni:** Mkusanyiko wa taswira za data za maingiliano kwa dashibodi, unaotoa muhtasari wa kwingineko kwa mtazamo mmoja kupitia chati zinazobadilika na ramani ya choropleth ya kijiografia ya nchi zote 54 za Afrika.
 
@@ -1361,7 +1371,7 @@ Hali za makosa zinarekodwa kupitia `console.error()` kwa:
 - **Hali ya Giza:** Msaada kamili wa hali ya giza kupitia kugundua vigeu vya CSS; rangi za chati na mandharinyuma zinabadilika kulingana na mandhari inayotumika
 - **Ubadilishaji:** Chati zote zinatumia `ResponsiveContainer` kwa ukubwa unaobadilika katika ukubwa wote wa skrini
 
-### 13.11 Ziara ya Maonyesho ya Maingiliano (ENT-15)
+### 13.12 Ziara ya Maonyesho ya Maingiliano (ENT-15)
 
 **Madhumuni:** Mwongozo wa hatua 11 unaotambulisha watumiaji wapya kwa vipengele muhimu vya mfumo katika mazingira ya maonyesho.
 
@@ -1373,3 +1383,10 @@ Hali za makosa zinarekodwa kupitia `console.error()` kwa:
 - **Mwangaza wa Spotlight:** Mandharinyuma ya nusu-uwazi yenye ufunguo wa mwangaza karibu na kipengele lengwa cha UI kwa kila hatua
 - **Kuzindua Tena:** Watumiaji wanaweza kuanzisha tena ziara wakati wowote kupitia kitufe cha "Take a Tour" katika bango la maonyesho la rangi ya kaharabu
 - **Kimataifa:** Vichwa na maelezo ya hatua za ziara yametafsiriwa kikamilifu katika lugha zote 5 za AU (Kiingereza, Kifaransa, Kireno, Kiarabu, Kiswahili) kupitia funguo za i18n chini ya `tour.*`
+
+---
+
+*Mwisho wa Nyaraka za Mfumo*
+
+*Hati imeandaliwa na Systems In Motion Limited*  
+*Mfumo wa Kituo Kikuu cha Data cha Mamlaka Mbalimbali na Rejista ya Mikopo v1.2*
