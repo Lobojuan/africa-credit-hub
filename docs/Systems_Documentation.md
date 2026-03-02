@@ -630,6 +630,7 @@ users ──────────────┐
 |--------|------|------|-------------|
 | `GET` | `/api/dashboard/stats` | Any | Dashboard statistics (8 stat cards) |
 | `GET` | `/api/dashboard/details/:type` | Any | Drill-down details (type: borrowers, accounts, outstanding, delinquent, defaults, inquiries, pending, disputes) |
+| `GET` | `/api/dashboard/chart-data` | Any | Returns monthly trend, status breakdown, type breakdown, and country breakdown for dashboard visualizations |
 
 ### 5.4 User Management Endpoints (Admin Only)
 
@@ -1600,6 +1601,46 @@ Error conditions are logged via `console.error()` for:
 - **Integration:** Registered as `pt` language resource in `client/src/lib/i18n.ts` i18next configuration
 - **Language Switcher:** Manual language selector available on the login page and main application header (`client/src/components/language-switcher.tsx`)
 - **Coverage:** All navigation, forms, error messages, dashboard labels, and feature-specific keys (MFA, chatbot, batch upload, disputes, etc.)
+
+### 13.13 Investor Demo Environment (ENT-13)
+
+**Purpose:** One-click demo access for investors, evaluators, and stakeholders to explore the full system using pre-configured role-based credentials without requiring account setup.
+
+**Architecture:**
+- **Login Page:** "Try Interactive Demo" button presents 3 role cards (Admin, Regulator, Bank Officer) for instant login
+- **Demo Banner:** Amber "DEMO ENVIRONMENT" banner persists across all pages, indicating fictional data mode
+- **Data Disclaimer:** Warning notice on demo selection page informs users all data is seeded test data (102,462 borrowers, 172,359 credit accounts across 54 countries)
+- **Session Handling:** Demo login uses standard authentication flow with pre-seeded credentials
+
+### 13.14 Dashboard Visual Analytics (ENT-14)
+
+**Purpose:** Interactive data visualization suite for the dashboard, providing at-a-glance portfolio insights through responsive charts and a geographic choropleth map of all 54 African countries.
+
+**Architecture:**
+- **Components:**
+  - `client/src/components/dashboard-charts.tsx` — Recharts-based visualizations including a 12-month area trend chart (borrower and account growth), a donut chart for account status breakdown, and a horizontal bar chart for loan type distribution
+  - `client/src/components/africa-map.tsx` — SVG choropleth map rendering all 54 African countries with heat coloring by borrower count, hover tooltips displaying country name, borrower count, and account count, and a legend showing activity levels
+- **API:** `GET /api/dashboard/chart-data` (authenticated via `requireAuth` middleware) returns:
+  - `monthlyTrend` — Array of monthly data points with borrower and account counts
+  - `statusBreakdown` — Account status distribution (current, delinquent, default, closed, restructured, written_off)
+  - `typeBreakdown` — Loan type distribution (term_loan, overdraft, mortgage, etc.)
+  - `countryBreakdown` — Per-country borrower and account counts across all 54 African jurisdictions
+- **Library:** Recharts for responsive, themed data visualization with automatic axis formatting and custom tooltips
+- **Dark Mode:** Full dark mode support via CSS variable detection; chart colors and backgrounds adapt to the active theme
+- **Responsiveness:** All charts use `ResponsiveContainer` for fluid resizing across viewport sizes
+
+### 13.15 Interactive Demo Tour (ENT-15)
+
+**Purpose:** An 11-step guided walkthrough that introduces new users to the system's key features in the demo environment.
+
+**Architecture:**
+- **Component:** `client/src/components/demo-tour.tsx` — Self-contained tour overlay with spotlight highlighting, step descriptions, and navigation controls
+- **Steps:** 11 tour stops covering sidebar navigation, stat cards, portfolio growth chart, account status chart, loan type chart, Africa map, credit search, borrower management, settings, and completion
+- **Auto-Launch:** Tour automatically launches after demo login via a `sessionStorage` flag (`demo_tour_shown`); only triggers once per session
+- **Controls:** Next, Back, Skip, and Close buttons for user-driven navigation through tour steps
+- **Spotlight Overlay:** Semi-transparent backdrop with a cut-out highlight around the target UI element for each step
+- **Relaunch:** Users can restart the tour at any time via the "Take a Tour" button in the amber demo environment banner
+- **Internationalization:** Tour step titles and descriptions are fully translated in all 5 AU languages (English, French, Portuguese, Arabic, Swahili) via i18n keys under `tour.*`
 
 ---
 

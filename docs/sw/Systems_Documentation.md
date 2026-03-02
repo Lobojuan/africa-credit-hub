@@ -713,6 +713,14 @@ Usanidi wa API ya nje kwa usimamizi wa kati.
 | GET | `/api/docs/:id` | Pata yaliyomo ya hati |
 | GET | `/api/docs/:id/pdf` | Pakua hati kama PDF |
 
+### 5.23 Miisho ya Dashibodi (Iliyothibitishwa)
+
+| Njia | Njia ya URL | Jukumu | Maelezo |
+|--------|------|------|-------------|
+| `GET` | `/api/dashboard/stats` | Yeyote | Takwimu za dashibodi (kadi 8 za takwimu) |
+| `GET` | `/api/dashboard/details/:type` | Yeyote | Maelezo ya kina (aina: borrowers, accounts, outstanding, delinquent, defaults, inquiries, pending, disputes) |
+| `GET` | `/api/dashboard/chart-data` | Yeyote | Inarudisha mwenendo wa kila mwezi, mgawanyo wa hali, mgawanyo wa aina, na mgawanyo wa nchi kwa taswira za dashibodi |
+
 ---
 
 ## 6. Usanifu wa Usalama
@@ -1335,3 +1343,33 @@ Hali za makosa zinarekodwa kupitia `console.error()` kwa:
 - **Ratiba:** Utekelezaji otomatiki kwa muda wa saa 24 kupitia `setInterval`
 - **Uanzishaji wa Mkono:** `POST /api/retention-policies/enforce` kwa utekelezaji kwa mkono
 - **Kitendo:** Rekodi zilizopita tarehe ya uhifadhi zimeondolewa (kufutwa laini au ngumu kulingana na sera)
+
+### 13.10 Uchambuzi wa Kuona wa Dashibodi (ENT-14)
+
+**Madhumuni:** Mkusanyiko wa taswira za data za maingiliano kwa dashibodi, unaotoa muhtasari wa kwingineko kwa mtazamo mmoja kupitia chati zinazobadilika na ramani ya choropleth ya kijiografia ya nchi zote 54 za Afrika.
+
+**Usanifu:**
+- **Vipengele:**
+  - `client/src/components/dashboard-charts.tsx` — Taswira zinazotegemea Recharts ikijumuisha chati ya eneo la mwenendo wa miezi 12 (ukuaji wa wakopaji na akaunti), chati ya donut kwa mgawanyo wa hali ya akaunti, na chati ya bar ya mlalo kwa usambazaji wa aina za mikopo
+  - `client/src/components/africa-map.tsx` — Ramani ya choropleth ya SVG inayoonyesha nchi zote 54 za Afrika na rangi ya joto kulingana na idadi ya wakopaji, vidokezo vya hover vinavyoonyesha jina la nchi, idadi ya wakopaji, na idadi ya akaunti, na hadithi inayoonyesha viwango vya shughuli
+- **API:** `GET /api/dashboard/chart-data` (iliyothibitishwa kupitia middleware ya `requireAuth`) inarudisha:
+  - `monthlyTrend` — Safu ya pointi za data za kila mwezi zenye hesabu za wakopaji na akaunti
+  - `statusBreakdown` — Usambazaji wa hali ya akaunti (current, delinquent, default, closed, restructured, written_off)
+  - `typeBreakdown` — Usambazaji wa aina za mikopo (term_loan, overdraft, mortgage, n.k.)
+  - `countryBreakdown` — Hesabu za wakopaji na akaunti kwa kila nchi katika mamlaka zote 54 za Afrika
+- **Maktaba:** Recharts kwa taswira za data zinazobadilika na zinazozingatia mandhari na upangaji wa moja kwa moja wa mhimili na vidokezo maalum
+- **Hali ya Giza:** Msaada kamili wa hali ya giza kupitia kugundua vigeu vya CSS; rangi za chati na mandharinyuma zinabadilika kulingana na mandhari inayotumika
+- **Ubadilishaji:** Chati zote zinatumia `ResponsiveContainer` kwa ukubwa unaobadilika katika ukubwa wote wa skrini
+
+### 13.11 Ziara ya Maonyesho ya Maingiliano (ENT-15)
+
+**Madhumuni:** Mwongozo wa hatua 11 unaotambulisha watumiaji wapya kwa vipengele muhimu vya mfumo katika mazingira ya maonyesho.
+
+**Usanifu:**
+- **Kipengele:** `client/src/components/demo-tour.tsx` — Mfumo wa ziara unaojitegemea wenye mwangaza wa spotlight, maelezo ya hatua, na vidhibiti vya urambazaji
+- **Hatua:** Vituo 11 vya ziara vinavyoshughulikia urambazaji wa mwambao, kadi za takwimu, chati ya ukuaji wa kwingineko, chati ya hali ya akaunti, chati ya aina za mikopo, ramani ya Afrika, utafutaji wa mikopo, usimamizi wa wakopaji, mipangilio, na kukamilisha
+- **Uzinduzi wa Moja kwa Moja:** Ziara inazinduka moja kwa moja baada ya kuingia kwa maonyesho kupitia bendera ya `sessionStorage` (`demo_tour_shown`); inachochewa mara moja tu kwa kila kipindi
+- **Vidhibiti:** Vitufe vya Next, Back, Skip, na Close kwa urambazaji unaoendeshwa na mtumiaji kupitia hatua za ziara
+- **Mwangaza wa Spotlight:** Mandharinyuma ya nusu-uwazi yenye ufunguo wa mwangaza karibu na kipengele lengwa cha UI kwa kila hatua
+- **Kuzindua Tena:** Watumiaji wanaweza kuanzisha tena ziara wakati wowote kupitia kitufe cha "Take a Tour" katika bango la maonyesho la rangi ya kaharabu
+- **Kimataifa:** Vichwa na maelezo ya hatua za ziara yametafsiriwa kikamilifu katika lugha zote 5 za AU (Kiingereza, Kifaransa, Kireno, Kiarabu, Kiswahili) kupitia funguo za i18n chini ya `tour.*`

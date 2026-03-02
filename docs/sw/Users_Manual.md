@@ -221,6 +221,48 @@ Chini ya kadi za takwimu, Dashibodi inaonyesha shughuli za hivi karibuni za mfum
 - Vitendo vya hivi karibuni vya idhini
 - Uwasilishaji na utatuzi wa migogoro
 
+### 3.4 Chati ya Ukuaji wa Kwingineko
+
+Chini ya sehemu ya shughuli za hivi karibuni, Dashibodi inaonyesha **Chati ya Ukuaji wa Kwingineko** — chati ya eneo ya miezi 12 inayoonyesha mwenendo wa wakopaji na akaunti za mikopo kwa muda.
+
+1. Chati inaonyesha mfululizo mbili za eneo zilizopangwa juu ya nyingine:
+   - **Borrowers** — Hesabu ya kila mwezi ya wakopaji waliosajiliwa
+   - **Accounts** — Hesabu ya kila mwezi ya akaunti za mikopo
+2. Mhimili wa X unaonyesha miezi 12 ya hivi karibuni (k.m., "Apr 2025", "May 2025", n.k.).
+3. Weka kipanya juu ya sehemu yoyote ya chati kuona kidokezo kinachoonyesha mwezi halisi, hesabu ya wakopaji, na hesabu ya akaunti.
+4. Chati imejengwa kwa Recharts na inabadilika kikamilifu — inajirekebishe kulingana na upana wa skrini unaopatiakana.
+5. Rangi na muundo vinabadilika moja kwa moja kulingana na mandhari ya sasa (hali ya mwanga au giza).
+
+### 3.5 Chati za Hali ya Akaunti na Aina za Mikopo
+
+Chati mbili za ziada zinaonekana pamoja na chati ya ukuaji wa kwingineko:
+
+**Chati ya Donut ya Hali ya Akaunti:**
+- Chati ya donut (pete) inayoonyesha mgawanyo wa akaunti za mikopo kwa hali (Current, Delinquent, Default, Closed, Restructured, Written Off).
+- Kila sehemu ina rangi tofauti na imeandikwa na jina la hali na hesabu.
+- Weka kipanya juu ya sehemu kuona hesabu halisi ya hali hiyo.
+
+**Chati ya Bar ya Mlalo ya Aina za Mikopo:**
+- Chati ya bar ya mlalo inayoonyesha usambazaji wa akaunti za mikopo kwa aina ya mkopo (Personal Loan, Mortgage, Vehicle Loan, Business Loan, Corporate Loan, Overdraft, Credit Card, Microfinance).
+- Bar zimepangwa kwa hesabu, ikirahisisha kutambua aina za mikopo zinazotumika zaidi.
+- Weka kipanya juu ya bar kuona hesabu halisi ya aina hiyo ya mkopo.
+
+### 3.6 Ramani ya Afrika
+
+Dashibodi inajumuisha **ramani ya maingiliano ya SVG ya Afrika** inayotoa muhtasari wa kijiografia wa ushughulikiaji wa daftari la mikopo kote barani.
+
+1. Ramani inaonyesha **nchi zote 54 za Afrika** kama maeneo ya SVG binafsi.
+2. Nchi zimechorwa kwa **rangi ya joto** kulingana na viwango vya shughuli za wakopaji:
+   - Rangi nyeusi zaidi inaonyesha shughuli kubwa zaidi za wakopaji/akaunti.
+   - Rangi nyepesi zaidi inaonyesha shughuli ndogo.
+   - Nchi zisizo na data zinaonekana kwa rangi ya kawaida.
+3. **Hadithi** inaonyeshwa pembeni ya ramani ikielezea kiwango cha rangi cha viwango vya shughuli.
+4. **Weka kipanya juu ya nchi yoyote** kuona kidokezo kinachoonyesha:
+   - Jina la nchi
+   - Idadi ya wakopaji waliosajiliwa
+   - Idadi ya akaunti za mikopo
+5. Ramani inabadilika kikamilifu na inajirekebishe kulingana na mandhari ya sasa (hali ya mwanga au giza).
+
 ---
 
 ## 4. Usimamizi wa Wakopaji
@@ -1138,6 +1180,9 @@ J: Nenda kwenye ukurasa wa maelezo ya mkopaji, tafuta sehemu ya Court Judgments,
 ### S: Mfumo unaunga mkono sarafu zipi?
 J: Mfumo unaunga mkono sarafu 42+ za Afrika pamoja na USD, EUR, na GBP (45+ jumla). Angalia Kiambatisho C kwa orodha kamili.
 
+### S: Ninawezaje kutumia ziara ya maonyesho ya maingiliano?
+J: Ziara ya mwongozo wa maingiliano inazinduka moja kwa moja baada ya kuingia kupitia mazingira ya maonyesho. Inakuongoza kupitia vipengele 11 muhimu vya mfumo na mwangaza wa spotlight na vidokezo vya maelezo. Tumia vitufe vya Next, Back, Skip, na Close kuvinjari ziara. Ikiwa unataka kuzindua tena ziara baada ya kumalizika, bonyeza kitufe cha "Take a Tour" katika bango la maonyesho la rangi ya kaharabu juu ya ukurasa.
+
 ---
 
 ## 21. Uthibitishaji wa Sababu Mbili (MFA)
@@ -1542,6 +1587,36 @@ Wakati wa kutumia mazingira ya maonyesho:
 ### 30.4 Kurudi kwenye Kuingia kwa Kawaida
 
 Kutoka kwenye skrini ya kuchagua maonyesho, bonyeza kitufe cha **"Back to Login"** kurudi kwenye fomu ya kawaida ya jina la mtumiaji/nenosiri.
+
+### 30.5 Ziara ya Mwongozo wa Maingiliano
+
+Baada ya kuingia kupitia mazingira ya maonyesho, **ziara ya mwongozo ya maingiliano ya hatua 11** inazinduka moja kwa moja kukuongoza kupitia vipengele muhimu vya mfumo.
+
+**Tabia ya Ziara:**
+1. Baada ya kuingia kwa maonyesho, ziara inaanza moja kwa moja, ikiangazia vipengele muhimu vya UI kimoja kimoja.
+2. **Mwangaza wa spotlight** unapunguza mwanga wa sehemu nyingine za skrini na kuvutia umakini kwenye kipengele kinachoonyeshwa kwa sasa.
+3. Kila hatua inaonyesha kidokezo chenye maelezo kinachoelezea madhumuni na utendaji wa kipengele kilichoonyeshwa.
+
+**Hatua za Ziara Zinashughulikia:**
+- Urambazaji wa mwambao na mpangilio wa moduli
+- Kadi za takwimu za dashibodi na utendaji wao wa kuchimba kwa kina
+- Chati ya ukuaji wa kwingineko na taswira za data
+- Ramani ya Afrika na ushughulikiaji wa kijiografia
+- Utendaji wa utafutaji wa mikopo
+- Mipangilio ya mfumo na chaguzi za usanidi
+
+**Vidhibiti vya Ziara:**
+- **Next** — Endelea hadi hatua inayofuata
+- **Back** — Rudi kwenye hatua ya awali
+- **Skip** — Maliza ziara mara moja
+- **Close** — Ondoa mfumo wa ziara ya sasa
+
+**Kuzindua Tena Ziara:**
+- Baada ya ziara kukamilika au kurukwa, unaweza kuizindua tena wakati wowote kwa kubonyeza kitufe cha **"Take a Tour"** kinachoonyeshwa katika bango la maonyesho la rangi ya kaharabu juu ya ukurasa.
+
+**Msaada wa Lugha:**
+- Maudhui ya ziara yanapatikana katika **lugha zote 5 za AU** (Kiingereza, Kifaransa, Kireno, Kiarabu, Kiswahili).
+- Lugha ya ziara inafuata mpangilio wa lugha wa kiolesura cha sasa.
 
 ---
 

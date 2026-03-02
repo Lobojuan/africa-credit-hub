@@ -530,6 +530,7 @@ Vifurushi vifuatavyo vya ziada viliongezwa kwa uboreshaji wa biashara (v1.1 na v
 | `jsonwebtoken` | Kusaini na kuthibitisha JWT kwa tokeni za Bearer | ENT-04 (OAuth 2.1) |
 | `compression` | Middleware ya usimbaji wa gzip | ENT-05 (Kipimo cha Chini cha Bandwidth) |
 | `multer` | Ushughulikiaji wa upakiaji wa faili za multipart/form-data | ENT-12 (Picha na Hati za Kitambulisho) |
+| `recharts` | Maktaba ya taswira za data zinazobadilika kwa chati za dashibodi | ENT-14 (Uchambuzi wa Kuona wa Dashibodi) |
 
 **Kiendelezi cha PostgreSQL:**
 - `pg_trgm` — Kinahitajika kwa kulinganisha taasisi kwa ukaribu (ENT-02). Kinaundwa kiotomatiki wakati wa kuanza.
@@ -558,6 +559,8 @@ Mfumo wa Rejista ya Mikopo unajumuisha moduli na uwezo ufuatao:
 | Utafutaji wa Kimataifa | Utafutaji wa taasisi mbalimbali kati ya waombaji mikopo, taasisi, na akaunti za mikopo (ENT-11) |
 | Picha na Hati za Kitambulisho | Picha za DiceBear zinazozalishwa kiotomatiki na upakiaji wa picha/hati unaotegemea multer (ENT-12) |
 | Mazingira ya Onyesho | Onyesho la kubofya mara moja kwa wawekezaji na kadi za jukumu na bango la DEMO (ENT-13) |
+| Uchambuzi wa Kuona wa Dashibodi | Chati za maingiliano za Recharts (eneo la mwenendo, donut ya hali, bar ya aina za mikopo) na ramani ya choropleth ya SVG ya Afrika yenye rangi ya joto kwa nchi 54; msaada wa hali ya giza (ENT-14) |
+| Ziara ya Maonyesho ya Maingiliano | Mwongozo wa hatua 11 wenye mfumo wa spotlight, vidhibiti vya urambazaji, uzinduzi wa moja kwa moja, na msaada wa lugha 5 za AU (ENT-15) |
 
 ---
 

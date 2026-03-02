@@ -172,6 +172,8 @@ This document maps every Software Requirements Specification (SRS) requirement t
 | ENT-11 | Global cross-entity search | Implemented | Global Search (`/api/global-search`, `credit-search.tsx`) | Searches across borrowers, institutions, and credit accounts with optional country filter; no schema changes required | TC-GS-001, TC-GS-002 |
 | ENT-12 | ID photo and document upload for borrowers | Implemented | ID Photos (`photoUrl`, `idDocumentUrl` fields on `borrowers`, multer upload endpoints) | DiceBear auto-generated avatars as default; multer-based photo/document upload with auth-protected serving | TC-PHOTO-001 through TC-PHOTO-003 |
 | ENT-13 | Investor demo environment | Implemented | Demo Environment (login page demo cards, DEMO banner) | One-click demo login with 3 role cards (Admin, Regulator, Bank Officer); amber DEMO ENVIRONMENT banner; fictional data disclaimer | TC-DEMO-001, TC-DEMO-002 |
+| ENT-14 | Dashboard Visual Analytics | Implemented | Dashboard Charts (`dashboard-charts.tsx`, `africa-map.tsx`, `routes.ts`) | Interactive charts (area trend, donut status breakdown, horizontal bar loan types) and SVG Africa map choropleth with heat coloring by borrower count across all 54 countries; real-time data via `GET /api/dashboard/chart-data` (auth-protected); Recharts library for responsive, themed visualization; dark mode support via CSS variable detection | TC-VIZ-001 through TC-VIZ-010 |
+| ENT-15 | Interactive Demo Tour | Implemented | Demo Tour (`demo-tour.tsx`) | 11-step guided walkthrough for demo environment; auto-launches after demo login via sessionStorage flag; spotlight overlay with Next/Back/Skip/Close controls; relaunch via "Take a Tour" button in amber demo banner; multilingual support in all 5 AU languages (EN/FR/PT/AR/SW) | TC-TOUR-001 through TC-TOUR-006 |
 
 ---
 
@@ -189,8 +191,8 @@ This document maps every Software Requirements Specification (SRS) requirement t
 | INT-RPT (Integration & Reporting) | 4 | 4 | 0 | 0 |
 | DQ (Data Quality) | 5 | 5 | 0 | 0 |
 | NFR-SEC (Security) | 10 | 10 | 0 | 0 |
-| ENT (Enterprise Enhancements) | 13 | 13 | 0 | 0 |
-| **Total** | **77** | **77** | **0** | **0** |
+| ENT (Enterprise Enhancements) | 15 | 15 | 0 | 0 |
+| **Total** | **79** | **79** | **0** | **0** |
 
 ---
 

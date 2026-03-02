@@ -13,7 +13,7 @@
 
 Ce document fournit une évaluation complète des contrôles de sécurité mis en œuvre dans le Système de Registre de Crédit par rapport aux exigences définies dans la Spécification des Exigences Logicielles (SRS) v1.2. Le système traite des données financières et personnelles sensibles à travers les 54 pays africains et prend en charge trois langues (anglais, français, portugais) et doit se conformer aux exigences réglementaires en matière de protection des données et de réglementation financière.
 
-Les dix exigences de sécurité non fonctionnelles (NFR-SEC-01 à NFR-SEC-10) ont été mises en œuvre, ainsi que treize améliorations de sécurité entreprise (ENT-01 à ENT-13) incluant l'authentification multifacteur TOTP, l'échange de jetons porteur OAuth 2.1, les chaînes de hachage de journaux d'audit à preuve de falsification, la correspondance floue d'entités, le chatbot de litiges, les optimisations pour faible bande passante, la prise en charge du téléchargement XBRL, l'application de la rétention des données, la gestion des taux de change, l'administration API, la recherche globale, le téléversement de photos/documents d'identité et l'environnement de démonstration pour investisseurs. Ce rapport détaille chaque contrôle de sécurité, sa mise en œuvre et son statut de conformité.
+Les dix exigences de sécurité non fonctionnelles (NFR-SEC-01 à NFR-SEC-10) ont été mises en œuvre, ainsi que quinze améliorations de sécurité entreprise (ENT-01 à ENT-15) incluant l'authentification multifacteur TOTP, l'échange de jetons porteur OAuth 2.1, les chaînes de hachage de journaux d'audit à preuve de falsification, la correspondance floue d'entités, le chatbot de litiges, les optimisations pour faible bande passante, la prise en charge du téléchargement XBRL, l'application de la rétention des données, la gestion des taux de change, l'administration API, la recherche globale, le téléversement de photos/documents d'identité, l'environnement de démonstration pour investisseurs, les analyses visuelles du tableau de bord et la visite guidée interactive de démonstration. Ce rapport détaille chaque contrôle de sécurité, sa mise en œuvre et son statut de conformité.
 
 ---
 
@@ -200,6 +200,8 @@ Tous les points d'accès de l'API interne (sous `/api/`) nécessitent une authen
 - `/api/auth/me`
 - `/api/health`
 - `/api/external/*`
+
+Cela inclut le point d'accès de visualisation du tableau de bord `GET /api/dashboard/chart-data`, qui retourne les données de tendance mensuelle, de répartition des statuts, de répartition des types et de répartition par pays pour le module d'Analyses Visuelles du Tableau de Bord (ENT-14). Ce point d'accès est protégé par le middleware `requireAuth` et nécessite une session authentifiée active.
 
 Middleware d'authentification :
 ```typescript
@@ -519,6 +521,8 @@ if (approval.requestedBy === currentUserId) {
 | ENT-11 | Recherche Globale | CONFORME | Recherche inter-entités sur les emprunteurs, institutions et comptes de crédit via le point d'accès `/api/global-search`. Filtre optionnel par pays. Aucune exposition de données sensibles au-delà du niveau d'accès de l'utilisateur authentifié. |
 | ENT-12 | Sécurité des Téléversements de Fichiers | CONFORME | Téléversement basé sur multer avec limites de taille de fichier (5 Mo photos, 10 Mo documents), validation des types MIME, noms de fichiers aléatoires, service protégé par authentification via la route `/uploads`. Tous les téléversements sont journalisés dans l'audit. |
 | ENT-13 | Environnement de Démonstration | CONFORME | Démonstration pour investisseurs avec cartes de rôle pré-configurées. Bannière ambre indiquant le mode démonstration. Utilise l'infrastructure d'authentification et d'autorisation existante. Données fictives uniquement. |
+| ENT-14 | Analyses Visuelles du Tableau de Bord | CONFORME | Point d'accès `GET /api/dashboard/chart-data` protégé par le middleware `requireAuth`. Retourne uniquement des données statistiques agrégées (tendances mensuelles, répartitions des statuts, répartitions des types, répartitions par pays) ; aucune donnée PII brute exposée. Recharts effectue le rendu des données côté client. La carte SVG de l'Afrique utilise des géométries de pays prédéfinies sans récupération de données externes. Prise en charge du mode sombre via détection des variables CSS. |
+| ENT-15 | Visite Guidée Interactive de Démonstration | CONFORME | Le composant de visite (`demo-tour.tsx`) fonctionne entièrement côté client sans points d'accès API supplémentaires. Lancement automatique contrôlé via indicateur sessionStorage (contexte de connexion démo uniquement). Aucune donnée sensible stockée ou transmise. Prise en charge multilingue dans les 5 langues de l'UA (EN/FR/PT/AR/SW). |
 | SLA-RET-01 | SLA d'application de la rétention | CONFORME | Cycle d'application automatisé de 24 heures assurant une gestion opportune du cycle de vie des données. Déclenchement manuel via `POST /api/retention-policies/enforce` (réservé aux administrateurs, protégé par RBAC). Toutes les actions d'application sont journalisées dans l'audit avec les détails complets des résultats. |
 
 ---

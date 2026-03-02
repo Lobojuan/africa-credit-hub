@@ -172,6 +172,8 @@ Ce document fait correspondre chaque exigence de la Spécification des Exigences
 | ENT-11 | Recherche globale inter-entités | Implémenté | Recherche Globale (`/api/global-search`, `credit-search.tsx`) | Recherche simultanée sur les emprunteurs, institutions et comptes de crédit avec filtre optionnel par pays ; aucune modification du schéma requise | TC-GS-001, TC-GS-002 |
 | ENT-12 | Téléversement de photos d'identité et documents pour les emprunteurs | Implémenté | Photos d'Identité (champs `photoUrl`, `idDocumentUrl` sur `borrowers`, points d'accès de téléversement multer) | Avatars DiceBear auto-générés par défaut ; téléversement multer de photos/documents avec service protégé par authentification | TC-PHOTO-001 à TC-PHOTO-003 |
 | ENT-13 | Environnement de démonstration pour investisseurs | Implémenté | Environnement de Démonstration (cartes de connexion démo sur la page de connexion, bannière DEMO) | Connexion démo en un clic avec 3 cartes de rôle (Admin, Régulateur, Agent Bancaire) ; bannière ambre ENVIRONNEMENT DE DÉMONSTRATION ; avertissement de données fictives | TC-DEMO-001, TC-DEMO-002 |
+| ENT-14 | Analyses Visuelles du Tableau de Bord | Implémenté | Graphiques du Tableau de Bord (`dashboard-charts.tsx`, `africa-map.tsx`, `routes.ts`) | Graphiques interactifs (tendance en aire, répartition en anneau des statuts, barres horizontales des types de prêt) et carte choroplèthe SVG de l'Afrique avec coloration thermique par nombre d'emprunteurs à travers les 54 pays ; données en temps réel via `GET /api/dashboard/chart-data` (protégé par authentification) ; bibliothèque Recharts pour une visualisation réactive et thématisée ; prise en charge du mode sombre via détection des variables CSS | TC-VIZ-001 à TC-VIZ-010 |
+| ENT-15 | Visite Guidée Interactive de Démonstration | Implémenté | Visite Guidée (`demo-tour.tsx`) | Parcours guidé en 11 étapes pour l'environnement de démonstration ; lancement automatique après connexion démo via indicateur sessionStorage ; surcouche projecteur avec contrôles Suivant/Précédent/Passer/Fermer ; relancement via le bouton « Faire la Visite » dans la bannière ambre de démonstration ; prise en charge multilingue dans les 5 langues de l'UA (EN/FR/PT/AR/SW) | TC-TOUR-001 à TC-TOUR-006 |
 
 ---
 
@@ -189,8 +191,8 @@ Ce document fait correspondre chaque exigence de la Spécification des Exigences
 | INT-RPT (Intégration et Reporting) | 4 | 4 | 0 | 0 |
 | DQ (Qualité des Données) | 5 | 5 | 0 | 0 |
 | NFR-SEC (Sécurité) | 10 | 10 | 0 | 0 |
-| ENT (Améliorations d'Entreprise) | 13 | 13 | 0 | 0 |
-| **Total** | **77** | **77** | **0** | **0** |
+| ENT (Améliorations d'Entreprise) | 15 | 15 | 0 | 0 |
+| **Total** | **79** | **79** | **0** | **0** |
 
 ---
 

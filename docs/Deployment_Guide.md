@@ -530,6 +530,7 @@ The following additional packages were added for enterprise enhancements (v1.1 a
 | `jsonwebtoken` | JWT signing and verification for Bearer tokens | ENT-04 (OAuth 2.1) |
 | `compression` | gzip compression middleware | ENT-05 (Low-Bandwidth) |
 | `multer` | Multipart/form-data file upload handling | ENT-12 (ID Photos & Documents) |
+| `recharts` | Responsive, themed data visualization charts (area, donut, bar) | ENT-14 (Dashboard Visual Analytics) |
 
 **PostgreSQL Extension:**
 - `pg_trgm` — Required for fuzzy entity matching (ENT-02). Automatically created at startup.
@@ -558,6 +559,8 @@ The Credit Registry System includes the following modules and capabilities:
 | Global Search | Cross-entity search across borrowers, institutions, and credit accounts (ENT-11) |
 | ID Photos & Documents | DiceBear auto-generated avatars with multer-based photo/document upload (ENT-12) |
 | Demo Environment | Investor-facing one-click demo with role cards and DEMO banner (ENT-13) |
+| Dashboard Visual Analytics | Interactive Recharts charts (area trend, donut status, horizontal bar types) and SVG Africa map choropleth with heat coloring across 54 countries; dark mode support (ENT-14) |
+| Interactive Demo Tour | 11-step guided walkthrough with spotlight overlay, auto-launch after demo login, multilingual support in 5 AU languages (ENT-15) |
 
 ---
 

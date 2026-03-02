@@ -221,6 +221,48 @@ Below the stat cards, the Dashboard displays recent system activity including:
 - Recent approval actions
 - Dispute filings and resolutions
 
+### 3.4 Portfolio Growth Chart
+
+Below the recent activity section, the Dashboard displays a **Portfolio Growth Chart** — a 12-month area chart that visualizes borrower and credit account trends over time.
+
+1. The chart displays two layered area series:
+   - **Borrowers** — Monthly count of registered borrowers
+   - **Accounts** — Monthly count of credit accounts
+2. The X-axis shows the most recent 12 months (e.g., "Apr 2025", "May 2025", etc.).
+3. Hover over any point on the chart to see a tooltip displaying the exact month, borrower count, and account count.
+4. The chart is built with Recharts and is fully responsive — it adjusts to the available screen width.
+5. Colors and styling automatically adapt to the current theme (light or dark mode).
+
+### 3.5 Account Status & Loan Type Charts
+
+Two additional charts appear alongside the portfolio growth chart:
+
+**Account Status Donut Chart:**
+- A donut (ring) chart showing the breakdown of credit accounts by status (Current, Delinquent, Default, Closed, Restructured, Written Off).
+- Each segment is color-coded and labeled with the status name and count.
+- Hover over a segment to see the exact count for that status.
+
+**Loan Type Horizontal Bar Chart:**
+- A horizontal bar chart showing the distribution of credit accounts by loan type (Personal Loan, Mortgage, Vehicle Loan, Business Loan, Corporate Loan, Overdraft, Credit Card, Microfinance).
+- Bars are sorted by count, making it easy to identify the most common loan types.
+- Hover over a bar to see the exact count for that loan type.
+
+### 3.6 Africa Map
+
+The Dashboard includes an **interactive SVG Africa Map** that provides a geographic overview of credit registry coverage across the continent.
+
+1. The map displays all **54 African countries** as individual SVG regions.
+2. Countries are shaded with **heat coloring** based on borrower activity levels:
+   - Darker shading indicates higher borrower/account activity.
+   - Lighter shading indicates lower activity.
+   - Countries with no data appear in a neutral tone.
+3. A **legend** is displayed alongside the map explaining the activity level color scale.
+4. **Hover over any country** to see a tooltip showing:
+   - Country name
+   - Number of registered borrowers
+   - Number of credit accounts
+5. The map is fully responsive and adapts to the current theme (light or dark mode).
+
 ---
 
 ## 4. Borrower Management
@@ -1138,6 +1180,9 @@ A: Navigate to a borrower's detail page, find the Court Judgments section, and c
 ### Q: What currencies does the system support?
 A: The system supports 42+ African currencies plus USD, EUR, and GBP (45+ total). See Appendix C for the complete list.
 
+### Q: How do I use the interactive demo tour?
+A: The interactive guided tour launches automatically after you log in via the demo environment. It walks you through 11 key features of the system with a spotlight overlay and descriptive tooltips. Use the Next, Back, Skip, and Close buttons to navigate the tour. If you want to relaunch the tour after it has ended, click the "Take a Tour" button in the amber demo banner at the top of the page.
+
 ---
 
 ## 21. Multi-Factor Authentication (MFA)
@@ -1542,6 +1587,36 @@ When using the demo environment:
 ### 30.4 Returning to Standard Login
 
 From the demo selection screen, click the **"Back to Login"** button to return to the standard username/password login form.
+
+### 30.5 Interactive Guided Tour
+
+After logging in via the demo environment, an **11-step interactive guided tour** automatically launches to walk you through the system's key features.
+
+**Tour Behavior:**
+1. Upon demo login, the tour starts automatically, highlighting key UI elements one at a time.
+2. A **spotlight overlay** dims the rest of the screen and draws attention to the currently highlighted element.
+3. Each step displays a descriptive tooltip explaining the purpose and functionality of the highlighted element.
+
+**Tour Steps Cover:**
+- Sidebar navigation and module organization
+- Dashboard stat cards and their drill-down functionality
+- Portfolio growth chart and data visualizations
+- Africa map and geographic coverage
+- Credit search functionality
+- System settings and configuration options
+
+**Tour Controls:**
+- **Next** — Advance to the next step
+- **Back** — Return to the previous step
+- **Skip** — End the tour immediately
+- **Close** — Dismiss the current tour overlay
+
+**Relaunching the Tour:**
+- After the tour has been completed or skipped, you can relaunch it at any time by clicking the **"Take a Tour"** button displayed in the amber demo banner at the top of the page.
+
+**Language Support:**
+- The tour content is available in all **5 AU languages** (English, French, Portuguese, Arabic, Swahili).
+- The tour language follows the current interface language setting.
 
 ---
 

@@ -221,6 +221,48 @@ Sous les cartes de statistiques, le Tableau de Bord affiche l'activité récente
 - Les actions d'approbation récentes
 - Les dépôts et résolutions de litiges
 
+### 3.4 Graphique de Croissance du Portefeuille
+
+Sous la section d'activité récente, le Tableau de Bord affiche un **Graphique de Croissance du Portefeuille** — un graphique en aire sur 12 mois qui visualise les tendances des emprunteurs et des comptes de crédit au fil du temps.
+
+1. Le graphique affiche deux séries en aire superposées :
+   - **Emprunteurs** — Nombre mensuel d'emprunteurs enregistrés
+   - **Comptes** — Nombre mensuel de comptes de crédit
+2. L'axe des X affiche les 12 derniers mois (par ex., « Avr 2025 », « Mai 2025 », etc.).
+3. Survolez n'importe quel point du graphique pour voir une infobulle affichant le mois exact, le nombre d'emprunteurs et le nombre de comptes.
+4. Le graphique est construit avec Recharts et est entièrement réactif — il s'adapte à la largeur d'écran disponible.
+5. Les couleurs et le style s'adaptent automatiquement au thème actuel (mode clair ou sombre).
+
+### 3.5 Graphiques de Statut des Comptes et Types de Prêts
+
+Deux graphiques supplémentaires apparaissent aux côtés du graphique de croissance du portefeuille :
+
+**Graphique en Anneau des Statuts de Compte :**
+- Un graphique en anneau montrant la répartition des comptes de crédit par statut (En cours, En souffrance, En défaut, Fermé, Restructuré, Passé en perte).
+- Chaque segment est coloré et étiqueté avec le nom du statut et le nombre.
+- Survolez un segment pour voir le nombre exact pour ce statut.
+
+**Graphique en Barres Horizontales des Types de Prêt :**
+- Un graphique en barres horizontales montrant la distribution des comptes de crédit par type de prêt (Prêt Personnel, Hypothèque, Prêt Véhicule, Prêt Commercial, Prêt Corporate, Découvert, Carte de Crédit, Microfinance).
+- Les barres sont triées par nombre, facilitant l'identification des types de prêts les plus courants.
+- Survolez une barre pour voir le nombre exact pour ce type de prêt.
+
+### 3.6 Carte de l'Afrique
+
+Le Tableau de Bord comprend une **carte SVG interactive de l'Afrique** qui fournit une vue géographique de la couverture du registre de crédit à travers le continent.
+
+1. La carte affiche les **54 pays africains** sous forme de régions SVG individuelles.
+2. Les pays sont colorés avec une **coloration thermique** basée sur les niveaux d'activité des emprunteurs :
+   - Une coloration plus foncée indique une activité emprunteurs/comptes plus élevée.
+   - Une coloration plus claire indique une activité plus faible.
+   - Les pays sans données apparaissent dans un ton neutre.
+3. Une **légende** est affichée à côté de la carte expliquant l'échelle de couleurs des niveaux d'activité.
+4. **Survolez n'importe quel pays** pour voir une infobulle affichant :
+   - Le nom du pays
+   - Le nombre d'emprunteurs enregistrés
+   - Le nombre de comptes de crédit
+5. La carte est entièrement réactive et s'adapte au thème actuel (mode clair ou sombre).
+
 ---
 
 ## 4. Gestion des Emprunteurs
@@ -1136,6 +1178,9 @@ R : Accédez à la page de détails d'un emprunteur, trouvez la section Jugement
 ### Q : Quelles devises le système prend-il en charge ?
 R : Le système prend en charge plus de 42 devises africaines plus USD, EUR et GBP. Voir l'Annexe C pour la liste complète.
 
+### Q : Comment utiliser la visite guidée interactive de démonstration ?
+R : La visite guidée interactive se lance automatiquement après votre connexion via l'environnement de démonstration. Elle vous guide à travers 11 fonctionnalités clés du système avec une surcouche projecteur et des infobulles descriptives. Utilisez les boutons Suivant, Précédent, Passer et Fermer pour naviguer dans la visite. Si vous souhaitez relancer la visite après sa fin, cliquez sur le bouton « Faire la Visite » dans la bannière ambre de démonstration en haut de la page.
+
 ---
 
 ## 21. Authentification Multi-Facteurs (MFA)
@@ -1492,6 +1537,40 @@ Le système inclut un environnement de démonstration conçu pour les présentat
 - Une **bannière ambre « ENVIRONNEMENT DE DÉMONSTRATION »** est affichée en haut de toutes les pages.
 - Un **avertissement de données fictives** est affiché pour indiquer que toutes les données présentées sont fictives.
 - La bannière et l'avertissement restent visibles sur toutes les pages lors de la navigation.
+
+### 30.4 Retour à la Connexion Standard
+
+Depuis l'écran de sélection de démonstration, cliquez sur le bouton **« Retour à la Connexion »** pour revenir au formulaire de connexion standard par nom d'utilisateur/mot de passe.
+
+### 30.5 Visite Guidée Interactive
+
+Après vous être connecté via l'environnement de démonstration, une **visite guidée interactive en 11 étapes** se lance automatiquement pour vous présenter les fonctionnalités clés du système.
+
+**Comportement de la Visite :**
+1. Lors de la connexion démo, la visite démarre automatiquement, mettant en surbrillance les éléments clés de l'interface un par un.
+2. Une **surcouche projecteur** assombrit le reste de l'écran et attire l'attention sur l'élément actuellement mis en surbrillance.
+3. Chaque étape affiche une infobulle descriptive expliquant l'objectif et la fonctionnalité de l'élément mis en surbrillance.
+
+**Les Étapes de la Visite Couvrent :**
+- La navigation dans la barre latérale et l'organisation des modules
+- Les cartes de statistiques du tableau de bord et leur fonctionnalité de détail
+- Le graphique de croissance du portefeuille et les visualisations de données
+- La carte de l'Afrique et la couverture géographique
+- La fonctionnalité de recherche de crédit
+- Les paramètres et options de configuration du système
+
+**Contrôles de la Visite :**
+- **Suivant** — Passer à l'étape suivante
+- **Précédent** — Revenir à l'étape précédente
+- **Passer** — Terminer la visite immédiatement
+- **Fermer** — Fermer la surcouche de la visite en cours
+
+**Relancement de la Visite :**
+- Après avoir terminé ou passé la visite, vous pouvez la relancer à tout moment en cliquant sur le bouton **« Faire la Visite »** affiché dans la bannière ambre de démonstration en haut de la page.
+
+**Prise en Charge des Langues :**
+- Le contenu de la visite est disponible dans les **5 langues de l'UA** (Anglais, Français, Portugais, Arabe, Swahili).
+- La langue de la visite suit le paramètre de langue actuel de l'interface.
 
 ---
 

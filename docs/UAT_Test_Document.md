@@ -49,6 +49,8 @@
 36. [ID Photos & Document Upload Module](#36-id-photos--document-upload-module)
 37. [Demo Environment Module](#37-demo-environment-module)
 38. [Language Switcher on Login Module](#38-language-switcher-on-login-module)
+39. [Dashboard Visual Analytics Module (ENT-14)](#39-dashboard-visual-analytics-module-ent-14)
+40. [Interactive Demo Tour Module (ENT-15)](#40-interactive-demo-tour-module-ent-15)
 
 ---
 
@@ -62,7 +64,7 @@
 | Database | PostgreSQL with 21 tables |
 | User Roles | Admin, Regulator, Lender, Viewer |
 | Supported Currencies | 42+ African currencies plus USD, EUR, GBP |
-| Enterprise Enhancements | MFA, Fuzzy Matching, Dispute Chatbot, OAuth 2.1, Low-Bandwidth, XBRL Upload, Tamper-Evident Audit, Exchange Rate Management, API Administration, Data Retention Policies, Global Search, ID Photos & Documents, Demo Environment |
+| Enterprise Enhancements | MFA, Fuzzy Matching, Dispute Chatbot, OAuth 2.1, Low-Bandwidth, XBRL Upload, Tamper-Evident Audit, Exchange Rate Management, API Administration, Data Retention Policies, Global Search, ID Photos & Documents, Demo Environment, Dashboard Visual Analytics, Interactive Demo Tour |
 | Jurisdictions | All 54 African countries |
 | Languages | English, French, Portuguese |
 | Seed Data | 102K+ borrowers, 172K+ credit accounts, 120K payment history records, 3,218 disputes, 2,147 court judgments |
@@ -477,7 +479,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total Test Cases | 197 |
+| Total Test Cases | 213 |
 | Passed | |
 | Failed | |
 | Blocked | |
@@ -641,8 +643,8 @@
 
 | TC-ID | Module | Test Case Name | Pre-conditions | Test Steps | Expected Result | Pass/Fail | SRS Reference |
 |-------|--------|---------------|----------------|------------|-----------------|-----------|---------------|
-| TC-DEMO-001 | Demo Environment | Demo login from login page | Application is accessible | 1. Navigate to login page. 2. Click "Try Interactive Demo" button. 3. Select a role card (Admin, Regulator, or Bank Officer). | User is logged in with the selected demo role. Amber DEMO ENVIRONMENT banner visible at top of application. | | ENT-13 |
-| TC-DEMO-002 | Demo Environment | Demo banner visibility | User logged in via demo | 1. Log in via demo environment. 2. Navigate between pages. | Amber DEMO ENVIRONMENT banner remains visible on all pages. Fictional data disclaimer shown. | | ENT-13 |
+| TC-DEMO-001 | Demo Environment | Demo login from login page | Application is accessible | 1. Navigate to login page. 2. Click "Try Interactive Demo" button. 3. Select a role card (Admin, Regulator, or Bank Officer). | User is logged in with the selected demo role. Amber DEMO ENVIRONMENT banner visible at top of application. | | ENT-14 |
+| TC-DEMO-002 | Demo Environment | Demo banner visibility | User logged in via demo | 1. Log in via demo environment. 2. Navigate between pages. | Amber DEMO ENVIRONMENT banner remains visible on all pages. Fictional data disclaimer shown. | | ENT-14 |
 
 ---
 
@@ -657,9 +659,39 @@
 
 ---
 
+## 39. Dashboard Visual Analytics Module (ENT-14)
+
+| TC-ID | Module | Test Case Name | Pre-conditions | Test Steps | Expected Result | Pass/Fail | SRS Reference |
+|-------|--------|---------------|----------------|------------|-----------------|-----------|---------------|
+| TC-VIZ-001 | Visual Analytics | Portfolio growth area chart loads with 12 months of data | User is logged in, dashboard data exists | 1. Navigate to Dashboard (`/`). 2. Scroll to the Portfolio Growth chart section. 3. Observe the area chart. | Area chart renders with 12 months of data points showing borrower and account trends over time. X-axis shows months, Y-axis shows counts. Chart is rendered using Recharts library. | | ENT-14 |
+| TC-VIZ-002 | Visual Analytics | Area chart tooltips on hover | User is logged in, portfolio growth chart visible | 1. Navigate to Dashboard. 2. Hover over a data point on the portfolio growth area chart. | Tooltip appears showing the month label, number of borrowers, and number of accounts for the hovered data point. | | ENT-14 |
+| TC-VIZ-003 | Visual Analytics | Account status donut chart shows all status categories | User is logged in, credit accounts with various statuses exist | 1. Navigate to Dashboard. 2. Locate the Account Status donut chart. 3. Observe all displayed status segments. | Donut chart renders with segments for all account status categories (current, delinquent, default, closed, restructured, written_off). Each segment is color-coded and labeled. | | ENT-14 |
+| TC-VIZ-004 | Visual Analytics | Loan type horizontal bar chart shows top account types | User is logged in, credit accounts with various types exist | 1. Navigate to Dashboard. 2. Locate the Loan Type breakdown chart. 3. Observe the horizontal bar chart. | Horizontal bar chart renders showing the top account types (e.g., personal_loan, mortgage, business_loan). Bars are proportional to the count of each type. | | ENT-14 |
+| TC-VIZ-005 | Visual Analytics | Africa map renders all 54 countries | User is logged in | 1. Navigate to Dashboard. 2. Scroll to the Africa Map section. 3. Observe the SVG map. | SVG choropleth map renders showing all 54 African countries. Each country is a distinct, clickable/hoverable region. | | ENT-14 |
+| TC-VIZ-006 | Visual Analytics | Map heat coloring reflects borrower activity levels | User is logged in, borrower data exists across multiple countries | 1. Navigate to Dashboard. 2. Observe the Africa map color coding. 3. Compare colors with the legend. | Countries with higher borrower activity display darker/more intense heat coloring. Countries with no activity display a neutral/light color. A legend is visible showing activity level color scale. | | ENT-14 |
+| TC-VIZ-007 | Visual Analytics | Map hover tooltips show country details | User is logged in, Africa map visible | 1. Navigate to Dashboard. 2. Hover over a country on the Africa map. | Tooltip appears showing the country name, number of borrowers, and number of accounts for that country. | | ENT-14 |
+| TC-VIZ-008 | Visual Analytics | Charts render correctly in dark mode | User is logged in, dark mode enabled | 1. Toggle theme to dark mode. 2. Navigate to Dashboard. 3. Observe all charts (area, donut, bar) and Africa map. | All charts adapt to dark mode with appropriate background colors, axis colors, label colors, and tooltip styling. Charts remain readable and visually consistent with the dark theme. | | ENT-14 |
+| TC-VIZ-009 | Visual Analytics | Chart-data API endpoint requires authentication | No active session | 1. Open a new browser tab or use an API client. 2. Send GET request to `/api/dashboard/chart-data` without authentication. | Request returns 401 Unauthorized. Chart data is not exposed to unauthenticated users. | | ENT-14, NFR-SEC-01 |
+| TC-VIZ-010 | Visual Analytics | Charts are responsive on mobile viewports | User is logged in | 1. Open browser developer tools. 2. Set viewport to mobile size (e.g., 375x667). 3. Navigate to Dashboard. 4. Scroll through all chart sections. | All charts resize responsively to fit the mobile viewport. Charts remain readable without horizontal scrolling. Legends and labels adjust appropriately. | | ENT-14 |
+
+---
+
+## 40. Interactive Demo Tour Module (ENT-15)
+
+| TC-ID | Module | Test Case Name | Pre-conditions | Test Steps | Expected Result | Pass/Fail | SRS Reference |
+|-------|--------|---------------|----------------|------------|-----------------|-----------|---------------|
+| TC-TOUR-001 | Demo Tour | Tour auto-launches after demo login | Application is accessible | 1. Navigate to login page. 2. Click "Try Interactive Demo" button. 3. Select a demo role (e.g., Admin). 4. Wait for Dashboard to load. | After demo login, the guided tour automatically launches. A spotlight overlay appears highlighting the first tour step. The sessionStorage flag triggers the auto-launch. | | ENT-15 |
+| TC-TOUR-002 | Demo Tour | Tour has 11 steps with spotlight overlay | Tour is active (from TC-TOUR-001) | 1. Observe the tour overlay. 2. Click "Next" through all steps. 3. Count total steps. | Tour contains exactly 11 steps. Each step shows a spotlight overlay highlighting a specific UI element (sidebar navigation, stat cards, charts, Africa map, search, settings, etc.). Step counter shows progress (e.g., "Step 1 of 11"). | | ENT-15 |
+| TC-TOUR-003 | Demo Tour | Next/Back/Skip/Close controls work | Tour is active | 1. Click "Next" to advance to step 2. 2. Click "Back" to return to step 1. 3. Click "Next" to advance again. 4. Click "Skip" to end the tour early. 5. Relaunch tour. 6. Click "Close" (X button) to dismiss. | Next advances to the following step. Back returns to the previous step. Skip ends the tour immediately and closes the overlay. Close (X) dismisses the tour overlay. All controls respond correctly. | | ENT-15 |
+| TC-TOUR-004 | Demo Tour | "Take a Tour" button relaunches tour | User is logged in via demo, tour was previously completed or skipped | 1. Complete or skip the initial tour. 2. Locate the amber DEMO ENVIRONMENT banner at the top of the page. 3. Click the "Take a Tour" button within the banner. | Tour relaunches from step 1. Spotlight overlay appears again. Full 11-step tour is available. | | ENT-15 |
+| TC-TOUR-005 | Demo Tour | Tour works in all 5 AU languages | User is logged in via demo | 1. Set language to French (FR). 2. Launch tour. Observe tour text is in French. 3. Repeat for Portuguese (PT), Arabic (AR), and Swahili (SW). | Tour step titles and descriptions are translated into the selected language. All 5 AU languages (EN, FR, PT, AR, SW) display correctly translated tour content. | | ENT-15 |
+| TC-TOUR-006 | Demo Tour | Tour handles mobile sidebar correctly | User is logged in via demo, mobile viewport | 1. Set viewport to mobile size. 2. Launch the demo tour. 3. Observe tour behavior when highlighting sidebar elements. | On mobile viewports, the tour correctly handles the collapsible sidebar. If a tour step highlights a sidebar element, the sidebar opens automatically or the step adapts to the mobile layout. Tour remains usable on mobile. | | ENT-15 |
+
+---
+
 **Document End**
 
-*This UAT Test Document covers all modules of the Cross-Jurisdictional Central Data Hub & Credit Registry System v1.2, including the 13 enterprise enhancements (ENT-01 through ENT-13). Each test case is designed to validate functional and non-functional requirements as defined in the Software Requirements Specification (SRS).*
+*This UAT Test Document covers all modules of the Cross-Jurisdictional Central Data Hub & Credit Registry System v1.2, including the 15 enterprise enhancements (ENT-01 through ENT-15). Each test case is designed to validate functional and non-functional requirements as defined in the Software Requirements Specification (SRS).*
 
 *Prepared by: Systems In Motion Limited*  
 *Classification: Confidential*

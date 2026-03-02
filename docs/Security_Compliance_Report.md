@@ -13,7 +13,7 @@
 
 This document provides a comprehensive assessment of the security controls implemented in the Credit Registry System against the requirements defined in the Software Requirements Specification (SRS) v1.2. The system handles sensitive financial and personal data across all 54 African countries and supports three languages (English, French, Portuguese) and must comply with data protection and financial regulatory requirements.
 
-All ten non-functional security requirements (NFR-SEC-01 through NFR-SEC-10) have been implemented, along with thirteen enterprise security enhancements (ENT-01 through ENT-13) including TOTP multi-factor authentication, OAuth 2.1 Bearer token exchange, tamper-evident audit log hash chains, fuzzy entity matching, dispute chatbot, low-bandwidth optimizations, XBRL upload support, data retention enforcement, exchange rate management, API administration, global search, ID photo/document upload, and investor demo environment. This report details each security control, its implementation, and compliance status.
+All ten non-functional security requirements (NFR-SEC-01 through NFR-SEC-10) have been implemented, along with fifteen enterprise security enhancements (ENT-01 through ENT-15) including TOTP multi-factor authentication, OAuth 2.1 Bearer token exchange, tamper-evident audit log hash chains, fuzzy entity matching, dispute chatbot, low-bandwidth optimizations, XBRL upload support, data retention enforcement, exchange rate management, API administration, global search, ID photo/document upload, investor demo environment, dashboard visual analytics, and interactive demo tour. This report details each security control, its implementation, and compliance status.
 
 ---
 
@@ -200,6 +200,8 @@ All internal API endpoints (under `/api/`) require session-based authentication,
 - `/api/auth/me`
 - `/api/health`
 - `/api/external/*`
+
+This includes the dashboard visualization endpoint `GET /api/dashboard/chart-data`, which returns monthly trend, status breakdown, type breakdown, and country breakdown data for the Dashboard Visual Analytics module (ENT-14). This endpoint is protected by the `requireAuth` middleware and requires an active authenticated session.
 
 Authentication middleware:
 ```typescript
@@ -541,6 +543,8 @@ if (approval.requestedBy === currentUserId) {
 | ENT-11 | Global Search | COMPLIANT | Cross-entity search across borrowers, institutions, and credit accounts via `/api/global-search` endpoint. Optional country filter. No sensitive data exposure beyond authenticated user's access level. |
 | ENT-12 | File Upload Security | COMPLIANT | Multer-based upload with file size limits (5MB photos, 10MB documents), MIME type validation, randomized filenames, auth-protected serving via `/uploads` route. All uploads audit-logged. |
 | ENT-13 | Demo Environment | COMPLIANT | Investor-facing demo with pre-configured role cards. Amber banner indicates demo mode. Uses existing authentication and authorization infrastructure. Fictional data only. |
+| ENT-14 | Dashboard Visual Analytics | COMPLIANT | `GET /api/dashboard/chart-data` endpoint protected by `requireAuth` middleware. Returns aggregated statistical data only (monthly trends, status breakdowns, type breakdowns, country breakdowns); no raw PII exposed. Recharts renders data client-side. SVG Africa map uses pre-defined country geometries with no external data fetching. Dark mode support via CSS variable detection. |
+| ENT-15 | Interactive Demo Tour | COMPLIANT | Tour component (`demo-tour.tsx`) operates entirely client-side with no additional API endpoints. Auto-launch controlled via sessionStorage flag (demo login context only). No sensitive data stored or transmitted. Multilingual support in 5 AU languages (EN/FR/PT/AR/SW). |
 | SLA-RET-01 | Retention Enforcement SLA | COMPLIANT | Automated 24-hour enforcement cycle ensures timely data lifecycle management. Manual trigger via `POST /api/retention-policies/enforce` (admin-only, RBAC-protected). All enforcement actions audit-logged with full result details. |
 
 ---

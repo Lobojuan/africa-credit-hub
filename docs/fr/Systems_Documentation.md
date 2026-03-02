@@ -63,6 +63,8 @@ Le système est conçu pour un déploiement panafricain couvrant les 54 pays afr
 - **Recherche Globale** — Recherche inter-entités sur les emprunteurs, les institutions et les comptes de crédit simultanément via `/api/global-search` avec filtrage par pays
 - **Photos d'Identité et Documents** — Avatars DiceBear auto-générés pour les profils d'emprunteurs, téléversement de photos et de documents d'identité via multer avec service authentifié depuis `/uploads`
 - **Environnement de Démonstration** — Démonstration en un clic pour investisseurs avec trois cartes de rôle (Admin, Régulateur, Agent Bancaire), bannière ambre ENVIRONNEMENT DE DÉMONSTRATION et avertissement de données fictives
+- **Analyses Visuelles du Tableau de Bord** — Graphiques interactifs Recharts (tendance en aire, anneau des statuts, barres horizontales des types) et carte choroplèthe SVG de l'Afrique avec coloration thermique à travers les 54 pays ; prise en charge du mode sombre
+- **Visite Guidée Interactive de Démonstration** — Parcours guidé en 11 étapes avec surcouche projecteur, lancement automatique après connexion démo, prise en charge multilingue dans les 5 langues de l'UA
 - **Piste d'Audit** — Journalisation complète des activités avec suivi des adresses IP et chaîne de hachage SHA-256 inviolable
 - **Authentification Multi-Facteurs** — AMF basée sur TOTP via la bibliothèque otpauth
 - **Correspondance Floue d'Entités** — Similarité par trigrammes PostgreSQL pg_trgm pour la détection des emprunteurs en double
@@ -1575,7 +1577,37 @@ Les conditions d'erreur sont journalisées via `console.error()` pour :
   - **Avertissement :** Avertissement de données fictives affiché dans l'environnement de démonstration
   - **Sécurité :** Utilise l'infrastructure d'authentification et d'autorisation existante
 
-  ### 13.15 Prise en Charge de la Langue Portugaise
+### 13.15 Analyses Visuelles du Tableau de Bord (ENT-14)
+
+**Objectif :** Suite de visualisation de données interactive pour le tableau de bord, fournissant des aperçus de portefeuille en un coup d'œil via des graphiques réactifs et une carte choroplèthe géographique des 54 pays africains.
+
+**Architecture :**
+- **Composants :**
+  - `client/src/components/dashboard-charts.tsx` — Visualisations basées sur Recharts incluant un graphique de tendance en aire sur 12 mois (croissance des emprunteurs et des comptes), un graphique en anneau pour la répartition des statuts de comptes, et un graphique en barres horizontales pour la distribution des types de prêts
+  - `client/src/components/africa-map.tsx` — Carte choroplèthe SVG affichant les 54 pays africains avec coloration thermique par nombre d'emprunteurs, infobulles au survol affichant le nom du pays, le nombre d'emprunteurs et le nombre de comptes, et une légende montrant les niveaux d'activité
+- **API :** `GET /api/dashboard/chart-data` (authentifié via le middleware `requireAuth`) retourne :
+  - `monthlyTrend` — Tableau de points de données mensuels avec les nombres d'emprunteurs et de comptes
+  - `statusBreakdown` — Distribution des statuts de comptes (en cours, en souffrance, en défaut, fermé, restructuré, passé en perte)
+  - `typeBreakdown` — Distribution des types de prêts (prêt à terme, découvert, hypothèque, etc.)
+  - `countryBreakdown` — Nombres d'emprunteurs et de comptes par pays à travers les 54 juridictions africaines
+- **Bibliothèque :** Recharts pour une visualisation de données réactive et thématisée avec formatage automatique des axes et infobulles personnalisées
+- **Mode Sombre :** Prise en charge complète du mode sombre via détection des variables CSS ; les couleurs et arrière-plans des graphiques s'adaptent au thème actif
+- **Réactivité :** Tous les graphiques utilisent `ResponsiveContainer` pour un redimensionnement fluide à travers les tailles de fenêtre
+
+### 13.16 Visite Guidée Interactive de Démonstration (ENT-15)
+
+**Objectif :** Un parcours guidé en 11 étapes qui présente aux nouveaux utilisateurs les fonctionnalités clés du système dans l'environnement de démonstration.
+
+**Architecture :**
+- **Composant :** `client/src/components/demo-tour.tsx` — Surcouche de visite autonome avec mise en surbrillance projecteur, descriptions des étapes et contrôles de navigation
+- **Étapes :** 11 arrêts de la visite couvrant la navigation dans la barre latérale, les cartes de statistiques, le graphique de croissance du portefeuille, le graphique des statuts de comptes, le graphique des types de prêts, la carte de l'Afrique, la recherche de crédit, la gestion des emprunteurs, les paramètres et la finalisation
+- **Lancement Automatique :** La visite se lance automatiquement après la connexion démo via un indicateur `sessionStorage` (`demo_tour_shown`) ; ne se déclenche qu'une fois par session
+- **Contrôles :** Boutons Suivant, Précédent, Passer et Fermer pour la navigation dirigée par l'utilisateur à travers les étapes de la visite
+- **Surcouche Projecteur :** Fond semi-transparent avec une découpe de mise en surbrillance autour de l'élément d'interface cible pour chaque étape
+- **Relancement :** Les utilisateurs peuvent redémarrer la visite à tout moment via le bouton « Faire la Visite » dans la bannière ambre de l'environnement de démonstration
+- **Internationalisation :** Les titres et descriptions des étapes de la visite sont entièrement traduits dans les 5 langues de l'UA (Anglais, Français, Portugais, Arabe, Swahili) via les clés i18n sous `tour.*`
+
+  ### 13.17 Prise en Charge de la Langue Portugaise
 
   **Objectif :** Localisation complète en portugais (pt) pour toutes les interfaces système, étendant les traductions existantes en anglais/français.
 

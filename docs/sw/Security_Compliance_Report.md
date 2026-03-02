@@ -13,7 +13,7 @@
 
 Hati hii inatoa tathmini ya kina ya udhibiti wa usalama uliotekelezwa katika Mfumo wa Rejista ya Mikopo dhidi ya mahitaji yaliyofafanuliwa katika Maelezo ya Mahitaji ya Programu (SRS) v1.2. Mfumo unashughulikia data nyeti za kifedha na za kibinafsi katika nchi zote 54 za Afrika na unasaidia lugha tatu (Kiingereza, Kifaransa, Kireno) na lazima uzingatie mahitaji ya ulinzi wa data na udhibiti wa kifedha.
 
-Mahitaji yote kumi ya usalama yasiyo ya kitendaji (NFR-SEC-01 hadi NFR-SEC-10) yametekelezwa, pamoja na uboreshaji kumi na tatu wa usalama wa biashara (ENT-01 hadi ENT-13) ikiwa ni pamoja na uthibitishaji wa hatua nyingi wa TOTP, ubadilishanaji wa tokeni ya OAuth 2.1 Bearer, mnyororo wa hash wa kumbukumbu za ukaguzi zinazostahimili uharibifu, ulinganishaji wa huluki zisizo kamili, chatbot ya migogoro, uboreshaji wa bandwidth ndogo, msaada wa kupakia XBRL, utekelezaji wa uhifadhi wa data, usimamizi wa viwango vya ubadilishaji, usimamizi wa API, utafutaji wa kimataifa, kupakia picha/hati za kitambulisho, na mazingira ya maonyesho ya wawekezaji. Ripoti hii inaelezea kila udhibiti wa usalama, utekelezaji wake, na hali ya utiifu.
+Mahitaji yote kumi ya usalama yasiyo ya kitendaji (NFR-SEC-01 hadi NFR-SEC-10) yametekelezwa, pamoja na uboreshaji kumi na tano wa usalama wa biashara (ENT-01 hadi ENT-15) ikiwa ni pamoja na uthibitishaji wa hatua nyingi wa TOTP, ubadilishanaji wa tokeni ya OAuth 2.1 Bearer, mnyororo wa hash wa kumbukumbu za ukaguzi zinazostahimili uharibifu, ulinganishaji wa huluki zisizo kamili, chatbot ya migogoro, uboreshaji wa bandwidth ndogo, msaada wa kupakia XBRL, utekelezaji wa uhifadhi wa data, usimamizi wa viwango vya ubadilishaji, usimamizi wa API, utafutaji wa kimataifa, kupakia picha/hati za kitambulisho, mazingira ya maonyesho ya wawekezaji, uchambuzi wa kuona wa dashibodi, na ziara ya maonyesho ya maingiliano. Ripoti hii inaelezea kila udhibiti wa usalama, utekelezaji wake, na hali ya utiifu.
 
 ---
 
@@ -200,6 +200,8 @@ Miisho yote ya API ya ndani (chini ya `/api/`) inahitaji uthibitishaji unaotegem
 - `/api/auth/me`
 - `/api/health`
 - `/api/external/*`
+
+Hii inajumuisha mwisho wa taswira ya dashibodi `GET /api/dashboard/chart-data`, ambao unarudisha mwenendo wa kila mwezi, mgawanyo wa hali, mgawanyo wa aina, na mgawanyo wa nchi kwa moduli ya Uchambuzi wa Kuona wa Dashibodi (ENT-14). Mwisho huu unalindwa na middleware ya `requireAuth` na unahitaji kipindi hai kilichothibitishwa.
 
 Middleware ya uthibitishaji:
 ```typescript
@@ -541,6 +543,8 @@ if (approval.requestedBy === currentUserId) {
 | ENT-11 | Utafutaji wa Kimataifa | INATII | Utafutaji wa huluki mbalimbali kwenye wakopaji, taasisi, na akaunti za mikopo kupitia mwisho wa `/api/global-search`. Chujio la hiari la nchi. Hakuna kufichua data nyeti zaidi ya kiwango cha ufikiaji wa mtumiaji aliyethibitishwa. |
 | ENT-12 | Usalama wa Kupakia Faili | INATII | Kupakia kulingana na multer na vikomo vya ukubwa wa faili (picha 5MB, hati 10MB), uthibitishaji wa aina ya MIME, majina ya faili yaliyobadilishwa kinasibu, upatikanaji uliolindwa kwa uthibitishaji kupitia njia ya `/uploads`. Kupakia kote kunarekodiwa katika ukaguzi. |
 | ENT-13 | Mazingira ya Maonyesho | INATII | Maonyesho ya wawekezaji na kadi za majukumu zilizosanidiwa. Bango la njano linaonyesha hali ya maonyesho. Inatumia miundombinu iliyopo ya uthibitishaji na uidhinishaji. Data ya kubuni pekee. |
+| ENT-14 | Uchambuzi wa Kuona wa Dashibodi | INATII | Mwisho wa `GET /api/dashboard/chart-data` unalindwa na middleware ya `requireAuth`. Inarudisha data ya takwimu zilizokusanywa pekee (mwenendo wa kila mwezi, mgawanyo wa hali, mgawanyo wa aina, mgawanyo wa nchi); hakuna PII ghafi inayofichuliwa. Recharts inachora data upande wa mteja. Ramani ya SVG ya Afrika inatumia jiometri za nchi zilizofafanuliwa awali bila kupata data ya nje. Msaada wa hali ya giza kupitia kugundua vigeu vya CSS. |
+| ENT-15 | Ziara ya Maonyesho ya Maingiliano | INATII | Kipengele cha ziara (`demo-tour.tsx`) kinafanya kazi kabisa upande wa mteja bila miisho ya ziada ya API. Uzinduzi wa moja kwa moja unadhibitiwa kupitia bendera ya sessionStorage (muktadha wa kuingia kwa maonyesho pekee). Hakuna data nyeti inayohifadhiwa au kusafirishwa. Msaada wa lugha nyingi katika lugha 5 za AU (EN/FR/PT/AR/SW). |
 | SLA-RET-01 | SLA ya Utekelezaji wa Uhifadhi | INATII | Mzunguko wa utekelezaji wa moja kwa moja wa masaa 24 unahakikisha usimamizi wa wakati wa mzunguko wa maisha ya data. Kichochezi cha mwongozo kupitia `POST /api/retention-policies/enforce` (admin pekee, RBAC imelindwa). Vitendo vyote vya utekelezaji vinarekodiwa katika ukaguzi na maelezo kamili ya matokeo. |
 
 ---

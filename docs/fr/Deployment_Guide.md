@@ -526,6 +526,7 @@ Les paquets supplémentaires suivants ont été ajoutés pour les améliorations
 | `jsonwebtoken` | Signature et vérification JWT pour les jetons Bearer | ENT-04 (OAuth 2.1) |
 | `compression` | Middleware de compression gzip | ENT-05 (Faible Bande Passante) |
 | `multer` | Middleware de téléversement de fichiers pour photos et documents d'identité | ENT-12 (Photos d'Identité) |
+| `recharts` | Graphiques de visualisation de données réactifs et thématisés (aire, anneau, barres) | ENT-14 (Analyses Visuelles du Tableau de Bord) |
 
 **Extension PostgreSQL :**
 - `pg_trgm` — Requise pour la correspondance floue des entités (ENT-02). Créée automatiquement au démarrage.
@@ -554,6 +555,8 @@ Le Système de Registre de Crédit comprend les modules et capacités suivants :
 | Recherche Globale | Recherche inter-entités sur les emprunteurs, institutions et comptes de crédit (ENT-11) |
 | Photos d'Identité et Documents | Téléversement de photos de profil et de documents d'identité via multer avec avatars DiceBear (ENT-12) |
 | Environnement de Démonstration | Mode de démonstration en un clic pour investisseurs avec cartes de rôle et bannière de démonstration (ENT-13) |
+| Analyses Visuelles du Tableau de Bord | Graphiques interactifs Recharts (tendance en aire, anneau des statuts, barres horizontales des types) et carte choroplèthe SVG de l'Afrique avec coloration thermique à travers les 54 pays ; prise en charge du mode sombre (ENT-14) |
+| Visite Guidée Interactive de Démonstration | Parcours guidé en 11 étapes avec surcouche projecteur, lancement automatique après connexion démo, prise en charge multilingue dans les 5 langues de l'UA (ENT-15) |
 
 ---
 

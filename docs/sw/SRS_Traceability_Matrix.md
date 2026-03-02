@@ -172,6 +172,8 @@ Hati hii inaorodhesha kila sharti la Maelezo ya Mahitaji ya Programu (SRS) kulin
 | ENT-11 | Utafutaji wa kimataifa wa huluki mbalimbali | Implemented | Global Search (`/api/global-search`, `credit-search.tsx`) | Inatafuta kwenye wakopaji, taasisi, na akaunti za mikopo na chujio la hiari la nchi; hakuna mabadiliko ya schema yanayohitajika | TC-GS-001, TC-GS-002 |
 | ENT-12 | Kupakia picha za kitambulisho na hati za wakopaji | Implemented | ID Photos (`photoUrl`, `idDocumentUrl` fields on `borrowers`, multer upload endpoints) | Picha za DiceBear zinazozalishwa kwa moja kwa moja kama chaguomsingi; kupakia picha/hati kulingana na multer na upatikanaji uliolindwa kwa uthibitishaji | TC-PHOTO-001 hadi TC-PHOTO-003 |
 | ENT-13 | Mazingira ya maonyesho ya wawekezaji | Implemented | Demo Environment (login page demo cards, DEMO banner) | Kuingia kwa maonyesho kwa kubofya mara moja na kadi 3 za majukumu (Admin, Regulator, Bank Officer); bango la njano la DEMO ENVIRONMENT; kanusho la data ya kubuni | TC-DEMO-001, TC-DEMO-002 |
+| ENT-14 | Uchambuzi wa Kuona wa Dashibodi | Implemented | Dashboard Charts (`dashboard-charts.tsx`, `africa-map.tsx`, `routes.ts`) | Chati za maingiliano (chati ya eneo la mwenendo, donut ya mgawanyo wa hali, bar ya mlalo ya aina za mikopo) na ramani ya choropleth ya SVG ya Afrika na rangi ya joto kulingana na idadi ya wakopaji katika nchi zote 54; data ya wakati halisi kupitia `GET /api/dashboard/chart-data` (iliyolindwa kwa uthibitishaji); maktaba ya Recharts kwa taswira zinazobadilika na zinazozingatia mandhari; msaada wa hali ya giza kupitia kugundua vigeu vya CSS | TC-VIZ-001 hadi TC-VIZ-010 |
+| ENT-15 | Ziara ya Maonyesho ya Maingiliano | Implemented | Demo Tour (`demo-tour.tsx`) | Mwongozo wa hatua 11 kwa mazingira ya maonyesho; inazinduka moja kwa moja baada ya kuingia kwa maonyesho kupitia bendera ya sessionStorage; mfumo wa spotlight na vidhibiti vya Next/Back/Skip/Close; kuzindua tena kupitia kitufe cha "Take a Tour" katika bango la maonyesho la kaharabu; msaada wa lugha nyingi katika lugha zote 5 za AU (EN/FR/PT/AR/SW) | TC-TOUR-001 hadi TC-TOUR-006 |
 
 ---
 
@@ -189,8 +191,8 @@ Hati hii inaorodhesha kila sharti la Maelezo ya Mahitaji ya Programu (SRS) kulin
 | INT-RPT (Ushirikiano na Utoaji Taarifa) | 4 | 4 | 0 | 0 |
 | DQ (Ubora wa Data) | 5 | 5 | 0 | 0 |
 | NFR-SEC (Usalama) | 10 | 10 | 0 | 0 |
-| ENT (Uboreshaji wa Biashara) | 13 | 13 | 0 | 0 |
-| **Jumla** | **77** | **77** | **0** | **0** |
+| ENT (Uboreshaji wa Biashara) | 15 | 15 | 0 | 0 |
+| **Jumla** | **79** | **79** | **0** | **0** |
 
 ---
 
