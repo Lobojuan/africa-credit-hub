@@ -22,6 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import LoginPage from "@/pages/login";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
+import InvestorLandingPage from "@/pages/investor-landing";
 
 const BorrowersPage = lazy(() => import("@/pages/borrowers"));
 const BorrowerDetailPage = lazy(() => import("@/pages/borrower-detail"));
@@ -202,9 +203,14 @@ function App() {
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <AuthProvider>
-            <AuthenticatedApp />
-          </AuthProvider>
+          <Switch>
+            <Route path="/investor" component={InvestorLandingPage} />
+            <Route>
+              <AuthProvider>
+                <AuthenticatedApp />
+              </AuthProvider>
+            </Route>
+          </Switch>
           <Toaster />
         </TooltipProvider>
       </QueryClientProvider>
