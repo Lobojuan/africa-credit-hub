@@ -1,6 +1,6 @@
 import { build as esbuild } from "esbuild";
 import { build as viteBuild } from "vite";
-import { rm, readFile } from "fs/promises";
+import { rm, readFile, mkdir, copyFile } from "fs/promises";
 
 // server deps to bundle to reduce openat(2) syscalls
 // which helps cold start times
@@ -59,6 +59,40 @@ async function buildAll() {
     external: externals,
     logLevel: "info",
   });
+
+  const spaRoutes = [
+    "investor",
+    "dashboard",
+    "borrowers",
+    "credit-accounts",
+    "disputes",
+    "batch-upload",
+    "audit-trail",
+    "exchange-rates",
+    "user-management",
+    "institutions",
+    "reports",
+    "regulatory-compliance",
+    "api-keys",
+    "api-admin",
+    "api-docs",
+    "retention-policies",
+    "helpdesk",
+    "consent-management",
+    "pending-approvals",
+    "credit-search",
+    "credit-report",
+    "settings",
+    "version-history",
+    "documentation",
+    "billing",
+    "online-manual",
+  ];
+  console.log("creating SPA fallback routes...");
+  for (const route of spaRoutes) {
+    await mkdir(`dist/public/${route}`, { recursive: true });
+    await copyFile("dist/public/index.html", `dist/public/${route}/index.html`);
+  }
 }
 
 buildAll().catch((err) => {
