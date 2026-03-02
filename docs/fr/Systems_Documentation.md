@@ -631,6 +631,7 @@ users ──────────────┐
 |---------|--------|------|-------------|
 | `GET` | `/api/dashboard/stats` | Tous | Statistiques du tableau de bord (8 cartes de statistiques) |
 | `GET` | `/api/dashboard/details/:type` | Tous | Détails approfondis (type : borrowers, accounts, outstanding, delinquent, defaults, inquiries, pending, disputes) |
+| `GET` | `/api/dashboard/chart-data` | Tous | Retourne la tendance mensuelle, la répartition des statuts, la répartition des types et la répartition par pays pour les visualisations du tableau de bord |
 
 ### 5.4 Points d'Accès de Gestion des Utilisateurs (Admin Uniquement)
 

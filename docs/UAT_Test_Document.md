@@ -479,7 +479,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total Test Cases | 213 |
+| Total Test Cases | 311 |
 | Passed | |
 | Failed | |
 | Blocked | |
