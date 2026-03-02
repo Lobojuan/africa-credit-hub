@@ -23,6 +23,13 @@ const iconStyles = [
   { bg: "linear-gradient(135deg, hsl(175 40% 35%) 0%, hsl(185 35% 28%) 100%)" },
 ];
 
+function valueFontSize(val: string | number): string {
+  const len = String(val).length;
+  if (len > 14) return "text-base";
+  if (len > 10) return "text-lg";
+  return "text-2xl";
+}
+
 export function StatCard({ title, value, subtitle, icon: Icon, testId, colorIndex = 0, onClick }: StatCardProps) {
   const style = iconStyles[colorIndex % iconStyles.length];
 
@@ -39,12 +46,12 @@ export function StatCard({ title, value, subtitle, icon: Icon, testId, colorInde
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">{title}</p>
-            <p className="text-2xl font-extrabold mt-1.5 truncate tracking-tight" data-testid={`${testId}-value`}>{value}</p>
+            <p className={`${valueFontSize(value)} font-extrabold mt-1.5 tracking-tight leading-tight break-words`} data-testid={`${testId}-value`}>{value}</p>
             {subtitle && (
               <p className="text-[11px] text-muted-foreground mt-1.5">{subtitle}</p>
             )}
           </div>
-          <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-col items-center gap-2 shrink-0">
             <div
               className="flex items-center justify-center w-11 h-11 rounded-xl shadow-sm"
               style={{ background: style.bg }}
