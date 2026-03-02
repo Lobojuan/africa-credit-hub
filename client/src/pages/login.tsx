@@ -184,7 +184,7 @@ export default function LoginPage() {
       </div>
 
       <div className="flex-1 flex items-center justify-center p-4 sm:p-6 bg-background relative">
-        <div className="absolute top-4 right-4" data-testid="login-language-switcher">
+        <div className="absolute top-4 login-lang-switcher" data-testid="login-language-switcher">
           <LanguageSwitcher />
         </div>
         <div className="w-full max-w-[420px] space-y-6 sm:space-y-8">

@@ -126,9 +126,9 @@ function AuthenticatedApp() {
               {t('login.demoBanner')}
             </div>
           )}
-          <header className="flex items-center justify-between gap-1 sm:gap-2 p-2 border-b shrink-0">
-            <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <div className="flex items-center gap-1 sm:gap-3">
+          <header className="flex items-center justify-between gap-1 sm:gap-2 p-2 border-b shrink-0 overflow-hidden">
+            <SidebarTrigger data-testid="button-sidebar-toggle" className="shrink-0" />
+            <div className="flex items-center gap-1 sm:gap-3 shrink-0">
               <span className="text-xs text-muted-foreground hidden md:inline" data-testid="text-current-user">
                 {user.fullName} ({user.role})
               </span>
