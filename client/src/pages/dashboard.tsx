@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatCard } from "@/components/stat-card";
+import { DashboardCharts } from "@/components/dashboard-charts";
+import { AfricaMap } from "@/components/africa-map";
 import { formatCurrency, detectLocalCurrency, SUPPORTED_CURRENCIES } from "@/lib/currency";
 import type { CreditAccount, AuditLog, ExchangeRate } from "@shared/schema";
 
@@ -473,6 +475,24 @@ export default function Dashboard() {
     enabled: !!selectedDetail,
   });
 
+  const { data: chartData, isLoading: chartsLoading } = useQuery<{
+    monthlyTrend: { month: string; borrowers: number; accounts: number }[];
+    statusBreakdown: { name: string; value: number }[];
+    typeBreakdown: { name: string; value: number }[];
+    countryBreakdown: { country: string; borrowers: number; accounts: number }[];
+  }>({
+    queryKey: ["/api/dashboard/chart-data"],
+  });
+
+  const chartProps = useMemo(() => {
+    if (!chartData) return {};
+    return {
+      monthlyTrend: chartData.monthlyTrend.map(d => ({ month: d.month, borrowers: d.borrowers, accounts: d.accounts, outstanding: 0 })),
+      statusBreakdown: chartData.statusBreakdown.map(d => ({ status: d.name, count: d.value })),
+      typeBreakdown: chartData.typeBreakdown.map(d => ({ type: d.name, count: d.value })),
+    };
+  }, [chartData]);
+
   const { data: recentAccounts, isLoading: accountsLoading } = useQuery<CreditAccount[]>({
     queryKey: ["/api/credit-accounts"],
   });
@@ -542,6 +562,19 @@ export default function Dashboard() {
             <StatCard title={t('dashboard.openDisputes')} value={stats.openDisputeCount.toLocaleString()} icon={AlertCircle} testId="stat-disputes" subtitle={t('dashboard.openDisputesSub')} colorIndex={7} onClick={() => setSelectedDetail("disputes")} />
           </>
         ) : null}
+      </div>
+
+      <DashboardCharts
+        monthlyTrend={chartProps.monthlyTrend}
+        statusBreakdown={chartProps.statusBreakdown}
+        typeBreakdown={chartProps.typeBreakdown}
+        isLoading={chartsLoading}
+      />
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2">
+          <AfricaMap countryBreakdown={chartData?.countryBreakdown} />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
