@@ -406,11 +406,12 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   text-align: left;
 }
 
-.login-lang-switcher {
-  right: 1rem;
+[dir="rtl"] .ltr-header {
+  direction: ltr !important;
 }
 
-[dir="rtl"] .login-lang-switcher {
-  right: auto;
-  left: 1rem;
+[dir="rtl"] .ml-auto.ltr-header {
+  margin-left: auto;
+  margin-right: unset;
 }
+
