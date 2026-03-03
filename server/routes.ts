@@ -2452,6 +2452,13 @@ export async function registerRoutes(
     } catch (e: any) { res.status(500).json({ message: e.message }); }
   });
 
+  app.get("/api/admin/organizations/list", requireAuth, requireSuperAdmin, async (_req, res) => {
+    try {
+      const orgs = await storage.getOrganizations();
+      res.json(orgs.map(o => ({ id: o.id, name: o.name, type: o.type, status: o.status, country: o.country, subscriptionTier: o.subscriptionTier })));
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
   app.get("/api/admin/organizations", requireAuth, requireSuperAdmin, async (_req, res) => {
     try {
       const orgs = await storage.getOrganizations();
