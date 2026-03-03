@@ -13,7 +13,7 @@
 
 This document provides a comprehensive assessment of the security controls implemented in the Credit Registry System against the requirements defined in the Software Requirements Specification (SRS) v1.2. The system handles sensitive financial and personal data across all 54 African countries and supports three languages (English, French, Portuguese) and must comply with data protection and financial regulatory requirements.
 
-All ten non-functional security requirements (NFR-SEC-01 through NFR-SEC-10) have been implemented, along with fifteen enterprise security enhancements (ENT-01 through ENT-15) including TOTP multi-factor authentication, OAuth 2.1 Bearer token exchange, tamper-evident audit log hash chains, fuzzy entity matching, dispute chatbot, low-bandwidth optimizations, XBRL upload support, data retention enforcement, exchange rate management, API administration, global search, ID photo/document upload, investor demo environment, dashboard visual analytics, and interactive demo tour. This report details each security control, its implementation, and compliance status.
+All ten non-functional security requirements (NFR-SEC-01 through NFR-SEC-10) have been implemented, along with fifteen enterprise security enhancements (ENT-01 through ENT-15) and additional AI-powered features (AI-001 through AI-004) and platform enhancements (ENT-16 through ENT-21). These include TOTP multi-factor authentication, OAuth 2.1 Bearer token exchange, tamper-evident audit log hash chains, fuzzy entity matching, dispute chatbot, low-bandwidth optimizations, XBRL upload support, data retention enforcement, exchange rate management, API administration, global search, ID photo/document upload, investor demo environment, dashboard visual analytics, interactive demo tour, AI credit risk analysis, AI report summaries, AI smart chatbot, AI compliance reports, Excel export, real-time notifications, API usage analytics, dashboard sparkline trends, audit trail enhancements, and multi-language PDF reports. This report details each security control, its implementation, and compliance status.
 
 ---
 
@@ -516,6 +516,58 @@ if (approval.requestedBy === currentUserId) {
 |---------|---------|---------------|
 | DiceBear (`api.dicebear.com`) | Auto-generated borrower profile avatars | No PII sent to DiceBear — only the borrower ID is used as a seed for avatar generation; no authentication required |
 | Open Exchange Rates (`open.er-api.com`) | Live currency exchange rate fetching | No authentication required; no sensitive data transmitted; only currency codes sent in requests |
+| OpenAI GPT-4o (via Replit AI Integrations) | AI credit risk analysis, report summaries, chatbot assistant, compliance reports | See Section 9.7 for detailed AI data handling controls |
+
+### 9.7 AI Data Handling — ENT-16 through ENT-21
+
+The system integrates with OpenAI GPT-4o for AI-powered analysis features. The following controls govern the handling of data sent to and received from the AI service.
+
+| Control | Implementation |
+|---------|---------------|
+| AI Provider | OpenAI GPT-4o via Replit AI Integrations |
+| Configuration | Environment variables: `AI_INTEGRATIONS_OPENAI_API_KEY`, `AI_INTEGRATIONS_OPENAI_BASE_URL` |
+| Data Sent | Borrower data (name, account details, payment history) sent to OpenAI API for analysis; data is used solely for generating the requested analysis |
+| PII Storage by AI | No PII is stored by OpenAI; requests are processed ephemerally per OpenAI's API data usage policy |
+| Response Handling | AI responses are returned directly to the authenticated user; responses are not persisted in the database |
+| Authentication | All AI endpoints require active session authentication via `requireAuth` middleware |
+| Role Restrictions | AI compliance report endpoint (`POST /api/ai/compliance-report`) requires `admin`, `super_admin`, or `regulator` role |
+| Audit Logging | AI analysis requests are logged in the audit trail |
+| Module Location | `server/ai.ts` — contains all AI integration functions |
+
+**AI Endpoints and Access Control:**
+
+| Endpoint | Purpose | Required Auth |
+|----------|---------|---------------|
+| `POST /api/ai/credit-risk/:borrowerId` | AI credit risk analysis for a borrower | Authenticated user |
+| `POST /api/ai/report-summary/:borrowerId` | AI-generated plain-language credit report summary | Authenticated user |
+| `POST /api/ai/chat` | AI chatbot assistant with SSE streaming responses | Authenticated user |
+| `POST /api/ai/compliance-report` | AI regulatory compliance analysis per country | admin, super_admin, regulator |
+
+### 9.8 API Usage Tracking and Monitoring
+
+The system includes in-memory API request tracking for monitoring and anomaly detection purposes.
+
+| Control | Implementation |
+|---------|---------------|
+| Tracking Scope | All requests to `/api` routes are tracked in-memory |
+| Data Captured | Endpoint path, timestamp, request count per endpoint |
+| Storage | In-memory only; resets on application restart (no persistent storage) |
+| Access Control | `GET /api/admin/api-usage` endpoint restricted to `admin` and `super_admin` roles |
+| Metrics Provided | Total requests today, requests this hour, unique endpoints, top endpoints by volume, hourly distribution (24h) |
+| Anomaly Detection | Usage data enables administrators to identify unusual traffic patterns, potential abuse, or unauthorized access attempts |
+
+### 9.9 Real-Time Notification System for Security Alerts
+
+The notification system supports security-relevant alerting capabilities.
+
+| Control | Implementation |
+|---------|---------------|
+| Notification Table | `notifications` table in PostgreSQL with user targeting |
+| Approval Notifications | Automatic notifications to admin/regulator users when maker-checker approval requests are submitted |
+| Result Notifications | Notification to original requester when approval requests are approved or rejected |
+| Access Control | Users can only view their own notifications; mark-as-read restricted to notification owner |
+| Polling Interval | Frontend polls every 30 seconds for new notifications |
+| Endpoints | `GET /api/notifications`, `PATCH /api/notifications/:id/read`, `POST /api/notifications/mark-all-read` |
 
 ---
 
@@ -546,6 +598,16 @@ if (approval.requestedBy === currentUserId) {
 | ENT-14 | Dashboard Visual Analytics | COMPLIANT | `GET /api/dashboard/chart-data` endpoint protected by `requireAuth` middleware. Returns aggregated statistical data only (monthly trends, status breakdowns, type breakdowns, country breakdowns); no raw PII exposed. Recharts renders data client-side. SVG Africa map uses pre-defined country geometries with no external data fetching. Dark mode support via CSS variable detection. |
 | ENT-15 | Interactive Demo Tour | COMPLIANT | Tour component (`demo-tour.tsx`) operates entirely client-side with no additional API endpoints. Auto-launch controlled via sessionStorage flag (demo login context only). No sensitive data stored or transmitted. Multilingual support in 5 AU languages (EN/FR/PT/AR/SW). |
 | SLA-RET-01 | Retention Enforcement SLA | COMPLIANT | Automated 24-hour enforcement cycle ensures timely data lifecycle management. Manual trigger via `POST /api/retention-policies/enforce` (admin-only, RBAC-protected). All enforcement actions audit-logged with full result details. |
+| AI-001 | AI Credit Risk Analysis | COMPLIANT | AI-powered risk assessment via OpenAI GPT-4o; all endpoints require session authentication; borrower data sent ephemerally; no PII stored by AI provider. |
+| AI-002 | AI Report Summary | COMPLIANT | Plain-language credit report summaries generated via AI; session authentication required; responses not persisted. |
+| AI-003 | AI Smart Chatbot | COMPLIANT | AI assistant mode with SSE streaming; session authentication required; conversation history maintained client-side only. |
+| AI-004 | AI Compliance Reports | COMPLIANT | AI regulatory compliance analysis; restricted to admin/super_admin/regulator roles via RBAC. |
+| ENT-16 | Excel Export | COMPLIANT | XLSX export via exceljs for portfolio, borrower, and audit data; session authentication required; no additional data exposure beyond authenticated user's access level. |
+| ENT-17 | Real-time Notifications | COMPLIANT | Notification bell with 30-second polling; users can only access their own notifications; mark-as-read restricted to notification owner. |
+| ENT-18 | API Usage Analytics | COMPLIANT | In-memory request tracking; usage dashboard restricted to admin/super_admin roles; data resets on restart (no persistent exposure risk). |
+| ENT-19 | Dashboard Sparkline Trends | COMPLIANT | 7-day trend data via `GET /api/dashboard/trends`; session authentication required; returns aggregate metrics only, no raw PII. |
+| ENT-20 | Audit Trail Enhancements | COMPLIANT | Timeline view, date range filters, CSV/Excel export; existing RBAC controls (admin/regulator) apply to audit log access. |
+| ENT-21 | Multi-language PDF Reports | COMPLIANT | Language selector (EN/FR/AR/SW) for credit report PDF generation; session authentication required; no additional data exposure. |
 
 ---
 

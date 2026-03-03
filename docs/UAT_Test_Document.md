@@ -51,6 +51,8 @@
 38. [Language Switcher on Login Module](#38-language-switcher-on-login-module)
 39. [Dashboard Visual Analytics Module (ENT-14)](#39-dashboard-visual-analytics-module-ent-14)
 40. [Interactive Demo Tour Module (ENT-15)](#40-interactive-demo-tour-module-ent-15)
+41. [AI Features Module](#41-ai-features-module)
+42. [Enhanced Features Module](#42-enhanced-features-module)
 
 ---
 
@@ -64,7 +66,7 @@
 | Database | PostgreSQL with 21 tables |
 | User Roles | Admin, Regulator, Lender, Viewer |
 | Supported Currencies | 42+ African currencies plus USD, EUR, GBP |
-| Enterprise Enhancements | MFA, Fuzzy Matching, Dispute Chatbot, OAuth 2.1, Low-Bandwidth, XBRL Upload, Tamper-Evident Audit, Exchange Rate Management, API Administration, Data Retention Policies, Global Search, ID Photos & Documents, Demo Environment, Dashboard Visual Analytics, Interactive Demo Tour |
+| Enterprise Enhancements | MFA, Fuzzy Matching, Dispute Chatbot, OAuth 2.1, Low-Bandwidth, XBRL Upload, Tamper-Evident Audit, Exchange Rate Management, API Administration, Data Retention Policies, Global Search, ID Photos & Documents, Demo Environment, Dashboard Visual Analytics, Interactive Demo Tour, AI Credit Risk Analysis, AI Report Summary, AI Smart Chatbot, AI Compliance Reports, Excel Export, Real-time Notifications, API Usage Analytics, Dashboard Sparkline Trends, Audit Trail Enhancements, Multi-language PDF Reports |
 | Jurisdictions | All 54 African countries |
 | Languages | English, French, Portuguese |
 | Seed Data | 102K+ borrowers, 172K+ credit accounts, 120K payment history records, 3,218 disputes, 2,147 court judgments |
@@ -689,9 +691,36 @@
 
 ---
 
+## 41. AI Features Module
+
+| TC-ID | Module | Test Case Name | Pre-conditions | Test Steps | Expected Result | Pass/Fail | SRS Reference |
+|-------|--------|---------------|----------------|------------|-----------------|-----------|---------------|
+| TC-AI-01 | AI Features | AI Risk Analysis button appears on borrower detail page | User is logged in, borrower exists | 1. Navigate to Borrowers page. 2. Click on a borrower to open the detail page (`/borrowers/:id`). 3. Locate the AI Risk Analysis section. | A purple "AI Risk Analysis" button is visible on the borrower detail page. The button includes a Sparkles icon. | Pass | AI-001 |
+| TC-AI-02 | AI Features | AI Risk Analysis generates risk assessment with score, factors, recommendations | User is logged in, on borrower detail page | 1. Navigate to borrower detail page. 2. Click the purple "AI Risk Analysis" button. 3. Wait for the analysis to complete. | AI risk assessment is generated and displayed in an expandable purple-gradient card. The assessment includes: risk level (low/medium/high/critical), risk score (0-100), summary text, risk factors with positive and negative impact indicators, actionable recommendations, and regulatory flags. Data is retrieved via POST `/api/ai/credit-risk/:borrowerId`. | Pass | AI-001 |
+| TC-AI-03 | AI Features | AI Summary button on credit report page generates plain-language summary | User is logged in, borrower with credit accounts exists | 1. Navigate to Credit Report page (`/credit-report/:borrowerId`). 2. Locate and click the "AI Summary" button (Sparkles icon). 3. Wait for the summary to generate. | A plain-language AI summary of the borrower's credit history is generated and displayed in a collapsible card. The card shows the borrower name and a timestamp. Summary is retrieved via POST `/api/ai/report-summary/:borrowerId`. | Pass | AI-002 |
+| TC-AI-04 | AI Features | AI Chatbot mode accessible via Sparkles icon with streaming responses | User is logged in, on Helpdesk page | 1. Navigate to Helpdesk page. 2. Open the dispute chatbot. 3. Click the Sparkles icon in the chatbot header to enter AI mode. 4. Type a question about credit data or regulations. 5. Send the message. | AI assistant mode is activated. The chatbot interface switches to AI mode with a visual indicator. User message is sent and AI responds with a streaming response (text appears progressively). Full conversation history is maintained. Messages are sent via POST `/api/ai/chat` with SSE streaming. | Pass | AI-003 |
+| TC-AI-05 | AI Features | AI Compliance Report generation with country selector | User is logged in as admin/super_admin/regulator | 1. Navigate to Regulatory Compliance page. 2. Select a country from the dropdown. 3. Click "Generate Report". 4. Wait for the report to generate. | AI compliance report is generated and displayed in a formatted card. The report includes: compliance score, regulatory body, data protection law, risk areas, and recommendations. Data is retrieved via POST `/api/ai/compliance-report`. Only users with admin, super_admin, or regulator roles can access this feature. | Pass | AI-004 |
+
+---
+
+## 42. Enhanced Features Module
+
+| TC-ID | Module | Test Case Name | Pre-conditions | Test Steps | Expected Result | Pass/Fail | SRS Reference |
+|-------|--------|---------------|----------------|------------|-----------------|-----------|---------------|
+| TC-ENH-01 | Enhanced Features | Audit trail timeline view toggle works | User is logged in as admin/regulator, audit log entries exist | 1. Navigate to Audit Trail page. 2. Locate the view toggle control. 3. Click the timeline view toggle. | Audit trail switches to a vertical timeline feed view. Each entry is displayed with a colored dot indicator: green for CREATE actions, blue for UPDATE actions, and red for DELETE actions. Entries are displayed chronologically with timestamps and action details. | Pass | ENT-20 |
+| TC-ENH-02 | Enhanced Features | Audit trail date range filters narrow results | User is logged in as admin/regulator, audit log entries exist across multiple dates | 1. Navigate to Audit Trail page. 2. Locate the date range filter inputs (From and To date fields). 3. Enter a From date. 4. Enter a To date. 5. Apply the filter. | Audit trail results are filtered to only show entries within the specified date range. Entries outside the date range are excluded from the display. The result count updates to reflect the filtered set. | Pass | ENT-20 |
+| TC-ENH-03 | Enhanced Features | Audit trail CSV and Excel export downloads | User is logged in as admin/regulator, audit log entries exist | 1. Navigate to Audit Trail page. 2. Locate the export buttons (CSV and Excel). 3. Click the CSV export button. 4. Verify a CSV file is downloaded. 5. Click the Excel export button. 6. Verify an XLSX file is downloaded. | Both CSV and Excel export buttons are visible. Clicking CSV export downloads a .csv file containing audit trail data. Clicking Excel export downloads a .xlsx file containing formatted audit trail data with teal header styling. Both files contain the currently filtered/displayed audit data. | Pass | ENT-20, ENT-16 |
+| TC-ENH-04 | Enhanced Features | API Usage Analytics tab shows stats and chart | User is logged in as admin, on API Administration page | 1. Navigate to API Administration page (`/api-admin`). 2. Locate and click the "API Usage Analytics" tab. 3. Observe the analytics dashboard. | API Usage Analytics tab displays: total requests today (numeric count), requests this hour (numeric count), unique endpoints (numeric count), an hourly bar chart showing request distribution over the last 24 hours, and a top endpoints table listing the most frequently accessed API endpoints. Data is retrieved via GET `/api/admin/api-usage`. | Pass | ENT-18 |
+| TC-ENH-05 | Enhanced Features | Dashboard stat cards display sparkline trends | User is logged in, on Dashboard page | 1. Navigate to Dashboard (`/`). 2. Observe the 8 stat cards. 3. Look for mini-charts within each stat card. | Each stat card displays a sparkline mini-chart (7-day trend line) showing the trend of the metric over the past 7 days. The sparkline is rendered as a Recharts AreaChart within the stat card. Trend data is retrieved via GET `/api/dashboard/trends`. | Pass | ENT-19 |
+| TC-ENH-06 | Enhanced Features | Notification bell shows/hides popover and marks read | User is logged in, notifications exist | 1. Locate the notification bell icon in the application header. 2. Observe if an unread count badge is displayed. 3. Click the notification bell. 4. Observe the popover dropdown with notifications. 5. Click on a notification to mark it as read. 6. Click "Mark all as read" if available. | Notification bell icon is visible in the header. Unread notification count is displayed as a badge on the bell icon. Clicking the bell opens a popover dropdown listing recent notifications. Each notification shows title, message, and timestamp. Clicking a notification marks it as read (PATCH `/api/notifications/:id/read`). "Mark all as read" button marks all notifications as read (POST `/api/notifications/mark-all-read`). Notifications are polled every 30 seconds for updates. | Pass | ENT-17 |
+| TC-ENH-07 | Enhanced Features | Excel export buttons on reports page download XLSX files | User is logged in, on Reports page | 1. Navigate to Reports page. 2. Locate the Excel export buttons for portfolio, borrowers, and audit trail data. 3. Click each Excel export button. | Each Excel export button triggers a download of a formatted .xlsx file. The files are generated via GET `/api/reports/export?format=xlsx&type=portfolio\|borrowers\|audit`. XLSX files contain properly formatted data with teal header styling using the exceljs package. | Pass | ENT-16 |
+| TC-ENH-08 | Enhanced Features | Language selector on credit report page | User is logged in, borrower with credit accounts exists | 1. Navigate to Credit Report page (`/credit-report/:borrowerId`). 2. Locate the language selector dropdown. 3. Select each available language option (English, French, Arabic, Swahili). 4. Generate/download a PDF report in each language. | Language selector dropdown is visible on the credit report page with options for English, French, Arabic, and Swahili. Selecting a language and downloading the PDF generates the credit report in the selected language. All report labels and headers are translated appropriately. | Pass | ENT-21 |
+
+---
+
 **Document End**
 
-*This UAT Test Document covers all modules of the Cross-Jurisdictional Central Data Hub & Credit Registry System v1.2, including the 15 enterprise enhancements (ENT-01 through ENT-15). Each test case is designed to validate functional and non-functional requirements as defined in the Software Requirements Specification (SRS).*
+*This UAT Test Document covers all modules of the Cross-Jurisdictional Central Data Hub & Credit Registry System v1.2, including the 15 enterprise enhancements (ENT-01 through ENT-15), AI-powered features (AI-001 through AI-004), and additional enhanced features (ENT-16 through ENT-21). Each test case is designed to validate functional and non-functional requirements as defined in the Software Requirements Specification (SRS).*
 
 *Prepared by: Systems In Motion Limited*  
 *Classification: Confidential*

@@ -10,7 +10,7 @@
 
 ## 1. Overview
 
-This document provides field-level documentation for all 21 database tables in the Credit Registry System. The system supports all 54 African countries with 42+ African currencies plus USD, EUR, and GBP. The database uses PostgreSQL with Drizzle ORM for schema management.
+This document provides field-level documentation for all 18 database tables in the Credit Registry System. The system supports all 54 African countries with 42+ African currencies plus USD, EUR, and GBP. The database uses PostgreSQL with Drizzle ORM for schema management.
 
 **Enterprise Enhancements — Schema Impact Summary:**
 
@@ -29,6 +29,13 @@ This document provides field-level documentation for all 21 database tables in t
 | ENT-11 (Global Search) | No schema changes; cross-entity search uses existing tables via `/api/global-search` endpoint |
 | ENT-12 (ID Photos) | Added `photo_url` and `id_document_url` columns to `borrowers` table for profile photos and ID document scans |
 | ENT-13 (Demo Environment) | No schema changes; investor-facing demo mode with role-based login cards using existing schema |
+| AI Features (AI-001 to AI-004) | No new tables/columns; AI analysis results are ephemeral and not persisted to the database |
+| ENT-16 (Excel Export) | No schema changes; uses `exceljs` package to generate XLSX files from existing table data |
+| ENT-17 (Notifications) | Uses existing `notifications` table (section 3.8) for notification bell feature |
+| ENT-18 (API Usage Tracking) | No schema changes; API usage metrics are tracked in-memory and reset on application restart |
+| ENT-19 (Dashboard Trends) | No schema changes; 7-day trend data is generated synthetically from existing aggregate queries |
+| ENT-20 (Audit Trail Enhancements) | No schema changes; timeline view, date filters, and export are frontend/API-layer features using existing `audit_logs` table |
+| ENT-21 (Multi-language PDF) | No schema changes; language selection for PDF export is a frontend/rendering feature |
 
 ---
 

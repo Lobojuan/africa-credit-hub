@@ -41,6 +41,7 @@ This guide provides step-by-step deployment instructions for the Credit Registry
 - HTTPS termination (via reverse proxy or platform-provided)
 - Outbound HTTPS access to `api.dicebear.com` (auto-generated borrower avatars)
 - Outbound HTTPS access to `open.er-api.com` (live exchange rate fetching)
+- Outbound HTTPS access to OpenAI API endpoint (AI-powered features; URL configured via `AI_INTEGRATIONS_OPENAI_BASE_URL`)
 
 ---
 
@@ -52,6 +53,8 @@ This guide provides step-by-step deployment instructions for the Credit Registry
 | `SESSION_SECRET` | Yes (production) | Express session encryption key (min 32 chars) | `a-long-random-string-at-least-32-characters` |
 | `PORT` | No | Application port (default: 5000) | `5000` |
 | `NODE_ENV` | No | Environment mode (development/production) | `production` |
+| `AI_INTEGRATIONS_OPENAI_API_KEY` | No | OpenAI API key for AI-powered features (credit risk analysis, report summaries, chatbot, compliance reports) | `sk-...` |
+| `AI_INTEGRATIONS_OPENAI_BASE_URL` | No | OpenAI API base URL (provided by Replit AI Integrations) | `https://ai.replit.dev/v1` |
 
 ### 3.1 Generating a Session Secret
 
@@ -419,7 +422,13 @@ All user actions are recorded in the `audit_logs` table with:
 - Timestamp
 - Human-readable details
 
-### 11.3 Recommended Monitoring Tools
+### 11.3 API Usage Tracking
+
+The application includes in-memory API usage tracking that monitors all `/api` requests. This data is accessible to administrators via `GET /api/admin/api-usage` and provides metrics including total requests today, requests this hour, unique endpoints, top endpoints, and hourly distribution.
+
+> **Note:** API usage tracking data is stored in-memory and resets on application restart. For persistent usage tracking in production, consider integrating an external analytics service or logging to a database.
+
+### 11.4 Recommended Monitoring Tools
 
 | Tool | Purpose |
 |------|---------|
@@ -517,6 +526,9 @@ psql $DATABASE_URL -c "\dt"
 - [ ] Ensure `pg_trgm` extension (ENT-02) is available in production PostgreSQL
 - [ ] Verify XBRL/XML batch uploads (ENT-06) work with expected file sizes; no additional parsing libraries required beyond built-in XML handling
 - [ ] Dispute chatbot (ENT-03) requires no additional configuration; it uses existing dispute filing endpoints
+- [ ] Configure `AI_INTEGRATIONS_OPENAI_API_KEY` and `AI_INTEGRATIONS_OPENAI_BASE_URL` for AI-powered features
+- [ ] Verify AI endpoints are accessible and returning valid responses
+- [ ] Monitor API usage tracking for anomaly detection
 
 ---
 
@@ -531,6 +543,7 @@ The following additional packages were added for enterprise enhancements (v1.1 a
 | `compression` | gzip compression middleware | ENT-05 (Low-Bandwidth) |
 | `multer` | Multipart/form-data file upload handling | ENT-12 (ID Photos & Documents) |
 | `recharts` | Responsive, themed data visualization charts (area, donut, bar) | ENT-14 (Dashboard Visual Analytics) |
+| `exceljs` | Excel (XLSX) file generation for report exports | ENT-16 (Excel Export) |
 
 **PostgreSQL Extension:**
 - `pg_trgm` — Required for fuzzy entity matching (ENT-02). Automatically created at startup.
@@ -561,6 +574,16 @@ The Credit Registry System includes the following modules and capabilities:
 | Demo Environment | Investor-facing one-click demo with role cards and DEMO banner (ENT-13) |
 | Dashboard Visual Analytics | Interactive Recharts charts (area trend, donut status, horizontal bar types) and SVG Africa map choropleth with heat coloring across 54 countries; dark mode support (ENT-14) |
 | Interactive Demo Tour | 11-step guided walkthrough with spotlight overlay, auto-launch after demo login, multilingual support in 5 AU languages (ENT-15) |
+| AI Credit Risk Analysis | AI-powered borrower risk assessment using OpenAI GPT-4o with risk scores, factors, and recommendations (AI-001) |
+| AI Report Summary | Plain-language AI-generated credit report summaries (AI-002) |
+| AI Smart Chatbot | AI assistant mode in dispute chatbot with SSE streaming responses (AI-003) |
+| AI Compliance Reports | Automated regulatory compliance analysis per country using AI (AI-004) |
+| Excel Export | XLSX export for portfolio, borrower, and audit trail data using exceljs (ENT-16) |
+| Real-time Notifications | Notification bell with 30-second polling, mark-as-read, and popover dropdown (ENT-17) |
+| API Usage Analytics | In-memory API request tracking with usage dashboard for administrators (ENT-18) |
+| Dashboard Sparkline Trends | 7-day trend mini-charts on dashboard stat cards using recharts AreaChart (ENT-19) |
+| Audit Trail Enhancements | Timeline view, date range filters, CSV and Excel export for audit logs (ENT-20) |
+| Multi-language PDF Reports | Language selector (EN/FR/AR/SW) for credit report PDF downloads (ENT-21) |
 
 ---
 

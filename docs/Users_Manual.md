@@ -42,10 +42,11 @@
 28. [Global Search](#28-global-search)
 29. [ID Photos & Document Upload](#29-id-photos--document-upload)
 30. [Demo Environment](#30-demo-environment)
-31. [Appendix A: Seed Credentials](#appendix-a-seed-credentials)
-32. [Appendix B: Role Access Matrix](#appendix-b-role-access-matrix)
-33. [Appendix C: Supported Currencies](#appendix-c-supported-currencies)
-34. [Appendix D: Glossary of Terms](#appendix-d-glossary-of-terms)
+31. [AI-Powered Features](#31-ai-powered-features)
+32. [Appendix A: Seed Credentials](#appendix-a-seed-credentials)
+33. [Appendix B: Role Access Matrix](#appendix-b-role-access-matrix)
+34. [Appendix C: Supported Currencies](#appendix-c-supported-currencies)
+35. [Appendix D: Glossary of Terms](#appendix-d-glossary-of-terms)
 
 ---
 
@@ -191,7 +192,7 @@ The Dashboard provides an at-a-glance overview of the Credit Registry System's k
 
 ### 3.1 Understanding the 8 Stat Cards
 
-The Dashboard displays 8 interactive stat cards:
+The Dashboard displays 8 interactive stat cards, each featuring a **sparkline mini-chart** showing 7-day trend data:
 
 | Card | Description |
 |------|-------------|
@@ -203,6 +204,8 @@ The Dashboard displays 8 interactive stat cards:
 | **Inquiries** | Total number of credit inquiries/searches performed |
 | **Pending Approvals** | Number of pending maker-checker approval requests |
 | **Open Disputes** | Number of currently open dispute cases |
+
+Each stat card includes a small area chart (sparkline) at the bottom that visualizes the metric's trend over the past 7 days. This allows you to quickly identify upward or downward trends in key metrics at a glance without navigating away from the dashboard.
 
 ### 3.2 Clicking Cards for Drill-Down Detail Sheets
 
@@ -517,6 +520,19 @@ This serial number serves as a reference for the report and can be used for audi
 2. The report opens in a print-friendly format.
 3. Use your browser's print dialog to print or save as PDF.
 4. The printed report includes all sections, the serial number, generation timestamp, and a footer disclaimer.
+
+### 6.8 Multi-Language PDF Reports
+
+The credit report page includes a **language selector** that allows you to download PDF reports in multiple languages:
+
+1. On the credit report page, locate the language selector dropdown.
+2. Choose from the available languages:
+   - **English (EN)**
+   - **French (FR)**
+   - **Arabic (AR)**
+   - **Swahili (SW)**
+3. Click the **Download PDF** button.
+4. The PDF report will be generated in the selected language, with all headings, labels, and content translated accordingly.
 
 ---
 
@@ -962,6 +978,36 @@ The audit trail can be filtered and searched by:
 - Entity type
 - IP address
 
+### 15.4 Timeline View
+
+The audit trail offers an alternative **Timeline View** for visualizing activity in a vertical feed:
+
+1. Click the **Timeline View** toggle at the top of the audit trail page.
+2. Entries are displayed as a vertical timeline with colored indicator dots:
+   - **Green dot** — CREATE actions (new records created)
+   - **Blue dot** — UPDATE actions (existing records modified)
+   - **Red dot** — DELETE actions (records removed)
+3. Each timeline entry shows the timestamp, user, action, entity, and details in a card-style layout.
+4. Toggle back to the standard table view at any time.
+
+### 15.5 Date Range Filters
+
+To narrow audit trail entries by date:
+
+1. Locate the **From** and **To** date input fields at the top of the audit trail page.
+2. Enter a start date in the **From** field.
+3. Enter an end date in the **To** field.
+4. The audit trail entries will automatically filter to show only entries within the selected date range.
+5. Clear the date fields to remove the filter and show all entries.
+
+### 15.6 Export (CSV and Excel)
+
+The audit trail supports exporting entries in both CSV and Excel formats:
+
+1. Click the **Export CSV** button to download audit trail data as a comma-separated values file.
+2. Click the **Export Excel** button to download audit trail data as a formatted XLSX spreadsheet.
+3. The exported file includes all currently filtered entries (respecting any active date range or other filters).
+
 ---
 
 ## 16. User Management (Admin Only)
@@ -1063,14 +1109,17 @@ The API keys table shows:
 
 The Reports module provides analytical views and data export capabilities.
 
-### 18.1 CSV Export (Portfolio/Borrowers)
+### 18.1 CSV and Excel Export (Portfolio/Borrowers/Audit)
 
 1. Navigate to **Reports** from the sidebar (via Credit Reports).
 2. Select the export type:
    - **Portfolio Export** — All credit accounts with balances and statuses
    - **Borrowers Export** — All borrower records
-3. Click **Export CSV**.
-4. The CSV file will be downloaded to your computer.
+   - **Audit Trail Export** — Audit log entries
+3. Choose your preferred format:
+   - Click **Export CSV** to download data as a comma-separated values file.
+   - Click **Export Excel** to download data as a formatted XLSX spreadsheet with styled headers and auto-sized columns.
+4. The file will be downloaded to your computer.
 
 ### 18.2 Regulatory Analytics View
 
@@ -1088,21 +1137,27 @@ The notification system keeps you informed about important events in the system.
 
 ### 19.1 Notification Bell
 
-The notification bell icon is located in the top header bar. It provides quick access to your notifications.
+The notification bell icon is located in the top header bar. It provides quick access to your notifications via a **popover dropdown**.
+
+1. Click the bell icon in the header to open the notification popover.
+2. The popover displays your most recent notifications in a scrollable list.
+3. The system automatically checks for new notifications every **30 seconds** (polling), so new notifications will appear without refreshing the page.
+4. Click outside the popover or press Escape to close it.
 
 ### 19.2 Unread Count Badge
 
-A red badge on the notification bell shows the number of unread notifications. The badge disappears when all notifications are read.
+A red badge on the notification bell shows the number of unread notifications. The badge disappears when all notifications are read. The count updates automatically with each polling cycle (every 30 seconds).
 
 ### 19.3 Marking as Read
 
-1. Click the notification bell to open the notifications panel.
+1. Click the notification bell to open the notifications popover.
 2. Click on an individual notification to mark it as read.
 3. Clicking a notification may also navigate you to the relevant page (e.g., Pending Approvals).
+4. Read notifications appear with reduced visual emphasis compared to unread ones.
 
 ### 19.4 Mark All Read
 
-Click the **Mark All as Read** button in the notifications panel to mark all notifications as read at once.
+Click the **Mark All as Read** button at the top of the notifications popover to mark all notifications as read at once.
 
 ### 19.5 Notification Types
 
@@ -1270,6 +1325,17 @@ The chatbot walks you through dispute filing in the following steps:
 
 You can cancel the chatbot flow at any time. The interface will reset and you can start a new guided flow.
 
+### 22.4 AI Assistant Mode
+
+The Dispute Chatbot includes an **AI Assistant mode** that provides intelligent answers to questions about credit data, regulations, and platform features:
+
+1. In the chatbot header, click the **Sparkles icon** to switch to AI Assistant mode.
+2. The chatbot interface changes to indicate AI mode is active.
+3. Type any question related to credit data, regulatory requirements, or platform functionality.
+4. The AI assistant responds using **streaming responses**, so you will see the answer appear progressively in real time.
+5. Full conversation history is maintained within the session, allowing you to ask follow-up questions.
+6. Click the Sparkles icon again to return to the standard guided dispute flow.
+
 ---
 
 ## 23. XBRL Upload
@@ -1413,6 +1479,19 @@ External APIs are organized into the following categories:
 ### 26.6 Managing API Categories
 
 API categories help organize connections by their functional purpose. When adding or editing an API connection, select the appropriate category to keep configurations organized and easily discoverable by other administrators.
+
+### 26.7 API Usage Analytics
+
+The API Administration page includes an **API Usage Analytics** tab that provides real-time visibility into API request activity:
+
+1. Navigate to **API Administration** and click the **API Usage Analytics** tab.
+2. The analytics dashboard displays:
+   - **Total Requests Today** — The total number of API requests made since midnight.
+   - **Requests This Hour** — The number of API requests made in the current hour.
+   - **Unique Endpoints** — The number of distinct API endpoints called.
+3. Below the summary stats, a **Hourly Bar Chart** visualizes request volume over the past 24 hours.
+4. A **Top Endpoints** table lists the most frequently called API endpoints with their request counts.
+5. Data is tracked in-memory and resets when the server restarts.
 
 ---
 
@@ -1617,6 +1696,61 @@ After logging in via the demo environment, an **11-step interactive guided tour*
 **Language Support:**
 - The tour content is available in all **5 AU languages** (English, French, Portuguese, Arabic, Swahili).
 - The tour language follows the current interface language setting.
+
+---
+
+## 31. AI-Powered Features
+
+The Credit Registry System integrates AI-powered capabilities using OpenAI GPT-4o to provide intelligent analysis, summaries, and assistance across the platform.
+
+### 31.1 AI Credit Risk Analysis
+
+The AI Credit Risk Analysis feature provides an AI-generated risk assessment for individual borrowers:
+
+1. Navigate to a **Borrower Detail** page (click any borrower from the Borrowers list).
+2. Locate the purple **"AI Risk Analysis"** button on the borrower detail page.
+3. Click the button to initiate the AI analysis. The system sends the borrower's credit data to the AI model for evaluation.
+4. After a brief processing period, the results are displayed in an expandable **purple-gradient card** containing:
+   - **Risk Level** — Categorized as Low, Medium, High, or Critical.
+   - **Risk Score** — A numerical score from 0 to 100 (higher scores indicate greater risk).
+   - **Summary** — A plain-language overview of the borrower's credit risk profile.
+   - **Risk Factors** — A list of factors with their positive or negative impact on the borrower's risk assessment.
+   - **Recommendations** — Actionable suggestions based on the analysis.
+   - **Regulatory Flags** — Any regulatory concerns or compliance issues identified.
+5. The analysis card can be expanded or collapsed as needed.
+
+### 31.2 AI Report Summary
+
+The AI Report Summary generates a plain-language summary of a borrower's credit history:
+
+1. Navigate to a **Credit Report** page for any borrower.
+2. Click the **"AI Summary"** button (identified by a Sparkles icon).
+3. The AI processes the borrower's credit report data and generates a human-readable summary.
+4. The summary is displayed in a **collapsible card** showing:
+   - The borrower's name
+   - A timestamp indicating when the summary was generated
+   - A clear, plain-language description of the borrower's credit history, key metrics, and notable patterns
+5. Click the card header to expand or collapse the summary.
+
+### 31.3 AI Compliance Reports
+
+The AI Compliance Reports feature generates regulatory compliance analysis for specific countries:
+
+1. Navigate to **Regulatory Compliance** from the sidebar.
+2. Select a **country** from the dropdown menu.
+3. Click the **"Generate Report"** button.
+4. The AI analyzes the regulatory landscape for the selected country and returns a formatted report containing:
+   - **Compliance Score** — An overall compliance rating for the jurisdiction.
+   - **Regulatory Body** — The relevant regulatory authority for the country.
+   - **Data Protection Law** — Applicable data protection legislation.
+   - **Risk Areas** — Identified areas of regulatory risk.
+   - **Recommendations** — Suggested actions to improve compliance posture.
+5. Results are displayed in a formatted card on the page.
+6. This feature is available to users with **Admin**, **Super Admin**, or **Regulator** roles only.
+
+### 31.4 AI Chatbot (Smart Mode)
+
+For details on the AI-powered chatbot assistant, see **Section 22.4 — AI Assistant Mode** under the Dispute Chatbot section.
 
 ---
 

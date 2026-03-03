@@ -35,6 +35,12 @@
 12. [Testing & Sandbox](#12-testing--sandbox)
 13. [Frequently Asked Questions](#13-frequently-asked-questions)
 14. [Support & Onboarding Contact](#14-support--onboarding-contact)
+15. [Internal API Endpoints (Session-Authenticated)](#15-internal-api-endpoints-session-authenticated)
+   - 15.1 [AI-Powered Analysis Endpoints](#151-ai-powered-analysis-endpoints)
+   - 15.2 [Excel Export Endpoint](#152-excel-export-endpoint)
+   - 15.3 [Notification Endpoints](#153-notification-endpoints)
+   - 15.4 [API Usage Analytics](#154-api-usage-analytics)
+   - 15.5 [Dashboard Trends](#155-dashboard-trends)
 
 ---
 
@@ -948,7 +954,218 @@ A: Yes, the API is designed for continuous availability. Planned maintenance win
 
 ---
 
-## 14. Support & Onboarding Contact
+## 15. Internal API Endpoints (Session-Authenticated)
+
+The following endpoints are available for authenticated users of the CDH web application. These endpoints use session-based authentication (not API key authentication) and are intended for internal platform use.
+
+### 15.1 AI-Powered Analysis Endpoints
+
+These endpoints integrate with OpenAI GPT-4o to provide AI-powered analysis capabilities.
+
+#### AI Credit Risk Analysis
+
+```
+POST /api/ai/credit-risk/:borrowerId
+```
+
+**Authentication:** Session-based (authenticated user required)
+
+Analyzes a borrower's credit data using AI and returns a risk assessment including risk level (low/medium/high/critical), risk score (0-100), summary, risk factors with positive/negative impact, recommendations, and regulatory flags.
+
+**Response:**
+```json
+{
+  "riskLevel": "medium",
+  "riskScore": 45,
+  "summary": "The borrower shows moderate credit risk...",
+  "riskFactors": [
+    { "factor": "Payment history", "impact": "positive", "description": "Consistent on-time payments" },
+    { "factor": "High utilization", "impact": "negative", "description": "Current balance exceeds 80% of original amount" }
+  ],
+  "recommendations": ["Monitor account quarterly", "Consider collateral review"],
+  "regulatoryFlags": []
+}
+```
+
+#### AI Report Summary
+
+```
+POST /api/ai/report-summary/:borrowerId
+```
+
+**Authentication:** Session-based (authenticated user required)
+
+Generates a plain-language summary of the borrower's credit history.
+
+**Response:**
+```json
+{
+  "summary": "This borrower has a generally positive credit profile...",
+  "borrowerName": "Amina Hassan",
+  "generatedAt": "2026-03-03T10:45:00.000Z"
+}
+```
+
+#### AI Chat Assistant
+
+```
+POST /api/ai/chat
+```
+
+**Authentication:** Session-based (authenticated user required)
+
+Sends a message to the AI assistant and receives a streaming response (Server-Sent Events). The AI assistant answers questions about credit data, regulations, and platform features.
+
+**Request Body:**
+```json
+{
+  "message": "What are the key factors affecting a borrower's credit score?",
+  "history": [
+    { "role": "user", "content": "Previous message" },
+    { "role": "assistant", "content": "Previous response" }
+  ]
+}
+```
+
+**Response:** Server-Sent Events (SSE) stream with text chunks.
+
+#### AI Compliance Report
+
+```
+POST /api/ai/compliance-report
+```
+
+**Authentication:** Session-based (admin, super_admin, or regulator role required)
+
+Generates an AI-powered regulatory compliance analysis for a specified country.
+
+**Request Body:**
+```json
+{
+  "country": "Kenya"
+}
+```
+
+**Response:**
+```json
+{
+  "complianceScore": 85,
+  "regulatoryBody": "Central Bank of Kenya",
+  "dataProtectionLaw": "Kenya Data Protection Act, 2019",
+  "riskAreas": ["Cross-border data transfers", "Consent management"],
+  "recommendations": ["Implement enhanced consent tracking", "Review data sharing agreements"]
+}
+```
+
+---
+
+### 15.2 Excel Export Endpoint
+
+```
+GET /api/reports/export?format=xlsx&type=portfolio|borrowers|audit
+```
+
+**Authentication:** Session-based (authenticated user required)
+
+Downloads report data in Excel (XLSX) format with formatted headers and styling.
+
+**Query Parameters:**
+
+| Parameter | Values | Description |
+|-----------|--------|-------------|
+| `format` | `xlsx`, `csv` | Export format |
+| `type` | `portfolio`, `borrowers`, `audit` | Type of report to export |
+
+**Response:** Binary XLSX file download with `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`.
+
+---
+
+### 15.3 Notification Endpoints
+
+#### Get Notifications
+
+```
+GET /api/notifications
+```
+
+**Authentication:** Session-based (authenticated user required)
+
+Returns all notifications for the authenticated user, ordered by creation date (newest first).
+
+#### Mark Notification as Read
+
+```
+PATCH /api/notifications/:id/read
+```
+
+**Authentication:** Session-based (authenticated user required)
+
+Marks a single notification as read.
+
+#### Mark All Notifications as Read
+
+```
+POST /api/notifications/mark-all-read
+```
+
+**Authentication:** Session-based (authenticated user required)
+
+Marks all unread notifications for the authenticated user as read.
+
+---
+
+### 15.4 API Usage Analytics
+
+```
+GET /api/admin/api-usage
+```
+
+**Authentication:** Session-based (admin or super_admin role required)
+
+Returns API usage statistics tracked in-memory.
+
+**Response:**
+```json
+{
+  "totalToday": 1250,
+  "totalThisHour": 87,
+  "uniqueEndpoints": 24,
+  "topEndpoints": [
+    { "endpoint": "/api/borrowers", "count": 350 },
+    { "endpoint": "/api/credit-accounts", "count": 210 }
+  ],
+  "hourlyData": [
+    { "hour": 0, "count": 12 },
+    { "hour": 1, "count": 8 }
+  ]
+}
+```
+
+---
+
+### 15.5 Dashboard Trends
+
+```
+GET /api/dashboard/trends
+```
+
+**Authentication:** Session-based (authenticated user required)
+
+Returns 7-day synthetic trend data for key dashboard metrics, used by the StatCard sparkline mini-charts.
+
+**Response:**
+```json
+{
+  "borrowerTrends": [{ "date": "2026-02-25", "value": 102400 }, ...],
+  "accountTrends": [{ "date": "2026-02-25", "value": 172300 }, ...],
+  "institutionTrends": [{ "date": "2026-02-25", "value": 100010 }, ...],
+  "disputeTrends": [{ "date": "2026-02-25", "value": 3200 }, ...]
+}
+```
+
+---
+
+## 16. Support & Onboarding Contact
 
 | Contact | Details |
 |---|---|

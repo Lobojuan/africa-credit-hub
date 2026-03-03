@@ -174,10 +174,27 @@ This document maps every Software Requirements Specification (SRS) requirement t
 | ENT-13 | Investor demo environment | Implemented | Demo Environment (login page demo cards, DEMO banner) | One-click demo login with 3 role cards (Admin, Regulator, Bank Officer); amber DEMO ENVIRONMENT banner; fictional data disclaimer | TC-DEMO-001, TC-DEMO-002 |
 | ENT-14 | Dashboard Visual Analytics | Implemented | Dashboard Charts (`dashboard-charts.tsx`, `africa-map.tsx`, `routes.ts`) | Interactive charts (area trend, donut status breakdown, horizontal bar loan types) and SVG Africa map choropleth with heat coloring by borrower count across all 54 countries; real-time data via `GET /api/dashboard/chart-data` (auth-protected); Recharts library for responsive, themed visualization; dark mode support via CSS variable detection | TC-VIZ-001 through TC-VIZ-010 |
 | ENT-15 | Interactive Demo Tour | Implemented | Demo Tour (`demo-tour.tsx`) | 11-step guided walkthrough for demo environment; auto-launches after demo login via sessionStorage flag; spotlight overlay with Next/Back/Skip/Close controls; relaunch via "Take a Tour" button in amber demo banner; multilingual support in all 5 AU languages (EN/FR/PT/AR/SW) | TC-TOUR-001 through TC-TOUR-006 |
+| ENT-16 | Excel Export — XLSX export for portfolio, borrower, and audit data | Implemented | Reports (`server/routes.ts`, `exceljs` package) | GET /api/reports/export?format=xlsx&type=portfolio\|borrowers\|audit; formatted XLSX with teal header styling | TC-ENH-03, TC-ENH-07 |
+| ENT-17 | Real-time Notifications — Notification bell with polling and mark-as-read | Implemented | Notifications (`notifications` table, `notification-bell.tsx`, `server/routes.ts`) | GET /api/notifications, PATCH /api/notifications/:id/read, POST /api/notifications/mark-all-read; NotificationBell component with 30-second polling using shadcn Popover | TC-ENH-06 |
+| ENT-18 | API Usage Analytics — Request tracking and usage dashboard | Implemented | API Admin (`server/routes.ts`, `api-admin.tsx`) | In-memory request tracking middleware on all /api routes; GET /api/admin/api-usage returns totalToday, totalThisHour, uniqueEndpoints, topEndpoints, hourlyData (24h); admin/super_admin only | TC-ENH-04 |
+| ENT-19 | Dashboard Sparkline Trends — 7-day trend mini-charts on stat cards | Implemented | Dashboard (`stat-card.tsx`, `dashboard.tsx`) | GET /api/dashboard/trends endpoint (auth-protected); returns 7-day synthetic trend data for key metrics; StatCard component with sparkline using recharts AreaChart | TC-ENH-05 |
+| ENT-20 | Audit Trail Enhancements — Timeline view, date filters, export | Implemented | Audit Trail (`audit-trail.tsx`) | Timeline view toggle (vertical feed with colored dots — green for CREATE, blue for UPDATE, red for DELETE); date range filters (From/To date inputs); CSV and Excel export buttons | TC-ENH-01 through TC-ENH-03 |
+| ENT-21 | Multi-language PDF Reports — Language selector for credit report PDF downloads | Implemented | Credit Report (`credit-report.tsx`) | Language selector on credit report page supporting English, French, Arabic, and Swahili for PDF report downloads | TC-ENH-08 |
 
 ---
 
-## 14. Summary
+## 14. AI-Powered Feature Requirements (AI)
+
+| SRS Ref | Requirement Description | Status | Module/Component | Implementation Notes | UAT Test Case |
+|---------|------------------------|--------|------------------|---------------------|----------------|
+| AI-001 | AI Credit Risk Analysis — AI-powered risk assessment for borrowers using GPT-4o | Implemented | AI Integration (`server/ai.ts`, `borrower-detail.tsx`) | POST /api/ai/credit-risk/:borrowerId; uses OpenAI GPT-4o to analyze borrower data; displays risk level (low/medium/high/critical), risk score (0-100), summary, risk factors with positive/negative impact, recommendations, and regulatory flags; results shown in expandable purple-gradient card; requires authentication | TC-AI-01, TC-AI-02 |
+| AI-002 | AI Report Summary — Plain-language credit report summaries | Implemented | AI Integration (`server/ai.ts`, `credit-report.tsx`) | POST /api/ai/report-summary/:borrowerId; generates plain-language summary of borrower's credit history; shown in collapsible card with borrower name and timestamp; requires authentication | TC-AI-03 |
+| AI-003 | AI Smart Chatbot — AI assistant mode in dispute chatbot with streaming responses | Implemented | AI Integration (`server/ai.ts`, `dispute-chatbot.tsx`) | POST /api/ai/chat with SSE streaming; users click Sparkles icon in chatbot header to enter AI mode; AI answers questions about credit data, regulations, and platform features; full conversation history maintained; requires authentication | TC-AI-04 |
+| AI-004 | AI Compliance Reports — Automated regulatory compliance analysis per country | Implemented | AI Integration (`server/ai.ts`, `regulatory-compliance.tsx`) | POST /api/ai/compliance-report; select country from dropdown, click "Generate Report"; AI analyzes regulatory landscape returning compliance score, regulatory body, data protection law, risk areas, and recommendations; requires admin/super_admin/regulator role | TC-AI-05 |
+
+---
+
+## 15. Summary
 
 | Category | Total Requirements | Implemented | Partial | Not Implemented |
 |----------|-------------------|-------------|---------|-----------------|
@@ -191,12 +208,13 @@ This document maps every Software Requirements Specification (SRS) requirement t
 | INT-RPT (Integration & Reporting) | 4 | 4 | 0 | 0 |
 | DQ (Data Quality) | 5 | 5 | 0 | 0 |
 | NFR-SEC (Security) | 10 | 10 | 0 | 0 |
-| ENT (Enterprise Enhancements) | 15 | 15 | 0 | 0 |
-| **Total** | **79** | **79** | **0** | **0** |
+| ENT (Enterprise Enhancements) | 21 | 21 | 0 | 0 |
+| AI (AI-Powered Features) | 4 | 4 | 0 | 0 |
+| **Total** | **89** | **89** | **0** | **0** |
 
 ---
 
-## 14. Sign-Off
+## 16. Sign-Off
 
 | Role | Name | Signature | Date |
 |------|------|-----------|------|
