@@ -3,16 +3,11 @@ import { useLocation } from "wouter";
 import {
   LayoutDashboard, Users, CreditCard, Search, FileText, Shield, Settings,
   CheckSquare, AlertCircle, Upload, Building2, Headset, Globe, DollarSign,
-  Scale, ChevronRight, ChevronLeft, Play, Pause, SkipForward, RotateCcw,
-  Monitor, UserCheck, Eye, MousePointerClick,
-  BarChart3, MapPin,
-  BookOpen, HelpCircle, FileCheck, Layers, Target,
-  Info, Zap, Volume2, VolumeX, ArrowRight,
+  Scale, ChevronRight, ChevronLeft, Play, Pause, RotateCcw,
+  Monitor, MapPin, BookOpen, ArrowRight,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 
 interface Slide {
   id: string;
@@ -28,41 +23,28 @@ interface Slide {
 
 const slides: Slide[] = [
   {
-    id: "welcome",
-    section: "Welcome",
-    sectionIcon: Globe,
+    id: "welcome", section: "Welcome", sectionIcon: Globe,
     title: "Welcome to the Credit Registry System",
     narration: "This walkthrough will guide you through every feature of the Pan-African Credit Registry System. The system covers all 54 African countries, supports 42+ currencies, and provides comprehensive credit information management. Let's take a tour of what you'll find inside.",
     visual: "hero",
   },
   {
-    id: "login",
-    section: "Getting Started",
-    sectionIcon: Monitor,
+    id: "login", section: "Getting Started", sectionIcon: Monitor,
     title: "Logging In",
     narration: "To get started, enter your username and password on the login page and click 'Sign In'. The system supports four user roles — Administrator, Regulator, Lender, and Viewer — each with different access levels. Your role determines which features and data you can see.",
     visual: "login",
-    tips: [
-      "Passwords expire every 90 days for security",
-      "After 3 failed attempts, your account is temporarily locked",
-      "Two-factor authentication (MFA) can be enabled for extra security",
-    ],
+    tips: ["Passwords expire every 90 days for security", "After 3 failed attempts, your account is temporarily locked", "Two-factor authentication (MFA) can be enabled for extra security"],
   },
   {
-    id: "sidebar",
-    section: "Getting Started",
-    sectionIcon: Monitor,
+    id: "sidebar", section: "Getting Started", sectionIcon: Monitor,
     title: "Navigating the Sidebar",
-    narration: "Once logged in, the sidebar on the left is your main navigation. It's organized into sections: Core features at the top (Dashboard, Borrowers, Credit Accounts, Search, Batch Upload), then Reports & Compliance, System administration, Integrations, and Resources. Sections collapse and expand by clicking their headers. Items you don't have access to are automatically hidden based on your role.",
-    visual: "sidebar",
-    highlight: "sidebar",
+    narration: "Once logged in, the sidebar on the left is your main navigation. It's organized into sections: Core features at the top (Dashboard, Borrowers, Credit Accounts, Search, Batch Upload), then Reports & Compliance, System administration, Integrations, and Resources. Items you don't have access to are automatically hidden based on your role.",
+    visual: "sidebar", highlight: "sidebar",
   },
   {
-    id: "dashboard-overview",
-    section: "Dashboard",
-    sectionIcon: LayoutDashboard,
+    id: "dashboard-overview", section: "Dashboard", sectionIcon: LayoutDashboard,
     title: "Your Dashboard — The Command Center",
-    narration: "The Dashboard is your landing page after login. At the top, four summary cards show you the key numbers at a glance: Total Borrowers, Total Credit Accounts, Active Disputes, and Pending Approvals. These update in real time as data flows into the system. Click any card to jump directly to that section.",
+    narration: "The Dashboard is your landing page after login. At the top, four summary cards show you the key numbers at a glance: Total Borrowers, Total Credit Accounts, Active Disputes, and Pending Approvals. These update in real time as data flows into the system.",
     visual: "dashboard",
     roleNotes: [
       { role: "Administrator", note: "You see data across ALL institutions and countries" },
@@ -71,267 +53,187 @@ const slides: Slide[] = [
     ],
   },
   {
-    id: "dashboard-charts",
-    section: "Dashboard",
-    sectionIcon: LayoutDashboard,
+    id: "dashboard-charts", section: "Dashboard", sectionIcon: LayoutDashboard,
     title: "Portfolio Growth & Analytics Charts",
-    narration: "Below the summary cards, you'll see interactive charts. The area chart shows 12 months of portfolio growth — borrower and account trends over time. Hover over any point to see exact numbers. Next to it, a donut chart breaks down accounts by status (Current, Delinquent, Default, etc.) and a horizontal bar chart shows distribution by loan type. These give you an instant picture of portfolio health.",
+    narration: "Below the summary cards, interactive charts appear. The area chart shows 12 months of portfolio growth. A donut chart breaks down accounts by status (Current, Delinquent, Default) and a horizontal bar chart shows distribution by loan type. Hover over any element for detailed tooltips.",
     visual: "charts",
-    tips: [
-      "Charts are interactive — hover for detailed tooltips",
-      "Colors automatically adjust in dark mode",
-      "Charts resize responsively on smaller screens",
-    ],
+    tips: ["Charts are interactive — hover for detailed tooltips", "Colors automatically adjust in dark mode", "Charts resize responsively on smaller screens"],
   },
   {
-    id: "dashboard-map",
-    section: "Dashboard",
-    sectionIcon: LayoutDashboard,
+    id: "dashboard-map", section: "Dashboard", sectionIcon: LayoutDashboard,
     title: "Africa Coverage Map",
-    narration: "The interactive map shows all 54 African countries color-coded by activity level. Darker shading means more borrowers registered. Hover over any country to see a tooltip with the country name, borrower count, and account count. This gives you a geographic view of the registry's cross-border coverage at a glance.",
+    narration: "The interactive map shows all 54 African countries color-coded by activity level. Darker shading means more borrowers registered. Hover over any country to see a tooltip with the country name, borrower count, and account count.",
     visual: "map",
   },
   {
-    id: "borrowers-list",
-    section: "Borrowers",
-    sectionIcon: Users,
+    id: "borrowers-list", section: "Borrowers", sectionIcon: Users,
     title: "Viewing the Borrower List",
-    narration: "Click 'Borrowers' in the sidebar. You'll see a table listing all borrowers with columns for Name, Type (Individual or Corporate), National ID, Country, Status, and Risk Level. Use the search bar at the top to filter by name or ID. Click any column header to sort the list.",
+    narration: "Click 'Borrowers' in the sidebar. You'll see a table listing all borrowers with columns for Name, Type (Individual or Corporate), National ID, Country, Status, and Risk Level. Use the search bar to filter by name or ID.",
     visual: "table-borrowers",
     roleNotes: [
-      { role: "Administrator", note: "You see ALL borrowers across all institutions and countries" },
+      { role: "Administrator", note: "You see ALL borrowers across all institutions" },
       { role: "Lender", note: "You see borrowers associated with YOUR institution only" },
-      { role: "Viewer", note: "Read-only access — you won't see Add or Edit buttons" },
+      { role: "Viewer", note: "Read-only access — no Add or Edit buttons" },
     ],
   },
   {
-    id: "borrowers-add",
-    section: "Borrowers",
-    sectionIcon: Users,
+    id: "borrowers-add", section: "Borrowers", sectionIcon: Users,
     title: "Adding a New Borrower",
-    narration: "Click the '+ Add Borrower' button at the top right. A form appears where you select Individual or Corporate. For individuals, fill in First Name, Last Name, National ID, Date of Birth, Gender, Phone, Email, Address, and Country. For corporates, fill in Company Name, Business Registration Number, TIN, and Sector. After submitting, the record enters the maker-checker approval queue — another authorized user must approve it before it becomes active.",
+    narration: "Click '+ Add Borrower' to open the registration form. Select Individual or Corporate, then fill in the required fields. After submitting, the record enters the maker-checker approval queue — another authorized user must approve it before it becomes active.",
     visual: "form-borrower",
-    roleNotes: [
-      { role: "Administrator", note: "You can add borrowers from any country" },
-      { role: "Lender", note: "You add borrowers for your institution — goes through approval" },
-      { role: "Viewer", note: "You CANNOT add borrowers" },
-    ],
-    tips: [
-      "National ID must be unique within a country",
-      "Set the PEP flag for Politically Exposed Persons",
-      "Select the correct country — it determines the jurisdiction",
-    ],
+    tips: ["National ID must be unique within a country", "Set the PEP flag for Politically Exposed Persons", "Select the correct country — it determines the jurisdiction"],
   },
   {
-    id: "borrower-detail",
-    section: "Borrowers",
-    sectionIcon: Users,
+    id: "borrower-detail", section: "Borrowers", sectionIcon: Users,
     title: "Borrower Detail Page",
-    narration: "Click any borrower row to open their full profile. Here you see all their information, linked credit accounts with payment history, credit inquiries, court judgments, and consent records. From this page, you can generate a comprehensive credit report by clicking the 'Generate Credit Report' button.",
+    narration: "Click any borrower row to open their full profile. See all linked credit accounts, payment history, credit inquiries, court judgments, and consent records. Generate a comprehensive credit report by clicking the 'Generate Credit Report' button.",
     visual: "detail-borrower",
   },
   {
-    id: "credit-accounts",
-    section: "Credit Accounts",
-    sectionIcon: CreditCard,
+    id: "credit-accounts", section: "Credit Accounts", sectionIcon: CreditCard,
     title: "Managing Credit Accounts",
-    narration: "Navigate to 'Credit Accounts' in the sidebar. The table shows all credit facilities: Account Number, Borrower, Institution, Type, Status, Currency, Original Amount, Current Balance, and Days in Arrears. Click '+ Add Account' to record a new credit facility. You'll need to select the borrower, fill in facility details, and optionally add collateral information. The system supports 42+ African currencies.",
+    narration: "Navigate to 'Credit Accounts' in the sidebar. The table shows all credit facilities: Account Number, Borrower, Institution, Type, Status, Currency, Amount, and Days in Arrears. Click '+ Add Account' to record a new facility. The system supports 42+ African currencies.",
     visual: "table-accounts",
-    roleNotes: [
-      { role: "Administrator", note: "Full access to add accounts for any institution" },
-      { role: "Lender", note: "Add accounts for YOUR institution only — goes through approval" },
-      { role: "Viewer", note: "Read-only access to account information" },
-    ],
-    tips: [
-      "For Islamic finance, check the 'Interest-Free' checkbox",
-      "Days in Arrears should reflect the latest reporting date",
-    ],
+    tips: ["For Islamic finance, check the 'Interest-Free' checkbox", "Days in Arrears should reflect the latest reporting date"],
   },
   {
-    id: "search",
-    section: "Global Search",
-    sectionIcon: Search,
+    id: "search", section: "Global Search", sectionIcon: Search,
     title: "Searching the Registry",
-    narration: "Click 'Global Search' in the sidebar. Type any name, national ID, TIN, passport number, or account number. The system searches across borrowers, credit accounts, and institutions simultaneously. Results appear grouped by category with relevance ranking. Cross-border entity resolution automatically finds matches across different jurisdictions.",
+    narration: "Click 'Global Search' in the sidebar. Type any name, national ID, TIN, passport number, or account number. The system searches across borrowers, credit accounts, and institutions simultaneously. Cross-border entity resolution automatically finds matches across jurisdictions.",
     visual: "search",
-    tips: [
-      "Partial matching is supported — no need to type the full name",
-      "Filter results by country using the country dropdown",
-      "Click any result to navigate directly to the record",
-    ],
+    tips: ["Partial matching is supported — no need to type the full name", "Click any result to navigate directly to the record"],
   },
   {
-    id: "credit-report",
-    section: "Credit Reports",
-    sectionIcon: FileText,
+    id: "credit-report", section: "Credit Reports", sectionIcon: FileText,
     title: "Generating Credit Reports",
-    narration: "From a borrower's detail page, click 'Generate Credit Report'. Select the purpose — New Credit Application, Periodic Review, Collection, Regulatory, or Portfolio Monitoring. The system produces a comprehensive D&B-style report with: a Credit Profile Overview with 11 key indicators, liability breakdown by institution, aging analysis (1-30, 31-60, 61-90 days, etc.), credit exposure by product, and detailed facility cards with 24-month payment history grids.",
+    narration: "From a borrower's detail page, click 'Generate Credit Report'. The system produces a comprehensive D&B-style report with a Credit Profile Overview, liability breakdown, aging analysis, credit exposure, and detailed facility cards with 24-month payment history grids.",
     visual: "report",
-    tips: [
-      "Each report gets a unique serial number for audit tracking",
-      "Bureau Score ranges from 300 to 850 with grade and factor analysis",
-      "Click 'Print Report' to generate a printer-friendly version",
-      "Every report generation is logged in the audit trail",
-    ],
+    tips: ["Each report gets a unique serial number for audit tracking", "Bureau Score ranges from 300 to 850 with grade and factor analysis", "Every report generation is logged in the audit trail"],
   },
   {
-    id: "batch-upload",
-    section: "Batch Upload",
-    sectionIcon: Upload,
+    id: "batch-upload", section: "Batch Upload", sectionIcon: Upload,
     title: "Uploading Records in Bulk",
-    narration: "Click 'Batch Upload' in the sidebar. Select whether you're uploading Borrowers or Credit Accounts, then choose your CSV file. Download the template first to see the required column format. The system validates every row and shows a summary: successful imports, errors, and what went wrong. Fix any errors and re-upload the failed rows.",
+    narration: "Click 'Batch Upload' in the sidebar. Select Borrowers or Credit Accounts, then choose your CSV file. Download the template first for the required column format. The system validates every row and shows a summary of successful imports and errors.",
     visual: "upload",
-    roleNotes: [
-      { role: "Administrator", note: "Can upload for any institution" },
-      { role: "Lender", note: "Upload for your institution — records go through maker-checker" },
-    ],
-    tips: [
-      "Date format must be YYYY-MM-DD",
-      "Currency codes must be valid ISO 4217 (ETB, KES, NGN, etc.)",
-      "Maximum file size is 10MB per upload",
-    ],
+    tips: ["Date format must be YYYY-MM-DD", "Currency codes must be valid ISO 4217 (ETB, KES, NGN, etc.)", "Maximum file size is 10MB per upload"],
   },
   {
-    id: "disputes",
-    section: "Disputes",
-    sectionIcon: AlertCircle,
+    id: "disputes", section: "Disputes", sectionIcon: AlertCircle,
     title: "Managing Disputes",
-    narration: "Navigate to 'Disputes' in the sidebar. Here you can view all dispute cases with their status, priority, and SLA deadline. Click '+ New Dispute' to file a data accuracy concern — select the borrower, the disputed record, the dispute type, and describe the issue. The system automatically assigns a priority and SLA timeline. Disputes approaching or past their deadline are highlighted in red.",
+    narration: "Navigate to 'Disputes' in the sidebar. View all dispute cases with their status, priority, and SLA deadline. File a new dispute by selecting the borrower, disputed record, dispute type, and description. Disputes approaching their deadline are highlighted in red.",
     visual: "disputes",
-    roleNotes: [
-      { role: "Administrator", note: "Can manage all disputes and assign investigators" },
-      { role: "Lender", note: "Can file disputes about your records and respond to disputes" },
-      { role: "Regulator", note: "Can oversee dispute resolution and escalate" },
-    ],
   },
   {
-    id: "approvals",
-    section: "Approvals",
-    sectionIcon: CheckSquare,
+    id: "approvals", section: "Approvals", sectionIcon: CheckSquare,
     title: "Maker-Checker Approvals",
-    narration: "Go to 'Pending Approvals' in the sidebar. When any user creates or modifies a record, the change enters this approval queue. You'll see the submitter, record type, and what changed. Click to see full before/after details. Click 'Approve' to apply or 'Reject' with a reason to deny. Important: you cannot approve your own submissions — this is a compliance requirement.",
+    narration: "Go to 'Pending Approvals'. When any user creates or modifies a record, the change enters this queue. Click to see full before/after details. Click 'Approve' to apply or 'Reject' with a reason. Important: you cannot approve your own submissions.",
     visual: "approval",
-    roleNotes: [
-      { role: "Administrator", note: "Can approve/reject ANY pending change" },
-      { role: "Regulator", note: "Can approve/reject within your jurisdiction" },
-    ],
-    tips: [
-      "You cannot approve your own submissions",
-      "All approval actions are logged in the audit trail",
-    ],
+    tips: ["You cannot approve your own submissions", "All approval actions are logged in the audit trail"],
   },
   {
-    id: "audit",
-    section: "Audit Trail",
-    sectionIcon: Shield,
+    id: "audit", section: "Audit Trail", sectionIcon: Shield,
     title: "Tamper-Evident Audit Trail",
-    narration: "Click 'Audit Trail' in the sidebar. This page records every action in the system: record creations, modifications, report generations, login attempts, approvals, and more. Each entry shows Timestamp, User, Action, Entity, Details, and IP Address. The audit log uses SHA-256 hash chaining — entries cannot be modified or deleted. Use date filters to find specific events, or export to CSV for regulatory reporting.",
+    narration: "Click 'Audit Trail' to see every action: record creations, modifications, report generations, login attempts, and approvals. Each entry shows Timestamp, User, Action, Entity, and Details. The audit log uses SHA-256 hash chaining — entries cannot be tampered with.",
     visual: "audit",
-    roleNotes: [
-      { role: "Administrator", note: "Full visibility of all audit entries" },
-      { role: "Regulator", note: "View audit entries within your regulatory scope" },
-    ],
   },
   {
-    id: "institutions",
-    section: "Administration",
-    sectionIcon: Building2,
+    id: "institutions", section: "Administration", sectionIcon: Building2,
     title: "Institution Management",
-    narration: "Navigate to 'Institutions' in the sidebar (Admin only). View and manage all registered financial institutions — their code, name, type (Commercial Bank, Microfinance, Development Finance), country, status, and contact details. Click '+ Add Institution' to register a new participating institution in the registry.",
+    narration: "Navigate to 'Institutions' (Admin only). View and manage all registered financial institutions — their code, name, type, country, status, and contact details. Click '+ Add Institution' to register a new participating institution.",
     visual: "institutions",
   },
   {
-    id: "users",
-    section: "Administration",
-    sectionIcon: Settings,
+    id: "users", section: "Administration", sectionIcon: Settings,
     title: "User Management & Roles",
-    narration: "Go to 'User Management' (Admin only). Here you create and manage user accounts. Each user has a role: Administrator (full access), Regulator (oversight, audit, approvals), Lender (add/edit own institution data), or Viewer (read-only). Each user is linked to an institution. Password policies enforce complexity and 90-day expiry. Deactivated users lose access but their audit history is preserved.",
+    narration: "Go to 'User Management' (Admin only). Create and manage user accounts with four roles: Administrator (full access), Regulator (oversight), Lender (own institution data), or Viewer (read-only). Password policies enforce complexity and 90-day expiry.",
     visual: "users",
   },
   {
-    id: "exchange-rates",
-    section: "Administration",
-    sectionIcon: DollarSign,
+    id: "exchange-rates", section: "Administration", sectionIcon: DollarSign,
     title: "Exchange Rate Management",
-    narration: "Under the Integrations section, find 'Exchange Rates' (Admin only). The system supports 42+ African currencies. View current exchange rates, update them manually, or let the system auto-sync every 6 hours. These rates are used when consolidating multi-currency exposure in credit reports and dashboard analytics.",
+    narration: "Under Integrations, find 'Exchange Rates' (Admin only). The system supports 42+ African currencies. View current rates, update manually, or let the system auto-sync every 6 hours. These rates are used when consolidating multi-currency exposure in credit reports.",
     visual: "exchange",
   },
   {
-    id: "compliance",
-    section: "Compliance",
-    sectionIcon: Scale,
+    id: "compliance", section: "Compliance", sectionIcon: Scale,
     title: "Regulatory Compliance Dashboard",
-    narration: "Navigate to 'Regulatory Compliance' in the sidebar. This dashboard shows compliance metrics: data submission rates, dispute resolution SLA performance, consent coverage, and NPL ratios by jurisdiction. Traffic-light indicators show green (compliant), yellow (at risk), or red (non-compliant). Use this to monitor your institution's compliance posture across all jurisdictions.",
+    narration: "Navigate to 'Regulatory Compliance'. This dashboard shows compliance metrics: data submission rates, dispute resolution SLA performance, consent coverage, and NPL ratios. Traffic-light indicators show green (compliant), yellow (at risk), or red (non-compliant).",
     visual: "compliance",
-    roleNotes: [
-      { role: "Administrator", note: "System-wide compliance metrics" },
-      { role: "Regulator", note: "Metrics for your regulatory jurisdiction" },
-    ],
   },
   {
-    id: "helpdesk",
-    section: "Support",
-    sectionIcon: Headset,
+    id: "helpdesk", section: "Support", sectionIcon: Headset,
     title: "Getting Help",
-    narration: "Need assistance? Use the Helpdesk to submit support tickets, the Online Manual for searchable help articles, or the Documentation page for technical API documentation. You can also use the chatbot (the floating button in the bottom-right corner) to ask questions about the system, file disputes, or browse FAQs — all without leaving the page.",
+    narration: "Need assistance? Use the Helpdesk for support tickets, the Online Manual for searchable help articles, or the Documentation page for the API Integration Guide. The floating chatbot (bottom-right) lets you ask questions, file disputes, or browse FAQs without leaving the page.",
     visual: "help",
   },
   {
-    id: "end",
-    section: "That's It!",
-    sectionIcon: Globe,
+    id: "end", section: "That's It!", sectionIcon: Globe,
     title: "You're Ready to Go",
-    narration: "That covers all the key features of the Credit Registry System. Remember: the sidebar is your main navigation, the dashboard gives you real-time overview, and every action is logged for audit compliance. If you need help, use the chatbot, helpdesk, or online manual. You can replay this guide anytime from the sidebar under 'App Guide'.",
+    narration: "That covers all the key features. Remember: the sidebar is your main navigation, the dashboard gives you real-time overview, and every action is logged for audit compliance. Replay this guide anytime from the sidebar under 'App Guide'.",
     visual: "end",
   },
 ];
 
 const SLIDE_DURATION = 12000;
 
-function VisualMockup({ type }: { type: string }) {
-  const mockupClass = "rounded-xl border-2 border-border/50 overflow-hidden shadow-lg";
-  
+function GlowOrb({ className, color }: { className?: string; color: string }) {
+  return <div className={`absolute rounded-full blur-3xl opacity-20 pointer-events-none ${className}`} style={{ background: color }} />;
+}
+
+function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
+  const base = `rounded-2xl overflow-hidden shadow-2xl transition-all duration-700 ${isActive ? "opacity-100 scale-100" : "opacity-0 scale-95"}`;
+
   switch (type) {
     case "hero":
       return (
-        <div className={`${mockupClass} p-8 text-center`} style={{ background: "linear-gradient(135deg, hsl(175 55% 28%) 0%, hsl(175 45% 22%) 100%)" }}>
-          <Globe className="w-16 h-16 text-white/80 mx-auto mb-4" />
-          <h3 className="text-2xl font-bold text-white">Pan-African Credit Registry</h3>
-          <p className="text-white/60 mt-2 text-sm">Cross-Jurisdictional Central Data Hub v1.2</p>
-          <div className="flex justify-center gap-6 mt-6">
-            {[{ n: "54", l: "Countries" }, { n: "42+", l: "Currencies" }, { n: "100K+", l: "Borrowers" }].map(s => (
-              <div key={s.l} className="text-center">
-                <p className="text-2xl font-black text-white">{s.n}</p>
-                <p className="text-[10px] text-white/50 uppercase tracking-wider">{s.l}</p>
-              </div>
-            ))}
+        <div className={`${base} relative`} style={{ background: "linear-gradient(135deg, hsl(175 60% 25%) 0%, hsl(200 40% 18%) 50%, hsl(230 30% 15%) 100%)" }}>
+          <GlowOrb className="w-64 h-64 -top-20 -right-20" color="hsl(175 60% 40%)" />
+          <GlowOrb className="w-48 h-48 -bottom-10 -left-10" color="hsl(43 80% 55%)" />
+          <div className="relative z-10 p-10 text-center">
+            <div className="w-20 h-20 rounded-2xl mx-auto mb-6 flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(43 80% 55%) 0%, hsl(33 75% 48%) 100%)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
+              <Globe className="w-10 h-10 text-white" />
+            </div>
+            <h3 className="text-3xl font-extrabold text-white tracking-tight">Pan-African Credit Registry</h3>
+            <p className="text-white/40 mt-2 text-sm font-medium tracking-wide">Cross-Jurisdictional Central Data Hub v1.2</p>
+            <div className="flex justify-center gap-10 mt-8">
+              {[{ n: "54", l: "Countries" }, { n: "42+", l: "Currencies" }, { n: "100K+", l: "Borrowers" }, { n: "5", l: "Languages" }].map(s => (
+                <div key={s.l} className="text-center">
+                  <p className="text-3xl font-black text-white" style={{ textShadow: "0 0 20px rgba(255,255,255,0.2)" }}>{s.n}</p>
+                  <p className="text-[10px] text-white/40 uppercase tracking-[0.15em] mt-1">{s.l}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       );
     case "login":
       return (
-        <div className={`${mockupClass} bg-background p-6`}>
-          <div className="max-w-xs mx-auto space-y-4">
-            <div className="text-center mb-4">
-              <div className="w-12 h-12 rounded-xl mx-auto mb-2" style={{ background: "linear-gradient(135deg, hsl(43 80% 55%), hsl(33 75% 48%))" }}>
-                <Globe className="w-6 h-6 text-white m-3" />
+        <div className={`${base} bg-card border border-border/50`}>
+          <div className="p-8">
+            <div className="max-w-[280px] mx-auto space-y-5">
+              <div className="text-center mb-6">
+                <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center shadow-lg" style={{ background: "linear-gradient(135deg, hsl(43 80% 55%), hsl(33 75% 48%))" }}>
+                  <Globe className="w-7 h-7 text-white" />
+                </div>
+                <p className="font-bold text-sm">Credit Registry System</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Sign in to continue</p>
               </div>
-              <p className="font-bold text-sm">Credit Registry System</p>
+              <div><p className="text-[11px] text-muted-foreground mb-1.5 font-medium">Username</p><div className="h-10 border rounded-lg bg-muted/30 flex items-center px-3 shadow-inner"><span className="text-xs text-muted-foreground">admin</span></div></div>
+              <div><p className="text-[11px] text-muted-foreground mb-1.5 font-medium">Password</p><div className="h-10 border rounded-lg bg-muted/30 flex items-center px-3 shadow-inner"><span className="text-xs text-muted-foreground tracking-widest">••••••••</span></div></div>
+              <div className="h-10 rounded-lg flex items-center justify-center font-semibold text-sm text-white shadow-lg" style={{ background: "linear-gradient(135deg, hsl(175 55% 35%), hsl(175 45% 28%))" }}>Sign In <ArrowRight className="w-4 h-4 ml-2" /></div>
             </div>
-            <div><p className="text-[10px] text-muted-foreground mb-1">Username</p><div className="h-9 border rounded-md bg-muted/20 flex items-center px-3"><span className="text-xs text-muted-foreground">admin</span></div></div>
-            <div><p className="text-[10px] text-muted-foreground mb-1">Password</p><div className="h-9 border rounded-md bg-muted/20 flex items-center px-3"><span className="text-xs text-muted-foreground">••••••••</span></div></div>
-            <div className="h-9 bg-primary rounded-md flex items-center justify-center"><span className="text-xs text-primary-foreground font-medium">Sign In</span></div>
           </div>
         </div>
       );
     case "sidebar":
       return (
-        <div className={`${mockupClass} bg-background flex`}>
-          <div className="w-48 border-r p-3 space-y-1 shrink-0" style={{ background: "hsl(var(--sidebar-background, var(--background)))" }}>
-            <div className="flex items-center gap-2 p-2 mb-3">
-              <div className="w-7 h-7 rounded-lg" style={{ background: "linear-gradient(135deg, hsl(43 80% 55%), hsl(33 75% 48%))" }} />
-              <span className="text-xs font-bold">Credit Registry</span>
+        <div className={`${base} bg-card border border-border/50 flex`}>
+          <div className="w-52 border-r p-4 space-y-1 shrink-0 bg-muted/30">
+            <div className="flex items-center gap-2.5 p-2 mb-4">
+              <div className="w-8 h-8 rounded-xl shadow-md" style={{ background: "linear-gradient(135deg, hsl(43 80% 55%), hsl(33 75% 48%))" }} />
+              <span className="text-xs font-bold tracking-tight">Credit Registry</span>
             </div>
+            <p className="text-[8px] text-muted-foreground/50 uppercase tracking-[0.2em] px-3 pb-1">Core</p>
             {[
               { icon: LayoutDashboard, label: "Dashboard", active: true },
               { icon: Users, label: "Borrowers" },
@@ -339,100 +241,123 @@ function VisualMockup({ type }: { type: string }) {
               { icon: Search, label: "Global Search" },
               { icon: Upload, label: "Batch Upload" },
             ].map(item => (
-              <div key={item.label} className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] ${item.active ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground"}`}>
+              <div key={item.label} className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-[11px] transition-colors ${item.active ? "bg-primary/10 text-primary font-semibold shadow-sm" : "text-muted-foreground hover:bg-muted/50"}`}>
                 <item.icon className="w-3.5 h-3.5" />
                 {item.label}
               </div>
             ))}
-            <p className="text-[9px] text-muted-foreground/50 uppercase tracking-wider px-2.5 pt-2">Reports & Compliance</p>
+            <p className="text-[8px] text-muted-foreground/50 uppercase tracking-[0.2em] px-3 pt-3 pb-1">Reports</p>
             {[
               { icon: FileText, label: "Credit Reports" },
               { icon: AlertCircle, label: "Disputes" },
               { icon: CheckSquare, label: "Approvals" },
+              { icon: Shield, label: "Audit Trail" },
             ].map(item => (
-              <div key={item.label} className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] text-muted-foreground">
+              <div key={item.label} className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[11px] text-muted-foreground">
                 <item.icon className="w-3.5 h-3.5" />
                 {item.label}
               </div>
             ))}
           </div>
-          <div className="flex-1 p-4 flex items-center justify-center">
-            <div className="text-center">
-              <ArrowRight className="w-6 h-6 text-primary/30 mx-auto animate-pulse" />
-              <p className="text-xs text-muted-foreground mt-2">Click any item to navigate</p>
+          <div className="flex-1 p-6 flex items-center justify-center bg-background/50">
+            <div className="text-center space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+                <ArrowRight className="w-5 h-5 text-primary/50" />
+              </div>
+              <p className="text-xs text-muted-foreground">Click any item to navigate</p>
+              <p className="text-[10px] text-muted-foreground/50">Menu adapts to your role</p>
             </div>
           </div>
         </div>
       );
     case "dashboard":
       return (
-        <div className={`${mockupClass} bg-background p-4 space-y-3`}>
-          <div className="grid grid-cols-4 gap-2">
+        <div className={`${base} bg-card border border-border/50 p-5 space-y-4`}>
+          <div className="grid grid-cols-4 gap-3">
             {[
-              { label: "Total Borrowers", value: "2,847", color: "border-l-4 border-l-blue-400" },
-              { label: "Credit Accounts", value: "4,312", color: "border-l-4 border-l-teal-400" },
-              { label: "Active Disputes", value: "23", color: "border-l-4 border-l-amber-400" },
-              { label: "Pending Approvals", value: "15", color: "border-l-4 border-l-purple-400" },
+              { label: "Total Borrowers", value: "102,462", icon: Users, gradient: "from-blue-500 to-blue-600" },
+              { label: "Credit Accounts", value: "172,359", icon: CreditCard, gradient: "from-teal-500 to-teal-600" },
+              { label: "Active Disputes", value: "23", icon: AlertCircle, gradient: "from-amber-500 to-amber-600" },
+              { label: "Pending Approvals", value: "15", icon: CheckSquare, gradient: "from-purple-500 to-purple-600" },
             ].map(c => (
-              <div key={c.label} className={`rounded-lg p-3 border shadow-sm ${c.color}`}>
-                <p className="text-[8px] text-muted-foreground uppercase tracking-wider">{c.label}</p>
-                <p className="text-xl font-black mt-1">{c.value}</p>
+              <div key={c.label} className="relative rounded-xl p-4 border shadow-sm overflow-hidden">
+                <div className={`absolute top-0 left-0 w-1 h-full bg-gradient-to-b ${c.gradient}`} />
+                <c.icon className="w-4 h-4 text-muted-foreground/40 mb-2" />
+                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">{c.label}</p>
+                <p className="text-xl font-black mt-1 tracking-tight">{c.value}</p>
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-3 gap-2">
-            <div className="col-span-2 border rounded-lg p-3 h-24">
-              <p className="text-[9px] font-semibold text-muted-foreground mb-2">Portfolio Growth</p>
-              <div className="flex items-end gap-0.5 h-14">
-                {[30, 35, 40, 38, 45, 50, 48, 55, 60, 58, 65, 70].map((h, i) => (
-                  <div key={i} className="flex-1 bg-primary/20 rounded-t" style={{ height: `${h}%` }} />
+          <div className="grid grid-cols-3 gap-3">
+            <div className="col-span-2 border rounded-xl p-4 h-28">
+              <p className="text-[10px] font-semibold text-muted-foreground mb-3">Portfolio Growth — 12 Months</p>
+              <div className="flex items-end gap-[3px] h-16">
+                {[30, 35, 42, 38, 45, 52, 48, 55, 62, 58, 65, 72].map((h, i) => (
+                  <div key={i} className="flex-1 rounded-t-sm relative" style={{ height: `${h}%` }}>
+                    <div className="absolute inset-0 rounded-t-sm" style={{ background: `linear-gradient(to top, hsl(175 55% 35% / 0.6), hsl(175 55% 35% / 0.15))` }} />
+                  </div>
                 ))}
               </div>
             </div>
-            <div className="border rounded-lg p-3 h-24 flex items-center justify-center">
-              <div className="w-14 h-14 rounded-full border-4 border-green-400 border-r-amber-400 border-b-red-400" />
+            <div className="border rounded-xl p-4 h-28 flex flex-col items-center justify-center">
+              <div className="w-16 h-16 rounded-full relative">
+                <svg viewBox="0 0 36 36" className="w-16 h-16 -rotate-90">
+                  <circle cx="18" cy="18" r="14" fill="none" stroke="currentColor" className="text-muted/30" strokeWidth="4" />
+                  <circle cx="18" cy="18" r="14" fill="none" stroke="hsl(142 70% 45%)" strokeWidth="4" strokeDasharray="63 88" />
+                  <circle cx="18" cy="18" r="14" fill="none" stroke="hsl(45 90% 50%)" strokeWidth="4" strokeDasharray="16 88" strokeDashoffset="-63" />
+                  <circle cx="18" cy="18" r="14" fill="none" stroke="hsl(0 70% 50%)" strokeWidth="4" strokeDasharray="9 88" strokeDashoffset="-79" />
+                </svg>
+              </div>
+              <p className="text-[9px] text-muted-foreground mt-1.5">Account Status</p>
             </div>
           </div>
         </div>
       );
     case "charts":
       return (
-        <div className={`${mockupClass} bg-background p-4 space-y-3`}>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="border rounded-lg p-3">
-              <p className="text-[9px] font-semibold text-muted-foreground mb-2">12-Month Portfolio Trend</p>
-              <div className="flex items-end gap-0.5 h-20">
-                {[25, 30, 35, 32, 40, 45, 42, 50, 55, 52, 60, 65].map((h, i) => (
-                  <div key={i} className="flex-1 rounded-t relative" style={{ height: `${h}%` }}>
-                    <div className="absolute inset-0 bg-primary/15 rounded-t" />
-                    <div className="absolute bottom-0 left-0 right-0 bg-primary/30 rounded-t" style={{ height: `${h * 0.6}%` }} />
+        <div className={`${base} bg-card border border-border/50 p-5 space-y-4`}>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="border rounded-xl p-4">
+              <p className="text-[10px] font-semibold text-muted-foreground mb-3">12-Month Portfolio Trend</p>
+              <div className="flex items-end gap-[3px] h-24">
+                {[25, 30, 38, 32, 42, 48, 44, 52, 58, 54, 62, 68].map((h, i) => (
+                  <div key={i} className="flex-1 relative" style={{ height: `${h}%` }}>
+                    <div className="absolute inset-0 rounded-t" style={{ background: `linear-gradient(to top, hsl(175 55% 35% / 0.5), hsl(175 55% 35% / 0.08))` }} />
+                    <div className="absolute bottom-0 left-0 right-0 rounded-t" style={{ height: `${h * 0.55}%`, background: `linear-gradient(to top, hsl(175 55% 45% / 0.7), hsl(175 55% 45% / 0.2))` }} />
                   </div>
                 ))}
               </div>
-              <div className="flex justify-between mt-1">
-                <span className="text-[7px] text-muted-foreground">Mar '25</span>
-                <span className="text-[7px] text-muted-foreground">Feb '26</span>
+              <div className="flex justify-between mt-2">
+                <span className="text-[8px] text-muted-foreground">Mar '25</span>
+                <span className="text-[8px] text-muted-foreground">Feb '26</span>
               </div>
             </div>
-            <div className="space-y-3">
-              <div className="border rounded-lg p-3">
-                <p className="text-[9px] font-semibold text-muted-foreground mb-2">Account Status</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full border-[5px] border-green-400 border-r-amber-400 border-b-red-400 shrink-0" />
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-400" /><span className="text-[8px]">Current 72%</span></div>
-                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-amber-400" /><span className="text-[8px]">Delinquent 18%</span></div>
-                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-red-400" /><span className="text-[8px]">Default 10%</span></div>
+            <div className="space-y-4">
+              <div className="border rounded-xl p-4">
+                <p className="text-[10px] font-semibold text-muted-foreground mb-3">Account Status</p>
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 shrink-0">
+                    <svg viewBox="0 0 36 36" className="w-14 h-14 -rotate-90">
+                      <circle cx="18" cy="18" r="14" fill="none" stroke="currentColor" className="text-muted/20" strokeWidth="5" />
+                      <circle cx="18" cy="18" r="14" fill="none" stroke="hsl(142 70% 45%)" strokeWidth="5" strokeDasharray="63 88" />
+                      <circle cx="18" cy="18" r="14" fill="none" stroke="hsl(45 90% 50%)" strokeWidth="5" strokeDasharray="16 88" strokeDashoffset="-63" />
+                      <circle cx="18" cy="18" r="14" fill="none" stroke="hsl(0 70% 50%)" strokeWidth="5" strokeDasharray="9 88" strokeDashoffset="-79" />
+                    </svg>
+                  </div>
+                  <div className="space-y-1">
+                    {[{ c: "bg-green-500", l: "Current", v: "72%" }, { c: "bg-amber-500", l: "Delinquent", v: "18%" }, { c: "bg-red-500", l: "Default", v: "10%" }].map(s => (
+                      <div key={s.l} className="flex items-center gap-2"><div className={`w-2 h-2 rounded-full ${s.c}`} /><span className="text-[9px] text-muted-foreground">{s.l}</span><span className="text-[9px] font-semibold ml-auto">{s.v}</span></div>
+                    ))}
                   </div>
                 </div>
               </div>
-              <div className="border rounded-lg p-3">
-                <p className="text-[9px] font-semibold text-muted-foreground mb-2">Loan Types</p>
-                <div className="space-y-1">
-                  {[{ l: "Term Loan", w: "80%" }, { l: "Overdraft", w: "55%" }, { l: "Mortgage", w: "35%" }].map(b => (
-                    <div key={b.l} className="flex items-center gap-2">
-                      <span className="text-[8px] w-14 text-muted-foreground">{b.l}</span>
-                      <div className="flex-1 h-2.5 bg-muted rounded-full"><div className="h-full bg-primary/40 rounded-full" style={{ width: b.w }} /></div>
+              <div className="border rounded-xl p-4">
+                <p className="text-[10px] font-semibold text-muted-foreground mb-3">Loan Types</p>
+                <div className="space-y-2">
+                  {[{ l: "Term Loan", w: "82%", v: "82%" }, { l: "Overdraft", w: "58%", v: "58%" }, { l: "Mortgage", w: "37%", v: "37%" }].map(b => (
+                    <div key={b.l}>
+                      <div className="flex items-center justify-between mb-0.5"><span className="text-[9px] text-muted-foreground">{b.l}</span><span className="text-[9px] font-semibold">{b.v}</span></div>
+                      <div className="h-2 bg-muted/50 rounded-full overflow-hidden"><div className="h-full rounded-full" style={{ width: b.w, background: "linear-gradient(to right, hsl(175 55% 35%), hsl(175 55% 45%))" }} /></div>
                     </div>
                   ))}
                 </div>
@@ -443,35 +368,39 @@ function VisualMockup({ type }: { type: string }) {
       );
     case "map":
       return (
-        <div className={`${mockupClass} bg-background p-4`}>
-          <p className="text-[9px] font-semibold text-muted-foreground mb-3">Africa Coverage — 54 Countries</p>
-          <div className="flex items-center justify-center gap-6">
-            <div className="relative">
-              <Globe className="w-28 h-28 text-primary/15" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <MapPin className="w-6 h-6 text-primary animate-bounce" />
+        <div className={`${base} border border-border/50 relative overflow-hidden`} style={{ background: "linear-gradient(135deg, hsl(200 30% 12%), hsl(210 25% 16%))" }}>
+          <GlowOrb className="w-80 h-80 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" color="hsl(175 55% 35%)" />
+          <div className="relative z-10 p-6">
+            <p className="text-[11px] font-semibold text-white/70 mb-4">Africa Coverage — 54 Countries</p>
+            <div className="flex items-center justify-center gap-8">
+              <div className="relative">
+                <Globe className="w-32 h-32 text-white/8" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="relative">
+                    <MapPin className="w-8 h-8 text-primary" style={{ filter: "drop-shadow(0 0 8px hsl(175 55% 35% / 0.5))" }} />
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-ping" />
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="space-y-2">
-              <div className="bg-muted/50 rounded-lg p-2.5 border min-w-[140px]">
-                <p className="text-[9px] font-semibold">🇰🇪 Kenya</p>
-                <p className="text-[8px] text-muted-foreground">328 borrowers · 512 accounts</p>
-              </div>
-              <div className="bg-muted/50 rounded-lg p-2.5 border">
-                <p className="text-[9px] font-semibold">🇳🇬 Nigeria</p>
-                <p className="text-[8px] text-muted-foreground">456 borrowers · 789 accounts</p>
-              </div>
-              <div className="flex items-center gap-1.5 px-1">
+              <div className="space-y-2.5">
                 {[
-                  { c: "bg-primary/80", l: "High" },
-                  { c: "bg-primary/40", l: "Med" },
-                  { c: "bg-primary/10", l: "Low" },
-                ].map(l => (
-                  <div key={l.l} className="flex items-center gap-0.5">
-                    <div className={`w-3 h-2 rounded-sm ${l.c}`} />
-                    <span className="text-[7px] text-muted-foreground">{l.l}</span>
+                  { flag: "🇰🇪", name: "Kenya", b: "3,284", a: "5,128" },
+                  { flag: "🇳🇬", name: "Nigeria", b: "4,567", a: "7,892" },
+                  { flag: "🇪🇹", name: "Ethiopia", b: "2,891", a: "4,312" },
+                ].map(c => (
+                  <div key={c.name} className="rounded-xl p-3 border border-white/10 min-w-[180px]" style={{ background: "rgba(255,255,255,0.05)", backdropFilter: "blur(8px)" }}>
+                    <p className="text-[11px] font-semibold text-white">{c.flag} {c.name}</p>
+                    <p className="text-[9px] text-white/50">{c.b} borrowers · {c.a} accounts</p>
                   </div>
                 ))}
+                <div className="flex items-center gap-3 px-2 pt-1">
+                  {[{ c: "bg-primary", l: "High" }, { c: "bg-primary/50", l: "Medium" }, { c: "bg-primary/20", l: "Low" }].map(l => (
+                    <div key={l.l} className="flex items-center gap-1">
+                      <div className={`w-3 h-2 rounded-sm ${l.c}`} />
+                      <span className="text-[8px] text-white/40">{l.l}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -479,21 +408,21 @@ function VisualMockup({ type }: { type: string }) {
       );
     case "table-borrowers":
       return (
-        <div className={`${mockupClass} bg-background`}>
-          <div className="flex items-center justify-between p-3 border-b">
-            <div className="flex items-center gap-2"><Users className="w-4 h-4 text-primary" /><span className="text-xs font-semibold">Borrowers</span></div>
-            <div className="h-7 px-3 bg-primary rounded-md flex items-center"><span className="text-[10px] text-primary-foreground font-medium">+ Add Borrower</span></div>
+        <div className={`${base} bg-card border border-border/50`}>
+          <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center gap-2"><Users className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">Borrowers</span><Badge variant="secondary" className="text-[9px]">102,462</Badge></div>
+            <div className="h-8 px-4 rounded-lg flex items-center text-white text-[11px] font-semibold shadow-md" style={{ background: "linear-gradient(135deg, hsl(175 55% 35%), hsl(175 45% 28%))" }}>+ Add Borrower</div>
           </div>
-          <div className="p-3"><div className="h-8 border rounded-md bg-muted/20 flex items-center px-3"><Search className="w-3 h-3 text-muted-foreground mr-2" /><span className="text-[10px] text-muted-foreground">Search borrowers...</span></div></div>
-          <table className="w-full text-[10px]">
-            <thead><tr className="bg-muted/50 text-muted-foreground"><th className="px-3 py-1.5 text-left">Name</th><th className="px-3 py-1.5 text-left">Type</th><th className="px-3 py-1.5 text-left">National ID</th><th className="px-3 py-1.5 text-left">Country</th><th className="px-3 py-1.5 text-left">Status</th></tr></thead>
+          <div className="p-3"><div className="h-9 border rounded-lg bg-muted/20 flex items-center px-3 shadow-inner"><Search className="w-3.5 h-3.5 text-muted-foreground mr-2" /><span className="text-[11px] text-muted-foreground">Search borrowers...</span></div></div>
+          <table className="w-full text-[11px]">
+            <thead><tr className="bg-muted/30"><th className="px-4 py-2 text-left text-muted-foreground font-medium">Name</th><th className="px-4 py-2 text-left text-muted-foreground font-medium">Type</th><th className="px-4 py-2 text-left text-muted-foreground font-medium">National ID</th><th className="px-4 py-2 text-left text-muted-foreground font-medium">Country</th><th className="px-4 py-2 text-left text-muted-foreground font-medium">Status</th></tr></thead>
             <tbody>
               {[
                 { name: "Amara Osei", type: "Individual", id: "GHA-29384756", country: "🇬🇭 Ghana", status: "Active" },
                 { name: "Safaricom Holdings", type: "Corporate", id: "KEN-87654321", country: "🇰🇪 Kenya", status: "Active" },
                 { name: "Fatima El-Rashid", type: "Individual", id: "EGY-11223344", country: "🇪🇬 Egypt", status: "Under Review" },
               ].map((r, i) => (
-                <tr key={i} className="border-t"><td className="px-3 py-2 font-medium">{r.name}</td><td className="px-3 py-2">{r.type}</td><td className="px-3 py-2 font-mono text-[9px]">{r.id}</td><td className="px-3 py-2">{r.country}</td><td className="px-3 py-2"><Badge variant={r.status === "Active" ? "default" : "secondary"} className="text-[8px]">{r.status}</Badge></td></tr>
+                <tr key={i} className="border-t hover:bg-muted/20 transition-colors"><td className="px-4 py-2.5 font-medium">{r.name}</td><td className="px-4 py-2.5">{r.type}</td><td className="px-4 py-2.5 font-mono text-[10px]">{r.id}</td><td className="px-4 py-2.5">{r.country}</td><td className="px-4 py-2.5"><Badge variant={r.status === "Active" ? "default" : "secondary"} className="text-[9px]">{r.status}</Badge></td></tr>
               ))}
             </tbody>
           </table>
@@ -501,55 +430,55 @@ function VisualMockup({ type }: { type: string }) {
       );
     case "form-borrower":
       return (
-        <div className={`${mockupClass} bg-background p-4 space-y-3`}>
-          <div className="flex items-center gap-2 mb-1"><Users className="w-4 h-4 text-primary" /><span className="text-xs font-semibold">Add New Borrower</span></div>
-          <div className="flex gap-2 mb-2">
-            <div className="h-8 px-4 bg-primary rounded-md flex items-center"><span className="text-[10px] text-primary-foreground">Individual</span></div>
-            <div className="h-8 px-4 border rounded-md flex items-center"><span className="text-[10px] text-muted-foreground">Corporate</span></div>
+        <div className={`${base} bg-card border border-border/50 p-6 space-y-4`}>
+          <div className="flex items-center gap-2"><Users className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">Add New Borrower</span></div>
+          <div className="flex gap-2">
+            <div className="h-9 px-5 rounded-lg flex items-center text-white text-[11px] font-semibold shadow-md" style={{ background: "linear-gradient(135deg, hsl(175 55% 35%), hsl(175 45% 28%))" }}>Individual</div>
+            <div className="h-9 px-5 border rounded-lg flex items-center text-[11px] text-muted-foreground">Corporate</div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             {["First Name *", "Last Name *", "National ID *", "Date of Birth", "Country *", "Phone", "Email", "Employer"].map(f => (
-              <div key={f}><p className="text-[9px] text-muted-foreground mb-1">{f}</p><div className="h-8 border rounded-md bg-muted/10" /></div>
+              <div key={f}><p className="text-[10px] text-muted-foreground mb-1.5 font-medium">{f}</p><div className="h-9 border rounded-lg bg-muted/20 shadow-inner" /></div>
             ))}
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <div className="h-8 px-4 border rounded-md flex items-center"><span className="text-[10px]">Cancel</span></div>
-            <div className="h-8 px-4 bg-primary rounded-md flex items-center"><span className="text-[10px] text-primary-foreground">Submit for Approval</span></div>
+            <div className="h-9 px-5 border rounded-lg flex items-center text-[11px]">Cancel</div>
+            <div className="h-9 px-5 rounded-lg flex items-center text-white text-[11px] font-semibold shadow-md" style={{ background: "linear-gradient(135deg, hsl(175 55% 35%), hsl(175 45% 28%))" }}>Submit for Approval</div>
           </div>
         </div>
       );
     case "detail-borrower":
       return (
-        <div className={`${mockupClass} bg-background p-4 space-y-3`}>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center"><Users className="w-6 h-6 text-primary" /></div>
-            <div><p className="text-sm font-bold">Amara Osei</p><p className="text-[10px] text-muted-foreground">Individual · GHA-29384756 · 🇬🇭 Ghana</p></div>
-            <div className="ml-auto h-8 px-3 bg-primary rounded-md flex items-center"><FileText className="w-3 h-3 text-primary-foreground mr-1.5" /><span className="text-[10px] text-primary-foreground">Generate Credit Report</span></div>
+        <div className={`${base} bg-card border border-border/50 p-6 space-y-4`}>
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: "linear-gradient(135deg, hsl(175 55% 35% / 0.15), hsl(175 55% 35% / 0.05))" }}><Users className="w-7 h-7 text-primary" /></div>
+            <div><p className="text-base font-bold">Amara Osei</p><p className="text-[11px] text-muted-foreground">Individual · GHA-29384756 · 🇬🇭 Ghana</p></div>
+            <div className="ml-auto h-9 px-4 rounded-lg flex items-center text-white text-[11px] font-semibold shadow-md" style={{ background: "linear-gradient(135deg, hsl(175 55% 35%), hsl(175 45% 28%))" }}><FileText className="w-3.5 h-3.5 mr-2" />Credit Report</div>
           </div>
-          <div className="grid grid-cols-3 gap-2">
-            {[{ l: "Credit Score", v: "720", c: "text-green-600" }, { l: "Total Accounts", v: "3" }, { l: "Outstanding", v: "GHS 125,000" }].map(c => (
-              <div key={c.l} className="border rounded-lg p-2.5 text-center"><p className="text-[8px] text-muted-foreground">{c.l}</p><p className={`text-base font-bold ${c.c || ""}`}>{c.v}</p></div>
+          <div className="grid grid-cols-3 gap-3">
+            {[{ l: "Credit Score", v: "720", c: "text-green-600 dark:text-green-400", bg: "bg-green-50 dark:bg-green-950/20" }, { l: "Total Accounts", v: "3", bg: "bg-blue-50 dark:bg-blue-950/20" }, { l: "Outstanding", v: "GHS 125K", bg: "bg-amber-50 dark:bg-amber-950/20" }].map(c => (
+              <div key={c.l} className={`rounded-xl p-3.5 text-center ${c.bg} border`}><p className="text-[9px] text-muted-foreground uppercase tracking-wider">{c.l}</p><p className={`text-xl font-black mt-1 ${c.c || ""}`}>{c.v}</p></div>
             ))}
           </div>
-          <div className="border rounded-lg p-2.5"><p className="text-[9px] font-semibold mb-1.5">Credit Accounts</p><div className="space-y-1">{["Term Loan — GHS 50,000 — Current", "Overdraft — GHS 75,000 — Current"].map(a => <div key={a} className="text-[9px] text-muted-foreground py-1 border-b last:border-0">{a}</div>)}</div></div>
+          <div className="border rounded-xl p-4"><p className="text-[10px] font-semibold mb-2">Credit Accounts</p><div className="space-y-1.5">{["Term Loan — GHS 50,000 — Current", "Overdraft — GHS 75,000 — Current"].map(a => <div key={a} className="text-[10px] text-muted-foreground py-1.5 border-b last:border-0 flex items-center gap-2"><CreditCard className="w-3 h-3 text-primary/50" />{a}</div>)}</div></div>
         </div>
       );
     case "table-accounts":
       return (
-        <div className={`${mockupClass} bg-background`}>
-          <div className="flex items-center justify-between p-3 border-b">
-            <div className="flex items-center gap-2"><CreditCard className="w-4 h-4 text-primary" /><span className="text-xs font-semibold">Credit Accounts</span></div>
-            <div className="h-7 px-3 bg-primary rounded-md flex items-center"><span className="text-[10px] text-primary-foreground font-medium">+ Add Account</span></div>
+        <div className={`${base} bg-card border border-border/50`}>
+          <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center gap-2"><CreditCard className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">Credit Accounts</span><Badge variant="secondary" className="text-[9px]">172,359</Badge></div>
+            <div className="h-8 px-4 rounded-lg flex items-center text-white text-[11px] font-semibold shadow-md" style={{ background: "linear-gradient(135deg, hsl(175 55% 35%), hsl(175 45% 28%))" }}>+ Add Account</div>
           </div>
-          <table className="w-full text-[10px]">
-            <thead><tr className="bg-muted/50 text-muted-foreground"><th className="px-3 py-1.5 text-left">Account #</th><th className="px-3 py-1.5 text-left">Borrower</th><th className="px-3 py-1.5 text-left">Type</th><th className="px-3 py-1.5 text-right">Balance</th><th className="px-3 py-1.5 text-left">Status</th></tr></thead>
+          <table className="w-full text-[11px]">
+            <thead><tr className="bg-muted/30"><th className="px-4 py-2 text-left text-muted-foreground font-medium">Account #</th><th className="px-4 py-2 text-left text-muted-foreground font-medium">Borrower</th><th className="px-4 py-2 text-left text-muted-foreground font-medium">Type</th><th className="px-4 py-2 text-right text-muted-foreground font-medium">Balance</th><th className="px-4 py-2 text-left text-muted-foreground font-medium">Status</th></tr></thead>
             <tbody>
               {[
                 { acc: "TL-2024-001", name: "Amara Osei", type: "Term Loan", bal: "GHS 50,000", s: "Current" },
-                { acc: "OD-2024-015", name: "Safaricom", type: "Overdraft", bal: "KES 2.5M", s: "Current" },
+                { acc: "OD-2024-015", name: "Safaricom PLC", type: "Overdraft", bal: "KES 2.5M", s: "Current" },
                 { acc: "MG-2024-008", name: "F. El-Rashid", type: "Mortgage", bal: "EGP 850K", s: "Delinquent" },
               ].map((r, i) => (
-                <tr key={i} className="border-t"><td className="px-3 py-2 font-mono">{r.acc}</td><td className="px-3 py-2">{r.name}</td><td className="px-3 py-2">{r.type}</td><td className="px-3 py-2 text-right font-medium">{r.bal}</td><td className="px-3 py-2"><Badge variant={r.s === "Current" ? "default" : "destructive"} className="text-[8px]">{r.s}</Badge></td></tr>
+                <tr key={i} className="border-t hover:bg-muted/20 transition-colors"><td className="px-4 py-2.5 font-mono text-[10px]">{r.acc}</td><td className="px-4 py-2.5 font-medium">{r.name}</td><td className="px-4 py-2.5">{r.type}</td><td className="px-4 py-2.5 text-right font-semibold">{r.bal}</td><td className="px-4 py-2.5"><Badge variant={r.s === "Current" ? "default" : "destructive"} className="text-[9px]">{r.s}</Badge></td></tr>
               ))}
             </tbody>
           </table>
@@ -557,15 +486,16 @@ function VisualMockup({ type }: { type: string }) {
       );
     case "search":
       return (
-        <div className={`${mockupClass} bg-background p-4 space-y-3`}>
-          <div className="flex items-center gap-2"><Search className="w-4 h-4 text-primary" /><span className="text-xs font-semibold">Global Search</span></div>
-          <div className="h-10 border-2 border-primary/30 rounded-lg bg-muted/10 flex items-center px-3"><Search className="w-4 h-4 text-muted-foreground mr-2" /><span className="text-xs">Amara</span><span className="text-xs text-muted-foreground animate-pulse">|</span></div>
-          <div className="space-y-1.5">
-            <p className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">Borrowers</p>
+        <div className={`${base} bg-card border border-border/50 p-6 space-y-4`}>
+          <div className="flex items-center gap-2"><Search className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">Global Search</span></div>
+          <div className="h-12 border-2 border-primary/30 rounded-xl bg-muted/10 flex items-center px-4 shadow-inner"><Search className="w-5 h-5 text-muted-foreground mr-3" /><span className="text-sm">Amara</span><span className="text-sm text-muted-foreground animate-pulse">|</span></div>
+          <div className="space-y-2">
+            <p className="text-[9px] text-muted-foreground font-semibold uppercase tracking-[0.15em]">Borrowers</p>
             {[{ n: "Amara Osei", d: "Individual · GHA-29384756 · Ghana" }, { n: "Amara Diallo", d: "Individual · SEN-55667788 · Senegal" }].map(r => (
-              <div key={r.n} className="flex items-center gap-2 p-2 rounded-lg border bg-muted/10">
-                <Users className="w-3.5 h-3.5 text-primary shrink-0" />
-                <div><p className="text-[10px] font-medium">{r.n}</p><p className="text-[8px] text-muted-foreground">{r.d}</p></div>
+              <div key={r.n} className="flex items-center gap-3 p-3 rounded-xl border bg-muted/10 hover:bg-muted/20 transition-colors cursor-pointer">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center"><Users className="w-4 h-4 text-primary" /></div>
+                <div><p className="text-[11px] font-semibold">{r.n}</p><p className="text-[9px] text-muted-foreground">{r.d}</p></div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground/30 ml-auto" />
               </div>
             ))}
           </div>
@@ -573,59 +503,68 @@ function VisualMockup({ type }: { type: string }) {
       );
     case "report":
       return (
-        <div className={`${mockupClass} bg-background p-4 space-y-3`}>
-          <div className="p-3 rounded-lg text-white" style={{ background: "linear-gradient(135deg, hsl(175 55% 28%), hsl(175 45% 22%))" }}>
-            <div className="flex items-center gap-2"><Shield className="w-4 h-4" /><span className="text-[11px] font-bold">Comprehensive Credit Information Report</span></div>
-            <p className="text-[8px] text-white/50 mt-0.5">Serial: CR-2026-AXBK7F</p>
+        <div className={`${base} bg-card border border-border/50 space-y-4`}>
+          <div className="p-5 rounded-t-2xl text-white relative overflow-hidden" style={{ background: "linear-gradient(135deg, hsl(175 55% 28%), hsl(200 40% 18%))" }}>
+            <GlowOrb className="w-32 h-32 -top-10 -right-10" color="hsl(43 80% 55%)" />
+            <div className="relative z-10 flex items-center gap-3">
+              <Shield className="w-5 h-5" />
+              <div>
+                <span className="text-sm font-bold">Comprehensive Credit Information Report</span>
+                <p className="text-[9px] text-white/40 mt-0.5">Serial: CR-2026-AXBK7F · Generated: 03 Mar 2026</p>
+              </div>
+            </div>
           </div>
-          <div className="grid grid-cols-4 gap-2">
-            {[{ l: "Bureau Score", v: "720", c: "text-green-600 dark:text-green-400" }, { l: "Facilities", v: "3" }, { l: "Outstanding", v: "GHS 125K" }, { l: "Risk Items", v: "0", c: "text-green-600 dark:text-green-400" }].map(c => (
-              <div key={c.l} className="border rounded-lg p-2 text-center"><p className="text-[7px] text-muted-foreground uppercase">{c.l}</p><p className={`text-sm font-black ${c.c || ""}`}>{c.v}</p></div>
-            ))}
-          </div>
-          <div className="space-y-1 text-[9px]">
-            {["1. Credit Profile Overview (11 indicators)", "2. Classification by Institution", "3. Liability Summary with Aging Buckets", "4. Facility Details + 24-Month Payment Grid"].map(s => (
-              <div key={s} className="flex items-center gap-1.5 text-muted-foreground"><ChevronRight className="w-3 h-3 text-primary shrink-0" />{s}</div>
-            ))}
+          <div className="px-5 pb-5 space-y-4">
+            <div className="grid grid-cols-4 gap-3">
+              {[{ l: "Bureau Score", v: "720", c: "text-green-600 dark:text-green-400" }, { l: "Facilities", v: "3" }, { l: "Outstanding", v: "GHS 125K" }, { l: "Risk Items", v: "0", c: "text-green-600 dark:text-green-400" }].map(c => (
+                <div key={c.l} className="border rounded-xl p-3 text-center"><p className="text-[8px] text-muted-foreground uppercase tracking-wider">{c.l}</p><p className={`text-base font-black mt-1 ${c.c || ""}`}>{c.v}</p></div>
+              ))}
+            </div>
+            <div className="space-y-1.5">
+              {["1. Credit Profile Overview (11 indicators)", "2. Classification by Institution", "3. Liability Summary with Aging Buckets", "4. Facility Details + 24-Month Payment Grid"].map(s => (
+                <div key={s} className="flex items-center gap-2 text-[10px] text-muted-foreground"><ChevronRight className="w-3 h-3 text-primary shrink-0" />{s}</div>
+              ))}
+            </div>
           </div>
         </div>
       );
     case "upload":
       return (
-        <div className={`${mockupClass} bg-background p-4 space-y-3`}>
-          <div className="flex items-center gap-2"><Upload className="w-4 h-4 text-primary" /><span className="text-xs font-semibold">Batch Upload</span></div>
+        <div className={`${base} bg-card border border-border/50 p-6 space-y-4`}>
+          <div className="flex items-center gap-2"><Upload className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">Batch Upload</span></div>
           <div className="flex gap-2">
-            <div className="h-8 px-4 bg-primary rounded-md flex items-center"><span className="text-[10px] text-primary-foreground">Borrowers</span></div>
-            <div className="h-8 px-4 border rounded-md flex items-center"><span className="text-[10px] text-muted-foreground">Credit Accounts</span></div>
+            <div className="h-9 px-5 rounded-lg flex items-center text-white text-[11px] font-semibold shadow-md" style={{ background: "linear-gradient(135deg, hsl(175 55% 35%), hsl(175 45% 28%))" }}>Borrowers</div>
+            <div className="h-9 px-5 border rounded-lg flex items-center text-[11px] text-muted-foreground">Credit Accounts</div>
           </div>
-          <div className="border-2 border-dashed rounded-lg p-6 text-center">
-            <Upload className="w-8 h-8 text-muted-foreground/30 mx-auto" />
-            <p className="text-[10px] text-muted-foreground mt-2">Drop your CSV file here or click to browse</p>
+          <div className="border-2 border-dashed border-primary/20 rounded-2xl p-8 text-center bg-primary/[0.02]">
+            <Upload className="w-10 h-10 text-primary/20 mx-auto" />
+            <p className="text-xs text-muted-foreground mt-3">Drop your CSV file here or click to browse</p>
+            <p className="text-[9px] text-muted-foreground/50 mt-1">Max 10MB · Download template first</p>
           </div>
-          <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
-            <div className="w-4 h-4 rounded-full bg-green-400 flex items-center justify-center"><span className="text-white text-[8px]">✓</span></div>
-            <span className="text-[10px] text-green-700 dark:text-green-300">245 of 250 records imported successfully</span>
+          <div className="flex items-center gap-3 p-3 rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/20">
+            <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center shrink-0"><span className="text-white text-xs font-bold">✓</span></div>
+            <div><p className="text-[11px] font-semibold text-green-700 dark:text-green-300">245 of 250 records imported</p><p className="text-[9px] text-green-600/70 dark:text-green-400/50">5 rows had validation errors</p></div>
           </div>
         </div>
       );
     case "disputes":
       return (
-        <div className={`${mockupClass} bg-background`}>
-          <div className="flex items-center justify-between p-3 border-b">
-            <div className="flex items-center gap-2"><AlertCircle className="w-4 h-4 text-primary" /><span className="text-xs font-semibold">Disputes</span></div>
-            <div className="h-7 px-3 bg-primary rounded-md flex items-center"><span className="text-[10px] text-primary-foreground">+ New Dispute</span></div>
+        <div className={`${base} bg-card border border-border/50`}>
+          <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center gap-2"><AlertCircle className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">Disputes</span></div>
+            <div className="h-8 px-4 rounded-lg flex items-center text-white text-[11px] font-semibold shadow-md" style={{ background: "linear-gradient(135deg, hsl(175 55% 35%), hsl(175 45% 28%))" }}>+ New Dispute</div>
           </div>
           <div className="divide-y">
             {[
-              { id: "DSP-001", status: "Open", priority: "High", sla: "2 days left", color: "text-amber-600" },
-              { id: "DSP-002", status: "Under Investigation", priority: "Medium", sla: "5 days left", color: "text-blue-600" },
-              { id: "DSP-003", status: "Resolved", priority: "Low", sla: "Completed", color: "text-green-600" },
+              { id: "DSP-001", status: "Open", priority: "High", sla: "2 days left", sc: "text-amber-600 dark:text-amber-400", bc: "bg-amber-100 dark:bg-amber-900/30" },
+              { id: "DSP-002", status: "Under Review", priority: "Medium", sla: "5 days left", sc: "text-blue-600 dark:text-blue-400", bc: "bg-blue-100 dark:bg-blue-900/30" },
+              { id: "DSP-003", status: "Resolved", priority: "Low", sla: "Completed", sc: "text-green-600 dark:text-green-400", bc: "bg-green-100 dark:bg-green-900/30" },
             ].map(d => (
-              <div key={d.id} className="flex items-center gap-3 px-3 py-2 text-[10px]">
-                <span className="font-mono text-muted-foreground">{d.id}</span>
-                <Badge variant={d.status === "Resolved" ? "default" : "secondary"} className="text-[8px]">{d.status}</Badge>
-                <span className="text-muted-foreground ml-auto">{d.priority}</span>
-                <span className={`text-[9px] font-medium ${d.color}`}>{d.sla}</span>
+              <div key={d.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/20 transition-colors">
+                <span className="font-mono text-[10px] text-muted-foreground w-16">{d.id}</span>
+                <Badge variant="secondary" className="text-[9px]">{d.status}</Badge>
+                <span className="text-[10px] text-muted-foreground">{d.priority}</span>
+                <span className={`text-[10px] font-semibold ml-auto ${d.sc}`}>{d.sla}</span>
               </div>
             ))}
           </div>
@@ -633,18 +572,18 @@ function VisualMockup({ type }: { type: string }) {
       );
     case "approval":
       return (
-        <div className={`${mockupClass} bg-background p-4 space-y-2`}>
-          <div className="flex items-center gap-2 mb-1"><CheckSquare className="w-4 h-4 text-primary" /><span className="text-xs font-semibold">Pending Approvals</span></div>
+        <div className={`${base} bg-card border border-border/50 p-5 space-y-3`}>
+          <div className="flex items-center gap-2 mb-1"><CheckSquare className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">Pending Approvals</span><Badge variant="secondary" className="text-[9px] ml-2">2</Badge></div>
           {[
             { user: "cbe_user", action: "New Borrower: Tadesse Bekele", time: "2 hours ago" },
             { user: "dashen_user", action: "Modified Account: OD-2024-015", time: "5 hours ago" },
           ].map(a => (
-            <div key={a.action} className="flex items-center gap-2 p-2.5 border rounded-lg">
-              <div className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
-              <div className="flex-1 min-w-0"><p className="text-[10px] font-medium truncate">{a.action}</p><p className="text-[8px] text-muted-foreground">By {a.user} · {a.time}</p></div>
-              <div className="flex gap-1 shrink-0">
-                <div className="h-7 px-2.5 bg-green-100 dark:bg-green-900/30 rounded text-[9px] flex items-center text-green-700 dark:text-green-300 font-medium">Approve</div>
-                <div className="h-7 px-2.5 bg-red-100 dark:bg-red-900/30 rounded text-[9px] flex items-center text-red-700 dark:text-red-300 font-medium">Reject</div>
+            <div key={a.action} className="flex items-center gap-3 p-3.5 border rounded-xl hover:bg-muted/20 transition-colors">
+              <div className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0 shadow-sm" />
+              <div className="flex-1 min-w-0"><p className="text-[11px] font-semibold truncate">{a.action}</p><p className="text-[9px] text-muted-foreground">By {a.user} · {a.time}</p></div>
+              <div className="flex gap-1.5 shrink-0">
+                <div className="h-7 px-3 bg-green-500 rounded-lg text-[10px] flex items-center text-white font-semibold shadow-sm">Approve</div>
+                <div className="h-7 px-3 bg-red-500/10 border border-red-200 dark:border-red-800 rounded-lg text-[10px] flex items-center text-red-600 dark:text-red-400 font-semibold">Reject</div>
               </div>
             </div>
           ))}
@@ -652,19 +591,19 @@ function VisualMockup({ type }: { type: string }) {
       );
     case "audit":
       return (
-        <div className={`${mockupClass} bg-background`}>
-          <div className="flex items-center gap-2 p-3 border-b"><Shield className="w-4 h-4 text-primary" /><span className="text-xs font-semibold">Audit Trail</span><Badge variant="outline" className="text-[8px] ml-auto">Tamper-Evident</Badge></div>
-          <div className="divide-y text-[10px]">
+        <div className={`${base} bg-card border border-border/50`}>
+          <div className="flex items-center gap-2 p-4 border-b"><Shield className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">Audit Trail</span><Badge variant="outline" className="text-[9px] ml-auto">SHA-256 Hash Chain</Badge></div>
+          <div className="divide-y">
             {[
               { time: "14:32:05", user: "admin", action: "GENERATE_REPORT", detail: "Credit report CR-2026-AXBK7F" },
-              { time: "14:28:11", user: "cbe_user", action: "CREATE_BORROWER", detail: "New borrower: Tadesse B." },
-              { time: "14:15:43", user: "admin", action: "APPROVE_CHANGE", detail: "Approved account OD-2024" },
+              { time: "14:28:11", user: "cbe_user", action: "CREATE_BORROWER", detail: "New borrower: Tadesse Bekele" },
+              { time: "14:15:43", user: "admin", action: "APPROVE_CHANGE", detail: "Approved account OD-2024-015" },
             ].map(e => (
-              <div key={e.time} className="flex items-center gap-3 px-3 py-2">
-                <span className="font-mono text-muted-foreground text-[9px]">{e.time}</span>
-                <span className="text-muted-foreground">{e.user}</span>
-                <Badge variant="outline" className="text-[8px]">{e.action}</Badge>
-                <span className="text-muted-foreground ml-auto truncate max-w-[150px]">{e.detail}</span>
+              <div key={e.time} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/20 transition-colors">
+                <span className="font-mono text-[10px] text-muted-foreground">{e.time}</span>
+                <span className="text-[11px] font-medium w-20">{e.user}</span>
+                <Badge variant="outline" className="text-[9px] font-mono">{e.action}</Badge>
+                <span className="text-[10px] text-muted-foreground ml-auto truncate max-w-[180px]">{e.detail}</span>
               </div>
             ))}
           </div>
@@ -672,19 +611,19 @@ function VisualMockup({ type }: { type: string }) {
       );
     case "institutions":
       return (
-        <div className={`${mockupClass} bg-background`}>
-          <div className="flex items-center gap-2 p-3 border-b"><Building2 className="w-4 h-4 text-primary" /><span className="text-xs font-semibold">Institutions</span></div>
-          <div className="divide-y text-[10px]">
+        <div className={`${base} bg-card border border-border/50`}>
+          <div className="flex items-center gap-2 p-4 border-b"><Building2 className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">Institutions</span></div>
+          <div className="divide-y">
             {[
               { name: "Commercial Bank of Ethiopia", type: "Commercial Bank", country: "🇪🇹 Ethiopia" },
               { name: "Equity Bank Kenya", type: "Commercial Bank", country: "🇰🇪 Kenya" },
               { name: "First Bank Nigeria", type: "Commercial Bank", country: "🇳🇬 Nigeria" },
             ].map(i => (
-              <div key={i.name} className="flex items-center gap-3 px-3 py-2">
-                <Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                <span className="font-medium">{i.name}</span>
-                <span className="text-muted-foreground ml-auto">{i.type}</span>
-                <span>{i.country}</span>
+              <div key={i.name} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/20 transition-colors">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center"><Building2 className="w-4 h-4 text-primary" /></div>
+                <span className="text-[11px] font-semibold">{i.name}</span>
+                <span className="text-[10px] text-muted-foreground ml-auto">{i.type}</span>
+                <span className="text-[11px]">{i.country}</span>
               </div>
             ))}
           </div>
@@ -692,18 +631,22 @@ function VisualMockup({ type }: { type: string }) {
       );
     case "users":
       return (
-        <div className={`${mockupClass} bg-background p-4 space-y-3`}>
-          <div className="flex items-center gap-2"><Settings className="w-4 h-4 text-primary" /><span className="text-xs font-semibold">User Management</span></div>
-          <div className="grid grid-cols-2 gap-2">
+        <div className={`${base} bg-card border border-border/50 p-6 space-y-4`}>
+          <div className="flex items-center gap-2"><Settings className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">User Management — Roles</span></div>
+          <div className="grid grid-cols-2 gap-3">
             {[
-              { role: "Administrator", color: "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300", desc: "Full access" },
-              { role: "Regulator", color: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300", desc: "Oversight + approvals" },
-              { role: "Lender", color: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300", desc: "Own institution data" },
-              { role: "Viewer", color: "bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-300", desc: "Read-only access" },
+              { role: "Administrator", color: "from-purple-500 to-purple-600", desc: "Full system access", icon: Shield },
+              { role: "Regulator", color: "from-blue-500 to-blue-600", desc: "Oversight + approvals", icon: Scale },
+              { role: "Lender", color: "from-green-500 to-green-600", desc: "Own institution data", icon: Building2 },
+              { role: "Viewer", color: "from-gray-400 to-gray-500", desc: "Read-only access", icon: Search },
             ].map(r => (
-              <div key={r.role} className={`rounded-lg p-2.5 ${r.color}`}>
-                <p className="text-[10px] font-semibold">{r.role}</p>
-                <p className="text-[8px] opacity-75">{r.desc}</p>
+              <div key={r.role} className="rounded-xl p-4 border relative overflow-hidden">
+                <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${r.color}`} />
+                <div className="flex items-center gap-2 mt-1">
+                  <r.icon className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-[11px] font-bold">{r.role}</p>
+                </div>
+                <p className="text-[9px] text-muted-foreground mt-1">{r.desc}</p>
               </div>
             ))}
           </div>
@@ -711,69 +654,82 @@ function VisualMockup({ type }: { type: string }) {
       );
     case "exchange":
       return (
-        <div className={`${mockupClass} bg-background p-4 space-y-2`}>
-          <div className="flex items-center gap-2"><DollarSign className="w-4 h-4 text-primary" /><span className="text-xs font-semibold">Exchange Rates — 42+ Currencies</span></div>
-          <div className="grid grid-cols-3 gap-1.5">
+        <div className={`${base} bg-card border border-border/50 p-6 space-y-4`}>
+          <div className="flex items-center gap-2"><DollarSign className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">Exchange Rates</span><Badge variant="secondary" className="text-[9px]">42+ Currencies</Badge></div>
+          <div className="grid grid-cols-3 gap-3">
             {[
-              { pair: "USD/ETB", rate: "56.78" }, { pair: "USD/KES", rate: "153.25" }, { pair: "USD/NGN", rate: "1,560.00" },
-              { pair: "USD/ZAR", rate: "18.42" }, { pair: "USD/EGP", rate: "30.95" }, { pair: "USD/GHS", rate: "14.85" },
+              { pair: "USD/ETB", rate: "56.78", change: "+0.12" }, { pair: "USD/KES", rate: "153.25", change: "-0.34" }, { pair: "USD/NGN", rate: "1,560", change: "+2.50" },
+              { pair: "USD/ZAR", rate: "18.42", change: "+0.08" }, { pair: "USD/EGP", rate: "30.95", change: "-0.15" }, { pair: "USD/GHS", rate: "14.85", change: "+0.22" },
             ].map(r => (
-              <div key={r.pair} className="border rounded-lg p-2 text-center"><p className="text-[8px] text-muted-foreground">{r.pair}</p><p className="text-[11px] font-bold">{r.rate}</p></div>
+              <div key={r.pair} className="border rounded-xl p-3 text-center hover:bg-muted/20 transition-colors">
+                <p className="text-[9px] text-muted-foreground font-medium">{r.pair}</p>
+                <p className="text-base font-black mt-0.5">{r.rate}</p>
+                <p className={`text-[8px] mt-0.5 ${r.change.startsWith("+") ? "text-green-600" : "text-red-500"}`}>{r.change}</p>
+              </div>
             ))}
           </div>
         </div>
       );
     case "compliance":
       return (
-        <div className={`${mockupClass} bg-background p-4 space-y-3`}>
-          <div className="flex items-center gap-2"><Scale className="w-4 h-4 text-primary" /><span className="text-xs font-semibold">Regulatory Compliance</span></div>
-          <div className="grid grid-cols-3 gap-2">
+        <div className={`${base} bg-card border border-border/50 p-6 space-y-4`}>
+          <div className="flex items-center gap-2"><Scale className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">Regulatory Compliance</span></div>
+          <div className="grid grid-cols-3 gap-3">
             {[
-              { l: "Data Submission", v: "98%", c: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300" },
-              { l: "Dispute SLA", v: "95%", c: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300" },
-              { l: "Consent Coverage", v: "87%", c: "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300" },
+              { l: "Data Submission", v: "98%", c: "from-green-500 to-green-600" },
+              { l: "Dispute SLA", v: "95%", c: "from-green-500 to-green-600" },
+              { l: "Consent Coverage", v: "87%", c: "from-amber-500 to-amber-600" },
             ].map(m => (
-              <div key={m.l} className={`rounded-lg p-2.5 text-center ${m.c}`}><p className="text-[8px] opacity-70">{m.l}</p><p className="text-lg font-black">{m.v}</p></div>
+              <div key={m.l} className="rounded-xl p-4 text-center border relative overflow-hidden">
+                <div className={`absolute bottom-0 left-0 w-full bg-gradient-to-r ${m.c} opacity-10`} style={{ height: m.v }} />
+                <p className="text-[9px] text-muted-foreground uppercase tracking-wider relative z-10">{m.l}</p>
+                <p className="text-2xl font-black mt-1 relative z-10">{m.v}</p>
+              </div>
             ))}
           </div>
         </div>
       );
     case "help":
       return (
-        <div className={`${mockupClass} bg-background p-4 space-y-2`}>
-          <div className="grid grid-cols-3 gap-2">
+        <div className={`${base} bg-card border border-border/50 p-6 space-y-4`}>
+          <div className="grid grid-cols-3 gap-3">
             {[
-              { icon: Headset, label: "Helpdesk", desc: "Submit support tickets" },
-              { icon: BookOpen, label: "Online Manual", desc: "Searchable help articles" },
-              { icon: FileText, label: "Documentation", desc: "Technical API docs" },
+              { icon: Headset, label: "Helpdesk", desc: "Submit support tickets", gradient: "from-blue-500 to-blue-600" },
+              { icon: BookOpen, label: "Online Manual", desc: "Searchable help articles", gradient: "from-purple-500 to-purple-600" },
+              { icon: FileText, label: "Documentation", desc: "API & technical docs", gradient: "from-teal-500 to-teal-600" },
             ].map(h => (
-              <div key={h.label} className="border rounded-lg p-3 text-center">
-                <h.icon className="w-6 h-6 text-primary mx-auto mb-1.5" />
-                <p className="text-[10px] font-semibold">{h.label}</p>
-                <p className="text-[8px] text-muted-foreground">{h.desc}</p>
+              <div key={h.label} className="border rounded-xl p-4 text-center relative overflow-hidden hover:bg-muted/20 transition-colors">
+                <div className={`absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r ${h.gradient}`} />
+                <h.icon className="w-7 h-7 text-primary mx-auto mb-2 mt-1" />
+                <p className="text-[11px] font-bold">{h.label}</p>
+                <p className="text-[9px] text-muted-foreground mt-0.5">{h.desc}</p>
               </div>
             ))}
           </div>
-          <div className="flex items-center justify-center gap-2 p-2 bg-primary/5 rounded-lg border">
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span className="text-primary-foreground text-xs">💬</span></div>
-            <div><p className="text-[10px] font-semibold">Chatbot Assistant</p><p className="text-[8px] text-muted-foreground">Click the floating button (bottom-right) anytime</p></div>
+          <div className="flex items-center gap-3 p-4 rounded-xl border bg-primary/5">
+            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shrink-0"><Headset className="w-5 h-5 text-primary-foreground" /></div>
+            <div><p className="text-[11px] font-bold">AI Chatbot Assistant</p><p className="text-[9px] text-muted-foreground">Always available — click the floating button (bottom-right)</p></div>
           </div>
         </div>
       );
     case "end":
       return (
-        <div className={`${mockupClass} p-8 text-center`} style={{ background: "linear-gradient(135deg, hsl(175 55% 28%) 0%, hsl(175 45% 22%) 100%)" }}>
-          <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center mx-auto mb-4">
-            <Globe className="w-8 h-8 text-white" />
+        <div className={`${base} relative overflow-hidden`} style={{ background: "linear-gradient(135deg, hsl(175 60% 25%) 0%, hsl(200 40% 18%) 50%, hsl(230 30% 15%) 100%)" }}>
+          <GlowOrb className="w-80 h-80 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" color="hsl(175 55% 40%)" />
+          <GlowOrb className="w-48 h-48 -bottom-10 -right-10" color="hsl(43 80% 55%)" />
+          <div className="relative z-10 p-10 text-center">
+            <div className="w-20 h-20 rounded-2xl mx-auto mb-6 flex items-center justify-center" style={{ background: "rgba(255,255,255,0.1)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.15)" }}>
+              <Globe className="w-10 h-10 text-white" />
+            </div>
+            <h3 className="text-2xl font-extrabold text-white tracking-tight">You're All Set!</h3>
+            <p className="text-white/50 mt-3 text-sm max-w-md mx-auto leading-relaxed">Explore the system, add records, generate reports, and monitor compliance across all 54 African countries.</p>
+            <p className="text-white/30 text-xs mt-6">Replay this guide anytime from the sidebar → App Guide</p>
           </div>
-          <h3 className="text-xl font-bold text-white">You're All Set!</h3>
-          <p className="text-white/60 mt-2 text-sm max-w-sm mx-auto">Explore the system, add records, generate reports, and monitor compliance across all 54 African countries.</p>
-          <p className="text-white/40 text-xs mt-4">Replay this guide anytime from the sidebar → App Guide</p>
         </div>
       );
     default:
       return (
-        <div className={`${mockupClass} bg-muted/30 h-32 flex items-center justify-center`}>
+        <div className={`${base} bg-muted/30 h-32 flex items-center justify-center rounded-2xl`}>
           <Monitor className="w-10 h-10 text-muted-foreground/20" />
         </div>
       );
@@ -785,11 +741,13 @@ export default function AppGuidePage() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [progress, setProgress] = useState(0);
+  const [slideDirection, setSlideDirection] = useState<"next" | "prev">("next");
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const totalSlides = slides.length;
   const slide = slides[currentSlide];
+  const isLastSlide = currentSlide === totalSlides - 1;
 
   const stopTimers = useCallback(() => {
     if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
@@ -800,199 +758,191 @@ export default function AppGuidePage() {
     stopTimers();
     setProgress(0);
     const step = 50;
-    const increments = SLIDE_DURATION / step;
-    let count = 0;
     progressRef.current = setInterval(() => {
-      count++;
-      setProgress((count / increments) * 100);
+      setProgress(prev => Math.min(prev + (step / SLIDE_DURATION) * 100, 100));
     }, step);
     intervalRef.current = setInterval(() => {
-      setCurrentSlide(prev => {
-        if (prev >= totalSlides - 1) {
-          setIsPlaying(false);
-          stopTimers();
-          return prev;
-        }
-        return prev + 1;
-      });
+      setSlideDirection("next");
+      setCurrentSlide(prev => (prev < totalSlides - 1 ? prev + 1 : prev));
     }, SLIDE_DURATION);
-  }, [totalSlides, stopTimers]);
+  }, [stopTimers, totalSlides]);
 
   useEffect(() => {
-    if (isPlaying) {
-      startTimers();
-    } else {
+    if (isLastSlide) {
+      setIsPlaying(false);
       stopTimers();
+      return;
     }
+    if (isPlaying) startTimers();
+    else stopTimers();
     return stopTimers;
-  }, [isPlaying, currentSlide, startTimers, stopTimers]);
+  }, [isPlaying, currentSlide, startTimers, stopTimers, isLastSlide]);
 
-  const goToSlide = (idx: number) => {
-    setCurrentSlide(idx);
+  const goTo = (index: number) => {
+    setSlideDirection(index > currentSlide ? "next" : "prev");
+    setCurrentSlide(index);
     setProgress(0);
-    if (isPlaying) {
-      startTimers();
+  };
+
+  const next = () => { if (currentSlide < totalSlides - 1) { setSlideDirection("next"); setCurrentSlide(prev => prev + 1); setProgress(0); } };
+  const prev = () => { if (currentSlide > 0) { setSlideDirection("prev"); setCurrentSlide(prev => prev - 1); setProgress(0); } };
+
+  const sections = slides.reduce<{ name: string; startIndex: number; count: number }[]>((acc, s, i) => {
+    if (!acc.length || acc[acc.length - 1].name !== s.section) {
+      acc.push({ name: s.section, startIndex: i, count: 1 });
+    } else {
+      acc[acc.length - 1].count++;
     }
-  };
+    return acc;
+  }, []);
 
-  const togglePlay = () => {
-    if (!isPlaying && currentSlide >= totalSlides - 1) {
-      setCurrentSlide(0);
-    }
-    setIsPlaying(!isPlaying);
-  };
-
-  const nextSlide = () => {
-    if (currentSlide < totalSlides - 1) goToSlide(currentSlide + 1);
-  };
-  const prevSlide = () => {
-    if (currentSlide > 0) goToSlide(currentSlide - 1);
-  };
-  const restart = () => {
-    goToSlide(0);
-    setIsPlaying(true);
-  };
-
-  const SectionIcon = slide.sectionIcon;
+  const currentSection = sections.find(s => currentSlide >= s.startIndex && currentSlide < s.startIndex + s.count);
 
   return (
-    <div className="h-full flex flex-col bg-background" data-testid="page-app-guide">
-      <div className="w-full h-1 bg-muted shrink-0">
-        <div
-          className="h-full bg-primary transition-all duration-100 ease-linear"
-          style={{ width: `${((currentSlide + (isPlaying ? progress / 100 : 0)) / totalSlides) * 100}%` }}
-          data-testid="guide-progress-bar"
-        />
-      </div>
+    <div className="min-h-screen bg-background" data-testid="page-app-guide">
+      <style>{`
+        @keyframes slideInRight { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes slideInLeft { from { opacity: 0; transform: translateX(-40px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .slide-in-right { animation: slideInRight 0.5s ease-out; }
+        .slide-in-left { animation: slideInLeft 0.5s ease-out; }
+        .fade-in-up { animation: fadeInUp 0.5s ease-out; }
+      `}</style>
 
-      <div className="flex-1 overflow-auto">
-        <div className="max-w-4xl mx-auto p-6 lg:p-8 space-y-6">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <SectionIcon className="w-5 h-5 text-primary" />
+      <div className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-xl">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="flex items-center h-14 gap-4">
+            <div className="flex items-center gap-2.5 shrink-0">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(43 80% 55%), hsl(33 75% 48%))" }}>
+                <Globe className="w-4 h-4 text-white" />
               </div>
-              <div className="min-w-0">
-                <p className="text-[10px] text-primary font-semibold uppercase tracking-wider">{slide.section}</p>
-                <h1 className="text-xl font-bold tracking-tight truncate" data-testid="text-guide-title">{slide.title}</h1>
+              <div className="hidden sm:block">
+                <p className="text-xs font-bold tracking-tight leading-none">App Guide</p>
+                <p className="text-[10px] text-muted-foreground leading-none mt-0.5">CDH v1.2</p>
               </div>
             </div>
+
+            <div className="flex-1 flex items-center gap-1 overflow-x-auto scrollbar-none px-2">
+              {sections.map((sec) => {
+                const isActive = currentSection?.name === sec.name;
+                const isPast = currentSlide > sec.startIndex + sec.count - 1;
+                return (
+                  <button
+                    key={sec.name}
+                    onClick={() => goTo(sec.startIndex)}
+                    className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all whitespace-nowrap ${
+                      isActive ? "bg-primary text-primary-foreground shadow-md" : isPast ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
+                    }`}
+                    data-testid={`nav-section-${sec.name.toLowerCase().replace(/\s+/g, "-")}`}
+                  >
+                    {sec.name}
+                  </button>
+                );
+              })}
+            </div>
+
             <div className="flex items-center gap-1 shrink-0">
-              <Button variant="ghost" size="icon" className="h-9 w-9" onClick={restart} data-testid="button-guide-restart">
-                <RotateCcw className="w-4 h-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-9 w-9" onClick={prevSlide} disabled={currentSlide === 0} data-testid="button-guide-prev">
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <Button variant="default" size="icon" className="h-9 w-9" onClick={togglePlay} data-testid="button-guide-play">
+              <span className="text-[10px] text-muted-foreground font-mono mr-1">{currentSlide + 1}/{totalSlides}</span>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={prev} disabled={currentSlide === 0} data-testid="button-prev"><ChevronLeft className="w-4 h-4" /></Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsPlaying(!isPlaying)} data-testid="button-play-pause">
                 {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
               </Button>
-              <Button variant="ghost" size="icon" className="h-9 w-9" onClick={nextSlide} disabled={currentSlide >= totalSlides - 1} data-testid="button-guide-next">
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-              <span className="text-xs text-muted-foreground ml-2 tabular-nums" data-testid="text-guide-counter">
-                {currentSlide + 1} / {totalSlides}
-              </span>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={next} disabled={isLastSlide} data-testid="button-next"><ChevronRight className="w-4 h-4" /></Button>
             </div>
           </div>
 
-          <div className="relative">
-            <div
-              key={slide.id}
-              className="animate-in fade-in slide-in-from-right-4 duration-500"
-            >
-              <VisualMockup type={slide.visual} />
-            </div>
+          <div className="h-0.5 bg-muted -mx-4 sm:-mx-6" data-testid="guide-progress-bar">
+            <div className="h-full transition-all duration-100 ease-linear rounded-full" style={{ width: `${((currentSlide) / (totalSlides - 1)) * 100}%`, background: "linear-gradient(to right, hsl(175 55% 35%), hsl(43 80% 55%))" }} />
           </div>
-
-          <div
-            key={`narr-${slide.id}`}
-            className="animate-in fade-in slide-in-from-bottom-2 duration-700"
-          >
-            <Card>
-              <CardContent className="p-5 space-y-4">
-                <p className="text-sm leading-relaxed" data-testid="text-guide-narration">
-                  {slide.narration}
-                </p>
-
-                {slide.roleNotes && slide.roleNotes.length > 0 && (
-                  <div className="space-y-1.5">
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                      <UserCheck className="w-3.5 h-3.5" /> What each role sees
-                    </p>
-                    {slide.roleNotes.map(rn => (
-                      <div key={rn.role} className="flex items-start gap-2 text-xs">
-                        <Badge variant="outline" className="text-[9px] shrink-0 mt-0.5">{rn.role}</Badge>
-                        <span className="text-muted-foreground">{rn.note}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {slide.tips && slide.tips.length > 0 && (
-                  <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
-                    <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 mb-1.5 flex items-center gap-1.5">
-                      <Zap className="w-3.5 h-3.5" /> Tips
-                    </p>
-                    <ul className="space-y-1">
-                      {slide.tips.map((tip, i) => (
-                        <li key={i} className="text-xs text-amber-700/80 dark:text-amber-300/80 flex items-start gap-1.5">
-                          <span className="text-amber-500 mt-0.5 shrink-0">•</span>
-                          {tip}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="flex items-center gap-1 justify-center flex-wrap" data-testid="guide-slide-dots">
-            {slides.map((s, idx) => (
-              <button
-                key={s.id}
-                onClick={() => goToSlide(idx)}
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  idx === currentSlide
-                    ? "w-8 bg-primary"
-                    : idx < currentSlide
-                    ? "w-2 bg-primary/40"
-                    : "w-2 bg-muted-foreground/20"
-                }`}
-                data-testid={`guide-dot-${idx}`}
-              />
-            ))}
-          </div>
-
-          {currentSlide >= totalSlides - 1 && !isPlaying && (
-            <div className="flex items-center justify-center gap-3 py-4 animate-in fade-in duration-500">
-              <Button variant="outline" onClick={restart} data-testid="button-guide-replay">
-                <RotateCcw className="w-4 h-4 mr-2" /> Replay Guide
-              </Button>
-              <Button onClick={() => navigate("/")} data-testid="button-guide-go-dashboard">
-                Go to Dashboard <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </div>
-          )}
         </div>
       </div>
 
-      <div className="border-t px-4 py-2 flex items-center justify-between shrink-0 bg-muted/30">
-        <div className="flex items-center gap-3">
-          <div className="h-1.5 w-32 bg-muted rounded-full overflow-hidden">
-            <div
-              className="h-full bg-primary/60 transition-all duration-100 ease-linear rounded-full"
-              style={{ width: `${isPlaying ? progress : 0}%` }}
-            />
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 lg:py-12">
+        <div key={currentSlide} className={slideDirection === "next" ? "slide-in-right" : "slide-in-left"}>
+          <div className="flex items-center gap-2 mb-2">
+            <slide.sectionIcon className="w-4 h-4 text-primary" />
+            <span className="text-[11px] font-semibold text-primary uppercase tracking-[0.15em]">{slide.section}</span>
           </div>
-          <span className="text-[10px] text-muted-foreground">
-            {isPlaying ? "Auto-advancing..." : currentSlide >= totalSlides - 1 ? "Walkthrough complete" : "Paused"}
-          </span>
+          <h2 className="text-2xl lg:text-3xl font-extrabold tracking-tight mb-6" data-testid="text-slide-title">{slide.title}</h2>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            <div className="space-y-5 order-2 lg:order-1">
+              <p className="text-base text-muted-foreground leading-relaxed" data-testid="text-slide-narration">{slide.narration}</p>
+
+              {slide.roleNotes && (
+                <div className="space-y-2">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.15em]">By Role</p>
+                  {slide.roleNotes.map(rn => (
+                    <div key={rn.role} className="flex items-start gap-2.5 text-sm">
+                      <Badge variant="outline" className="text-[9px] shrink-0 mt-0.5">{rn.role}</Badge>
+                      <span className="text-muted-foreground text-[12px]">{rn.note}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {slide.tips && (
+                <div className="rounded-xl border bg-muted/30 p-4 space-y-2">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.15em]">Tips</p>
+                  {slide.tips.map(tip => (
+                    <div key={tip} className="flex items-start gap-2 text-[12px] text-muted-foreground">
+                      <ChevronRight className="w-3 h-3 text-primary shrink-0 mt-0.5" />
+                      {tip}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {isPlaying && !isLastSlide && (
+                <div className="pt-2">
+                  <div className="h-1 bg-muted rounded-full overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-100 ease-linear" style={{ width: `${progress}%`, background: "linear-gradient(to right, hsl(175 55% 35%), hsl(175 55% 45%))" }} />
+                  </div>
+                  <p className="text-[9px] text-muted-foreground mt-1.5">Auto-advancing in {Math.max(0, Math.ceil((100 - progress) / 100 * 12))}s</p>
+                </div>
+              )}
+            </div>
+
+            <div className="order-1 lg:order-2">
+              <VisualMockup type={slide.visual} isActive={true} />
+            </div>
+          </div>
         </div>
-        <span className="text-[10px] text-muted-foreground">
-          {Math.ceil(((totalSlides - currentSlide) * SLIDE_DURATION) / 60000)} min remaining
-        </span>
+
+        {isLastSlide && (
+          <div className="flex items-center justify-center gap-4 mt-10 fade-in-up">
+            <Button size="lg" variant="outline" className="gap-2" onClick={() => { setCurrentSlide(0); setIsPlaying(true); setProgress(0); }} data-testid="button-replay">
+              <RotateCcw className="w-4 h-4" />
+              Replay Guide
+            </Button>
+            <Button size="lg" className="gap-2 shadow-lg" style={{ background: "linear-gradient(135deg, hsl(175 55% 35%), hsl(175 45% 28%))" }} onClick={() => navigate("/")} data-testid="button-go-dashboard">
+              Go to Dashboard
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/80 backdrop-blur-xl py-2.5 px-4 sm:px-6">
+        <div className="max-w-6xl mx-auto flex items-center justify-center gap-1">
+          {slides.map((s, i) => (
+            <button
+              key={s.id}
+              onClick={() => goTo(i)}
+              className={`rounded-full transition-all duration-300 ${
+                i === currentSlide ? "w-6 h-2" : "w-2 h-2 hover:bg-primary/40"
+              }`}
+              style={{
+                background: i === currentSlide
+                  ? "linear-gradient(to right, hsl(175 55% 35%), hsl(43 80% 55%))"
+                  : i < currentSlide
+                    ? "hsl(175 55% 35% / 0.3)"
+                    : "hsl(var(--muted-foreground) / 0.15)"
+              }}
+              data-testid={`dot-${i}`}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

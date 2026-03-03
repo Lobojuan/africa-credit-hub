@@ -1295,7 +1295,7 @@ Hali za makosa zinarekodwa kupitia `console.error()` kwa:
 - **Genesis:** Ingizo la kwanza la ukaguzi lina `previous_hash = "genesis"`
 - **Uthibitishaji:** Kila ingizo jipya linahesabu hash yake kutoka kwa hash ya ingizo la awali, likiunda mnyororo ambao haubadilishwi
 
-### 13.5 Mtiririko wa OAuth 2.1 (ENT-08)
+### 13.5 Mtiririko wa OAuth 2.1 (ENT-04)
 
 **Madhumuni:** Utekelezaji wa uthibitishaji wa Bearer token kwa ufikio wa API ya nje unaotii viwango.
 
@@ -1305,7 +1305,7 @@ Hali za makosa zinarekodwa kupitia `console.error()` kwa:
 - **Muundo wa Token:** JWT na kumalizika kunakoweza kusanidiwa
 - **Matumizi:** Njia mbadala ya uthibitishaji wa ufunguo wa API kwa muunganisho wa taasisi
 
-### 13.6 Uboreshaji wa Bandwidth Ndogo (ENT-09)
+### 13.6 Uboreshaji wa Bandwidth Ndogo (ENT-05)
 
 **Madhumuni:** Kuboresha utendaji kwa mazingira ya bandwidth ndogo, muhimu kwa uwekaji katika nchi za Afrika.
 
@@ -1313,7 +1313,7 @@ Hali za makosa zinarekodwa kupitia `console.error()` kwa:
 - **Ukandamizaji wa gzip:** Middleware ya ukandamizaji kwenye Express.js
 - **Mgawanyo wa msimbo:** `React.lazy()` na `Suspense` kwa upakiaji wa kurasa zinazosubiri
 
-### 13.7 Usimamizi wa Viwango vya Ubadilishaji (ENT-10)
+### 13.7 Usimamizi wa Viwango vya Ubadilishaji (ENT-08)
 
 **Madhumuni:** Mfumo kamili wa usimamizi wa viwango vya ubadilishaji wa sarafu kwa sarafu 42+ za Afrika.
 
@@ -1324,7 +1324,7 @@ Hali za makosa zinarekodwa kupitia `console.error()` kwa:
 - **Kifaa cha Kubadilisha:** Kifaa cha kubadilisha sarafu upande wa mteja kilichojengwa ndani ya ukurasa wa viwango vya ubadilishaji
 - **Ratiba:** Msasishaji wa ratiba ya viwango vya ubadilishaji wenye muda wa saa 24
 
-### 13.8 Usimamizi wa API (ENT-11)
+### 13.8 Usimamizi wa API (ENT-09)
 
 **Madhumuni:** Usimamizi wa kati wa usanidi wa API ya nje na upimaji wa muunganisho.
 
@@ -1334,7 +1334,7 @@ Hali za makosa zinarekodwa kupitia `console.error()` kwa:
 - **Ulinzi wa SSRF:** Uthibitishaji wa URL ili kuzuia maombi ya seva za ndani
 - **Mipangilio ya Nchi:** Usanidi wa kila nchi kwa uhusiano wa API mahususi wa mamlaka
 
-### 13.9 Sera za Uhifadhi wa Data (ENT-12)
+### 13.9 Sera za Uhifadhi wa Data (ENT-10)
 
 **Madhumuni:** Sera za uhifadhi wa data mahususi kwa mamlaka na utekelezaji otomatiki.
 
@@ -1344,7 +1344,27 @@ Hali za makosa zinarekodwa kupitia `console.error()` kwa:
 - **Uanzishaji wa Mkono:** `POST /api/retention-policies/enforce` kwa utekelezaji kwa mkono
 - **Kitendo:** Rekodi zilizopita tarehe ya uhifadhi zimeondolewa (kufutwa laini au ngumu kulingana na sera)
 
-### 13.10 Mazingira ya Maonyesho ya Wawekezaji (ENT-13)
+### 13.10 Utatuzi wa Taasisi za Kimataifa (ENT-11)
+
+**Madhumuni:** Utambuzi ulioboreshwa wa wakopaji wa kimataifa kwa kutumia nambari za pasipoti, aina za uhusiano zilizopanuliwa, na ulinganishaji wa ukaribu katika sehemu nyingi za utambulisho.
+
+**Usanifu:**
+- **Sehemu ya Pasipoti:** Safu ya `passport_number` (text, inaweza kuwa tupu) kwenye jedwali la `borrowers` kwa utambulisho wa kimataifa
+- **Aina za Uhusiano:** Aina 7 zinazosaidiwa — `spouse`, `guarantor`, `director`, `shareholder`, `beneficial_owner`, `subsidiary`, `parent_company`
+- **Ulinganishaji wa Ukaribu:** Ufanano wa trigram wa PostgreSQL `pg_trgm` umepanuliwa kulinganisha kwenye nambari ya pasipoti, TIN, na sehemu za jina
+- **Mwisho:** `GET /api/borrowers/fuzzy-match?name=<query>` — inarudisha nakala zinazowezekana na alama za ufanano katika sehemu zote za utambulisho
+
+### 13.11 Msaada wa Lugha ya Kireno (ENT-12)
+
+**Madhumuni:** Utafsiri kamili wa Kireno (pt) kwa kiolesura chote cha mfumo, ukipanua tafsiri zilizopo za Kiingereza/Kifaransa.
+
+**Usanifu:**
+- **Faili ya Tafsiri:** `client/src/lib/i18n-pt.ts` — rasilimali kamili ya tafsiri ya PT inayoshughulikia maneno yote ya UI
+- **Ushirikiano:** Imesajiliwa kama rasilimali ya lugha ya `pt` katika usanidi wa i18next wa `client/src/lib/i18n.ts`
+- **Kibadilishi cha Lugha:** Kichaguzi cha lugha cha mkono kinapatikana kwenye ukurasa wa kuingia na kichwa cha programu kuu (`client/src/components/language-switcher.tsx`)
+- **Upeo:** Urambazaji wote, fomu, ujumbe wa makosa, lebo za dashibodi, na funguo za kipengele maalum (MFA, chatbot, kupakia kwa wingi, migogoro, n.k.)
+
+### 13.12 Mazingira ya Maonyesho ya Wawekezaji (ENT-13)
 
 **Madhumuni:** Ufikiaji wa maonyesho kwa kubonyeza mara moja kwa wawekezaji, watathimini, na wadau kuchunguza mfumo kamili kwa kutumia vitambulisho vilivyosanidiwa mapema kulingana na majukumu bila kuhitaji usanidi wa akaunti.
 
@@ -1354,7 +1374,7 @@ Hali za makosa zinarekodwa kupitia `console.error()` kwa:
 - **Kanusho la Data:** Taarifa ya onyo kwenye ukurasa wa uchaguzi wa maonyesho inaarifu watumiaji kuwa data yote ni data ya majaribio iliyopandwa (wakopaji 102,462, akaunti za mikopo 172,359 katika nchi 54)
 - **Ushughulikiaji wa Kipindi:** Kuingia kwa maonyesho kunatumia mtiririko wa kawaida wa uthibitishaji na vitambulisho vilivyopandwa mapema
 
-### 13.11 Uchambuzi wa Kuona wa Dashibodi (ENT-14)
+### 13.13 Uchambuzi wa Kuona wa Dashibodi (ENT-14)
 
 **Madhumuni:** Mkusanyiko wa taswira za data za maingiliano kwa dashibodi, unaotoa muhtasari wa kwingineko kwa mtazamo mmoja kupitia chati zinazobadilika na ramani ya choropleth ya kijiografia ya nchi zote 54 za Afrika.
 
@@ -1371,7 +1391,7 @@ Hali za makosa zinarekodwa kupitia `console.error()` kwa:
 - **Hali ya Giza:** Msaada kamili wa hali ya giza kupitia kugundua vigeu vya CSS; rangi za chati na mandharinyuma zinabadilika kulingana na mandhari inayotumika
 - **Ubadilishaji:** Chati zote zinatumia `ResponsiveContainer` kwa ukubwa unaobadilika katika ukubwa wote wa skrini
 
-### 13.12 Ziara ya Maonyesho ya Maingiliano (ENT-15)
+### 13.14 Ziara ya Maonyesho ya Maingiliano (ENT-15)
 
 **Madhumuni:** Mwongozo wa hatua 11 unaotambulisha watumiaji wapya kwa vipengele muhimu vya mfumo katika mazingira ya maonyesho.
 
