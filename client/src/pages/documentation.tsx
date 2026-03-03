@@ -30,6 +30,7 @@ function formatSize(bytes: number) {
 
 function DocIcon({ id }: { id: string }) {
   const colors: Record<string, string> = {
+    "api-guide": "bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300",
     uat: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
     systems: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
     "users-manual": "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",

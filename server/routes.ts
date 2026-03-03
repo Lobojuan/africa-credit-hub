@@ -329,11 +329,12 @@ export async function registerRoutes(
   });
 
   app.get("/api/docs/api-integration-guide", (_req, res) => {
+    const _dir = typeof __dirname !== "undefined" ? __dirname : process.cwd();
     const candidates = [
       path.resolve(process.cwd(), "docs/API_Integration_Guide.md"),
-      path.resolve(__dirname, "docs/API_Integration_Guide.md"),
-      path.resolve(__dirname, "../docs/API_Integration_Guide.md"),
-      path.resolve(__dirname, "../../docs/API_Integration_Guide.md"),
+      path.resolve(_dir, "docs/API_Integration_Guide.md"),
+      path.resolve(_dir, "../docs/API_Integration_Guide.md"),
+      path.resolve(_dir, "../../docs/API_Integration_Guide.md"),
     ];
     const filePath = candidates.find(p => {
       try { return fs.existsSync(p); } catch { return false; }
@@ -1617,9 +1618,17 @@ export async function registerRoutes(
     }
   });
 
-  const DOCS_DIR = path.resolve(process.cwd(), "docs");
+  const _dirnameCompat = typeof __dirname !== "undefined" ? __dirname : process.cwd();
+  const DOCS_DIR_CANDIDATES = [
+    path.resolve(process.cwd(), "docs"),
+    path.resolve(_dirnameCompat, "docs"),
+    path.resolve(_dirnameCompat, "../docs"),
+    path.resolve(_dirnameCompat, "../../docs"),
+  ];
+  const DOCS_DIR = DOCS_DIR_CANDIDATES.find(d => fs.existsSync(d)) || path.resolve(process.cwd(), "docs");
   const SUPPORTED_DOC_LANGS = ["en", "fr", "ar", "sw"];
   const DOCS_LIST = [
+    { id: "api-guide", filename: "API_Integration_Guide.md", title: "API Integration Guide", description: "Complete guide for banks and lenders to connect via REST API — authentication, endpoints, data models, and examples" },
     { id: "uat", filename: "UAT_Test_Document.md", title: "UAT Test Document", description: "187 test cases across 22 modules with SRS traceability" },
     { id: "systems", filename: "Systems_Documentation.md", title: "Systems Documentation", description: "Technical architecture, data model, API catalog, security, deployment" },
     { id: "users-manual", filename: "Users_Manual.md", title: "Users Manual", description: "Step-by-step user guide for all roles with 24 sections" },
