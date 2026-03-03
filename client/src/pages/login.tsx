@@ -59,6 +59,8 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
+      sessionStorage.removeItem("demo_login");
+      sessionStorage.removeItem("demo_tour_pending");
       const result = await login(username, password);
       if ((result as any)?.requireMfa) {
         setMfaRequired(true);
