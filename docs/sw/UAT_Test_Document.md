@@ -49,6 +49,8 @@
 36. [Moduli ya Picha za Kitambulisho na Upakiaji wa Nyaraka](#36-moduli-ya-picha-za-kitambulisho-na-upakiaji-wa-nyaraka)
 37. [Moduli ya Mazingira ya Maonyesho](#37-moduli-ya-mazingira-ya-maonyesho)
 38. [Moduli ya Kubadili Lugha kwenye Ukurasa wa Kuingia](#38-moduli-ya-kubadili-lugha-kwenye-ukurasa-wa-kuingia)
+39. [Moduli ya Uchambuzi wa Kuona wa Dashibodi (ENT-14)](#39-moduli-ya-uchambuzi-wa-kuona-wa-dashibodi-ent-14)
+40. [Moduli ya Ziara ya Maonyesho ya Maingiliano (ENT-15)](#40-moduli-ya-ziara-ya-maonyesho-ya-maingiliano-ent-15)
 
 ---
 
@@ -62,7 +64,7 @@
 | Hifadhidata | PostgreSQL yenye meza 21 |
 | Majukumu ya Watumiaji | Admin, Regulator, Lender, Viewer |
 | Sarafu Zinazotumika | Sarafu 42+ za Afrika pamoja na USD, EUR, GBP |
-| Uboreshaji wa Biashara | MFA, Fuzzy Matching, Dispute Chatbot, OAuth 2.1, Low-Bandwidth, XBRL Upload, Tamper-Evident Audit, Exchange Rate Management, API Administration, Data Retention Policies, Global Search, ID Photos & Documents, Demo Environment |
+| Uboreshaji wa Biashara | MFA, Fuzzy Matching, Dispute Chatbot, OAuth 2.1, Low-Bandwidth, XBRL Upload, Tamper-Evident Audit, Exchange Rate Management, API Administration, Data Retention Policies, Global Search, ID Photos & Documents, Demo Environment, Dashboard Visual Analytics, Interactive Demo Tour |
 | Mamlaka | Nchi zote 54 za Afrika |
 | Lugha | English, French, Portuguese |
 | Data ya Msingi | Wakopaji 102K+, akaunti za mikopo 172K+, rekodi 120K za historia ya malipo, migogoro 3,218, hukumu za mahakama 2,147 |
@@ -475,8 +477,8 @@
 
 | Kipengele | Maelezo |
 |------|--------|
-| Jumla ya Visa vya Jaribio | 197+ |
-| Moduli Zilizofunikwa | 38 |
+| Jumla ya Visa vya Jaribio | 311 |
+| Moduli Zilizofunikwa | 40 |
 | Rejea za SRS | Zimeorodheshwa kwa kila jaribio |
 
 ### Sahihi za Kupitisha

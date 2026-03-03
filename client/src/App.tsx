@@ -17,7 +17,7 @@ import { PasswordChangeDialog } from "@/components/password-change-dialog";
 import { Button } from "@/components/ui/button";
 import { LogOut, Loader2, MessageCircle } from "lucide-react";
 import { DisputeChatbot } from "@/components/dispute-chatbot";
-import { DemoTour } from "@/components/demo-tour";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import LoginPage from "@/pages/login";
 import NotFound from "@/pages/not-found";
@@ -97,20 +97,11 @@ function Router() {
 function AuthenticatedApp() {
   const { user, isLoading, logout, passwordExpired } = useAuth();
   const [chatbotOpen, setChatbotOpen] = useState(false);
-  const [showTour, setShowTour] = useState(false);
   const { t, i18n } = useTranslation();
 
   useEffect(() => {
     document.documentElement.dir = i18n.language === "ar" ? "rtl" : "ltr";
   }, [i18n.language]);
-
-  useEffect(() => {
-    if (sessionStorage.getItem("demo_tour_pending") === "true") {
-      sessionStorage.removeItem("demo_tour_pending");
-      const timer = setTimeout(() => setShowTour(true), 800);
-      return () => clearTimeout(timer);
-    }
-  }, []);
 
   if (isLoading) {
     return (
@@ -129,25 +120,11 @@ function AuthenticatedApp() {
     "--sidebar-width-icon": "3rem",
   };
 
-  const isDemoLogin = sessionStorage.getItem("demo_login") === "true";
-
   return (
     <SidebarProvider style={style as React.CSSProperties}>
       <div className="flex h-screen w-full">
         <AppSidebar />
         <div className="flex flex-col flex-1 min-w-0">
-          {isDemoLogin && (
-            <div className="bg-amber-500 text-white text-center text-xs font-semibold py-1 px-3 shrink-0 flex items-center justify-center gap-3" data-testid="banner-demo">
-              <span>{t('login.demoBanner')}</span>
-              <button
-                onClick={() => setShowTour(true)}
-                className="underline underline-offset-2 hover:no-underline text-white/90"
-                data-testid="button-start-tour"
-              >
-                {t('demoTour.startTour')}
-              </button>
-            </div>
-          )}
           <header className="flex items-center gap-1 sm:gap-2 p-2 border-b shrink-0 overflow-hidden ltr-header">
             <SidebarTrigger data-testid="button-sidebar-toggle" className="shrink-0" />
             <div className="flex items-center gap-1 sm:gap-3 shrink-0 ml-auto ltr-header">
@@ -165,7 +142,6 @@ function AuthenticatedApp() {
                   e.preventDefault();
                   e.stopPropagation();
                   try {
-                    sessionStorage.removeItem("demo_login");
                     await logout();
                   } catch {
                     window.location.href = "/";
@@ -195,7 +171,6 @@ function AuthenticatedApp() {
         </button>
       )}
       <DisputeChatbot open={chatbotOpen} onOpenChange={setChatbotOpen} />
-      {showTour && <DemoTour onClose={() => setShowTour(false)} />}
     </SidebarProvider>
   );
 }
