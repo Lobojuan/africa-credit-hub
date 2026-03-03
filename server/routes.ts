@@ -328,8 +328,18 @@ export async function registerRoutes(
     res.json({ ...userData, passwordExpired });
   });
 
+  app.get("/api/docs/api-integration-guide", (_req, res) => {
+    const filePath = path.resolve(process.cwd(), "docs/API_Integration_Guide.md");
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+    res.setHeader("Content-Type", "text/markdown; charset=utf-8");
+    res.setHeader("Content-Disposition", 'attachment; filename="CDH_API_Integration_Guide.md"');
+    fs.createReadStream(filePath).pipe(res);
+  });
+
   app.use("/api", (req, res, next) => {
-    if (req.path.startsWith("/auth") || req.path.startsWith("/external")) return next();
+    if (req.path.startsWith("/auth") || req.path.startsWith("/external") || req.path.startsWith("/docs")) return next();
     requireAuth(req, res, next);
   });
 
