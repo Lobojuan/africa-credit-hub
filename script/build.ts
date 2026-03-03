@@ -1,6 +1,6 @@
 import { build as esbuild } from "esbuild";
 import { build as viteBuild } from "vite";
-import { rm, readFile, mkdir, copyFile } from "fs/promises";
+import { rm, readFile, mkdir, copyFile, readdir } from "fs/promises";
 
 // server deps to bundle to reduce openat(2) syscalls
 // which helps cold start times
@@ -93,6 +93,15 @@ async function buildAll() {
   for (const route of spaRoutes) {
     await mkdir(`dist/public/${route}`, { recursive: true });
     await copyFile("dist/public/index.html", `dist/public/${route}/index.html`);
+  }
+
+  console.log("copying docs folder...");
+  await mkdir("dist/docs", { recursive: true });
+  const docFiles = await readdir("docs");
+  for (const file of docFiles) {
+    if (file.endsWith(".md")) {
+      await copyFile(`docs/${file}`, `dist/docs/${file}`);
+    }
   }
 }
 

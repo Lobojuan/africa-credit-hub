@@ -329,8 +329,13 @@ export async function registerRoutes(
   });
 
   app.get("/api/docs/api-integration-guide", (_req, res) => {
-    const filePath = path.resolve(process.cwd(), "docs/API_Integration_Guide.md");
-    if (!fs.existsSync(filePath)) {
+    const candidates = [
+      path.resolve(process.cwd(), "docs/API_Integration_Guide.md"),
+      path.resolve(__dirname, "../docs/API_Integration_Guide.md"),
+      path.resolve(__dirname, "../../docs/API_Integration_Guide.md"),
+    ];
+    const filePath = candidates.find(p => fs.existsSync(p));
+    if (!filePath) {
       return res.status(404).json({ message: "Document not found" });
     }
     res.setHeader("Content-Type", "text/markdown; charset=utf-8");
