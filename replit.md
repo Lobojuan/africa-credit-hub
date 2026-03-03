@@ -51,6 +51,9 @@ The system utilizes a modern full-stack architecture designed for scalability an
 
 ## External Dependencies
 -   **Database**: PostgreSQL (Neon)
--   **Frontend**: React, TypeScript, Vite, Tailwind CSS, shadcn/ui, wouter, react-i18next
--   **Backend**: Express.js, bcryptjs, express-session, Drizzle ORM, compression, jsonwebtoken, otpauth
+-   **Frontend**: React, TypeScript, Vite, Tailwind CSS, shadcn/ui, wouter, react-i18next, Recharts
+-   **Backend**: Express.js, bcryptjs, express-session, Drizzle ORM, compression, jsonwebtoken, otpauth, pdfkit
+-   **Payments**: Stripe integration (connected via Replit connector `conn_stripe_01KJSTY6E6PSMZRZK1JD9RP0SF`). Products: Standard ($299/mo), Professional ($799/mo), Enterprise ($1,999/mo). Checkout, portal, and webhook endpoints at `/api/stripe/*`. Webhook route MUST stay before `express.json()` in `server/index.ts`.
+-   **Email**: SendGrid email service (`server/email.ts`) with templates for welcome, billing, and dispute notifications. Currently in **stub mode** — logs email events but does not send. To activate: set `SENDGRID_API_KEY` environment secret and install `@sendgrid/mail` package. The user dismissed the Replit SendGrid connector; use manual API key when ready.
+-   **PDF**: Server-side PDF invoice generation via pdfkit at `GET /api/admin/organizations/:orgId/billing/:billingId/pdf`.
 -   **Third-Party APIs**: open.er-api.com (for exchange rates), DiceBear (for avatars).

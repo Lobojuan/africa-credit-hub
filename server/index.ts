@@ -71,8 +71,9 @@ app.use(
     secret: process.env.SESSION_SECRET || "credit-registry-dev-secret",
     resave: false,
     saveUninitialized: false,
+    proxy: process.env.NODE_ENV === "production",
     cookie: {
-      secure: false,
+      secure: process.env.NODE_ENV === "production",
       httpOnly: true,
       maxAge: 8 * 60 * 60 * 1000,
       sameSite: "lax",
