@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, CreditCard, Search, FileText, Shield, Settings,
   CheckSquare, AlertCircle, Upload, Building2, Headset, Globe, DollarSign,
   Scale, ChevronRight, ChevronLeft, Play, Pause, RotateCcw,
-  Monitor, MapPin, BookOpen, ArrowRight,
+  Monitor, MapPin, BookOpen, ArrowRight, Brain, Bell, Sparkles,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -44,7 +44,7 @@ const slides: Slide[] = [
   {
     id: "dashboard-overview", section: "Dashboard", sectionIcon: LayoutDashboard,
     title: "Your Dashboard — The Command Center",
-    narration: "The Dashboard is your landing page after login. At the top, four summary cards show you the key numbers at a glance: Total Borrowers, Total Credit Accounts, Active Disputes, and Pending Approvals. These update in real time as data flows into the system.",
+    narration: "The Dashboard is your landing page after login. At the top, four summary cards show you the key numbers at a glance: Total Borrowers, Total Credit Accounts, Active Disputes, and Pending Approvals. Each card includes a sparkline mini-chart showing 7-day trends below the stat number. These update in real time as data flows into the system. Look for the notification bell in the header area — it shows a red badge with your unread notification count.",
     visual: "dashboard",
     roleNotes: [
       { role: "Administrator", note: "You see data across ALL institutions and countries" },
@@ -86,7 +86,7 @@ const slides: Slide[] = [
   {
     id: "borrower-detail", section: "Borrowers", sectionIcon: Users,
     title: "Borrower Detail Page",
-    narration: "Click any borrower row to open their full profile. See all linked credit accounts, payment history, credit inquiries, court judgments, and consent records. Generate a comprehensive credit report by clicking the 'Generate Credit Report' button.",
+    narration: "Click any borrower row to open their full profile. See all linked credit accounts, payment history, credit inquiries, court judgments, and consent records. Generate a comprehensive credit report by clicking the 'Generate Credit Report' button. You'll also find the purple-gradient 'AI Risk Analysis' button — click it to get an AI-powered risk assessment with a risk score, key risk factors, actionable recommendations, and regulatory flags.",
     visual: "detail-borrower",
   },
   {
@@ -106,7 +106,7 @@ const slides: Slide[] = [
   {
     id: "credit-report", section: "Credit Reports", sectionIcon: FileText,
     title: "Generating Credit Reports",
-    narration: "From a borrower's detail page, click 'Generate Credit Report'. The system produces a comprehensive D&B-style report with a Credit Profile Overview, liability breakdown, aging analysis, credit exposure, and detailed facility cards with 24-month payment history grids.",
+    narration: "From a borrower's detail page, click 'Generate Credit Report'. The system produces a comprehensive D&B-style report with a Credit Profile Overview, liability breakdown, aging analysis, credit exposure, and detailed facility cards with 24-month payment history grids. Use the 'AI Summary' button to generate a plain-language overview of the report. When downloading as PDF, choose from English, French, Arabic, or Swahili using the language selector.",
     visual: "report",
     tips: ["Each report gets a unique serial number for audit tracking", "Bureau Score ranges from 300 to 850 with grade and factor analysis", "Every report generation is logged in the audit trail"],
   },
@@ -133,7 +133,7 @@ const slides: Slide[] = [
   {
     id: "audit", section: "Audit Trail", sectionIcon: Shield,
     title: "Tamper-Evident Audit Trail",
-    narration: "Click 'Audit Trail' to see every action: record creations, modifications, report generations, login attempts, and approvals. Each entry shows Timestamp, User, Action, Entity, and Details. The audit log uses SHA-256 hash chaining — entries cannot be tampered with.",
+    narration: "Click 'Audit Trail' to see every action: record creations, modifications, report generations, login attempts, and approvals. Each entry shows Timestamp, User, Action, Entity, and Details. The audit log uses SHA-256 hash chaining — entries cannot be tampered with. Toggle between table and timeline views, use date range filters to narrow results, and export filtered records as CSV or Excel using the export buttons.",
     visual: "audit",
   },
   {
@@ -157,19 +157,45 @@ const slides: Slide[] = [
   {
     id: "compliance", section: "Compliance", sectionIcon: Scale,
     title: "Regulatory Compliance Dashboard",
-    narration: "Navigate to 'Regulatory Compliance'. This dashboard shows compliance metrics: data submission rates, dispute resolution SLA performance, consent coverage, and NPL ratios. Traffic-light indicators show green (compliant), yellow (at risk), or red (non-compliant).",
+    narration: "Navigate to 'Regulatory Compliance'. This dashboard shows compliance metrics: data submission rates, dispute resolution SLA performance, consent coverage, and NPL ratios. Traffic-light indicators show green (compliant), yellow (at risk), or red (non-compliant). Use the 'Generate AI Compliance Report' button with the country selector to produce an AI-powered compliance assessment for any jurisdiction.",
     visual: "compliance",
   },
   {
     id: "helpdesk", section: "Support", sectionIcon: Headset,
     title: "Getting Help",
-    narration: "Need assistance? Use the Helpdesk for support tickets, the Online Manual for searchable help articles, or the Documentation page for the API Integration Guide. The floating chatbot (bottom-right) lets you ask questions, file disputes, or browse FAQs without leaving the page.",
+    narration: "Need assistance? Use the Helpdesk for support tickets, the Online Manual for searchable help articles, or the Documentation page for the API Integration Guide. The floating chatbot (bottom-right) lets you ask questions, file disputes, or browse FAQs without leaving the page. Click the Sparkles icon in the chatbot to switch to AI Assistant mode — it uses GPT-4o to answer questions about credit data, regulations, and system features.",
     visual: "help",
+  },
+  {
+    id: "ai-features", section: "AI Features", sectionIcon: Brain,
+    title: "AI-Powered Intelligence",
+    narration: "The platform integrates OpenAI GPT-4o for intelligent analysis. On any borrower's detail page, click the purple 'AI Risk Analysis' button to get a comprehensive risk assessment with score, risk factors, and recommendations. On credit reports, use 'AI Summary' for a plain-language overview. The chatbot includes an AI Assistant mode for answering questions about credit data and regulations.",
+    visual: "ai-features",
+    tips: ["AI analysis considers all borrower data including accounts, disputes, and payment history", "AI responses are generated fresh each time based on current data", "The AI chatbot supports streaming responses for real-time interaction"],
+  },
+  {
+    id: "notifications", section: "Notifications", sectionIcon: Bell,
+    title: "Real-Time Notifications",
+    narration: "The notification bell in the header keeps you informed of important events — new disputes, approval requests, system alerts, and more. A red badge shows your unread count. Click the bell to see recent notifications, click any notification to navigate to the relevant page, or mark them all as read.",
+    visual: "notifications",
+  },
+  {
+    id: "excel-export", section: "Reports & Export", sectionIcon: FileText,
+    title: "Excel & CSV Export",
+    narration: "On the Reports page, download portfolio data, borrower lists, or audit trail records in both CSV and Excel (XLSX) format. Excel files include formatted headers with teal styling. On the Audit Trail page, use the export buttons after applying date range filters to download just the filtered records.",
+    visual: "export",
+  },
+  {
+    id: "api-usage", section: "Administration", sectionIcon: Building2,
+    title: "API Usage Analytics",
+    narration: "Administrators can monitor API usage from the 'API Administration' page. Switch to the 'API Usage Analytics' tab to see total requests today, requests this hour, and a breakdown of the most-called endpoints. A bar chart shows hourly request volume for the last 24 hours.",
+    visual: "api-usage",
+    roleNotes: [{ role: "Administrator", note: "Only administrators and super admins can view API usage analytics" }],
   },
   {
     id: "end", section: "That's It!", sectionIcon: Globe,
     title: "You're Ready to Go",
-    narration: "That covers all the key features. Remember: the sidebar is your main navigation, the dashboard gives you real-time overview, and every action is logged for audit compliance. Replay this guide anytime from the sidebar under 'App Guide'.",
+    narration: "That covers all the key features — including AI-powered risk analysis, AI report summaries, the AI chatbot assistant, real-time notifications, multi-language PDF reports, and Excel exports. Remember: the sidebar is your main navigation, the dashboard gives you real-time overview, and every action is logged for audit compliance. Replay this guide anytime from the sidebar under 'App Guide'.",
     visual: "end",
   },
 ];
@@ -285,6 +311,11 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
                 <c.icon className="w-4 h-4 text-muted-foreground/40 mb-2" />
                 <p className="text-[9px] text-muted-foreground uppercase tracking-wider">{c.label}</p>
                 <p className="text-xl font-black mt-1 tracking-tight">{c.value}</p>
+                <div className="flex items-end gap-[2px] h-3 mt-1.5">
+                  {[3, 5, 4, 6, 5, 7, 6].map((h, j) => (
+                    <div key={j} className="flex-1 rounded-t-sm" style={{ height: `${h * 14}%`, background: `linear-gradient(to top, hsl(175 55% 35% / 0.5), hsl(175 55% 35% / 0.1))` }} />
+                  ))}
+                </div>
               </div>
             ))}
           </div>
@@ -453,7 +484,10 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: "linear-gradient(135deg, hsl(175 55% 35% / 0.15), hsl(175 55% 35% / 0.05))" }}><Users className="w-7 h-7 text-primary" /></div>
             <div><p className="text-base font-bold">Amara Osei</p><p className="text-[11px] text-muted-foreground">Individual · GHA-29384756 · 🇬🇭 Ghana</p></div>
-            <div className="ml-auto h-9 px-4 rounded-lg flex items-center text-white text-[11px] font-semibold shadow-md" style={{ background: "linear-gradient(135deg, hsl(175 55% 35%), hsl(175 45% 28%))" }}><FileText className="w-3.5 h-3.5 mr-2" />Credit Report</div>
+            <div className="ml-auto flex gap-2">
+              <div className="h-9 px-4 rounded-lg flex items-center text-white text-[11px] font-semibold shadow-md" style={{ background: "linear-gradient(135deg, hsl(270 60% 50%), hsl(280 55% 40%))" }}><Brain className="w-3.5 h-3.5 mr-2" />AI Risk Analysis</div>
+              <div className="h-9 px-4 rounded-lg flex items-center text-white text-[11px] font-semibold shadow-md" style={{ background: "linear-gradient(135deg, hsl(175 55% 35%), hsl(175 45% 28%))" }}><FileText className="w-3.5 h-3.5 mr-2" />Credit Report</div>
+            </div>
           </div>
           <div className="grid grid-cols-3 gap-3">
             {[{ l: "Credit Score", v: "720", c: "text-green-600 dark:text-green-400", bg: "bg-green-50 dark:bg-green-950/20" }, { l: "Total Accounts", v: "3", bg: "bg-blue-50 dark:bg-blue-950/20" }, { l: "Outstanding", v: "GHS 125K", bg: "bg-amber-50 dark:bg-amber-950/20" }].map(c => (
@@ -709,6 +743,130 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
           <div className="flex items-center gap-3 p-4 rounded-xl border bg-primary/5">
             <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shrink-0"><Headset className="w-5 h-5 text-primary-foreground" /></div>
             <div><p className="text-[11px] font-bold">AI Chatbot Assistant</p><p className="text-[9px] text-muted-foreground">Always available — click the floating button (bottom-right)</p></div>
+          </div>
+        </div>
+      );
+    case "ai-features":
+      return (
+        <div className={`${base} bg-card border border-border/50 space-y-4`}>
+          <div className="p-5 rounded-t-2xl text-white relative overflow-hidden" style={{ background: "linear-gradient(135deg, hsl(270 60% 45%), hsl(280 50% 35%))" }}>
+            <GlowOrb className="w-32 h-32 -top-10 -right-10" color="hsl(270 60% 60%)" />
+            <div className="relative z-10 flex items-center gap-3">
+              <Brain className="w-5 h-5" />
+              <div>
+                <span className="text-sm font-bold">AI-Powered Risk Analysis</span>
+                <p className="text-[9px] text-white/40 mt-0.5">GPT-4o Intelligence Engine</p>
+              </div>
+            </div>
+          </div>
+          <div className="px-5 pb-5 space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <svg viewBox="0 0 36 36" className="w-20 h-20 -rotate-90">
+                  <circle cx="18" cy="18" r="15" fill="none" stroke="currentColor" className="text-muted/20" strokeWidth="3" />
+                  <circle cx="18" cy="18" r="15" fill="none" stroke="hsl(45 90% 50%)" strokeWidth="3" strokeDasharray="68 94" />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center"><p className="text-lg font-black">72</p><p className="text-[7px] text-muted-foreground">/100</p></div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Badge variant="secondary" className="text-[9px]">MEDIUM RISK</Badge>
+                <div className="space-y-1">
+                  {["High debt-to-income ratio (62%)", "3 recent credit inquiries", "Short credit history (< 2 years)"].map(f => (
+                    <div key={f} className="flex items-center gap-1.5 text-[10px] text-muted-foreground"><AlertCircle className="w-3 h-3 text-amber-500 shrink-0" />{f}</div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 p-3 rounded-xl border bg-purple-50 dark:bg-purple-950/20">
+              <Sparkles className="w-4 h-4 text-purple-500 shrink-0" />
+              <p className="text-[10px] text-muted-foreground">AI recommendations and regulatory flags included</p>
+            </div>
+          </div>
+        </div>
+      );
+    case "notifications":
+      return (
+        <div className={`${base} bg-card border border-border/50 p-5 space-y-4`}>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="relative">
+              <Bell className="w-5 h-5 text-primary" />
+              <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center"><span className="text-[8px] text-white font-bold">3</span></div>
+            </div>
+            <span className="text-sm font-semibold">Notifications</span>
+          </div>
+          <div className="space-y-2">
+            {[
+              { icon: AlertCircle, title: "New dispute filed", desc: "DSP-047 by Amara Osei", time: "2 min ago", ic: "text-amber-500" },
+              { icon: CheckSquare, title: "Approval needed", desc: "New borrower: Fatima El-Rashid", time: "15 min ago", ic: "text-blue-500" },
+              { icon: Shield, title: "System update", desc: "Exchange rates synced successfully", time: "1 hour ago", ic: "text-green-500" },
+            ].map(n => (
+              <div key={n.title} className="flex items-start gap-3 p-3 rounded-xl border hover:bg-muted/20 transition-colors">
+                <div className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center shrink-0 mt-0.5"><n.icon className={`w-4 h-4 ${n.ic}`} /></div>
+                <div className="flex-1 min-w-0"><p className="text-[11px] font-semibold">{n.title}</p><p className="text-[9px] text-muted-foreground">{n.desc}</p></div>
+                <span className="text-[9px] text-muted-foreground shrink-0">{n.time}</span>
+              </div>
+            ))}
+          </div>
+          <div className="text-center"><span className="text-[10px] text-primary font-medium">Mark all as read</span></div>
+        </div>
+      );
+    case "export":
+      return (
+        <div className={`${base} bg-card border border-border/50 p-5 space-y-4`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2"><FileText className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">Reports Export</span></div>
+            <div className="flex gap-2">
+              <div className="h-8 px-3 rounded-lg flex items-center text-[10px] font-semibold border hover:bg-muted/20 transition-colors gap-1.5"><FileText className="w-3 h-3" />CSV</div>
+              <div className="h-8 px-3 rounded-lg flex items-center text-white text-[10px] font-semibold shadow-md gap-1.5" style={{ background: "linear-gradient(135deg, hsl(175 55% 35%), hsl(175 45% 28%))" }}><FileText className="w-3 h-3" />Excel</div>
+            </div>
+          </div>
+          <div className="border rounded-xl overflow-hidden">
+            <div className="grid grid-cols-4 text-[9px] font-semibold text-white" style={{ background: "linear-gradient(135deg, hsl(175 55% 35%), hsl(175 45% 28%))" }}>
+              {["Name", "Account #", "Balance", "Status"].map(h => <div key={h} className="px-3 py-2">{h}</div>)}
+            </div>
+            {[
+              ["Amara Osei", "TL-2024-001", "GHS 50,000", "Current"],
+              ["Safaricom PLC", "OD-2024-015", "KES 2.5M", "Current"],
+              ["F. El-Rashid", "MG-2024-008", "EGP 850K", "Delinquent"],
+            ].map((row, i) => (
+              <div key={i} className="grid grid-cols-4 text-[10px] border-t">
+                {row.map((cell, j) => <div key={j} className={`px-3 py-2 ${j === 0 ? "font-medium" : "text-muted-foreground"}`}>{cell}</div>)}
+              </div>
+            ))}
+          </div>
+          <p className="text-[9px] text-muted-foreground text-center">Excel files include formatted headers with teal styling</p>
+        </div>
+      );
+    case "api-usage":
+      return (
+        <div className={`${base} bg-card border border-border/50 p-5 space-y-4`}>
+          <div className="flex items-center gap-2"><Building2 className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">API Usage Analytics</span></div>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { label: "Requests Today", value: "1,247", icon: Globe, gradient: "from-blue-500 to-blue-600" },
+              { label: "This Hour", value: "89", icon: Monitor, gradient: "from-teal-500 to-teal-600" },
+            ].map(c => (
+              <div key={c.label} className="relative rounded-xl p-4 border shadow-sm overflow-hidden">
+                <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${c.gradient}`} />
+                <c.icon className="w-4 h-4 text-muted-foreground/40 mb-1" />
+                <p className="text-[9px] text-muted-foreground uppercase tracking-wider">{c.label}</p>
+                <p className="text-xl font-black mt-0.5">{c.value}</p>
+              </div>
+            ))}
+          </div>
+          <div className="border rounded-xl p-4">
+            <p className="text-[10px] font-semibold text-muted-foreground mb-3">Hourly Volume — Last 24h</p>
+            <div className="flex items-end gap-[3px] h-20">
+              {[20, 35, 28, 42, 55, 48, 62, 38, 45, 72, 58, 65, 42, 35, 28, 50, 68, 75, 60, 45, 38, 52, 48, 30].map((h, i) => (
+                <div key={i} className="flex-1 rounded-t-sm" style={{ height: `${h}%`, background: `linear-gradient(to top, hsl(175 55% 35% / 0.6), hsl(175 55% 35% / 0.15))` }} />
+              ))}
+            </div>
+            <div className="flex justify-between mt-2">
+              <span className="text-[8px] text-muted-foreground">24h ago</span>
+              <span className="text-[8px] text-muted-foreground">Now</span>
+            </div>
           </div>
         </div>
       );
