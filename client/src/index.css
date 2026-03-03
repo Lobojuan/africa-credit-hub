@@ -415,3 +415,67 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
   margin-right: unset;
 }
 
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm 10mm;
+  }
+
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  [data-testid="credit-report-content"],
+  [data-testid="credit-report-content"] * {
+    visibility: visible;
+  }
+
+  [data-testid="credit-report-content"] {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+
+  nav, aside, header, [data-testid="sidebar"],
+  .sidebar, [role="navigation"] {
+    display: none !important;
+  }
+
+  [data-testid="credit-report-content"] .border {
+    border-color: #d1d5db !important;
+  }
+
+  [data-testid="credit-report-content"] table {
+    page-break-inside: auto;
+  }
+
+  [data-testid="credit-report-content"] tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  [data-testid="credit-report-content"] .print\:break-inside-avoid {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  [data-testid="credit-report-content"] > div {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+

@@ -155,13 +155,33 @@ export default function ReportsPage() {
     generateMutation.mutate();
   };
 
-  const handleDownloadPdf = () => {
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownloadPdf = async () => {
     if (!selectedBorrower) return;
-    const params = new URLSearchParams({
-      purpose,
-      currency: reportCurrency,
-    });
-    window.open(`/api/credit-reports/${selectedBorrower.id}/download?${params.toString()}`, "_blank");
+    setIsDownloading(true);
+    try {
+      const genRes = await apiRequest("POST", "/api/credit-reports/generate", {
+        borrowerId: selectedBorrower.id,
+        purpose,
+        reportCurrency,
+      });
+      const reportData = await genRes.json();
+      const pdfRes = await apiRequest("POST", "/api/credit-reports/download-pdf", { reportData });
+      const blob = await pdfRes.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Credit_Report_${reportData.serialNumber}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("PDF download failed:", e);
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const lenderBreakdown = accounts ? accounts.reduce<Record<string, { count: number; total: number; delinquent: number; currencies: Record<string, number> }>>((acc, a) => {
@@ -313,11 +333,11 @@ export default function ReportsPage() {
                   <Button
                     variant="outline"
                     onClick={handleDownloadPdf}
-                    disabled={generateMutation.isPending}
+                    disabled={isDownloading || generateMutation.isPending}
                     data-testid="button-download-pdf"
                   >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download PDF
+                    {isDownloading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+                    {isDownloading ? "Generating PDF..." : "Download PDF"}
                   </Button>
                   <Button
                     onClick={handleGenerate}

@@ -1402,6 +1402,319 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/credit-reports/download-pdf", async (req, res) => {
+    try {
+      const { reportData } = req.body;
+      if (!reportData) return res.status(400).json({ message: "reportData is required" });
+
+      const PDFDocument = (await import("pdfkit")).default;
+      const doc = new PDFDocument({ size: "A4", margins: { top: 40, bottom: 40, left: 40, right: 40 }, bufferPages: true });
+      const chunks: Buffer[] = [];
+      doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+
+      const TEAL = "#0d4a42";
+      const DARK = "#1a1a1a";
+      const GRAY = "#555555";
+      const LIGHT = "#888888";
+      const W = doc.page.width - 80;
+
+      function drawHeader() {
+        doc.rect(40, 40, W, 60).fill(TEAL);
+        doc.fill("#ffffff").fontSize(14).font("Helvetica-Bold")
+          .text("Comprehensive Credit Information Report", 50, 52, { width: W - 140 });
+        doc.fontSize(8).font("Helvetica").fill("#cccccc")
+          .text("Cross-Jurisdictional Central Data Hub v1.2 | Systems In Motion Limited", 50, 72, { width: W - 140 });
+        doc.fill("#ffffff").fontSize(7).font("Helvetica")
+          .text("ORDER NUMBER", W - 90, 52, { width: 80, align: "right" });
+        doc.fontSize(9).font("Helvetica-Bold")
+          .text(reportData.serialNumber || "", W - 90, 63, { width: 80, align: "right" });
+        doc.fill(DARK);
+        doc.y = 115;
+      }
+
+      function sectionTitle(title: string, num?: number) {
+        ensureSpace(30);
+        doc.moveDown(0.5);
+        const y = doc.y;
+        if (num !== undefined) {
+          doc.fill(TEAL).fontSize(8).font("Helvetica-Bold")
+            .text(`${num}`, 40, y, { width: 15 });
+          doc.fill(TEAL).fontSize(10).font("Helvetica-Bold")
+            .text(title, 58, y);
+        } else {
+          doc.fill(TEAL).fontSize(10).font("Helvetica-Bold")
+            .text(title, 40, y);
+        }
+        doc.moveDown(0.3);
+        doc.moveTo(40, doc.y).lineTo(40 + W, doc.y).strokeColor("#dddddd").lineWidth(0.5).stroke();
+        doc.moveDown(0.3);
+        doc.fill(DARK);
+      }
+
+      function infoRow(label: string, value: string, x: number, w: number) {
+        doc.fontSize(6).font("Helvetica").fill(LIGHT).text(label.toUpperCase(), x, doc.y, { width: w });
+        doc.fontSize(8.5).font("Helvetica-Bold").fill(DARK).text(value || "—", x, doc.y, { width: w });
+        doc.moveDown(0.2);
+      }
+
+      function ensureSpace(needed: number) {
+        if (doc.y + needed > doc.page.height - 60) {
+          doc.addPage();
+          doc.y = 40;
+        }
+      }
+
+      function tableHeader(cols: { label: string; width: number; align?: string }[]) {
+        ensureSpace(20);
+        const y = doc.y;
+        doc.rect(40, y, W, 16).fill("#f0f0f0");
+        let x = 44;
+        cols.forEach(col => {
+          doc.fill(GRAY).fontSize(6).font("Helvetica-Bold")
+            .text(col.label.toUpperCase(), x, y + 4, { width: col.width - 8, align: (col.align as any) || "left" });
+          x += col.width;
+        });
+        doc.y = y + 18;
+      }
+
+      function tableRow(cols: { value: string; width: number; align?: string; bold?: boolean; color?: string }[]) {
+        ensureSpace(16);
+        const y = doc.y;
+        let x = 44;
+        cols.forEach(col => {
+          doc.fill(col.color || DARK).fontSize(7.5).font(col.bold ? "Helvetica-Bold" : "Helvetica")
+            .text(col.value || "—", x, y + 3, { width: col.width - 8, align: (col.align as any) || "left" });
+          x += col.width;
+        });
+        doc.moveTo(40, y + 15).lineTo(40 + W, y + 15).strokeColor("#eeeeee").lineWidth(0.3).stroke();
+        doc.y = y + 16;
+      }
+
+      drawHeader();
+
+      const b = reportData.borrower;
+      const s = reportData.summary;
+      const accounts = reportData.accounts || [];
+      const inquiries = reportData.inquiries || [];
+      const judgments = reportData.courtJudgments || [];
+
+      doc.fontSize(6).font("Helvetica").fill(LIGHT).text("CIR NUMBER", 40, doc.y, { continued: false });
+      doc.fontSize(8).font("Helvetica-Bold").fill(DARK).text(reportData.serialNumber);
+      doc.moveDown(0.3);
+
+      const grid1 = [
+        ["Report Order Date", new Date(reportData.generatedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })],
+        ["Institution", reportData.requestedBy?.institution || "—"],
+        ["Requested By", reportData.requestedBy?.fullName || "—"],
+      ];
+      grid1.forEach(([l, v]) => {
+        doc.fontSize(6).font("Helvetica").fill(LIGHT).text(l, 40, doc.y, { width: W });
+        doc.fontSize(8).font("Helvetica-Bold").fill(DARK).text(v, 40, doc.y, { width: W });
+        doc.moveDown(0.2);
+      });
+
+      doc.moveDown(0.3);
+      doc.fontSize(6).font("Helvetica").fill(LIGHT).text("SEARCH DETAILS", 40, doc.y);
+      doc.moveDown(0.2);
+      const name = b.type === "corporate" ? (b.companyName || "—") : `${b.firstName} ${b.lastName}`;
+      doc.fontSize(8).font("Helvetica-Bold").fill(DARK).text(`Name: ${name} | ID: ${b.nationalId || b.tinNumber || "—"} | Country: ${b.country || "—"}`);
+      doc.moveDown(0.5);
+
+      sectionTitle("Subject Details");
+      if (b.type === "individual") {
+        const fields = [
+          ["Full Name", `${b.firstName} ${b.lastName}`], ["Date of Birth", b.dateOfBirth || "—"],
+          ["Gender", b.gender || "—"], ["National ID", b.nationalId || "—"],
+          ["TIN", b.tinNumber || "—"], ["Passport", b.passportNumber || "—"],
+          ["Employer", b.employerName || "—"], ["Occupation", b.occupation || "—"],
+          ["Phone", b.phone || "—"], ["Email", b.email || "—"],
+        ];
+        fields.forEach(([l, v]) => infoRow(l, v, 40, W));
+      } else {
+        const fields = [
+          ["Company Name", b.companyName || "—"], ["Business Reg", b.businessRegNumber || "—"],
+          ["Sector", b.sector || "—"], ["TIN", b.tinNumber || "—"],
+          ["Phone", b.phone || "—"], ["Email", b.email || "—"],
+        ];
+        fields.forEach(([l, v]) => infoRow(l, v, 40, W));
+      }
+
+      sectionTitle("Credit Score Summary");
+      ensureSpace(40);
+      doc.fontSize(24).font("Helvetica-Bold").fill(s.creditScore >= 700 ? "#16a34a" : s.creditScore >= 600 ? "#ca8a04" : "#dc2626")
+        .text(String(s.creditScore), 40, doc.y, { width: W, align: "center" });
+      doc.fontSize(8).font("Helvetica").fill(GRAY)
+        .text(`Range 300-850 | Total Facilities: ${s.totalAccounts} | Active: ${s.activeAccounts} | Risk Items: ${s.delinquentAccounts + s.writtenOffAccounts + s.judgmentCount}`, 40, doc.y, { width: W, align: "center" });
+      doc.moveDown(0.5);
+
+      if (s.reasonCodes && s.reasonCodes.length > 0) {
+        sectionTitle("Score Factor Analysis");
+        s.reasonCodes.forEach((code: string) => {
+          ensureSpace(14);
+          const label = code.replace(/_/g, " ").toLowerCase().replace(/^\w/, (c: string) => c.toUpperCase());
+          doc.fontSize(7.5).font("Helvetica").fill(DARK).text(`• ${label}`, 48, doc.y);
+          doc.moveDown(0.15);
+        });
+      }
+
+      sectionTitle("Credit Profile Overview", 1);
+      const overviewCols = [
+        { label: "S.No", width: 35 },
+        { label: "Indicator", width: W - 135 },
+        { label: "Value", width: 100, align: "right" },
+      ];
+      tableHeader(overviewCols);
+      const openAccts = accounts.filter((a: any) => a.status !== "closed");
+      const totalBal = openAccts.reduce((s: number, a: any) => s + parseFloat(a.currentBalance || "0"), 0);
+      const overdueAccts = openAccts.filter((a: any) => (a.daysInArrears || 0) > 0);
+      const npl = openAccts.filter((a: any) => (a.daysInArrears || 0) > 90);
+      const closedAccts = accounts.filter((a: any) => a.status === "closed");
+      const woAccts = accounts.filter((a: any) => a.status === "written_off");
+      const indicators = [
+        ["1", "Number of Open Credit Facilities", String(openAccts.length)],
+        ["2", "Total Outstanding Balance", totalBal.toLocaleString("en-US", { minimumFractionDigits: 2 })],
+        ["3", "Number of Overdue Facilities", String(overdueAccts.length)],
+        ["4", "Non-Performing (>90 days)", String(npl.length)],
+        ["5", "Closed Facilities", String(closedAccts.length)],
+        ["6", "Written-Off Facilities", String(woAccts.length)],
+        ["7", "Court Judgments", String(judgments.length)],
+        ["8", "Credit Inquiries", String(inquiries.length)],
+      ];
+      indicators.forEach(([sno, label, val]) => {
+        tableRow([
+          { value: sno, width: 35 },
+          { value: label, width: W - 135 },
+          { value: val, width: 100, align: "right", bold: true },
+        ]);
+      });
+
+      if (inquiries.length > 0) {
+        sectionTitle("Inquiry History", 2);
+        const inqCols = [
+          { label: "Institution", width: W * 0.35 },
+          { label: "Purpose", width: W * 0.25 },
+          { label: "Date", width: W * 0.2 },
+          { label: "Consent", width: W * 0.2 },
+        ];
+        tableHeader(inqCols);
+        inquiries.slice(0, 20).forEach((inq: any) => {
+          tableRow([
+            { value: inq.institution, width: W * 0.35 },
+            { value: (inq.purpose || "").replace(/_/g, " "), width: W * 0.25 },
+            { value: inq.createdAt ? new Date(inq.createdAt).toLocaleDateString("en-GB") : "—", width: W * 0.2 },
+            { value: inq.consentProvided ? "Yes" : "No", width: W * 0.2, color: inq.consentProvided ? "#16a34a" : "#dc2626" },
+          ]);
+        });
+      }
+
+      if (accounts.length > 0) {
+        sectionTitle("Credit Facility Details", 3);
+        accounts.forEach((acct: any, idx: number) => {
+          ensureSpace(100);
+          const cur = acct.currency || "ETB";
+          doc.moveDown(0.3);
+          doc.fontSize(8).font("Helvetica-Bold").fill(TEAL)
+            .text(`Facility ${idx + 1} of ${accounts.length} — ${acct.status?.toUpperCase()} (${cur})`, 40, doc.y);
+          doc.moveDown(0.3);
+
+          const facilityFields = [
+            ["Institution", acct.lenderInstitution], ["Account No.", acct.accountNumber],
+            ["Type", (acct.accountType || "").replace(/_/g, " ")], ["Classification", acct.status],
+            ["Current Balance", acct.currentBalance ? `${cur} ${parseFloat(acct.currentBalance).toLocaleString()}` : "—"],
+            ["Sanctioned Amount", acct.originalAmount ? `${cur} ${parseFloat(acct.originalAmount).toLocaleString()}` : "—"],
+            ["Days in Arrears", String(acct.daysInArrears || 0)],
+            ["Interest Rate", acct.isInterestFree ? "Interest-Free" : `${acct.interestRate || "—"}%`],
+            ["Disbursement Date", acct.disbursementDate || "—"], ["Maturity Date", acct.maturityDate || "—"],
+            ["Last Payment", acct.lastPaymentDate || "—"],
+            ["Restructured", (acct.restructureCount || 0) > 0 ? `Yes (${acct.restructureCount}x)` : "No"],
+          ];
+          facilityFields.forEach(([l, v]) => {
+            ensureSpace(14);
+            infoRow(l, v, 48, W - 8);
+          });
+
+          const history = reportData.paymentHistory?.[acct.id] || [];
+          if (history.length > 0) {
+            ensureSpace(20);
+            doc.fontSize(7).font("Helvetica-Bold").fill(GRAY).text("Payment History (Last 12 Months):", 48, doc.y);
+            doc.moveDown(0.2);
+            const statusLine = history.slice(0, 12).map((ph: any) => {
+              const label = ph.status === "on_time" ? "OK" : ph.status === "late" ? "30" : ph.status === "missed" ? "X" : ph.status === "partial" ? "P" : "ND";
+              return `${ph.period}: ${label}`;
+            }).join(" | ");
+            doc.fontSize(6.5).font("Helvetica").fill(DARK).text(statusLine, 48, doc.y, { width: W - 16 });
+            doc.moveDown(0.3);
+          }
+
+          if (acct.collateralType) {
+            ensureSpace(20);
+            doc.fontSize(7).font("Helvetica-Bold").fill(GRAY).text("Security:", 48, doc.y);
+            doc.moveDown(0.15);
+            doc.fontSize(7.5).font("Helvetica").fill(DARK)
+              .text(`Type: ${acct.collateralType} | Value: ${cur} ${parseFloat(acct.collateralValue || "0").toLocaleString()}`, 48, doc.y, { width: W - 16 });
+            doc.moveDown(0.3);
+          }
+
+          doc.moveTo(40, doc.y).lineTo(40 + W, doc.y).strokeColor("#cccccc").lineWidth(0.5).stroke();
+          doc.moveDown(0.2);
+        });
+      }
+
+      if (judgments.length > 0) {
+        sectionTitle("Court Judgments & Public Records", 4);
+        const jCols = [
+          { label: "Case No.", width: W * 0.2 },
+          { label: "Court", width: W * 0.25 },
+          { label: "Type", width: W * 0.15 },
+          { label: "Amount", width: W * 0.15, align: "right" },
+          { label: "Date", width: W * 0.12 },
+          { label: "Status", width: W * 0.13 },
+        ];
+        tableHeader(jCols);
+        judgments.forEach((j: any) => {
+          tableRow([
+            { value: j.caseNumber, width: W * 0.2 },
+            { value: j.court, width: W * 0.25 },
+            { value: (j.judgmentType || "").replace(/_/g, " "), width: W * 0.15 },
+            { value: j.amount ? `${j.currency || "ETB"} ${parseFloat(j.amount).toLocaleString()}` : "—", width: W * 0.15, align: "right" },
+            { value: j.judgmentDate || "—", width: W * 0.12 },
+            { value: j.status || "—", width: W * 0.13, color: j.status === "active" ? "#dc2626" : "#16a34a" },
+          ]);
+        });
+      }
+
+      ensureSpace(80);
+      doc.moveDown(1);
+      doc.moveTo(40, doc.y).lineTo(40 + W, doc.y).strokeColor("#cccccc").lineWidth(0.5).stroke();
+      doc.moveDown(0.5);
+      doc.fontSize(8).font("Helvetica-Bold").fill(DARK)
+        .text("End of Credit Information Report", 40, doc.y, { width: W, align: "center" });
+      doc.moveDown(0.3);
+      doc.fontSize(7).font("Helvetica").fill(GRAY)
+        .text(`Report Serial: ${reportData.serialNumber} | Generated: ${new Date(reportData.generatedAt).toLocaleString("en-GB")}${reportData.requestedBy ? ` | By: ${reportData.requestedBy.fullName} (${reportData.requestedBy.institution})` : ""}`, 40, doc.y, { width: W, align: "center" });
+      doc.moveDown(0.3);
+      doc.fontSize(6).font("Helvetica").fill(LIGHT)
+        .text("The information in this report has been compiled from data submitted by participating financial institutions. While Systems In Motion Limited endeavors to ensure accuracy, we do not accept responsibility for any loss or damage resulting from this report.", 40, doc.y, { width: W, align: "center" });
+      doc.moveDown(0.3);
+      doc.fontSize(6).font("Helvetica").fill(LIGHT)
+        .text("Cross-Jurisdictional Central Data Hub & Credit Registry System v1.2 | Systems In Motion Limited | Confidential & Proprietary", 40, doc.y, { width: W, align: "center" });
+
+      doc.end();
+      await new Promise<void>((resolve) => doc.on("end", resolve));
+
+      const pdfBuffer = Buffer.concat(chunks);
+      res.set({
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="Credit_Report_${reportData.serialNumber}.pdf"`,
+        "Content-Length": pdfBuffer.length,
+      });
+      res.send(pdfBuffer);
+    } catch (e: any) {
+      console.error("PDF generation error:", e);
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   app.post("/api/credit-search/bulk", async (req, res) => {
     try {
       const { identifiers } = req.body;

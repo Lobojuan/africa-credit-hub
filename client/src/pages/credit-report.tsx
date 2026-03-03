@@ -5,10 +5,10 @@ import { useTranslation } from "react-i18next";
 import { apiRequest } from "@/lib/queryClient";
 import { formatCurrency } from "@/lib/currency";
 import {
-  ArrowLeft, Printer, FileText, User, Building2, CreditCard, Search,
+  ArrowLeft, Printer, FileText, Download, User, Building2, CreditCard, Search,
   AlertTriangle, Shield, Gavel, CheckCircle2, XCircle, Clock, Flag,
   Calendar, MapPin, Phone, Mail, Briefcase, Hash, TrendingUp, Activity,
-  Landmark, BarChart3, Layers, Table,
+  Landmark, BarChart3, Layers, Table, Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -298,8 +298,33 @@ export default function CreditReportPage() {
 
   const report = generateMutation.data as CreditReportData | undefined;
 
+  const [isDownloading, setIsDownloading] = useState(false);
+
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!report) return;
+    setIsDownloading(true);
+    try {
+      const res = await apiRequest("POST", "/api/credit-reports/download-pdf", {
+        reportData: report,
+      });
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Credit_Report_${report.serialNumber}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("PDF download failed:", e);
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   if (!borrowerId) {
@@ -380,6 +405,10 @@ export default function CreditReportPage() {
       {report && (
         <div ref={printRef} className="space-y-5 print:space-y-3" data-testid="credit-report-content">
           <div className="flex items-center justify-end gap-2 print:hidden">
+            <Button variant="outline" size="sm" onClick={handleDownloadPdf} disabled={isDownloading} data-testid="button-download-pdf">
+              {isDownloading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+              {isDownloading ? "Generating PDF..." : "Download PDF"}
+            </Button>
             <Button variant="outline" size="sm" onClick={handlePrint} data-testid="button-print-report">
               <Printer className="w-4 h-4 mr-2" /> Print Report
             </Button>
