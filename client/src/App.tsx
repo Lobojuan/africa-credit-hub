@@ -17,6 +17,8 @@ import { PasswordChangeDialog } from "@/components/password-change-dialog";
 import { Button } from "@/components/ui/button";
 import { LogOut, Loader2, MessageCircle, Building2 } from "lucide-react";
 import { DisputeChatbot } from "@/components/dispute-chatbot";
+import { OrgSwitcherProvider } from "@/hooks/use-org-switcher";
+import { OrgSwitcher } from "@/components/org-switcher";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import LoginPage from "@/pages/login";
@@ -137,9 +139,12 @@ function AuthenticatedApp() {
                 </span>
               )}
               {user.role === "super_admin" && (
-                <span className="text-xs font-medium text-amber-600 dark:text-amber-400 hidden md:inline" data-testid="text-platform-admin">
-                  Platform Admin
-                </span>
+                <>
+                  <span className="text-xs font-medium text-amber-600 dark:text-amber-400 hidden md:inline" data-testid="text-platform-admin">
+                    Platform Admin
+                  </span>
+                  <OrgSwitcher />
+                </>
               )}
               <span className="text-xs text-muted-foreground hidden md:inline" data-testid="text-current-user">
                 {user.fullName} ({user.role})
@@ -197,7 +202,9 @@ function App() {
             <Route path="/investor" component={InvestorLandingPage} />
             <Route>
               <AuthProvider>
-                <AuthenticatedApp />
+                <OrgSwitcherProvider>
+                  <AuthenticatedApp />
+                </OrgSwitcherProvider>
               </AuthProvider>
             </Route>
           </Switch>
