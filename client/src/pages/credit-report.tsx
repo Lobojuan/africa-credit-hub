@@ -8,7 +8,7 @@ import {
   ArrowLeft, Printer, FileText, Download, User, Building2, CreditCard, Search,
   AlertTriangle, Shield, Gavel, CheckCircle2, XCircle, Clock, Flag,
   Calendar, MapPin, Phone, Mail, Briefcase, Hash, TrendingUp, Activity,
-  Landmark, BarChart3, Layers, Table, Loader2,
+  Landmark, BarChart3, Layers, Table, Loader2, Brain, Sparkles, Globe,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -299,6 +299,20 @@ export default function CreditReportPage() {
   const report = generateMutation.data as CreditReportData | undefined;
 
   const [isDownloading, setIsDownloading] = useState(false);
+  const [reportLanguage, setReportLanguage] = useState("en");
+  const [aiSummary, setAiSummary] = useState<{ summary: string; borrowerName: string; generatedAt: string } | null>(null);
+  const [showAiSummary, setShowAiSummary] = useState(true);
+
+  const aiSummaryMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/ai/report-summary/${report?.borrower?.id}`);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setAiSummary(data);
+      setShowAiSummary(true);
+    },
+  });
 
   const handlePrint = () => {
     window.print();
@@ -308,7 +322,7 @@ export default function CreditReportPage() {
     if (!report) return;
     setIsDownloading(true);
     try {
-      const res = await apiRequest("POST", "/api/credit-reports/download-pdf", {
+      const res = await apiRequest("POST", `/api/credit-reports/download-pdf?lang=${reportLanguage}`, {
         reportData: report,
       });
       const blob = await res.blob();
@@ -404,7 +418,29 @@ export default function CreditReportPage() {
 
       {report && (
         <div ref={printRef} className="space-y-5 print:space-y-3" data-testid="credit-report-content">
-          <div className="flex items-center justify-end gap-2 print:hidden">
+          <div className="flex items-center justify-end gap-2 flex-wrap print:hidden">
+            <Select value={reportLanguage} onValueChange={setReportLanguage}>
+              <SelectTrigger className="w-[150px]" data-testid="select-report-language">
+                <Globe className="w-4 h-4 mr-2 shrink-0" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="en">English</SelectItem>
+                <SelectItem value="fr">French</SelectItem>
+                <SelectItem value="ar">Arabic</SelectItem>
+                <SelectItem value="sw">Swahili</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => aiSummaryMutation.mutate()}
+              disabled={aiSummaryMutation.isPending}
+              data-testid="button-ai-summary"
+            >
+              {aiSummaryMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+              {aiSummaryMutation.isPending ? "Generating Summary..." : "AI Summary"}
+            </Button>
             <Button variant="outline" size="sm" onClick={handleDownloadPdf} disabled={isDownloading} data-testid="button-download-pdf">
               {isDownloading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
               {isDownloading ? "Generating PDF..." : "Download PDF"}
@@ -413,6 +449,45 @@ export default function CreditReportPage() {
               <Printer className="w-4 h-4 mr-2" /> Print Report
             </Button>
           </div>
+
+          {aiSummary && (
+            <Card className="border border-purple-200 dark:border-purple-800 overflow-visible print:hidden" data-testid="card-ai-summary">
+              <div className="p-4" style={{ background: "linear-gradient(135deg, hsl(270 60% 96%) 0%, hsl(280 50% 93%) 100%)" }}>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                    <h3 className="text-sm font-bold text-purple-900 dark:text-purple-100">AI-Generated Credit Summary</h3>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAiSummary(!showAiSummary)}
+                    data-testid="button-toggle-ai-summary"
+                  >
+                    {showAiSummary ? "Collapse" : "Expand"}
+                  </Button>
+                </div>
+                <p className="text-[10px] text-purple-600/70 dark:text-purple-300/70 mt-0.5">
+                  Generated for {aiSummary.borrowerName} on {new Date(aiSummary.generatedAt).toLocaleString()}
+                </p>
+              </div>
+              {showAiSummary && (
+                <CardContent className="p-4">
+                  <div className="text-sm leading-relaxed whitespace-pre-wrap" data-testid="text-ai-summary-content">
+                    {aiSummary.summary}
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+          )}
+
+          {aiSummaryMutation.isError && (
+            <Card className="border border-destructive/30 print:hidden">
+              <CardContent className="p-4">
+                <p className="text-sm text-destructive" data-testid="text-ai-summary-error">Failed to generate AI summary. Please try again.</p>
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="border-2 border-primary/20 overflow-hidden print:border print:border-gray-300 print:shadow-none">
             <div className="p-6 print:p-4" style={{ background: "linear-gradient(135deg, hsl(175 55% 28%) 0%, hsl(175 45% 22%) 100%)" }}>

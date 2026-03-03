@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Plus, Pencil, Trash2, Plug, TestTube2, CheckCircle, XCircle, Globe, Cloud, Gavel, CreditCard, Settings2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Plug, TestTube2, CheckCircle, XCircle, Globe, Cloud, Gavel, CreditCard, Settings2, BarChart3, Activity, Hash } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,10 +13,20 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { SUPPORTED_COUNTRIES } from "@/lib/currency";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import type { ApiConfiguration } from "@shared/schema";
+
+interface ApiUsageStats {
+  totalToday: number;
+  totalThisHour: number;
+  uniqueEndpoints: number;
+  topEndpoints: { endpoint: string; count: number }[];
+  hourlyData: { hour: string; requests: number }[];
+}
 
 const categories = ["all", "weather", "judicial", "payment_gateway", "exchange_rate", "custom"] as const;
 const authTypes = ["api_key", "oauth2", "bearer", "basic", "none"] as const;
@@ -165,6 +175,11 @@ export default function ApiAdminPage() {
     setDialogOpen(true);
   };
 
+  const { data: usageStats, isLoading: usageLoading } = useQuery<ApiUsageStats>({
+    queryKey: ["/api/admin/api-usage"],
+    refetchInterval: 30000,
+  });
+
   return (
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-[1400px] mx-auto">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -185,6 +200,118 @@ export default function ApiAdminPage() {
           {t("apiAdmin.addConfig")}
         </Button>
       </div>
+
+      <Tabs defaultValue="configurations" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="configurations" data-testid="tab-configurations">
+            <Plug className="w-4 h-4 mr-2" />
+            Configurations
+          </TabsTrigger>
+          <TabsTrigger value="usage" data-testid="tab-usage">
+            <BarChart3 className="w-4 h-4 mr-2" />
+            API Usage Analytics
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="usage" className="space-y-4">
+          {usageLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Card key={i}>
+                  <CardContent className="p-4 space-y-2">
+                    <Skeleton className="h-4 w-1/2" />
+                    <Skeleton className="h-8 w-3/4" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : usageStats ? (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <Card data-testid="card-total-today">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Activity className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Total Requests Today</span>
+                    </div>
+                    <p className="text-3xl font-bold" data-testid="text-total-today">{usageStats.totalToday.toLocaleString()}</p>
+                  </CardContent>
+                </Card>
+                <Card data-testid="card-this-hour">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <BarChart3 className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Requests This Hour</span>
+                    </div>
+                    <p className="text-3xl font-bold" data-testid="text-this-hour">{usageStats.totalThisHour.toLocaleString()}</p>
+                  </CardContent>
+                </Card>
+                <Card data-testid="card-unique-endpoints">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Hash className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Unique Endpoints</span>
+                    </div>
+                    <p className="text-3xl font-bold" data-testid="text-unique-endpoints">{usageStats.uniqueEndpoints}</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card data-testid="card-hourly-chart">
+                <CardHeader className="flex flex-row items-center gap-2 pb-2">
+                  <BarChart3 className="w-5 h-5 text-muted-foreground" />
+                  <h3 className="font-semibold">Hourly Request Volume (Last 24h)</h3>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={usageStats.hourlyData}>
+                        <XAxis dataKey="hour" tick={{ fontSize: 11 }} interval={2} />
+                        <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                        <Tooltip
+                          contentStyle={{ borderRadius: "6px", fontSize: "12px" }}
+                          labelFormatter={(label) => `Time: ${label}`}
+                        />
+                        <Bar dataKey="requests" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card data-testid="card-top-endpoints">
+                <CardHeader className="flex flex-row items-center gap-2 pb-2">
+                  <Activity className="w-5 h-5 text-muted-foreground" />
+                  <h3 className="font-semibold">Top Endpoints by Request Count</h3>
+                </CardHeader>
+                <CardContent>
+                  {usageStats.topEndpoints.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Endpoint</TableHead>
+                          <TableHead className="text-right">Requests</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {usageStats.topEndpoints.map((ep, idx) => (
+                          <TableRow key={ep.endpoint} data-testid={`row-endpoint-${idx}`}>
+                            <TableCell className="font-mono text-sm">{ep.endpoint}</TableCell>
+                            <TableCell className="text-right font-semibold">{ep.count.toLocaleString()}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-8">No API usage data recorded yet.</p>
+                  )}
+                </CardContent>
+              </Card>
+            </>
+          ) : null}
+        </TabsContent>
+
+        <TabsContent value="configurations" className="space-y-4">
 
       <div className="flex items-center gap-2 flex-wrap">
         {categories.map((cat) => (
@@ -306,6 +433,9 @@ export default function ApiAdminPage() {
           </CardContent>
         </Card>
       )}
+
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setEditingId(null); setFormData(defaultFormData); } }}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">

@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { type LucideIcon, ChevronRight } from "lucide-react";
+import { AreaChart, Area, ResponsiveContainer } from "recharts";
 
 interface StatCardProps {
   title: string;
@@ -10,6 +11,7 @@ interface StatCardProps {
   testId?: string;
   colorIndex?: number;
   onClick?: () => void;
+  sparklineData?: number[];
 }
 
 const iconStyles = [
@@ -30,8 +32,21 @@ function valueFontSize(val: string | number): string {
   return "text-2xl";
 }
 
-export function StatCard({ title, value, subtitle, icon: Icon, testId, colorIndex = 0, onClick }: StatCardProps) {
+const sparklineColors = [
+  { stroke: "hsl(175 55% 28%)", fill: "hsl(175 55% 28% / 0.15)" },
+  { stroke: "hsl(43 80% 55%)", fill: "hsl(43 80% 55% / 0.15)" },
+  { stroke: "hsl(14 70% 50%)", fill: "hsl(14 70% 50% / 0.15)" },
+  { stroke: "hsl(142 55% 40%)", fill: "hsl(142 55% 40% / 0.15)" },
+  { stroke: "hsl(200 60% 45%)", fill: "hsl(200 60% 45% / 0.15)" },
+  { stroke: "hsl(280 50% 50%)", fill: "hsl(280 50% 50% / 0.15)" },
+  { stroke: "hsl(350 60% 50%)", fill: "hsl(350 60% 50% / 0.15)" },
+  { stroke: "hsl(175 40% 35%)", fill: "hsl(175 40% 35% / 0.15)" },
+];
+
+export function StatCard({ title, value, subtitle, icon: Icon, testId, colorIndex = 0, onClick, sparklineData }: StatCardProps) {
   const style = iconStyles[colorIndex % iconStyles.length];
+  const sparkColor = sparklineColors[colorIndex % sparklineColors.length];
+  const chartData = sparklineData?.map((v, i) => ({ v, i }));
 
   return (
     <Card
@@ -63,6 +78,23 @@ export function StatCard({ title, value, subtitle, icon: Icon, testId, colorInde
             )}
           </div>
         </div>
+        {chartData && chartData.length > 0 && (
+          <div className="mt-3 -mx-1" data-testid={`${testId}-sparkline`}>
+            <ResponsiveContainer width="100%" height={40}>
+              <AreaChart data={chartData} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
+                <Area
+                  type="monotone"
+                  dataKey="v"
+                  stroke={sparkColor.stroke}
+                  fill={sparkColor.fill}
+                  strokeWidth={1.5}
+                  dot={false}
+                  isAnimationActive={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

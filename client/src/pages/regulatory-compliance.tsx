@@ -1,7 +1,10 @@
 import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,6 +24,10 @@ import {
   Database,
   Users,
   Landmark,
+  Sparkles,
+  Loader2,
+  TrendingUp,
+  AlertCircle,
 } from "lucide-react";
 
 type RequirementStatus = "compliant" | "partial" | "not_applicable";
@@ -201,6 +208,14 @@ const REGIONAL_BLOCS: Record<string, { name: string; description: string }> = {
 const REQUIREMENT_CATEGORIES = ["All", "Data Collection", "Credit Reporting", "Consent & Disputes", "Regulatory", "Security", "Enterprise", "Institutions", "Billing", "Reporting", "User Management", "Notifications", "API", "Data Quality"];
 const REGIONS = ["All", "North Africa", "West Africa", "East Africa", "Central Africa", "Southern Africa"];
 
+interface ComplianceReportResult {
+  complianceScore: number;
+  regulatoryBody: string;
+  dataProtectionLaw: string;
+  riskAreas: string[];
+  recommendations: string[];
+}
+
 export default function RegulatoryCompliancePage() {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState("");
@@ -209,6 +224,18 @@ export default function RegulatoryCompliancePage() {
   const [blocFilter, setBlocFilter] = useState("All");
   const [expandedReqs, setExpandedReqs] = useState<Set<string>>(new Set());
   const [dpFilter, setDpFilter] = useState("All");
+  const [complianceCountry, setComplianceCountry] = useState("");
+  const [complianceReport, setComplianceReport] = useState<ComplianceReportResult | null>(null);
+
+  const complianceMutation = useMutation({
+    mutationFn: async (country: string) => {
+      const res = await apiRequest("POST", "/api/ai/compliance-report", { country });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setComplianceReport(data);
+    },
+  });
 
   const filteredRequirements = useMemo(() => {
     return SRS_REQUIREMENTS.filter((req) => {
@@ -303,6 +330,102 @@ export default function RegulatoryCompliancePage() {
           colorIndex={1}
         />
       </div>
+
+      <Card data-testid="card-ai-compliance-generator">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-purple-500" />
+            Generate AI Compliance Report
+          </CardTitle>
+          <CardDescription>
+            Select a country to generate an AI-powered regulatory compliance analysis.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3 items-end">
+            <div className="space-y-1.5 flex-1 min-w-[200px]">
+              <label className="text-sm font-medium">Country</label>
+              <Select value={complianceCountry} onValueChange={setComplianceCountry}>
+                <SelectTrigger data-testid="select-compliance-country">
+                  <SelectValue placeholder="Select a country..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {AFRICAN_REGULATORY_DATA.map((c) => (
+                    <SelectItem key={c.code} value={c.name}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              onClick={() => complianceMutation.mutate(complianceCountry)}
+              disabled={!complianceCountry || complianceMutation.isPending}
+              data-testid="button-generate-compliance-report"
+            >
+              {complianceMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+              {complianceMutation.isPending ? "Generating..." : "Generate Report"}
+            </Button>
+          </div>
+
+          {complianceMutation.isError && (
+            <p className="text-sm text-destructive" data-testid="text-compliance-error">Failed to generate compliance report. Please try again.</p>
+          )}
+
+          {complianceReport && (
+            <div className="space-y-4 pt-2" data-testid="card-compliance-result">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="rounded-lg border p-4">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">Compliance Score</p>
+                  <p className={`text-2xl font-bold ${complianceReport.complianceScore >= 70 ? "text-green-600 dark:text-green-400" : complianceReport.complianceScore >= 40 ? "text-yellow-600 dark:text-yellow-400" : "text-red-600 dark:text-red-400"}`} data-testid="text-compliance-score">
+                    {complianceReport.complianceScore}%
+                  </p>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">Regulatory Body</p>
+                  <p className="text-sm font-medium" data-testid="text-regulatory-body">{complianceReport.regulatoryBody}</p>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">Data Protection Law</p>
+                  <p className="text-sm font-medium" data-testid="text-dp-law">{complianceReport.dataProtectionLaw}</p>
+                </div>
+              </div>
+
+              {complianceReport.riskAreas && complianceReport.riskAreas.length > 0 && (
+                <div className="rounded-lg border p-4">
+                  <h4 className="font-semibold flex items-center gap-2 mb-2">
+                    <AlertCircle className="w-4 h-4 text-amber-500" />
+                    Risk Areas
+                  </h4>
+                  <ul className="space-y-1">
+                    {complianceReport.riskAreas.map((area, i) => (
+                      <li key={i} className="text-sm text-muted-foreground flex items-start gap-2" data-testid={`text-risk-area-${i}`}>
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-500 mt-0.5 shrink-0" />
+                        {area}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {complianceReport.recommendations && complianceReport.recommendations.length > 0 && (
+                <div className="rounded-lg border p-4">
+                  <h4 className="font-semibold flex items-center gap-2 mb-2">
+                    <TrendingUp className="w-4 h-4 text-green-500" />
+                    Recommendations
+                  </h4>
+                  <ul className="space-y-1">
+                    {complianceReport.recommendations.map((rec, i) => (
+                      <li key={i} className="text-sm text-muted-foreground flex items-start gap-2" data-testid={`text-recommendation-${i}`}>
+                        <CheckCircle2 className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" />
+                        {rec}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="srs" className="space-y-4">
         <TabsList className="grid w-full grid-cols-4" data-testid="tabs-compliance">

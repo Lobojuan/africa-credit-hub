@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Bot, User, Send, HelpCircle, FileWarning } from "lucide-react";
+import { Bot, User, Send, HelpCircle, FileWarning, Sparkles, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +16,7 @@ interface Message {
   options?: string[];
 }
 
-type Mode = "menu" | "dispute" | "faq";
+type Mode = "menu" | "dispute" | "faq" | "ai";
 type DisputeStep = "issue_type" | "borrower_search" | "select_borrower" | "select_account" | "description" | "confirm" | "done";
 type FaqStep = "categories" | "questions" | "answer" | "search";
 
@@ -180,6 +180,9 @@ export function DisputeChatbot({ open, onOpenChange }: ChatbotProps) {
   const [selectedAccount, setSelectedAccount] = useState<CreditAccount | null>(null);
   const [description, setDescription] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [aiMessages, setAiMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
+  const [aiStreaming, setAiStreaming] = useState(false);
+  const [aiInput, setAiInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const faqData = useMemo(() => buildFaqData(t), [t, i18n.language]);
@@ -218,7 +221,7 @@ export function DisputeChatbot({ open, onOpenChange }: ChatbotProps) {
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages]);
+  }, [messages, aiMessages]);
 
   useEffect(() => {
     if (open && messages.length === 0) {
@@ -253,6 +256,82 @@ export function DisputeChatbot({ open, onOpenChange }: ChatbotProps) {
     setSearchQuery("");
     setInput("");
     addBot(t("chatbot.mainMenu"), [t("chatbot.menuDispute"), t("chatbot.menuFaq"), t("chatbot.menuSearch")]);
+  };
+
+  const startAi = () => {
+    setMode("ai");
+    setAiMessages([]);
+    setAiInput("");
+    setAiStreaming(false);
+    setMessages([]);
+  };
+
+  const handleAiSend = async () => {
+    const text = aiInput.trim();
+    if (!text || aiStreaming) return;
+    setAiInput("");
+
+    const userMessage = { role: "user" as const, content: text };
+    const updatedMessages = [...aiMessages, userMessage];
+    setAiMessages(updatedMessages);
+    setAiStreaming(true);
+
+    try {
+      const response = await fetch("/api/ai/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: updatedMessages }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to get AI response");
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No response stream");
+
+      const decoder = new TextDecoder();
+      let assistantContent = "";
+      setAiMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith("data: ")) continue;
+          const jsonStr = trimmed.slice(6);
+          if (jsonStr === "[DONE]") continue;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            if (parsed.done) continue;
+            if (parsed.content) {
+              assistantContent += parsed.content;
+              setAiMessages((prev) => {
+                const updated = [...prev];
+                updated[updated.length - 1] = { role: "assistant", content: assistantContent };
+                return updated;
+              });
+            }
+          } catch {
+          }
+        }
+      }
+    } catch (e: unknown) {
+      const errorMsg = e instanceof Error ? e.message : "Unknown error";
+      setAiMessages((prev) => [
+        ...prev.filter((m) => !(m.role === "assistant" && m.content === "")),
+        { role: "assistant", content: `Error: ${errorMsg}` },
+      ]);
+    } finally {
+      setAiStreaming(false);
+    }
   };
 
   const startDispute = () => {
@@ -457,14 +536,56 @@ export function DisputeChatbot({ open, onOpenChange }: ChatbotProps) {
               <Bot className="w-5 h-5" />
               {t("chatbot.title")}
             </SheetTitle>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-primary-foreground hover:bg-primary/80" onClick={showMainMenu} data-testid="button-chatbot-home" title={t("chatbot.faqBackToMenu")}>
-              <HelpCircle className="w-4 h-4" />
-            </Button>
+            <div className="flex items-center gap-1">
+              {mode === "ai" && (
+                <Button variant="ghost" size="icon" className="text-primary-foreground" onClick={showMainMenu} data-testid="button-chatbot-back-menu" title={t("chatbot.faqBackToMenu")}>
+                  <ArrowLeft className="w-4 h-4" />
+                </Button>
+              )}
+              {mode !== "ai" && (
+                <Button variant="ghost" size="icon" className="text-primary-foreground" onClick={startAi} data-testid="button-chatbot-ai" title="AI Assistant">
+                  <Sparkles className="w-4 h-4" />
+                </Button>
+              )}
+              <Button variant="ghost" size="icon" className="text-primary-foreground" onClick={showMainMenu} data-testid="button-chatbot-home" title={t("chatbot.faqBackToMenu")}>
+                <HelpCircle className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </SheetHeader>
 
         <div ref={scrollRef} className="flex-1 overflow-auto p-3 space-y-3">
-          {messages.map((msg, i) => (
+          {mode === "ai" && aiMessages.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-full text-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <Sparkles className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium" data-testid="text-ai-welcome">AI Assistant</p>
+                <p className="text-xs text-muted-foreground mt-1">Ask me anything about credit reports, disputes, or the system.</p>
+              </div>
+            </div>
+          )}
+
+          {mode === "ai" && aiMessages.map((msg, i) => (
+            <div key={i} className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`} data-testid={`ai-message-${i}`}>
+              {msg.role === "assistant" && (
+                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                </div>
+              )}
+              <div className={`max-w-[85%] ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"} rounded-lg p-2.5`}>
+                <p className="text-sm whitespace-pre-wrap">{msg.content || (aiStreaming && i === aiMessages.length - 1 ? "..." : "")}</p>
+              </div>
+              {msg.role === "user" && (
+                <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0">
+                  <User className="w-4 h-4 text-muted-foreground" />
+                </div>
+              )}
+            </div>
+          ))}
+
+          {mode !== "ai" && messages.map((msg, i) => (
             <div key={i} className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
               {msg.role === "bot" && (
                 <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -536,6 +657,23 @@ export function DisputeChatbot({ open, onOpenChange }: ChatbotProps) {
             </div>
           )}
         </div>
+
+        {mode === "ai" && (
+          <div className="p-3 border-t flex gap-2 shrink-0">
+            <Input
+              data-testid="input-ai-message"
+              value={aiInput}
+              onChange={(e) => setAiInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleAiSend()}
+              placeholder="Ask the AI assistant..."
+              className="h-9 text-sm"
+              disabled={aiStreaming}
+            />
+            <Button size="icon" className="shrink-0" onClick={handleAiSend} disabled={aiStreaming || !aiInput.trim()} data-testid="button-ai-send">
+              <Send className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
 
         {showInput && (
           <div className="p-3 border-t flex gap-2 shrink-0">

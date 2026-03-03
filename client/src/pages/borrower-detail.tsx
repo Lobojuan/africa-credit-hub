@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, User, Building2, Mail, Phone, MapPin, Briefcase, CreditCard, AlertTriangle, TrendingUp, FileText, Flag, GraduationCap, Users, Link2, ClipboardList, Camera, Upload, IdCard } from "lucide-react";
+import { ArrowLeft, User, Building2, Mail, Phone, MapPin, Briefcase, CreditCard, AlertTriangle, TrendingUp, FileText, Flag, GraduationCap, Users, Link2, ClipboardList, Camera, Upload, IdCard, Brain, Loader2, ShieldCheck, ShieldAlert, ShieldX, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +40,24 @@ export default function BorrowerDetailPage() {
   const photoInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const [aiRisk, setAiRisk] = useState<any>(null);
+  const [aiExpanded, setAiExpanded] = useState(false);
+
+  const aiRiskMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/ai/credit-risk/${borrowerId}`, { method: "POST", credentials: "include" });
+      if (!res.ok) throw new Error("AI analysis failed");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setAiRisk(data);
+      setAiExpanded(true);
+      toast({ title: "AI Risk Analysis Complete" });
+    },
+    onError: (e: any) => {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    },
+  });
 
   const uploadPhotoMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -223,8 +241,103 @@ export default function BorrowerDetailPage() {
             <ClipboardList className="w-4 h-4 mr-2" />
             Full Credit Report
           </Button>
+          <Button
+            size="sm"
+            onClick={() => aiRiskMutation.mutate()}
+            disabled={aiRiskMutation.isPending}
+            className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
+            data-testid="button-ai-risk-analysis"
+          >
+            {aiRiskMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Brain className="w-4 h-4 mr-2" />}
+            AI Risk Analysis
+          </Button>
         </div>
       </div>
+
+      {aiRisk && (
+        <Card className="border-purple-200 dark:border-purple-800 bg-gradient-to-br from-purple-50/50 to-indigo-50/50 dark:from-purple-950/20 dark:to-indigo-950/20">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between cursor-pointer" onClick={() => setAiExpanded(!aiExpanded)} data-testid="toggle-ai-risk-panel">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${
+                  aiRisk.riskLevel === "low" ? "bg-green-100 dark:bg-green-900/30" :
+                  aiRisk.riskLevel === "medium" ? "bg-yellow-100 dark:bg-yellow-900/30" :
+                  aiRisk.riskLevel === "high" ? "bg-orange-100 dark:bg-orange-900/30" :
+                  "bg-red-100 dark:bg-red-900/30"
+                }`}>
+                  {aiRisk.riskLevel === "low" ? <ShieldCheck className="w-5 h-5 text-green-600" /> :
+                   aiRisk.riskLevel === "medium" ? <ShieldAlert className="w-5 h-5 text-yellow-600" /> :
+                   <ShieldX className="w-5 h-5 text-red-600" />}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-purple-500" />
+                    <span className="font-semibold text-sm">AI Risk Assessment</span>
+                    <Badge variant={
+                      aiRisk.riskLevel === "low" ? "default" :
+                      aiRisk.riskLevel === "medium" ? "secondary" : "destructive"
+                    } className="text-[10px]">
+                      {aiRisk.riskLevel?.toUpperCase()} RISK — Score: {aiRisk.riskScore}/100
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">{aiRisk.summary}</p>
+                </div>
+              </div>
+              {aiExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </div>
+
+            {aiExpanded && (
+              <div className="mt-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                <Separator />
+                {aiRisk.factors?.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-semibold mb-2 text-muted-foreground uppercase tracking-wide">Risk Factors</h4>
+                    <div className="space-y-2">
+                      {aiRisk.factors.map((f: any, i: number) => (
+                        <div key={i} className="flex items-start gap-2 text-sm">
+                          <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
+                            f.impact === "positive" ? "bg-green-500" :
+                            f.impact === "negative" ? "bg-red-500" : "bg-gray-400"
+                          }`} />
+                          <div>
+                            <span className="font-medium">{f.factor}:</span>{" "}
+                            <span className="text-muted-foreground">{f.detail}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {aiRisk.recommendations?.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-semibold mb-2 text-muted-foreground uppercase tracking-wide">Recommendations</h4>
+                    <ul className="space-y-1">
+                      {aiRisk.recommendations.map((r: string, i: number) => (
+                        <li key={i} className="text-sm flex items-start gap-2">
+                          <TrendingUp className="w-3 h-3 mt-1 text-purple-500 flex-shrink-0" />
+                          <span>{r}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {aiRisk.regulatoryFlags?.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-semibold mb-2 text-muted-foreground uppercase tracking-wide">Regulatory Flags</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {aiRisk.regulatoryFlags.map((f: string, i: number) => (
+                        <Badge key={i} variant="outline" className="text-[11px] border-orange-300 text-orange-700 dark:text-orange-400">
+                          <AlertTriangle className="w-3 h-3 mr-1" />{f}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Card>

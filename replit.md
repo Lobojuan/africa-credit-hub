@@ -46,7 +46,7 @@ The system utilizes a modern full-stack architecture designed for scalability an
     -   **ID Photos & Documents**: Borrower profiles include auto-generated avatars and sections for uploading ID photos/documents.
     -   **Multi-Tenant SaaS Architecture**: `organizations` table, tenant scoping via `organizationId` on all key tables, and a `super_admin` role with platform administration routes. Client Management page (`/organizations`) with animated stat cards, searchable/filterable client list with payment health badges and country flags, clickable detail view with billing summaries and tabbed content (Overview, Billing, Users), and a 4-step onboarding wizard with visual country/currency pickers and subscription plan selection.
     -   **Low-Bandwidth Optimizations**: Gzip compression and React.lazy code-splitting.
-    -   **Chatbot**: A Credit Registry Assistant with dispute filing, FAQ, and keyword search in EN/FR, accessible via a floating action button.
+    -   **Chatbot**: A Credit Registry Assistant with dispute filing, FAQ, keyword search in EN/FR, and **AI-powered Smart Assistant mode** (OpenAI GPT-4o streaming), accessible via a floating action button.
     -   **Documentation**: Multi-language documentation API (`/api/docs`) supporting English, French, Arabic, and Swahili, with translated content for key documents.
 
 ## External Dependencies
@@ -55,5 +55,18 @@ The system utilizes a modern full-stack architecture designed for scalability an
 -   **Backend**: Express.js, bcryptjs, express-session, Drizzle ORM, compression, jsonwebtoken, otpauth, pdfkit
 -   **Payments**: Stripe integration (connected via Replit connector `conn_stripe_01KJSTY6E6PSMZRZK1JD9RP0SF`). Products: Standard ($299/mo), Professional ($799/mo), Enterprise ($1,999/mo). Checkout, portal, and webhook endpoints at `/api/stripe/*`. Webhook route MUST stay before `express.json()` in `server/index.ts`.
 -   **Email**: SendGrid email service (`server/email.ts`) with templates for welcome, billing, and dispute notifications. Currently in **stub mode** — logs email events but does not send. To activate: set `SENDGRID_API_KEY` environment secret and install `@sendgrid/mail` package. The user dismissed the Replit SendGrid connector; use manual API key when ready.
--   **PDF**: Server-side PDF invoice generation via pdfkit at `GET /api/admin/organizations/:orgId/billing/:billingId/pdf`.
+-   **PDF**: Server-side PDF invoice generation via pdfkit at `GET /api/admin/organizations/:orgId/billing/:billingId/pdf`. Credit report PDF supports language parameter (`?lang=en|fr|ar|sw`).
+-   **AI / OpenAI**: Connected via Replit AI Integrations (`AI_INTEGRATIONS_OPENAI_API_KEY`, `AI_INTEGRATIONS_OPENAI_BASE_URL`). `server/ai.ts` provides: `analyzeCreditRisk`, `generateReportSummary`, `chatWithAI` (SSE streaming), `generateComplianceReport`. Routes: `POST /api/ai/credit-risk/:borrowerId`, `/api/ai/report-summary/:borrowerId`, `/api/ai/chat`, `/api/ai/compliance-report`.
+-   **Excel Export**: `exceljs` package. `GET /api/reports/export?format=xlsx&type=portfolio|borrowers|audit` returns formatted XLSX files.
 -   **Third-Party APIs**: open.er-api.com (for exchange rates), DiceBear (for avatars).
+
+## Recent Additions
+-   **AI Risk Analysis**: Button on borrower detail page calls AI credit risk analysis, displays expandable results panel with risk score, factors, recommendations, regulatory flags.
+-   **AI Report Summary**: Button on credit report page generates plain-language AI summary.
+-   **AI Compliance Reports**: Country selector on regulatory compliance page generates AI compliance assessments.
+-   **AI Chatbot Mode**: Sparkles button in chatbot header enters AI assistant mode with SSE streaming responses.
+-   **Notification Bell**: Real-time notification dropdown in header with 30s polling, mark-as-read, mark-all-read.
+-   **Dashboard Sparklines**: Mini trend charts (7-day) on dashboard stat cards using recharts.
+-   **API Usage Dashboard**: In-memory request tracking middleware, `/api/admin/api-usage` endpoint, "API Usage Analytics" tab on api-admin page with bar charts and top endpoints table.
+-   **Audit Trail Enhancements**: Timeline/table view toggle, date range filters, CSV/Excel export buttons.
+-   **Excel Export Buttons**: Portfolio, borrowers, and audit trail exports in XLSX format on reports page.

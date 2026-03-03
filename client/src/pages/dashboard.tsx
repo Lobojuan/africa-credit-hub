@@ -475,6 +475,16 @@ export default function Dashboard() {
     enabled: !!selectedDetail,
   });
 
+  const { data: trends } = useQuery<{
+    borrowers: number[];
+    accounts: number[];
+    disputes: number[];
+    inquiries: number[];
+    delinquent: number[];
+    defaults: number[];
+    approvals: number[];
+  }>({ queryKey: ["/api/dashboard/trends"] });
+
   const { data: chartData, isLoading: chartsLoading } = useQuery<{
     monthlyTrend: { month: string; borrowers: number; accounts: number }[];
     statusBreakdown: { name: string; value: number }[];
@@ -544,8 +554,8 @@ export default function Dashboard() {
           ))
         ) : stats ? (
           <>
-            <StatCard title={t('dashboard.totalBorrowers')} value={stats.totalBorrowers.toLocaleString()} icon={Users} testId="stat-borrowers" colorIndex={0} onClick={() => setSelectedDetail("borrowers")} />
-            <StatCard title={t('dashboard.creditAccounts')} value={stats.totalAccounts.toLocaleString()} icon={CreditCard} testId="stat-accounts" colorIndex={1} onClick={() => setSelectedDetail("accounts")} />
+            <StatCard title={t('dashboard.totalBorrowers')} value={stats.totalBorrowers.toLocaleString()} icon={Users} testId="stat-borrowers" colorIndex={0} onClick={() => setSelectedDetail("borrowers")} sparklineData={trends?.borrowers} />
+            <StatCard title={t('dashboard.creditAccounts')} value={stats.totalAccounts.toLocaleString()} icon={CreditCard} testId="stat-accounts" colorIndex={1} onClick={() => setSelectedDetail("accounts")} sparklineData={trends?.accounts} />
             <StatCard
               title={t('dashboard.outstanding')}
               value={convertedOutstanding !== null ? formatCurrency(convertedOutstanding, displayCurrency, { compact: true }) : formatCurrency(stats.totalOutstanding, displayCurrency, { compact: true })}
@@ -555,11 +565,11 @@ export default function Dashboard() {
               onClick={() => setSelectedDetail("outstanding")}
               subtitle={usdOutstanding !== null ? `≈ ${formatCurrency(usdOutstanding, "USD", { compact: true })}` : undefined}
             />
-            <StatCard title={t('dashboard.delinquent')} value={stats.delinquentAccounts.toLocaleString()} icon={AlertTriangle} testId="stat-delinquent" subtitle={t('dashboard.delinquentSub')} colorIndex={3} onClick={() => setSelectedDetail("delinquent")} />
-            <StatCard title={t('dashboard.defaults')} value={stats.defaultAccounts.toLocaleString()} icon={ShieldAlert} testId="stat-defaults" subtitle={t('dashboard.defaultsSub')} colorIndex={4} onClick={() => setSelectedDetail("defaults")} />
-            <StatCard title={t('dashboard.inquiries')} value={stats.totalInquiries.toLocaleString()} icon={Search} testId="stat-inquiries" colorIndex={5} onClick={() => setSelectedDetail("inquiries")} />
-            <StatCard title={t('dashboard.pendingApprovals')} value={stats.pendingApprovalCount.toLocaleString()} icon={CheckSquare} testId="stat-approvals" subtitle={t('dashboard.pendingApprovalsSub')} colorIndex={6} onClick={() => setSelectedDetail("approvals")} />
-            <StatCard title={t('dashboard.openDisputes')} value={stats.openDisputeCount.toLocaleString()} icon={AlertCircle} testId="stat-disputes" subtitle={t('dashboard.openDisputesSub')} colorIndex={7} onClick={() => setSelectedDetail("disputes")} />
+            <StatCard title={t('dashboard.delinquent')} value={stats.delinquentAccounts.toLocaleString()} icon={AlertTriangle} testId="stat-delinquent" subtitle={t('dashboard.delinquentSub')} colorIndex={3} onClick={() => setSelectedDetail("delinquent")} sparklineData={trends?.delinquent} />
+            <StatCard title={t('dashboard.defaults')} value={stats.defaultAccounts.toLocaleString()} icon={ShieldAlert} testId="stat-defaults" subtitle={t('dashboard.defaultsSub')} colorIndex={4} onClick={() => setSelectedDetail("defaults")} sparklineData={trends?.defaults} />
+            <StatCard title={t('dashboard.inquiries')} value={stats.totalInquiries.toLocaleString()} icon={Search} testId="stat-inquiries" colorIndex={5} onClick={() => setSelectedDetail("inquiries")} sparklineData={trends?.inquiries} />
+            <StatCard title={t('dashboard.pendingApprovals')} value={stats.pendingApprovalCount.toLocaleString()} icon={CheckSquare} testId="stat-approvals" subtitle={t('dashboard.pendingApprovalsSub')} colorIndex={6} onClick={() => setSelectedDetail("approvals")} sparklineData={trends?.approvals} />
+            <StatCard title={t('dashboard.openDisputes')} value={stats.openDisputeCount.toLocaleString()} icon={AlertCircle} testId="stat-disputes" subtitle={t('dashboard.openDisputesSub')} colorIndex={7} onClick={() => setSelectedDetail("disputes")} sparklineData={trends?.disputes} />
           </>
         ) : null}
       </div>

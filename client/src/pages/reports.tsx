@@ -5,7 +5,7 @@ import { useLocation } from "wouter";
 import {
   FileText, Download, Users, CreditCard, TrendingUp, AlertTriangle,
   Search, Globe, DollarSign, ArrowRight, Shield, ChevronDown, Loader2,
-  MapPin, Building2,
+  MapPin, Building2, FileSpreadsheet,
 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -229,12 +229,18 @@ export default function ReportsPage() {
           </div>
           <p className="text-sm text-muted-foreground ml-4">{t('reports.subtitle')}</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" data-testid="button-export-portfolio" onClick={() => window.open("/api/reports/export?format=csv&type=portfolio", "_blank")}>
-            <Download className="w-4 h-4 mr-2" />{t('reports.exportPortfolio')}
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" data-testid="button-export-portfolio-csv" onClick={() => window.open("/api/reports/export?format=csv&type=portfolio", "_blank")}>
+            <Download className="w-4 h-4 mr-2" />{t('reports.exportPortfolio')} (CSV)
           </Button>
-          <Button variant="outline" size="sm" data-testid="button-export-borrowers" onClick={() => window.open("/api/reports/export?format=csv&type=borrowers", "_blank")}>
-            <Download className="w-4 h-4 mr-2" />{t('reports.exportBorrowers')}
+          <Button variant="outline" size="sm" className="border-emerald-600/40 text-emerald-700 dark:text-emerald-400" data-testid="button-export-portfolio-xlsx" onClick={() => window.open("/api/reports/export?format=xlsx&type=portfolio", "_blank")}>
+            <FileSpreadsheet className="w-4 h-4 mr-2" />{t('reports.exportPortfolio')} (Excel)
+          </Button>
+          <Button variant="outline" size="sm" data-testid="button-export-borrowers-csv" onClick={() => window.open("/api/reports/export?format=csv&type=borrowers", "_blank")}>
+            <Download className="w-4 h-4 mr-2" />{t('reports.exportBorrowers')} (CSV)
+          </Button>
+          <Button variant="outline" size="sm" className="border-emerald-600/40 text-emerald-700 dark:text-emerald-400" data-testid="button-export-borrowers-xlsx" onClick={() => window.open("/api/reports/export?format=xlsx&type=borrowers", "_blank")}>
+            <FileSpreadsheet className="w-4 h-4 mr-2" />{t('reports.exportBorrowers')} (Excel)
           </Button>
         </div>
       </div>
@@ -429,6 +435,23 @@ export default function ReportsPage() {
           </>
         ) : null}
       </div>
+
+      <Card data-testid="card-export-audit-trail">
+        <CardHeader className="pb-3">
+          <h3 className="text-sm font-semibold">Export Audit Trail</h3>
+          <p className="text-xs text-muted-foreground">Download a full audit trail of all system activities</p>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" data-testid="button-export-audit-csv" onClick={() => window.open("/api/reports/export?format=csv&type=audit", "_blank")}>
+              <Download className="w-4 h-4 mr-2" />Export Audit Trail (CSV)
+            </Button>
+            <Button variant="outline" size="sm" className="border-emerald-600/40 text-emerald-700 dark:text-emerald-400" data-testid="button-export-audit-xlsx" onClick={() => window.open("/api/reports/export?format=xlsx&type=audit", "_blank")}>
+              <FileSpreadsheet className="w-4 h-4 mr-2" />Export Audit Trail (Excel)
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
