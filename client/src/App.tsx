@@ -15,7 +15,7 @@ import { NotificationBell } from "@/components/notification-bell";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { PasswordChangeDialog } from "@/components/password-change-dialog";
 import { Button } from "@/components/ui/button";
-import { LogOut, Loader2, MessageCircle } from "lucide-react";
+import { LogOut, Loader2, MessageCircle, Building2 } from "lucide-react";
 import { DisputeChatbot } from "@/components/dispute-chatbot";
 
 import { Skeleton } from "@/components/ui/skeleton";
@@ -49,6 +49,7 @@ const RetentionPoliciesPage = lazy(() => import("@/pages/retention-policies"));
 const RegulatoryCompliancePage = lazy(() => import("@/pages/regulatory-compliance"));
 const VersionHistoryPage = lazy(() => import("@/pages/version-history"));
 const AppGuidePage = lazy(() => import("@/pages/app-guide"));
+const OrganizationsPage = lazy(() => import("@/pages/organizations"));
 
 function LazyFallback() {
   return (
@@ -88,6 +89,7 @@ function Router() {
         <Route path="/regulatory-compliance" component={RegulatoryCompliancePage} />
         <Route path="/version-history" component={VersionHistoryPage} />
         <Route path="/guide" component={AppGuidePage} />
+        <Route path="/organizations" component={OrganizationsPage} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
@@ -128,6 +130,17 @@ function AuthenticatedApp() {
           <header className="flex items-center gap-1 sm:gap-2 p-2 border-b shrink-0 overflow-hidden ltr-header">
             <SidebarTrigger data-testid="button-sidebar-toggle" className="shrink-0" />
             <div className="flex items-center gap-1 sm:gap-3 shrink-0 ml-auto ltr-header">
+              {(user as any)?.organization?.name && user.role !== "super_admin" && (
+                <span className="text-xs text-muted-foreground hidden lg:inline-flex items-center gap-1" data-testid="text-org-context">
+                  <Building2 className="w-3 h-3" />
+                  {(user as any).organization.name}
+                </span>
+              )}
+              {user.role === "super_admin" && (
+                <span className="text-xs font-medium text-amber-600 dark:text-amber-400 hidden md:inline" data-testid="text-platform-admin">
+                  Platform Admin
+                </span>
+              )}
               <span className="text-xs text-muted-foreground hidden md:inline" data-testid="text-current-user">
                 {user.fullName} ({user.role})
               </span>

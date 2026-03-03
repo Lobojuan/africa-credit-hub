@@ -3,9 +3,29 @@ import { pgTable, text, varchar, integer, decimal, boolean, timestamp, pgEnum } 
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const userRoleEnum = pgEnum("user_role", ["admin", "regulator", "lender", "viewer"]);
+export const userRoleEnum = pgEnum("user_role", ["super_admin", "admin", "regulator", "lender", "viewer"]);
 export const userStatusEnum = pgEnum("user_status", ["active", "suspended", "deactivated"]);
+export const organizationTypeEnum = pgEnum("organization_type", ["bank", "microfinance", "insurance", "telecom", "fintech", "utility", "government", "regulator", "real_estate", "investment", "other"]);
+export const organizationStatusEnum = pgEnum("organization_status", ["active", "suspended", "pending", "deactivated"]);
 export const borrowerTypeEnum = pgEnum("borrower_type", ["individual", "corporate"]);
+
+export const organizations = pgTable("organizations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  type: organizationTypeEnum("type").notNull().default("other"),
+  status: organizationStatusEnum("status").notNull().default("pending"),
+  country: text("country"),
+  contactEmail: text("contact_email"),
+  contactPhone: text("contact_phone"),
+  address: text("address"),
+  logoUrl: text("logo_url"),
+  website: text("website"),
+  subscriptionTier: text("subscription_tier").notNull().default("standard"),
+  maxUsers: integer("max_users").default(10),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
 export const accountStatusEnum = pgEnum("account_status", ["current", "delinquent", "default", "closed", "restructured", "written_off"]);
 export const inquiryPurposeEnum = pgEnum("inquiry_purpose", ["new_credit", "review", "collection", "regulatory", "portfolio_monitoring"]);
 export const approvalStatusEnum = pgEnum("approval_status", ["pending", "approved", "rejected"]);
@@ -26,6 +46,7 @@ export const users = pgTable("users", {
   role: userRoleEnum("role").notNull().default("viewer"),
   status: userStatusEnum("status").notNull().default("active"),
   institution: text("institution"),
+  organizationId: varchar("organization_id").references(() => organizations.id),
   failedLoginAttempts: integer("failed_login_attempts").default(0),
   lockedUntil: timestamp("locked_until"),
   lastLogin: timestamp("last_login"),
@@ -66,6 +87,7 @@ export const borrowers = pgTable("borrowers", {
   educationLevel: text("education_level"),
   educationInstitution: text("education_institution"),
   employmentHistory: text("employment_history"),
+  organizationId: varchar("organization_id").references(() => organizations.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -93,6 +115,7 @@ export const creditAccounts = pgTable("credit_accounts", {
   restructureCount: integer("restructure_count").default(0),
   writtenOffDate: text("written_off_date"),
   reinstatedDate: text("reinstated_date"),
+  organizationId: varchar("organization_id").references(() => organizations.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -117,6 +140,7 @@ export const auditLogs = pgTable("audit_logs", {
   ipAddress: text("ip_address"),
   previousHash: text("previous_hash"),
   currentHash: text("current_hash"),
+  organizationId: varchar("organization_id").references(() => organizations.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -130,6 +154,7 @@ export const pendingApprovals = pgTable("pending_approvals", {
   reviewedBy: varchar("reviewed_by").references(() => users.id),
   status: approvalStatusEnum("status").notNull().default("pending"),
   reviewNotes: text("review_notes"),
+  organizationId: varchar("organization_id").references(() => organizations.id),
   createdAt: timestamp("created_at").defaultNow(),
   reviewedAt: timestamp("reviewed_at"),
 });
@@ -145,6 +170,7 @@ export const disputes = pgTable("disputes", {
   resolution: text("resolution"),
   correctionType: text("correction_type"),
   slaDeadline: timestamp("sla_deadline"),
+  organizationId: varchar("organization_id").references(() => organizations.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   resolvedAt: timestamp("resolved_at"),
@@ -172,6 +198,7 @@ export const courtJudgments = pgTable("court_judgments", {
   judgmentDate: text("judgment_date").notNull(),
   status: judgmentStatusEnum("status").notNull().default("active"),
   description: text("description"),
+  organizationId: varchar("organization_id").references(() => organizations.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -212,6 +239,7 @@ export const institutions = pgTable("institutions", {
   submissionFrequency: text("submission_frequency").default("monthly"),
   approvedBy: varchar("approved_by").references(() => users.id),
   approvedAt: timestamp("approved_at"),
+  organizationId: varchar("organization_id").references(() => organizations.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -225,6 +253,7 @@ export const billingRecords = pgTable("billing_records", {
   invoiceNumber: text("invoice_number").notNull(),
   periodStart: text("period_start"),
   periodEnd: text("period_end"),
+  organizationId: varchar("organization_id").references(() => organizations.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -235,6 +264,7 @@ export const creditReportLogs = pgTable("credit_report_logs", {
   institution: text("institution").notNull(),
   purpose: text("purpose").notNull(),
   serialNumber: text("serial_number").notNull().unique(),
+  organizationId: varchar("organization_id").references(() => organizations.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -293,6 +323,7 @@ export const apiKeys = pgTable("api_keys", {
   revokedAt: timestamp("revoked_at"),
 });
 
+export const insertOrganizationSchema = createInsertSchema(organizations).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertApiKeySchema = createInsertSchema(apiKeys).omit({ id: true, createdAt: true, lastUsedAt: true, revokedAt: true });
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, lastLogin: true, failedLoginAttempts: true, lockedUntil: true, passwordChangedAt: true, mustChangePassword: true, mfaSecret: true, mfaEnabled: true });
@@ -313,6 +344,8 @@ export const insertExchangeRateSchema = createInsertSchema(exchangeRates).omit({
 export const insertRetentionPolicySchema = createInsertSchema(retentionPolicies).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertApiConfigurationSchema = createInsertSchema(apiConfigurations).omit({ id: true, createdAt: true, updatedAt: true, lastTestedAt: true, lastTestStatus: true });
 
+export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
+export type Organization = typeof organizations.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertBorrower = z.infer<typeof insertBorrowerSchema>;

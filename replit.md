@@ -55,6 +55,16 @@ The system employs a modern full-stack architecture:
 -   **Floating Chatbot Button**: Chatbot trigger moved from header icon to a prominent floating action button (FAB) in bottom-right corner. Hides when chatbot panel is open, reappears on close. Uses primary color with shadow and hover scale animation.
 -   **Application Walkthrough Guide**: Comprehensive in-app visual guide at `/guide` accessible from sidebar under Resources ("App Guide"). Features 14 sections covering all major features (Dashboard, Borrowers, Credit Accounts, Search, Batch Upload, Disputes, Approvals, Credit Reports, Consent, Audit Trail, Institutions, User Management, Exchange Rates, Regulatory Compliance). Each section has step-by-step instructions with visual mockups, role-specific notes for all 4 roles, and tips. Role filter lets users see only features relevant to their role. Includes Quick Reference permissions matrix and links to Help, Documentation, and Helpdesk. Sidebar i18n labels in all 5 AU languages.
 
+## Multi-Tenant SaaS Architecture
+-   **Organizations Table**: `organizations` table with enums for type (bank, microfinance, insurance, telecom, fintech, utility, government, regulator, real_estate, investment, other) and status (active, suspended, pending, deactivated). Fields: id, name, slug (unique), type, status, country, contactEmail, contactPhone, address, logoUrl, website, subscriptionTier (standard/professional/enterprise), maxUsers, createdAt, updatedAt.
+-   **Tenant Scoping**: `organizationId` column added to all key tables (users, borrowers, creditAccounts, auditLogs, pendingApprovals, disputes, notifications, courtJudgments, consentRecords, institutions, billingRecords, creditReportLogs). All major queries accept optional `organizationId` for filtering.
+-   **Super Admin Role**: `super_admin` role added to userRoleEnum. Super admins can view all organizations' data or filter by `?orgId=` query param. Regular users are automatically scoped to their organization.
+-   **Platform Admin Routes**: `GET/POST /api/admin/organizations`, `PATCH/DELETE /api/admin/organizations/:id`, `GET /api/admin/platform-stats`, `GET /api/admin/organizations/:id/users` — all super_admin only.
+-   **Organizations Management Page**: `/organizations` route with CRUD for organizations, platform stats dashboard (total orgs, active orgs, total users, total borrowers).
+-   **Sidebar Updates**: "Platform" section with "Organizations" link for super_admin; org name in footer for regular users; "Platform Admin" badge for super_admin. Header shows org context for regular users and "Platform Admin" label for super_admin.
+-   **Seed Data**: 4 demo organizations (Systems In Motion, National Bank of Ethiopia, M-Pesa Financial Services, AfrInsure Group) with `platform_admin/platform123` super_admin user. Existing seed users/borrowers assigned to demo orgs.
+-   **Data Isolation**: `getOrgScope()` helper in routes returns `req.query.orgId` for super_admin or `req.session.organizationId` for others. All CRUD operations automatically scope by organization.
+
 ## External Dependencies
 -   **Database**: PostgreSQL (specifically Neon for hosting)
 -   **Frontend Libraries**: React, TypeScript, Vite, Tailwind CSS, shadcn/ui

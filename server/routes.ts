@@ -8,6 +8,7 @@ import {
   insertCourtJudgmentSchema, insertConsentRecordSchema, insertPaymentHistorySchema,
   insertInstitutionSchema, insertBillingRecordSchema, insertCreditReportLogSchema,
   insertExchangeRateSchema, insertRetentionPolicySchema, insertApiConfigurationSchema,
+  insertOrganizationSchema,
 } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
@@ -36,6 +37,20 @@ function requireRole(...roles: string[]) {
     }
     next();
   };
+}
+
+function requireSuperAdmin(req: Request, res: Response, next: NextFunction) {
+  if (req.session?.userRole !== "super_admin") {
+    return res.status(403).json({ message: "Super admin access required" });
+  }
+  next();
+}
+
+function getOrgScope(req: Request): string | undefined {
+  if (req.session?.userRole === "super_admin") {
+    return (req.query.orgId as string) || undefined;
+  }
+  return req.session?.organizationId || undefined;
 }
 
 export async function registerRoutes(
@@ -104,12 +119,14 @@ export async function registerRoutes(
 
       req.session.userId = user.id;
       req.session.userRole = user.role;
+      req.session.organizationId = user.organizationId || undefined;
       req.session.lastActivity = Date.now();
 
       await storage.createAuditLog({
         action: "LOGIN", entity: "system", userId: user.id,
         details: `${user.fullName} logged in`,
         ipAddress: req.ip || null,
+        organizationId: user.organizationId || undefined,
       });
 
       let passwordExpired = false;
@@ -120,7 +137,12 @@ export async function registerRoutes(
         passwordExpired = daysSinceChange > 90;
       }
 
-      res.json({ ...stripPassword(user), passwordExpired });
+      let organization = null;
+      if (user.organizationId) {
+        organization = await storage.getOrganization(user.organizationId);
+      }
+
+      res.json({ ...stripPassword(user), passwordExpired, organization });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
@@ -204,11 +226,13 @@ export async function registerRoutes(
       delete req.session.mfaPendingUserId;
       req.session.userId = user.id;
       req.session.userRole = user.role;
+      req.session.organizationId = user.organizationId || undefined;
       req.session.lastActivity = Date.now();
       await storage.createAuditLog({
         action: "LOGIN", entity: "system", userId: user.id,
         details: `${user.fullName} logged in (MFA verified)`,
         ipAddress: req.ip || null,
+        organizationId: user.organizationId || undefined,
       });
       let passwordExpired = false;
       if (user.mustChangePassword) {
@@ -217,7 +241,11 @@ export async function registerRoutes(
         const daysSinceChange = (Date.now() - new Date(user.passwordChangedAt).getTime()) / (1000 * 60 * 60 * 24);
         passwordExpired = daysSinceChange > 90;
       }
-      res.json({ ...stripPassword(user), passwordExpired });
+      let organization = null;
+      if (user.organizationId) {
+        organization = await storage.getOrganization(user.organizationId);
+      }
+      res.json({ ...stripPassword(user), passwordExpired, organization });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
@@ -301,6 +329,7 @@ export async function registerRoutes(
       if (!admin) return res.status(500).json({ message: "Admin user not found" });
       req.session.userId = admin.id;
       req.session.userRole = admin.role;
+      req.session.organizationId = admin.organizationId || undefined;
       req.session.lastActivity = Date.now();
       req.session.save((err) => {
         if (err) return res.status(500).json({ message: "Session save failed" });
@@ -328,7 +357,12 @@ export async function registerRoutes(
       passwordExpired = daysSinceChange > PASSWORD_EXPIRY_DAYS;
     }
 
-    res.json({ ...userData, passwordExpired });
+    let organization = null;
+    if (user.organizationId) {
+      organization = await storage.getOrganization(user.organizationId);
+    }
+
+    res.json({ ...userData, passwordExpired, organization });
   });
 
   app.get("/api/docs/api-integration-guide", (_req, res) => {
@@ -357,7 +391,8 @@ export async function registerRoutes(
 
   app.get("/api/dashboard/stats", async (req, res) => {
     try {
-      const stats = await storage.getDashboardStats();
+      const orgId = getOrgScope(req);
+      const stats = await storage.getDashboardStats(orgId);
       res.json(stats);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -366,18 +401,20 @@ export async function registerRoutes(
 
   app.get("/api/dashboard/details/:type", async (req, res) => {
     try {
-      const details = await storage.getDashboardDetails(req.params.type);
+      const orgId = getOrgScope(req);
+      const details = await storage.getDashboardDetails(req.params.type, orgId);
       res.json(details);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
   });
 
-  app.get("/api/dashboard/chart-data", requireAuth, async (_req, res) => {
+  app.get("/api/dashboard/chart-data", requireAuth, async (req, res) => {
     try {
-      const stats = await storage.getDashboardStats();
+      const orgId = getOrgScope(req);
+      const stats = await storage.getDashboardStats(orgId);
 
-      const allAccounts = await storage.getAllCreditAccounts();
+      const allAccounts = await storage.getAllCreditAccounts(orgId);
       const statusMap: Record<string, number> = {};
       const typeMap: Record<string, number> = {};
       for (const a of allAccounts) {
@@ -390,7 +427,7 @@ export async function registerRoutes(
         .slice(0, 8)
         .map(([name, value]) => ({ name, value }));
 
-      const borrowerResult = await storage.getBorrowers(1, 200000);
+      const borrowerResult = await storage.getBorrowers(1, 200000, orgId);
       const allBorrowers = borrowerResult.data;
       const countryMap: Record<string, number> = {};
       for (const b of allBorrowers) {
@@ -425,18 +462,20 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/users", requireRole("admin"), async (_req, res) => {
+  app.get("/api/users", requireRole("admin", "super_admin"), async (req, res) => {
     try {
-      const users = await storage.getUsers();
+      const orgId = getOrgScope(req);
+      const users = await storage.getUsers(orgId);
       res.json(users.map(stripPassword));
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
   });
 
-  app.post("/api/users", requireRole("admin"), async (req, res) => {
+  app.post("/api/users", requireRole("admin", "super_admin"), async (req, res) => {
     try {
-      const parsed = insertUserSchema.parse(req.body);
+      const orgId = req.session?.userRole === "super_admin" ? (req.body.organizationId || getOrgScope(req)) : getOrgScope(req);
+      const parsed = insertUserSchema.parse({ ...req.body, organizationId: orgId });
       const hashedPassword = await bcrypt.hash(parsed.password, 10);
       const user = await storage.createUser({ ...parsed, password: hashedPassword });
       await storage.createAuditLog({
@@ -489,15 +528,16 @@ export async function registerRoutes(
 
   app.get("/api/borrowers", async (req, res) => {
     try {
+      const orgId = getOrgScope(req);
       const search = req.query.search as string;
       const country = req.query.country as string;
       if (search || country) {
-        const data = await storage.searchBorrowers(search || "", country || undefined);
+        const data = await storage.searchBorrowers(search || "", country || undefined, orgId);
         res.json(data);
       } else {
         const page = Math.max(1, parseInt(req.query.page as string) || 1);
         const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50));
-        const result = await storage.getBorrowers(page, limit);
+        const result = await storage.getBorrowers(page, limit, orgId);
         res.json(result);
       }
     } catch (e: any) {
@@ -507,12 +547,13 @@ export async function registerRoutes(
 
   app.get("/api/global-search", async (req, res) => {
     try {
+      const orgId = getOrgScope(req);
       const query = (req.query.q as string) || "";
       const country = (req.query.country as string) || undefined;
       if (!query && !country) {
         return res.json({ borrowers: [], institutions: [], creditAccounts: [] });
       }
-      const results = await storage.globalSearch(query, country);
+      const results = await storage.globalSearch(query, country, orgId);
       res.json(results);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -548,12 +589,14 @@ export async function registerRoutes(
 
   app.post("/api/borrowers", async (req, res) => {
     try {
-      const parsed = insertBorrowerSchema.parse(req.body);
+      const orgId = getOrgScope(req);
+      const parsed = insertBorrowerSchema.parse({ ...req.body, organizationId: orgId });
       const approval = await storage.createPendingApproval({
         entityType: "borrower",
         action: "CREATE",
         payload: JSON.stringify(parsed),
         requestedBy: req.session?.userId!,
+        organizationId: orgId,
       });
       await storage.createAuditLog({
         action: "SUBMIT_APPROVAL", entity: "borrower", entityId: approval.id, userId: req.session?.userId,
@@ -671,10 +714,11 @@ export async function registerRoutes(
 
   app.get("/api/credit-accounts", async (req, res) => {
     try {
+      const orgId = getOrgScope(req);
       const borrowerId = req.query.borrowerId as string;
       const result = borrowerId
         ? await storage.getCreditAccountsByBorrower(borrowerId)
-        : await storage.getAllCreditAccounts();
+        : await storage.getAllCreditAccounts(orgId);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -693,12 +737,14 @@ export async function registerRoutes(
 
   app.post("/api/credit-accounts", async (req, res) => {
     try {
-      const parsed = insertCreditAccountSchema.parse(req.body);
+      const orgId = getOrgScope(req);
+      const parsed = insertCreditAccountSchema.parse({ ...req.body, organizationId: orgId });
       const approval = await storage.createPendingApproval({
         entityType: "credit_account",
         action: "CREATE",
         payload: JSON.stringify(parsed),
         requestedBy: req.session?.userId!,
+        organizationId: orgId,
       });
       await storage.createAuditLog({
         action: "SUBMIT_APPROVAL", entity: "credit_account", entityId: approval.id, userId: req.session?.userId,
@@ -736,9 +782,10 @@ export async function registerRoutes(
   app.get("/api/credit-inquiries", async (req, res) => {
     try {
       const borrowerId = req.query.borrowerId as string;
+      const orgId = getOrgScope(req);
       const result = borrowerId
         ? await storage.getCreditInquiriesByBorrower(borrowerId)
-        : await storage.getAllCreditInquiries();
+        : await storage.getAllCreditInquiries(orgId);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -802,9 +849,10 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/audit-logs", requireRole("admin", "regulator"), async (_req, res) => {
+  app.get("/api/audit-logs", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
     try {
-      const logs = await storage.getAuditLogs();
+      const orgId = getOrgScope(req);
+      const logs = await storage.getAuditLogs(orgId);
       res.json(logs);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -820,9 +868,10 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/pending-approvals", async (_req, res) => {
+  app.get("/api/pending-approvals", async (req, res) => {
     try {
-      const approvals = await storage.getPendingApprovals();
+      const orgId = getOrgScope(req);
+      const approvals = await storage.getPendingApprovals(orgId);
       res.json(approvals);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -910,9 +959,10 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/disputes", async (_req, res) => {
+  app.get("/api/disputes", async (req, res) => {
     try {
-      const disputeList = await storage.getDisputes();
+      const orgId = getOrgScope(req);
+      const disputeList = await storage.getDisputes(orgId);
       res.json(disputeList);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -1129,9 +1179,10 @@ export async function registerRoutes(
   app.get("/api/court-judgments", async (req, res) => {
     try {
       const borrowerId = req.query.borrowerId as string;
+      const orgId = getOrgScope(req);
       const result = borrowerId
         ? await storage.getCourtJudgmentsByBorrower(borrowerId)
-        : await storage.getAllCourtJudgments();
+        : await storage.getAllCourtJudgments(orgId);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -1156,9 +1207,10 @@ export async function registerRoutes(
   app.get("/api/consent-records", async (req, res) => {
     try {
       const borrowerId = req.query.borrowerId as string;
+      const orgId = getOrgScope(req);
       const result = borrowerId
         ? await storage.getConsentRecordsByBorrower(borrowerId)
-        : await storage.getAllConsentRecords();
+        : await storage.getAllConsentRecords(orgId);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -1222,7 +1274,8 @@ export async function registerRoutes(
     try {
       const page = Math.max(1, parseInt(req.query.page as string) || 1);
       const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50));
-      const result = await storage.getInstitutions(page, limit);
+      const orgId = getOrgScope(req);
+      const result = await storage.getInstitutions(page, limit, orgId);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -1274,9 +1327,10 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/billing", requireRole("admin", "regulator"), async (_req, res) => {
+  app.get("/api/billing", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
     try {
-      const records = await storage.getBillingRecords();
+      const orgId = getOrgScope(req);
+      const records = await storage.getBillingRecords(orgId);
       res.json(records);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -1298,9 +1352,10 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/credit-reports/logs", requireRole("admin", "regulator"), async (_req, res) => {
+  app.get("/api/credit-reports/logs", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
     try {
-      const logs = await storage.getCreditReportLogs();
+      const orgId = getOrgScope(req);
+      const logs = await storage.getCreditReportLogs(orgId);
       res.json(logs);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -1752,13 +1807,14 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/reports/export", requireRole("admin", "regulator"), async (req, res) => {
+  app.get("/api/reports/export", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
     try {
+      const orgId = getOrgScope(req);
       const format = (req.query.format as string) || "csv";
       const type = (req.query.type as string) || "portfolio";
 
-      const accounts = await storage.getAllCreditAccounts();
-      const { data: borrowersList } = await storage.getBorrowers(1, 200);
+      const accounts = await storage.getAllCreditAccounts(orgId);
+      const { data: borrowersList } = await storage.getBorrowers(1, 200, orgId);
 
       if (format === "csv") {
         let csv = "";
@@ -1786,13 +1842,14 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/reports/regulatory", requireRole("admin", "regulator"), async (_req, res) => {
+  app.get("/api/reports/regulatory", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
     try {
-      const accounts = await storage.getAllCreditAccounts();
-      const { data: borrowersList, total: totalBorrowers } = await storage.getBorrowers(1, 200);
-      const disputeList = await storage.getDisputes();
-      const approvals = await storage.getPendingApprovals();
-      const { data: instList, total: totalInstitutions } = await storage.getInstitutions(1, 200);
+      const orgId = getOrgScope(req);
+      const accounts = await storage.getAllCreditAccounts(orgId);
+      const { data: borrowersList, total: totalBorrowers } = await storage.getBorrowers(1, 200, orgId);
+      const disputeList = await storage.getDisputes(orgId);
+      const approvals = await storage.getPendingApprovals(orgId);
+      const { data: instList, total: totalInstitutions } = await storage.getInstitutions(1, 200, orgId);
 
       const totalOutstanding = accounts.reduce((sum, a) => sum + parseFloat(a.currentBalance || "0"), 0);
       const nplAccounts = accounts.filter(a => a.status === "delinquent" || a.status === "default" || a.status === "written_off");
@@ -2213,7 +2270,233 @@ export async function registerRoutes(
     } catch (e: any) { res.status(500).json({ message: e.message }); }
   });
 
+  app.get("/api/admin/organizations", requireAuth, requireSuperAdmin, async (_req, res) => {
+    try {
+      const orgs = await storage.getOrganizations();
+      const orgsWithStats = await Promise.all(orgs.map(async (org) => {
+        const users = await storage.getUsers(org.id);
+        const stats = await storage.getDashboardStats(org.id);
+        return { ...org, userCount: users.length, stats };
+      }));
+      res.json(orgsWithStats);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/admin/organizations/:id", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const org = await storage.getOrganization(req.params.id);
+      if (!org) return res.status(404).json({ message: "Organization not found" });
+      const users = await storage.getUsers(org.id);
+      const stats = await storage.getDashboardStats(org.id);
+      res.json({ ...org, userCount: users.length, stats });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/admin/organizations", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const parsed = insertOrganizationSchema.parse(req.body);
+      const existing = await storage.getOrganizationBySlug(parsed.slug);
+      if (existing) return res.status(400).json({ message: "Organization with this slug already exists" });
+      const org = await storage.createOrganization(parsed);
+      await storage.createAuditLog({
+        action: "CREATE", entity: "organization", entityId: org.id, userId: req.session?.userId,
+        details: `Created organization: ${org.name}`,
+        ipAddress: req.ip || null,
+      });
+      res.status(201).json(org);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.patch("/api/admin/organizations/:id", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const updateSchema = insertOrganizationSchema.partial();
+      const parsed = updateSchema.parse(req.body);
+      const org = await storage.updateOrganization(req.params.id, parsed);
+      if (!org) return res.status(404).json({ message: "Organization not found" });
+      await storage.createAuditLog({
+        action: "UPDATE", entity: "organization", entityId: org.id, userId: req.session?.userId,
+        details: `Updated organization: ${org.name}`,
+        ipAddress: req.ip || null,
+      });
+      res.json(org);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.delete("/api/admin/organizations/:id", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const users = await storage.getUsers(req.params.id);
+      if (users.length > 0) {
+        return res.status(400).json({ message: "Cannot delete organization with active users. Remove all users first." });
+      }
+      const deleted = await storage.deleteOrganization(req.params.id);
+      if (!deleted) return res.status(404).json({ message: "Organization not found" });
+      await storage.createAuditLog({
+        action: "DELETE", entity: "organization", entityId: req.params.id, userId: req.session?.userId,
+        details: `Deleted organization: ${req.params.id}`,
+        ipAddress: req.ip || null,
+      });
+      res.json({ message: "Organization deleted" });
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/admin/organizations/:id/users", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const users = await storage.getUsers(req.params.id);
+      res.json(users.map(stripPassword));
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/admin/organizations/:id/stats", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const stats = await storage.getDashboardStats(req.params.id);
+      res.json(stats);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/admin/platform-stats", requireAuth, requireSuperAdmin, async (_req, res) => {
+    try {
+      const orgs = await storage.getOrganizations();
+      const allUsers = await storage.getUsers();
+      const globalStats = await storage.getDashboardStats();
+      res.json({
+        totalOrganizations: orgs.length,
+        activeOrganizations: orgs.filter(o => o.status === "active").length,
+        totalUsers: allUsers.length,
+        ...globalStats,
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  await seedOrganizations();
+
   registerExternalApi(app);
 
   return httpServer;
+}
+
+async function seedOrganizations() {
+  const existing = await storage.getOrganizations();
+  if (existing.length > 0) return;
+
+  const simOrg = await storage.createOrganization({
+    name: "Systems In Motion",
+    slug: "sim",
+    type: "other",
+    status: "active",
+    country: "Ethiopia",
+    contactEmail: "admin@systemsinmotion.com",
+    subscriptionTier: "enterprise",
+    maxUsers: 100,
+  });
+
+  const nbeOrg = await storage.createOrganization({
+    name: "National Bank of Ethiopia",
+    slug: "nbe",
+    type: "bank",
+    status: "active",
+    country: "Ethiopia",
+    contactEmail: "info@nbe.gov.et",
+    subscriptionTier: "enterprise",
+    maxUsers: 50,
+  });
+
+  const mpesaOrg = await storage.createOrganization({
+    name: "M-Pesa Financial Services",
+    slug: "mpesa",
+    type: "fintech",
+    status: "active",
+    country: "Kenya",
+    contactEmail: "info@mpesa.co.ke",
+    subscriptionTier: "professional",
+    maxUsers: 30,
+  });
+
+  const insureOrg = await storage.createOrganization({
+    name: "AfrInsure Group",
+    slug: "afrinsure",
+    type: "insurance",
+    status: "active",
+    country: "South Africa",
+    contactEmail: "info@afrinsure.co.za",
+    subscriptionTier: "standard",
+    maxUsers: 20,
+  });
+
+  const platformAdmin = await storage.getUserByUsername("platform_admin");
+  if (!platformAdmin) {
+    const bcryptLib = await import("bcryptjs");
+    const hashedPassword = await bcryptLib.hash("platform123", 10);
+    await storage.createUser({
+      username: "platform_admin",
+      password: hashedPassword,
+      fullName: "Platform Administrator",
+      email: "platform@systemsinmotion.com",
+      role: "super_admin",
+      status: "active",
+      organizationId: simOrg.id,
+    });
+  }
+
+  const admin = await storage.getUserByUsername("admin");
+  if (admin && !admin.organizationId) {
+    await storage.updateUser(admin.id, { organizationId: simOrg.id, role: "super_admin" } as any);
+  }
+
+  const regUser = await storage.getUserByUsername("regulator1");
+  if (regUser && !regUser.organizationId) {
+    await storage.updateUser(regUser.id, { organizationId: nbeOrg.id } as any);
+  }
+
+  const cbeUser = await storage.getUserByUsername("cbe_user");
+  if (cbeUser && !cbeUser.organizationId) {
+    await storage.updateUser(cbeUser.id, { organizationId: nbeOrg.id } as any);
+  }
+
+  const dashenUser = await storage.getUserByUsername("dashen_user");
+  if (dashenUser && !dashenUser.organizationId) {
+    await storage.updateUser(dashenUser.id, { organizationId: mpesaOrg.id } as any);
+  }
+
+  const awashUser = await storage.getUserByUsername("awash_user");
+  if (awashUser && !awashUser.organizationId) {
+    await storage.updateUser(awashUser.id, { organizationId: insureOrg.id } as any);
+  }
+
+  const { data: allBorrowers } = await storage.getBorrowers(1, 10000);
+  const orgIds = [simOrg.id, nbeOrg.id, mpesaOrg.id, insureOrg.id];
+  for (let i = 0; i < allBorrowers.length; i++) {
+    const b = allBorrowers[i];
+    if (!b.organizationId) {
+      const assignedOrg = orgIds[i % orgIds.length];
+      await storage.updateBorrower(b.id, { organizationId: assignedOrg } as any);
+    }
+  }
+
+  const allAccounts = await storage.getAllCreditAccounts();
+  for (const acc of allAccounts) {
+    if (!acc.organizationId) {
+      const borrower = await storage.getBorrower(acc.borrowerId);
+      if (borrower?.organizationId) {
+        await storage.updateCreditAccount(acc.id, { organizationId: borrower.organizationId } as any);
+      }
+    }
+  }
+
+  console.log("[Seed] Organizations and tenant assignments created successfully");
 }

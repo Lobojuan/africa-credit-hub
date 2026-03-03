@@ -2,9 +2,9 @@ import { createContext, useContext, useEffect, useCallback, type ReactNode } fro
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { User } from "@shared/schema";
+import type { User, Organization } from "@shared/schema";
 
-type AuthUser = Omit<User, "password"> & { passwordExpired?: boolean };
+type AuthUser = Omit<User, "password"> & { passwordExpired?: boolean; organization?: Organization | null };
 
 interface AuthContextType {
   user: AuthUser | null;

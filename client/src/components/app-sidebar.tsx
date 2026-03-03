@@ -57,30 +57,34 @@ const coreItems: NavItem[] = [
   { titleKey: "sidebar.borrowers", url: "/borrowers", icon: Users, testId: "nav-borrowers" },
   { titleKey: "sidebar.creditAccounts", url: "/credit-accounts", icon: CreditCard, testId: "nav-credit-accounts" },
   { titleKey: "sidebar.creditSearch", url: "/search", icon: Search, testId: "nav-credit-search" },
-  { titleKey: "sidebar.batchUpload", url: "/batch-upload", icon: Upload, testId: "nav-batch-upload", roles: ["admin", "lender"] },
+  { titleKey: "sidebar.batchUpload", url: "/batch-upload", icon: Upload, testId: "nav-batch-upload", roles: ["admin", "lender", "super_admin"] },
 ];
 
 const reportItems: NavItem[] = [
   { titleKey: "sidebar.creditReports", url: "/reports", icon: FileText, testId: "nav-credit-reports" },
   { titleKey: "sidebar.disputes", url: "/disputes", icon: AlertCircle, testId: "nav-disputes" },
-  { titleKey: "sidebar.pendingApprovals", url: "/approvals", icon: CheckSquare, testId: "nav-pending-approvals", roles: ["admin", "regulator"] },
+  { titleKey: "sidebar.pendingApprovals", url: "/approvals", icon: CheckSquare, testId: "nav-pending-approvals", roles: ["admin", "regulator", "super_admin"] },
   { titleKey: "sidebar.consentManagement", url: "/consent", icon: FileCheck, testId: "nav-consent" },
   { titleKey: "sidebar.helpdesk", url: "/helpdesk", icon: Headset, testId: "nav-helpdesk" },
-  { titleKey: "sidebar.auditTrail", url: "/audit", icon: Shield, testId: "nav-audit-trail", roles: ["admin", "regulator"] },
-  { titleKey: "sidebar.regulatoryCompliance", url: "/regulatory-compliance", icon: Scale, testId: "nav-regulatory-compliance", roles: ["admin", "regulator"] },
+  { titleKey: "sidebar.auditTrail", url: "/audit", icon: Shield, testId: "nav-audit-trail", roles: ["admin", "regulator", "super_admin"] },
+  { titleKey: "sidebar.regulatoryCompliance", url: "/regulatory-compliance", icon: Scale, testId: "nav-regulatory-compliance", roles: ["admin", "regulator", "super_admin"] },
+];
+
+const platformItems: NavItem[] = [
+  { titleKey: "sidebar.organizations", url: "/organizations", icon: Building2, testId: "nav-organizations", roles: ["super_admin"] },
 ];
 
 const systemItems: NavItem[] = [
-  { titleKey: "sidebar.userManagement", url: "/users", icon: Settings, testId: "nav-user-management", roles: ["admin"] },
-  { titleKey: "sidebar.institutions", url: "/institutions", icon: Building2, testId: "nav-institutions", roles: ["admin"] },
-  { titleKey: "sidebar.billing", url: "/billing", icon: Receipt, testId: "nav-billing", roles: ["admin", "regulator"] },
-  { titleKey: "sidebar.retentionPolicies", url: "/retention-policies", icon: Archive, testId: "nav-retention-policies", roles: ["admin", "regulator"] },
+  { titleKey: "sidebar.userManagement", url: "/users", icon: Settings, testId: "nav-user-management", roles: ["admin", "super_admin"] },
+  { titleKey: "sidebar.institutions", url: "/institutions", icon: Building2, testId: "nav-institutions", roles: ["admin", "super_admin"] },
+  { titleKey: "sidebar.billing", url: "/billing", icon: Receipt, testId: "nav-billing", roles: ["admin", "regulator", "super_admin"] },
+  { titleKey: "sidebar.retentionPolicies", url: "/retention-policies", icon: Archive, testId: "nav-retention-policies", roles: ["admin", "regulator", "super_admin"] },
 ];
 
 const integrationItems: NavItem[] = [
-  { titleKey: "sidebar.exchangeRates", url: "/exchange-rates", icon: DollarSign, testId: "nav-exchange-rates", roles: ["admin"] },
-  { titleKey: "sidebar.apiAdmin", url: "/api-admin", icon: Plug, testId: "nav-api-admin", roles: ["admin"] },
-  { titleKey: "sidebar.apiKeys", url: "/api-keys", icon: Key, testId: "nav-api-keys", roles: ["admin"] },
+  { titleKey: "sidebar.exchangeRates", url: "/exchange-rates", icon: DollarSign, testId: "nav-exchange-rates", roles: ["admin", "super_admin"] },
+  { titleKey: "sidebar.apiAdmin", url: "/api-admin", icon: Plug, testId: "nav-api-admin", roles: ["admin", "super_admin"] },
+  { titleKey: "sidebar.apiKeys", url: "/api-keys", icon: Key, testId: "nav-api-keys", roles: ["admin", "super_admin"] },
 ];
 
 const resourceItems: NavItem[] = [
@@ -150,11 +154,14 @@ export function AppSidebar() {
   const role = user?.role;
   const isRtl = i18n.language === "ar";
 
+  const visiblePlatform = filterByRole(platformItems, role);
   const visibleCore = filterByRole(coreItems, role);
   const visibleReports = filterByRole(reportItems, role);
   const visibleSystem = filterByRole(systemItems, role);
   const visibleIntegrations = filterByRole(integrationItems, role);
   const visibleResources = filterByRole(resourceItems, role);
+  const isSuperAdmin = role === "super_admin";
+  const orgName = (user as any)?.organization?.name;
 
   return (
     <Sidebar side={isRtl ? "right" : "left"}>
@@ -177,6 +184,32 @@ export function AppSidebar() {
         </Link>
       </SidebarHeader>
       <SidebarContent className="gap-0">
+        {visiblePlatform.length > 0 && (
+          <>
+            <SidebarGroup className="py-0">
+              <SidebarGroupLabel className="text-sidebar-foreground/40 text-[10px] font-semibold uppercase tracking-widest px-3">
+                Platform
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {visiblePlatform.map((item) => (
+                    <SidebarMenuItem key={item.titleKey}>
+                      <SidebarMenuButton asChild data-active={location === item.url}>
+                        <Link href={item.url} data-testid={item.testId}>
+                          <item.icon className="w-4 h-4" />
+                          <span>{t(item.titleKey)}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+            <div className="mx-3 my-1">
+              <div className="h-px bg-sidebar-foreground/10" />
+            </div>
+          </>
+        )}
         <SidebarGroup className="py-0">
           <SidebarGroupContent>
             <SidebarMenu>
@@ -248,6 +281,22 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="p-3 pt-0">
+        {orgName && !isSuperAdmin && (
+          <div className="rounded-lg p-2.5 mb-1 border border-sidebar-foreground/10" style={{ background: "rgba(255,255,255,0.03)" }}>
+            <div className="flex items-center gap-2">
+              <Building2 className="w-3.5 h-3.5 text-sidebar-foreground/60" />
+              <span className="text-[11px] font-semibold text-sidebar-foreground/80 truncate" data-testid="text-org-name">{orgName}</span>
+            </div>
+          </div>
+        )}
+        {isSuperAdmin && (
+          <div className="rounded-lg p-2.5 mb-1 border border-amber-500/30" style={{ background: "rgba(245,158,11,0.08)" }}>
+            <div className="flex items-center gap-2">
+              <Shield className="w-3.5 h-3.5 text-amber-500" />
+              <span className="text-[11px] font-semibold text-amber-500" data-testid="text-super-admin-badge">Platform Admin</span>
+            </div>
+          </div>
+        )}
         <div className="rounded-lg p-2.5" style={{ background: "rgba(255,255,255,0.05)" }}>
           <div className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />

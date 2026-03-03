@@ -25,6 +25,7 @@ declare module "express-session" {
   interface SessionData {
     userId: string;
     userRole: string;
+    organizationId: string;
     lastActivity: number;
     mfaPendingUserId: string;
   }
