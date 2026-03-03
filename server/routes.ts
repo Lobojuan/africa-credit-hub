@@ -302,7 +302,10 @@ export async function registerRoutes(
       req.session.userId = admin.id;
       req.session.userRole = admin.role;
       req.session.lastActivity = Date.now();
-      res.redirect("/");
+      req.session.save((err) => {
+        if (err) return res.status(500).json({ message: "Session save failed" });
+        res.redirect("/");
+      });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
