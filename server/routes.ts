@@ -331,12 +331,15 @@ export async function registerRoutes(
   app.get("/api/docs/api-integration-guide", (_req, res) => {
     const candidates = [
       path.resolve(process.cwd(), "docs/API_Integration_Guide.md"),
+      path.resolve(__dirname, "docs/API_Integration_Guide.md"),
       path.resolve(__dirname, "../docs/API_Integration_Guide.md"),
       path.resolve(__dirname, "../../docs/API_Integration_Guide.md"),
     ];
-    const filePath = candidates.find(p => fs.existsSync(p));
+    const filePath = candidates.find(p => {
+      try { return fs.existsSync(p); } catch { return false; }
+    });
     if (!filePath) {
-      return res.status(404).json({ message: "Document not found" });
+      return res.status(404).json({ message: "Document not found", searched: candidates });
     }
     res.setHeader("Content-Type", "text/markdown; charset=utf-8");
     res.setHeader("Content-Disposition", 'attachment; filename="CDH_API_Integration_Guide.md"');
