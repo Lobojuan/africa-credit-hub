@@ -26,6 +26,7 @@ import {
   Scale,
   ChevronDown,
   History,
+  Play,
 } from "lucide-react";
 import {
   Sidebar,
@@ -83,6 +84,7 @@ const integrationItems: NavItem[] = [
 ];
 
 const resourceItems: NavItem[] = [
+  { titleKey: "sidebar.appGuide", url: "/guide", icon: Play, testId: "nav-app-guide" },
   { titleKey: "sidebar.help", url: "/help", icon: HelpCircle, testId: "nav-help" },
   { titleKey: "sidebar.documentation", url: "/documentation", icon: BookOpen, testId: "nav-documentation" },
   { titleKey: "sidebar.versionHistory", url: "/version-history", icon: History, testId: "nav-version-history" },

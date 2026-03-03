@@ -84,6 +84,7 @@ async function buildAll() {
     "credit-report",
     "settings",
     "version-history",
+    "guide",
     "documentation",
     "billing",
     "online-manual",

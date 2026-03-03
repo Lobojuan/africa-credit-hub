@@ -26,6 +26,7 @@ const pt = {
     integrations: "Integrações",
     help: "Ajuda e Guia",
     documentation: "Documentação",
+    appGuide: "Guia do App",
     versionHistory: "Histórico de Versões",
     brandTitle: "Registo de Crédito",
     brandSubtitle: "Systems In Motion Limited™",

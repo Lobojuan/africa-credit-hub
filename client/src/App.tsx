@@ -48,6 +48,7 @@ const ApiAdminPage = lazy(() => import("@/pages/api-admin"));
 const RetentionPoliciesPage = lazy(() => import("@/pages/retention-policies"));
 const RegulatoryCompliancePage = lazy(() => import("@/pages/regulatory-compliance"));
 const VersionHistoryPage = lazy(() => import("@/pages/version-history"));
+const AppGuidePage = lazy(() => import("@/pages/app-guide"));
 
 function LazyFallback() {
   return (
@@ -86,6 +87,7 @@ function Router() {
         <Route path="/retention-policies" component={RetentionPoliciesPage} />
         <Route path="/regulatory-compliance" component={RegulatoryCompliancePage} />
         <Route path="/version-history" component={VersionHistoryPage} />
+        <Route path="/guide" component={AppGuidePage} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>

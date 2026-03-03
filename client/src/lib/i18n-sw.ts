@@ -26,6 +26,7 @@ const sw: Record<string, any> = {
     integrations: "Miunganisho",
     help: "Msaada na Mwongozo",
     documentation: "Nyaraka",
+    appGuide: "Mwongozo wa Programu",
     versionHistory: "Historia ya Matoleo",
     brandTitle: "Sajili ya Mikopo",
     brandSubtitle: "Systems In Motion Limited™",

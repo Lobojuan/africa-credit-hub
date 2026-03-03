@@ -26,6 +26,7 @@ const ar: Record<string, any> = {
     integrations: "التكاملات",
     help: "المساعدة والدليل",
     documentation: "الوثائق",
+    appGuide: "دليل التطبيق",
     versionHistory: "سجل الإصدارات",
     brandTitle: "سجل الائتمان",
     brandSubtitle: "Systems In Motion Limited™",
