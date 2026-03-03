@@ -2276,7 +2276,24 @@ export async function registerRoutes(
       const orgsWithStats = await Promise.all(orgs.map(async (org) => {
         const users = await storage.getUsers(org.id);
         const stats = await storage.getDashboardStats(org.id);
-        return { ...org, userCount: users.length, stats };
+        const billing = await storage.getBillingRecords(org.id);
+        const totalBilled = billing.reduce((s, b) => s + parseFloat(b.amount || "0"), 0);
+        const totalPaid = billing.filter(b => b.status === "paid").reduce((s, b) => s + parseFloat(b.amount || "0"), 0);
+        const totalPending = billing.filter(b => b.status === "pending").reduce((s, b) => s + parseFloat(b.amount || "0"), 0);
+        const totalOverdue = billing.filter(b => b.status === "overdue").reduce((s, b) => s + parseFloat(b.amount || "0"), 0);
+        const latestInvoice = billing[0] || null;
+        return {
+          ...org, userCount: users.length, stats,
+          billing: {
+            totalBilled, totalPaid, totalPending, totalOverdue,
+            invoiceCount: billing.length,
+            paidCount: billing.filter(b => b.status === "paid").length,
+            pendingCount: billing.filter(b => b.status === "pending").length,
+            overdueCount: billing.filter(b => b.status === "overdue").length,
+            latestInvoice,
+            paymentHealth: totalOverdue > 0 ? "overdue" : totalPending > 0 ? "pending" : totalPaid > 0 ? "current" : "no_invoices",
+          },
+        };
       }));
       res.json(orgsWithStats);
     } catch (e: any) {
@@ -2290,7 +2307,27 @@ export async function registerRoutes(
       if (!org) return res.status(404).json({ message: "Organization not found" });
       const users = await storage.getUsers(org.id);
       const stats = await storage.getDashboardStats(org.id);
-      res.json({ ...org, userCount: users.length, stats });
+      const billing = await storage.getBillingRecords(org.id);
+      const disputes = await storage.getDisputes(org.id);
+      const totalBilled = billing.reduce((s, b) => s + parseFloat(b.amount || "0"), 0);
+      const totalPaid = billing.filter(b => b.status === "paid").reduce((s, b) => s + parseFloat(b.amount || "0"), 0);
+      const totalPending = billing.filter(b => b.status === "pending").reduce((s, b) => s + parseFloat(b.amount || "0"), 0);
+      const totalOverdue = billing.filter(b => b.status === "overdue").reduce((s, b) => s + parseFloat(b.amount || "0"), 0);
+      res.json({
+        ...org, userCount: users.length, stats,
+        users: users.map(stripPassword),
+        billing: {
+          records: billing,
+          totalBilled, totalPaid, totalPending, totalOverdue,
+          invoiceCount: billing.length,
+          paidCount: billing.filter(b => b.status === "paid").length,
+          pendingCount: billing.filter(b => b.status === "pending").length,
+          overdueCount: billing.filter(b => b.status === "overdue").length,
+          paymentHealth: totalOverdue > 0 ? "overdue" : totalPending > 0 ? "pending" : totalPaid > 0 ? "current" : "no_invoices",
+        },
+        disputeCount: disputes.length,
+        activeDisputeCount: disputes.filter(d => d.status === "open" || d.status === "under_review").length,
+      });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
