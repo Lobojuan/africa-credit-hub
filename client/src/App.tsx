@@ -25,6 +25,7 @@ import LoginPage from "@/pages/login";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import InvestorLandingPage from "@/pages/investor-landing";
+const MobileSearchPage = lazy(() => import("@/pages/mobile-search"));
 
 const BorrowersPage = lazy(() => import("@/pages/borrowers"));
 const BorrowerDetailPage = lazy(() => import("@/pages/borrower-detail"));
@@ -200,6 +201,15 @@ function App() {
         <TooltipProvider>
           <Switch>
             <Route path="/investor" component={InvestorLandingPage} />
+            <Route path="/mobile">
+              <AuthProvider>
+                <OrgSwitcherProvider>
+                  <Suspense fallback={<LazyFallback />}>
+                    <MobileSearchPage />
+                  </Suspense>
+                </OrgSwitcherProvider>
+              </AuthProvider>
+            </Route>
             <Route>
               <AuthProvider>
                 <OrgSwitcherProvider>

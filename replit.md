@@ -70,3 +70,5 @@ The system utilizes a modern full-stack architecture designed for scalability an
 -   **API Usage Dashboard**: In-memory request tracking middleware, `/api/admin/api-usage` endpoint, "API Usage Analytics" tab on api-admin page with bar charts and top endpoints table.
 -   **Audit Trail Enhancements**: Timeline/table view toggle, date range filters, CSV/Excel export buttons.
 -   **Excel Export Buttons**: Portfolio, borrowers, and audit trail exports in XLSX format on reports page.
+-   **Super Admin Org Switcher**: Dropdown in header (super_admin only) to filter all platform data by selected client organization. Uses `OrgSwitcherProvider` context and `setGlobalOrgId` in queryClient to auto-append `?orgId=X` to all API requests.
+-   **Mobile Search Page**: Dedicated mobile-first search at `/mobile` route — no sidebar, large touch targets, instant search, auto-focus input. Designed for quick client lookups from iPhone/Android.
