@@ -31,6 +31,27 @@ declare module "express-session" {
   }
 }
 
+import { WebhookHandlers } from "./webhookHandlers";
+app.post(
+  '/api/stripe/webhook',
+  express.raw({ type: 'application/json' }),
+  async (req, res) => {
+    const signature = req.headers['stripe-signature'];
+    if (!signature) return res.status(400).json({ error: 'Missing signature' });
+    try {
+      const sig = Array.isArray(signature) ? signature[0] : signature;
+      if (!Buffer.isBuffer(req.body)) {
+        return res.status(500).json({ error: 'Webhook body not Buffer' });
+      }
+      await WebhookHandlers.processWebhook(req.body as Buffer, sig);
+      res.status(200).json({ received: true });
+    } catch (error: any) {
+      console.error('Webhook error:', error.message);
+      res.status(400).json({ error: 'Webhook processing error' });
+    }
+  }
+);
+
 app.use(
   express.json({
     verify: (req, _res, buf) => {
@@ -133,6 +154,34 @@ process.on("unhandledRejection", (err) => { console.error("Unhandled rejection:"
     await seedTestData();
   } catch (e) {
     console.error("Test data seed error:", e);
+  }
+
+  try {
+    const { runMigrations } = await import('stripe-replit-sync');
+    const databaseUrl = process.env.DATABASE_URL;
+    if (databaseUrl) {
+      console.log('Initializing Stripe schema...');
+      await runMigrations({ databaseUrl, schema: 'stripe' });
+      console.log('Stripe schema ready');
+
+      const { getStripeSync } = await import('./stripeClient');
+      const stripeSync = await getStripeSync();
+
+      const webhookBaseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
+      const webhookResult = await stripeSync.findOrCreateManagedWebhook(
+        `${webhookBaseUrl}/api/stripe/webhook`
+      );
+      console.log('Stripe webhook configured:', webhookResult?.webhook?.url || 'setup complete');
+
+      stripeSync.syncBackfill()
+        .then(() => console.log('Stripe data synced'))
+        .catch((err: any) => console.error('Stripe sync error:', err));
+
+      const { seedStripeProducts } = await import('./stripe-seed');
+      seedStripeProducts().catch((e: any) => console.error('Stripe seed error:', e));
+    }
+  } catch (e: any) {
+    console.error('Stripe initialization error (non-fatal):', e.message);
   }
 
   await registerRoutes(httpServer, app);

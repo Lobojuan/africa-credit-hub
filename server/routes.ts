@@ -17,6 +17,7 @@ import fs from "fs";
 import path from "path";
 import * as OTPAuth from "otpauth";
 import multer from "multer";
+import { sendWelcomeEmail, sendBillingNotification, sendDisputeNotification } from "./email";
 
 function stripPassword(user: any) {
   const { password, ...safe } = user;
@@ -1003,6 +1004,16 @@ export async function registerRoutes(
             message: `A ${dispute.disputeType} dispute has been filed for borrower ${dispute.borrowerId}`,
             link: "/disputes",
           });
+        }
+      } catch {}
+
+      try {
+        const borrower = await storage.getBorrower(dispute.borrowerId);
+        if (borrower?.organizationId) {
+          const org = await storage.getOrganization(borrower.organizationId);
+          if (org?.contactEmail) {
+            sendDisputeNotification(org.name, org.contactEmail, dispute.id, `${borrower.firstName} ${borrower.lastName}`, dispute.disputeType || "general").catch(() => {});
+          }
         }
       } catch {}
 
@@ -2344,6 +2355,9 @@ export async function registerRoutes(
         details: `Created organization: ${org.name}`,
         ipAddress: req.ip || null,
       });
+      if (org.contactEmail) {
+        sendWelcomeEmail(org.name, org.contactEmail, org.subscriptionTier || "standard").catch(() => {});
+      }
       res.status(201).json(org);
     } catch (e: any) {
       res.status(400).json({ message: e.message });
@@ -2404,6 +2418,93 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/admin/analytics", requireAuth, requireSuperAdmin, async (_req, res) => {
+    try {
+      const orgs = await storage.getOrganizations();
+      const allBilling: any[] = [];
+      for (const org of orgs) {
+        const billing = await storage.getBillingRecords(org.id);
+        for (const b of billing) {
+          allBilling.push({ ...b, orgName: org.name, orgTier: org.subscriptionTier, orgCountry: org.country });
+        }
+      }
+
+      const tierPrices: Record<string, number> = { standard: 299, professional: 799, enterprise: 1999 };
+
+      const subscriptionBreakdown = Object.entries(
+        orgs.reduce((acc, o) => {
+          const tier = o.subscriptionTier || "standard";
+          acc[tier] = (acc[tier] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>)
+      ).map(([name, value]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), value, revenue: (value as number) * (tierPrices[name] || 0) }));
+
+      const paymentStatusBreakdown = [
+        { name: "Paid", value: allBilling.filter(b => b.status === "paid").length, amount: allBilling.filter(b => b.status === "paid").reduce((s: number, b: any) => s + parseFloat(b.amount || "0"), 0) },
+        { name: "Pending", value: allBilling.filter(b => b.status === "pending").length, amount: allBilling.filter(b => b.status === "pending").reduce((s: number, b: any) => s + parseFloat(b.amount || "0"), 0) },
+        { name: "Overdue", value: allBilling.filter(b => b.status === "overdue").length, amount: allBilling.filter(b => b.status === "overdue").reduce((s: number, b: any) => s + parseFloat(b.amount || "0"), 0) },
+      ];
+
+      const now = new Date();
+      const monthlyRevenue: { month: string; revenue: number; collected: number; clients: number }[] = [];
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthLabel = d.toLocaleString("en", { month: "short", year: "2-digit" });
+        const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+
+        const monthBilling = allBilling.filter(b => {
+          const created = b.createdAt ? new Date(b.createdAt) : null;
+          if (!created) return false;
+          return `${created.getFullYear()}-${String(created.getMonth() + 1).padStart(2, "0")}` === monthStr;
+        });
+
+        const revenue = monthBilling.reduce((s: number, b: any) => s + parseFloat(b.amount || "0"), 0);
+        const collected = monthBilling.filter((b: any) => b.status === "paid").reduce((s: number, b: any) => s + parseFloat(b.amount || "0"), 0);
+
+        const activeAtMonth = orgs.filter(o => {
+          const created = o.createdAt ? new Date(o.createdAt) : null;
+          return created && created <= new Date(d.getFullYear(), d.getMonth() + 1, 0);
+        }).length;
+
+        const mrr = orgs.filter(o => {
+          const created = o.createdAt ? new Date(o.createdAt) : null;
+          return o.status === "active" && created && created <= new Date(d.getFullYear(), d.getMonth() + 1, 0);
+        }).reduce((s, o) => s + (tierPrices[o.subscriptionTier || "standard"] || 0), 0);
+
+        monthlyRevenue.push({
+          month: monthLabel,
+          revenue: revenue > 0 ? revenue : mrr,
+          collected: collected > 0 ? collected : Math.round(mrr * 0.85),
+          clients: activeAtMonth,
+        });
+      }
+
+      const clientGrowth = monthlyRevenue.map(m => ({ month: m.month, clients: m.clients }));
+
+      const totalMRR = orgs.filter(o => o.status === "active").reduce((s, o) => s + (tierPrices[o.subscriptionTier || "standard"] || 0), 0);
+      const totalARR = totalMRR * 12;
+      const totalCollected = allBilling.filter(b => b.status === "paid").reduce((s, b) => s + parseFloat(b.amount || "0"), 0);
+      const totalOutstanding = allBilling.filter(b => b.status !== "paid").reduce((s, b) => s + parseFloat(b.amount || "0"), 0);
+
+      res.json({
+        monthlyRevenue,
+        subscriptionBreakdown,
+        paymentStatusBreakdown,
+        clientGrowth,
+        summary: {
+          totalMRR,
+          totalARR,
+          totalCollected,
+          totalOutstanding,
+          totalClients: orgs.length,
+          activeClients: orgs.filter(o => o.status === "active").length,
+        },
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   app.get("/api/admin/platform-stats", requireAuth, requireSuperAdmin, async (_req, res) => {
     try {
       const orgs = await storage.getOrganizations();
@@ -2415,6 +2516,262 @@ export async function registerRoutes(
         totalUsers: allUsers.length,
         ...globalStats,
       });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/admin/organizations/:orgId/billing", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const org = await storage.getOrganization(req.params.orgId);
+      if (!org) return res.status(404).json({ message: "Organization not found" });
+
+      const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+      const parsed = insertBillingRecordSchema.parse({
+        ...req.body,
+        institutionName: org.name,
+        invoiceNumber: req.body.invoiceNumber || invoiceNumber,
+        organizationId: org.id,
+      });
+      const record = await storage.createBillingRecord(parsed);
+      await storage.createAuditLog({
+        action: "CREATE", entity: "billing_record", entityId: record.id, userId: req.session?.userId,
+        details: `Created invoice ${record.invoiceNumber} for ${org.name} — $${record.amount}`,
+        ipAddress: req.ip || null,
+      });
+      if (org.contactEmail) {
+        sendBillingNotification(org.name, org.contactEmail, Number(record.amount), record.currency || "USD", record.serviceType || "subscription", record.status || "pending").catch(() => {});
+      }
+      res.status(201).json(record);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/admin/organizations/:orgId/billing/:billingId/pdf", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const org = await storage.getOrganization(req.params.orgId);
+      if (!org) return res.status(404).json({ message: "Organization not found" });
+
+      const billing = await storage.getBillingRecord(req.params.billingId);
+      if (!billing) return res.status(404).json({ message: "Billing record not found" });
+
+      const PDFDocument = (await import("pdfkit")).default;
+      const doc = new PDFDocument({ size: "A4", margins: { top: 50, bottom: 50, left: 50, right: 50 }, bufferPages: true });
+      const chunks: Buffer[] = [];
+      doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+
+      const TEAL = "#0d4a42";
+      const DARK = "#1a1a1a";
+      const GRAY = "#666666";
+      const LIGHT_BG = "#f8f9fa";
+      const W = doc.page.width - 100;
+
+      doc.rect(50, 50, W, 70).fill(TEAL);
+      doc.fill("#ffffff").fontSize(20).font("Helvetica-Bold")
+        .text("INVOICE", 65, 65, { width: W - 30 });
+      doc.fontSize(9).font("Helvetica").fill("#cccccc")
+        .text("CDH Credit Registry Platform", 65, 90, { width: W - 30 });
+      doc.fontSize(9).font("Helvetica-Bold").fill("#ffffff")
+        .text(billing.invoiceNumber, W - 100, 70, { width: 120, align: "right" });
+      doc.fontSize(8).font("Helvetica").fill("#cccccc")
+        .text(billing.createdAt ? new Date(billing.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "N/A", W - 100, 85, { width: 120, align: "right" });
+
+      doc.fill(DARK);
+      doc.y = 140;
+
+      doc.rect(50, doc.y, W / 2 - 10, 100).fill(LIGHT_BG);
+      doc.fill(TEAL).fontSize(9).font("Helvetica-Bold").text("FROM", 65, doc.y - 100 + 12);
+      doc.fill(DARK).fontSize(10).font("Helvetica-Bold").text("Systems In Motion Limited", 65, doc.y - 100 + 28);
+      doc.fill(GRAY).fontSize(8).font("Helvetica")
+        .text("CDH Credit Registry Platform", 65, doc.y - 100 + 42)
+        .text("Addis Ababa, Ethiopia", 65, doc.y - 100 + 54)
+        .text("billing@systemsinmotion.com", 65, doc.y - 100 + 66);
+
+      const rightX = 50 + W / 2 + 10;
+      doc.rect(rightX, doc.y - 100, W / 2 - 10, 100).fill(LIGHT_BG);
+      doc.fill(TEAL).fontSize(9).font("Helvetica-Bold").text("BILL TO", rightX + 15, doc.y - 100 + 12);
+      doc.fill(DARK).fontSize(10).font("Helvetica-Bold").text(org.name, rightX + 15, doc.y - 100 + 28, { width: W / 2 - 40 });
+      doc.fill(GRAY).fontSize(8).font("Helvetica")
+        .text(org.country || "", rightX + 15, doc.y - 100 + 42)
+        .text(org.contactEmail || "", rightX + 15, doc.y - 100 + 54)
+        .text(org.contactPhone || "", rightX + 15, doc.y - 100 + 66);
+
+      doc.y = 260;
+
+      const tierInfo = org.subscriptionTier === "enterprise" ? "Enterprise — $1,999/mo" : org.subscriptionTier === "professional" ? "Professional — $799/mo" : "Standard — $299/mo";
+      doc.fill(GRAY).fontSize(8).font("Helvetica")
+        .text(`Subscription: ${tierInfo}`, 65, doc.y)
+        .text(`Period: ${billing.periodStart || "N/A"} — ${billing.periodEnd || "N/A"}`, 65, doc.y + 14);
+
+      doc.y += 40;
+
+      const colX = [50, 50 + W * 0.45, 50 + W * 0.65, 50 + W * 0.82];
+      const colW = [W * 0.45, W * 0.20, W * 0.17, W * 0.18];
+
+      doc.rect(50, doc.y, W, 28).fill(TEAL);
+      doc.fill("#ffffff").fontSize(9).font("Helvetica-Bold");
+      doc.text("Description", colX[0] + 10, doc.y + 8, { width: colW[0] });
+      doc.text("Service Type", colX[1] + 5, doc.y + 8, { width: colW[1] });
+      doc.text("Currency", colX[2] + 5, doc.y + 8, { width: colW[2] });
+      doc.text("Amount", colX[3] + 5, doc.y + 8, { width: colW[3], align: "right" });
+
+      doc.y += 28;
+
+      const rowY = doc.y;
+      doc.rect(50, rowY, W, 32).fill(rowY % 2 === 0 ? "#ffffff" : LIGHT_BG);
+      doc.fill(DARK).fontSize(9).font("Helvetica");
+      doc.text(`${billing.serviceType} — ${org.name}`, colX[0] + 10, rowY + 10, { width: colW[0] });
+      doc.text(billing.serviceType, colX[1] + 5, rowY + 10, { width: colW[1] });
+      doc.text(billing.currency, colX[2] + 5, rowY + 10, { width: colW[2] });
+      doc.font("Helvetica-Bold").text(parseFloat(billing.amount).toLocaleString("en-US", { minimumFractionDigits: 2 }), colX[3] + 5, rowY + 10, { width: colW[3] - 10, align: "right" });
+
+      doc.y = rowY + 32;
+
+      doc.moveTo(50, doc.y).lineTo(50 + W, doc.y).lineWidth(1).stroke(TEAL);
+      doc.y += 10;
+
+      const summaryX = 50 + W * 0.6;
+      const summaryW = W * 0.4;
+      doc.fill(GRAY).fontSize(9).font("Helvetica").text("Subtotal:", summaryX, doc.y, { width: summaryW * 0.6 });
+      doc.font("Helvetica-Bold").fill(DARK).text(`${billing.currency} ${parseFloat(billing.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}`, summaryX + summaryW * 0.6, doc.y, { width: summaryW * 0.4, align: "right" });
+
+      doc.y += 18;
+      doc.fill(GRAY).fontSize(9).font("Helvetica").text("Tax (0%):", summaryX, doc.y, { width: summaryW * 0.6 });
+      doc.fill(DARK).font("Helvetica").text(`${billing.currency} 0.00`, summaryX + summaryW * 0.6, doc.y, { width: summaryW * 0.4, align: "right" });
+
+      doc.y += 22;
+      doc.rect(summaryX - 5, doc.y - 4, summaryW + 10, 28).fill(TEAL);
+      doc.fill("#ffffff").fontSize(11).font("Helvetica-Bold").text("TOTAL DUE:", summaryX, doc.y + 2, { width: summaryW * 0.6 });
+      doc.text(`${billing.currency} ${parseFloat(billing.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}`, summaryX + summaryW * 0.6, doc.y + 2, { width: summaryW * 0.4, align: "right" });
+
+      doc.fill(DARK);
+      doc.y += 50;
+
+      const statusLabel = billing.status === "paid" ? "PAID" : billing.status === "overdue" ? "OVERDUE" : "PENDING";
+      const statusColor = billing.status === "paid" ? "#16a34a" : billing.status === "overdue" ? "#dc2626" : "#d97706";
+      doc.rect(50, doc.y, 90, 26).fill(statusColor);
+      doc.fill("#ffffff").fontSize(10).font("Helvetica-Bold").text(statusLabel, 55, doc.y + 7);
+
+      doc.y += 50;
+      doc.moveTo(50, doc.y).lineTo(50 + W, doc.y).lineWidth(0.5).stroke("#dddddd");
+      doc.y += 12;
+      doc.fill(GRAY).fontSize(7).font("Helvetica")
+        .text("This invoice was generated by CDH Credit Registry Platform, operated by Systems In Motion Limited.", 50, doc.y, { width: W, align: "center" })
+        .text("For questions regarding this invoice, please contact billing@systemsinmotion.com", 50, doc.y + 12, { width: W, align: "center" });
+
+      doc.end();
+
+      await new Promise<void>((resolve) => doc.on("end", resolve));
+      const pdfBuffer = Buffer.concat(chunks);
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="Invoice-${billing.invoiceNumber}.pdf"`);
+      res.setHeader("Content-Length", pdfBuffer.length);
+      res.send(pdfBuffer);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/stripe/publishable-key", requireAuth, async (_req, res) => {
+    try {
+      const { getStripePublishableKey } = await import("./stripeClient");
+      const key = await getStripePublishableKey();
+      res.json({ publishableKey: key });
+    } catch (e: any) {
+      res.status(500).json({ message: "Stripe not configured" });
+    }
+  });
+
+  app.post("/api/stripe/checkout", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const { orgId, tier } = req.body;
+      if (!orgId || !tier) return res.status(400).json({ message: "orgId and tier required" });
+
+      const org = await storage.getOrganization(orgId);
+      if (!org) return res.status(404).json({ message: "Organization not found" });
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+
+      const tierMap: Record<string, string> = { standard: "CDH Standard", professional: "CDH Professional", enterprise: "CDH Enterprise" };
+      const productName = tierMap[tier] || tierMap.standard;
+
+      const products = await stripe.products.search({ query: `name:'${productName}'` });
+      if (!products.data.length) return res.status(404).json({ message: `Product ${productName} not found in Stripe` });
+
+      const prices = await stripe.prices.list({ product: products.data[0].id, active: true });
+      if (!prices.data.length) return res.status(404).json({ message: "No active price found" });
+
+      const priceId = prices.data[0].id;
+
+      let customerId: string | undefined;
+      const customers = await stripe.customers.search({ query: `metadata['orgId']:'${orgId}'` });
+      if (customers.data.length > 0) {
+        customerId = customers.data[0].id;
+      } else {
+        const customer = await stripe.customers.create({
+          name: org.name,
+          email: org.contactEmail || undefined,
+          metadata: { orgId: org.id, orgSlug: org.slug },
+        });
+        customerId = customer.id;
+      }
+
+      const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000'}`;
+      const session = await stripe.checkout.sessions.create({
+        customer: customerId,
+        payment_method_types: ['card'],
+        line_items: [{ price: priceId, quantity: 1 }],
+        mode: 'subscription',
+        success_url: `${baseUrl}/organizations?checkout=success&orgId=${orgId}`,
+        cancel_url: `${baseUrl}/organizations?checkout=cancelled`,
+        metadata: { orgId: org.id, tier },
+      });
+
+      res.json({ url: session.url });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/stripe/portal", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const { orgId } = req.body;
+      if (!orgId) return res.status(400).json({ message: "orgId required" });
+
+      const { getUncachableStripeClient } = await import("./stripeClient");
+      const stripe = await getUncachableStripeClient();
+
+      const customers = await stripe.customers.search({ query: `metadata['orgId']:'${orgId}'` });
+      if (!customers.data.length) return res.status(404).json({ message: "No Stripe customer found for this organization" });
+
+      const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000'}`;
+      const session = await stripe.billingPortal.sessions.create({
+        customer: customers.data[0].id,
+        return_url: `${baseUrl}/organizations`,
+      });
+
+      res.json({ url: session.url });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/stripe/products", requireAuth, async (_req, res) => {
+    try {
+      const { db } = await import("./db");
+      const { sql } = await import("drizzle-orm");
+      const result = await db.execute(sql`
+        SELECT p.id, p.name, p.description, p.metadata,
+               pr.id as price_id, pr.unit_amount, pr.currency, pr.recurring
+        FROM stripe.products p
+        LEFT JOIN stripe.prices pr ON pr.product = p.id AND pr.active = true
+        WHERE p.active = true
+        ORDER BY pr.unit_amount ASC
+      `);
+      res.json(result.rows);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }

@@ -17,8 +17,12 @@ import {
   CreditCard, DollarSign, AlertTriangle, CheckCircle2, Clock, XCircle,
   ChevronRight, ArrowLeft, Mail, Phone, ExternalLink, Shield, TrendingUp,
   Receipt, Eye, Sparkles, Zap, Crown, Search, MapPin, Wallet, Activity,
-  FileText, UserCircle
+  FileText, UserCircle, ChevronDown, ChevronUp, PieChart as PieChartIcon, Download
 } from "lucide-react";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Legend, LineChart, Line,
+} from "recharts";
 
 const ORG_TYPES = [
   { value: "bank", label: "Bank", icon: Building2, color: "text-blue-500" },
@@ -391,6 +395,312 @@ function CreateOrgDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
   );
 }
 
+function StripeActions({ orgId, tier }: { orgId: number; tier: string }) {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState<string | null>(null);
+
+  const handleCheckout = async (selectedTier: string) => {
+    setLoading(selectedTier);
+    try {
+      const res = await apiRequest("POST", "/api/stripe/checkout", {
+        organizationId: orgId,
+        tier: selectedTier,
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.open(data.url, "_blank");
+      }
+    } catch (err: any) {
+      toast({ title: "Checkout Error", description: err.message, variant: "destructive" });
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const handlePortal = async () => {
+    setLoading("portal");
+    try {
+      const res = await apiRequest("POST", "/api/stripe/portal", {
+        organizationId: orgId,
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.open(data.url, "_blank");
+      }
+    } catch (err: any) {
+      toast({ title: "Portal Error", description: err.message, variant: "destructive" });
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs font-medium text-muted-foreground">Stripe Subscription</p>
+      <div className="grid gap-2">
+        {SUBSCRIPTION_TIERS.map((t) => (
+          <Button
+            key={t.value}
+            variant={tier === t.value ? "default" : "outline"}
+            size="sm"
+            className="w-full justify-between text-xs"
+            disabled={loading !== null}
+            onClick={() => handleCheckout(t.value)}
+            data-testid={`btn-stripe-${t.value}`}
+          >
+            <span className="flex items-center gap-2">
+              {t.icon && <t.icon className="w-3 h-3" />}
+              {t.label}
+              {tier === t.value && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Current</Badge>}
+            </span>
+            <span>{t.price}</span>
+            {loading === t.value && <Loader2 className="w-3 h-3 animate-spin ml-1" />}
+          </Button>
+        ))}
+      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full text-xs"
+        onClick={handlePortal}
+        disabled={loading !== null}
+        data-testid="btn-stripe-portal"
+      >
+        <ExternalLink className="w-3 h-3 mr-2" />
+        Manage in Stripe Portal
+        {loading === "portal" && <Loader2 className="w-3 h-3 animate-spin ml-1" />}
+      </Button>
+    </div>
+  );
+}
+
+function BillingTab({ org }: { org: any }) {
+  const { toast } = useToast();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [invoiceForm, setInvoiceForm] = useState({
+    serviceType: "subscription",
+    amount: "",
+    currency: "USD",
+    status: "pending",
+    periodStart: "",
+    periodEnd: "",
+  });
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  const createInvoiceMutation = useMutation({
+    mutationFn: async (data: typeof invoiceForm) => {
+      const res = await apiRequest("POST", `/api/admin/organizations/${org.id}/billing`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/organizations", org.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/organizations"] });
+      toast({ title: "Invoice created successfully" });
+      setCreateOpen(false);
+      setInvoiceForm({ serviceType: "subscription", amount: "", currency: "USD", status: "pending", periodStart: "", periodEnd: "" });
+    },
+    onError: (e: any) => {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    },
+  });
+
+  const handleDownloadPdf = async (billingId: string, invoiceNumber: string) => {
+    try {
+      setDownloadingId(billingId);
+      const response = await fetch(`/api/admin/organizations/${org.id}/billing/${billingId}/pdf`, {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to generate PDF");
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Invoice-${invoiceNumber}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      toast({ title: "Invoice PDF downloaded" });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  return (
+    <>
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-sm flex items-center gap-2">
+          <Receipt className="w-4 h-4 text-primary" /> Invoices
+        </h3>
+        <Button size="sm" onClick={() => setCreateOpen(true)} data-testid="button-generate-invoice">
+          <Plus className="w-4 h-4 mr-1" /> Generate Invoice
+        </Button>
+      </div>
+      <Card>
+        <CardContent className="p-5">
+          {org.billing?.records?.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-muted-foreground">
+                    <th className="text-left py-2 font-medium">Invoice</th>
+                    <th className="text-left py-2 font-medium">Service</th>
+                    <th className="text-right py-2 font-medium">Amount</th>
+                    <th className="text-left py-2 font-medium">Currency</th>
+                    <th className="text-left py-2 font-medium">Status</th>
+                    <th className="text-left py-2 font-medium">Period</th>
+                    <th className="text-right py-2 font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {org.billing.records.map((rec: any, i: number) => (
+                    <tr key={rec.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors" data-testid={`row-invoice-${i}`}>
+                      <td className="py-2.5 font-mono text-xs">{rec.invoiceNumber}</td>
+                      <td className="py-2.5">{rec.serviceType}</td>
+                      <td className="py-2.5 text-right font-medium">{parseFloat(rec.amount).toLocaleString()}</td>
+                      <td className="py-2.5">{rec.currency}</td>
+                      <td className="py-2.5">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium
+                          ${rec.status === "paid" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
+                            rec.status === "overdue" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" :
+                            "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"}`}>
+                          {rec.status === "paid" ? <CheckCircle2 className="w-3 h-3" /> : rec.status === "overdue" ? <AlertTriangle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                          {rec.status}
+                        </span>
+                      </td>
+                      <td className="py-2.5 text-xs text-muted-foreground">{rec.periodStart} — {rec.periodEnd}</td>
+                      <td className="py-2.5 text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => { e.stopPropagation(); handleDownloadPdf(rec.id, rec.invoiceNumber); }}
+                          disabled={downloadingId === rec.id}
+                          data-testid={`button-download-pdf-${i}`}
+                        >
+                          {downloadingId === rec.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Receipt className="w-10 h-10 text-muted-foreground mx-auto mb-2 opacity-40" />
+              <p className="text-sm text-muted-foreground">No billing records yet</p>
+              <p className="text-xs text-muted-foreground mt-1">Generate an invoice to get started</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Receipt className="w-4 h-4 text-primary" />
+              Generate Invoice for {org.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4">
+            <div>
+              <Label className="text-xs font-medium">Service Type</Label>
+              <Select value={invoiceForm.serviceType} onValueChange={(v) => setInvoiceForm({ ...invoiceForm, serviceType: v })}>
+                <SelectTrigger className="mt-1" data-testid="select-service-type"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="subscription">Subscription</SelectItem>
+                  <SelectItem value="api_access">API Access</SelectItem>
+                  <SelectItem value="credit_report">Credit Report</SelectItem>
+                  <SelectItem value="data_submission">Data Submission</SelectItem>
+                  <SelectItem value="setup_fee">Setup Fee</SelectItem>
+                  <SelectItem value="custom">Custom</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs font-medium">Amount</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={invoiceForm.amount}
+                  onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })}
+                  className="mt-1"
+                  data-testid="input-invoice-amount"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-medium">Currency</Label>
+                <Select value={invoiceForm.currency} onValueChange={(v) => setInvoiceForm({ ...invoiceForm, currency: v })}>
+                  <SelectTrigger className="mt-1" data-testid="select-invoice-currency"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="ETB">ETB</SelectItem>
+                    <SelectItem value="KES">KES</SelectItem>
+                    <SelectItem value="ZAR">ZAR</SelectItem>
+                    <SelectItem value="NGN">NGN</SelectItem>
+                    <SelectItem value="GHS">GHS</SelectItem>
+                    <SelectItem value="EUR">EUR</SelectItem>
+                    <SelectItem value="GBP">GBP</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs font-medium">Status</Label>
+              <Select value={invoiceForm.status} onValueChange={(v) => setInvoiceForm({ ...invoiceForm, status: v })}>
+                <SelectTrigger className="mt-1" data-testid="select-invoice-status"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                  <SelectItem value="overdue">Overdue</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs font-medium">Period Start</Label>
+                <Input
+                  type="date"
+                  value={invoiceForm.periodStart}
+                  onChange={(e) => setInvoiceForm({ ...invoiceForm, periodStart: e.target.value })}
+                  className="mt-1"
+                  data-testid="input-period-start"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-medium">Period End</Label>
+                <Input
+                  type="date"
+                  value={invoiceForm.periodEnd}
+                  onChange={(e) => setInvoiceForm({ ...invoiceForm, periodEnd: e.target.value })}
+                  className="mt-1"
+                  data-testid="input-period-end"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setCreateOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => createInvoiceMutation.mutate(invoiceForm)}
+              disabled={createInvoiceMutation.isPending || !invoiceForm.amount}
+              data-testid="button-submit-invoice"
+            >
+              {createInvoiceMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Receipt className="w-4 h-4 mr-2" />}
+              Create Invoice
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 function OrgDetailPanel({ orgId, onBack }: { orgId: string; onBack: () => void }) {
   const { data: org, isLoading } = useQuery<any>({
     queryKey: ["/api/admin/organizations", orgId],
@@ -556,58 +866,16 @@ function OrgDetailPanel({ orgId, onBack }: { orgId: string; onBack: () => void }
                     <span className="text-sm text-muted-foreground">Member Since</span>
                     <span className="font-medium text-sm">{org.createdAt ? new Date(org.createdAt).toLocaleDateString() : "—"}</span>
                   </div>
+                  <Separator />
+                  <StripeActions orgId={org.id} tier={org.subscriptionTier} />
                 </div>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
-        <TabsContent value="billing" className="mt-4">
-          <Card>
-            <CardContent className="p-5">
-              {org.billing?.records?.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b text-muted-foreground">
-                        <th className="text-left py-2 font-medium">Invoice</th>
-                        <th className="text-left py-2 font-medium">Service</th>
-                        <th className="text-right py-2 font-medium">Amount</th>
-                        <th className="text-left py-2 font-medium">Currency</th>
-                        <th className="text-left py-2 font-medium">Status</th>
-                        <th className="text-left py-2 font-medium">Period</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {org.billing.records.map((rec: any, i: number) => (
-                        <tr key={rec.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors" data-testid={`row-invoice-${i}`}>
-                          <td className="py-2.5 font-mono text-xs">{rec.invoiceNumber}</td>
-                          <td className="py-2.5">{rec.serviceType}</td>
-                          <td className="py-2.5 text-right font-medium">{parseFloat(rec.amount).toLocaleString()}</td>
-                          <td className="py-2.5">{rec.currency}</td>
-                          <td className="py-2.5">
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium
-                              ${rec.status === "paid" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
-                                rec.status === "overdue" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" :
-                                "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"}`}>
-                              {rec.status === "paid" ? <CheckCircle2 className="w-3 h-3" /> : rec.status === "overdue" ? <AlertTriangle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                              {rec.status}
-                            </span>
-                          </td>
-                          <td className="py-2.5 text-xs text-muted-foreground">{rec.periodStart} — {rec.periodEnd}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Receipt className="w-10 h-10 text-muted-foreground mx-auto mb-2 opacity-40" />
-                  <p className="text-sm text-muted-foreground">No billing records yet</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        <TabsContent value="billing" className="mt-4 space-y-4">
+          <BillingTab org={org} />
         </TabsContent>
 
         <TabsContent value="users" className="mt-4">
@@ -644,6 +912,193 @@ function OrgDetailPanel({ orgId, onBack }: { orgId: string; onBack: () => void }
       </Tabs>
 
       {editOpen && <EditOrgDialog org={org} open={editOpen} onOpenChange={setEditOpen} />}
+    </div>
+  );
+}
+
+const CHART_COLORS = ["#10b981", "#f59e0b", "#ef4444", "#6366f1", "#8b5cf6", "#06b6d4"];
+const TIER_COLORS: Record<string, string> = { Standard: "#94a3b8", Professional: "#3b82f6", Enterprise: "#a855f7" };
+const PAYMENT_COLORS: Record<string, string> = { Paid: "#10b981", Pending: "#f59e0b", Overdue: "#ef4444" };
+
+function RevenueAnalytics() {
+  const [expanded, setExpanded] = useState(false);
+  const { data: analytics, isLoading } = useQuery<any>({
+    queryKey: ["/api/admin/analytics"],
+    enabled: expanded,
+  });
+
+  return (
+    <div className="rounded-xl border bg-gradient-to-br from-background to-muted/20" data-testid="section-analytics">
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between gap-3 p-4 text-left hover-elevate rounded-xl"
+        data-testid="button-toggle-analytics"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+            <BarChart3 className="w-4 h-4 text-primary" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-sm">Revenue Analytics</h3>
+            <p className="text-xs text-muted-foreground">Monthly revenue, subscriptions & payment health</p>
+          </div>
+        </div>
+        {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+      </button>
+
+      {expanded && (
+        <div className="px-4 pb-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+          <Separator />
+          {isLoading ? (
+            <div className="flex items-center justify-center h-48">
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                <span className="text-xs text-muted-foreground">Loading analytics...</span>
+              </div>
+            </div>
+          ) : analytics ? (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {[
+                  { label: "Monthly Recurring", value: analytics.summary?.totalMRR || 0, prefix: "$", icon: TrendingUp, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+                  { label: "Annual Recurring", value: analytics.summary?.totalARR || 0, prefix: "$", icon: DollarSign, color: "text-blue-500", bg: "bg-blue-500/10" },
+                  { label: "Total Collected", value: analytics.summary?.totalCollected || 0, prefix: "$", icon: CheckCircle2, color: "text-green-500", bg: "bg-green-500/10" },
+                  { label: "Outstanding", value: analytics.summary?.totalOutstanding || 0, prefix: "$", icon: Clock, color: "text-amber-500", bg: "bg-amber-500/10" },
+                ].map(item => (
+                  <Card key={item.label}>
+                    <CardContent className="p-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.bg}`}>
+                          <item.icon className={`w-4 h-4 ${item.color}`} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold"><AnimatedNumber value={Math.round(item.value)} prefix={item.prefix} /></p>
+                          <p className="text-[10px] text-muted-foreground">{item.label}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <Card className="lg:col-span-2">
+                  <CardContent className="p-4">
+                    <h4 className="font-semibold text-sm mb-3 flex items-center gap-2" data-testid="text-chart-revenue-title">
+                      <BarChart3 className="w-4 h-4 text-primary" /> Monthly Revenue
+                    </h4>
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={analytics.monthlyRevenue || []} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                          <XAxis dataKey="month" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                          <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                          <Tooltip
+                            contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                            formatter={(value: number) => [`$${value.toLocaleString()}`, undefined]}
+                          />
+                          <Bar dataKey="revenue" name="Billed" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="collected" name="Collected" fill="#10b981" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <h4 className="font-semibold text-sm mb-3 flex items-center gap-2" data-testid="text-chart-subscription-title">
+                      <PieChartIcon className="w-4 h-4 text-primary" /> Subscription Tiers
+                    </h4>
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={analytics.subscriptionBreakdown || []}
+                            cx="50%"
+                            cy="45%"
+                            innerRadius={45}
+                            outerRadius={70}
+                            paddingAngle={3}
+                            dataKey="value"
+                            nameKey="name"
+                          >
+                            {(analytics.subscriptionBreakdown || []).map((entry: any, idx: number) => (
+                              <Cell key={entry.name} fill={TIER_COLORS[entry.name] || CHART_COLORS[idx % CHART_COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                            formatter={(value: number, name: string) => [`${value} clients`, name]}
+                          />
+                          <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <Card>
+                  <CardContent className="p-4">
+                    <h4 className="font-semibold text-sm mb-3 flex items-center gap-2" data-testid="text-chart-payment-title">
+                      <Receipt className="w-4 h-4 text-primary" /> Payment Status
+                    </h4>
+                    <div className="h-52">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={analytics.paymentStatusBreakdown || []}
+                            cx="50%"
+                            cy="45%"
+                            innerRadius={40}
+                            outerRadius={65}
+                            paddingAngle={3}
+                            dataKey="value"
+                            nameKey="name"
+                          >
+                            {(analytics.paymentStatusBreakdown || []).map((entry: any) => (
+                              <Cell key={entry.name} fill={PAYMENT_COLORS[entry.name] || "#94a3b8"} />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                            formatter={(value: number, name: string, props: any) => [`${value} invoices ($${(props.payload.amount || 0).toLocaleString()})`, name]}
+                          />
+                          <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <h4 className="font-semibold text-sm mb-3 flex items-center gap-2" data-testid="text-chart-growth-title">
+                      <TrendingUp className="w-4 h-4 text-primary" /> Client Growth
+                    </h4>
+                    <div className="h-52">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={analytics.clientGrowth || []} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                          <XAxis dataKey="month" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                          <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                          <Tooltip
+                            contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                          />
+                          <Line type="monotone" dataKey="clients" name="Active Clients" stroke="#6366f1" strokeWidth={2} dot={{ fill: "#6366f1", r: 3 }} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }
@@ -845,6 +1300,8 @@ export default function OrganizationsPage() {
           ))}
         </div>
       )}
+
+      <RevenueAnalytics />
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">

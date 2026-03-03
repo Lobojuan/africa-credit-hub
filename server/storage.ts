@@ -105,6 +105,7 @@ export interface IStorage {
   approveInstitution(id: string, approvedBy: string): Promise<Institution | undefined>;
 
   getBillingRecords(organizationId?: string): Promise<BillingRecord[]>;
+  getBillingRecord(id: string): Promise<BillingRecord | undefined>;
   getBillingRecordsByInstitution(institutionName: string): Promise<BillingRecord[]>;
   createBillingRecord(record: InsertBillingRecord): Promise<BillingRecord>;
 
@@ -706,6 +707,11 @@ export class DatabaseStorage implements IStorage {
   async getBillingRecords(organizationId?: string): Promise<BillingRecord[]> {
     const orgFilter = organizationId ? eq(billingRecords.organizationId, organizationId) : undefined;
     return db.select().from(billingRecords).where(orgFilter).orderBy(desc(billingRecords.createdAt));
+  }
+
+  async getBillingRecord(id: string): Promise<BillingRecord | undefined> {
+    const [record] = await db.select().from(billingRecords).where(eq(billingRecords.id, id));
+    return record;
   }
 
   async getBillingRecordsByInstitution(institutionName: string): Promise<BillingRecord[]> {
