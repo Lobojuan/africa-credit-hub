@@ -17,7 +17,8 @@ import {
   CreditCard, DollarSign, AlertTriangle, CheckCircle2, Clock, XCircle,
   ChevronRight, ArrowLeft, Mail, Phone, ExternalLink, Shield, TrendingUp,
   Receipt, Eye, Sparkles, Zap, Crown, Search, MapPin, Wallet, Activity,
-  FileText, UserCircle, ChevronDown, ChevronUp, PieChart as PieChartIcon, Download
+  FileText, UserCircle, ChevronDown, ChevronUp, PieChart as PieChartIcon, Download,
+  Ban, PlayCircle, Pause
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -708,6 +709,28 @@ function OrgDetailPanel({ orgId, onBack }: { orgId: string; onBack: () => void }
   const { toast } = useToast();
   const [editOpen, setEditOpen] = useState(false);
 
+  const toggleStatusMutation = useMutation({
+    mutationFn: async (action: "suspend" | "reactivate") => {
+      const res = await apiRequest("PATCH", `/api/admin/organizations/${orgId}`, {
+        status: action === "suspend" ? "suspended" : "active",
+      });
+      return res.json();
+    },
+    onSuccess: (_, action) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/organizations", orgId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/organizations"] });
+      toast({
+        title: action === "suspend" ? "Client Suspended" : "Client Reactivated",
+        description: action === "suspend"
+          ? "All users under this client are now blocked until payment is received."
+          : "Client access has been restored. Users can log in again.",
+      });
+    },
+    onError: (e: any) => {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64 animate-in fade-in duration-300">
@@ -750,8 +773,36 @@ function OrgDetailPanel({ orgId, onBack }: { orgId: string; onBack: () => void }
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap justify-end">
               <PaymentHealthBadge health={org.billing?.paymentHealth || "no_invoices"} />
+              {org.status === "active" ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50 hover:text-amber-800 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-900/30"
+                  data-testid="button-suspend-detail"
+                  disabled={toggleStatusMutation.isPending}
+                  onClick={() => {
+                    if (confirm(`Suspend ${org.name}? All their users will be blocked until you reactivate.`))
+                      toggleStatusMutation.mutate("suspend");
+                  }}
+                >
+                  {toggleStatusMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Pause className="w-4 h-4" />}
+                  Suspend Client
+                </Button>
+              ) : org.status === "suspended" ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 border-green-300 text-green-700 hover:bg-green-50 hover:text-green-800 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-900/30"
+                  data-testid="button-reactivate-detail"
+                  disabled={toggleStatusMutation.isPending}
+                  onClick={() => toggleStatusMutation.mutate("reactivate")}
+                >
+                  {toggleStatusMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <PlayCircle className="w-4 h-4" />}
+                  Reactivate Client
+                </Button>
+              ) : null}
               <Button variant="outline" size="sm" onClick={() => setEditOpen(true)} data-testid="button-edit-detail">
                 <Edit className="w-4 h-4 mr-1" /> Edit
               </Button>
@@ -776,6 +827,29 @@ function OrgDetailPanel({ orgId, onBack }: { orgId: string; onBack: () => void }
           </div>
         </div>
       </div>
+
+      {org.status === "suspended" && (
+        <div className="flex items-center gap-3 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-4" data-testid="banner-suspended">
+          <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shrink-0">
+            <Ban className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-amber-800 dark:text-amber-300 text-sm">Account Suspended</p>
+            <p className="text-xs text-amber-700 dark:text-amber-400">This client's users are currently blocked from accessing the platform. Click "Reactivate Client" above once payment has been received.</p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0 gap-1.5 border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-900/30"
+            data-testid="button-reactivate-banner"
+            disabled={toggleStatusMutation.isPending}
+            onClick={() => toggleStatusMutation.mutate("reactivate")}
+          >
+            {toggleStatusMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PlayCircle className="w-3.5 h-3.5" />}
+            Reactivate
+          </Button>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
@@ -1229,6 +1303,28 @@ export default function OrganizationsPage() {
     },
   });
 
+  const suspendMutation = useMutation({
+    mutationFn: async ({ id, action }: { id: string; action: "suspend" | "reactivate" }) => {
+      const res = await apiRequest("PATCH", `/api/admin/organizations/${id}`, {
+        status: action === "suspend" ? "suspended" : "active",
+      });
+      return res.json();
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/organizations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/platform-stats"] });
+      toast({
+        title: vars.action === "suspend" ? "Client Suspended" : "Client Reactivated",
+        description: vars.action === "suspend"
+          ? "All users under this client are now blocked until payment is received."
+          : "Client access has been restored.",
+      });
+    },
+    onError: (e: any) => {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    },
+  });
+
   const filtered = organizations.filter(org => {
     const matchSearch = !searchTerm || org.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       org.slug.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1393,6 +1489,34 @@ export default function OrganizationsPage() {
                   </Badge>
 
                   <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    {org.status === "active" ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50 hover:text-amber-800 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-900/30 opacity-0 group-hover:opacity-100 transition-opacity"
+                        data-testid={`button-suspend-org-${org.id}`}
+                        disabled={suspendMutation.isPending}
+                        onClick={() => {
+                          if (confirm(`Suspend ${org.name}? All their users will be blocked until you reactivate.`))
+                            suspendMutation.mutate({ id: org.id, action: "suspend" });
+                        }}
+                      >
+                        {suspendMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Pause className="w-3 h-3" />}
+                        Suspend
+                      </Button>
+                    ) : org.status === "suspended" ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs gap-1.5 border-green-300 text-green-700 hover:bg-green-50 hover:text-green-800 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-900/30"
+                        data-testid={`button-reactivate-org-${org.id}`}
+                        disabled={suspendMutation.isPending}
+                        onClick={() => suspendMutation.mutate({ id: org.id, action: "reactivate" })}
+                      >
+                        {suspendMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <PlayCircle className="w-3 h-3" />}
+                        Reactivate
+                      </Button>
+                    ) : null}
                     <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" data-testid={`button-view-org-${org.id}`} onClick={() => setSelectedOrgId(org.id)}>
                       <Eye className="w-4 h-4" />
                     </Button>
