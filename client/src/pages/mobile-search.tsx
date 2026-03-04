@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Search, Loader2, X, ShieldCheck, TrendingUp, TrendingDown, Minus, FileText, User } from "lucide-react";
+import { Search, Loader2, X, ShieldCheck, TrendingUp, TrendingDown, Minus, FileText, User, LogOut, Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 import type { Borrower } from "@shared/schema";
 import { getBorrowerAvatarUrl } from "@/lib/avatar";
 
@@ -47,8 +49,116 @@ function CreditScoreRing({ score }: { score: number }) {
   );
 }
 
+function MobileLogin({ onLogin }: { onLogin: (username: string, password: string) => Promise<void> }) {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!username.trim() || !password.trim()) return;
+    setError("");
+    setLoading(true);
+    try {
+      await onLogin(username.trim(), password);
+    } catch (err: any) {
+      const msg = err.message || "Login failed";
+      const cleaned = msg.replace(/^\d+:\s*/, "").replace(/^"?|"?$/g, "");
+      try {
+        const parsed = JSON.parse(cleaned);
+        setError(parsed.message || cleaned);
+      } catch {
+        setError(cleaned);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      <div className="bg-primary text-primary-foreground px-6 pt-12 pb-10 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center mx-auto mb-4">
+          <ShieldCheck className="w-8 h-8" />
+        </div>
+        <h1 className="text-2xl font-bold" data-testid="text-login-title">Credit Check</h1>
+        <p className="text-sm opacity-80 mt-1">Pan-African Credit Registry</p>
+      </div>
+
+      <div className="flex-1 px-6 -mt-4">
+        <form onSubmit={handleSubmit} className="bg-card border rounded-2xl p-6 shadow-lg space-y-5" data-testid="form-mobile-login">
+          <div className="text-center mb-2">
+            <p className="text-sm font-semibold">Sign in to your account</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Enter your credentials to continue</p>
+          </div>
+
+          {error && (
+            <div className="bg-destructive/10 border border-destructive/20 rounded-xl px-4 py-3 text-sm text-destructive" data-testid="text-login-error">
+              {error}
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label className="text-xs font-medium">Username</Label>
+            <Input
+              data-testid="input-mobile-username"
+              placeholder="Enter username"
+              className="h-12 text-base rounded-xl"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="username"
+              autoCapitalize="off"
+              autoCorrect="off"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs font-medium">Password</Label>
+            <div className="relative">
+              <Input
+                data-testid="input-mobile-password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter password"
+                className="h-12 text-base rounded-xl pr-12"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground"
+                onClick={() => setShowPassword(!showPassword)}
+                data-testid="button-toggle-password"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
+          </div>
+
+          <Button
+            type="submit"
+            className="w-full h-12 text-base rounded-xl"
+            disabled={loading || !username.trim() || !password.trim()}
+            data-testid="button-mobile-login"
+          >
+            {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
+            {loading ? "Signing in..." : "Sign In"}
+          </Button>
+        </form>
+
+        <p className="text-center text-[10px] text-muted-foreground mt-6">
+          Systems In Motion Limited
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function MobileSearchPage() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, login, logout } = useAuth();
+  const { toast } = useToast();
   const [query, setQuery] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [, navigate] = useLocation();
@@ -77,8 +187,12 @@ export default function MobileSearchPage() {
   }
 
   if (!user) {
-    window.location.href = "/";
-    return null;
+    return (
+      <MobileLogin onLogin={async (username, password) => {
+        await login(username, password);
+        toast({ title: "Welcome back" });
+      }} />
+    );
   }
 
   const handleInstantSearch = (val: string) => {
@@ -100,8 +214,17 @@ export default function MobileSearchPage() {
             <h1 className="text-lg font-bold" data-testid="text-mobile-title">Credit Check</h1>
             <p className="text-xs opacity-80">{user?.fullName}</p>
           </div>
-          <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
-            <ShieldCheck className="w-5 h-5" />
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <button
+              onClick={async () => { await logout(); }}
+              className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center"
+              data-testid="button-mobile-logout"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </div>
         <div className="relative">
