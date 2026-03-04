@@ -40,7 +40,7 @@ async function requireAuth(req: Request, res: Response, next: NextFunction) {
 
 function requireRole(...roles: string[]) {
   return (req: Request, res: Response, next: NextFunction) => {
-    if (!req.session?.userRole || !roles.includes(req.session.userRole)) {
+    if (!req.session?.userRole || (!roles.includes(req.session.userRole) && req.session.userRole !== "super_admin")) {
       return res.status(403).json({ message: "Insufficient permissions" });
     }
     next();
