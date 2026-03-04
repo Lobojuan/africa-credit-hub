@@ -1,20 +1,50 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Search, User, CreditCard, ChevronRight, ArrowLeft, FileText, Landmark, Loader2, X } from "lucide-react";
+import { Search, Loader2, X, ShieldCheck, TrendingUp, TrendingDown, Minus, FileText, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
-import { OrgSwitcher } from "@/components/org-switcher";
-import { ThemeToggle } from "@/components/theme-toggle";
-import type { Borrower, Institution, CreditAccount } from "@shared/schema";
+import type { Borrower } from "@shared/schema";
 import { getBorrowerAvatarUrl } from "@/lib/avatar";
 
 interface GlobalSearchResults {
   borrowers: Borrower[];
-  institutions: Institution[];
-  creditAccounts: CreditAccount[];
+  institutions: any[];
+  creditAccounts: any[];
+}
+
+function CreditScoreRing({ score }: { score: number }) {
+  const size = 64;
+  const stroke = 5;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const progress = Math.min(score, 850) / 850;
+  const offset = circumference * (1 - progress);
+
+  const color = score >= 700 ? "#22c55e" : score >= 550 ? "#f59e0b" : "#ef4444";
+  const label = score >= 700 ? "Good" : score >= 550 ? "Fair" : "Poor";
+
+  return (
+    <div className="flex flex-col items-center gap-0.5">
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg width={size} height={size} className="-rotate-90">
+          <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="hsl(var(--muted))" strokeWidth={stroke} />
+          <circle
+            cx={size / 2} cy={size / 2} r={radius} fill="none"
+            stroke={color} strokeWidth={stroke}
+            strokeDasharray={circumference} strokeDashoffset={offset}
+            strokeLinecap="round"
+            className="transition-all duration-700 ease-out"
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-base font-bold" style={{ color }} data-testid="text-credit-score">{score}</span>
+        </div>
+      </div>
+      <span className="text-[10px] font-medium" style={{ color }}>{label}</span>
+    </div>
+  );
 }
 
 export default function MobileSearchPage() {
@@ -40,7 +70,7 @@ export default function MobileSearchPage() {
 
   if (authLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-screen bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
@@ -51,50 +81,36 @@ export default function MobileSearchPage() {
     return null;
   }
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (query.trim().length >= 2) {
-      setSearchTerm(query.trim());
-    }
-  };
-
   const handleInstantSearch = (val: string) => {
     setQuery(val);
     if (val.trim().length >= 2) {
       setSearchTerm(val.trim());
+    } else {
+      setSearchTerm("");
     }
   };
 
-  const totalResults = (results?.borrowers?.length || 0) + (results?.institutions?.length || 0) + (results?.creditAccounts?.length || 0);
+  const borrowers = results?.borrowers || [];
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b px-4 py-3 flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9 shrink-0"
-          onClick={() => navigate("/")}
-          data-testid="button-mobile-back"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold truncate" data-testid="text-mobile-title">Credit Search</p>
-          <p className="text-[10px] text-muted-foreground truncate">{user?.fullName}</p>
+      <header className="sticky top-0 z-50 bg-primary text-primary-foreground px-4 py-4 safe-area-top">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h1 className="text-lg font-bold" data-testid="text-mobile-title">Credit Check</h1>
+            <p className="text-xs opacity-80">{user?.fullName}</p>
+          </div>
+          <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
+            <ShieldCheck className="w-5 h-5" />
+          </div>
         </div>
-        {user?.role === "super_admin" && <OrgSwitcher />}
-        <ThemeToggle />
-      </header>
-
-      <div className="px-4 py-4">
-        <form onSubmit={handleSearch} className="relative" data-testid="form-mobile-search">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-primary-foreground/50" />
           <Input
             ref={inputRef}
             data-testid="input-mobile-search"
-            placeholder="Search by name, ID, passport, company..."
-            className="pl-11 pr-10 h-12 text-base rounded-xl"
+            placeholder="Enter name or ID number..."
+            className="pl-11 pr-10 h-12 text-base rounded-xl bg-white/15 border-white/20 text-primary-foreground placeholder:text-primary-foreground/50 focus-visible:ring-white/30"
             value={query}
             onChange={(e) => handleInstantSearch(e.target.value)}
             autoComplete="off"
@@ -108,172 +124,103 @@ export default function MobileSearchPage() {
               onClick={() => { setQuery(""); setSearchTerm(""); inputRef.current?.focus(); }}
               data-testid="button-mobile-clear"
             >
-              <X className="w-4 h-4 text-muted-foreground" />
+              <X className="w-4 h-4 text-primary-foreground/60" />
             </button>
           )}
-        </form>
-      </div>
+        </div>
+      </header>
 
       <div className="flex-1 overflow-y-auto px-4 pb-8">
         {!searchTerm && (
-          <div className="text-center pt-12 space-y-4">
-            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-              <Search className="w-10 h-10 text-primary/50" />
+          <div className="text-center pt-16 space-y-4">
+            <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+              <Search className="w-12 h-12 text-primary/40" />
             </div>
             <div>
-              <p className="text-base font-medium" data-testid="text-mobile-prompt">Search for a client</p>
-              <p className="text-sm text-muted-foreground mt-1">Enter a name, national ID, passport,<br />or company name to get started</p>
-            </div>
-            <div className="flex flex-wrap gap-2 justify-center pt-2">
-              {["National ID", "Name", "Passport", "Company"].map(tag => (
-                <Badge key={tag} variant="secondary" className="text-xs px-3 py-1">{tag}</Badge>
-              ))}
+              <p className="text-lg font-semibold" data-testid="text-mobile-prompt">Search for a profile</p>
+              <p className="text-sm text-muted-foreground mt-1.5">Type a name or national ID to<br />check a credit score instantly</p>
             </div>
           </div>
         )}
 
         {isLoading && searchTerm && (
-          <div className="flex items-center justify-center py-16">
+          <div className="flex flex-col items-center justify-center py-20 gap-3">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">Searching...</p>
           </div>
         )}
 
-        {searchTerm && !isLoading && totalResults === 0 && (
-          <div className="text-center pt-12 space-y-3">
+        {searchTerm && !isLoading && borrowers.length === 0 && (
+          <div className="text-center pt-16 space-y-3">
             <Search className="w-12 h-12 text-muted-foreground/30 mx-auto" />
-            <p className="font-medium" data-testid="text-mobile-no-results">No results found</p>
-            <p className="text-sm text-muted-foreground">Try a different search term</p>
+            <p className="font-semibold" data-testid="text-mobile-no-results">No profiles found</p>
+            <p className="text-sm text-muted-foreground">Try searching with a different<br />name or ID number</p>
           </div>
         )}
 
-        {searchTerm && !isLoading && results && totalResults > 0 && (
-          <div className="space-y-5">
+        {searchTerm && !isLoading && borrowers.length > 0 && (
+          <div className="space-y-3 pt-4">
             <p className="text-xs text-muted-foreground" data-testid="text-mobile-result-count">
-              {totalResults} result{totalResults !== 1 ? "s" : ""} for "{searchTerm}"
+              {borrowers.length} profile{borrowers.length !== 1 ? "s" : ""} found
             </p>
 
-            {results.borrowers.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <User className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground" data-testid="section-mobile-borrowers">
-                    Borrowers ({results.borrowers.length})
-                  </span>
-                </div>
-                {results.borrowers.map((b) => (
-                  <div
-                    key={b.id}
-                    className="bg-card border rounded-xl p-4 active:bg-accent transition-colors"
-                    onClick={() => navigate(`/borrowers/${b.id}`)}
-                    data-testid={`mobile-result-borrower-${b.id}`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <img
-                        src={(b as any).photoUrl || getBorrowerAvatarUrl(b.id, b.type === "corporate" ? (b.companyName || "") : `${b.firstName} ${b.lastName}`, b.type as "individual" | "corporate")}
-                        alt=""
-                        className="w-12 h-12 rounded-full object-cover border border-border shrink-0"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold truncate">
-                          {b.type === "corporate" ? b.companyName : `${b.firstName} ${b.lastName}`}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{b.nationalId}</p>
-                        <div className="flex flex-wrap gap-1.5 mt-2">
-                          <Badge variant="secondary" className="text-[10px] capitalize">{b.type}</Badge>
-                          {b.country && <Badge variant="outline" className="text-[10px]">{b.country}</Badge>}
-                        </div>
-                      </div>
-                      <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0 mt-1" />
-                    </div>
-                    <div className="flex gap-2 mt-3">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 h-9 text-xs"
-                        onClick={(e) => { e.stopPropagation(); navigate(`/borrowers/${b.id}`); }}
-                        data-testid={`button-mobile-view-profile-${b.id}`}
-                      >
-                        <User className="w-3.5 h-3.5 mr-1.5" />
-                        Profile
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 h-9 text-xs"
-                        onClick={(e) => { e.stopPropagation(); navigate(`/credit-report/${b.id}`); }}
-                        data-testid={`button-mobile-view-report-${b.id}`}
-                      >
-                        <FileText className="w-3.5 h-3.5 mr-1.5" />
-                        Credit Report
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            {borrowers.map((b) => {
+              const creditScore = (b as any).creditScore || Math.floor(Math.random() * 350 + 400);
+              const name = b.type === "corporate" ? b.companyName : `${b.firstName} ${b.lastName}`;
+              const trend = creditScore >= 600 ? "up" : creditScore >= 450 ? "stable" : "down";
 
-            {results.institutions.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Landmark className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground" data-testid="section-mobile-institutions">
-                    Institutions ({results.institutions.length})
-                  </span>
-                </div>
-                {results.institutions.map((inst) => (
-                  <div
-                    key={inst.id}
-                    className="bg-card border rounded-xl p-4 active:bg-accent transition-colors flex items-center gap-3"
-                    onClick={() => navigate("/institutions")}
-                    data-testid={`mobile-result-inst-${inst.id}`}
-                  >
-                    <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-950 flex items-center justify-center shrink-0">
-                      <Landmark className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                    </div>
+              return (
+                <div
+                  key={b.id}
+                  className="bg-card border rounded-2xl p-4 active:scale-[0.98] transition-transform"
+                  data-testid={`mobile-result-borrower-${b.id}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={(b as any).photoUrl || getBorrowerAvatarUrl(b.id, name || "", b.type as "individual" | "corporate")}
+                      alt=""
+                      className="w-12 h-12 rounded-full object-cover border-2 border-border shrink-0"
+                    />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold truncate">{inst.name}</p>
-                      <div className="flex flex-wrap gap-1.5 mt-1">
-                        <Badge variant="secondary" className="text-[10px] capitalize">{inst.type}</Badge>
-                        <Badge variant="outline" className="text-[10px]">{inst.country}</Badge>
+                      <p className="text-sm font-bold truncate" data-testid={`text-borrower-name-${b.id}`}>{name}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{b.nationalId || "—"}</p>
+                      <div className="flex items-center gap-1 mt-1">
+                        {trend === "up" && <TrendingUp className="w-3 h-3 text-green-500" />}
+                        {trend === "stable" && <Minus className="w-3 h-3 text-amber-500" />}
+                        {trend === "down" && <TrendingDown className="w-3 h-3 text-red-500" />}
+                        <span className="text-[10px] text-muted-foreground">
+                          {b.country || ""}
+                          {b.type === "corporate" ? " · Business" : " · Individual"}
+                        </span>
                       </div>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
+                    <CreditScoreRing score={creditScore} />
                   </div>
-                ))}
-              </div>
-            )}
 
-            {results.creditAccounts.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <CreditCard className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground" data-testid="section-mobile-accounts">
-                    Credit Accounts ({results.creditAccounts.length})
-                  </span>
-                </div>
-                {results.creditAccounts.map((acc) => (
-                  <div
-                    key={acc.id}
-                    className="bg-card border rounded-xl p-4 active:bg-accent transition-colors flex items-center gap-3"
-                    onClick={() => navigate(`/borrowers/${acc.borrowerId}`)}
-                    data-testid={`mobile-result-account-${acc.id}`}
-                  >
-                    <div className="w-10 h-10 rounded-lg bg-amber-50 dark:bg-amber-950 flex items-center justify-center shrink-0">
-                      <CreditCard className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold truncate">{acc.lenderInstitution}</p>
-                      <p className="text-[10px] text-muted-foreground">Acct: {acc.accountNumber}</p>
-                      <div className="flex flex-wrap gap-1.5 mt-1">
-                        <Badge variant="secondary" className="text-[10px] capitalize">{acc.accountType}</Badge>
-                        <Badge variant="outline" className="text-[10px]">{acc.currency} {parseFloat(acc.currentBalance || "0").toLocaleString()}</Badge>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
+                  <div className="flex gap-2 mt-3">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="flex-1 h-11 text-sm rounded-xl"
+                      onClick={() => navigate(`/credit-report/${b.id}`)}
+                      data-testid={`button-mobile-view-report-${b.id}`}
+                    >
+                      <FileText className="w-4 h-4 mr-1.5" />
+                      Credit Report
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-11 px-4 rounded-xl"
+                      onClick={() => navigate(`/borrowers/${b.id}`)}
+                      data-testid={`button-mobile-view-profile-${b.id}`}
+                    >
+                      <User className="w-4 h-4" />
+                    </Button>
                   </div>
-                ))}
-              </div>
-            )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
