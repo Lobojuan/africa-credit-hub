@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Search, Loader2, X, ShieldCheck, LogOut, Eye, EyeOff } from "lucide-react";
@@ -92,6 +92,8 @@ export default function MobileSearchPage() {
   const [, navigate] = useLocation();
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const { data: results, isLoading } = useQuery<{ borrowers: Borrower[] }>({
     queryKey: ["/api/global-search", searchTerm],
     queryFn: async () => {
@@ -103,7 +105,7 @@ export default function MobileSearchPage() {
   });
 
   useEffect(() => {
-    if (user) setTimeout(() => inputRef.current?.focus(), 300);
+    if (user) setTimeout(() => inputRef.current?.focus(), 100);
   }, [user]);
 
   if (authLoading) return <div className="flex items-center justify-center h-screen"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
@@ -112,7 +114,10 @@ export default function MobileSearchPage() {
 
   const search = (val: string) => {
     setQuery(val);
-    setSearchTerm(val.trim().length >= 2 ? val.trim() : "");
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setSearchTerm(val.trim().length >= 2 ? val.trim() : "");
+    }, 400);
   };
 
   const borrowers = results?.borrowers || [];
