@@ -178,6 +178,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteOrganization(id: string): Promise<boolean> {
+    const orgBorrowers = await db.select({ id: borrowers.id }).from(borrowers).where(eq(borrowers.organizationId, id));
+    if (orgBorrowers.length > 0) {
+      const borrowerIds = orgBorrowers.map(b => b.id);
+      await db.execute(sql`DELETE FROM consent_records WHERE borrower_id = ANY(${borrowerIds})`);
+    }
+    const orgAccounts = await db.select({ id: creditAccounts.id }).from(creditAccounts).where(eq(creditAccounts.organizationId, id));
+    if (orgAccounts.length > 0) {
+      const accountIds = orgAccounts.map(a => a.id);
+      await db.execute(sql`DELETE FROM payment_history WHERE credit_account_id = ANY(${accountIds})`);
+    }
+    const orgInstitutions = await db.select({ id: institutions.id }).from(institutions).where(eq(institutions.organizationId, id));
+    if (orgInstitutions.length > 0) {
+      const instIds = orgInstitutions.map(i => i.id);
+      await db.execute(sql`DELETE FROM api_keys WHERE institution_id = ANY(${instIds})`);
+    }
+    const directTables = [
+      "credit_report_logs", "billing_records", "court_judgments",
+      "disputes", "pending_approvals", "audit_logs",
+      "credit_accounts", "borrowers", "institutions", "users", "notifications"
+    ];
+    for (const table of directTables) {
+      await db.execute(sql`DELETE FROM ${sql.identifier(table)} WHERE organization_id = ${id}`);
+    }
     const result = await db.delete(organizations).where(eq(organizations.id, id)).returning();
     return result.length > 0;
   }

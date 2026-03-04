@@ -2563,7 +2563,14 @@ export async function registerRoutes(
     try {
       const users = await storage.getUsers(req.params.id);
       if (users.length > 0) {
-        return res.status(400).json({ message: "Cannot delete organization with active users. Remove all users first." });
+        for (const u of users) {
+          await storage.deleteUser(u.id);
+        }
+        await storage.createAuditLog({
+          action: "DELETE", entity: "user", entityId: req.params.id, userId: req.session?.userId,
+          details: `Auto-removed ${users.length} user(s) from organization before deletion`,
+          ipAddress: req.ip || null,
+        });
       }
       const deleted = await storage.deleteOrganization(req.params.id);
       if (!deleted) return res.status(404).json({ message: "Organization not found" });
