@@ -99,8 +99,41 @@ function Router() {
   );
 }
 
+function SuspendedScreen({ orgName, onLogout }: { orgName?: string; onLogout: () => void }) {
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-background p-4">
+      <div className="max-w-md w-full text-center space-y-6">
+        <div className="w-20 h-20 rounded-full bg-red-100 dark:bg-red-950 flex items-center justify-center mx-auto">
+          <Building2 className="w-10 h-10 text-red-600 dark:text-red-400" />
+        </div>
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold text-foreground" data-testid="text-suspended-title">Account Suspended</h1>
+          {orgName && <p className="text-sm text-muted-foreground">{orgName}</p>}
+        </div>
+        <div className="bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900 rounded-lg p-4 space-y-2">
+          <p className="text-sm text-red-800 dark:text-red-200 font-medium">
+            Your organization's access has been suspended due to an outstanding balance.
+          </p>
+          <p className="text-xs text-red-600 dark:text-red-300">
+            Please contact your platform administrator or make a payment to restore access to the Credit Registry System.
+          </p>
+        </div>
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            If you believe this is an error, please contact support at <span className="font-medium">support@systemsinmotion.co</span>
+          </p>
+          <Button variant="outline" onClick={onLogout} data-testid="button-suspended-logout">
+            <LogOut className="w-4 h-4 mr-2" />
+            Sign Out
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AuthenticatedApp() {
-  const { user, isLoading, logout, passwordExpired } = useAuth();
+  const { user, isLoading, logout, passwordExpired, accountSuspended } = useAuth();
   const [chatbotOpen, setChatbotOpen] = useState(false);
   const { t, i18n } = useTranslation();
 
@@ -118,6 +151,10 @@ function AuthenticatedApp() {
 
   if (!user) {
     return <LoginPage />;
+  }
+
+  if (accountSuspended) {
+    return <SuspendedScreen orgName={(user as any)?.organization?.name} onLogout={logout} />;
   }
 
   const style = {

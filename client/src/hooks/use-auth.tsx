@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useCallback, useState, type ReactNode } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -10,6 +10,7 @@ interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
   passwordExpired: boolean;
+  accountSuspended: boolean;
   login: (username: string, password: string) => Promise<AuthUser>;
   logout: () => Promise<void>;
 }
@@ -18,6 +19,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
+  const [accountSuspended, setAccountSuspended] = useState(false);
 
   const { data: user, isLoading } = useQuery<AuthUser | null>({
     queryKey: ["/api/auth/me"],
@@ -41,6 +43,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await originalFetch(...args);
       if (response.status === 440) {
         handleIdleTimeout();
+      }
+      if (response.status === 403) {
+        try {
+          const cloned = response.clone();
+          const body = await cloned.json();
+          if (body.message === "ACCOUNT_SUSPENDED") {
+            setAccountSuspended(true);
+          }
+        } catch {}
       }
       return response;
     };
@@ -80,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const passwordExpired = !!(user && (user as AuthUser).passwordExpired);
 
   return (
-    <AuthContext.Provider value={{ user: user ?? null, isLoading, passwordExpired, login, logout }}>
+    <AuthContext.Provider value={{ user: user ?? null, isLoading, passwordExpired, accountSuspended, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

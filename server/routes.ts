@@ -25,9 +25,15 @@ function stripPassword(user: any) {
   return safe;
 }
 
-function requireAuth(req: Request, res: Response, next: NextFunction) {
+async function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session?.userId) {
     return res.status(401).json({ message: "Authentication required" });
+  }
+  if (req.session.userRole !== "super_admin" && req.session.organizationId) {
+    const org = await storage.getOrganization(req.session.organizationId);
+    if (org && org.status === "suspended") {
+      return res.status(403).json({ message: "ACCOUNT_SUSPENDED", reason: "Your organization's account has been suspended due to unpaid billing. Please contact your administrator or make a payment to restore access." });
+    }
   }
   next();
 }
