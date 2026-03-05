@@ -73,6 +73,7 @@ export interface IStorage {
   updateApprovalStatus(id: string, status: string, reviewedBy: string, reviewNotes?: string): Promise<PendingApproval | undefined>;
 
   getDisputes(organizationId?: string): Promise<Dispute[]>;
+  getDisputesByBorrower(borrowerId: string): Promise<Dispute[]>;
   getDispute(id: string): Promise<Dispute | undefined>;
   createDispute(dispute: InsertDispute): Promise<Dispute>;
   updateDispute(id: string, data: Partial<{ status: string; resolution: string }>): Promise<Dispute | undefined>;
@@ -544,6 +545,10 @@ export class DatabaseStorage implements IStorage {
   async getDisputes(organizationId?: string): Promise<Dispute[]> {
     const orgFilter = organizationId ? eq(disputes.organizationId, organizationId) : undefined;
     return db.select().from(disputes).where(orgFilter).orderBy(desc(disputes.createdAt)).limit(200);
+  }
+
+  async getDisputesByBorrower(borrowerId: string): Promise<Dispute[]> {
+    return db.select().from(disputes).where(eq(disputes.borrowerId, borrowerId)).orderBy(desc(disputes.createdAt));
   }
 
   async getDispute(id: string): Promise<Dispute | undefined> {

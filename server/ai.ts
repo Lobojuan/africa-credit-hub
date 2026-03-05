@@ -58,14 +58,15 @@ ${accounts.map(a => `  - ${a.accountType}: ${a.currency || "USD"} ${parseFloat(a
     temperature: 0.3,
   });
 
-  const content = response.choices[0]?.message?.content || "{}";
+  const raw = response.choices[0]?.message?.content || "{}";
+  const content = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
   try {
     return JSON.parse(content);
   } catch {
     return {
       riskLevel: "medium",
       riskScore: 50,
-      summary: content,
+      summary: raw,
       factors: [],
       recommendations: [],
       regulatoryFlags: [],
@@ -194,10 +195,11 @@ export async function generateComplianceReport(country: string) {
     temperature: 0.3,
   });
 
-  const content = response.choices[0]?.message?.content || "{}";
+  const raw = response.choices[0]?.message?.content || "{}";
+  const content = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
   try {
     return JSON.parse(content);
   } catch {
-    return { country, summary: content, complianceScore: 0 };
+    return { country, summary: raw, complianceScore: 0 };
   }
 }
