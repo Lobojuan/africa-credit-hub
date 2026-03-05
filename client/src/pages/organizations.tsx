@@ -774,7 +774,7 @@ function OrgDetailPanel({ orgId, onBack }: { orgId: string; onBack: () => void }
               </div>
             </div>
             <div className="flex items-center gap-2 flex-wrap justify-end">
-              <PaymentHealthBadge health={org.billing?.paymentHealth || "no_invoices"} />
+              {org.billing?.paymentHealth && <PaymentHealthBadge health={org.billing.paymentHealth} />}
               {org.status === "active" ? (
                 <Button
                   variant="outline"
@@ -1480,9 +1480,11 @@ export default function OrganizationsPage() {
                     </div>
                   </div>
 
-                  <div className="hidden md:block">
-                    <PaymentHealthBadge health={org.billing?.paymentHealth || "no_invoices"} />
-                  </div>
+                  {org.billing?.paymentHealth && (
+                    <div className="hidden md:block">
+                      <PaymentHealthBadge health={org.billing.paymentHealth} />
+                    </div>
+                  )}
 
                   <Badge variant="outline" className={`hidden lg:inline-flex ${tierCfg?.color || ""} text-xs`}>
                     {org.subscriptionTier}
