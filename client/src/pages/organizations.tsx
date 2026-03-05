@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { SUPPORTED_COUNTRIES, SUPPORTED_CURRENCIES } from "@/lib/currency";
+import { SUPPORTED_COUNTRIES, SUPPORTED_CURRENCIES, getCurrencyForCountry, getCurrencySymbol } from "@/lib/currency";
 import {
   Building2, Plus, Users, BarChart3, Globe, Edit, Trash2, Loader2,
   CreditCard, DollarSign, AlertTriangle, CheckCircle2, Clock, XCircle,
@@ -477,11 +477,12 @@ function StripeActions({ orgId, tier }: { orgId: number; tier: string }) {
 
 function BillingTab({ org }: { org: any }) {
   const { toast } = useToast();
+  const orgDefaultCurrency = getCurrencyForCountry(org.country || "");
   const [createOpen, setCreateOpen] = useState(false);
   const [invoiceForm, setInvoiceForm] = useState({
     serviceType: "subscription",
     amount: "",
-    currency: "USD",
+    currency: orgDefaultCurrency,
     status: "pending",
     periodStart: "",
     periodEnd: "",
@@ -498,7 +499,7 @@ function BillingTab({ org }: { org: any }) {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/organizations"] });
       toast({ title: "Invoice created successfully" });
       setCreateOpen(false);
-      setInvoiceForm({ serviceType: "subscription", amount: "", currency: "USD", status: "pending", periodStart: "", periodEnd: "" });
+      setInvoiceForm({ serviceType: "subscription", amount: "", currency: orgDefaultCurrency, status: "pending", periodStart: "", periodEnd: "" });
     },
     onError: (e: any) => {
       toast({ title: "Error", description: e.message, variant: "destructive" });
@@ -853,12 +854,15 @@ function OrgDetailPanel({ orgId, onBack }: { orgId: string; onBack: () => void }
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {[
-          { label: "Total Billed", value: org.billing?.totalBilled || 0, prefix: "$", icon: Receipt, color: "text-blue-500", bg: "bg-blue-500/10" },
-          { label: "Total Paid", value: org.billing?.totalPaid || 0, prefix: "$", icon: CheckCircle2, color: "text-green-500", bg: "bg-green-500/10" },
-          { label: "Pending", value: org.billing?.totalPending || 0, prefix: "$", icon: Clock, color: "text-amber-500", bg: "bg-amber-500/10" },
-          { label: "Overdue", value: org.billing?.totalOverdue || 0, prefix: "$", icon: AlertTriangle, color: "text-red-500", bg: "bg-red-500/10" },
-        ].map(item => (
+        {(() => {
+          const orgCurrency = getCurrencySymbol(getCurrencyForCountry(org.country || ""));
+          return [
+            { label: "Total Billed", value: org.billing?.totalBilled || 0, prefix: orgCurrency + " ", icon: Receipt, color: "text-blue-500", bg: "bg-blue-500/10" },
+            { label: "Total Paid", value: org.billing?.totalPaid || 0, prefix: orgCurrency + " ", icon: CheckCircle2, color: "text-green-500", bg: "bg-green-500/10" },
+            { label: "Pending", value: org.billing?.totalPending || 0, prefix: orgCurrency + " ", icon: Clock, color: "text-amber-500", bg: "bg-amber-500/10" },
+            { label: "Overdue", value: org.billing?.totalOverdue || 0, prefix: orgCurrency + " ", icon: AlertTriangle, color: "text-red-500", bg: "bg-red-500/10" },
+          ];
+        })().map(item => (
           <Card key={item.label} className="overflow-hidden group hover:shadow-md transition-all duration-300">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
@@ -1386,7 +1390,7 @@ export default function OrganizationsPage() {
           {[
             { label: "Total Clients", value: platformStats.totalOrganizations, icon: Building2, color: "text-primary", bg: "bg-primary/10" },
             { label: "Active", value: platformStats.activeOrganizations, icon: CheckCircle2, color: "text-green-500", bg: "bg-green-500/10" },
-            { label: "Revenue Collected", value: totalRevenue, prefix: "$", icon: DollarSign, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+            { label: "Revenue (USD)", value: totalRevenue, prefix: "$", icon: DollarSign, color: "text-emerald-500", bg: "bg-emerald-500/10" },
             { label: "Users", value: platformStats.totalUsers, icon: Users, color: "text-blue-500", bg: "bg-blue-500/10" },
             { label: "Pending Payments", value: pendingPayCount, icon: Clock, color: "text-amber-500", bg: "bg-amber-500/10" },
             { label: "Overdue", value: overdueCount, icon: AlertTriangle, color: overdueCount > 0 ? "text-red-500" : "text-muted-foreground", bg: overdueCount > 0 ? "bg-red-500/10" : "bg-muted" },
@@ -1487,7 +1491,7 @@ export default function OrganizationsPage() {
                     </div>
                     <div className="text-right min-w-[80px]">
                       <p className="text-xs text-muted-foreground">Billed</p>
-                      <p className="font-semibold text-sm">${(org.billing?.totalBilled || 0).toLocaleString()}</p>
+                      <p className="font-semibold text-sm">{getCurrencySymbol(getCurrencyForCountry(org.country || ""))} {(org.billing?.totalBilled || 0).toLocaleString()}</p>
                     </div>
                   </div>
 

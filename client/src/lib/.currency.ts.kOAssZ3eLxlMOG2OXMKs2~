@@ -257,7 +257,7 @@ export function detectLocalCurrency(): string {
 
 export function formatCurrencyValue(
   value: string | number,
-  currencyCode = "USD"
+  currencyCode = "ETB"
 ): string {
   const num = typeof value === "string" ? parseFloat(value) : value;
   if (isNaN(num)) return "0.00";
