@@ -10,11 +10,8 @@ export async function seedDatabase() {
   const hash = (pw: string) => bcrypt.hashSync(pw, 8);
 
   const [admin] = await db.insert(users).values([
-    { username: "admin", password: hash("admin123"), fullName: "Tadesse Bekele", email: "tadesse@systemsinmotionlimited.com", role: "admin", status: "active", institution: "Systems In Motion Limited" },
-    { username: "regulator1", password: hash("reg123"), fullName: "Almaz Haile", email: "almaz@systemsinmotionlimited.com", role: "regulator", status: "active", institution: "Systems In Motion Limited" },
-    { username: "cbe_user", password: hash("cbe123"), fullName: "Yohannes Gebre", email: "yohannes@cbe.com.et", role: "lender", status: "active", institution: "Commercial Bank of Ethiopia" },
-    { username: "dashen_user", password: hash("dashen123"), fullName: "Sara Mengistu", email: "sara@dashenbank.com.et", role: "lender", status: "active", institution: "Dashen Bank" },
-    { username: "awash_user", password: hash("awash123"), fullName: "Kebede Worku", email: "kebede@awashbank.com", role: "lender", status: "active", institution: "Awash International Bank" },
+    { username: "admin", password: hash("admin0987"), fullName: "Tadesse Bekele", email: "tadesse@systemsinmotionlimited.com", role: "super_admin", status: "active", institution: "Systems In Motion Limited" },
+    { username: "platform_admin", password: hash("admin0987"), fullName: "Platform Administrator", email: "platform@systemsinmotionlimited.com", role: "super_admin", status: "active", institution: "Systems In Motion Limited" },
   ]).returning();
 
   const createdBorrowers = await db.insert(borrowers).values([
