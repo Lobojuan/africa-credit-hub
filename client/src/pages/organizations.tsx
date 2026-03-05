@@ -748,8 +748,9 @@ function OrgDetailPanel({ orgId, onBack }: { orgId: string; onBack: () => void }
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-right-6 duration-400">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={onBack} data-testid="button-back-to-list">
-          <ArrowLeft className="w-4 h-4 mr-1" /> Back
+        <Button variant="outline" size="default" onClick={onBack} data-testid="button-back-to-list" className="gap-2 shadow-sm hover:shadow-md transition-all">
+          <ArrowLeft className="w-4 h-4" />
+          Back to All Clients
         </Button>
       </div>
 
@@ -1280,6 +1281,16 @@ export default function OrganizationsPage() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterTier, setFilterTier] = useState<string>("all");
   const { toast } = useToast();
+
+  useEffect(() => {
+    const resetHandler = () => setSelectedOrgId(null);
+    window.addEventListener("organizations:reset", resetHandler);
+    window.addEventListener("popstate", resetHandler);
+    return () => {
+      window.removeEventListener("organizations:reset", resetHandler);
+      window.removeEventListener("popstate", resetHandler);
+    };
+  }, []);
 
   const { data: organizations = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/admin/organizations"],

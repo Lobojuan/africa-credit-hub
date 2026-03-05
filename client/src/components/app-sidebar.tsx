@@ -195,7 +195,9 @@ export function AppSidebar() {
                   {visiblePlatform.map((item) => (
                     <SidebarMenuItem key={item.titleKey}>
                       <SidebarMenuButton asChild data-active={location === item.url}>
-                        <Link href={item.url} data-testid={item.testId}>
+                        <Link href={item.url} data-testid={item.testId} onClick={() => {
+                          if (location === item.url) window.dispatchEvent(new Event("organizations:reset"));
+                        }}>
                           <item.icon className="w-4 h-4" />
                           <span>{t(item.titleKey)}</span>
                         </Link>
