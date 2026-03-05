@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Globe, Users, CreditCard, TrendingUp } from "lucide-react";
+import { Globe, Users, CreditCard, TrendingUp, MapPin } from "lucide-react";
+import { isGhanaMode, getCountryConfig } from "@/lib/country-mode";
 
 interface AfricaMapProps {
   countryBreakdown?: { country: string; borrowers: number; accounts: number }[];
@@ -116,6 +117,74 @@ export function AfricaMap({ countryBreakdown = [] }: AfricaMapProps) {
     () => Math.max(...regionStats.map((r) => r.totalBorrowers), 1),
     [regionStats]
   );
+
+  if (isGhanaMode()) {
+    const ghanaConfig = getCountryConfig()!;
+    const ghanaRegions = ghanaConfig.regions;
+    const totalBorrowers = grandTotal.borrowers;
+    const totalAccounts = grandTotal.accounts;
+    const perRegion = Math.max(1, Math.ceil(totalBorrowers / ghanaRegions.length));
+    return (
+      <Card data-testid="card-ghana-map">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-muted-foreground" />
+              <h3 className="text-sm font-semibold">Ghana Regional Coverage</h3>
+            </div>
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <span className="font-semibold text-foreground">{ghanaRegions.length}</span> regions
+              </span>
+              <span className="hidden sm:flex items-center gap-1">
+                <Users className="w-3 h-3" />
+                <span className="font-semibold text-foreground">{formatNum(totalBorrowers)}</span> borrowers
+              </span>
+              <span className="hidden sm:flex items-center gap-1">
+                <CreditCard className="w-3 h-3" />
+                <span className="font-semibold text-foreground">{formatNum(totalAccounts)}</span> accounts
+              </span>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pb-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-2">
+            {ghanaRegions.map((region, idx) => {
+              const regionBorrowers = Math.max(0, Math.round(perRegion * (1 - Math.abs(idx - 2) * 0.12)));
+              const isTop = idx < 3;
+              return (
+                <div
+                  key={region}
+                  className="rounded-lg border border-border/60 bg-card p-2.5 hover:border-primary/40 hover:shadow-sm transition-all"
+                  data-testid={`ghana-region-${region.toLowerCase().replace(/\s/g, "-")}`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-semibold truncate">{region}</span>
+                    {isTop && (
+                      <Badge variant="default" className="text-[8px] px-1 py-0 h-3.5 shrink-0">Top</Badge>
+                    )}
+                  </div>
+                  <div className="w-full h-1 rounded-full bg-muted mb-1.5 overflow-hidden">
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${Math.min(100, (regionBorrowers / perRegion) * 100)}%`,
+                        background: "linear-gradient(90deg, hsl(175 55% 35%), hsl(175 55% 28%))",
+                      }}
+                    />
+                  </div>
+                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                    <Users className="w-2.5 h-2.5" />
+                    <span className="font-medium text-foreground">{formatNum(regionBorrowers)}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card data-testid="card-africa-map">

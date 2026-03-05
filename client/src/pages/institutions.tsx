@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { SUPPORTED_COUNTRIES } from "@/lib/currency";
+import { isGhanaMode, getDefaultCountry } from "@/lib/country-mode";
 import type { Institution } from "@shared/schema";
 
 const institutionTypes = ["bank", "mfi", "utility", "telecom", "digital_lender", "sacco"] as const;
@@ -60,7 +61,7 @@ export default function InstitutionsPage() {
     name: "",
     type: "bank",
     registrationNumber: "",
-    country: "",
+    country: getDefaultCountry() || "",
     contactEmail: "",
     contactPhone: "",
     address: "",
@@ -72,7 +73,7 @@ export default function InstitutionsPage() {
       name: "",
       type: "bank",
       registrationNumber: "",
-      country: "",
+      country: getDefaultCountry() || "",
       contactEmail: "",
       contactPhone: "",
       address: "",
@@ -173,16 +174,20 @@ export default function InstitutionsPage() {
               </div>
               <div>
                 <Label>{t("institutions.country")}</Label>
-                <Select value={formData.country} onValueChange={(v) => setFormData({ ...formData, country: v })}>
-                  <SelectTrigger data-testid="select-country"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {SUPPORTED_COUNTRIES.map((c) => (
-                      <SelectItem key={c.code} value={c.name}>
-                        {isFr ? c.nameFr : c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {isGhanaMode() ? (
+                  <Input data-testid="select-country" value="Ghana" disabled className="bg-muted" />
+                ) : (
+                  <Select value={formData.country} onValueChange={(v) => setFormData({ ...formData, country: v })}>
+                    <SelectTrigger data-testid="select-country"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {SUPPORTED_COUNTRIES.map((c) => (
+                        <SelectItem key={c.code} value={c.name}>
+                          {isFr ? c.nameFr : c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>

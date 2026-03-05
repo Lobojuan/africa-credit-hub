@@ -1,3 +1,5 @@
+import { getDefaultCurrency as _getModeCurrency } from "@/lib/country-mode";
+
 export interface CountryInfo {
   code: string;
   name: string;
@@ -238,6 +240,8 @@ const COUNTRY_TO_CURRENCY: Record<string, string> = {
 };
 
 export function getCurrencyForCountry(country: string): string {
+  const modeCurrency = _getModeCurrency();
+  if (modeCurrency) return modeCurrency;
   if (!country) return "USD";
   return COUNTRY_TO_CURRENCY[country.toLowerCase()] || "USD";
 }
@@ -248,6 +252,8 @@ export function getCurrencySymbol(currencyCode: string): string {
 }
 
 export function detectLocalCurrency(): string {
+  const modeCurrency = _getModeCurrency();
+  if (modeCurrency) return modeCurrency;
   try {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     if (tz && TIMEZONE_TO_CURRENCY[tz]) return TIMEZONE_TO_CURRENCY[tz];

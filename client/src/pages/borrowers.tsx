@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { Plus, Search, Building2, User, Users, ChevronRight, ChevronLeft, Flag, AlertTriangle, Camera } from "lucide-react";
 import { SUPPORTED_COUNTRIES } from "@/lib/currency";
+import { isGhanaMode, getDefaultCountry } from "@/lib/country-mode";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,7 +45,7 @@ export default function BorrowersPage() {
     firstName: "", lastName: "", companyName: "", nationalId: "",
     tinNumber: "", passportNumber: "",
     dateOfBirth: "", gender: "", phone: "", email: "",
-    address: "", country: "", city: "", region: "",
+    address: "", country: getDefaultCountry() || "", city: "", region: "",
     employerName: "", occupation: "", businessRegNumber: "", sector: "",
     isPep: false, pepDetails: "",
     educationLevel: "", educationInstitution: "", employmentHistory: "",
@@ -97,7 +98,7 @@ export default function BorrowersPage() {
       queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string)?.startsWith?.("/api/borrowers") });
       queryClient.invalidateQueries({ queryKey: ["/api/pending-approvals"] });
       setDialogOpen(false);
-      setFormData({ type: "individual", firstName: "", lastName: "", companyName: "", nationalId: "", tinNumber: "", passportNumber: "", dateOfBirth: "", gender: "", phone: "", email: "", address: "", country: "", city: "", region: "", employerName: "", occupation: "", businessRegNumber: "", sector: "", isPep: false, pepDetails: "", educationLevel: "", educationInstitution: "", employmentHistory: "", relatedBorrowerId: "", relationshipType: "" });
+      setFormData({ type: "individual", firstName: "", lastName: "", companyName: "", nationalId: "", tinNumber: "", passportNumber: "", dateOfBirth: "", gender: "", phone: "", email: "", address: "", country: getDefaultCountry() || "", city: "", region: "", employerName: "", occupation: "", businessRegNumber: "", sector: "", isPep: false, pepDetails: "", educationLevel: "", educationInstitution: "", employmentHistory: "", relatedBorrowerId: "", relationshipType: "" });
       toast({ title: data.message || t("borrowers.registerBorrower"), description: t("borrowers.submittedForApproval") });
     },
     onError: (e: Error) => {
@@ -203,14 +204,18 @@ export default function BorrowersPage() {
               <div><Label>{t("borrowers.address")}</Label><Input data-testid="input-address" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} /></div>
               <div>
                 <Label>{t("borrowers.country")}</Label>
-                <Select value={formData.country} onValueChange={(v) => setFormData({ ...formData, country: v })}>
-                  <SelectTrigger data-testid="select-country"><SelectValue placeholder={t("creditAccounts.select")} /></SelectTrigger>
-                  <SelectContent>
-                    {SUPPORTED_COUNTRIES.map(c => (
-                      <SelectItem key={c.code} value={c.name}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {isGhanaMode() ? (
+                  <Input data-testid="select-country" value="Ghana" disabled className="bg-muted" />
+                ) : (
+                  <Select value={formData.country} onValueChange={(v) => setFormData({ ...formData, country: v })}>
+                    <SelectTrigger data-testid="select-country"><SelectValue placeholder={t("creditAccounts.select")} /></SelectTrigger>
+                    <SelectContent>
+                      {SUPPORTED_COUNTRIES.map(c => (
+                        <SelectItem key={c.code} value={c.name}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><Label>{t("borrowers.city")}</Label><Input data-testid="input-city" value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} /></div>

@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { SUPPORTED_COUNTRIES, SUPPORTED_CURRENCIES, getCurrencyForCountry, getCurrencySymbol } from "@/lib/currency";
+import { isGhanaMode, getDefaultCountry } from "@/lib/country-mode";
 import {
   Building2, Plus, Users, BarChart3, Globe, Edit, Trash2, Loader2,
   CreditCard, DollarSign, AlertTriangle, CheckCircle2, Clock, XCircle,
@@ -103,6 +104,13 @@ function CountryPicker({ value, onChange }: { value: string; onChange: (v: strin
   const filtered = SUPPORTED_COUNTRIES.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) || c.code.toLowerCase().includes(search.toLowerCase())
   );
+  if (isGhanaMode()) {
+    return (
+      <div className="space-y-2">
+        <Input value="Ghana" disabled className="bg-muted" data-testid="input-country-search" />
+      </div>
+    );
+  }
   return (
     <div className="space-y-2">
       <div className="relative">

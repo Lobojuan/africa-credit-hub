@@ -43,6 +43,7 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@radix-ui/react-collapsible";
 import type { LucideIcon } from "lucide-react";
+import { isGhanaMode, getBrandTitle } from "@/lib/country-mode";
 
 type NavItem = {
   titleKey: string;
@@ -177,7 +178,7 @@ export function AppSidebar() {
               <Globe className="w-4 h-4 text-white" />
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-bold tracking-tight text-sidebar-foreground">{t('sidebar.brandTitle')}</span>
+              <span className="text-sm font-bold tracking-tight text-sidebar-foreground">{isGhanaMode() ? getBrandTitle() : t('sidebar.brandTitle')}</span>
               <span className="text-[10px] font-medium text-sidebar-foreground/50">{t('sidebar.brandSubtitle')}</span>
             </div>
           </div>

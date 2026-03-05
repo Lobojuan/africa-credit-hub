@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { isGhanaMode } from "@/lib/country-mode";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -224,7 +225,7 @@ export default function RegulatoryCompliancePage() {
   const [blocFilter, setBlocFilter] = useState("All");
   const [expandedReqs, setExpandedReqs] = useState<Set<string>>(new Set());
   const [dpFilter, setDpFilter] = useState("All");
-  const [complianceCountry, setComplianceCountry] = useState("");
+  const [complianceCountry, setComplianceCountry] = useState(isGhanaMode() ? "Ghana" : "");
   const [complianceReport, setComplianceReport] = useState<ComplianceReportResult | null>(null);
 
   const complianceMutation = useMutation({
@@ -345,16 +346,20 @@ export default function RegulatoryCompliancePage() {
           <div className="flex flex-col sm:flex-row gap-3 items-end">
             <div className="space-y-1.5 flex-1 min-w-[200px]">
               <label className="text-sm font-medium">Country</label>
-              <Select value={complianceCountry} onValueChange={setComplianceCountry}>
-                <SelectTrigger data-testid="select-compliance-country">
-                  <SelectValue placeholder="Select a country..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {AFRICAN_REGULATORY_DATA.map((c) => (
-                    <SelectItem key={c.code} value={c.name}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {isGhanaMode() ? (
+                <Input data-testid="select-compliance-country" value="Ghana" disabled className="bg-muted" />
+              ) : (
+                <Select value={complianceCountry} onValueChange={setComplianceCountry}>
+                  <SelectTrigger data-testid="select-compliance-country">
+                    <SelectValue placeholder="Select a country..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AFRICAN_REGULATORY_DATA.map((c) => (
+                      <SelectItem key={c.code} value={c.name}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <Button
               onClick={() => complianceMutation.mutate(complianceCountry)}

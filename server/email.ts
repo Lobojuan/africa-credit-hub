@@ -1,4 +1,5 @@
 import { storage } from "./storage";
+import { isGhanaMode } from "./country-mode";
 
 let sendgridClient: any = null;
 let sendgridConfigured = false;
@@ -22,7 +23,7 @@ async function initSendGrid() {
 initSendGrid();
 
 const FROM_EMAIL = "noreply@systemsinmotion.co.ke";
-const FROM_NAME = "Pan-African Credit Registry";
+const FROM_NAME = isGhanaMode() ? "Ghana Credit Registry" : "Pan-African Credit Registry";
 
 function createEmailHtml(title: string, bodyHtml: string): string {
   return `<!DOCTYPE html>

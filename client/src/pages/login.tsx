@@ -9,6 +9,7 @@ import { Shield, AlertTriangle, ArrowRight, Globe, ArrowLeft } from "lucide-reac
 import { useTranslation } from "react-i18next";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { isGhanaMode, getCountryConfig } from "@/lib/country-mode";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -91,25 +92,35 @@ export default function LoginPage() {
             }}>
               <Globe className="w-5 h-5 text-white" />
             </div>
-            <span className="text-white/90 font-semibold text-lg tracking-tight">CDH Registry</span>
+            <span className="text-white/90 font-semibold text-lg tracking-tight">{isGhanaMode() ? "Ghana Credit Registry" : "CDH Registry"}</span>
           </div>
 
           <div className="max-w-lg">
             <h2 className="text-4xl font-extrabold text-white leading-tight tracking-tight">
-              Cross-Jurisdictional<br />
-              <span style={{ color: "hsl(43 80% 65%)" }}>Credit Data Hub</span>
+              {isGhanaMode() ? (
+                <>Ghana<br /><span style={{ color: "hsl(43 80% 65%)" }}>Credit Registry</span></>
+              ) : (
+                <>Cross-Jurisdictional<br /><span style={{ color: "hsl(43 80% 65%)" }}>Credit Data Hub</span></>
+              )}
             </h2>
             <p className="text-white/60 mt-4 text-base leading-relaxed">
-              {t('login.heroDescription')}
+              {isGhanaMode() 
+                ? "Ghana's unified credit registry system. Empowering financial inclusion and responsible lending across the nation."
+                : t('login.heroDescription')}
             </p>
 
             <div className="mt-10 grid grid-cols-2 gap-4">
-              {[
+              {(isGhanaMode() ? [
+                { label: "Jurisdiction", val: "Ghana" },
+                { label: "Currency", val: "GHS (₵)" },
+                { label: "Compliance", val: "SRS v1.2" },
+                { label: "Regulator", val: "Bank of Ghana" },
+              ] : [
                 { label: t('login.jurisdictions'), val: t('login.fourCountries') },
                 { label: t('login.currencies'), val: t('login.eighteenSupported') },
                 { label: t('login.compliance'), val: "SRS v1.2" },
                 { label: t('login.languages'), val: "EN / FR / PT / AR / SW" },
-              ].map((item) => (
+              ]).map((item) => (
                 <div key={item.label} className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.06)", backdropFilter: "blur(8px)" }}>
                   <p className="text-white/60 text-xs font-medium uppercase tracking-wider">{item.label}</p>
                   <p className="text-white font-semibold mt-1">{item.val}</p>
@@ -120,7 +131,7 @@ export default function LoginPage() {
 
           <div className="text-xs space-y-1">
             <p className="text-white/50">
-              Systems In Motion Limited™ &middot; Cross-Jurisdictional CDH v1.2
+              Systems In Motion Limited™ &middot; {isGhanaMode() ? "Ghana Credit Registry v1.2" : "Cross-Jurisdictional CDH v1.2"}
             </p>
             <p className="text-white/30 text-[10px]">
               © 2026 Systems In Motion Limited. All rights reserved.
@@ -138,7 +149,7 @@ export default function LoginPage() {
             <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary">
               <Globe className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="font-semibold text-lg tracking-tight">CDH Registry</span>
+            <span className="font-semibold text-lg tracking-tight">{isGhanaMode() ? "Ghana Credit Registry" : "CDH Registry"}</span>
           </div>
 
           <div>

@@ -44,3 +44,8 @@ outputType = "webview"
 
 [agent]
 integrations = ["stripe:1.0.0", "javascript_openai_ai_integrations:2.0.0"]
+
+[userenv]
+
+[userenv.shared]
+VITE_COUNTRY_MODE = "ghana"
