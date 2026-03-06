@@ -17,8 +17,9 @@ export function OrgSwitcherProvider({ children }: { children: ReactNode }) {
     setSelectedOrgId(orgId);
     setSelectedOrgName(orgName);
     setGlobalOrgId(orgId);
-    queryClient.removeQueries({ predicate: (q) => !q.observers.length });
-    queryClient.resetQueries();
+    const skipAuth = (q: any) => !(q.queryKey[0] as string)?.startsWith("/api/auth/");
+    queryClient.removeQueries({ predicate: (q) => skipAuth(q) && !q.observers.length });
+    queryClient.resetQueries({ predicate: skipAuth });
   }, []);
 
   return (
