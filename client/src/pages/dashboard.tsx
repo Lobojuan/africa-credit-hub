@@ -5,8 +5,10 @@ import { useLocation } from "wouter";
 import {
   Users, CreditCard, Search, AlertTriangle, DollarSign, ShieldAlert,
   CheckSquare, AlertCircle, TrendingUp, Activity, X, ExternalLink,
-  Building2, MapPin, UserCheck, BarChart3, Banknote, Clock, Gavel
+  Building2, MapPin, UserCheck, BarChart3, Banknote, Clock, Gavel,
+  Sun, Moon, Sunrise, Sunset
 } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -407,9 +409,19 @@ function DetailContent({ type, data, displayCurrency, convertAmount }: { type: D
   }
 }
 
+function getGreeting(): { text: string; Icon: typeof Sun } {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return { text: "Good morning", Icon: Sunrise };
+  if (hour >= 12 && hour < 17) return { text: "Good afternoon", Icon: Sun };
+  if (hour >= 17 && hour < 21) return { text: "Good evening", Icon: Sunset };
+  return { text: "Good evening", Icon: Moon };
+}
+
 export default function Dashboard() {
   const { t } = useTranslation();
   const [, navigate] = useLocation();
+  const { user } = useAuth();
+  const greeting = useMemo(() => getGreeting(), []);
   const [selectedDetail, setSelectedDetail] = useState<DetailType>(null);
   const [detectedCurrency] = useState(() => detectLocalCurrency());
   const [displayCurrency, setDisplayCurrency] = useState(() => {
@@ -521,15 +533,18 @@ export default function Dashboard() {
 
   return (
     <div className="p-3 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 max-w-[1400px] mx-auto">
-      <div className="flex items-end justify-between gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <div className="page-header-bar" />
             <h1 className="text-2xl font-extrabold tracking-tight" data-testid="text-dashboard-title">{t('dashboard.title')}</h1>
           </div>
-          <p className="text-sm text-muted-foreground ml-4">
-            {t('dashboard.subtitle')}
-          </p>
+          <div className="flex items-center gap-2 ml-4">
+            <greeting.Icon className="w-4 h-4 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground" data-testid="text-dashboard-greeting">
+              {greeting.text}{user?.firstName ? `, ${user.firstName}` : ""}. {t('dashboard.subtitle')}
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <Select value={displayCurrency} onValueChange={handleCurrencyChange}>
