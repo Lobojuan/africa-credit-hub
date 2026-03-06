@@ -15,7 +15,8 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
-import { SUPPORTED_CURRENCIES } from "@/lib/currency";
+import { SUPPORTED_CURRENCIES, getModeCurrencies } from "@/lib/currency";
+import { isGhanaMode } from "@/lib/country-mode";
 import type { BillingRecord } from "@shared/schema";
 
 function StatusBadge({ status }: { status: string }) {
@@ -46,11 +47,14 @@ export default function BillingPage() {
     queryKey: ["/api/billing"],
   });
 
+  const ghanaMode = isGhanaMode();
+  const currencyList = getModeCurrencies();
+
   const [formData, setFormData] = useState({
     institutionName: "",
     serviceType: "data_submission",
     amount: "",
-    currency: "ETB",
+    currency: ghanaMode ? "GHS" : "ETB",
     invoiceNumber: "",
     periodStart: "",
     periodEnd: "",
@@ -71,7 +75,7 @@ export default function BillingPage() {
         institutionName: "",
         serviceType: "data_submission",
         amount: "",
-        currency: "ETB",
+        currency: ghanaMode ? "GHS" : "ETB",
         invoiceNumber: "",
         periodStart: "",
         periodEnd: "",
@@ -153,7 +157,7 @@ export default function BillingPage() {
                     <Select value={formData.currency} onValueChange={(v) => setFormData({ ...formData, currency: v })}>
                       <SelectTrigger data-testid="select-currency"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {SUPPORTED_CURRENCIES.map((c) => (
+                        {currencyList.map((c) => (
                           <SelectItem key={c.code} value={c.code}>
                             {c.code} ({isFr ? c.nameFr : c.name})
                           </SelectItem>

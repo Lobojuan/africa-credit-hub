@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { StatCard } from "@/components/stat-card";
 import { DashboardCharts } from "@/components/dashboard-charts";
 import { AfricaMap } from "@/components/africa-map";
-import { formatCurrency, detectLocalCurrency, SUPPORTED_CURRENCIES } from "@/lib/currency";
+import { formatCurrency, detectLocalCurrency, SUPPORTED_CURRENCIES, getModeCurrencies } from "@/lib/currency";
 import { isGhanaMode, CREDIT_SCORE_FACTORS } from "@/lib/country-mode";
 import { ReferenceRateBadge, CurrencyReference } from "@/components/currency-reference";
 import type { CreditAccount, AuditLog, ExchangeRate } from "@shared/schema";
@@ -24,6 +24,9 @@ import type { CreditAccount, AuditLog, ExchangeRate } from "@shared/schema";
 const POPULAR_CODES = ["USD", "EUR", "GBP", "ETB", "KES", "NGN", "ZAR", "EGP", "GHS", "TZS", "UGX", "XAF", "XOF", "MAD", "RWF"];
 
 function getDisplayCurrencies(detectedCode: string) {
+  if (isGhanaMode()) {
+    return getModeCurrencies();
+  }
   const codes = new Set(POPULAR_CODES);
   codes.add(detectedCode);
   return SUPPORTED_CURRENCIES

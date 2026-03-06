@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatCurrency, SUPPORTED_COUNTRIES, SUPPORTED_CURRENCIES } from "@/lib/currency";
+import { formatCurrency, SUPPORTED_COUNTRIES, SUPPORTED_CURRENCIES, getModeCurrencies } from "@/lib/currency";
 import { getDefaultFallbackCurrency } from "@/lib/country-mode";
 import { apiRequest } from "@/lib/queryClient";
 import type { Borrower, CreditAccount } from "@shared/schema";
@@ -312,7 +312,7 @@ export default function ReportsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {SUPPORTED_CURRENCIES.map(c => (
+                      {getModeCurrencies().map(c => (
                         <SelectItem key={c.code} value={c.code}>{c.code} — {c.name}</SelectItem>
                       ))}
                     </SelectContent>

@@ -14,7 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { SUPPORTED_CURRENCIES } from "@/lib/currency";
+import { SUPPORTED_CURRENCIES, getModeCurrencies } from "@/lib/currency";
+import { isGhanaMode } from "@/lib/country-mode";
 import type { ExchangeRate } from "@shared/schema";
 
 export default function ExchangeRatesPage() {
@@ -26,16 +27,19 @@ export default function ExchangeRatesPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedRate, setSelectedRate] = useState<ExchangeRate | null>(null);
 
+  const ghanaMode = isGhanaMode();
+  const currencyList = getModeCurrencies();
+
   const [formData, setFormData] = useState({
     baseCurrency: "USD",
-    targetCurrency: "ETB",
+    targetCurrency: ghanaMode ? "GHS" : "ETB",
     rate: "",
     effectiveDate: new Date().toISOString().split("T")[0],
   });
 
   const [convertAmount, setConvertAmount] = useState("");
   const [convertFrom, setConvertFrom] = useState("USD");
-  const [convertTo, setConvertTo] = useState("ETB");
+  const [convertTo, setConvertTo] = useState(ghanaMode ? "GHS" : "ETB");
   const [convertResult, setConvertResult] = useState<string | null>(null);
 
   const { data: exchangeRates, isLoading } = useQuery<ExchangeRate[]>({
@@ -134,7 +138,7 @@ export default function ExchangeRatesPage() {
   function resetForm() {
     setFormData({
       baseCurrency: "USD",
-      targetCurrency: "ETB",
+      targetCurrency: ghanaMode ? "GHS" : "ETB",
       rate: "",
       effectiveDate: new Date().toISOString().split("T")[0],
     });
@@ -176,7 +180,7 @@ export default function ExchangeRatesPage() {
           <Select value={formData.baseCurrency} onValueChange={(v) => setFormData({ ...formData, baseCurrency: v })}>
             <SelectTrigger data-testid="select-base-currency"><SelectValue /></SelectTrigger>
             <SelectContent>
-              {SUPPORTED_CURRENCIES.map((c) => (
+              {currencyList.map((c) => (
                 <SelectItem key={c.code} value={c.code}>
                   {c.code} - {c.name}
                 </SelectItem>
@@ -189,7 +193,7 @@ export default function ExchangeRatesPage() {
           <Select value={formData.targetCurrency} onValueChange={(v) => setFormData({ ...formData, targetCurrency: v })}>
             <SelectTrigger data-testid="select-target-currency"><SelectValue /></SelectTrigger>
             <SelectContent>
-              {SUPPORTED_CURRENCIES.map((c) => (
+              {currencyList.map((c) => (
                 <SelectItem key={c.code} value={c.code}>
                   {c.code} - {c.name}
                 </SelectItem>
@@ -289,7 +293,7 @@ export default function ExchangeRatesPage() {
               <Select value={convertFrom} onValueChange={setConvertFrom}>
                 <SelectTrigger data-testid="select-from"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {SUPPORTED_CURRENCIES.map((c) => (
+                  {currencyList.map((c) => (
                     <SelectItem key={c.code} value={c.code}>
                       {c.code} ({c.symbol})
                     </SelectItem>
@@ -302,7 +306,7 @@ export default function ExchangeRatesPage() {
               <Select value={convertTo} onValueChange={setConvertTo}>
                 <SelectTrigger data-testid="select-to"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {SUPPORTED_CURRENCIES.map((c) => (
+                  {currencyList.map((c) => (
                     <SelectItem key={c.code} value={c.code}>
                       {c.code} ({c.symbol})
                     </SelectItem>
@@ -336,7 +340,12 @@ export default function ExchangeRatesPage() {
             ))}
           </CardContent>
         </Card>
-      ) : exchangeRates && exchangeRates.length > 0 ? (
+      ) : (() => {
+        const ghanaCodes = new Set(currencyList.map(c => c.code));
+        const displayRates = ghanaMode && exchangeRates
+          ? exchangeRates.filter(r => ghanaCodes.has(r.baseCurrency) && ghanaCodes.has(r.targetCurrency))
+          : exchangeRates || [];
+        return displayRates.length > 0 ? (
         <Card>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -352,7 +361,7 @@ export default function ExchangeRatesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {exchangeRates.map((rate) => (
+                  {displayRates.map((rate) => (
                     <TableRow key={rate.id} data-testid={`row-rate-${rate.id}`}>
                       <TableCell>
                         <Badge variant="outline">{rate.baseCurrency}</Badge>
@@ -404,7 +413,8 @@ export default function ExchangeRatesPage() {
             <p className="text-sm text-muted-foreground mt-1">{t("exchangeRates.noRatesSub")}</p>
           </CardContent>
         </Card>
-      )}
+      );
+      })()}
 
       <Dialog open={editDialogOpen} onOpenChange={(open) => { setEditDialogOpen(open); if (!open) { setSelectedRate(null); resetForm(); } }}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">

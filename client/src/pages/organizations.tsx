@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { SUPPORTED_COUNTRIES, SUPPORTED_CURRENCIES, getCurrencyForCountry, getCurrencySymbol } from "@/lib/currency";
+import { SUPPORTED_COUNTRIES, SUPPORTED_CURRENCIES, getCurrencyForCountry, getCurrencySymbol, getModeCurrencies } from "@/lib/currency";
 import { isGhanaMode, getDefaultCountry } from "@/lib/country-mode";
 import {
   Building2, Plus, Users, BarChart3, Globe, Edit, Trash2, Loader2,
@@ -148,7 +148,8 @@ function CountryPicker({ value, onChange }: { value: string; onChange: (v: strin
 
 function CurrencyPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [search, setSearch] = useState("");
-  const filtered = SUPPORTED_CURRENCIES.filter(c =>
+  const modeCurrencies = getModeCurrencies();
+  const filtered = modeCurrencies.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) || c.code.toLowerCase().includes(search.toLowerCase())
   );
   return (

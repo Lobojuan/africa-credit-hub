@@ -261,15 +261,6 @@ export function detectLocalCurrency(): string {
   return "USD";
 }
 
-const GHANA_CURRENCIES = ["GHS", "USD", "EUR"];
-
-export function getModeCurrencies(): CurrencyInfo[] {
-  if (isGhanaMode()) {
-    return SUPPORTED_CURRENCIES.filter(c => GHANA_CURRENCIES.includes(c.code));
-  }
-  return SUPPORTED_CURRENCIES;
-}
-
 export function formatCurrencyValue(
   value: string | number,
   currencyCode = "USD"
