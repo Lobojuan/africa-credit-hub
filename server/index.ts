@@ -6,6 +6,12 @@ import helmet from "helmet";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { execSync } from "child_process";
+
+const port = parseInt(process.env.PORT || "5000", 10);
+try {
+  execSync(`fuser -k -9 ${port}/tcp 2>/dev/null`, { stdio: "ignore" });
+} catch {}
 
 const app = express();
 
@@ -142,6 +148,20 @@ app.use((req, res, next) => {
   next();
 });
 
+function gracefulShutdown(signal: string) {
+  console.log(`Received ${signal}, shutting down gracefully...`);
+  httpServer.close(() => {
+    console.log("Server closed");
+    process.exit(0);
+  });
+  setTimeout(() => {
+    console.log("Forcing shutdown after timeout");
+    process.exit(1);
+  }, 5000);
+}
+
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 process.on("SIGHUP", () => { /* ignore hangup signal */ });
 process.on("SIGPIPE", () => { /* ignore broken pipe */ });
 process.on("uncaughtException", (err) => { console.error("Uncaught exception:", err); });
@@ -214,7 +234,6 @@ process.on("unhandledRejection", (err) => { console.error("Unhandled rejection:"
     await setupVite(httpServer, app);
   }
 
-  const port = parseInt(process.env.PORT || "5000", 10);
   httpServer.listen(port, "0.0.0.0", async () => {
     log(`serving on port ${port}`);
 
