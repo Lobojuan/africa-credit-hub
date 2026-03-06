@@ -2689,14 +2689,14 @@ export async function registerRoutes(
 
   app.get("/api/admin/organizations/list", requireAuth, requireSuperAdmin, async (_req, res) => {
     try {
-      const orgs = await storage.getOrganizations();
+      const orgs = await storage.getOrganizations(getGhanaCountry());
       res.json(orgs.map(o => ({ id: o.id, name: o.name, type: o.type, status: o.status, country: o.country, subscriptionTier: o.subscriptionTier })));
     } catch (e: any) { res.status(500).json({ message: e.message }); }
   });
 
   app.get("/api/admin/organizations", requireAuth, requireSuperAdmin, async (_req, res) => {
     try {
-      const orgs = await storage.getOrganizations();
+      const orgs = await storage.getOrganizations(getGhanaCountry());
       const orgsWithStats = await Promise.all(orgs.map(async (org) => {
         const users = await storage.getUsers(org.id);
         const stats = await storage.getDashboardStats(org.id);
@@ -2849,7 +2849,7 @@ export async function registerRoutes(
 
   app.get("/api/admin/analytics", requireAuth, requireSuperAdmin, async (_req, res) => {
     try {
-      const orgs = await storage.getOrganizations();
+      const orgs = await storage.getOrganizations(getGhanaCountry());
       const allBilling: any[] = [];
       for (const org of orgs) {
         const billing = await storage.getBillingRecords(org.id);
@@ -2936,7 +2936,7 @@ export async function registerRoutes(
 
   app.get("/api/admin/platform-stats", requireAuth, requireSuperAdmin, async (_req, res) => {
     try {
-      const orgs = await storage.getOrganizations();
+      const orgs = await storage.getOrganizations(getGhanaCountry());
       const allUsers = await storage.getUsers();
       const globalStats = await storage.getDashboardStats();
       res.json({
