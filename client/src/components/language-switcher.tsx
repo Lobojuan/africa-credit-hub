@@ -8,19 +8,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { isGhanaMode } from "@/lib/country-mode";
 
-const SUPPORTED_LANGS = ["en", "fr", "pt", "ar", "sw"] as const;
+const ALL_LANGS = ["en", "fr", "pt", "ar", "sw"] as const;
+const GHANA_LANGS = ["en", "fr"] as const;
 
 function resolveLanguage(lang: string | undefined): string {
   if (!lang) return "en";
-  for (const supported of SUPPORTED_LANGS) {
-    if (lang.startsWith(supported)) return supported;
+  const supported = isGhanaMode() ? GHANA_LANGS : ALL_LANGS;
+  for (const s of supported) {
+    if (lang.startsWith(s)) return s;
   }
   return "en";
 }
 
 export function LanguageSwitcher() {
   const { i18n } = useTranslation();
+  const ghanaMode = isGhanaMode();
+  const langs = ghanaMode ? GHANA_LANGS : ALL_LANGS;
 
   return (
     <Select
@@ -38,11 +43,11 @@ export function LanguageSwitcher() {
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="en" data-testid="option-lang-en">EN</SelectItem>
-        <SelectItem value="fr" data-testid="option-lang-fr">FR</SelectItem>
-        <SelectItem value="pt" data-testid="option-lang-pt">PT</SelectItem>
-        <SelectItem value="ar" data-testid="option-lang-ar">AR</SelectItem>
-        <SelectItem value="sw" data-testid="option-lang-sw">SW</SelectItem>
+        {langs.includes("en") && <SelectItem value="en" data-testid="option-lang-en">EN</SelectItem>}
+        {langs.includes("fr") && <SelectItem value="fr" data-testid="option-lang-fr">FR</SelectItem>}
+        {!ghanaMode && <SelectItem value="pt" data-testid="option-lang-pt">PT</SelectItem>}
+        {!ghanaMode && <SelectItem value="ar" data-testid="option-lang-ar">AR</SelectItem>}
+        {!ghanaMode && <SelectItem value="sw" data-testid="option-lang-sw">SW</SelectItem>}
       </SelectContent>
     </Select>
   );
