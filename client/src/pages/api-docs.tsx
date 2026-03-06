@@ -12,11 +12,11 @@ function CodeBlock({ method, path, description }: { method: string; path: string
     POST: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
   };
   return (
-    <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
-      <Badge variant="outline" className={`${methodColors[method] || ""} text-xs font-mono shrink-0`}>{method}</Badge>
-      <div>
-        <code className="text-sm font-mono font-medium" data-testid={`text-endpoint-${path.replace(/\//g, "-")}`}>{path}</code>
-        <p className="text-xs text-muted-foreground mt-1">{description}</p>
+    <div className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 bg-muted/50 rounded-lg">
+      <Badge variant="outline" className={`${methodColors[method] || ""} text-[10px] sm:text-xs font-mono shrink-0`}>{method}</Badge>
+      <div className="min-w-0">
+        <code className="text-xs sm:text-sm font-mono font-medium break-all" data-testid={`text-endpoint-${path.replace(/\//g, "-")}`}>{path}</code>
+        <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">{description}</p>
       </div>
     </div>
   );
@@ -30,16 +30,16 @@ export default function ApiDocsPage() {
 
   return (
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-[1000px] mx-auto">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/api-keys")} data-testid="button-back">
+      <div className="flex items-center gap-2 sm:gap-4">
+        <Button variant="ghost" size="icon" className="shrink-0" onClick={() => navigate("/api-keys")} data-testid="button-back">
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <div>
+        <div className="min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <div className="page-header-bar" />
-            <h1 className="text-2xl font-extrabold tracking-tight" data-testid="text-api-docs-title">{t("apiDocs.title")}</h1>
+            <h1 className="text-lg sm:text-2xl font-extrabold tracking-tight" data-testid="text-api-docs-title">{t("apiDocs.title")}</h1>
           </div>
-          <p className="text-sm text-muted-foreground ml-4">{t("apiDocs.subtitle")}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground ml-4">{t("apiDocs.subtitle")}</p>
         </div>
       </div>
 
@@ -50,25 +50,25 @@ export default function ApiDocsPage() {
               <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 shrink-0">
                 <Shield className="w-5 h-5 text-amber-700 dark:text-amber-300" />
               </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-semibold">Ghana Regulatory Compliance Notice</h3>
+              <div className="space-y-2 min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                  <h3 className="text-xs sm:text-sm font-semibold">Ghana Regulatory Compliance Notice</h3>
                   <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-amber-400 text-amber-700 dark:text-amber-300">Act 726</Badge>
                   <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-amber-400 text-amber-700 dark:text-amber-300">Act 843</Badge>
                 </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">
+                <p className="text-[10px] sm:text-xs text-muted-foreground leading-relaxed">
                   All API usage is governed by the Credit Reporting Act, 2007 (Act 726) and Data Protection Act, 2012 (Act 843). 
                   Only BoG-licensed institutions may access this API. Credit report pulls require documented borrower consent per Act 726, Section 14. 
                   All data must use GHS currency for domestic facilities and Ghana Card as the primary identifier.
                 </p>
-                <div className="flex items-center gap-2 pt-1">
+                <div className="flex flex-wrap items-center gap-2 pt-1">
                   <Link href="/ghana-docs">
-                    <Button variant="outline" size="sm" className="text-xs h-7" data-testid="button-view-ghana-api-guide">
+                    <Button variant="outline" size="sm" className="text-[10px] sm:text-xs h-7" data-testid="button-view-ghana-api-guide">
                       <FileText className="w-3 h-3 mr-1" /> View Ghana API Guide
                     </Button>
                   </Link>
                   <Link href="/ghana-docs">
-                    <Button variant="ghost" size="sm" className="text-xs h-7" data-testid="button-view-ghana-connections">
+                    <Button variant="ghost" size="sm" className="text-[10px] sm:text-xs h-7" data-testid="button-view-ghana-connections">
                       View Connections Policy
                     </Button>
                   </Link>
@@ -88,8 +88,8 @@ export default function ApiDocsPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">{t("apiDocs.authDescription")}</p>
-          <div className="bg-muted p-4 rounded-lg">
-            <code className="text-sm font-mono block" data-testid="text-auth-header">X-API-Key: sim_xxxxxxxx_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</code>
+          <div className="bg-muted p-3 sm:p-4 rounded-lg overflow-x-auto">
+            <code className="text-xs sm:text-sm font-mono block whitespace-nowrap" data-testid="text-auth-header">X-API-Key: sim_xxxxxxxx_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</code>
           </div>
           <p className="text-xs text-muted-foreground">{t("apiDocs.authNote")}</p>
 
@@ -100,9 +100,9 @@ export default function ApiDocsPage() {
               <Badge variant="outline" className="text-[10px]">OAuth 2.1</Badge>
             </div>
             <p className="text-sm text-muted-foreground mb-3">{t("apiDocs.oauthDescription")}</p>
-            <div className="bg-muted p-4 rounded-lg space-y-2">
+            <div className="bg-muted p-3 sm:p-4 rounded-lg space-y-2 overflow-x-auto">
               <p className="text-xs text-muted-foreground">{t("apiDocs.oauthStep1")}</p>
-              <pre className="text-xs font-mono whitespace-pre-wrap" data-testid="text-oauth-example">{`POST /api/external/oauth/token
+              <pre className="text-[10px] sm:text-xs font-mono whitespace-pre-wrap" data-testid="text-oauth-example">{`POST /api/external/oauth/token
 Content-Type: application/json
 
 {
@@ -111,13 +111,13 @@ Content-Type: application/json
   "client_secret": "sim_xxxxxxxx_xxxx...full_key"
 }`}</pre>
               <p className="text-xs text-muted-foreground mt-3">{t("apiDocs.oauthStep2")}</p>
-              <pre className="text-xs font-mono whitespace-pre-wrap">{`{
+              <pre className="text-[10px] sm:text-xs font-mono whitespace-pre-wrap">{`{
   "access_token": "eyJhbGciOiJI...",
   "token_type": "Bearer",
   "expires_in": 3600
 }`}</pre>
               <p className="text-xs text-muted-foreground mt-3">{t("apiDocs.oauthStep3")}</p>
-              <pre className="text-xs font-mono whitespace-pre-wrap">{`Authorization: Bearer eyJhbGciOiJI...`}</pre>
+              <pre className="text-[10px] sm:text-xs font-mono whitespace-pre-wrap">{`Authorization: Bearer eyJhbGciOiJI...`}</pre>
             </div>
           </div>
         </CardContent>
@@ -131,8 +131,8 @@ Content-Type: application/json
           </div>
         </CardHeader>
         <CardContent>
-          <div className="bg-muted p-4 rounded-lg">
-            <code className="text-sm font-mono" data-testid="text-base-url">{baseUrl}/api/external/v1</code>
+          <div className="bg-muted p-3 sm:p-4 rounded-lg overflow-x-auto">
+            <code className="text-xs sm:text-sm font-mono break-all" data-testid="text-base-url">{baseUrl}/api/external/v1</code>
           </div>
         </CardContent>
       </Card>
@@ -174,8 +174,8 @@ Content-Type: application/json
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">{t("apiDocs.batchDescription")}</p>
-          <div className="bg-muted p-4 rounded-lg">
-            <pre className="text-xs font-mono whitespace-pre-wrap" data-testid="text-batch-example">{`POST /api/external/v1/borrowers
+          <div className="bg-muted p-3 sm:p-4 rounded-lg overflow-x-auto">
+            <pre className="text-[10px] sm:text-xs font-mono whitespace-pre-wrap" data-testid="text-batch-example">{`POST /api/external/v1/borrowers
 Content-Type: application/json
 X-API-Key: sim_xxxxxxxx_xxx...
 
@@ -207,8 +207,8 @@ X-API-Key: sim_xxxxxxxx_xxx...
           </div>
         </CardHeader>
         <CardContent>
-          <div className="bg-muted p-4 rounded-lg">
-            <pre className="text-xs font-mono whitespace-pre-wrap" data-testid="text-response-example">{`{
+          <div className="bg-muted p-3 sm:p-4 rounded-lg overflow-x-auto">
+            <pre className="text-[10px] sm:text-xs font-mono whitespace-pre-wrap" data-testid="text-response-example">{`{
   "success": true,
   "message": "Borrower created successfully",
   "data": { ... },
@@ -224,11 +224,11 @@ X-API-Key: sim_xxxxxxxx_xxx...
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            <div className="flex items-center gap-3 text-sm"><Badge variant="outline">401</Badge> <span>{t("apiDocs.error401")}</span></div>
-            <div className="flex items-center gap-3 text-sm"><Badge variant="outline">403</Badge> <span>{t("apiDocs.error403")}</span></div>
-            <div className="flex items-center gap-3 text-sm"><Badge variant="outline">400</Badge> <span>{t("apiDocs.error400")}</span></div>
-            <div className="flex items-center gap-3 text-sm"><Badge variant="outline">404</Badge> <span>{t("apiDocs.error404")}</span></div>
-            <div className="flex items-center gap-3 text-sm"><Badge variant="outline">500</Badge> <span>{t("apiDocs.error500")}</span></div>
+            <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm"><Badge variant="outline">401</Badge> <span>{t("apiDocs.error401")}</span></div>
+            <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm"><Badge variant="outline">403</Badge> <span>{t("apiDocs.error403")}</span></div>
+            <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm"><Badge variant="outline">400</Badge> <span>{t("apiDocs.error400")}</span></div>
+            <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm"><Badge variant="outline">404</Badge> <span>{t("apiDocs.error404")}</span></div>
+            <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm"><Badge variant="outline">500</Badge> <span>{t("apiDocs.error500")}</span></div>
           </div>
         </CardContent>
       </Card>

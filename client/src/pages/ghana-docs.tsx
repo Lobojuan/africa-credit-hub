@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { apiRequest } from "@/lib/queryClient";
 import { isGhanaMode } from "@/lib/country-mode";
 
@@ -104,37 +104,39 @@ export default function GhanaDocsPage() {
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          variant={activeFilter === null ? "default" : "outline"}
-          size="sm"
-          className="text-xs h-7"
-          onClick={() => setActiveFilter(null)}
-          data-testid="filter-all"
-        >
-          All Documents
-        </Button>
-        {categories.map(cat => {
-          const config = CATEGORY_CONFIG[cat];
-          if (!config) return null;
-          const Icon = config.icon;
-          return (
-            <Button
-              key={cat}
-              variant={activeFilter === cat ? "default" : "outline"}
-              size="sm"
-              className="text-xs h-7"
-              onClick={() => setActiveFilter(activeFilter === cat ? null : cat)}
-              data-testid={`filter-${cat}`}
-            >
-              <Icon className="w-3 h-3 mr-1" />
-              {config.label}
-            </Button>
-          );
-        })}
-        <div className="ml-auto text-xs text-muted-foreground flex items-center gap-1.5">
-          <Scale className="w-3.5 h-3.5" />
-          <span>Credit Reporting Act, 2007 (Act 726) | Data Protection Act, 2012 (Act 843)</span>
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant={activeFilter === null ? "default" : "outline"}
+            size="sm"
+            className="text-xs h-7"
+            onClick={() => setActiveFilter(null)}
+            data-testid="filter-all"
+          >
+            All Documents
+          </Button>
+          {categories.map(cat => {
+            const config = CATEGORY_CONFIG[cat];
+            if (!config) return null;
+            const Icon = config.icon;
+            return (
+              <Button
+                key={cat}
+                variant={activeFilter === cat ? "default" : "outline"}
+                size="sm"
+                className="text-xs h-7"
+                onClick={() => setActiveFilter(activeFilter === cat ? null : cat)}
+                data-testid={`filter-${cat}`}
+              >
+                <Icon className="w-3 h-3 mr-1" />
+                {config.label}
+              </Button>
+            );
+          })}
+        </div>
+        <div className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1.5 px-1">
+          <Scale className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+          <span className="leading-tight">Credit Reporting Act, 2007 (Act 726) | Data Protection Act, 2012 (Act 843)</span>
         </div>
       </div>
 
@@ -212,41 +214,47 @@ export default function GhanaDocsPage() {
       )}
 
       <Dialog open={!!viewingDoc} onOpenChange={(open) => { if (!open) setViewingDoc(null); }}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto p-0">
-          <div className="sticky top-0 z-10 bg-background border-b px-6 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Shield className="w-4 h-4 text-primary" />
-              <h2 className="text-sm font-semibold" data-testid="text-doc-viewer-title">{docTitle}</h2>
-            </div>
-            <div className="flex items-center gap-2">
-              {viewingDoc && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs h-7"
-                    onClick={() => downloadPdf(viewingDoc)}
-                    data-testid="button-viewer-download-pdf"
-                  >
-                    <Download className="w-3 h-3 mr-1" /> Download PDF
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-xs h-7"
-                    onClick={() => downloadMarkdown(viewingDoc)}
-                    data-testid="button-viewer-download-md"
-                  >
-                    <FileText className="w-3 h-3 mr-1" /> .md
-                  </Button>
-                </>
-              )}
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setViewingDoc(null)} data-testid="button-close-viewer">
-                <X className="w-4 h-4" />
-              </Button>
+        <DialogContent className="w-[95vw] sm:w-auto max-w-4xl h-[90vh] sm:h-auto sm:max-h-[85vh] flex flex-col p-0 gap-0">
+          <div className="sticky top-0 z-10 bg-background border-b px-3 sm:px-6 py-3 shrink-0">
+            <DialogTitle className="sr-only">{docTitle}</DialogTitle>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <Shield className="w-4 h-4 text-primary shrink-0" />
+                <h2 className="text-xs sm:text-sm font-semibold truncate" data-testid="text-doc-viewer-title">{docTitle}</h2>
+              </div>
+              <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                {viewingDoc && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-[10px] sm:text-xs h-7 px-2 sm:px-3"
+                      onClick={() => downloadPdf(viewingDoc)}
+                      data-testid="button-viewer-download-pdf"
+                    >
+                      <Download className="w-3 h-3 sm:mr-1" />
+                      <span className="hidden sm:inline">Download PDF</span>
+                      <span className="sm:hidden">PDF</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-[10px] sm:text-xs h-7 px-2 sm:px-3"
+                      onClick={() => downloadMarkdown(viewingDoc)}
+                      data-testid="button-viewer-download-md"
+                    >
+                      <FileText className="w-3 h-3 sm:mr-1" />
+                      <span className="hidden sm:inline">.md</span>
+                    </Button>
+                  </>
+                )}
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setViewingDoc(null)} data-testid="button-close-viewer">
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           </div>
-          <div className="px-6 py-4">
+          <div className="flex-1 overflow-auto px-3 sm:px-6 py-4">
             {loading ? (
               <div className="space-y-3">
                 <Skeleton className="h-6 w-2/3" />
@@ -258,10 +266,11 @@ export default function GhanaDocsPage() {
               <div
                 className="prose prose-sm dark:prose-invert max-w-none
                   prose-headings:text-foreground prose-p:text-muted-foreground
-                  prose-table:text-sm prose-th:bg-muted/50 prose-th:px-3 prose-th:py-2
-                  prose-td:px-3 prose-td:py-2 prose-td:border-border
-                  prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded
-                  prose-pre:bg-muted prose-pre:border prose-pre:border-border"
+                  prose-table:text-xs sm:prose-table:text-sm prose-th:bg-muted/50 prose-th:px-2 sm:prose-th:px-3 prose-th:py-2
+                  prose-td:px-2 sm:prose-td:px-3 prose-td:py-2 prose-td:border-border
+                  prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-[10px] sm:prose-code:text-xs
+                  prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-pre:text-[10px] sm:prose-pre:text-xs prose-pre:overflow-x-auto
+                  [&_table]:block [&_table]:overflow-x-auto [&_table]:w-full [&_table]:whitespace-nowrap sm:[&_table]:whitespace-normal"
                 dangerouslySetInnerHTML={{ __html: docHtml }}
                 data-testid="doc-viewer-content"
               />

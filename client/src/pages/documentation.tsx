@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { apiRequest } from "@/lib/queryClient";
 import { isGhanaMode } from "@/lib/country-mode";
 
@@ -119,24 +119,46 @@ export default function DocumentationPage() {
               data-testid={`card-doc-${doc.id}`}
               onClick={() => viewDocument(doc)}
             >
-              <CardContent className="p-5">
-                <div className="flex items-start gap-4">
+              <CardContent className="p-4 sm:p-5">
+                <div className="flex items-start gap-3 sm:gap-4">
                   <DocIcon id={doc.id} />
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-sm" data-testid={`text-doc-title-${doc.id}`}>{doc.title}</h3>
-                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{doc.description}</p>
-                    <div className="flex items-center gap-3 mt-3">
+                    <h3 className="font-semibold text-xs sm:text-sm" data-testid={`text-doc-title-${doc.id}`}>{doc.title}</h3>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 line-clamp-2">{doc.description}</p>
+                    <div className="flex items-center gap-2 sm:gap-3 mt-2 sm:mt-3 flex-wrap">
                       <Badge variant="outline" className="text-[10px]">{formatSize(doc.size)}</Badge>
                       <Badge variant="outline" className="text-[10px]">Markdown</Badge>
+                      <div className="flex items-center gap-1.5 sm:hidden">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-[10px] gap-1 px-2"
+                          onClick={(e) => { e.stopPropagation(); viewDocument(doc); }}
+                          data-testid={`button-view-${doc.id}`}
+                        >
+                          <Eye className="w-3 h-3" />
+                          {t("docs.view")}
+                        </Button>
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="h-7 text-[10px] gap-1 px-2"
+                          onClick={(e) => { e.stopPropagation(); downloadPdf(doc.id); }}
+                          data-testid={`button-download-mobile-${doc.id}`}
+                        >
+                          <Download className="w-3 h-3" />
+                          PDF
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex flex-col gap-1.5 shrink-0">
+                  <div className="hidden sm:flex flex-col gap-1.5 shrink-0">
                     <Button
                       variant="outline"
                       size="sm"
                       className="h-8 text-xs gap-1.5"
                       onClick={(e) => { e.stopPropagation(); viewDocument(doc); }}
-                      data-testid={`button-view-${doc.id}`}
+                      data-testid={`button-view-desktop-${doc.id}`}
                     >
                       <Eye className="w-3.5 h-3.5" />
                       {t("docs.view")}
@@ -160,32 +182,34 @@ export default function DocumentationPage() {
       )}
 
       <Dialog open={!!viewingDoc} onOpenChange={(open) => { if (!open) { setViewingDoc(null); setDocHtml(""); } }}>
-        <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0 gap-0">
-          <div className="flex items-center justify-between p-4 border-b shrink-0">
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setViewingDoc(null); setDocHtml(""); }} data-testid="button-close-viewer">
+        <DialogContent className="w-[95vw] sm:w-auto max-w-5xl h-[90vh] flex flex-col p-0 gap-0">
+          <div className="flex items-center justify-between px-3 sm:p-4 py-3 border-b shrink-0 gap-2">
+            <DialogTitle className="sr-only">{docTitle}</DialogTitle>
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => { setViewingDoc(null); setDocHtml(""); }} data-testid="button-close-viewer">
                 <ArrowLeft className="w-4 h-4" />
               </Button>
-              <h2 className="font-semibold text-sm" data-testid="text-viewing-title">{docTitle}</h2>
+              <h2 className="font-semibold text-xs sm:text-sm truncate" data-testid="text-viewing-title">{docTitle}</h2>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
               <Button
                 variant="default"
                 size="sm"
-                className="h-8 text-xs gap-1.5"
+                className="h-8 text-[10px] sm:text-xs gap-1 sm:gap-1.5 px-2 sm:px-3"
                 onClick={() => viewingDoc && downloadPdf(viewingDoc)}
                 disabled={loading}
                 data-testid="button-download-pdf"
               >
                 <Download className="w-3.5 h-3.5" />
-                {t("docs.downloadPdf")}
+                <span className="hidden sm:inline">{t("docs.downloadPdf")}</span>
+                <span className="sm:hidden">PDF</span>
               </Button>
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setViewingDoc(null); setDocHtml(""); }}>
                 <X className="w-4 h-4" />
               </Button>
             </div>
           </div>
-          <div className="flex-1 overflow-auto p-6">
+          <div className="flex-1 overflow-auto px-3 sm:px-6 py-4">
             {loading ? (
               <div className="space-y-3">
                 <Skeleton className="h-8 w-3/4" />
@@ -202,10 +226,11 @@ export default function DocumentationPage() {
                   prose-h2:text-lg prose-h2:mt-8 prose-h2:mb-3 prose-h2:text-primary prose-h2:border-b prose-h2:pb-2
                   prose-h3:text-base prose-h3:mt-6 prose-h3:mb-2
                   prose-table:text-xs
-                  prose-th:bg-muted prose-th:px-3 prose-th:py-2
-                  prose-td:px-3 prose-td:py-1.5
-                  prose-code:text-xs prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded
-                  prose-pre:bg-muted prose-pre:text-xs"
+                  prose-th:bg-muted prose-th:px-2 sm:prose-th:px-3 prose-th:py-2
+                  prose-td:px-2 sm:prose-td:px-3 prose-td:py-1.5
+                  prose-code:text-[10px] sm:prose-code:text-xs prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded
+                  prose-pre:bg-muted prose-pre:text-[10px] sm:prose-pre:text-xs prose-pre:overflow-x-auto
+                  [&_table]:block [&_table]:overflow-x-auto [&_table]:w-full [&_table]:whitespace-nowrap sm:[&_table]:whitespace-normal"
                 dangerouslySetInnerHTML={{ __html: docHtml }}
                 data-testid="doc-content"
               />
