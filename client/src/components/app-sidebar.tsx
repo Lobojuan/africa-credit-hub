@@ -88,11 +88,16 @@ const integrationItems: NavItem[] = [
   { titleKey: "sidebar.apiKeys", url: "/api-keys", icon: Key, testId: "nav-api-keys", roles: ["admin", "super_admin"] },
 ];
 
+const ghanaComplianceItems: NavItem[] = isGhanaMode()
+  ? [{ titleKey: "sidebar.ghanaDocs", url: "/ghana-docs", icon: Scale, testId: "nav-ghana-docs" }]
+  : [];
+
 const resourceItems: NavItem[] = [
   { titleKey: "sidebar.appGuide", url: "/guide", icon: Play, testId: "nav-app-guide" },
   { titleKey: "sidebar.help", url: "/help", icon: HelpCircle, testId: "nav-help" },
   { titleKey: "sidebar.documentation", url: "/documentation", icon: BookOpen, testId: "nav-documentation" },
   { titleKey: "sidebar.versionHistory", url: "/version-history", icon: History, testId: "nav-version-history" },
+  ...ghanaComplianceItems,
 ];
 
 function filterByRole(items: NavItem[], role: string | undefined): NavItem[] {

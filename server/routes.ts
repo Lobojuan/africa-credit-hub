@@ -2314,6 +2314,77 @@ export async function registerRoutes(
     return path.join(DOCS_DIR, filename);
   }
 
+  const GHANA_DOCS_LIST = [
+    { id: "ghana-sla", filename: "Ghana_SLA_Agreement.md", title: "Ghana SLA Agreement", description: "Service Level Agreement for the Ghana Credit Registry — uptime, dispute resolution, data submission, and performance benchmarks aligned with BoG standards", category: "sla" },
+    { id: "ghana-compliance", filename: "Ghana_Compliance_Framework.md", title: "Regulatory Compliance Framework", description: "Comprehensive compliance framework covering Credit Reporting Act 726, Data Protection Act 843, and BoG CRB operational guidelines", category: "compliance" },
+    { id: "ghana-e2e", filename: "Ghana_E2E_Test_Plan.md", title: "End-to-End Test Plan", description: "Complete E2E test plan for Ghana CRB mode — borrower registration, credit accounts, BoG batch upload, dashboard, and security testing", category: "testing" },
+    { id: "ghana-data-standards", filename: "Ghana_Data_Standards.md", title: "BoG CRB Data Standards Reference", description: "Full BoG CRB v1.1 data standards — file formats, facility types, asset classifications, industry codes, and field validation rules", category: "data-standards" },
+    { id: "ghana-data-protection", filename: "Ghana_Data_Protection_Policy.md", title: "Data Protection & Privacy Policy", description: "Data protection policy aligned with Act 843 — lawful basis, data subject rights, security measures, breach management, and retention schedules", category: "compliance" },
+    { id: "ghana-operations", filename: "Ghana_Operational_Procedures.md", title: "Operational Procedures Manual", description: "Standard operating procedures for data submission, credit reporting, dispute resolution, institution onboarding, and regulatory reporting", category: "operations" },
+  ];
+
+  const GHANA_DOCS_DIR = path.join(process.cwd(), "docs", "ghana");
+
+  app.get("/api/ghana-docs", requireAuth, (_req, res) => {
+    const docsWithSize = GHANA_DOCS_LIST.map(doc => {
+      try {
+        const filePath = path.join(GHANA_DOCS_DIR, doc.filename);
+        const stats = fs.statSync(filePath);
+        return { ...doc, size: stats.size };
+      } catch {
+        return { ...doc, size: 0 };
+      }
+    });
+    res.json(docsWithSize);
+  });
+
+  app.get("/api/ghana-docs/:id", requireAuth, async (req, res) => {
+    const doc = GHANA_DOCS_LIST.find(d => d.id === req.params.id);
+    if (!doc) return res.status(404).json({ message: "Document not found" });
+    try {
+      const filePath = path.join(GHANA_DOCS_DIR, doc.filename);
+      const content = fs.readFileSync(filePath, "utf-8");
+      const { marked } = await import("marked");
+      const html = marked(content);
+      res.json({ ...doc, content, html });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/ghana-docs/:id/pdf", requireAuth, async (req, res) => {
+    const doc = GHANA_DOCS_LIST.find(d => d.id === req.params.id);
+    if (!doc) return res.status(404).json({ message: "Document not found" });
+    try {
+      const filePath = path.join(GHANA_DOCS_DIR, doc.filename);
+      const content = fs.readFileSync(filePath, "utf-8");
+      const { PassThrough } = await import("stream");
+      const { generatePdfFromMarkdown } = await import("./pdf-generator");
+      const stream = new PassThrough();
+      const safeName = doc.title.replace(/[^a-zA-Z0-9_\- ]/g, "").replace(/\s+/g, "_");
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="${safeName}.pdf"`);
+      stream.pipe(res);
+      generatePdfFromMarkdown(content, doc.title, stream);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/ghana-docs/:id/download", requireAuth, (req, res) => {
+    const doc = GHANA_DOCS_LIST.find(d => d.id === req.params.id);
+    if (!doc) return res.status(404).json({ message: "Document not found" });
+    try {
+      const filePath = path.join(GHANA_DOCS_DIR, doc.filename);
+      const safeName = doc.title.replace(/[^a-zA-Z0-9_\- ]/g, "").replace(/\s+/g, "_");
+      res.setHeader("Content-Type", "text/markdown");
+      res.setHeader("Content-Disposition", `attachment; filename="${safeName}.md"`);
+      res.sendFile(filePath);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   app.get("/api/docs", requireAuth, (req, res) => {
     const lang = (req.query.lang as string) || "en";
     const docsWithSize = DOCS_LIST.map(doc => {
