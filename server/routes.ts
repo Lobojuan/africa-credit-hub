@@ -2321,6 +2321,8 @@ export async function registerRoutes(
     { id: "ghana-data-standards", filename: "Ghana_Data_Standards.md", title: "BoG CRB Data Standards Reference", description: "Full BoG CRB v1.1 data standards — file formats, facility types, asset classifications, industry codes, and field validation rules", category: "data-standards" },
     { id: "ghana-data-protection", filename: "Ghana_Data_Protection_Policy.md", title: "Data Protection & Privacy Policy", description: "Data protection policy aligned with Act 843 — lawful basis, data subject rights, security measures, breach management, and retention schedules", category: "compliance" },
     { id: "ghana-operations", filename: "Ghana_Operational_Procedures.md", title: "Operational Procedures Manual", description: "Standard operating procedures for data submission, credit reporting, dispute resolution, institution onboarding, and regulatory reporting", category: "operations" },
+    { id: "ghana-api-guide", filename: "Ghana_API_Integration_Guide.md", title: "Ghana API Integration Guide", description: "Ghana-specific API guide with BoG CRB v1.1 endpoints, Ghana Card validation, GHS currency enforcement, consent requirements per Act 726, and error codes", category: "api" },
+    { id: "ghana-connections", filename: "Ghana_Connections_Policy.md", title: "Data Connections & Exchange Policy", description: "Data exchange policy governing API connections, NIA integration, inter-bureau exchange, BoG regulatory feeds, and mobile money — all under Act 726, Act 843, and Act 1038", category: "connections" },
   ];
 
   const GHANA_DOCS_DIR = path.join(process.cwd(), "docs", "ghana");

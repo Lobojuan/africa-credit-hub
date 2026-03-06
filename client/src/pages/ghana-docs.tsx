@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Redirect } from "wouter";
 import {
   FileText, Download, Eye, Shield, TestTube, Database, ScrollText,
-  Building2, Scale, Filter, X
+  Building2, Scale, Filter, X, Code2, Network
 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,9 @@ const CATEGORY_CONFIG: Record<string, { label: string; icon: typeof FileText; co
   compliance: { label: "Compliance", icon: Shield, color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" },
   testing: { label: "Testing", icon: TestTube, color: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300" },
   "data-standards": { label: "Data Standards", icon: Database, color: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300" },
-  operations: { label: "Operations", icon: Building2, color: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300" },
+  operations: { label: "Operations", icon: Building2, color: "bg-cyan-100 text-cyan-700 dark:bg-cyan-100/40 dark:text-cyan-300" },
+  api: { label: "API", icon: Code2, color: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300" },
+  connections: { label: "Connections", icon: Network, color: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300" },
 };
 
 function formatSize(bytes: number) {

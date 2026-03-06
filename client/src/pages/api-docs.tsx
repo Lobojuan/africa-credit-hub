@@ -1,9 +1,10 @@
 import { useTranslation } from "react-i18next";
-import { useLocation } from "wouter";
-import { ArrowLeft, Code2, Lock, Send, Search, FileText, CreditCard, Gavel, Clock, KeyRound } from "lucide-react";
+import { useLocation, Link } from "wouter";
+import { ArrowLeft, Code2, Lock, Send, Search, FileText, CreditCard, Gavel, Clock, KeyRound, Shield, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { isGhanaMode } from "@/lib/country-mode";
 
 function CodeBlock({ method, path, description }: { method: string; path: string; description: string }) {
   const methodColors: Record<string, string> = {
@@ -41,6 +42,42 @@ export default function ApiDocsPage() {
           <p className="text-sm text-muted-foreground ml-4">{t("apiDocs.subtitle")}</p>
         </div>
       </div>
+
+      {isGhanaMode() && (
+        <Card className="border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-950/20" data-testid="card-ghana-api-compliance">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 shrink-0">
+                <Shield className="w-5 h-5 text-amber-700 dark:text-amber-300" />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-semibold">Ghana Regulatory Compliance Notice</h3>
+                  <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-amber-400 text-amber-700 dark:text-amber-300">Act 726</Badge>
+                  <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-amber-400 text-amber-700 dark:text-amber-300">Act 843</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  All API usage is governed by the Credit Reporting Act, 2007 (Act 726) and Data Protection Act, 2012 (Act 843). 
+                  Only BoG-licensed institutions may access this API. Credit report pulls require documented borrower consent per Act 726, Section 14. 
+                  All data must use GHS currency for domestic facilities and Ghana Card as the primary identifier.
+                </p>
+                <div className="flex items-center gap-2 pt-1">
+                  <Link href="/ghana-docs">
+                    <Button variant="outline" size="sm" className="text-xs h-7" data-testid="button-view-ghana-api-guide">
+                      <FileText className="w-3 h-3 mr-1" /> View Ghana API Guide
+                    </Button>
+                  </Link>
+                  <Link href="/ghana-docs">
+                    <Button variant="ghost" size="sm" className="text-xs h-7" data-testid="button-view-ghana-connections">
+                      View Connections Policy
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="space-y-0 pb-3">

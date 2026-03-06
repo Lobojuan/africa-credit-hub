@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { FileText, Download, Eye, ArrowLeft, X } from "lucide-react";
+import { Link } from "wouter";
+import { FileText, Download, Eye, ArrowLeft, X, Shield } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { apiRequest } from "@/lib/queryClient";
+import { isGhanaMode } from "@/lib/country-mode";
 
 type DocMeta = {
   id: string;
@@ -97,6 +99,24 @@ export default function DocumentationPage() {
           <strong>{t("docs.pdfTip")}</strong> {t("docs.pdfTipDesc")}
         </p>
       </div>
+
+      {isGhanaMode() && (
+        <div className="bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4" data-testid="banner-ghana-docs-notice">
+          <div className="flex items-start gap-3">
+            <Shield className="w-5 h-5 text-amber-700 dark:text-amber-300 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                <strong>Ghana Compliance:</strong> All documentation and API integrations comply with the Credit Reporting Act 726, Data Protection Act 843, and Bank of Ghana CRB v1.1 standards. For Ghana-specific regulatory documents, SLA agreements, and data standards, visit the dedicated Ghana Compliance hub.
+              </p>
+              <Link href="/ghana-docs">
+                <Button variant="outline" size="sm" className="text-xs h-7 mt-2 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/30" data-testid="button-go-to-ghana-docs">
+                  <FileText className="w-3 h-3 mr-1" /> Ghana Compliance Documents
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
