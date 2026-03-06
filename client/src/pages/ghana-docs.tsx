@@ -297,7 +297,7 @@ export default function GhanaDocsPage() {
                   className="w-full text-left rounded-xl border border-border/50 bg-card p-3 flex items-center gap-3 cursor-pointer hover:bg-muted/30 transition-colors"
                   onClick={() => viewDocument(doc)}
                   onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); viewDocument(doc); } }}
-                  data-testid={`card-ghana-doc-${doc.id}`}
+                  data-testid={`row-ghana-doc-${doc.id}`}
                 >
                   <div className={`flex items-center justify-center w-10 h-10 rounded-lg shrink-0 ${catConfig?.bgLight || "bg-gray-50 dark:bg-gray-900"}`}>
                     <CatIcon className={`w-4 h-4 ${catConfig?.color || "text-gray-600"}`} />
