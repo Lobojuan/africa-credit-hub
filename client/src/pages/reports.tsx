@@ -15,7 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatCurrency, SUPPORTED_COUNTRIES, SUPPORTED_CURRENCIES, getModeCurrencies } from "@/lib/currency";
-import { getDefaultFallbackCurrency } from "@/lib/country-mode";
+import { isGhanaMode, getDefaultFallbackCurrency } from "@/lib/country-mode";
 import { apiRequest } from "@/lib/queryClient";
 import type { Borrower, CreditAccount } from "@shared/schema";
 
@@ -61,18 +61,25 @@ function BorrowerSearchSelect({ onSelect }: { onSelect: (b: Borrower) => void })
           />
         </div>
         <div className="w-48">
-          <Select value={countryFilter} onValueChange={(val) => { setCountryFilter(val === "all" ? "" : val); setIsOpen(true); }}>
-            <SelectTrigger data-testid="select-country-filter">
+          {isGhanaMode() ? (
+            <div className="flex items-center h-10 px-3 border rounded-md bg-muted">
               <MapPin className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
-              <SelectValue placeholder="All countries" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All countries</SelectItem>
-              {SUPPORTED_COUNTRIES.map(c => (
-                <SelectItem key={c.code} value={c.name}>{c.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+              <span className="text-sm" data-testid="select-country-filter">Ghana</span>
+            </div>
+          ) : (
+            <Select value={countryFilter} onValueChange={(val) => { setCountryFilter(val === "all" ? "" : val); setIsOpen(true); }}>
+              <SelectTrigger data-testid="select-country-filter">
+                <MapPin className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
+                <SelectValue placeholder="All countries" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All countries</SelectItem>
+                {SUPPORTED_COUNTRIES.map(c => (
+                  <SelectItem key={c.code} value={c.name}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
 

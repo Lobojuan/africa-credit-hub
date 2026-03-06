@@ -81,6 +81,10 @@ function getOrgScope(req: Request): string | undefined {
   return req.session?.organizationId || undefined;
 }
 
+function getGhanaCountry(): string | undefined {
+  return isGhanaMode() ? "Ghana" : undefined;
+}
+
 const apiUsageTracker = new Map<string, number>();
 
 function getUsageKey(endpoint: string, hour: Date): string {
@@ -541,7 +545,7 @@ export async function registerRoutes(
   app.get("/api/dashboard/details/:type", async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const details = await storage.getDashboardDetails(req.params.type, orgId);
+      const details = await storage.getDashboardDetails(req.params.type, orgId, getGhanaCountry());
       res.json(details);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -554,7 +558,7 @@ export async function registerRoutes(
       const ghanaCountry = isGhanaMode() ? "Ghana" : undefined;
       const stats = await storage.getDashboardStats(orgId, ghanaCountry);
 
-      const allAccounts = await storage.getAllCreditAccounts(orgId);
+      const allAccounts = await storage.getAllCreditAccounts(orgId, ghanaCountry);
       const statusMap: Record<string, number> = {};
       const typeMap: Record<string, number> = {};
       for (const a of allAccounts) {
@@ -567,8 +571,10 @@ export async function registerRoutes(
         .slice(0, 8)
         .map(([name, value]) => ({ name, value }));
 
-      const borrowerResult = await storage.getBorrowers(1, 200000, orgId);
-      const allBorrowers = borrowerResult.data;
+      const borrowerSearch = ghanaCountry
+        ? await storage.searchBorrowers("", ghanaCountry, orgId)
+        : (await storage.getBorrowers(1, 200000, orgId)).data;
+      const allBorrowers = borrowerSearch;
       const countryMap: Record<string, number> = {};
       for (const b of allBorrowers) {
         const c = b.country || "Unknown";
@@ -858,7 +864,7 @@ export async function registerRoutes(
       const borrowerId = req.query.borrowerId as string;
       const result = borrowerId
         ? await storage.getCreditAccountsByBorrower(borrowerId)
-        : await storage.getAllCreditAccounts(orgId);
+        : await storage.getAllCreditAccounts(orgId, getGhanaCountry());
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -925,7 +931,7 @@ export async function registerRoutes(
       const orgId = getOrgScope(req);
       const result = borrowerId
         ? await storage.getCreditInquiriesByBorrower(borrowerId)
-        : await storage.getAllCreditInquiries(orgId);
+        : await storage.getAllCreditInquiries(orgId, getGhanaCountry());
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -1102,7 +1108,7 @@ export async function registerRoutes(
   app.get("/api/disputes", async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const disputeList = await storage.getDisputes(orgId);
+      const disputeList = await storage.getDisputes(orgId, getGhanaCountry());
       res.json(disputeList);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -1439,7 +1445,7 @@ export async function registerRoutes(
       const orgId = getOrgScope(req);
       const result = borrowerId
         ? await storage.getCourtJudgmentsByBorrower(borrowerId)
-        : await storage.getAllCourtJudgments(orgId);
+        : await storage.getAllCourtJudgments(orgId, getGhanaCountry());
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -1467,7 +1473,7 @@ export async function registerRoutes(
       const orgId = getOrgScope(req);
       const result = borrowerId
         ? await storage.getConsentRecordsByBorrower(borrowerId)
-        : await storage.getAllConsentRecords(orgId);
+        : await storage.getAllConsentRecords(orgId, getGhanaCountry());
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -1613,7 +1619,7 @@ export async function registerRoutes(
   app.get("/api/credit-reports/logs", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const logs = await storage.getCreditReportLogs(orgId);
+      const logs = await storage.getCreditReportLogs(orgId, getGhanaCountry());
       res.json(logs);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -2037,7 +2043,7 @@ export async function registerRoutes(
 
       const results: any[] = [];
       for (const id of identifiers) {
-        const borrowersFound = await storage.searchBorrowers(id);
+        const borrowersFound = await storage.searchBorrowers(id, getGhanaCountry());
         if (borrowersFound.length > 0) {
           const borrower = borrowersFound[0];
           const accounts = await storage.getCreditAccountsByBorrower(borrower.id);
@@ -2071,8 +2077,11 @@ export async function registerRoutes(
       const format = (req.query.format as string) || "csv";
       const type = (req.query.type as string) || "portfolio";
 
-      const accounts = await storage.getAllCreditAccounts(orgId);
-      const { data: borrowersList } = await storage.getBorrowers(1, 200, orgId);
+      const accounts = await storage.getAllCreditAccounts(orgId, getGhanaCountry());
+      const ghanaCountry = getGhanaCountry();
+      const borrowersList = ghanaCountry
+        ? await storage.searchBorrowers("", ghanaCountry, orgId)
+        : (await storage.getBorrowers(1, 200, orgId)).data;
 
       if (format === "xlsx") {
         const ExcelJS = (await import("exceljs")).default;
@@ -2176,11 +2185,15 @@ export async function registerRoutes(
   app.get("/api/reports/regulatory", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const accounts = await storage.getAllCreditAccounts(orgId);
-      const { data: borrowersList, total: totalBorrowers } = await storage.getBorrowers(1, 200, orgId);
-      const disputeList = await storage.getDisputes(orgId);
+      const gc = getGhanaCountry();
+      const accounts = await storage.getAllCreditAccounts(orgId, gc);
+      const borrowersList = gc
+        ? await storage.searchBorrowers("", gc, orgId)
+        : (await storage.getBorrowers(1, 200, orgId)).data;
+      const totalBorrowers = borrowersList.length;
+      const disputeList = await storage.getDisputes(orgId, gc);
       const approvals = await storage.getPendingApprovals(orgId);
-      const { data: instList, total: totalInstitutions } = await storage.getInstitutions(1, 200, orgId);
+      const { data: instList, total: totalInstitutions } = await storage.getInstitutions(1, 200, orgId, gc);
 
       const totalOutstanding = accounts.reduce((sum, a) => sum + parseFloat(a.currentBalance || "0"), 0);
       const nplAccounts = accounts.filter(a => a.status === "delinquent" || a.status === "default" || a.status === "written_off");
@@ -2717,9 +2730,9 @@ export async function registerRoutes(
       const org = await storage.getOrganization(req.params.id);
       if (!org) return res.status(404).json({ message: "Organization not found" });
       const users = await storage.getUsers(org.id);
-      const stats = await storage.getDashboardStats(org.id);
+      const stats = await storage.getDashboardStats(org.id, getGhanaCountry());
       const billing = await storage.getBillingRecords(org.id);
-      const disputes = await storage.getDisputes(org.id);
+      const disputes = await storage.getDisputes(org.id, getGhanaCountry());
       const totalBilled = billing.reduce((s, b) => s + parseFloat(b.amount || "0"), 0);
       const totalPaid = billing.filter(b => b.status === "paid").reduce((s, b) => s + parseFloat(b.amount || "0"), 0);
       const totalPending = billing.filter(b => b.status === "pending").reduce((s, b) => s + parseFloat(b.amount || "0"), 0);

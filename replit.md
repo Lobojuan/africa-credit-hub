@@ -45,7 +45,7 @@ The system employs a modern full-stack architecture built for scalability and co
     -   **Low-Bandwidth Optimizations**: Gzip compression and React.lazy code-splitting.
     -   **Chatbot**: Credit Registry Assistant with dispute filing, FAQ, keyword search, and an AI-powered Smart Assistant mode (OpenAI GPT-4o streaming).
     -   **Documentation**: Multi-language documentation API for key documents.
-    -   **Ghana Mode**: An optional country-specific mode that reconfigures the system for Ghana's credit registry, including specific data standards, currency restrictions, and compliance documentation.
+    -   **Ghana Mode** (`VITE_COUNTRY_MODE=ghana`): A comprehensive country-specific mode that reconfigures the entire system for Ghana's credit registry. Backend filtering via `getGhanaCountry()` helper ensures all API endpoints (borrowers, credit accounts, disputes, court judgments, consent records, credit inquiries, credit reports, dashboard stats/details, institutions, global search, regulatory compliance, retention policies, admin analytics) return only Ghana-related data. Frontend locks country selectors to "Ghana" on credit search, reports, and institution pages. Currencies restricted to GHS/USD/EUR. Includes 8 Ghana compliance documents and Bank of Ghana CRB v1.1 standards.
     -   **Security Hardening**: Helmet security headers, rate limiting, DOMPurify sanitization, and secure handling of secrets.
 
 ## External Dependencies

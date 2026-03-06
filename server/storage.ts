@@ -54,12 +54,12 @@ export interface IStorage {
 
   getCreditAccount(id: string): Promise<CreditAccount | undefined>;
   getCreditAccountsByBorrower(borrowerId: string): Promise<CreditAccount[]>;
-  getAllCreditAccounts(organizationId?: string): Promise<CreditAccount[]>;
+  getAllCreditAccounts(organizationId?: string, country?: string): Promise<CreditAccount[]>;
   createCreditAccount(account: InsertCreditAccount): Promise<CreditAccount>;
   updateCreditAccount(id: string, data: Partial<InsertCreditAccount>): Promise<CreditAccount | undefined>;
 
   getCreditInquiriesByBorrower(borrowerId: string): Promise<CreditInquiry[]>;
-  getAllCreditInquiries(organizationId?: string): Promise<CreditInquiry[]>;
+  getAllCreditInquiries(organizationId?: string, country?: string): Promise<CreditInquiry[]>;
   createCreditInquiry(inquiry: InsertCreditInquiry): Promise<CreditInquiry>;
 
   getAuditLogs(organizationId?: string): Promise<AuditLog[]>;
@@ -72,7 +72,7 @@ export interface IStorage {
   createPendingApproval(approval: InsertPendingApproval): Promise<PendingApproval>;
   updateApprovalStatus(id: string, status: string, reviewedBy: string, reviewNotes?: string): Promise<PendingApproval | undefined>;
 
-  getDisputes(organizationId?: string): Promise<Dispute[]>;
+  getDisputes(organizationId?: string, country?: string): Promise<Dispute[]>;
   getDisputesByBorrower(borrowerId: string): Promise<Dispute[]>;
   getDispute(id: string): Promise<Dispute | undefined>;
   createDispute(dispute: InsertDispute): Promise<Dispute>;
@@ -88,11 +88,11 @@ export interface IStorage {
   getUsersByRole(...roles: string[]): Promise<User[]>;
 
   getCourtJudgmentsByBorrower(borrowerId: string): Promise<CourtJudgment[]>;
-  getAllCourtJudgments(organizationId?: string): Promise<CourtJudgment[]>;
+  getAllCourtJudgments(organizationId?: string, country?: string): Promise<CourtJudgment[]>;
   createCourtJudgment(judgment: InsertCourtJudgment): Promise<CourtJudgment>;
 
   getConsentRecordsByBorrower(borrowerId: string): Promise<ConsentRecord[]>;
-  getAllConsentRecords(organizationId?: string): Promise<ConsentRecord[]>;
+  getAllConsentRecords(organizationId?: string, country?: string): Promise<ConsentRecord[]>;
   createConsentRecord(record: InsertConsentRecord): Promise<ConsentRecord>;
   revokeConsent(id: string): Promise<ConsentRecord | undefined>;
 
@@ -110,7 +110,7 @@ export interface IStorage {
   getBillingRecordsByInstitution(institutionName: string): Promise<BillingRecord[]>;
   createBillingRecord(record: InsertBillingRecord): Promise<BillingRecord>;
 
-  getCreditReportLogs(organizationId?: string): Promise<CreditReportLog[]>;
+  getCreditReportLogs(organizationId?: string, country?: string): Promise<CreditReportLog[]>;
   getCreditReportLogsByBorrower(borrowerId: string): Promise<CreditReportLog[]>;
   createCreditReportLog(log: InsertCreditReportLog): Promise<CreditReportLog>;
 
@@ -125,7 +125,7 @@ export interface IStorage {
     pendingApprovalCount: number;
     openDisputeCount: number;
   }>;
-  getDashboardDetails(type: string, organizationId?: string): Promise<Record<string, any>>;
+  getDashboardDetails(type: string, organizationId?: string, country?: string): Promise<Record<string, any>>;
 
   getApiKeysByInstitution(institutionId: string): Promise<ApiKey[]>;
   getAllApiKeys(): Promise<ApiKey[]>;
@@ -390,9 +390,12 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(creditAccounts).where(eq(creditAccounts.borrowerId, borrowerId)).orderBy(desc(creditAccounts.createdAt));
   }
 
-  async getAllCreditAccounts(organizationId?: string): Promise<CreditAccount[]> {
-    const orgFilter = organizationId ? eq(creditAccounts.organizationId, organizationId) : undefined;
-    return db.select().from(creditAccounts).where(orgFilter).orderBy(desc(creditAccounts.createdAt)).limit(200);
+  async getAllCreditAccounts(organizationId?: string, country?: string): Promise<CreditAccount[]> {
+    const conditions: any[] = [];
+    if (organizationId) conditions.push(eq(creditAccounts.organizationId, organizationId));
+    if (country) conditions.push(sql`${creditAccounts.borrowerId} IN (SELECT id FROM borrowers WHERE country = ${country})`);
+    const filter = conditions.length > 0 ? and(...conditions) : undefined;
+    return db.select().from(creditAccounts).where(filter).orderBy(desc(creditAccounts.createdAt)).limit(200);
   }
 
   async createCreditAccount(account: InsertCreditAccount): Promise<CreditAccount> {
@@ -409,14 +412,12 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(creditInquiries).where(eq(creditInquiries.borrowerId, borrowerId)).orderBy(desc(creditInquiries.createdAt));
   }
 
-  async getAllCreditInquiries(organizationId?: string): Promise<CreditInquiry[]> {
-    if (organizationId) {
-      const orgBorrowerIds = await db.select({ id: borrowers.id }).from(borrowers).where(eq(borrowers.organizationId, organizationId));
-      const ids = orgBorrowerIds.map(b => b.id);
-      if (ids.length === 0) return [];
-      return db.select().from(creditInquiries).where(inArray(creditInquiries.borrowerId, ids)).orderBy(desc(creditInquiries.createdAt)).limit(200);
-    }
-    return db.select().from(creditInquiries).orderBy(desc(creditInquiries.createdAt)).limit(200);
+  async getAllCreditInquiries(organizationId?: string, country?: string): Promise<CreditInquiry[]> {
+    const conditions: any[] = [];
+    if (organizationId) conditions.push(sql`${creditInquiries.borrowerId} IN (SELECT id FROM borrowers WHERE organization_id = ${organizationId})`);
+    if (country) conditions.push(sql`${creditInquiries.borrowerId} IN (SELECT id FROM borrowers WHERE country = ${country})`);
+    const filter = conditions.length > 0 ? and(...conditions) : undefined;
+    return db.select().from(creditInquiries).where(filter).orderBy(desc(creditInquiries.createdAt)).limit(200);
   }
 
   async createCreditInquiry(inquiry: InsertCreditInquiry): Promise<CreditInquiry> {
@@ -542,9 +543,12 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
-  async getDisputes(organizationId?: string): Promise<Dispute[]> {
-    const orgFilter = organizationId ? eq(disputes.organizationId, organizationId) : undefined;
-    return db.select().from(disputes).where(orgFilter).orderBy(desc(disputes.createdAt)).limit(200);
+  async getDisputes(organizationId?: string, country?: string): Promise<Dispute[]> {
+    const conditions: any[] = [];
+    if (organizationId) conditions.push(eq(disputes.organizationId, organizationId));
+    if (country) conditions.push(sql`${disputes.borrowerId} IN (SELECT id FROM borrowers WHERE country = ${country})`);
+    const filter = conditions.length > 0 ? and(...conditions) : undefined;
+    return db.select().from(disputes).where(filter).orderBy(desc(disputes.createdAt)).limit(200);
   }
 
   async getDisputesByBorrower(borrowerId: string): Promise<Dispute[]> {
@@ -637,9 +641,12 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(courtJudgments).where(eq(courtJudgments.borrowerId, borrowerId)).orderBy(desc(courtJudgments.createdAt));
   }
 
-  async getAllCourtJudgments(organizationId?: string): Promise<CourtJudgment[]> {
-    const orgFilter = organizationId ? eq(courtJudgments.organizationId, organizationId) : undefined;
-    return db.select().from(courtJudgments).where(orgFilter).orderBy(desc(courtJudgments.createdAt)).limit(200);
+  async getAllCourtJudgments(organizationId?: string, country?: string): Promise<CourtJudgment[]> {
+    const conditions: any[] = [];
+    if (organizationId) conditions.push(eq(courtJudgments.organizationId, organizationId));
+    if (country) conditions.push(sql`${courtJudgments.borrowerId} IN (SELECT id FROM borrowers WHERE country = ${country})`);
+    const filter = conditions.length > 0 ? and(...conditions) : undefined;
+    return db.select().from(courtJudgments).where(filter).orderBy(desc(courtJudgments.createdAt)).limit(200);
   }
 
   async createCourtJudgment(judgment: InsertCourtJudgment): Promise<CourtJudgment> {
@@ -651,14 +658,12 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(consentRecords).where(eq(consentRecords.borrowerId, borrowerId)).orderBy(desc(consentRecords.createdAt));
   }
 
-  async getAllConsentRecords(organizationId?: string): Promise<ConsentRecord[]> {
-    if (organizationId) {
-      const orgBorrowerIds = await db.select({ id: borrowers.id }).from(borrowers).where(eq(borrowers.organizationId, organizationId));
-      const ids = orgBorrowerIds.map(b => b.id);
-      if (ids.length === 0) return [];
-      return db.select().from(consentRecords).where(inArray(consentRecords.borrowerId, ids)).orderBy(desc(consentRecords.createdAt)).limit(200);
-    }
-    return db.select().from(consentRecords).orderBy(desc(consentRecords.createdAt)).limit(200);
+  async getAllConsentRecords(organizationId?: string, country?: string): Promise<ConsentRecord[]> {
+    const conditions: any[] = [];
+    if (organizationId) conditions.push(sql`${consentRecords.borrowerId} IN (SELECT id FROM borrowers WHERE organization_id = ${organizationId})`);
+    if (country) conditions.push(sql`${consentRecords.borrowerId} IN (SELECT id FROM borrowers WHERE country = ${country})`);
+    const filter = conditions.length > 0 ? and(...conditions) : undefined;
+    return db.select().from(consentRecords).where(filter).orderBy(desc(consentRecords.createdAt)).limit(200);
   }
 
   async createConsentRecord(record: InsertConsentRecord): Promise<ConsentRecord> {
@@ -741,9 +746,12 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async getCreditReportLogs(organizationId?: string): Promise<CreditReportLog[]> {
-    const orgFilter = organizationId ? eq(creditReportLogs.organizationId, organizationId) : undefined;
-    return db.select().from(creditReportLogs).where(orgFilter).orderBy(desc(creditReportLogs.createdAt)).limit(200);
+  async getCreditReportLogs(organizationId?: string, country?: string): Promise<CreditReportLog[]> {
+    const conditions: any[] = [];
+    if (organizationId) conditions.push(eq(creditReportLogs.organizationId, organizationId));
+    if (country) conditions.push(sql`${creditReportLogs.borrowerId} IN (SELECT id FROM borrowers WHERE country = ${country})`);
+    const filter = conditions.length > 0 ? and(...conditions) : undefined;
+    return db.select().from(creditReportLogs).where(filter).orderBy(desc(creditReportLogs.createdAt)).limit(200);
   }
 
   async getCreditReportLogsByBorrower(borrowerId: string): Promise<CreditReportLog[]> {
@@ -755,47 +763,66 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async getDashboardDetails(type: string, organizationId?: string) {
-    const orgBorrowerFilter = organizationId ? eq(borrowers.organizationId, organizationId) : undefined;
-    const orgAccFilter = organizationId ? eq(creditAccounts.organizationId, organizationId) : undefined;
+  async getDashboardDetails(type: string, organizationId?: string, country?: string) {
+    const borrowerConds: any[] = [];
+    if (organizationId) borrowerConds.push(eq(borrowers.organizationId, organizationId));
+    if (country) borrowerConds.push(eq(borrowers.country, country));
+    const borrowerFilter = borrowerConds.length > 0 ? and(...borrowerConds) : undefined;
+
+    const accConds: any[] = [];
+    if (organizationId) accConds.push(eq(creditAccounts.organizationId, organizationId));
+    if (country) accConds.push(sql`${creditAccounts.borrowerId} IN (SELECT id FROM borrowers WHERE country = ${country})`);
+    const accFilter = accConds.length > 0 ? and(...accConds) : undefined;
+
     const orgApprovalFilter = organizationId ? eq(pendingApprovals.organizationId, organizationId) : undefined;
-    const orgDisputeFilter = organizationId ? eq(disputes.organizationId, organizationId) : undefined;
+
+    const dispConds: any[] = [];
+    if (organizationId) dispConds.push(eq(disputes.organizationId, organizationId));
+    if (country) dispConds.push(sql`${disputes.borrowerId} IN (SELECT id FROM borrowers WHERE country = ${country})`);
+    const dispFilter = dispConds.length > 0 ? and(...dispConds) : undefined;
+
+    const inqConds: any[] = [];
+    if (country) inqConds.push(sql`${creditInquiries.borrowerId} IN (SELECT id FROM borrowers WHERE country = ${country})`);
+    else if (organizationId) inqConds.push(sql`${creditInquiries.borrowerId} IN (SELECT id FROM borrowers WHERE organization_id = ${organizationId})`);
+    const inqFilter = inqConds.length > 0 ? and(...inqConds) : undefined;
 
     switch (type) {
       case "borrowers": {
         const byCountry = await db.select({
           city: sql<string>`COALESCE(${borrowers.city}, 'Unknown')`,
           count: count(),
-        }).from(borrowers).where(orgBorrowerFilter).groupBy(sql`COALESCE(${borrowers.city}, 'Unknown')`).orderBy(desc(count())).limit(10);
+        }).from(borrowers).where(borrowerFilter).groupBy(sql`COALESCE(${borrowers.city}, 'Unknown')`).orderBy(desc(count())).limit(10);
         const byType = await db.select({
           type: borrowers.type,
           count: count(),
-        }).from(borrowers).where(orgBorrowerFilter).groupBy(borrowers.type);
-        const pepFilter = orgBorrowerFilter ? and(eq(borrowers.isPep, true), orgBorrowerFilter) : eq(borrowers.isPep, true);
+        }).from(borrowers).where(borrowerFilter).groupBy(borrowers.type);
+        const pepConds = [...borrowerConds, eq(borrowers.isPep, true)];
+        const pepFilter = and(...pepConds);
         const [pepCount] = await db.select({ value: count() }).from(borrowers).where(pepFilter);
-        const recent = await db.select().from(borrowers).where(orgBorrowerFilter).orderBy(desc(borrowers.createdAt)).limit(10);
+        const recent = await db.select().from(borrowers).where(borrowerFilter).orderBy(desc(borrowers.createdAt)).limit(10);
         return { byCity: byCountry, byType, pepCount: pepCount.value, recent };
       }
       case "accounts": {
         const byStatus = await db.select({
           status: creditAccounts.status,
           count: count(),
-        }).from(creditAccounts).where(orgAccFilter).groupBy(creditAccounts.status);
+        }).from(creditAccounts).where(accFilter).groupBy(creditAccounts.status);
         const byType = await db.select({
           type: creditAccounts.accountType,
           count: count(),
-        }).from(creditAccounts).where(orgAccFilter).groupBy(creditAccounts.accountType).orderBy(desc(count())).limit(10);
+        }).from(creditAccounts).where(accFilter).groupBy(creditAccounts.accountType).orderBy(desc(count())).limit(10);
         const byInstitution = await db.select({
           institution: creditAccounts.lenderInstitution,
           count: count(),
           total: sql<string>`COALESCE(SUM(${creditAccounts.currentBalance}::numeric), 0)::text`,
-        }).from(creditAccounts).where(orgAccFilter).groupBy(creditAccounts.lenderInstitution).orderBy(desc(count())).limit(10);
+        }).from(creditAccounts).where(accFilter).groupBy(creditAccounts.lenderInstitution).orderBy(desc(count())).limit(10);
         return { byStatus, byType, byInstitution };
       }
       case "outstanding": {
-        const outstandingFilter = orgAccFilter
-          ? and(or(eq(creditAccounts.status, "current"), eq(creditAccounts.status, "delinquent"), eq(creditAccounts.status, "restructured")), orgAccFilter)
-          : or(eq(creditAccounts.status, "current"), eq(creditAccounts.status, "delinquent"), eq(creditAccounts.status, "restructured"));
+        const outConds = [or(eq(creditAccounts.status, "current"), eq(creditAccounts.status, "delinquent"), eq(creditAccounts.status, "restructured"))];
+        if (organizationId) outConds.push(eq(creditAccounts.organizationId, organizationId));
+        if (country) outConds.push(sql`${creditAccounts.borrowerId} IN (SELECT id FROM borrowers WHERE country = ${country})`);
+        const outstandingFilter = and(...outConds);
         const byCurrency = await db.select({
           currency: creditAccounts.currency,
           total: sql<string>`COALESCE(SUM(${creditAccounts.currentBalance}::numeric), 0)::text`,
@@ -809,7 +836,10 @@ export class DatabaseStorage implements IStorage {
         return { byCurrency, byInstitution };
       }
       case "delinquent": {
-        const delFilter = orgAccFilter ? and(eq(creditAccounts.status, "delinquent"), orgAccFilter) : eq(creditAccounts.status, "delinquent");
+        const delConds = [eq(creditAccounts.status, "delinquent")];
+        if (organizationId) delConds.push(eq(creditAccounts.organizationId, organizationId));
+        if (country) delConds.push(sql`${creditAccounts.borrowerId} IN (SELECT id FROM borrowers WHERE country = ${country})`);
+        const delFilter = and(...delConds);
         const accounts = await db.select().from(creditAccounts).where(delFilter).orderBy(desc(creditAccounts.daysInArrears)).limit(20);
         const byInstitution = await db.select({
           institution: creditAccounts.lenderInstitution,
@@ -819,7 +849,10 @@ export class DatabaseStorage implements IStorage {
         return { accounts, byInstitution };
       }
       case "defaults": {
-        const defFilter = orgAccFilter ? and(eq(creditAccounts.status, "default"), orgAccFilter) : eq(creditAccounts.status, "default");
+        const defConds = [eq(creditAccounts.status, "default")];
+        if (organizationId) defConds.push(eq(creditAccounts.organizationId, organizationId));
+        if (country) defConds.push(sql`${creditAccounts.borrowerId} IN (SELECT id FROM borrowers WHERE country = ${country})`);
+        const defFilter = and(...defConds);
         const accounts = await db.select().from(creditAccounts).where(defFilter).orderBy(desc(creditAccounts.currentBalance)).limit(20);
         const byInstitution = await db.select({
           institution: creditAccounts.lenderInstitution,
@@ -832,12 +865,12 @@ export class DatabaseStorage implements IStorage {
         const byPurpose = await db.select({
           purpose: creditInquiries.purpose,
           count: count(),
-        }).from(creditInquiries).groupBy(creditInquiries.purpose);
+        }).from(creditInquiries).where(inqFilter).groupBy(creditInquiries.purpose);
         const byInstitution = await db.select({
           institution: creditInquiries.institution,
           count: count(),
-        }).from(creditInquiries).groupBy(creditInquiries.institution).orderBy(desc(count())).limit(10);
-        const recent = await db.select().from(creditInquiries).orderBy(desc(creditInquiries.createdAt)).limit(15);
+        }).from(creditInquiries).where(inqFilter).groupBy(creditInquiries.institution).orderBy(desc(count())).limit(10);
+        const recent = await db.select().from(creditInquiries).where(inqFilter).orderBy(desc(creditInquiries.createdAt)).limit(15);
         return { byPurpose, byInstitution, recent };
       }
       case "approvals": {
@@ -851,15 +884,20 @@ export class DatabaseStorage implements IStorage {
       }
       case "disputes": {
         const openStatus = or(eq(disputes.status, "open"), eq(disputes.status, "under_review"));
-        const dispFilter = orgDisputeFilter ? and(openStatus, orgDisputeFilter) : openStatus;
-        const items = await db.select().from(disputes).where(dispFilter).orderBy(desc(disputes.createdAt)).limit(20);
+        const openDispConds = [openStatus!];
+        if (organizationId) openDispConds.push(eq(disputes.organizationId, organizationId));
+        if (country) openDispConds.push(sql`${disputes.borrowerId} IN (SELECT id FROM borrowers WHERE country = ${country})`);
+        const openDispFilter = and(...openDispConds);
+        const items = await db.select().from(disputes).where(openDispFilter).orderBy(desc(disputes.createdAt)).limit(20);
         const byType = await db.select({
           type: disputes.disputeType,
           count: count(),
-        }).from(disputes).where(dispFilter).groupBy(disputes.disputeType);
-        const slaFilter = orgDisputeFilter
-          ? sql`${disputes.status} IN ('open', 'under_review') AND ${disputes.slaDeadline} < NOW() AND ${disputes.organizationId} = ${organizationId}`
-          : sql`${disputes.status} IN ('open', 'under_review') AND ${disputes.slaDeadline} < NOW()`;
+        }).from(disputes).where(openDispFilter).groupBy(disputes.disputeType);
+        const slaParts = [`${disputes.status.name} IN ('open', 'under_review')`, `${disputes.slaDeadline.name} < NOW()`];
+        const slaConditions: any[] = [sql`status IN ('open', 'under_review') AND sla_deadline < NOW()`];
+        if (organizationId) slaConditions.push(eq(disputes.organizationId, organizationId));
+        if (country) slaConditions.push(sql`${disputes.borrowerId} IN (SELECT id FROM borrowers WHERE country = ${country})`);
+        const slaFilter = and(...slaConditions);
         const [slaBreached] = await db.select({ value: count() }).from(disputes).where(slaFilter);
         return { items, byType, slaBreached: slaBreached.value };
       }
