@@ -39,7 +39,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "fuser -k -9 5000/tcp 2>/dev/null; sleep 2; npm run dev"
+args = "npm run dev"
 waitForPort = 5000
 
 [agent]

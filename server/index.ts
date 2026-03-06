@@ -6,8 +6,48 @@ import helmet from "helmet";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { readFileSync, readdirSync, readlinkSync } from "fs";
 
 const port = parseInt(process.env.PORT || "5000", 10);
+
+function killPortHolder(targetPort: number) {
+  try {
+    const hexPort = targetPort.toString(16).toUpperCase().padStart(4, "0");
+    const tcpData = readFileSync("/proc/net/tcp", "utf-8");
+    for (const line of tcpData.split("\n")) {
+      const parts = line.trim().split(/\s+/);
+      if (parts.length < 10) continue;
+      const portHex = parts[1]?.split(":")[1];
+      if (portHex?.toUpperCase() !== hexPort) continue;
+      const inode = parts[9];
+      if (!inode || inode === "0") continue;
+      const pids = readdirSync("/proc").filter((f: string) => /^\d+$/.test(f));
+      for (const pid of pids) {
+        try {
+          const fds = readdirSync(`/proc/${pid}/fd`);
+          for (const fd of fds) {
+            try {
+              const target = readlinkSync(`/proc/${pid}/fd/${fd}`);
+              if (target === `socket:[${inode}]`) {
+                const pidNum = parseInt(pid);
+                if (pidNum !== process.pid) {
+                  process.kill(pidNum, 9);
+                  console.log(`Killed stale process ${pidNum} on port ${targetPort}`);
+                  const end = Date.now() + 3000;
+                  while (Date.now() < end) { try { process.kill(pidNum, 0); } catch { break; } }
+                }
+                return;
+              }
+            } catch {}
+          }
+        } catch {}
+      }
+      return;
+    }
+  } catch {}
+}
+
+killPortHolder(port);
 
 const app = express();
 
