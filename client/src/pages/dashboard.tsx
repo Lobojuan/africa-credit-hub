@@ -17,6 +17,8 @@ import { StatCard } from "@/components/stat-card";
 import { DashboardCharts } from "@/components/dashboard-charts";
 import { AfricaMap } from "@/components/africa-map";
 import { formatCurrency, detectLocalCurrency, SUPPORTED_CURRENCIES } from "@/lib/currency";
+import { isGhanaMode, CREDIT_SCORE_FACTORS } from "@/lib/country-mode";
+import { ReferenceRateBadge, CurrencyReference } from "@/components/currency-reference";
 import type { CreditAccount, AuditLog, ExchangeRate } from "@shared/schema";
 
 const POPULAR_CODES = ["USD", "EUR", "GBP", "ETB", "KES", "NGN", "ZAR", "EGP", "GHS", "TZS", "UGX", "XAF", "XOF", "MAD", "RWF"];
@@ -540,6 +542,7 @@ export default function Dashboard() {
               ))}
             </SelectContent>
           </Select>
+          {isGhanaMode() && <ReferenceRateBadge />}
           <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground">
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
             <span>Live Data</span>
@@ -581,10 +584,45 @@ export default function Dashboard() {
         isLoading={chartsLoading}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2">
+      <div className={`grid grid-cols-1 ${isGhanaMode() ? 'lg:grid-cols-3' : 'lg:grid-cols-3'} gap-4`}>
+        <div className={isGhanaMode() ? "lg:col-span-2" : "lg:col-span-2"}>
           <AfricaMap countryBreakdown={chartData?.countryBreakdown} />
         </div>
+        {isGhanaMode() && (
+          <Card className="border border-border/60" data-testid="card-credit-score-factors">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <Activity className="w-4 h-4 text-muted-foreground" />
+                <h3 className="text-sm font-semibold">Credit Score Factors</h3>
+              </div>
+              <p className="text-[11px] text-muted-foreground">How credit scores are calculated in Ghana</p>
+            </CardHeader>
+            <CardContent className="pb-4 space-y-3">
+              {CREDIT_SCORE_FACTORS.map((factor) => (
+                <div key={factor.name} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium">{factor.name}</span>
+                    <span className="font-semibold" style={{ color: factor.color }}>{factor.weight}%</span>
+                  </div>
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-700"
+                      style={{
+                        width: `${factor.weight * 2.86}%`,
+                        backgroundColor: factor.color,
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+              <div className="pt-2 border-t border-border/40 mt-3">
+                <p className="text-[10px] text-muted-foreground leading-relaxed">
+                  Based on Bank of Ghana Credit Reporting Act, 2007 (Act 726) and licensed bureau methodology.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

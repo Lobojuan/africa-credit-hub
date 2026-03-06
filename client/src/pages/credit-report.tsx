@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { apiRequest } from "@/lib/queryClient";
 import { formatCurrency } from "@/lib/currency";
+import { getDefaultFallbackCurrency } from "@/lib/country-mode";
 import {
   ArrowLeft, Printer, FileText, Download, User, Building2, CreditCard, Search,
   AlertTriangle, Shield, Gavel, CheckCircle2, XCircle, Clock, Flag,
@@ -161,7 +162,7 @@ function buildCreditProfileOverview(report: CreditReportData) {
 
   const byCurrency: Record<string, { open: number; balance: number; installment: number; overdue: number }> = {};
   openAccounts.forEach(a => {
-    const c = a.currency || "ETB";
+    const c = a.currency || getDefaultFallbackCurrency();
     if (!byCurrency[c]) byCurrency[c] = { open: 0, balance: 0, installment: 0, overdue: 0 };
     byCurrency[c].open++;
     byCurrency[c].balance += parseFloat(a.currentBalance || "0");
@@ -181,7 +182,7 @@ function buildCreditProfileOverview(report: CreditReportData) {
       { sno: 5, label: "Number of Open Facilities > 90 Days in Arrears (Non-Performing)", values: [{ currency: "", value: nplAccounts.length.toString() }] },
       { sno: 6, label: "Number of Closed Credit Facilities", values: [{ currency: "", value: closedLast6.length.toString() }] },
       { sno: 7, label: "Number of Facilities with Write-Off", values: [{ currency: "", value: writtenOffAccounts.length.toString() }] },
-      { sno: 8, label: "Total Write-Off Amount", values: [{ currency: currencyKeys[0] || "ETB", value: writtenOffTotal > 0 ? formatCurrency(writtenOffTotal.toFixed(2), currencyKeys[0] || "ETB") : "0" }] },
+      { sno: 8, label: "Total Write-Off Amount", values: [{ currency: currencyKeys[0] || getDefaultFallbackCurrency(), value: writtenOffTotal > 0 ? formatCurrency(writtenOffTotal.toFixed(2), currencyKeys[0] || getDefaultFallbackCurrency()) : "0" }] },
       { sno: 9, label: "Number of Credit Facilities with Judgments", values: [{ currency: "", value: report.courtJudgments.length.toString() }] },
       { sno: 10, label: "Number of Inquiries in the Last 6 Months", values: [{ currency: "", value: report.inquiries.length.toString() }] },
       { sno: 11, label: "Number of Disputes Raised in the Last 6 Months", values: [{ currency: "", value: "0" }] },
@@ -193,7 +194,7 @@ function buildInstitutionBreakdown(accounts: CreditAccount[]) {
   const groups: Record<string, Record<string, { count: number; approved: number; balance: number; overdue: number; utilization: number }>> = {};
   accounts.filter(a => a.status !== "closed").forEach(a => {
     const inst = a.lenderInstitution || "Unknown";
-    const cur = a.currency || "ETB";
+    const cur = a.currency || getDefaultFallbackCurrency();
     const key = `${inst}|||${cur}`;
     if (!groups[key]) groups[key] = {};
     if (!groups[key][cur]) groups[key][cur] = { count: 0, approved: 0, balance: 0, overdue: 0, utilization: 0 };
@@ -220,12 +221,12 @@ function buildInstitutionBreakdown(accounts: CreditAccount[]) {
 }
 
 function buildLiabilitySummary(accounts: CreditAccount[]) {
-  const currencies = [...new Set(accounts.map(a => a.currency || "ETB"))];
+  const currencies = [...new Set(accounts.map(a => a.currency || getDefaultFallbackCurrency()))];
   const summary: Record<string, { balance: number; overdue: number; d1_30: number; d31_60: number; d61_90: number; d91_120: number; d121_150: number; d151_180: number; d180plus: number }> = {};
   currencies.forEach(c => { summary[c] = { balance: 0, overdue: 0, d1_30: 0, d31_60: 0, d61_90: 0, d91_120: 0, d121_150: 0, d151_180: 0, d180plus: 0 }; });
 
   accounts.filter(a => a.status !== "closed").forEach(a => {
-    const c = a.currency || "ETB";
+    const c = a.currency || getDefaultFallbackCurrency();
     const bal = parseFloat(a.currentBalance || "0");
     const days = a.daysInArrears || 0;
     summary[c].balance += bal;
@@ -249,7 +250,7 @@ function buildProductExposure(accounts: CreditAccount[]) {
   const groups: Record<string, Record<string, { count: number; balance: number; overdue: number }>> = {};
   accounts.filter(a => a.status !== "closed").forEach(a => {
     const type = a.accountType || "Other";
-    const cur = a.currency || "ETB";
+    const cur = a.currency || getDefaultFallbackCurrency();
     if (!groups[type]) groups[type] = {};
     if (!groups[type][cur]) groups[type][cur] = { count: 0, balance: 0, overdue: 0 };
     groups[type][cur].count++;
@@ -599,7 +600,7 @@ export default function CreditReportPage() {
             <Card>
               <CardContent className="p-4 text-center print:p-2">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold print:text-[8px]">Total Outstanding</p>
-                <p className="text-2xl font-black mt-1 print:text-lg">{formatCurrency(report.summary.totalDebt, "ETB", { compact: true })}</p>
+                <p className="text-2xl font-black mt-1 print:text-lg">{formatCurrency(report.summary.totalDebt, getDefaultFallbackCurrency(), { compact: true })}</p>
                 <p className="text-[10px] text-muted-foreground print:text-[8px]">Current Balance</p>
               </CardContent>
             </Card>
@@ -851,7 +852,7 @@ export default function CreditReportPage() {
               {report.accounts.length > 0 ? (
                 <div className="space-y-5 print:space-y-3">
                   {report.accounts.map((account, idx) => {
-                    const currency = account.currency || "ETB";
+                    const currency = account.currency || getDefaultFallbackCurrency();
                     const history = report.paymentHistory?.[account.id] || [];
                     const isOpen = account.status !== "closed";
 
@@ -1000,7 +1001,7 @@ export default function CreditReportPage() {
                           <TableCell className="font-mono">{j.caseNumber}</TableCell>
                           <TableCell>{j.court}</TableCell>
                           <TableCell className="capitalize">{j.judgmentType.replace(/_/g, " ")}</TableCell>
-                          <TableCell className="text-right">{j.amount ? formatCurrency(j.amount, j.currency || "ETB") : "—"}</TableCell>
+                          <TableCell className="text-right">{j.amount ? formatCurrency(j.amount, j.currency || getDefaultFallbackCurrency()) : "—"}</TableCell>
                           <TableCell>{j.judgmentDate}</TableCell>
                           <TableCell>
                             <Badge variant={j.status === "active" ? "destructive" : "default"} className="text-[9px] capitalize print:text-[7px]">{j.status}</Badge>

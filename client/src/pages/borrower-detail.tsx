@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, User, Building2, Mail, Phone, MapPin, Briefcase, CreditCard, AlertTriangle, TrendingUp, FileText, Flag, GraduationCap, Users, Link2, ClipboardList, Camera, Upload, IdCard, Brain, Loader2, ShieldCheck, ShieldAlert, ShieldX, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
+import { ArrowLeft, User, Building2, Mail, Phone, MapPin, Briefcase, CreditCard, AlertTriangle, TrendingUp, FileText, Flag, GraduationCap, Users, Link2, ClipboardList, Camera, Upload, IdCard, Brain, Loader2, ShieldCheck, ShieldAlert, ShieldX, ChevronDown, ChevronUp, Sparkles, Smartphone, Heart } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { formatCurrency } from "@/lib/currency";
 import { getBorrowerAvatarUrl } from "@/lib/avatar";
+import { isGhanaMode, getDefaultCurrency } from "@/lib/country-mode";
+import { CurrencyReference } from "@/components/currency-reference";
 import type { Borrower, CreditAccount, CreditInquiry, CourtJudgment, ConsentRecord } from "@shared/schema";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Gavel, FileCheck } from "lucide-react";
@@ -383,10 +385,29 @@ export default function BorrowerDetailPage() {
             <InfoRow label={t("borrowerDetail.country")} value={borrower.country || "—"} />
             <InfoRow label={t("borrowerDetail.tinNumber")} value={borrower.tinNumber || "—"} />
             <InfoRow label={t("borrowerDetail.passportNumber")} value={borrower.passportNumber || "—"} />
+            {isGhanaMode() && (
+              <>
+                {(borrower as any).ghanaCardNumber && (
+                  <InfoRow label="Ghana Card" value={(borrower as any).ghanaCardNumber} />
+                )}
+                {(borrower as any).votersId && (
+                  <InfoRow label="Voter's ID" value={(borrower as any).votersId} />
+                )}
+                {(borrower as any).ssnitNumber && (
+                  <InfoRow label="SSNIT Number" value={(borrower as any).ssnitNumber} />
+                )}
+                {(borrower as any).driversLicense && (
+                  <InfoRow label="Driver's License" value={(borrower as any).driversLicense} />
+                )}
+              </>
+            )}
             {isIndividual && (
               <>
                 <InfoRow label={t("borrowerDetail.dateOfBirth")} value={borrower.dateOfBirth || "—"} />
                 <InfoRow label={t("borrowerDetail.gender")} value={borrower.gender || "—"} />
+                {isGhanaMode() && (borrower as any).maritalStatus && (
+                  <InfoRow label="Marital Status" value={(borrower as any).maritalStatus} />
+                )}
                 <InfoRow label={t("borrowerDetail.employer")} value={borrower.employerName || "—"} />
                 <InfoRow label={t("borrowerDetail.occupation")} value={borrower.occupation || "—"} />
               </>
@@ -399,6 +420,12 @@ export default function BorrowerDetailPage() {
               <Phone className="w-3.5 h-3.5 text-muted-foreground" />
               <span>{borrower.phone || "—"}</span>
             </div>
+            {isGhanaMode() && (borrower as any).mobileMoneyNumber && (
+              <div className="flex items-center gap-2 text-sm" data-testid="text-mobile-money">
+                <Smartphone className="w-3.5 h-3.5 text-muted-foreground" />
+                <span>{(borrower as any).mobileMoneyNumber} <span className="text-[10px] text-muted-foreground">(Mobile Money)</span></span>
+              </div>
+            )}
             <div className="flex items-center gap-2 text-sm">
               <Mail className="w-3.5 h-3.5 text-muted-foreground" />
               <span>{borrower.email || "—"}</span>
@@ -461,7 +488,7 @@ export default function BorrowerDetailPage() {
             {accounts.length > 0 ? (
               <div className="divide-y">
                 {accounts.map((account) => {
-                  const currency = (account as any).currency || "ETB";
+                  const currency = (account as any).currency || (isGhanaMode() ? "GHS" : "ETB");
                   return (
                     <div key={account.id} className="px-5 py-4 space-y-2" data-testid={`row-credit-${account.id}`}>
                       <div className="flex items-center justify-between gap-3">
@@ -472,8 +499,20 @@ export default function BorrowerDetailPage() {
                         <Badge variant={getStatusColor(account.status)} className="text-[10px] capitalize shrink-0">{account.status}</Badge>
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                        <div><span className="text-muted-foreground">{t("borrowerDetail.original")}</span> <span className="font-medium">{formatCurrency(account.originalAmount, currency)}</span></div>
-                        <div><span className="text-muted-foreground">{t("borrowerDetail.balance")}</span> <span className="font-medium">{formatCurrency(account.currentBalance, currency)}</span></div>
+                        <div>
+                          <span className="text-muted-foreground">{t("borrowerDetail.original")}</span>{" "}
+                          <span className="font-medium">{formatCurrency(account.originalAmount, currency)}</span>
+                          {isGhanaMode() && currency === "GHS" && (
+                            <CurrencyReference amount={parseFloat(account.originalAmount || "0")} currency="GHS" />
+                          )}
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">{t("borrowerDetail.balance")}</span>{" "}
+                          <span className="font-medium">{formatCurrency(account.currentBalance, currency)}</span>
+                          {isGhanaMode() && currency === "GHS" && (
+                            <CurrencyReference amount={parseFloat(account.currentBalance || "0")} currency="GHS" />
+                          )}
+                        </div>
                         <div><span className="text-muted-foreground">{t("borrowerDetail.rate")}</span> <span className="font-medium">{account.interestRate || "—"}%</span></div>
                         <div><span className="text-muted-foreground">{t("borrowerDetail.arrears")}</span> <span className={`font-medium ${(account.daysInArrears || 0) > 0 ? "text-destructive" : ""}`}>{account.daysInArrears || 0} {t("borrowerDetail.days")}</span></div>
                       </div>

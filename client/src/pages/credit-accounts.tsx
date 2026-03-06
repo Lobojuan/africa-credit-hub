@@ -15,6 +15,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatCurrency, SUPPORTED_CURRENCIES } from "@/lib/currency";
+import { isGhanaMode, BOG_FACILITY_TYPES, BOG_PURPOSE_CODES, BOG_ASSET_CLASSIFICATIONS, BOG_REPAYMENT_FREQUENCIES, BOG_COLLATERAL_TYPES } from "@/lib/country-mode";
+import { CurrencyReference } from "@/components/currency-reference";
 import type { CreditAccount, Borrower } from "@shared/schema";
 
 function getStatusVariant(status: string) {
@@ -42,12 +44,16 @@ export default function CreditAccountsPage() {
   });
   const borrowers = borrowersResult?.data;
 
+  const ghanaMode = isGhanaMode();
+
   const [formData, setFormData] = useState({
     borrowerId: "", lenderInstitution: "", accountNumber: "", accountType: "",
-    originalAmount: "", currentBalance: "", currency: "ETB",
+    originalAmount: "", currentBalance: "", currency: ghanaMode ? "GHS" : "ETB",
     interestRate: "", disbursementDate: "", maturityDate: "",
     status: "current" as string, collateralType: "", collateralValue: "",
     isInterestFree: false, gracePeriodMonths: "", restructureCount: "0",
+    facilityTypeCode: "", purposeOfFacility: "", repaymentFrequency: "",
+    assetClassification: "", amountOverdue: "", writtenOffAmount: "",
   });
 
   const createMutation = useMutation({
@@ -144,33 +150,115 @@ export default function CreditAccountsPage() {
                   </Select>
                 </div>
               </div>
+              {ghanaMode && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <Label>BoG Facility Type</Label>
+                    <Select value={formData.facilityTypeCode} onValueChange={(v) => setFormData({ ...formData, facilityTypeCode: v })}>
+                      <SelectTrigger data-testid="select-facility-type"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        {BOG_FACILITY_TYPES.map(f => (
+                          <SelectItem key={f.code} value={f.code}>{f.code} — {f.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Purpose of Facility</Label>
+                    <Select value={formData.purposeOfFacility} onValueChange={(v) => setFormData({ ...formData, purposeOfFacility: v })}>
+                      <SelectTrigger data-testid="select-purpose"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        {BOG_PURPOSE_CODES.map(p => (
+                          <SelectItem key={p.code} value={p.code}>{p.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div><Label>{t("creditAccounts.originalAmount")} ({formData.currency})</Label><Input data-testid="input-original-amount" type="number" step="0.01" value={formData.originalAmount} onChange={(e) => setFormData({ ...formData, originalAmount: e.target.value })} required /></div>
-                <div><Label>{t("creditAccounts.currentBalance")} ({formData.currency})</Label><Input data-testid="input-current-balance" type="number" step="0.01" value={formData.currentBalance} onChange={(e) => setFormData({ ...formData, currentBalance: e.target.value })} required /></div>
+                <div>
+                  <Label>{t("creditAccounts.originalAmount")} ({formData.currency})</Label>
+                  <Input data-testid="input-original-amount" type="number" step="0.01" value={formData.originalAmount} onChange={(e) => setFormData({ ...formData, originalAmount: e.target.value })} required />
+                  {ghanaMode && formData.originalAmount && <CurrencyReference amount={formData.originalAmount} className="mt-0.5 block" />}
+                </div>
+                <div>
+                  <Label>{t("creditAccounts.currentBalance")} ({formData.currency})</Label>
+                  <Input data-testid="input-current-balance" type="number" step="0.01" value={formData.currentBalance} onChange={(e) => setFormData({ ...formData, currentBalance: e.target.value })} required />
+                  {ghanaMode && formData.currentBalance && <CurrencyReference amount={formData.currentBalance} className="mt-0.5 block" />}
+                </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><Label>{t("creditAccounts.interestRate")}</Label><Input data-testid="input-interest-rate" type="number" step="0.01" value={formData.interestRate} onChange={(e) => setFormData({ ...formData, interestRate: e.target.value })} /></div>
                 <div>
                   <Label>{t("creditAccounts.currency")}</Label>
-                  <Select value={formData.currency} onValueChange={(v) => setFormData({ ...formData, currency: v })}>
-                    <SelectTrigger data-testid="select-currency"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {SUPPORTED_CURRENCIES.map((c) => (
-                        <SelectItem key={c.code} value={c.code}>
-                          {c.code} ({isFr ? c.nameFr : c.name})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {ghanaMode ? (
+                    <Input data-testid="select-currency" value="GHS — Ghana Cedi (₵)" disabled className="bg-muted" />
+                  ) : (
+                    <Select value={formData.currency} onValueChange={(v) => setFormData({ ...formData, currency: v })}>
+                      <SelectTrigger data-testid="select-currency"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {SUPPORTED_CURRENCIES.map((c) => (
+                          <SelectItem key={c.code} value={c.code}>
+                            {c.code} ({isFr ? c.nameFr : c.name})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
               </div>
+              {ghanaMode && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <Label>Repayment Frequency</Label>
+                    <Select value={formData.repaymentFrequency} onValueChange={(v) => setFormData({ ...formData, repaymentFrequency: v })}>
+                      <SelectTrigger data-testid="select-repayment-freq"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        {BOG_REPAYMENT_FREQUENCIES.map(r => (
+                          <SelectItem key={r.code} value={r.code}>{r.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Asset Classification (BoG)</Label>
+                    <Select value={formData.assetClassification} onValueChange={(v) => setFormData({ ...formData, assetClassification: v })}>
+                      <SelectTrigger data-testid="select-asset-class"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        {BOG_ASSET_CLASSIFICATIONS.map(a => (
+                          <SelectItem key={a.code} value={a.code}>{a.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><Label>{t("creditAccounts.disbursementDate")}</Label><Input type="date" value={formData.disbursementDate} onChange={(e) => setFormData({ ...formData, disbursementDate: e.target.value })} /></div>
                 <div><Label>{t("creditAccounts.maturityDate")}</Label><Input type="date" value={formData.maturityDate} onChange={(e) => setFormData({ ...formData, maturityDate: e.target.value })} /></div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div><Label>{t("creditAccounts.collateralType")}</Label><Input value={formData.collateralType} onChange={(e) => setFormData({ ...formData, collateralType: e.target.value })} /></div>
-                <div><Label>{t("creditAccounts.collateralValue")} ({formData.currency})</Label><Input type="number" step="0.01" value={formData.collateralValue} onChange={(e) => setFormData({ ...formData, collateralValue: e.target.value })} /></div>
+                <div>
+                  <Label>{t("creditAccounts.collateralType")}</Label>
+                  {ghanaMode ? (
+                    <Select value={formData.collateralType} onValueChange={(v) => setFormData({ ...formData, collateralType: v })}>
+                      <SelectTrigger data-testid="select-collateral-type"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        {BOG_COLLATERAL_TYPES.map(c => (
+                          <SelectItem key={c.code} value={c.code}>{c.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input value={formData.collateralType} onChange={(e) => setFormData({ ...formData, collateralType: e.target.value })} />
+                  )}
+                </div>
+                <div>
+                  <Label>{t("creditAccounts.collateralValue")} ({formData.currency})</Label>
+                  <Input type="number" step="0.01" value={formData.collateralValue} onChange={(e) => setFormData({ ...formData, collateralValue: e.target.value })} />
+                  {ghanaMode && formData.collateralValue && <CurrencyReference amount={formData.collateralValue} className="mt-0.5 block" />}
+                </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="flex items-center gap-2 pt-5">

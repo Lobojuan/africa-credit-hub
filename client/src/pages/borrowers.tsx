@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { Plus, Search, Building2, User, Users, ChevronRight, ChevronLeft, Flag, AlertTriangle, Camera } from "lucide-react";
 import { SUPPORTED_COUNTRIES } from "@/lib/currency";
-import { isGhanaMode, getDefaultCountry } from "@/lib/country-mode";
+import { isGhanaMode, getDefaultCountry, getCountryConfig, BOG_MARITAL_STATUSES, BOG_PROOF_OF_ADDRESS, BOG_BUSINESS_TYPES, BOG_INDUSTRY_CODES, BOG_EMPLOYMENT_TYPES } from "@/lib/country-mode";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +40,9 @@ export default function BorrowersPage() {
   const totalBorrowers = Array.isArray(paginatedResult) ? paginatedResult.length : paginatedResult?.total ?? 0;
   const totalPages = Math.ceil(totalBorrowers / PAGE_SIZE);
 
+  const ghanaMode = isGhanaMode();
+  const ghanaConfig = getCountryConfig();
+
   const [formData, setFormData] = useState({
     type: "individual" as "individual" | "corporate",
     firstName: "", lastName: "", companyName: "", nationalId: "",
@@ -50,6 +53,9 @@ export default function BorrowersPage() {
     isPep: false, pepDetails: "",
     educationLevel: "", educationInstitution: "", employmentHistory: "",
     relatedBorrowerId: "", relationshipType: "",
+    ghanaCardNumber: "", votersId: "", ssnitNumber: "", driversLicense: "",
+    maritalStatus: "", proofOfAddressType: "", proofOfAddressNumber: "",
+    mobileMoneyNumber: "",
   });
 
   const [fuzzyMatches, setFuzzyMatches] = useState<any[]>([]);
@@ -98,7 +104,7 @@ export default function BorrowersPage() {
       queryClient.invalidateQueries({ predicate: (query) => (query.queryKey[0] as string)?.startsWith?.("/api/borrowers") });
       queryClient.invalidateQueries({ queryKey: ["/api/pending-approvals"] });
       setDialogOpen(false);
-      setFormData({ type: "individual", firstName: "", lastName: "", companyName: "", nationalId: "", tinNumber: "", passportNumber: "", dateOfBirth: "", gender: "", phone: "", email: "", address: "", country: getDefaultCountry() || "", city: "", region: "", employerName: "", occupation: "", businessRegNumber: "", sector: "", isPep: false, pepDetails: "", educationLevel: "", educationInstitution: "", employmentHistory: "", relatedBorrowerId: "", relationshipType: "" });
+      setFormData({ type: "individual", firstName: "", lastName: "", companyName: "", nationalId: "", tinNumber: "", passportNumber: "", dateOfBirth: "", gender: "", phone: "", email: "", address: "", country: getDefaultCountry() || "", city: "", region: "", employerName: "", occupation: "", businessRegNumber: "", sector: "", isPep: false, pepDetails: "", educationLevel: "", educationInstitution: "", employmentHistory: "", relatedBorrowerId: "", relationshipType: "", ghanaCardNumber: "", votersId: "", ssnitNumber: "", driversLicense: "", maritalStatus: "", proofOfAddressType: "", proofOfAddressNumber: "", mobileMoneyNumber: "" });
       toast({ title: data.message || t("borrowers.registerBorrower"), description: t("borrowers.submittedForApproval") });
     },
     onError: (e: Error) => {
@@ -173,11 +179,28 @@ export default function BorrowersPage() {
                   <div><Label>{t("borrowers.businessRegNo")}</Label><Input data-testid="input-business-reg" value={formData.businessRegNumber} onChange={(e) => setFormData({ ...formData, businessRegNumber: e.target.value })} /></div>
                 </>
               )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div><Label>{t("borrowers.nationalId")}</Label><Input data-testid="input-national-id" value={formData.nationalId} onChange={(e) => setFormData({ ...formData, nationalId: e.target.value })} required /></div>
-                <div><Label>{t("borrowers.tinNumber")}</Label><Input data-testid="input-tin" value={formData.tinNumber} onChange={(e) => setFormData({ ...formData, tinNumber: e.target.value })} /></div>
-                <div><Label>{t("borrowers.passportNumber")}</Label><Input data-testid="input-passport" value={formData.passportNumber} onChange={(e) => setFormData({ ...formData, passportNumber: e.target.value })} placeholder={t("borrowers.passportNumber")} /></div>
-              </div>
+              {ghanaMode ? (
+                <>
+                  <Separator className="my-1" />
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ghana Identification</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div><Label>Ghana Card Number *</Label><Input data-testid="input-ghana-card" value={formData.ghanaCardNumber} onChange={(e) => setFormData({ ...formData, ghanaCardNumber: e.target.value, nationalId: e.target.value || formData.nationalId })} placeholder="GHA-XXXXXXXXX-X" required /></div>
+                    <div><Label>Voter's ID</Label><Input data-testid="input-voters-id" value={formData.votersId} onChange={(e) => setFormData({ ...formData, votersId: e.target.value })} /></div>
+                    <div><Label>SSNIT Number</Label><Input data-testid="input-ssnit" value={formData.ssnitNumber} onChange={(e) => setFormData({ ...formData, ssnitNumber: e.target.value })} /></div>
+                    <div><Label>Driver's License</Label><Input data-testid="input-drivers-license" value={formData.driversLicense} onChange={(e) => setFormData({ ...formData, driversLicense: e.target.value })} /></div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div><Label>TIN Number</Label><Input data-testid="input-tin" value={formData.tinNumber} onChange={(e) => setFormData({ ...formData, tinNumber: e.target.value })} /></div>
+                    <div><Label>Passport Number</Label><Input data-testid="input-passport" value={formData.passportNumber} onChange={(e) => setFormData({ ...formData, passportNumber: e.target.value })} /></div>
+                  </div>
+                </>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div><Label>{t("borrowers.nationalId")}</Label><Input data-testid="input-national-id" value={formData.nationalId} onChange={(e) => setFormData({ ...formData, nationalId: e.target.value })} required /></div>
+                  <div><Label>{t("borrowers.tinNumber")}</Label><Input data-testid="input-tin" value={formData.tinNumber} onChange={(e) => setFormData({ ...formData, tinNumber: e.target.value })} /></div>
+                  <div><Label>{t("borrowers.passportNumber")}</Label><Input data-testid="input-passport" value={formData.passportNumber} onChange={(e) => setFormData({ ...formData, passportNumber: e.target.value })} placeholder={t("borrowers.passportNumber")} /></div>
+                </div>
+              )}
               {fuzzyMatches.length > 0 && (
                 <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20" data-testid="alert-fuzzy-matches">
                   <div className="flex items-center gap-2 mb-2">
@@ -197,11 +220,49 @@ export default function BorrowersPage() {
                   </div>
                 </div>
               )}
+              {ghanaMode && (
+                <>
+                  <Separator className="my-1" />
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Contact & Mobile Money</p>
+                </>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><Label>{t("borrowers.phone")}</Label><Input data-testid="input-phone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} /></div>
                 <div><Label>{t("borrowers.email")}</Label><Input data-testid="input-email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} /></div>
               </div>
+              {ghanaMode && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div><Label>Mobile Money Number</Label><Input data-testid="input-mobile-money" value={formData.mobileMoneyNumber} onChange={(e) => setFormData({ ...formData, mobileMoneyNumber: e.target.value })} placeholder="024XXXXXXX" /></div>
+                  <div>
+                    <Label>Marital Status</Label>
+                    <Select value={formData.maritalStatus} onValueChange={(v) => setFormData({ ...formData, maritalStatus: v })}>
+                      <SelectTrigger data-testid="select-marital-status"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        {BOG_MARITAL_STATUSES.map(s => (
+                          <SelectItem key={s.code} value={s.code}>{s.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
               <div><Label>{t("borrowers.address")}</Label><Input data-testid="input-address" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} /></div>
+              {ghanaMode && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <Label>Proof of Address Type</Label>
+                    <Select value={formData.proofOfAddressType} onValueChange={(v) => setFormData({ ...formData, proofOfAddressType: v })}>
+                      <SelectTrigger data-testid="select-proof-address"><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        {BOG_PROOF_OF_ADDRESS.map(p => (
+                          <SelectItem key={p.code} value={p.code}>{p.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div><Label>Proof of Address Number</Label><Input data-testid="input-proof-address-num" value={formData.proofOfAddressNumber} onChange={(e) => setFormData({ ...formData, proofOfAddressNumber: e.target.value })} placeholder="Bill/Meter number" /></div>
+                </div>
+              )}
               <div>
                 <Label>{t("borrowers.country")}</Label>
                 {isGhanaMode() ? (
@@ -219,9 +280,37 @@ export default function BorrowersPage() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><Label>{t("borrowers.city")}</Label><Input data-testid="input-city" value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} /></div>
-                <div><Label>{t("borrowers.region")}</Label><Input data-testid="input-region" value={formData.region} onChange={(e) => setFormData({ ...formData, region: e.target.value })} /></div>
+                <div>
+                  <Label>{t("borrowers.region")}</Label>
+                  {ghanaMode && ghanaConfig ? (
+                    <Select value={formData.region} onValueChange={(v) => setFormData({ ...formData, region: v })}>
+                      <SelectTrigger data-testid="select-region"><SelectValue placeholder="Select region" /></SelectTrigger>
+                      <SelectContent>
+                        {ghanaConfig.regions.map(r => (
+                          <SelectItem key={r} value={r}>{r}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input data-testid="input-region" value={formData.region} onChange={(e) => setFormData({ ...formData, region: e.target.value })} />
+                  )}
+                </div>
               </div>
-              <div><Label>{t("borrowers.sector")}</Label><Input data-testid="input-sector" value={formData.sector} onChange={(e) => setFormData({ ...formData, sector: e.target.value })} /></div>
+              <div>
+                <Label>{t("borrowers.sector")}</Label>
+                {ghanaMode ? (
+                  <Select value={formData.sector} onValueChange={(v) => setFormData({ ...formData, sector: v })}>
+                    <SelectTrigger data-testid="select-sector"><SelectValue placeholder="Select industry" /></SelectTrigger>
+                    <SelectContent>
+                      {BOG_INDUSTRY_CODES.map(s => (
+                        <SelectItem key={s.code} value={s.code}>{s.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input data-testid="input-sector" value={formData.sector} onChange={(e) => setFormData({ ...formData, sector: e.target.value })} />
+                )}
+              </div>
               <div className="flex items-center gap-3">
                 <input
                   type="checkbox"

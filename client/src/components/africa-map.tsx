@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Globe, Users, CreditCard, TrendingUp, MapPin } from "lucide-react";
-import { isGhanaMode, getCountryConfig } from "@/lib/country-mode";
+import { Globe, Users, CreditCard, TrendingUp, MapPin, Building2, ShieldCheck, AlertTriangle } from "lucide-react";
+import { isGhanaMode, getCountryConfig, GHANA_MARKET_STATS } from "@/lib/country-mode";
 
 interface AfricaMapProps {
   countryBreakdown?: { country: string; borrowers: number; accounts: number }[];
@@ -10,14 +10,12 @@ interface AfricaMapProps {
 
 interface RegionDef {
   name: string;
-  emoji: string;
   countries: string[];
 }
 
 const REGIONS: RegionDef[] = [
   {
     name: "East Africa",
-    emoji: "🌍",
     countries: [
       "Ethiopia", "Kenya", "Tanzania", "Uganda", "Rwanda", "Burundi",
       "South Sudan", "Eritrea", "Djibouti", "Somalia", "Comoros",
@@ -26,7 +24,6 @@ const REGIONS: RegionDef[] = [
   },
   {
     name: "West Africa",
-    emoji: "🌍",
     countries: [
       "Nigeria", "Ghana", "Senegal", "Ivory Coast", "Mali", "Burkina Faso",
       "Niger", "Guinea", "Sierra Leone", "Liberia", "Togo", "Benin",
@@ -35,7 +32,6 @@ const REGIONS: RegionDef[] = [
   },
   {
     name: "North Africa",
-    emoji: "🏛️",
     countries: [
       "Egypt", "Algeria", "Morocco", "Tunisia", "Libya", "Sudan",
       "Western Sahara",
@@ -43,7 +39,6 @@ const REGIONS: RegionDef[] = [
   },
   {
     name: "Central Africa",
-    emoji: "🌿",
     countries: [
       "Democratic Republic of the Congo", "Cameroon", "Chad",
       "Central African Republic", "Republic of the Congo", "Gabon",
@@ -52,7 +47,6 @@ const REGIONS: RegionDef[] = [
   },
   {
     name: "Southern Africa",
-    emoji: "🌄",
     countries: [
       "South Africa", "Angola", "Mozambique", "Zambia", "Zimbabwe",
       "Botswana", "Namibia", "Malawi", "Eswatini", "Lesotho",
@@ -64,6 +58,132 @@ function formatNum(n: number): string {
   if (n >= 1000000) return (n / 1000000).toFixed(1) + "M";
   if (n >= 1000) return (n / 1000).toFixed(1) + "K";
   return n.toLocaleString();
+}
+
+function GhanaMarketOverview({ countryBreakdown }: { countryBreakdown: AfricaMapProps["countryBreakdown"] }) {
+  const ghanaConfig = getCountryConfig()!;
+  const ms = GHANA_MARKET_STATS;
+
+  const totalBorrowers = useMemo(() => {
+    return countryBreakdown?.reduce((sum, c) => sum + c.borrowers, 0) || 0;
+  }, [countryBreakdown]);
+
+  const totalAccounts = useMemo(() => {
+    return countryBreakdown?.reduce((sum, c) => sum + c.accounts, 0) || 0;
+  }, [countryBreakdown]);
+
+  const regionData = useMemo(() => {
+    const weights = [18, 15, 8, 7, 9, 6, 5, 4, 3, 4, 3, 2, 3, 2, 2, 2];
+    const totalWeight = weights.reduce((a, b) => a + b, 0);
+    return ghanaConfig.regions.map((region, idx) => {
+      const weight = weights[idx] || 3;
+      const borrowerCount = totalBorrowers > 0
+        ? Math.round((totalBorrowers * weight) / totalWeight)
+        : 0;
+      return {
+        name: region,
+        borrowers: borrowerCount,
+        isCapital: idx === 0,
+      };
+    });
+  }, [ghanaConfig.regions, totalBorrowers]);
+
+  const maxRegBorrowers = Math.max(...regionData.map(r => r.borrowers), 1);
+
+  return (
+    <Card data-testid="card-ghana-market-overview" className="border border-border/60">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(175 55% 28%) 0%, hsl(43 80% 45%) 100%)" }}>
+              <MapPin className="w-3.5 h-3.5 text-white" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold">Ghana Credit Market</h3>
+              <p className="text-[10px] text-muted-foreground">Bank of Ghana CRB Standards {ms.crbVersion}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-[9px] font-medium">
+              {ghanaConfig.regions.length} Regions
+            </Badge>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="pb-4 space-y-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="rounded-lg border border-border/50 bg-muted/30 p-2.5 text-center">
+            <Users className="w-3.5 h-3.5 mx-auto mb-1 text-muted-foreground" />
+            <p className="text-lg font-bold leading-tight">{formatNum(ms.activeBorrowers)}</p>
+            <p className="text-[9px] text-muted-foreground">National Borrowers</p>
+          </div>
+          <div className="rounded-lg border border-border/50 bg-muted/30 p-2.5 text-center">
+            <Building2 className="w-3.5 h-3.5 mx-auto mb-1 text-muted-foreground" />
+            <p className="text-lg font-bold leading-tight">{ms.licensedInstitutions}</p>
+            <p className="text-[9px] text-muted-foreground">Institutions</p>
+          </div>
+          <div className="rounded-lg border border-border/50 bg-muted/30 p-2.5 text-center">
+            <AlertTriangle className="w-3.5 h-3.5 mx-auto mb-1 text-muted-foreground" />
+            <p className="text-lg font-bold leading-tight text-amber-600">{ms.nationalDefaultRate}%</p>
+            <p className="text-[9px] text-muted-foreground">Default Rate</p>
+          </div>
+          <div className="rounded-lg border border-border/50 bg-muted/30 p-2.5 text-center">
+            <ShieldCheck className="w-3.5 h-3.5 mx-auto mb-1 text-muted-foreground" />
+            <p className="text-lg font-bold leading-tight">{formatNum(ms.bureauScoredAdults)}</p>
+            <p className="text-[9px] text-muted-foreground">Adults Scored</p>
+          </div>
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Regional Coverage</p>
+            <p className="text-[10px] text-muted-foreground">
+              {formatNum(totalBorrowers)} registered | {formatNum(totalAccounts)} accounts
+            </p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+            {regionData.map((region) => (
+              <div
+                key={region.name}
+                className="rounded-md border border-border/40 bg-card p-2 hover:border-primary/30 transition-colors"
+                data-testid={`ghana-region-${region.name.toLowerCase().replace(/\s/g, "-")}`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-semibold truncate">{region.name}</span>
+                  {region.isCapital && (
+                    <Badge variant="default" className="text-[7px] px-1 py-0 h-3 shrink-0">Capital</Badge>
+                  )}
+                </div>
+                <div className="w-full h-1 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${Math.min(100, (region.borrowers / maxRegBorrowers) * 100)}%`,
+                      background: "linear-gradient(90deg, hsl(175 55% 35%), hsl(175 55% 28%))",
+                    }}
+                  />
+                </div>
+                <p className="text-[9px] text-muted-foreground mt-0.5 flex items-center gap-0.5">
+                  <Users className="w-2 h-2" />
+                  <span className="font-medium text-foreground">{formatNum(region.borrowers)}</span>
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="pt-2 border-t border-border/30 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <p className="text-[9px] text-muted-foreground">
+            {ms.creditReportingAct}
+          </p>
+          <p className="text-[9px] text-muted-foreground">|</p>
+          <p className="text-[9px] text-muted-foreground">
+            Bureaus: {ms.licensedBureaus.join(", ")}
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 export function AfricaMap({ countryBreakdown = [] }: AfricaMapProps) {
@@ -119,71 +239,7 @@ export function AfricaMap({ countryBreakdown = [] }: AfricaMapProps) {
   );
 
   if (isGhanaMode()) {
-    const ghanaConfig = getCountryConfig()!;
-    const ghanaRegions = ghanaConfig.regions;
-    const totalBorrowers = grandTotal.borrowers;
-    const totalAccounts = grandTotal.accounts;
-    const perRegion = Math.max(1, Math.ceil(totalBorrowers / ghanaRegions.length));
-    return (
-      <Card data-testid="card-ghana-map">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-muted-foreground" />
-              <h3 className="text-sm font-semibold">Ghana Regional Coverage</h3>
-            </div>
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <span className="font-semibold text-foreground">{ghanaRegions.length}</span> regions
-              </span>
-              <span className="hidden sm:flex items-center gap-1">
-                <Users className="w-3 h-3" />
-                <span className="font-semibold text-foreground">{formatNum(totalBorrowers)}</span> borrowers
-              </span>
-              <span className="hidden sm:flex items-center gap-1">
-                <CreditCard className="w-3 h-3" />
-                <span className="font-semibold text-foreground">{formatNum(totalAccounts)}</span> accounts
-              </span>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="pb-4">
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-2">
-            {ghanaRegions.map((region, idx) => {
-              const regionBorrowers = Math.max(0, Math.round(perRegion * (1 - Math.abs(idx - 2) * 0.12)));
-              const isTop = idx < 3;
-              return (
-                <div
-                  key={region}
-                  className="rounded-lg border border-border/60 bg-card p-2.5 hover:border-primary/40 hover:shadow-sm transition-all"
-                  data-testid={`ghana-region-${region.toLowerCase().replace(/\s/g, "-")}`}
-                >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[11px] font-semibold truncate">{region}</span>
-                    {isTop && (
-                      <Badge variant="default" className="text-[8px] px-1 py-0 h-3.5 shrink-0">Top</Badge>
-                    )}
-                  </div>
-                  <div className="w-full h-1 rounded-full bg-muted mb-1.5 overflow-hidden">
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${Math.min(100, (regionBorrowers / perRegion) * 100)}%`,
-                        background: "linear-gradient(90deg, hsl(175 55% 35%), hsl(175 55% 28%))",
-                      }}
-                    />
-                  </div>
-                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                    <Users className="w-2.5 h-2.5" />
-                    <span className="font-medium text-foreground">{formatNum(regionBorrowers)}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-    );
+    return <GhanaMarketOverview countryBreakdown={countryBreakdown} />;
   }
 
   return (

@@ -15,6 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatCurrency, SUPPORTED_COUNTRIES, SUPPORTED_CURRENCIES } from "@/lib/currency";
+import { getDefaultFallbackCurrency } from "@/lib/country-mode";
 import { apiRequest } from "@/lib/queryClient";
 import type { Borrower, CreditAccount } from "@shared/schema";
 
@@ -189,7 +190,7 @@ export default function ReportsPage() {
     acc[a.lenderInstitution].count++;
     const balance = parseFloat(a.currentBalance || "0");
     acc[a.lenderInstitution].total += balance;
-    const cur = a.currency || "ETB";
+    const cur = a.currency || getDefaultFallbackCurrency();
     acc[a.lenderInstitution].currencies[cur] = (acc[a.lenderInstitution].currencies[cur] || 0) + balance;
     if (a.status === "delinquent" || a.status === "default") acc[a.lenderInstitution].delinquent++;
     return acc;
@@ -200,7 +201,7 @@ export default function ReportsPage() {
     acc[a.accountType].count++;
     const balance = parseFloat(a.currentBalance || "0");
     acc[a.accountType].total += balance;
-    const cur = a.currency || "ETB";
+    const cur = a.currency || getDefaultFallbackCurrency();
     acc[a.accountType].currencies[cur] = (acc[a.accountType].currencies[cur] || 0) + balance;
     return acc;
   }, {}) : {};
@@ -401,7 +402,7 @@ export default function ReportsPage() {
                   <div className="flex items-center justify-center w-10 h-10 rounded-md bg-primary/10"><CreditCard className="w-5 h-5 text-primary" /></div>
                   <div>
                     <p className="text-xs text-muted-foreground">{t('reports.totalExposure')}</p>
-                    <p className="text-xl font-bold">{formatCurrency(stats.totalOutstanding, "ETB", { compact: true })}</p>
+                    <p className="text-xl font-bold">{formatCurrency(stats.totalOutstanding, getDefaultFallbackCurrency(), { compact: true })}</p>
                   </div>
                 </div>
               </CardContent>

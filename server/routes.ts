@@ -1242,6 +1242,113 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/batch-upload/bog-pipe", requireRole("admin", "lender"), async (req, res) => {
+    try {
+      const { data: pipeData } = req.body;
+      if (!pipeData || typeof pipeData !== "string") {
+        return res.status(400).json({ message: "Request body must contain a 'data' string with pipe-delimited content" });
+      }
+
+      const lines = pipeData.trim().split("\n").filter((l: string) => l.trim());
+      if (lines.length < 2) {
+        return res.status(400).json({ message: "File must contain a header row and at least one data row" });
+      }
+
+      const headers = lines[0].split("|").map((h: string) => h.trim());
+
+      const bogFieldMap: Record<string, string> = {
+        "SRN": "_srn",
+        "ReportingDate": "_reportingDate",
+        "BorrowerName": "_borrowerName",
+        "GhanaCardNo": "_ghanaCardNo",
+        "FacilityType": "facilityTypeCode",
+        "AccountNumber": "accountNumber",
+        "Currency": "currency",
+        "OriginalAmount": "originalAmount",
+        "CurrentBalance": "currentBalance",
+        "InterestRate": "interestRate",
+        "DisbursementDate": "disbursementDate",
+        "MaturityDate": "maturityDate",
+        "AssetClassification": "assetClassification",
+        "RepaymentFrequency": "repaymentFrequency",
+        "DaysInArrears": "daysInArrears",
+        "PurposeOfFacility": "purposeOfFacility",
+        "CollateralType": "collateralType",
+        "CollateralValue": "collateralValue",
+        "AmountOverdue": "amountOverdue",
+        "WrittenOffAmount": "writtenOffAmount",
+        "LenderInstitution": "lenderInstitution",
+        "AccountType": "accountType",
+        "BorrowerId": "borrowerId",
+        "Status": "status",
+      };
+
+      function parseBogDate(dateStr: string): string {
+        if (!dateStr || dateStr.length !== 8) return dateStr;
+        return `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}`;
+      }
+
+      const records: any[] = [];
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split("|").map((v: string) => v.trim());
+        const record: any = {};
+        headers.forEach((header: string, idx: number) => {
+          const mapped = bogFieldMap[header];
+          if (mapped && !mapped.startsWith("_")) {
+            record[mapped] = values[idx] || "";
+          }
+        });
+
+        if (record.disbursementDate) record.disbursementDate = parseBogDate(record.disbursementDate);
+        if (record.maturityDate) record.maturityDate = parseBogDate(record.maturityDate);
+        if (record.daysInArrears) record.daysInArrears = parseInt(record.daysInArrears, 10) || 0;
+
+        if (!record.currency) record.currency = "GHS";
+        if (!record.status) record.status = "current";
+        if (!record.accountType) {
+          const facilityMap: Record<string, string> = {
+            "OVD": "Overdraft", "TML": "Term Loan", "MTG": "Mortgage", "CRC": "Credit Card",
+            "LAS": "Loan Against Salary", "MFL": "Microfinance Loan", "TRF": "Trade Finance",
+            "LSE": "Lease", "GRT": "Guarantee", "LOC": "Letter of Credit", "BND": "Bond",
+            "STL": "Staff Loan", "GRP": "Group Loan", "OTH": "Other",
+          };
+          record.accountType = facilityMap[record.facilityTypeCode] || "Other";
+        }
+        if (!record.lenderInstitution) record.lenderInstitution = "Unknown";
+
+        records.push(record);
+      }
+
+      const results = {
+        totalSubmitted: records.length,
+        successCount: 0,
+        errorCount: 0,
+        errors: [] as Array<{ index: number; message: string }>,
+      };
+
+      for (let i = 0; i < records.length; i++) {
+        try {
+          const parsed = insertCreditAccountSchema.parse(records[i]);
+          await storage.createCreditAccount(parsed);
+          results.successCount++;
+        } catch (err: any) {
+          results.errorCount++;
+          results.errors.push({ index: i, message: err.message || "Validation failed" });
+        }
+      }
+
+      await storage.createAuditLog({
+        action: "BATCH_UPLOAD_BOG", entity: "credit_account", userId: req.session?.userId,
+        details: `BoG pipe-delimited upload: ${results.successCount} succeeded, ${results.errorCount} failed out of ${results.totalSubmitted}`,
+        ipAddress: req.ip || null,
+      });
+
+      res.json(results);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
   app.get("/api/notifications", async (req, res) => {
     try {
       if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
