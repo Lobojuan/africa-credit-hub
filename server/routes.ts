@@ -555,10 +555,7 @@ export async function registerRoutes(
         .slice(0, 8)
         .map(([name, value]) => ({ name, value }));
 
-      const borrowerSearch = ghanaCountry
-        ? await storage.searchBorrowers("", ghanaCountry, orgId)
-        : (await storage.getBorrowers(1, 200000, orgId)).data;
-      const allBorrowers = borrowerSearch;
+      const allBorrowers = await storage.searchBorrowers("", orgId);
       const countryMap: Record<string, number> = {};
       for (const b of allBorrowers) {
         const c = b.country || "Unknown";
@@ -2022,9 +2019,10 @@ export async function registerRoutes(
         return res.status(400).json({ message: "identifiers array is required" });
       }
 
+      const orgId = getOrgScope(req);
       const results: any[] = [];
       for (const id of identifiers) {
-        const borrowersFound = await storage.searchBorrowers(id);
+        const borrowersFound = await storage.searchBorrowers(id, orgId);
         if (borrowersFound.length > 0) {
           const borrower = borrowersFound[0];
           const accounts = await storage.getCreditAccountsByBorrower(borrower.id);

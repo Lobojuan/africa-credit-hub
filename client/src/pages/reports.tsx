@@ -41,6 +41,12 @@ function BorrowerSearchSelect({ onSelect }: { onSelect: (b: Borrower) => void })
 
   const { data: results, isLoading } = useQuery<Borrower[] | { data: Borrower[] }>({
     queryKey: ["/api/borrowers", debouncedQuery, countryFilter],
+    queryFn: async () => {
+      const url = searchUrl || "/api/borrowers?page=1&limit=50";
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+      return res.json();
+    },
     enabled: !!(debouncedQuery.length >= 2 || countryFilter),
   });
 

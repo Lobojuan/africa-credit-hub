@@ -570,6 +570,7 @@ export default function Dashboard() {
               colorIndex={2}
               onClick={() => setSelectedDetail("outstanding")}
               subtitle={usdOutstanding !== null ? `≈ ${formatCurrency(usdOutstanding, "USD", { compact: true })}` : undefined}
+              sparklineData={trends?.outstanding}
             />
             <StatCard title={t('dashboard.delinquent')} value={stats.delinquentAccounts.toLocaleString()} icon={AlertTriangle} testId="stat-delinquent" subtitle={t('dashboard.delinquentSub')} colorIndex={3} onClick={() => setSelectedDetail("delinquent")} sparklineData={trends?.delinquent} />
             <StatCard title={t('dashboard.defaults')} value={stats.defaultAccounts.toLocaleString()} icon={ShieldAlert} testId="stat-defaults" subtitle={t('dashboard.defaultsSub')} colorIndex={4} onClick={() => setSelectedDetail("defaults")} sparklineData={trends?.defaults} />

@@ -41,7 +41,7 @@ The system employs a modern full-stack architecture built for scalability and co
     -   **Exchange Rate Management**: Multi-currency conversion for 44 currencies with automatic live rate fetching.
     -   **Cross-Border Entity Resolution**: Passport number field for cross-jurisdictional identity matching.
     -   **Global Search**: Searches across borrowers, institutions, and credit accounts.
-    -   **Multi-Tenant SaaS**: `organizations` table, tenant scoping via `organizationId`, and `super_admin` role for platform administration. Includes client management and a 4-step onboarding wizard.
+    -   **Multi-Tenant SaaS**: `organizations` table, tenant scoping via `organizationId`, and `super_admin` role for platform administration. Includes client management and a 4-step onboarding wizard. The org switcher in the header uses `OrgSwitcherProvider` context + `setGlobalOrgId()` which causes `appendOrgId()` in `queryClient.ts` to add `?orgId=xxx` to all API fetches. When switching orgs, auth queries (`/api/auth/*`) must be excluded from query reset to prevent logout.
     -   **Low-Bandwidth Optimizations**: Gzip compression and React.lazy code-splitting.
     -   **Chatbot**: Credit Registry Assistant with dispute filing, FAQ, keyword search, and an AI-powered Smart Assistant mode (OpenAI GPT-4o streaming).
     -   **Documentation**: Multi-language documentation API for key documents.
