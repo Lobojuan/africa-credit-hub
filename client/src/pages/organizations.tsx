@@ -715,6 +715,11 @@ function BillingTab({ org }: { org: any }) {
 function OrgDetailPanel({ orgId, onBack }: { orgId: string; onBack: () => void }) {
   const { data: org, isLoading } = useQuery<any>({
     queryKey: ["/api/admin/organizations", orgId],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/organizations/${orgId}`, { credentials: "include" });
+      if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+      return res.json();
+    },
   });
   const { toast } = useToast();
   const [editOpen, setEditOpen] = useState(false);
