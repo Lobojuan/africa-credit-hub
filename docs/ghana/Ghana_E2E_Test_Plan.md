@@ -13,8 +13,8 @@ This document defines the end-to-end test plan for the Ghana Credit Registry, en
 ### 1.2 Scope
 | Area | Modules Covered |
 |------|----------------|
-| Ghana-Specific Data Entry | Borrower registration, Ghana Card, Voter's ID, SSNIT, Driver's License |
-| Credit Account Management | GHS currency, BoG facility types, asset classification |
+| Ghana-Specific Data Entry | Borrower registration, Ghana Card, Voter's ID, SSNIT, Driver's License, employment type, proof of address |
+| Credit Account Management | GHS currency, BoG facility types, asset classification, closure reasons |
 | Batch Upload | BoG pipe-delimited format, JSON, XBRL |
 | Credit Reporting | GHS primary with USD/EUR reference, BoG-compliant reports |
 | Dispute Management | SLA-tracked dispute resolution |
@@ -42,10 +42,12 @@ This document defines the end-to-end test plan for the Ghana Credit Registry, en
 | 3 | Enter Ghana Card Number (GHA-123456789) | Field accepts format |
 | 4 | Enter Voter's ID, SSNIT Number | Fields accept values |
 | 5 | Select Region from dropdown | 16 Ghana regions available |
-| 6 | Select Marital Status | BoG codes: Single/Married/Divorced/Widowed/Separated |
-| 7 | Enter Mobile Money Number | Accepts Ghana mobile format |
-| 8 | Submit form | Borrower created with all Ghana fields |
-| 9 | View borrower detail | All Ghana IDs displayed correctly |
+| 6 | Select Marital Status | BoG codes: SNG/MRD/DIV/WID/SEP available |
+| 7 | Select Employment Type | BoG codes: EMP/SLF/UNE/RET/STD/HMK/OTH available |
+| 8 | Select Proof of Address type | BoG codes: WAT/ELE/BNK/TEN/OTH available |
+| 9 | Enter Mobile Money Number | Accepts Ghana mobile format (+233) |
+| 10 | Submit form | Borrower created with all Ghana fields |
+| 11 | View borrower detail | All Ghana IDs and demographic fields displayed correctly |
 
 ### TC-GH-002: Corporate Borrower Registration
 | Step | Action | Expected Result |
@@ -93,6 +95,23 @@ This document defines the end-to-end test plan for the Ghana Credit Registry, en
 | 3 | Update to 120 days arrears | Classification should be Substandard |
 | 4 | Update to 200 days arrears | Classification should be Doubtful |
 | 5 | Update to 400 days arrears | Classification should be Loss |
+
+### TC-GH-012: Facility Closure with BoG Reason Codes
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Open existing GHS credit account | Account detail loads |
+| 2 | Initiate facility closure | Closure form displays reason code selection |
+| 3 | Verify closure reason options | NOR/EAR/WOF/TRF/REF/OTH codes available |
+| 4 | Select "Normal Closure" (NOR) | Reason accepted |
+| 5 | Confirm closure | Account marked as closed with NOR reason |
+
+### TC-GH-013: Collateral Type Validation
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Create new account with collateral | Collateral type dropdown shows BoG codes |
+| 2 | Select PRO (Property) | Collateral value field becomes mandatory |
+| 3 | Select UNS (Unsecured) | Collateral value field not required |
+| 4 | Verify all 12 collateral types | PRO/VEH/EQP/STK/FXD/GOV/INV/REC/GRT/INS/OTH/UNS available |
 
 ---
 

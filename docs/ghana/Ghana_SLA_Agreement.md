@@ -124,8 +124,10 @@ This Service Level Agreement (SLA) defines the performance standards, responsibi
 | Active credit facilities | 5.7 million | BoG Annual Report 2025 |
 | National default rate | 23% | BoG Quarterly Statistics |
 | Licensed credit institutions | 154 | BoG Register |
-| Licensed credit bureaus | 3 (XDS, D&B, Hudson Price) | BoG CRB Register |
+| Licensed credit bureaus | 3 (XDS Data Ghana, Dun & Bradstreet, Hudson Price) | BoG CRB Register |
 | Adult population with credit history | 25% (4.5M scored) | Bureau aggregate data |
+| Mobile money subscribers | 22 million | NCA Statistics |
+| Female credit participation | 44% | Bureau aggregate data |
 
 ---
 

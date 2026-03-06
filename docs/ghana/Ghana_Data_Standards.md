@@ -213,7 +213,20 @@ SRN-ReportingDate-CreationDate-Version-FileType-Sequence.csv
 
 ---
 
-## 12. Identity Document Codes
+## 12. Facility Closure Reason Codes
+
+| Code | Reason |
+|------|--------|
+| NOR | Normal Closure |
+| EAR | Early Settlement by Subject |
+| WOF | Written Off |
+| TRF | Transferred to Another Institution |
+| REF | Refinanced |
+| OTH | Other |
+
+---
+
+## 13. Identity Document Codes
 
 | Code | Document | Format | Issuing Authority |
 |------|----------|--------|-------------------|
@@ -225,7 +238,7 @@ SRN-ReportingDate-CreationDate-Version-FileType-Sequence.csv
 
 ---
 
-## 13. Marital Status Codes
+## 14. Marital Status Codes
 
 | Code | Status |
 |------|--------|
@@ -237,7 +250,21 @@ SRN-ReportingDate-CreationDate-Version-FileType-Sequence.csv
 
 ---
 
-## 14. Proof of Address Codes
+## 15. Employment Type Codes (Appendix X)
+
+| Code | Employment Status |
+|------|------------------|
+| EMP | Employed |
+| SLF | Self-Employed |
+| UNE | Unemployed |
+| RET | Retired |
+| STD | Student |
+| HMK | Homemaker |
+| OTH | Other |
+
+---
+
+## 16. Proof of Address Codes (Appendix XI)
 
 | Code | Document Type |
 |------|--------------|
@@ -249,16 +276,16 @@ SRN-ReportingDate-CreationDate-Version-FileType-Sequence.csv
 
 ---
 
-## 15. Data Validation Rules
+## 17. Data Validation Rules
 
-### 15.1 Mandatory Field Checks
+### 17.1 Mandatory Field Checks
 - Ghana Card Number: Required for all individual submissions (from 2024)
 - Account Number: Must be unique per institution
 - Currency: Must be GHS for Ghana domestic facilities
 - Facility Type: Must match BoG Appendix I codes
 - Asset Classification: Must match BoG classification codes
 
-### 15.2 Cross-Field Validations
+### 17.2 Cross-Field Validations
 | Rule | Description |
 |------|-------------|
 | Days in arrears vs classification | Must be consistent with BoG thresholds |

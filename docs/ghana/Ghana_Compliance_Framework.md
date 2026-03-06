@@ -96,16 +96,35 @@
 | Full Name | Surname, first name, other names | Required |
 | Date of Birth | YYYYMMDD format | Age 18+ validation |
 | Gender | M/F | Required |
+| Marital Status | SNG/MRD/DIV/WID/SEP | BoG marital status codes |
+| Employment Type | EMP/SLF/UNE/RET/STD/HMK/OTH | BoG employment codes |
+| Mobile Money Number | +233 format | Ghana mobile format |
+| Proof of Address | WAT/ELE/BNK/TEN/OTH | Address verification type |
 | Account Number | Unique facility identifier | Required |
-| Facility Type Code | BoG Appendix I codes | Validated against code list |
+| Facility Type Code | BoG Appendix I codes (OVD/TML/MTG/CRC/LAS/MFL/TRF/LSE/GRT/LOC/BND/STL/GRP/OTH) | Validated against code list |
+| Purpose of Facility | BoG Appendix II codes (PER/BUS/AGR/EDU/HSG/VEH/TRD/MFG/INF/OTH) | Validated against code list |
 | Currency | ISO 4217 code | GHS required |
 | Original Amount | Facility amount at disbursement | Decimal(18,2) |
 | Current Balance | Outstanding balance | Decimal(18,2) |
+| Amount Overdue | Overdue amount | Decimal(18,2) |
+| Written-Off Amount | Amount written off (if applicable) | Decimal(18,2) |
 | Asset Classification | Current/OLEM/Substandard/Doubtful/Loss | BoG codes |
 | Days in Arrears | Number of days past due | Integer >= 0 |
 | Repayment Frequency | Daily/Weekly/Monthly/etc. | BoG frequency codes |
+| Collateral Type | BoG Appendix VI codes (PRO/VEH/EQP/STK/FXD/GOV/INV/REC/GRT/INS/UNS/OTH) | Validated against code list |
+| Collateral Value | Value of security | Decimal(18,2), required if not UNS |
 
-### 4.3 Asset Classification Rules (BoG BSD/2018/01)
+### 4.3 Credit Score Factors (Ghana Model)
+
+| Factor | Weight | Description |
+|--------|--------|-------------|
+| Payment History | 35% | On-time repayment track record |
+| Credit Utilization | 30% | Outstanding debt vs available credit |
+| Account Age | 15% | Length of credit history |
+| Credit Mix | 10% | Diversity of credit facility types |
+| New Inquiries | 10% | Recent credit applications |
+
+### 4.4 Asset Classification Rules (BoG BSD/2018/01)
 
 | Classification | Code | Days Past Due | Provision Rate |
 |---------------|------|---------------|----------------|

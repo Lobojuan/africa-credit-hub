@@ -152,6 +152,8 @@ X-API-Key: sim_gcb001_xxx...
   "region": "Greater Accra",
   "maritalStatus": "MRD",
   "mobileMoneyNumber": "+233244123456",
+  "employmentType": "EMP",
+  "proofOfAddress": "ELE",
   "country": "GH"
 }
 ```
@@ -168,6 +170,19 @@ X-API-Key: sim_gcb001_xxx...
 | gender | Yes | M or F | BoG CRB v1.1 |
 | phone | Yes | +233 format | BoG CRB v1.1 |
 | country | Yes | Must be "GH" | System enforcement |
+
+**Optional Ghana-Specific Fields:**
+
+| Field | Type | Values | Description |
+|-------|------|--------|-------------|
+| votersId | string | EC format | Electoral Commission voter's ID |
+| ssnit | string | Numeric | Social Security (SSNIT) number |
+| driversLicense | string | DVLA format | Driver's license number |
+| mobileMoneyNumber | string | +233 format | Mobile money-linked number |
+| maritalStatus | string | SNG/MRD/DIV/WID/SEP | BoG marital status codes |
+| employmentType | string | EMP/SLF/UNE/RET/STD/HMK/OTH | BoG employment type codes |
+| proofOfAddress | string | WAT/ELE/BNK/TEN/OTH | Address verification document type |
+| region | string | 16 Ghana regions | Greater Accra, Ashanti, etc. |
 
 ### 4.2 Submit Credit Account (GHS)
 
@@ -193,7 +208,8 @@ X-API-Key: sim_gcb001_xxx...
   "daysInArrears": 0,
   "amountOverdue": "0.00",
   "collateralType": "PRO",
-  "collateralValue": "120000.00"
+  "collateralValue": "120000.00",
+  "closureReason": null
 }
 ```
 
@@ -202,11 +218,13 @@ X-API-Key: sim_gcb001_xxx...
 | Field | Required | Validation | BoG Reference |
 |-------|----------|------------|---------------|
 | currency | Yes | Must be "GHS" for domestic | BoG CRB v1.1 |
-| facilityTypeCode | Yes | BoG Appendix I codes | BoG CRB v1.1, Section 4 |
+| facilityTypeCode | Yes | BoG Appendix I codes (14 types) | BoG CRB v1.1, Section 4 |
 | assetClassification | Yes | CUR/OLM/SUB/DBT/LSS | BSD/2018/01 |
 | daysInArrears | Yes | Integer >= 0 | BoG CRB v1.1, Section 5 |
-| purposeOfFacility | Yes | BoG Appendix II codes | BoG CRB v1.1, Section 4 |
-| repaymentFrequency | Yes | BoG Appendix III codes | BoG CRB v1.1, Section 4 |
+| purposeOfFacility | Yes | BoG Appendix II codes (10 types) | BoG CRB v1.1, Section 4 |
+| repaymentFrequency | Yes | BoG Appendix III codes (9 types) | BoG CRB v1.1, Section 4 |
+| collateralType | Yes | BoG Appendix VI codes (12 types) | BoG CRB v1.1, Section 6 |
+| closureReason | On closure | NOR/EAR/WOF/TRF/REF/OTH | BoG CRB v1.1, Section 7 |
 
 ### 4.3 Pull Credit Report (Requires Consent)
 
