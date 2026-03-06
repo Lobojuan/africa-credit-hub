@@ -17,8 +17,8 @@ export function OrgSwitcherProvider({ children }: { children: ReactNode }) {
     setSelectedOrgId(orgId);
     setSelectedOrgName(orgName);
     setGlobalOrgId(orgId);
-    queryClient.clear();
-    queryClient.invalidateQueries();
+    queryClient.removeQueries({ predicate: (q) => !q.observers.length });
+    queryClient.resetQueries();
   }, []);
 
   return (
