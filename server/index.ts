@@ -6,14 +6,8 @@ import helmet from "helmet";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
-import { execSync } from "child_process";
 
 const port = parseInt(process.env.PORT || "5000", 10);
-try {
-  execSync(`fuser -k -9 ${port}/tcp 2>/dev/null`, { stdio: "ignore", timeout: 3000 });
-  const { spawnSync } = require("child_process");
-  spawnSync("sleep", ["2"]);
-} catch {}
 
 const app = express();
 
