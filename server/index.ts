@@ -10,7 +10,9 @@ import { execSync } from "child_process";
 
 const port = parseInt(process.env.PORT || "5000", 10);
 try {
-  execSync(`fuser -k -9 ${port}/tcp 2>/dev/null`, { stdio: "ignore" });
+  execSync(`fuser -k -9 ${port}/tcp 2>/dev/null`, { stdio: "ignore", timeout: 3000 });
+  const { spawnSync } = require("child_process");
+  spawnSync("sleep", ["2"]);
 } catch {}
 
 const app = express();
@@ -164,7 +166,12 @@ process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 process.on("SIGHUP", () => { /* ignore hangup signal */ });
 process.on("SIGPIPE", () => { /* ignore broken pipe */ });
-process.on("uncaughtException", (err) => { console.error("Uncaught exception:", err); });
+process.on("uncaughtException", (err: NodeJS.ErrnoException) => {
+  console.error("Uncaught exception:", err);
+  if (err.code === "EADDRINUSE") {
+    process.exit(1);
+  }
+});
 process.on("unhandledRejection", (err) => { console.error("Unhandled rejection:", err); });
 
 (async () => {
