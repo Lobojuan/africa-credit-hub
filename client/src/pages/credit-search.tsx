@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SUPPORTED_COUNTRIES } from "@/lib/currency";
+import { isGhanaMode } from "@/lib/country-mode";
 import type { Borrower, Institution, CreditAccount } from "@shared/schema";
 import { getBorrowerAvatarUrl } from "@/lib/avatar";
 
@@ -80,25 +81,32 @@ export default function CreditSearchPage() {
           </div>
           <Button type="submit" data-testid="button-search">{t('search.searchBtn')}</Button>
         </div>
-        <div className="flex items-center gap-2">
-          <Globe className="w-4 h-4 text-muted-foreground shrink-0" />
-          <Select value={country} onValueChange={setCountry}>
-            <SelectTrigger className="w-full" data-testid="select-search-country">
-              <SelectValue placeholder={t('search.allCountries')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('search.allCountries')}</SelectItem>
-              {SUPPORTED_COUNTRIES.map(c => (
-                <SelectItem key={c.code} value={c.name}>{c.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {country && country !== "all" && (
-            <Button type="button" variant="ghost" size="sm" className="text-xs shrink-0" onClick={() => { setCountry(""); setActiveCountry(""); }} data-testid="button-clear-country">
-              {t('common.clear')}
-            </Button>
-          )}
-        </div>
+        {isGhanaMode() ? (
+          <div className="flex items-center gap-2">
+            <Globe className="w-4 h-4 text-muted-foreground shrink-0" />
+            <Input value="Ghana" disabled className="bg-muted" data-testid="select-search-country" />
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Globe className="w-4 h-4 text-muted-foreground shrink-0" />
+            <Select value={country} onValueChange={setCountry}>
+              <SelectTrigger className="w-full" data-testid="select-search-country">
+                <SelectValue placeholder={t('search.allCountries')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('search.allCountries')}</SelectItem>
+                {SUPPORTED_COUNTRIES.map(c => (
+                  <SelectItem key={c.code} value={c.name}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {country && country !== "all" && (
+              <Button type="button" variant="ghost" size="sm" className="text-xs shrink-0" onClick={() => { setCountry(""); setActiveCountry(""); }} data-testid="button-clear-country">
+                {t('common.clear')}
+              </Button>
+            )}
+          </div>
+        )}
       </form>
 
       {hasActiveSearch && (

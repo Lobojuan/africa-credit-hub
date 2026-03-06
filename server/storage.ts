@@ -99,7 +99,7 @@ export interface IStorage {
   getPaymentHistoryByAccount(creditAccountId: string): Promise<PaymentHistory[]>;
   createPaymentHistory(entry: InsertPaymentHistory): Promise<PaymentHistory>;
 
-  getInstitutions(page?: number, limit?: number, organizationId?: string): Promise<{ data: Institution[]; total: number }>;
+  getInstitutions(page?: number, limit?: number, organizationId?: string, country?: string): Promise<{ data: Institution[]; total: number }>;
   getInstitution(id: string): Promise<Institution | undefined>;
   createInstitution(inst: InsertInstitution): Promise<Institution>;
   updateInstitution(id: string, data: Partial<InsertInstitution>): Promise<Institution | undefined>;
@@ -114,7 +114,7 @@ export interface IStorage {
   getCreditReportLogsByBorrower(borrowerId: string): Promise<CreditReportLog[]>;
   createCreditReportLog(log: InsertCreditReportLog): Promise<CreditReportLog>;
 
-  getDashboardStats(organizationId?: string): Promise<{
+  getDashboardStats(organizationId?: string, country?: string): Promise<{
     totalBorrowers: number;
     totalAccounts: number;
     totalInquiries: number;
@@ -686,12 +686,15 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async getInstitutions(page: number = 1, limit: number = 50, organizationId?: string): Promise<{ data: Institution[]; total: number }> {
+  async getInstitutions(page: number = 1, limit: number = 50, organizationId?: string, country?: string): Promise<{ data: Institution[]; total: number }> {
     const safeLimit = Math.min(limit, 200);
     const offset = (page - 1) * safeLimit;
-    const orgFilter = organizationId ? eq(institutions.organizationId, organizationId) : undefined;
-    const [totalResult] = await db.select({ value: count() }).from(institutions).where(orgFilter);
-    const data = await db.select().from(institutions).where(orgFilter).orderBy(desc(institutions.createdAt)).limit(safeLimit).offset(offset);
+    const conditions = [];
+    if (organizationId) conditions.push(eq(institutions.organizationId, organizationId));
+    if (country) conditions.push(eq(institutions.country, country));
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const [totalResult] = await db.select({ value: count() }).from(institutions).where(whereClause);
+    const data = await db.select().from(institutions).where(whereClause).orderBy(desc(institutions.createdAt)).limit(safeLimit).offset(offset);
     return { data, total: totalResult.value };
   }
 
@@ -865,22 +868,35 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getDashboardStats(organizationId?: string) {
-    const orgBorrowerFilter = organizationId ? eq(borrowers.organizationId, organizationId) : undefined;
-    const orgAccFilter = organizationId ? eq(creditAccounts.organizationId, organizationId) : undefined;
+  async getDashboardStats(organizationId?: string, country?: string) {
+    const conditions: any[] = [];
+    if (organizationId) conditions.push(eq(borrowers.organizationId, organizationId));
+    if (country) conditions.push(eq(borrowers.country, country));
+    const borrowerFilter = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const ghanaBorrowerSubquery = country
+      ? sql`${creditAccounts.borrowerId} IN (SELECT id FROM borrowers WHERE country = ${country}${organizationId ? sql` AND organization_id = ${organizationId}` : sql``})`
+      : undefined;
+
+    const accConditions: any[] = [];
+    if (organizationId) accConditions.push(eq(creditAccounts.organizationId, organizationId));
+    if (ghanaBorrowerSubquery) accConditions.push(ghanaBorrowerSubquery);
+    const accFilter = accConditions.length > 0 ? and(...accConditions) : undefined;
+
     const orgApprovalFilter = organizationId ? eq(pendingApprovals.organizationId, organizationId) : undefined;
     const orgDisputeFilter = organizationId ? eq(disputes.organizationId, organizationId) : undefined;
 
-    const [borrowerCount] = await db.select({ value: count() }).from(borrowers).where(orgBorrowerFilter);
-    const [accountCount] = await db.select({ value: count() }).from(creditAccounts).where(orgAccFilter);
+    const [borrowerCount] = await db.select({ value: count() }).from(borrowers).where(borrowerFilter);
+    const [accountCount] = await db.select({ value: count() }).from(creditAccounts).where(accFilter);
 
-    const inqFilter = organizationId
-      ? sql`${creditInquiries.borrowerId} IN (SELECT id FROM borrowers WHERE organization_id = ${organizationId})`
-      : undefined;
+    const inqConditions: any[] = [];
+    if (country) inqConditions.push(sql`${creditInquiries.borrowerId} IN (SELECT id FROM borrowers WHERE country = ${country}${organizationId ? sql` AND organization_id = ${organizationId}` : sql``})`);
+    else if (organizationId) inqConditions.push(sql`${creditInquiries.borrowerId} IN (SELECT id FROM borrowers WHERE organization_id = ${organizationId})`);
+    const inqFilter = inqConditions.length > 0 ? and(...inqConditions) : undefined;
     const [inquiryCount] = await db.select({ value: count() }).from(creditInquiries).where(inqFilter);
 
     const outstandingStatusFilter = or(eq(creditAccounts.status, "current"), eq(creditAccounts.status, "delinquent"), eq(creditAccounts.status, "restructured"));
-    const outstandingFilter = orgAccFilter ? and(outstandingStatusFilter, orgAccFilter) : outstandingStatusFilter;
+    const outstandingFilter = accFilter ? and(outstandingStatusFilter, accFilter) : outstandingStatusFilter;
 
     const [outstanding] = await db.select({
       value: sql<string>`COALESCE(SUM(${creditAccounts.currentBalance}::numeric), 0)::text`
@@ -890,10 +906,10 @@ export class DatabaseStorage implements IStorage {
       total: sql<string>`COALESCE(SUM(${creditAccounts.currentBalance}::numeric), 0)::text`,
     }).from(creditAccounts).where(outstandingFilter).groupBy(creditAccounts.currency);
 
-    const delFilter = orgAccFilter ? and(eq(creditAccounts.status, "delinquent"), orgAccFilter) : eq(creditAccounts.status, "delinquent");
+    const delFilter = accFilter ? and(eq(creditAccounts.status, "delinquent"), accFilter) : eq(creditAccounts.status, "delinquent");
     const [delinquent] = await db.select({ value: count() }).from(creditAccounts).where(delFilter);
 
-    const defFilter = orgAccFilter ? and(eq(creditAccounts.status, "default"), orgAccFilter) : eq(creditAccounts.status, "default");
+    const defFilter = accFilter ? and(eq(creditAccounts.status, "default"), accFilter) : eq(creditAccounts.status, "default");
     const [defaulted] = await db.select({ value: count() }).from(creditAccounts).where(defFilter);
 
     const pendFilter = orgApprovalFilter ? and(eq(pendingApprovals.status, "pending"), orgApprovalFilter) : eq(pendingApprovals.status, "pending");

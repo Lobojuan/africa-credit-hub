@@ -249,7 +249,8 @@ export default function RegulatoryCompliancePage() {
   }, [searchTerm, categoryFilter]);
 
   const filteredCountries = useMemo(() => {
-    return AFRICAN_REGULATORY_DATA.filter((c) => {
+    const baseData = isGhanaMode() ? AFRICAN_REGULATORY_DATA.filter(c => c.name === "Ghana") : AFRICAN_REGULATORY_DATA;
+    return baseData.filter((c) => {
       const matchesSearch = searchTerm === "" ||
         c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.centralBank.toLowerCase().includes(searchTerm.toLowerCase());
@@ -266,11 +267,12 @@ export default function RegulatoryCompliancePage() {
   const stats = useMemo(() => {
     const total = SRS_REQUIREMENTS.length;
     const compliant = SRS_REQUIREMENTS.filter((r) => r.status === "compliant").length;
-    const totalCountries = AFRICAN_REGULATORY_DATA.length;
-    const dpEnacted = AFRICAN_REGULATORY_DATA.filter((c) => c.dataProtectionStatus === "enacted").length;
-    const dpDraft = AFRICAN_REGULATORY_DATA.filter((c) => c.dataProtectionStatus === "draft").length;
-    const dpNone = AFRICAN_REGULATORY_DATA.filter((c) => c.dataProtectionStatus === "none").length;
-    const withBureau = AFRICAN_REGULATORY_DATA.filter((c) => !c.creditBureauFramework.includes("No formal")).length;
+    const regData = isGhanaMode() ? AFRICAN_REGULATORY_DATA.filter(c => c.name === "Ghana") : AFRICAN_REGULATORY_DATA;
+    const totalCountries = regData.length;
+    const dpEnacted = regData.filter((c) => c.dataProtectionStatus === "enacted").length;
+    const dpDraft = regData.filter((c) => c.dataProtectionStatus === "draft").length;
+    const dpNone = regData.filter((c) => c.dataProtectionStatus === "none").length;
+    const withBureau = regData.filter((c) => !c.creditBureauFramework.includes("No formal")).length;
     return { total, compliant, totalCountries, dpEnacted, dpDraft, dpNone, withBureau };
   }, []);
 
