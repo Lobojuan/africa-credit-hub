@@ -81,9 +81,6 @@ function getOrgScope(req: Request): string | undefined {
   return req.session?.organizationId || undefined;
 }
 
-function getGhanaCountry(): string | undefined {
-  return isGhanaMode() ? "Ghana" : undefined;
-}
 
 const apiUsageTracker = new Map<string, number>();
 
@@ -491,18 +488,7 @@ export async function registerRoutes(
   app.get("/api/dashboard/stats", async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const ghanaCountry = isGhanaMode() ? "Ghana" : undefined;
-      const stats = await storage.getDashboardStats(orgId, ghanaCountry);
-      if (isGhanaMode() && stats.outstandingByCurrency) {
-        const allowedCurrencies = ["GHS", "USD", "EUR"];
-        stats.outstandingByCurrency = stats.outstandingByCurrency.filter(
-          (c: { currency: string }) => allowedCurrencies.includes(c.currency)
-        );
-        const filteredTotal = stats.outstandingByCurrency.reduce(
-          (sum: number, c: { total: string }) => sum + parseFloat(c.total || "0"), 0
-        );
-        stats.totalOutstanding = filteredTotal.toFixed(2);
-      }
+      const stats = await storage.getDashboardStats(orgId);
       res.json(stats);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -512,8 +498,7 @@ export async function registerRoutes(
   app.get("/api/dashboard/trends", requireAuth, async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const ghanaCountry = isGhanaMode() ? "Ghana" : undefined;
-      const stats = await storage.getDashboardStats(orgId, ghanaCountry);
+      const stats = await storage.getDashboardStats(orgId);
 
       function generateTrend(currentValue: number): number[] {
         const points: number[] = [];
@@ -545,7 +530,7 @@ export async function registerRoutes(
   app.get("/api/dashboard/details/:type", async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const details = await storage.getDashboardDetails(req.params.type, orgId, getGhanaCountry());
+      const details = await storage.getDashboardDetails(req.params.type, orgId);
       res.json(details);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -555,10 +540,9 @@ export async function registerRoutes(
   app.get("/api/dashboard/chart-data", requireAuth, async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const ghanaCountry = isGhanaMode() ? "Ghana" : undefined;
-      const stats = await storage.getDashboardStats(orgId, ghanaCountry);
+      const stats = await storage.getDashboardStats(orgId);
 
-      const allAccounts = await storage.getAllCreditAccounts(orgId, ghanaCountry);
+      const allAccounts = await storage.getAllCreditAccounts(orgId);
       const statusMap: Record<string, number> = {};
       const typeMap: Record<string, number> = {};
       for (const a of allAccounts) {
@@ -676,9 +660,8 @@ export async function registerRoutes(
     try {
       const orgId = getOrgScope(req);
       const search = req.query.search as string;
-      const country = req.query.country as string || (isGhanaMode() ? "Ghana" : undefined);
-      if (search || country) {
-        const data = await storage.searchBorrowers(search || "", country || undefined, orgId);
+      if (search) {
+        const data = await storage.searchBorrowers(search, orgId);
         res.json(data);
       } else {
         const page = Math.max(1, parseInt(req.query.page as string) || 1);
@@ -695,11 +678,10 @@ export async function registerRoutes(
     try {
       const orgId = getOrgScope(req);
       const query = (req.query.q as string) || "";
-      const country = (req.query.country as string) || (isGhanaMode() ? "Ghana" : undefined);
-      if (!query && !country) {
+      if (!query) {
         return res.json({ borrowers: [], institutions: [], creditAccounts: [] });
       }
-      const results = await storage.globalSearch(query, country, orgId);
+      const results = await storage.globalSearch(query, orgId);
       res.json(results);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -864,7 +846,7 @@ export async function registerRoutes(
       const borrowerId = req.query.borrowerId as string;
       const result = borrowerId
         ? await storage.getCreditAccountsByBorrower(borrowerId)
-        : await storage.getAllCreditAccounts(orgId, getGhanaCountry());
+        : await storage.getAllCreditAccounts(orgId);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -931,7 +913,7 @@ export async function registerRoutes(
       const orgId = getOrgScope(req);
       const result = borrowerId
         ? await storage.getCreditInquiriesByBorrower(borrowerId)
-        : await storage.getAllCreditInquiries(orgId, getGhanaCountry());
+        : await storage.getAllCreditInquiries(orgId);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -1108,7 +1090,7 @@ export async function registerRoutes(
   app.get("/api/disputes", async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const disputeList = await storage.getDisputes(orgId, getGhanaCountry());
+      const disputeList = await storage.getDisputes(orgId);
       res.json(disputeList);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -1445,7 +1427,7 @@ export async function registerRoutes(
       const orgId = getOrgScope(req);
       const result = borrowerId
         ? await storage.getCourtJudgmentsByBorrower(borrowerId)
-        : await storage.getAllCourtJudgments(orgId, getGhanaCountry());
+        : await storage.getAllCourtJudgments(orgId);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -1473,7 +1455,7 @@ export async function registerRoutes(
       const orgId = getOrgScope(req);
       const result = borrowerId
         ? await storage.getConsentRecordsByBorrower(borrowerId)
-        : await storage.getAllConsentRecords(orgId, getGhanaCountry());
+        : await storage.getAllConsentRecords(orgId);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -1538,8 +1520,7 @@ export async function registerRoutes(
       const page = Math.max(1, parseInt(req.query.page as string) || 1);
       const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50));
       const orgId = getOrgScope(req);
-      const ghanaCountry = isGhanaMode() ? "Ghana" : undefined;
-      const result = await storage.getInstitutions(page, limit, orgId, ghanaCountry);
+      const result = await storage.getInstitutions(page, limit, orgId);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -1619,7 +1600,7 @@ export async function registerRoutes(
   app.get("/api/credit-reports/logs", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const logs = await storage.getCreditReportLogs(orgId, getGhanaCountry());
+      const logs = await storage.getCreditReportLogs(orgId);
       res.json(logs);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -2043,7 +2024,7 @@ export async function registerRoutes(
 
       const results: any[] = [];
       for (const id of identifiers) {
-        const borrowersFound = await storage.searchBorrowers(id, getGhanaCountry());
+        const borrowersFound = await storage.searchBorrowers(id);
         if (borrowersFound.length > 0) {
           const borrower = borrowersFound[0];
           const accounts = await storage.getCreditAccountsByBorrower(borrower.id);
@@ -2077,11 +2058,8 @@ export async function registerRoutes(
       const format = (req.query.format as string) || "csv";
       const type = (req.query.type as string) || "portfolio";
 
-      const accounts = await storage.getAllCreditAccounts(orgId, getGhanaCountry());
-      const ghanaCountry = getGhanaCountry();
-      const borrowersList = ghanaCountry
-        ? await storage.searchBorrowers("", ghanaCountry, orgId)
-        : (await storage.getBorrowers(1, 200, orgId)).data;
+      const accounts = await storage.getAllCreditAccounts(orgId);
+      const borrowersList = (await storage.getBorrowers(1, 200, orgId)).data;
 
       if (format === "xlsx") {
         const ExcelJS = (await import("exceljs")).default;
@@ -2185,15 +2163,12 @@ export async function registerRoutes(
   app.get("/api/reports/regulatory", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const gc = getGhanaCountry();
-      const accounts = await storage.getAllCreditAccounts(orgId, gc);
-      const borrowersList = gc
-        ? await storage.searchBorrowers("", gc, orgId)
-        : (await storage.getBorrowers(1, 200, orgId)).data;
+      const accounts = await storage.getAllCreditAccounts(orgId);
+      const borrowersList = (await storage.getBorrowers(1, 200, orgId)).data;
       const totalBorrowers = borrowersList.length;
-      const disputeList = await storage.getDisputes(orgId, gc);
+      const disputeList = await storage.getDisputes(orgId);
       const approvals = await storage.getPendingApprovals(orgId);
-      const { data: instList, total: totalInstitutions } = await storage.getInstitutions(1, 200, orgId, gc);
+      const { data: instList, total: totalInstitutions } = await storage.getInstitutions(1, 200, orgId);
 
       const totalOutstanding = accounts.reduce((sum, a) => sum + parseFloat(a.currentBalance || "0"), 0);
       const nplAccounts = accounts.filter(a => a.status === "delinquent" || a.status === "default" || a.status === "written_off");
@@ -2689,14 +2664,14 @@ export async function registerRoutes(
 
   app.get("/api/admin/organizations/list", requireAuth, requireSuperAdmin, async (_req, res) => {
     try {
-      const orgs = await storage.getOrganizations(getGhanaCountry());
+      const orgs = await storage.getOrganizations();
       res.json(orgs.map(o => ({ id: o.id, name: o.name, type: o.type, status: o.status, country: o.country, subscriptionTier: o.subscriptionTier })));
     } catch (e: any) { res.status(500).json({ message: e.message }); }
   });
 
   app.get("/api/admin/organizations", requireAuth, requireSuperAdmin, async (_req, res) => {
     try {
-      const orgs = await storage.getOrganizations(getGhanaCountry());
+      const orgs = await storage.getOrganizations();
       const orgsWithStats = await Promise.all(orgs.map(async (org) => {
         const users = await storage.getUsers(org.id);
         const stats = await storage.getDashboardStats(org.id);
@@ -2730,9 +2705,9 @@ export async function registerRoutes(
       const org = await storage.getOrganization(req.params.id);
       if (!org) return res.status(404).json({ message: "Organization not found" });
       const users = await storage.getUsers(org.id);
-      const stats = await storage.getDashboardStats(org.id, getGhanaCountry());
+      const stats = await storage.getDashboardStats(org.id);
       const billing = await storage.getBillingRecords(org.id);
-      const disputes = await storage.getDisputes(org.id, getGhanaCountry());
+      const disputes = await storage.getDisputes(org.id);
       const totalBilled = billing.reduce((s, b) => s + parseFloat(b.amount || "0"), 0);
       const totalPaid = billing.filter(b => b.status === "paid").reduce((s, b) => s + parseFloat(b.amount || "0"), 0);
       const totalPending = billing.filter(b => b.status === "pending").reduce((s, b) => s + parseFloat(b.amount || "0"), 0);
@@ -2849,7 +2824,7 @@ export async function registerRoutes(
 
   app.get("/api/admin/analytics", requireAuth, requireSuperAdmin, async (_req, res) => {
     try {
-      const orgs = await storage.getOrganizations(getGhanaCountry());
+      const orgs = await storage.getOrganizations();
       const allBilling: any[] = [];
       for (const org of orgs) {
         const billing = await storage.getBillingRecords(org.id);
@@ -2936,7 +2911,7 @@ export async function registerRoutes(
 
   app.get("/api/admin/platform-stats", requireAuth, requireSuperAdmin, async (_req, res) => {
     try {
-      const orgs = await storage.getOrganizations(getGhanaCountry());
+      const orgs = await storage.getOrganizations();
       const allUsers = await storage.getUsers();
       const globalStats = await storage.getDashboardStats();
       res.json({
@@ -3275,18 +3250,29 @@ async function seedOrganizations() {
   const existing = await storage.getOrganizations();
   if (existing.length > 0) return;
 
+  const ghanaMode = isGhanaMode();
+
   const simOrg = await storage.createOrganization({
     name: "Systems In Motion",
     slug: "sim",
     type: "other",
     status: "active",
-    country: "Ethiopia",
+    country: ghanaMode ? "Ghana" : "Ethiopia",
     contactEmail: "admin@systemsinmotion.com",
     subscriptionTier: "enterprise",
     maxUsers: 100,
   });
 
-  const nbeOrg = await storage.createOrganization({
+  const nbeOrg = await storage.createOrganization(ghanaMode ? {
+    name: "Bank of Ghana",
+    slug: "bog",
+    type: "bank",
+    status: "active",
+    country: "Ghana",
+    contactEmail: "info@bog.gov.gh",
+    subscriptionTier: "enterprise",
+    maxUsers: 50,
+  } : {
     name: "National Bank of Ethiopia",
     slug: "nbe",
     type: "bank",
@@ -3297,7 +3283,16 @@ async function seedOrganizations() {
     maxUsers: 50,
   });
 
-  const mpesaOrg = await storage.createOrganization({
+  const mpesaOrg = await storage.createOrganization(ghanaMode ? {
+    name: "GCB Bank",
+    slug: "gcb",
+    type: "bank",
+    status: "active",
+    country: "Ghana",
+    contactEmail: "info@gcbbank.com.gh",
+    subscriptionTier: "professional",
+    maxUsers: 30,
+  } : {
     name: "M-Pesa Financial Services",
     slug: "mpesa",
     type: "fintech",
@@ -3308,7 +3303,16 @@ async function seedOrganizations() {
     maxUsers: 30,
   });
 
-  const insureOrg = await storage.createOrganization({
+  const insureOrg = await storage.createOrganization(ghanaMode ? {
+    name: "Ecobank Ghana",
+    slug: "ecobank",
+    type: "bank",
+    status: "active",
+    country: "Ghana",
+    contactEmail: "info@ecobank.com.gh",
+    subscriptionTier: "standard",
+    maxUsers: 20,
+  } : {
     name: "AfrInsure Group",
     slug: "afrinsure",
     type: "insurance",

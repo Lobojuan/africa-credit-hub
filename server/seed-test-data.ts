@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { borrowers, creditAccounts, courtJudgments, consentRecords, paymentHistory, institutions, billingRecords, disputes, users } from "@shared/schema";
 import { count, like, eq } from "drizzle-orm";
+import { isGhanaMode } from "./country-mode";
 
 const countryData: Record<string, {
   currency: string; idPrefix: string;
@@ -632,7 +633,7 @@ function futureDate(yearsAhead: number): string {
 function padId(n: number): string { return String(n).padStart(5, "0"); }
 
 export async function seedTestData() {
-  const allCountries = Object.keys(countryData);
+  const allCountries = isGhanaMode() ? ["Ghana"] : Object.keys(countryData);
 
   const MIN_BORROWERS_PER_COUNTRY = 30;
   const TARGET_INDIVIDUALS = 24;
