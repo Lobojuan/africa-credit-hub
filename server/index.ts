@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import compression from "compression";
+import helmet from "helmet";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
@@ -12,6 +13,10 @@ app.get("/health", (_req, res) => {
   res.status(200).send("ok");
 });
 
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+}));
 app.use(compression());
 const httpServer = createServer(app);
 
@@ -68,7 +73,7 @@ app.use(
     store: new MemoryStore({
       checkPeriod: 86400000,
     }),
-    secret: process.env.SESSION_SECRET || "credit-registry-dev-secret",
+    secret: process.env.SESSION_SECRET!,
     resave: false,
     saveUninitialized: false,
     proxy: process.env.NODE_ENV === "production",
@@ -189,7 +194,9 @@ process.on("unhandledRejection", (err) => { console.error("Unhandled rejection:"
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    const message = status >= 500 && process.env.NODE_ENV === "production"
+      ? "Internal Server Error"
+      : err.message || "Internal Server Error";
 
     console.error("Internal Server Error:", err);
 

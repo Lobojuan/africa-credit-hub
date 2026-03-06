@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Redirect } from "wouter";
+import DOMPurify from "isomorphic-dompurify";
 import {
   FileText, Download, Eye, Shield, TestTube, Database, ScrollText,
   Building2, Scale, X, Code2, Network, Search, ChevronRight
@@ -385,7 +386,7 @@ export default function GhanaDocsPage() {
                   prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-[10px] sm:prose-code:text-xs
                   prose-pre:bg-muted prose-pre:border prose-pre:border-border prose-pre:text-[10px] sm:prose-pre:text-xs prose-pre:overflow-x-auto
                   [&_table]:block [&_table]:overflow-x-auto [&_table]:w-full [&_table]:whitespace-nowrap sm:[&_table]:whitespace-normal"
-                dangerouslySetInnerHTML={{ __html: docHtml }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(docHtml) }}
                 data-testid="doc-viewer-content"
               />
             )}

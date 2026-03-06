@@ -7,7 +7,7 @@ import {
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.SESSION_SECRET || "credit-registry-jwt-secret";
+const JWT_SECRET = process.env.SESSION_SECRET! + "-jwt-ext";
 const TOKEN_EXPIRY = "1h";
 
 function hashApiKey(key: string): string {

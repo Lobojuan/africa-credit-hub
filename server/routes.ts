@@ -17,8 +17,25 @@ import fs from "fs";
 import path from "path";
 import * as OTPAuth from "otpauth";
 import multer from "multer";
+import rateLimit from "express-rate-limit";
 import { sendWelcomeEmail, sendBillingNotification, sendDisputeNotification } from "./email";
 import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport } from "./ai";
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  message: { message: "Too many login attempts. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  message: { message: "Too many requests. Please slow down." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 function stripPassword(user: any) {
   const { password, ...safe } = user;
@@ -135,7 +152,7 @@ export async function registerRoutes(
     res.json({ status: "ok" });
   });
 
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/auth/login", loginLimiter, async (req, res) => {
     try {
       const { username, password } = req.body;
       if (!username || !password) {
@@ -392,26 +409,28 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/auth/auto-login/:token", async (req, res) => {
-    const BYPASS_TOKEN = "sim-review-2026-x7k9m";
-    if (req.params.token !== BYPASS_TOKEN) {
-      return res.status(404).json({ message: "Not found" });
-    }
-    try {
-      const admin = await storage.getUserByUsername("admin");
-      if (!admin) return res.status(500).json({ message: "Admin user not found" });
-      req.session.userId = admin.id;
-      req.session.userRole = admin.role;
-      req.session.organizationId = admin.organizationId || undefined;
-      req.session.lastActivity = Date.now();
-      req.session.save((err) => {
-        if (err) return res.status(500).json({ message: "Session save failed" });
-        res.redirect("/");
-      });
-    } catch (e: any) {
-      res.status(500).json({ message: e.message });
-    }
-  });
+  if (process.env.NODE_ENV !== "production") {
+    app.get("/api/auth/auto-login/:token", loginLimiter, async (req, res) => {
+      const BYPASS_TOKEN = "sim-review-2026-x7k9m";
+      if (req.params.token !== BYPASS_TOKEN) {
+        return res.status(404).json({ message: "Not found" });
+      }
+      try {
+        const admin = await storage.getUserByUsername("admin");
+        if (!admin) return res.status(500).json({ message: "Admin user not found" });
+        req.session.userId = admin.id;
+        req.session.userRole = admin.role;
+        req.session.organizationId = admin.organizationId || undefined;
+        req.session.lastActivity = Date.now();
+        req.session.save((err) => {
+          if (err) return res.status(500).json({ message: "Session save failed" });
+          res.redirect("/");
+        });
+      } catch (e: any) {
+        res.status(500).json({ message: "Auto-login failed" });
+      }
+    });
+  }
 
   app.get("/api/auth/me", async (req, res) => {
     if (!req.session?.userId) {
@@ -457,7 +476,7 @@ export async function registerRoutes(
     fs.createReadStream(filePath).pipe(res);
   });
 
-  app.use("/api", (req, res, next) => {
+  app.use("/api", apiLimiter, (req, res, next) => {
     if (req.path.startsWith("/auth") || req.path.startsWith("/external") || req.path.startsWith("/docs")) return next();
     requireAuth(req, res, next);
   });

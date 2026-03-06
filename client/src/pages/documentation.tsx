@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Redirect } from "wouter";
+import DOMPurify from "isomorphic-dompurify";
 import { FileText, Download, Eye, ArrowLeft, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -231,7 +232,7 @@ export default function DocumentationPage() {
                   prose-code:text-[10px] sm:prose-code:text-xs prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded
                   prose-pre:bg-muted prose-pre:text-[10px] sm:prose-pre:text-xs prose-pre:overflow-x-auto
                   [&_table]:block [&_table]:overflow-x-auto [&_table]:w-full [&_table]:whitespace-nowrap sm:[&_table]:whitespace-normal"
-                dangerouslySetInnerHTML={{ __html: docHtml }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(docHtml) }}
                 data-testid="doc-content"
               />
             )}
