@@ -237,6 +237,13 @@ process.stderr.write = function (...args: any[]) {
 } as any;
 
 (async () => {
+  try {
+    const { cleanupNonGhanaData } = await import("./ghana-cleanup");
+    await cleanupNonGhanaData();
+  } catch (e) {
+    console.error("Ghana cleanup error (non-fatal):", e);
+  }
+
   const { seedDatabase } = await import("./seed");
   try {
     await seedDatabase();
