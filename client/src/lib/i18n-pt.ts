@@ -31,7 +31,7 @@ const pt = {
     versionHistory: "Histórico de Versões",
     brandTitle: "Registo de Crédito",
     brandSubtitle: "Carlson Capital & Systems In Motion Limited™",
-    version: "v1.2 — Registo de Crédito",
+    version: "v2.0 — Registo de Crédito",
   },
   login: {
     title: "Sistema de Registo de Crédito",

@@ -370,9 +370,9 @@ const TECH_ARCHITECTURE = [
 ];
 
 const ROADMAP_ITEMS = [
-  { phase: "Current", title: "CDH v1.2", items: ["Full 54-country coverage", "42+ currency support", "Maker-checker workflows", "Visual analytics dashboard", "AI chatbot assistant"], status: "live" },
-  { phase: "Next", title: "CDH v1.3", items: ["Real-time WebSocket notifications", "Mobile-responsive PWA", "Biometric authentication", "Advanced ML credit scoring", "Blockchain audit anchoring"], status: "planned" },
-  { phase: "Future", title: "CDH v2.0", items: ["Open Banking API gateway", "RegTech automation suite", "Predictive default modeling", "Digital identity integration", "Pan-African credit passport"], status: "vision" },
+  { phase: "Current", title: "CDH v2.0", items: ["Full 54-country coverage", "42+ currency support", "Maker-checker workflows", "Visual analytics dashboard", "AI chatbot assistant"], status: "live" },
+  { phase: "Next", title: "CDH v2.1", items: ["Real-time WebSocket notifications", "Mobile-responsive PWA", "Biometric authentication", "Advanced ML credit scoring", "Blockchain audit anchoring"], status: "planned" },
+  { phase: "Future", title: "CDH v3.0", items: ["Open Banking API gateway", "RegTech automation suite", "Predictive default modeling", "Digital identity integration", "Pan-African credit passport"], status: "vision" },
 ];
 
 export default function InvestorLandingPage() {
@@ -382,8 +382,8 @@ export default function InvestorLandingPage() {
 
   useEffect(() => {
     document.title = isGhanaMode() 
-      ? "Ghana Credit Registry System | v1.2 — Carlson Capital & Systems In Motion Limited"
-      : "Pan-African Credit Registry System | CDH v1.2 — Carlson Capital & Systems In Motion Limited";
+      ? "Ghana Credit Registry System | v2.0 — Carlson Capital & Systems In Motion Limited"
+      : "Pan-African Credit Registry System | CDH v2.0 — Carlson Capital & Systems In Motion Limited";
     const meta = document.querySelector('meta[name="description"]');
     const content = "The first SRS-compliant credit information sharing platform covering all 54 African countries with 42+ currencies, 5 AU languages, and enterprise-grade security.";
     if (meta) {
@@ -430,7 +430,7 @@ export default function InvestorLandingPage() {
             </div>
             <div>
               <span className="font-bold text-sm tracking-tight">CDH Credit Registry</span>
-              <span className="text-[10px] text-muted-foreground ml-1.5">v1.2</span>
+              <span className="text-[10px] text-muted-foreground ml-1.5">v2.0</span>
             </div>
           </div>
           <div className="flex items-center gap-1 sm:gap-2">
@@ -476,7 +476,7 @@ export default function InvestorLandingPage() {
         <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 text-center">
           <Badge variant="secondary" className="mb-6 text-xs px-3 py-1 font-medium" data-testid="badge-version">
             <Star className="w-3 h-3 mr-1" />
-            Cross-Jurisdictional CDH v1.2 — Carlson Capital & Systems In Motion Limited
+            Cross-Jurisdictional CDH v2.0 — Carlson Capital & Systems In Motion Limited
           </Badge>
 
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1] mb-6">
@@ -575,7 +575,7 @@ export default function InvestorLandingPage() {
           <div className="mt-10 text-center">
             <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-primary/30 bg-primary/5">
               <Target className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium">CDH v1.2 solves all four challenges in a single, unified platform.</span>
+              <span className="text-sm font-medium">CDH v2.0 solves all four challenges in a single, unified platform.</span>
             </div>
           </div>
         </div>
@@ -650,7 +650,7 @@ export default function InvestorLandingPage() {
               Who Benefits and How
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base">
-              CDH v1.2 serves every participant in the African credit ecosystem —
+              CDH v2.0 serves every participant in the African credit ecosystem —
               from central bank supervisors to microfinance lenders.
             </p>
           </div>
@@ -691,7 +691,7 @@ export default function InvestorLandingPage() {
           <div className="text-center mb-14">
             <Badge variant="outline" className="mb-4 text-xs">Competitive Advantage</Badge>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-4">
-              Why CDH v1.2 Stands Alone
+              Why CDH v2.0 Stands Alone
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base">
               No other credit bureau platform addresses Africa's unique challenges at this scale,
@@ -728,7 +728,7 @@ export default function InvestorLandingPage() {
               Production-Ready, Not a Prototype
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-sm">
-              CDH v1.2 ships with a fully seeded database for realistic evaluation.
+              CDH v2.0 ships with a fully seeded database for realistic evaluation.
               Every feature works with real data — not mockups or placeholders.
             </p>
           </div>
@@ -827,7 +827,7 @@ export default function InvestorLandingPage() {
               Vision & Growth Trajectory
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base">
-              CDH v1.2 is a production-ready foundation with a clear path to becoming
+              CDH v2.0 is a production-ready foundation with a clear path to becoming
               the definitive credit infrastructure layer for the African continent.
             </p>
           </div>
@@ -925,7 +925,7 @@ export default function InvestorLandingPage() {
               </div>
               <span>Carlson Capital & Systems In Motion Limited</span>
             </div>
-            <p>Cross-Jurisdictional Central Data Hub & Credit Registry System v1.2</p>
+            <p>Cross-Jurisdictional Central Data Hub & Credit Registry System v2.0</p>
             <p>Confidential & Proprietary</p>
           </div>
         </div>

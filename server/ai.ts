@@ -125,7 +125,7 @@ export async function chatWithAI(messages: { role: string; content: string }[], 
   const defaultCurrency = getDefaultCurrencyCode();
   const systemMessage = {
     role: "system" as const,
-    content: `You are the Pan-African Credit Registry AI Assistant, an expert in credit bureau operations, African financial regulations, and the Credit Data Hub (CDH v1.2) platform.
+    content: `You are the Pan-African Credit Registry AI Assistant, an expert in credit bureau operations, African financial regulations, and the Credit Data Hub (CDH v2.0) platform.
 
 Your knowledge includes:
 - Credit scoring methodologies (300-850 scale)

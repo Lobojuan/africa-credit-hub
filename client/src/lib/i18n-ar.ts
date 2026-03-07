@@ -31,7 +31,7 @@ const ar: Record<string, any> = {
     versionHistory: "سجل الإصدارات",
     brandTitle: "سجل الائتمان",
     brandSubtitle: "Carlson Capital & Systems In Motion Limited™",
-    version: "v1.2 — سجل الائتمان",
+    version: "v2.0 — سجل الائتمان",
   },
   login: {
     title: "نظام سجل الائتمان",

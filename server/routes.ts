@@ -1702,7 +1702,7 @@ export async function registerRoutes(
         doc.fill("#ffffff").fontSize(14).font("Helvetica-Bold")
           .text("Comprehensive Credit Information Report", 50, 52, { width: W - 140 });
         doc.fontSize(8).font("Helvetica").fill("#cccccc")
-          .text("Cross-Jurisdictional Central Data Hub v1.2 | Carlson Capital & Systems In Motion Limited", 50, 72, { width: W - 140 });
+          .text("Cross-Jurisdictional Central Data Hub v2.0 | Carlson Capital & Systems In Motion Limited", 50, 72, { width: W - 140 });
         doc.fill("#ffffff").fontSize(7).font("Helvetica")
           .text("ORDER NUMBER", W - 90, 52, { width: 80, align: "right" });
         doc.fontSize(9).font("Helvetica-Bold")
@@ -1976,7 +1976,7 @@ export async function registerRoutes(
         .text("The information in this report has been compiled from data submitted by participating financial institutions. While Carlson Capital & Systems In Motion Limited endeavor to ensure accuracy, we do not accept responsibility for any loss or damage resulting from this report.", 40, doc.y, { width: W, align: "center" });
       doc.moveDown(0.3);
       doc.fontSize(6).font("Helvetica").fill(LIGHT)
-        .text("Cross-Jurisdictional Central Data Hub & Credit Registry System v1.2 | Carlson Capital & Systems In Motion Limited | Confidential & Proprietary", 40, doc.y, { width: W, align: "center" });
+        .text("Cross-Jurisdictional Central Data Hub & Credit Registry System v2.0 | Carlson Capital & Systems In Motion Limited | Confidential & Proprietary", 40, doc.y, { width: W, align: "center" });
 
       doc.end();
       await new Promise<void>((resolve, reject) => {

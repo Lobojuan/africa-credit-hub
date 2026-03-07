@@ -40,7 +40,7 @@ const en = {
     organizations: "Organizations",
     brandTitle: "Credit Registry",
     brandSubtitle: "Carlson Capital & Systems In Motion Limited™",
-    version: "v1.2 — Credit Registry",
+    version: "v2.0 — Credit Registry",
   },
   login: {
     title: "Credit Registry System",
@@ -1075,9 +1075,22 @@ const en = {
   versionHistory: {
     title: "Version History",
     subtitle: "Release notes and changelog for the Credit Registry System",
-    v12: {
+    v20: {
       date: "March 2026",
       tag: "Current",
+      description: "Bank of Ghana CRB v1.1 full compliance with pipe-delimited CSV export engine, 6 regulatory file types, and BoG code catalogs.",
+      f1: { title: "BoG CRB Export", desc: "Pipe-delimited CSV export for all 6 BoG file types: CONC, BUSC, CONJ, BUSJ, COND, BUSD" },
+      f2: { title: "Schema Expansion", desc: "65+ new BoG-compliant fields across borrowers, credit accounts, court judgments, and new dishonoured cheques table" },
+      f3: { title: "Code Catalogs", desc: "Complete BoG appendix codes: facility types, repayment frequencies, asset classifications, sector/sub-sector codes" },
+      f4: { title: "Compliance Docs", desc: "Field-by-field BoG CRB v1.1 compliance mapping documentation with validation rules" },
+      f5: { title: "Org-Scoped Export", desc: "Organization-scoped data export with SRN-based file naming per BoG specification" },
+      f6: { title: "Multi-Tenant Export", desc: "Dishonoured cheques storage, court judgment BoG fields, and institution-level export isolation" },
+      f7: { title: "Regulatory Reporting", desc: "YYYYMMDD dates, whole-number amounts, correction indicators, and payment history profiles" },
+      f8: { title: "Overdue Buckets", desc: "7-tier overdue aging buckets (1-30, 31-60, 61-90, 91-120, 121-150, 151-180, 181+)" },
+    },
+    v12: {
+      date: "March 2026",
+      tag: "Internationalisation",
       description: "Internationalisation, currency localisation, and UI polish across all 54 African jurisdictions.",
       f1: { title: "5 AU Languages", desc: "English, French, Portuguese, Arabic (RTL), and Swahili" },
       f2: { title: "Arabic RTL Support", desc: "Full right-to-left layout with sidebar, forms, and tables" },
@@ -1211,7 +1224,7 @@ const fr: typeof en = {
     organizations: "Organisations",
     brandTitle: "Registre de Crédit",
     brandSubtitle: "Carlson Capital & Systems In Motion Limited™",
-    version: "v1.2 — Registre de Crédit",
+    version: "v2.0 — Registre de Crédit",
   },
   login: {
     title: "Système de Registre de Crédit",
@@ -2246,9 +2259,22 @@ const fr: typeof en = {
   versionHistory: {
     title: "Historique des Versions",
     subtitle: "Notes de version et journal des modifications du Système de Registre de Crédit",
-    v12: {
+    v20: {
       date: "Mars 2026",
       tag: "Actuelle",
+      description: "Conformite complète BoG CRB v1.1 avec moteur d'exportation CSV, 6 types de fichiers réglementaires et catalogues de codes BoG.",
+      f1: { title: "Export BoG CRB", desc: "Export CSV délimité par pipe pour les 6 types de fichiers BoG : CONC, BUSC, CONJ, BUSJ, COND, BUSD" },
+      f2: { title: "Extension du Schéma", desc: "65+ nouveaux champs conformes BoG pour emprunteurs, comptes de crédit, jugements et nouvelle table de chèques impayés" },
+      f3: { title: "Catalogues de Codes", desc: "Codes complets des annexes BoG : types de facilités, fréquences de remboursement, classifications d'actifs, codes secteur/sous-secteur" },
+      f4: { title: "Documentation", desc: "Documentation de conformité BoG CRB v1.1 champ par champ avec règles de validation" },
+      f5: { title: "Export par Organisation", desc: "Export des données par organisation avec nommage de fichier basé sur SRN selon la spécification BoG" },
+      f6: { title: "Export Multi-Tenant", desc: "Stockage des chèques impayés, champs BoG des jugements et isolation d'export au niveau institution" },
+      f7: { title: "Reporting Réglementaire", desc: "Dates AAAAMMJJ, montants entiers, indicateurs de correction et profils d'historique de paiement" },
+      f8: { title: "Tranches d'Impayés", desc: "7 niveaux de vieillissement des impayés (1-30, 31-60, 61-90, 91-120, 121-150, 151-180, 181+)" },
+    },
+    v12: {
+      date: "Mars 2026",
+      tag: "Internationalisation",
       description: "Internationalisation, localisation des devises et perfectionnement de l'interface pour les 54 juridictions africaines.",
       f1: { title: "5 Langues de l'UA", desc: "Anglais, Français, Portugais, Arabe (RTL) et Swahili" },
       f2: { title: "Support RTL Arabe", desc: "Mise en page droite-à-gauche complète avec barre latérale, formulaires et tableaux" },

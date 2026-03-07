@@ -1,7 +1,7 @@
-# Credit Registry System - Systems In Motion Limited
+# Credit Registry System v2.0 - Systems In Motion Limited
 
 ## Overview
-This project is a web-based Pan-African Credit Registry System aimed at centralizing credit information, managing borrower records, and supporting credit risk assessment for financial institutions across 54 African countries. It handles 42+ African currencies plus USD/EUR/GBP, enforces jurisdiction-specific data retention, ensures regulatory compliance, and facilitates cross-border entity resolution. The system is designed for robust security, adherence to regulatory workflows, and fault tolerance to bolster financial stability and responsible lending in Africa.
+This project is a web-based Pan-African Credit Registry System (v2.0) aimed at centralizing credit information, managing borrower records, and supporting credit risk assessment for financial institutions across 54 African countries. It handles 42+ African currencies plus USD/EUR/GBP, enforces jurisdiction-specific data retention, ensures regulatory compliance, and facilitates cross-border entity resolution. The system is designed for robust security, adherence to regulatory workflows, and fault tolerance to bolster financial stability and responsible lending in Africa.
 
 ## User Preferences
 I prefer clear and concise communication.

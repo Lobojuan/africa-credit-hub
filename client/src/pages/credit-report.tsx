@@ -498,7 +498,7 @@ export default function CreditReportPage() {
                     <Shield className="w-6 h-6" />
                     <h1 className="text-lg font-bold print:text-base">Comprehensive Credit Information Report</h1>
                   </div>
-                  <p className="text-sm text-white/70 print:text-[10px]">Cross-Jurisdictional Central Data Hub v1.2</p>
+                  <p className="text-sm text-white/70 print:text-[10px]">Cross-Jurisdictional Central Data Hub v2.0</p>
                   <p className="text-xs text-white/50 mt-1 print:text-[8px]">Carlson Capital & Systems In Motion Limited</p>
                 </div>
                 <div className="text-right">
@@ -1068,7 +1068,7 @@ export default function CreditReportPage() {
                   or seek to hold, the Credit Registry System responsible or liable with respect to the content of this report.
                 </p>
                 <p className="text-[10px] text-muted-foreground/60 print:text-[7px]">
-                  Cross-Jurisdictional Central Data Hub & Credit Registry System v1.2 | Carlson Capital & Systems In Motion Limited
+                  Cross-Jurisdictional Central Data Hub & Credit Registry System v2.0 | Carlson Capital & Systems In Motion Limited
                 </p>
                 <p className="text-[9px] text-muted-foreground/40 mt-1 print:text-[7px]">
                   Confidential & Proprietary | Unauthorized distribution is prohibited

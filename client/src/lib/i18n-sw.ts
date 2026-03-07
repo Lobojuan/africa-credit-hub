@@ -31,7 +31,7 @@ const sw: Record<string, any> = {
     versionHistory: "Historia ya Matoleo",
     brandTitle: "Sajili ya Mikopo",
     brandSubtitle: "Carlson Capital & Systems In Motion Limited™",
-    version: "v1.2 — Sajili ya Mikopo",
+    version: "v2.0 — Sajili ya Mikopo",
   },
   login: {
     title: "Mfumo wa Sajili ya Mikopo",

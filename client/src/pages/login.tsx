@@ -201,12 +201,12 @@ export default function LoginPage() {
               {(isGhanaMode() ? [
                 { label: "Jurisdiction", val: "Ghana" },
                 { label: "Currency", val: "GHS (\u20B5)" },
-                { label: "Compliance", val: "SRS v1.2" },
+                { label: "Compliance", val: "SRS v2.0" },
                 { label: "Regulator", val: "Bank of Ghana" },
               ] : [
                 { label: t('login.jurisdictions'), val: t('login.fourCountries') },
                 { label: t('login.currencies'), val: t('login.eighteenSupported') },
-                { label: t('login.compliance'), val: "SRS v1.2" },
+                { label: t('login.compliance'), val: "SRS v2.0" },
                 { label: t('login.languages'), val: "EN / FR / PT / AR / SW" },
               ]).map((item, i) => (
                 <div key={item.label} className="rounded-xl p-4" style={{
@@ -231,7 +231,7 @@ export default function LoginPage() {
             transitionDelay: "0.9s",
           }}>
             <p className="text-white/50">
-              Carlson Capital & Systems In Motion Limited\u2122 &middot; {isGhanaMode() ? "Ghana Credit Registry v1.2" : "Cross-Jurisdictional CDH v1.2"}
+              Carlson Capital & Systems In Motion Limited\u2122 &middot; {isGhanaMode() ? "Ghana Credit Registry v2.0" : "Cross-Jurisdictional CDH v2.0"}
             </p>
             <p className="text-white/30 text-[10px]">
               &copy; 2026 Carlson Capital & Systems In Motion Limited. All rights reserved.

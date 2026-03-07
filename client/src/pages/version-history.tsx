@@ -22,6 +22,10 @@ import {
   LayoutDashboard,
   Clock,
   Scale,
+  FileSpreadsheet,
+  Database,
+  Building2,
+  CheckCircle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -38,6 +42,22 @@ type VersionEntry = {
 };
 
 const versions: VersionEntry[] = [
+  {
+    version: "v2.0",
+    dateKey: "versionHistory.v20.date",
+    tagKey: "versionHistory.v20.tag",
+    descriptionKey: "versionHistory.v20.description",
+    features: [
+      { icon: FileSpreadsheet, titleKey: "versionHistory.v20.f1.title", descriptionKey: "versionHistory.v20.f1.desc" },
+      { icon: Database, titleKey: "versionHistory.v20.f2.title", descriptionKey: "versionHistory.v20.f2.desc" },
+      { icon: CheckCircle, titleKey: "versionHistory.v20.f3.title", descriptionKey: "versionHistory.v20.f3.desc" },
+      { icon: FileText, titleKey: "versionHistory.v20.f4.title", descriptionKey: "versionHistory.v20.f4.desc" },
+      { icon: Shield, titleKey: "versionHistory.v20.f5.title", descriptionKey: "versionHistory.v20.f5.desc" },
+      { icon: Building2, titleKey: "versionHistory.v20.f6.title", descriptionKey: "versionHistory.v20.f6.desc" },
+      { icon: Scale, titleKey: "versionHistory.v20.f7.title", descriptionKey: "versionHistory.v20.f7.desc" },
+      { icon: CreditCard, titleKey: "versionHistory.v20.f8.title", descriptionKey: "versionHistory.v20.f8.desc" },
+    ],
+  },
   {
     version: "v1.2",
     dateKey: "versionHistory.v12.date",
