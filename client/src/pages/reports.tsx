@@ -113,7 +113,7 @@ function BorrowerSearchSelect({ onSelect }: { onSelect: (b: Borrower) => void })
                       {b.type === "corporate" ? "Corporate" : "Individual"} · {b.nationalId || b.tinNumber || b.passportNumber || "No ID"} · {b.country}
                     </p>
                   </div>
-                  <Badge variant="secondary" className="text-[9px] shrink-0">{b.status}</Badge>
+                  <Badge variant="secondary" className="text-[9px] shrink-0">{b.type}</Badge>
                 </button>
               ))}
             </div>
@@ -295,8 +295,8 @@ export default function ReportsPage() {
                     {selectedBorrower.country}
                   </p>
                 </div>
-                <Badge variant={selectedBorrower.status === "active" ? "default" : "secondary"} className="shrink-0">
-                  {selectedBorrower.status}
+                <Badge variant="secondary" className="shrink-0 capitalize">
+                  {selectedBorrower.type}
                 </Badge>
               </div>
 

@@ -1997,7 +1997,10 @@ export async function registerRoutes(
         .text("Cross-Jurisdictional Central Data Hub & Credit Registry System v1.2 | Systems In Motion Limited | Confidential & Proprietary", 40, doc.y, { width: W, align: "center" });
 
       doc.end();
-      await new Promise<void>((resolve) => doc.on("end", resolve));
+      await new Promise<void>((resolve, reject) => {
+        doc.on("end", resolve);
+        doc.on("error", reject);
+      });
 
       const pdfBuffer = Buffer.concat(chunks);
       res.set({
