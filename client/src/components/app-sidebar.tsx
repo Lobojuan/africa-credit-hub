@@ -28,6 +28,7 @@ import {
   History,
   Play,
   FileSpreadsheet,
+  Info,
 } from "lucide-react";
 import {
   Sidebar,
@@ -95,6 +96,7 @@ const resourceItems: NavItem[] = [
   { titleKey: "sidebar.help", url: "/help", icon: HelpCircle, testId: "nav-help" },
   { titleKey: isGhanaMode() ? "sidebar.ghanaDocs" : "sidebar.documentation", url: isGhanaMode() ? "/ghana-docs" : "/documentation", icon: BookOpen, testId: "nav-documentation" },
   { titleKey: "sidebar.versionHistory", url: "/version-history", icon: History, testId: "nav-version-history" },
+  { titleKey: "sidebar.about", url: "/about", icon: Info, testId: "nav-about" },
 ];
 
 function filterByRole(items: NavItem[], role: string | undefined): NavItem[] {

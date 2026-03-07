@@ -29,6 +29,7 @@ const pt = {
     documentation: "Documentação",
     appGuide: "Guia do App",
     versionHistory: "Histórico de Versões",
+    about: "Sobre",
     brandTitle: "Registo de Crédito",
     brandSubtitle: "Carlson Capital & Systems In Motion Limited™",
     version: "v2.0 — Registo de Crédito",

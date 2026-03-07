@@ -58,6 +58,7 @@ const VersionHistoryPage = lazy(() => import("@/pages/version-history"));
 const AppGuidePage = lazy(() => import("@/pages/app-guide"));
 const OrganizationsPage = lazy(() => import("@/pages/organizations"));
 const GhanaDocsPage = lazy(() => import("@/pages/ghana-docs"));
+const AboutPage = lazy(() => import("@/pages/about"));
 
 function LazyFallback() {
   return (
@@ -100,6 +101,7 @@ function Router() {
         <Route path="/guide" component={AppGuidePage} />
         <Route path="/organizations" component={OrganizationsPage} />
         <Route path="/ghana-docs" component={GhanaDocsPage} />
+        <Route path="/about" component={AboutPage} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>

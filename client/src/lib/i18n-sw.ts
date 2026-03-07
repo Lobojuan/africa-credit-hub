@@ -29,6 +29,7 @@ const sw: Record<string, any> = {
     documentation: "Nyaraka",
     appGuide: "Mwongozo wa Programu",
     versionHistory: "Historia ya Matoleo",
+    about: "Kuhusu",
     brandTitle: "Sajili ya Mikopo",
     brandSubtitle: "Carlson Capital & Systems In Motion Limited™",
     version: "v2.0 — Sajili ya Mikopo",
