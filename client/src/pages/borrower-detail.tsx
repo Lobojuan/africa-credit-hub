@@ -14,6 +14,7 @@ import { isGhanaMode, getDefaultCurrency } from "@/lib/country-mode";
 import { CurrencyReference } from "@/components/currency-reference";
 import type { Borrower, CreditAccount, CreditInquiry, CourtJudgment, ConsentRecord } from "@shared/schema";
 import { GhanaCardSample, GhanaPassportSample, SampleDriversLicense } from "@/components/sample-id-cards";
+import { CreditScoreGauge } from "@/components/credit-score-gauge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Gavel, FileCheck } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
@@ -183,7 +184,7 @@ export default function BorrowerDetailPage() {
   const avatarUrl = (borrower as any).photoUrl || getBorrowerAvatarUrl(borrower.id, displayName, borrower.type as "individual" | "corporate");
 
   return (
-    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-[1200px] mx-auto">
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-[1200px] mx-auto animate-page-enter">
       <input type="file" ref={photoInputRef} className="hidden" accept="image/*"
         onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadPhotoMutation.mutate(f); }}
         data-testid="input-upload-photo"
@@ -342,34 +343,31 @@ export default function BorrowerDetailPage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className={`text-3xl font-bold ${getCreditScoreColor(summary.creditScore)}`} data-testid="text-credit-score">
-              {summary.creditScore}
-            </div>
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <Card className="sm:row-span-1 card-shine border-border/40">
+          <CardContent className="p-4 flex flex-col items-center justify-center">
+            <CreditScoreGauge score={summary.creditScore} size={160} testId="text-credit-score" />
             <p className="text-xs text-muted-foreground mt-1">{t("borrowerDetail.creditScore")}</p>
-            <Badge variant="outline" className="mt-1 text-[10px]">{getCreditScoreLabel(summary.creditScore)}</Badge>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold">{summary.totalAccounts}</div>
-            <p className="text-xs text-muted-foreground mt-1">{t("borrowerDetail.totalAccounts")}</p>
-            <p className="text-[11px] text-muted-foreground">{summary.activeAccounts} {t("borrowerDetail.active")}</p>
+        <Card className="card-shine border-border/40">
+          <CardContent className="p-4 text-center flex flex-col justify-center h-full">
+            <div className="text-3xl font-extrabold tracking-tight">{summary.totalAccounts}</div>
+            <p className="text-xs text-muted-foreground mt-1.5">{t("borrowerDetail.totalAccounts")}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">{summary.activeAccounts} {t("borrowerDetail.active")}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold">{formatCurrency(summary.totalDebt, getDefaultCurrency())}</div>
-            <p className="text-xs text-muted-foreground mt-1">{t("borrowerDetail.totalOutstanding")}</p>
+        <Card className="card-shine border-border/40">
+          <CardContent className="p-4 text-center flex flex-col justify-center h-full">
+            <div className="text-2xl font-extrabold tracking-tight">{formatCurrency(summary.totalDebt, getDefaultCurrency())}</div>
+            <p className="text-xs text-muted-foreground mt-1.5">{t("borrowerDetail.totalOutstanding")}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold">{summary.delinquentAccounts}</div>
-            <p className="text-xs text-muted-foreground mt-1">{t("borrowerDetail.delinquent")}</p>
-            <p className="text-[11px] text-muted-foreground">{summary.inquiryCount} {t("borrowerDetail.inquiriesCount")}</p>
+        <Card className="card-shine border-border/40">
+          <CardContent className="p-4 text-center flex flex-col justify-center h-full">
+            <div className="text-3xl font-extrabold tracking-tight">{summary.delinquentAccounts}</div>
+            <p className="text-xs text-muted-foreground mt-1.5">{t("borrowerDetail.delinquent")}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">{summary.inquiryCount} {t("borrowerDetail.inquiriesCount")}</p>
           </CardContent>
         </Card>
       </div>

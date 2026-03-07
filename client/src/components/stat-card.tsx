@@ -65,8 +65,11 @@ export function StatCard({ title, value, subtitle, icon: Icon, testId, colorInde
   return (
     <Card
       data-testid={testId}
-      className={`group transition-all duration-300 border border-border/60 hover:shadow-lg hover:-translate-y-0.5 ${onClick ? "cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 outline-none" : ""}`}
-      style={{ background: isDark ? cardGradient.dark : cardGradient.light }}
+      className={`group card-shine transition-all duration-300 border border-border/40 hover:border-border/60 hover:shadow-xl hover:-translate-y-1 ${onClick ? "cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 outline-none" : ""}`}
+      style={{
+        background: isDark ? cardGradient.dark : cardGradient.light,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02)",
+      }}
       onClick={onClick}
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
@@ -76,20 +79,20 @@ export function StatCard({ title, value, subtitle, icon: Icon, testId, colorInde
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">{title}</p>
-            <p className={`${valueFontSize(value)} font-extrabold mt-1.5 tracking-tight leading-tight break-words`} data-testid={`${testId}-value`}>{value}</p>
+            <p className={`${valueFontSize(value)} font-extrabold mt-2 tracking-tight leading-tight break-words`} data-testid={`${testId}-value`}>{value}</p>
             {subtitle && (
               <p className="text-[11px] text-muted-foreground mt-1.5">{subtitle}</p>
             )}
           </div>
           <div className="flex flex-col items-center gap-2 shrink-0">
             <div
-              className="flex items-center justify-center w-11 h-11 rounded-xl shadow-sm group-hover:shadow-md transition-shadow duration-300"
+              className="flex items-center justify-center w-11 h-11 rounded-xl shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-300"
               style={{ background: style.bg }}
             >
               <Icon className="w-5 h-5 text-white" />
             </div>
             {onClick && (
-              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 group-hover:text-primary transition-colors" />
+              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/50 group-hover:text-primary group-hover:translate-x-0.5 transition-all duration-200" />
             )}
           </div>
         </div>

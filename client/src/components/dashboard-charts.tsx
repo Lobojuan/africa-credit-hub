@@ -177,7 +177,7 @@ export function DashboardCharts({ monthlyTrend, statusBreakdown, typeBreakdown, 
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" data-testid="dashboard-charts">
-      <Card className="lg:col-span-2 border border-border/60" data-testid="chart-portfolio-trend">
+      <Card className="lg:col-span-2 border border-border/40 card-shine" data-testid="chart-portfolio-trend">
         <CardHeader className="flex flex-row items-center justify-between gap-3 pb-2 p-5">
           <div>
             <h3 className="text-sm font-semibold">Portfolio Growth</h3>
@@ -226,7 +226,7 @@ export function DashboardCharts({ monthlyTrend, statusBreakdown, typeBreakdown, 
         </CardContent>
       </Card>
 
-      <Card className="border border-border/60" data-testid="chart-account-status">
+      <Card className="border border-border/40 card-shine" data-testid="chart-account-status">
         <CardHeader className="flex flex-row items-center justify-between gap-3 pb-2 p-5">
           <div>
             <h3 className="text-sm font-semibold">Account Status</h3>
@@ -270,7 +270,7 @@ export function DashboardCharts({ monthlyTrend, statusBreakdown, typeBreakdown, 
         </CardContent>
       </Card>
 
-      <Card className="lg:col-span-3 border border-border/60" data-testid="chart-account-types">
+      <Card className="lg:col-span-3 border border-border/40 card-shine" data-testid="chart-account-types">
         <CardHeader className="flex flex-row items-center justify-between gap-3 pb-2 p-5">
           <div>
             <h3 className="text-sm font-semibold">Loan Types Distribution</h3>

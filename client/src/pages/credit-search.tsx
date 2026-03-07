@@ -56,7 +56,7 @@ export default function CreditSearchPage() {
   const totalResults = (results?.borrowers?.length || 0) + (results?.institutions?.length || 0) + (results?.creditAccounts?.length || 0);
 
   return (
-    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-[1000px] mx-auto">
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-[1000px] mx-auto animate-page-enter">
       <div className="text-center space-y-2 pt-8">
         <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mx-auto mb-4">
           <Search className="w-8 h-8 text-primary" />

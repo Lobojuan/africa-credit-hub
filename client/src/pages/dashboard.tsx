@@ -532,43 +532,49 @@ export default function Dashboard() {
   const DetailIcon = config?.icon;
 
   return (
-    <div className="p-3 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 max-w-[1400px] mx-auto">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <div className="page-header-bar" />
-            <h1 className="text-2xl font-extrabold tracking-tight" data-testid="text-dashboard-title">{t('dashboard.title')}</h1>
+    <div className="p-3 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 max-w-[1400px] mx-auto animate-page-enter">
+      <div className="section-banner">
+        <div className="relative z-10 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(43 80% 55%) 0%, hsl(33 75% 48%) 100%)" }}>
+                <BarChart3 className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white" data-testid="text-dashboard-title">{t('dashboard.title')}</h1>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <greeting.Icon className="w-3.5 h-3.5 text-white/60" />
+                  <p className="text-sm text-white/70" data-testid="text-dashboard-greeting">
+                    {greeting.text}{user?.firstName ? `, ${user.firstName}` : ""}. {t('dashboard.subtitle')}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-2 ml-4">
-            <greeting.Icon className="w-4 h-4 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground" data-testid="text-dashboard-greeting">
-              {greeting.text}{user?.firstName ? `, ${user.firstName}` : ""}. {t('dashboard.subtitle')}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <Select value={displayCurrency} onValueChange={handleCurrencyChange}>
-            <SelectTrigger className="w-[150px] h-8 text-xs" data-testid="select-dashboard-currency">
-              <Banknote className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {currencyOptions.map((c, i) => (
-                <SelectItem key={c.code} value={c.code} data-testid={`currency-option-${c.code}`}>
-                  {c.code === detectedCurrency && i === 0 ? `${c.symbol} ${c.code} (Local)` : `${c.symbol} ${c.code}`}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {isGhanaMode() && <ReferenceRateBadge />}
-          <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span>Live Data</span>
+          <div className="flex items-center gap-3">
+            <Select value={displayCurrency} onValueChange={handleCurrencyChange}>
+              <SelectTrigger className="w-[150px] h-8 text-xs bg-white/10 border-white/20 text-white" data-testid="select-dashboard-currency">
+                <Banknote className="w-3.5 h-3.5 mr-1 text-white/70" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {currencyOptions.map((c, i) => (
+                  <SelectItem key={c.code} value={c.code} data-testid={`currency-option-${c.code}`}>
+                    {c.code === detectedCurrency && i === 0 ? `${c.symbol} ${c.code} (Local)` : `${c.symbol} ${c.code}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {isGhanaMode() && <ReferenceRateBadge />}
+            <div className="hidden md:flex items-center gap-2 text-xs text-white/60">
+              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Live Data</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
         {statsLoading ? (
           Array.from({ length: 8 }).map((_, i) => (
             <Card key={i} className="border border-border/60"><CardContent className="p-5"><Skeleton className="h-16 w-full" /></CardContent></Card>
@@ -608,7 +614,7 @@ export default function Dashboard() {
           <AfricaMap countryBreakdown={chartData?.countryBreakdown} />
         </div>
         {isGhanaMode() && (
-          <Card className="border border-border/60" data-testid="card-credit-score-factors">
+          <Card className="border border-border/40 card-shine" data-testid="card-credit-score-factors">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
                 <Activity className="w-4 h-4 text-muted-foreground" />
@@ -645,11 +651,11 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="border border-border/60 overflow-hidden">
-          <CardHeader className="pb-3 bg-gradient-to-r from-card to-background">
+        <Card className="border border-border/40 overflow-hidden card-shine">
+          <CardHeader className="pb-3 bg-gradient-to-r from-card to-background/50">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(175 55% 28%) 0%, hsl(175 45% 22%) 100%)" }}>
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-md" style={{ background: "linear-gradient(135deg, hsl(175 55% 28%) 0%, hsl(175 45% 22%) 100%)" }}>
                   <TrendingUp className="w-4 h-4 text-white" />
                 </div>
                 <div>
@@ -706,11 +712,11 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border border-border/60 overflow-hidden">
-          <CardHeader className="pb-3 bg-gradient-to-r from-card to-background">
+        <Card className="border border-border/40 overflow-hidden card-shine">
+          <CardHeader className="pb-3 bg-gradient-to-r from-card to-background/50">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(43 80% 55%) 0%, hsl(33 70% 48%) 100%)" }}>
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-md" style={{ background: "linear-gradient(135deg, hsl(43 80% 55%) 0%, hsl(33 70% 48%) 100%)" }}>
                   <Activity className="w-4 h-4 text-white" />
                 </div>
                 <div>
