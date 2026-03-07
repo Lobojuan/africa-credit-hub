@@ -2,6 +2,7 @@ import express from "express";
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { db } from "./db";
 import {
   insertBorrowerSchema, insertCreditAccountSchema, insertCreditInquirySchema,
   insertUserSchema, insertPendingApprovalSchema, insertDisputeSchema,
@@ -3273,7 +3274,42 @@ export async function registerRoutes(
 
 async function seedOrganizations() {
   const existing = await storage.getOrganizations();
-  if (existing.length > 0) return;
+
+  const { sql: rawSql } = await import("drizzle-orm");
+  try {
+    await db.execute(rawSql`UPDATE borrowers SET organization_id = NULL WHERE organization_id IS NOT NULL AND organization_id NOT IN (SELECT id FROM organizations)`);
+    await db.execute(rawSql`UPDATE credit_accounts SET organization_id = NULL WHERE organization_id IS NOT NULL AND organization_id NOT IN (SELECT id FROM organizations)`);
+    await db.execute(rawSql`UPDATE court_judgments SET organization_id = NULL WHERE organization_id IS NOT NULL AND organization_id NOT IN (SELECT id FROM organizations)`);
+    await db.execute(rawSql`UPDATE dishonoured_cheques SET organization_id = NULL WHERE organization_id IS NOT NULL AND organization_id NOT IN (SELECT id FROM organizations)`);
+    await db.execute(rawSql`UPDATE disputes SET organization_id = NULL WHERE organization_id IS NOT NULL AND organization_id NOT IN (SELECT id FROM organizations)`);
+  } catch (e) {
+    console.log("[Seed] Orphan cleanup skipped:", (e as Error).message);
+  }
+
+  if (existing.length >= 4) {
+    const orgIds = existing.map(o => o.id);
+    const { data: allBorrowers } = await storage.getBorrowers(1, 10000);
+    let assignedCount = 0;
+    for (let i = 0; i < allBorrowers.length; i++) {
+      if (!allBorrowers[i].organizationId) {
+        await storage.updateBorrower(allBorrowers[i].id, { organizationId: orgIds[i % orgIds.length] } as any);
+        assignedCount++;
+      }
+    }
+    if (assignedCount > 0) {
+      const allAccounts = await storage.getAllCreditAccounts();
+      for (const acc of allAccounts) {
+        if (!acc.organizationId) {
+          const borrower = await storage.getBorrower(acc.borrowerId);
+          if (borrower?.organizationId) {
+            await storage.updateCreditAccount(acc.id, { organizationId: borrower.organizationId } as any);
+          }
+        }
+      }
+      console.log(`[Seed] Assigned ${assignedCount} orphaned borrowers to organizations`);
+    }
+    return;
+  }
 
   const ghanaMode = isGhanaMode();
 

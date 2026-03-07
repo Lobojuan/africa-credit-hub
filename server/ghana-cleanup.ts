@@ -13,12 +13,13 @@ export async function cleanupNonGhanaData() {
 
   const nonGhanaBorrowers = await rowCount(sql`SELECT COUNT(*) as cnt FROM borrowers WHERE country != 'Ghana' OR country IS NULL`);
   const nonGhanaInstitutions = await rowCount(sql`SELECT COUNT(*) as cnt FROM institutions WHERE country != 'Ghana'`);
-  const nonGhanaOrgs = await rowCount(sql`SELECT COUNT(*) as cnt FROM organizations WHERE country != 'Ghana'`);
+  const totalNonGhana = nonGhanaBorrowers + nonGhanaInstitutions;
+  if (totalNonGhana === 0) {
+    await db.execute(sql`UPDATE organizations SET country = 'Ghana' WHERE country IS NULL OR country != 'Ghana'`);
+    return;
+  }
 
-  const totalNonGhana = nonGhanaBorrowers + nonGhanaInstitutions + nonGhanaOrgs;
-  if (totalNonGhana === 0) return;
-
-  console.log(`[Ghana Cleanup] Found non-Ghana data: ${nonGhanaBorrowers} borrowers, ${nonGhanaInstitutions} institutions, ${nonGhanaOrgs} orgs — purging...`);
+  console.log(`[Ghana Cleanup] Found non-Ghana data: ${nonGhanaBorrowers} borrowers, ${nonGhanaInstitutions} institutions — purging...`);
 
   await db.execute(sql`DELETE FROM payment_history WHERE credit_account_id IN (SELECT id FROM credit_accounts WHERE borrower_id IN (SELECT id FROM borrowers WHERE country != 'Ghana' OR country IS NULL))`);
   await db.execute(sql`DELETE FROM credit_inquiries WHERE borrower_id IN (SELECT id FROM borrowers WHERE country != 'Ghana' OR country IS NULL)`);
@@ -32,7 +33,7 @@ export async function cleanupNonGhanaData() {
   await db.execute(sql`DELETE FROM billing_records WHERE institution_name IN (SELECT name FROM institutions WHERE country != 'Ghana')`);
   await db.execute(sql`DELETE FROM institutions WHERE country != 'Ghana'`);
 
-  await db.execute(sql`DELETE FROM organizations WHERE country != 'Ghana'`);
+  await db.execute(sql`UPDATE organizations SET country = 'Ghana' WHERE country IS NULL OR country != 'Ghana'`);
 
   await db.execute(sql`DELETE FROM retention_policies WHERE country != 'Ghana'`);
   await db.execute(sql`DELETE FROM exchange_rates WHERE base_currency NOT IN ('GHS', 'USD', 'EUR', 'GBP') OR target_currency NOT IN ('GHS', 'USD', 'EUR', 'GBP')`);
