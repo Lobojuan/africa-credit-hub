@@ -18,15 +18,22 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [mfaRequired, setMfaRequired] = useState(false);
   const [mfaCode, setMfaCode] = useState("");
-  const [mounted, setMounted] = useState(false);
+  const [mounted, setMounted] = useState(() => {
+    if (sessionStorage.getItem("login_seen")) return true;
+    return false;
+  });
   const { login } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
 
   useEffect(() => {
-    const timer = setTimeout(() => setMounted(true), 50);
+    if (mounted) return;
+    const timer = setTimeout(() => {
+      setMounted(true);
+      sessionStorage.setItem("login_seen", "1");
+    }, 50);
     return () => clearTimeout(timer);
-  }, []);
+  }, [mounted]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

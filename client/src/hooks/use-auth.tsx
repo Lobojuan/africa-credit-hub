@@ -35,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       title: "Session expired due to inactivity",
       variant: "destructive",
     });
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     const originalFetch = window.fetch;
