@@ -81,11 +81,22 @@ const ghanaOccupations = [
 ];
 
 const ghanaSectors = [
-  "Banking", "Mining", "Agriculture", "Telecommunications", "Manufacturing",
-  "Oil & Gas", "Construction", "Education", "Healthcare", "Government",
-  "Insurance", "Transportation", "Hospitality", "Retail", "Technology",
-  "Fishing", "Forestry", "Energy", "Real Estate", "Legal Services",
-  "Cocoa", "Textiles", "Food Processing", "Media", "NGO",
+  "Agriculture", "Agriculture", "Agriculture", "Agriculture", "Agriculture",
+  "Agriculture", "Agriculture", "Agriculture", "Cocoa", "Cocoa",
+  "Cocoa", "Cocoa", "Cocoa", "Cocoa", "Fishing", "Fishing",
+  "Forestry", "Forestry",
+  "Retail", "Retail", "Retail", "Retail", "Retail",
+  "Hospitality", "Hospitality", "Food Processing", "Food Processing",
+  "Transportation", "Transportation", "Transportation",
+  "Banking", "Banking", "Insurance",
+  "Mining", "Mining", "Mining",
+  "Construction", "Construction",
+  "Government", "Government", "Government",
+  "Education", "Education",
+  "Healthcare", "Healthcare",
+  "Telecommunications", "Manufacturing", "Oil & Gas",
+  "Technology", "Energy", "Real Estate", "Legal Services",
+  "Textiles", "Media", "NGO",
 ];
 
 const ghanaStreets = [
@@ -99,12 +110,29 @@ const ghanaStreets = [
   "Airport Bypass", "Mango Tree Avenue",
 ];
 
-const ghanaCities = [
+const ghanaCitiesUnique = [
   "Accra", "Kumasi", "Tamale", "Takoradi", "Cape Coast", "Sunyani",
   "Ho", "Koforidua", "Tema", "Obuasi", "Tarkwa", "Nkawkaw",
   "Winneba", "Kasoa", "Madina", "Techiman", "Bolgatanga", "Wa",
   "Sekondi", "Aflao", "Nsawam", "Konongo", "Ejisu", "Bekwai",
   "Ashaiman", "Akim Oda", "Hohoe", "Keta", "Prestea", "Dunkwa",
+];
+const ghanaCities = [
+  "Accra", "Accra", "Accra", "Accra", "Accra", "Accra", "Accra", "Accra", "Accra", "Accra",
+  "Accra", "Accra", "Accra", "Accra", "Accra",
+  "Tema", "Tema", "Tema", "Tema", "Tema", "Tema", "Tema",
+  "Madina", "Madina", "Madina", "Kasoa", "Kasoa", "Kasoa",
+  "Ashaiman", "Ashaiman",
+  "Kumasi", "Kumasi", "Kumasi", "Kumasi", "Kumasi", "Kumasi", "Kumasi", "Kumasi",
+  "Ejisu", "Obuasi",
+  "Tamale", "Tamale", "Tamale",
+  "Takoradi", "Takoradi", "Sekondi",
+  "Cape Coast", "Cape Coast", "Winneba",
+  "Sunyani", "Techiman",
+  "Koforidua", "Nsawam", "Akim Oda",
+  "Ho", "Hohoe",
+  "Bolgatanga", "Wa",
+  "Tarkwa", "Nkawkaw", "Konongo", "Bekwai", "Aflao", "Keta", "Prestea", "Dunkwa",
 ];
 
 const ghanaRegions = [
@@ -182,8 +210,8 @@ function generateDriversLicense(): string {
 
 export async function seedTestData() {
   const MIN_BORROWERS = 75;
-  const TARGET_INDIVIDUALS = 55;
-  const TARGET_CORPORATES = 25;
+  const TARGET_INDIVIDUALS = 72;
+  const TARGET_CORPORATES = 13;
 
   const [check] = await db.select({ value: count() }).from(borrowers).where(like(borrowers.nationalId, "GHA%"));
   if (Number(check.value) >= MIN_BORROWERS) {
@@ -209,13 +237,25 @@ export async function seedTestData() {
   const educationLevels = ["SHS/WASSCE", "HND", "Bachelor's Degree", "Master's Degree", "PhD", "Professional Certificate", "Diploma", "NVTI Certificate"];
   const pepTitles = ["Member of Parliament", "District Chief Executive", "Regional Minister", "Board Member — Bank of Ghana", "Director — COCOBOD", "SSNIT Board Member", "GRA Commissioner"];
 
+  const cityToRegion: Record<string, string> = {
+    "Accra": "Greater Accra", "Tema": "Greater Accra", "Madina": "Greater Accra",
+    "Kasoa": "Central", "Ashaiman": "Greater Accra",
+    "Kumasi": "Ashanti", "Ejisu": "Ashanti", "Obuasi": "Ashanti", "Bekwai": "Ashanti", "Konongo": "Ashanti",
+    "Tamale": "Northern", "Cape Coast": "Central", "Winneba": "Central",
+    "Takoradi": "Western", "Sekondi": "Western", "Tarkwa": "Western", "Prestea": "Western",
+    "Sunyani": "Bono", "Techiman": "Bono East",
+    "Ho": "Volta", "Hohoe": "Volta", "Keta": "Volta", "Aflao": "Volta",
+    "Koforidua": "Eastern", "Nsawam": "Eastern", "Akim Oda": "Eastern", "Nkawkaw": "Eastern",
+    "Bolgatanga": "Upper East", "Wa": "Upper West", "Dunkwa": "Central",
+  };
+
   for (let i = 0; i < TARGET_INDIVIDUALS; i++) {
     idCounter++;
     const isMale = Math.random() < 0.5;
     const fn = isMale ? pick(ghanaFirstNamesMale) : pick(ghanaFirstNamesFemale);
     const ln = pick(ghanaLastNames);
-    const cityIdx = i % ghanaCities.length;
-    const regionIdx = i % ghanaRegions.length;
+    const city = pick(ghanaCities);
+    const region = cityToRegion[city] || pick(ghanaRegions);
     const nationalId = `GHA-ID-${padId(idCounter)}`;
     if (usedNationalIds.has(nationalId)) continue;
     usedNationalIds.add(nationalId);
@@ -239,10 +279,10 @@ export async function seedTestData() {
       gender: isMale ? "Male" : "Female",
       phone: `+233${pick(["20", "24", "25", "26", "27", "50", "54", "55", "56", "57"])}${randInt(1000000, 9999999)}`,
       email: `${fn.toLowerCase().replace(/[^a-z]/g, "")}.${ln.toLowerCase().replace(/[^a-z]/g, "")}${randInt(1, 99)}@${pick(["gmail.com", "yahoo.com", "outlook.com", "hotmail.com"])}`,
-      address: `${randInt(1, 300)} ${pick(ghanaStreets)}, ${ghanaCities[cityIdx]}`,
+      address: `${randInt(1, 300)} ${pick(ghanaStreets)}, ${city}`,
       country: "Ghana",
-      city: ghanaCities[cityIdx],
-      region: ghanaRegions[regionIdx],
+      city,
+      region,
       employerName: pick(ghanaEmployers),
       occupation: pick(ghanaOccupations),
       sector: pick(ghanaSectors),
@@ -266,13 +306,13 @@ export async function seedTestData() {
     let companyName = pick(ghanaCompanies);
     let attempts = 0;
     while (usedCompanies.has(companyName) && attempts < 10) {
-      companyName = `${companyName} (${pick(ghanaCities)})`;
+      companyName = `${companyName} (${pick(ghanaCitiesUnique)})`;
       attempts++;
     }
     usedCompanies.add(companyName);
     idCounter++;
-    const cityIdx = i % ghanaCities.length;
-    const regionIdx = i % ghanaRegions.length;
+    const city = pick(ghanaCities);
+    const region = cityToRegion[city] || pick(ghanaRegions);
     const nationalId = `GHA-BIZ-${padId(idCounter)}`;
     if (usedNationalIds.has(nationalId)) continue;
     usedNationalIds.add(nationalId);
@@ -284,10 +324,10 @@ export async function seedTestData() {
       tinNumber: `TIN-GHA-C-${padId(idCounter)}`,
       phone: `+233${pick(["30", "31", "32"])}${randInt(2000000, 9999999)}`,
       email: `info@${companyName.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 20)}.com.gh`,
-      address: `${pick(["Industrial Area", "Business District", "Commercial Zone", "Free Zones Enclave", "Light Industrial Area"])}, Plot ${randInt(1, 500)}, ${ghanaCities[cityIdx]}`,
+      address: `${pick(["Industrial Area", "Business District", "Commercial Zone", "Free Zones Enclave", "Light Industrial Area"])}, Plot ${randInt(1, 500)}, ${city}`,
       country: "Ghana",
-      city: ghanaCities[cityIdx],
-      region: ghanaRegions[regionIdx],
+      city,
+      region,
       businessRegNumber: `BN-${randInt(2005, 2024)}-${padId(randInt(1, 99999))}`,
       sector: pick(ghanaSectors),
       isPep: false,
@@ -297,10 +337,24 @@ export async function seedTestData() {
   const createdBorrowers = await db.insert(borrowers).values(borrowerValues).returning();
   console.log(`  Created ${createdBorrowers.length} Ghana borrowers (${TARGET_INDIVIDUALS} individuals, ${TARGET_CORPORATES} corporates)`);
 
-  const accountTypes = [
-    "Personal Loan", "Mortgage", "Auto Loan", "Business Loan", "Overdraft",
-    "Credit Card", "Microfinance Loan", "Agricultural Loan", "Trade Finance",
-    "Student Loan", "Salary Advance", "SME Loan", "Asset Finance", "Working Capital",
+  const individualAccountTypes = [
+    "Personal Loan", "Personal Loan", "Personal Loan", "Personal Loan",
+    "Salary Advance", "Salary Advance", "Salary Advance",
+    "Microfinance Loan", "Microfinance Loan", "Microfinance Loan",
+    "Mortgage", "Mortgage",
+    "Auto Loan", "Auto Loan",
+    "Credit Card",
+    "Student Loan", "Student Loan",
+    "Agricultural Loan", "Agricultural Loan", "Agricultural Loan",
+    "Overdraft",
+  ];
+  const corporateAccountTypes = [
+    "Business Loan", "Business Loan", "Business Loan",
+    "SME Loan", "SME Loan", "SME Loan",
+    "Working Capital", "Working Capital",
+    "Trade Finance", "Trade Finance",
+    "Agricultural Loan", "Agricultural Loan",
+    "Asset Finance", "Overdraft",
   ];
   const collateralTypes = [
     "Landed Property", "Vehicle", "Fixed Deposit", "Government Securities",
@@ -313,25 +367,60 @@ export async function seedTestData() {
     "Equipment Acquisition", "Farm Development", "Construction", "Import Financing",
     "Export Pre-Financing", "Salary Support", "Debt Consolidation",
   ];
-  const repaymentFreqs = ["Monthly", "Quarterly", "Bi-Weekly", "Weekly", "Bullet"];
-  const assetClassifications = ["Pass", "OLEM", "Substandard", "Doubtful", "Loss"];
+  const repaymentFreqs = ["Monthly", "Monthly", "Monthly", "Monthly", "Quarterly", "Bi-Weekly", "Weekly", "Bullet"];
   const statuses: Array<"current" | "delinquent" | "default" | "closed" | "restructured" | "written_off"> = [
-    "current", "current", "current", "current", "current",
-    "delinquent", "delinquent", "default", "closed", "closed",
-    "restructured", "written_off",
+    "current", "current", "current", "current", "current", "current", "current", "current", "current", "current",
+    "current", "current",
+    "delinquent", "delinquent",
+    "default",
+    "closed", "closed", "closed",
+    "restructured",
+    "written_off",
   ];
+
+  function loanAmount(acctType: string, isCorporate: boolean): number {
+    if (isCorporate) {
+      if (acctType === "Trade Finance") return randInt(200, 2500) * 1000;
+      if (acctType === "Working Capital") return randInt(80, 1200) * 1000;
+      if (acctType === "Business Loan" || acctType === "SME Loan") return randInt(50, 800) * 1000;
+      if (acctType === "Agricultural Loan") return randInt(30, 600) * 1000;
+      return randInt(50, 500) * 1000;
+    }
+    if (acctType === "Mortgage") return randInt(180, 1500) * 1000;
+    if (acctType === "Auto Loan") return randInt(25, 120) * 1000;
+    if (acctType === "Personal Loan") return randInt(5, 150) * 1000;
+    if (acctType === "Salary Advance") return randInt(2, 30) * 1000;
+    if (acctType === "Microfinance Loan") return randInt(1, 25) * 1000;
+    if (acctType === "Student Loan") return randInt(3, 40) * 1000;
+    if (acctType === "Agricultural Loan") return randInt(5, 80) * 1000;
+    if (acctType === "Credit Card") return randInt(2, 20) * 1000;
+    if (acctType === "Overdraft") return randInt(2, 50) * 1000;
+    return randInt(5, 100) * 1000;
+  }
+
+  function interestRate(acctType: string): string {
+    if (acctType === "Credit Card") return randDec(28, 38);
+    if (acctType === "Mortgage") return randDec(18, 26);
+    if (acctType === "Microfinance Loan") return randDec(28, 36);
+    if (acctType === "Salary Advance") return randDec(20, 30);
+    if (acctType === "Agricultural Loan") return randDec(18, 25);
+    if (acctType === "Student Loan") return randDec(18, 23);
+    if (acctType === "Auto Loan") return randDec(22, 32);
+    if (acctType === "Overdraft") return randDec(24, 34);
+    return randDec(22, 35);
+  }
 
   const accountValues: any[] = [];
   for (const b of createdBorrowers) {
-    const numAccounts = b.type === "corporate" ? randInt(2, 5) : randInt(1, 4);
+    const isCorporate = b.type === "corporate";
+    const numAccounts = isCorporate ? randInt(2, 4) : randInt(1, 3);
     for (let a = 0; a < numAccounts; a++) {
       const status = pick(statuses);
-      const isCorporate = b.type === "corporate";
-      const amountMultiplier = isCorporate ? randInt(100, 2000) : randInt(2, 80);
-      const original = (amountMultiplier * 1000).toString() + ".00";
+      const acctType = isCorporate ? pick(corporateAccountTypes) : pick(individualAccountTypes);
+      const origAmount = loanAmount(acctType, isCorporate);
+      const original = origAmount.toFixed(2);
       const balRatio = status === "closed" ? 0 : Math.random() * 0.85 + 0.1;
-      const current = (amountMultiplier * 1000 * balRatio).toFixed(2);
-      const acctType = pick(accountTypes);
+      const current = (origAmount * balRatio).toFixed(2);
       const daysArrears = status === "delinquent" ? randInt(30, 180) : status === "default" ? randInt(181, 720) : 0;
       const classification = daysArrears === 0 ? "Pass" : daysArrears <= 90 ? "OLEM" : daysArrears <= 180 ? "Substandard" : daysArrears <= 360 ? "Doubtful" : "Loss";
 
@@ -342,23 +431,23 @@ export async function seedTestData() {
         accountType: acctType,
         originalAmount: original,
         currentBalance: current,
-        currency: Math.random() < 0.88 ? "GHS" : pick(["USD", "EUR", "GBP"]),
-        interestRate: acctType === "Credit Card" ? randDec(24, 36) : acctType === "Mortgage" ? randDec(18, 28) : randDec(20, 35),
+        currency: Math.random() < 0.97 ? "GHS" : pick(["USD", "EUR", "GBP"]),
+        interestRate: interestRate(acctType),
         disbursementDate: pastDate(5),
         maturityDate: futureDate(7),
         status,
         daysInArrears: daysArrears,
         collateralType: Math.random() < 0.7 ? pick(collateralTypes) : null,
-        collateralValue: Math.random() > 0.3 ? (amountMultiplier * 1000 * (1.1 + Math.random() * 0.5)).toFixed(2) : null,
+        collateralValue: Math.random() > 0.3 ? (origAmount * (1.1 + Math.random() * 0.5)).toFixed(2) : null,
         lastPaymentDate: status !== "written_off" ? pastDate(1) : null,
-        lastPaymentAmount: status !== "written_off" ? (amountMultiplier * 100 * (0.3 + Math.random())).toFixed(2) : null,
+        lastPaymentAmount: status !== "written_off" ? (origAmount * 0.05 * (0.3 + Math.random())).toFixed(2) : null,
         restructureCount: status === "restructured" ? randInt(1, 3) : 0,
         writtenOffDate: status === "written_off" ? pastDate(1) : null,
         facilityTypeCode: `FT-${randInt(100, 999)}`,
         purposeOfFacility: pick(facilityPurposes),
         repaymentFrequency: pick(repaymentFreqs),
         assetClassification: classification,
-        amountOverdue: daysArrears > 0 ? (amountMultiplier * 100 * Math.random()).toFixed(2) : "0.00",
+        amountOverdue: daysArrears > 0 ? (origAmount * 0.1 * Math.random()).toFixed(2) : "0.00",
       });
     }
   }
@@ -373,7 +462,7 @@ export async function seedTestData() {
   const borrowerIds = new Set(createdBorrowers.map(b => b.id));
   const newAccounts = allAccounts.filter(a => borrowerIds.has(a.borrowerId));
   const paymentValues: any[] = [];
-  const paymentStatuses: Array<"on_time" | "late" | "missed" | "partial"> = ["on_time", "on_time", "on_time", "on_time", "on_time", "late", "missed", "partial"];
+  const paymentStatuses: Array<"on_time" | "late" | "missed" | "partial"> = ["on_time", "on_time", "on_time", "on_time", "on_time", "on_time", "on_time", "on_time", "on_time", "on_time", "on_time", "on_time", "late", "late", "missed", "partial"];
 
   for (const acc of newAccounts) {
     const numPayments = randInt(3, 12);
