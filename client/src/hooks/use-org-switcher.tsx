@@ -17,9 +17,15 @@ export function OrgSwitcherProvider({ children }: { children: ReactNode }) {
     setSelectedOrgId(orgId);
     setSelectedOrgName(orgName);
     setGlobalOrgId(orgId);
-    const skipAuth = (q: any) => !(q.queryKey[0] as string)?.startsWith("/api/auth/");
+    const skipAuth = (q: any) => {
+      const key = q.queryKey[0] as string;
+      return key && !key.startsWith("/api/auth/");
+    };
     queryClient.removeQueries({ predicate: (q) => skipAuth(q) && !q.observers.length });
-    queryClient.resetQueries({ predicate: skipAuth });
+    queryClient.invalidateQueries({
+      predicate: skipAuth,
+      refetchType: "all",
+    });
   }, []);
 
   return (
