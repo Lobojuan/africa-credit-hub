@@ -3265,6 +3265,14 @@ export async function registerRoutes(
     }
   });
 
+  try {
+    const { sql: unlockSql } = await import("drizzle-orm");
+    await db.execute(unlockSql`UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE failed_login_attempts > 0 OR locked_until IS NOT NULL`);
+    console.log("Cleared any account lockouts on startup");
+  } catch (e) {
+    console.log("Lockout clear skipped:", e);
+  }
+
   await seedOrganizations();
 
   registerExternalApi(app);
