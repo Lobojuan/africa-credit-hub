@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Redirect } from "wouter";
 import DOMPurify from "isomorphic-dompurify";
 import { FileText, Download, Eye, ArrowLeft, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { apiRequest } from "@/lib/queryClient";
-import { isGhanaMode } from "@/lib/country-mode";
 
 type DocMeta = {
   id: string;
@@ -55,8 +53,6 @@ export default function DocumentationPage() {
   const [docHtml, setDocHtml] = useState<string>("");
   const [docTitle, setDocTitle] = useState<string>("");
   const [loading, setLoading] = useState(false);
-  const ghanaMode = isGhanaMode();
-
   const currentLang = i18n.language?.startsWith("fr") ? "fr" : i18n.language?.startsWith("ar") ? "ar" : i18n.language?.startsWith("sw") ? "sw" : i18n.language?.startsWith("pt") ? "pt" : "en";
 
   const { data: docs, isLoading } = useQuery<DocMeta[]>({
@@ -66,12 +62,7 @@ export default function DocumentationPage() {
       if (!res.ok) throw new Error("Failed to fetch docs");
       return res.json();
     },
-    enabled: !ghanaMode,
   });
-
-  if (ghanaMode) {
-    return <Redirect to="/ghana-docs" />;
-  }
 
   const viewDocument = async (doc: DocMeta) => {
     setLoading(true);

@@ -94,7 +94,12 @@ const integrationItems: NavItem[] = [
 const resourceItems: NavItem[] = [
   { titleKey: "sidebar.appGuide", url: "/guide", icon: Play, testId: "nav-app-guide" },
   { titleKey: "sidebar.help", url: "/help", icon: HelpCircle, testId: "nav-help" },
-  { titleKey: isGhanaMode() ? "sidebar.ghanaDocs" : "sidebar.documentation", url: isGhanaMode() ? "/ghana-docs" : "/documentation", icon: BookOpen, testId: "nav-documentation" },
+  ...(isGhanaMode() ? [
+    { titleKey: "sidebar.ghanaDocs", url: "/ghana-docs", icon: BookOpen, testId: "nav-ghana-docs" } as NavItem,
+    { titleKey: "sidebar.documentation", url: "/documentation", icon: FileText, testId: "nav-documentation" } as NavItem,
+  ] : [
+    { titleKey: "sidebar.documentation", url: "/documentation", icon: BookOpen, testId: "nav-documentation" } as NavItem,
+  ]),
   { titleKey: "sidebar.versionHistory", url: "/version-history", icon: History, testId: "nav-version-history" },
   { titleKey: "sidebar.about", url: "/about", icon: Info, testId: "nav-about" },
 ];
