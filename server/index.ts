@@ -10,13 +10,6 @@ import { readFileSync, readdirSync, readlinkSync } from "fs";
 
 const port = parseInt(process.env.PORT || "5000", 10);
 
-process.on("uncaughtException", (err) => {
-  console.error("[FATAL] Uncaught exception:", err);
-});
-process.on("unhandledRejection", (reason) => {
-  console.error("[FATAL] Unhandled rejection:", reason);
-});
-
 function killPortHolder(targetPort: number) {
   try {
     const hexPort = targetPort.toString(16).toUpperCase().padStart(4, "0");

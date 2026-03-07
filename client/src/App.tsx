@@ -21,6 +21,7 @@ import { OrgSwitcherProvider } from "@/hooks/use-org-switcher";
 import { OrgSwitcher } from "@/components/org-switcher";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorBoundary } from "@/components/error-boundary";
 import LoginPage from "@/pages/login";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
@@ -212,7 +213,9 @@ function AuthenticatedApp() {
             </div>
           </header>
           <main className="flex-1 overflow-auto">
-            <Router />
+            <ErrorBoundary>
+              <Router />
+            </ErrorBoundary>
           </main>
           {passwordExpired && <PasswordChangeDialog open={true} forced={true} />}
         </div>
