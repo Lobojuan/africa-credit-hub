@@ -4,7 +4,7 @@ import { db } from "./db";
 import {
   users, borrowers, creditAccounts, creditInquiries, auditLogs, pendingApprovals, disputes, notifications,
   courtJudgments, consentRecords, paymentHistory, institutions, billingRecords, creditReportLogs, apiKeys,
-  exchangeRates, retentionPolicies, apiConfigurations, organizations,
+  exchangeRates, retentionPolicies, apiConfigurations, organizations, dishonouredCheques,
   type User, type InsertUser,
   type Organization, type InsertOrganization,
   type Borrower, type InsertBorrower,
@@ -24,6 +24,7 @@ import {
   type ExchangeRate, type InsertExchangeRate,
   type RetentionPolicy, type InsertRetentionPolicy,
   type ApiConfiguration, type InsertApiConfiguration,
+  type DishonouredCheque, type InsertDishonouredCheque,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -151,6 +152,10 @@ export interface IStorage {
   createApiConfiguration(data: InsertApiConfiguration): Promise<ApiConfiguration>;
   updateApiConfiguration(id: string, data: Partial<InsertApiConfiguration>): Promise<ApiConfiguration | undefined>;
   deleteApiConfiguration(id: string): Promise<boolean>;
+
+  getDishonouredChequesByBorrower(borrowerId: string): Promise<DishonouredCheque[]>;
+  getAllDishonouredCheques(organizationId?: string): Promise<DishonouredCheque[]>;
+  createDishonouredCheque(cheque: InsertDishonouredCheque): Promise<DishonouredCheque>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1010,6 +1015,20 @@ export class DatabaseStorage implements IStorage {
   async deleteApiConfiguration(id: string): Promise<boolean> {
     const result = await db.delete(apiConfigurations).where(eq(apiConfigurations.id, id)).returning();
     return result.length > 0;
+  }
+
+  async getDishonouredChequesByBorrower(borrowerId: string): Promise<DishonouredCheque[]> {
+    return db.select().from(dishonouredCheques).where(eq(dishonouredCheques.borrowerId, borrowerId)).orderBy(desc(dishonouredCheques.createdAt));
+  }
+
+  async getAllDishonouredCheques(organizationId?: string): Promise<DishonouredCheque[]> {
+    const filter = organizationId ? eq(dishonouredCheques.organizationId, organizationId) : undefined;
+    return db.select().from(dishonouredCheques).where(filter).orderBy(desc(dishonouredCheques.createdAt)).limit(200);
+  }
+
+  async createDishonouredCheque(cheque: InsertDishonouredCheque): Promise<DishonouredCheque> {
+    const [created] = await db.insert(dishonouredCheques).values(cheque).returning();
+    return created;
   }
 }
 

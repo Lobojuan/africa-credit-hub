@@ -27,6 +27,7 @@ import {
   ChevronDown,
   History,
   Play,
+  FileSpreadsheet,
 } from "lucide-react";
 import {
   Sidebar,
@@ -69,6 +70,7 @@ const reportItems: NavItem[] = [
   { titleKey: "sidebar.helpdesk", url: "/helpdesk", icon: Headset, testId: "nav-helpdesk" },
   { titleKey: "sidebar.auditTrail", url: "/audit", icon: Shield, testId: "nav-audit-trail", roles: ["admin", "regulator", "super_admin"] },
   { titleKey: "sidebar.regulatoryCompliance", url: "/regulatory-compliance", icon: Scale, testId: "nav-regulatory-compliance", roles: ["admin", "regulator", "super_admin"] },
+  { titleKey: "sidebar.bogExport", url: "/bog-export", icon: FileSpreadsheet, testId: "nav-bog-export", roles: ["admin", "regulator", "super_admin"] },
 ];
 
 const platformItems: NavItem[] = [

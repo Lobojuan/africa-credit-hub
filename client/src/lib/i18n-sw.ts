@@ -22,6 +22,7 @@ const sw: Record<string, any> = {
     apiAdmin: "Utawala wa API",
     retentionPolicies: "Sera za Uhifadhi",
     regulatoryCompliance: "Uzingatiaji wa Kanuni",
+    bogExport: "BoG CRB Export",
     systemConfig: "Mfumo",
     integrations: "Miunganisho",
     help: "Msaada na Mwongozo",

@@ -22,6 +22,8 @@ import rateLimit from "express-rate-limit";
 import { isGhanaMode } from "./country-mode";
 import { sendWelcomeEmail, sendBillingNotification, sendDisputeNotification } from "./email";
 import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport } from "./ai";
+import { BOG_EXPORT_GENERATORS } from "./bog-export";
+import type { BogFileType } from "@shared/bog-codes";
 
 const loginLimiter = rateLimit({
   validate: { trustProxy: false },
@@ -2209,6 +2211,48 @@ export async function registerRoutes(
         portfolioByInstitution: byInstitution,
         portfolioByType: byType,
       });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/bog/export/:fileType", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
+    try {
+      const fileType = req.params.fileType.toUpperCase() as BogFileType;
+      const validTypes: BogFileType[] = ["CONC", "BUSC", "CONJ", "BUSJ", "COND", "BUSD"];
+      if (!validTypes.includes(fileType)) {
+        return res.status(400).json({ message: `Invalid file type: ${fileType}. Must be one of: ${validTypes.join(", ")}` });
+      }
+      const reportingDate = (req.query.reportingDate as string) || new Date().toISOString().split("T")[0].replace(/-/g, "");
+      const sequenceNumber = parseInt(req.query.sequenceNumber as string) || 1;
+      const correctionIndicator = (req.query.correctionIndicator as string) || "0";
+
+      const orgId = getOrgScope(req);
+      const generator = BOG_EXPORT_GENERATORS[fileType];
+      const { content, filename } = await generator(reportingDate, sequenceNumber, correctionIndicator, orgId);
+
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.send(content);
+    } catch (e: any) {
+      console.error("BoG export error:", e);
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/bog/export-preview/:fileType", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
+    try {
+      const fileType = req.params.fileType.toUpperCase() as BogFileType;
+      const validTypes: BogFileType[] = ["CONC", "BUSC", "CONJ", "BUSJ", "COND", "BUSD"];
+      if (!validTypes.includes(fileType)) {
+        return res.status(400).json({ message: `Invalid file type` });
+      }
+      const reportingDate = (req.query.reportingDate as string) || new Date().toISOString().split("T")[0].replace(/-/g, "");
+      const orgId = getOrgScope(req);
+      const generator = BOG_EXPORT_GENERATORS[fileType];
+      const { content, filename } = await generator(reportingDate, 1, "0", orgId);
+      const lines = content.split("\n");
+      res.json({ filename, totalRows: lines.length - 1, headerRow: lines[0], sampleRows: lines.slice(1, 4) });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }

@@ -22,6 +22,7 @@ const ar: Record<string, any> = {
     apiAdmin: "إدارة API",
     retentionPolicies: "سياسات الاحتفاظ",
     regulatoryCompliance: "الامتثال التنظيمي",
+    bogExport: "BoG CRB Export",
     systemConfig: "النظام",
     integrations: "التكاملات",
     help: "المساعدة والدليل",

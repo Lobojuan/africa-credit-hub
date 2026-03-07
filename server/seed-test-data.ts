@@ -1,6 +1,7 @@
 import { db } from "./db";
-import { borrowers, creditAccounts, courtJudgments, consentRecords, paymentHistory, institutions, billingRecords, disputes, users } from "@shared/schema";
+import { borrowers, creditAccounts, courtJudgments, consentRecords, paymentHistory, institutions, billingRecords, disputes, users, dishonouredCheques } from "@shared/schema";
 import { count, like } from "drizzle-orm";
+import { mapInternalStatusToBog, mapInternalAssetClassToBog, mapDaysInArrearsToPaymentProfile } from "@shared/bog-codes";
 
 const ghanaFirstNamesMale = [
   "Kwame", "Kofi", "Kwesi", "Yaw", "Kojo", "Kwaku", "Nana", "Osei",
@@ -208,6 +209,19 @@ function generateDriversLicense(): string {
   return `DL-${randInt(10000000, 99999999)}`;
 }
 
+function distributeOverdue(total: number, daysInArrears: number): number[] {
+  const buckets = [0, 0, 0, 0, 0, 0, 0];
+  if (total <= 0 || daysInArrears <= 0) return buckets;
+  const activeBuckets = Math.min(Math.ceil(daysInArrears / 30), 7);
+  let remaining = total;
+  for (let i = 0; i < activeBuckets; i++) {
+    const share = i < activeBuckets - 1 ? remaining * (0.2 + Math.random() * 0.3) : remaining;
+    buckets[i] = Math.round(share * 100) / 100;
+    remaining -= buckets[i];
+  }
+  return buckets;
+}
+
 export async function seedTestData() {
   const MIN_BORROWERS = 75;
   const TARGET_INDIVIDUALS = 72;
@@ -236,6 +250,22 @@ export async function seedTestData() {
   const proofTypes = ["Utility Bill", "Bank Statement", "Rent Agreement", "Property Tax Receipt", "DVLA Document"];
   const educationLevels = ["SHS/WASSCE", "HND", "Bachelor's Degree", "Master's Degree", "PhD", "Professional Certificate", "Diploma", "NVTI Certificate"];
   const pepTitles = ["Member of Parliament", "District Chief Executive", "Regional Minister", "Board Member — Bank of Ghana", "Director — COCOBOD", "SSNIT Board Member", "GRA Commissioner"];
+  const bogTitles = ["Mr", "Mrs", "Ms", "Dr", "Prof", "Chief", "Nana", "Rev"];
+  const bogOwnerTenant = ["O", "O", "O", "O", "O", "T", "T", "T", "F"];
+  const bogEmploymentTypes = ["101", "101", "101", "101", "101", "104", "104", "106", "103", "102"];
+  const bogNationalities = ["GHA", "GHA", "GHA", "GHA", "GHA", "GHA", "GHA", "GHA", "GHA", "GHA", "GHA", "GHA", "GHA", "GHA", "GHA", "GHA", "GHA", "GHA", "GHA", "NGA", "TGO", "CIV", "BFA"];
+  const bogBusinessTypes = ["A", "A", "A", "C", "C", "C", "B", "D", "F", "G", "H", "L"];
+  const bogSectorIndustry = ["10", "10", "10", "20", "30", "30", "40", "50", "60", "60", "60", "70", "80", "80"];
+  const bogSubSectors: Record<string, string[]> = {
+    "10": ["101", "102", "103", "104", "105", "107"],
+    "20": ["203", "205", "206"],
+    "30": ["301", "302", "303", "305", "309"],
+    "40": ["401", "402"],
+    "50": ["501", "503"],
+    "60": ["601", "603", "604", "607", "608"],
+    "70": ["702", "703", "706"],
+    "80": ["801", "802", "804", "805", "806"],
+  };
 
   const cityToRegion: Record<string, string> = {
     "Accra": "Greater Accra", "Tema": "Greater Accra", "Madina": "Greater Accra",
@@ -269,6 +299,10 @@ export async function seedTestData() {
     const isPep = Math.random() < 0.06;
     const edLevel = pick(educationLevels);
 
+    const middleName = Math.random() < 0.6 ? (isMale ? pick(ghanaFirstNamesMale) : pick(ghanaFirstNamesFemale)) : null;
+    const empType = pick(bogEmploymentTypes);
+    const monthlyInc = empType === "102" ? 0 : randInt(800, 25000);
+
     borrowerValues.push({
       type: "individual" as const,
       firstName: fn,
@@ -299,6 +333,19 @@ export async function seedTestData() {
       educationInstitution: edLevel !== "SHS/WASSCE" && edLevel !== "NVTI Certificate" ? pick(ghanaEducation) : null,
       isPep,
       pepDetails: isPep ? `${pick(pepTitles)} - Ghana` : null,
+      middleNames: middleName,
+      title: isMale ? pick(["Mr", "Mr", "Mr", "Dr", "Prof", "Chief", "Nana"]) : pick(["Mrs", "Ms", "Ms", "Dr", "Prof"]),
+      nationality: pick(bogNationalities),
+      ownerOrTenant: pick(bogOwnerTenant),
+      employmentTypeCode: empType,
+      ezwichNumber: Math.random() < 0.4 ? `EZW${randInt(1000000000, 9999999999)}` : null,
+      numberOfDependants: randInt(0, 6),
+      monthlyIncome: monthlyInc.toFixed(2),
+      incomeCurrency: "GHS",
+      homeTelephone: Math.random() < 0.3 ? `+233${pick(["30", "31", "32"])}${randInt(2000000, 9999999)}` : null,
+      workTelephone: Math.random() < 0.4 ? `+233${pick(["30", "31", "32"])}${randInt(2000000, 9999999)}` : null,
+      dateOfEmployment: empType === "101" || empType === "104" ? pastDate(10) : null,
+      employerAddress: empType === "101" ? `${pick(ghanaStreets)}, ${pick(ghanaCitiesUnique)}` : null,
     });
   }
 
@@ -317,6 +364,8 @@ export async function seedTestData() {
     if (usedNationalIds.has(nationalId)) continue;
     usedNationalIds.add(nationalId);
 
+    const sectorCode = pick(bogSectorIndustry);
+    const subSectors = bogSubSectors[sectorCode] || ["309"];
     borrowerValues.push({
       type: "corporate" as const,
       companyName,
@@ -331,6 +380,13 @@ export async function seedTestData() {
       businessRegNumber: `BN-${randInt(2005, 2024)}-${padId(randInt(1, 99999))}`,
       sector: pick(ghanaSectors),
       isPep: false,
+      sectorIndustryCode: sectorCode,
+      subSectorCode: pick(subSectors),
+      businessTypeCode: pick(bogBusinessTypes),
+      turnoverAmount: (randInt(50, 5000) * 1000).toFixed(2),
+      turnoverCurrency: "GHS",
+      registrationDate: pastDate(15),
+      commencementDate: pastDate(12),
     });
   }
 
@@ -424,6 +480,23 @@ export async function seedTestData() {
       const daysArrears = status === "delinquent" ? randInt(30, 180) : status === "default" ? randInt(181, 720) : 0;
       const classification = daysArrears === 0 ? "Pass" : daysArrears <= 90 ? "OLEM" : daysArrears <= 180 ? "Substandard" : daysArrears <= 360 ? "Doubtful" : "Loss";
 
+      const totalOverdue = daysArrears > 0 ? origAmount * 0.1 * Math.random() : 0;
+      const hasCollateral = Math.random() < 0.7;
+      const collType = hasCollateral ? pick(collateralTypes) : null;
+      const termMonths = acctType === "Overdraft" ? 12 : acctType === "Mortgage" ? randInt(120, 360) : randInt(6, 72);
+      const facilityCode = isCorporate
+        ? pick(["101", "103", "110", "118", "121", "126", "129"])
+        : pick(["102", "106", "107", "109", "115", "118", "121", "122", "128"]);
+      const repayCode = pick(["10", "12", "12", "12", "13", "16", "18"]);
+      const purposeCode = pick(["A", "B", "C", "D", "E", "F", "G", "K", "L", "P", "S"]);
+      const securityTypeMap: Record<string, string> = {
+        "Landed Property": "A", "Vehicle": "L", "Fixed Deposit": "E",
+        "Government Securities": "C", "Inventory": "Q", "Machinery": "K",
+        "Cocoa Warehouse Receipt": "Q", "Accounts Receivable": "Q",
+        "Personal Guarantee": "N", "Corporate Guarantee": "M", "Life Insurance Policy": "Q",
+      };
+      const overdueArr = distributeOverdue(totalOverdue, daysArrears);
+
       accountValues.push({
         borrowerId: b.id,
         lenderInstitution: pick(ghanaBanks),
@@ -437,17 +510,39 @@ export async function seedTestData() {
         maturityDate: futureDate(7),
         status,
         daysInArrears: daysArrears,
-        collateralType: Math.random() < 0.7 ? pick(collateralTypes) : null,
-        collateralValue: Math.random() > 0.3 ? (origAmount * (1.1 + Math.random() * 0.5)).toFixed(2) : null,
+        collateralType: collType,
+        collateralValue: hasCollateral ? (origAmount * (1.1 + Math.random() * 0.5)).toFixed(2) : null,
         lastPaymentDate: status !== "written_off" ? pastDate(1) : null,
         lastPaymentAmount: status !== "written_off" ? (origAmount * 0.05 * (0.3 + Math.random())).toFixed(2) : null,
         restructureCount: status === "restructured" ? randInt(1, 3) : 0,
         writtenOffDate: status === "written_off" ? pastDate(1) : null,
-        facilityTypeCode: `FT-${randInt(100, 999)}`,
-        purposeOfFacility: pick(facilityPurposes),
-        repaymentFrequency: pick(repaymentFreqs),
+        facilityTypeCode: facilityCode,
+        purposeOfFacility: purposeCode,
+        repaymentFrequency: repayCode,
         assetClassification: classification,
-        amountOverdue: daysArrears > 0 ? (origAmount * 0.1 * Math.random()).toFixed(2) : "0.00",
+        amountOverdue: totalOverdue.toFixed(2),
+        currentBalanceIndicator: parseFloat(current) >= 0 ? "D" : "C",
+        facilityTerm: termMonths,
+        scheduledInstallmentAmount: (origAmount / termMonths).toFixed(2),
+        disbursementAmount: original,
+        paymentHistoryProfile: mapDaysInArrearsToPaymentProfile(daysArrears),
+        bogAccountStatus: mapInternalStatusToBog(status),
+        bogAssetClassification: mapInternalAssetClassToBog(classification),
+        legalFlag: daysArrears > 180 && Math.random() < 0.3 ? "102" : "101",
+        amtOverdue1to30: overdueArr[0].toFixed(2),
+        amtOverdue31to60: overdueArr[1].toFixed(2),
+        amtOverdue61to90: overdueArr[2].toFixed(2),
+        amtOverdue91to120: overdueArr[3].toFixed(2),
+        amtOverdue121to150: overdueArr[4].toFixed(2),
+        amtOverdue151to180: overdueArr[5].toFixed(2),
+        amtOverdue181plus: overdueArr[6].toFixed(2),
+        creditCollateralIndicator: hasCollateral ? "101" : "102",
+        securityType: collType ? (securityTypeMap[collType] || "Q") : null,
+        natureOfCharge: hasCollateral ? pick(["A", "B"]) : null,
+        securityValue: hasCollateral ? (origAmount * (1.1 + Math.random() * 0.5)).toFixed(2) : null,
+        jointOrSoleAccount: Math.random() < 0.9 ? "S" : "J",
+        noParticipantsInAccount: 1,
+        arrearsStartDate: daysArrears > 0 ? pastDate(1) : null,
       });
     }
   }
@@ -551,11 +646,37 @@ export async function seedTestData() {
         "Default on agricultural loan — cocoa season financing",
         "Non-payment of equipment lease — CalBank leasing facility",
       ]),
+      courtLocation: pick(ghanaCitiesUnique),
+      courtType: pick(["High Court", "Circuit Court", "District Court", "Commercial Court"]),
+      caseFilingDate: pastDate(4),
+      bogCaseType: pick(["A", "B", "C", "E"]),
+      caseReason: pick(["F", "R", "R", "R", "O"]),
+      judgmentCurrency: "GHS",
     });
   }
   if (judgmentValues.length > 0) {
     await db.insert(courtJudgments).values(judgmentValues);
     console.log(`  Created ${judgmentValues.length} court judgments`);
+  }
+
+  const chequeSample = createdBorrowers.sort(() => Math.random() - 0.5).slice(0, 6);
+  const chequeValues: any[] = [];
+  for (const b of chequeSample) {
+    chequeValues.push({
+      borrowerId: b.id,
+      accountNumber: `GHA-CHQ-${randInt(2020, 2025)}-${padId(randInt(1, 99999))}`,
+      chequeNumber: `${randInt(100000, 999999)}`,
+      dateAccountOpened: pastDate(5),
+      dateIssued: pastDate(1),
+      dateBounced: pastDate(0),
+      reasonReturnedCode: pick(["11", "11", "11", "12"]),
+      currency: "GHS",
+      chequeAmount: randDec(500, 50000),
+    });
+  }
+  if (chequeValues.length > 0) {
+    await db.insert(dishonouredCheques).values(chequeValues);
+    console.log(`  Created ${chequeValues.length} dishonoured cheques`);
   }
 
   const consentValues: any[] = [];
