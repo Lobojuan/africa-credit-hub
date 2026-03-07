@@ -11,26 +11,23 @@ async function rowCount(query: ReturnType<typeof sql>) {
 export async function cleanupNonGhanaData() {
   if (!isGhanaMode()) return;
 
-  const nonGhanaBorrowers = await rowCount(sql`SELECT COUNT(*) as cnt FROM borrowers WHERE country IS NOT NULL AND country != 'Ghana'`);
+  const nonGhanaBorrowers = await rowCount(sql`SELECT COUNT(*) as cnt FROM borrowers WHERE country != 'Ghana' OR country IS NULL`);
   const nonGhanaInstitutions = await rowCount(sql`SELECT COUNT(*) as cnt FROM institutions WHERE country != 'Ghana'`);
   const nonGhanaOrgs = await rowCount(sql`SELECT COUNT(*) as cnt FROM organizations WHERE country != 'Ghana'`);
-  const nullCountryBorrowers = await rowCount(sql`SELECT COUNT(*) as cnt FROM borrowers WHERE country IS NULL`);
 
-  const totalNonGhana = nonGhanaBorrowers + nonGhanaInstitutions + nonGhanaOrgs + nullCountryBorrowers;
+  const totalNonGhana = nonGhanaBorrowers + nonGhanaInstitutions + nonGhanaOrgs;
   if (totalNonGhana === 0) return;
 
-  console.log(`[Ghana Cleanup] Found non-Ghana data: ${nonGhanaBorrowers} borrowers, ${nonGhanaInstitutions} institutions, ${nonGhanaOrgs} orgs, ${nullCountryBorrowers} null-country — purging...`);
+  console.log(`[Ghana Cleanup] Found non-Ghana data: ${nonGhanaBorrowers} borrowers, ${nonGhanaInstitutions} institutions, ${nonGhanaOrgs} orgs — purging...`);
 
-  const nonGhanaBorrowerFilter = sql`(country IS NOT NULL AND country != 'Ghana') OR country IS NULL`;
-
-  await db.execute(sql`DELETE FROM payment_history WHERE credit_account_id IN (SELECT id FROM credit_accounts WHERE borrower_id IN (SELECT id FROM borrowers WHERE ${nonGhanaBorrowerFilter}))`);
-  await db.execute(sql`DELETE FROM credit_inquiries WHERE borrower_id IN (SELECT id FROM borrowers WHERE ${nonGhanaBorrowerFilter})`);
-  await db.execute(sql`DELETE FROM credit_report_logs WHERE borrower_id IN (SELECT id FROM borrowers WHERE ${nonGhanaBorrowerFilter})`);
-  await db.execute(sql`DELETE FROM disputes WHERE borrower_id IN (SELECT id FROM borrowers WHERE ${nonGhanaBorrowerFilter})`);
-  await db.execute(sql`DELETE FROM consent_records WHERE borrower_id IN (SELECT id FROM borrowers WHERE ${nonGhanaBorrowerFilter})`);
-  await db.execute(sql`DELETE FROM court_judgments WHERE borrower_id IN (SELECT id FROM borrowers WHERE ${nonGhanaBorrowerFilter})`);
-  await db.execute(sql`DELETE FROM credit_accounts WHERE borrower_id IN (SELECT id FROM borrowers WHERE ${nonGhanaBorrowerFilter})`);
-  await db.execute(sql`DELETE FROM borrowers WHERE ${nonGhanaBorrowerFilter}`);
+  await db.execute(sql`DELETE FROM payment_history WHERE credit_account_id IN (SELECT id FROM credit_accounts WHERE borrower_id IN (SELECT id FROM borrowers WHERE country != 'Ghana' OR country IS NULL))`);
+  await db.execute(sql`DELETE FROM credit_inquiries WHERE borrower_id IN (SELECT id FROM borrowers WHERE country != 'Ghana' OR country IS NULL)`);
+  await db.execute(sql`DELETE FROM credit_report_logs WHERE borrower_id IN (SELECT id FROM borrowers WHERE country != 'Ghana' OR country IS NULL)`);
+  await db.execute(sql`DELETE FROM disputes WHERE borrower_id IN (SELECT id FROM borrowers WHERE country != 'Ghana' OR country IS NULL)`);
+  await db.execute(sql`DELETE FROM consent_records WHERE borrower_id IN (SELECT id FROM borrowers WHERE country != 'Ghana' OR country IS NULL)`);
+  await db.execute(sql`DELETE FROM court_judgments WHERE borrower_id IN (SELECT id FROM borrowers WHERE country != 'Ghana' OR country IS NULL)`);
+  await db.execute(sql`DELETE FROM credit_accounts WHERE borrower_id IN (SELECT id FROM borrowers WHERE country != 'Ghana' OR country IS NULL)`);
+  await db.execute(sql`DELETE FROM borrowers WHERE country != 'Ghana' OR country IS NULL`);
 
   await db.execute(sql`DELETE FROM billing_records WHERE institution_name IN (SELECT name FROM institutions WHERE country != 'Ghana')`);
   await db.execute(sql`DELETE FROM institutions WHERE country != 'Ghana'`);
