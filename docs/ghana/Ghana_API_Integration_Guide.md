@@ -1,7 +1,7 @@
 # Ghana Credit Registry — API Integration Guide
 
-**Systems In Motion Limited**
-**Version 1.1 | Bank of Ghana CRB v1.1 Compliant API**
+**Carlson Capital & Systems In Motion Limited**
+**Version 1.1 | Bank of Ghana CRB v1.1 Compliant API | CDH v2.0**
 
 ---
 
@@ -405,7 +405,7 @@ The Bank of Ghana CRB Unit may request API activity logs at any time per Act 726
 Use of this API constitutes agreement to comply with the Credit Reporting Act, 2007 (Act 726), the Data Protection Act, 2012 (Act 843), and all Bank of Ghana directives. Misuse of the API, including unauthorized data access, data harvesting, or failure to maintain consent records, may result in license revocation and criminal prosecution.
 
 ### 10.2 Liability
-Systems In Motion Limited provides this API on an "as-is" basis and is not liable for data accuracy issues originating from submitting institutions. Each institution remains legally responsible for the accuracy of data submitted per Act 726, Section 7(3).
+Carlson Capital & Systems In Motion Limited provides this API on an "as-is" basis and is not liable for data accuracy issues originating from submitting institutions. Each institution remains legally responsible for the accuracy of data submitted per Act 726, Section 7(3).
 
 ### 10.3 Governing Law
 This API and all data processed through it are governed by the laws of the Republic of Ghana, with the Courts of Ghana having exclusive jurisdiction over any disputes.

@@ -1,17 +1,17 @@
 # Ghana Credit Registry — Service Level Agreement (SLA)
 
-**Systems In Motion Limited**
-**Version 1.1 | Effective Date: January 2026**
+**Carlson Capital & Systems In Motion Limited**
+**Version 1.1 | Effective Date: January 2026 | CDH v2.0**
 **Regulatory Framework: Credit Reporting Act, 2007 (Act 726)**
 
 ---
 
 ## 1. Purpose and Scope
 
-This Service Level Agreement (SLA) defines the performance standards, responsibilities, and compliance obligations for the Ghana Credit Registry operated by Systems In Motion Limited. This agreement aligns with Bank of Ghana (BoG) Credit Reporting Bureau (CRB) Standards v1.1 and the Credit Reporting Act, 2007 (Act 726).
+This Service Level Agreement (SLA) defines the performance standards, responsibilities, and compliance obligations for the Ghana Credit Registry operated by Carlson Capital & Systems In Motion Limited. This agreement aligns with Bank of Ghana (BoG) Credit Reporting Bureau (CRB) Standards v1.1 and the Credit Reporting Act, 2007 (Act 726).
 
 ### 1.1 Parties
-- **Service Provider**: Systems In Motion Limited (Registry Operator)
+- **Service Provider**: Carlson Capital & Systems In Motion Limited (Registry Operator)
 - **Service Recipients**: Licensed credit institutions, microfinance companies, and non-bank financial institutions in Ghana
 - **Regulatory Authority**: Bank of Ghana (BoG)
 
@@ -157,7 +157,7 @@ This Service Level Agreement (SLA) defines the performance standards, responsibi
 
 This SLA is reviewed annually in consultation with the Bank of Ghana and participating institutions. Amendments require 30 days' written notice to all parties.
 
-**Approved by**: Systems In Motion Limited, Board of Directors
+**Approved by**: Carlson Capital & Systems In Motion Limited, Board of Directors
 **Regulatory Alignment**: Bank of Ghana Credit Reporting Bureau Unit
 
 ---

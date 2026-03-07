@@ -1,7 +1,7 @@
 # Ghana Credit Registry — Data Connections and Exchange Policy
 
-**Systems In Motion Limited**
-**Version 1.0 | Regulatory Data Exchange Framework**
+**Carlson Capital & Systems In Motion Limited**
+**Version 1.1 | Regulatory Data Exchange Framework | CDH v2.0**
 
 ---
 
@@ -307,5 +307,5 @@ Per Act 843, Section 37:
 
 ---
 
-*Document Reference: GH-CONN-2026-v1.0*
+*Document Reference: GH-CONN-2026-v1.1*
 *Classification: Confidential — Authorized Personnel Only*

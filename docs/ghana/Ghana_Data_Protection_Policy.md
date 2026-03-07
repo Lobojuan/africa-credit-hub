@@ -1,13 +1,13 @@
 # Ghana Credit Registry — Data Protection and Privacy Policy
 
-**Systems In Motion Limited**
-**Version 1.0 | Aligned with Data Protection Act, 2012 (Act 843)**
+**Carlson Capital & Systems In Motion Limited**
+**Version 1.1 | Aligned with Data Protection Act, 2012 (Act 843) | CDH v2.0**
 
 ---
 
 ## 1. Introduction
 
-This Data Protection and Privacy Policy governs the collection, processing, storage, and sharing of personal data within the Ghana Credit Registry operated by Systems In Motion Limited. This policy ensures compliance with the Data Protection Act, 2012 (Act 843) and the Credit Reporting Act, 2007 (Act 726).
+This Data Protection and Privacy Policy governs the collection, processing, storage, and sharing of personal data within the Ghana Credit Registry operated by Carlson Capital & Systems In Motion Limited. This policy ensures compliance with the Data Protection Act, 2012 (Act 843) and the Credit Reporting Act, 2007 (Act 726).
 
 ---
 
@@ -15,7 +15,7 @@ This Data Protection and Privacy Policy governs the collection, processing, stor
 
 | Detail | Information |
 |--------|-------------|
-| Data Controller | Systems In Motion Limited |
+| Data Controller | Carlson Capital & Systems In Motion Limited |
 | Registration | Data Protection Commission, Ghana |
 | Data Protection Officer | Appointed per Act 843, Section 50 |
 | Contact | dpo@systemsinmotion.com |
@@ -189,5 +189,5 @@ For data protection inquiries, complaints, or to exercise your rights:
 
 ---
 
-*Document Reference: GH-DPP-2026-v1.0*
+*Document Reference: GH-DPP-2026-v1.1*
 *Classification: Public — Data Protection Policy*

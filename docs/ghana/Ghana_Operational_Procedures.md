@@ -1,7 +1,7 @@
 # Ghana Credit Registry — Operational Procedures Manual
 
-**Systems In Motion Limited**
-**Version 1.0 | Standard Operating Procedures for Ghana CRB Operations**
+**Carlson Capital & Systems In Motion Limited**
+**Version 1.1 | Standard Operating Procedures for Ghana CRB Operations | CDH v2.0**
 
 ---
 
@@ -170,5 +170,5 @@ This manual defines the standard operating procedures (SOPs) for the day-to-day 
 
 ---
 
-*Document Reference: GH-OPS-2026-v1.0*
+*Document Reference: GH-OPS-2026-v1.1*
 *Classification: Internal — Operations Manual*

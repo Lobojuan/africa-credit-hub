@@ -1,7 +1,7 @@
 # Ghana Credit Registry — BoG CRB Data Standards Reference
 
-**Systems In Motion Limited**
-**Version 1.1 | Bank of Ghana CRB Data Format Specification**
+**Carlson Capital & Systems In Motion Limited**
+**Version 1.1 | Bank of Ghana CRB Data Format Specification | CDH v2.0**
 
 ---
 
