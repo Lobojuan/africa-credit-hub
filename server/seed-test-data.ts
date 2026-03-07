@@ -1,6 +1,6 @@
 import { db } from "./db";
-import { borrowers, creditAccounts, courtJudgments, consentRecords, paymentHistory, institutions, billingRecords, disputes, users, dishonouredCheques } from "@shared/schema";
-import { count, like } from "drizzle-orm";
+import { borrowers, creditAccounts, courtJudgments, consentRecords, paymentHistory, institutions, billingRecords, disputes, users, dishonouredCheques, organizations } from "@shared/schema";
+import { count, like, ne, isNull, eq } from "drizzle-orm";
 import { mapInternalStatusToBog, mapInternalAssetClassToBog, mapDaysInArrearsToPaymentProfile } from "@shared/bog-codes";
 
 const ghanaFirstNamesMale = [
@@ -393,6 +393,18 @@ export async function seedTestData() {
   const createdBorrowers = await db.insert(borrowers).values(borrowerValues).returning();
   console.log(`  Created ${createdBorrowers.length} Ghana borrowers (${TARGET_INDIVIDUALS} individuals, ${TARGET_CORPORATES} corporates)`);
 
+  const lendingOrgs = await db.select({ id: organizations.id })
+    .from(organizations)
+    .where(ne(organizations.name, "Bank of Ghana"));
+  if (lendingOrgs.length > 0) {
+    for (let i = 0; i < createdBorrowers.length; i++) {
+      const orgId = lendingOrgs[i % lendingOrgs.length].id;
+      await db.update(borrowers).set({ organizationId: orgId }).where(eq(borrowers.id, createdBorrowers[i].id));
+      createdBorrowers[i] = { ...createdBorrowers[i], organizationId: orgId };
+    }
+    console.log(`  Assigned borrowers across ${lendingOrgs.length} organizations`);
+  }
+
   const individualAccountTypes = [
     "Personal Loan", "Personal Loan", "Personal Loan", "Personal Loan",
     "Salary Advance", "Salary Advance", "Salary Advance",
@@ -499,6 +511,7 @@ export async function seedTestData() {
 
       accountValues.push({
         borrowerId: b.id,
+        organizationId: b.organizationId,
         lenderInstitution: pick(ghanaBanks),
         accountNumber: `GHA-${pick(["LN", "OD", "CC", "ML", "TF", "MG", "AL", "SL"])}-${randInt(2019, 2025)}-${padId(randInt(1, 99999))}`,
         accountType: acctType,
@@ -596,6 +609,7 @@ export async function seedTestData() {
     slaDeadline.setDate(slaDeadline.getDate() + randInt(-5, 25));
     disputeValues.push({
       borrowerId: b.id,
+      organizationId: b.organizationId,
       filedBy: adminUser.id,
       disputeType: pick(disputeTypes),
       description: pick([
@@ -631,6 +645,7 @@ export async function seedTestData() {
   for (const b of judgmentSample) {
     judgmentValues.push({
       borrowerId: b.id,
+      organizationId: b.organizationId,
       caseNumber: `GH-${randInt(2020, 2025)}-CV-${padId(randInt(1, 9999))}`,
       court: pick(ghanaCourts),
       judgmentType: pick(judgmentTypes),
@@ -664,6 +679,7 @@ export async function seedTestData() {
   for (const b of chequeSample) {
     chequeValues.push({
       borrowerId: b.id,
+      organizationId: b.organizationId,
       accountNumber: `GHA-CHQ-${randInt(2020, 2025)}-${padId(randInt(1, 99999))}`,
       chequeNumber: `${randInt(100000, 999999)}`,
       dateAccountOpened: pastDate(5),
