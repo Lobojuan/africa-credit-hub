@@ -361,7 +361,7 @@ export default function BorrowerDetailPage() {
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold">{formatCurrency(summary.totalDebt)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(summary.totalDebt, getDefaultCurrency())}</div>
             <p className="text-xs text-muted-foreground mt-1">{t("borrowerDetail.totalOutstanding")}</p>
           </CardContent>
         </Card>
@@ -667,7 +667,7 @@ export default function BorrowerDetailPage() {
                     <TableCell className="text-sm font-medium">{j.caseNumber}</TableCell>
                     <TableCell className="text-sm">{j.court}</TableCell>
                     <TableCell><Badge variant="outline" className="text-[10px] capitalize">{j.judgmentType.replace(/_/g, " ")}</Badge></TableCell>
-                    <TableCell className="text-sm">{j.amount ? formatCurrency(j.amount) : "—"}</TableCell>
+                    <TableCell className="text-sm">{j.amount ? formatCurrency(j.amount, getDefaultCurrency()) : "—"}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{j.judgmentDate || "—"}</TableCell>
                     <TableCell>
                       <Badge variant={j.status === "active" ? "destructive" : j.status === "resolved" ? "default" : "secondary"} className="text-[10px] capitalize">
