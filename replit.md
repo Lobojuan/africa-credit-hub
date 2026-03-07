@@ -63,9 +63,10 @@ The system employs a modern full-stack architecture built for scalability and co
 
 The dev server uses `bash dev-server.sh` as the workflow command instead of direct `npm run dev`. Key stability measures:
 
+-   **dev-server.sh**: Wrapper script that traps HUP and PIPE signals and runs `node --require ./server/stdout-guard.cjs --import tsx/esm server/index.ts`. The bash process stays alive as PID 1 so the workflow system doesn't escalate to SIGKILL when the stdout pipe breaks.
 -   **stdout-guard.cjs**: A Node.js `--require` preload that patches `process.stdout._write` and `process.stderr._write` to silently swallow EIO/EPIPE errors. Without this, the Replit workflow system's stdout pipe breaks periodically, causing cascading EIO errors that crash the Node.js process.
--   **dev-server.sh**: Wrapper script that traps HUP and PIPE signals, sets `NODE_OPTIONS="--require ./server/stdout-guard.cjs"`, and runs `npm run dev`.
 -   **vite.ts**: The Vite dev server's custom error logger no longer calls `process.exit(1)` on errors (previously killed the entire server on any Vite compilation error).
--   **server/index.ts**: EIO/EPIPE/ERR_STREAM_DESTROYED errors are filtered in the uncaught exception handler; stdout/stderr error events are silently handled; console.error calls are wrapped in try/catch.
+-   **server/index.ts**: EIO/EPIPE/ERR_STREAM_DESTROYED errors are filtered in the uncaught exception handler; stdout/stderr error events are silently handled; console.error calls are wrapped in try/catch. Crash diagnostics written to `/tmp/server-crash.log`.
 -   **Error Boundary**: `client/src/components/error-boundary.tsx` wraps the Router in App.tsx for graceful React error display.
 -   **Credit Report Preload**: Heavy modules (`credit-report.tsx`, `reports.tsx`) are preloaded 2 seconds after user login via `useEffect` in `AuthenticatedApp` to prevent Vite on-demand compilation memory spikes.
+-   **Known Platform Limitation**: The Replit workflow system's stdout pipe breaks after ~30-120 seconds. With the bash wrapper, both processes survive but the workflow may show "not started". The server continues responding on port 5000 — restart the workflow to restore the UI indicator.
