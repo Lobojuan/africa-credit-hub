@@ -382,8 +382,8 @@ export default function InvestorLandingPage() {
 
   useEffect(() => {
     document.title = isGhanaMode() 
-      ? "Ghana Credit Registry System | v1.2 — Systems In Motion Limited"
-      : "Pan-African Credit Registry System | CDH v1.2 — Systems In Motion Limited";
+      ? "Ghana Credit Registry System | v1.2 — Carlson Capital & Systems In Motion Limited"
+      : "Pan-African Credit Registry System | CDH v1.2 — Carlson Capital & Systems In Motion Limited";
     const meta = document.querySelector('meta[name="description"]');
     const content = "The first SRS-compliant credit information sharing platform covering all 54 African countries with 42+ currencies, 5 AU languages, and enterprise-grade security.";
     if (meta) {
@@ -476,7 +476,7 @@ export default function InvestorLandingPage() {
         <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 text-center">
           <Badge variant="secondary" className="mb-6 text-xs px-3 py-1 font-medium" data-testid="badge-version">
             <Star className="w-3 h-3 mr-1" />
-            Cross-Jurisdictional CDH v1.2 — Systems In Motion Limited
+            Cross-Jurisdictional CDH v1.2 — Carlson Capital & Systems In Motion Limited
           </Badge>
 
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1] mb-6">
@@ -497,7 +497,7 @@ export default function InvestorLandingPage() {
           </p>
 
           <p className="text-sm text-muted-foreground/80 max-w-xl mx-auto mb-10">
-            Built by <strong className="text-foreground/80">Systems In Motion Limited</strong> to address
+            Built by <strong className="text-foreground/80">Carlson Capital & Systems In Motion Limited</strong> to address
             Africa's $4.8 trillion credit information gap.
           </p>
 
@@ -923,7 +923,7 @@ export default function InvestorLandingPage() {
               >
                 <Shield className="w-3.5 h-3.5 text-white" />
               </div>
-              <span>Systems In Motion Limited</span>
+              <span>Carlson Capital & Systems In Motion Limited</span>
             </div>
             <p>Cross-Jurisdictional Central Data Hub & Credit Registry System v1.2</p>
             <p>Confidential & Proprietary</p>

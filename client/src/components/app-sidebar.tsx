@@ -311,7 +311,7 @@ export function AppSidebar() {
         </div>
         <div className="px-1">
           <p className="text-[9px] text-sidebar-foreground/40 leading-relaxed" data-testid="text-provider-credit">
-            <span className="text-sidebar-foreground/60 font-medium">Systems In Motion Limited™</span>
+            <span className="text-sidebar-foreground/60 font-medium">Carlson Capital & Systems In Motion Limited™</span>
           </p>
           <p className="text-[8px] text-sidebar-foreground/30" data-testid="text-copyright">
             © 2026 All rights reserved.

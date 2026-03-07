@@ -13,8 +13,8 @@ export async function seedDatabase() {
   const ghanaMode = isGhanaMode();
 
   const [admin] = await db.insert(users).values([
-    { username: "admin", password: hash("admin0987"), fullName: ghanaMode ? "Kwame Mensah" : "Tadesse Bekele", email: "tadesse@systemsinmotionlimited.com", role: "super_admin", status: "active", institution: "Systems In Motion Limited" },
-    { username: "platform_admin", password: hash("admin0987"), fullName: "Platform Administrator", email: "platform@systemsinmotionlimited.com", role: "super_admin", status: "active", institution: "Systems In Motion Limited" },
+    { username: "admin", password: hash("admin0987"), fullName: ghanaMode ? "Kwame Mensah" : "Tadesse Bekele", email: "tadesse@systemsinmotionlimited.com", role: "super_admin", status: "active", institution: "Carlson Capital & Systems In Motion Limited" },
+    { username: "platform_admin", password: hash("admin0987"), fullName: "Platform Administrator", email: "platform@systemsinmotionlimited.com", role: "super_admin", status: "active", institution: "Carlson Capital & Systems In Motion Limited" },
   ]).returning();
 
   const coreBorrowers = ghanaMode ? [
@@ -194,7 +194,7 @@ export async function seedDatabase() {
   await db.insert(creditInquiries).values([
     { borrowerId: createdBorrowers[0].id, inquiredBy: admin.id, purpose: "new_credit", institution: coreInstitution, consentProvided: true },
     { borrowerId: createdBorrowers[1].id, inquiredBy: admin.id, purpose: "review", institution: coreInstitution2, consentProvided: true },
-    { borrowerId: createdBorrowers[2].id, inquiredBy: admin.id, purpose: "regulatory", institution: "Systems In Motion Limited", consentProvided: true },
+    { borrowerId: createdBorrowers[2].id, inquiredBy: admin.id, purpose: "regulatory", institution: "Carlson Capital & Systems In Motion Limited", consentProvided: true },
     { borrowerId: createdBorrowers[3].id, inquiredBy: admin.id, purpose: "portfolio_monitoring", institution: coreInstitution3, consentProvided: true },
   ]);
 

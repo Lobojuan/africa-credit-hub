@@ -499,7 +499,7 @@ export default function CreditReportPage() {
                     <h1 className="text-lg font-bold print:text-base">Comprehensive Credit Information Report</h1>
                   </div>
                   <p className="text-sm text-white/70 print:text-[10px]">Cross-Jurisdictional Central Data Hub v1.2</p>
-                  <p className="text-xs text-white/50 mt-1 print:text-[8px]">Systems In Motion Limited</p>
+                  <p className="text-xs text-white/50 mt-1 print:text-[8px]">Carlson Capital & Systems In Motion Limited</p>
                 </div>
                 <div className="text-right">
                   <div className="bg-white/10 rounded-lg px-4 py-2 print:px-2 print:py-1">
@@ -1063,12 +1063,12 @@ export default function CreditReportPage() {
                 </p>
                 <p className="text-[10px] text-muted-foreground/60 max-w-3xl mx-auto print:text-[7px]">
                   Note: The information contained in this report has been compiled from data submitted by participating financial institutions
-                  to the Credit Registry System. While Systems In Motion Limited endeavors to ensure accuracy of information, we do not accept
+                  to the Credit Registry System. While Carlson Capital & Systems In Motion Limited endeavor to ensure accuracy of information, we do not accept
                   any responsibility for any loss or damage to any subject resulting from this report. The requesting institution agrees not to hold,
                   or seek to hold, the Credit Registry System responsible or liable with respect to the content of this report.
                 </p>
                 <p className="text-[10px] text-muted-foreground/60 print:text-[7px]">
-                  Cross-Jurisdictional Central Data Hub & Credit Registry System v1.2 | Systems In Motion Limited
+                  Cross-Jurisdictional Central Data Hub & Credit Registry System v1.2 | Carlson Capital & Systems In Motion Limited
                 </p>
                 <p className="text-[9px] text-muted-foreground/40 mt-1 print:text-[7px]">
                   Confidential & Proprietary | Unauthorized distribution is prohibited

@@ -34,7 +34,7 @@ function createEmailHtml(title: string, bodyHtml: string): string {
     <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
       <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);padding:28px 32px;">
         <h1 style="color:#fff;margin:0;font-size:20px;font-weight:600;">🌍 Pan-African Credit Registry</h1>
-        <p style="color:rgba(255,255,255,.7);margin:4px 0 0;font-size:13px;">Systems In Motion Limited</p>
+        <p style="color:rgba(255,255,255,.7);margin:4px 0 0;font-size:13px;">Carlson Capital & Systems In Motion Limited</p>
       </div>
       <div style="padding:32px;">
         <h2 style="color:#1a1a2e;margin:0 0 16px;font-size:18px;">${title}</h2>

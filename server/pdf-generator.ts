@@ -97,7 +97,7 @@ export function generatePdfFromMarkdown(markdownContent: string, title: string, 
     bufferPages: true,
     info: {
       Title: title,
-      Author: "Systems In Motion Limited™",
+      Author: "Carlson Capital & Systems In Motion Limited™",
       Creator: "Credit Registry System v1.1",
     },
   });
@@ -125,7 +125,7 @@ export function generatePdfFromMarkdown(markdownContent: string, title: string, 
   doc.font("Helvetica-Bold").fontSize(20).fillColor(TEAL).text(title);
   doc.moveDown(0.3);
   doc.font("Helvetica").fontSize(9).fillColor(LIGHT_GRAY)
-    .text("Systems In Motion Limited™ — Cross-Jurisdictional Central Data Hub & Credit Registry System v1.1");
+    .text("Carlson Capital & Systems In Motion Limited™ — Cross-Jurisdictional Central Data Hub & Credit Registry System v1.1");
   doc.moveDown(0.2);
   doc.font("Helvetica").fontSize(9).fillColor(LIGHT_GRAY)
     .text(`Generated: ${new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}`);
@@ -326,8 +326,8 @@ export function generatePdfFromMarkdown(markdownContent: string, title: string, 
     .stroke();
   doc.moveDown(0.5);
   doc.font("Helvetica").fontSize(8).fillColor(LIGHT_GRAY)
-    .text("Systems In Motion Limited™ — Cross-Jurisdictional Central Data Hub & Credit Registry System v1.1", { align: "center" });
-  doc.text("© 2026 Systems In Motion Limited. All rights reserved.", { align: "center" });
+    .text("Carlson Capital & Systems In Motion Limited™ — Cross-Jurisdictional Central Data Hub & Credit Registry System v1.1", { align: "center" });
+  doc.text("© 2026 Carlson Capital & Systems In Motion Limited. All rights reserved.", { align: "center" });
 
   const totalPages = doc.bufferedPageRange().count;
   for (let p = 0; p < totalPages; p++) {

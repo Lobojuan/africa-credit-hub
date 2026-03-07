@@ -29,7 +29,7 @@ const GHANA_CONFIG: CountryConfig = {
   regulatoryBody: "Bank of Ghana",
   dataProtectionLaw: "Data Protection Act, 2012 (Act 843)",
   brandTitle: "Ghana Credit Registry",
-  brandSubtitle: "Systems In Motion Limited™",
+  brandSubtitle: "Carlson Capital & Systems In Motion Limited™",
   regions: [
     "Greater Accra",
     "Ashanti",
@@ -260,7 +260,7 @@ export function getBrandTitle(): string {
 
 export function getBrandSubtitle(): string {
   const config = getCountryConfig();
-  return config ? config.brandSubtitle : "Systems In Motion Limited™";
+  return config ? config.brandSubtitle : "Carlson Capital & Systems In Motion Limited™";
 }
 
 export function getDefaultFallbackCurrency(): string {
