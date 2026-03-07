@@ -445,29 +445,7 @@ export default function BorrowerDetailPage() {
                 <IdCard className="w-3.5 h-3.5" />
                 {t("borrowerDetail.idDocument")}
               </p>
-              {isGhanaMode() && isIndividual ? (
-                <div className="space-y-4" data-testid="sample-id-documents">
-                  {(borrower as any).ghanaCardNumber && (
-                    <GhanaCardSample borrower={borrower as any} />
-                  )}
-                  {borrower.passportNumber && (
-                    <GhanaPassportSample borrower={borrower as any} />
-                  )}
-                  {(borrower as any).driversLicense && (
-                    <SampleDriversLicense borrower={borrower as any} />
-                  )}
-                  {!(borrower as any).ghanaCardNumber && !borrower.passportNumber && !(borrower as any).driversLicense && (
-                    <button
-                      onClick={() => docInputRef.current?.click()}
-                      className="w-full border-2 border-dashed rounded-lg p-6 text-center hover:border-primary/50 hover:bg-accent/50 transition-colors"
-                      data-testid="button-upload-first-document"
-                    >
-                      <IdCard className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-xs text-muted-foreground">{t("borrowerDetail.uploadIdDocPrompt")}</p>
-                    </button>
-                  )}
-                </div>
-              ) : (borrower as any).idDocumentUrl ? (
+              {(borrower as any).idDocumentUrl ? (
                 <div className="relative group rounded-lg overflow-hidden border">
                   <img
                     src={(borrower as any).idDocumentUrl}
@@ -490,6 +468,19 @@ export default function BorrowerDetailPage() {
                   <IdCard className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
                   <p className="text-xs text-muted-foreground">{t("borrowerDetail.uploadIdDocPrompt")}</p>
                 </button>
+              )}
+              {isGhanaMode() && isIndividual && (
+                <div className="space-y-4 mt-3" data-testid="sample-id-documents">
+                  {(borrower as any).ghanaCardNumber && (
+                    <GhanaCardSample borrower={borrower as any} />
+                  )}
+                  {borrower.passportNumber && (
+                    <GhanaPassportSample borrower={borrower as any} />
+                  )}
+                  {(borrower as any).driversLicense && (
+                    <SampleDriversLicense borrower={borrower as any} />
+                  )}
+                </div>
               )}
             </div>
           </CardContent>
