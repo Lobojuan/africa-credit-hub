@@ -6,9 +6,19 @@ import helmet from "helmet";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
-import { readFileSync, readdirSync, readlinkSync } from "fs";
+import { readFileSync, readdirSync, readlinkSync, writeFileSync, appendFileSync } from "fs";
 
 const port = parseInt(process.env.PORT || "5000", 10);
+
+function crashLog(msg: string) {
+  try {
+    const ts = new Date().toISOString();
+    const mem = process.memoryUsage();
+    const line = `[${ts}] ${msg} | rss=${Math.round(mem.rss / 1024 / 1024)}MB heap=${Math.round(mem.heapUsed / 1024 / 1024)}/${Math.round(mem.heapTotal / 1024 / 1024)}MB\n`;
+    appendFileSync("/tmp/server-crash.log", line);
+  } catch {}
+}
+crashLog("SERVER_START");
 
 function killPortHolder(targetPort: number) {
   try {
@@ -181,6 +191,7 @@ app.use((req, res, next) => {
 });
 
 function gracefulShutdown(signal: string) {
+  crashLog(`SHUTDOWN signal=${signal}`);
   console.log(`Received ${signal}, shutting down gracefully...`);
   httpServer.close(() => {
     console.log("Server closed");
@@ -194,15 +205,36 @@ function gracefulShutdown(signal: string) {
 
 process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 process.on("SIGINT", () => gracefulShutdown("SIGINT"));
-process.on("SIGHUP", () => { /* ignore hangup signal */ });
+process.on("SIGHUP", () => { crashLog("SIGHUP received"); });
 process.on("SIGPIPE", () => { /* ignore broken pipe */ });
 process.on("uncaughtException", (err: NodeJS.ErrnoException) => {
-  console.error("Uncaught exception:", err);
+  if (err.code === "EIO" || err.code === "EPIPE" || err.code === "ERR_STREAM_DESTROYED") {
+    return;
+  }
+  crashLog(`UNCAUGHT_EXCEPTION ${err.message} ${err.stack?.slice(0, 300)}`);
+  try { console.error("Uncaught exception:", err); } catch {}
   if (err.code === "EADDRINUSE") {
     process.exit(1);
   }
 });
-process.on("unhandledRejection", (err) => { console.error("Unhandled rejection:", err); });
+process.on("unhandledRejection", (err) => {
+  crashLog(`UNHANDLED_REJECTION ${err}`);
+  try { console.error("Unhandled rejection:", err); } catch {}
+});
+process.on("beforeExit", (code) => { crashLog(`BEFORE_EXIT code=${code}`); });
+process.on("exit", (code) => { crashLog(`EXIT code=${code}`); });
+
+process.stdout?.on?.("error", () => {});
+process.stderr?.on?.("error", () => {});
+
+const origStdoutWrite = process.stdout.write.bind(process.stdout);
+const origStderrWrite = process.stderr.write.bind(process.stderr);
+process.stdout.write = function (...args: any[]) {
+  try { return origStdoutWrite(...args); } catch { return false; }
+} as any;
+process.stderr.write = function (...args: any[]) {
+  try { return origStderrWrite(...args); } catch { return false; }
+} as any;
 
 (async () => {
   const { seedDatabase } = await import("./seed");

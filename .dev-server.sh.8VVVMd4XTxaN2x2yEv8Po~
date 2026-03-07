@@ -1,0 +1,4 @@
+#!/bin/bash
+trap '' HUP PIPE
+
+NODE_ENV=development exec node --require ./server/stdout-guard.cjs --import tsx/esm server/index.ts

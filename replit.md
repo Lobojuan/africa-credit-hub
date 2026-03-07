@@ -58,3 +58,14 @@ The system employs a modern full-stack architecture built for scalability and co
 -   **AI / OpenAI**: Integrated via Replit AI Integrations for credit risk analysis, report summaries, chatbot, and compliance reports.
 -   **Excel Export**: `exceljs` package for XLSX report exports.
 -   **Third-Party APIs**: open.er-api.com (exchange rates), DiceBear (avatars).
+
+## Server Stability
+
+The dev server uses `bash dev-server.sh` as the workflow command instead of direct `npm run dev`. Key stability measures:
+
+-   **stdout-guard.cjs**: A Node.js `--require` preload that patches `process.stdout._write` and `process.stderr._write` to silently swallow EIO/EPIPE errors. Without this, the Replit workflow system's stdout pipe breaks periodically, causing cascading EIO errors that crash the Node.js process.
+-   **dev-server.sh**: Wrapper script that traps HUP and PIPE signals, sets `NODE_OPTIONS="--require ./server/stdout-guard.cjs"`, and runs `npm run dev`.
+-   **vite.ts**: The Vite dev server's custom error logger no longer calls `process.exit(1)` on errors (previously killed the entire server on any Vite compilation error).
+-   **server/index.ts**: EIO/EPIPE/ERR_STREAM_DESTROYED errors are filtered in the uncaught exception handler; stdout/stderr error events are silently handled; console.error calls are wrapped in try/catch.
+-   **Error Boundary**: `client/src/components/error-boundary.tsx` wraps the Router in App.tsx for graceful React error display.
+-   **Credit Report Preload**: Heavy modules (`credit-report.tsx`, `reports.tsx`) are preloaded 2 seconds after user login via `useEffect` in `AuthenticatedApp` to prevent Vite on-demand compilation memory spikes.
