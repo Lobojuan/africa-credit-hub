@@ -32,7 +32,8 @@ const BorrowersPage = lazy(() => import("@/pages/borrowers"));
 const BorrowerDetailPage = lazy(() => import("@/pages/borrower-detail"));
 const CreditAccountsPage = lazy(() => import("@/pages/credit-accounts"));
 const CreditSearchPage = lazy(() => import("@/pages/credit-search"));
-const ReportsPage = lazy(() => import("@/pages/reports"));
+const reportsImport = () => import("@/pages/reports");
+const ReportsPage = lazy(reportsImport);
 const AuditTrailPage = lazy(() => import("@/pages/audit-trail"));
 const UserManagementPage = lazy(() => import("@/pages/user-management"));
 const PendingApprovalsPage = lazy(() => import("@/pages/pending-approvals"));
@@ -42,7 +43,8 @@ const InstitutionsPage = lazy(() => import("@/pages/institutions"));
 const ConsentManagementPage = lazy(() => import("@/pages/consent-management"));
 const BillingPage = lazy(() => import("@/pages/billing"));
 const HelpdeskPage = lazy(() => import("@/pages/helpdesk"));
-const CreditReportPage = lazy(() => import("@/pages/credit-report"));
+const creditReportImport = () => import("@/pages/credit-report");
+const CreditReportPage = lazy(creditReportImport);
 const ApiKeysPage = lazy(() => import("@/pages/api-keys"));
 const ApiDocsPage = lazy(() => import("@/pages/api-docs"));
 const OnlineManualPage = lazy(() => import("@/pages/online-manual"));
@@ -143,6 +145,16 @@ function AuthenticatedApp() {
   useEffect(() => {
     document.documentElement.dir = i18n.language === "ar" ? "rtl" : "ltr";
   }, [i18n.language]);
+
+  useEffect(() => {
+    if (user) {
+      const timer = setTimeout(() => {
+        reportsImport();
+        creditReportImport();
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [user]);
 
   if (isLoading) {
     return (
