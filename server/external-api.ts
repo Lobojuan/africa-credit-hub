@@ -5,6 +5,7 @@ import {
   insertCourtJudgmentSchema, insertConsentRecordSchema,
 } from "@shared/schema";
 import crypto from "crypto";
+import { calculateCreditScore } from "./credit-score";
 import jwt from "jsonwebtoken";
 
 const JWT_SECRET = process.env.SESSION_SECRET! + "-jwt-ext";
@@ -305,18 +306,7 @@ export function registerExternalApi(app: Express) {
         serialNumber,
       });
 
-      let score = 700;
-      const reasonCodes: string[] = [];
-      const delinquent = accounts.filter(a => a.status === "delinquent").length;
-      const defaulted = accounts.filter(a => a.status === "default").length;
-      const writtenOff = accounts.filter(a => a.status === "written_off").length;
-      if (delinquent > 0) { score -= delinquent * 30; reasonCodes.push("DELINQUENT_ACCOUNTS"); }
-      if (defaulted > 0) { score -= defaulted * 50; reasonCodes.push("DEFAULTED_ACCOUNTS"); }
-      if (writtenOff > 0) { score -= writtenOff * 60; reasonCodes.push("WRITTEN_OFF_ACCOUNTS"); }
-      if (judgments.filter(j => j.status === "active").length > 0) { score -= 40; reasonCodes.push("ACTIVE_COURT_JUDGMENTS"); }
-      if (accounts.length === 0) { score -= 50; reasonCodes.push("NO_CREDIT_HISTORY"); }
-      if (reasonCodes.length === 0) reasonCodes.push("GOOD_STANDING");
-      score = Math.max(300, Math.min(850, score));
+      const { score, reasonCodes } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep);
 
       await storage.createAuditLog({
         action: "API_CREDIT_REPORT", entity: "borrower", entityId: borrower.id,

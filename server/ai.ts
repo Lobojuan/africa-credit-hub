@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { storage } from "./storage";
+import { getDefaultCurrencyCode } from "./credit-score";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -12,10 +13,11 @@ export async function analyzeCreditRisk(borrowerId: string | number) {
 
   const accounts = await storage.getCreditAccountsByBorrower(borrowerId);
   const disputes = await storage.getDisputesByBorrower(borrowerId);
+  const defaultCurrency = getDefaultCurrencyCode();
 
   const totalBalance = accounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
-  const delinquentCount = accounts.filter(a => a.accountStatus === "delinquent" || a.accountStatus === "default").length;
-  const activeCount = accounts.filter(a => a.accountStatus === "current" || a.accountStatus === "active").length;
+  const delinquentCount = accounts.filter(a => a.status === "delinquent" || a.status === "default").length;
+  const activeCount = accounts.filter(a => a.status === "current" || a.status === "closed").length;
   const openDisputeCount = disputes.filter(d => d.status === "open" || d.status === "under_review").length;
 
   const borrowerProfile = `
@@ -28,10 +30,10 @@ PEP Status: ${borrower.isPep ? "Yes" : "No"}
 Number of Credit Accounts: ${accounts.length}
 Active/Current Accounts: ${activeCount}
 Delinquent/Default Accounts: ${delinquentCount}
-Total Outstanding Balance: $${totalBalance.toLocaleString()}
+Total Outstanding Balance: ${defaultCurrency} ${totalBalance.toLocaleString()}
 Open Disputes: ${openDisputeCount}
 Account Details:
-${accounts.map(a => `  - ${a.accountType}: ${a.currency || "USD"} ${parseFloat(a.currentBalance || "0").toLocaleString()} | Status: ${a.accountStatus} | Opened: ${a.dateOpened || "Unknown"}`).join("\n")}
+${accounts.map(a => `  - ${a.accountType}: ${a.currency || defaultCurrency} ${parseFloat(a.currentBalance || "0").toLocaleString()} | Status: ${a.status} | Opened: ${a.dateOpened || "Unknown"}`).join("\n")}
   `.trim();
 
   const response = await openai.chat.completions.create({
@@ -39,7 +41,7 @@ ${accounts.map(a => `  - ${a.accountType}: ${a.currency || "USD"} ${parseFloat(a
     messages: [
       {
         role: "system",
-        content: `You are an expert credit risk analyst for the Pan-African Credit Registry. Analyze borrower profiles and provide structured risk assessments. You must respond in valid JSON format with these fields:
+        content: `You are an expert credit risk analyst for the Pan-African Credit Registry. Analyze borrower profiles and provide structured risk assessments. All monetary amounts are in ${defaultCurrency} (${defaultCurrency === "GHS" ? "Ghana Cedis" : defaultCurrency}). You must respond in valid JSON format with these fields:
 {
   "riskLevel": "low" | "medium" | "high" | "critical",
   "riskScore": <number 0-100, higher = more risky>,
@@ -80,6 +82,7 @@ export async function generateReportSummary(borrowerId: string | number) {
 
   const accounts = await storage.getCreditAccountsByBorrower(borrowerId);
   const disputes = await storage.getDisputesByBorrower(borrowerId);
+  const defaultCurrency = getDefaultCurrencyCode();
 
   const totalBalance = accounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
 
@@ -89,9 +92,9 @@ Country: ${borrower.country || "Unknown"} | ID: ${borrower.nationalId || "N/A"}
 Employment: ${borrower.employmentStatus || "Unknown"} | Income: ${borrower.monthlyIncome || "Not reported"}
 
 Credit Accounts (${accounts.length}):
-${accounts.map(a => `  ${a.accountType} — ${a.currency || "USD"} ${parseFloat(a.currentBalance || "0").toLocaleString()} — Status: ${a.accountStatus} — Opened: ${a.dateOpened || "Unknown"}`).join("\n")}
+${accounts.map(a => `  ${a.accountType} — ${a.currency || defaultCurrency} ${parseFloat(a.currentBalance || "0").toLocaleString()} — Status: ${a.status} — Opened: ${a.dateOpened || "Unknown"}`).join("\n")}
 
-Total Outstanding: $${totalBalance.toLocaleString()}
+Total Outstanding: ${defaultCurrency} ${totalBalance.toLocaleString()}
 Disputes: ${disputes.length} total, ${disputes.filter(d => d.status === "open").length} open
   `.trim();
 
@@ -100,7 +103,7 @@ Disputes: ${disputes.length} total, ${disputes.filter(d => d.status === "open").
     messages: [
       {
         role: "system",
-        content: `You are a credit report summarizer for the Pan-African Credit Registry. Generate clear, professional, plain-language summaries of credit reports suitable for non-technical readers such as bank officers and regulators. Include key highlights, concerns, and an overall assessment. Keep it concise but comprehensive (3-5 paragraphs). Use professional financial language.`
+        content: `You are a credit report summarizer for the Pan-African Credit Registry. All monetary amounts are in ${defaultCurrency} (${defaultCurrency === "GHS" ? "Ghana Cedis" : defaultCurrency}). Generate clear, professional, plain-language summaries of credit reports suitable for non-technical readers such as bank officers and regulators. Include key highlights, concerns, and an overall assessment. Keep it concise but comprehensive (3-5 paragraphs). Use professional financial language. Always reference amounts in ${defaultCurrency}.`
       },
       {
         role: "user",
@@ -119,6 +122,7 @@ Disputes: ${disputes.length} total, ${disputes.filter(d => d.status === "open").
 }
 
 export async function chatWithAI(messages: { role: string; content: string }[], userRole?: string) {
+  const defaultCurrency = getDefaultCurrencyCode();
   const systemMessage = {
     role: "system" as const,
     content: `You are the Pan-African Credit Registry AI Assistant, an expert in credit bureau operations, African financial regulations, and the Credit Data Hub (CDH v1.2) platform.
@@ -134,6 +138,8 @@ Your knowledge includes:
 - Credit account types (personal loans, mortgages, business credit, trade finance)
 - Regulatory reporting requirements
 
+The system is currently operating in Ghana mode. The default currency is ${defaultCurrency} (Ghana Cedis). The regulatory body is the Bank of Ghana.
+
 You help users with:
 - Understanding credit data and reports
 - Navigating the platform features
@@ -142,7 +148,7 @@ You help users with:
 - Providing guidance on dispute management
 - Explaining compliance requirements
 
-Be professional, concise, and helpful. When discussing regulations, specify the relevant jurisdiction. If unsure about specific country regulations, say so rather than guessing.
+Be professional, concise, and helpful. When discussing regulations, specify the relevant jurisdiction. If unsure about specific country regulations, say so rather than guessing. Always use ${defaultCurrency} when referencing monetary amounts unless the user specifies otherwise.
 
 The user's role is: ${userRole || "user"}.`
   };

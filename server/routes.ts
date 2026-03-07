@@ -13,6 +13,7 @@ import {
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { registerExternalApi, generateApiKey } from "./external-api";
+import { calculateCreditScore, getDefaultCurrencyCode } from "./credit-score";
 import fs from "fs";
 import path from "path";
 import * as OTPAuth from "otpauth";
@@ -939,16 +940,11 @@ export async function registerRoutes(
       const accounts = await storage.getCreditAccountsByBorrower(req.params.id);
       const inquiries = await storage.getCreditInquiriesByBorrower(req.params.id);
 
+      const judgments = await storage.getCourtJudgmentsByBorrower(req.params.id);
       const totalDebt = accounts.reduce((sum, a) => sum + parseFloat(a.currentBalance || "0"), 0);
       const delinquentCount = accounts.filter(a => a.status === "delinquent" || a.status === "default").length;
-      const onTimeCount = accounts.filter(a => a.status === "current").length;
-
-      let creditScore = 600;
-      if (accounts.length > 0) {
-        const onTimeRatio = onTimeCount / accounts.length;
-        creditScore = Math.round(300 + (onTimeRatio * 500) - (delinquentCount * 50) - (inquiries.length * 5));
-        creditScore = Math.max(300, Math.min(850, creditScore));
-      }
+      const writtenOffCount = accounts.filter(a => a.status === "written_off").length;
+      const { score: creditScore, reasonCodes } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep);
 
       await storage.createAuditLog({
         action: "VIEW", entity: "credit_report", entityId: req.params.id, userId: req.session?.userId,
@@ -965,8 +961,11 @@ export async function registerRoutes(
           activeAccounts: accounts.filter(a => a.status !== "closed").length,
           totalDebt: totalDebt.toFixed(2),
           delinquentAccounts: delinquentCount,
+          writtenOffAccounts: writtenOffCount,
           creditScore,
+          reasonCodes,
           inquiryCount: inquiries.length,
+          judgmentCount: judgments.length,
         },
       });
     } catch (e: any) {
@@ -1632,29 +1631,10 @@ export async function registerRoutes(
 
       const totalDebt = accounts.reduce((sum, a) => sum + parseFloat(a.currentBalance || "0"), 0);
       const delinquentCount = accounts.filter(a => a.status === "delinquent" || a.status === "default").length;
-      const onTimeCount = accounts.filter(a => a.status === "current").length;
       const writtenOffCount = accounts.filter(a => a.status === "written_off").length;
       const restructuredCount = accounts.filter(a => a.status === "restructured").length;
 
-      let creditScore = 600;
-      const reasonCodes: string[] = [];
-      if (accounts.length > 0) {
-        const onTimeRatio = onTimeCount / accounts.length;
-        creditScore = Math.round(300 + (onTimeRatio * 500) - (delinquentCount * 50) - (inquiries.length * 5) - (writtenOffCount * 75) - (judgments.length * 40));
-        creditScore = Math.max(300, Math.min(850, creditScore));
-
-        if (delinquentCount > 0) reasonCodes.push("DELINQUENT_ACCOUNTS");
-        if (writtenOffCount > 0) reasonCodes.push("WRITTEN_OFF_ACCOUNTS");
-        if (restructuredCount > 0) reasonCodes.push("RESTRUCTURED_ACCOUNTS");
-        if (inquiries.length > 5) reasonCodes.push("HIGH_INQUIRY_VOLUME");
-        if (totalDebt > 1000000) reasonCodes.push("HIGH_DEBT_LEVEL");
-        if (judgments.length > 0) reasonCodes.push("COURT_JUDGMENTS_PRESENT");
-        if (borrower.isPep) reasonCodes.push("POLITICALLY_EXPOSED_PERSON");
-        if (onTimeRatio > 0.8) reasonCodes.push("STRONG_REPAYMENT_HISTORY");
-        if (accounts.length >= 3 && onTimeRatio === 1) reasonCodes.push("EXCELLENT_PAYMENT_RECORD");
-      } else {
-        reasonCodes.push("THIN_FILE_LIMITED_HISTORY");
-      }
+      const { score: creditScore, reasonCodes } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep);
 
       const log = await storage.createCreditReportLog({
         borrowerId,
