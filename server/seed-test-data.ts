@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { borrowers, creditAccounts, courtJudgments, consentRecords, paymentHistory, institutions, billingRecords, disputes, users, dishonouredCheques, organizations } from "@shared/schema";
+import { borrowers, creditAccounts, courtJudgments, consentRecords, paymentHistory, institutions, billingRecords, disputes, users, dishonouredCheques, organizations, retentionPolicies, apiConfigurations } from "@shared/schema";
 import { count, like, ne, isNull, eq } from "drizzle-orm";
 import { mapInternalStatusToBog, mapInternalAssetClassToBog, mapDaysInArrearsToPaymentProfile } from "@shared/bog-codes";
 
@@ -772,6 +772,35 @@ export async function seedTestData() {
       await db.insert(billingRecords).values(billingValues.slice(i, i + BATCH_SIZE));
     }
     console.log(`  Created ${billingValues.length} billing records`);
+  }
+
+  const [rpCheck] = await db.select({ value: count() }).from(retentionPolicies).where(eq(retentionPolicies.country, "Ghana"));
+  if (Number(rpCheck.value) < 8) {
+    await db.delete(retentionPolicies).where(eq(retentionPolicies.country, "Ghana"));
+    await db.insert(retentionPolicies).values([
+      { country: "Ghana", entityType: "borrower", retentionYears: 7, archiveAfterYears: 10, description: "Borrower personal data retained for 7 years per Bank of Ghana Data Protection Directive. Archived after 10 years.", isActive: true },
+      { country: "Ghana", entityType: "credit_account", retentionYears: 7, archiveAfterYears: 10, description: "Credit account records retained for 7 years from account closure per BoG CRB v1.1 Section 4.2.", isActive: true },
+      { country: "Ghana", entityType: "court_judgment", retentionYears: 10, archiveAfterYears: 15, description: "Court judgment records retained for 10 years per Ghana Courts Act, 1993 (Act 459). Archived after 15 years.", isActive: true },
+      { country: "Ghana", entityType: "dispute", retentionYears: 5, archiveAfterYears: 8, description: "Dispute records retained for 5 years from resolution per Data Protection Act, 2012 (Act 843).", isActive: true },
+      { country: "Ghana", entityType: "audit_log", retentionYears: 10, archiveAfterYears: 15, description: "Audit trail logs retained for 10 years per BoG Cybersecurity Directive for Financial Institutions.", isActive: true },
+      { country: "Ghana", entityType: "consent_record", retentionYears: 7, archiveAfterYears: 10, description: "Borrower consent records retained for 7 years per Data Protection Act, 2012 (Act 843) Section 17.", isActive: true },
+      { country: "Ghana", entityType: "credit_inquiry", retentionYears: 3, archiveAfterYears: 5, description: "Credit inquiry logs retained for 3 years per BoG CRB v1.1 reporting requirements.", isActive: true },
+      { country: "Ghana", entityType: "dishonoured_cheque", retentionYears: 7, archiveAfterYears: 10, description: "Dishonoured cheque records retained for 7 years per Bills of Exchange Act, 1961 (Act 55).", isActive: true },
+    ]);
+    console.log("  Created 8 Ghana retention policies");
+  }
+
+  const [acCheck] = await db.select({ value: count() }).from(apiConfigurations).where(eq(apiConfigurations.country, "Ghana"));
+  if (Number(acCheck.value) < 5) {
+    await db.delete(apiConfigurations).where(eq(apiConfigurations.country, "Ghana"));
+    await db.insert(apiConfigurations).values([
+      { name: "Bank of Ghana CRB Reporting", category: "regulatory", baseUrl: "https://api.bog.gov.gh/crb/v1.1", apiKeyHeaderName: "X-BoG-API-Key", authType: "api_key", country: "Ghana", isActive: true, description: "Bank of Ghana Credit Reference Bureau regulatory reporting API for submitting CONC, BUSC, CONJ, BUSJ, COND, BUSD files." },
+      { name: "Ghana Revenue Authority", category: "tax", baseUrl: "https://api.gra.gov.gh/taxpayer/v2", apiKeyHeaderName: "Authorization", authType: "bearer", country: "Ghana", isActive: true, description: "GRA Taxpayer Identification Number verification service for borrower KYC compliance." },
+      { name: "National Identification Authority", category: "identity", baseUrl: "https://api.nia.gov.gh/ghanacard/v1", apiKeyHeaderName: "X-NIA-Key", authType: "api_key", country: "Ghana", isActive: true, description: "Ghana Card identity verification and biometric validation API for borrower registration." },
+      { name: "SSNIT Verification", category: "social_security", baseUrl: "https://api.ssnit.org.gh/verify/v1", apiKeyHeaderName: "Authorization", authType: "bearer", country: "Ghana", isActive: false, description: "Social Security and National Insurance Trust member verification service (integration pending)." },
+      { name: "Open Exchange Rates", category: "exchange_rates", baseUrl: "https://open.er-api.com/v6", apiKeyHeaderName: "X-API-Key", authType: "none", country: "Ghana", isActive: true, description: "Live exchange rate feed for GHS/USD/EUR/GBP currency conversion in credit account valuations." },
+    ]);
+    console.log("  Created 5 API configurations");
   }
 
   console.log("Ghana seed data complete!");
