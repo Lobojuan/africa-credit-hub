@@ -1605,6 +1605,7 @@ export async function registerRoutes(
       const inquiries = await storage.getCreditInquiriesByBorrower(borrowerId);
       const judgments = await storage.getCourtJudgmentsByBorrower(borrowerId);
       const consents = await storage.getConsentRecordsByBorrower(borrowerId);
+      const dishonouredChequesList = await storage.getDishonouredChequesByBorrower(borrowerId);
 
       const paymentHistoryMap: Record<string, any[]> = {};
       for (const account of accounts) {
@@ -1643,6 +1644,7 @@ export async function registerRoutes(
         inquiries,
         courtJudgments: judgments,
         consentRecords: consents,
+        dishonouredCheques: dishonouredChequesList,
         paymentHistory: paymentHistoryMap,
         requestedBy: user ? { fullName: user.fullName, institution: user.institution } : null,
         summary: {

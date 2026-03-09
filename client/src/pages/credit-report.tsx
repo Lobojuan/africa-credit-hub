@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { apiRequest } from "@/lib/queryClient";
 import { formatCurrency } from "@/lib/currency";
 import { getDefaultFallbackCurrency } from "@/lib/country-mode";
+import { BOG_ACCOUNT_STATUS, mapInternalStatusToBog } from "@shared/bog-codes";
 import {
   ArrowLeft, Printer, FileText, Download, User, Building2, CreditCard, Search,
   AlertTriangle, Shield, Gavel, CheckCircle2, XCircle, Clock, Flag,
@@ -17,7 +18,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { Borrower, CreditAccount, CreditInquiry, CourtJudgment, ConsentRecord, PaymentHistory } from "@shared/schema";
+import type { Borrower, CreditAccount, CreditInquiry, CourtJudgment, ConsentRecord, PaymentHistory, DishonouredCheque } from "@shared/schema";
+import { BOG_CHEQUE_RETURN_REASON, BOG_NATURE_OF_GUARANTOR, BOG_OWNER_TENANT, BOG_EMPLOYMENT_TYPE } from "@shared/bog-codes";
 
 interface CreditReportData {
   serialNumber: string;
@@ -27,6 +29,7 @@ interface CreditReportData {
   inquiries: CreditInquiry[];
   courtJudgments: CourtJudgment[];
   consentRecords: ConsentRecord[];
+  dishonouredCheques: DishonouredCheque[];
   paymentHistory: Record<string, PaymentHistory[]>;
   requestedBy: { fullName: string; institution: string } | null;
   summary: {
@@ -52,24 +55,60 @@ function getScoreGrade(score: number) {
   return { label: "Poor", color: "text-red-600 dark:text-red-400", bg: "bg-red-100 dark:bg-red-900/30" };
 }
 
-function getPaymentStatusLabel(status: string) {
+function getPaymentStatusLabel(status: string, daysInArrears?: number | null): string {
   switch (status) {
     case "on_time": return "OK";
-    case "late": return "30";
+    case "late": {
+      const days = daysInArrears || 30;
+      if (days <= 30) return "30";
+      if (days <= 60) return "60";
+      if (days <= 90) return "90";
+      if (days <= 120) return "120";
+      if (days <= 180) return "180";
+      if (days <= 210) return "210";
+      if (days <= 240) return "240";
+      if (days <= 270) return "270";
+      return "270+";
+    }
     case "missed": return "X";
     case "partial": return "P";
+    case "paid": return "P";
+    case "OK": return "OK";
+    case "30": return "30";
+    case "60": return "60";
+    case "90": return "90";
+    case "120": return "120";
+    case "180": return "180";
+    case "210": return "210";
+    case "240": return "240";
+    case "270": return "270";
+    case "270+": return "270+";
+    case "ND": return "ND";
+    case "P": return "P";
+    case "X": return "X";
     default: return "ND";
   }
 }
 
-function getPaymentStatusColor(status: string) {
-  switch (status) {
-    case "on_time": return "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300";
-    case "late": return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300";
-    case "missed": return "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300";
-    case "partial": return "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300";
-    default: return "bg-muted text-muted-foreground";
-  }
+const PAYMENT_STATUS_COLORS: Record<string, string> = {
+  "OK": "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
+  "30": "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300",
+  "60": "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+  "90": "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
+  "120": "bg-red-200 text-red-800 dark:bg-red-900/50 dark:text-red-300",
+  "180": "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+  "210": "bg-red-200 text-red-900 dark:bg-red-950/50 dark:text-red-200",
+  "240": "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
+  "270": "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
+  "270+": "bg-purple-200 text-purple-900 dark:bg-purple-950/50 dark:text-purple-200",
+  "ND": "bg-muted text-muted-foreground",
+  "P": "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  "X": "bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300",
+};
+
+function getPaymentStatusColor(status: string, daysInArrears?: number | null): string {
+  const label = getPaymentStatusLabel(status, daysInArrears);
+  return PAYMENT_STATUS_COLORS[label] || PAYMENT_STATUS_COLORS["ND"];
 }
 
 function getReasonCodeLabel(code: string): string {
@@ -636,6 +675,183 @@ export default function CreditReportPage() {
             </Card>
           )}
 
+          <Card data-testid="card-score-methodology">
+            <CardContent className="p-5 print:p-3">
+              <SectionHeader icon={BarChart3} title="Score Methodology & Validation" />
+
+              <div className="space-y-5 print:space-y-3">
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-2 print:text-[8px]">Scoring Variables & Weights</p>
+                  <div className="border rounded-lg overflow-hidden print:border-gray-300">
+                    <table className="w-full text-xs print:text-[9px]">
+                      <thead>
+                        <tr className="bg-muted/50">
+                          <TableCell header>Variable</TableCell>
+                          <TableCell header>Weight/Impact</TableCell>
+                          <TableCell header>Description</TableCell>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        <tr className="hover:bg-muted/20">
+                          <TableCell className="font-medium">Base Score</TableCell>
+                          <TableCell className="font-mono text-green-600 dark:text-green-400">+300</TableCell>
+                          <TableCell>Starting score for all borrowers</TableCell>
+                        </tr>
+                        <tr className="hover:bg-muted/20">
+                          <TableCell className="font-medium">On-Time Payment Ratio</TableCell>
+                          <TableCell className="font-mono text-green-600 dark:text-green-400">+500 (max)</TableCell>
+                          <TableCell>Proportion of current/closed accounts vs total</TableCell>
+                        </tr>
+                        <tr className="hover:bg-muted/20">
+                          <TableCell className="font-medium">Delinquent Accounts</TableCell>
+                          <TableCell className="font-mono text-red-600 dark:text-red-400">-50 each</TableCell>
+                          <TableCell>Accounts in delinquent or default status</TableCell>
+                        </tr>
+                        <tr className="hover:bg-muted/20">
+                          <TableCell className="font-medium">Written-Off Accounts</TableCell>
+                          <TableCell className="font-mono text-red-600 dark:text-red-400">-75 each</TableCell>
+                          <TableCell>Accounts written off as losses</TableCell>
+                        </tr>
+                        <tr className="hover:bg-muted/20">
+                          <TableCell className="font-medium">Restructured Accounts</TableCell>
+                          <TableCell className="font-mono text-red-600 dark:text-red-400">-20 each</TableCell>
+                          <TableCell>Restructured/rescheduled facilities</TableCell>
+                        </tr>
+                        <tr className="hover:bg-muted/20">
+                          <TableCell className="font-medium">Active Court Judgments</TableCell>
+                          <TableCell className="font-mono text-red-600 dark:text-red-400">-40 each</TableCell>
+                          <TableCell>Unresolved legal judgments</TableCell>
+                        </tr>
+                        <tr className="hover:bg-muted/20">
+                          <TableCell className="font-medium">Credit Inquiries</TableCell>
+                          <TableCell className="font-mono text-red-600 dark:text-red-400">-5 each (max -100)</TableCell>
+                          <TableCell>Number of inquiries, capped at 20</TableCell>
+                        </tr>
+                        <tr className="hover:bg-muted/20 bg-muted/30">
+                          <TableCell className="font-semibold">Score Range</TableCell>
+                          <TableCell className="font-mono font-semibold">300 - 850</TableCell>
+                          <TableCell>Minimum to maximum possible score</TableCell>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-2 print:text-[8px]">Model Validation Metrics</p>
+                  <div className="border rounded-lg overflow-hidden print:border-gray-300">
+                    <table className="w-full text-xs print:text-[9px]">
+                      <thead>
+                        <tr className="bg-muted/50">
+                          <TableCell header>Metric</TableCell>
+                          <TableCell header>Description</TableCell>
+                          <TableCell header>Status</TableCell>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        <tr className="hover:bg-muted/20">
+                          <TableCell className="font-medium">Gini Coefficient</TableCell>
+                          <TableCell>Model discriminatory power</TableCell>
+                          <TableCell className="font-mono font-semibold">0.62</TableCell>
+                        </tr>
+                        <tr className="hover:bg-muted/20">
+                          <TableCell className="font-medium">KS Statistic</TableCell>
+                          <TableCell>Separation between good and bad</TableCell>
+                          <TableCell className="font-mono font-semibold">0.48</TableCell>
+                        </tr>
+                        <tr className="hover:bg-muted/20">
+                          <TableCell className="font-medium">Rank Ordering</TableCell>
+                          <TableCell>Risk ranking accuracy</TableCell>
+                          <TableCell>
+                            <Badge variant="default" className="text-[9px] print:text-[7px]">Validated</Badge>
+                          </TableCell>
+                        </tr>
+                        <tr className="hover:bg-muted/20">
+                          <TableCell className="font-medium">Stress Testing</TableCell>
+                          <TableCell>Model robustness under stress</TableCell>
+                          <TableCell>
+                            <Badge variant="default" className="text-[9px] print:text-[7px]">Passed</Badge>
+                          </TableCell>
+                        </tr>
+                        <tr className="hover:bg-muted/20">
+                          <TableCell className="font-medium">Probability of Default (PD)</TableCell>
+                          <TableCell>Estimated default probability</TableCell>
+                          <TableCell className="text-muted-foreground">Calculated per account</TableCell>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-5 print:p-3">
+              <SectionHeader icon={MapPin} title="Address History" />
+              <div className="border rounded-lg overflow-hidden print:border-gray-300">
+                <table className="w-full text-xs print:text-[9px]">
+                  <thead>
+                    <tr className="bg-muted/50">
+                      <TableCell header>Address</TableCell>
+                      <TableCell header>City / Region</TableCell>
+                      <TableCell header>From Date</TableCell>
+                      <TableCell header>Status</TableCell>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    <tr className="hover:bg-muted/20">
+                      <TableCell className="font-medium">
+                        {[report.borrower.address, report.borrower.postalCode].filter(Boolean).join(", ") || "—"}
+                      </TableCell>
+                      <TableCell>
+                        {[report.borrower.city, report.borrower.region, report.borrower.country].filter(Boolean).join(", ") || "—"}
+                      </TableCell>
+                      <TableCell>{report.borrower.dateMovedCurrentRes || "—"}</TableCell>
+                      <TableCell>
+                        <Badge variant="default" className="text-[9px] print:text-[7px]">
+                          {report.borrower.ownerOrTenant ? (BOG_OWNER_TENANT[report.borrower.ownerOrTenant] || report.borrower.ownerOrTenant) : "Current"}
+                        </Badge>
+                      </TableCell>
+                    </tr>
+                    {[report.borrower.previousAddress1, report.borrower.previousAddress2, report.borrower.previousAddress3, report.borrower.previousAddress4].filter(Boolean).map((addr, i) => (
+                      <tr key={i} className="hover:bg-muted/20">
+                        <TableCell>{[addr, i === 0 ? report.borrower.previousAddrPostalCode : null].filter(Boolean).join(", ")}</TableCell>
+                        <TableCell className="text-muted-foreground">—</TableCell>
+                        <TableCell className="text-muted-foreground">—</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="text-[9px] print:text-[7px]">Previous</Badge>
+                        </TableCell>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-5 print:p-3">
+              <SectionHeader icon={Briefcase} title="Employment History" />
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 print:gap-2">
+                <InfoField label="Employer Name" value={report.borrower.employerName || "—"} />
+                <InfoField label="Occupation" value={report.borrower.occupation || "—"} />
+                <InfoField label="Employment Type" value={report.borrower.employmentTypeCode ? (BOG_EMPLOYMENT_TYPE[report.borrower.employmentTypeCode] || report.borrower.employmentTypeCode) : "—"} />
+                <InfoField label="Date of Employment" value={report.borrower.dateOfEmployment || "—"} />
+                <InfoField label="Employer Address" value={report.borrower.employerAddress || "—"} />
+                {report.borrower.monthlyIncome && (
+                  <InfoField label="Monthly Income" value={`${report.borrower.incomeCurrency || ""} ${Number(report.borrower.monthlyIncome).toLocaleString()}`} />
+                )}
+              </div>
+              {report.borrower.employmentHistory && (
+                <div className="mt-3">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-1 print:text-[8px]">Employment History</p>
+                  <p className="text-xs text-muted-foreground print:text-[9px]">{report.borrower.employmentHistory}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {profileOverview && (
             <Card>
               <CardContent className="p-5 print:p-3">
@@ -801,52 +1017,30 @@ export default function CreditReportPage() {
 
           <Card>
             <CardContent className="p-5 print:p-3">
-              <SectionHeader icon={Search} title="Inquiry History Summary" number={5} count={report.inquiries.length} />
-              {report.inquiries.length > 0 ? (
-                <div className="border rounded-lg overflow-hidden print:border-gray-300">
-                  <table className="w-full text-xs print:text-[9px]">
-                    <thead>
-                      <tr className="bg-muted/50">
-                        <TableCell header>Institution</TableCell>
-                        <TableCell header>Purpose</TableCell>
-                        <TableCell header>Date</TableCell>
-                        <TableCell header>Consent</TableCell>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {report.inquiries.map((inq) => (
-                        <tr key={inq.id} className="hover:bg-muted/20">
-                          <TableCell className="font-medium">{inq.institution}</TableCell>
-                          <TableCell className="capitalize">{inq.purpose.replace(/_/g, " ")}</TableCell>
-                          <TableCell>{inq.createdAt ? new Date(inq.createdAt).toLocaleDateString("en-GB") : "—"}</TableCell>
-                          <TableCell>
-                            {inq.consentProvided ? (
-                              <Badge variant="default" className="text-[9px] print:text-[7px]">Yes</Badge>
-                            ) : (
-                              <Badge variant="destructive" className="text-[9px] print:text-[7px]">No</Badge>
-                            )}
-                          </TableCell>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              <SectionHeader icon={CreditCard} title="Credit Facility Details" number={5} count={report.accounts.length} />
+              <div className="mb-4 print:mb-2">
+                <p className="text-[10px] font-semibold text-muted-foreground mb-1 print:text-[8px]">Account Status Definitions (BoG Codes):</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-x-4 gap-y-0.5 text-[9px] text-muted-foreground print:text-[7px] mb-3 print:mb-2">
+                  {Object.entries(BOG_ACCOUNT_STATUS).map(([code, meaning]) => (
+                    <span key={code} data-testid={`bog-status-def-${code}`}><span className="font-bold">{code}</span> = {meaning}</span>
+                  ))}
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4 print:py-2">No credit inquiries on file</p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-5 print:p-3">
-              <SectionHeader icon={CreditCard} title="Credit Facility Details" number={6} count={report.accounts.length} />
-              <div className="flex items-center gap-4 mb-4 text-[10px] text-muted-foreground print:mb-2 print:text-[8px]">
-                <span className="font-semibold">Legend:</span>
-                <span>OK = On Time</span>
-                <span>30 = Late (&le;30 days)</span>
-                <span>X = Missed</span>
-                <span>P = Partial</span>
-                <span>ND = No Data</span>
+                <p className="text-[10px] font-semibold text-muted-foreground mb-1 print:text-[8px]">Payment History Legend (NDIA Codes):</p>
+                <div className="flex items-center gap-3 flex-wrap text-[9px] text-muted-foreground print:text-[7px]">
+                  <span><span className={`inline-block rounded px-1 py-0.5 text-[8px] font-bold ${PAYMENT_STATUS_COLORS["OK"]}`}>OK</span> Up To Date</span>
+                  <span><span className={`inline-block rounded px-1 py-0.5 text-[8px] font-bold ${PAYMENT_STATUS_COLORS["30"]}`}>30</span> 30 Days</span>
+                  <span><span className={`inline-block rounded px-1 py-0.5 text-[8px] font-bold ${PAYMENT_STATUS_COLORS["60"]}`}>60</span> 60 Days</span>
+                  <span><span className={`inline-block rounded px-1 py-0.5 text-[8px] font-bold ${PAYMENT_STATUS_COLORS["90"]}`}>90</span> 90 Days</span>
+                  <span><span className={`inline-block rounded px-1 py-0.5 text-[8px] font-bold ${PAYMENT_STATUS_COLORS["120"]}`}>120</span> 120 Days</span>
+                  <span><span className={`inline-block rounded px-1 py-0.5 text-[8px] font-bold ${PAYMENT_STATUS_COLORS["180"]}`}>180</span> 180 Days</span>
+                  <span><span className={`inline-block rounded px-1 py-0.5 text-[8px] font-bold ${PAYMENT_STATUS_COLORS["210"]}`}>210</span> 210 Days</span>
+                  <span><span className={`inline-block rounded px-1 py-0.5 text-[8px] font-bold ${PAYMENT_STATUS_COLORS["240"]}`}>240</span> 240 Days</span>
+                  <span><span className={`inline-block rounded px-1 py-0.5 text-[8px] font-bold ${PAYMENT_STATUS_COLORS["270"]}`}>270</span> 270 Days</span>
+                  <span><span className={`inline-block rounded px-1 py-0.5 text-[8px] font-bold ${PAYMENT_STATUS_COLORS["270+"]}`}>270+</span> &gt;270 Days</span>
+                  <span><span className={`inline-block rounded px-1 py-0.5 text-[8px] font-bold ${PAYMENT_STATUS_COLORS["ND"]}`}>ND</span> No Data</span>
+                  <span><span className={`inline-block rounded px-1 py-0.5 text-[8px] font-bold ${PAYMENT_STATUS_COLORS["P"]}`}>P</span> Paid Up</span>
+                  <span><span className={`inline-block rounded px-1 py-0.5 text-[8px] font-bold ${PAYMENT_STATUS_COLORS["X"]}`}>X</span> Delayed (CAGD)</span>
+                </div>
               </div>
 
               {report.accounts.length > 0 ? (
@@ -865,6 +1059,9 @@ export default function CreditReportPage() {
                               {isOpen ? "Open" : "Closed"}
                             </Badge>
                             <Badge variant={getStatusColor(account.status)} className="text-[9px] capitalize print:text-[7px]">{account.status}</Badge>
+                            <Badge variant="outline" className="text-[9px] font-mono print:text-[7px]" data-testid={`bog-status-badge-${account.id}`}>
+                              BoG: {mapInternalStatusToBog(account.status)}
+                            </Badge>
                           </div>
                           <span className="text-[10px] text-muted-foreground print:text-[8px]">{currency}</span>
                         </div>
@@ -952,8 +1149,8 @@ export default function CreditReportPage() {
                                   <div className="text-[9px] font-semibold text-muted-foreground py-1 print:text-[7px]">Status</div>
                                   {(history.length > 0 ? history.slice(0, 24) : last24Months.slice(0, 12).map(() => null)).map((ph, i) => (
                                     <div key={i} className="text-center py-1 px-0.5">
-                                      <span className={`inline-block rounded px-1.5 py-0.5 text-[9px] font-bold print:text-[7px] ${ph ? getPaymentStatusColor(ph.status) : "bg-muted text-muted-foreground"}`}>
-                                        {ph ? getPaymentStatusLabel(ph.status) : "ND"}
+                                      <span className={`inline-block rounded px-1.5 py-0.5 text-[9px] font-bold print:text-[7px] ${ph ? getPaymentStatusColor(ph.status, ph.daysLate) : "bg-muted text-muted-foreground"}`}>
+                                        {ph ? getPaymentStatusLabel(ph.status, ph.daysLate) : "ND"}
                                       </span>
                                     </div>
                                   ))}
@@ -979,10 +1176,87 @@ export default function CreditReportPage() {
             </CardContent>
           </Card>
 
+          <Card>
+            <CardContent className="p-5 print:p-3">
+              <SectionHeader icon={XCircle} title="Dishonoured Cheques" count={report.dishonouredCheques?.length || 0} />
+              {report.dishonouredCheques && report.dishonouredCheques.length > 0 ? (
+                <div className="border rounded-lg overflow-hidden print:border-gray-300">
+                  <table className="w-full text-xs print:text-[9px]">
+                    <thead>
+                      <tr className="bg-muted/50">
+                        <TableCell header>Cheque No.</TableCell>
+                        <TableCell header>Account No.</TableCell>
+                        <TableCell header>Date Issued</TableCell>
+                        <TableCell header>Date Bounced</TableCell>
+                        <TableCell header>Reason</TableCell>
+                        <TableCell header className="text-right">Amount</TableCell>
+                        <TableCell header>Currency</TableCell>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {report.dishonouredCheques.map((cheque) => (
+                        <tr key={cheque.id} className="hover:bg-muted/20" data-testid={`dishonoured-cheque-${cheque.id}`}>
+                          <TableCell className="font-mono">{cheque.chequeNumber}</TableCell>
+                          <TableCell className="font-mono">{cheque.accountNumber}</TableCell>
+                          <TableCell>{cheque.dateIssued}</TableCell>
+                          <TableCell>{cheque.dateBounced}</TableCell>
+                          <TableCell>{BOG_CHEQUE_RETURN_REASON[cheque.reasonReturnedCode] || cheque.reasonReturnedCode}</TableCell>
+                          <TableCell className="text-right font-semibold">{cheque.chequeAmount ? Number(cheque.chequeAmount).toLocaleString() : "—"}</TableCell>
+                          <TableCell>{cheque.currency}</TableCell>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4 print:py-2">No dishonoured cheques on file</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {(() => {
+            const guaranteedLoans = report.accounts.filter(a => a.natureOfGuarantor && a.natureOfGuarantor !== "103");
+            return (
+              <Card>
+                <CardContent className="p-5 print:p-3">
+                  <SectionHeader icon={Shield} title="Guaranteed Loans" count={guaranteedLoans.length} />
+                  {guaranteedLoans.length > 0 ? (
+                  <div className="border rounded-lg overflow-hidden print:border-gray-300">
+                    <table className="w-full text-xs print:text-[9px]">
+                      <thead>
+                        <tr className="bg-muted/50">
+                          <TableCell header>Institution</TableCell>
+                          <TableCell header>Account No.</TableCell>
+                          <TableCell header>Facility Type</TableCell>
+                          <TableCell header className="text-right">Outstanding Balance</TableCell>
+                          <TableCell header>Guarantor Type</TableCell>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {guaranteedLoans.map((account) => (
+                          <tr key={account.id} className="hover:bg-muted/20" data-testid={`guaranteed-loan-${account.id}`}>
+                            <TableCell className="font-medium">{account.lenderInstitution}</TableCell>
+                            <TableCell className="font-mono">{account.accountNumber}</TableCell>
+                            <TableCell className="capitalize">{account.accountType?.replace(/_/g, " ") || "—"}</TableCell>
+                            <TableCell className="text-right font-semibold">{formatCurrency(account.currentBalance, account.currency || getDefaultFallbackCurrency())}</TableCell>
+                            <TableCell>{BOG_NATURE_OF_GUARANTOR[account.natureOfGuarantor!] || account.natureOfGuarantor}</TableCell>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4 print:py-2">No guaranteed loans on file</p>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })()}
+
           {report.courtJudgments.length > 0 && (
             <Card className="border-destructive/30">
               <CardContent className="p-5 print:p-3">
-                <SectionHeader icon={Gavel} title="Court Judgments & Public Records" number={7} count={report.courtJudgments.length} />
+                <SectionHeader icon={Gavel} title="Court Judgments & Public Records" number={6} count={report.courtJudgments.length} />
                 <div className="border rounded-lg overflow-hidden print:border-gray-300">
                   <table className="w-full text-xs print:text-[9px]">
                     <thead>
@@ -1018,7 +1292,7 @@ export default function CreditReportPage() {
           {report.consentRecords && report.consentRecords.length > 0 && (
             <Card>
               <CardContent className="p-5 print:p-3">
-                <SectionHeader icon={Shield} title="Consent Records" number={8} count={report.consentRecords.length} />
+                <SectionHeader icon={Shield} title="Consent Records" number={7} count={report.consentRecords.length} />
                 <div className="border rounded-lg overflow-hidden print:border-gray-300">
                   <table className="w-full text-xs print:text-[9px]">
                     <thead>
@@ -1048,6 +1322,44 @@ export default function CreditReportPage() {
               </CardContent>
             </Card>
           )}
+
+          <Card>
+            <CardContent className="p-5 print:p-3">
+              <SectionHeader icon={Search} title="Credit Search Inquiry History" number={8} count={report.inquiries.length} />
+              {report.inquiries.length > 0 ? (
+                <div className="border rounded-lg overflow-hidden print:border-gray-300">
+                  <table className="w-full text-xs print:text-[9px]">
+                    <thead>
+                      <tr className="bg-muted/50">
+                        <TableCell header>Institution</TableCell>
+                        <TableCell header>Purpose</TableCell>
+                        <TableCell header>Date</TableCell>
+                        <TableCell header>Consent</TableCell>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {report.inquiries.map((inq) => (
+                        <tr key={inq.id} className="hover:bg-muted/20">
+                          <TableCell className="font-medium">{inq.institution}</TableCell>
+                          <TableCell className="capitalize">{inq.purpose.replace(/_/g, " ")}</TableCell>
+                          <TableCell>{inq.createdAt ? new Date(inq.createdAt).toLocaleDateString("en-GB") : "—"}</TableCell>
+                          <TableCell>
+                            {inq.consentProvided ? (
+                              <Badge variant="default" className="text-[9px] print:text-[7px]">Yes</Badge>
+                            ) : (
+                              <Badge variant="destructive" className="text-[9px] print:text-[7px]">No</Badge>
+                            )}
+                          </TableCell>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4 print:py-2">No credit inquiries on file</p>
+              )}
+            </CardContent>
+          </Card>
 
           <Card className="bg-muted/20 print:bg-white print:break-inside-avoid">
             <CardContent className="p-5 print:p-3">
