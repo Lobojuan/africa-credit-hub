@@ -175,14 +175,14 @@ function buildCreditProfileOverview(report: CreditReportData) {
 
   return {
     indicators: [
-      { sno: 1, label: "Number of Open Credit Facilities", values: currencyKeys.map(c => ({ currency: c, value: byCurrency[c].open.toString() })) },
-      { sno: 2, label: "Total Outstanding Balance in Open Credit Facilities", values: currencyKeys.map(c => ({ currency: c, value: formatCurrency(byCurrency[c].balance.toFixed(2), c) })) },
-      { sno: 3, label: "Total Overdue Amount on Open Credit Facilities", values: currencyKeys.map(c => ({ currency: c, value: formatCurrency(byCurrency[c].overdue.toFixed(2), c) })) },
+      { sno: 1, label: "Number of Open Credit Facilities", values: currencyKeys.map(c => ({ currency: "", value: byCurrency[c].open.toString() })) },
+      { sno: 2, label: "Total Outstanding Balance in Open Credit Facilities", values: currencyKeys.map(c => ({ currency: "", value: formatCurrency(byCurrency[c].balance.toFixed(2), c) })) },
+      { sno: 3, label: "Total Overdue Amount on Open Credit Facilities", values: currencyKeys.map(c => ({ currency: "", value: formatCurrency(byCurrency[c].overdue.toFixed(2), c) })) },
       { sno: 4, label: "Number of Open Credit Facilities with Overdue", values: [{ currency: "", value: overdueAccounts.length.toString() }] },
       { sno: 5, label: "Number of Open Facilities > 90 Days in Arrears (Non-Performing)", values: [{ currency: "", value: nplAccounts.length.toString() }] },
       { sno: 6, label: "Number of Closed Credit Facilities", values: [{ currency: "", value: closedLast6.length.toString() }] },
       { sno: 7, label: "Number of Facilities with Write-Off", values: [{ currency: "", value: writtenOffAccounts.length.toString() }] },
-      { sno: 8, label: "Total Write-Off Amount", values: [{ currency: currencyKeys[0] || getDefaultFallbackCurrency(), value: writtenOffTotal > 0 ? formatCurrency(writtenOffTotal.toFixed(2), currencyKeys[0] || getDefaultFallbackCurrency()) : "0" }] },
+      { sno: 8, label: "Total Write-Off Amount", values: [{ currency: "", value: writtenOffTotal > 0 ? formatCurrency(writtenOffTotal.toFixed(2), currencyKeys[0] || getDefaultFallbackCurrency()) : "0" }] },
       { sno: 9, label: "Number of Credit Facilities with Judgments", values: [{ currency: "", value: report.courtJudgments.length.toString() }] },
       { sno: 10, label: "Number of Inquiries in the Last 6 Months", values: [{ currency: "", value: report.inquiries.length.toString() }] },
       { sno: 11, label: "Number of Disputes Raised in the Last 6 Months", values: [{ currency: "", value: "0" }] },
