@@ -403,10 +403,10 @@ export default function RegulatoryCompliancePage() {
                     Risk Areas
                   </h4>
                   <ul className="space-y-1">
-                    {complianceReport.riskAreas.map((area, i) => (
+                    {complianceReport.riskAreas.map((area: any, i: number) => (
                       <li key={i} className="text-sm text-muted-foreground flex items-start gap-2" data-testid={`text-risk-area-${i}`}>
                         <AlertTriangle className="w-3.5 h-3.5 text-amber-500 mt-0.5 shrink-0" />
-                        {area}
+                        <span>{typeof area === "string" ? area : `${area.area || area.name || ""}${area.severity ? ` [${area.severity}]` : ""}${area.detail ? ` — ${area.detail}` : ""}`}</span>
                       </li>
                     ))}
                   </ul>
@@ -420,10 +420,10 @@ export default function RegulatoryCompliancePage() {
                     Recommendations
                   </h4>
                   <ul className="space-y-1">
-                    {complianceReport.recommendations.map((rec, i) => (
+                    {complianceReport.recommendations.map((rec: any, i: number) => (
                       <li key={i} className="text-sm text-muted-foreground flex items-start gap-2" data-testid={`text-recommendation-${i}`}>
                         <CheckCircle2 className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" />
-                        {rec}
+                        <span>{typeof rec === "string" ? rec : rec.recommendation || rec.title || rec.description || JSON.stringify(rec)}</span>
                       </li>
                     ))}
                   </ul>
