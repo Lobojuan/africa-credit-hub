@@ -2338,6 +2338,7 @@ export async function registerRoutes(
     { id: "data-dictionary", filename: "Data_Dictionary.md", title: "Data Dictionary", description: "Field-level documentation for all 15 tables" },
     { id: "deployment", filename: "Deployment_Guide.md", title: "Deployment Guide", description: "Step-by-step deployment instructions" },
     { id: "security", filename: "Security_Compliance_Report.md", title: "Security & Compliance Report", description: "Security controls with NFR-SEC compliance matrix" },
+    { id: "liberia-proposal", filename: "Liberia_Marketing_Proposal.md", title: "Liberia Marketing Proposal", description: "Marketing & technical proposal for the Republic of Liberia — credit bureau solution, compliance assessment, implementation roadmap, and pricing" },
   ];
 
   function resolveDocPath(filename: string, lang?: string): string {
