@@ -19,7 +19,7 @@ import { StatCard } from "@/components/stat-card";
 import { DashboardCharts } from "@/components/dashboard-charts";
 import { AfricaMap } from "@/components/africa-map";
 import { formatCurrency, detectLocalCurrency, SUPPORTED_CURRENCIES, getModeCurrencies } from "@/lib/currency";
-import { isGhanaMode, CREDIT_SCORE_FACTORS } from "@/lib/country-mode";
+import { isGhanaMode, getDefaultCurrency, CREDIT_SCORE_FACTORS } from "@/lib/country-mode";
 import { ReferenceRateBadge, CurrencyReference } from "@/components/currency-reference";
 import type { CreditAccount, AuditLog, ExchangeRate } from "@shared/schema";
 
@@ -157,7 +157,7 @@ const detailConfig: Record<string, { title: string; icon: any; navigateTo: strin
 
 function DetailContent({ type, data, displayCurrency, convertAmount }: { type: DetailType; data: any; displayCurrency: string; convertAmount: (v: string | number, from: string) => number | null }) {
   if (!data || !type) return <Skeleton className="h-40 w-full" />;
-  const fmtConverted = (v: any, fromCurrency = "ETB") => {
+  const fmtConverted = (v: any, fromCurrency = getDefaultCurrency() || "GHS") => {
     const converted = convertAmount(v, fromCurrency);
     return converted !== null ? formatCurrency(converted, displayCurrency, { compact: true }) : formatCurrency(v, fromCurrency, { compact: true });
   };
@@ -233,7 +233,7 @@ function DetailContent({ type, data, displayCurrency, convertAmount }: { type: D
                 { key: "currency", label: "Currency" },
                 { key: "count", label: "Accounts", format: (v: any) => Number(v).toLocaleString() },
                 { key: "total", label: `Outstanding (${displayCurrency})`, format: (v: any, row: any) => {
-                  const rowCurrency = row?.currency || "ETB";
+                  const rowCurrency = row?.currency || getDefaultCurrency() || "GHS";
                   return fmtConverted(v, rowCurrency);
                 }},
               ]}
