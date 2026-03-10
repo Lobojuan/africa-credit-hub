@@ -139,8 +139,23 @@ async function buildLiveContext(): Promise<string> {
       storage.getDisputes().catch(() => []),
     ]);
 
-    const institutionList = institutions.data.map(i => `  - ${sanitizeForPrompt(i.name)} (${sanitizeForPrompt(i.institutionType) || "bank"}, ${sanitizeForPrompt(i.country) || "Ghana"}) — Status: ${sanitizeForPrompt(i.status) || "active"}`).join("\n");
-    const orgList = orgs.map(o => `  - ${sanitizeForPrompt(o.name)} (${sanitizeForPrompt(o.status) || "active"})`).join("\n");
+    const institutionList = institutions.data.map(i => {
+      const instContact = [];
+      if (i.contactPhone) instContact.push(`Phone: ${sanitizeForPrompt(i.contactPhone)}`);
+      if (i.contactEmail) instContact.push(`Email: ${sanitizeForPrompt(i.contactEmail)}`);
+      if (i.address) instContact.push(`Address: ${sanitizeForPrompt(i.address)}`);
+      const contactStr = instContact.length > 0 ? instContact.join(" | ") : "No contact info";
+      return `  - ${sanitizeForPrompt(i.name)} (${sanitizeForPrompt(i.institutionType) || "bank"}, ${sanitizeForPrompt(i.country) || "Ghana"}) — Status: ${sanitizeForPrompt(i.status) || "active"} | Reg#: ${sanitizeForPrompt(i.registrationNumber) || "N/A"}\n    Contact: ${contactStr}`;
+    }).join("\n");
+    const orgList = orgs.map(o => {
+      const orgContact = [];
+      if (o.contactPhone) orgContact.push(`Phone: ${sanitizeForPrompt(o.contactPhone)}`);
+      if (o.contactEmail) orgContact.push(`Email: ${sanitizeForPrompt(o.contactEmail)}`);
+      if (o.address) orgContact.push(`Address: ${sanitizeForPrompt(o.address)}`);
+      if (o.website) orgContact.push(`Web: ${sanitizeForPrompt(o.website)}`);
+      const contactStr = orgContact.length > 0 ? orgContact.join(" | ") : "No contact info";
+      return `  - ${sanitizeForPrompt(o.name)} (${sanitizeForPrompt(o.type) || "other"}, ${sanitizeForPrompt(o.status) || "active"}, ${sanitizeForPrompt(o.country) || "Ghana"})\n    Contact: ${contactStr}`;
+    }).join("\n");
     const retentionList = retentionPolicies.map(r => `  - ${sanitizeForPrompt(r.jurisdiction)}: ${r.retentionYears} years`).join("\n");
 
     const usdGhsRate = exchangeRates.find(r => r.baseCurrency === "USD" && r.targetCurrency === "GHS");
