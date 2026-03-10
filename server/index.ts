@@ -80,6 +80,7 @@ declare module "express-session" {
     organizationId: string;
     lastActivity: number;
     mfaPendingUserId: string;
+    viewingCountry: string;
   }
 }
 

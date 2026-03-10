@@ -86,13 +86,17 @@ function getOrgScope(req: Request): string | undefined {
   return req.session?.organizationId || undefined;
 }
 
-function getCountryFilter(): string | undefined {
+function getCountryFilter(req?: Request): string | undefined {
+  if (req?.session?.userRole === "super_admin" && req.session.viewingCountry) {
+    if (req.session.viewingCountry === "global") return undefined;
+    return req.session.viewingCountry;
+  }
   const country = getActiveCountryName();
   return country || undefined;
 }
 
-async function validateOrgCountry(orgId: string): Promise<boolean> {
-  const country = getCountryFilter();
+async function validateOrgCountry(orgId: string, req?: Request): Promise<boolean> {
+  const country = getCountryFilter(req);
   if (!country) return true;
   const org = await storage.getOrganization(orgId);
   if (!org) return false;
@@ -476,7 +480,8 @@ export async function registerRoutes(
       organization = await storage.getOrganization(user.organizationId);
     }
 
-    res.json({ ...userData, passwordExpired, organization });
+    const viewingCountry = req.session.viewingCountry || getActiveCountryName() || null;
+    res.json({ ...userData, passwordExpired, organization, viewingCountry });
   });
 
   app.get("/api/docs/api-integration-guide", (_req, res) => {
@@ -2922,17 +2927,17 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     } catch (e: any) { res.status(500).json({ message: e.message }); }
   });
 
-  app.get("/api/admin/organizations/list", requireAuth, requireSuperAdmin, async (_req, res) => {
+  app.get("/api/admin/organizations/list", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      const country = getCountryFilter();
+      const country = getCountryFilter(req);
       const orgs = await storage.getOrganizations(country);
       res.json(orgs.map(o => ({ id: o.id, name: o.name, type: o.type, status: o.status, country: o.country, subscriptionTier: o.subscriptionTier })));
     } catch (e: any) { res.status(500).json({ message: e.message }); }
   });
 
-  app.get("/api/admin/organizations", requireAuth, requireSuperAdmin, async (_req, res) => {
+  app.get("/api/admin/organizations", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      const country = getCountryFilter();
+      const country = getCountryFilter(req);
       const orgs = await storage.getOrganizations(country);
       const orgsWithStats = await Promise.all(orgs.map(async (org) => {
         const users = await storage.getUsers(org.id);
@@ -2964,7 +2969,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
 
   app.get("/api/admin/organizations/:id", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      if (!(await validateOrgCountry(req.params.id))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
+      if (!(await validateOrgCountry(req.params.id, req))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
       const org = await storage.getOrganization(req.params.id);
       if (!org) return res.status(404).json({ message: "Organization not found" });
       const users = await storage.getUsers(org.id);
@@ -3017,7 +3022,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
 
   app.patch("/api/admin/organizations/:id", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      if (!(await validateOrgCountry(req.params.id))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
+      if (!(await validateOrgCountry(req.params.id, req))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
       const updateSchema = insertOrganizationSchema.partial();
       const parsed = updateSchema.parse(req.body);
       const org = await storage.updateOrganization(req.params.id, parsed);
@@ -3035,7 +3040,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
 
   app.delete("/api/admin/organizations/:id", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      if (!(await validateOrgCountry(req.params.id))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
+      if (!(await validateOrgCountry(req.params.id, req))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
       const users = await storage.getUsers(req.params.id);
       if (users.length > 0) {
         for (const u of users) {
@@ -3062,7 +3067,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
 
   app.get("/api/admin/organizations/:id/users", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      if (!(await validateOrgCountry(req.params.id))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
+      if (!(await validateOrgCountry(req.params.id, req))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
       const users = await storage.getUsers(req.params.id);
       res.json(users.map(stripPassword));
     } catch (e: any) {
@@ -3072,7 +3077,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
 
   app.get("/api/admin/organizations/:id/stats", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      if (!(await validateOrgCountry(req.params.id))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
+      if (!(await validateOrgCountry(req.params.id, req))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
       const stats = await storage.getDashboardStats(req.params.id);
       res.json(stats);
     } catch (e: any) {
@@ -3089,9 +3094,9 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     }
   });
 
-  app.get("/api/admin/analytics", requireAuth, requireSuperAdmin, async (_req, res) => {
+  app.get("/api/admin/analytics", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      const country = getCountryFilter();
+      const country = getCountryFilter(req);
       const orgs = await storage.getOrganizations(country);
       const allBilling: any[] = [];
       for (const org of orgs) {
@@ -3177,9 +3182,9 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     }
   });
 
-  app.get("/api/admin/platform-stats", requireAuth, requireSuperAdmin, async (_req, res) => {
+  app.get("/api/admin/platform-stats", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      const country = getCountryFilter();
+      const country = getCountryFilter(req);
       const orgs = await storage.getOrganizations(country);
       const allUsers = await storage.getUsers();
       const globalStats = await storage.getDashboardStats();
@@ -3195,8 +3200,8 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     }
   });
 
-  app.get("/api/platform/country-mode", requireAuth, async (_req, res) => {
-    const country = getCountryFilter();
+  app.get("/api/platform/country-mode", requireAuth, async (req, res) => {
+    const country = getCountryFilter(req);
     const config = country ? COUNTRY_REGISTRY[country.toLowerCase().replace(/[\s_-]/g, "")] : null;
     res.json({
       activeCountry: country || null,
@@ -3212,6 +3217,25 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
         code: c.code,
       })),
     });
+  });
+
+  app.post("/api/platform/set-country", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const { country } = req.body;
+      if (country === "global" || country === null) {
+        req.session.viewingCountry = "global";
+        return res.json({ viewingCountry: "global", message: "Switched to global view" });
+      }
+      const normalized = country.toLowerCase().replace(/[\s_-]/g, "");
+      const config = COUNTRY_REGISTRY[normalized];
+      if (!config) {
+        return res.status(400).json({ message: "Invalid country" });
+      }
+      req.session.viewingCountry = config.name;
+      res.json({ viewingCountry: config.name, message: `Switched to ${config.name}` });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
   });
 
   app.get("/api/platform/country-stats", requireAuth, requireSuperAdmin, async (_req, res) => {
@@ -3259,7 +3283,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
 
   app.post("/api/admin/organizations/:orgId/billing", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      if (!(await validateOrgCountry(req.params.orgId))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
+      if (!(await validateOrgCountry(req.params.orgId, req))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
       const org = await storage.getOrganization(req.params.orgId);
       if (!org) return res.status(404).json({ message: "Organization not found" });
 
@@ -3287,7 +3311,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
 
   app.get("/api/admin/organizations/:orgId/billing/:billingId/pdf", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      if (!(await validateOrgCountry(req.params.orgId))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
+      if (!(await validateOrgCountry(req.params.orgId, req))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
       const org = await storage.getOrganization(req.params.orgId);
       if (!org) return res.status(404).json({ message: "Organization not found" });
 

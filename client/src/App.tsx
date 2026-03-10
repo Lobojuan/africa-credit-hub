@@ -19,6 +19,8 @@ import { LogOut, Loader2, MessageCircle, Building2 } from "lucide-react";
 import { DisputeChatbot } from "@/components/dispute-chatbot";
 import { OrgSwitcherProvider } from "@/hooks/use-org-switcher";
 import { OrgSwitcher } from "@/components/org-switcher";
+import { CountryThemeProvider } from "@/components/country-theme-provider";
+import { CountrySelector } from "@/components/country-selector";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -208,6 +210,7 @@ function AuthenticatedApp() {
                   <span className="text-xs font-medium text-amber-600 dark:text-amber-400 hidden md:inline" data-testid="text-platform-admin">
                     Platform Admin
                   </span>
+                  <CountrySelector />
                   <OrgSwitcher />
                 </>
               )}
@@ -279,7 +282,9 @@ function App() {
             <Route>
               <AuthProvider>
                 <OrgSwitcherProvider>
-                  <AuthenticatedApp />
+                  <CountryThemeProvider>
+                    <AuthenticatedApp />
+                  </CountryThemeProvider>
                 </OrgSwitcherProvider>
               </AuthProvider>
             </Route>

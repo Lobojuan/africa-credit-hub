@@ -50,6 +50,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@radix-ui/react-collapsible";
 import type { LucideIcon } from "lucide-react";
 import { isGhanaMode, isSingleCountryMode, getBrandTitle, getCountryConfig } from "@/lib/country-mode";
+import { useCountryTheme } from "@/components/country-theme-provider";
 
 type NavItem = {
   titleKey: string;
@@ -179,6 +180,7 @@ export function AppSidebar() {
   const { user } = useAuth();
   const role = user?.role;
   const isRtl = i18n.language === "ar";
+  const countryTheme = useCountryTheme();
 
   const visibleCore = filterByRole(coreItems, role);
   const visibleOperations = filterByRole(operationsItems, role);
@@ -187,6 +189,9 @@ export function AppSidebar() {
   const visibleResources = filterByRole(resourceItems, role);
   const isSuperAdmin = role === "super_admin";
   const orgName = (user as any)?.organization?.name;
+  const dynamicCountryConfig = countryTheme?.activeConfig;
+  const dynamicBrandTitle = dynamicCountryConfig?.brandTitle || (isGhanaMode() ? getBrandTitle() : t('sidebar.brandTitle'));
+  const dynamicTheme = countryTheme?.activeTheme;
 
   return (
     <Sidebar side={isRtl ? "right" : "left"}>
@@ -196,14 +201,14 @@ export function AppSidebar() {
             <div
               className="flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-300 group-hover:scale-110 group-hover:rotate-3"
               style={{
-                background: "linear-gradient(135deg, hsl(42 85% 55%) 0%, hsl(32 78% 46%) 100%)",
-                boxShadow: "0 4px 16px -2px hsl(42 85% 53% / 0.4), 0 0 0 1px hsl(42 85% 53% / 0.15)"
+                background: `linear-gradient(135deg, ${dynamicTheme?.logoGradientFrom || "hsl(42 85% 55%)"} 0%, ${dynamicTheme?.logoGradientTo || "hsl(32 78% 46%)"} 100%)`,
+                boxShadow: `0 4px 16px -2px ${dynamicTheme?.logoGlow || "hsl(42 85% 53% / 0.4)"}, 0 0 0 1px ${dynamicTheme?.logoGlow || "hsl(42 85% 53% / 0.15)"}`
               }}
             >
               <Globe className="w-5 h-5 text-white drop-shadow-sm" />
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-extrabold tracking-tight text-sidebar-foreground">{isGhanaMode() ? getBrandTitle() : t('sidebar.brandTitle')}</span>
+              <span className="text-sm font-extrabold tracking-tight text-sidebar-foreground">{dynamicBrandTitle}</span>
               <span className="text-[10px] font-medium text-sidebar-foreground/40">{t('sidebar.brandSubtitle')}</span>
             </div>
           </div>
@@ -290,19 +295,33 @@ export function AppSidebar() {
             </div>
           </div>
         )}
-        {isSingleCountryMode() && (() => {
-          const cc = getCountryConfig();
-          return cc ? (
-            <div className="rounded-xl p-2.5 border border-sidebar-foreground/8" style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.08), rgba(59,130,246,0.03))" }}>
-              <div className="flex items-center gap-2">
-                <Globe className="w-3.5 h-3.5 text-blue-400" />
-                <div className="flex flex-col min-w-0 flex-1">
-                  <span className="text-[11px] font-bold text-blue-400" data-testid="text-country-mode">{cc.name} Mode</span>
-                  <span className="text-[9px] text-sidebar-foreground/40 truncate">{cc.regulatoryBody} | {cc.currency}</span>
+        {(() => {
+          const cc = dynamicCountryConfig || getCountryConfig();
+          const isGlobal = countryTheme?.isGlobalView;
+          if (isGlobal && isSuperAdmin) {
+            return (
+              <div className="rounded-xl p-2.5 border border-sidebar-foreground/8" style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.08), rgba(59,130,246,0.03))" }}>
+                <div className="flex items-center gap-2">
+                  <Globe className="w-3.5 h-3.5 text-blue-400" />
+                  <span className="text-[11px] font-bold text-blue-400" data-testid="text-country-mode">Global View</span>
                 </div>
               </div>
-            </div>
-          ) : null;
+            );
+          }
+          if (cc) {
+            return (
+              <div className="rounded-xl p-2.5 border border-sidebar-foreground/8" style={{ background: `linear-gradient(135deg, ${cc.theme?.logoGlow || "rgba(59,130,246,0.08)"}, rgba(59,130,246,0.03))` }}>
+                <div className="flex items-center gap-2">
+                  <Globe className="w-3.5 h-3.5 text-blue-400" />
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <span className="text-[11px] font-bold text-blue-400" data-testid="text-country-mode">{cc.name} Mode</span>
+                    <span className="text-[9px] text-sidebar-foreground/40 truncate">{cc.regulatoryBody} | {cc.currency}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+          return null;
         })()}
         <div className="rounded-xl p-2.5" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))" }}>
           <div className="flex items-center gap-2">
