@@ -126,6 +126,224 @@ function sanitizeForPrompt(text: string | null | undefined): string {
   return text.replace(/[<>{}[\]]/g, "").replace(/\n/g, " ").slice(0, 100);
 }
 
+async function buildPortfolioData() {
+  const [stats, borrowersResult, allAccounts, disputes, institutions] = await Promise.all([
+    storage.getDashboardStats(),
+    storage.getBorrowers(1, 200),
+    storage.getAllCreditAccounts(),
+    storage.getDisputes(),
+    storage.getInstitutions(1, 100),
+  ]);
+
+  const accountsByBorrower: Record<string, typeof allAccounts> = {};
+  for (const acc of allAccounts) {
+    const bid = String(acc.borrowerId);
+    if (!accountsByBorrower[bid]) accountsByBorrower[bid] = [];
+    accountsByBorrower[bid].push(acc);
+  }
+
+  const disputesByBorrower: Record<string, number> = {};
+  for (const d of disputes) {
+    const bid = String(d.borrowerId);
+    disputesByBorrower[bid] = (disputesByBorrower[bid] || 0) + 1;
+  }
+
+  const borrowerProfiles = borrowersResult.data.map(b => {
+    const bAccounts = accountsByBorrower[String(b.id)] || [];
+    const totalBalance = bAccounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
+    const originalTotal = bAccounts.reduce((s, a) => s + parseFloat(a.originalAmount || "0"), 0);
+    const delinquent = bAccounts.filter(a => a.status === "delinquent").length;
+    const defaulted = bAccounts.filter(a => a.status === "default").length;
+    const writtenOff = bAccounts.filter(a => a.status === "written_off").length;
+    const current = bAccounts.filter(a => a.status === "current").length;
+    const closed = bAccounts.filter(a => a.status === "closed").length;
+    const maxArrears = Math.max(0, ...bAccounts.map(a => parseInt(a.daysInArrears || "0") || 0));
+    const disputeCount = disputesByBorrower[String(b.id)] || 0;
+    const name = b.borrowerType === "corporate" ? (b.companyName || "Unknown Corp") : `${b.firstName || ""} ${b.lastName || ""}`.trim();
+
+    return {
+      name, id: b.id, type: b.borrowerType || "individual", nationalId: b.nationalId,
+      phone: b.phone, email: b.email, address: b.address, city: b.city, region: b.region,
+      accountCount: bAccounts.length, totalBalance, originalTotal,
+      current, delinquent, defaulted, writtenOff, closed,
+      maxArrears, disputeCount, isPep: b.isPep || false,
+      employmentStatus: b.employmentStatus, monthlyIncome: b.monthlyIncome,
+      accounts: bAccounts.map(a => ({
+        type: a.accountType, balance: parseFloat(a.currentBalance || "0"),
+        original: parseFloat(a.originalAmount || "0"), status: a.status,
+        arrears: parseInt(a.daysInArrears || "0") || 0, lender: a.lenderInstitution,
+        dateOpened: a.dateOpened, interestRate: a.interestRate,
+      })),
+    };
+  });
+
+  const accountsByType: Record<string, { count: number; balance: number; delinquent: number; defaulted: number }> = {};
+  for (const acc of allAccounts) {
+    const t = acc.accountType || "Other";
+    if (!accountsByType[t]) accountsByType[t] = { count: 0, balance: 0, delinquent: 0, defaulted: 0 };
+    accountsByType[t].count++;
+    accountsByType[t].balance += parseFloat(acc.currentBalance || "0");
+    if (acc.status === "delinquent") accountsByType[t].delinquent++;
+    if (acc.status === "default") accountsByType[t].defaulted++;
+  }
+
+  const accountsByLender: Record<string, { count: number; balance: number; delinquent: number; defaulted: number }> = {};
+  for (const acc of allAccounts) {
+    const lender = acc.lenderInstitution || "Unknown";
+    if (!accountsByLender[lender]) accountsByLender[lender] = { count: 0, balance: 0, delinquent: 0, defaulted: 0 };
+    accountsByLender[lender].count++;
+    accountsByLender[lender].balance += parseFloat(acc.currentBalance || "0");
+    if (acc.status === "delinquent") accountsByLender[lender].delinquent++;
+    if (acc.status === "default") accountsByLender[lender].defaulted++;
+  }
+
+  return { stats, borrowerProfiles, accountsByType, accountsByLender, totalAccounts: allAccounts.length, totalDisputes: disputes.length, institutions: institutions.data };
+}
+
+export async function generatePortfolioIntelligence() {
+  const data = await buildPortfolioData();
+  const defaultCurrency = getDefaultCurrencyCode();
+
+  const riskBorrowers = data.borrowerProfiles
+    .filter(b => b.delinquent > 0 || b.defaulted > 0 || b.writtenOff > 0 || b.maxArrears > 30)
+    .sort((a, b) => (b.defaulted + b.delinquent + b.writtenOff) - (a.defaulted + a.delinquent + a.writtenOff) || b.maxArrears - a.maxArrears);
+
+  const portfolioContext = `
+PORTFOLIO DATA:
+Total Borrowers: ${data.stats.totalBorrowers}
+Total Accounts: ${data.stats.totalAccounts}
+Outstanding: ${defaultCurrency} ${parseFloat(data.stats.totalOutstanding).toLocaleString()}
+Delinquent Accounts: ${data.stats.delinquentAccounts}
+Defaulted Accounts: ${data.stats.defaultAccounts}
+Open Disputes: ${data.stats.openDisputeCount}
+
+ACCOUNTS BY PRODUCT TYPE:
+${Object.entries(data.accountsByType).map(([type, d]) => `${type}: ${d.count} accounts, ${defaultCurrency} ${d.balance.toLocaleString()} outstanding, ${d.delinquent} delinquent, ${d.defaulted} defaulted`).join("\n")}
+
+ACCOUNTS BY LENDER:
+${Object.entries(data.accountsByLender).map(([lender, d]) => `${lender}: ${d.count} accounts, ${defaultCurrency} ${d.balance.toLocaleString()} outstanding, ${d.delinquent} delinquent, ${d.defaulted} defaulted`).join("\n")}
+
+AT-RISK BORROWERS (${riskBorrowers.length} total):
+${riskBorrowers.slice(0, 30).map(b => `- ${b.name} (${b.type}, ID: ${b.nationalId}) | Phone: ${b.phone || "N/A"} | Email: ${b.email || "N/A"}
+  ${b.accountCount} accounts | Outstanding: ${defaultCurrency} ${b.totalBalance.toLocaleString()} | Max Arrears: ${b.maxArrears}d
+  Status: ${b.current} current, ${b.delinquent} delinquent, ${b.defaulted} defaulted, ${b.writtenOff} written-off
+  Accounts: ${b.accounts.map(a => `${a.type}: ${defaultCurrency} ${a.balance.toLocaleString()} (${a.status}, ${a.arrears}d arrears, ${a.lender})`).join("; ")}`).join("\n")}
+
+ALL BORROWERS SUMMARY (${data.borrowerProfiles.length} total):
+${data.borrowerProfiles.filter(b => b.delinquent === 0 && b.defaulted === 0 && b.writtenOff === 0).length} borrowers in good standing
+${riskBorrowers.length} borrowers at risk
+Total portfolio default rate: ${data.totalAccounts > 0 ? ((data.stats.defaultAccounts / data.totalAccounts) * 100).toFixed(1) : 0}%
+Total portfolio delinquency rate: ${data.totalAccounts > 0 ? ((data.stats.delinquentAccounts / data.totalAccounts) * 100).toFixed(1) : 0}%
+`.trim();
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+      {
+        role: "system",
+        content: `You are a senior credit risk analyst for the Pan-African Credit Registry (CDH v2.0) operating in Ghana. Currency is ${defaultCurrency} (Ghana Cedis). Analyze the portfolio data and generate a comprehensive intelligence report. You must respond in valid JSON with this exact structure:
+{
+  "overallRiskRating": "low" | "moderate" | "elevated" | "high" | "critical",
+  "portfolioHealthScore": <number 0-100, 100 is healthiest>,
+  "executiveSummary": "<3-4 sentence overview of the portfolio health and key concerns>",
+  "keyMetrics": {
+    "totalExposure": "<formatted amount>",
+    "delinquencyRate": "<percentage>",
+    "defaultRate": "<percentage>",
+    "avgArrearsDays": <number>,
+    "concentrationRisk": "<description of any concentration issues>"
+  },
+  "defaultPredictions": [
+    {
+      "borrowerName": "<name>",
+      "borrowerType": "<individual/corporate>",
+      "phone": "<phone or N/A>",
+      "email": "<email or N/A>",
+      "currentExposure": "<formatted amount>",
+      "riskLevel": "high" | "critical",
+      "daysInArrears": <number>,
+      "prediction": "<specific prediction about this borrower>",
+      "recommendedAction": "<what to do about this borrower>",
+      "probabilityOfDefault": "<percentage estimate>"
+    }
+  ],
+  "sectorAnalysis": [
+    {
+      "sector": "<loan type>",
+      "totalAccounts": <number>,
+      "totalExposure": "<formatted amount>",
+      "delinquencyRate": "<percentage>",
+      "defaultRate": "<percentage>",
+      "trend": "improving" | "stable" | "deteriorating",
+      "riskAssessment": "<brief assessment>"
+    }
+  ],
+  "lenderAnalysis": [
+    {
+      "lenderName": "<institution name>",
+      "totalAccounts": <number>,
+      "totalExposure": "<formatted amount>",
+      "delinquencyRate": "<percentage>",
+      "defaultRate": "<percentage>",
+      "portfolioQuality": "strong" | "adequate" | "weak" | "critical"
+    }
+  ],
+  "earlyWarnings": [
+    {
+      "severity": "warning" | "alert" | "critical",
+      "title": "<short title>",
+      "description": "<detailed description of the warning>",
+      "affectedBorrowers": <number>,
+      "potentialLoss": "<formatted amount>",
+      "recommendedAction": "<what to do>"
+    }
+  ],
+  "collectionPriorities": [
+    {
+      "priority": <1-10>,
+      "borrowerName": "<name>",
+      "phone": "<phone or N/A>",
+      "email": "<email or N/A>",
+      "amountOverdue": "<formatted amount>",
+      "daysOverdue": <number>,
+      "reason": "<why this is priority>"
+    }
+  ],
+  "trendForecast": {
+    "delinquencyTrend": "increasing" | "stable" | "decreasing",
+    "defaultTrend": "increasing" | "stable" | "decreasing",
+    "portfolioOutlook": "<2-3 sentence outlook for the next 3-6 months>",
+    "expectedLosses": "<estimated potential losses>"
+  },
+  "recommendations": [
+    {
+      "priority": "immediate" | "short_term" | "medium_term",
+      "category": "collections" | "risk_management" | "policy" | "monitoring" | "compliance",
+      "title": "<recommendation title>",
+      "description": "<detailed recommendation>",
+      "expectedImpact": "<what improvement to expect>"
+    }
+  ]
+}`
+      },
+      {
+        role: "user",
+        content: `Analyze this credit portfolio and generate a comprehensive intelligence report with predictions, early warnings, and actionable recommendations:\n\n${portfolioContext}`
+      }
+    ],
+    max_tokens: 4000,
+    temperature: 0.3,
+  });
+
+  const raw = response.choices[0]?.message?.content || "{}";
+  const content = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+  try {
+    return JSON.parse(content);
+  } catch {
+    return { executiveSummary: raw, overallRiskRating: "moderate", portfolioHealthScore: 50 };
+  }
+}
+
 async function buildLiveContext(): Promise<string> {
   try {
     const [stats, institutions, orgs, retentionPolicies, exchangeRates, borrowersResult, allAccounts, disputes] = await Promise.all([

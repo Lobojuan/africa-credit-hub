@@ -4,6 +4,7 @@ const pt = {
     reportsCompliance: "Relatórios e Conformidade",
     administration: "Administração",
     dashboard: "Painel",
+    portfolioIntelligence: "Inteligência de Portfólio IA",
     borrowers: "Mutuários",
     creditAccounts: "Contas de Crédito",
     creditSearch: "Pesquisa Global",

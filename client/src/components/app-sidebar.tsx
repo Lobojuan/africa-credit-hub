@@ -29,6 +29,7 @@ import {
   Play,
   FileSpreadsheet,
   Info,
+  Brain,
 } from "lucide-react";
 import {
   Sidebar,
@@ -57,6 +58,7 @@ type NavItem = {
 
 const coreItems: NavItem[] = [
   { titleKey: "sidebar.dashboard", url: "/", icon: LayoutDashboard, testId: "nav-dashboard" },
+  { titleKey: "sidebar.portfolioIntelligence", url: "/portfolio-intelligence", icon: Brain, testId: "nav-portfolio-intelligence", roles: ["admin", "super_admin", "regulator"] },
   { titleKey: "sidebar.borrowers", url: "/borrowers", icon: Users, testId: "nav-borrowers" },
   { titleKey: "sidebar.creditAccounts", url: "/credit-accounts", icon: CreditCard, testId: "nav-credit-accounts" },
   { titleKey: "sidebar.creditSearch", url: "/search", icon: Search, testId: "nav-credit-search" },

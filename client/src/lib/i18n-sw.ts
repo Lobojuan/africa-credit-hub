@@ -4,6 +4,7 @@ const sw: Record<string, any> = {
     reportsCompliance: "Ripoti na Uzingatiaji",
     administration: "Utawala",
     dashboard: "Dashibodi",
+    portfolioIntelligence: "Akili ya Kwingineko ya AI",
     borrowers: "Wakopaji",
     creditAccounts: "Akaunti za Mikopo",
     creditSearch: "Utafutaji wa Jumla",

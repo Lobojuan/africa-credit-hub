@@ -22,7 +22,7 @@ import multer from "multer";
 import rateLimit from "express-rate-limit";
 import { isGhanaMode } from "./country-mode";
 import { sendWelcomeEmail, sendBillingNotification, sendDisputeNotification } from "./email";
-import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport } from "./ai";
+import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport, generatePortfolioIntelligence } from "./ai";
 import { BOG_EXPORT_GENERATORS } from "./bog-export";
 import type { BogFileType } from "@shared/bog-codes";
 
@@ -3252,6 +3252,15 @@ export async function registerRoutes(
       const { country } = req.body;
       if (!country) return res.status(400).json({ message: "country required" });
       const result = await generateComplianceReport(country);
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/ai/portfolio-intelligence", requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
+    try {
+      const result = await generatePortfolioIntelligence();
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });

@@ -4,6 +4,7 @@ const ar: Record<string, any> = {
     reportsCompliance: "التقارير والامتثال",
     administration: "الإدارة",
     dashboard: "لوحة المعلومات",
+    portfolioIntelligence: "ذكاء المحفظة بالذكاء الاصطناعي",
     borrowers: "المقترضون",
     creditAccounts: "حسابات الائتمان",
     creditSearch: "البحث الشامل",
