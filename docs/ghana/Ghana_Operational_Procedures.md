@@ -1,7 +1,7 @@
 # Ghana Credit Registry — Operational Procedures Manual
 
 **Carlson Capital & Systems In Motion Limited**
-**Version 1.1 | Standard Operating Procedures for Ghana CRB Operations | CDH v2.0**
+**Version 2.1 | Standard Operating Procedures for Ghana CRB Operations | CDH v2.1**
 
 ---
 
@@ -170,5 +170,83 @@ This manual defines the standard operating procedures (SOPs) for the day-to-day 
 
 ---
 
-*Document Reference: GH-OPS-2026-v1.1*
+## 8. Enterprise Oversight Features (v2.1)
+
+### 8.1 Regulatory Dashboard
+
+The Regulatory Dashboard (`/regulatory-dashboard`) provides Bank of Ghana supervisory staff with real-time portfolio oversight:
+
+| Metric | Source | Calculation |
+|--------|--------|-------------|
+| NPL Ratio | credit_accounts table | (delinquent + default + written_off) / total accounts |
+| Sector NPL Heatmap | credit_accounts grouped by account_type | Per-sector NPL ratio and exposure |
+| Institution Compliance | credit_accounts grouped by lender_institution | Per-institution NPL, account counts, exposure |
+| Data Quality Score | borrowers table | % with national_id, phone/mobile_money, email |
+| Status Breakdown | credit_accounts table | Count by status (current, delinquent, default, closed, restructured, written_off) |
+
+Access: admin, regulator, super_admin roles only. All metrics use DB-level aggregate queries for accuracy at scale.
+
+### 8.2 Borrower Alert System
+
+Automatic notifications generated when credit files are accessed:
+
+| Event | Alert Type | Generated When |
+|-------|-----------|----------------|
+| Credit Report Pull | report_accessed | Credit report generated via /api/credit-reports/generate |
+| Credit Inquiry | credit_inquiry | External API credit inquiry |
+| Dispute Update | dispute_update | Dispute status changes |
+| Score Change | score_change | Credit score recalculation |
+
+Alerts are org-scoped: users can only view alerts for borrowers within their organization (super_admin exempt).
+
+### 8.3 Credit Score Methodology Transparency
+
+Public-facing page at `/credit-score-methodology` compliant with Credit Reporting Act 726 transparency requirements:
+
+| Factor | Weight | Description |
+|--------|--------|-------------|
+| Payment History | 35% | On-time payment track record |
+| Credit Utilization | 30% | Outstanding balance vs credit limits |
+| Length of Credit History | 15% | Duration of credit relationships |
+| New Credit Inquiries | 10% | Recent applications for new credit |
+| Account Mix | 10% | Diversity of credit products |
+
+Score bands: Excellent (750-850), Good (700-749), Fair (650-699), Poor (550-649), Very Poor (300-549).
+
+### 8.4 Enhanced Audit Trail
+
+Forensic audit capabilities for BoG compliance reporting:
+
+- Hash chain integrity verification with visual pass/fail indicator
+- CSV export of filtered audit logs for regulatory submission
+- Advanced filtering by date range, action type, entity type, user
+- Dedicated access log panel showing who accessed which borrower's data
+- Statistics summary with daily action counts and active user tracking
+
+### 8.5 Enhanced Batch Upload
+
+Extended data submission formats beyond BoG pipe-delimited:
+
+| Format | Tab | Features |
+|--------|-----|----------|
+| JSON | JSON | Paste or file upload, schema validation |
+| XBRL | XBRL | Financial reporting standard format |
+| BoG Pipe-Delimited | BoG | CRB v1.1 compliant, 6 file types |
+| CSV | CSV | File picker, drag-and-drop, row-level validation preview |
+
+All formats include: validation preview before submission, template downloads, and upload history tracking.
+
+### 8.6 Interactive API Documentation
+
+Developer portal at `/api-docs` with:
+
+- Interactive API explorer with try-it-out testing
+- Authentication flow diagram (API key to OAuth 2.1 token to API call)
+- Code examples in Python, JavaScript, and cURL
+- Rate limit documentation and error code reference
+- Webhook setup guide for real-time data push notifications
+
+---
+
+*Document Reference: GH-OPS-2026-v2.1*
 *Classification: Internal — Operations Manual*

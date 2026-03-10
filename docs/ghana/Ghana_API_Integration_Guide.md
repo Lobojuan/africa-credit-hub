@@ -1,7 +1,7 @@
 # Ghana Credit Registry — API Integration Guide
 
 **Carlson Capital & Systems In Motion Limited**
-**Version 1.1 | Bank of Ghana CRB v1.1 Compliant API | CDH v2.0**
+**Version 2.1 | Bank of Ghana CRB v1.1 Compliant API | CDH v2.1**
 
 ---
 
@@ -399,18 +399,81 @@ The Bank of Ghana CRB Unit may request API activity logs at any time per Act 726
 
 ---
 
-## 10. Legal Notices
+## 10. Enterprise API Endpoints (v2.1)
 
-### 10.1 Disclaimer
+### 10.1 Regulatory Dashboard
+
+```
+GET /api/regulatory/dashboard
+Authorization: Bearer <token> (admin, regulator, super_admin)
+```
+
+Returns portfolio-wide analytics using DB-level aggregate queries:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| summary.totalBorrowers | integer | Total borrowers in scope |
+| summary.totalAccounts | integer | Total credit accounts |
+| summary.nplRatio | string | NPL ratio as percentage |
+| summary.nplExposure | string | Total NPL exposure in GHS |
+| summary.statusBreakdown | object | Counts by account status |
+| dataQuality | object | National ID, phone, email coverage percentages |
+| sectorNpl | array | Per-sector NPL ratios and exposure |
+| institutionCompliance | array | Per-institution NPL and compliance data |
+
+### 10.2 Borrower Alerts
+
+```
+GET /api/borrower-alerts
+Authorization: Bearer <token> (admin, regulator, super_admin)
+```
+
+Returns all borrower alerts (org-scoped).
+
+```
+GET /api/borrower-alerts/:borrowerId
+Authorization: Bearer <token>
+```
+
+Returns alerts for a specific borrower. Returns 403 if borrower is outside the user's organization (super_admin exempt).
+
+| Field | Type | Description |
+|-------|------|-------------|
+| alertType | enum | credit_inquiry, report_accessed, dispute_update, score_change |
+| message | string | Alert message text |
+| status | enum | pending, sent, failed |
+| recipientPhone | string | Borrower phone number |
+| recipientEmail | string | Borrower email address |
+
+### 10.3 Audit Integrity Verification
+
+```
+GET /api/audit-logs/verify-integrity
+Authorization: Bearer <token> (admin, super_admin)
+```
+
+Returns hash chain verification result for the audit trail.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| intact | boolean | Whether hash chain is intact |
+| totalRecords | integer | Number of records verified |
+| brokenAt | integer/null | Record index where chain broke (null if intact) |
+
+---
+
+## 11. Legal Notices
+
+### 11.1 Disclaimer
 Use of this API constitutes agreement to comply with the Credit Reporting Act, 2007 (Act 726), the Data Protection Act, 2012 (Act 843), and all Bank of Ghana directives. Misuse of the API, including unauthorized data access, data harvesting, or failure to maintain consent records, may result in license revocation and criminal prosecution.
 
-### 10.2 Liability
+### 11.2 Liability
 Carlson Capital & Systems In Motion Limited provides this API on an "as-is" basis and is not liable for data accuracy issues originating from submitting institutions. Each institution remains legally responsible for the accuracy of data submitted per Act 726, Section 7(3).
 
-### 10.3 Governing Law
+### 11.3 Governing Law
 This API and all data processed through it are governed by the laws of the Republic of Ghana, with the Courts of Ghana having exclusive jurisdiction over any disputes.
 
 ---
 
-*Document Reference: GH-API-2026-v1.1*
+*Document Reference: GH-API-2026-v2.1*
 *Classification: Confidential — BoG-Licensed Institutions Only*

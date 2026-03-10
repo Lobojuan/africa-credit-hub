@@ -1,7 +1,7 @@
 # Ghana Credit Registry — Data Connections and Exchange Policy
 
 **Carlson Capital & Systems In Motion Limited**
-**Version 1.1 | Regulatory Data Exchange Framework | CDH v2.0**
+**Version 2.1 | Regulatory Data Exchange Framework | CDH v2.1**
 
 ---
 

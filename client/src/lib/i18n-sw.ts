@@ -36,7 +36,7 @@ const sw: Record<string, any> = {
     borrowerAlerts: "Tahadhari za Wakopaji",
     brandTitle: "Sajili ya Mikopo",
     brandSubtitle: "Carlson Capital & Systems In Motion Limited™",
-    version: "v2.0 — Sajili ya Mikopo",
+    version: "v2.1 — Sajili ya Mikopo",
   },
   login: {
     title: "Mfumo wa Sajili ya Mikopo",
@@ -1160,9 +1160,22 @@ const sw: Record<string, any> = {
   versionHistory: {
     title: "Historia ya Matoleo",
     subtitle: "Maelezo ya matoleo na kumbukumbu za mabadiliko ya Mfumo wa Sajili ya Mikopo",
-    v12: {
+    v21: {
       date: "Machi 2026",
       tag: "Ya Sasa",
+      description: "Utayari wa benki kuu kwa biashara na uwezo 6 mpya wa usimamizi na utiifu, urambazaji uliobuniwa upya, na usalama wa wapangaji wengi ulioimarishwa.",
+      f1: { title: "Mbinu ya Alama ya Mikopo", desc: "Ukurasa wa uwazi wa mfano wa alama na kiigaji shirikishi, uzito wa sababu, bendi 300-850, na kamusi ya nambari za sababu" },
+      f2: { title: "Dashibodi ya Udhibiti", desc: "Usimamizi wa benki kuu na uwiano wa NPL, ramani ya sekta, utiifu wa taasisi, na vipimo vya ubora wa data" },
+      f3: { title: "Mfumo wa Tahadhari za Wakopaji", desc: "Tahadhari zinazozalishwa kiotomatiki wakati ripoti za mikopo zinapochukuliwa na udhibiti wa ufikiaji kwa shirika" },
+      f4: { title: "Njia ya Ukaguzi Iliyoboreshwa", desc: "UI ya uthibitishaji wa mnyororo wa hashi, usafirishaji CSV, vichujio vya hali ya juu kwa tarehe/kitendo/huluki/mtumiaji" },
+      f5: { title: "Upakiaji wa Kundi Ulioboreshwa", desc: "Kichupo cha CSV, kichaguzi cha faili cha buruta-na-dondosha, hakiki ya uthibitishaji kwa kiwango cha safu" },
+      f6: { title: "Nyaraka za API Shirikishi", desc: "Kichunguzi cha API cha majaribio, nyaraka za vikomo vya kiwango, mchoro wa uthibitishaji, mifano ya Python/JS/cURL" },
+      f7: { title: "Muundo Mpya wa Upau wa Kando", desc: "Urambazaji uliopangwa upya: Msingi (4), Shughuli (6), Usimamizi (6), Utawala (8), Rasilimali - sehemu zinazokunjwa" },
+      f8: { title: "Uimarishaji wa Usalama", desc: "Maswali ya tahadhari yaliyopimwa kwa shirika, uchambuzi wa udhibiti uliojitenga, na maswali ya jumla katika kiwango cha hifadhidata" },
+    },
+    v12: {
+      date: "Machi 2026",
+      tag: "Utaifishaji",
       description: "Utaifishaji, usanidi wa sarafu za eneo, na uboreshaji wa kiolesura katika mamlaka zote 54 za Afrika.",
       f1: { title: "Lugha 5 za AU", desc: "Kiingereza, Kifaransa, Kireno, Kiarabu (RTL), na Kiswahili" },
       f2: { title: "Msaada wa RTL Kiarabu", desc: "Mpangilio kamili wa kulia-kwenda-kushoto na upau wa kando, fomu, na jedwali" },

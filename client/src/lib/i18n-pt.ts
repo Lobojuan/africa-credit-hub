@@ -36,7 +36,7 @@ const pt = {
     borrowerAlerts: "Alertas de Mutuários",
     brandTitle: "Registo de Crédito",
     brandSubtitle: "Carlson Capital & Systems In Motion Limited™",
-    version: "v2.0 — Registo de Crédito",
+    version: "v2.1 — Registo de Crédito",
   },
   login: {
     title: "Sistema de Registo de Crédito",
@@ -1147,9 +1147,22 @@ const pt = {
   versionHistory: {
     title: "Histórico de Versões",
     subtitle: "Notas de versão e registo de alterações do Sistema de Registo de Crédito",
-    v12: {
+    v21: {
       date: "Março 2026",
       tag: "Atual",
+      description: "Prontidão de nível empresarial para banco central com 6 novas capacidades de supervisão e conformidade, navegação redesenhada e segurança multi-inquilino reforçada.",
+      f1: { title: "Metodologia de Pontuação", desc: "Página transparente do modelo de pontuação com simulador interativo, pesos dos fatores, bandas 300-850 e glossário de códigos de razão" },
+      f2: { title: "Painel Regulatório", desc: "Supervisão do banco central com rácios NPL, mapa setorial, conformidade institucional e métricas de qualidade de dados" },
+      f3: { title: "Sistema de Alertas", desc: "Alertas automáticos ao consultar relatórios de crédito com controlo de acesso por organização e rastreamento de estado de entrega" },
+      f4: { title: "Trilha de Auditoria Melhorada", desc: "UI de verificação de cadeia hash, exportação CSV, filtros avançados por data/ação/entidade/utilizador e painel de log de acesso" },
+      f5: { title: "Upload em Lote Melhorado", desc: "Separador CSV, seletor de ficheiros arrastar-e-soltar, pré-visualização de validação por linha, histórico de uploads e modelos descarregáveis" },
+      f6: { title: "Docs API Interativos", desc: "Explorador API de teste, documentação de limites de taxa, diagrama de autenticação, exemplos Python/JS/cURL" },
+      f7: { title: "Redesenho da Barra Lateral", desc: "Navegação reorganizada: Essencial (4), Operações (6), Supervisão (6), Administração (8), Recursos - secções recolhíveis" },
+      f8: { title: "Reforço de Segurança", desc: "Consultas de alertas com âmbito de organização, analíticas regulatórias isoladas e consultas agregadas ao nível da base de dados" },
+    },
+    v12: {
+      date: "Março 2026",
+      tag: "Internacionalização",
       description: "Internacionalização, localização de moedas e polimento da interface em todas as 54 jurisdições africanas.",
       f1: { title: "5 Línguas da UA", desc: "Inglês, Francês, Português, Árabe (RTL) e Suaíli" },
       f2: { title: "Suporte RTL Árabe", desc: "Layout da direita para a esquerda com barra lateral, formulários e tabelas" },

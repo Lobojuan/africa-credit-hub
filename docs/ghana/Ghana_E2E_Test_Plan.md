@@ -1,7 +1,7 @@
 # Ghana Credit Registry — End-to-End Test Plan
 
 **Carlson Capital & Systems In Motion Limited**
-**Version 1.1 | BoG CRB Standards Compliance Testing | CDH v2.0**
+**Version 2.1 | BoG CRB Standards Compliance Testing | CDH v2.1**
 
 ---
 
@@ -15,11 +15,16 @@ This document defines the end-to-end test plan for the Ghana Credit Registry, en
 |------|----------------|
 | Ghana-Specific Data Entry | Borrower registration, Ghana Card, Voter's ID, SSNIT, Driver's License, employment type, proof of address |
 | Credit Account Management | GHS currency, BoG facility types, asset classification, closure reasons |
-| Batch Upload | BoG pipe-delimited format, JSON, XBRL |
+| Batch Upload | BoG pipe-delimited format, JSON, XBRL, CSV file upload with validation preview |
 | Credit Reporting | GHS primary with USD/EUR reference, BoG-compliant reports |
 | Dispute Management | SLA-tracked dispute resolution |
 | Compliance Dashboard | Market benchmarks, credit score factors |
-| Security | Authentication, authorization, audit trail |
+| Regulatory Oversight | Regulatory Dashboard (NPL ratios, sector heatmap, institution compliance, data quality metrics) |
+| Borrower Alerts | Auto-generated alerts on credit report pull, org-scoped access control |
+| Credit Score Methodology | Interactive score simulator, factor weights, score bands 300-850, reason code glossary |
+| Enhanced Audit Trail | Hash chain verification UI, CSV export, advanced filters, access log panel |
+| Interactive API Docs | API explorer with try-it-out, auth flow diagram, code examples |
+| Security | Authentication, authorization, audit trail, multi-tenant isolation |
 
 ### 1.3 Test Environment
 | Component | Details |
@@ -226,8 +231,95 @@ This document defines the end-to-end test plan for the Ghana Credit Registry, en
 | High | TC-GH-030 to TC-GH-031 | Dashboard Ghana mode |
 | Medium | TC-GH-040 to TC-GH-042 | Compliance features |
 | Medium | TC-GH-050 to TC-GH-051 | Security testing |
+| High | TC-GH-060 to TC-GH-067 | Enterprise features (v2.1) |
 
 ---
 
-*Document Reference: GH-E2E-2026-v1.1*
+## 10. Test Cases — Enterprise Features (v2.1)
+
+### TC-GH-060: Regulatory Dashboard
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Navigate to /regulatory-dashboard (admin/regulator role) | Page loads with summary statistics |
+| 2 | Verify NPL ratio card | NPL ratio displayed as percentage with delinquent + default + written_off / total |
+| 3 | Verify data quality metrics | National ID coverage, phone coverage, email coverage shown as percentages |
+| 4 | Verify sector NPL heatmap | Account types listed with per-sector NPL ratios and exposure amounts |
+| 5 | Verify institution compliance panel | Each reporting institution shows account count, NPL ratio, exposure |
+| 6 | Verify status breakdown | Current, delinquent, default, closed, restructured, written_off counts |
+| 7 | Verify org-scoped data | Switch org context and confirm metrics change to reflect scoped data |
+
+### TC-GH-061: Borrower Alert System
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Navigate to /borrower-alerts | Alert management page loads |
+| 2 | Generate a credit report for a borrower | Report generates successfully |
+| 3 | Return to /borrower-alerts | New alert appears for the report_accessed event |
+| 4 | Verify alert details | Shows borrower name, accessing institution, purpose, timestamp |
+| 5 | Test org-scoped access | GET /api/borrower-alerts/:borrowerId returns 403 for borrowers outside user's org |
+
+### TC-GH-062: Credit Score Methodology
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Navigate to /credit-score-methodology | Page loads with scoring model documentation |
+| 2 | Verify factor weights | Payment History 35%, Credit Utilization 30%, Credit Length 15%, New Inquiries 10%, Account Mix 10% |
+| 3 | Test interactive simulator | Adjust sliders and verify score recalculates in real-time |
+| 4 | Verify score bands | Excellent (750-850), Good (700-749), Fair (650-699), Poor (550-649), Very Poor (300-549) |
+| 5 | Verify reason code glossary | All reason codes listed with descriptions |
+
+### TC-GH-063: Enhanced Audit Trail
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Navigate to /audit | Audit trail page loads with statistics cards |
+| 2 | Verify statistics summary | Actions Today, Active Users, and integrity status cards display |
+| 3 | Click hash chain verification button | Verification runs and shows intact/broken result |
+| 4 | Apply date range filter | Logs filter to selected date range |
+| 5 | Apply action type filter | Logs filter to selected action type |
+| 6 | Click CSV export button | CSV file downloads with filtered audit logs |
+| 7 | Switch to Access Log tab | Shows filtered view of who accessed which borrower's data |
+
+### TC-GH-064: Enhanced Batch Upload with CSV
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Navigate to /batch-upload | Batch upload page loads |
+| 2 | Click CSV tab | CSV upload interface appears |
+| 3 | Select or drag-drop a CSV file | File is accepted and parsed |
+| 4 | Verify validation preview | Preview table shows row-by-row status (valid/invalid with error messages) |
+| 5 | Click template download | CSV template file downloads with sample data and header columns |
+| 6 | Switch to History tab | Previous batch uploads shown with timestamps, record counts, success/error rates |
+
+### TC-GH-065: Enhanced API Documentation
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Navigate to /api-docs | API docs page loads with tabbed navigation |
+| 2 | Click Explorer tab | Interactive API explorer loads with endpoint list |
+| 3 | Select an endpoint | Parameters form appears with try-it-out button |
+| 4 | Click Auth tab | Authentication flow diagram and steps displayed |
+| 5 | Click Code tab | Code examples shown in Python, JavaScript, cURL |
+| 6 | Copy a code example | Code copies to clipboard |
+| 7 | Click Webhooks tab | Webhook setup documentation displayed |
+
+### TC-GH-066: Sidebar Navigation Redesign
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Login as super_admin | Full sidebar visible with all sections |
+| 2 | Verify Core section | Dashboard, Borrowers, Credit Accounts, Credit Search always visible |
+| 3 | Verify Operations section | Collapsible, open by default, contains Credit Reports, Batch Upload, Disputes, etc. |
+| 4 | Verify Oversight section | Collapsible, closed by default, contains Portfolio Intelligence, Regulatory Dashboard, etc. |
+| 5 | Verify Administration section | Collapsible, closed by default, contains Organizations, User Management, etc. |
+| 6 | Verify Resources section | Collapsible, closed by default, contains Score Methodology, Help, Docs |
+| 7 | Verify item count badges | Each section header shows item count |
+| 8 | Verify active indicator | Collapsed section shows dot when active page is inside it |
+| 9 | Login as lender role | Oversight and Administration sections hidden or reduced |
+
+### TC-GH-067: Multi-Tenant Security (v2.1 Hardening)
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | As org-A user, GET /api/borrower-alerts/:borrowerFromOrgB | Returns 403 Access denied |
+| 2 | As super_admin, GET /api/borrower-alerts/:borrowerFromOrgB | Returns alert data (super_admin bypasses org scope) |
+| 3 | Verify regulatory dashboard uses DB aggregates | No 200-row cap on analytics queries |
+| 4 | Verify sidebar version shows v2.1 | Footer displays "v2.1 — Credit Registry" |
+
+---
+
+*Document Reference: GH-E2E-2026-v2.1*
 *Classification: Internal — Quality Assurance*

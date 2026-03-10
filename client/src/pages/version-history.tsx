@@ -26,6 +26,12 @@ import {
   Database,
   Building2,
   CheckCircle,
+  Brain,
+  BarChart3,
+  Bell,
+  FileCheck,
+  BookOpen,
+  PanelLeft,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -42,6 +48,22 @@ type VersionEntry = {
 };
 
 const versions: VersionEntry[] = [
+  {
+    version: "v2.1",
+    dateKey: "versionHistory.v21.date",
+    tagKey: "versionHistory.v21.tag",
+    descriptionKey: "versionHistory.v21.description",
+    features: [
+      { icon: Brain, titleKey: "versionHistory.v21.f1.title", descriptionKey: "versionHistory.v21.f1.desc" },
+      { icon: BarChart3, titleKey: "versionHistory.v21.f2.title", descriptionKey: "versionHistory.v21.f2.desc" },
+      { icon: Bell, titleKey: "versionHistory.v21.f3.title", descriptionKey: "versionHistory.v21.f3.desc" },
+      { icon: Shield, titleKey: "versionHistory.v21.f4.title", descriptionKey: "versionHistory.v21.f4.desc" },
+      { icon: Upload, titleKey: "versionHistory.v21.f5.title", descriptionKey: "versionHistory.v21.f5.desc" },
+      { icon: BookOpen, titleKey: "versionHistory.v21.f6.title", descriptionKey: "versionHistory.v21.f6.desc" },
+      { icon: PanelLeft, titleKey: "versionHistory.v21.f7.title", descriptionKey: "versionHistory.v21.f7.desc" },
+      { icon: FileCheck, titleKey: "versionHistory.v21.f8.title", descriptionKey: "versionHistory.v21.f8.desc" },
+    ],
+  },
   {
     version: "v2.0",
     dateKey: "versionHistory.v20.date",

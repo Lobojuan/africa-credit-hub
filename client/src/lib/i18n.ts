@@ -45,7 +45,7 @@ const en = {
     borrowerAlerts: "Borrower Alerts",
     brandTitle: "Credit Registry",
     brandSubtitle: "Carlson Capital & Systems In Motion Limited™",
-    version: "v2.0 — Credit Registry",
+    version: "v2.1 — Credit Registry",
   },
   login: {
     title: "Credit Registry System",
@@ -1099,9 +1099,22 @@ const en = {
   versionHistory: {
     title: "Version History",
     subtitle: "Release notes and changelog for the Credit Registry System",
-    v20: {
+    v21: {
       date: "March 2026",
       tag: "Current",
+      description: "Enterprise-grade central bank readiness with 6 new oversight and compliance capabilities, redesigned navigation, and strengthened multi-tenant security.",
+      f1: { title: "Credit Score Methodology", desc: "Transparent scoring model page with interactive simulator, factor weights, 300-850 score bands, and reason code glossary" },
+      f2: { title: "Regulatory Dashboard", desc: "Central bank oversight with portfolio NPL ratios, sector heatmap, institution compliance, and data quality metrics using DB-level aggregates" },
+      f3: { title: "Borrower Alert System", desc: "Auto-generated alerts on credit report pulls with org-scoped access control, alert type classification, and delivery status tracking" },
+      f4: { title: "Enhanced Audit Trail", desc: "Hash chain verification UI, CSV export, advanced filters by date/action/entity/user, access log panel, and statistics summary" },
+      f5: { title: "Enhanced Batch Upload", desc: "CSV file upload tab, drag-and-drop file picker, client-side validation preview with row-level status, upload history, and template downloads" },
+      f6: { title: "Interactive API Docs", desc: "Try-it-out API explorer, rate limit documentation, auth flow diagram, code examples in Python/JS/cURL, webhook and SDK docs" },
+      f7: { title: "Sidebar Redesign", desc: "Reorganized navigation: Core (4), Operations (6), Oversight (6), Administration (8), Resources — collapsible sections with item counts and active indicators" },
+      f8: { title: "Security Hardening", desc: "Org-scoped borrower alert queries, tenant-isolated regulatory analytics, and DB-level aggregate queries replacing capped in-memory lists" },
+    },
+    v20: {
+      date: "March 2026",
+      tag: "BoG Compliance",
       description: "Bank of Ghana CRB v1.1 full compliance with pipe-delimited CSV export engine, 6 regulatory file types, and BoG code catalogs.",
       f1: { title: "BoG CRB Export", desc: "Pipe-delimited CSV export for all 6 BoG file types: CONC, BUSC, CONJ, BUSJ, COND, BUSD" },
       f2: { title: "Schema Expansion", desc: "65+ new BoG-compliant fields across borrowers, credit accounts, court judgments, and new dishonoured cheques table" },
@@ -1251,7 +1264,7 @@ const fr: typeof en = {
     organizations: "Organisations",
     brandTitle: "Registre de Crédit",
     brandSubtitle: "Carlson Capital & Systems In Motion Limited™",
-    version: "v2.0 — Registre de Crédit",
+    version: "v2.1 — Registre de Crédit",
   },
   login: {
     title: "Système de Registre de Crédit",
@@ -2286,10 +2299,23 @@ const fr: typeof en = {
   versionHistory: {
     title: "Historique des Versions",
     subtitle: "Notes de version et journal des modifications du Système de Registre de Crédit",
-    v20: {
+    v21: {
       date: "Mars 2026",
       tag: "Actuelle",
-      description: "Conformite complète BoG CRB v1.1 avec moteur d'exportation CSV, 6 types de fichiers réglementaires et catalogues de codes BoG.",
+      description: "Niveau entreprise pour la banque centrale avec 6 nouvelles capacites de supervision et conformite, navigation repensee et securite multi-tenant renforcee.",
+      f1: { title: "Methodologie de Score", desc: "Page transparente du modele de scoring avec simulateur interactif, poids des facteurs, bandes 300-850 et glossaire des codes de raison" },
+      f2: { title: "Tableau de Bord Reglementaire", desc: "Supervision banque centrale avec ratios NPL, carte sectorielle, conformite des institutions et metriques de qualite des donnees" },
+      f3: { title: "Alertes Emprunteurs", desc: "Alertes auto-generees lors des tirages de rapports de credit avec controle d'acces par organisation et suivi du statut de livraison" },
+      f4: { title: "Piste d'Audit Amelioree", desc: "Verification de chaine de hachage, export CSV, filtres avances par date/action/entite/utilisateur et panneau de journal d'acces" },
+      f5: { title: "Import en Lot Ameliore", desc: "Onglet CSV, selecteur de fichiers glisser-deposer, apercu de validation par ligne, historique des imports et modeles telechargeables" },
+      f6: { title: "Docs API Interactifs", desc: "Explorateur API interactif, documentation des limites de debit, diagramme d'authentification, exemples en Python/JS/cURL" },
+      f7: { title: "Redesign Barre Laterale", desc: "Navigation reorganisee : Essentiel (4), Operations (6), Supervision (6), Administration (8), Ressources — sections repliables" },
+      f8: { title: "Renforcement Securite", desc: "Requetes d'alertes par organisation, analytiques reglementaires isolees par tenant et requetes agregees au niveau base de donnees" },
+    },
+    v20: {
+      date: "Mars 2026",
+      tag: "Conformite BoG",
+      description: "Conformite complete BoG CRB v1.1 avec moteur d'exportation CSV, 6 types de fichiers reglementaires et catalogues de codes BoG.",
       f1: { title: "Export BoG CRB", desc: "Export CSV délimité par pipe pour les 6 types de fichiers BoG : CONC, BUSC, CONJ, BUSJ, COND, BUSD" },
       f2: { title: "Extension du Schéma", desc: "65+ nouveaux champs conformes BoG pour emprunteurs, comptes de crédit, jugements et nouvelle table de chèques impayés" },
       f3: { title: "Catalogues de Codes", desc: "Codes complets des annexes BoG : types de facilités, fréquences de remboursement, classifications d'actifs, codes secteur/sous-secteur" },

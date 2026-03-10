@@ -1,7 +1,7 @@
 # Ghana Credit Registry — Data Protection and Privacy Policy
 
 **Carlson Capital & Systems In Motion Limited**
-**Version 1.1 | Aligned with Data Protection Act, 2012 (Act 843) | CDH v2.0**
+**Version 2.1 | Aligned with Data Protection Act, 2012 (Act 843) | CDH v2.1**
 
 ---
 
