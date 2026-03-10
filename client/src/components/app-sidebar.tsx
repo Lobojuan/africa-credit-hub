@@ -32,6 +32,7 @@ import {
   Brain,
   BarChart3,
   Bell,
+  Eye,
 } from "lucide-react";
 import {
   Sidebar,
@@ -60,38 +61,35 @@ type NavItem = {
 
 const coreItems: NavItem[] = [
   { titleKey: "sidebar.dashboard", url: "/", icon: LayoutDashboard, testId: "nav-dashboard" },
-  { titleKey: "sidebar.portfolioIntelligence", url: "/portfolio-intelligence", icon: Brain, testId: "nav-portfolio-intelligence", roles: ["admin", "super_admin", "regulator"] },
   { titleKey: "sidebar.borrowers", url: "/borrowers", icon: Users, testId: "nav-borrowers" },
   { titleKey: "sidebar.creditAccounts", url: "/credit-accounts", icon: CreditCard, testId: "nav-credit-accounts" },
   { titleKey: "sidebar.creditSearch", url: "/search", icon: Search, testId: "nav-credit-search" },
-  { titleKey: "sidebar.batchUpload", url: "/batch-upload", icon: Upload, testId: "nav-batch-upload", roles: ["admin", "lender", "super_admin"] },
 ];
 
-const reportItems: NavItem[] = [
+const operationsItems: NavItem[] = [
   { titleKey: "sidebar.creditReports", url: "/reports", icon: FileText, testId: "nav-credit-reports" },
+  { titleKey: "sidebar.batchUpload", url: "/batch-upload", icon: Upload, testId: "nav-batch-upload", roles: ["admin", "lender", "super_admin"] },
   { titleKey: "sidebar.disputes", url: "/disputes", icon: AlertCircle, testId: "nav-disputes" },
   { titleKey: "sidebar.pendingApprovals", url: "/approvals", icon: CheckSquare, testId: "nav-pending-approvals", roles: ["admin", "regulator", "super_admin"] },
   { titleKey: "sidebar.consentManagement", url: "/consent", icon: FileCheck, testId: "nav-consent" },
   { titleKey: "sidebar.helpdesk", url: "/helpdesk", icon: Headset, testId: "nav-helpdesk" },
-  { titleKey: "sidebar.auditTrail", url: "/audit", icon: Shield, testId: "nav-audit-trail", roles: ["admin", "regulator", "super_admin"] },
-  { titleKey: "sidebar.regulatoryCompliance", url: "/regulatory-compliance", icon: Scale, testId: "nav-regulatory-compliance", roles: ["admin", "regulator", "super_admin"] },
+];
+
+const oversightItems: NavItem[] = [
+  { titleKey: "sidebar.portfolioIntelligence", url: "/portfolio-intelligence", icon: Brain, testId: "nav-portfolio-intelligence", roles: ["admin", "super_admin", "regulator"] },
   { titleKey: "sidebar.regulatoryDashboard", url: "/regulatory-dashboard", icon: BarChart3, testId: "nav-regulatory-dashboard", roles: ["admin", "regulator", "super_admin"] },
-  { titleKey: "sidebar.bogExport", url: "/bog-export", icon: FileSpreadsheet, testId: "nav-bog-export", roles: ["admin", "regulator", "super_admin"] },
+  { titleKey: "sidebar.auditTrail", url: "/audit", icon: Shield, testId: "nav-audit-trail", roles: ["admin", "regulator", "super_admin"] },
   { titleKey: "sidebar.borrowerAlerts", url: "/borrower-alerts", icon: Bell, testId: "nav-borrower-alerts", roles: ["admin", "regulator", "super_admin"] },
+  { titleKey: "sidebar.regulatoryCompliance", url: "/regulatory-compliance", icon: Scale, testId: "nav-regulatory-compliance", roles: ["admin", "regulator", "super_admin"] },
+  { titleKey: "sidebar.bogExport", url: "/bog-export", icon: FileSpreadsheet, testId: "nav-bog-export", roles: ["admin", "regulator", "super_admin"] },
 ];
 
-const platformItems: NavItem[] = [
+const adminItems: NavItem[] = [
   { titleKey: "sidebar.organizations", url: "/organizations", icon: Building2, testId: "nav-organizations", roles: ["super_admin"] },
-];
-
-const systemItems: NavItem[] = [
   { titleKey: "sidebar.userManagement", url: "/users", icon: Settings, testId: "nav-user-management", roles: ["admin", "super_admin"] },
   { titleKey: "sidebar.institutions", url: "/institutions", icon: Building2, testId: "nav-institutions", roles: ["admin", "super_admin"] },
   { titleKey: "sidebar.billing", url: "/billing", icon: Receipt, testId: "nav-billing", roles: ["admin", "regulator", "super_admin"] },
   { titleKey: "sidebar.retentionPolicies", url: "/retention-policies", icon: Archive, testId: "nav-retention-policies", roles: ["admin", "regulator", "super_admin"] },
-];
-
-const integrationItems: NavItem[] = [
   { titleKey: "sidebar.exchangeRates", url: "/exchange-rates", icon: DollarSign, testId: "nav-exchange-rates", roles: ["admin", "super_admin"] },
   { titleKey: "sidebar.apiAdmin", url: "/api-admin", icon: Plug, testId: "nav-api-admin", roles: ["admin", "super_admin"] },
   { titleKey: "sidebar.apiKeys", url: "/api-keys", icon: Key, testId: "nav-api-keys", roles: ["admin", "super_admin"] },
@@ -122,12 +120,14 @@ function CollapsibleSection({
   location,
   defaultOpen,
   t,
+  icon: Icon,
 }: {
   label: string;
   items: NavItem[];
   location: string;
   defaultOpen: boolean;
   t: (key: string) => string;
+  icon?: LucideIcon;
 }) {
   const hasActive = items.some(item => location === item.url);
   const [open, setOpen] = useState(defaultOpen || hasActive);
@@ -139,8 +139,17 @@ function CollapsibleSection({
       <SidebarGroup className="py-0">
         <CollapsibleTrigger className="w-full">
           <SidebarGroupLabel className="text-sidebar-foreground/40 text-[10px] font-semibold uppercase tracking-widest px-3 cursor-pointer hover:text-sidebar-foreground/60 transition-colors flex items-center justify-between">
-            <span>{label}</span>
-            <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${open ? "" : "-rotate-90"}`} />
+            <span className="flex items-center gap-1.5">
+              {Icon && <Icon className="w-3 h-3" />}
+              {label}
+            </span>
+            <div className="flex items-center gap-1.5">
+              {!open && hasActive && (
+                <div className="w-1.5 h-1.5 rounded-full bg-primary/70" />
+              )}
+              <span className="text-[9px] font-medium text-sidebar-foreground/30">{items.length}</span>
+              <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${open ? "" : "-rotate-90"}`} />
+            </div>
           </SidebarGroupLabel>
         </CollapsibleTrigger>
         <CollapsibleContent>
@@ -171,11 +180,10 @@ export function AppSidebar() {
   const role = user?.role;
   const isRtl = i18n.language === "ar";
 
-  const visiblePlatform = filterByRole(platformItems, role);
   const visibleCore = filterByRole(coreItems, role);
-  const visibleReports = filterByRole(reportItems, role);
-  const visibleSystem = filterByRole(systemItems, role);
-  const visibleIntegrations = filterByRole(integrationItems, role);
+  const visibleOperations = filterByRole(operationsItems, role);
+  const visibleOversight = filterByRole(oversightItems, role);
+  const visibleAdmin = filterByRole(adminItems, role);
   const visibleResources = filterByRole(resourceItems, role);
   const isSuperAdmin = role === "super_admin";
   const orgName = (user as any)?.organization?.name;
@@ -202,34 +210,6 @@ export function AppSidebar() {
         </Link>
       </SidebarHeader>
       <SidebarContent className="gap-0">
-        {visiblePlatform.length > 0 && (
-          <>
-            <SidebarGroup className="py-0">
-              <SidebarGroupLabel className="text-sidebar-foreground/40 text-[10px] font-semibold uppercase tracking-widest px-3">
-                Platform
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {visiblePlatform.map((item) => (
-                    <SidebarMenuItem key={item.titleKey}>
-                      <SidebarMenuButton asChild data-active={location === item.url}>
-                        <Link href={item.url} data-testid={item.testId} onClick={() => {
-                          if (location === item.url) window.dispatchEvent(new Event("organizations:reset"));
-                        }}>
-                          <item.icon className="w-4 h-4" />
-                          <span>{t(item.titleKey)}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-            <div className="mx-3 my-1">
-              <div className="h-px bg-sidebar-foreground/10" />
-            </div>
-          </>
-        )}
         <SidebarGroup className="py-0">
           <SidebarGroupContent>
             <SidebarMenu>
@@ -252,30 +232,32 @@ export function AppSidebar() {
         </div>
 
         <CollapsibleSection
-          label={t('sidebar.reportsCompliance')}
-          items={visibleReports}
+          label={t('sidebar.operations', 'Operations')}
+          items={visibleOperations}
           location={location}
           defaultOpen={true}
           t={t}
         />
 
-        {visibleSystem.length > 0 && (
+        {visibleOversight.length > 0 && (
           <CollapsibleSection
-            label={t('sidebar.systemConfig', 'System')}
-            items={visibleSystem}
+            label={t('sidebar.oversight', 'Oversight')}
+            items={visibleOversight}
             location={location}
             defaultOpen={false}
             t={t}
+            icon={Eye}
           />
         )}
 
-        {visibleIntegrations.length > 0 && (
+        {visibleAdmin.length > 0 && (
           <CollapsibleSection
-            label={t('sidebar.integrations', 'Integrations')}
-            items={visibleIntegrations}
+            label={t('sidebar.administration', 'Administration')}
+            items={visibleAdmin}
             location={location}
             defaultOpen={false}
             t={t}
+            icon={Settings}
           />
         )}
 
@@ -283,22 +265,13 @@ export function AppSidebar() {
           <div className="h-px bg-sidebar-foreground/10" />
         </div>
 
-        <SidebarGroup className="py-0">
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {visibleResources.map((item) => (
-                <SidebarMenuItem key={item.titleKey}>
-                  <SidebarMenuButton asChild data-active={location === item.url}>
-                    <Link href={item.url} data-testid={item.testId}>
-                      <item.icon className="w-4 h-4" />
-                      <span>{t(item.titleKey)}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        <CollapsibleSection
+          label={t('sidebar.resources', 'Resources')}
+          items={visibleResources}
+          location={location}
+          defaultOpen={false}
+          t={t}
+        />
       </SidebarContent>
       <SidebarFooter className="p-3 pt-0 space-y-1.5">
         {orgName && !isSuperAdmin && (
@@ -328,10 +301,10 @@ export function AppSidebar() {
         </div>
         <div className="px-1 pt-0.5">
           <p className="text-[10px] text-sidebar-foreground/45 leading-relaxed" data-testid="text-provider-credit">
-            <span className="text-sidebar-foreground/65 font-semibold">Carlson Capital & Systems In Motion Limited™</span>
+            <span className="text-sidebar-foreground/65 font-semibold">Carlson Capital & Systems In Motion Limited</span>
           </p>
           <p className="text-[9px] text-sidebar-foreground/35 font-medium" data-testid="text-copyright">
-            © 2026 All rights reserved.
+            2026 All rights reserved.
           </p>
         </div>
       </SidebarFooter>
