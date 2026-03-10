@@ -175,10 +175,24 @@ async function buildLiveContext(): Promise<string> {
       if (disputeCount > 0) statusFlags.push(`${disputeCount} disputes`);
       if (b.isPep) statusFlags.push("PEP");
 
+      const contactParts = [];
+      if (b.phone) contactParts.push(`Phone: ${sanitizeForPrompt(b.phone)}`);
+      if (b.mobileMoneyNumber) contactParts.push(`Mobile Money: ${sanitizeForPrompt(b.mobileMoneyNumber)}`);
+      if (b.homeTelephone) contactParts.push(`Home: ${sanitizeForPrompt(b.homeTelephone)}`);
+      if (b.workTelephone) contactParts.push(`Work: ${sanitizeForPrompt(b.workTelephone)}`);
+      if (b.email) contactParts.push(`Email: ${sanitizeForPrompt(b.email)}`);
+      const addressParts = [];
+      if (b.address) addressParts.push(sanitizeForPrompt(b.address));
+      if (b.city) addressParts.push(sanitizeForPrompt(b.city));
+      if (b.region) addressParts.push(sanitizeForPrompt(b.region));
+      if (b.postalAddress1) addressParts.push(`Postal: ${sanitizeForPrompt(b.postalAddress1)}`);
+
       return {
         name,
         type: b.borrowerType || "individual",
         nationalId: b.nationalId || "N/A",
+        contact: contactParts.join(" | ") || "No contact info",
+        address: addressParts.join(", ") || "No address",
         accountCount: bAccounts.length,
         totalBalance,
         delinquent,
@@ -198,7 +212,7 @@ async function buildLiveContext(): Promise<string> {
 
     const borrowerList = borrowerProfiles.map(bp => {
       const flagStr = bp.flags.length > 0 ? ` [${bp.flags.join(", ")}]` : "";
-      return `  - ${bp.name} (${bp.type}, ID: ${bp.nationalId}) | ${bp.accountCount} accounts | Outstanding: GHS ${bp.totalBalance.toLocaleString()} | Max Arrears: ${bp.maxArrears}d${flagStr}\n    Accounts: ${bp.accountDetails || "None"}`;
+      return `  - ${bp.name} (${bp.type}, ID: ${bp.nationalId}) | ${bp.accountCount} accounts | Outstanding: GHS ${bp.totalBalance.toLocaleString()} | Max Arrears: ${bp.maxArrears}d${flagStr}\n    Contact: ${bp.contact}\n    Address: ${bp.address}\n    Accounts: ${bp.accountDetails || "None"}`;
     }).join("\n");
 
     return `
