@@ -185,13 +185,6 @@ export function DisputeChatbot({ open, onOpenChange }: ChatbotProps) {
   const [aiInput, setAiInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (open && mode !== "ai") {
-      setMode("ai");
-      setMessages([]);
-    }
-  }, [open]);
-
   const faqData = useMemo(() => buildFaqData(t), [t, i18n.language]);
 
   const { data: searchResults } = useQuery<Borrower[]>({
@@ -231,13 +224,13 @@ export function DisputeChatbot({ open, onOpenChange }: ChatbotProps) {
   }, [messages, aiMessages]);
 
   useEffect(() => {
-    if (open && messages.length === 0) {
+    if (open && mode !== "ai" && messages.length === 0) {
       showMainMenu();
     }
   }, [open]);
 
   useEffect(() => {
-    if (open) {
+    if (open && mode !== "ai") {
       showMainMenu();
     }
   }, [i18n.language]);
