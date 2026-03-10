@@ -31,31 +31,31 @@ interface DashboardChartsProps {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  current: "hsl(175, 55%, 28%)",
-  delinquent: "hsl(43, 80%, 55%)",
-  default: "hsl(0, 72%, 42%)",
-  closed: "hsl(200, 10%, 46%)",
-  restructured: "hsl(200, 60%, 45%)",
+  current: "hsl(172, 62%, 26%)",
+  delinquent: "hsl(42, 85%, 53%)",
+  default: "hsl(0, 76%, 40%)",
+  closed: "hsl(210, 12%, 44%)",
+  restructured: "hsl(215, 65%, 48%)",
 };
 
 const PIE_COLORS = [
-  "hsl(175, 55%, 28%)",
-  "hsl(43, 80%, 55%)",
-  "hsl(0, 72%, 42%)",
-  "hsl(200, 10%, 46%)",
-  "hsl(200, 60%, 45%)",
-  "hsl(142, 55%, 40%)",
+  "hsl(172, 62%, 26%)",
+  "hsl(42, 85%, 53%)",
+  "hsl(0, 76%, 40%)",
+  "hsl(210, 12%, 44%)",
+  "hsl(215, 65%, 48%)",
+  "hsl(152, 60%, 38%)",
 ];
 
 const BAR_COLORS = [
-  "hsl(175, 55%, 28%)",
-  "hsl(43, 80%, 55%)",
-  "hsl(14, 70%, 50%)",
-  "hsl(142, 55%, 40%)",
-  "hsl(200, 60%, 45%)",
-  "hsl(280, 50%, 50%)",
-  "hsl(350, 60%, 50%)",
-  "hsl(175, 40%, 35%)",
+  "hsl(172, 62%, 26%)",
+  "hsl(42, 85%, 53%)",
+  "hsl(12, 76%, 48%)",
+  "hsl(152, 60%, 38%)",
+  "hsl(215, 65%, 48%)",
+  "hsl(280, 55%, 50%)",
+  "hsl(350, 65%, 50%)",
+  "hsl(172, 45%, 35%)",
 ];
 
 const FALLBACK_TREND: MonthlyTrend[] = (() => {
@@ -102,13 +102,13 @@ function formatCompact(value: number): string {
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-popover border border-border rounded-md p-3 shadow-md text-sm">
-      <p className="font-semibold mb-1.5">{label}</p>
+    <div className="bg-popover/95 backdrop-blur-md border border-border/50 rounded-lg p-3.5 shadow-xl text-sm">
+      <p className="font-bold mb-2 text-xs uppercase tracking-wider text-muted-foreground">{label}</p>
       {payload.map((entry: any, i: number) => (
-        <div key={i} className="flex items-center gap-2 py-0.5">
-          <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
-          <span className="text-muted-foreground capitalize">{entry.name}:</span>
-          <span className="font-medium">{typeof entry.value === "number" ? entry.value.toLocaleString() : entry.value}</span>
+        <div key={i} className="flex items-center gap-2.5 py-0.5">
+          <div className="w-2.5 h-2.5 rounded-full shrink-0 ring-2 ring-white/20" style={{ backgroundColor: entry.color }} />
+          <span className="text-muted-foreground capitalize text-xs">{entry.name}:</span>
+          <span className="font-bold text-xs">{typeof entry.value === "number" ? entry.value.toLocaleString() : entry.value}</span>
         </div>
       ))}
     </div>
@@ -119,12 +119,12 @@ function PieTooltip({ active, payload }: any) {
   if (!active || !payload?.length) return null;
   const item = payload[0];
   return (
-    <div className="bg-popover border border-border rounded-md p-3 shadow-md text-sm">
-      <div className="flex items-center gap-2">
-        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.payload.fill }} />
-        <span className="font-semibold capitalize">{item.name}</span>
+    <div className="bg-popover/95 backdrop-blur-md border border-border/50 rounded-lg p-3.5 shadow-xl text-sm">
+      <div className="flex items-center gap-2.5">
+        <div className="w-3 h-3 rounded-full shrink-0 ring-2 ring-white/20" style={{ backgroundColor: item.payload.fill }} />
+        <span className="font-bold capitalize">{item.name}</span>
       </div>
-      <p className="mt-1 text-muted-foreground">
+      <p className="mt-1.5 text-muted-foreground text-xs">
         {item.value.toLocaleString()} accounts ({((item.value / item.payload.total) * 100).toFixed(1)}%)
       </p>
     </div>
@@ -176,61 +176,63 @@ export function DashboardCharts({ monthlyTrend, statusBreakdown, typeBreakdown, 
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" data-testid="dashboard-charts">
-      <Card className="lg:col-span-2 border border-border/40 card-shine" data-testid="chart-portfolio-trend">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-5" data-testid="dashboard-charts">
+      <Card className="lg:col-span-2 border border-border/30 card-shine premium-glow" data-testid="chart-portfolio-trend">
         <CardHeader className="flex flex-row items-center justify-between gap-3 pb-2 p-5">
           <div>
-            <h3 className="text-sm font-semibold">Portfolio Growth</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">12-month borrower and account trends</p>
+            <h3 className="text-sm font-bold">Portfolio Growth</h3>
+            <p className="text-xs text-muted-foreground/70 mt-0.5">12-month borrower and account trends</p>
           </div>
         </CardHeader>
         <CardContent className="p-5 pt-0">
-          <ResponsiveContainer width="100%" height={280}>
+          <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={trendData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
               <defs>
                 <linearGradient id="gradBorrowers" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(175, 55%, 28%)" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="hsl(175, 55%, 28%)" stopOpacity={0.02} />
+                  <stop offset="5%" stopColor="hsl(172, 62%, 26%)" stopOpacity={0.35} />
+                  <stop offset="50%" stopColor="hsl(172, 62%, 26%)" stopOpacity={0.08} />
+                  <stop offset="95%" stopColor="hsl(172, 62%, 26%)" stopOpacity={0.01} />
                 </linearGradient>
                 <linearGradient id="gradAccounts" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(43, 80%, 55%)" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="hsl(43, 80%, 55%)" stopOpacity={0.02} />
+                  <stop offset="5%" stopColor="hsl(42, 85%, 53%)" stopOpacity={0.35} />
+                  <stop offset="50%" stopColor="hsl(42, 85%, 53%)" stopOpacity={0.08} />
+                  <stop offset="95%" stopColor="hsl(42, 85%, 53%)" stopOpacity={0.01} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(200, 10%, 46%, 0.15)" />
-              <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="hsl(200, 10%, 46%, 0.5)" />
-              <YAxis tick={{ fontSize: 11 }} stroke="hsl(200, 10%, 46%, 0.5)" tickFormatter={formatCompact} />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(210, 12%, 44%, 0.12)" />
+              <XAxis dataKey="month" tick={{ fontSize: 11, fontWeight: 500 }} stroke="hsl(210, 12%, 44%, 0.4)" />
+              <YAxis tick={{ fontSize: 11, fontWeight: 500 }} stroke="hsl(210, 12%, 44%, 0.4)" tickFormatter={formatCompact} />
               <Tooltip content={<CustomTooltip />} />
               <Area
                 type="monotone"
                 dataKey="borrowers"
                 name="Borrowers"
-                stroke="hsl(175, 55%, 28%)"
+                stroke="hsl(172, 62%, 26%)"
                 strokeWidth={2.5}
                 fill="url(#gradBorrowers)"
                 dot={false}
-                activeDot={{ r: 5, strokeWidth: 2 }}
+                activeDot={{ r: 6, strokeWidth: 2, fill: "hsl(172, 62%, 26%)" }}
               />
               <Area
                 type="monotone"
                 dataKey="accounts"
                 name="Accounts"
-                stroke="hsl(43, 80%, 55%)"
+                stroke="hsl(42, 85%, 53%)"
                 strokeWidth={2.5}
                 fill="url(#gradAccounts)"
                 dot={false}
-                activeDot={{ r: 5, strokeWidth: 2 }}
+                activeDot={{ r: 6, strokeWidth: 2, fill: "hsl(42, 85%, 53%)" }}
               />
             </AreaChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
 
-      <Card className="border border-border/40 card-shine" data-testid="chart-account-status">
+      <Card className="border border-border/30 card-shine premium-glow" data-testid="chart-account-status">
         <CardHeader className="flex flex-row items-center justify-between gap-3 pb-2 p-5">
           <div>
-            <h3 className="text-sm font-semibold">Account Status</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">{statusTotal.toLocaleString()} total accounts</p>
+            <h3 className="text-sm font-bold">Account Status</h3>
+            <p className="text-xs text-muted-foreground/70 mt-0.5">{statusTotal.toLocaleString()} total accounts</p>
           </div>
         </CardHeader>
         <CardContent className="p-5 pt-0">
@@ -270,23 +272,23 @@ export function DashboardCharts({ monthlyTrend, statusBreakdown, typeBreakdown, 
         </CardContent>
       </Card>
 
-      <Card className="lg:col-span-3 border border-border/40 card-shine" data-testid="chart-account-types">
+      <Card className="lg:col-span-3 border border-border/30 card-shine premium-glow" data-testid="chart-account-types">
         <CardHeader className="flex flex-row items-center justify-between gap-3 pb-2 p-5">
           <div>
-            <h3 className="text-sm font-semibold">Loan Types Distribution</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Breakdown by account type</p>
+            <h3 className="text-sm font-bold">Loan Types Distribution</h3>
+            <p className="text-xs text-muted-foreground/70 mt-0.5">Breakdown by account type</p>
           </div>
         </CardHeader>
         <CardContent className="p-5 pt-0">
           <ResponsiveContainer width="100%" height={Math.max(200, sortedTypes.length * 44)}>
             <BarChart data={sortedTypes} layout="vertical" margin={{ top: 0, right: 30, left: 10, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(200, 10%, 46%, 0.15)" />
-              <XAxis type="number" tick={{ fontSize: 11 }} stroke="hsl(200, 10%, 46%, 0.5)" tickFormatter={formatCompact} />
+              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(210, 12%, 44%, 0.12)" />
+              <XAxis type="number" tick={{ fontSize: 11, fontWeight: 500 }} stroke="hsl(210, 12%, 44%, 0.4)" tickFormatter={formatCompact} />
               <YAxis
                 type="category"
                 dataKey="type"
-                tick={{ fontSize: 11 }}
-                stroke="hsl(200, 10%, 46%, 0.5)"
+                tick={{ fontSize: 11, fontWeight: 500 }}
+                stroke="hsl(210, 12%, 44%, 0.4)"
                 width={120}
               />
               <Tooltip content={<CustomTooltip />} />

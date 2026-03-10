@@ -17,7 +17,7 @@ The system employs a modern full-stack architecture built for scalability and co
 -   **Frontend**: React with TypeScript and Vite, styled using Tailwind CSS and shadcn/ui.
 -   **Internationalization**: Supports English, French, Portuguese, Arabic, and Swahili with `react-i18next`, including full RTL support for Arabic.
 -   **Theming**: Dark/light theme.
--   **Aesthetics**: Warm teal and gold palette reflecting a Pan-African cultural aesthetic. Enhanced with mesh gradient backgrounds, glass-card effects, card-shine hover animations, section-banner gradient headers, and page-enter transitions.
+-   **Aesthetics**: Premium teal and gold palette reflecting a Pan-African cultural aesthetic. Enhanced with mesh gradient backgrounds, glassmorphism (glass-card, backdrop-blur), card-shine sweep animations, premium-glow hover effects with colored blur halos, gradient-border hover reveals, section-banner gradient headers with animated floating icons, page-enter/stagger transitions, and reduced-motion accessibility support. Stat cards feature colored icon glows, elevated sparklines, and smooth scale transitions. Chart tooltips use frosted glass styling.
 -   **Responsiveness**: Mobile-first design, adaptive layouts, and mobile-specific components.
 -   **Interactive Elements**: Dashboards with drill-down capabilities, in-app notifications, Recharts-based charts, an interactive SVG Africa map, and circular SVG credit score gauge (`CreditScoreGauge` component).
 -   **Guided Tours**: Interactive demo tour and application walkthroughs with role-specific notes.

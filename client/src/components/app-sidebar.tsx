@@ -175,20 +175,21 @@ export function AppSidebar() {
 
   return (
     <Sidebar side={isRtl ? "right" : "left"}>
-      <SidebarHeader className="p-4 pb-4">
+      <SidebarHeader className="p-4 pb-5">
         <Link href="/">
-          <div className="flex items-center gap-3 cursor-pointer group">
+          <div className="flex items-center gap-3.5 cursor-pointer group">
             <div
-              className="flex items-center justify-center w-9 h-9 rounded-lg shadow-md transition-transform group-hover:scale-105"
+              className="flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-300 group-hover:scale-110 group-hover:rotate-3"
               style={{
-                background: "linear-gradient(135deg, hsl(43 80% 55%) 0%, hsl(33 75% 48%) 100%)"
+                background: "linear-gradient(135deg, hsl(42 85% 55%) 0%, hsl(32 78% 46%) 100%)",
+                boxShadow: "0 4px 16px -2px hsl(42 85% 53% / 0.4), 0 0 0 1px hsl(42 85% 53% / 0.15)"
               }}
             >
-              <Globe className="w-4 h-4 text-white" />
+              <Globe className="w-5 h-5 text-white drop-shadow-sm" />
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-bold tracking-tight text-sidebar-foreground">{isGhanaMode() ? getBrandTitle() : t('sidebar.brandTitle')}</span>
-              <span className="text-[10px] font-medium text-sidebar-foreground/50">{t('sidebar.brandSubtitle')}</span>
+              <span className="text-sm font-extrabold tracking-tight text-sidebar-foreground">{isGhanaMode() ? getBrandTitle() : t('sidebar.brandTitle')}</span>
+              <span className="text-[10px] font-medium text-sidebar-foreground/40">{t('sidebar.brandSubtitle')}</span>
             </div>
           </div>
         </Link>
@@ -292,37 +293,37 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-3 pt-0">
+      <SidebarFooter className="p-3 pt-0 space-y-1.5">
         {orgName && !isSuperAdmin && (
-          <div className="rounded-lg p-2.5 mb-1 border border-sidebar-foreground/10" style={{ background: "rgba(255,255,255,0.03)" }}>
+          <div className="rounded-xl p-2.5 border border-sidebar-foreground/8" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))" }}>
             <div className="flex items-center gap-2">
-              <Building2 className="w-3.5 h-3.5 text-sidebar-foreground/60" />
+              <Building2 className="w-3.5 h-3.5 text-sidebar-foreground/50" />
               <span className="text-[11px] font-semibold text-sidebar-foreground/80 truncate" data-testid="text-org-name">{orgName}</span>
             </div>
           </div>
         )}
         {isSuperAdmin && (
-          <div className="rounded-lg p-2.5 mb-1 border border-amber-500/30" style={{ background: "rgba(245,158,11,0.08)" }}>
+          <div className="rounded-xl p-2.5 border border-amber-500/25" style={{ background: "linear-gradient(135deg, rgba(245,158,11,0.10), rgba(245,158,11,0.04))" }}>
             <div className="flex items-center gap-2">
               <Shield className="w-3.5 h-3.5 text-amber-500" />
-              <span className="text-[11px] font-semibold text-amber-500" data-testid="text-super-admin-badge">Platform Admin</span>
+              <span className="text-[11px] font-bold text-amber-400" data-testid="text-super-admin-badge">Platform Admin</span>
             </div>
           </div>
         )}
-        <div className="rounded-lg p-2.5" style={{ background: "rgba(255,255,255,0.05)" }}>
+        <div className="rounded-xl p-2.5" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))" }}>
           <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-            <span className="text-[10px] font-medium text-sidebar-foreground/70">System Online</span>
+            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" style={{ boxShadow: "0 0 8px hsl(152 60% 50% / 0.4)" }} />
+            <span className="text-[10px] font-semibold text-sidebar-foreground/70">System Online</span>
           </div>
-          <div className="text-[9px] text-sidebar-foreground/50 mt-0.5">
+          <div className="text-[9px] text-sidebar-foreground/40 mt-0.5 font-medium">
             {t('sidebar.version')}
           </div>
         </div>
-        <div className="px-1">
-          <p className="text-[9px] text-sidebar-foreground/40 leading-relaxed" data-testid="text-provider-credit">
-            <span className="text-sidebar-foreground/60 font-medium">Carlson Capital & Systems In Motion Limited™</span>
+        <div className="px-1 pt-0.5">
+          <p className="text-[10px] text-sidebar-foreground/45 leading-relaxed" data-testid="text-provider-credit">
+            <span className="text-sidebar-foreground/65 font-semibold">Carlson Capital & Systems In Motion Limited™</span>
           </p>
-          <p className="text-[8px] text-sidebar-foreground/30" data-testid="text-copyright">
+          <p className="text-[9px] text-sidebar-foreground/35 font-medium" data-testid="text-copyright">
             © 2026 All rights reserved.
           </p>
         </div>

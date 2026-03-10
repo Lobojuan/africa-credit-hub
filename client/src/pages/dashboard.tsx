@@ -131,7 +131,7 @@ function BarBreakdown({ data, labelKey, valueKey, total }: {
                 className="h-full rounded-full transition-all duration-500"
                 style={{
                   width: `${pct}%`,
-                  background: "linear-gradient(90deg, hsl(175 55% 28%), hsl(43 80% 55%))",
+                  background: "linear-gradient(90deg, hsl(172 62% 26%), hsl(42 85% 53%))",
                 }}
               />
             </div>
@@ -532,19 +532,19 @@ export default function Dashboard() {
   const DetailIcon = config?.icon;
 
   return (
-    <div className="p-3 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 max-w-[1400px] mx-auto animate-page-enter">
+    <div className="p-3 sm:p-6 lg:p-8 space-y-7 sm:space-y-10 max-w-[1400px] mx-auto animate-page-enter">
       <div className="section-banner">
         <div className="relative z-10 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(43 80% 55%) 0%, hsl(33 75% 48%) 100%)" }}>
-                <BarChart3 className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-4 mb-2">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center animate-float" style={{ background: "linear-gradient(135deg, hsl(42 85% 55%) 0%, hsl(32 78% 46%) 100%)", boxShadow: "0 4px 16px -2px hsl(42 85% 53% / 0.4)" }}>
+                <BarChart3 className="w-6 h-6 text-white drop-shadow-sm" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white" data-testid="text-dashboard-title">{t('dashboard.title')}</h1>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <greeting.Icon className="w-3.5 h-3.5 text-white/60" />
-                  <p className="text-sm text-white/70" data-testid="text-dashboard-greeting">
+                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white" data-testid="text-dashboard-title">{t('dashboard.title')}</h1>
+                <div className="flex items-center gap-2 mt-1">
+                  <greeting.Icon className="w-4 h-4 text-white/50" />
+                  <p className="text-sm text-white/60 font-medium" data-testid="text-dashboard-greeting">
                     {greeting.text}{user?.firstName ? `, ${user.firstName}` : ""}. {t('dashboard.subtitle')}
                   </p>
                 </div>
@@ -553,8 +553,8 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-3">
             <Select value={displayCurrency} onValueChange={handleCurrencyChange}>
-              <SelectTrigger className="w-[150px] h-8 text-xs bg-white/10 border-white/20 text-white" data-testid="select-dashboard-currency">
-                <Banknote className="w-3.5 h-3.5 mr-1 text-white/70" />
+              <SelectTrigger className="w-[155px] h-9 text-xs bg-white/10 border-white/15 text-white backdrop-blur-sm rounded-lg" data-testid="select-dashboard-currency">
+                <Banknote className="w-3.5 h-3.5 mr-1.5 text-white/60" />
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -566,9 +566,9 @@ export default function Dashboard() {
               </SelectContent>
             </Select>
             {isGhanaMode() && <ReferenceRateBadge />}
-            <div className="hidden md:flex items-center gap-2 text-xs text-white/60">
+            <div className="hidden md:flex items-center gap-2 text-xs text-white/50 bg-white/5 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/10">
               <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Live Data</span>
+              <span className="font-medium">Live Data</span>
             </div>
           </div>
         </div>
@@ -614,13 +614,15 @@ export default function Dashboard() {
           <AfricaMap countryBreakdown={chartData?.countryBreakdown} />
         </div>
         {isGhanaMode() && (
-          <Card className="border border-border/40 card-shine" data-testid="card-credit-score-factors">
+          <Card className="border border-border/30 card-shine premium-glow" data-testid="card-credit-score-factors">
             <CardHeader className="pb-3">
-              <div className="flex items-center gap-2">
-                <Activity className="w-4 h-4 text-muted-foreground" />
-                <h3 className="text-sm font-semibold">Credit Score Factors</h3>
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(172 62% 30%), hsl(172 50% 22%))", boxShadow: "0 3px 10px -2px hsl(172 62% 26% / 0.3)" }}>
+                  <Activity className="w-4 h-4 text-white" />
+                </div>
+                <h3 className="text-sm font-bold">Credit Score Factors</h3>
               </div>
-              <p className="text-[11px] text-muted-foreground">How credit scores are calculated in Ghana</p>
+              <p className="text-[11px] text-muted-foreground/70">How credit scores are calculated in Ghana</p>
             </CardHeader>
             <CardContent className="pb-4 space-y-3">
               {CREDIT_SCORE_FACTORS.map((factor) => (
@@ -651,16 +653,16 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="border border-border/40 overflow-hidden card-shine">
-          <CardHeader className="pb-3 bg-gradient-to-r from-card to-background/50">
+        <Card className="border border-border/30 overflow-hidden card-shine premium-glow">
+          <CardHeader className="pb-3 bg-gradient-to-r from-card via-card to-background/30">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-md" style={{ background: "linear-gradient(135deg, hsl(175 55% 28%) 0%, hsl(175 45% 22%) 100%)" }}>
-                  <TrendingUp className="w-4 h-4 text-white" />
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(172 62% 30%) 0%, hsl(172 50% 22%) 100%)", boxShadow: "0 4px 12px -2px hsl(172 62% 26% / 0.3)" }}>
+                  <TrendingUp className="w-4.5 h-4.5 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-sm">{t('dashboard.recentAccounts')}</h3>
-                  <p className="text-[11px] text-muted-foreground">{t('dashboard.recentAccountsSub')}</p>
+                  <h3 className="font-bold text-sm">{t('dashboard.recentAccounts')}</h3>
+                  <p className="text-[11px] text-muted-foreground/70">{t('dashboard.recentAccountsSub')}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -712,16 +714,16 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border border-border/40 overflow-hidden card-shine">
-          <CardHeader className="pb-3 bg-gradient-to-r from-card to-background/50">
+        <Card className="border border-border/30 overflow-hidden card-shine premium-glow">
+          <CardHeader className="pb-3 bg-gradient-to-r from-card via-card to-background/30">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-md" style={{ background: "linear-gradient(135deg, hsl(43 80% 55%) 0%, hsl(33 70% 48%) 100%)" }}>
-                  <Activity className="w-4 h-4 text-white" />
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(42 85% 55%) 0%, hsl(32 78% 46%) 100%)", boxShadow: "0 4px 12px -2px hsl(42 85% 53% / 0.3)" }}>
+                  <Activity className="w-4.5 h-4.5 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-sm">{t('dashboard.recentActivity')}</h3>
-                  <p className="text-[11px] text-muted-foreground">{t('dashboard.recentActivitySub')}</p>
+                  <h3 className="font-bold text-sm">{t('dashboard.recentActivity')}</h3>
+                  <p className="text-[11px] text-muted-foreground/70">{t('dashboard.recentActivitySub')}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
