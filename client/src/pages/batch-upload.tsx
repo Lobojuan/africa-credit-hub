@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useState, useCallback, useRef } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Upload, FileText, CheckCircle, AlertTriangle, Download, FileCode, Database } from "lucide-react";
+import { Upload, FileText, CheckCircle, AlertTriangle, Download, FileCode, Database, Clock, FileSpreadsheet, X, Eye } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,27 @@ interface BatchResult {
   errors: Array<{ index: number; message: string }>;
 }
 
+interface ValidationRow {
+  rowIndex: number;
+  data: Record<string, string>;
+  valid: boolean;
+  errors: string[];
+}
+
+interface UploadHistoryItem {
+  id: string;
+  format: string;
+  totalSubmitted: number;
+  successCount: number;
+  errorCount: number;
+  userId: string | null;
+  createdAt: string;
+  details: string;
+}
+
 const ghanaMode = isGhanaMode();
+
+const requiredFields = ["borrowerId", "lenderInstitution", "accountNumber", "accountType", "originalAmount", "currentBalance", "currency", "disbursementDate", "maturityDate", "status"];
 
 const sampleJson = ghanaMode ? `[
   {
@@ -95,14 +115,103 @@ const sampleBogPipe = `SRN|ReportingDate|BorrowerName|GhanaCardNo|FacilityType|A
 GCB001|20250115|Kwame Mensah|GHA-123456789|TML|GCB-LN-2025-001|GHS|150000.00|125000.00|28.50|20250115|20280115|CUR|MTH|0|BUS|PRO|200000.00
 GCB001|20250115|Abena Osei|GHA-987654321|OVD|GCB-OD-2025-002|GHS|50000.00|35000.00|32.00|20250201|20260201|OLM|QTR|15|PER|UNS|0.00`;
 
+const sampleCsv = ghanaMode
+  ? `borrowerId,lenderInstitution,accountNumber,accountType,originalAmount,currentBalance,currency,interestRate,disbursementDate,maturityDate,status,daysInArrears
+BORROWER_ID_1,GCB Bank Limited,GCB-LN-2025-001,Term Loan,150000.00,125000.00,GHS,28.50,2025-01-15,2028-01-15,current,0
+BORROWER_ID_2,Ecobank Ghana,ECO-OD-2025-002,Overdraft,50000.00,35000.00,GHS,32.00,2025-02-01,2026-02-01,current,15`
+  : `borrowerId,lenderInstitution,accountNumber,accountType,originalAmount,currentBalance,currency,interestRate,disbursementDate,maturityDate,status,daysInArrears
+BORROWER_ID_1,Commercial Bank of Ethiopia,CBE-LN-2025-001,Personal Loan,500000.00,450000.00,ETB,12.50,2025-01-15,2028-01-15,current,0
+BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00,ETB,15.00,2025-02-01,2030-02-01,current,0`;
+
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && i + 1 < line.length && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (ch === ',' && !inQuotes) {
+      result.push(current.trim());
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
+function validateRecord(record: Record<string, string>, index: number): ValidationRow {
+  const errors: string[] = [];
+  for (const field of requiredFields) {
+    if (!record[field] || record[field].trim() === "") {
+      errors.push(`Missing required field: ${field}`);
+    }
+  }
+  if (record.originalAmount && isNaN(parseFloat(record.originalAmount))) {
+    errors.push("originalAmount must be a number");
+  }
+  if (record.currentBalance && isNaN(parseFloat(record.currentBalance))) {
+    errors.push("currentBalance must be a number");
+  }
+  if (record.disbursementDate && !/^\d{4}-\d{2}-\d{2}$/.test(record.disbursementDate)) {
+    errors.push("disbursementDate must be YYYY-MM-DD format");
+  }
+  if (record.maturityDate && !/^\d{4}-\d{2}-\d{2}$/.test(record.maturityDate)) {
+    errors.push("maturityDate must be YYYY-MM-DD format");
+  }
+  const validStatuses = ["current", "delinquent", "default", "closed", "written_off", "restructured"];
+  if (record.status && !validStatuses.includes(record.status)) {
+    errors.push(`status must be one of: ${validStatuses.join(", ")}`);
+  }
+  return {
+    rowIndex: index,
+    data: record,
+    valid: errors.length === 0,
+    errors,
+  };
+}
+
+function parseCSVToRecords(csvText: string): Record<string, string>[] {
+  const lines = csvText.trim().split("\n").filter(l => l.trim());
+  if (lines.length < 2) return [];
+  const headers = parseCSVLine(lines[0]);
+  return lines.slice(1).map(line => {
+    const values = parseCSVLine(line);
+    const obj: Record<string, string> = {};
+    headers.forEach((h, i) => { obj[h] = values[i] || ""; });
+    return obj;
+  });
+}
+
 export default function BatchUploadPage() {
   const { t } = useTranslation();
   const [jsonInput, setJsonInput] = useState("");
+  const [csvInput, setCsvInput] = useState("");
   const [xbrlInput, setXbrlInput] = useState("");
   const [bogInput, setBogInput] = useState("");
-  const [uploadTab, setUploadTab] = useState("json");
+  const [uploadTab, setUploadTab] = useState("csv");
   const [result, setResult] = useState<BatchResult | null>(null);
+  const [csvValidation, setCsvValidation] = useState<ValidationRow[] | null>(null);
+  const [jsonValidation, setJsonValidation] = useState<ValidationRow[] | null>(null);
+  const [dragOver, setDragOver] = useState<string | null>(null);
+  const [uploadedFileName, setUploadedFileName] = useState<Record<string, string>>({});
   const { toast } = useToast();
+
+  const csvFileRef = useRef<HTMLInputElement>(null);
+  const jsonFileRef = useRef<HTMLInputElement>(null);
+  const xbrlFileRef = useRef<HTMLInputElement>(null);
+  const bogFileRef = useRef<HTMLInputElement>(null);
+
+  const historyQuery = useQuery<UploadHistoryItem[]>({
+    queryKey: ["/api/batch-upload/history"],
+  });
 
   const uploadMutation = useMutation({
     mutationFn: async (records: any[]) => {
@@ -111,8 +220,31 @@ export default function BatchUploadPage() {
     },
     onSuccess: (data) => {
       setResult(data);
+      setJsonValidation(null);
       queryClient.invalidateQueries({ queryKey: ["/api/credit-accounts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/batch-upload/history"] });
+      toast({
+        title: t('batchUpload.complete'),
+        description: t('batchUpload.completeDesc', { success: data.successCount, errors: data.errorCount }),
+      });
+    },
+    onError: (e: Error) => {
+      toast({ title: t('batchUpload.uploadFailed'), description: e.message, variant: "destructive" });
+    },
+  });
+
+  const csvUploadMutation = useMutation({
+    mutationFn: async (csvData: string) => {
+      const res = await apiRequest("POST", "/api/batch-upload/csv", { csvData });
+      return res.json() as Promise<BatchResult>;
+    },
+    onSuccess: (data) => {
+      setResult(data);
+      setCsvValidation(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/credit-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/batch-upload/history"] });
       toast({
         title: t('batchUpload.complete'),
         description: t('batchUpload.completeDesc', { success: data.successCount, errors: data.errorCount }),
@@ -132,6 +264,7 @@ export default function BatchUploadPage() {
       setResult(data);
       queryClient.invalidateQueries({ queryKey: ["/api/credit-accounts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/batch-upload/history"] });
       toast({
         title: t('batchUpload.complete'),
         description: t('batchUpload.completeDesc', { success: data.successCount, errors: data.errorCount }),
@@ -151,6 +284,7 @@ export default function BatchUploadPage() {
       setResult(data);
       queryClient.invalidateQueries({ queryKey: ["/api/credit-accounts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/batch-upload/history"] });
       toast({
         title: t('batchUpload.complete'),
         description: t('batchUpload.completeDesc', { success: data.successCount, errors: data.errorCount }),
@@ -161,19 +295,38 @@ export default function BatchUploadPage() {
     },
   });
 
-  const handleXbrlSubmit = () => {
-    if (!xbrlInput.trim()) return;
+  const handleCsvValidate = useCallback(() => {
+    if (!csvInput.trim()) return;
+    const records = parseCSVToRecords(csvInput);
+    if (records.length === 0) {
+      toast({ title: t('common.error'), description: "No data rows found in CSV", variant: "destructive" });
+      return;
+    }
+    const validated = records.map((rec, i) => validateRecord(rec, i));
+    setCsvValidation(validated);
+  }, [csvInput, toast, t]);
+
+  const handleCsvSubmit = () => {
+    if (!csvInput.trim()) return;
     setResult(null);
-    xbrlUploadMutation.mutate(xbrlInput);
+    csvUploadMutation.mutate(csvInput);
   };
 
-  const handleBogSubmit = () => {
-    if (!bogInput.trim()) return;
-    setResult(null);
-    bogUploadMutation.mutate(bogInput);
-  };
+  const handleJsonValidate = useCallback(() => {
+    try {
+      const parsed = JSON.parse(jsonInput);
+      if (!Array.isArray(parsed)) {
+        toast({ title: t('common.error'), description: t('batchUpload.mustBeArray'), variant: "destructive" });
+        return;
+      }
+      const validated = parsed.map((rec: any, i: number) => validateRecord(rec, i));
+      setJsonValidation(validated);
+    } catch {
+      toast({ title: t('common.error'), description: t('batchUpload.invalidJson'), variant: "destructive" });
+    }
+  }, [jsonInput, toast, t]);
 
-  const handleSubmit = () => {
+  const handleJsonSubmit = () => {
     try {
       const parsed = JSON.parse(jsonInput);
       if (!Array.isArray(parsed)) {
@@ -187,32 +340,52 @@ export default function BatchUploadPage() {
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleXbrlSubmit = () => {
+    if (!xbrlInput.trim()) return;
+    setResult(null);
+    xbrlUploadMutation.mutate(xbrlInput);
+  };
 
+  const handleBogSubmit = () => {
+    if (!bogInput.trim()) return;
+    setResult(null);
+    bogUploadMutation.mutate(bogInput);
+  };
+
+  const handleFileDrop = useCallback((e: React.DragEvent, tab: string) => {
+    e.preventDefault();
+    setDragOver(null);
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
-      if (file.name.endsWith(".csv")) {
-        try {
-          const lines = text.trim().split("\n");
-          const headers = lines[0].split(",").map(h => h.trim().replace(/^"|"$/g, ""));
-          const records = lines.slice(1).map(line => {
-            const values = line.split(",").map(v => v.trim().replace(/^"|"$/g, ""));
-            const obj: any = {};
-            headers.forEach((h, i) => { obj[h] = values[i] || ""; });
-            return obj;
-          });
-          setJsonInput(JSON.stringify(records, null, 2));
-        } catch {
-          toast({ title: t('common.error'), description: t('batchUpload.csvParseFailed'), variant: "destructive" });
-        }
-      } else {
-        setJsonInput(text);
-      }
+      setUploadedFileName(prev => ({ ...prev, [tab]: file.name }));
+      if (tab === "csv") setCsvInput(text);
+      else if (tab === "json") setJsonInput(text);
+      else if (tab === "xbrl") setXbrlInput(text);
+      else if (tab === "bog") setBogInput(text);
     };
     reader.readAsText(file);
+  }, []);
+
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>, tab: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      setUploadedFileName(prev => ({ ...prev, [tab]: file.name }));
+      if (tab === "csv") setCsvInput(text);
+      else if (tab === "json") setJsonInput(text);
+      else if (tab === "xbrl") setXbrlInput(text);
+      else if (tab === "bog") setBogInput(text);
+    };
+    reader.readAsText(file);
+  }, []);
+
+  const downloadTemplate = (format: string) => {
+    window.open(`/api/batch-upload/template/${format}`, "_blank");
   };
 
   const downloadErrorReport = () => {
@@ -234,26 +407,276 @@ export default function BatchUploadPage() {
     URL.revokeObjectURL(url);
   };
 
+  const clearFile = (tab: string) => {
+    setUploadedFileName(prev => {
+      const next = { ...prev };
+      delete next[tab];
+      return next;
+    });
+    if (tab === "csv") { setCsvInput(""); setCsvValidation(null); }
+    else if (tab === "json") { setJsonInput(""); setJsonValidation(null); }
+    else if (tab === "xbrl") setXbrlInput("");
+    else if (tab === "bog") setBogInput("");
+  };
+
+  const renderDropZone = (tab: string, accept: string, icon: any, label: string, sublabel: string, fileRef: React.RefObject<HTMLInputElement>) => {
+    const Icon = icon;
+    const fileName = uploadedFileName[tab];
+    return (
+      <div
+        className={`border-2 border-dashed rounded-md p-6 text-center cursor-pointer transition-colors ${dragOver === tab ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}
+        onDragOver={(e) => { e.preventDefault(); setDragOver(tab); }}
+        onDragLeave={() => setDragOver(null)}
+        onDrop={(e) => handleFileDrop(e, tab)}
+        onClick={() => fileRef.current?.click()}
+        data-testid={`dropzone-${tab}`}
+      >
+        {fileName ? (
+          <div className="flex items-center justify-center gap-2">
+            <FileText className="w-5 h-5 text-green-600" />
+            <span className="text-sm font-medium">{fileName}</span>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={(e) => { e.stopPropagation(); clearFile(tab); }}
+              data-testid={`button-clear-file-${tab}`}
+            >
+              <X className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        ) : (
+          <>
+            <Icon className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+            <p className="text-sm font-medium">{label}</p>
+            <p className="text-xs text-muted-foreground mt-1">{sublabel}</p>
+          </>
+        )}
+        <input
+          ref={fileRef}
+          type="file"
+          accept={accept}
+          className="hidden"
+          onChange={(e) => handleFileSelect(e, tab)}
+          data-testid={`input-file-${tab}`}
+        />
+      </div>
+    );
+  };
+
+  const renderValidationPreview = (validation: ValidationRow[] | null, onClear: () => void) => {
+    if (!validation) return null;
+    const validCount = validation.filter(v => v.valid).length;
+    const invalidCount = validation.filter(v => !v.valid).length;
+    return (
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Eye className="w-4 h-4 text-muted-foreground" />
+              <h3 className="font-semibold text-sm">{t('batchUpload.validationPreview')}</h3>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge variant="secondary">{validation.length} rows</Badge>
+              <Badge variant="default" className="bg-green-600">{validCount} valid</Badge>
+              {invalidCount > 0 && <Badge variant="destructive">{invalidCount} invalid</Badge>}
+              <Button size="icon" variant="ghost" onClick={onClear} data-testid="button-clear-validation">
+                <X className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-auto max-h-64">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12">{t('batchUpload.row')}</TableHead>
+                  <TableHead className="w-20">{t('batchUpload.statusLabel')}</TableHead>
+                  <TableHead>{t('batchUpload.accountNum')}</TableHead>
+                  <TableHead>{t('batchUpload.institution')}</TableHead>
+                  <TableHead>{t('batchUpload.issues')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {validation.map((row) => (
+                  <TableRow key={row.rowIndex}>
+                    <TableCell className="text-sm font-mono">{row.rowIndex + 1}</TableCell>
+                    <TableCell>
+                      {row.valid ? (
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                      ) : (
+                        <AlertTriangle className="w-4 h-4 text-destructive" />
+                      )}
+                    </TableCell>
+                    <TableCell className="text-xs font-mono">{row.data.accountNumber || "-"}</TableCell>
+                    <TableCell className="text-xs">{row.data.lenderInstitution || "-"}</TableCell>
+                    <TableCell className="text-xs text-destructive">
+                      {row.errors.length > 0 ? row.errors.join("; ") : "-"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderResultCard = (testIdPrefix: string = "") => {
+    if (!result) return null;
+    return (
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <h3 className="font-semibold text-sm">{t('batchUpload.uploadResults')}</h3>
+            {result.errorCount > 0 && (
+              <Button variant="outline" size="sm" className="text-xs" onClick={downloadErrorReport} data-testid={`button-download-errors${testIdPrefix}`}>
+                <Download className="w-3 h-3 mr-1" /> {t('batchUpload.errorReport')}
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            <div className="text-center p-3 bg-muted rounded-md">
+              <p className="text-lg font-bold" data-testid={`text-total-submitted${testIdPrefix}`}>{result.totalSubmitted}</p>
+              <p className="text-xs text-muted-foreground">{t('batchUpload.submitted')}</p>
+            </div>
+            <div className="text-center p-3 bg-green-500/10 rounded-md">
+              <p className="text-lg font-bold text-green-600" data-testid={`text-success-count${testIdPrefix}`}>{result.successCount}</p>
+              <p className="text-xs text-muted-foreground">{t('batchUpload.succeeded')}</p>
+            </div>
+            <div className="text-center p-3 bg-red-500/10 rounded-md">
+              <p className="text-lg font-bold text-red-600" data-testid={`text-error-count${testIdPrefix}`}>{result.errorCount}</p>
+              <p className="text-xs text-muted-foreground">{t('batchUpload.failed')}</p>
+            </div>
+          </div>
+          {result.errors.length > 0 && (
+            <div className="overflow-auto max-h-48">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-16">{t('batchUpload.row')}</TableHead>
+                    <TableHead>{t('batchUpload.error')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {result.errors.map((err, i) => (
+                    <TableRow key={i}>
+                      <TableCell className="text-sm font-mono">{err.index + 1}</TableCell>
+                      <TableCell className="text-xs text-destructive">{err.message}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-[1400px] mx-auto">
-      <div>
-        <div className="flex items-center gap-2 mb-1">
-          <div className="page-header-bar" />
-          <h1 className="text-2xl font-extrabold tracking-tight" data-testid="text-batch-title">{t('batchUpload.title')}</h1>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="page-header-bar" />
+            <h1 className="text-2xl font-extrabold tracking-tight" data-testid="text-batch-title">{t('batchUpload.title')}</h1>
+          </div>
+          <p className="text-sm text-muted-foreground ml-4">
+            {t('batchUpload.subtitle')}
+          </p>
         </div>
-        <p className="text-sm text-muted-foreground ml-4">
-          {t('batchUpload.subtitle')}
-        </p>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={() => downloadTemplate("csv")} data-testid="button-download-csv-template">
+            <Download className="w-3.5 h-3.5 mr-1.5" /> CSV Template
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => downloadTemplate("json")} data-testid="button-download-json-template">
+            <Download className="w-3.5 h-3.5 mr-1.5" /> JSON Template
+          </Button>
+        </div>
       </div>
 
-      <Tabs value={uploadTab} onValueChange={setUploadTab} className="w-full">
+      <Tabs value={uploadTab} onValueChange={(v) => { setUploadTab(v); setResult(null); }} className="w-full">
         <TabsList className="mb-4">
-          <TabsTrigger value="json" data-testid="tab-json"><FileText className="w-3.5 h-3.5 mr-1.5" /> JSON / CSV</TabsTrigger>
+          <TabsTrigger value="csv" data-testid="tab-csv"><FileSpreadsheet className="w-3.5 h-3.5 mr-1.5" /> CSV</TabsTrigger>
+          <TabsTrigger value="json" data-testid="tab-json"><FileText className="w-3.5 h-3.5 mr-1.5" /> JSON</TabsTrigger>
           <TabsTrigger value="xbrl" data-testid="tab-xbrl"><FileCode className="w-3.5 h-3.5 mr-1.5" /> XBRL / XML</TabsTrigger>
           {ghanaMode && (
             <TabsTrigger value="bog" data-testid="tab-bog"><Database className="w-3.5 h-3.5 mr-1.5" /> BoG Format</TabsTrigger>
           )}
+          <TabsTrigger value="history" data-testid="tab-history"><Clock className="w-3.5 h-3.5 mr-1.5" /> History</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="csv">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader className="pb-3">
+                <h3 className="font-semibold text-sm">{t('batchUpload.csvUpload')}</h3>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {renderDropZone("csv", ".csv", FileSpreadsheet, t('batchUpload.uploadCsvFile'), t('batchUpload.uploadCsvFileSub'), csvFileRef)}
+                <div className="relative">
+                  <p className="text-xs text-muted-foreground mb-1">{t('batchUpload.pasteCsv')}</p>
+                  <Textarea
+                    data-testid="input-batch-csv"
+                    value={csvInput}
+                    onChange={(e) => { setCsvInput(e.target.value); setCsvValidation(null); }}
+                    placeholder={t('batchUpload.csvPlaceholder')}
+                    rows={10}
+                    className="font-mono text-xs"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={handleCsvValidate}
+                    disabled={!csvInput.trim()}
+                    data-testid="button-validate-csv"
+                  >
+                    <Eye className="w-3.5 h-3.5 mr-1.5" /> {t('batchUpload.validatePreview')}
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={handleCsvSubmit}
+                    disabled={csvUploadMutation.isPending || !csvInput.trim()}
+                    data-testid="button-submit-csv"
+                  >
+                    {csvUploadMutation.isPending ? t('batchUpload.processing') : t('batchUpload.submitCsv')}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="space-y-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <h3 className="font-semibold text-sm">{t('batchUpload.csvSampleFormat')}</h3>
+                </CardHeader>
+                <CardContent>
+                  <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-48" data-testid="text-csv-sample">
+                    {sampleCsv}
+                  </pre>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-3 text-xs"
+                    onClick={() => setCsvInput(sampleCsv)}
+                    data-testid="button-use-csv-sample"
+                  >
+                    {t('batchUpload.useSample')}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {renderValidationPreview(csvValidation, () => setCsvValidation(null))}
+              {renderResultCard("-csv")}
+            </div>
+          </div>
+        </TabsContent>
 
         <TabsContent value="json">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -262,42 +685,37 @@ export default function BatchUploadPage() {
                 <h3 className="font-semibold text-sm">{t('batchUpload.uploadData')}</h3>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <label htmlFor="file-upload" className="block">
-                    <div className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:bg-muted/50 transition-colors">
-                      <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-sm font-medium">{t('batchUpload.uploadFile')}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{t('batchUpload.uploadFileSub')}</p>
-                    </div>
-                    <input
-                      id="file-upload"
-                      type="file"
-                      accept=".json,.csv"
-                      className="hidden"
-                      onChange={handleFileUpload}
-                      data-testid="input-file-upload"
-                    />
-                  </label>
-                </div>
+                {renderDropZone("json", ".json,.csv", Upload, t('batchUpload.uploadFile'), t('batchUpload.uploadFileSub'), jsonFileRef)}
                 <div className="relative">
                   <p className="text-xs text-muted-foreground mb-1">{t('batchUpload.pasteJson')}</p>
                   <Textarea
                     data-testid="input-batch-json"
                     value={jsonInput}
-                    onChange={(e) => setJsonInput(e.target.value)}
+                    onChange={(e) => { setJsonInput(e.target.value); setJsonValidation(null); }}
                     placeholder={t('batchUpload.pastePlaceholder')}
-                    rows={12}
+                    rows={10}
                     className="font-mono text-xs"
                   />
                 </div>
-                <Button
-                  className="w-full"
-                  onClick={handleSubmit}
-                  disabled={uploadMutation.isPending || !jsonInput.trim()}
-                  data-testid="button-submit-batch"
-                >
-                  {uploadMutation.isPending ? t('batchUpload.processing') : t('batchUpload.submitBatch')}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={handleJsonValidate}
+                    disabled={!jsonInput.trim()}
+                    data-testid="button-validate-json"
+                  >
+                    <Eye className="w-3.5 h-3.5 mr-1.5" /> {t('batchUpload.validatePreview')}
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={handleJsonSubmit}
+                    disabled={uploadMutation.isPending || !jsonInput.trim()}
+                    data-testid="button-submit-batch"
+                  >
+                    {uploadMutation.isPending ? t('batchUpload.processing') : t('batchUpload.submitBatch')}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 
@@ -307,7 +725,7 @@ export default function BatchUploadPage() {
                   <h3 className="font-semibold text-sm">{t('batchUpload.sampleFormat')}</h3>
                 </CardHeader>
                 <CardContent>
-                  <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-64" data-testid="text-sample-format">
+                  <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-48" data-testid="text-sample-format">
                     {sampleJson}
                   </pre>
                   <Button
@@ -322,91 +740,20 @@ export default function BatchUploadPage() {
                 </CardContent>
               </Card>
 
-          {result && (
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-sm">{t('batchUpload.uploadResults')}</h3>
-                  {result.errorCount > 0 && (
-                    <Button variant="outline" size="sm" className="text-xs" onClick={downloadErrorReport} data-testid="button-download-errors">
-                      <Download className="w-3 h-3 mr-1" /> {t('batchUpload.errorReport')}
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                  <div className="text-center p-3 bg-muted rounded-md">
-                    <p className="text-lg font-bold" data-testid="text-total-submitted">{result.totalSubmitted}</p>
-                    <p className="text-xs text-muted-foreground">{t('batchUpload.submitted')}</p>
-                  </div>
-                  <div className="text-center p-3 bg-green-500/10 rounded-md">
-                    <p className="text-lg font-bold text-green-600" data-testid="text-success-count">{result.successCount}</p>
-                    <p className="text-xs text-muted-foreground">{t('batchUpload.succeeded')}</p>
-                  </div>
-                  <div className="text-center p-3 bg-red-500/10 rounded-md">
-                    <p className="text-lg font-bold text-red-600" data-testid="text-error-count">{result.errorCount}</p>
-                    <p className="text-xs text-muted-foreground">{t('batchUpload.failed')}</p>
-                  </div>
-                </div>
-
-                {result.errors.length > 0 && (
-                  <div className="overflow-auto max-h-48">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-16">{t('batchUpload.row')}</TableHead>
-                          <TableHead>{t('batchUpload.error')}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {result.errors.map((err, i) => (
-                          <TableRow key={i}>
-                            <TableCell className="text-sm font-mono">{err.index + 1}</TableCell>
-                            <TableCell className="text-xs text-destructive">{err.message}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+              {renderValidationPreview(jsonValidation, () => setJsonValidation(null))}
+              {renderResultCard("-json")}
+            </div>
           </div>
-        </div>
-      </TabsContent>
+        </TabsContent>
 
-      <TabsContent value="xbrl">
+        <TabsContent value="xbrl">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader className="pb-3">
                 <h3 className="font-semibold text-sm">{t('batchUpload.xbrlUpload')}</h3>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <label htmlFor="xbrl-file-upload" className="block">
-                    <div className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:bg-muted/50 transition-colors">
-                      <FileCode className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-sm font-medium">{t('batchUpload.uploadXbrlFile')}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{t('batchUpload.uploadXbrlFileSub')}</p>
-                    </div>
-                    <input
-                      id="xbrl-file-upload"
-                      type="file"
-                      accept=".xbrl,.xml"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        const reader = new FileReader();
-                        reader.onload = (ev) => setXbrlInput(ev.target?.result as string);
-                        reader.readAsText(file);
-                      }}
-                      data-testid="input-xbrl-file-upload"
-                    />
-                  </label>
-                </div>
+                {renderDropZone("xbrl", ".xbrl,.xml", FileCode, t('batchUpload.uploadXbrlFile'), t('batchUpload.uploadXbrlFileSub'), xbrlFileRef)}
                 <div className="relative">
                   <p className="text-xs text-muted-foreground mb-1">{t('batchUpload.pasteXbrl')}</p>
                   <Textarea
@@ -414,7 +761,7 @@ export default function BatchUploadPage() {
                     value={xbrlInput}
                     onChange={(e) => setXbrlInput(e.target.value)}
                     placeholder={t('batchUpload.xbrlPlaceholder')}
-                    rows={12}
+                    rows={10}
                     className="font-mono text-xs"
                   />
                 </div>
@@ -435,7 +782,7 @@ export default function BatchUploadPage() {
                   <h3 className="font-semibold text-sm">{t('batchUpload.xbrlSampleFormat')}</h3>
                 </CardHeader>
                 <CardContent>
-                  <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-64" data-testid="text-xbrl-sample">
+                  <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-48" data-testid="text-xbrl-sample">
                     {sampleXbrl}
                   </pre>
                   <Button
@@ -450,184 +797,154 @@ export default function BatchUploadPage() {
                 </CardContent>
               </Card>
 
-              {result && (
-                <Card>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-sm">{t('batchUpload.uploadResults')}</h3>
-                      {result.errorCount > 0 && (
-                        <Button variant="outline" size="sm" className="text-xs" onClick={downloadErrorReport} data-testid="button-download-xbrl-errors">
-                          <Download className="w-3 h-3 mr-1" /> {t('batchUpload.errorReport')}
-                        </Button>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="text-center p-3 bg-muted rounded-md">
-                        <p className="text-lg font-bold">{result.totalSubmitted}</p>
-                        <p className="text-xs text-muted-foreground">{t('batchUpload.submitted')}</p>
-                      </div>
-                      <div className="text-center p-3 bg-green-500/10 rounded-md">
-                        <p className="text-lg font-bold text-green-600">{result.successCount}</p>
-                        <p className="text-xs text-muted-foreground">{t('batchUpload.succeeded')}</p>
-                      </div>
-                      <div className="text-center p-3 bg-red-500/10 rounded-md">
-                        <p className="text-lg font-bold text-red-600">{result.errorCount}</p>
-                        <p className="text-xs text-muted-foreground">{t('batchUpload.failed')}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-          </div>
-        </div>
-      </TabsContent>
-
-      {ghanaMode && (
-        <TabsContent value="bog">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-2">
-                  <Database className="w-4 h-4 text-muted-foreground" />
-                  <h3 className="font-semibold text-sm">BoG Pipe-Delimited Upload</h3>
-                </div>
-                <p className="text-[11px] text-muted-foreground">Bank of Ghana CRB v1.1 format — pipe (|) delimited, YYYYMMDD dates</p>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <label htmlFor="bog-file-upload" className="block">
-                    <div className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:bg-muted/50 transition-colors">
-                      <Database className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-sm font-medium">Upload BoG Format File</p>
-                      <p className="text-xs text-muted-foreground mt-1">Pipe-delimited CSV (.csv, .txt)</p>
-                    </div>
-                    <input
-                      id="bog-file-upload"
-                      type="file"
-                      accept=".csv,.txt"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        const reader = new FileReader();
-                        reader.onload = (ev) => setBogInput(ev.target?.result as string);
-                        reader.readAsText(file);
-                      }}
-                      data-testid="input-bog-file-upload"
-                    />
-                  </label>
-                </div>
-                <div className="relative">
-                  <p className="text-xs text-muted-foreground mb-1">Paste pipe-delimited data</p>
-                  <Textarea
-                    data-testid="input-batch-bog"
-                    value={bogInput}
-                    onChange={(e) => setBogInput(e.target.value)}
-                    placeholder="SRN|ReportingDate|BorrowerName|GhanaCardNo|FacilityType|..."
-                    rows={12}
-                    className="font-mono text-xs"
-                  />
-                </div>
-                <Button
-                  className="w-full"
-                  onClick={handleBogSubmit}
-                  disabled={bogUploadMutation.isPending || !bogInput.trim()}
-                  data-testid="button-submit-bog"
-                >
-                  {bogUploadMutation.isPending ? t('batchUpload.processing') : "Submit BoG Format"}
-                </Button>
-              </CardContent>
-            </Card>
-
-            <div className="space-y-4">
-              <Card>
-                <CardHeader className="pb-3">
-                  <h3 className="font-semibold text-sm">BoG Format Reference</h3>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-48" data-testid="text-bog-sample">
-                    {sampleBogPipe}
-                  </pre>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs"
-                    onClick={() => setBogInput(sampleBogPipe)}
-                    data-testid="button-use-bog-sample"
-                  >
-                    {t('batchUpload.useSample')}
-                  </Button>
-                  <div className="border-t border-border/40 pt-3 space-y-2">
-                    <p className="text-xs font-semibold text-muted-foreground">File Naming Convention</p>
-                    <code className="text-[10px] bg-muted px-2 py-1 rounded block">
-                      SRN-YYYYMMDD-YYYYMMDD-1.1-FILEIDENT-Seq.csv
-                    </code>
-                    <div className="text-[10px] text-muted-foreground space-y-0.5">
-                      <p><strong>BUSC</strong> — Business Credit</p>
-                      <p><strong>CONC</strong> — Consumer Credit</p>
-                      <p><strong>BUSD/COND</strong> — Dishonoured Cheques</p>
-                      <p><strong>BUSJ/CONJ</strong> — Court Judgments</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {result && (
-                <Card>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-sm">{t('batchUpload.uploadResults')}</h3>
-                      {result.errorCount > 0 && (
-                        <Button variant="outline" size="sm" className="text-xs" onClick={downloadErrorReport} data-testid="button-download-bog-errors">
-                          <Download className="w-3 h-3 mr-1" /> {t('batchUpload.errorReport')}
-                        </Button>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="text-center p-3 bg-muted rounded-md">
-                        <p className="text-lg font-bold">{result.totalSubmitted}</p>
-                        <p className="text-xs text-muted-foreground">{t('batchUpload.submitted')}</p>
-                      </div>
-                      <div className="text-center p-3 bg-green-500/10 rounded-md">
-                        <p className="text-lg font-bold text-green-600">{result.successCount}</p>
-                        <p className="text-xs text-muted-foreground">{t('batchUpload.succeeded')}</p>
-                      </div>
-                      <div className="text-center p-3 bg-red-500/10 rounded-md">
-                        <p className="text-lg font-bold text-red-600">{result.errorCount}</p>
-                        <p className="text-xs text-muted-foreground">{t('batchUpload.failed')}</p>
-                      </div>
-                    </div>
-                    {result.errors.length > 0 && (
-                      <div className="overflow-auto max-h-48 mt-3">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="w-16">{t('batchUpload.row')}</TableHead>
-                              <TableHead>{t('batchUpload.error')}</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {result.errors.map((err, i) => (
-                              <TableRow key={i}>
-                                <TableCell className="text-sm font-mono">{err.index + 1}</TableCell>
-                                <TableCell className="text-xs text-destructive">{err.message}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
+              {renderResultCard("-xbrl")}
             </div>
           </div>
         </TabsContent>
-      )}
+
+        {ghanaMode && (
+          <TabsContent value="bog">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-2">
+                    <Database className="w-4 h-4 text-muted-foreground" />
+                    <h3 className="font-semibold text-sm">BoG Pipe-Delimited Upload</h3>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">Bank of Ghana CRB v1.1 format — pipe (|) delimited, YYYYMMDD dates</p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {renderDropZone("bog", ".csv,.txt", Database, "Upload BoG Format File", "Pipe-delimited CSV (.csv, .txt)", bogFileRef)}
+                  <div className="relative">
+                    <p className="text-xs text-muted-foreground mb-1">Paste pipe-delimited data</p>
+                    <Textarea
+                      data-testid="input-batch-bog"
+                      value={bogInput}
+                      onChange={(e) => setBogInput(e.target.value)}
+                      placeholder="SRN|ReportingDate|BorrowerName|GhanaCardNo|FacilityType|..."
+                      rows={10}
+                      className="font-mono text-xs"
+                    />
+                  </div>
+                  <Button
+                    className="w-full"
+                    onClick={handleBogSubmit}
+                    disabled={bogUploadMutation.isPending || !bogInput.trim()}
+                    data-testid="button-submit-bog"
+                  >
+                    {bogUploadMutation.isPending ? t('batchUpload.processing') : "Submit BoG Format"}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <div className="space-y-4">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <h3 className="font-semibold text-sm">BoG Format Reference</h3>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-48" data-testid="text-bog-sample">
+                      {sampleBogPipe}
+                    </pre>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => setBogInput(sampleBogPipe)}
+                      data-testid="button-use-bog-sample"
+                    >
+                      {t('batchUpload.useSample')}
+                    </Button>
+                    <div className="border-t border-border/40 pt-3 space-y-2">
+                      <p className="text-xs font-semibold text-muted-foreground">File Naming Convention</p>
+                      <code className="text-[10px] bg-muted px-2 py-1 rounded block">
+                        SRN-YYYYMMDD-YYYYMMDD-1.1-FILEIDENT-Seq.csv
+                      </code>
+                      <div className="text-[10px] text-muted-foreground space-y-0.5">
+                        <p><strong>BUSC</strong> — Business Credit</p>
+                        <p><strong>CONC</strong> — Consumer Credit</p>
+                        <p><strong>BUSD/COND</strong> — Dishonoured Cheques</p>
+                        <p><strong>BUSJ/CONJ</strong> — Court Judgments</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {renderResultCard("-bog")}
+              </div>
+            </div>
+          </TabsContent>
+        )}
+
+        <TabsContent value="history">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-muted-foreground" />
+                <h3 className="font-semibold text-sm">{t('batchUpload.uploadHistory')}</h3>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {historyQuery.isLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="h-12 bg-muted animate-pulse rounded-md" />
+                  ))}
+                </div>
+              ) : !historyQuery.data || historyQuery.data.length === 0 ? (
+                <div className="text-center py-8">
+                  <Upload className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">{t('batchUpload.noHistory')}</p>
+                </div>
+              ) : (
+                <div className="overflow-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t('batchUpload.dateTime')}</TableHead>
+                        <TableHead>{t('batchUpload.format')}</TableHead>
+                        <TableHead className="text-right">{t('batchUpload.totalRecords')}</TableHead>
+                        <TableHead className="text-right">{t('batchUpload.succeeded')}</TableHead>
+                        <TableHead className="text-right">{t('batchUpload.failed')}</TableHead>
+                        <TableHead>{t('batchUpload.successRate')}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {historyQuery.data.map((item) => {
+                        const rate = item.totalSubmitted > 0
+                          ? Math.round((item.successCount / item.totalSubmitted) * 100)
+                          : 0;
+                        return (
+                          <TableRow key={item.id} data-testid={`row-history-${item.id}`}>
+                            <TableCell className="text-xs">
+                              {item.createdAt ? new Date(item.createdAt).toLocaleString() : "-"}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary" className="text-[10px]">
+                                {item.format || "JSON"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right text-sm font-mono">{item.totalSubmitted}</TableCell>
+                            <TableCell className="text-right text-sm font-mono text-green-600">{item.successCount}</TableCell>
+                            <TableCell className="text-right text-sm font-mono text-red-600">{item.errorCount}</TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={rate === 100 ? "default" : rate >= 80 ? "secondary" : "destructive"}
+                                className={rate === 100 ? "bg-green-600 text-[10px]" : "text-[10px]"}
+                              >
+                                {rate}%
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
     </div>
   );

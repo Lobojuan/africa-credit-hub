@@ -55,6 +55,13 @@ The system employs a modern full-stack architecture built for scalability and co
         -   **API Routes**: `GET /api/bog/export/:fileType` (download) and `GET /api/bog/export-preview/:fileType` (preview) — requires admin/regulator/super_admin role.
         -   **UI**: BoG CRB Export page at `/bog-export` with file type selector, reporting date, sequence number, correction indicator, filename preview, download button, and data preview panel.
         -   **Documentation**: `docs/ghana/BoG_CRB_v1.1_Compliance_Mapping.md` with field-by-field mappings, all code catalogs, validation rules, and export workflow docs.
+    -   **Enterprise Features**:
+        -   **Credit Score Methodology Page** (`/credit-score-methodology`): Transparent scoring model documentation with interactive score simulator, factor weights (Payment History 35%, Credit Utilization 30%, Credit Length 15%, New Inquiries 10%, Account Mix 10%), score band chart (300-850), and reason code glossary.
+        -   **Regulatory Dashboard** (`/regulatory-dashboard`): Central bank oversight dashboard with portfolio-wide NPL ratios (DB-level aggregates, not capped queries), sector NPL heatmap, institution compliance panel, data quality metrics (national ID/phone/email coverage), and status breakdown. Access: admin/super_admin/regulator. Endpoint: `GET /api/regulatory/dashboard`.
+        -   **Borrower Alerts** (`/borrower-alerts`): Credit file access notification system. Auto-generates alerts when credit reports are pulled. DB table `borrower_alerts` with alert types (credit_inquiry, report_accessed, dispute_update, score_change). Org-scoped access control on per-borrower alert queries. Endpoints: `GET /api/borrower-alerts`, `GET /api/borrower-alerts/:borrowerId`.
+        -   **Enhanced Audit Trail** (`/audit`): Hash chain verification UI, CSV export, advanced filters (date range, action type, entity type, user), access log panel, and statistics summary cards.
+        -   **Enhanced Batch Upload** (`/batch-upload`): CSV file upload tab alongside JSON/XBRL/BoG, drag-and-drop file picker, client-side validation preview with row-by-row status, upload history, and downloadable CSV/JSON templates.
+        -   **Enhanced API Docs** (`/api-docs`): Interactive API explorer (try-it-out), rate limit documentation, authentication flow diagram, code examples (Python/JavaScript/cURL), webhook documentation, and SDKs section.
     -   **Security Hardening**: Helmet security headers, rate limiting, DOMPurify sanitization, and secure handling of secrets.
 
 ## External Dependencies

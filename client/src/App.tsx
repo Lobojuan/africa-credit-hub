@@ -60,6 +60,9 @@ const OrganizationsPage = lazy(() => import("@/pages/organizations"));
 const GhanaDocsPage = lazy(() => import("@/pages/ghana-docs"));
 const AboutPage = lazy(() => import("@/pages/about"));
 const PortfolioIntelligencePage = lazy(() => import("@/pages/portfolio-intelligence"));
+const BorrowerAlertsPage = lazy(() => import("@/pages/borrower-alerts"));
+const RegulatoryDashboardPage = lazy(() => import("@/pages/regulatory-dashboard"));
+const CreditScoreMethodologyPage = lazy(() => import("@/pages/credit-score-methodology"));
 
 function LazyFallback() {
   return (
@@ -104,6 +107,9 @@ function Router() {
         <Route path="/ghana-docs" component={GhanaDocsPage} />
         <Route path="/about" component={AboutPage} />
         <Route path="/portfolio-intelligence" component={PortfolioIntelligencePage} />
+        <Route path="/credit-score-methodology" component={CreditScoreMethodologyPage} />
+        <Route path="/regulatory-dashboard" component={RegulatoryDashboardPage} />
+        <Route path="/borrower-alerts" component={BorrowerAlertsPage} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>

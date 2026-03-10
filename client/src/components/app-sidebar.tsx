@@ -30,6 +30,8 @@ import {
   FileSpreadsheet,
   Info,
   Brain,
+  BarChart3,
+  Bell,
 } from "lucide-react";
 import {
   Sidebar,
@@ -73,7 +75,9 @@ const reportItems: NavItem[] = [
   { titleKey: "sidebar.helpdesk", url: "/helpdesk", icon: Headset, testId: "nav-helpdesk" },
   { titleKey: "sidebar.auditTrail", url: "/audit", icon: Shield, testId: "nav-audit-trail", roles: ["admin", "regulator", "super_admin"] },
   { titleKey: "sidebar.regulatoryCompliance", url: "/regulatory-compliance", icon: Scale, testId: "nav-regulatory-compliance", roles: ["admin", "regulator", "super_admin"] },
+  { titleKey: "sidebar.regulatoryDashboard", url: "/regulatory-dashboard", icon: BarChart3, testId: "nav-regulatory-dashboard", roles: ["admin", "regulator", "super_admin"] },
   { titleKey: "sidebar.bogExport", url: "/bog-export", icon: FileSpreadsheet, testId: "nav-bog-export", roles: ["admin", "regulator", "super_admin"] },
+  { titleKey: "sidebar.borrowerAlerts", url: "/borrower-alerts", icon: Bell, testId: "nav-borrower-alerts", roles: ["admin", "regulator", "super_admin"] },
 ];
 
 const platformItems: NavItem[] = [
@@ -94,6 +98,7 @@ const integrationItems: NavItem[] = [
 ];
 
 const resourceItems: NavItem[] = [
+  { titleKey: "sidebar.creditScoreMethodology", url: "/credit-score-methodology", icon: Brain, testId: "nav-credit-score-methodology" },
   { titleKey: "sidebar.appGuide", url: "/guide", icon: Play, testId: "nav-app-guide" },
   { titleKey: "sidebar.help", url: "/help", icon: HelpCircle, testId: "nav-help" },
   ...(isGhanaMode() ? [

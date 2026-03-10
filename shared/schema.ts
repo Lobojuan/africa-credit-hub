@@ -406,6 +406,24 @@ export const apiConfigurations = pgTable("api_configurations", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const alertTypeEnum = pgEnum("alert_type", ["credit_inquiry", "report_accessed", "dispute_update", "score_change", "data_updated"]);
+export const alertStatusEnum = pgEnum("alert_status", ["pending", "sent", "failed", "disabled"]);
+
+export const borrowerAlerts = pgTable("borrower_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id),
+  alertType: alertTypeEnum("alert_type").notNull(),
+  message: text("message").notNull(),
+  recipientPhone: text("recipient_phone"),
+  recipientEmail: text("recipient_email"),
+  accessedBy: text("accessed_by"),
+  institution: text("institution"),
+  purpose: text("purpose"),
+  status: alertStatusEnum("status").notNull().default("pending"),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const apiKeyStatusEnum = pgEnum("api_key_status", ["active", "revoked"]);
 
 export const apiKeys = pgTable("api_keys", {
@@ -422,6 +440,7 @@ export const apiKeys = pgTable("api_keys", {
   revokedAt: timestamp("revoked_at"),
 });
 
+export const insertBorrowerAlertSchema = createInsertSchema(borrowerAlerts).omit({ id: true, createdAt: true });
 export const insertOrganizationSchema = createInsertSchema(organizations).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertApiKeySchema = createInsertSchema(apiKeys).omit({ id: true, createdAt: true, lastUsedAt: true, revokedAt: true });
 
@@ -484,3 +503,5 @@ export type InsertApiConfiguration = z.infer<typeof insertApiConfigurationSchema
 export type ApiConfiguration = typeof apiConfigurations.$inferSelect;
 export type InsertDishonouredCheque = z.infer<typeof insertDishonouredChequeSchema>;
 export type DishonouredCheque = typeof dishonouredCheques.$inferSelect;
+export type InsertBorrowerAlert = z.infer<typeof insertBorrowerAlertSchema>;
+export type BorrowerAlert = typeof borrowerAlerts.$inferSelect;

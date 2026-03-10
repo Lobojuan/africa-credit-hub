@@ -12,7 +12,7 @@ import { formatCurrency } from "@/lib/currency";
 import { getBorrowerAvatarUrl } from "@/lib/avatar";
 import { isGhanaMode, getDefaultCurrency } from "@/lib/country-mode";
 import { CurrencyReference } from "@/components/currency-reference";
-import type { Borrower, CreditAccount, CreditInquiry, CourtJudgment, ConsentRecord } from "@shared/schema";
+import type { Borrower, CreditAccount, CreditInquiry, CourtJudgment, ConsentRecord, BorrowerAlert } from "@shared/schema";
 import { GhanaCardSample, GhanaPassportSample, SampleDriversLicense } from "@/components/sample-id-cards";
 import { CreditScoreGauge } from "@/components/credit-score-gauge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -149,6 +149,16 @@ export default function BorrowerDetailPage() {
     queryKey: ['/api/consent-records', borrowerId],
     queryFn: async () => {
       const res = await fetch(`/api/consent-records?borrowerId=${borrowerId}`);
+      if (!res.ok) throw new Error("Failed to fetch");
+      return res.json();
+    },
+    enabled: !!borrowerId,
+  });
+
+  const { data: accessAlerts } = useQuery<BorrowerAlert[]>({
+    queryKey: ['/api/borrower-alerts', borrowerId],
+    queryFn: async () => {
+      const res = await fetch(`/api/borrower-alerts/${borrowerId}`);
       if (!res.ok) throw new Error("Failed to fetch");
       return res.json();
     },
@@ -756,6 +766,53 @@ export default function BorrowerDetailPage() {
                     ) : related.relationshipType ? (
                       <Badge variant="outline" className="text-[10px] capitalize">{related.relationshipType.replace(/_/g, " ")}</Badge>
                     ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {accessAlerts && accessAlerts.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4" />
+                {t("borrowerDetail.accessLog", "Credit File Access Log")}
+              </h3>
+              <Badge variant="secondary" className="text-[10px]">{accessAlerts.length}</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="px-0 pb-0">
+            <div className="divide-y">
+              {accessAlerts.slice(0, 20).map((alert) => (
+                <div
+                  key={alert.id}
+                  className="flex items-center justify-between gap-3 px-5 py-3"
+                  data-testid={`row-access-${alert.id}`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-md bg-accent shrink-0">
+                      <Building2 className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {alert.institution || "Unknown Institution"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {alert.accessedBy || "Unknown"} — {alert.purpose?.replace(/_/g, " ") || "N/A"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-[10px] capitalize">{alert.alertType.replace(/_/g, " ")}</Badge>
+                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                      {alert.createdAt ? new Date(alert.createdAt).toLocaleString("en-GB", {
+                        day: "2-digit", month: "short", year: "numeric",
+                      }) : ""}
+                    </span>
                   </div>
                 </div>
               ))}

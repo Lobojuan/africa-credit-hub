@@ -4,7 +4,7 @@ import { db } from "./db";
 import {
   users, borrowers, creditAccounts, creditInquiries, auditLogs, pendingApprovals, disputes, notifications,
   courtJudgments, consentRecords, paymentHistory, institutions, billingRecords, creditReportLogs, apiKeys,
-  exchangeRates, retentionPolicies, apiConfigurations, organizations, dishonouredCheques,
+  exchangeRates, retentionPolicies, apiConfigurations, organizations, dishonouredCheques, borrowerAlerts,
   type User, type InsertUser,
   type Organization, type InsertOrganization,
   type Borrower, type InsertBorrower,
@@ -25,6 +25,7 @@ import {
   type RetentionPolicy, type InsertRetentionPolicy,
   type ApiConfiguration, type InsertApiConfiguration,
   type DishonouredCheque, type InsertDishonouredCheque,
+  type BorrowerAlert, type InsertBorrowerAlert,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -156,6 +157,10 @@ export interface IStorage {
   getDishonouredChequesByBorrower(borrowerId: string): Promise<DishonouredCheque[]>;
   getAllDishonouredCheques(organizationId?: string): Promise<DishonouredCheque[]>;
   createDishonouredCheque(cheque: InsertDishonouredCheque): Promise<DishonouredCheque>;
+
+  getBorrowerAlerts(organizationId?: string): Promise<BorrowerAlert[]>;
+  getBorrowerAlertsByBorrower(borrowerId: string): Promise<BorrowerAlert[]>;
+  createBorrowerAlert(alert: InsertBorrowerAlert): Promise<BorrowerAlert>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1028,6 +1033,20 @@ export class DatabaseStorage implements IStorage {
 
   async createDishonouredCheque(cheque: InsertDishonouredCheque): Promise<DishonouredCheque> {
     const [created] = await db.insert(dishonouredCheques).values(cheque).returning();
+    return created;
+  }
+
+  async getBorrowerAlerts(organizationId?: string): Promise<BorrowerAlert[]> {
+    const filter = organizationId ? eq(borrowerAlerts.organizationId, organizationId) : undefined;
+    return db.select().from(borrowerAlerts).where(filter).orderBy(desc(borrowerAlerts.createdAt)).limit(500);
+  }
+
+  async getBorrowerAlertsByBorrower(borrowerId: string): Promise<BorrowerAlert[]> {
+    return db.select().from(borrowerAlerts).where(eq(borrowerAlerts.borrowerId, borrowerId)).orderBy(desc(borrowerAlerts.createdAt)).limit(100);
+  }
+
+  async createBorrowerAlert(alert: InsertBorrowerAlert): Promise<BorrowerAlert> {
+    const [created] = await db.insert(borrowerAlerts).values(alert).returning();
     return created;
   }
 }

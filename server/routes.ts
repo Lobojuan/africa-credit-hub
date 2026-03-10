@@ -3,6 +3,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db";
+import { sql } from "drizzle-orm";
 import {
   insertBorrowerSchema, insertCreditAccountSchema, insertCreditInquirySchema,
   insertUserSchema, insertPendingApprovalSchema, insertDisputeSchema,
@@ -912,6 +913,23 @@ export async function registerRoutes(
         details: `Credit inquiry for borrower ${inquiry.borrowerId} by ${inquiry.institution}`,
         ipAddress: req.ip || null,
       });
+      try {
+        const borrower = await storage.getBorrower(inquiry.borrowerId);
+        const user = req.session?.userId ? await storage.getUser(req.session.userId) : null;
+        if (borrower) {
+          await storage.createBorrowerAlert({
+            borrowerId: inquiry.borrowerId,
+            alertType: "credit_inquiry",
+            message: `Credit inquiry by ${inquiry.institution} for purpose: ${inquiry.purpose}`,
+            recipientPhone: borrower.phone || borrower.mobileMoneyNumber || null,
+            recipientEmail: borrower.email || null,
+            accessedBy: user?.fullName || "Unknown",
+            institution: inquiry.institution,
+            purpose: inquiry.purpose,
+            organizationId: borrower.organizationId,
+          });
+        }
+      } catch {}
       res.status(201).json(inquiry);
     } catch (e: any) {
       res.status(400).json({ message: e.message });
@@ -972,6 +990,64 @@ export async function registerRoutes(
     try {
       const result = await storage.verifyAuditIntegrity();
       res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/audit/stats", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
+    try {
+      const orgId = getOrgScope(req);
+      const allLogs = await storage.getAuditLogs(orgId);
+
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+      let actionsToday = 0;
+      const uniqueUsersToday = new Set<string>();
+      const actionCounts: Record<string, number> = {};
+      const entityCounts: Record<string, number> = {};
+      const userIds = new Set<string>();
+
+      for (const log of allLogs) {
+        if (log.action) {
+          actionCounts[log.action] = (actionCounts[log.action] || 0) + 1;
+        }
+        if (log.entity) {
+          entityCounts[log.entity] = (entityCounts[log.entity] || 0) + 1;
+        }
+        if (log.userId) {
+          userIds.add(log.userId);
+        }
+        if (log.createdAt && new Date(log.createdAt) >= todayStart) {
+          actionsToday++;
+          if (log.userId) uniqueUsersToday.add(log.userId);
+        }
+      }
+
+      const topActions = Object.entries(actionCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([action, count]) => ({ action, count }));
+
+      const topEntities = Object.entries(entityCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([entity, count]) => ({ entity, count }));
+
+      const uniqueActions = Object.keys(actionCounts);
+      const uniqueEntities = Object.keys(entityCounts);
+
+      res.json({
+        totalLogs: allLogs.length,
+        actionsToday,
+        uniqueUsersToday: uniqueUsersToday.size,
+        totalUniqueUsers: userIds.size,
+        topActions,
+        topEntities,
+        uniqueActions,
+        uniqueEntities,
+      });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
@@ -1353,6 +1429,149 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/batch-upload/csv", requireRole("admin", "lender"), async (req, res) => {
+    try {
+      const { csvData } = req.body;
+      if (!csvData || typeof csvData !== "string") {
+        return res.status(400).json({ message: "Request body must contain a 'csvData' string with CSV content" });
+      }
+
+      const lines = csvData.trim().split("\n").filter((l: string) => l.trim());
+      if (lines.length < 2) {
+        return res.status(400).json({ message: "CSV must contain a header row and at least one data row" });
+      }
+
+      function parseCSVLine(line: string): string[] {
+        const result: string[] = [];
+        let current = "";
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+          const ch = line[i];
+          if (ch === '"') {
+            if (inQuotes && i + 1 < line.length && line[i + 1] === '"') {
+              current += '"';
+              i++;
+            } else {
+              inQuotes = !inQuotes;
+            }
+          } else if (ch === ',' && !inQuotes) {
+            result.push(current.trim());
+            current = "";
+          } else {
+            current += ch;
+          }
+        }
+        result.push(current.trim());
+        return result;
+      }
+
+      const headers = parseCSVLine(lines[0]);
+      const records: any[] = [];
+      for (let i = 1; i < lines.length; i++) {
+        const values = parseCSVLine(lines[i]);
+        const obj: any = {};
+        headers.forEach((h, idx) => {
+          obj[h] = values[idx] || "";
+        });
+        if (obj.daysInArrears) obj.daysInArrears = parseInt(obj.daysInArrears, 10) || 0;
+        records.push(obj);
+      }
+
+      const results = {
+        totalSubmitted: records.length,
+        successCount: 0,
+        errorCount: 0,
+        errors: [] as Array<{ index: number; message: string }>,
+      };
+
+      for (let i = 0; i < records.length; i++) {
+        try {
+          const parsed = insertCreditAccountSchema.parse(records[i]);
+          await storage.createCreditAccount(parsed);
+          results.successCount++;
+        } catch (err: any) {
+          results.errorCount++;
+          results.errors.push({ index: i, message: err.message || "Validation failed" });
+        }
+      }
+
+      await storage.createAuditLog({
+        action: "BATCH_UPLOAD_CSV", entity: "credit_account", userId: req.session?.userId,
+        details: `CSV upload: ${results.successCount} succeeded, ${results.errorCount} failed out of ${results.totalSubmitted}`,
+        ipAddress: req.ip || null,
+      });
+
+      res.json(results);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/batch-upload/history", requireRole("admin", "lender"), async (req, res) => {
+    try {
+      const allLogs = await storage.getAuditLogs(getOrgScope(req));
+      const batchLogs = allLogs
+        .filter((log: any) => log.action && log.action.startsWith("BATCH_UPLOAD"))
+        .map((log: any) => {
+          const detailStr = log.details || "";
+          const formatMatch = log.action.replace("BATCH_UPLOAD", "").replace("_", "") || "JSON";
+          let totalSubmitted = 0, successCount = 0, errorCount = 0;
+          const numMatch = detailStr.match(/(\d+)\s+succeeded.*?(\d+)\s+failed.*?(\d+)/);
+          if (numMatch) {
+            successCount = parseInt(numMatch[1], 10);
+            errorCount = parseInt(numMatch[2], 10);
+            totalSubmitted = parseInt(numMatch[3], 10);
+          }
+          return {
+            id: log.id,
+            format: formatMatch || "JSON",
+            totalSubmitted,
+            successCount,
+            errorCount,
+            userId: log.userId,
+            createdAt: log.createdAt,
+            details: log.details,
+          };
+        });
+      res.json(batchLogs);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/batch-upload/template/:format", (_req, res) => {
+    const format = _req.params.format;
+    if (format === "csv") {
+      const csvTemplate = `borrowerId,lenderInstitution,accountNumber,accountType,originalAmount,currentBalance,currency,interestRate,disbursementDate,maturityDate,status,daysInArrears
+BORROWER_ID_1,Commercial Bank,CB-LN-2025-001,Personal Loan,500000.00,450000.00,ETB,12.50,2025-01-15,2028-01-15,current,0
+BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00,ETB,15.00,2025-02-01,2030-02-01,current,0`;
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", 'attachment; filename="batch-upload-template.csv"');
+      return res.send(csvTemplate);
+    } else if (format === "json") {
+      const jsonTemplate = JSON.stringify([
+        {
+          borrowerId: "BORROWER_ID_1",
+          lenderInstitution: "Commercial Bank",
+          accountNumber: "CB-LN-2025-001",
+          accountType: "Personal Loan",
+          originalAmount: "500000.00",
+          currentBalance: "450000.00",
+          currency: "ETB",
+          interestRate: "12.50",
+          disbursementDate: "2025-01-15",
+          maturityDate: "2028-01-15",
+          status: "current",
+          daysInArrears: 0
+        }
+      ], null, 2);
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader("Content-Disposition", 'attachment; filename="batch-upload-template.json"');
+      return res.send(jsonTemplate);
+    }
+    res.status(400).json({ message: "Unsupported format. Use 'csv' or 'json'" });
+  });
+
   app.get("/api/notifications", async (req, res) => {
     try {
       if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
@@ -1635,6 +1854,23 @@ export async function registerRoutes(
         details: `Generated credit report serial ${serialNumber} for ${borrower.firstName || borrower.companyName}`,
         ipAddress: req.ip || null,
       });
+
+      try {
+        const borrowerName = borrower.type === "individual"
+          ? `${borrower.firstName || ""} ${borrower.lastName || ""}`.trim()
+          : borrower.companyName || "Unknown";
+        await storage.createBorrowerAlert({
+          borrowerId,
+          alertType: "report_accessed",
+          message: `Credit report accessed by ${user?.institution || "Unknown institution"} for purpose: ${purpose}. Serial: ${serialNumber}`,
+          recipientPhone: borrower.phone || borrower.mobileMoneyNumber || null,
+          recipientEmail: borrower.email || null,
+          accessedBy: user?.fullName || "Unknown",
+          institution: user?.institution || "Unknown",
+          purpose,
+          organizationId: borrower.organizationId,
+        });
+      } catch {}
 
       res.json({
         serialNumber,
@@ -3252,6 +3488,175 @@ export async function registerRoutes(
       const { country } = req.body;
       if (!country) return res.status(400).json({ message: "country required" });
       const result = await generateComplianceReport(country);
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/borrower-alerts", requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
+    try {
+      const orgScope = getOrgScope(req);
+      const alerts = await storage.getBorrowerAlerts(orgScope);
+      res.json(alerts);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/borrower-alerts/:borrowerId", requireAuth, async (req, res) => {
+    try {
+      const borrower = await storage.getBorrower(req.params.borrowerId);
+      if (!borrower) return res.status(404).json({ message: "Borrower not found" });
+      const user = await storage.getUser(req.session?.userId!);
+      if (user?.role !== "super_admin" && borrower.organizationId && user?.organizationId !== borrower.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const alerts = await storage.getBorrowerAlertsByBorrower(req.params.borrowerId);
+      res.json(alerts);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/borrower-alerts/settings", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const { alertTypes, enabled } = req.body;
+      if (!alertTypes || !Array.isArray(alertTypes)) {
+        return res.status(400).json({ message: "alertTypes array is required" });
+      }
+      await storage.createAuditLog({
+        action: "UPDATE_ALERT_SETTINGS",
+        entity: "borrower_alerts",
+        userId: req.session?.userId,
+        details: `Alert settings updated: types=${alertTypes.join(",")}, enabled=${enabled}`,
+        ipAddress: req.ip || null,
+        organizationId: getOrgScope(req),
+      });
+      res.json({ message: "Alert preferences saved", alertTypes, enabled });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/regulatory/dashboard", requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
+    try {
+      const orgScope = getOrgScope(req);
+      const orgFilter = orgScope ? sql`AND organization_id = ${orgScope}` : sql``;
+
+      const statusRows = await db.execute(sql`
+        SELECT status, COUNT(*)::int AS cnt, COALESCE(SUM(CAST(current_balance AS DECIMAL(15,2))), 0)::text AS exposure
+        FROM credit_accounts WHERE 1=1 ${orgFilter} GROUP BY status
+      `);
+      const statusMap: Record<string, { cnt: number; exposure: number }> = {};
+      let totalAccounts = 0;
+      let totalExposure = 0;
+      for (const row of statusRows.rows as any[]) {
+        statusMap[row.status] = { cnt: row.cnt, exposure: parseFloat(row.exposure || "0") };
+        totalAccounts += row.cnt;
+        totalExposure += parseFloat(row.exposure || "0");
+      }
+      const delinquent = statusMap["delinquent"]?.cnt || 0;
+      const defaulted = statusMap["default"]?.cnt || 0;
+      const writtenOff = statusMap["written_off"]?.cnt || 0;
+      const nplCount = delinquent + defaulted + writtenOff;
+      const nplRatio = totalAccounts > 0 ? ((nplCount / totalAccounts) * 100).toFixed(1) : "0.0";
+      const nplExposure = (statusMap["delinquent"]?.exposure || 0) + (statusMap["default"]?.exposure || 0) + (statusMap["written_off"]?.exposure || 0);
+
+      const dqRows = await db.execute(sql`
+        SELECT
+          COUNT(*)::int AS total,
+          COUNT(national_id)::int AS with_id,
+          COUNT(CASE WHEN phone IS NOT NULL OR mobile_money_number IS NOT NULL THEN 1 END)::int AS with_phone,
+          COUNT(email)::int AS with_email
+        FROM borrowers WHERE 1=1 ${orgFilter}
+      `);
+      const dq = (dqRows.rows as any[])[0] || { total: 0, with_id: 0, with_phone: 0, with_email: 0 };
+      const totalBorrowers = dq.total;
+      const dataQuality = {
+        nationalIdCoverage: totalBorrowers > 0 ? ((dq.with_id / totalBorrowers) * 100).toFixed(1) : "0.0",
+        phoneCoverage: totalBorrowers > 0 ? ((dq.with_phone / totalBorrowers) * 100).toFixed(1) : "0.0",
+        emailCoverage: totalBorrowers > 0 ? ((dq.with_email / totalBorrowers) * 100).toFixed(1) : "0.0",
+        overallScore: totalBorrowers > 0
+          ? (((dq.with_id + dq.with_phone + dq.with_email) / (totalBorrowers * 3)) * 100).toFixed(1) : "0.0",
+      };
+
+      const sectorRows = await db.execute(sql`
+        SELECT account_type AS sector, status, COUNT(*)::int AS cnt,
+          COALESCE(SUM(CAST(current_balance AS DECIMAL(15,2))), 0)::text AS exposure
+        FROM credit_accounts WHERE 1=1 ${orgFilter} GROUP BY account_type, status
+      `);
+      const sectorMap: Record<string, { total: number; npl: number; exposure: number; nplExposure: number }> = {};
+      for (const row of sectorRows.rows as any[]) {
+        const sector = row.sector || "Other";
+        if (!sectorMap[sector]) sectorMap[sector] = { total: 0, npl: 0, exposure: 0, nplExposure: 0 };
+        sectorMap[sector].total += row.cnt;
+        sectorMap[sector].exposure += parseFloat(row.exposure || "0");
+        if (["delinquent", "default", "written_off"].includes(row.status)) {
+          sectorMap[sector].npl += row.cnt;
+          sectorMap[sector].nplExposure += parseFloat(row.exposure || "0");
+        }
+      }
+      const sectorNpl = Object.entries(sectorMap).map(([sector, data]) => ({
+        sector, totalAccounts: data.total, nplAccounts: data.npl,
+        nplRatio: data.total > 0 ? ((data.npl / data.total) * 100).toFixed(1) : "0.0",
+        totalExposure: data.exposure.toFixed(2), nplExposure: data.nplExposure.toFixed(2),
+      })).sort((a, b) => parseFloat(b.nplRatio) - parseFloat(a.nplRatio));
+
+      const lenderRows = await db.execute(sql`
+        SELECT lender_institution AS lender, status, COUNT(*)::int AS cnt,
+          COALESCE(SUM(CAST(current_balance AS DECIMAL(15,2))), 0)::text AS exposure
+        FROM credit_accounts WHERE 1=1 ${orgFilter} GROUP BY lender_institution, status
+      `);
+      const lenderMap: Record<string, { total: number; npl: number; exposure: number }> = {};
+      for (const row of lenderRows.rows as any[]) {
+        const lender = row.lender || "Unknown";
+        if (!lenderMap[lender]) lenderMap[lender] = { total: 0, npl: 0, exposure: 0 };
+        lenderMap[lender].total += row.cnt;
+        lenderMap[lender].exposure += parseFloat(row.exposure || "0");
+        if (["delinquent", "default", "written_off"].includes(row.status)) lenderMap[lender].npl += row.cnt;
+      }
+      const institutionCompliance = Object.entries(lenderMap).map(([name, data]) => ({
+        name, totalAccounts: data.total, nplAccounts: data.npl,
+        nplRatio: data.total > 0 ? ((data.npl / data.total) * 100).toFixed(1) : "0.0",
+        totalExposure: data.exposure.toFixed(2), lastSubmission: null as string | null,
+        dataQualityScore: "Good",
+      })).sort((a, b) => b.totalAccounts - a.totalAccounts);
+
+      const { data: allInstitutions } = await storage.getInstitutions(1, 500, orgScope);
+
+      const statusBreakdown = {
+        current: statusMap["current"]?.cnt || 0,
+        delinquent,
+        default: defaulted,
+        closed: statusMap["closed"]?.cnt || 0,
+        restructured: statusMap["restructured"]?.cnt || 0,
+        writtenOff,
+      };
+
+      res.json({
+        summary: {
+          totalBorrowers,
+          totalAccounts,
+          totalInstitutions: allInstitutions.length,
+          totalExposure: totalExposure.toFixed(2),
+          nplCount,
+          nplRatio,
+          nplExposure: nplExposure.toFixed(2),
+          statusBreakdown,
+        },
+        dataQuality,
+        sectorNpl,
+        institutionCompliance,
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/audit-logs/verify-integrity", requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
+    try {
+      const result = await storage.verifyAuditIntegrity();
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
