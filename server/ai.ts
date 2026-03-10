@@ -128,12 +128,15 @@ function sanitizeForPrompt(text: string | null | undefined): string {
 
 async function buildLiveContext(): Promise<string> {
   try {
-    const [stats, institutions, orgs, retentionPolicies, exchangeRates] = await Promise.all([
+    const [stats, institutions, orgs, retentionPolicies, exchangeRates, borrowersResult, allAccounts, disputes] = await Promise.all([
       storage.getDashboardStats().catch(() => null),
       storage.getInstitutions(1, 100).catch(() => ({ data: [], total: 0 })),
       storage.getOrganizations().catch(() => []),
       storage.getRetentionPolicies().catch(() => []),
       storage.getExchangeRates().catch(() => []),
+      storage.getBorrowers(1, 200).catch(() => ({ data: [], total: 0 })),
+      storage.getAllCreditAccounts().catch(() => []),
+      storage.getDisputes().catch(() => []),
     ]);
 
     const institutionList = institutions.data.map(i => `  - ${sanitizeForPrompt(i.name)} (${sanitizeForPrompt(i.institutionType) || "bank"}, ${sanitizeForPrompt(i.country) || "Ghana"}) — Status: ${sanitizeForPrompt(i.status) || "active"}`).join("\n");
@@ -142,6 +145,61 @@ async function buildLiveContext(): Promise<string> {
 
     const usdGhsRate = exchangeRates.find(r => r.baseCurrency === "USD" && r.targetCurrency === "GHS");
     const rateInfo = usdGhsRate ? `USD/GHS: ${usdGhsRate.rate} (as of ${usdGhsRate.effectiveDate})` : "Exchange rates available";
+
+    const accountsByBorrower: Record<string, typeof allAccounts> = {};
+    for (const acc of allAccounts) {
+      const bid = String(acc.borrowerId);
+      if (!accountsByBorrower[bid]) accountsByBorrower[bid] = [];
+      accountsByBorrower[bid].push(acc);
+    }
+
+    const disputesByBorrower: Record<string, number> = {};
+    for (const d of disputes) {
+      const bid = String(d.borrowerId);
+      disputesByBorrower[bid] = (disputesByBorrower[bid] || 0) + 1;
+    }
+
+    const borrowerProfiles = borrowersResult.data.map(b => {
+      const bAccounts = accountsByBorrower[String(b.id)] || [];
+      const totalBalance = bAccounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
+      const delinquent = bAccounts.filter(a => a.status === "delinquent").length;
+      const defaulted = bAccounts.filter(a => a.status === "default").length;
+      const writtenOff = bAccounts.filter(a => a.status === "written_off").length;
+      const maxArrears = Math.max(0, ...bAccounts.map(a => parseInt(a.daysInArrears || "0") || 0));
+      const disputeCount = disputesByBorrower[String(b.id)] || 0;
+      const name = b.borrowerType === "corporate" ? sanitizeForPrompt(b.companyName) : `${sanitizeForPrompt(b.firstName)} ${sanitizeForPrompt(b.lastName)}`;
+      const statusFlags = [];
+      if (delinquent > 0) statusFlags.push(`${delinquent} delinquent`);
+      if (defaulted > 0) statusFlags.push(`${defaulted} defaulted`);
+      if (writtenOff > 0) statusFlags.push(`${writtenOff} written-off`);
+      if (disputeCount > 0) statusFlags.push(`${disputeCount} disputes`);
+      if (b.isPep) statusFlags.push("PEP");
+
+      return {
+        name,
+        type: b.borrowerType || "individual",
+        nationalId: b.nationalId || "N/A",
+        accountCount: bAccounts.length,
+        totalBalance,
+        delinquent,
+        defaulted,
+        writtenOff,
+        maxArrears,
+        disputeCount,
+        isPep: b.isPep || false,
+        employmentStatus: b.employmentStatus || "Unknown",
+        monthlyIncome: b.monthlyIncome || "Not reported",
+        flags: statusFlags,
+        accountDetails: bAccounts.map(a => `${a.accountType}: GHS ${parseFloat(a.currentBalance || "0").toLocaleString()} (${a.status}${parseInt(a.daysInArrears || "0") > 0 ? `, ${a.daysInArrears}d arrears` : ""})`).join("; "),
+      };
+    });
+
+    borrowerProfiles.sort((a, b) => (b.defaulted + b.delinquent + b.writtenOff) - (a.defaulted + a.delinquent + a.writtenOff) || b.maxArrears - a.maxArrears || b.totalBalance - a.totalBalance);
+
+    const borrowerList = borrowerProfiles.map(bp => {
+      const flagStr = bp.flags.length > 0 ? ` [${bp.flags.join(", ")}]` : "";
+      return `  - ${bp.name} (${bp.type}, ID: ${bp.nationalId}) | ${bp.accountCount} accounts | Outstanding: GHS ${bp.totalBalance.toLocaleString()} | Max Arrears: ${bp.maxArrears}d${flagStr}\n    Accounts: ${bp.accountDetails || "None"}`;
+    }).join("\n");
 
     return `
 === LIVE SYSTEM DATA (real-time from database) ===
@@ -166,6 +224,9 @@ ${retentionList || "  Default policies"}
 
 Exchange Rates: ${rateInfo}
 Rates are updated automatically every 6 hours from live market data.
+
+=== BORROWER PORTFOLIO (all ${borrowersResult.total} borrowers, sorted by risk — worst first) ===
+${borrowerList || "  No borrowers"}
 === END LIVE DATA ===`.trim();
   } catch (err) {
     return "=== LIVE DATA UNAVAILABLE ===";
