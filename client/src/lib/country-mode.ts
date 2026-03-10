@@ -21,33 +21,145 @@ export interface BogCode {
   label: string;
 }
 
-const GHANA_CONFIG: CountryConfig = {
-  name: "Ghana",
-  code: "GH",
-  currency: "GHS",
-  currencySymbol: "₵",
-  regulatoryBody: "Bank of Ghana",
-  dataProtectionLaw: "Data Protection Act, 2012 (Act 843)",
-  brandTitle: "Ghana Credit Registry",
-  brandSubtitle: "Carlson Capital & Systems In Motion Limited™",
-  regions: [
-    "Greater Accra",
-    "Ashanti",
-    "Western",
-    "Central",
-    "Eastern",
-    "Northern",
-    "Volta",
-    "Upper East",
-    "Upper West",
-    "Bono",
-    "Bono East",
-    "Ahafo",
-    "Western North",
-    "Oti",
-    "Savannah",
-    "North East",
-  ],
+const COUNTRY_REGISTRY: Record<string, CountryConfig> = {
+  ghana: {
+    name: "Ghana",
+    code: "GH",
+    currency: "GHS",
+    currencySymbol: "\u20B5",
+    regulatoryBody: "Bank of Ghana",
+    dataProtectionLaw: "Data Protection Act, 2012 (Act 843)",
+    brandTitle: "Ghana Credit Registry",
+    brandSubtitle: "Carlson Capital & Systems In Motion Limited\u2122",
+    regions: [
+      "Greater Accra", "Ashanti", "Western", "Central", "Eastern",
+      "Northern", "Volta", "Upper East", "Upper West", "Bono",
+      "Bono East", "Ahafo", "Western North", "Oti", "Savannah", "North East",
+    ],
+  },
+  liberia: {
+    name: "Liberia",
+    code: "LR",
+    currency: "LRD",
+    currencySymbol: "L$",
+    regulatoryBody: "Central Bank of Liberia",
+    dataProtectionLaw: "Data Protection Act of Liberia",
+    brandTitle: "Liberia Credit Registry",
+    brandSubtitle: "Carlson Capital & Systems In Motion Limited\u2122",
+    regions: [
+      "Montserrado", "Nimba", "Bong", "Grand Bassa", "Lofa",
+      "Margibi", "Maryland", "Grand Gedeh", "Sinoe", "Gbarpolu",
+      "Grand Cape Mount", "Grand Kru", "River Cess", "River Gee", "Bomi",
+    ],
+  },
+  sierraleone: {
+    name: "Sierra Leone",
+    code: "SL",
+    currency: "SLE",
+    currencySymbol: "Le",
+    regulatoryBody: "Bank of Sierra Leone",
+    dataProtectionLaw: "Data Protection Act of Sierra Leone",
+    brandTitle: "Sierra Leone Credit Registry",
+    brandSubtitle: "Carlson Capital & Systems In Motion Limited\u2122",
+    regions: [
+      "Western Area", "Northern", "Southern", "Eastern", "North West",
+    ],
+  },
+  nigeria: {
+    name: "Nigeria",
+    code: "NG",
+    currency: "NGN",
+    currencySymbol: "\u20A6",
+    regulatoryBody: "Central Bank of Nigeria",
+    dataProtectionLaw: "Nigeria Data Protection Regulation (NDPR)",
+    brandTitle: "Nigeria Credit Registry",
+    brandSubtitle: "Carlson Capital & Systems In Motion Limited\u2122",
+    regions: [
+      "Lagos", "Abuja FCT", "Kano", "Rivers", "Oyo", "Kaduna",
+      "Ogun", "Anambra", "Delta", "Enugu", "Edo", "Imo",
+    ],
+  },
+  kenya: {
+    name: "Kenya",
+    code: "KE",
+    currency: "KES",
+    currencySymbol: "KSh",
+    regulatoryBody: "Central Bank of Kenya",
+    dataProtectionLaw: "Data Protection Act, 2019",
+    brandTitle: "Kenya Credit Registry",
+    brandSubtitle: "Carlson Capital & Systems In Motion Limited\u2122",
+    regions: [
+      "Nairobi", "Mombasa", "Kisumu", "Nakuru", "Eldoret",
+      "Nyeri", "Machakos", "Kiambu", "Uasin Gishu", "Kilifi",
+    ],
+  },
+  rwanda: {
+    name: "Rwanda",
+    code: "RW",
+    currency: "RWF",
+    currencySymbol: "FRw",
+    regulatoryBody: "National Bank of Rwanda",
+    dataProtectionLaw: "Law Relating to the Protection of Personal Data",
+    brandTitle: "Rwanda Credit Registry",
+    brandSubtitle: "Carlson Capital & Systems In Motion Limited\u2122",
+    regions: ["Kigali", "Eastern", "Northern", "Southern", "Western"],
+  },
+  tanzania: {
+    name: "Tanzania",
+    code: "TZ",
+    currency: "TZS",
+    currencySymbol: "TSh",
+    regulatoryBody: "Bank of Tanzania",
+    dataProtectionLaw: "Personal Data Protection Act, 2022",
+    brandTitle: "Tanzania Credit Registry",
+    brandSubtitle: "Carlson Capital & Systems In Motion Limited\u2122",
+    regions: [
+      "Dar es Salaam", "Dodoma", "Arusha", "Mwanza", "Zanzibar",
+      "Mbeya", "Morogoro", "Tanga", "Kilimanjaro", "Iringa",
+    ],
+  },
+  uganda: {
+    name: "Uganda",
+    code: "UG",
+    currency: "UGX",
+    currencySymbol: "USh",
+    regulatoryBody: "Bank of Uganda",
+    dataProtectionLaw: "Data Protection and Privacy Act, 2019",
+    brandTitle: "Uganda Credit Registry",
+    brandSubtitle: "Carlson Capital & Systems In Motion Limited\u2122",
+    regions: [
+      "Kampala", "Wakiso", "Mukono", "Jinja", "Gulu",
+      "Mbarara", "Lira", "Masaka", "Mbale", "Fort Portal",
+    ],
+  },
+  ethiopia: {
+    name: "Ethiopia",
+    code: "ET",
+    currency: "ETB",
+    currencySymbol: "Br",
+    regulatoryBody: "National Bank of Ethiopia",
+    dataProtectionLaw: "Computer Crime Proclamation No. 958/2016",
+    brandTitle: "Ethiopia Credit Registry",
+    brandSubtitle: "Carlson Capital & Systems In Motion Limited\u2122",
+    regions: [
+      "Addis Ababa", "Oromia", "Amhara", "SNNPR", "Tigray",
+      "Somali", "Afar", "Benishangul-Gumuz", "Gambela", "Harari",
+    ],
+  },
+  southafrica: {
+    name: "South Africa",
+    code: "ZA",
+    currency: "ZAR",
+    currencySymbol: "R",
+    regulatoryBody: "South African Reserve Bank",
+    dataProtectionLaw: "Protection of Personal Information Act (POPIA)",
+    brandTitle: "South Africa Credit Registry",
+    brandSubtitle: "Carlson Capital & Systems In Motion Limited\u2122",
+    regions: [
+      "Gauteng", "Western Cape", "KwaZulu-Natal", "Eastern Cape",
+      "Free State", "Limpopo", "Mpumalanga", "North West", "Northern Cape",
+    ],
+  },
 };
 
 export const GHANA_ID_TYPES: GhanaIdType[] = [
@@ -224,8 +336,9 @@ export const CREDIT_SCORE_FACTORS = [
 
 export function getCountryMode(): string | null {
   const mode = import.meta.env.VITE_COUNTRY_MODE;
-  if (mode && typeof mode === "string" && mode.toLowerCase() === "ghana") {
-    return "ghana";
+  if (mode && typeof mode === "string") {
+    const normalized = mode.toLowerCase().replace(/[\s_-]/g, "");
+    if (COUNTRY_REGISTRY[normalized]) return normalized;
   }
   return null;
 }
@@ -239,7 +352,8 @@ export function isSingleCountryMode(): boolean {
 }
 
 export function getCountryConfig(): CountryConfig | null {
-  if (isGhanaMode()) return GHANA_CONFIG;
+  const mode = getCountryMode();
+  if (mode) return COUNTRY_REGISTRY[mode];
   return null;
 }
 
@@ -260,11 +374,16 @@ export function getBrandTitle(): string {
 
 export function getBrandSubtitle(): string {
   const config = getCountryConfig();
-  return config ? config.brandSubtitle : "Carlson Capital & Systems In Motion Limited™";
+  return config ? config.brandSubtitle : "Carlson Capital & Systems In Motion Limited\u2122";
 }
 
 export function getDefaultFallbackCurrency(): string {
-  return isGhanaMode() ? "GHS" : "ETB";
+  const config = getCountryConfig();
+  return config ? config.currency : "ETB";
+}
+
+export function getSupportedCountries(): CountryConfig[] {
+  return Object.values(COUNTRY_REGISTRY);
 }
 
 export function formatBogFileName(
@@ -276,3 +395,5 @@ export function formatBogFileName(
   const createdDate = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   return `${srn}-${reportingDate}-${createdDate}-1.1-${fileType}-${sequenceNumber}.csv`;
 }
+
+export { COUNTRY_REGISTRY };

@@ -2,11 +2,12 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useOrgSwitcher } from "@/hooks/use-org-switcher";
 import { useAuth } from "@/hooks/use-auth";
-import { Building2, ChevronDown, Check, Eye } from "lucide-react";
+import { Building2, ChevronDown, Check, Eye, Globe } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { isSingleCountryMode, getCountryConfig } from "@/lib/country-mode";
 
 interface OrgListItem {
   id: string;
@@ -53,6 +54,15 @@ export function OrgSwitcher() {
       <PopoverContent align="end" className="w-[280px] p-0">
         <div className="px-3 py-2">
           <p className="text-xs font-medium text-muted-foreground">Viewing Client Data</p>
+          {isSingleCountryMode() && (() => {
+            const cc = getCountryConfig();
+            return cc ? (
+              <div className="flex items-center gap-1.5 mt-1">
+                <Globe className="w-3 h-3 text-blue-500" />
+                <span className="text-[10px] font-semibold text-blue-500" data-testid="text-org-switcher-country">{cc.name} Only</span>
+              </div>
+            ) : null;
+          })()}
         </div>
         <Separator />
         <div className="max-h-[320px] overflow-y-auto">

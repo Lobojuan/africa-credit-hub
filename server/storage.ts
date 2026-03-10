@@ -29,7 +29,7 @@ import {
 } from "@shared/schema";
 
 export interface IStorage {
-  getOrganizations(): Promise<Organization[]>;
+  getOrganizations(country?: string): Promise<Organization[]>;
   getOrganization(id: string): Promise<Organization | undefined>;
   getOrganizationBySlug(slug: string): Promise<Organization | undefined>;
   createOrganization(org: InsertOrganization): Promise<Organization>;
@@ -164,7 +164,10 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  async getOrganizations(): Promise<Organization[]> {
+  async getOrganizations(country?: string): Promise<Organization[]> {
+    if (country) {
+      return db.select().from(organizations).where(eq(organizations.country, country)).orderBy(desc(organizations.createdAt));
+    }
     return db.select().from(organizations).orderBy(desc(organizations.createdAt));
   }
 

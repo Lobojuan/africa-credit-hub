@@ -49,7 +49,7 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@radix-ui/react-collapsible";
 import type { LucideIcon } from "lucide-react";
-import { isGhanaMode, getBrandTitle } from "@/lib/country-mode";
+import { isGhanaMode, isSingleCountryMode, getBrandTitle, getCountryConfig } from "@/lib/country-mode";
 
 type NavItem = {
   titleKey: string;
@@ -290,6 +290,20 @@ export function AppSidebar() {
             </div>
           </div>
         )}
+        {isSingleCountryMode() && (() => {
+          const cc = getCountryConfig();
+          return cc ? (
+            <div className="rounded-xl p-2.5 border border-sidebar-foreground/8" style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.08), rgba(59,130,246,0.03))" }}>
+              <div className="flex items-center gap-2">
+                <Globe className="w-3.5 h-3.5 text-blue-400" />
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="text-[11px] font-bold text-blue-400" data-testid="text-country-mode">{cc.name} Mode</span>
+                  <span className="text-[9px] text-sidebar-foreground/40 truncate">{cc.regulatoryBody} | {cc.currency}</span>
+                </div>
+              </div>
+            </div>
+          ) : null;
+        })()}
         <div className="rounded-xl p-2.5" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))" }}>
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" style={{ boxShadow: "0 0 8px hsl(152 60% 50% / 0.4)" }} />
