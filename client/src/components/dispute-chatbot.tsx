@@ -169,7 +169,7 @@ interface ChatbotProps {
 export function DisputeChatbot({ open, onOpenChange }: ChatbotProps) {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
-  const [mode, setMode] = useState<Mode>("menu");
+  const [mode, setMode] = useState<Mode>("ai");
   const [disputeStep, setDisputeStep] = useState<DisputeStep>("issue_type");
   const [faqStep, setFaqStep] = useState<FaqStep>("categories");
   const [faqCategory, setFaqCategory] = useState("");
