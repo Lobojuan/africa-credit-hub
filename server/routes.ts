@@ -3216,11 +3216,19 @@ export async function registerRoutes(
       if (!messages || !Array.isArray(messages)) {
         return res.status(400).json({ message: "messages array required" });
       }
+      const sanitizedMessages = messages
+        .filter((m: any) => m && typeof m.role === "string" && typeof m.content === "string")
+        .filter((m: any) => m.role === "user" || m.role === "assistant")
+        .map((m: any) => ({ role: m.role, content: m.content.slice(0, 4000) }))
+        .slice(-20);
+      if (sanitizedMessages.length === 0) {
+        return res.status(400).json({ message: "At least one valid user message required" });
+      }
       res.setHeader("Content-Type", "text/event-stream");
       res.setHeader("Cache-Control", "no-cache");
       res.setHeader("Connection", "keep-alive");
 
-      const stream = await chatWithAI(messages, req.session?.userRole);
+      const stream = await chatWithAI(sanitizedMessages, req.session?.userRole);
       for await (const chunk of stream) {
         const content = chunk.choices[0]?.delta?.content || "";
         if (content) {
