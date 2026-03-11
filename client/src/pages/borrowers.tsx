@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { Plus, Search, Building2, User, Users, ChevronRight, ChevronLeft, Flag, AlertTriangle, Camera } from "lucide-react";
 import { SUPPORTED_COUNTRIES } from "@/lib/currency";
-import { isGhanaMode, getDefaultCountry, getCountryConfig, BOG_MARITAL_STATUSES, BOG_PROOF_OF_ADDRESS, BOG_BUSINESS_TYPES, BOG_INDUSTRY_CODES, BOG_EMPLOYMENT_TYPES } from "@/lib/country-mode";
+import { isGhanaMode, isSierraLeoneMode, getDefaultCountry, getCountryConfig, BOG_MARITAL_STATUSES, BOG_PROOF_OF_ADDRESS, BOG_BUSINESS_TYPES, BOG_INDUSTRY_CODES, BOG_EMPLOYMENT_TYPES } from "@/lib/country-mode";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +41,7 @@ export default function BorrowersPage() {
   const totalPages = Math.ceil(totalBorrowers / PAGE_SIZE);
 
   const ghanaMode = isGhanaMode();
+  const sierraLeoneMode = isSierraLeoneMode();
   const ghanaConfig = getCountryConfig();
 
   const [formData, setFormData] = useState({
@@ -187,6 +188,21 @@ export default function BorrowersPage() {
                     <div><Label>Ghana Card Number *</Label><Input data-testid="input-ghana-card" value={formData.ghanaCardNumber} onChange={(e) => setFormData({ ...formData, ghanaCardNumber: e.target.value, nationalId: e.target.value || formData.nationalId })} placeholder="GHA-XXXXXXXXX-X" required /></div>
                     <div><Label>Voter's ID</Label><Input data-testid="input-voters-id" value={formData.votersId} onChange={(e) => setFormData({ ...formData, votersId: e.target.value })} /></div>
                     <div><Label>SSNIT Number</Label><Input data-testid="input-ssnit" value={formData.ssnitNumber} onChange={(e) => setFormData({ ...formData, ssnitNumber: e.target.value })} /></div>
+                    <div><Label>Driver's License</Label><Input data-testid="input-drivers-license" value={formData.driversLicense} onChange={(e) => setFormData({ ...formData, driversLicense: e.target.value })} /></div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div><Label>TIN Number</Label><Input data-testid="input-tin" value={formData.tinNumber} onChange={(e) => setFormData({ ...formData, tinNumber: e.target.value })} /></div>
+                    <div><Label>Passport Number</Label><Input data-testid="input-passport" value={formData.passportNumber} onChange={(e) => setFormData({ ...formData, passportNumber: e.target.value })} /></div>
+                  </div>
+                </>
+              ) : sierraLeoneMode ? (
+                <>
+                  <Separator className="my-1" />
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sierra Leone Identification</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div><Label>NCRA National ID *</Label><Input data-testid="input-ncra-id" value={formData.ghanaCardNumber} onChange={(e) => setFormData({ ...formData, ghanaCardNumber: e.target.value, nationalId: e.target.value || formData.nationalId })} placeholder="NCRA-YYYY-XXXXXX" required /></div>
+                    <div><Label>NIN</Label><Input data-testid="input-nin" value={formData.votersId} onChange={(e) => setFormData({ ...formData, votersId: e.target.value })} placeholder="NIN followed by 10 digits" /></div>
+                    <div><Label>NASSIT Number</Label><Input data-testid="input-nassit" value={formData.ssnitNumber} onChange={(e) => setFormData({ ...formData, ssnitNumber: e.target.value })} placeholder="NASSIT-XXXXX-XXX" /></div>
                     <div><Label>Driver's License</Label><Input data-testid="input-drivers-license" value={formData.driversLicense} onChange={(e) => setFormData({ ...formData, driversLicense: e.target.value })} /></div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

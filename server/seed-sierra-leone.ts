@@ -90,7 +90,7 @@ const slCities = [
 ];
 
 const slRegions = [
-  "Western Area", "Northern", "Southern", "Eastern", "North West",
+  "Western Area Urban", "Western Area Rural", "Northern", "Southern", "Eastern", "North West",
 ];
 
 const slBanks = [
@@ -183,8 +183,6 @@ export async function seedSierraLeoneData() {
   }
 
   for (let i = 0; i < slOrgs.length; i++) {
-    if (i === 0) continue;
-    const orgSlug = slOrgs[i].slug;
     await db.insert(institutions).values({
       name: slOrgs[i].name,
       type: slOrgs[i].type,
@@ -192,7 +190,7 @@ export async function seedSierraLeoneData() {
       country: "Sierra Leone",
       contactEmail: slOrgs[i].contactEmail,
       status: "active",
-      submissionFrequency: "monthly",
+      submissionFrequency: i === 0 ? "quarterly" : "monthly",
       organizationId: orgIds[i],
     }).onConflictDoNothing();
   }

@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { formatCurrency } from "@/lib/currency";
 import { getBorrowerAvatarUrl } from "@/lib/avatar";
-import { isGhanaMode, getDefaultCurrency } from "@/lib/country-mode";
+import { isGhanaMode, isSierraLeoneMode, getDefaultCurrency } from "@/lib/country-mode";
 import { CurrencyReference } from "@/components/currency-reference";
 import type { Borrower, CreditAccount, CreditInquiry, CourtJudgment, ConsentRecord, BorrowerAlert } from "@shared/schema";
 import { GhanaCardSample, GhanaPassportSample, SampleDriversLicense } from "@/components/sample-id-cards";
@@ -404,6 +404,22 @@ export default function BorrowerDetailPage() {
                 )}
                 {(borrower as any).ssnitNumber && (
                   <InfoRow label="SSNIT Number" value={(borrower as any).ssnitNumber} />
+                )}
+                {(borrower as any).driversLicense && (
+                  <InfoRow label="Driver's License" value={(borrower as any).driversLicense} />
+                )}
+              </>
+            )}
+            {isSierraLeoneMode() && (
+              <>
+                {(borrower as any).ghanaCardNumber && (
+                  <InfoRow label="NCRA National ID" value={(borrower as any).ghanaCardNumber} />
+                )}
+                {(borrower as any).votersId && (
+                  <InfoRow label="NIN" value={(borrower as any).votersId} />
+                )}
+                {(borrower as any).ssnitNumber && (
+                  <InfoRow label="NASSIT Number" value={(borrower as any).ssnitNumber} />
                 )}
                 {(borrower as any).driversLicense && (
                   <InfoRow label="Driver's License" value={(borrower as any).driversLicense} />
