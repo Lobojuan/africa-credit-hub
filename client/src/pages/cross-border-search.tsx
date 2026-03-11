@@ -40,7 +40,7 @@ export default function CrossBorderSearchPage() {
   const [hasSearched, setHasSearched] = useState(false);
 
   const { data: agreements = [] } = useQuery<DataSharingAgreement[]>({
-    queryKey: ["/api/sata/agreements"],
+    queryKey: ["/api/sata/my-agreements"],
   });
 
   const activeAgreements = agreements.filter(a => a.status === "active");

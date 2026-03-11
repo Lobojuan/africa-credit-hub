@@ -4079,6 +4079,32 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     } catch (e: any) { res.status(500).json({ message: e.message }); }
   });
 
+  app.get("/api/sata/my-agreements", requireAuth, async (req, res) => {
+    try {
+      if (req.session?.userRole === "super_admin" || req.session?.userRole === "admin" || req.session?.userRole === "regulator") {
+        const all = await db.select().from(dataSharingAgreements).where(eq(dataSharingAgreements.status, "active"));
+        return res.json(all);
+      }
+      const userOrgId = req.session?.organizationId;
+      if (!userOrgId) return res.json([]);
+      const org = await storage.getOrganization(userOrgId);
+      if (!org) return res.json([]);
+      const orgCountry = org.country || getActiveCountryName();
+      const orgName = org.name;
+      const active = await db.select().from(dataSharingAgreements).where(
+        and(eq(dataSharingAgreements.status, "active"), or(eq(dataSharingAgreements.sourceCountry, orgCountry), eq(dataSharingAgreements.targetCountry, orgCountry)))
+      );
+      const accessible = active.filter(a => {
+        const srcInsts = a.sourceInstitutions || [];
+        const tgtInsts = a.targetInstitutions || [];
+        const isInSource = a.sourceCountry === orgCountry && (srcInsts.length === 0 || srcInsts.includes(orgName));
+        const isInTarget = a.targetCountry === orgCountry && (tgtInsts.length === 0 || tgtInsts.includes(orgName));
+        return isInSource || isInTarget;
+      });
+      res.json(accessible);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
   // Cross-border search — requires active agreement + institution check + role check
   app.get("/api/sata/cross-border-search", requireAuth, requireRole("admin", "super_admin", "regulator", "lender"), requireCrossBorderAccess, async (req, res) => {
     try {
@@ -4098,6 +4124,20 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
         )
       );
       if (activeAgreements.length === 0) return res.status(403).json({ message: `No active data sharing agreement between ${userCountry} and ${targetCountry}` });
+
+      if (req.session?.userRole !== "super_admin") {
+        const userOrgId = req.session?.organizationId;
+        const org = userOrgId ? await storage.getOrganization(userOrgId) : null;
+        const orgName = org?.name || "";
+        const institutionAllowed = activeAgreements.some(a => {
+          const srcInsts = a.sourceInstitutions || [];
+          const tgtInsts = a.targetInstitutions || [];
+          const isSource = a.sourceCountry === userCountry;
+          const relevantInsts = isSource ? srcInsts : tgtInsts;
+          return relevantInsts.length === 0 || relevantInsts.includes(orgName);
+        });
+        if (!institutionAllowed) return res.status(403).json({ message: "Your institution is not covered by any active agreement for this country pair" });
+      }
 
       const searchTerm = `%${q}%`;
       const results = await db.execute(sql`

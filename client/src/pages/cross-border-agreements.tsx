@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from "@/hooks/use-toast";
 import {
   Plus, Globe, Shield, FileText, CheckCircle2, AlertTriangle,
-  XCircle, Clock, Handshake, ArrowRight, Loader2, Trash2,
+  XCircle, Clock, Handshake, ArrowRight, Loader2, Trash2, Pencil,
 } from "lucide-react";
 import type { DataSharingAgreement } from "@shared/schema";
 
@@ -52,6 +52,8 @@ export default function CrossBorderAgreementsPage() {
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedAgreement, setSelectedAgreement] = useState<DataSharingAgreement | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [editForm, setEditForm] = useState({ legalBasis: "", description: "", effectiveDate: "", expiryDate: "", regionalBloc: "", sourceInstitutions: "", targetInstitutions: "" });
   const [form, setForm] = useState({
     sourceCountry: "", targetCountry: "", allowedDataTypes: [] as string[],
     effectiveDate: "", expiryDate: "", legalBasis: "", description: "", regionalBloc: "",
@@ -250,10 +252,10 @@ export default function CrossBorderAgreementsPage() {
       )}
 
       {selectedAgreement && (
-        <Dialog open={!!selectedAgreement} onOpenChange={() => setSelectedAgreement(null)}>
-          <DialogContent className="max-w-lg">
+        <Dialog open={!!selectedAgreement} onOpenChange={() => { setSelectedAgreement(null); setEditMode(false); }}>
+          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Agreement Details</DialogTitle>
+              <DialogTitle>{editMode ? "Edit Agreement" : "Agreement Details"}</DialogTitle>
             </DialogHeader>
             <div className="space-y-3 pt-2">
               <div className="flex items-center gap-2">
@@ -262,43 +264,96 @@ export default function CrossBorderAgreementsPage() {
                 <span className="font-semibold">{selectedAgreement.targetCountry}</span>
                 {statusBadge(selectedAgreement.status)}
               </div>
-              {selectedAgreement.description && <p className="text-sm text-muted-foreground">{selectedAgreement.description}</p>}
-              {selectedAgreement.legalBasis && <p className="text-xs"><span className="font-medium">Legal Basis:</span> {selectedAgreement.legalBasis}</p>}
-              {(selectedAgreement as any).sourceInstitutions?.length > 0 && <p className="text-xs"><span className="font-medium">Source Institutions:</span> {(selectedAgreement as any).sourceInstitutions.join(", ")}</p>}
-              {(selectedAgreement as any).targetInstitutions?.length > 0 && <p className="text-xs"><span className="font-medium">Target Institutions:</span> {(selectedAgreement as any).targetInstitutions.join(", ")}</p>}
-              {!(selectedAgreement as any).sourceInstitutions?.length && !(selectedAgreement as any).targetInstitutions?.length && <p className="text-[10px] text-muted-foreground">All institutions in both countries are covered</p>}
-              <div className="flex flex-wrap gap-1.5">
-                {selectedAgreement.allowedDataTypes.map(dt => (
-                  <Badge key={dt} variant="secondary" className="text-[10px] capitalize">{dt.replace(/_/g, " ")}</Badge>
-                ))}
-              </div>
-              <div className="flex gap-2 pt-3 flex-wrap">
-                {selectedAgreement.status === "draft" && (
-                  <Button size="sm" onClick={() => updateMutation.mutate({ id: selectedAgreement.id, status: "active" })} disabled={updateMutation.isPending} data-testid="button-activate">
-                    <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Activate
-                  </Button>
-                )}
-                {selectedAgreement.status === "active" && (
-                  <Button size="sm" variant="outline" onClick={() => updateMutation.mutate({ id: selectedAgreement.id, status: "suspended", suspendedReason: "Manual suspension" })} disabled={updateMutation.isPending} data-testid="button-suspend">
-                    <AlertTriangle className="w-3.5 h-3.5 mr-1" /> Suspend
-                  </Button>
-                )}
-                {selectedAgreement.status === "suspended" && (
-                  <Button size="sm" onClick={() => updateMutation.mutate({ id: selectedAgreement.id, status: "active" })} disabled={updateMutation.isPending} data-testid="button-reactivate">
-                    <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Reactivate
-                  </Button>
-                )}
-                {(selectedAgreement.status === "active" || selectedAgreement.status === "suspended") && (
-                  <Button size="sm" variant="outline" onClick={() => updateMutation.mutate({ id: selectedAgreement.id, status: "expired" })} disabled={updateMutation.isPending} data-testid="button-expire">
-                    <XCircle className="w-3.5 h-3.5 mr-1" /> Expire
-                  </Button>
-                )}
-                {selectedAgreement.status === "draft" && (
-                  <Button size="sm" variant="destructive" onClick={() => deleteMutation.mutate(selectedAgreement.id)} disabled={deleteMutation.isPending} data-testid="button-delete-agreement">
-                    <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
-                  </Button>
-                )}
-              </div>
+              {editMode ? (
+                <div className="space-y-3">
+                  <div><Label>Legal Basis</Label><Input value={editForm.legalBasis} onChange={e => setEditForm(f => ({ ...f, legalBasis: e.target.value }))} data-testid="input-edit-legal-basis" /></div>
+                  <div><Label>Description</Label><Input value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} data-testid="input-edit-description" /></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><Label>Effective Date</Label><Input type="date" value={editForm.effectiveDate} onChange={e => setEditForm(f => ({ ...f, effectiveDate: e.target.value }))} data-testid="input-edit-effective-date" /></div>
+                    <div><Label>Expiry Date</Label><Input type="date" value={editForm.expiryDate} onChange={e => setEditForm(f => ({ ...f, expiryDate: e.target.value }))} data-testid="input-edit-expiry-date" /></div>
+                  </div>
+                  <div>
+                    <Label>Regional Bloc</Label>
+                    <Select value={editForm.regionalBloc} onValueChange={v => setEditForm(f => ({ ...f, regionalBloc: v }))}>
+                      <SelectTrigger data-testid="select-edit-regional-bloc"><SelectValue placeholder="Select bloc" /></SelectTrigger>
+                      <SelectContent>{REGIONAL_BLOCS.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div><Label>Source Institutions</Label><Input value={editForm.sourceInstitutions} onChange={e => setEditForm(f => ({ ...f, sourceInstitutions: e.target.value }))} placeholder="Comma-separated (empty = all)" data-testid="input-edit-source-institutions" /></div>
+                  <div><Label>Target Institutions</Label><Input value={editForm.targetInstitutions} onChange={e => setEditForm(f => ({ ...f, targetInstitutions: e.target.value }))} placeholder="Comma-separated (empty = all)" data-testid="input-edit-target-institutions" /></div>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={() => {
+                      updateMutation.mutate({
+                        id: selectedAgreement.id,
+                        legalBasis: editForm.legalBasis,
+                        description: editForm.description,
+                        effectiveDate: editForm.effectiveDate,
+                        expiryDate: editForm.expiryDate,
+                        regionalBloc: editForm.regionalBloc,
+                        sourceInstitutions: editForm.sourceInstitutions ? editForm.sourceInstitutions.split(",").map(s => s.trim()).filter(Boolean) : [],
+                        targetInstitutions: editForm.targetInstitutions ? editForm.targetInstitutions.split(",").map(s => s.trim()).filter(Boolean) : [],
+                      });
+                      setEditMode(false);
+                    }} disabled={updateMutation.isPending} data-testid="button-save-edit">Save Changes</Button>
+                    <Button size="sm" variant="outline" onClick={() => setEditMode(false)} data-testid="button-cancel-edit">Cancel</Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {selectedAgreement.description && <p className="text-sm text-muted-foreground">{selectedAgreement.description}</p>}
+                  {selectedAgreement.legalBasis && <p className="text-xs"><span className="font-medium">Legal Basis:</span> {selectedAgreement.legalBasis}</p>}
+                  {(selectedAgreement as any).sourceInstitutions?.length > 0 && <p className="text-xs"><span className="font-medium">Source Institutions:</span> {(selectedAgreement as any).sourceInstitutions.join(", ")}</p>}
+                  {(selectedAgreement as any).targetInstitutions?.length > 0 && <p className="text-xs"><span className="font-medium">Target Institutions:</span> {(selectedAgreement as any).targetInstitutions.join(", ")}</p>}
+                  {!(selectedAgreement as any).sourceInstitutions?.length && !(selectedAgreement as any).targetInstitutions?.length && <p className="text-[10px] text-muted-foreground">All institutions in both countries are covered</p>}
+                  {selectedAgreement.effectiveDate && <p className="text-xs"><span className="font-medium">Effective:</span> {selectedAgreement.effectiveDate} {selectedAgreement.expiryDate ? `- ${selectedAgreement.expiryDate}` : ""}</p>}
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedAgreement.allowedDataTypes.map(dt => (
+                      <Badge key={dt} variant="secondary" className="text-[10px] capitalize">{dt.replace(/_/g, " ")}</Badge>
+                    ))}
+                  </div>
+                  <div className="flex gap-2 pt-3 flex-wrap">
+                    <Button size="sm" variant="outline" onClick={() => {
+                      setEditMode(true);
+                      setEditForm({
+                        legalBasis: selectedAgreement.legalBasis || "",
+                        description: selectedAgreement.description || "",
+                        effectiveDate: selectedAgreement.effectiveDate || "",
+                        expiryDate: selectedAgreement.expiryDate || "",
+                        regionalBloc: selectedAgreement.regionalBloc || "",
+                        sourceInstitutions: ((selectedAgreement as any).sourceInstitutions || []).join(", "),
+                        targetInstitutions: ((selectedAgreement as any).targetInstitutions || []).join(", "),
+                      });
+                    }} data-testid="button-edit-agreement">
+                      <Pencil className="w-3.5 h-3.5 mr-1" /> Edit
+                    </Button>
+                    {selectedAgreement.status === "draft" && (
+                      <Button size="sm" onClick={() => updateMutation.mutate({ id: selectedAgreement.id, status: "active" })} disabled={updateMutation.isPending} data-testid="button-activate">
+                        <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Activate
+                      </Button>
+                    )}
+                    {selectedAgreement.status === "active" && (
+                      <Button size="sm" variant="outline" onClick={() => updateMutation.mutate({ id: selectedAgreement.id, status: "suspended", suspendedReason: "Manual suspension" })} disabled={updateMutation.isPending} data-testid="button-suspend">
+                        <AlertTriangle className="w-3.5 h-3.5 mr-1" /> Suspend
+                      </Button>
+                    )}
+                    {selectedAgreement.status === "suspended" && (
+                      <Button size="sm" onClick={() => updateMutation.mutate({ id: selectedAgreement.id, status: "active" })} disabled={updateMutation.isPending} data-testid="button-reactivate">
+                        <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Reactivate
+                      </Button>
+                    )}
+                    {(selectedAgreement.status === "active" || selectedAgreement.status === "suspended") && (
+                      <Button size="sm" variant="outline" onClick={() => updateMutation.mutate({ id: selectedAgreement.id, status: "expired" })} disabled={updateMutation.isPending} data-testid="button-expire">
+                        <XCircle className="w-3.5 h-3.5 mr-1" /> Expire
+                      </Button>
+                    )}
+                    {selectedAgreement.status === "draft" && (
+                      <Button size="sm" variant="destructive" onClick={() => deleteMutation.mutate(selectedAgreement.id)} disabled={deleteMutation.isPending} data-testid="button-delete-agreement">
+                        <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
+                      </Button>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </DialogContent>
         </Dialog>

@@ -49,6 +49,9 @@ export default function PapssSettlementsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
   const [countryFilter, setCountryFilter] = useState("all");
+  const [institutionFilter, setInstitutionFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [selectedSettlement, setSelectedSettlement] = useState<PapssSettlement | null>(null);
   const [form, setForm] = useState({
     senderInstitution: "", senderCountry: "", receiverInstitution: "", receiverCountry: "",
@@ -102,6 +105,9 @@ export default function PapssSettlementsPage() {
   const filtered = settlements.filter(s => {
     if (statusFilter !== "all" && s.status !== statusFilter) return false;
     if (countryFilter !== "all" && s.senderCountry !== countryFilter && s.receiverCountry !== countryFilter) return false;
+    if (institutionFilter && !s.senderInstitution.toLowerCase().includes(institutionFilter.toLowerCase()) && !s.receiverInstitution.toLowerCase().includes(institutionFilter.toLowerCase())) return false;
+    if (dateFrom && s.createdAt && new Date(s.createdAt) < new Date(dateFrom)) return false;
+    if (dateTo && s.createdAt && new Date(s.createdAt) > new Date(dateTo + "T23:59:59")) return false;
     return true;
   });
 
@@ -213,7 +219,7 @@ export default function PapssSettlementsPage() {
         <Card><CardContent className="p-4 text-center"><p className="text-2xl font-bold text-primary" data-testid="stat-volume">{completedTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p><p className="text-xs text-muted-foreground">Total Volume</p></CardContent></Card>
       </div>
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-3 items-end">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-[160px]" data-testid="filter-status"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>
@@ -231,6 +237,18 @@ export default function PapssSettlementsPage() {
             {SUPPORTED_COUNTRIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
           </SelectContent>
         </Select>
+        <div>
+          <Label className="text-xs text-muted-foreground">Institution</Label>
+          <Input value={institutionFilter} onChange={e => setInstitutionFilter(e.target.value)} placeholder="Filter by institution..." className="w-[180px] h-9" data-testid="filter-institution" />
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">From</Label>
+          <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-[140px] h-9" data-testid="filter-date-from" />
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">To</Label>
+          <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-[140px] h-9" data-testid="filter-date-to" />
+        </div>
       </div>
 
       {isLoading ? (
