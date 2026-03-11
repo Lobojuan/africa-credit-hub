@@ -1,12 +1,13 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
-import createMemoryStore from "memorystore";
+import pgSession from "connect-pg-simple";
 import compression from "compression";
 import helmet from "helmet";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { readFileSync, readdirSync, readlinkSync, writeFileSync, appendFileSync } from "fs";
+import { pool } from "./db";
 
 const port = parseInt(process.env.PORT || "5000", 10);
 
@@ -116,11 +117,14 @@ app.use(
 
 app.use(express.urlencoded({ extended: false }));
 
-const MemoryStore = createMemoryStore(session);
+const PgStore = pgSession(session);
 app.use(
   session({
-    store: new MemoryStore({
-      checkPeriod: 86400000,
+    store: new PgStore({
+      pool: pool,
+      tableName: "user_sessions",
+      createTableIfMissing: true,
+      pruneSessionInterval: 300,
     }),
     secret: process.env.SESSION_SECRET!,
     resave: false,
@@ -292,6 +296,13 @@ process.stderr.write = function (...args: any[]) {
     }
   } catch (e: any) {
     console.error('Stripe initialization error (non-fatal):', e.message);
+  }
+
+  try {
+    const { createPerformanceIndexes } = await import("./migrate-indexes");
+    await createPerformanceIndexes();
+  } catch (e) {
+    console.error("Index migration error (non-fatal):", e);
   }
 
   await registerRoutes(httpServer, app);

@@ -2,8 +2,9 @@ import express from "express";
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { sql, eq, and, or, desc } from "drizzle-orm";
+import { enqueueBatchAccountCreate, enqueueBatchBorrowerUpdate, getJobStatus, getQueueStats } from "./batch-queue";
 import {
   insertBorrowerSchema, insertCreditAccountSchema, insertCreditInquirySchema,
   insertUserSchema, insertPendingApprovalSchema, insertDisputeSchema,
@@ -42,8 +43,26 @@ const loginLimiter = rateLimit({
 const apiLimiter = rateLimit({
   validate: { trustProxy: false },
   windowMs: 60 * 1000,
-  max: 100,
+  max: 200,
   message: { message: "Too many requests. Please slow down." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const writeLimiter = rateLimit({
+  validate: { trustProxy: false },
+  windowMs: 60 * 1000,
+  max: 60,
+  message: { message: "Too many write requests. Please slow down." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const batchLimiter = rateLimit({
+  validate: { trustProxy: false },
+  windowMs: 60 * 1000,
+  max: 10,
+  message: { message: "Too many batch operations. Please wait before submitting more." },
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -222,14 +241,31 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
 
-  app.use("/api", (req, _res, next) => {
+  app.use("/api", apiLimiter, (req, _res, next) => {
     const route = req.method + " " + req.path;
     trackApiUsage(route);
     next();
   });
 
   app.get("/api/health", (_req, res) => {
-    res.json({ status: "ok" });
+    const mem = process.memoryUsage();
+    const queueStats = getQueueStats();
+    res.json({
+      status: "ok",
+      uptime: Math.round(process.uptime()),
+      memory: {
+        rss: Math.round(mem.rss / 1024 / 1024),
+        heapUsed: Math.round(mem.heapUsed / 1024 / 1024),
+        heapTotal: Math.round(mem.heapTotal / 1024 / 1024),
+      },
+      pool: {
+        total: pool.totalCount,
+        idle: pool.idleCount,
+        waiting: pool.waitingCount,
+      },
+      queue: queueStats,
+      timestamp: new Date().toISOString(),
+    });
   });
 
   app.post("/api/auth/login", loginLimiter, async (req, res) => {
@@ -1305,7 +1341,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/batch-upload/credit-accounts", requireRole("admin", "lender"), async (req, res) => {
+  app.post("/api/batch-upload/credit-accounts", batchLimiter, requireRole("admin", "lender"), async (req, res) => {
     try {
       const { records } = req.body;
       if (!Array.isArray(records)) {
@@ -1319,17 +1355,32 @@ export async function registerRoutes(
         errors: [],
       };
 
+      const validated: Array<{ index: number; data: any }> = [];
       for (let i = 0; i < records.length; i++) {
         try {
           const parsed = insertCreditAccountSchema.parse(records[i]);
-          await storage.createCreditAccount(parsed);
-          results.successCount++;
+          validated.push({ index: i, data: parsed });
         } catch (err: any) {
           results.errorCount++;
-          results.errors.push({
-            index: i,
-            message: err.message || "Validation failed",
-          });
+          results.errors.push({ index: i, message: err.message || "Validation failed" });
+        }
+      }
+
+      const CHUNK = 250;
+      for (let c = 0; c < validated.length; c += CHUNK) {
+        const chunk = validated.slice(c, c + CHUNK);
+        try {
+          for (const item of chunk) {
+            await storage.createCreditAccount(item.data);
+            results.successCount++;
+          }
+        } catch (err: any) {
+          for (const item of chunk) {
+            if (results.successCount + results.errorCount < results.totalSubmitted) {
+              results.errorCount++;
+              results.errors.push({ index: item.index, message: err.message || "Insert failed" });
+            }
+          }
         }
       }
 
@@ -1345,7 +1396,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/batch-upload/xbrl", requireRole("admin", "lender"), async (req, res) => {
+  app.post("/api/batch-upload/xbrl", batchLimiter, requireRole("admin", "lender"), async (req, res) => {
     try {
       const { xml: xmlContent } = req.body;
       if (!xmlContent || typeof xmlContent !== "string") {
@@ -1382,14 +1433,20 @@ export async function registerRoutes(
       }
 
       const results = { totalSubmitted: records.length, successCount: 0, errorCount: 0, errors: [] as Array<{ index: number; message: string }> };
+      const validated: Array<{ index: number; data: any }> = [];
       for (let i = 0; i < records.length; i++) {
         try {
-          const parsed = insertCreditAccountSchema.parse(records[i]);
-          await storage.createCreditAccount(parsed);
-          results.successCount++;
+          validated.push({ index: i, data: insertCreditAccountSchema.parse(records[i]) });
         } catch (err: any) {
           results.errorCount++;
           results.errors.push({ index: i, message: err.message || "Validation failed" });
+        }
+      }
+      for (let c = 0; c < validated.length; c += 250) {
+        const chunk = validated.slice(c, c + 250);
+        for (const item of chunk) {
+          try { await storage.createCreditAccount(item.data); results.successCount++; }
+          catch (err: any) { results.errorCount++; results.errors.push({ index: item.index, message: err.message }); }
         }
       }
 
@@ -1405,7 +1462,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/batch-upload/bog-pipe", requireRole("admin", "lender"), async (req, res) => {
+  app.post("/api/batch-upload/bog-pipe", batchLimiter, requireRole("admin", "lender"), async (req, res) => {
     try {
       const { data: pipeData } = req.body;
       if (!pipeData || typeof pipeData !== "string") {
@@ -1489,14 +1546,20 @@ export async function registerRoutes(
         errors: [] as Array<{ index: number; message: string }>,
       };
 
+      const validated: Array<{ index: number; data: any }> = [];
       for (let i = 0; i < records.length; i++) {
         try {
-          const parsed = insertCreditAccountSchema.parse(records[i]);
-          await storage.createCreditAccount(parsed);
-          results.successCount++;
+          validated.push({ index: i, data: insertCreditAccountSchema.parse(records[i]) });
         } catch (err: any) {
           results.errorCount++;
           results.errors.push({ index: i, message: err.message || "Validation failed" });
+        }
+      }
+      for (let c = 0; c < validated.length; c += 250) {
+        const chunk = validated.slice(c, c + 250);
+        for (const item of chunk) {
+          try { await storage.createCreditAccount(item.data); results.successCount++; }
+          catch (err: any) { results.errorCount++; results.errors.push({ index: item.index, message: err.message }); }
         }
       }
 
@@ -1512,7 +1575,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/batch-upload/csv", requireRole("admin", "lender"), async (req, res) => {
+  app.post("/api/batch-upload/csv", batchLimiter, requireRole("admin", "lender"), async (req, res) => {
     try {
       const { csvData } = req.body;
       if (!csvData || typeof csvData !== "string") {
@@ -1567,14 +1630,20 @@ export async function registerRoutes(
         errors: [] as Array<{ index: number; message: string }>,
       };
 
+      const validated: Array<{ index: number; data: any }> = [];
       for (let i = 0; i < records.length; i++) {
         try {
-          const parsed = insertCreditAccountSchema.parse(records[i]);
-          await storage.createCreditAccount(parsed);
-          results.successCount++;
+          validated.push({ index: i, data: insertCreditAccountSchema.parse(records[i]) });
         } catch (err: any) {
           results.errorCount++;
           results.errors.push({ index: i, message: err.message || "Validation failed" });
+        }
+      }
+      for (let c = 0; c < validated.length; c += 250) {
+        const chunk = validated.slice(c, c + 250);
+        for (const item of chunk) {
+          try { await storage.createCreditAccount(item.data); results.successCount++; }
+          catch (err: any) { results.errorCount++; results.errors.push({ index: item.index, message: err.message }); }
         }
       }
 
@@ -1620,6 +1689,63 @@ export async function registerRoutes(
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
+  });
+
+  app.post("/api/batch/accounts", batchLimiter, requireAuth, requireRole("admin", "lender"), async (req, res) => {
+    try {
+      const { records } = req.body;
+      if (!Array.isArray(records) || records.length === 0) {
+        return res.status(400).json({ message: "Request body must contain a non-empty 'records' array" });
+      }
+      if (records.length > 1000) {
+        return res.status(400).json({ message: "Maximum 1,000 records per batch. Split into multiple requests." });
+      }
+      const jobId = await enqueueBatchAccountCreate(records, req.session?.userId || null);
+      await storage.createAuditLog({
+        action: "BATCH_QUEUE_ACCOUNTS", entity: "credit_account", userId: req.session?.userId,
+        details: `Queued batch account create: ${records.length} records (job: ${jobId})`,
+        ipAddress: req.ip || null,
+      });
+      res.json({ jobId, totalRecords: records.length, status: "queued" });
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/batch/borrowers", batchLimiter, requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const { updates } = req.body;
+      if (!Array.isArray(updates) || updates.length === 0) {
+        return res.status(400).json({ message: "Request body must contain a non-empty 'updates' array of { id, fields }" });
+      }
+      if (updates.length > 1000) {
+        return res.status(400).json({ message: "Maximum 1,000 updates per batch. Split into multiple requests." });
+      }
+      for (const u of updates) {
+        if (!u.id || !u.fields || typeof u.fields !== "object") {
+          return res.status(400).json({ message: "Each update must have 'id' (string) and 'fields' (object)" });
+        }
+      }
+      const jobId = await enqueueBatchBorrowerUpdate(updates, req.session?.userId || null);
+      await storage.createAuditLog({
+        action: "BATCH_QUEUE_BORROWERS", entity: "borrower", userId: req.session?.userId,
+        details: `Queued batch borrower update: ${updates.length} records (job: ${jobId})`,
+        ipAddress: req.ip || null,
+      });
+      res.json({ jobId, totalRecords: updates.length, status: "queued" });
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/batch/jobs/:jobId", requireAuth, async (req, res) => {
+    const job = getJobStatus(req.params.jobId);
+    if (!job) return res.status(404).json({ message: "Job not found" });
+    res.json(job);
+  });
+
+  app.get("/api/batch/queue-stats", requireAuth, requireRole("admin", "super_admin"), (_req, res) => {
+    res.json(getQueueStats());
   });
 
   app.get("/api/batch-upload/template/:format", (_req, res) => {

@@ -24,8 +24,12 @@ The system employs a modern full-stack architecture built for scalability and co
 **Technical Implementations & Feature Specifications:**
 -   **Backend**: Express.js API server.
 -   **Database**: PostgreSQL hosted on Neon, managed with Drizzle ORM.
--   **Authentication**: Session-based with bcryptjs, including 3-attempt lockout, session timeouts, IP tracking, strong password policies, 90-day expiry, and TOTP MFA.
+-   **Authentication**: Session-based with bcryptjs, sessions stored in PostgreSQL (connect-pg-simple, table: `user_sessions`), including 3-attempt lockout, session timeouts, IP tracking, strong password policies, 90-day expiry, and TOTP MFA.
 -   **Data Model**: 19 core tables for comprehensive credit and operational data, including `dishonoured_cheques` for compliance.
+-   **Connection Pool**: PostgreSQL pool sized at 20 max / 2 min connections with keepalive, statement timeout (30s), and connection timeout (5s). Pool stats available via `/api/health`.
+-   **Batch Processing**: In-process async job queue (`server/batch-queue.ts`) for high-volume operations. Endpoints: `POST /api/batch/accounts` (up to 1,000 records), `POST /api/batch/borrowers` (up to 1,000 updates), `GET /api/batch/jobs/:jobId` (status polling), `GET /api/batch/queue-stats`. Chunked transactions (250 rows per chunk).
+-   **API Rate Limiting**: express-rate-limit with tiered limits — auth: 15/15min, global reads: 200/min, writes: 60/min, batch operations: 10/min. Memory-stored (single-process Replit).
+-   **Database Indexes**: 17 performance indexes on high-query columns (borrowers, credit_accounts, audit_logs, data_sharing_agreements, disputes, consent_records, notifications). Created via `server/migrate-indexes.ts` on startup.
 -   **Core Capabilities**:
     -   **Credit Management**: Borrower and credit account management, multi-currency support, collateral, and arrears tracking.
     -   **Credit Scoring**: Algorithmic scoring (300-850) with reason codes, reports, and transparency section.
