@@ -19,7 +19,7 @@ import { LogOut, Loader2, MessageCircle, Building2 } from "lucide-react";
 import { DisputeChatbot } from "@/components/dispute-chatbot";
 import { OrgSwitcherProvider } from "@/hooks/use-org-switcher";
 import { OrgSwitcher } from "@/components/org-switcher";
-import { CountryThemeProvider } from "@/components/country-theme-provider";
+import { CountryThemeProvider, useCountryTheme } from "@/components/country-theme-provider";
 import { CountrySelector } from "@/components/country-selector";
 
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,6 +28,7 @@ import LoginPage from "@/pages/login";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import InvestorLandingPage from "@/pages/investor-landing";
+import CountrySelectionPage from "@/pages/country-selection";
 const MobileSearchPage = lazy(() => import("@/pages/mobile-search"));
 
 const BorrowersPage = lazy(() => import("@/pages/borrowers"));
@@ -155,6 +156,7 @@ function AuthenticatedApp() {
   const { user, isLoading, logout, passwordExpired, accountSuspended } = useAuth();
   const [chatbotOpen, setChatbotOpen] = useState(false);
   const { t, i18n } = useTranslation();
+  const countryTheme = useCountryTheme();
 
   useEffect(() => {
     document.documentElement.dir = i18n.language === "ar" ? "rtl" : "ltr";
@@ -184,6 +186,12 @@ function AuthenticatedApp() {
 
   if (accountSuspended) {
     return <SuspendedScreen orgName={(user as any)?.organization?.name} onLogout={logout} />;
+  }
+
+  const viewingCountry = (user as any)?.viewingCountry;
+  const needsCountrySelection = user.role === "super_admin" && !viewingCountry;
+  if (needsCountrySelection) {
+    return <CountrySelectionPage />;
   }
 
   const style = {

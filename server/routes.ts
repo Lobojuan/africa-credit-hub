@@ -258,7 +258,13 @@ export async function registerRoutes(
         organization = await storage.getOrganization(user.organizationId);
       }
 
-      res.json({ ...stripPassword(user), passwordExpired, organization });
+      let viewingCountry: string | null = null;
+      if (user.role === "super_admin") {
+        viewingCountry = null;
+      } else {
+        viewingCountry = getActiveCountryName() || null;
+      }
+      res.json({ ...stripPassword(user), passwordExpired, organization, viewingCountry });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
@@ -480,7 +486,12 @@ export async function registerRoutes(
       organization = await storage.getOrganization(user.organizationId);
     }
 
-    const viewingCountry = req.session.viewingCountry || getActiveCountryName() || null;
+    let viewingCountry: string | null = null;
+    if (user.role === "super_admin") {
+      viewingCountry = req.session.viewingCountry || null;
+    } else {
+      viewingCountry = getActiveCountryName() || null;
+    }
     res.json({ ...userData, passwordExpired, organization, viewingCountry });
   });
 
