@@ -3318,8 +3318,8 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
         accountCounts[row.organization_id as string] = Number(row.count);
       }
 
-      let totalBorrowersAll = 0;
-      let totalAccountsAll = 0;
+      let totalBorrowersAll = Object.values(borrowerCounts).reduce((a, b) => a + b, 0);
+      let totalAccountsAll = Object.values(accountCounts).reduce((a, b) => a + b, 0);
 
       const countryDetails = supportedCountries.map((sc) => {
         const info = countryMap[sc.name] || { orgs: 0, activeOrgs: 0, orgIds: [] };
@@ -3329,9 +3329,6 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
           borrowerCount += borrowerCounts[orgId] || 0;
           accountCount += accountCounts[orgId] || 0;
         }
-        totalBorrowersAll += borrowerCount;
-        totalAccountsAll += accountCount;
-
         const hasData = borrowerCount > 0 || info.orgs > 0;
         const features: string[] = [];
         if (sc.name === "Ghana") features.push("BoG CRB v1.1 Export");
