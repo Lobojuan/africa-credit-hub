@@ -3934,14 +3934,14 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
   });
 
   // ── SATA Data Sharing Agreements ──
-  app.get("/api/sata/agreements", requireAuth, async (_req, res) => {
+  app.get("/api/sata/agreements", requireAuth, requireRole("admin", "super_admin", "regulator"), async (_req, res) => {
     try {
       const rows = await db.select().from(dataSharingAgreements).orderBy(desc(dataSharingAgreements.createdAt));
       res.json(rows);
     } catch (e: any) { res.status(500).json({ message: e.message }); }
   });
 
-  app.get("/api/sata/agreements/:id", requireAuth, async (req, res) => {
+  app.get("/api/sata/agreements/:id", requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
     try {
       const [row] = await db.select().from(dataSharingAgreements).where(eq(dataSharingAgreements.id, req.params.id));
       if (!row) return res.status(404).json({ message: "Agreement not found" });
@@ -3981,7 +3981,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     } catch (e: any) { res.status(500).json({ message: e.message }); }
   });
 
-  app.get("/api/sata/agreements/country/:country", requireAuth, async (req, res) => {
+  app.get("/api/sata/agreements/country/:country", requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
     try {
       const country = req.params.country;
       const rows = await db.select().from(dataSharingAgreements).where(
@@ -3994,8 +3994,8 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     } catch (e: any) { res.status(500).json({ message: e.message }); }
   });
 
-  // Cross-border search — requires active agreement
-  app.get("/api/sata/cross-border-search", requireAuth, async (req, res) => {
+  // Cross-border search — requires active agreement + role check
+  app.get("/api/sata/cross-border-search", requireAuth, requireRole("admin", "super_admin", "regulator", "lender"), async (req, res) => {
     try {
       const { q, targetCountry } = req.query;
       if (!q || !targetCountry) return res.status(400).json({ message: "Query (q) and targetCountry are required" });
@@ -4037,8 +4037,8 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     } catch (e: any) { res.status(500).json({ message: e.message }); }
   });
 
-  // SATA compliance stats
-  app.get("/api/sata/stats", requireAuth, async (_req, res) => {
+  // SATA compliance stats — admin/super_admin/regulator only
+  app.get("/api/sata/stats", requireAuth, requireRole("admin", "super_admin", "regulator"), async (_req, res) => {
     try {
       const allAgreements = await db.select().from(dataSharingAgreements);
       const activeCount = allAgreements.filter(a => a.status === "active").length;
@@ -4059,16 +4059,31 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
       const completedSettlements = settlements.filter(s => s.status === "completed");
       const totalVolume = completedSettlements.reduce((acc, s) => acc + parseFloat(s.senderAmount || "0"), 0);
 
+      const consentRecordsResult = await db.execute(sql`SELECT COUNT(*) as count FROM consent_records WHERE status = 'active'`);
+      const activeConsents = parseInt((consentRecordsResult.rows?.[0] as any)?.count || "0");
+
+      const consentByAgreement = allAgreements.filter(a => a.status === "active").map(a => {
+        const hasConsentDataType = a.allowedDataTypes.includes("consent_records");
+        return {
+          id: a.id,
+          sourceCountry: a.sourceCountry,
+          targetCountry: a.targetCountry,
+          consentDataSharing: hasConsentDataType,
+          legalBasis: a.legalBasis || "Not specified",
+        };
+      });
+
       res.json({
         agreements: { total: allAgreements.length, active: activeCount, draft: draftCount, suspended: suspendedCount, expired: expiredCount },
         coverage: { countriesConnected: countriesInAgreements.size, regionalBlocs: Array.from(blocsSet) },
         settlements: { total: settlements.length, completed: completedSettlements.length, totalVolumeUsd: totalVolume },
+        consent: { activeConsents, agreementConsentStatus: consentByAgreement },
       });
     } catch (e: any) { res.status(500).json({ message: e.message }); }
   });
 
   // ── PAPSS Settlements ──
-  app.get("/api/papss/settlements", requireAuth, async (req, res) => {
+  app.get("/api/papss/settlements", requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
     try {
       const { status, country, limit: lim } = req.query;
       let query = db.select().from(papssSettlements).orderBy(desc(papssSettlements.createdAt));
@@ -4081,7 +4096,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     } catch (e: any) { res.status(500).json({ message: e.message }); }
   });
 
-  app.get("/api/papss/settlements/:id", requireAuth, async (req, res) => {
+  app.get("/api/papss/settlements/:id", requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
     try {
       const [row] = await db.select().from(papssSettlements).where(eq(papssSettlements.id, req.params.id));
       if (!row) return res.status(404).json({ message: "Settlement not found" });

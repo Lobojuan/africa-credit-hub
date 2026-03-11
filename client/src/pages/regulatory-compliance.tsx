@@ -861,6 +861,7 @@ function SataComplianceTab() {
     agreements: { total: number; active: number; draft: number; suspended: number; expired: number };
     coverage: { countriesConnected: number; regionalBlocs: string[] };
     settlements: { total: number; completed: number; totalVolumeUsd: number };
+    consent: { activeConsents: number; agreementConsentStatus: { id: string; sourceCountry: string; targetCountry: string; consentDataSharing: boolean; legalBasis: string }[] };
   }>({ queryKey: ["/api/sata/stats"] });
 
   if (isLoading) {
@@ -948,6 +949,42 @@ function SataComplianceTab() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2"><Lock className="w-4 h-4 text-primary" /> Consent Status per Agreement</CardTitle>
+          <CardDescription className="text-xs">Active consent records across the platform and consent data sharing status per agreement</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border">
+            <Users className="w-5 h-5 text-primary shrink-0" />
+            <div>
+              <p className="text-sm font-semibold" data-testid="sata-active-consents">{s?.consent?.activeConsents || 0} Active Consent Records</p>
+              <p className="text-[10px] text-muted-foreground">Total valid consent records across all jurisdictions</p>
+            </div>
+          </div>
+          {(s?.consent?.agreementConsentStatus || []).length > 0 ? (
+            <div className="space-y-2">
+              {s?.consent.agreementConsentStatus.map(a => (
+                <div key={a.id} className="flex items-center justify-between p-2.5 rounded-lg border bg-background">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Globe className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <span className="text-xs font-medium truncate">{a.sourceCountry} — {a.targetCountry}</span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge variant="secondary" className={`text-[10px] ${a.consentDataSharing ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" : "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300"}`}>
+                      {a.consentDataSharing ? "Consent Sharing Enabled" : "Consent Not Shared"}
+                    </Badge>
+                    <span className="text-[9px] text-muted-foreground max-w-[120px] truncate" title={a.legalBasis}>{a.legalBasis}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">No active agreements to show consent status for.</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
