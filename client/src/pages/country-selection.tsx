@@ -392,7 +392,12 @@ export default function CountrySelectionPage() {
                     <tbody>
                       {countries.map((c) => {
                         const detail = countryDetails.find((d) => d.code === c.code);
-                        const exportType = c.code === "GH" ? "BoG CRB v1.1" : c.code === "SL" ? "BSL Export" : "Standard";
+                        const features = detail?.features || [];
+                        const hasScoring = features.includes("Credit Scoring");
+                        const hasDisputes = features.includes("Dispute Management");
+                        const hasConsent = features.includes("Consent Tracking");
+                        const bogExport = features.find((f) => f.includes("BoG") || f.includes("BSL"));
+                        const exportLabel = bogExport || "Standard";
                         return (
                           <tr key={c.code} className="border-b border-slate-700/20 hover:bg-slate-700/20">
                             <td className="p-3 sticky left-0 bg-slate-800/90">
@@ -401,14 +406,20 @@ export default function CountrySelectionPage() {
                                 <span className="text-slate-300 font-medium">{c.name}</span>
                               </div>
                             </td>
-                            <td className="text-center p-3"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mx-auto" /></td>
                             <td className="text-center p-3">
-                              <span className={`text-[10px] font-medium ${exportType !== "Standard" ? "text-emerald-400" : "text-slate-400"}`}>
-                                {exportType}
+                              {hasScoring ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mx-auto" /> : <AlertTriangle className="w-3.5 h-3.5 text-amber-400 mx-auto" />}
+                            </td>
+                            <td className="text-center p-3">
+                              <span className={`text-[10px] font-medium ${bogExport ? "text-emerald-400" : "text-slate-400"}`}>
+                                {exportLabel}
                               </span>
                             </td>
-                            <td className="text-center p-3"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mx-auto" /></td>
-                            <td className="text-center p-3"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mx-auto" /></td>
+                            <td className="text-center p-3">
+                              {hasDisputes ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mx-auto" /> : <AlertTriangle className="w-3.5 h-3.5 text-amber-400 mx-auto" />}
+                            </td>
+                            <td className="text-center p-3">
+                              {hasConsent ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mx-auto" /> : <AlertTriangle className="w-3.5 h-3.5 text-amber-400 mx-auto" />}
+                            </td>
                             <td className="text-center p-3"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mx-auto" /></td>
                             <td className="text-center p-3"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mx-auto" /></td>
                             <td className="text-center p-3">
