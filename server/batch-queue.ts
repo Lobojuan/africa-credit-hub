@@ -283,7 +283,7 @@ export async function enqueueBatchBorrowerUpdate(
 }
 
 export async function enqueueBatchAccountUpdate(
-  updates: Array<{ id: number; fields: Record<string, any> }>,
+  updates: Array<{ id: string; fields: Record<string, any> }>,
   userId: string | null
 ): Promise<string> {
   const jobId = generateJobId();
@@ -314,7 +314,7 @@ export async function enqueueBatchAccountUpdate(
 
       for (let chunkStart = 0; chunkStart < updates.length; chunkStart += CHUNK_SIZE) {
         const chunk = updates.slice(chunkStart, chunkStart + CHUNK_SIZE);
-        const validUpdates: Array<{ globalIdx: number; id: number; fields: Record<string, any> }> = [];
+        const validUpdates: Array<{ globalIdx: number; id: string; fields: Record<string, any> }> = [];
 
         for (let i = 0; i < chunk.length; i++) {
           const globalIdx = chunkStart + i;

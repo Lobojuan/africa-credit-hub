@@ -1746,7 +1746,7 @@ export async function registerRoutes(
       }
       for (const u of updates) {
         if (!u.id || !u.fields || typeof u.fields !== "object") {
-          return res.status(400).json({ message: "Each update must have 'id' (number) and 'fields' (object)" });
+          return res.status(400).json({ message: "Each update must have 'id' (string UUID) and 'fields' (object)" });
         }
       }
       const jobId = await enqueueBatchAccountUpdate(updates, req.session?.userId || null);
