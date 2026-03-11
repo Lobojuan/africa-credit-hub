@@ -188,46 +188,200 @@ export async function enqueueBatchBorrowerUpdate(
     await waitForSlot();
     try {
       job.status = "processing";
+      const ALLOWED_BORROWER_FIELDS = new Set([
+        "firstName", "lastName", "middleName", "dateOfBirth", "gender",
+        "nationalId", "phone", "email", "address", "employerName",
+        "monthlyIncome", "status",
+      ]);
+
       for (let chunkStart = 0; chunkStart < updates.length; chunkStart += CHUNK_SIZE) {
         const chunk = updates.slice(chunkStart, chunkStart + CHUNK_SIZE);
+        const validUpdates: Array<{ globalIdx: number; id: string; fields: Record<string, any> }> = [];
+
+        for (let i = 0; i < chunk.length; i++) {
+          const globalIdx = chunkStart + i;
+          const { id, fields } = chunk[i];
+          if (!id || !fields || Object.keys(fields).length === 0) {
+            job.errorCount++;
+            job.errors.push({ index: globalIdx, message: "Missing id or fields" });
+            job.processedRecords++;
+            continue;
+          }
+          const filtered: Record<string, any> = {};
+          for (const [key, val] of Object.entries(fields)) {
+            if (ALLOWED_BORROWER_FIELDS.has(key)) filtered[key] = val;
+          }
+          if (Object.keys(filtered).length === 0) {
+            job.errorCount++;
+            job.errors.push({ index: globalIdx, message: "No valid fields to update" });
+            job.processedRecords++;
+            continue;
+          }
+          validUpdates.push({ globalIdx, id, fields: filtered });
+        }
+
+        if (validUpdates.length === 0) continue;
+
         const client = await pool.connect();
         try {
           await client.query("BEGIN");
-          for (let i = 0; i < chunk.length; i++) {
-            const globalIdx = chunkStart + i;
-            const { id, fields } = chunk[i];
-            if (!id || !fields || Object.keys(fields).length === 0) {
-              job.errorCount++;
-              job.errors.push({ index: globalIdx, message: "Missing id or fields" });
-              job.processedRecords++;
-              continue;
+
+          const fieldNames = [...new Set(validUpdates.flatMap(u => Object.keys(u.fields)))];
+          const ids = validUpdates.map(u => u.id);
+
+          const setClauses: string[] = [];
+          const allValues: any[] = [];
+          let paramIdx = 1;
+
+          for (const field of fieldNames) {
+            const snakeField = field.replace(/[A-Z]/g, (m) => `_${m.toLowerCase()}`);
+            const caseParts: string[] = [];
+            for (const upd of validUpdates) {
+              if (field in upd.fields) {
+                caseParts.push(`WHEN id = $${paramIdx++} THEN $${paramIdx++}`);
+                allValues.push(upd.id, upd.fields[field]);
+              }
             }
-            const setClauses: string[] = [];
-            const vals: any[] = [];
-            let pIdx = 1;
-            for (const [key, val] of Object.entries(fields)) {
-              const snakeKey = key.replace(/[A-Z]/g, (m) => `_${m.toLowerCase()}`);
-              setClauses.push(`${snakeKey} = $${pIdx++}`);
-              vals.push(val);
+            if (caseParts.length > 0) {
+              setClauses.push(`${snakeField} = CASE ${caseParts.join(" ")} ELSE ${snakeField} END`);
             }
-            setClauses.push(`updated_at = NOW()`);
-            vals.push(id);
-            await client.query(
-              `UPDATE borrowers SET ${setClauses.join(", ")} WHERE id = $${pIdx}`,
-              vals
-            );
-            job.successCount++;
-            job.processedRecords++;
           }
+
+          setClauses.push(`updated_at = NOW()`);
+
+          const idPlaceholders = ids.map(() => `$${paramIdx++}`).join(", ");
+          allValues.push(...ids);
+
+          const sql = `UPDATE borrowers SET ${setClauses.join(", ")} WHERE id IN (${idPlaceholders})`;
+          const result = await client.query(sql, allValues);
           await client.query("COMMIT");
+
+          job.successCount += result.rowCount || validUpdates.length;
+          job.processedRecords += validUpdates.length;
         } catch (err: any) {
           await client.query("ROLLBACK");
-          for (let i = 0; i < chunk.length; i++) {
-            if (chunkStart + i >= job.processedRecords) {
-              job.errorCount++;
-              job.errors.push({ index: chunkStart + i, message: err.message });
-              job.processedRecords++;
+          for (const upd of validUpdates) {
+            job.errorCount++;
+            job.errors.push({ index: upd.globalIdx, message: err.message || "Batch update failed" });
+            job.processedRecords++;
+          }
+        } finally {
+          client.release();
+        }
+      }
+      job.status = job.errorCount > 0 && job.successCount === 0 ? "failed" : "completed";
+      job.completedAt = new Date();
+    } catch (err: any) {
+      job.status = "failed";
+      job.completedAt = new Date();
+    } finally {
+      releaseSlot();
+    }
+  })();
+
+  return jobId;
+}
+
+export async function enqueueBatchAccountUpdate(
+  updates: Array<{ id: number; fields: Record<string, any> }>,
+  userId: string | null
+): Promise<string> {
+  const jobId = generateJobId();
+  const job: BatchJob = {
+    id: jobId,
+    type: "account_update",
+    status: "queued",
+    totalRecords: updates.length,
+    processedRecords: 0,
+    successCount: 0,
+    errorCount: 0,
+    errors: [],
+    createdAt: new Date(),
+    completedAt: null,
+    userId,
+  };
+  jobStore.set(jobId, job);
+
+  (async () => {
+    await waitForSlot();
+    try {
+      job.status = "processing";
+      const ALLOWED_FIELDS = new Set([
+        "status", "currentBalance", "daysInArrears", "interestRate",
+        "maturityDate", "currency", "originalAmount", "accountType",
+        "lenderInstitution", "collateralType", "collateralValue",
+      ]);
+
+      for (let chunkStart = 0; chunkStart < updates.length; chunkStart += CHUNK_SIZE) {
+        const chunk = updates.slice(chunkStart, chunkStart + CHUNK_SIZE);
+        const validUpdates: Array<{ globalIdx: number; id: number; fields: Record<string, any> }> = [];
+
+        for (let i = 0; i < chunk.length; i++) {
+          const globalIdx = chunkStart + i;
+          const { id, fields } = chunk[i];
+          if (!id || !fields || Object.keys(fields).length === 0) {
+            job.errorCount++;
+            job.errors.push({ index: globalIdx, message: "Missing id or fields" });
+            job.processedRecords++;
+            continue;
+          }
+          const filtered: Record<string, any> = {};
+          for (const [key, val] of Object.entries(fields)) {
+            if (ALLOWED_FIELDS.has(key)) filtered[key] = val;
+          }
+          if (Object.keys(filtered).length === 0) {
+            job.errorCount++;
+            job.errors.push({ index: globalIdx, message: "No valid fields to update" });
+            job.processedRecords++;
+            continue;
+          }
+          validUpdates.push({ globalIdx, id, fields: filtered });
+        }
+
+        if (validUpdates.length === 0) continue;
+
+        const client = await pool.connect();
+        try {
+          await client.query("BEGIN");
+
+          const fieldNames = [...new Set(validUpdates.flatMap(u => Object.keys(u.fields)))];
+          const ids = validUpdates.map(u => u.id);
+
+          const setClauses: string[] = [];
+          const allValues: any[] = [];
+          let paramIdx = 1;
+
+          for (const field of fieldNames) {
+            const snakeField = field.replace(/[A-Z]/g, (m) => `_${m.toLowerCase()}`);
+            const caseParts: string[] = [];
+            for (const upd of validUpdates) {
+              if (field in upd.fields) {
+                caseParts.push(`WHEN id = $${paramIdx++} THEN $${paramIdx++}`);
+                allValues.push(upd.id, upd.fields[field]);
+              }
             }
+            if (caseParts.length > 0) {
+              setClauses.push(`${snakeField} = CASE ${caseParts.join(" ")} ELSE ${snakeField} END`);
+            }
+          }
+
+          setClauses.push(`updated_at = NOW()`);
+
+          const idPlaceholders = ids.map(() => `$${paramIdx++}`).join(", ");
+          allValues.push(...ids);
+
+          const sql = `UPDATE credit_accounts SET ${setClauses.join(", ")} WHERE id IN (${idPlaceholders})`;
+          const result = await client.query(sql, allValues);
+          await client.query("COMMIT");
+
+          job.successCount += result.rowCount || validUpdates.length;
+          job.processedRecords += validUpdates.length;
+        } catch (err: any) {
+          await client.query("ROLLBACK");
+          for (const upd of validUpdates) {
+            job.errorCount++;
+            job.errors.push({ index: upd.globalIdx, message: err.message || "Batch update failed" });
+            job.processedRecords++;
           }
         } finally {
           client.release();

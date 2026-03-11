@@ -4,7 +4,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { db, pool } from "./db";
 import { sql, eq, and, or, desc } from "drizzle-orm";
-import { enqueueBatchAccountCreate, enqueueBatchBorrowerUpdate, getJobStatus, getQueueStats } from "./batch-queue";
+import { enqueueBatchAccountCreate, enqueueBatchBorrowerUpdate, enqueueBatchAccountUpdate, getJobStatus, getQueueStats } from "./batch-queue";
 import {
   insertBorrowerSchema, insertCreditAccountSchema, insertCreditInquirySchema,
   insertUserSchema, insertPendingApprovalSchema, insertDisputeSchema,
@@ -12,7 +12,7 @@ import {
   insertInstitutionSchema, insertBillingRecordSchema, insertCreditReportLogSchema,
   insertExchangeRateSchema, insertRetentionPolicySchema, insertApiConfigurationSchema,
   insertOrganizationSchema, insertDataSharingAgreementSchema, insertPapssSettlementSchema,
-  dataSharingAgreements, papssSettlements,
+  dataSharingAgreements, papssSettlements, creditAccounts,
 } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
@@ -33,8 +33,8 @@ import type { BslFileType } from "@shared/bsl-codes";
 
 const loginLimiter = rateLimit({
   validate: { trustProxy: false },
-  windowMs: 15 * 60 * 1000,
-  max: 15,
+  windowMs: 60 * 1000,
+  max: 10,
   message: { message: "Too many login attempts. Please try again later." },
   standardHeaders: true,
   legacyHeaders: false,
@@ -244,6 +244,13 @@ export async function registerRoutes(
   app.use("/api", apiLimiter, (req, _res, next) => {
     const route = req.method + " " + req.path;
     trackApiUsage(route);
+    next();
+  });
+
+  app.use("/api", (req, res, next) => {
+    if (["POST", "PATCH", "PUT", "DELETE"].includes(req.method)) {
+      return writeLimiter(req, res, next);
+    }
     next();
   });
 
@@ -1341,6 +1348,30 @@ export async function registerRoutes(
     }
   });
 
+  async function batchInsertCreditAccounts(
+    validated: Array<{ index: number; data: any }>,
+    results: { successCount: number; errorCount: number; errors: Array<{ index: number; message: string }> }
+  ) {
+    const CHUNK = 250;
+    for (let c = 0; c < validated.length; c += CHUNK) {
+      const chunk = validated.slice(c, c + CHUNK);
+      try {
+        await db.insert(creditAccounts).values(chunk.map(item => item.data));
+        results.successCount += chunk.length;
+      } catch (err: any) {
+        for (const item of chunk) {
+          try {
+            await db.insert(creditAccounts).values(item.data);
+            results.successCount++;
+          } catch (innerErr: any) {
+            results.errorCount++;
+            results.errors.push({ index: item.index, message: innerErr.message || "Insert failed" });
+          }
+        }
+      }
+    }
+  }
+
   app.post("/api/batch-upload/credit-accounts", batchLimiter, requireRole("admin", "lender"), async (req, res) => {
     try {
       const { records } = req.body;
@@ -1366,23 +1397,7 @@ export async function registerRoutes(
         }
       }
 
-      const CHUNK = 250;
-      for (let c = 0; c < validated.length; c += CHUNK) {
-        const chunk = validated.slice(c, c + CHUNK);
-        try {
-          for (const item of chunk) {
-            await storage.createCreditAccount(item.data);
-            results.successCount++;
-          }
-        } catch (err: any) {
-          for (const item of chunk) {
-            if (results.successCount + results.errorCount < results.totalSubmitted) {
-              results.errorCount++;
-              results.errors.push({ index: item.index, message: err.message || "Insert failed" });
-            }
-          }
-        }
-      }
+      await batchInsertCreditAccounts(validated, results);
 
       await storage.createAuditLog({
         action: "BATCH_UPLOAD", entity: "credit_account", userId: req.session?.userId,
@@ -1442,13 +1457,7 @@ export async function registerRoutes(
           results.errors.push({ index: i, message: err.message || "Validation failed" });
         }
       }
-      for (let c = 0; c < validated.length; c += 250) {
-        const chunk = validated.slice(c, c + 250);
-        for (const item of chunk) {
-          try { await storage.createCreditAccount(item.data); results.successCount++; }
-          catch (err: any) { results.errorCount++; results.errors.push({ index: item.index, message: err.message }); }
-        }
-      }
+      await batchInsertCreditAccounts(validated, results);
 
       await storage.createAuditLog({
         action: "BATCH_UPLOAD_XBRL", entity: "credit_account", userId: req.session?.userId,
@@ -1555,13 +1564,7 @@ export async function registerRoutes(
           results.errors.push({ index: i, message: err.message || "Validation failed" });
         }
       }
-      for (let c = 0; c < validated.length; c += 250) {
-        const chunk = validated.slice(c, c + 250);
-        for (const item of chunk) {
-          try { await storage.createCreditAccount(item.data); results.successCount++; }
-          catch (err: any) { results.errorCount++; results.errors.push({ index: item.index, message: err.message }); }
-        }
-      }
+      await batchInsertCreditAccounts(validated, results);
 
       await storage.createAuditLog({
         action: "BATCH_UPLOAD_BOG", entity: "credit_account", userId: req.session?.userId,
@@ -1639,13 +1642,7 @@ export async function registerRoutes(
           results.errors.push({ index: i, message: err.message || "Validation failed" });
         }
       }
-      for (let c = 0; c < validated.length; c += 250) {
-        const chunk = validated.slice(c, c + 250);
-        for (const item of chunk) {
-          try { await storage.createCreditAccount(item.data); results.successCount++; }
-          catch (err: any) { results.errorCount++; results.errors.push({ index: item.index, message: err.message }); }
-        }
-      }
+      await batchInsertCreditAccounts(validated, results);
 
       await storage.createAuditLog({
         action: "BATCH_UPLOAD_CSV", entity: "credit_account", userId: req.session?.userId,
@@ -1730,6 +1727,32 @@ export async function registerRoutes(
       await storage.createAuditLog({
         action: "BATCH_QUEUE_BORROWERS", entity: "borrower", userId: req.session?.userId,
         details: `Queued batch borrower update: ${updates.length} records (job: ${jobId})`,
+        ipAddress: req.ip || null,
+      });
+      res.json({ jobId, totalRecords: updates.length, status: "queued" });
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/batch/account-updates", batchLimiter, requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const { updates } = req.body;
+      if (!Array.isArray(updates) || updates.length === 0) {
+        return res.status(400).json({ message: "Request body must contain a non-empty 'updates' array of { id, fields }" });
+      }
+      if (updates.length > 1000) {
+        return res.status(400).json({ message: "Maximum 1,000 updates per batch. Split into multiple requests." });
+      }
+      for (const u of updates) {
+        if (!u.id || !u.fields || typeof u.fields !== "object") {
+          return res.status(400).json({ message: "Each update must have 'id' (number) and 'fields' (object)" });
+        }
+      }
+      const jobId = await enqueueBatchAccountUpdate(updates, req.session?.userId || null);
+      await storage.createAuditLog({
+        action: "BATCH_QUEUE_ACCOUNTS", entity: "credit_account", userId: req.session?.userId,
+        details: `Queued batch account update: ${updates.length} records (job: ${jobId})`,
         ipAddress: req.ip || null,
       });
       res.json({ jobId, totalRecords: updates.length, status: "queued" });
