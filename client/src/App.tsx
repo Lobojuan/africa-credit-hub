@@ -67,6 +67,9 @@ const PortfolioIntelligencePage = lazy(() => import("@/pages/portfolio-intellige
 const BorrowerAlertsPage = lazy(() => import("@/pages/borrower-alerts"));
 const RegulatoryDashboardPage = lazy(() => import("@/pages/regulatory-dashboard"));
 const CreditScoreMethodologyPage = lazy(() => import("@/pages/credit-score-methodology"));
+const CrossBorderAgreementsPage = lazy(() => import("@/pages/cross-border-agreements"));
+const CrossBorderSearchPage = lazy(() => import("@/pages/cross-border-search"));
+const PapssSettlementsPage = lazy(() => import("@/pages/papss-settlements"));
 
 function LazyFallback() {
   return (
@@ -115,6 +118,9 @@ function Router() {
         <Route path="/credit-score-methodology" component={CreditScoreMethodologyPage} />
         <Route path="/regulatory-dashboard" component={RegulatoryDashboardPage} />
         <Route path="/borrower-alerts" component={BorrowerAlertsPage} />
+        <Route path="/cross-border-agreements" component={CrossBorderAgreementsPage} />
+        <Route path="/cross-border-search" component={CrossBorderSearchPage} />
+        <Route path="/papss-settlements" component={PapssSettlementsPage} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>

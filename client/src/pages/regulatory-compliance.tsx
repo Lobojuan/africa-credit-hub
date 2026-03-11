@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { isGhanaMode } from "@/lib/country-mode";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -29,6 +29,8 @@ import {
   Loader2,
   TrendingUp,
   AlertCircle,
+  Handshake,
+  ArrowRightLeft,
 } from "lucide-react";
 
 type RequirementStatus = "compliant" | "partial" | "not_applicable";
@@ -435,7 +437,7 @@ export default function RegulatoryCompliancePage() {
       </Card>
 
       <Tabs defaultValue="srs" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4" data-testid="tabs-compliance">
+        <TabsList className="grid w-full grid-cols-5" data-testid="tabs-compliance">
           <TabsTrigger value="srs" data-testid="tab-srs">
             <FileText className="w-4 h-4 mr-1 hidden sm:inline" /> SRS Traceability
           </TabsTrigger>
@@ -447,6 +449,9 @@ export default function RegulatoryCompliancePage() {
           </TabsTrigger>
           <TabsTrigger value="gaps" data-testid="tab-gaps">
             <AlertTriangle className="w-4 h-4 mr-1 hidden sm:inline" /> Gap Analysis
+          </TabsTrigger>
+          <TabsTrigger value="sata" data-testid="tab-sata">
+            <Handshake className="w-4 h-4 mr-1 hidden sm:inline" /> SATA
           </TabsTrigger>
         </TabsList>
 
@@ -842,7 +847,107 @@ export default function RegulatoryCompliancePage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="sata" className="space-y-4">
+          <SataComplianceTab />
+        </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function SataComplianceTab() {
+  const { data: stats, isLoading } = useQuery<{
+    agreements: { total: number; active: number; draft: number; suspended: number; expired: number };
+    coverage: { countriesConnected: number; regionalBlocs: string[] };
+    settlements: { total: number; completed: number; totalVolumeUsd: number };
+  }>({ queryKey: ["/api/sata/stats"] });
+
+  if (isLoading) {
+    return <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">{Array.from({ length: 4 }).map((_, i) => <Card key={i}><CardContent className="p-6 h-24 animate-pulse bg-muted/30" /></Card>)}</div>;
+  }
+
+  const s = stats;
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4 text-center">
+            <Handshake className="w-6 h-6 text-primary mx-auto mb-2" />
+            <p className="text-2xl font-bold" data-testid="sata-active-agreements">{s?.agreements.active || 0}</p>
+            <p className="text-xs text-muted-foreground">Active Agreements</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <Globe className="w-6 h-6 text-blue-500 mx-auto mb-2" />
+            <p className="text-2xl font-bold" data-testid="sata-countries-connected">{s?.coverage.countriesConnected || 0}</p>
+            <p className="text-xs text-muted-foreground">Countries Connected</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <ArrowRightLeft className="w-6 h-6 text-green-500 mx-auto mb-2" />
+            <p className="text-2xl font-bold" data-testid="sata-settlements-completed">{s?.settlements.completed || 0}</p>
+            <p className="text-xs text-muted-foreground">Settlements Completed</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <TrendingUp className="w-6 h-6 text-amber-500 mx-auto mb-2" />
+            <p className="text-2xl font-bold" data-testid="sata-total-volume">{(s?.settlements.totalVolumeUsd || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            <p className="text-xs text-muted-foreground">Total Settlement Volume</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2"><Shield className="w-4 h-4 text-primary" /> Agreement Status Breakdown</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Active</span>
+              <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">{s?.agreements.active || 0}</Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Draft</span>
+              <Badge variant="secondary" className="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">{s?.agreements.draft || 0}</Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Suspended</span>
+              <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">{s?.agreements.suspended || 0}</Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Expired</span>
+              <Badge variant="secondary" className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300">{s?.agreements.expired || 0}</Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2"><Landmark className="w-4 h-4 text-primary" /> Regional Bloc Coverage</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {(s?.coverage.regionalBlocs || []).length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {s?.coverage.regionalBlocs.map(bloc => (
+                  <Badge key={bloc} variant="outline" className="text-xs">{bloc}</Badge>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No regional bloc agreements active yet. Create agreements with regional bloc tags to track coverage.</p>
+            )}
+            <div className="mt-4 p-3 rounded-lg bg-muted/30 border">
+              <p className="text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">SATA Compliance:</span> The Smart Africa Telecommunications Alliance framework requires bilateral data sharing agreements with consent management, data minimization, and audit trail compliance.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

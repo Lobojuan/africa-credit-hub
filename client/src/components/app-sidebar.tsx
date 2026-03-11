@@ -33,6 +33,9 @@ import {
   BarChart3,
   Bell,
   Eye,
+  Handshake,
+  FileSearch,
+  ArrowRightLeft,
 } from "lucide-react";
 import {
   Sidebar,
@@ -94,6 +97,12 @@ function getOversightItems(activeCountryName?: string): NavItem[] {
   }
   return items;
 }
+
+const crossBorderItems: NavItem[] = [
+  { titleKey: "sidebar.crossBorderAgreements", url: "/cross-border-agreements", icon: Handshake, testId: "nav-cross-border-agreements", roles: ["admin", "super_admin", "regulator"] },
+  { titleKey: "sidebar.crossBorderSearch", url: "/cross-border-search", icon: FileSearch, testId: "nav-cross-border-search" },
+  { titleKey: "sidebar.papssSettlements", url: "/papss-settlements", icon: ArrowRightLeft, testId: "nav-papss-settlements", roles: ["admin", "super_admin", "regulator"] },
+];
 
 const adminItems: NavItem[] = [
   { titleKey: "sidebar.organizations", url: "/organizations", icon: Building2, testId: "nav-organizations", roles: ["super_admin"] },
@@ -200,6 +209,7 @@ export function AppSidebar() {
   const visibleOperations = filterByRole(operationsItems, role);
   const oversightItems = getOversightItems(dynamicCountryConfig?.name);
   const visibleOversight = filterByRole(oversightItems, role);
+  const visibleCrossBorder = filterByRole(crossBorderItems, role);
   const visibleAdmin = filterByRole(adminItems, role);
   const visibleResources = filterByRole(resourceItems, role);
   const isSuperAdmin = role === "super_admin";
@@ -264,6 +274,17 @@ export function AppSidebar() {
             defaultOpen={false}
             t={t}
             icon={Eye}
+          />
+        )}
+
+        {visibleCrossBorder.length > 0 && (
+          <CollapsibleSection
+            label={t('sidebar.crossBorder', 'Cross-Border')}
+            items={visibleCrossBorder}
+            location={location}
+            defaultOpen={false}
+            t={t}
+            icon={Globe}
           />
         )}
 

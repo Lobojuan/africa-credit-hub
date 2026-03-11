@@ -3,14 +3,15 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db";
-import { sql } from "drizzle-orm";
+import { sql, eq, and, or, desc } from "drizzle-orm";
 import {
   insertBorrowerSchema, insertCreditAccountSchema, insertCreditInquirySchema,
   insertUserSchema, insertPendingApprovalSchema, insertDisputeSchema,
   insertCourtJudgmentSchema, insertConsentRecordSchema, insertPaymentHistorySchema,
   insertInstitutionSchema, insertBillingRecordSchema, insertCreditReportLogSchema,
   insertExchangeRateSchema, insertRetentionPolicySchema, insertApiConfigurationSchema,
-  insertOrganizationSchema,
+  insertOrganizationSchema, insertDataSharingAgreementSchema, insertPapssSettlementSchema,
+  dataSharingAgreements, papssSettlements,
 } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
@@ -3930,6 +3931,185 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
+  });
+
+  // ── SATA Data Sharing Agreements ──
+  app.get("/api/sata/agreements", requireAuth, async (_req, res) => {
+    try {
+      const rows = await db.select().from(dataSharingAgreements).orderBy(desc(dataSharingAgreements.createdAt));
+      res.json(rows);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.get("/api/sata/agreements/:id", requireAuth, async (req, res) => {
+    try {
+      const [row] = await db.select().from(dataSharingAgreements).where(eq(dataSharingAgreements.id, req.params.id));
+      if (!row) return res.status(404).json({ message: "Agreement not found" });
+      res.json(row);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.post("/api/sata/agreements", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const parsed = insertDataSharingAgreementSchema.parse(req.body);
+      const [created] = await db.insert(dataSharingAgreements).values({ ...parsed, createdBy: req.session.userId }).returning();
+      await storage.createAuditLog({ userId: req.session.userId!, action: "CREATE", entity: "data_sharing_agreement", entityId: created.id, details: `Created SATA agreement: ${created.sourceCountry} → ${created.targetCountry}`, ipAddress: req.ip, organizationId: null });
+      res.status(201).json(created);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  app.patch("/api/sata/agreements/:id", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const { status, suspendedReason, approvedBy, ...rest } = req.body;
+      const updates: any = { ...rest, updatedAt: new Date() };
+      if (status) updates.status = status;
+      if (status === "active") updates.approvedBy = req.session.userId;
+      if (status === "suspended" && suspendedReason) updates.suspendedReason = suspendedReason;
+      const [updated] = await db.update(dataSharingAgreements).set(updates).where(eq(dataSharingAgreements.id, req.params.id)).returning();
+      if (!updated) return res.status(404).json({ message: "Agreement not found" });
+      await storage.createAuditLog({ userId: req.session.userId!, action: "UPDATE", entity: "data_sharing_agreement", entityId: updated.id, details: `Updated SATA agreement status to ${updated.status}: ${updated.sourceCountry} → ${updated.targetCountry}`, ipAddress: req.ip, organizationId: null });
+      res.json(updated);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  app.delete("/api/sata/agreements/:id", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const [deleted] = await db.delete(dataSharingAgreements).where(eq(dataSharingAgreements.id, req.params.id)).returning();
+      if (!deleted) return res.status(404).json({ message: "Agreement not found" });
+      await storage.createAuditLog({ userId: req.session.userId!, action: "DELETE", entity: "data_sharing_agreement", entityId: deleted.id, details: `Deleted SATA agreement: ${deleted.sourceCountry} → ${deleted.targetCountry}`, ipAddress: req.ip, organizationId: null });
+      res.json({ message: "Agreement deleted" });
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.get("/api/sata/agreements/country/:country", requireAuth, async (req, res) => {
+    try {
+      const country = req.params.country;
+      const rows = await db.select().from(dataSharingAgreements).where(
+        and(
+          eq(dataSharingAgreements.status, "active"),
+          or(eq(dataSharingAgreements.sourceCountry, country), eq(dataSharingAgreements.targetCountry, country))
+        )
+      );
+      res.json(rows);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  // Cross-border search — requires active agreement
+  app.get("/api/sata/cross-border-search", requireAuth, async (req, res) => {
+    try {
+      const { q, targetCountry } = req.query;
+      if (!q || !targetCountry) return res.status(400).json({ message: "Query (q) and targetCountry are required" });
+
+      const userCountry = getCountryFilter(req) || getActiveCountryName();
+      if (!userCountry || userCountry === targetCountry) return res.status(400).json({ message: "Cannot search your own country via cross-border" });
+
+      const activeAgreements = await db.select().from(dataSharingAgreements).where(
+        and(
+          eq(dataSharingAgreements.status, "active"),
+          or(
+            and(eq(dataSharingAgreements.sourceCountry, userCountry), eq(dataSharingAgreements.targetCountry, targetCountry as string)),
+            and(eq(dataSharingAgreements.sourceCountry, targetCountry as string), eq(dataSharingAgreements.targetCountry, userCountry))
+          )
+        )
+      );
+      if (activeAgreements.length === 0) return res.status(403).json({ message: `No active data sharing agreement between ${userCountry} and ${targetCountry}` });
+
+      const searchTerm = `%${q}%`;
+      const results = await db.execute(sql`
+        SELECT id, type, first_name, last_name, company_name, national_id, country, city, region
+        FROM borrowers
+        WHERE country = ${targetCountry}
+        AND (
+          first_name ILIKE ${searchTerm} OR last_name ILIKE ${searchTerm}
+          OR company_name ILIKE ${searchTerm} OR national_id ILIKE ${searchTerm}
+          OR passport_number ILIKE ${searchTerm}
+        )
+        LIMIT 50
+      `);
+
+      await storage.createAuditLog({
+        userId: req.session.userId!, action: "CROSS_BORDER_SEARCH", entity: "borrower",
+        details: `Cross-border search from ${userCountry} to ${targetCountry}: "${q}" (${(results.rows || []).length} results, agreement: ${activeAgreements[0].id})`,
+        ipAddress: req.ip, organizationId: null,
+      });
+
+      res.json({ results: results.rows || [], agreementId: activeAgreements[0].id, sourceCountry: userCountry, targetCountry });
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  // SATA compliance stats
+  app.get("/api/sata/stats", requireAuth, async (_req, res) => {
+    try {
+      const allAgreements = await db.select().from(dataSharingAgreements);
+      const activeCount = allAgreements.filter(a => a.status === "active").length;
+      const draftCount = allAgreements.filter(a => a.status === "draft").length;
+      const suspendedCount = allAgreements.filter(a => a.status === "suspended").length;
+      const expiredCount = allAgreements.filter(a => a.status === "expired").length;
+
+      const countriesInAgreements = new Set<string>();
+      allAgreements.filter(a => a.status === "active").forEach(a => {
+        countriesInAgreements.add(a.sourceCountry);
+        countriesInAgreements.add(a.targetCountry);
+      });
+
+      const blocsRaw = allAgreements.filter(a => a.status === "active" && a.regionalBloc).map(a => a.regionalBloc!);
+      const blocsSet = new Set(blocsRaw);
+
+      const settlements = await db.select().from(papssSettlements);
+      const completedSettlements = settlements.filter(s => s.status === "completed");
+      const totalVolume = completedSettlements.reduce((acc, s) => acc + parseFloat(s.senderAmount || "0"), 0);
+
+      res.json({
+        agreements: { total: allAgreements.length, active: activeCount, draft: draftCount, suspended: suspendedCount, expired: expiredCount },
+        coverage: { countriesConnected: countriesInAgreements.size, regionalBlocs: Array.from(blocsSet) },
+        settlements: { total: settlements.length, completed: completedSettlements.length, totalVolumeUsd: totalVolume },
+      });
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  // ── PAPSS Settlements ──
+  app.get("/api/papss/settlements", requireAuth, async (req, res) => {
+    try {
+      const { status, country, limit: lim } = req.query;
+      let query = db.select().from(papssSettlements).orderBy(desc(papssSettlements.createdAt));
+      const rows = await query;
+      let filtered = rows;
+      if (status && status !== "all") filtered = filtered.filter(r => r.status === status);
+      if (country) filtered = filtered.filter(r => r.senderCountry === country || r.receiverCountry === country);
+      if (lim) filtered = filtered.slice(0, parseInt(lim as string));
+      res.json(filtered);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.get("/api/papss/settlements/:id", requireAuth, async (req, res) => {
+    try {
+      const [row] = await db.select().from(papssSettlements).where(eq(papssSettlements.id, req.params.id));
+      if (!row) return res.status(404).json({ message: "Settlement not found" });
+      res.json(row);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.post("/api/papss/settlements", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const parsed = insertPapssSettlementSchema.parse(req.body);
+      const [created] = await db.insert(papssSettlements).values({ ...parsed, initiatedBy: req.session.userId }).returning();
+      await storage.createAuditLog({ userId: req.session.userId!, action: "CREATE", entity: "papss_settlement", entityId: created.id, details: `PAPSS settlement: ${created.senderInstitution} (${created.senderCountry}) → ${created.receiverInstitution} (${created.receiverCountry}), ${created.senderCurrency} ${created.senderAmount}`, ipAddress: req.ip, organizationId: null });
+      res.status(201).json(created);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  app.patch("/api/papss/settlements/:id", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const { status, failureReason } = req.body;
+      const updates: any = { updatedAt: new Date() };
+      if (status) updates.status = status;
+      if (status === "completed") updates.completedAt = new Date();
+      if (status === "failed" && failureReason) updates.failureReason = failureReason;
+      const [updated] = await db.update(papssSettlements).set(updates).where(eq(papssSettlements.id, req.params.id)).returning();
+      if (!updated) return res.status(404).json({ message: "Settlement not found" });
+      await storage.createAuditLog({ userId: req.session.userId!, action: "UPDATE", entity: "papss_settlement", entityId: updated.id, details: `Updated PAPSS settlement status to ${updated.status}`, ipAddress: req.ip, organizationId: null });
+      res.json(updated);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
   });
 
   try {

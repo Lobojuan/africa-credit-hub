@@ -440,6 +440,54 @@ export const apiKeys = pgTable("api_keys", {
   revokedAt: timestamp("revoked_at"),
 });
 
+export const agreementStatusEnum = pgEnum("agreement_status", ["draft", "active", "suspended", "expired"]);
+export const settlementStatusEnum = pgEnum("settlement_status", ["pending", "completed", "failed", "reversed"]);
+
+export const dataSharingAgreements = pgTable("data_sharing_agreements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sourceCountry: text("source_country").notNull(),
+  targetCountry: text("target_country").notNull(),
+  allowedDataTypes: text("allowed_data_types").array().notNull(),
+  status: agreementStatusEnum("status").notNull().default("draft"),
+  effectiveDate: text("effective_date"),
+  expiryDate: text("expiry_date"),
+  legalBasis: text("legal_basis"),
+  description: text("description"),
+  regionalBloc: text("regional_bloc"),
+  createdBy: varchar("created_by").references(() => users.id),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  suspendedReason: text("suspended_reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const papssSettlements = pgTable("papss_settlements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  senderInstitution: text("sender_institution").notNull(),
+  senderCountry: text("sender_country").notNull(),
+  receiverInstitution: text("receiver_institution").notNull(),
+  receiverCountry: text("receiver_country").notNull(),
+  senderAmount: decimal("sender_amount", { precision: 15, scale: 2 }).notNull(),
+  senderCurrency: text("sender_currency").notNull(),
+  receiverAmount: decimal("receiver_amount", { precision: 15, scale: 2 }).notNull(),
+  receiverCurrency: text("receiver_currency").notNull(),
+  exchangeRate: decimal("exchange_rate", { precision: 15, scale: 6 }).notNull(),
+  exchangeRateSource: text("exchange_rate_source").default("PAPSS"),
+  iso20022Reference: text("iso20022_reference").notNull(),
+  messageType: text("message_type").default("pacs.008"),
+  status: settlementStatusEnum("status").notNull().default("pending"),
+  purpose: text("purpose"),
+  agreementId: varchar("agreement_id").references(() => dataSharingAgreements.id),
+  initiatedBy: varchar("initiated_by").references(() => users.id),
+  completedAt: timestamp("completed_at"),
+  failureReason: text("failure_reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertDataSharingAgreementSchema = createInsertSchema(dataSharingAgreements).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertPapssSettlementSchema = createInsertSchema(papssSettlements).omit({ id: true, createdAt: true, updatedAt: true, completedAt: true });
+
 export const insertBorrowerAlertSchema = createInsertSchema(borrowerAlerts).omit({ id: true, createdAt: true });
 export const insertOrganizationSchema = createInsertSchema(organizations).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertApiKeySchema = createInsertSchema(apiKeys).omit({ id: true, createdAt: true, lastUsedAt: true, revokedAt: true });
@@ -505,3 +553,7 @@ export type InsertDishonouredCheque = z.infer<typeof insertDishonouredChequeSche
 export type DishonouredCheque = typeof dishonouredCheques.$inferSelect;
 export type InsertBorrowerAlert = z.infer<typeof insertBorrowerAlertSchema>;
 export type BorrowerAlert = typeof borrowerAlerts.$inferSelect;
+export type InsertDataSharingAgreement = z.infer<typeof insertDataSharingAgreementSchema>;
+export type DataSharingAgreement = typeof dataSharingAgreements.$inferSelect;
+export type InsertPapssSettlement = z.infer<typeof insertPapssSettlementSchema>;
+export type PapssSettlement = typeof papssSettlements.$inferSelect;
