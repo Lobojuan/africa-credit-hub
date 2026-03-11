@@ -457,6 +457,8 @@ export const dataSharingAgreements = pgTable("data_sharing_agreements", {
   createdBy: varchar("created_by").references(() => users.id),
   approvedBy: varchar("approved_by").references(() => users.id),
   suspendedReason: text("suspended_reason"),
+  sourceInstitutions: text("source_institutions").array().default(sql`ARRAY[]::TEXT[]`),
+  targetInstitutions: text("target_institutions").array().default(sql`ARRAY[]::TEXT[]`),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

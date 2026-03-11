@@ -98,6 +98,57 @@ function getCountryFilter(req?: Request): string | undefined {
   return country || undefined;
 }
 
+async function requireCrossBorderAccess(req: Request, res: Response, next: NextFunction) {
+  try {
+    if (req.session?.userRole === "super_admin") return next();
+
+    const userOrgId = req.session?.organizationId;
+    if (!userOrgId) {
+      return res.status(403).json({ message: "Cross-border access requires an organization affiliation" });
+    }
+
+    const org = await storage.getOrganization(userOrgId);
+    if (!org) {
+      return res.status(403).json({ message: "Organization not found" });
+    }
+
+    const orgCountry = org.country || getActiveCountryName();
+    const orgName = org.name;
+
+    const activeAgreements = await db.select().from(dataSharingAgreements).where(
+      and(
+        eq(dataSharingAgreements.status, "active"),
+        or(
+          eq(dataSharingAgreements.sourceCountry, orgCountry),
+          eq(dataSharingAgreements.targetCountry, orgCountry)
+        )
+      )
+    );
+
+    const hasAccess = activeAgreements.some(a => {
+      const srcInsts = a.sourceInstitutions || [];
+      const tgtInsts = a.targetInstitutions || [];
+      const isInSource = a.sourceCountry === orgCountry && (srcInsts.length === 0 || srcInsts.includes(orgName));
+      const isInTarget = a.targetCountry === orgCountry && (tgtInsts.length === 0 || tgtInsts.includes(orgName));
+      return isInSource || isInTarget;
+    });
+
+    if (!hasAccess) {
+      return res.status(403).json({ message: "No active cross-border data sharing agreement covers your institution" });
+    }
+
+    await storage.createAuditLog({
+      userId: req.session?.userId!, action: "CROSS_BORDER_ACCESS", entity: "cross_border",
+      details: `Cross-border access by ${orgName} (${orgCountry})`,
+      ipAddress: req.ip, organizationId: userOrgId,
+    });
+
+    next();
+  } catch (e: any) {
+    res.status(500).json({ message: e.message });
+  }
+}
+
 async function validateOrgCountry(orgId: string, req?: Request): Promise<boolean> {
   const country = getCountryFilter(req);
   if (!country) return true;
@@ -3933,6 +3984,40 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     }
   });
 
+  // Cross-border access check for UI gating
+  app.get("/api/sata/access-check", requireAuth, async (req, res) => {
+    try {
+      if (req.session?.userRole === "super_admin") {
+        return res.json({ hasAccess: true, reason: "super_admin" });
+      }
+      const userOrgId = req.session?.organizationId;
+      if (!userOrgId) return res.json({ hasAccess: false, reason: "no_organization" });
+
+      const org = await storage.getOrganization(userOrgId);
+      if (!org) return res.json({ hasAccess: false, reason: "org_not_found" });
+
+      const orgCountry = org.country || getActiveCountryName();
+      const orgName = org.name;
+
+      const activeAgreements = await db.select().from(dataSharingAgreements).where(
+        and(
+          eq(dataSharingAgreements.status, "active"),
+          or(eq(dataSharingAgreements.sourceCountry, orgCountry), eq(dataSharingAgreements.targetCountry, orgCountry))
+        )
+      );
+
+      const hasAccess = activeAgreements.some(a => {
+        const srcInsts = a.sourceInstitutions || [];
+        const tgtInsts = a.targetInstitutions || [];
+        const isInSource = a.sourceCountry === orgCountry && (srcInsts.length === 0 || srcInsts.includes(orgName));
+        const isInTarget = a.targetCountry === orgCountry && (tgtInsts.length === 0 || tgtInsts.includes(orgName));
+        return isInSource || isInTarget;
+      });
+
+      res.json({ hasAccess, reason: hasAccess ? "active_agreement" : "no_agreement", orgCountry, orgName });
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
   // ── SATA Data Sharing Agreements ──
   app.get("/api/sata/agreements", requireAuth, requireRole("admin", "super_admin", "regulator"), async (_req, res) => {
     try {
@@ -3994,8 +4079,8 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     } catch (e: any) { res.status(500).json({ message: e.message }); }
   });
 
-  // Cross-border search — requires active agreement + role check
-  app.get("/api/sata/cross-border-search", requireAuth, requireRole("admin", "super_admin", "regulator", "lender"), async (req, res) => {
+  // Cross-border search — requires active agreement + institution check + role check
+  app.get("/api/sata/cross-border-search", requireAuth, requireRole("admin", "super_admin", "regulator", "lender"), requireCrossBorderAccess, async (req, res) => {
     try {
       const { q, targetCountry } = req.query;
       if (!q || !targetCountry) return res.status(400).json({ message: "Query (q) and targetCountry are required" });

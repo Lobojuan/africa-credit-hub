@@ -50,6 +50,7 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/use-auth";
+import { useQuery } from "@tanstack/react-query";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@radix-ui/react-collapsible";
 import type { LucideIcon } from "lucide-react";
 import { isGhanaMode, isSierraLeoneMode, isSingleCountryMode, getBrandTitle, getCountryConfig } from "@/lib/country-mode";
@@ -209,7 +210,12 @@ export function AppSidebar() {
   const visibleOperations = filterByRole(operationsItems, role);
   const oversightItems = getOversightItems(dynamicCountryConfig?.name);
   const visibleOversight = filterByRole(oversightItems, role);
-  const visibleCrossBorder = filterByRole(crossBorderItems, role);
+  const { data: crossBorderAccess } = useQuery<{ hasAccess: boolean; reason: string }>({
+    queryKey: ["/api/sata/access-check"],
+    enabled: !!user,
+  });
+  const hasCrossBorderAccess = crossBorderAccess?.hasAccess ?? false;
+  const visibleCrossBorder = hasCrossBorderAccess ? filterByRole(crossBorderItems, role) : [];
   const visibleAdmin = filterByRole(adminItems, role);
   const visibleResources = filterByRole(resourceItems, role);
   const isSuperAdmin = role === "super_admin";

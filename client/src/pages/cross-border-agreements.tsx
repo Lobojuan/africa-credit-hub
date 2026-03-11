@@ -55,6 +55,7 @@ export default function CrossBorderAgreementsPage() {
   const [form, setForm] = useState({
     sourceCountry: "", targetCountry: "", allowedDataTypes: [] as string[],
     effectiveDate: "", expiryDate: "", legalBasis: "", description: "", regionalBloc: "",
+    sourceInstitutions: "", targetInstitutions: "",
   });
 
   const { data: agreements = [], isLoading } = useQuery<DataSharingAgreement[]>({
@@ -91,14 +92,19 @@ export default function CrossBorderAgreementsPage() {
     },
   });
 
-  const resetForm = () => setForm({ sourceCountry: "", targetCountry: "", allowedDataTypes: [], effectiveDate: "", expiryDate: "", legalBasis: "", description: "", regionalBloc: "" });
+  const resetForm = () => setForm({ sourceCountry: "", targetCountry: "", allowedDataTypes: [], effectiveDate: "", expiryDate: "", legalBasis: "", description: "", regionalBloc: "", sourceInstitutions: "", targetInstitutions: "" });
 
   const handleCreate = () => {
     if (!form.sourceCountry || !form.targetCountry || form.allowedDataTypes.length === 0) {
       toast({ title: "Validation Error", description: "Source country, target country, and at least one data type are required", variant: "destructive" });
       return;
     }
-    createMutation.mutate(form);
+    const payload = {
+      ...form,
+      sourceInstitutions: form.sourceInstitutions ? form.sourceInstitutions.split(",").map(s => s.trim()).filter(Boolean) : [],
+      targetInstitutions: form.targetInstitutions ? form.targetInstitutions.split(",").map(s => s.trim()).filter(Boolean) : [],
+    };
+    createMutation.mutate(payload);
   };
 
   const toggleDataType = (dt: string) => {
@@ -171,6 +177,8 @@ export default function CrossBorderAgreementsPage() {
                 <div><Label>Expiry Date</Label><Input type="date" value={form.expiryDate} onChange={e => setForm(f => ({ ...f, expiryDate: e.target.value }))} data-testid="input-expiry-date" /></div>
               </div>
               <div><Label>Legal Basis</Label><Input value={form.legalBasis} onChange={e => setForm(f => ({ ...f, legalBasis: e.target.value }))} placeholder="e.g. ECOWAS Protocol on Free Movement" data-testid="input-legal-basis" /></div>
+              <div><Label>Source Institutions</Label><Input value={form.sourceInstitutions} onChange={e => setForm(f => ({ ...f, sourceInstitutions: e.target.value }))} placeholder="Comma-separated (empty = all institutions)" data-testid="input-source-institutions" /></div>
+              <div><Label>Target Institutions</Label><Input value={form.targetInstitutions} onChange={e => setForm(f => ({ ...f, targetInstitutions: e.target.value }))} placeholder="Comma-separated (empty = all institutions)" data-testid="input-target-institutions" /></div>
               <div><Label>Description</Label><Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Description of the agreement" data-testid="input-description" /></div>
               <Button onClick={handleCreate} disabled={createMutation.isPending} className="w-full" data-testid="button-submit-agreement">
                 {createMutation.isPending && <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />}
@@ -256,6 +264,9 @@ export default function CrossBorderAgreementsPage() {
               </div>
               {selectedAgreement.description && <p className="text-sm text-muted-foreground">{selectedAgreement.description}</p>}
               {selectedAgreement.legalBasis && <p className="text-xs"><span className="font-medium">Legal Basis:</span> {selectedAgreement.legalBasis}</p>}
+              {(selectedAgreement as any).sourceInstitutions?.length > 0 && <p className="text-xs"><span className="font-medium">Source Institutions:</span> {(selectedAgreement as any).sourceInstitutions.join(", ")}</p>}
+              {(selectedAgreement as any).targetInstitutions?.length > 0 && <p className="text-xs"><span className="font-medium">Target Institutions:</span> {(selectedAgreement as any).targetInstitutions.join(", ")}</p>}
+              {!(selectedAgreement as any).sourceInstitutions?.length && !(selectedAgreement as any).targetInstitutions?.length && <p className="text-[10px] text-muted-foreground">All institutions in both countries are covered</p>}
               <div className="flex flex-wrap gap-1.5">
                 {selectedAgreement.allowedDataTypes.map(dt => (
                   <Badge key={dt} variant="secondary" className="text-[10px] capitalize">{dt.replace(/_/g, " ")}</Badge>
