@@ -112,7 +112,7 @@ const COUNTRY_REGISTRY: Record<string, CountryConfig> = {
     brandTitle: "Sierra Leone Credit Registry",
     brandSubtitle: "Carlson Capital & Systems In Motion Limited\u2122",
     regions: [
-      "Western Area", "Northern", "Southern", "Eastern", "North West",
+      "Western Area Urban", "Western Area Rural", "Northern", "Southern", "Eastern", "North West",
     ],
     theme: {
       primary: "145 55% 32%",
@@ -348,6 +348,14 @@ export const GHANA_ID_TYPES: GhanaIdType[] = [
   { code: "PASSPORT", label: "Passport", fieldName: "passportNumber" },
 ];
 
+export const SIERRA_LEONE_ID_TYPES: GhanaIdType[] = [
+  { code: "NCRA_ID", label: "NCRA National ID", fieldName: "ghanaCardNumber" },
+  { code: "NIN", label: "National Identification Number (NIN)", fieldName: "votersId" },
+  { code: "NASSIT", label: "NASSIT Number", fieldName: "ssnitNumber" },
+  { code: "DRIVERS_LICENSE", label: "Driver's License", fieldName: "driversLicense" },
+  { code: "PASSPORT", label: "Passport", fieldName: "passportNumber" },
+];
+
 export const BOG_FACILITY_TYPES: BogCode[] = [
   { code: "OVD", label: "Overdraft" },
   { code: "TML", label: "Term Loan" },
@@ -523,6 +531,10 @@ export function getCountryMode(): string | null {
 
 export function isGhanaMode(): boolean {
   return getCountryMode() === "ghana";
+}
+
+export function isSierraLeoneMode(): boolean {
+  return getCountryMode() === "sierraleone";
 }
 
 export function isSingleCountryMode(): boolean {

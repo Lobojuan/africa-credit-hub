@@ -260,6 +260,13 @@ process.stderr.write = function (...args: any[]) {
   }
 
   try {
+    const { seedSierraLeoneData } = await import("./seed-sierra-leone");
+    await seedSierraLeoneData();
+  } catch (e) {
+    console.error("Sierra Leone seed error (non-fatal):", e);
+  }
+
+  try {
     const { runMigrations } = await import('stripe-replit-sync');
     const databaseUrl = process.env.DATABASE_URL;
     if (databaseUrl) {

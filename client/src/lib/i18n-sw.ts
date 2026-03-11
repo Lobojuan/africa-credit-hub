@@ -25,6 +25,7 @@ const sw: Record<string, any> = {
     regulatoryCompliance: "Uzingatiaji wa Kanuni",
     regulatoryDashboard: "Dashibodi ya Udhibiti",
     bogExport: "BoG CRB Export",
+    bslExport: "BSL CRB Export",
     creditScoreMethodology: "Mbinu ya Alama",
     systemConfig: "Mfumo",
     integrations: "Miunganisho",

@@ -25,6 +25,7 @@ const ar: Record<string, any> = {
     regulatoryCompliance: "الامتثال التنظيمي",
     regulatoryDashboard: "لوحة التنظيم",
     bogExport: "BoG CRB Export",
+    bslExport: "BSL CRB Export",
     creditScoreMethodology: "منهجية التقييم",
     systemConfig: "النظام",
     integrations: "التكاملات",

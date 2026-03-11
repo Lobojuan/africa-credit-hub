@@ -26,6 +26,8 @@ import { sendWelcomeEmail, sendBillingNotification, sendDisputeNotification } fr
 import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport, generatePortfolioIntelligence } from "./ai";
 import { BOG_EXPORT_GENERATORS } from "./bog-export";
 import type { BogFileType } from "@shared/bog-codes";
+import { BSL_EXPORT_GENERATORS } from "./bsl-export";
+import type { BslFileType } from "@shared/bsl-codes";
 
 const loginLimiter = rateLimit({
   validate: { trustProxy: false },
@@ -2508,6 +2510,48 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     }
   });
 
+  app.get("/api/bsl/export/:fileType", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
+    try {
+      const fileType = req.params.fileType.toUpperCase() as BslFileType;
+      const validTypes: BslFileType[] = ["CONC", "BUSC", "CONJ", "BUSJ", "COND", "BUSD"];
+      if (!validTypes.includes(fileType)) {
+        return res.status(400).json({ message: `Invalid file type: ${fileType}. Must be one of: ${validTypes.join(", ")}` });
+      }
+      const reportingDate = (req.query.reportingDate as string) || new Date().toISOString().split("T")[0].replace(/-/g, "");
+      const sequenceNumber = parseInt(req.query.sequenceNumber as string) || 1;
+      const correctionIndicator = (req.query.correctionIndicator as string) || "0";
+
+      const orgId = getOrgScope(req);
+      const generator = BSL_EXPORT_GENERATORS[fileType];
+      const { content, filename } = await generator(reportingDate, sequenceNumber, correctionIndicator, orgId);
+
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.send(content);
+    } catch (e: any) {
+      console.error("BSL export error:", e);
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/bsl/export-preview/:fileType", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
+    try {
+      const fileType = req.params.fileType.toUpperCase() as BslFileType;
+      const validTypes: BslFileType[] = ["CONC", "BUSC", "CONJ", "BUSJ", "COND", "BUSD"];
+      if (!validTypes.includes(fileType)) {
+        return res.status(400).json({ message: `Invalid file type` });
+      }
+      const reportingDate = (req.query.reportingDate as string) || new Date().toISOString().split("T")[0].replace(/-/g, "");
+      const orgId = getOrgScope(req);
+      const generator = BSL_EXPORT_GENERATORS[fileType];
+      const { content, filename } = await generator(reportingDate, 1, "0", orgId);
+      const lines = content.split("\n");
+      res.json({ filename, totalRows: lines.length - 1, headerRow: lines[0], sampleRows: lines.slice(1, 4) });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   app.get("/api/api-keys", requireAuth, requireRole("admin"), async (_req, res) => {
     try {
       const keys = await storage.getAllApiKeys();
@@ -3332,7 +3376,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
         const hasData = borrowerCount > 0 || info.orgs > 0;
         const features: string[] = [];
         if (sc.name === "Ghana") features.push("BoG CRB v1.1 Export");
-        if (sc.name === "Sierra Leone") features.push("BSL Export");
+        if (sc.name === "Sierra Leone") features.push("BSL CRB v1.0 Export");
         features.push("Credit Scoring", "Dispute Management", "Consent Tracking");
 
         const dpStatusMap: Record<string, "enacted" | "draft" | "none"> = {

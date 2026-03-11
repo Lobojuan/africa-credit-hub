@@ -49,7 +49,7 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@radix-ui/react-collapsible";
 import type { LucideIcon } from "lucide-react";
-import { isGhanaMode, isSingleCountryMode, getBrandTitle, getCountryConfig } from "@/lib/country-mode";
+import { isGhanaMode, isSierraLeoneMode, isSingleCountryMode, getBrandTitle, getCountryConfig } from "@/lib/country-mode";
 import { useCountryTheme } from "@/components/country-theme-provider";
 
 type NavItem = {
@@ -76,14 +76,24 @@ const operationsItems: NavItem[] = [
   { titleKey: "sidebar.helpdesk", url: "/helpdesk", icon: Headset, testId: "nav-helpdesk" },
 ];
 
-const oversightItems: NavItem[] = [
+const baseOversightItems: NavItem[] = [
   { titleKey: "sidebar.portfolioIntelligence", url: "/portfolio-intelligence", icon: Brain, testId: "nav-portfolio-intelligence", roles: ["admin", "super_admin", "regulator"] },
   { titleKey: "sidebar.regulatoryDashboard", url: "/regulatory-dashboard", icon: BarChart3, testId: "nav-regulatory-dashboard", roles: ["admin", "regulator", "super_admin"] },
   { titleKey: "sidebar.auditTrail", url: "/audit", icon: Shield, testId: "nav-audit-trail", roles: ["admin", "regulator", "super_admin"] },
   { titleKey: "sidebar.borrowerAlerts", url: "/borrower-alerts", icon: Bell, testId: "nav-borrower-alerts", roles: ["admin", "regulator", "super_admin"] },
   { titleKey: "sidebar.regulatoryCompliance", url: "/regulatory-compliance", icon: Scale, testId: "nav-regulatory-compliance", roles: ["admin", "regulator", "super_admin"] },
-  { titleKey: "sidebar.bogExport", url: "/bog-export", icon: FileSpreadsheet, testId: "nav-bog-export", roles: ["admin", "regulator", "super_admin"] },
 ];
+
+function getOversightItems(activeCountryName?: string): NavItem[] {
+  const items = [...baseOversightItems];
+  const country = activeCountryName?.toLowerCase().replace(/[\s_-]/g, "") || "";
+  if (country === "sierraleone" || isSierraLeoneMode()) {
+    items.push({ titleKey: "sidebar.bslExport", url: "/bsl-export", icon: FileSpreadsheet, testId: "nav-bsl-export", roles: ["admin", "regulator", "super_admin"] });
+  } else {
+    items.push({ titleKey: "sidebar.bogExport", url: "/bog-export", icon: FileSpreadsheet, testId: "nav-bog-export", roles: ["admin", "regulator", "super_admin"] });
+  }
+  return items;
+}
 
 const adminItems: NavItem[] = [
   { titleKey: "sidebar.organizations", url: "/organizations", icon: Building2, testId: "nav-organizations", roles: ["super_admin"] },
@@ -182,16 +192,18 @@ export function AppSidebar() {
   const isRtl = i18n.language === "ar";
   const countryTheme = useCountryTheme();
 
+  const dynamicCountryConfig = countryTheme?.activeConfig;
+  const dynamicBrandTitle = dynamicCountryConfig?.brandTitle || (isGhanaMode() ? getBrandTitle() : t('sidebar.brandTitle'));
+  const dynamicTheme = countryTheme?.activeTheme;
+
   const visibleCore = filterByRole(coreItems, role);
   const visibleOperations = filterByRole(operationsItems, role);
+  const oversightItems = getOversightItems(dynamicCountryConfig?.name);
   const visibleOversight = filterByRole(oversightItems, role);
   const visibleAdmin = filterByRole(adminItems, role);
   const visibleResources = filterByRole(resourceItems, role);
   const isSuperAdmin = role === "super_admin";
   const orgName = (user as any)?.organization?.name;
-  const dynamicCountryConfig = countryTheme?.activeConfig;
-  const dynamicBrandTitle = dynamicCountryConfig?.brandTitle || (isGhanaMode() ? getBrandTitle() : t('sidebar.brandTitle'));
-  const dynamicTheme = countryTheme?.activeTheme;
 
   return (
     <Sidebar side={isRtl ? "right" : "left"}>

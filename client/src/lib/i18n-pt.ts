@@ -25,6 +25,7 @@ const pt = {
     regulatoryCompliance: "Conformidade Regulatória",
     regulatoryDashboard: "Painel Regulatório",
     bogExport: "BoG CRB Export",
+    bslExport: "BSL CRB Export",
     creditScoreMethodology: "Metodologia de Pontuação",
     systemConfig: "Sistema",
     integrations: "Integrações",
