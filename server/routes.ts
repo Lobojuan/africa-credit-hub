@@ -21,7 +21,7 @@ import path from "path";
 import * as OTPAuth from "otpauth";
 import multer from "multer";
 import rateLimit from "express-rate-limit";
-import { isGhanaMode, getActiveCountryName, isSingleCountryMode, COUNTRY_REGISTRY } from "./country-mode";
+import { isGhanaMode, getActiveCountryName, isSingleCountryMode, COUNTRY_REGISTRY, getSupportedCountries } from "./country-mode";
 import { sendWelcomeEmail, sendBillingNotification, sendDisputeNotification } from "./email";
 import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport, generatePortfolioIntelligence } from "./ai";
 import { BOG_EXPORT_GENERATORS } from "./bog-export";
@@ -3286,6 +3286,86 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
         activeCountry: getActiveCountryName() || "all",
         singleCountryMode: isSingleCountryMode(),
         countries: countryStats.sort((a, b) => b.totalBorrowers - a.totalBorrowers),
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/platform/command-center", requireAuth, requireSuperAdmin, async (_req, res) => {
+    try {
+      const allOrgs = await storage.getOrganizations();
+      const supportedCountries = getSupportedCountries();
+
+      const countryMap: Record<string, { orgs: number; activeOrgs: number; orgIds: string[] }> = {};
+      for (const org of allOrgs) {
+        const c = org.country || "Unknown";
+        if (!countryMap[c]) countryMap[c] = { orgs: 0, activeOrgs: 0, orgIds: [] };
+        countryMap[c].orgs++;
+        countryMap[c].orgIds.push(org.id);
+        if (org.status === "active") countryMap[c].activeOrgs++;
+      }
+
+      const borrowersByOrg = await db.execute(sql`SELECT organization_id, COUNT(*) as count FROM borrowers GROUP BY organization_id`);
+      const accountsByOrg = await db.execute(sql`SELECT organization_id, COUNT(*) as count FROM credit_accounts GROUP BY organization_id`);
+
+      const borrowerCounts: Record<string, number> = {};
+      for (const row of borrowersByOrg.rows || []) {
+        borrowerCounts[row.organization_id as string] = Number(row.count);
+      }
+      const accountCounts: Record<string, number> = {};
+      for (const row of accountsByOrg.rows || []) {
+        accountCounts[row.organization_id as string] = Number(row.count);
+      }
+
+      let totalBorrowersAll = 0;
+      let totalAccountsAll = 0;
+
+      const countryDetails = supportedCountries.map((sc) => {
+        const info = countryMap[sc.name] || { orgs: 0, activeOrgs: 0, orgIds: [] };
+        let borrowerCount = 0;
+        let accountCount = 0;
+        for (const orgId of info.orgIds) {
+          borrowerCount += borrowerCounts[orgId] || 0;
+          accountCount += accountCounts[orgId] || 0;
+        }
+        totalBorrowersAll += borrowerCount;
+        totalAccountsAll += accountCount;
+
+        const hasData = borrowerCount > 0 || info.orgs > 0;
+        const features: string[] = [];
+        if (sc.name === "Ghana") features.push("BoG CRB v1.1 Export");
+        if (sc.name === "Sierra Leone") features.push("BSL Export");
+        features.push("Credit Scoring", "Dispute Management", "Consent Tracking");
+
+        return {
+          name: sc.name,
+          code: sc.code,
+          currency: sc.currency,
+          regulatoryBody: sc.regulatoryBody,
+          dataProtectionLaw: sc.dataProtectionLaw,
+          institutions: info.orgs,
+          activeInstitutions: info.activeOrgs,
+          borrowers: borrowerCount,
+          accounts: accountCount,
+          hasData,
+          features,
+        };
+      });
+
+      const activeCountries = countryDetails.filter((c) => c.hasData).length;
+
+      res.json({
+        platform: {
+          totalBorrowers: totalBorrowersAll,
+          totalAccounts: totalAccountsAll,
+          totalInstitutions: allOrgs.length,
+          activeCountries,
+          supportedCountries: supportedCountries.length,
+          systemVersion: "CDH v2.1",
+          systemStatus: "operational",
+        },
+        countries: countryDetails,
       });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
