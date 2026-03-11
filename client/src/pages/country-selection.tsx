@@ -29,6 +29,9 @@ interface CountryDetail {
   currency: string;
   regulatoryBody: string;
   dataProtectionLaw: string;
+  dataProtectionStatus: "enacted" | "draft" | "none";
+  sataReadiness: "ready" | "partial" | "planned";
+  regionalBlocs: string[];
   institutions: number;
   activeInstitutions: number;
   borrowers: number;
@@ -41,32 +44,6 @@ interface CommandCenterData {
   platform: PlatformStats;
   countries: CountryDetail[];
 }
-
-const SATA_READINESS: Record<string, { level: "ready" | "partial" | "planned"; blocs: string[] }> = {
-  GH: { level: "ready", blocs: ["AU", "ECOWAS"] },
-  NG: { level: "ready", blocs: ["AU", "ECOWAS"] },
-  KE: { level: "ready", blocs: ["AU", "EAC", "COMESA"] },
-  RW: { level: "ready", blocs: ["AU", "EAC", "COMESA"] },
-  TZ: { level: "partial", blocs: ["AU", "EAC", "SADC"] },
-  UG: { level: "partial", blocs: ["AU", "EAC", "COMESA"] },
-  ZA: { level: "ready", blocs: ["AU", "SADC"] },
-  ET: { level: "partial", blocs: ["AU", "IGAD", "COMESA"] },
-  SL: { level: "planned", blocs: ["AU", "ECOWAS"] },
-  LR: { level: "planned", blocs: ["AU", "ECOWAS"] },
-};
-
-const DATA_PROTECTION_STATUS: Record<string, "enacted" | "draft" | "none"> = {
-  GH: "enacted",
-  NG: "enacted",
-  KE: "enacted",
-  RW: "enacted",
-  TZ: "enacted",
-  UG: "enacted",
-  ZA: "enacted",
-  ET: "enacted",
-  SL: "draft",
-  LR: "draft",
-};
 
 const CREDIT_BUREAU_FRAMEWORK: Record<string, string> = {
   GH: "XDS Data, Dun & Bradstreet, Hudson Price",
@@ -167,7 +144,9 @@ export default function CountrySelectionPage() {
         <div className="flex items-center gap-2">
           <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
             <Activity className="w-3 h-3 text-emerald-400" />
-            <span className="text-[10px] font-medium text-emerald-400" data-testid="text-system-status">System Online</span>
+            <span className="text-[10px] font-medium text-emerald-400" data-testid="text-system-status">
+              {platform?.systemStatus === "operational" ? "System Online" : platform?.systemStatus || "System Online"}
+            </span>
           </div>
           <ThemeToggle />
           <Button
@@ -242,8 +221,8 @@ export default function CountrySelectionPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {countries.map((c) => {
                   const detail = countryDetails.find((d) => d.code === c.code);
-                  const sata = SATA_READINESS[c.code];
-                  const dpStatus = DATA_PROTECTION_STATUS[c.code];
+                  const dpStatus = detail?.dataProtectionStatus;
+                  const sataLevel = detail?.sataReadiness;
                   return (
                     <button
                       key={c.code}
@@ -291,7 +270,7 @@ export default function CountrySelectionPage() {
 
                       <div className="flex items-center gap-1.5 flex-wrap w-full">
                         {dpStatus && <ComplianceIndicator status={dpStatus} />}
-                        {sata && <SATAIndicator level={sata.level} />}
+                        {sataLevel && <SATAIndicator level={sataLevel} />}
                         <Badge variant="outline" className="text-[9px] h-5 border-slate-600/50 text-slate-400">{c.currency}</Badge>
                       </div>
                     </button>
@@ -309,7 +288,8 @@ export default function CountrySelectionPage() {
                   </div>
                   <div className="space-y-2">
                     {countries.map((c) => {
-                      const dpStatus = DATA_PROTECTION_STATUS[c.code] || "none";
+                      const detail = countryDetails.find((d) => d.code === c.code);
+                      const dpStatus = detail?.dataProtectionStatus || "none";
                       return (
                         <div key={c.code} className="flex items-center justify-between py-1.5 border-b border-slate-700/30 last:border-0">
                           <div className="flex items-center gap-2">
@@ -317,7 +297,7 @@ export default function CountrySelectionPage() {
                             <span className="text-xs text-slate-300">{c.name}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] text-slate-500 hidden sm:inline max-w-[180px] truncate">{c.dataProtectionLaw}</span>
+                            <span className="text-[10px] text-slate-500 hidden sm:inline max-w-[180px] truncate">{detail?.dataProtectionLaw || c.dataProtectionLaw}</span>
                             <ComplianceIndicator status={dpStatus} />
                           </div>
                         </div>
@@ -334,7 +314,7 @@ export default function CountrySelectionPage() {
                   <p className="text-[10px] text-slate-400 mb-3">Smart Africa Trust Alliance compliance for cross-border data sharing</p>
                   <div className="space-y-2">
                     {countries.map((c) => {
-                      const sata = SATA_READINESS[c.code];
+                      const detail = countryDetails.find((d) => d.code === c.code);
                       const bureau = CREDIT_BUREAU_FRAMEWORK[c.code] || "N/A";
                       return (
                         <div key={c.code} className="flex items-center justify-between py-1.5 border-b border-slate-700/30 last:border-0">
@@ -346,10 +326,10 @@ export default function CountrySelectionPage() {
                             </div>
                           </div>
                           <div className="flex items-center gap-1.5">
-                            {sata?.blocs.map((b) => (
+                            {(detail?.regionalBlocs || []).map((b) => (
                               <Badge key={b} variant="outline" className="text-[8px] h-4 px-1 border-slate-600/50 text-slate-500">{b}</Badge>
                             ))}
-                            {sata && <SATAIndicator level={sata.level} />}
+                            {detail?.sataReadiness && <SATAIndicator level={detail.sataReadiness} />}
                           </div>
                         </div>
                       );
@@ -411,7 +391,7 @@ export default function CountrySelectionPage() {
                     </thead>
                     <tbody>
                       {countries.map((c) => {
-                        const sata = SATA_READINESS[c.code];
+                        const detail = countryDetails.find((d) => d.code === c.code);
                         const exportType = c.code === "GH" ? "BoG CRB v1.1" : c.code === "SL" ? "BSL Export" : "Standard";
                         return (
                           <tr key={c.code} className="border-b border-slate-700/20 hover:bg-slate-700/20">
@@ -432,14 +412,14 @@ export default function CountrySelectionPage() {
                             <td className="text-center p-3"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mx-auto" /></td>
                             <td className="text-center p-3"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mx-auto" /></td>
                             <td className="text-center p-3">
-                              {DATA_PROTECTION_STATUS[c.code] === "enacted" ? (
+                              {detail?.dataProtectionStatus === "enacted" ? (
                                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mx-auto" />
                               ) : (
                                 <AlertTriangle className="w-3.5 h-3.5 text-amber-400 mx-auto" />
                               )}
                             </td>
                             <td className="text-center p-3">
-                              {sata && <SATAIndicator level={sata.level} />}
+                              {detail?.sataReadiness && <SATAIndicator level={detail.sataReadiness} />}
                             </td>
                           </tr>
                         );

@@ -3338,12 +3338,29 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
         if (sc.name === "Sierra Leone") features.push("BSL Export");
         features.push("Credit Scoring", "Dispute Management", "Consent Tracking");
 
+        const dpStatusMap: Record<string, "enacted" | "draft" | "none"> = {
+          GH: "enacted", NG: "enacted", KE: "enacted", RW: "enacted", TZ: "enacted",
+          UG: "enacted", ZA: "enacted", ET: "enacted", SL: "draft", LR: "draft",
+        };
+        const sataMap: Record<string, "ready" | "partial" | "planned"> = {
+          GH: "ready", NG: "ready", KE: "ready", RW: "ready", ZA: "ready",
+          TZ: "partial", UG: "partial", ET: "partial", SL: "planned", LR: "planned",
+        };
+        const blocsMap: Record<string, string[]> = {
+          GH: ["AU", "ECOWAS"], NG: ["AU", "ECOWAS"], KE: ["AU", "EAC", "COMESA"],
+          RW: ["AU", "EAC", "COMESA"], TZ: ["AU", "EAC", "SADC"], UG: ["AU", "EAC", "COMESA"],
+          ZA: ["AU", "SADC"], ET: ["AU", "IGAD", "COMESA"], SL: ["AU", "ECOWAS"], LR: ["AU", "ECOWAS"],
+        };
+
         return {
           name: sc.name,
           code: sc.code,
           currency: sc.currency,
           regulatoryBody: sc.regulatoryBody,
           dataProtectionLaw: sc.dataProtectionLaw,
+          dataProtectionStatus: dpStatusMap[sc.code] || "none",
+          sataReadiness: sataMap[sc.code] || "planned",
+          regionalBlocs: blocsMap[sc.code] || [],
           institutions: info.orgs,
           activeInstitutions: info.activeOrgs,
           borrowers: borrowerCount,
