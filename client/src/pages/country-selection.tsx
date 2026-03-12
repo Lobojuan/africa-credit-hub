@@ -5,13 +5,15 @@ import { getSupportedCountries, type CountryConfig } from "@/lib/country-mode";
 import {
   Globe, Loader2, LogOut, Shield, ArrowRight, Building2, Users,
   CreditCard, CheckCircle2, AlertTriangle, Activity, Database,
-  TrendingUp, Lock, FileText, Scale,
+  TrendingUp, Lock, FileText, Scale, Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CommandCenterUsersTab } from "./command-center-users";
+import { CommandCenterSettingsTab } from "./command-center-settings";
 
 interface PlatformStats {
   totalBorrowers: number;
@@ -214,6 +216,12 @@ export default function CountrySelectionPage() {
               </TabsTrigger>
               <TabsTrigger value="features" className="text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-white" data-testid="tab-features">
                 Feature Matrix
+              </TabsTrigger>
+              <TabsTrigger value="users-clients" className="text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-white" data-testid="tab-users-clients">
+                <Users className="w-3 h-3 mr-1" /> Users & Clients
+              </TabsTrigger>
+              <TabsTrigger value="country-settings" className="text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-white" data-testid="tab-country-settings">
+                <Settings className="w-3 h-3 mr-1" /> Country Settings
               </TabsTrigger>
             </TabsList>
 
@@ -439,6 +447,14 @@ export default function CountrySelectionPage() {
                   </table>
                 </div>
               </div>
+            </TabsContent>
+
+            <TabsContent value="users-clients" className="mt-0">
+              <CommandCenterUsersTab />
+            </TabsContent>
+
+            <TabsContent value="country-settings" className="mt-0">
+              <CommandCenterSettingsTab />
             </TabsContent>
           </Tabs>
         </div>
