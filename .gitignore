@@ -4,3 +4,6 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+e2e/.auth/
+e2e/test-results-artifacts/
+e2e/report/
