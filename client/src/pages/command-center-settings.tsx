@@ -402,8 +402,8 @@ export function CommandCenterSettingsTab() {
     : agreements;
 
   const toggleFeature = (featureKey: string) => {
-    if (!selectedConfig || !selectedSettings) return;
-    const current = selectedSettings.enabledFeatures || [];
+    if (!selectedConfig) return;
+    const current = selectedSettings?.enabledFeatures || [];
     const updated = current.includes(featureKey)
       ? current.filter((f) => f !== featureKey)
       : [...current, featureKey];
