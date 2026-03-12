@@ -157,28 +157,30 @@ function UserCreateDialog({ open, onOpenChange, organizations }: { open: boolean
   );
 }
 
-function UserEditDialog({ user, open, onOpenChange }: { user: User | null; open: boolean; onOpenChange: (v: boolean) => void }) {
+function UserEditDialog({ user, open, onOpenChange, organizations }: { user: User | null; open: boolean; onOpenChange: (v: boolean) => void; organizations: Organization[] }) {
   const { toast } = useToast();
-  const [form, setForm] = useState({ fullName: "", email: "", role: "", status: "", institution: "", password: "" });
+  const [form, setForm] = useState({ fullName: "", email: "", role: "", status: "", institution: "", password: "", organizationId: "" });
 
   useEffect(() => {
     if (user && open) {
       setForm({
         fullName: user.fullName, email: user.email, role: user.role,
         status: user.status, institution: user.institution || "", password: "",
+        organizationId: user.organizationId || "",
       });
     }
   }, [user, open]);
 
   const editMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Record<string, string> }) => {
-      const payload: Record<string, string> = {};
+      const payload: Record<string, any> = {};
       if (data.fullName) payload.fullName = data.fullName;
       if (data.email) payload.email = data.email;
       if (data.role) payload.role = data.role;
       if (data.status) payload.status = data.status;
       if (data.institution !== undefined) payload.institution = data.institution;
       if (data.password) payload.password = data.password;
+      payload.organizationId = data.organizationId && data.organizationId !== "none" ? data.organizationId : null;
       const res = await apiRequest("PATCH", `/api/users/${id}`, payload);
       return res.json();
     },
@@ -193,8 +195,8 @@ function UserEditDialog({ user, open, onOpenChange }: { user: User | null; open:
   });
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) setForm({ fullName: "", email: "", role: "", status: "", institution: "", password: "" }); onOpenChange(v); }}>
-      <DialogContent className="max-w-md bg-slate-900 border-slate-700/50 text-white">
+    <Dialog open={open} onOpenChange={(v) => { if (!v) setForm({ fullName: "", email: "", role: "", status: "", institution: "", password: "", organizationId: "" }); onOpenChange(v); }}>
+      <DialogContent className="max-w-md bg-slate-900 border-slate-700/50 text-white max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-white">
             <Pencil className="w-4 h-4 text-blue-400" /> Edit User
@@ -233,6 +235,18 @@ function UserEditDialog({ user, open, onOpenChange }: { user: User | null; open:
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          <div>
+            <Label className="text-xs text-slate-400">Organization</Label>
+            <Select value={form.organizationId || "none"} onValueChange={(v) => setForm({ ...form, organizationId: v })}>
+              <SelectTrigger data-testid="select-cc-edit-org" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent className="bg-slate-900 border-slate-700 max-h-[200px]">
+                <SelectItem value="none" className="text-slate-300">No Organization</SelectItem>
+                {organizations.map((o) => (
+                  <SelectItem key={o.id} value={o.id} className="text-slate-300">{o.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label className="text-xs text-slate-400">New Password (leave blank to keep)</Label>
@@ -479,6 +493,7 @@ export function CommandCenterUsersTab() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [countryFilter, setCountryFilter] = useState("all");
+  const [orgFilter, setOrgFilter] = useState("all");
   const [createUserOpen, setCreateUserOpen] = useState(false);
   const [editUser, setEditUser] = useState<User | null>(null);
   const [editUserOpen, setEditUserOpen] = useState(false);
@@ -526,6 +541,10 @@ export function CommandCenterUsersTab() {
       if (!u.organizationId) return false;
       const org = orgList.find((o: any) => o.id === u.organizationId);
       if (!org || org.country !== countryFilter) return false;
+    }
+    if (orgFilter !== "all") {
+      if (orgFilter === "none") { if (u.organizationId) return false; }
+      else if (u.organizationId !== orgFilter) return false;
     }
     return true;
   });
@@ -630,6 +649,18 @@ export function CommandCenterUsersTab() {
                 <SelectItem value="all" className="text-slate-300 text-xs">All Countries</SelectItem>
                 {countries.map((c) => (
                   <SelectItem key={c.code} value={c.name} className="text-slate-300 text-xs">{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={orgFilter} onValueChange={setOrgFilter}>
+              <SelectTrigger className="w-[150px] bg-slate-800/50 border-slate-700/50 text-white h-8 text-xs" data-testid="filter-org">
+                <SelectValue placeholder="Organization" />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-900 border-slate-700 max-h-[200px]">
+                <SelectItem value="all" className="text-slate-300 text-xs">All Organizations</SelectItem>
+                <SelectItem value="none" className="text-slate-300 text-xs">No Organization</SelectItem>
+                {orgList.map((o) => (
+                  <SelectItem key={o.id} value={o.id} className="text-slate-300 text-xs">{o.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -796,7 +827,7 @@ export function CommandCenterUsersTab() {
       </Tabs>
 
       <UserCreateDialog open={createUserOpen} onOpenChange={setCreateUserOpen} organizations={orgList} />
-      <UserEditDialog user={editUser} open={editUserOpen} onOpenChange={(v) => { setEditUserOpen(v); if (!v) setEditUser(null); }} />
+      <UserEditDialog user={editUser} open={editUserOpen} onOpenChange={(v) => { setEditUserOpen(v); if (!v) setEditUser(null); }} organizations={orgList} />
       <OrgCreateDialog open={createOrgOpen} onOpenChange={setCreateOrgOpen} />
       <OrgEditDialog org={editOrg} open={editOrgOpen} onOpenChange={(v) => { setEditOrgOpen(v); if (!v) setEditOrg(null); }} />
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
-  Globe, Settings, Plus, Trash2, Loader2, Shield, Scale, FileText,
+  Globe, Settings, Plus, Trash2, Loader2, Shield, Scale, FileText, Pencil,
   CheckCircle2, AlertTriangle, ArrowRight, Link2, Calendar,
 } from "lucide-react";
 import { getSupportedCountries } from "@/lib/country-mode";
@@ -188,12 +189,151 @@ function CreateAgreementDialog({ open, onOpenChange }: { open: boolean; onOpenCh
   );
 }
 
+function EditAgreementDialog({ agreement, open, onOpenChange }: { agreement: SATAAgreement | null; open: boolean; onOpenChange: (v: boolean) => void }) {
+  const { toast } = useToast();
+  const countries = getSupportedCountries();
+  const [form, setForm] = useState({
+    sourceCountry: "", targetCountry: "", effectiveDate: "", expiryDate: "",
+    legalBasis: "", description: "", regionalBloc: "", allowedDataTypes: [] as string[],
+  });
+
+  useEffect(() => {
+    if (agreement && open) {
+      setForm({
+        sourceCountry: agreement.sourceCountry, targetCountry: agreement.targetCountry,
+        effectiveDate: agreement.effectiveDate || "", expiryDate: agreement.expiryDate || "",
+        legalBasis: agreement.legalBasis || "", description: agreement.description || "",
+        regionalBloc: agreement.regionalBloc || "", allowedDataTypes: [...(agreement.allowedDataTypes || [])],
+      });
+    }
+  }, [agreement, open]);
+
+  const editMutation = useMutation({
+    mutationFn: async (data: typeof form) => {
+      const res = await apiRequest("PATCH", `/api/sata/agreements/${agreement!.id}`, {
+        sourceCountry: data.sourceCountry, targetCountry: data.targetCountry,
+        effectiveDate: data.effectiveDate || null, expiryDate: data.expiryDate || null,
+        legalBasis: data.legalBasis || null, description: data.description || null,
+        regionalBloc: data.regionalBloc && data.regionalBloc !== "none" ? data.regionalBloc : null,
+        allowedDataTypes: data.allowedDataTypes,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/sata/agreements"] });
+      onOpenChange(false);
+      toast({ title: "Agreement updated successfully" });
+    },
+    onError: (e: Error) => {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    },
+  });
+
+  const toggleDataType = (dt: string) => {
+    setForm((f) => ({
+      ...f,
+      allowedDataTypes: f.allowedDataTypes.includes(dt) ? f.allowedDataTypes.filter((t) => t !== dt) : [...f.allowedDataTypes, dt],
+    }));
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); }}>
+      <DialogContent className="max-w-md bg-slate-900 border-slate-700/50 text-white max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-white">
+            <Pencil className="w-4 h-4 text-blue-400" /> Edit Agreement
+          </DialogTitle>
+        </DialogHeader>
+        <form onSubmit={(e) => { e.preventDefault(); editMutation.mutate(form); }} className="space-y-3" data-testid="form-cc-edit-agreement">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs text-slate-400">Source Country</Label>
+              <Select value={form.sourceCountry} onValueChange={(v) => setForm({ ...form, sourceCountry: v })}>
+                <SelectTrigger data-testid="select-cc-edit-source-country" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm"><SelectValue placeholder="Select..." /></SelectTrigger>
+                <SelectContent className="bg-slate-900 border-slate-700">
+                  {countries.map((c) => <SelectItem key={c.code} value={c.name} className="text-slate-300">{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs text-slate-400">Target Country</Label>
+              <Select value={form.targetCountry} onValueChange={(v) => setForm({ ...form, targetCountry: v })}>
+                <SelectTrigger data-testid="select-cc-edit-target-country" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm"><SelectValue placeholder="Select..." /></SelectTrigger>
+                <SelectContent className="bg-slate-900 border-slate-700">
+                  {countries.map((c) => <SelectItem key={c.code} value={c.name} className="text-slate-300">{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs text-slate-400">Effective Date</Label>
+              <Input data-testid="input-cc-edit-effective-date" type="date" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm" value={form.effectiveDate} onChange={(e) => setForm({ ...form, effectiveDate: e.target.value })} />
+            </div>
+            <div>
+              <Label className="text-xs text-slate-400">Expiry Date</Label>
+              <Input data-testid="input-cc-edit-expiry-date" type="date" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm" value={form.expiryDate} onChange={(e) => setForm({ ...form, expiryDate: e.target.value })} />
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs text-slate-400">Legal Basis</Label>
+            <Input data-testid="input-cc-edit-legal-basis" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm" value={form.legalBasis} onChange={(e) => setForm({ ...form, legalBasis: e.target.value })} placeholder="e.g. AfCFTA Protocol, Bilateral MOU" />
+          </div>
+          <div>
+            <Label className="text-xs text-slate-400">Regional Bloc</Label>
+            <Select value={form.regionalBloc || "none"} onValueChange={(v) => setForm({ ...form, regionalBloc: v })}>
+              <SelectTrigger data-testid="select-cc-edit-bloc" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm"><SelectValue placeholder="Select..." /></SelectTrigger>
+              <SelectContent className="bg-slate-900 border-slate-700">
+                <SelectItem value="none" className="text-slate-300">None</SelectItem>
+                <SelectItem value="ECOWAS" className="text-slate-300">ECOWAS</SelectItem>
+                <SelectItem value="EAC" className="text-slate-300">EAC</SelectItem>
+                <SelectItem value="SADC" className="text-slate-300">SADC</SelectItem>
+                <SelectItem value="COMESA" className="text-slate-300">COMESA</SelectItem>
+                <SelectItem value="AfCFTA" className="text-slate-300">AfCFTA</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs text-slate-400">Description</Label>
+            <Input data-testid="input-cc-edit-description" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Brief description..." />
+          </div>
+          <div>
+            <Label className="text-xs text-slate-400 mb-2 block">Allowed Data Types</Label>
+            <div className="grid grid-cols-2 gap-1.5">
+              {DATA_TYPES.map((dt) => (
+                <button
+                  key={dt}
+                  type="button"
+                  onClick={() => toggleDataType(dt)}
+                  className={`text-[10px] px-2 py-1.5 rounded-md border transition-colors text-left
+                    ${form.allowedDataTypes.includes(dt) ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" : "border-slate-700/50 text-slate-400 hover:bg-slate-800"}`}
+                  data-testid={`toggle-cc-edit-dt-${dt.replace(/\s/g, '-').toLowerCase()}`}
+                >
+                  {form.allowedDataTypes.includes(dt) ? <CheckCircle2 className="w-3 h-3 inline mr-1" /> : null}
+                  {dt}
+                </button>
+              ))}
+            </div>
+          </div>
+          <Button type="submit" className="w-full" disabled={editMutation.isPending || !form.sourceCountry || !form.targetCountry || form.allowedDataTypes.length === 0} data-testid="button-cc-submit-edit-agreement">
+            {editMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+            {editMutation.isPending ? "Updating..." : "Update Agreement"}
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 interface CountryDetail {
   name: string;
   code: string;
   currency: string;
   regulatoryBody: string;
   dataProtectionLaw: string;
+  dataProtectionStatus: "enacted" | "draft" | "none";
+  sataReadiness: "ready" | "partial" | "planned";
+  regionalBlocs: string[];
   features: string[];
 }
 
@@ -202,6 +342,8 @@ export function CommandCenterSettingsTab() {
   const countries = getSupportedCountries();
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [createAgreementOpen, setCreateAgreementOpen] = useState(false);
+  const [editAgreement, setEditAgreement] = useState<SATAAgreement | null>(null);
+  const [editAgreementOpen, setEditAgreementOpen] = useState(false);
   const [deleteAgreement, setDeleteAgreement] = useState<SATAAgreement | null>(null);
 
   const { data: agreements = [], isLoading: agreementsLoading } = useQuery<SATAAgreement[]>({
@@ -312,20 +454,43 @@ export function CommandCenterSettingsTab() {
               </div>
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <div className="p-3 rounded-lg bg-slate-900/50">
-                  <p className="text-[10px] text-slate-500 mb-1">Currency</p>
-                  <p className="text-sm font-semibold text-white" data-testid="text-cc-country-currency">{selectedConfig.currency}</p>
-                </div>
-                <div className="p-3 rounded-lg bg-slate-900/50">
                   <p className="text-[10px] text-slate-500 mb-1">Regulatory Body</p>
                   <p className="text-sm font-semibold text-white" data-testid="text-cc-country-regulator">{selectedConfig.regulatoryBody}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-slate-900/50">
+                  <p className="text-[10px] text-slate-500 mb-1">Currency</p>
+                  <p className="text-sm font-semibold text-white" data-testid="text-cc-country-currency">{selectedConfig.currency}</p>
                 </div>
                 <div className="p-3 rounded-lg bg-slate-900/50">
                   <p className="text-[10px] text-slate-500 mb-1">Data Protection Law</p>
                   <p className="text-sm font-semibold text-white" data-testid="text-cc-country-dp-law">{selectedConfig.dataProtectionLaw}</p>
                 </div>
                 <div className="p-3 rounded-lg bg-slate-900/50">
-                  <p className="text-[10px] text-slate-500 mb-1">Country Code</p>
-                  <p className="text-sm font-semibold text-white">{selectedConfig.code}</p>
+                  <p className="text-[10px] text-slate-500 mb-1">Data Protection Status</p>
+                  <Badge variant="outline" className={`text-[9px] h-5 capitalize ${
+                    selectedDetail?.dataProtectionStatus === "enacted" ? "border-emerald-500/30 text-emerald-400 bg-emerald-500/10" :
+                    selectedDetail?.dataProtectionStatus === "draft" ? "border-amber-500/30 text-amber-400 bg-amber-500/10" :
+                    "border-red-500/30 text-red-400 bg-red-500/10"
+                  }`} data-testid="text-cc-country-dp-status">{selectedDetail?.dataProtectionStatus || "none"}</Badge>
+                </div>
+                <div className="p-3 rounded-lg bg-slate-900/50">
+                  <p className="text-[10px] text-slate-500 mb-1">SATA Readiness</p>
+                  <Badge variant="outline" className={`text-[9px] h-5 capitalize ${
+                    selectedDetail?.sataReadiness === "ready" ? "border-emerald-500/30 text-emerald-400 bg-emerald-500/10" :
+                    selectedDetail?.sataReadiness === "partial" ? "border-blue-500/30 text-blue-400 bg-blue-500/10" :
+                    "border-slate-500/30 text-slate-400 bg-slate-500/10"
+                  }`} data-testid="text-cc-country-sata-readiness">{selectedDetail?.sataReadiness || "planned"}</Badge>
+                </div>
+                <div className="p-3 rounded-lg bg-slate-900/50">
+                  <p className="text-[10px] text-slate-500 mb-1">Regional Blocs</p>
+                  <div className="flex flex-wrap gap-1">
+                    {(selectedDetail?.regionalBlocs || []).map((b) => (
+                      <Badge key={b} variant="outline" className="text-[8px] h-4 px-1.5 border-slate-600/50 text-slate-300">{b}</Badge>
+                    ))}
+                    {(!selectedDetail?.regionalBlocs || selectedDetail.regionalBlocs.length === 0) && (
+                      <span className="text-[10px] text-slate-500">None</span>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -336,14 +501,15 @@ export function CommandCenterSettingsTab() {
                     const enabled = selectedDetail?.features?.includes(feat.key) ?? false;
                     const Icon = feat.icon;
                     return (
-                      <div key={feat.key} className={`flex items-start gap-2 p-2.5 rounded-lg border ${enabled ? "border-emerald-500/20 bg-emerald-500/5" : "border-slate-700/30 bg-slate-900/30"}`} data-testid={`feature-${feat.key.replace(/\s/g, '-').toLowerCase()}`}>
-                        <div className={`w-6 h-6 rounded-md flex items-center justify-center mt-0.5 ${enabled ? "bg-emerald-500/20" : "bg-slate-700/50"}`}>
-                          {enabled ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> : <AlertTriangle className="w-3.5 h-3.5 text-slate-500" />}
+                      <div key={feat.key} className={`flex items-center gap-2 p-2.5 rounded-lg border ${enabled ? "border-emerald-500/20 bg-emerald-500/5" : "border-slate-700/30 bg-slate-900/30"}`} data-testid={`feature-${feat.key.replace(/\s/g, '-').toLowerCase()}`}>
+                        <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${enabled ? "bg-emerald-500/20" : "bg-slate-700/50"}`}>
+                          <Icon className={`w-3.5 h-3.5 ${enabled ? "text-emerald-400" : "text-slate-500"}`} />
                         </div>
-                        <div>
+                        <div className="flex-1 min-w-0">
                           <p className={`text-xs font-medium ${enabled ? "text-emerald-300" : "text-slate-400"}`}>{feat.key}</p>
-                          <p className="text-[10px] text-slate-500">{feat.description}</p>
+                          <p className="text-[10px] text-slate-500 truncate">{feat.description}</p>
                         </div>
+                        <Switch checked={enabled} disabled className="shrink-0 data-[state=checked]:bg-emerald-600" data-testid={`switch-feature-${feat.key.replace(/\s/g, '-').toLowerCase()}`} />
                       </div>
                     );
                   })}
@@ -423,6 +589,13 @@ export function CommandCenterSettingsTab() {
                         </Button>
                       )}
                       <button
+                        onClick={() => { setEditAgreement(a); setEditAgreementOpen(true); }}
+                        className="p-1.5 rounded-md hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+                        data-testid={`button-cc-edit-agreement-${a.id}`}
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                      <button
                         onClick={() => setDeleteAgreement(a)}
                         className="p-1.5 rounded-md hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors"
                         data-testid={`button-cc-delete-agreement-${a.id}`}
@@ -439,6 +612,7 @@ export function CommandCenterSettingsTab() {
       </div>
 
       <CreateAgreementDialog open={createAgreementOpen} onOpenChange={setCreateAgreementOpen} />
+      <EditAgreementDialog agreement={editAgreement} open={editAgreementOpen} onOpenChange={(v) => { setEditAgreementOpen(v); if (!v) setEditAgreement(null); }} />
 
       <Dialog open={!!deleteAgreement} onOpenChange={(v) => !v && setDeleteAgreement(null)}>
         <DialogContent className="bg-slate-900 border-slate-700/50 text-white">
