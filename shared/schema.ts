@@ -559,3 +559,18 @@ export type InsertDataSharingAgreement = z.infer<typeof insertDataSharingAgreeme
 export type DataSharingAgreement = typeof dataSharingAgreements.$inferSelect;
 export type InsertPapssSettlement = z.infer<typeof insertPapssSettlementSchema>;
 export type PapssSettlement = typeof papssSettlements.$inferSelect;
+
+export const countrySettings = pgTable("country_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  countryCode: text("country_code").notNull().unique(),
+  countryName: text("country_name").notNull(),
+  regulatoryBody: text("regulatory_body"),
+  dataProtectionLaw: text("data_protection_law"),
+  dataProtectionStatus: text("data_protection_status").notNull().default("none"),
+  sataReadiness: text("sata_readiness").notNull().default("planned"),
+  enabledFeatures: text("enabled_features").array().default(sql`ARRAY[]::TEXT[]`),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+export const insertCountrySettingsSchema = createInsertSchema(countrySettings).omit({ id: true, updatedAt: true });
+export type InsertCountrySettings = z.infer<typeof insertCountrySettingsSchema>;
+export type CountrySettings = typeof countrySettings.$inferSelect;

@@ -12,7 +12,7 @@ import {
   insertInstitutionSchema, insertBillingRecordSchema, insertCreditReportLogSchema,
   insertExchangeRateSchema, insertRetentionPolicySchema, insertApiConfigurationSchema,
   insertOrganizationSchema, insertDataSharingAgreementSchema, insertPapssSettlementSchema,
-  dataSharingAgreements, papssSettlements, creditAccounts,
+  dataSharingAgreements, papssSettlements, creditAccounts, countrySettings,
 } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
@@ -3647,6 +3647,64 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     }
   });
 
+  app.get("/api/platform/country-settings", requireAuth, requireSuperAdmin, async (_req, res) => {
+    try {
+      const settings = await db.select().from(countrySettings);
+      res.json(settings);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.get("/api/platform/country-settings/:code", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const [setting] = await db.select().from(countrySettings).where(eq(countrySettings.countryCode, req.params.code));
+      if (!setting) return res.status(404).json({ message: "Country settings not found" });
+      res.json(setting);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  const countrySettingsUpdateSchema = z.object({
+    countryName: z.string().optional(),
+    regulatoryBody: z.string().optional(),
+    dataProtectionLaw: z.string().optional(),
+    dataProtectionStatus: z.enum(["enacted", "draft", "none"]).optional(),
+    sataReadiness: z.enum(["ready", "partial", "planned"]).optional(),
+    enabledFeatures: z.array(z.string()).optional(),
+  });
+
+  app.put("/api/platform/country-settings/:code", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const parsed = countrySettingsUpdateSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: "Invalid payload", errors: parsed.error.flatten().fieldErrors });
+      const { countryName, regulatoryBody, dataProtectionLaw, dataProtectionStatus, sataReadiness, enabledFeatures } = parsed.data;
+      const [existing] = await db.select().from(countrySettings).where(eq(countrySettings.countryCode, req.params.code));
+      if (existing) {
+        const [updated] = await db.update(countrySettings).set({
+          countryName: countryName ?? existing.countryName,
+          regulatoryBody: regulatoryBody ?? existing.regulatoryBody,
+          dataProtectionLaw: dataProtectionLaw ?? existing.dataProtectionLaw,
+          dataProtectionStatus: dataProtectionStatus ?? existing.dataProtectionStatus,
+          sataReadiness: sataReadiness ?? existing.sataReadiness,
+          enabledFeatures: enabledFeatures ?? existing.enabledFeatures,
+          updatedAt: new Date(),
+        }).where(eq(countrySettings.countryCode, req.params.code)).returning();
+        await storage.createAuditLog({ userId: req.session.userId!, action: "UPDATE", entity: "country_settings", entityId: updated.id, details: `Updated country settings for ${updated.countryName}`, ipAddress: req.ip, organizationId: null });
+        res.json(updated);
+      } else {
+        const [created] = await db.insert(countrySettings).values({
+          countryCode: req.params.code,
+          countryName: countryName || req.params.code,
+          regulatoryBody: regulatoryBody || null,
+          dataProtectionLaw: dataProtectionLaw || null,
+          dataProtectionStatus: dataProtectionStatus || "none",
+          sataReadiness: sataReadiness || "planned",
+          enabledFeatures: enabledFeatures || [],
+        }).returning();
+        await storage.createAuditLog({ userId: req.session.userId!, action: "CREATE", entity: "country_settings", entityId: created.id, details: `Created country settings for ${created.countryName}`, ipAddress: req.ip, organizationId: null });
+        res.json(created);
+      }
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
   app.post("/api/admin/organizations/:orgId/billing", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
       if (!(await validateOrgCountry(req.params.orgId, req))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
@@ -4443,6 +4501,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     console.log("Admin reset skipped:", e);
   }
 
+  await seedCountrySettings();
   await seedOrganizations();
 
   registerExternalApi(app);
@@ -4623,4 +4682,49 @@ async function seedOrganizations() {
   }
 
   console.log("[Seed] Organizations and tenant assignments created successfully");
+}
+
+async function seedCountrySettings() {
+  try {
+    const existing = await db.select().from(countrySettings);
+    if (existing.length > 0) return;
+
+    const supported = getSupportedCountries();
+    const dpStatusMap: Record<string, string> = {
+      GH: "enacted", NG: "enacted", KE: "enacted", RW: "enacted", TZ: "enacted",
+      UG: "enacted", ZA: "enacted", ET: "enacted", SL: "draft", LR: "draft",
+    };
+    const sataMap: Record<string, string> = {
+      GH: "ready", NG: "ready", KE: "ready", RW: "ready", ZA: "ready",
+      TZ: "partial", UG: "partial", ET: "partial", SL: "planned", LR: "planned",
+    };
+    const defaultFeatures = ["credit_scoring", "dispute_management", "consent_tracking"];
+    const countryFeatures: Record<string, string[]> = {
+      GH: [...defaultFeatures, "regulatory_export", "batch_upload", "api_access", "kyc_verification"],
+      SL: [...defaultFeatures, "regulatory_export", "batch_upload"],
+      NG: [...defaultFeatures, "cross_border_sharing", "batch_upload", "api_access", "kyc_verification"],
+      KE: [...defaultFeatures, "cross_border_sharing", "batch_upload", "api_access", "kyc_verification"],
+      RW: [...defaultFeatures, "cross_border_sharing", "api_access"],
+      TZ: [...defaultFeatures, "batch_upload", "api_access"],
+      UG: [...defaultFeatures, "batch_upload"],
+      ZA: [...defaultFeatures, "cross_border_sharing", "batch_upload", "api_access", "kyc_verification"],
+      ET: [...defaultFeatures, "batch_upload"],
+      LR: [...defaultFeatures],
+    };
+
+    for (const sc of supported) {
+      await db.insert(countrySettings).values({
+        countryCode: sc.code,
+        countryName: sc.name,
+        regulatoryBody: sc.regulatoryBody,
+        dataProtectionLaw: sc.dataProtectionLaw,
+        dataProtectionStatus: dpStatusMap[sc.code] || "none",
+        sataReadiness: sataMap[sc.code] || "planned",
+        enabledFeatures: countryFeatures[sc.code] || defaultFeatures,
+      }).onConflictDoNothing();
+    }
+    console.log("[Seed] Country settings initialized");
+  } catch (e) {
+    console.log("[Seed] Country settings seed skipped:", e);
+  }
 }

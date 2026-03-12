@@ -42,20 +42,27 @@ function AgreementStatusBadge({ status }: { status: string }) {
   return <Badge variant="outline" className={`text-[9px] h-5 capitalize ${cls[status] || "border-slate-500/30 text-slate-400"}`}>{status}</Badge>;
 }
 
-const DATA_TYPES = [
-  "Credit History", "Payment Records", "Default Data", "Identity Verification",
-  "Court Judgments", "Consent Records", "Dispute Data", "Loan Applications",
-];
+const DATA_TYPE_MAP: Record<string, string> = {
+  credit_history: "Credit History",
+  payment_records: "Payment Records",
+  default_data: "Default Data",
+  identity_verification: "Identity Verification",
+  court_judgments: "Court Judgments",
+  consent_records: "Consent Records",
+  dispute_data: "Dispute Data",
+  loan_applications: "Loan Applications",
+};
+const DATA_TYPES = Object.keys(DATA_TYPE_MAP);
 
 const FEATURE_DEFINITIONS = [
-  { key: "Credit Scoring", description: "Automated credit score calculation for borrowers", icon: Shield },
-  { key: "Dispute Management", description: "Handle and track data disputes from borrowers", icon: Scale },
-  { key: "Consent Tracking", description: "Record and manage borrower consent for data sharing", icon: FileText },
-  { key: "Regulatory Export", description: "Generate regulator-specific file exports (BoG, BSL)", icon: FileText },
-  { key: "Cross-Border Sharing", description: "SATA-based cross-border data sharing capabilities", icon: Globe },
-  { key: "Batch Upload", description: "Bulk data upload via CSV/Excel files", icon: FileText },
-  { key: "API Access", description: "External API integration for data submission and queries", icon: Link2 },
-  { key: "KYC Verification", description: "Know-Your-Customer identity verification", icon: Shield },
+  { key: "credit_scoring", label: "Credit Scoring", description: "Automated credit score calculation for borrowers", icon: Shield },
+  { key: "dispute_management", label: "Dispute Management", description: "Handle and track data disputes from borrowers", icon: Scale },
+  { key: "consent_tracking", label: "Consent Tracking", description: "Record and manage borrower consent for data sharing", icon: FileText },
+  { key: "regulatory_export", label: "Regulatory Export", description: "Generate regulator-specific file exports (BoG, BSL)", icon: FileText },
+  { key: "cross_border_sharing", label: "Cross-Border Sharing", description: "SATA-based cross-border data sharing capabilities", icon: Globe },
+  { key: "batch_upload", label: "Batch Upload", description: "Bulk data upload via CSV/Excel files", icon: FileText },
+  { key: "api_access", label: "API Access", description: "External API integration for data submission and queries", icon: Link2 },
+  { key: "kyc_verification", label: "KYC Verification", description: "Know-Your-Customer identity verification", icon: Shield },
 ];
 
 function CreateAgreementDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
@@ -174,7 +181,7 @@ function CreateAgreementDialog({ open, onOpenChange }: { open: boolean; onOpenCh
                   data-testid={`toggle-cc-dt-${dt.replace(/\s/g, '-').toLowerCase()}`}
                 >
                   {form.allowedDataTypes.includes(dt) ? <CheckCircle2 className="w-3 h-3 inline mr-1" /> : null}
-                  {dt}
+                  {DATA_TYPE_MAP[dt] || dt}
                 </button>
               ))}
             </div>
@@ -310,7 +317,7 @@ function EditAgreementDialog({ agreement, open, onOpenChange }: { agreement: SAT
                   data-testid={`toggle-cc-edit-dt-${dt.replace(/\s/g, '-').toLowerCase()}`}
                 >
                   {form.allowedDataTypes.includes(dt) ? <CheckCircle2 className="w-3 h-3 inline mr-1" /> : null}
-                  {dt}
+                  {DATA_TYPE_MAP[dt] || dt}
                 </button>
               ))}
             </div>
@@ -325,16 +332,16 @@ function EditAgreementDialog({ agreement, open, onOpenChange }: { agreement: SAT
   );
 }
 
-interface CountryDetail {
-  name: string;
-  code: string;
-  currency: string;
-  regulatoryBody: string;
-  dataProtectionLaw: string;
-  dataProtectionStatus: "enacted" | "draft" | "none";
-  sataReadiness: "ready" | "partial" | "planned";
-  regionalBlocs: string[];
-  features: string[];
+interface PersistedCountrySettings {
+  id: string;
+  countryCode: string;
+  countryName: string;
+  regulatoryBody: string | null;
+  dataProtectionLaw: string | null;
+  dataProtectionStatus: string;
+  sataReadiness: string;
+  enabledFeatures: string[];
+  updatedAt: string;
 }
 
 export function CommandCenterSettingsTab() {
@@ -350,9 +357,8 @@ export function CommandCenterSettingsTab() {
     queryKey: ["/api/sata/agreements"],
   });
 
-  const { data: commandData } = useQuery<{ countries: CountryDetail[] }>({
-    queryKey: ["/api/platform/command-center"],
-    staleTime: 30000,
+  const { data: allSettings = [] } = useQuery<PersistedCountrySettings[]>({
+    queryKey: ["/api/platform/country-settings"],
   });
 
   const deleteAgreementMutation = useMutation({
@@ -377,11 +383,43 @@ export function CommandCenterSettingsTab() {
     onError: (e: Error) => { toast({ title: "Error", description: e.message, variant: "destructive" }); },
   });
 
+  const updateSettingsMutation = useMutation({
+    mutationFn: async ({ code, data }: { code: string; data: Partial<PersistedCountrySettings> }) => {
+      const res = await apiRequest("PUT", `/api/platform/country-settings/${code}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/platform/country-settings"] });
+      toast({ title: "Country settings updated" });
+    },
+    onError: (e: Error) => { toast({ title: "Error", description: e.message, variant: "destructive" }); },
+  });
+
   const selectedConfig = selectedCountry ? countries.find((c) => c.name === selectedCountry) : null;
-  const selectedDetail = selectedCountry ? (commandData?.countries || []).find((d) => d.name === selectedCountry) : null;
+  const selectedSettings = selectedConfig ? allSettings.find((s) => s.countryCode === selectedConfig.code) : null;
   const countryAgreements = selectedCountry
     ? agreements.filter((a) => a.sourceCountry === selectedCountry || a.targetCountry === selectedCountry)
     : agreements;
+
+  const toggleFeature = (featureKey: string) => {
+    if (!selectedConfig || !selectedSettings) return;
+    const current = selectedSettings.enabledFeatures || [];
+    const updated = current.includes(featureKey)
+      ? current.filter((f) => f !== featureKey)
+      : [...current, featureKey];
+    updateSettingsMutation.mutate({
+      code: selectedConfig.code,
+      data: { enabledFeatures: updated, countryName: selectedConfig.name },
+    });
+  };
+
+  const updateMetadataField = (field: string, value: string) => {
+    if (!selectedConfig) return;
+    updateSettingsMutation.mutate({
+      code: selectedConfig.code,
+      data: { [field]: value, countryName: selectedConfig.name },
+    });
+  };
 
   const activeAgreements = agreements.filter((a) => a.status === "active").length;
   const draftAgreements = agreements.filter((a) => a.status === "draft").length;
@@ -451,11 +489,18 @@ export function CommandCenterSettingsTab() {
               <div className="flex items-center gap-2 mb-3">
                 <Settings className="w-4 h-4 text-violet-400" />
                 <h3 className="text-sm font-semibold text-white">{selectedConfig.name} Configuration</h3>
+                {updateSettingsMutation.isPending && <Loader2 className="w-3 h-3 text-blue-400 animate-spin" />}
               </div>
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <div className="p-3 rounded-lg bg-slate-900/50">
                   <p className="text-[10px] text-slate-500 mb-1">Regulatory Body</p>
-                  <p className="text-sm font-semibold text-white" data-testid="text-cc-country-regulator">{selectedConfig.regulatoryBody}</p>
+                  <Input
+                    data-testid="input-cc-country-regulator"
+                    className="bg-transparent border-slate-700/50 text-white h-7 text-xs px-2"
+                    defaultValue={selectedSettings?.regulatoryBody || selectedConfig.regulatoryBody || ""}
+                    onBlur={(e) => updateMetadataField("regulatoryBody", e.target.value)}
+                    key={`reg-${selectedConfig.code}-${selectedSettings?.updatedAt}`}
+                  />
                 </div>
                 <div className="p-3 rounded-lg bg-slate-900/50">
                   <p className="text-[10px] text-slate-500 mb-1">Currency</p>
@@ -463,34 +508,45 @@ export function CommandCenterSettingsTab() {
                 </div>
                 <div className="p-3 rounded-lg bg-slate-900/50">
                   <p className="text-[10px] text-slate-500 mb-1">Data Protection Law</p>
-                  <p className="text-sm font-semibold text-white" data-testid="text-cc-country-dp-law">{selectedConfig.dataProtectionLaw}</p>
+                  <Input
+                    data-testid="input-cc-country-dp-law"
+                    className="bg-transparent border-slate-700/50 text-white h-7 text-xs px-2"
+                    defaultValue={selectedSettings?.dataProtectionLaw || selectedConfig.dataProtectionLaw || ""}
+                    onBlur={(e) => updateMetadataField("dataProtectionLaw", e.target.value)}
+                    key={`dpl-${selectedConfig.code}-${selectedSettings?.updatedAt}`}
+                  />
                 </div>
                 <div className="p-3 rounded-lg bg-slate-900/50">
                   <p className="text-[10px] text-slate-500 mb-1">Data Protection Status</p>
-                  <Badge variant="outline" className={`text-[9px] h-5 capitalize ${
-                    selectedDetail?.dataProtectionStatus === "enacted" ? "border-emerald-500/30 text-emerald-400 bg-emerald-500/10" :
-                    selectedDetail?.dataProtectionStatus === "draft" ? "border-amber-500/30 text-amber-400 bg-amber-500/10" :
-                    "border-red-500/30 text-red-400 bg-red-500/10"
-                  }`} data-testid="text-cc-country-dp-status">{selectedDetail?.dataProtectionStatus || "none"}</Badge>
+                  <Select
+                    value={selectedSettings?.dataProtectionStatus || "none"}
+                    onValueChange={(v) => updateMetadataField("dataProtectionStatus", v)}
+                  >
+                    <SelectTrigger data-testid="select-cc-country-dp-status" className="bg-transparent border-slate-700/50 text-white h-7 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-700">
+                      <SelectItem value="enacted" className="text-emerald-400 text-xs">Enacted</SelectItem>
+                      <SelectItem value="draft" className="text-amber-400 text-xs">Draft</SelectItem>
+                      <SelectItem value="none" className="text-red-400 text-xs">None</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="p-3 rounded-lg bg-slate-900/50">
                   <p className="text-[10px] text-slate-500 mb-1">SATA Readiness</p>
-                  <Badge variant="outline" className={`text-[9px] h-5 capitalize ${
-                    selectedDetail?.sataReadiness === "ready" ? "border-emerald-500/30 text-emerald-400 bg-emerald-500/10" :
-                    selectedDetail?.sataReadiness === "partial" ? "border-blue-500/30 text-blue-400 bg-blue-500/10" :
-                    "border-slate-500/30 text-slate-400 bg-slate-500/10"
-                  }`} data-testid="text-cc-country-sata-readiness">{selectedDetail?.sataReadiness || "planned"}</Badge>
+                  <Select
+                    value={selectedSettings?.sataReadiness || "planned"}
+                    onValueChange={(v) => updateMetadataField("sataReadiness", v)}
+                  >
+                    <SelectTrigger data-testid="select-cc-country-sata-readiness" className="bg-transparent border-slate-700/50 text-white h-7 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-700">
+                      <SelectItem value="ready" className="text-emerald-400 text-xs">Ready</SelectItem>
+                      <SelectItem value="partial" className="text-blue-400 text-xs">Partial</SelectItem>
+                      <SelectItem value="planned" className="text-slate-400 text-xs">Planned</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="p-3 rounded-lg bg-slate-900/50">
-                  <p className="text-[10px] text-slate-500 mb-1">Regional Blocs</p>
-                  <div className="flex flex-wrap gap-1">
-                    {(selectedDetail?.regionalBlocs || []).map((b) => (
-                      <Badge key={b} variant="outline" className="text-[8px] h-4 px-1.5 border-slate-600/50 text-slate-300">{b}</Badge>
-                    ))}
-                    {(!selectedDetail?.regionalBlocs || selectedDetail.regionalBlocs.length === 0) && (
-                      <span className="text-[10px] text-slate-500">None</span>
-                    )}
-                  </div>
+                  <p className="text-[10px] text-slate-500 mb-1">Country Code</p>
+                  <p className="text-sm font-semibold text-white">{selectedConfig.code}</p>
                 </div>
               </div>
 
@@ -498,18 +554,20 @@ export function CommandCenterSettingsTab() {
                 <p className="text-xs font-medium text-slate-400 mb-2">Feature Configuration</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {FEATURE_DEFINITIONS.map((feat) => {
-                    const enabled = selectedDetail?.features?.includes(feat.key) ?? false;
+                    const enabled = (selectedSettings?.enabledFeatures || []).includes(feat.key);
                     const Icon = feat.icon;
                     return (
-                      <div key={feat.key} className={`flex items-center gap-2 p-2.5 rounded-lg border ${enabled ? "border-emerald-500/20 bg-emerald-500/5" : "border-slate-700/30 bg-slate-900/30"}`} data-testid={`feature-${feat.key.replace(/\s/g, '-').toLowerCase()}`}>
+                      <div key={feat.key} className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-colors ${enabled ? "border-emerald-500/20 bg-emerald-500/5" : "border-slate-700/30 bg-slate-900/30"}`}
+                        onClick={() => toggleFeature(feat.key)}
+                        data-testid={`feature-${feat.key}`}>
                         <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${enabled ? "bg-emerald-500/20" : "bg-slate-700/50"}`}>
                           <Icon className={`w-3.5 h-3.5 ${enabled ? "text-emerald-400" : "text-slate-500"}`} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className={`text-xs font-medium ${enabled ? "text-emerald-300" : "text-slate-400"}`}>{feat.key}</p>
+                          <p className={`text-xs font-medium ${enabled ? "text-emerald-300" : "text-slate-400"}`}>{feat.label}</p>
                           <p className="text-[10px] text-slate-500 truncate">{feat.description}</p>
                         </div>
-                        <Switch checked={enabled} disabled className="shrink-0 data-[state=checked]:bg-emerald-600" data-testid={`switch-feature-${feat.key.replace(/\s/g, '-').toLowerCase()}`} />
+                        <Switch checked={enabled} onClick={(e) => e.stopPropagation()} onCheckedChange={() => toggleFeature(feat.key)} className="shrink-0 data-[state=checked]:bg-emerald-600" data-testid={`switch-feature-${feat.key}`} />
                       </div>
                     );
                   })}
