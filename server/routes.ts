@@ -81,6 +81,9 @@ async function requireAuth(req: Request, res: Response, next: NextFunction) {
     if (org && org.status === "suspended") {
       return res.status(403).json({ message: "ACCOUNT_SUSPENDED", reason: "Your organization's account has been suspended due to unpaid billing. Please contact your administrator or make a payment to restore access." });
     }
+    if (!req.session.userCountry && org?.country) {
+      req.session.userCountry = org.country;
+    }
   }
   next();
 }
@@ -118,6 +121,18 @@ function getCountryFilter(req?: Request): string | undefined {
   }
   const country = getActiveCountryName();
   return country || undefined;
+}
+
+async function resolveUserCountry(req: Request): Promise<string | undefined> {
+  if (req.session?.userCountry) return req.session.userCountry;
+  if (req.session?.organizationId) {
+    const org = await storage.getOrganization(req.session.organizationId);
+    if (org?.country) {
+      req.session.userCountry = org.country;
+      return org.country;
+    }
+  }
+  return undefined;
 }
 
 async function validateBorrowerCountry(borrowerId: string, req: Request): Promise<boolean> {
@@ -608,7 +623,7 @@ export async function registerRoutes(
     if (user.role === "super_admin") {
       viewingCountry = req.session.viewingCountry || null;
     } else {
-      viewingCountry = getActiveCountryName() || null;
+      viewingCountry = req.session.userCountry || organization?.country || getActiveCountryName() || null;
     }
     res.json({ ...userData, passwordExpired, organization, viewingCountry });
   });
