@@ -113,8 +113,19 @@ function getCountryFilter(req?: Request): string | undefined {
     if (req.session.viewingCountry === "global") return undefined;
     return req.session.viewingCountry;
   }
+  if (req?.session?.userCountry) {
+    return req.session.userCountry;
+  }
   const country = getActiveCountryName();
   return country || undefined;
+}
+
+async function validateBorrowerCountry(borrowerId: string, req: Request): Promise<boolean> {
+  const country = getCountryFilter(req);
+  if (!country) return true;
+  const borrower = await storage.getBorrower(borrowerId);
+  if (!borrower) return true;
+  return borrower.country === country;
 }
 
 async function requireCrossBorderAccess(req: Request, res: Response, next: NextFunction) {
@@ -335,6 +346,15 @@ export async function registerRoutes(
       req.session.organizationId = user.organizationId || undefined;
       req.session.lastActivity = Date.now();
 
+      let organization = null;
+      if (user.organizationId) {
+        organization = await storage.getOrganization(user.organizationId);
+      }
+
+      if (user.role !== "super_admin" && organization?.country) {
+        req.session.userCountry = organization.country;
+      }
+
       await storage.createAuditLog({
         action: "LOGIN", entity: "system", userId: user.id,
         details: `${user.fullName} logged in`,
@@ -350,16 +370,11 @@ export async function registerRoutes(
         passwordExpired = daysSinceChange > 90;
       }
 
-      let organization = null;
-      if (user.organizationId) {
-        organization = await storage.getOrganization(user.organizationId);
-      }
-
       let viewingCountry: string | null = null;
       if (user.role === "super_admin") {
         viewingCountry = null;
       } else {
-        viewingCountry = getActiveCountryName() || null;
+        viewingCountry = organization?.country || getActiveCountryName() || null;
       }
       res.json({ ...stripPassword(user), passwordExpired, organization, viewingCountry });
     } catch (e: any) {
@@ -447,6 +462,12 @@ export async function registerRoutes(
       req.session.userRole = user.role;
       req.session.organizationId = user.organizationId || undefined;
       req.session.lastActivity = Date.now();
+      if (user.role !== "super_admin" && user.organizationId) {
+        const org = await storage.getOrganization(user.organizationId);
+        if (org?.country) {
+          req.session.userCountry = org.country;
+        }
+      }
       await storage.createAuditLog({
         action: "LOGIN", entity: "system", userId: user.id,
         details: `${user.fullName} logged in (MFA verified)`,
@@ -843,6 +864,10 @@ export async function registerRoutes(
     try {
       const borrower = await storage.getBorrower(req.params.id);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
+      const country = getCountryFilter(req);
+      if (country && borrower.country !== country) {
+        return res.status(403).json({ message: "Access denied: borrower belongs to a different country" });
+      }
       res.json(borrower);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -961,9 +986,14 @@ export async function registerRoutes(
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
       const borrowerId = req.query.borrowerId as string;
-      const result = borrowerId
-        ? await storage.getCreditAccountsByBorrower(borrowerId)
-        : await storage.getAllCreditAccounts(orgId, country);
+      if (borrowerId) {
+        if (!(await validateBorrowerCountry(borrowerId, req))) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+        const result = await storage.getCreditAccountsByBorrower(borrowerId);
+        return res.json(result);
+      }
+      const result = await storage.getAllCreditAccounts(orgId, country);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -974,6 +1004,13 @@ export async function registerRoutes(
     try {
       const account = await storage.getCreditAccount(req.params.id);
       if (!account) return res.status(404).json({ message: "Account not found" });
+      const country = getCountryFilter(req);
+      if (country) {
+        const borrower = await storage.getBorrower(account.borrowerId);
+        if (borrower && borrower.country !== country) {
+          return res.status(403).json({ message: "Access denied: account belongs to a different country" });
+        }
+      }
       res.json(account);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -1029,9 +1066,13 @@ export async function registerRoutes(
       const borrowerId = req.query.borrowerId as string;
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
-      const result = borrowerId
-        ? await storage.getCreditInquiriesByBorrower(borrowerId)
-        : await storage.getAllCreditInquiries(orgId, country);
+      if (borrowerId) {
+        if (!(await validateBorrowerCountry(borrowerId, req))) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+        return res.json(await storage.getCreditInquiriesByBorrower(borrowerId));
+      }
+      const result = await storage.getAllCreditInquiries(orgId, country);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -1074,6 +1115,10 @@ export async function registerRoutes(
     try {
       const borrower = await storage.getBorrower(req.params.id);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
+      const country = getCountryFilter(req);
+      if (country && borrower.country !== country) {
+        return res.status(403).json({ message: "Access denied: borrower belongs to a different country" });
+      }
       const accounts = await storage.getCreditAccountsByBorrower(req.params.id);
       const inquiries = await storage.getCreditInquiriesByBorrower(req.params.id);
 
@@ -1296,6 +1341,9 @@ export async function registerRoutes(
     try {
       const dispute = await storage.getDispute(req.params.id);
       if (!dispute) return res.status(404).json({ message: "Dispute not found" });
+      if (!(await validateBorrowerCountry(dispute.borrowerId, req))) {
+        return res.status(403).json({ message: "Access denied" });
+      }
       res.json(dispute);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -1858,6 +1906,9 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
 
   app.get("/api/borrowers/:id/related", async (req, res) => {
     try {
+      if (!(await validateBorrowerCountry(req.params.id, req))) {
+        return res.status(403).json({ message: "Access denied" });
+      }
       const related = await storage.getRelatedBorrowers(req.params.id);
       res.json(related);
     } catch (e: any) {
@@ -1869,9 +1920,14 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     try {
       const borrowerId = req.query.borrowerId as string;
       const orgId = getOrgScope(req);
-      const result = borrowerId
-        ? await storage.getCourtJudgmentsByBorrower(borrowerId)
-        : await storage.getAllCourtJudgments(orgId);
+      const country = getCountryFilter(req);
+      if (borrowerId) {
+        if (!(await validateBorrowerCountry(borrowerId, req))) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+        return res.json(await storage.getCourtJudgmentsByBorrower(borrowerId));
+      }
+      const result = await storage.getAllCourtJudgments(orgId, country);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -1897,9 +1953,14 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     try {
       const borrowerId = req.query.borrowerId as string;
       const orgId = getOrgScope(req);
-      const result = borrowerId
-        ? await storage.getConsentRecordsByBorrower(borrowerId)
-        : await storage.getAllConsentRecords(orgId);
+      const country = getCountryFilter(req);
+      if (borrowerId) {
+        if (!(await validateBorrowerCountry(borrowerId, req))) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+        return res.json(await storage.getConsentRecordsByBorrower(borrowerId));
+      }
+      const result = await storage.getAllConsentRecords(orgId, country);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -1939,6 +2000,16 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
 
   app.get("/api/payment-history/:creditAccountId", async (req, res) => {
     try {
+      const country = getCountryFilter(req);
+      if (country) {
+        const account = await storage.getCreditAccount(req.params.creditAccountId);
+        if (account) {
+          const borrower = await storage.getBorrower(account.borrowerId);
+          if (borrower && borrower.country !== country) {
+            return res.status(403).json({ message: "Access denied" });
+          }
+        }
+      }
       const history = await storage.getPaymentHistoryByAccount(req.params.creditAccountId);
       res.json(history);
     } catch (e: any) {
@@ -1964,7 +2035,8 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
       const page = Math.max(1, parseInt(req.query.page as string) || 1);
       const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50));
       const orgId = getOrgScope(req);
-      const result = await storage.getInstitutions(page, limit, orgId);
+      const country = getCountryFilter(req);
+      const result = await storage.getInstitutions(page, limit, orgId, country);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -2019,7 +2091,8 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
   app.get("/api/billing", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const records = await storage.getBillingRecords(orgId);
+      const country = getCountryFilter(req);
+      const records = await storage.getBillingRecords(orgId, country);
       res.json(records);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -2044,7 +2117,8 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
   app.get("/api/credit-reports/logs", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const logs = await storage.getCreditReportLogs(orgId);
+      const country = getCountryFilter(req);
+      const logs = await storage.getCreditReportLogs(orgId, country);
       res.json(logs);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -2060,6 +2134,10 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
 
       const borrower = await storage.getBorrower(borrowerId);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
+      const country = getCountryFilter(req);
+      if (country && borrower.country !== country) {
+        return res.status(403).json({ message: "Access denied: borrower belongs to a different country" });
+      }
 
       const user = await storage.getUser(req.session?.userId!);
       const serialNumber = `CR-${new Date().getFullYear()}-${Date.now().toString(36).toUpperCase()}`;
@@ -2470,9 +2548,10 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
       }
 
       const orgId = getOrgScope(req);
+      const country = getCountryFilter(req);
       const results: any[] = [];
       for (const id of identifiers) {
-        const borrowersFound = await storage.searchBorrowers(id, orgId);
+        const borrowersFound = await storage.searchBorrowers(id, orgId, country);
         if (borrowersFound.length > 0) {
           const borrower = borrowersFound[0];
           const accounts = await storage.getCreditAccountsByBorrower(borrower.id);
@@ -2506,8 +2585,9 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
       const format = (req.query.format as string) || "csv";
       const type = (req.query.type as string) || "portfolio";
 
-      const accounts = await storage.getAllCreditAccounts(orgId);
-      const borrowersList = (await storage.getBorrowers(1, 200, orgId)).data;
+      const country = getCountryFilter(req);
+      const accounts = await storage.getAllCreditAccounts(orgId, country);
+      const borrowersList = (await storage.getBorrowers(1, 200, orgId, country)).data;
 
       if (format === "xlsx") {
         const ExcelJS = (await import("exceljs")).default;
@@ -2611,12 +2691,13 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
   app.get("/api/reports/regulatory", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const accounts = await storage.getAllCreditAccounts(orgId);
-      const borrowersList = (await storage.getBorrowers(1, 200, orgId)).data;
+      const country = getCountryFilter(req);
+      const accounts = await storage.getAllCreditAccounts(orgId, country);
+      const borrowersList = (await storage.getBorrowers(1, 200, orgId, country)).data;
       const totalBorrowers = borrowersList.length;
-      const disputeList = await storage.getDisputes(orgId);
-      const approvals = await storage.getPendingApprovals(orgId);
-      const { data: instList, total: totalInstitutions } = await storage.getInstitutions(1, 200, orgId);
+      const disputeList = await storage.getDisputes(orgId, country);
+      const approvals = await storage.getPendingApprovals(orgId, country);
+      const { data: instList, total: totalInstitutions } = await storage.getInstitutions(1, 200, orgId, country);
 
       const totalOutstanding = accounts.reduce((sum, a) => sum + parseFloat(a.currentBalance || "0"), 0);
       const nplAccounts = accounts.filter(a => a.status === "delinquent" || a.status === "default" || a.status === "written_off");
@@ -4047,7 +4128,8 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
   app.get("/api/borrower-alerts", requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
     try {
       const orgScope = getOrgScope(req);
-      const alerts = await storage.getBorrowerAlerts(orgScope);
+      const country = getCountryFilter(req);
+      const alerts = await storage.getBorrowerAlerts(orgScope, country);
       res.json(alerts);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -4092,11 +4174,13 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
   app.get("/api/regulatory/dashboard", requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
     try {
       const orgScope = getOrgScope(req);
+      const country = getCountryFilter(req);
       const orgFilter = orgScope ? sql`AND organization_id = ${orgScope}` : sql``;
+      const countryOrgFilter = country ? sql`AND organization_id IN (SELECT id FROM organizations WHERE country = ${country})` : sql``;
 
       const statusRows = await db.execute(sql`
         SELECT status, COUNT(*)::int AS cnt, COALESCE(SUM(CAST(current_balance AS DECIMAL(15,2))), 0)::text AS exposure
-        FROM credit_accounts WHERE 1=1 ${orgFilter} GROUP BY status
+        FROM credit_accounts WHERE 1=1 ${orgFilter} ${countryOrgFilter} GROUP BY status
       `);
       const statusMap: Record<string, { cnt: number; exposure: number }> = {};
       let totalAccounts = 0;
@@ -4119,7 +4203,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
           COUNT(national_id)::int AS with_id,
           COUNT(CASE WHEN phone IS NOT NULL OR mobile_money_number IS NOT NULL THEN 1 END)::int AS with_phone,
           COUNT(email)::int AS with_email
-        FROM borrowers WHERE 1=1 ${orgFilter}
+        FROM borrowers WHERE 1=1 ${orgFilter} ${country ? sql`AND country = ${country}` : sql``}
       `);
       const dq = (dqRows.rows as any[])[0] || { total: 0, with_id: 0, with_phone: 0, with_email: 0 };
       const totalBorrowers = dq.total;
@@ -4134,7 +4218,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
       const sectorRows = await db.execute(sql`
         SELECT account_type AS sector, status, COUNT(*)::int AS cnt,
           COALESCE(SUM(CAST(current_balance AS DECIMAL(15,2))), 0)::text AS exposure
-        FROM credit_accounts WHERE 1=1 ${orgFilter} GROUP BY account_type, status
+        FROM credit_accounts WHERE 1=1 ${orgFilter} ${countryOrgFilter} GROUP BY account_type, status
       `);
       const sectorMap: Record<string, { total: number; npl: number; exposure: number; nplExposure: number }> = {};
       for (const row of sectorRows.rows as any[]) {
@@ -4156,7 +4240,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
       const lenderRows = await db.execute(sql`
         SELECT lender_institution AS lender, status, COUNT(*)::int AS cnt,
           COALESCE(SUM(CAST(current_balance AS DECIMAL(15,2))), 0)::text AS exposure
-        FROM credit_accounts WHERE 1=1 ${orgFilter} GROUP BY lender_institution, status
+        FROM credit_accounts WHERE 1=1 ${orgFilter} ${countryOrgFilter} GROUP BY lender_institution, status
       `);
       const lenderMap: Record<string, { total: number; npl: number; exposure: number }> = {};
       for (const row of lenderRows.rows as any[]) {
@@ -4173,7 +4257,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
         dataQualityScore: "Good",
       })).sort((a, b) => b.totalAccounts - a.totalAccounts);
 
-      const { data: allInstitutions } = await storage.getInstitutions(1, 500, orgScope);
+      const { data: allInstitutions } = await storage.getInstitutions(1, 500, orgScope, country);
 
       const statusBreakdown = {
         current: statusMap["current"]?.cnt || 0,

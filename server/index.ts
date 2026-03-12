@@ -79,6 +79,7 @@ declare module "express-session" {
     userId: string;
     userRole: string;
     organizationId: string;
+    userCountry: string;
     lastActivity: number;
     mfaPendingUserId: string;
     viewingCountry: string;

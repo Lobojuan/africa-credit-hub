@@ -90,29 +90,29 @@ export interface IStorage {
   getUsersByRole(...roles: string[]): Promise<User[]>;
 
   getCourtJudgmentsByBorrower(borrowerId: string): Promise<CourtJudgment[]>;
-  getAllCourtJudgments(organizationId?: string): Promise<CourtJudgment[]>;
+  getAllCourtJudgments(organizationId?: string, country?: string): Promise<CourtJudgment[]>;
   createCourtJudgment(judgment: InsertCourtJudgment): Promise<CourtJudgment>;
 
   getConsentRecordsByBorrower(borrowerId: string): Promise<ConsentRecord[]>;
-  getAllConsentRecords(organizationId?: string): Promise<ConsentRecord[]>;
+  getAllConsentRecords(organizationId?: string, country?: string): Promise<ConsentRecord[]>;
   createConsentRecord(record: InsertConsentRecord): Promise<ConsentRecord>;
   revokeConsent(id: string): Promise<ConsentRecord | undefined>;
 
   getPaymentHistoryByAccount(creditAccountId: string): Promise<PaymentHistory[]>;
   createPaymentHistory(entry: InsertPaymentHistory): Promise<PaymentHistory>;
 
-  getInstitutions(page?: number, limit?: number, organizationId?: string): Promise<{ data: Institution[]; total: number }>;
+  getInstitutions(page?: number, limit?: number, organizationId?: string, country?: string): Promise<{ data: Institution[]; total: number }>;
   getInstitution(id: string): Promise<Institution | undefined>;
   createInstitution(inst: InsertInstitution): Promise<Institution>;
   updateInstitution(id: string, data: Partial<InsertInstitution>): Promise<Institution | undefined>;
   approveInstitution(id: string, approvedBy: string): Promise<Institution | undefined>;
 
-  getBillingRecords(organizationId?: string): Promise<BillingRecord[]>;
+  getBillingRecords(organizationId?: string, country?: string): Promise<BillingRecord[]>;
   getBillingRecord(id: string): Promise<BillingRecord | undefined>;
   getBillingRecordsByInstitution(institutionName: string): Promise<BillingRecord[]>;
   createBillingRecord(record: InsertBillingRecord): Promise<BillingRecord>;
 
-  getCreditReportLogs(organizationId?: string): Promise<CreditReportLog[]>;
+  getCreditReportLogs(organizationId?: string, country?: string): Promise<CreditReportLog[]>;
   getCreditReportLogsByBorrower(borrowerId: string): Promise<CreditReportLog[]>;
   createCreditReportLog(log: InsertCreditReportLog): Promise<CreditReportLog>;
 
@@ -158,7 +158,7 @@ export interface IStorage {
   getAllDishonouredCheques(organizationId?: string): Promise<DishonouredCheque[]>;
   createDishonouredCheque(cheque: InsertDishonouredCheque): Promise<DishonouredCheque>;
 
-  getBorrowerAlerts(organizationId?: string): Promise<BorrowerAlert[]>;
+  getBorrowerAlerts(organizationId?: string, country?: string): Promise<BorrowerAlert[]>;
   getBorrowerAlertsByBorrower(borrowerId: string): Promise<BorrowerAlert[]>;
   createBorrowerAlert(alert: InsertBorrowerAlert): Promise<BorrowerAlert>;
 }
@@ -664,9 +664,12 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(courtJudgments).where(eq(courtJudgments.borrowerId, borrowerId)).orderBy(desc(courtJudgments.createdAt));
   }
 
-  async getAllCourtJudgments(organizationId?: string): Promise<CourtJudgment[]> {
-    const filter = organizationId ? eq(courtJudgments.organizationId, organizationId) : undefined;
-    return db.select().from(courtJudgments).where(filter).orderBy(desc(courtJudgments.createdAt)).limit(200);
+  async getAllCourtJudgments(organizationId?: string, country?: string): Promise<CourtJudgment[]> {
+    const filters: any[] = [];
+    if (organizationId) filters.push(eq(courtJudgments.organizationId, organizationId));
+    if (country) filters.push(this.countryOrgFilter(courtJudgments, country));
+    const where = filters.length > 1 ? and(...filters) : filters[0];
+    return db.select().from(courtJudgments).where(where).orderBy(desc(courtJudgments.createdAt)).limit(200);
   }
 
   async createCourtJudgment(judgment: InsertCourtJudgment): Promise<CourtJudgment> {
@@ -678,9 +681,12 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(consentRecords).where(eq(consentRecords.borrowerId, borrowerId)).orderBy(desc(consentRecords.createdAt));
   }
 
-  async getAllConsentRecords(organizationId?: string): Promise<ConsentRecord[]> {
-    const filter = organizationId ? sql`${consentRecords.borrowerId} IN (SELECT id FROM borrowers WHERE organization_id = ${organizationId})` : undefined;
-    return db.select().from(consentRecords).where(filter).orderBy(desc(consentRecords.createdAt)).limit(200);
+  async getAllConsentRecords(organizationId?: string, country?: string): Promise<ConsentRecord[]> {
+    const filters: any[] = [];
+    if (organizationId) filters.push(sql`${consentRecords.borrowerId} IN (SELECT id FROM borrowers WHERE organization_id = ${organizationId})`);
+    if (country) filters.push(sql`${consentRecords.borrowerId} IN (SELECT id FROM borrowers WHERE country = ${country})`);
+    const where = filters.length > 1 ? and(...filters) : filters[0];
+    return db.select().from(consentRecords).where(where).orderBy(desc(consentRecords.createdAt)).limit(200);
   }
 
   async createConsentRecord(record: InsertConsentRecord): Promise<ConsentRecord> {
@@ -708,10 +714,13 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async getInstitutions(page: number = 1, limit: number = 50, organizationId?: string): Promise<{ data: Institution[]; total: number }> {
+  async getInstitutions(page: number = 1, limit: number = 50, organizationId?: string, country?: string): Promise<{ data: Institution[]; total: number }> {
     const safeLimit = Math.min(limit, 200);
     const offset = (page - 1) * safeLimit;
-    const whereClause = organizationId ? eq(institutions.organizationId, organizationId) : undefined;
+    const filters: any[] = [];
+    if (organizationId) filters.push(eq(institutions.organizationId, organizationId));
+    if (country) filters.push(this.countryOrgFilter(institutions, country));
+    const whereClause = filters.length > 1 ? and(...filters) : filters[0];
     const [totalResult] = await db.select({ value: count() }).from(institutions).where(whereClause);
     const data = await db.select().from(institutions).where(whereClause).orderBy(desc(institutions.createdAt)).limit(safeLimit).offset(offset);
     return { data, total: totalResult.value };
@@ -741,9 +750,12 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
-  async getBillingRecords(organizationId?: string): Promise<BillingRecord[]> {
-    const orgFilter = organizationId ? eq(billingRecords.organizationId, organizationId) : undefined;
-    return db.select().from(billingRecords).where(orgFilter).orderBy(desc(billingRecords.createdAt));
+  async getBillingRecords(organizationId?: string, country?: string): Promise<BillingRecord[]> {
+    const filters: any[] = [];
+    if (organizationId) filters.push(eq(billingRecords.organizationId, organizationId));
+    if (country) filters.push(this.countryOrgFilter(billingRecords, country));
+    const where = filters.length > 1 ? and(...filters) : filters[0];
+    return db.select().from(billingRecords).where(where).orderBy(desc(billingRecords.createdAt));
   }
 
   async getBillingRecord(id: string): Promise<BillingRecord | undefined> {
@@ -760,9 +772,12 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async getCreditReportLogs(organizationId?: string): Promise<CreditReportLog[]> {
-    const filter = organizationId ? eq(creditReportLogs.organizationId, organizationId) : undefined;
-    return db.select().from(creditReportLogs).where(filter).orderBy(desc(creditReportLogs.createdAt)).limit(200);
+  async getCreditReportLogs(organizationId?: string, country?: string): Promise<CreditReportLog[]> {
+    const filters: any[] = [];
+    if (organizationId) filters.push(eq(creditReportLogs.organizationId, organizationId));
+    if (country) filters.push(this.countryOrgFilter(creditReportLogs, country));
+    const where = filters.length > 1 ? and(...filters) : filters[0];
+    return db.select().from(creditReportLogs).where(where).orderBy(desc(creditReportLogs.createdAt)).limit(200);
   }
 
   async getCreditReportLogsByBorrower(borrowerId: string): Promise<CreditReportLog[]> {
@@ -1102,9 +1117,12 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async getBorrowerAlerts(organizationId?: string): Promise<BorrowerAlert[]> {
-    const filter = organizationId ? eq(borrowerAlerts.organizationId, organizationId) : undefined;
-    return db.select().from(borrowerAlerts).where(filter).orderBy(desc(borrowerAlerts.createdAt)).limit(500);
+  async getBorrowerAlerts(organizationId?: string, country?: string): Promise<BorrowerAlert[]> {
+    const filters: any[] = [];
+    if (organizationId) filters.push(eq(borrowerAlerts.organizationId, organizationId));
+    if (country) filters.push(this.countryOrgFilter(borrowerAlerts, country));
+    const where = filters.length > 1 ? and(...filters) : filters[0];
+    return db.select().from(borrowerAlerts).where(where).orderBy(desc(borrowerAlerts.createdAt)).limit(500);
   }
 
   async getBorrowerAlertsByBorrower(borrowerId: string): Promise<BorrowerAlert[]> {
