@@ -25,7 +25,7 @@ import multer from "multer";
 import rateLimit from "express-rate-limit";
 import { isGhanaMode, getActiveCountryName, isSingleCountryMode, COUNTRY_REGISTRY, getSupportedCountries } from "./country-mode";
 import { sendWelcomeEmail, sendBillingNotification, sendDisputeNotification } from "./email";
-import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport, generatePortfolioIntelligence } from "./ai";
+import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport, generatePortfolioIntelligence, parseProvider } from "./ai";
 import { BOG_EXPORT_GENERATORS } from "./bog-export";
 import type { BogFileType } from "@shared/bog-codes";
 import { BSL_EXPORT_GENERATORS } from "./bsl-export";
@@ -3891,7 +3891,8 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
 
   app.post("/api/ai/credit-risk/:borrowerId", requireAuth, async (req, res) => {
     try {
-      const result = await analyzeCreditRisk(req.params.borrowerId);
+      const provider = parseProvider(req.body?.provider);
+      const result = await analyzeCreditRisk(req.params.borrowerId, provider);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -3900,7 +3901,8 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
 
   app.post("/api/ai/report-summary/:borrowerId", requireAuth, async (req, res) => {
     try {
-      const result = await generateReportSummary(req.params.borrowerId);
+      const provider = parseProvider(req.body?.provider);
+      const result = await generateReportSummary(req.params.borrowerId, provider);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -3909,7 +3911,8 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
 
   app.post("/api/ai/chat", requireAuth, async (req, res) => {
     try {
-      const { messages } = req.body;
+      const { messages, provider: reqProvider } = req.body;
+      const provider = parseProvider(reqProvider);
       if (!messages || !Array.isArray(messages)) {
         return res.status(400).json({ message: "messages array required" });
       }
@@ -3925,11 +3928,22 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
       res.setHeader("Cache-Control", "no-cache");
       res.setHeader("Connection", "keep-alive");
 
-      const stream = await chatWithAI(sanitizedMessages, req.session?.userRole);
-      for await (const chunk of stream) {
-        const content = chunk.choices[0]?.delta?.content || "";
-        if (content) {
-          res.write(`data: ${JSON.stringify({ content })}\n\n`);
+      const result = await chatWithAI(sanitizedMessages, req.session?.userRole, provider);
+      if (result.type === "claude") {
+        for await (const event of result.stream) {
+          if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+            const content = event.delta.text;
+            if (content) {
+              res.write(`data: ${JSON.stringify({ content })}\n\n`);
+            }
+          }
+        }
+      } else {
+        for await (const chunk of result.stream) {
+          const content = chunk.choices[0]?.delta?.content || "";
+          if (content) {
+            res.write(`data: ${JSON.stringify({ content })}\n\n`);
+          }
         }
       }
       res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
@@ -3946,9 +3960,10 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
 
   app.post("/api/ai/compliance-report", requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
     try {
-      const { country } = req.body;
+      const { country, provider: reqProvider } = req.body;
+      const provider = parseProvider(reqProvider);
       if (!country) return res.status(400).json({ message: "country required" });
-      const result = await generateComplianceReport(country);
+      const result = await generateComplianceReport(country, provider);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -4126,7 +4141,8 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
 
   app.post("/api/ai/portfolio-intelligence", requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
     try {
-      const result = await generatePortfolioIntelligence();
+      const provider = parseProvider(req.body?.provider);
+      const result = await generatePortfolioIntelligence(provider);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });

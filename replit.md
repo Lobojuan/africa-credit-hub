@@ -46,7 +46,7 @@ The system employs a modern full-stack architecture built for scalability and co
     -   **Global Search**: Searches across borrowers, institutions, and credit accounts.
     -   **Multi-Tenant SaaS**: `organizations` table, tenant scoping via `organizationId`, and `super_admin` role. Includes client management and a 4-step onboarding wizard.
     -   **Low-Bandwidth Optimizations**: Gzip compression and React.lazy code-splitting.
-    -   **Chatbot**: Credit Registry Assistant with dispute filing, FAQ, keyword search, and an AI-powered Smart Assistant mode (OpenAI GPT-4o streaming) with live database context.
+    -   **Chatbot**: Credit Registry Assistant with dispute filing, FAQ, keyword search, and an AI-powered Smart Assistant mode with live database context. Defaults to Claude Opus (Anthropic), with OpenAI (GPT-4o) available via optional `provider` parameter.
     -   **AI Portfolio Intelligence**: Dedicated analytics page generating comprehensive AI-powered portfolio reports including executive summaries, risk ratings, default predictions, early warnings, and strategic recommendations. Access restricted to admin/super_admin/regulator roles.
     -   **Documentation**: Multi-language documentation API.
     -   **Multi-Country Data Isolation**: Country-level data sandboxing via `VITE_COUNTRY_MODE`. Each country's organizations, borrowers, and accounts are isolated — only the active country's data is visible. Server-side `getCountryFilter()` enforces isolation on all org queries. 10 African countries supported in the registry (Ghana, Liberia, Sierra Leone, Nigeria, Kenya, Rwanda, Tanzania, Uganda, Ethiopia, South Africa). API endpoints: `GET /api/platform/country-mode` (all users), `GET /api/platform/country-stats` (super_admin only). Country badge in sidebar footer, country label in org switcher.
@@ -73,6 +73,6 @@ The system employs a modern full-stack architecture built for scalability and co
 -   **Payments**: Stripe integration for subscriptions.
 -   **Email**: SendGrid email service for notifications.
 -   **PDF Generation**: pdfkit for server-side PDF invoice and credit report generation.
--   **AI / OpenAI**: Integrated via Replit AI Integrations for credit risk analysis, report summaries, chatbot, and compliance reports.
+-   **AI / Anthropic + OpenAI**: Both providers integrated via Replit AI Integrations. All text/chat AI features (credit risk analysis, report summaries, chatbot, portfolio intelligence, compliance reports, conversations chat) default to Claude Opus (Anthropic) but support an optional `provider` parameter (`"claude"` or `"openai"`) to switch to OpenAI if needed. Audio (voice chat, TTS, STT) and image generation remain OpenAI-only.
 -   **Excel Export**: `exceljs` package for XLSX report exports.
 -   **Third-Party APIs**: open.er-api.com (exchange rates), DiceBear (avatars).

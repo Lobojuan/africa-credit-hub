@@ -43,7 +43,7 @@ args = "bash dev-server.sh"
 waitForPort = 5000
 
 [agent]
-integrations = ["stripe:1.0.0", "javascript_openai_ai_integrations:2.0.0"]
+integrations = ["stripe:1.0.0", "javascript_openai_ai_integrations:2.0.0", "javascript_anthropic_ai_integrations:2.0.0"]
 
 [userenv]
 
@@ -51,3 +51,7 @@ integrations = ["stripe:1.0.0", "javascript_openai_ai_integrations:2.0.0"]
 VITE_COUNTRY_MODE = "ghana"
 
 [userenv.development]
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 20000

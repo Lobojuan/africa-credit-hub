@@ -8,20 +8,44 @@ import pRetry from "p-retry";
  * rate limiting and automatic retries. Use it for any task that requires
  * processing multiple items through an LLM or external API.
  *
- * USAGE:
+ * USAGE (OpenAI):
  * ```typescript
  * import { batchProcess, isRateLimitError } from "./replit_integrations/batch";
  *
  * const results = await batchProcess(
  *   artworks,
  *   async (artwork) => {
- *     // Your custom LLM logic here
  *     const response = await openai.chat.completions.create({
- *       model: "gpt-5.1",
+ *       model: "gpt-4o",
  *       messages: [{ role: "user", content: `Categorize: ${artwork.name}` }],
  *       response_format: { type: "json_object" },
  *     });
  *     return JSON.parse(response.choices[0]?.message?.content || "{}");
+ *   },
+ *   { concurrency: 2, retries: 5 }
+ * );
+ * ```
+ *
+ * USAGE (Anthropic):
+ * ```typescript
+ * import { batchProcess } from "./replit_integrations/batch";
+ * import Anthropic from "@anthropic-ai/sdk";
+ *
+ * const anthropic = new Anthropic({
+ *   apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
+ *   baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
+ * });
+ *
+ * const results = await batchProcess(
+ *   items,
+ *   async (item) => {
+ *     const message = await anthropic.messages.create({
+ *       model: "claude-opus-4-6",
+ *       max_tokens: 8192,
+ *       messages: [{ role: "user", content: `Categorize: ${item.name}` }],
+ *     });
+ *     const content = message.content[0];
+ *     return content.type === "text" ? JSON.parse(content.text) : {};
  *   },
  *   { concurrency: 2, retries: 5 }
  * );
@@ -64,16 +88,31 @@ export function isRateLimitError(error: unknown): boolean {
  * @returns Promise resolving to array of results in the same order as input
  *
  * @example
- * // Process CSV artwork data with custom categorization
+ * // Process CSV data with OpenAI
  * const categorized = await batchProcess(
  *   csvRows,
  *   async (row) => {
  *     const response = await openai.chat.completions.create({
- *       model: "gpt-5.1", // the newest OpenAI model
- *       messages: [{ role: "user", content: `Categorize artwork: ${row.name}` }],
+ *       model: "gpt-4o",
+ *       messages: [{ role: "user", content: `Categorize: ${row.name}` }],
  *       response_format: { type: "json_object" },
  *     });
  *     return { ...row, category: JSON.parse(response.choices[0]?.message?.content || "{}") };
+ *   }
+ * );
+ *
+ * @example
+ * // Process CSV data with Anthropic Claude
+ * const categorized = await batchProcess(
+ *   csvRows,
+ *   async (row) => {
+ *     const msg = await anthropic.messages.create({
+ *       model: "claude-opus-4-6",
+ *       max_tokens: 1024,
+ *       messages: [{ role: "user", content: `Categorize: ${row.name}. Respond in JSON.` }],
+ *     });
+ *     const text = msg.content[0]?.type === "text" ? msg.content[0].text : "{}";
+ *     return { ...row, category: JSON.parse(text) };
  *   }
  * );
  */

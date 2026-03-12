@@ -1,13 +1,30 @@
 import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import { storage } from "./storage";
 import { getDefaultCurrencyCode } from "./credit-score";
+
+export type AIProvider = "openai" | "claude";
+
+export function isValidProvider(value: unknown): value is AIProvider {
+  return value === "openai" || value === "claude";
+}
+
+export function parseProvider(value: unknown): AIProvider {
+  if (isValidProvider(value)) return value;
+  return "claude";
+}
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
-export async function analyzeCreditRisk(borrowerId: string | number) {
+const anthropic = new Anthropic({
+  apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
+  baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
+});
+
+export async function analyzeCreditRisk(borrowerId: string | number, provider: AIProvider = "claude") {
   const borrower = await storage.getBorrower(borrowerId);
   if (!borrower) throw new Error("Borrower not found");
 
@@ -36,12 +53,7 @@ Account Details:
 ${accounts.map(a => `  - ${a.accountType}: ${a.currency || defaultCurrency} ${parseFloat(a.currentBalance || "0").toLocaleString()} | Status: ${a.status} | Opened: ${a.dateOpened || "Unknown"}`).join("\n")}
   `.trim();
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [
-      {
-        role: "system",
-        content: `You are an expert credit risk analyst for the Pan-African Credit Registry. Analyze borrower profiles and provide structured risk assessments. All monetary amounts are in ${defaultCurrency} (${defaultCurrency === "GHS" ? "Ghana Cedis" : defaultCurrency}). You must respond in valid JSON format with these fields:
+  const systemPrompt = `You are an expert credit risk analyst for the Pan-African Credit Registry. Analyze borrower profiles and provide structured risk assessments. All monetary amounts are in ${defaultCurrency} (${defaultCurrency === "GHS" ? "Ghana Cedis" : defaultCurrency}). You must respond in valid JSON format with these fields:
 {
   "riskLevel": "low" | "medium" | "high" | "critical",
   "riskScore": <number 0-100, higher = more risky>,
@@ -49,18 +61,31 @@ ${accounts.map(a => `  - ${a.accountType}: ${a.currency || defaultCurrency} ${pa
   "factors": [{"factor": "<name>", "impact": "positive" | "negative" | "neutral", "detail": "<explanation>"}],
   "recommendations": ["<actionable recommendation>"],
   "regulatoryFlags": ["<any compliance concerns>"]
-}`
-      },
-      {
-        role: "user",
-        content: `Analyze this borrower's credit risk:\n\n${borrowerProfile}`
-      }
-    ],
-    max_tokens: 1500,
-    temperature: 0.3,
-  });
+}`;
+  const userPrompt = `Analyze this borrower's credit risk:\n\n${borrowerProfile}`;
 
-  const raw = response.choices[0]?.message?.content || "{}";
+  let raw: string;
+  if (provider === "claude") {
+    const response = await anthropic.messages.create({
+      model: "claude-opus-4-6",
+      max_tokens: 1500,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userPrompt }],
+    });
+    raw = response.content[0]?.type === "text" ? response.content[0].text : "{}";
+  } else {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      max_tokens: 1500,
+      temperature: 0.3,
+    });
+    raw = response.choices[0]?.message?.content || "{}";
+  }
+
   const content = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
   try {
     return JSON.parse(content);
@@ -76,7 +101,7 @@ ${accounts.map(a => `  - ${a.accountType}: ${a.currency || defaultCurrency} ${pa
   }
 }
 
-export async function generateReportSummary(borrowerId: string | number) {
+export async function generateReportSummary(borrowerId: string | number, provider: AIProvider = "claude") {
   const borrower = await storage.getBorrower(borrowerId);
   if (!borrower) throw new Error("Borrower not found");
 
@@ -98,24 +123,33 @@ Total Outstanding: ${defaultCurrency} ${totalBalance.toLocaleString()}
 Disputes: ${disputes.length} total, ${disputes.filter(d => d.status === "open").length} open
   `.trim();
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [
-      {
-        role: "system",
-        content: `You are a credit report summarizer for the Pan-African Credit Registry. All monetary amounts are in ${defaultCurrency} (${defaultCurrency === "GHS" ? "Ghana Cedis" : defaultCurrency}). Generate clear, professional, plain-language summaries of credit reports suitable for non-technical readers such as bank officers and regulators. Include key highlights, concerns, and an overall assessment. Keep it concise but comprehensive (3-5 paragraphs). Use professional financial language. Always reference amounts in ${defaultCurrency}.`
-      },
-      {
-        role: "user",
-        content: `Generate a plain-language credit report summary:\n\n${reportData}`
-      }
-    ],
-    max_tokens: 1000,
-    temperature: 0.4,
-  });
+  const systemPrompt = `You are a credit report summarizer for the Pan-African Credit Registry. All monetary amounts are in ${defaultCurrency} (${defaultCurrency === "GHS" ? "Ghana Cedis" : defaultCurrency}). Generate clear, professional, plain-language summaries of credit reports suitable for non-technical readers such as bank officers and regulators. Include key highlights, concerns, and an overall assessment. Keep it concise but comprehensive (3-5 paragraphs). Use professional financial language. Always reference amounts in ${defaultCurrency}.`;
+  const userPrompt = `Generate a plain-language credit report summary:\n\n${reportData}`;
+
+  let summary: string;
+  if (provider === "claude") {
+    const response = await anthropic.messages.create({
+      model: "claude-opus-4-6",
+      max_tokens: 1000,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userPrompt }],
+    });
+    summary = response.content[0]?.type === "text" ? response.content[0].text : "Unable to generate summary.";
+  } else {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      max_tokens: 1000,
+      temperature: 0.4,
+    });
+    summary = response.choices[0]?.message?.content || "Unable to generate summary.";
+  }
 
   return {
-    summary: response.choices[0]?.message?.content || "Unable to generate summary.",
+    summary,
     borrowerName: `${borrower.firstName} ${borrower.lastName}`,
     generatedAt: new Date().toISOString(),
   };
@@ -200,7 +234,7 @@ async function buildPortfolioData() {
   return { stats, borrowerProfiles, accountsByType, accountsByLender, totalAccounts: allAccounts.length, totalDisputes: disputes.length, institutions: institutions.data };
 }
 
-export async function generatePortfolioIntelligence() {
+export async function generatePortfolioIntelligence(provider: AIProvider = "claude") {
   const data = await buildPortfolioData();
   const defaultCurrency = getDefaultCurrencyCode();
 
@@ -236,12 +270,7 @@ Total portfolio default rate: ${data.totalAccounts > 0 ? ((data.stats.defaultAcc
 Total portfolio delinquency rate: ${data.totalAccounts > 0 ? ((data.stats.delinquentAccounts / data.totalAccounts) * 100).toFixed(1) : 0}%
 `.trim();
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [
-      {
-        role: "system",
-        content: `You are a senior credit risk analyst for the Pan-African Credit Registry (CDH v2.0) operating in Ghana. Currency is ${defaultCurrency} (Ghana Cedis). Analyze the portfolio data and generate a comprehensive intelligence report. You must respond in valid JSON with this exact structure:
+  const systemPrompt = `You are a senior credit risk analyst for the Pan-African Credit Registry (CDH v2.0) operating in Ghana. Currency is ${defaultCurrency} (Ghana Cedis). Analyze the portfolio data and generate a comprehensive intelligence report. You must respond in valid JSON with this exact structure:
 {
   "overallRiskRating": "low" | "moderate" | "elevated" | "high" | "critical",
   "portfolioHealthScore": <number 0-100, 100 is healthiest>,
@@ -324,18 +353,31 @@ Total portfolio delinquency rate: ${data.totalAccounts > 0 ? ((data.stats.delinq
       "expectedImpact": "<what improvement to expect>"
     }
   ]
-}`
-      },
-      {
-        role: "user",
-        content: `Analyze this credit portfolio and generate a comprehensive intelligence report with predictions, early warnings, and actionable recommendations:\n\n${portfolioContext}`
-      }
-    ],
-    max_tokens: 4000,
-    temperature: 0.3,
-  });
+}`;
+  const userPrompt = `Analyze this credit portfolio and generate a comprehensive intelligence report with predictions, early warnings, and actionable recommendations:\n\n${portfolioContext}`;
 
-  const raw = response.choices[0]?.message?.content || "{}";
+  let raw: string;
+  if (provider === "claude") {
+    const response = await anthropic.messages.create({
+      model: "claude-opus-4-6",
+      max_tokens: 8192,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userPrompt }],
+    });
+    raw = response.content[0]?.type === "text" ? response.content[0].text : "{}";
+  } else {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      max_tokens: 4000,
+      temperature: 0.3,
+    });
+    raw = response.choices[0]?.message?.content || "{}";
+  }
+
   const content = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
   try {
     return JSON.parse(content);
@@ -480,7 +522,7 @@ ${borrowerList || "  No borrowers"}
   }
 }
 
-export async function chatWithAI(messages: { role: string; content: string }[], userRole?: string) {
+export async function chatWithAI(messages: { role: string; content: string }[], userRole?: string, provider: AIProvider = "claude") {
   const defaultCurrency = getDefaultCurrencyCode();
   const liveContext = await buildLiveContext();
 
@@ -590,32 +632,33 @@ ${liveContext}
 - The platform is built by Carlson Capital & Systems In Motion Limited.`
   };
 
-  const chatMessages = [
-    systemMessage,
-    ...messages.map(m => ({
-      role: m.role as "user" | "assistant",
-      content: m.content,
-    }))
-  ];
+  const chatMessages = messages.map(m => ({
+    role: m.role as "user" | "assistant",
+    content: m.content,
+  }));
+
+  if (provider === "claude") {
+    const stream = anthropic.messages.stream({
+      model: "claude-opus-4-6",
+      max_tokens: 2000,
+      system: systemMessage.content,
+      messages: chatMessages,
+    });
+    return { type: "claude" as const, stream };
+  }
 
   const stream = await openai.chat.completions.create({
     model: "gpt-4o",
-    messages: chatMessages,
+    messages: [systemMessage, ...chatMessages],
     max_tokens: 2000,
     temperature: 0.4,
     stream: true,
   });
-
-  return stream;
+  return { type: "openai" as const, stream };
 }
 
-export async function generateComplianceReport(country: string) {
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [
-      {
-        role: "system",
-        content: `You are a regulatory compliance expert for African credit bureaus. Generate detailed compliance reports for specific countries. Respond in valid JSON:
+export async function generateComplianceReport(country: string, provider: AIProvider = "claude") {
+  const systemPrompt = `You are a regulatory compliance expert for African credit bureaus. Generate detailed compliance reports for specific countries. Respond in valid JSON:
 {
   "country": "<country name>",
   "regulatoryBody": "<name of financial regulator>",
@@ -627,18 +670,31 @@ export async function generateComplianceReport(country: string) {
   "riskAreas": [{"area": "<name>", "severity": "low"|"medium"|"high", "detail": "<explanation>"}],
   "recommendations": ["<recommendation>"],
   "lastUpdated": "<date>"
-}`
-      },
-      {
-        role: "user",
-        content: `Generate a regulatory compliance report for credit bureau operations in ${country}.`
-      }
-    ],
-    max_tokens: 2000,
-    temperature: 0.3,
-  });
+}`;
+  const userPrompt = `Generate a regulatory compliance report for credit bureau operations in ${country}.`;
 
-  const raw = response.choices[0]?.message?.content || "{}";
+  let raw: string;
+  if (provider === "claude") {
+    const response = await anthropic.messages.create({
+      model: "claude-opus-4-6",
+      max_tokens: 2000,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userPrompt }],
+    });
+    raw = response.content[0]?.type === "text" ? response.content[0].text : "{}";
+  } else {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      max_tokens: 2000,
+      temperature: 0.3,
+    });
+    raw = response.choices[0]?.message?.content || "{}";
+  }
+
   const content = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
   try {
     return JSON.parse(content);

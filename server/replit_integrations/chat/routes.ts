@@ -1,10 +1,16 @@
 import type { Express, Request, Response } from "express";
 import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import { chatStorage } from "./storage";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+});
+
+const anthropic = new Anthropic({
+  apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
+  baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
 });
 
 export function registerChatRoutes(app: Express): void {
@@ -63,7 +69,8 @@ export function registerChatRoutes(app: Express): void {
   app.post("/api/conversations/:id/messages", async (req: Request, res: Response) => {
     try {
       const conversationId = parseInt(req.params.id);
-      const { content } = req.body;
+      const { content, provider: reqProvider } = req.body;
+      const provider = (reqProvider === "openai") ? "openai" : "claude";
 
       // Save user message
       await chatStorage.createMessage(conversationId, "user", content);
@@ -80,21 +87,38 @@ export function registerChatRoutes(app: Express): void {
       res.setHeader("Cache-Control", "no-cache");
       res.setHeader("Connection", "keep-alive");
 
-      // Stream response from OpenAI
-      const stream = await openai.chat.completions.create({
-        model: "gpt-5.1",
-        messages: chatMessages,
-        stream: true,
-        max_completion_tokens: 8192,
-      });
-
       let fullResponse = "";
 
-      for await (const chunk of stream) {
-        const content = chunk.choices[0]?.delta?.content || "";
-        if (content) {
-          fullResponse += content;
-          res.write(`data: ${JSON.stringify({ content })}\n\n`);
+      if (provider === "claude") {
+        const stream = anthropic.messages.stream({
+          model: "claude-opus-4-6",
+          max_tokens: 8192,
+          messages: chatMessages,
+        });
+
+        for await (const event of stream) {
+          if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+            const text = event.delta.text;
+            if (text) {
+              fullResponse += text;
+              res.write(`data: ${JSON.stringify({ content: text })}\n\n`);
+            }
+          }
+        }
+      } else {
+        const stream = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: chatMessages,
+          stream: true,
+          max_tokens: 8192,
+        });
+
+        for await (const chunk of stream) {
+          const text = chunk.choices[0]?.delta?.content || "";
+          if (text) {
+            fullResponse += text;
+            res.write(`data: ${JSON.stringify({ content: text })}\n\n`);
+          }
         }
       }
 
