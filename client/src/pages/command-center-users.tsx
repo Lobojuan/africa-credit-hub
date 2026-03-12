@@ -173,7 +173,7 @@ function UserEditDialog({ user, open, onOpenChange, organizations }: { user: Use
 
   const editMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Record<string, string> }) => {
-      const payload: Record<string, any> = {};
+      const payload: Record<string, string | null> = {};
       if (data.fullName) payload.fullName = data.fullName;
       if (data.email) payload.email = data.email;
       if (data.role) payload.role = data.role;
@@ -367,7 +367,7 @@ function OrgCreateDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
   );
 }
 
-function OrgEditDialog({ org, open, onOpenChange }: { org: any; open: boolean; onOpenChange: (v: boolean) => void }) {
+function OrgEditDialog({ org, open, onOpenChange }: { org: Organization | null; open: boolean; onOpenChange: (v: boolean) => void }) {
   const { toast } = useToast();
   const countries = getSupportedCountries();
   const [form, setForm] = useState({ name: "", contactEmail: "", contactPhone: "", type: "", status: "", country: "", subscriptionTier: "" });
@@ -439,6 +439,7 @@ function OrgEditDialog({ org, open, onOpenChange }: { org: any; open: boolean; o
                   <SelectItem value="pending" className="text-slate-300">Pending</SelectItem>
                   <SelectItem value="active" className="text-slate-300">Active</SelectItem>
                   <SelectItem value="suspended" className="text-slate-300">Suspended</SelectItem>
+                  <SelectItem value="deactivated" className="text-slate-300">Deactivated</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -500,13 +501,13 @@ export function CommandCenterUsersTab() {
   const [deleteUser, setDeleteUser] = useState<User | null>(null);
   const [orgSearch, setOrgSearch] = useState("");
   const [createOrgOpen, setCreateOrgOpen] = useState(false);
-  const [editOrg, setEditOrg] = useState<any>(null);
+  const [editOrg, setEditOrg] = useState<Organization | null>(null);
   const [editOrgOpen, setEditOrgOpen] = useState(false);
-  const [deleteOrg, setDeleteOrg] = useState<any>(null);
+  const [deleteOrg, setDeleteOrg] = useState<Organization | null>(null);
   const countries = getSupportedCountries();
 
   const { data: users = [], isLoading: usersLoading } = useQuery<User[]>({ queryKey: ["/api/users"] });
-  const { data: orgs = [], isLoading: orgsLoading } = useQuery<any[]>({ queryKey: ["/api/admin/organizations"] });
+  const { data: orgs = [], isLoading: orgsLoading } = useQuery<Organization[]>({ queryKey: ["/api/admin/organizations"] });
   const { data: orgList = [] } = useQuery<Organization[]>({ queryKey: ["/api/admin/organizations/list"] });
 
   const deleteUserMutation = useMutation({
@@ -531,7 +532,7 @@ export function CommandCenterUsersTab() {
   });
 
   const orgMap = new Map<string, string>();
-  orgList.forEach((o: any) => orgMap.set(o.id, o.name));
+  orgList.forEach((o) => orgMap.set(o.id, o.name));
 
   const filteredUsers = users.filter((u) => {
     if (userSearch && !u.fullName.toLowerCase().includes(userSearch.toLowerCase()) && !u.username.toLowerCase().includes(userSearch.toLowerCase()) && !u.email.toLowerCase().includes(userSearch.toLowerCase())) return false;
@@ -539,7 +540,7 @@ export function CommandCenterUsersTab() {
     if (statusFilter !== "all" && u.status !== statusFilter) return false;
     if (countryFilter !== "all") {
       if (!u.organizationId) return false;
-      const org = orgList.find((o: any) => o.id === u.organizationId);
+      const org = orgList.find((o) => o.id === u.organizationId);
       if (!org || org.country !== countryFilter) return false;
     }
     if (orgFilter !== "all") {
@@ -549,7 +550,7 @@ export function CommandCenterUsersTab() {
     return true;
   });
 
-  const filteredOrgs = orgs.filter((o: any) => {
+  const filteredOrgs = orgs.filter((o: Organization) => {
     if (orgSearch && !o.name.toLowerCase().includes(orgSearch.toLowerCase())) return false;
     return true;
   });
@@ -769,7 +770,7 @@ export function CommandCenterUsersTab() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredOrgs.map((o: any) => (
+                    {filteredOrgs.map((o) => (
                       <tr key={o.id} className="border-b border-slate-700/20 hover:bg-slate-700/20" data-testid={`row-cc-org-${o.id}`}>
                         <td className="p-3">
                           <div className="flex items-center gap-2">
