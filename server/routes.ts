@@ -619,7 +619,8 @@ export async function registerRoutes(
   app.get("/api/dashboard/stats", async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const stats = await storage.getDashboardStats(orgId);
+      const country = getCountryFilter(req);
+      const stats = await storage.getDashboardStats(orgId, country);
       res.json(stats);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -629,7 +630,8 @@ export async function registerRoutes(
   app.get("/api/dashboard/trends", requireAuth, async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const stats = await storage.getDashboardStats(orgId);
+      const country = getCountryFilter(req);
+      const stats = await storage.getDashboardStats(orgId, country);
 
       function generateTrend(currentValue: number): number[] {
         const points: number[] = [];
@@ -661,7 +663,8 @@ export async function registerRoutes(
   app.get("/api/dashboard/details/:type", async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const details = await storage.getDashboardDetails(req.params.type, orgId);
+      const country = getCountryFilter(req);
+      const details = await storage.getDashboardDetails(req.params.type, orgId, country);
       res.json(details);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -671,9 +674,10 @@ export async function registerRoutes(
   app.get("/api/dashboard/chart-data", requireAuth, async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const stats = await storage.getDashboardStats(orgId);
+      const country = getCountryFilter(req);
+      const stats = await storage.getDashboardStats(orgId, country);
 
-      const allAccounts = await storage.getAllCreditAccounts(orgId);
+      const allAccounts = await storage.getAllCreditAccounts(orgId, country);
       const statusMap: Record<string, number> = {};
       const typeMap: Record<string, number> = {};
       for (const a of allAccounts) {
@@ -686,7 +690,7 @@ export async function registerRoutes(
         .slice(0, 8)
         .map(([name, value]) => ({ name, value }));
 
-      const allBorrowers = await storage.searchBorrowers("", orgId);
+      const allBorrowers = await storage.searchBorrowers("", orgId, country);
       const countryMap: Record<string, number> = {};
       for (const b of allBorrowers) {
         const c = b.country || "Unknown";
@@ -787,14 +791,15 @@ export async function registerRoutes(
   app.get("/api/borrowers", async (req, res) => {
     try {
       const orgId = getOrgScope(req);
+      const country = getCountryFilter(req);
       const search = req.query.search as string;
       if (search) {
-        const data = await storage.searchBorrowers(search, orgId);
+        const data = await storage.searchBorrowers(search, orgId, country);
         res.json(data);
       } else {
         const page = Math.max(1, parseInt(req.query.page as string) || 1);
         const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50));
-        const result = await storage.getBorrowers(page, limit, orgId);
+        const result = await storage.getBorrowers(page, limit, orgId, country);
         res.json(result);
       }
     } catch (e: any) {
@@ -805,11 +810,12 @@ export async function registerRoutes(
   app.get("/api/global-search", async (req, res) => {
     try {
       const orgId = getOrgScope(req);
+      const country = getCountryFilter(req);
       const query = (req.query.q as string) || "";
       if (!query) {
         return res.json({ borrowers: [], institutions: [], creditAccounts: [] });
       }
-      const results = await storage.globalSearch(query, orgId);
+      const results = await storage.globalSearch(query, orgId, country);
       res.json(results);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -953,10 +959,11 @@ export async function registerRoutes(
   app.get("/api/credit-accounts", async (req, res) => {
     try {
       const orgId = getOrgScope(req);
+      const country = getCountryFilter(req);
       const borrowerId = req.query.borrowerId as string;
       const result = borrowerId
         ? await storage.getCreditAccountsByBorrower(borrowerId)
-        : await storage.getAllCreditAccounts(orgId);
+        : await storage.getAllCreditAccounts(orgId, country);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -1021,9 +1028,10 @@ export async function registerRoutes(
     try {
       const borrowerId = req.query.borrowerId as string;
       const orgId = getOrgScope(req);
+      const country = getCountryFilter(req);
       const result = borrowerId
         ? await storage.getCreditInquiriesByBorrower(borrowerId)
-        : await storage.getAllCreditInquiries(orgId);
+        : await storage.getAllCreditInquiries(orgId, country);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -1105,7 +1113,8 @@ export async function registerRoutes(
   app.get("/api/audit-logs", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const logs = await storage.getAuditLogs(orgId);
+      const country = getCountryFilter(req);
+      const logs = await storage.getAuditLogs(orgId, country);
       res.json(logs);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -1124,7 +1133,8 @@ export async function registerRoutes(
   app.get("/api/audit/stats", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const allLogs = await storage.getAuditLogs(orgId);
+      const country = getCountryFilter(req);
+      const allLogs = await storage.getAuditLogs(orgId, country);
 
       const now = new Date();
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -1182,7 +1192,8 @@ export async function registerRoutes(
   app.get("/api/pending-approvals", async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const approvals = await storage.getPendingApprovals(orgId);
+      const country = getCountryFilter(req);
+      const approvals = await storage.getPendingApprovals(orgId, country);
       res.json(approvals);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -1273,7 +1284,8 @@ export async function registerRoutes(
   app.get("/api/disputes", async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const disputeList = await storage.getDisputes(orgId);
+      const country = getCountryFilter(req);
+      const disputeList = await storage.getDisputes(orgId, country);
       res.json(disputeList);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -1658,7 +1670,7 @@ export async function registerRoutes(
 
   app.get("/api/batch-upload/history", requireRole("admin", "lender"), async (req, res) => {
     try {
-      const allLogs = await storage.getAuditLogs(getOrgScope(req));
+      const allLogs = await storage.getAuditLogs(getOrgScope(req), getCountryFilter(req));
       const batchLogs = allLogs
         .filter((log: any) => log.action && log.action.startsWith("BATCH_UPLOAD"))
         .map((log: any) => {
@@ -3478,6 +3490,10 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
   app.post("/api/platform/set-country", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
       const { country } = req.body;
+      if (country === "command_center") {
+        req.session.viewingCountry = undefined;
+        return res.json({ viewingCountry: null, message: "Returned to command center" });
+      }
       if (country === "global" || country === null) {
         req.session.viewingCountry = "global";
         return res.json({ viewingCountry: "global", message: "Switched to global view" });

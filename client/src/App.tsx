@@ -1,7 +1,7 @@
 import "./lib/i18n";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { Switch, Route } from "wouter";
-import { queryClient } from "./lib/queryClient";
+import { queryClient, apiRequest } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,7 +15,7 @@ import { NotificationBell } from "@/components/notification-bell";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { PasswordChangeDialog } from "@/components/password-change-dialog";
 import { Button } from "@/components/ui/button";
-import { LogOut, Loader2, MessageCircle, Building2 } from "lucide-react";
+import { LogOut, Loader2, MessageCircle, Building2, LayoutGrid } from "lucide-react";
 import { DisputeChatbot } from "@/components/dispute-chatbot";
 import { OrgSwitcherProvider } from "@/hooks/use-org-switcher";
 import { OrgSwitcher } from "@/components/org-switcher";
@@ -223,9 +223,33 @@ function AuthenticatedApp() {
               )}
               {user.role === "super_admin" && (
                 <>
-                  <span className="text-xs font-medium text-amber-600 dark:text-amber-400 hidden md:inline" data-testid="text-platform-admin">
-                    Platform Admin
-                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 text-xs border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                    onClick={async () => {
+                      try {
+                        await apiRequest("POST", "/api/platform/set-country", { country: "command_center" });
+                        queryClient.setQueryData(["/api/auth/me"], (old: any) => {
+                          if (!old) return old;
+                          return { ...old, viewingCountry: null };
+                        });
+                        await queryClient.invalidateQueries({
+                          predicate: (q) => {
+                            const key = q.queryKey[0] as string;
+                            return key && !key.startsWith("/api/auth/");
+                          },
+                          refetchType: "all",
+                        });
+                      } catch {
+                        window.location.href = "/";
+                      }
+                    }}
+                    data-testid="button-command-center"
+                  >
+                    <LayoutGrid className="w-3.5 h-3.5 shrink-0" />
+                    <span className="hidden lg:inline">Command Center</span>
+                  </Button>
                   <CountrySelector />
                   <OrgSwitcher />
                 </>
