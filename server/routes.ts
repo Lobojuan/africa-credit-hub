@@ -481,6 +481,9 @@ export async function registerRoutes(
       req.session.userRole = user.role;
       req.session.organizationId = user.organizationId || undefined;
       req.session.lastActivity = Date.now();
+      if (user.role === "super_admin") {
+        req.session.viewingCountry = undefined;
+      }
       if (user.role !== "super_admin" && user.organizationId) {
         const org = await storage.getOrganization(user.organizationId);
         if (org?.country) {
