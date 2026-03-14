@@ -54,11 +54,28 @@ interface SystemStats {
     failed: number;
   };
   recentActivity: { action: string; userId: string; details: string; timestamp: string }[];
+  traffic: {
+    totalToday: number;
+    totalThisHour: number;
+    totalAllTime: number;
+    uniqueEndpoints: number;
+    topEndpoints: { endpoint: string; count: number }[];
+    hourlyData: { hour: string; requests: number }[];
+    minuteData: { minute: string; requests: number }[];
+    dailyData: { date: string; requests: number }[];
+    methodBreakdown: { method: string; count: number }[];
+    statusBreakdown: { bucket: string; count: number }[];
+    responseTime: { avg: number; p50: number; p95: number; p99: number; max: number; samples: number };
+    peakHour: { hour: string; requests: number };
+    peakMinute: { minute: string; requests: number };
+    requestsPerSecond: number;
+    projectedDaily: number;
+    capacityTarget: number;
+    capacityUsedPct: number;
+  };
   sla: {
     targetUptime: number;
     currentUptime: number;
-    avgResponseTime: string;
-    maxResponseTime: string;
     disputeResolutionSLA: string;
     dataRetention: string;
     backupFrequency: string;
@@ -228,14 +245,257 @@ export function CommandCenterSystemTab() {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+        <StatCard icon={Zap} label="Requests Today" value={stats.traffic.totalToday.toLocaleString()} sub={`${stats.traffic.requestsPerSecond} req/s`} color="bg-cyan-500/20" />
         <StatCard icon={Activity} label="Uptime" value={formatUptime(stats.server.uptime.ms)} color="bg-emerald-500/20" />
-        <StatCard icon={Database} label="DB Size" value={`${stats.database.sizeMB} MB`} color="bg-blue-500/20" />
-        <StatCard icon={MemoryStick} label="Heap Used" value={`${stats.server.memory.heapUsedMB} MB`} sub={`of ${stats.server.memory.heapTotalMB} MB (${memUsagePct}%)`} color="bg-violet-500/20" />
-        <StatCard icon={Network} label="DB Connections" value={stats.database.connections.total} sub={`${stats.database.connections.active} active, ${stats.database.connections.idle} idle`} color="bg-cyan-500/20" />
+        <StatCard icon={Gauge} label="Avg Response" value={`${stats.traffic.responseTime.avg}ms`} sub={`p95: ${stats.traffic.responseTime.p95}ms`} color="bg-blue-500/20" />
+        <StatCard icon={Network} label="DB Connections" value={stats.database.connections.total} sub={`of ${stats.database.connections.maxConnections} max`} color="bg-violet-500/20" />
+        <StatCard icon={BarChart3} label="Projected Daily" value={stats.traffic.projectedDaily.toLocaleString()} sub={`${stats.traffic.capacityUsedPct}% of 2M target`} color="bg-amber-500/20" />
+        <StatCard icon={MemoryStick} label="Heap Used" value={`${stats.server.memory.heapUsedMB} MB`} sub={`${memUsagePct}% utilized`} color="bg-orange-500/20" />
         <StatCard icon={Shield} label="SRS Score" value={`${srsScore}%`} sub={`${stats.srs.passed}/${stats.srs.total} passed`} color="bg-teal-500/20" />
-        <StatCard icon={Users} label="Users" value={stats.dataCounts.users.total} sub={`${stats.dataCounts.users.active} active`} color="bg-amber-500/20" />
-        <StatCard icon={Building2} label="Institutions" value={stats.dataCounts.organizations.total} sub={`${stats.dataCounts.organizations.active} active`} color="bg-orange-500/20" />
-        <StatCard icon={FileText} label="Audit Logs" value={stats.dataCounts.auditLogs} color="bg-slate-500/20" />
+        <StatCard icon={Database} label="DB Size" value={`${stats.database.sizeMB} MB`} sub={`${stats.database.tableStats.length} tables`} color="bg-slate-500/20" />
+      </div>
+
+      <div className="rounded-xl border border-cyan-500/20 bg-slate-800/50 p-4">
+        <div className="flex items-center justify-between mb-4">
+          <SectionHeader icon={Zap} title="Traffic & Performance Monitor" color="text-cyan-400"
+            badge={`${stats.traffic.totalAllTime.toLocaleString()} total requests tracked`} />
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 mb-4">
+          <div className="text-center p-3 rounded-lg bg-slate-900/50 border border-slate-700/30">
+            <p className="text-lg font-bold text-cyan-400">{stats.traffic.totalToday.toLocaleString()}</p>
+            <p className="text-[9px] text-slate-500">Requests Today</p>
+          </div>
+          <div className="text-center p-3 rounded-lg bg-slate-900/50 border border-slate-700/30">
+            <p className="text-lg font-bold text-blue-400">{stats.traffic.totalThisHour.toLocaleString()}</p>
+            <p className="text-[9px] text-slate-500">This Hour</p>
+          </div>
+          <div className="text-center p-3 rounded-lg bg-slate-900/50 border border-slate-700/30">
+            <p className="text-lg font-bold text-emerald-400">{stats.traffic.requestsPerSecond}</p>
+            <p className="text-[9px] text-slate-500">Req/sec (current)</p>
+          </div>
+          <div className="text-center p-3 rounded-lg bg-slate-900/50 border border-slate-700/30">
+            <p className="text-lg font-bold text-amber-400">{stats.traffic.projectedDaily.toLocaleString()}</p>
+            <p className="text-[9px] text-slate-500">Projected Daily</p>
+          </div>
+          <div className="text-center p-3 rounded-lg bg-slate-900/50 border border-slate-700/30">
+            <p className="text-lg font-bold text-violet-400">{stats.traffic.peakHour.requests.toLocaleString()}</p>
+            <p className="text-[9px] text-slate-500">Peak Hour ({stats.traffic.peakHour.hour})</p>
+          </div>
+          <div className="text-center p-3 rounded-lg bg-slate-900/50 border border-slate-700/30">
+            <p className={`text-lg font-bold ${stats.traffic.capacityUsedPct < 50 ? "text-emerald-400" : stats.traffic.capacityUsedPct < 80 ? "text-amber-400" : "text-red-400"}`}>
+              {stats.traffic.capacityUsedPct}%
+            </p>
+            <p className="text-[9px] text-slate-500">of 2M/day Capacity</p>
+          </div>
+        </div>
+
+        <div className="mb-2">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] text-slate-400">Daily Capacity Usage ({stats.traffic.projectedDaily.toLocaleString()} / {stats.traffic.capacityTarget.toLocaleString()})</span>
+            <span className={`text-[10px] font-medium ${stats.traffic.capacityUsedPct < 50 ? "text-emerald-400" : stats.traffic.capacityUsedPct < 80 ? "text-amber-400" : "text-red-400"}`}>
+              {stats.traffic.capacityUsedPct}%
+            </span>
+          </div>
+          <ProgressBar
+            value={stats.traffic.capacityUsedPct}
+            max={100}
+            color={stats.traffic.capacityUsedPct < 50 ? "bg-emerald-500" : stats.traffic.capacityUsedPct < 80 ? "bg-amber-500" : "bg-red-500"}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+          <div>
+            <p className="text-[10px] text-slate-400 font-medium mb-2">Hourly Traffic (Last 24h)</p>
+            <div className="flex items-end gap-[2px] h-[80px]">
+              {(() => {
+                const maxH = Math.max(...stats.traffic.hourlyData.map(h => h.requests), 1);
+                return stats.traffic.hourlyData.map((h, i) => (
+                  <div key={i} className="flex-1 flex flex-col items-center group relative">
+                    <div
+                      className="w-full rounded-t bg-cyan-500/60 hover:bg-cyan-400/80 transition-colors cursor-default min-h-[1px]"
+                      style={{ height: `${Math.max((h.requests / maxH) * 100, 1)}%` }}
+                      title={`${h.hour}: ${h.requests} requests`}
+                    />
+                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 hidden group-hover:block bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-[8px] text-white whitespace-nowrap z-10">
+                      {h.hour}: {h.requests}
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+            <div className="flex justify-between mt-1">
+              <span className="text-[8px] text-slate-600">{stats.traffic.hourlyData[0]?.hour}</span>
+              <span className="text-[8px] text-slate-600">Now</span>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-[10px] text-slate-400 font-medium mb-2">Per-Minute Traffic (Last 60 min)</p>
+            <div className="flex items-end gap-[1px] h-[80px]">
+              {(() => {
+                const maxM = Math.max(...stats.traffic.minuteData.map(m => m.requests), 1);
+                return stats.traffic.minuteData.map((m, i) => (
+                  <div key={i} className="flex-1 flex flex-col items-center group relative">
+                    <div
+                      className="w-full rounded-t bg-blue-500/60 hover:bg-blue-400/80 transition-colors cursor-default min-h-[1px]"
+                      style={{ height: `${Math.max((m.requests / maxM) * 100, 1)}%` }}
+                      title={`${m.minute}: ${m.requests} requests`}
+                    />
+                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 hidden group-hover:block bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-[8px] text-white whitespace-nowrap z-10">
+                      {m.minute}: {m.requests}
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+            <div className="flex justify-between mt-1">
+              <span className="text-[8px] text-slate-600">{stats.traffic.minuteData[0]?.minute}</span>
+              <span className="text-[8px] text-slate-600">Now</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mt-4">
+          <div>
+            <p className="text-[10px] text-slate-400 font-medium mb-2">Response Time (ms)</p>
+            <div className="space-y-1.5">
+              {[
+                { label: "Average", value: stats.traffic.responseTime.avg, color: "text-emerald-400" },
+                { label: "P50 (Median)", value: stats.traffic.responseTime.p50, color: "text-blue-400" },
+                { label: "P95", value: stats.traffic.responseTime.p95, color: "text-amber-400" },
+                { label: "P99", value: stats.traffic.responseTime.p99, color: "text-orange-400" },
+                { label: "Max", value: stats.traffic.responseTime.max, color: "text-red-400" },
+              ].map(({ label, value, color }) => (
+                <div key={label} className="flex items-center justify-between">
+                  <span className="text-[10px] text-slate-400">{label}</span>
+                  <span className={`text-[10px] font-mono font-medium ${color}`}>{value}ms</span>
+                </div>
+              ))}
+              <div className="text-[9px] text-slate-600 mt-1">{stats.traffic.responseTime.samples.toLocaleString()} samples</div>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-[10px] text-slate-400 font-medium mb-2">HTTP Methods</p>
+            <div className="space-y-1.5">
+              {stats.traffic.methodBreakdown.map(({ method, count }) => {
+                const methodColors: Record<string, string> = {
+                  GET: "bg-emerald-500", POST: "bg-blue-500", PUT: "bg-amber-500",
+                  PATCH: "bg-violet-500", DELETE: "bg-red-500",
+                };
+                const total = stats.traffic.methodBreakdown.reduce((a, b) => a + b.count, 0);
+                const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                return (
+                  <div key={method}>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-[10px] font-mono text-slate-300">{method}</span>
+                      <span className="text-[9px] text-slate-500">{count} ({pct}%)</span>
+                    </div>
+                    <ProgressBar value={count} max={total} color={methodColors[method] || "bg-slate-500"} />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-[10px] text-slate-400 font-medium mb-2">Status Codes</p>
+            <div className="space-y-1.5">
+              {stats.traffic.statusBreakdown.map(({ bucket, count }) => {
+                const colors: Record<string, string> = {
+                  "2xx": "text-emerald-400", "3xx": "text-blue-400",
+                  "4xx": "text-amber-400", "5xx": "text-red-400",
+                };
+                const labels: Record<string, string> = {
+                  "2xx": "Success", "3xx": "Redirect", "4xx": "Client Error", "5xx": "Server Error",
+                };
+                return (
+                  <div key={bucket} className="flex items-center justify-between py-1 border-b border-slate-700/20 last:border-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] font-mono font-medium ${colors[bucket] || "text-slate-400"}`}>{bucket}</span>
+                      <span className="text-[9px] text-slate-500">{labels[bucket]}</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-white">{count.toLocaleString()}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-[10px] text-slate-400 font-medium mb-2">7-Day Trend</p>
+            <div className="space-y-1">
+              {stats.traffic.dailyData.map(({ date, requests }) => {
+                const dayLabel = new Date(date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+                const maxDay = Math.max(...stats.traffic.dailyData.map(d => d.requests), 1);
+                return (
+                  <div key={date}>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-[9px] text-slate-400">{dayLabel}</span>
+                      <span className="text-[9px] font-mono text-slate-300">{requests.toLocaleString()}</span>
+                    </div>
+                    <ProgressBar value={requests} max={maxDay} color="bg-cyan-500" />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <p className="text-[10px] text-slate-400 font-medium mb-2">Top Endpoints (by request count)</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 max-h-[150px] overflow-y-auto pr-1">
+            {stats.traffic.topEndpoints.slice(0, 14).map(({ endpoint, count }, i) => (
+              <div key={endpoint} className="flex items-center justify-between py-1 border-b border-slate-700/20">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-[9px] text-slate-600 w-4 shrink-0">{i + 1}.</span>
+                  <span className="text-[10px] font-mono text-slate-300 truncate">{endpoint}</span>
+                </div>
+                <span className="text-[10px] font-mono text-white shrink-0 ml-2">{count.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-4 p-3 rounded-lg bg-slate-900/50 border border-slate-700/30">
+          <div className="flex items-center gap-2 mb-2">
+            <Monitor className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="text-[10px] font-medium text-white">Capacity Planning — 2,000,000 requests/day target</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              {
+                label: "Current Load",
+                value: `${stats.traffic.projectedDaily.toLocaleString()}/day`,
+                status: stats.traffic.capacityUsedPct < 50 ? "green" : stats.traffic.capacityUsedPct < 80 ? "amber" : "red",
+              },
+              {
+                label: "Headroom",
+                value: `${(stats.traffic.capacityTarget - stats.traffic.projectedDaily).toLocaleString()}/day`,
+                status: stats.traffic.capacityUsedPct < 80 ? "green" : "red",
+              },
+              {
+                label: "Req/sec Capacity",
+                value: `~${Math.round(stats.traffic.capacityTarget / 86400)} req/s`,
+                status: "green",
+              },
+              {
+                label: "Current Req/sec",
+                value: `${stats.traffic.requestsPerSecond} req/s`,
+                status: stats.traffic.requestsPerSecond < 15 ? "green" : stats.traffic.requestsPerSecond < 20 ? "amber" : "red",
+              },
+            ].map(({ label, value, status }) => (
+              <div key={label} className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${status === "green" ? "bg-emerald-400" : status === "amber" ? "bg-amber-400" : "bg-red-400"}`} />
+                <div>
+                  <p className="text-[9px] text-slate-500">{label}</p>
+                  <p className="text-[10px] font-mono text-white">{value}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -378,8 +638,9 @@ export function CommandCenterSystemTab() {
             {[
               { label: "Target Uptime", value: `${stats.sla.targetUptime}%` },
               { label: "Current Uptime", value: `${stats.sla.currentUptime}%` },
-              { label: "Avg Response Time", value: stats.sla.avgResponseTime },
-              { label: "Max Response Time", value: stats.sla.maxResponseTime },
+              { label: "Avg Response Time", value: `${stats.traffic.responseTime.avg}ms` },
+              { label: "P95 Response Time", value: `${stats.traffic.responseTime.p95}ms` },
+              { label: "Max Response Time", value: `${stats.traffic.responseTime.max}ms` },
               { label: "Dispute Resolution SLA", value: stats.sla.disputeResolutionSLA },
               { label: "Data Retention", value: stats.sla.dataRetention },
               { label: "Backup Frequency", value: stats.sla.backupFrequency },

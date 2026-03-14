@@ -205,21 +205,85 @@ async function validateOrgCountry(orgId: string, req?: Request): Promise<boolean
 
 
 const apiUsageTracker = new Map<string, number>();
+const methodTracker = new Map<string, number>();
+const statusCodeTracker = new Map<string, number>();
+const responseTimes: number[] = [];
+const minuteTracker = new Map<string, number>();
+let totalRequestsAllTime = 0;
+let peakRequestsPerMinute = 0;
+let peakMinuteLabel = "";
+const dailyTracker = new Map<string, number>();
 
 function getUsageKey(endpoint: string, hour: Date): string {
   const h = `${hour.getFullYear()}-${String(hour.getMonth() + 1).padStart(2, "0")}-${String(hour.getDate()).padStart(2, "0")}T${String(hour.getHours()).padStart(2, "0")}`;
   return `${h}|${endpoint}`;
 }
 
-function trackApiUsage(endpoint: string) {
-  const key = getUsageKey(endpoint, new Date());
-  apiUsageTracker.set(key, (apiUsageTracker.get(key) || 0) + 1);
+function getDayKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
+
+function getMinuteKey(d: Date): string {
+  return `${getDayKey(d)}T${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function trackApiUsage(endpoint: string) {
+  const now = new Date();
+  const key = getUsageKey(endpoint, now);
+  apiUsageTracker.set(key, (apiUsageTracker.get(key) || 0) + 1);
+  totalRequestsAllTime++;
+
+  const dayKey = getDayKey(now);
+  dailyTracker.set(dayKey, (dailyTracker.get(dayKey) || 0) + 1);
+
+  const minKey = getMinuteKey(now);
+  const minCount = (minuteTracker.get(minKey) || 0) + 1;
+  minuteTracker.set(minKey, minCount);
+  if (minCount > peakRequestsPerMinute) {
+    peakRequestsPerMinute = minCount;
+    peakMinuteLabel = minKey;
+  }
+
+  const method = endpoint.split(" ")[0] || "GET";
+  methodTracker.set(method, (methodTracker.get(method) || 0) + 1);
+}
+
+function trackResponseTime(ms: number, statusCode: number) {
+  responseTimes.push(ms);
+  if (responseTimes.length > 5000) responseTimes.splice(0, 1000);
+
+  const bucket = statusCode >= 500 ? "5xx" : statusCode >= 400 ? "4xx" : statusCode >= 300 ? "3xx" : "2xx";
+  statusCodeTracker.set(bucket, (statusCodeTracker.get(bucket) || 0) + 1);
+}
+
+function cleanOldTrackingData() {
+  const now = new Date();
+  const cutoff72h = now.getTime() - 72 * 60 * 60 * 1000;
+  const cutoffMin = now.getTime() - 2 * 60 * 60 * 1000;
+
+  apiUsageTracker.forEach((_, key) => {
+    const hourPart = key.split("|")[0];
+    const d = new Date(hourPart + ":00:00");
+    if (d.getTime() < cutoff72h) apiUsageTracker.delete(key);
+  });
+
+  minuteTracker.forEach((_, key) => {
+    const d = new Date(key.replace("T", " ") + ":00");
+    if (d.getTime() < cutoffMin) minuteTracker.delete(key);
+  });
+
+  const keep7Days = now.getTime() - 7 * 24 * 60 * 60 * 1000;
+  dailyTracker.forEach((_, key) => {
+    if (new Date(key).getTime() < keep7Days) dailyTracker.delete(key);
+  });
+}
+
+setInterval(cleanOldTrackingData, 10 * 60 * 1000);
 
 function getApiUsageStats() {
   const now = new Date();
   const currentHourKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}T${String(now.getHours()).padStart(2, "0")}`;
-  const todayPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const todayPrefix = getDayKey(now);
 
   let totalToday = 0;
   let totalThisHour = 0;
@@ -260,7 +324,63 @@ function getApiUsageStats() {
 
   const uniqueEndpoints = endpointCounts.size;
 
-  return { totalToday, totalThisHour, uniqueEndpoints, topEndpoints, hourlyData };
+  const minuteData: { minute: string; requests: number }[] = [];
+  for (let i = 59; i >= 0; i--) {
+    const m = new Date(now.getTime() - i * 60 * 1000);
+    const mKey = getMinuteKey(m);
+    const label = `${String(m.getHours()).padStart(2, "0")}:${String(m.getMinutes()).padStart(2, "0")}`;
+    minuteData.push({ minute: label, requests: minuteTracker.get(mKey) || 0 });
+  }
+
+  const sortedTimes = [...responseTimes].sort((a, b) => a - b);
+  const avgResponseTime = sortedTimes.length > 0 ? Math.round(sortedTimes.reduce((a, b) => a + b, 0) / sortedTimes.length) : 0;
+  const p50 = sortedTimes.length > 0 ? sortedTimes[Math.floor(sortedTimes.length * 0.5)] : 0;
+  const p95 = sortedTimes.length > 0 ? sortedTimes[Math.floor(sortedTimes.length * 0.95)] : 0;
+  const p99 = sortedTimes.length > 0 ? sortedTimes[Math.floor(sortedTimes.length * 0.99)] : 0;
+  const maxResponseTime = sortedTimes.length > 0 ? sortedTimes[sortedTimes.length - 1] : 0;
+
+  const methodBreakdown: { method: string; count: number }[] = [];
+  methodTracker.forEach((count, method) => methodBreakdown.push({ method, count }));
+  methodBreakdown.sort((a, b) => b.count - a.count);
+
+  const statusBreakdown: { bucket: string; count: number }[] = [];
+  statusCodeTracker.forEach((count, bucket) => statusBreakdown.push({ bucket, count }));
+  statusBreakdown.sort((a, b) => a.bucket.localeCompare(b.bucket));
+
+  const dailyData: { date: string; requests: number }[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+    const dKey = getDayKey(d);
+    dailyData.push({ date: dKey, requests: dailyTracker.get(dKey) || 0 });
+  }
+
+  const elapsedHoursToday = now.getHours() + now.getMinutes() / 60;
+  const projectedDaily = elapsedHoursToday > 0 ? Math.round(totalToday * (24 / elapsedHoursToday)) : 0;
+  const requestsPerSecond = totalThisHour > 0 ? (totalThisHour / (now.getMinutes() * 60 + now.getSeconds() || 1)).toFixed(2) : "0.00";
+  const capacityTarget = 2_000_000;
+  const capacityUsedPct = projectedDaily > 0 ? ((projectedDaily / capacityTarget) * 100).toFixed(2) : "0.00";
+
+  const peakHour = hourlyData.reduce((max, h) => h.requests > max.requests ? h : max, { hour: "N/A", requests: 0 });
+
+  return {
+    totalToday,
+    totalThisHour,
+    totalAllTime: totalRequestsAllTime,
+    uniqueEndpoints,
+    topEndpoints,
+    hourlyData,
+    minuteData,
+    dailyData,
+    methodBreakdown,
+    statusBreakdown,
+    responseTime: { avg: avgResponseTime, p50, p95, p99, max: maxResponseTime, samples: sortedTimes.length },
+    peakHour: { hour: peakHour.hour, requests: peakHour.requests },
+    peakMinute: { minute: peakMinuteLabel, requests: peakRequestsPerMinute },
+    requestsPerSecond: Number(requestsPerSecond),
+    projectedDaily,
+    capacityTarget,
+    capacityUsedPct: Number(capacityUsedPct),
+  };
 }
 
 export async function registerRoutes(
@@ -268,9 +388,15 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
 
-  app.use("/api", apiLimiter, (req, _res, next) => {
+  app.use("/api", apiLimiter, (req, res, next) => {
     const route = req.method + " " + req.path;
     trackApiUsage(route);
+    const start = Date.now();
+    const origEnd = res.end.bind(res);
+    res.end = function (...args: any[]) {
+      trackResponseTime(Date.now() - start, res.statusCode);
+      return origEnd(...args);
+    } as any;
     next();
   });
 
@@ -4021,11 +4147,10 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
         },
         srs: { requirements: srsRequirements, total: srsTotal, passed: srsPassed, warning: srsWarning, failed: srsTotal - srsPassed - srsWarning },
         recentActivity,
+        traffic: getApiUsageStats(),
         sla: {
           targetUptime: 99.9,
           currentUptime: 99.95,
-          avgResponseTime: "45ms",
-          maxResponseTime: "320ms",
           disputeResolutionSLA: "30 days",
           dataRetention: "7 years",
           backupFrequency: "Daily",
