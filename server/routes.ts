@@ -3700,6 +3700,38 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
       let totalBorrowersAll = Object.values(borrowerCounts).reduce((a, b) => a + b, 0);
       let totalAccountsAll = Object.values(accountCounts).reduce((a, b) => a + b, 0);
 
+      const allCountrySettings = await db.select().from(countrySettings);
+      const settingsMap: Record<string, typeof allCountrySettings[0]> = {};
+      for (const s of allCountrySettings) {
+        settingsMap[s.countryCode] = s;
+      }
+
+      const featureLabelMap: Record<string, string> = {
+        credit_scoring: "Credit Scoring",
+        dispute_management: "Dispute Management",
+        consent_tracking: "Consent Tracking",
+        regulatory_export: "Regulatory Export",
+        cross_border_sharing: "Cross-Border Sharing",
+        batch_upload: "Batch Upload",
+        api_access: "API Access",
+        kyc_verification: "KYC Verification",
+      };
+
+      const blocsMap: Record<string, string[]> = {
+        GH: ["AU", "ECOWAS"], NG: ["AU", "ECOWAS"], KE: ["AU", "EAC", "COMESA"],
+        RW: ["AU", "EAC", "COMESA"], TZ: ["AU", "EAC", "SADC"], UG: ["AU", "EAC", "COMESA"],
+        ZA: ["AU", "SADC"], ET: ["AU", "IGAD", "COMESA"], SL: ["AU", "ECOWAS"], LR: ["AU", "ECOWAS"],
+      };
+
+      const dpFallback: Record<string, "enacted" | "draft" | "none"> = {
+        GH: "enacted", NG: "enacted", KE: "enacted", RW: "enacted", TZ: "enacted",
+        UG: "enacted", ZA: "enacted", ET: "enacted", SL: "draft", LR: "draft",
+      };
+      const sataFallback: Record<string, "ready" | "partial" | "planned"> = {
+        GH: "ready", NG: "ready", KE: "ready", RW: "ready", ZA: "ready",
+        TZ: "partial", UG: "partial", ET: "partial", SL: "planned", LR: "planned",
+      };
+
       const countryDetails = supportedCountries.map((sc) => {
         const info = countryMap[sc.name] || { orgs: 0, activeOrgs: 0, orgIds: [] };
         let borrowerCount = 0;
@@ -3709,33 +3741,40 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
           accountCount += accountCounts[orgId] || 0;
         }
         const hasData = borrowerCount > 0 || info.orgs > 0;
-        const features: string[] = [];
-        if (sc.name === "Ghana") features.push("BoG CRB v1.1 Export");
-        if (sc.name === "Sierra Leone") features.push("BSL CRB v1.0 Export");
-        features.push("Credit Scoring", "Dispute Management", "Consent Tracking");
 
-        const dpStatusMap: Record<string, "enacted" | "draft" | "none"> = {
-          GH: "enacted", NG: "enacted", KE: "enacted", RW: "enacted", TZ: "enacted",
-          UG: "enacted", ZA: "enacted", ET: "enacted", SL: "draft", LR: "draft",
+        const cs = settingsMap[sc.code];
+        const enabledKeys = (cs?.enabledFeatures as string[]) || [];
+        const features: string[] = [];
+
+        const regExportLabelMap: Record<string, string> = {
+          GH: "BoG CRB v1.1 Export",
+          SL: "BSL CRB v1.0 Export",
         };
-        const sataMap: Record<string, "ready" | "partial" | "planned"> = {
-          GH: "ready", NG: "ready", KE: "ready", RW: "ready", ZA: "ready",
-          TZ: "partial", UG: "partial", ET: "partial", SL: "planned", LR: "planned",
-        };
-        const blocsMap: Record<string, string[]> = {
-          GH: ["AU", "ECOWAS"], NG: ["AU", "ECOWAS"], KE: ["AU", "EAC", "COMESA"],
-          RW: ["AU", "EAC", "COMESA"], TZ: ["AU", "EAC", "SADC"], UG: ["AU", "EAC", "COMESA"],
-          ZA: ["AU", "SADC"], ET: ["AU", "IGAD", "COMESA"], SL: ["AU", "ECOWAS"], LR: ["AU", "ECOWAS"],
-        };
+        if (enabledKeys.includes("regulatory_export")) {
+          features.push(regExportLabelMap[sc.code] || "Regulatory Export");
+        }
+
+        for (const key of enabledKeys) {
+          if (key === "regulatory_export") continue;
+          const label = featureLabelMap[key];
+          if (label) features.push(label);
+        }
+
+        if (!cs && features.length === 0) {
+          features.push("Credit Scoring", "Dispute Management", "Consent Tracking");
+        }
+
+        const dpStatus = (cs?.dataProtectionStatus as "enacted" | "draft" | "none") || dpFallback[sc.code] || "none";
+        const sataReadiness = (cs?.sataReadiness as "ready" | "partial" | "planned") || sataFallback[sc.code] || "planned";
 
         return {
           name: sc.name,
           code: sc.code,
           currency: sc.currency,
-          regulatoryBody: sc.regulatoryBody,
-          dataProtectionLaw: sc.dataProtectionLaw,
-          dataProtectionStatus: dpStatusMap[sc.code] || "none",
-          sataReadiness: sataMap[sc.code] || "planned",
+          regulatoryBody: cs?.regulatoryBody || sc.regulatoryBody,
+          dataProtectionLaw: cs?.dataProtectionLaw || sc.dataProtectionLaw,
+          dataProtectionStatus: dpStatus,
+          sataReadiness,
           regionalBlocs: blocsMap[sc.code] || [],
           institutions: info.orgs,
           activeInstitutions: info.activeOrgs,
@@ -4624,6 +4663,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
   }
 
   await seedCountrySettings();
+  await repairCountrySettings();
   await seedOrganizations();
 
   registerExternalApi(app);
@@ -4804,6 +4844,27 @@ async function seedOrganizations() {
   }
 
   console.log("[Seed] Organizations and tenant assignments created successfully");
+}
+
+async function repairCountrySettings() {
+  try {
+    const dpCorrections: Record<string, string> = {
+      GH: "enacted", NG: "enacted", KE: "enacted", RW: "enacted",
+      TZ: "enacted", UG: "enacted", ZA: "enacted", ET: "enacted",
+    };
+    for (const [code, status] of Object.entries(dpCorrections)) {
+      await db.update(countrySettings)
+        .set({ dataProtectionStatus: status })
+        .where(
+          and(
+            eq(countrySettings.countryCode, code),
+            sql`${countrySettings.dataProtectionStatus} != ${status}`
+          )
+        );
+    }
+  } catch (e) {
+    console.log("[Repair] Country settings repair skipped:", e);
+  }
 }
 
 async function seedCountrySettings() {

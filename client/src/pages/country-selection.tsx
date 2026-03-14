@@ -404,8 +404,14 @@ export default function CountrySelectionPage() {
                         const hasScoring = features.includes("Credit Scoring");
                         const hasDisputes = features.includes("Dispute Management");
                         const hasConsent = features.includes("Consent Tracking");
-                        const bogExport = features.find((f) => f.includes("BoG") || f.includes("BSL"));
-                        const exportLabel = bogExport || "Standard";
+                        const hasBatch = features.includes("Batch Upload");
+                        const hasApi = features.includes("API Access");
+                        const hasKyc = features.includes("KYC Verification");
+                        const bogExport = features.find((f) => f.includes("BoG") || f.includes("BSL") || f.includes("Regulatory Export"));
+                        const exportLabel = bogExport || "—";
+                        const FeatureCheck = ({ enabled }: { enabled: boolean }) => (
+                          enabled ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mx-auto" /> : <AlertTriangle className="w-3.5 h-3.5 text-slate-600 mx-auto" />
+                        );
                         return (
                           <tr key={c.code} className="border-b border-slate-700/20 hover:bg-slate-700/20">
                             <td className="p-3 sticky left-0 bg-slate-800/90">
@@ -414,29 +420,17 @@ export default function CountrySelectionPage() {
                                 <span className="text-slate-300 font-medium">{c.name}</span>
                               </div>
                             </td>
+                            <td className="text-center p-3"><FeatureCheck enabled={hasScoring} /></td>
                             <td className="text-center p-3">
-                              {hasScoring ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mx-auto" /> : <AlertTriangle className="w-3.5 h-3.5 text-amber-400 mx-auto" />}
-                            </td>
-                            <td className="text-center p-3">
-                              <span className={`text-[10px] font-medium ${bogExport ? "text-emerald-400" : "text-slate-400"}`}>
+                              <span className={`text-[10px] font-medium ${bogExport ? "text-emerald-400" : "text-slate-500"}`}>
                                 {exportLabel}
                               </span>
                             </td>
-                            <td className="text-center p-3">
-                              {hasDisputes ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mx-auto" /> : <AlertTriangle className="w-3.5 h-3.5 text-amber-400 mx-auto" />}
-                            </td>
-                            <td className="text-center p-3">
-                              {hasConsent ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mx-auto" /> : <AlertTriangle className="w-3.5 h-3.5 text-amber-400 mx-auto" />}
-                            </td>
-                            <td className="text-center p-3"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mx-auto" /></td>
-                            <td className="text-center p-3"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mx-auto" /></td>
-                            <td className="text-center p-3">
-                              {detail?.dataProtectionStatus === "enacted" ? (
-                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mx-auto" />
-                              ) : (
-                                <AlertTriangle className="w-3.5 h-3.5 text-amber-400 mx-auto" />
-                              )}
-                            </td>
+                            <td className="text-center p-3"><FeatureCheck enabled={hasDisputes} /></td>
+                            <td className="text-center p-3"><FeatureCheck enabled={hasConsent} /></td>
+                            <td className="text-center p-3"><FeatureCheck enabled={hasBatch} /></td>
+                            <td className="text-center p-3"><FeatureCheck enabled={hasApi} /></td>
+                            <td className="text-center p-3"><FeatureCheck enabled={hasKyc} /></td>
                             <td className="text-center p-3">
                               {detail?.sataReadiness && <SATAIndicator level={detail.sataReadiness} />}
                             </td>
