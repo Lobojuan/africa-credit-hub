@@ -248,7 +248,7 @@ function AuthenticatedApp() {
                     data-testid="button-command-center"
                   >
                     <LayoutGrid className="w-3.5 h-3.5 shrink-0" />
-                    <span className="hidden lg:inline">Command Center</span>
+                    <span>Command Center</span>
                   </Button>
                   <CountrySelector />
                   <OrgSwitcher />
