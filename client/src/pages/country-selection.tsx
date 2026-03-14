@@ -5,7 +5,8 @@ import { getSupportedCountries, type CountryConfig } from "@/lib/country-mode";
 import {
   Globe, Loader2, LogOut, Shield, ArrowRight, Building2, Users,
   CreditCard, CheckCircle2, AlertTriangle, Activity, Database,
-  TrendingUp, Lock, FileText, Scale, Settings,
+  TrendingUp, Lock, FileText, Scale, Settings, Key, BarChart3,
+  DollarSign, Archive, ScrollText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
@@ -15,6 +16,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CommandCenterUsersTab } from "./command-center-users";
 import { CommandCenterSettingsTab } from "./command-center-settings";
 import { CommandCenterSystemTab } from "./command-center-system";
+import { CommandCenterAuditTab } from "./command-center-audit";
+import { CommandCenterApiKeysTab } from "./command-center-apikeys";
+import { CommandCenterDataQualityTab } from "./command-center-dataquality";
+import { CommandCenterBillingTab } from "./command-center-billing";
+import { CommandCenterRetentionTab } from "./command-center-retention";
 
 interface PlatformStats {
   totalBorrowers: number;
@@ -100,6 +106,55 @@ function SATAIndicator({ level }: { level: "ready" | "partial" | "planned" }) {
   if (level === "ready") return <Badge variant="outline" className="text-[9px] h-5 border-emerald-500/30 text-emerald-400 bg-emerald-500/10">SATA Ready</Badge>;
   if (level === "partial") return <Badge variant="outline" className="text-[9px] h-5 border-amber-500/30 text-amber-400 bg-amber-500/10">Partial</Badge>;
   return <Badge variant="outline" className="text-[9px] h-5 border-slate-500/30 text-slate-400 bg-slate-500/10">Planned</Badge>;
+}
+
+const ACTION_ICON_COLORS: Record<string, string> = {
+  LOGIN: "text-violet-400",
+  CREATE: "text-emerald-400",
+  UPDATE: "text-blue-400",
+  DELETE: "text-red-400",
+  VIEW: "text-cyan-400",
+  EXPORT: "text-orange-400",
+};
+
+function ActivityFeed() {
+  const { data: feed } = useQuery<any[]>({
+    queryKey: ["/api/platform/activity-feed"],
+    refetchInterval: 30000,
+  });
+
+  const items = (feed || []).slice(0, 15);
+
+  return (
+    <div className="rounded-xl border border-slate-700/50 bg-slate-800/50 p-4" data-testid="panel-activity-feed">
+      <div className="flex items-center gap-2 mb-3">
+        <Activity className="w-4 h-4 text-cyan-400" />
+        <h3 className="text-sm font-semibold text-white">Live Activity Feed</h3>
+        <span className="text-[9px] text-slate-500 ml-auto">Last 15 events • auto-refresh 30s</span>
+      </div>
+      {items.length === 0 ? (
+        <p className="text-sm text-slate-500 text-center py-4">No recent activity</p>
+      ) : (
+        <div className="space-y-1 max-h-[280px] overflow-y-auto pr-1">
+          {items.map((item: any) => (
+            <div key={item.id} className="flex items-start gap-2 py-1.5 border-b border-slate-700/20 last:border-0" data-testid={`activity-${item.id}`}>
+              <div className={`w-1.5 h-1.5 rounded-full mt-1.5 ${item.action === "LOGIN" ? "bg-violet-400" : item.action === "CREATE" ? "bg-emerald-400" : item.action === "UPDATE" ? "bg-blue-400" : item.action === "DELETE" ? "bg-red-400" : "bg-slate-400"}`} />
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] text-slate-300 truncate">
+                  <span className={`font-semibold ${ACTION_ICON_COLORS[item.action] || "text-slate-400"}`}>{item.action}</span>
+                  {" "}<span className="text-slate-500">[{item.entity}]</span>
+                  {" "}{item.details || `${item.action} on ${item.entity}`}
+                </p>
+                <p className="text-[9px] text-slate-600">
+                  {item.userName} {item.ipAddress ? `• ${item.ipAddress}` : ""} • {item.createdAt ? new Date(item.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function CountrySelectionPage() {
@@ -229,7 +284,22 @@ export default function CountrySelectionPage() {
                 <Settings className="w-3 h-3 mr-1" /> Country Settings
               </TabsTrigger>
               <TabsTrigger value="system" className="text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-white" data-testid="tab-system">
-                <Activity className="w-3 h-3 mr-1" /> System & Infrastructure
+                <Activity className="w-3 h-3 mr-1" /> System
+              </TabsTrigger>
+              <TabsTrigger value="audit" className="text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-white" data-testid="tab-audit">
+                <ScrollText className="w-3 h-3 mr-1" /> Audit Log
+              </TabsTrigger>
+              <TabsTrigger value="api-keys" className="text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-white" data-testid="tab-api-keys">
+                <Key className="w-3 h-3 mr-1" /> API Keys
+              </TabsTrigger>
+              <TabsTrigger value="data-quality" className="text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-white" data-testid="tab-data-quality">
+                <BarChart3 className="w-3 h-3 mr-1" /> Data Quality
+              </TabsTrigger>
+              <TabsTrigger value="billing" className="text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-white" data-testid="tab-billing">
+                <DollarSign className="w-3 h-3 mr-1" /> Billing
+              </TabsTrigger>
+              <TabsTrigger value="retention" className="text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-white" data-testid="tab-retention">
+                <Archive className="w-3 h-3 mr-1" /> Retention
               </TabsTrigger>
             </TabsList>
 
@@ -354,6 +424,8 @@ export default function CountrySelectionPage() {
                 </div>
               </div>
 
+              <ActivityFeed />
+
               <div className="rounded-xl border border-slate-700/50 bg-slate-800/50 p-4">
                 <div className="flex items-center gap-2 mb-4">
                   <FileText className="w-4 h-4 text-amber-400" />
@@ -461,6 +533,26 @@ export default function CountrySelectionPage() {
 
             <TabsContent value="system" className="mt-0">
               <CommandCenterSystemTab />
+            </TabsContent>
+
+            <TabsContent value="audit" className="mt-0">
+              <CommandCenterAuditTab />
+            </TabsContent>
+
+            <TabsContent value="api-keys" className="mt-0">
+              <CommandCenterApiKeysTab />
+            </TabsContent>
+
+            <TabsContent value="data-quality" className="mt-0">
+              <CommandCenterDataQualityTab />
+            </TabsContent>
+
+            <TabsContent value="billing" className="mt-0">
+              <CommandCenterBillingTab />
+            </TabsContent>
+
+            <TabsContent value="retention" className="mt-0">
+              <CommandCenterRetentionTab />
             </TabsContent>
           </Tabs>
         </div>

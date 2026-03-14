@@ -560,6 +560,43 @@ export type DataSharingAgreement = typeof dataSharingAgreements.$inferSelect;
 export type InsertPapssSettlement = z.infer<typeof insertPapssSettlementSchema>;
 export type PapssSettlement = typeof papssSettlements.$inferSelect;
 
+export const usageMeteringEventEnum = pgEnum("usage_metering_event", ["credit_report_pull", "api_call", "batch_upload", "cross_border_query", "dispute_filing", "data_export"]);
+
+export const usageMetering = pgTable("usage_metering", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  eventType: usageMeteringEventEnum("event_type").notNull(),
+  quantity: integer("quantity").notNull().default(1),
+  unitPriceCents: integer("unit_price_cents").notNull(),
+  totalCents: integer("total_cents").notNull(),
+  currency: text("currency").notNull().default("USD"),
+  country: text("country"),
+  metadata: text("metadata"),
+  billed: boolean("billed").default(false),
+  billingRecordId: varchar("billing_record_id").references(() => billingRecords.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertUsageMeteringSchema = createInsertSchema(usageMetering).omit({ id: true, createdAt: true });
+export type InsertUsageMetering = z.infer<typeof insertUsageMeteringSchema>;
+export type UsageMetering = typeof usageMetering.$inferSelect;
+
+export const pricingTiers = pgTable("pricing_tiers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  eventType: usageMeteringEventEnum("event_type").notNull(),
+  minVolume: integer("min_volume").notNull().default(0),
+  maxVolume: integer("max_volume"),
+  unitPriceCents: integer("unit_price_cents").notNull(),
+  currency: text("currency").notNull().default("USD"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertPricingTierSchema = createInsertSchema(pricingTiers).omit({ id: true, createdAt: true });
+export type InsertPricingTier = z.infer<typeof insertPricingTierSchema>;
+export type PricingTier = typeof pricingTiers.$inferSelect;
+
 export const countrySettings = pgTable("country_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   countryCode: text("country_code").notNull().unique(),

@@ -13,6 +13,10 @@ import {
   insertExchangeRateSchema, insertRetentionPolicySchema, insertApiConfigurationSchema,
   insertOrganizationSchema, insertDataSharingAgreementSchema, insertPapssSettlementSchema,
   dataSharingAgreements, papssSettlements, creditAccounts, countrySettings,
+  auditLogs, apiKeys, apiConfigurations, billingRecords, retentionPolicies,
+  usageMetering, pricingTiers, users, organizations, borrowers,
+  creditInquiries, disputes, consentRecords, paymentHistory, courtJudgments,
+  dishonouredCheques, creditReportLogs,
 } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
@@ -4229,6 +4233,250 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
         res.json(created);
       }
     } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  // ── Audit Logs ──
+  app.get("/api/platform/audit-logs", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit as string) || 100, 500);
+      const offset = parseInt(req.query.offset as string) || 0;
+      const action = req.query.action as string;
+      const entity = req.query.entity as string;
+      const userId = req.query.userId as string;
+      const search = req.query.search as string;
+
+      const conditions: any[] = [];
+      if (action) conditions.push(eq(auditLogs.action, action));
+      if (entity) conditions.push(eq(auditLogs.entity, entity));
+      if (userId) conditions.push(eq(auditLogs.userId, userId));
+      if (search) conditions.push(sql`(${auditLogs.details} ILIKE ${'%' + search + '%'} OR ${auditLogs.action} ILIKE ${'%' + search + '%'})`);
+
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+      const logs = whereClause
+        ? await db.select().from(auditLogs).where(whereClause).orderBy(desc(auditLogs.createdAt)).limit(limit).offset(offset)
+        : await db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt)).limit(limit).offset(offset);
+
+      const [{ count: totalCount }] = whereClause
+        ? await db.select({ count: sql<number>`count(*)` }).from(auditLogs).where(whereClause)
+        : await db.select({ count: sql<number>`count(*)` }).from(auditLogs);
+
+      const actionCountsQuery = whereClause
+        ? db.select({ action: auditLogs.action, count: sql<number>`count(*)` }).from(auditLogs).where(whereClause).groupBy(auditLogs.action)
+        : db.select({ action: auditLogs.action, count: sql<number>`count(*)` }).from(auditLogs).groupBy(auditLogs.action);
+      const actionCounts = await actionCountsQuery;
+
+      const entityCountsQuery = whereClause
+        ? db.select({ entity: auditLogs.entity, count: sql<number>`count(*)` }).from(auditLogs).where(whereClause).groupBy(auditLogs.entity)
+        : db.select({ entity: auditLogs.entity, count: sql<number>`count(*)` }).from(auditLogs).groupBy(auditLogs.entity);
+      const entityCounts = await entityCountsQuery;
+
+      const userMap: Record<string, string> = {};
+      const userIds = [...new Set(logs.map(l => l.userId).filter(Boolean))] as string[];
+      if (userIds.length > 0) {
+        const placeholders = userIds.map((_, i) => `$${i + 1}`).join(",");
+        const { rows: userRows } = await pool.query(`SELECT id, full_name FROM users WHERE id IN (${placeholders})`, userIds);
+        for (const u of userRows) userMap[u.id] = u.full_name;
+      }
+
+      res.json({
+        logs: logs.map(l => ({ ...l, userName: l.userId ? userMap[l.userId] || "Unknown" : "System" })),
+        total: Number(totalCount),
+        actionCounts: actionCounts.map(a => ({ action: a.action, count: Number(a.count) })),
+        entityCounts: entityCounts.map(e => ({ entity: e.entity, count: Number(e.count) })),
+      });
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  // ── API Keys & Configurations ──
+  app.get("/api/platform/api-keys", requireAuth, requireSuperAdmin, async (_req, res) => {
+    try {
+      const keys = await db.select({
+        id: apiKeys.id,
+        label: apiKeys.label,
+        keyPrefix: apiKeys.keyPrefix,
+        status: apiKeys.status,
+        permissions: apiKeys.permissions,
+        organizationId: apiKeys.organizationId,
+        createdAt: apiKeys.createdAt,
+        expiresAt: apiKeys.expiresAt,
+        lastUsedAt: apiKeys.lastUsedAt,
+        revokedAt: apiKeys.revokedAt,
+      }).from(apiKeys).orderBy(desc(apiKeys.createdAt));
+      const configs = await db.select().from(apiConfigurations).orderBy(desc(apiConfigurations.createdAt));
+      res.json({ keys, configurations: configs });
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.post("/api/platform/api-keys/:id/revoke", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const [updated] = await db.update(apiKeys).set({ status: "revoked", revokedAt: new Date() }).where(eq(apiKeys.id, req.params.id)).returning();
+      if (!updated) return res.status(404).json({ message: "Key not found" });
+      await storage.createAuditLog({ userId: req.session.userId!, action: "REVOKE", entity: "api_key", entityId: updated.id, details: `Revoked API key ${updated.keyPrefix}...`, ipAddress: req.ip, organizationId: null });
+      res.json(updated);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  // ── Data Quality ──
+  app.get("/api/platform/data-quality", requireAuth, requireSuperAdmin, async (_req, res) => {
+    try {
+      const [borrowerTotal] = await db.select({ count: sql<number>`count(*)` }).from(borrowers);
+      const [missingNin] = await db.select({ count: sql<number>`count(*)` }).from(borrowers).where(sql`national_id IS NULL OR national_id = ''`);
+      const [missingEmail] = await db.select({ count: sql<number>`count(*)` }).from(borrowers).where(sql`email IS NULL OR email = ''`);
+      const [missingPhone] = await db.select({ count: sql<number>`count(*)` }).from(borrowers).where(sql`phone IS NULL OR phone = ''`);
+      const [missingDob] = await db.select({ count: sql<number>`count(*)` }).from(borrowers).where(sql`date_of_birth IS NULL OR date_of_birth = ''`);
+      const [missingAddress] = await db.select({ count: sql<number>`count(*)` }).from(borrowers).where(sql`address IS NULL OR address = ''`);
+
+      const [accountTotal] = await db.select({ count: sql<number>`count(*)` }).from(creditAccounts);
+      const [missingBalance] = await db.select({ count: sql<number>`count(*)` }).from(creditAccounts).where(sql`current_balance IS NULL`);
+      const [missingInst] = await db.select({ count: sql<number>`count(*)` }).from(creditAccounts).where(sql`lender_institution IS NULL OR lender_institution = ''`);
+
+      const [consentTotal] = await db.select({ count: sql<number>`count(*)` }).from(consentRecords);
+      const [disputeTotal] = await db.select({ count: sql<number>`count(*)` }).from(disputes);
+      const [paymentTotal] = await db.select({ count: sql<number>`count(*)` }).from(paymentHistory);
+      const [judgmentTotal] = await db.select({ count: sql<number>`count(*)` }).from(courtJudgments);
+      const [chequeTotal] = await db.select({ count: sql<number>`count(*)` }).from(dishonouredCheques);
+
+      const countryCounts = await db.select({
+        country: borrowers.country,
+        count: sql<number>`count(*)`,
+      }).from(borrowers).groupBy(borrowers.country);
+
+      const bt = Number(borrowerTotal.count);
+      const at = Number(accountTotal.count);
+      const completeness = bt > 0 ? Math.round(((bt - Number(missingNin.count)) + (bt - Number(missingEmail.count)) + (bt - Number(missingPhone.count)) + (bt - Number(missingDob.count)) + (bt - Number(missingAddress.count))) / (bt * 5) * 100) : 100;
+
+      res.json({
+        borrowers: { total: bt, missingNationalId: Number(missingNin.count), missingEmail: Number(missingEmail.count), missingPhone: Number(missingPhone.count), missingDob: Number(missingDob.count), missingAddress: Number(missingAddress.count) },
+        accounts: { total: at, missingBalance: Number(missingBalance.count), missingInstitution: Number(missingInst.count) },
+        relatedEntities: { consents: Number(consentTotal.count), disputes: Number(disputeTotal.count), payments: Number(paymentTotal.count), judgments: Number(judgmentTotal.count), dishonouredCheques: Number(chequeTotal.count) },
+        overallCompleteness: completeness,
+        byCountry: countryCounts.map(c => ({ country: c.country || "Unknown", count: Number(c.count) })),
+      });
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  // ── Billing & Revenue ──
+  app.get("/api/platform/billing", requireAuth, requireSuperAdmin, async (_req, res) => {
+    try {
+      const records = await db.select().from(billingRecords).orderBy(desc(billingRecords.createdAt));
+      const tiers = await db.select().from(pricingTiers).orderBy(pricingTiers.eventType, pricingTiers.minVolume);
+      const usage = await db.select().from(usageMetering).orderBy(desc(usageMetering.createdAt)).limit(500);
+
+      const totalRevenue = records.reduce((sum, r) => sum + parseFloat(r.amount), 0);
+      const paidRevenue = records.filter(r => r.status === "paid").reduce((sum, r) => sum + parseFloat(r.amount), 0);
+      const pendingRevenue = records.filter(r => r.status === "pending").reduce((sum, r) => sum + parseFloat(r.amount), 0);
+      const overdueRevenue = records.filter(r => r.status === "overdue").reduce((sum, r) => sum + parseFloat(r.amount), 0);
+
+      const usageByCat = await db.select({
+        eventType: usageMetering.eventType,
+        totalEvents: sql<number>`count(*)`,
+        totalCents: sql<number>`COALESCE(sum(${usageMetering.totalCents}), 0)`,
+        unbilledCents: sql<number>`COALESCE(sum(CASE WHEN ${usageMetering.billed} = false THEN ${usageMetering.totalCents} ELSE 0 END), 0)`,
+      }).from(usageMetering).groupBy(usageMetering.eventType);
+
+      const orgBilling = await db.select({
+        orgId: billingRecords.organizationId,
+        name: billingRecords.institutionName,
+        total: sql<number>`COALESCE(sum(${billingRecords.amount}::numeric), 0)`,
+        count: sql<number>`count(*)`,
+      }).from(billingRecords).groupBy(billingRecords.organizationId, billingRecords.institutionName);
+
+      res.json({
+        invoices: records,
+        pricingTiers: tiers,
+        usageEvents: usage,
+        summary: { totalRevenue, paidRevenue, pendingRevenue, overdueRevenue, invoiceCount: records.length },
+        usageByCategory: usageByCat.map(u => ({ eventType: u.eventType, totalEvents: Number(u.totalEvents), totalCents: Number(u.totalCents), unbilledCents: Number(u.unbilledCents) })),
+        revenueByOrg: orgBilling.map(o => ({ orgId: o.orgId, name: o.name, total: Number(o.total), invoiceCount: Number(o.count) })),
+      });
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.put("/api/platform/pricing-tiers/:id", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const { unitPriceCents, isActive } = req.body;
+      if (unitPriceCents !== undefined && (typeof unitPriceCents !== "number" || unitPriceCents < 0)) {
+        return res.status(400).json({ message: "unitPriceCents must be a non-negative number" });
+      }
+      if (isActive !== undefined && typeof isActive !== "boolean") {
+        return res.status(400).json({ message: "isActive must be a boolean" });
+      }
+      const updates: any = {};
+      if (unitPriceCents !== undefined) updates.unitPriceCents = unitPriceCents;
+      if (isActive !== undefined) updates.isActive = isActive;
+      const [updated] = await db.update(pricingTiers).set(updates).where(eq(pricingTiers.id, req.params.id)).returning();
+      if (!updated) return res.status(404).json({ message: "Tier not found" });
+      await storage.createAuditLog({ userId: req.session.userId!, action: "UPDATE", entity: "pricing_tier", entityId: updated.id, details: `Updated pricing tier "${updated.name}"`, ipAddress: req.ip, organizationId: null });
+      res.json(updated);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  // ── Retention Policies ──
+  app.get("/api/platform/retention-policies", requireAuth, requireSuperAdmin, async (_req, res) => {
+    try {
+      const policies = await db.select().from(retentionPolicies).orderBy(retentionPolicies.country, retentionPolicies.entityType);
+      res.json(policies);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.post("/api/platform/retention-policies", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const parsed = insertRetentionPolicySchema.parse(req.body);
+      const [created] = await db.insert(retentionPolicies).values(parsed).returning();
+      await storage.createAuditLog({ userId: req.session.userId!, action: "CREATE", entity: "retention_policy", entityId: created.id, details: `Created retention policy for ${created.country} - ${created.entityType}`, ipAddress: req.ip, organizationId: null });
+      res.json(created);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  app.put("/api/platform/retention-policies/:id", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const { retentionYears, archiveAfterYears, isActive, description } = req.body;
+      if (retentionYears !== undefined && (typeof retentionYears !== "number" || retentionYears < 1 || retentionYears > 100)) {
+        return res.status(400).json({ message: "retentionYears must be a number between 1 and 100" });
+      }
+      if (archiveAfterYears !== undefined && (typeof archiveAfterYears !== "number" || archiveAfterYears < 0)) {
+        return res.status(400).json({ message: "archiveAfterYears must be a non-negative number" });
+      }
+      if (isActive !== undefined && typeof isActive !== "boolean") {
+        return res.status(400).json({ message: "isActive must be a boolean" });
+      }
+      if (description !== undefined && typeof description !== "string") {
+        return res.status(400).json({ message: "description must be a string" });
+      }
+      const updates: any = { updatedAt: new Date() };
+      if (retentionYears !== undefined) updates.retentionYears = retentionYears;
+      if (archiveAfterYears !== undefined) updates.archiveAfterYears = archiveAfterYears;
+      if (isActive !== undefined) updates.isActive = isActive;
+      if (description !== undefined) updates.description = description;
+      const [updated] = await db.update(retentionPolicies).set(updates).where(eq(retentionPolicies.id, req.params.id)).returning();
+      if (!updated) return res.status(404).json({ message: "Policy not found" });
+      res.json(updated);
+    } catch (e: any) { res.status(400).json({ message: e.message }); }
+  });
+
+  // ── Activity Feed ──
+  app.get("/api/platform/activity-feed", requireAuth, requireSuperAdmin, async (_req, res) => {
+    try {
+      const recent = await db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt)).limit(100);
+      const userIds = [...new Set(recent.map(l => l.userId).filter(Boolean))] as string[];
+      const userMap: Record<string, string> = {};
+      if (userIds.length > 0) {
+        const placeholders = userIds.map((_, i) => `$${i + 1}`).join(",");
+        const { rows: userRows } = await pool.query(`SELECT id, full_name FROM users WHERE id IN (${placeholders})`, userIds);
+        for (const u of userRows) userMap[u.id] = u.full_name;
+      }
+      res.json(recent.map(l => ({
+        id: l.id,
+        action: l.action,
+        entity: l.entity,
+        entityId: l.entityId,
+        details: l.details,
+        userName: l.userId ? userMap[l.userId] || "Unknown" : "System",
+        ipAddress: l.ipAddress,
+        createdAt: l.createdAt,
+      })));
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
   });
 
   app.post("/api/admin/organizations/:orgId/billing", requireAuth, requireSuperAdmin, async (req, res) => {
