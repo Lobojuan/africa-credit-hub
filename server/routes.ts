@@ -4360,7 +4360,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
   app.get("/api/platform/billing", requireAuth, requireSuperAdmin, async (_req, res) => {
     try {
       const records = await db.select().from(billingRecords).orderBy(desc(billingRecords.createdAt));
-      const rawTiers = await db.select().from(pricingTiers).orderBy(pricingTiers.eventType, pricingTiers.minVolume);
+      const rawTiers = await db.select().from(pricingTiers).orderBy(pricingTiers.country, pricingTiers.eventType, pricingTiers.minVolume);
       const tiers = rawTiers.map(t => ({
         ...t,
         minVolume: Number(t.minVolume) || 0,

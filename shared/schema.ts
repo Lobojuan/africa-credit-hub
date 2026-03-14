@@ -589,6 +589,7 @@ export const pricingTiers = pgTable("pricing_tiers", {
   maxVolume: integer("max_volume"),
   unitPriceCents: integer("unit_price_cents").notNull(),
   currency: text("currency").notNull().default("USD"),
+  country: text("country").notNull().default("Global"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });

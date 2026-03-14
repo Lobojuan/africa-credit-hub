@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { DollarSign, TrendingUp, FileText, CreditCard, Building2, Tag, AlertTriangle, CheckCircle, Clock } from "lucide-react";
+import { DollarSign, TrendingUp, FileText, CreditCard, Building2, Tag, AlertTriangle, CheckCircle, Clock, Globe, ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,26 @@ const STATUS_COLORS: Record<string, string> = {
   overdue: "bg-red-500/20 text-red-400 border-red-500/30",
 };
 
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  USD: "$",
+  GHS: "GH₵",
+  SLL: "Le",
+  KES: "KSh",
+  NGN: "₦",
+  ZAR: "R",
+  TZS: "TSh",
+  UGX: "USh",
+  RWF: "RF",
+  ETB: "Br",
+  EGP: "E£",
+};
+
+function formatPrice(cents: number, currency: string = "USD") {
+  const symbol = CURRENCY_SYMBOLS[currency] || currency + " ";
+  const amount = (cents / 100).toFixed(2);
+  return `${symbol}${Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 function formatUSD(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;
 }
@@ -30,6 +50,7 @@ export function CommandCenterBillingTab() {
   const { toast } = useToast();
   const [editingTier, setEditingTier] = useState<string | null>(null);
   const [editPrice, setEditPrice] = useState("");
+  const [selectedCountry, setSelectedCountry] = useState<string>("all");
 
   const { data, isLoading } = useQuery<{
     invoices: any[];
@@ -54,6 +75,25 @@ export function CommandCenterBillingTab() {
   });
 
   const s = data?.summary;
+
+  const countries = data?.pricingTiers
+    ? [...new Set(data.pricingTiers.map((t: any) => t.country as string))].sort((a, b) => {
+        if (a === "Global") return -1;
+        if (b === "Global") return 1;
+        return a.localeCompare(b);
+      })
+    : [];
+
+  const filteredTiers = selectedCountry === "all"
+    ? data?.pricingTiers || []
+    : (data?.pricingTiers || []).filter((t: any) => t.country === selectedCountry);
+
+  const tiersByCountry: Record<string, any[]> = {};
+  for (const tier of filteredTiers) {
+    const c = tier.country || "Global";
+    if (!tiersByCountry[c]) tiersByCountry[c] = [];
+    tiersByCountry[c].push(tier);
+  }
 
   return (
     <div className="space-y-4" data-testid="panel-billing">
@@ -85,60 +125,104 @@ export function CommandCenterBillingTab() {
       ) : (
         <>
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
               <Tag className="w-4 h-4 text-amber-400" />
-              <h3 className="text-sm font-semibold text-white">Pricing Tiers — Transaction-Based Monetization</h3>
-              <span className="text-[10px] text-muted-foreground ml-auto">Click price to edit</span>
+              <h3 className="text-sm font-semibold text-white">Pricing Tiers — Per-Country Transaction Pricing</h3>
+              <span className="text-[10px] text-muted-foreground ml-auto hidden sm:inline">Click price to edit</span>
             </div>
-            <div className="space-y-1">
-              <div className="grid grid-cols-[1fr_120px_80px_80px_80px] gap-2 text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-2 pb-1 border-b border-border/30">
-                <span>Tier Name</span>
-                <span>Event Type</span>
-                <span className="text-right">Min Vol</span>
-                <span className="text-right">Max Vol</span>
-                <span className="text-right">Unit Price</span>
-              </div>
-              {(data?.pricingTiers || []).map(tier => {
-                const minVol = Number(tier.minVolume) || 0;
-                const maxVol = tier.maxVolume != null ? Number(tier.maxVolume) : null;
-                const priceCents = Number(tier.unitPriceCents) || 0;
-                return (
-                  <div key={tier.id} className="grid grid-cols-[1fr_120px_80px_80px_80px] gap-2 items-center px-2 py-1.5 rounded hover:bg-white/5 transition-colors" data-testid={`pricing-tier-${tier.id}`}>
-                    <span className="text-xs text-white">{tier.name}</span>
-                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-cyan-500/10 text-cyan-400 border-cyan-500/30 justify-center">
-                      {EVENT_LABELS[tier.eventType] || tier.eventType}
-                    </Badge>
-                    <span className="text-[10px] text-muted-foreground text-right font-mono">{minVol.toLocaleString()}</span>
-                    <span className="text-[10px] text-muted-foreground text-right font-mono">{maxVol != null ? maxVol.toLocaleString() : "∞"}</span>
-                    {editingTier === tier.id ? (
-                      <div className="flex items-center gap-1 justify-end">
-                        <Input
-                          className="h-6 w-16 text-[10px] bg-slate-900 border-slate-700/50 text-white px-1"
-                          value={editPrice}
-                          onChange={(e) => setEditPrice(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              const cents = Math.round(parseFloat(editPrice) * 100);
-                              if (!isNaN(cents) && cents > 0) updateTierMutation.mutate({ id: tier.id, unitPriceCents: cents });
-                            }
-                            if (e.key === "Escape") setEditingTier(null);
-                          }}
-                          autoFocus
-                        />
-                      </div>
-                    ) : (
-                      <button
-                        className="text-[10px] text-emerald-400 text-right font-mono hover:underline cursor-pointer"
-                        onClick={() => { setEditingTier(tier.id); setEditPrice((priceCents / 100).toFixed(2)); }}
-                        data-testid={`button-edit-price-${tier.id}`}
-                      >
-                        {formatUSD(priceCents)}
-                      </button>
-                    )}
+
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
+              <Globe className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-[10px] text-muted-foreground">Filter by country:</span>
+              <button
+                className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+                  selectedCountry === "all"
+                    ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
+                    : "border-border/40 text-muted-foreground hover:text-white hover:bg-white/5"
+                }`}
+                onClick={() => setSelectedCountry("all")}
+                data-testid="filter-country-all"
+              >
+                All Countries
+              </button>
+              {countries.map(c => (
+                <button
+                  key={c}
+                  className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+                    selectedCountry === c
+                      ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
+                      : "border-border/40 text-muted-foreground hover:text-white hover:bg-white/5"
+                  }`}
+                  onClick={() => setSelectedCountry(c)}
+                  data-testid={`filter-country-${c.toLowerCase().replace(/\s/g, '-')}`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+
+            {Object.entries(tiersByCountry).map(([countryName, tiers]) => {
+              const currency = tiers[0]?.currency || "USD";
+              return (
+                <div key={countryName} className="mb-4 last:mb-0">
+                  <div className="flex items-center gap-2 mb-1.5 px-2">
+                    <span className="text-[10px] font-semibold text-amber-400 uppercase tracking-wider">{countryName}</span>
+                    <Badge variant="outline" className="text-[8px] px-1 py-0 border-border/30 text-muted-foreground">{currency}</Badge>
+                    <span className="text-[9px] text-muted-foreground">{tiers.length} tiers</span>
                   </div>
-                );
-              })}
-            </div>
+                  <div className="space-y-0.5">
+                    <div className="grid grid-cols-[1fr_120px_80px_80px_100px] gap-2 text-[9px] font-semibold text-muted-foreground uppercase tracking-wider px-2 pb-1 border-b border-border/30">
+                      <span>Tier Name</span>
+                      <span>Event Type</span>
+                      <span className="text-right">Min Vol</span>
+                      <span className="text-right">Max Vol</span>
+                      <span className="text-right">Unit Price</span>
+                    </div>
+                    {tiers.map((tier: any) => {
+                      const minVol = Number(tier.minVolume) || 0;
+                      const maxVol = tier.maxVolume != null ? Number(tier.maxVolume) : null;
+                      const priceCents = Number(tier.unitPriceCents) || 0;
+                      const tierCurrency = tier.currency || "USD";
+                      return (
+                        <div key={tier.id} className="grid grid-cols-[1fr_120px_80px_80px_100px] gap-2 items-center px-2 py-1.5 rounded hover:bg-white/5 transition-colors" data-testid={`pricing-tier-${tier.id}`}>
+                          <span className="text-xs text-white">{tier.name}</span>
+                          <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-cyan-500/10 text-cyan-400 border-cyan-500/30 justify-center">
+                            {EVENT_LABELS[tier.eventType] || tier.eventType}
+                          </Badge>
+                          <span className="text-[10px] text-muted-foreground text-right font-mono">{minVol.toLocaleString()}</span>
+                          <span className="text-[10px] text-muted-foreground text-right font-mono">{maxVol != null ? maxVol.toLocaleString() : "∞"}</span>
+                          {editingTier === tier.id ? (
+                            <div className="flex items-center gap-1 justify-end">
+                              <Input
+                                className="h-6 w-20 text-[10px] bg-slate-900 border-slate-700/50 text-white px-1"
+                                value={editPrice}
+                                onChange={(e) => setEditPrice(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    const cents = Math.round(parseFloat(editPrice) * 100);
+                                    if (!isNaN(cents) && cents > 0) updateTierMutation.mutate({ id: tier.id, unitPriceCents: cents });
+                                  }
+                                  if (e.key === "Escape") setEditingTier(null);
+                                }}
+                                autoFocus
+                              />
+                            </div>
+                          ) : (
+                            <button
+                              className="text-[10px] text-emerald-400 text-right font-mono hover:underline cursor-pointer"
+                              onClick={() => { setEditingTier(tier.id); setEditPrice((priceCents / 100).toFixed(2)); }}
+                              data-testid={`button-edit-price-${tier.id}`}
+                            >
+                              {formatPrice(priceCents, tierCurrency)}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -235,11 +319,13 @@ export function CommandCenterBillingTab() {
             <div className="flex items-start gap-2">
               <CreditCard className="w-4 h-4 text-cyan-400 mt-0.5" />
               <div>
-                <p className="text-xs font-semibold text-cyan-400">Monetization Model</p>
+                <p className="text-xs font-semibold text-cyan-400">Per-Country Monetization Model</p>
                 <p className="text-[10px] text-muted-foreground mt-1">
-                  Revenue is generated per-transaction: each credit report pull, API call, batch upload, cross-border query, dispute filing, and data export
-                  is metered and billed at the tier rate based on the organization's monthly volume. Volume discounts automatically apply as organizations
-                  exceed tier thresholds. Unbilled usage is accumulated and invoiced at the end of each billing period.
+                  Each country has its own pricing tiers in local currency, reflecting regional market conditions and affordability.
+                  Revenue is generated per-transaction: each credit report pull, API call, batch upload, cross-border query, dispute filing,
+                  and data export is metered and billed at the country-specific tier rate based on the organization's monthly volume.
+                  Volume discounts automatically apply as organizations exceed tier thresholds. Use the country filter above to view
+                  and edit pricing for each jurisdiction independently.
                 </p>
               </div>
             </div>
