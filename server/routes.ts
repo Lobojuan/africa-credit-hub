@@ -4608,8 +4608,8 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     const { sql: unlockSql } = await import("drizzle-orm");
     const bcrypt = await import("bcryptjs");
     const adminPassword = await bcrypt.hash("admin0987", 10);
-    await db.execute(unlockSql`UPDATE users SET failed_login_attempts = 0, locked_until = NULL, password = ${adminPassword}, full_name = 'Uffe J Carlson' WHERE username = 'admin'`);
-    await db.execute(unlockSql`UPDATE users SET failed_login_attempts = 0, locked_until = NULL, password = ${adminPassword}, full_name = 'Platform Administrator' WHERE username = 'platform_admin'`);
+    await db.execute(unlockSql`UPDATE users SET failed_login_attempts = 0, locked_until = NULL, password = ${adminPassword}, full_name = 'Uffe J Carlson', role = 'super_admin' WHERE username = 'admin'`);
+    await db.execute(unlockSql`UPDATE users SET failed_login_attempts = 0, locked_until = NULL, password = ${adminPassword}, full_name = 'Platform Administrator', role = 'super_admin' WHERE username = 'platform_admin'`);
     console.log("Reset admin credentials and cleared lockouts on startup");
   } catch (e) {
     console.log("Admin reset skipped:", e);
