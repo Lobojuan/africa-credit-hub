@@ -4358,15 +4358,24 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
 
   // ── Billing & Revenue ──
   app.get("/api/platform/billing", requireAuth, requireSuperAdmin, async (_req, res) => {
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    res.set("Pragma", "no-cache");
     try {
       const records = await db.select().from(billingRecords).orderBy(desc(billingRecords.createdAt));
-      const rawTiers = await db.select().from(pricingTiers).orderBy(pricingTiers.country, pricingTiers.eventType, pricingTiers.minVolume);
-      const tiers = rawTiers.map(t => ({
-        ...t,
-        minVolume: Number(t.minVolume) || 0,
-        maxVolume: t.maxVolume != null ? Number(t.maxVolume) : null,
-        unitPriceCents: Number(t.unitPriceCents) || 0,
-      }));
+      let tiers: any[] = [];
+      try {
+        const rawTiers = await db.execute(sql`SELECT id, name, event_type AS "eventType", min_volume AS "minVolume", max_volume AS "maxVolume", unit_price_cents AS "unitPriceCents", currency, COALESCE(country, 'Global') AS country, is_active AS "isActive", created_at AS "createdAt" FROM pricing_tiers WHERE is_active = true ORDER BY country, event_type, min_volume`);
+        tiers = (rawTiers.rows || rawTiers || []).map((t: any) => ({
+          ...t,
+          minVolume: Number(t.minVolume) || 0,
+          maxVolume: t.maxVolume != null ? Number(t.maxVolume) : null,
+          unitPriceCents: Number(t.unitPriceCents) || 0,
+          country: String(t.country || "Global"),
+          currency: String(t.currency || "USD"),
+        }));
+      } catch (tierErr: any) {
+        console.error("[Billing] Pricing tiers query error:", tierErr.message);
+      }
       const usage = await db.select().from(usageMetering).orderBy(desc(usageMetering.createdAt)).limit(500);
 
       const totalRevenue = records.reduce((sum, r) => sum + parseFloat(r.amount), 0);

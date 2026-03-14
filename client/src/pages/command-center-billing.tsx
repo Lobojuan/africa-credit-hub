@@ -70,7 +70,8 @@ export function CommandCenterBillingTab() {
   });
 
   const s = data?.summary;
-  const allTiers = data?.pricingTiers || [];
+  const rawTiers = data?.pricingTiers;
+  const allTiers = Array.isArray(rawTiers) ? rawTiers : [];
 
   const countries = allTiers.length > 0
     ? [...new Set(allTiers.map((t: any) => String(t.country || "Global")))].sort((a, b) => {
