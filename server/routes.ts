@@ -362,7 +362,7 @@ export async function registerRoutes(
       req.session.lastActivity = Date.now();
 
       if (user.role === "super_admin") {
-        req.session.viewingCountry = undefined;
+        delete req.session.viewingCountry;
       }
 
       let organization = null;
@@ -482,7 +482,7 @@ export async function registerRoutes(
       req.session.organizationId = user.organizationId || undefined;
       req.session.lastActivity = Date.now();
       if (user.role === "super_admin") {
-        req.session.viewingCountry = undefined;
+        delete req.session.viewingCountry;
       }
       if (user.role !== "super_admin" && user.organizationId) {
         const org = await storage.getOrganization(user.organizationId);
@@ -628,7 +628,7 @@ export async function registerRoutes(
 
     let viewingCountry: string | null = null;
     if (user.role === "super_admin") {
-      viewingCountry = req.session.viewingCountry || null;
+      viewingCountry = req.session.viewingCountry && req.session.viewingCountry !== "undefined" ? req.session.viewingCountry : null;
     } else {
       viewingCountry = req.session.userCountry || organization?.country || getActiveCountryName() || null;
     }
