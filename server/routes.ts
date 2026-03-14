@@ -112,7 +112,8 @@ function getOrgScope(req: Request): string | undefined {
 }
 
 function getCountryFilter(req?: Request): string | undefined {
-  if (req?.session?.userRole === "super_admin" && req.session.viewingCountry) {
+  if (req?.session?.userRole === "super_admin") {
+    if (!req.session.viewingCountry) return undefined;
     if (req.session.viewingCountry === "global") return undefined;
     return req.session.viewingCountry;
   }
@@ -507,7 +508,13 @@ export async function registerRoutes(
       if (user.organizationId) {
         organization = await storage.getOrganization(user.organizationId);
       }
-      res.json({ ...stripPassword(user), passwordExpired, organization });
+      let viewingCountry: string | null = null;
+      if (user.role === "super_admin") {
+        viewingCountry = null;
+      } else {
+        viewingCountry = organization?.country || getActiveCountryName() || null;
+      }
+      res.json({ ...stripPassword(user), passwordExpired, organization, viewingCountry });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
