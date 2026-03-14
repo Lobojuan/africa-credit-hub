@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CommandCenterUsersTab } from "./command-center-users";
 import { CommandCenterSettingsTab } from "./command-center-settings";
+import { CommandCenterSystemTab } from "./command-center-system";
 
 interface PlatformStats {
   totalBorrowers: number;
@@ -121,9 +122,13 @@ export default function CountrySelectionPage() {
   const platform = commandData?.platform;
   const countryDetails = commandData?.countries || [];
 
-  const srsCompliant = 47;
-  const srsTotal = 50;
-  const complianceScore = Math.round((srsCompliant / srsTotal) * 100);
+  const { data: systemStats } = useQuery<{ srs: { total: number; passed: number } }>({
+    queryKey: ["/api/platform/system-stats"],
+    staleTime: 60000,
+  });
+  const srsCompliant = systemStats?.srs?.passed ?? 47;
+  const srsTotal = systemStats?.srs?.total ?? 50;
+  const complianceScore = srsTotal > 0 ? Math.round((srsCompliant / srsTotal) * 100) : 94;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col">
@@ -207,7 +212,7 @@ export default function CountrySelectionPage() {
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-            <TabsList className="bg-slate-800/50 border border-slate-700/50 h-9">
+            <TabsList className="bg-slate-800/50 border border-slate-700/50 h-9 flex-wrap sm:flex-nowrap w-full overflow-x-auto">
               <TabsTrigger value="overview" className="text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-white" data-testid="tab-overview">
                 Jurisdictions
               </TabsTrigger>
@@ -222,6 +227,9 @@ export default function CountrySelectionPage() {
               </TabsTrigger>
               <TabsTrigger value="country-settings" className="text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-white" data-testid="tab-country-settings">
                 <Settings className="w-3 h-3 mr-1" /> Country Settings
+              </TabsTrigger>
+              <TabsTrigger value="system" className="text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-white" data-testid="tab-system">
+                <Activity className="w-3 h-3 mr-1" /> System & Infrastructure
               </TabsTrigger>
             </TabsList>
 
@@ -449,6 +457,10 @@ export default function CountrySelectionPage() {
 
             <TabsContent value="country-settings" className="mt-0">
               <CommandCenterSettingsTab />
+            </TabsContent>
+
+            <TabsContent value="system" className="mt-0">
+              <CommandCenterSystemTab />
             </TabsContent>
           </Tabs>
         </div>
