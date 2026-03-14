@@ -1,10 +1,10 @@
 # Systems In Motion Limited
 # Pan-African Credit Registry — External API Integration Guide
-## Cross-Jurisdictional Credit Data Hub (CDH) v1.2
+## Cross-Jurisdictional Credit Data Hub (CDH) v2.0
 
 ---
 
-**Document Version:** 1.2  
+**Document Version:** 2.0  
 **Last Updated:** March 2026  
 **Classification:** CONFIDENTIAL — For Authorized Institutions Only  
 **Contact:** Systems In Motion Limited — api-support@systemsinmotion.com
@@ -1161,6 +1161,139 @@ Returns 7-day synthetic trend data for key dashboard metrics, used by the StatCa
   "institutionTrends": [{ "date": "2026-02-25", "value": 100010 }, ...],
   "disputeTrends": [{ "date": "2026-02-25", "value": 3200 }, ...]
 }
+```
+
+---
+
+### 15.6 Platform Command Center Endpoints (Super Admin Only)
+
+All Platform Command Center endpoints require session authentication with `super_admin` role.
+
+#### 15.6.1 Audit Logs
+
+```
+GET /api/platform/audit-logs?limit=100&offset=0&action=LOGIN&entity=system&search=admin
+```
+
+**Query Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| limit | integer | Max results (default 100, max 500) |
+| offset | integer | Pagination offset (default 0) |
+| action | string | Filter by action type (LOGIN, CREATE, UPDATE, DELETE, etc.) |
+| entity | string | Filter by entity type (system, borrower, credit_account, etc.) |
+| userId | string | Filter by user ID |
+| search | string | Text search on details and action fields |
+
+**Response:**
+```json
+{
+  "logs": [{ "id": "...", "userId": "...", "action": "LOGIN", "entity": "system", "details": "...", "ipAddress": "...", "createdAt": "...", "userName": "Uffe J Carlson" }],
+  "total": 153,
+  "actionCounts": [{ "action": "LOGIN", "count": 103 }],
+  "entityCounts": [{ "entity": "system", "count": 103 }]
+}
+```
+
+#### 15.6.2 API Keys Management
+
+```
+GET /api/platform/api-keys
+```
+
+Returns all API keys (excluding sensitive `keyHash`) and API configurations.
+
+```json
+{
+  "keys": [{ "id": "...", "label": "...", "keyPrefix": "sim_", "status": "active", "permissions": [...], "organizationId": "...", "createdAt": "...", "expiresAt": "...", "lastUsedAt": "...", "revokedAt": null }],
+  "configurations": [...]
+}
+```
+
+```
+POST /api/platform/api-keys/:id/revoke
+```
+
+Revokes an API key. Creates an audit log entry. Returns the updated key object.
+
+#### 15.6.3 Data Quality
+
+```
+GET /api/platform/data-quality
+```
+
+Returns data completeness metrics across all borrowers and credit accounts.
+
+```json
+{
+  "overallCompleteness": 96,
+  "borrowers": { "total": 155, "missingNationalId": 0, "missingEmail": 0, "missingPhone": 0, "missingDob": 28, "missingAddress": 0 },
+  "accounts": { "total": 301, "missingBalance": 0, "missingInstitution": 0 },
+  "institutions": 7,
+  "consentRecords": 50,
+  "disputes": 10,
+  "paymentHistory": 200,
+  "byCountry": [{ "country": "Ghana", "borrowers": 85, "accounts": 170 }]
+}
+```
+
+#### 15.6.4 Billing & Revenue
+
+```
+GET /api/platform/billing
+```
+
+Returns billing overview with revenue KPIs, pricing tiers, and recent invoices.
+
+```json
+{
+  "revenue": { "total": 0, "collected": 0, "pending": 0, "overdue": 0 },
+  "pricingTiers": [{ "id": "...", "name": "Credit Report - Standard", "eventType": "credit_report_pull", "tier": "standard", "unitPriceCents": 150, "minVolume": 0, "maxVolume": 500, "isActive": true }],
+  "recentInvoices": [...]
+}
+```
+
+```
+PUT /api/platform/pricing-tiers/:id
+```
+
+Updates a pricing tier. Validates: `unitPriceCents` must be non-negative number, `isActive` must be boolean.
+
+**Request Body:**
+```json
+{ "unitPriceCents": 200, "isActive": true }
+```
+
+#### 15.6.5 Retention Policies
+
+```
+GET /api/platform/retention-policies
+```
+
+Returns all retention policies ordered by country and entity type.
+
+```
+POST /api/platform/retention-policies
+```
+
+Creates a new retention policy. Validates against `insertRetentionPolicySchema`.
+
+```
+PUT /api/platform/retention-policies/:id
+```
+
+Updates a retention policy. Validates: `retentionYears` (1-100), `archiveAfterYears` (non-negative), `isActive` (boolean), `description` (string).
+
+#### 15.6.6 Activity Feed
+
+```
+GET /api/platform/activity-feed
+```
+
+Returns the 100 most recent audit events with resolved user names.
+
+```json
+[{ "id": "...", "action": "LOGIN", "entity": "system", "details": "...", "userName": "Uffe J Carlson", "ipAddress": "...", "createdAt": "..." }]
 ```
 
 ---

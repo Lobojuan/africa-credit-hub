@@ -1,6 +1,6 @@
 # Deployment Guide
 
-## Cross-Jurisdictional Central Data Hub & Credit Registry System v1.2
+## Cross-Jurisdictional Central Data Hub & Credit Registry System v2.0
 
 **Prepared for:** Systems In Motion Limited  
 **Document Version:** 1.2  
@@ -105,7 +105,7 @@ npx drizzle-kit push
 
 The seed process (`server/seed.ts`) creates:
 
-- 6 system users with predefined credentials
+- 6 system users with predefined credentials (including super admin)
 - 102,462 borrowers across all 54 African countries
 - 100,020 institutions
 - 172,359 credit accounts
@@ -116,6 +116,8 @@ The seed process (`server/seed.ts`) creates:
 - 3,218 disputes
 - 2,147 court judgments
 - 120 billing records
+- 11 pricing tiers (transaction-based monetization)
+- 8 retention policies (per-jurisdiction data retention rules)
 
 **Default Credentials (change in production):**
 
@@ -534,7 +536,7 @@ psql $DATABASE_URL -c "\dt"
 
 ## 15. Enterprise Enhancement Dependencies
 
-The following additional packages were added for enterprise enhancements (v1.1 and v1.2):
+The following additional packages were added for enterprise enhancements (v1.1 and v2.0):
 
 | Package | Purpose | Enhancement |
 |---------|---------|-------------|
@@ -591,7 +593,7 @@ The Credit Registry System includes the following modules and capabilities:
 
 | Component | Version |
 |-----------|---------|
-| Application | v1.2 (Enterprise Enhancements) |
+| Application | v2.0 (Enterprise Enhancements) |
 | Node.js Runtime | 20.x LTS |
 | Express.js | 4.x |
 | Drizzle ORM | Latest |

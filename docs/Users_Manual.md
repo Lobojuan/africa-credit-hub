@@ -1,4 +1,4 @@
-# Credit Registry System — Users Manual v1.2
+# Credit Registry System — Users Manual v2.0
 
 **Cross-Jurisdictional Central Data Hub & Credit Registry System**
 
@@ -177,10 +177,10 @@ The system supports optional TOTP-based Multi-Factor Authentication for enhanced
 
 See Section 21 for detailed MFA setup instructions.
 
-### 2.8 Session Timeout (15-Minute Auto-Logout)
+### 2.8 Session Timeout (4-Hour Auto-Logout)
 
-For security compliance (NFR-SEC-09), the system automatically logs you out after **15 minutes of inactivity**. When a session times out:
-- You will be redirected to the login page.
+For security compliance (NFR-SEC-09), the system automatically logs you out after **4 hours of inactivity**. When a session times out:
+- You will be automatically redirected to the login page (HTTP 440 status triggers frontend redirect).
 - Any unsaved work will be lost.
 - A maximum session duration of **8 hours** applies regardless of activity.
 
@@ -1914,6 +1914,76 @@ The system supports **42+ African currencies** plus USD, EUR, and GBP (45+ total
 | **TIN** | Tax Identification Number |
 | **UAT** | User Acceptance Testing |
 | **Written Off** | An account that has been classified as uncollectible and removed from active portfolios |
+
+---
+
+---
+
+## 34. Platform Command Center (Super Admin)
+
+The Platform Command Center is the central hub for super administrators to manage the entire pan-African credit registry platform. It is the first screen displayed after super admin login and provides comprehensive oversight across all 11 management tabs.
+
+### 34.1 Accessing the Command Center
+
+After logging in with super admin credentials, the Platform Command Center is displayed automatically. To return to the Command Center from a country dashboard, click the **"Command Center"** button in the application header.
+
+### 34.2 Jurisdictions Tab (Overview)
+
+The default tab shows:
+- **Country Cards** — One card per active country showing borrower count, account count, institution count, compliance badges, and SATA readiness indicators.
+- **Live Activity Feed** — A real-time panel showing the 15 most recent platform events. Events are color-coded by action type (violet for LOGIN, green for CREATE, blue for UPDATE, red for DELETE). Auto-refreshes every 30 seconds.
+- **SRS Requirements Traceability** — A summary of requirements compliance by category.
+
+### 34.3 Audit Log Tab
+
+Provides a searchable, filterable view of all platform audit events:
+- **Search** — Free-text search across event details and action types.
+- **Filter by Action** — Dropdown to filter by action type (LOGIN, CREATE, UPDATE, DELETE, VIEW, EXPORT, etc.).
+- **Filter by Entity** — Dropdown to filter by entity type (system, borrower, credit_account, etc.).
+- **Pagination** — Navigate through results with configurable page size.
+- **Breakdown Charts** — Visual charts showing event distribution by action type and entity type.
+
+All filters apply consistently to the total count, charts, and paginated results.
+
+### 34.4 API Keys Tab
+
+View and manage API keys for external integrations:
+- **KPI Cards** — Total API Keys, Active Keys, Revoked Keys, and API Integrations count.
+- **Key Listing** — Shows key label, prefix, status, permissions, creation date, and last used date. For security, the actual key hash is never displayed.
+- **Revoke** — Click the Revoke button next to any active key to disable it. This action is recorded in the audit log.
+- **External API Integrations** — View configured external API services.
+
+### 34.5 Data Quality Tab
+
+Monitors data completeness across the entire platform:
+- **Overall Completeness** — A percentage score showing how complete the data is across all fields.
+- **Per-Field Completeness** — Progress bars for National ID, Email, Phone, Date of Birth, and Address fields showing what percentage of borrowers have each field populated.
+- **Per-Country Breakdown** — Table showing borrower and account counts by country.
+- **Recommendations** — Actionable suggestions for improving data quality based on current gaps.
+
+### 34.6 Billing & Revenue Tab
+
+Manages the transaction-based monetization system:
+- **Revenue KPIs** — Total Revenue, Collected, Pending, and Overdue amounts.
+- **Pricing Tiers** — View and edit 11 pricing tiers covering all billable event types:
+  - Credit Reports: $1.50 (standard), $2.00 (premium), $2.50 (enterprise)
+  - API Calls: $0.05 (standard), $0.08 (premium), $0.10 (enterprise)
+  - Batch Uploads: $3.50 (standard), $4.00 (premium), $5.00 (enterprise)
+  - Cross-Border Queries: $3.50
+  - Dispute Filing: $1.00
+  - Data Exports: $2.00
+- **Recent Invoices** — List of generated invoices with status.
+- **Monetization Model** — Explanation of the per-transaction billing model with volume tier discounts.
+
+To edit a pricing tier, click the Edit icon, change the unit price, and save. Invalid values (negative prices) are rejected with a validation error.
+
+### 34.7 Retention Tab
+
+Manage data retention policies per jurisdiction:
+- **KPI Cards** — Total Policies, Active Policies, Countries Covered.
+- **Policy Listing** — Grouped by country, showing entity type, retention years, archive years, status, and legal basis.
+- **New Policy** — Click "New Policy" to create a retention policy for a specific country and entity type.
+- **Edit Policy** — Modify retention years (1-100), archive years, active status, and description.
 
 ---
 

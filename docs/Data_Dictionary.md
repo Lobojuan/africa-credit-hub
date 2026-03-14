@@ -1,16 +1,16 @@
 # Data Dictionary
 
-## Cross-Jurisdictional Central Data Hub & Credit Registry System v1.2
+## Cross-Jurisdictional Central Data Hub & Credit Registry System v2.0
 
 **Prepared for:** Systems In Motion Limited  
-**Document Version:** 1.2  
+**Document Version:** 2.0  
 **Date:** March 2026
 
 ---
 
 ## 1. Overview
 
-This document provides field-level documentation for all 18 database tables in the Credit Registry System. The system supports all 54 African countries with 42+ African currencies plus USD, EUR, and GBP. The database uses PostgreSQL with Drizzle ORM for schema management.
+This document provides field-level documentation for all 21 database tables in the Credit Registry System. The system supports all 54 African countries with 42+ African currencies plus USD, EUR, and GBP. The database uses PostgreSQL with Drizzle ORM for schema management.
 
 **Enterprise Enhancements — Schema Impact Summary:**
 
@@ -36,6 +36,8 @@ This document provides field-level documentation for all 18 database tables in t
 | ENT-19 (Dashboard Trends) | No schema changes; 7-day trend data is generated synthetically from existing aggregate queries |
 | ENT-20 (Audit Trail Enhancements) | No schema changes; timeline view, date filters, and export are frontend/API-layer features using existing `audit_logs` table |
 | ENT-21 (Multi-language PDF) | No schema changes; language selection for PDF export is a frontend/rendering feature |
+| PCC-08 (Usage Metering) | New `usage_metering` table for tracking per-organization billable transaction events |
+| PCC-08 (Pricing Tiers) | New `pricing_tiers` table with 11 seeded tiers for transaction-based monetization pricing |
 
 ---
 
@@ -44,7 +46,8 @@ This document provides field-level documentation for all 18 database tables in t
 ### 2.1 user_role
 | Value | Description |
 |-------|-------------|
-| admin | Full system access, user management, institution management, API key management |
+| super_admin | Platform-wide access, Command Center, cross-country management, monetization, all administrative functions |
+| admin | Full system access within assigned country, user management, institution management, API key management |
 | regulator | Access to audit logs, billing, approvals, analytics |
 | lender | Data entry, borrower management, batch upload |
 | viewer | Read-only access to borrowers, accounts, reports |
@@ -657,6 +660,63 @@ The system supports 42+ African currencies plus 3 international reserve currenci
 
 ## 6. Index Summary
 
+### 3.20 usage_metering
+
+Tracks per-organization billable transaction events for the transaction-based monetization system.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | VARCHAR (PK) | NOT NULL, DEFAULT gen_random_uuid() | Unique metering record identifier |
+| organization_id | VARCHAR | NOT NULL | Organization that generated the billable event |
+| event_type | TEXT | NOT NULL | Type of billable event (e.g., credit_report_pull, api_call, batch_upload, cross_border_query, dispute_filing, data_export) |
+| quantity | INTEGER | NOT NULL, DEFAULT 1 | Number of units consumed in this event |
+| unit_price_cents | INTEGER | NOT NULL | Price per unit in cents at time of event |
+| total_cents | INTEGER | NOT NULL | Total charge in cents (quantity × unitPriceCents) |
+| currency | TEXT | NOT NULL, DEFAULT 'USD' | Currency code for the charge |
+| billed | BOOLEAN | NOT NULL, DEFAULT false | Whether this event has been included in an invoice |
+| invoice_id | VARCHAR | | Reference to the invoice this was billed on (null if unbilled) |
+| metadata | JSONB | | Additional context about the event (e.g., borrower ID, report serial) |
+| created_at | TIMESTAMP | NOT NULL, DEFAULT NOW() | Timestamp when the event occurred |
+
+### 3.21 pricing_tiers
+
+Defines per-event-type pricing for the transaction-based monetization system. 11 tiers are seeded by default.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | VARCHAR (PK) | NOT NULL, DEFAULT gen_random_uuid() | Unique pricing tier identifier |
+| name | TEXT | NOT NULL | Display name (e.g., "Credit Report - Standard") |
+| event_type | TEXT | NOT NULL | Event type this tier applies to |
+| tier | TEXT | NOT NULL, DEFAULT 'standard' | Tier level (standard, premium, enterprise) |
+| unit_price_cents | INTEGER | NOT NULL | Price per unit in cents |
+| min_volume | INTEGER | NOT NULL, DEFAULT 0 | Minimum volume threshold for this tier |
+| max_volume | INTEGER | | Maximum volume threshold (null for unlimited) |
+| is_active | BOOLEAN | NOT NULL, DEFAULT true | Whether this tier is currently active |
+| description | TEXT | | Human-readable description of what's included |
+| created_at | TIMESTAMP | NOT NULL, DEFAULT NOW() | Record creation timestamp |
+| updated_at | TIMESTAMP | NOT NULL, DEFAULT NOW() | Last update timestamp |
+
+**Default Seeded Pricing Tiers:**
+
+| Event Type | Tier | Unit Price | Volume Range | Description |
+|-----------|------|-----------|--------------|-------------|
+| credit_report_pull | standard | $1.50 | 0-500 | Standard credit report generation |
+| credit_report_pull | premium | $2.00 | 501-2000 | High-volume credit report tier |
+| credit_report_pull | enterprise | $2.50 | 2001+ | Enterprise unlimited credit reports |
+| api_call | standard | $0.05 | 0-10000 | Standard API call |
+| api_call | premium | $0.08 | 10001-50000 | High-volume API tier |
+| api_call | enterprise | $0.10 | 50001+ | Enterprise API tier |
+| batch_upload | standard | $3.50 | 0-100 | Standard batch upload |
+| batch_upload | premium | $4.00 | 101-500 | High-volume batch tier |
+| batch_upload | enterprise | $5.00 | 501+ | Enterprise batch tier |
+| cross_border_query | standard | $3.50 | 0+ | Cross-border borrower search |
+| dispute_filing | standard | $1.00 | 0+ | Dispute resolution fee |
+| data_export | standard | $2.00 | 0+ | Data export/download fee |
+
+---
+
+## 4. Index Reference
+
 | Table | Indexed Columns | Index Type |
 |-------|----------------|------------|
 | users | id (PK), username (UNIQUE) | B-tree |
@@ -677,3 +737,5 @@ The system supports 42+ African currencies plus 3 international reserve currenci
 | exchange_rates | id (PK), created_by (FK) | B-tree |
 | retention_policies | id (PK) | B-tree |
 | api_configurations | id (PK) | B-tree |
+| usage_metering | id (PK), organization_id, event_type, created_at | B-tree |
+| pricing_tiers | id (PK), event_type, tier | B-tree |

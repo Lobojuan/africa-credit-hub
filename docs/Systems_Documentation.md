@@ -21,7 +21,7 @@
 10. [Error Handling](#10-error-handling)
 11. [Performance](#11-performance)
 12. [Monitoring & Logging](#12-monitoring--logging)
-13. [Enterprise Enhancements (v1.1 — v1.2)](#13-enterprise-enhancements-v11--v12)
+13. [Enterprise Enhancements (v1.1 — v2.0)](#13-enterprise-enhancements-v11--v12)
 14. [AI Integration Architecture (v1.3)](#14-ai-integration-architecture-v13)
 15. [API Usage Tracking (v1.3)](#15-api-usage-tracking-v13)
 16. [Excel Export System (v1.3)](#16-excel-export-system-v13)
@@ -1497,7 +1497,7 @@ Error conditions are logged via `console.error()` for:
 
 ---
 
-## 13. Enterprise Enhancements (v1.1 — v1.2)
+## 13. Enterprise Enhancements (v1.1 — v2.0)
 
 ### 13.1 TOTP Multi-Factor Authentication (ENT-01)
 
@@ -1986,7 +1986,85 @@ The `StatCard` component (`client/src/components/stat-card.tsx`) displays sparkl
 
 ---
 
+---
+
+## 19. Platform Command Center Architecture (v2.0)
+
+### 19.1 Overview
+
+The Platform Command Center is the super admin landing page providing platform-wide management across 11 operational tabs. It serves as the central hub for monitoring, configuration, and administration of the entire pan-African credit registry.
+
+### 19.2 Component Architecture
+
+| Component File | Tab | Description |
+|---------------|-----|-------------|
+| `country-selection.tsx` | Jurisdictions | Country cards, live activity feed, SRS traceability |
+| `country-selection.tsx` | Compliance & SATA | Data protection status, SATA readiness |
+| `country-selection.tsx` | Feature Matrix | Per-country capability matrix |
+| `command-center-users.tsx` | Users & Clients | User CRUD, organization management |
+| `command-center-settings.tsx` | Country Settings | Per-country config, SATA agreements |
+| `command-center-system.tsx` | System | IT infrastructure monitoring |
+| `command-center-audit.tsx` | Audit Log | Searchable audit trail with filters |
+| `command-center-apikeys.tsx` | API Keys | Key lifecycle management |
+| `command-center-dataquality.tsx` | Data Quality | Completeness metrics dashboard |
+| `command-center-billing.tsx` | Billing | Revenue, pricing tiers, invoices |
+| `command-center-retention.tsx` | Retention | Per-jurisdiction retention policies |
+
+### 19.3 API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/platform/audit-logs` | GET | Paginated, filterable audit log with search |
+| `/api/platform/api-keys` | GET | API keys (keyHash excluded) |
+| `/api/platform/api-keys/:id/revoke` | POST | Revoke API key |
+| `/api/platform/data-quality` | GET | Data completeness metrics |
+| `/api/platform/billing` | GET | Revenue KPIs, pricing tiers, invoices |
+| `/api/platform/pricing-tiers/:id` | PUT | Edit pricing tier (validated) |
+| `/api/platform/retention-policies` | GET | All retention policies |
+| `/api/platform/retention-policies` | POST | Create retention policy (Zod validated) |
+| `/api/platform/retention-policies/:id` | PUT | Update retention policy (validated) |
+| `/api/platform/activity-feed` | GET | Latest 100 audit events with user names |
+
+### 19.4 Security
+
+- All endpoints enforce `requireAuth` + `requireSuperAdmin` middleware
+- API key responses exclude `keyHash` column
+- Mutable endpoints validate input types and ranges
+- Audit log filters apply consistently to counts and breakdowns
+- Raw SQL queries use parameterized `IN` clauses (no string interpolation)
+
+---
+
+## 20. Transaction-Based Monetization System (v2.0)
+
+### 20.1 Architecture
+
+The monetization system tracks per-transaction billable events across organizations using a two-table design:
+
+- **`usage_metering`** — Records individual billable events (credit report pulls, API calls, batch uploads, cross-border queries, dispute filings, data exports) with quantity, unit price, and total charge
+- **`pricing_tiers`** — Defines per-event-type pricing with volume-based tier discounts (standard, premium, enterprise)
+
+### 20.2 Pricing Model
+
+| Event Type | Standard | Premium | Enterprise |
+|-----------|----------|---------|------------|
+| Credit Report Pull | $1.50 (0-500) | $2.00 (501-2000) | $2.50 (2001+) |
+| API Call | $0.05 (0-10K) | $0.08 (10K-50K) | $0.10 (50K+) |
+| Batch Upload | $3.50 (0-100) | $4.00 (101-500) | $5.00 (501+) |
+| Cross-Border Query | $3.50 | — | — |
+| Dispute Filing | $1.00 | — | — |
+| Data Export | $2.00 | — | — |
+
+### 20.3 Billing Flow
+
+1. Billable events create entries in `usage_metering` with `billed = false`
+2. Unbilled usage accumulates until monthly invoice generation
+3. Invoice generation marks entries as `billed = true` with `invoice_id` reference
+4. Pricing tiers are editable via the Billing tab in the Command Center
+
+---
+
 *End of Systems Documentation*
 
 *Document prepared by Systems In Motion Limited*  
-*Cross-Jurisdictional Central Data Hub & Credit Registry System v1.3*
+*Cross-Jurisdictional Central Data Hub & Credit Registry System v2.0*

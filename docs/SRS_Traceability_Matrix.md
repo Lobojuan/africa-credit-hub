@@ -1,9 +1,9 @@
 # SRS Traceability Matrix
 
-## Cross-Jurisdictional Central Data Hub & Credit Registry System v1.2
+## Cross-Jurisdictional Central Data Hub & Credit Registry System v2.0
 
 **Prepared for:** Systems In Motion Limited  
-**Document Version:** 1.2  
+**Document Version:** 2.0  
 **Date:** March 2026
 
 ---
@@ -150,7 +150,7 @@ This document maps every Software Requirements Specification (SRS) requirement t
 | NFR-SEC-06 | System shall track IP addresses in audit logs | Implemented | Audit Logging (`ipAddress` field) | IP captured from `req.ip` on all audited operations | TC-AUDIT-003 |
 | NFR-SEC-07 | System shall enforce maker-checker (four-eye principle) | Implemented | Pending Approvals (`routes.ts` self-approval check) | Server-side enforcement: `requestedBy !== reviewedBy`; 403 error on self-approval attempt | TC-MC-004 |
 | NFR-SEC-08 | System shall enforce 90-day password expiry | Implemented | Login/Auth (`passwordChangedAt`, `mustChangePassword`) | Password age check on login; forced change dialog when expired | TC-AUTH-008 |
-| NFR-SEC-09 | System shall enforce 15-minute idle session timeout | Implemented | Session Middleware (`server/index.ts`) | `IDLE_TIMEOUT_MS = 15 * 60 * 1000`; automatic session destruction; 440 status code returned | TC-AUTH-004 |
+| NFR-SEC-09 | System shall enforce 4-hour idle session timeout | Implemented | Session Middleware (`server/index.ts`) | `IDLE_TIMEOUT_MS = 4 * 60 * 60 * 1000`; automatic session destruction; 440 status code returned; frontend auto-redirects to /auth on 440 | TC-AUTH-004 |
 | NFR-SEC-10 | SSRF Protection | URL validation and hostname blocking in API test endpoint | server/routes.ts | Blocks private IPs, metadata endpoints | TC-SEC-010 |
 
 ---
@@ -183,6 +183,23 @@ This document maps every Software Requirements Specification (SRS) requirement t
 
 ---
 
+## 13a. Platform Command Center Requirements (PCC)
+
+| SRS Ref | Requirement Description | Status | Module/Component | Implementation Notes | UAT Test Case |
+|---------|------------------------|--------|------------------|---------------------|----------------|
+| PCC-01 | System shall provide a Platform Command Center for super admin users with jurisdiction overview | Implemented | Platform Command Center (`country-selection.tsx`) | 11-tab interface with Jurisdictions, Compliance & SATA, Feature Matrix, Users & Clients, Country Settings, System, Audit Log, API Keys, Data Quality, Billing, Retention; live KPIs (borrowers, accounts, institutions, active countries, SRS compliance score) | TC-PCC-001, TC-PCC-002 |
+| PCC-02 | System shall provide an Audit Log Viewer with search, filter, and pagination | Implemented | Audit Log (`command-center-audit.tsx`, `/api/platform/audit-logs`) | Searchable audit trail with action/entity filters applied to total, actionCounts, and entityCounts; text search on details/action; pagination with configurable limit/offset; breakdown charts by action type and entity type | TC-PCC-003, TC-PCC-004 |
+| PCC-03 | System shall provide API Keys & Access Management with key lifecycle management | Implemented | API Keys (`command-center-apikeys.tsx`, `/api/platform/api-keys`) | View all API keys (excluding sensitive keyHash), revoke keys with audit logging, external API integrations overview; keyHash never exposed to client responses | TC-PCC-005, TC-PCC-006 |
+| PCC-04 | System shall provide a Data Quality Dashboard with completeness metrics | Implemented | Data Quality (`command-center-dataquality.tsx`, `/api/platform/data-quality`) | Overall completeness percentage; per-field completeness (National ID, Email, Phone, DOB, Address); per-country breakdown; institution and consent/dispute/payment counts; actionable recommendations | TC-PCC-007, TC-PCC-008 |
+| PCC-05 | System shall provide Billing & Revenue management with pricing tier configuration | Implemented | Billing (`command-center-billing.tsx`, `/api/platform/billing`, `/api/platform/pricing-tiers/:id`) | Revenue KPIs (total, collected, pending, overdue); 11 editable pricing tiers with input validation (non-negative prices, boolean active); invoice listing; monetization model documentation | TC-PCC-009, TC-PCC-010 |
+| PCC-06 | System shall provide Retention Policy management per jurisdiction | Implemented | Retention (`command-center-retention.tsx`, `/api/platform/retention-policies`) | CRUD for retention policies per country/entity type; validation (retentionYears 1-100, archiveAfterYears non-negative); active/inactive toggle; legal basis and description fields | TC-PCC-011, TC-PCC-012 |
+| PCC-07 | System shall provide a Live Activity Feed with auto-refresh | Implemented | Activity Feed (`country-selection.tsx`, `/api/platform/activity-feed`) | Most recent 100 audit events with user names resolved; 30-second auto-refresh; color-coded action types (LOGIN, CREATE, UPDATE, DELETE); shown on Jurisdictions overview tab | TC-PCC-013 |
+| PCC-08 | System shall implement transaction-based monetization with usage metering | Implemented | Monetization (`usage_metering` and `pricing_tiers` tables in `schema.ts`) | Per-transaction billing with volume tier discounts; 11 seeded pricing tiers (credit reports $1.50-$2.50, API calls $0.05-$0.10, batch uploads $3.50-$5.00, cross-border queries $3.50, disputes $1.00, data exports $2.00); unbilled usage accumulation for monthly invoicing | TC-PCC-014, TC-PCC-015 |
+| PCC-09 | System shall validate all mutable platform endpoints with input sanitization | Implemented | Input Validation (`routes.ts`) | Type and range validation on pricing tier updates (non-negative unitPriceCents, boolean isActive); retention policy updates (retentionYears 1-100, non-negative archiveAfterYears, boolean isActive, string description); Zod validation on retention policy creation | TC-PCC-016 |
+| PCC-10 | System shall support dynamic country switching for super admin users | Implemented | Country Switching (`CountryThemeProvider`, `/api/platform/set-country`) | Super admin selects country from Command Center; per-country CSS theme (sidebar colors, primary/accent, logo gradient); session-stored viewingCountry; data isolation maintained per country | TC-PCC-017 |
+
+---
+
 ## 14. AI-Powered Feature Requirements (AI)
 
 | SRS Ref | Requirement Description | Status | Module/Component | Implementation Notes | UAT Test Case |
@@ -209,8 +226,9 @@ This document maps every Software Requirements Specification (SRS) requirement t
 | DQ (Data Quality) | 5 | 5 | 0 | 0 |
 | NFR-SEC (Security) | 10 | 10 | 0 | 0 |
 | ENT (Enterprise Enhancements) | 21 | 21 | 0 | 0 |
+| PCC (Platform Command Center) | 10 | 10 | 0 | 0 |
 | AI (AI-Powered Features) | 4 | 4 | 0 | 0 |
-| **Total** | **89** | **89** | **0** | **0** |
+| **Total** | **99** | **99** | **0** | **0** |
 
 ---
 

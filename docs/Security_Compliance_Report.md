@@ -1,6 +1,6 @@
 # Security Compliance Report
 
-## Cross-Jurisdictional Central Data Hub & Credit Registry System v1.2
+## Cross-Jurisdictional Central Data Hub & Credit Registry System v2.0
 
 **Prepared for:** Systems In Motion Limited  
 **Document Version:** 1.2  
@@ -11,7 +11,7 @@
 
 ## 1. Executive Summary
 
-This document provides a comprehensive assessment of the security controls implemented in the Credit Registry System against the requirements defined in the Software Requirements Specification (SRS) v1.2. The system handles sensitive financial and personal data across all 54 African countries and supports three languages (English, French, Portuguese) and must comply with data protection and financial regulatory requirements.
+This document provides a comprehensive assessment of the security controls implemented in the Credit Registry System against the requirements defined in the Software Requirements Specification (SRS) v2.0. The system handles sensitive financial and personal data across all 54 African countries and supports three languages (English, French, Portuguese) and must comply with data protection and financial regulatory requirements.
 
 All ten non-functional security requirements (NFR-SEC-01 through NFR-SEC-10) have been implemented, along with fifteen enterprise security enhancements (ENT-01 through ENT-15) and additional AI-powered features (AI-001 through AI-004) and platform enhancements (ENT-16 through ENT-21). These include TOTP multi-factor authentication, OAuth 2.1 Bearer token exchange, tamper-evident audit log hash chains, fuzzy entity matching, dispute chatbot, low-bandwidth optimizations, XBRL upload support, data retention enforcement, exchange rate management, API administration, global search, ID photo/document upload, investor demo environment, dashboard visual analytics, interactive demo tour, AI credit risk analysis, AI report summaries, AI smart chatbot, AI compliance reports, Excel export, real-time notifications, API usage analytics, dashboard sparkline trends, audit trail enhancements, and multi-language PDF reports. This report details each security control, its implementation, and compliance status.
 
@@ -152,13 +152,13 @@ The frontend sidebar and page access are filtered based on the user's role, prev
 | Cookie Secure | `false` (configurable) | Should be `true` in production with HTTPS |
 | Cookie SameSite | `lax` | CSRF protection |
 | Max Session Age | 8 hours | Absolute session lifetime |
-| Idle Timeout | 15 minutes | NFR-SEC-09 compliance |
+| Idle Timeout | 4 hours | NFR-SEC-09 compliance |
 | Store Cleanup | Every 24 hours | `checkPeriod: 86400000` |
 
 ### 4.2 Idle Timeout Implementation (NFR-SEC-09)
 
 ```typescript
-const IDLE_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
+const IDLE_TIMEOUT_MS = 4 * 60 * 60 * 1000; // 4 hours
 
 app.use((req, res, next) => {
   if (req.session?.userId && req.session.lastActivity) {
@@ -176,9 +176,9 @@ app.use((req, res, next) => {
 ```
 
 - `lastActivity` timestamp updated on every authenticated request
-- Session destroyed when idle time exceeds 15 minutes
+- Session destroyed when idle time exceeds 4 hours
 - HTTP 440 status returned (Login Timeout)
-- Frontend detects 440 and redirects to login page
+- Frontend detects 440 and automatically redirects to `/auth` login page
 
 ### 4.3 Session Data
 
@@ -707,7 +707,49 @@ All retention enforcement actions are fully audit-logged:
 
 ---
 
-## 14. Sign-Off
+## 14. Platform Command Center Security Controls
+
+### 14.1 Access Control
+
+All Platform Command Center endpoints (`/api/platform/*`) enforce dual authentication:
+1. **Session authentication** — `requireAuth` middleware validates active session
+2. **Super admin role check** — `requireSuperAdmin` middleware restricts access to `super_admin` role only
+
+### 14.2 Sensitive Data Protection
+
+- **API Key Hash Exclusion (PCC-03):** The `GET /api/platform/api-keys` endpoint explicitly selects only non-sensitive columns (id, label, keyPrefix, status, permissions, organizationId, timestamps). The `keyHash` field is never transmitted to the client, preventing credential exposure even in administrative interfaces.
+
+### 14.3 Input Validation on Mutable Endpoints
+
+All mutable platform endpoints enforce strict input validation:
+
+| Endpoint | Field | Validation Rule |
+|----------|-------|----------------|
+| `PUT /api/platform/pricing-tiers/:id` | `unitPriceCents` | Must be non-negative number |
+| `PUT /api/platform/pricing-tiers/:id` | `isActive` | Must be boolean |
+| `PUT /api/platform/retention-policies/:id` | `retentionYears` | Must be number between 1 and 100 |
+| `PUT /api/platform/retention-policies/:id` | `archiveAfterYears` | Must be non-negative number |
+| `PUT /api/platform/retention-policies/:id` | `isActive` | Must be boolean |
+| `PUT /api/platform/retention-policies/:id` | `description` | Must be string |
+| `POST /api/platform/retention-policies` | All fields | Validated against `insertRetentionPolicySchema` (Zod) |
+
+### 14.4 Audit Log Filter Integrity
+
+The audit log endpoint (`GET /api/platform/audit-logs`) applies all filters consistently across:
+- Paginated log results
+- Total count
+- Action type breakdown counts
+- Entity type breakdown counts
+
+This prevents data leakage where filtered views might show aggregate counts from unfiltered datasets.
+
+### 14.5 SQL Injection Prevention
+
+Platform endpoints use Drizzle ORM parameterized queries throughout. The two endpoints using raw `pool.query` (audit-logs and activity-feed) use parameterized `IN` clauses with explicit placeholder generation (`$1, $2, ...`) instead of string interpolation.
+
+---
+
+## 15. Sign-Off
 
 | Role | Name | Signature | Date |
 |------|------|-----------|------|

@@ -1,6 +1,6 @@
 # User Acceptance Testing (UAT) Test Document
 
-## Cross-Jurisdictional Central Data Hub & Credit Registry System v1.2
+## Cross-Jurisdictional Central Data Hub & Credit Registry System v2.0
 
 **Prepared for:** Systems In Motion Limited  
 **Document Version:** 1.2  
@@ -62,7 +62,7 @@
 
 | Item | Detail |
 |------|--------|
-| Application | Cross-Jurisdictional Central Data Hub & Credit Registry System v1.2 |
+| Application | Cross-Jurisdictional Central Data Hub & Credit Registry System v2.0 |
 | Database | PostgreSQL with 21 tables |
 | User Roles | Admin, Regulator, Lender, Viewer |
 | Supported Currencies | 42+ African currencies plus USD, EUR, GBP |
@@ -718,9 +718,32 @@
 
 ---
 
+## 43. Platform Command Center Module
+
+| TC-ID | Module | Test Case Name | Pre-conditions | Test Steps | Expected Result | Pass/Fail | SRS Reference |
+|-------|--------|---------------|----------------|------------|-----------------|-----------|---------------|
+| TC-PCC-001 | Command Center | Platform Command Center loads with 11 tabs for super admin | User logged in as super_admin | 1. Login as super admin. 2. Verify Platform Command Center is displayed. 3. Count available tabs. | Platform Command Center displays with 11 tabs: Jurisdictions, Compliance & SATA, Feature Matrix, Users & Clients, Country Settings, System, Audit Log, API Keys, Data Quality, Billing, Retention. All tabs are clickable. | Pass | PCC-01 |
+| TC-PCC-002 | Command Center | Jurisdictions tab shows country cards with live stats | User logged in as super_admin, on Command Center | 1. Click Jurisdictions tab. 2. Verify country cards are displayed. 3. Verify Live Activity Feed is visible. | Country cards show borrower/account counts, compliance badges, and SATA indicators. Live Activity Feed panel displays recent events with auto-refresh. | Pass | PCC-01, PCC-07 |
+| TC-PCC-003 | Command Center | Audit Log tab displays searchable audit trail | User logged in as super_admin | 1. Click Audit Log tab. 2. Verify Total Events count. 3. Use Action filter dropdown. 4. Use Entity filter dropdown. 5. Enter search text. | Audit trail loads with paginated results. Filter by action shows only matching actions. Filter by entity shows only matching entities. Search narrows results by keyword. Total count, action counts, and entity counts all update with filters. | Pass | PCC-02 |
+| TC-PCC-004 | Command Center | Audit Log pagination works correctly | User logged in as super_admin, audit entries exist | 1. Navigate to Audit Log tab. 2. Verify pagination controls. 3. Click next page. 4. Click previous page. | Pagination shows correct total and page indicators. Navigating pages shows different log entries. Entries per page respects configured limit. | Pass | PCC-02 |
+| TC-PCC-005 | Command Center | API Keys tab shows keys without sensitive data | User logged in as super_admin | 1. Click API Keys tab. 2. Verify KPI cards (Total, Active, Revoked). 3. Verify External API Integrations section. 4. Inspect network response for keyHash absence. | API Keys tab displays key listing with label, prefix, status, and timestamps. No keyHash values appear in the API response or UI. External API Integrations section is visible. | Pass | PCC-03 |
+| TC-PCC-006 | Command Center | API key revocation works and creates audit log | User logged in as super_admin, active API key exists | 1. Click API Keys tab. 2. Find an active key. 3. Click Revoke button. 4. Verify key status changes to revoked. 5. Check Audit Log for revocation entry. | Key status changes to "revoked" with revokedAt timestamp. Audit log contains REVOKE action for api_key entity. | Pass | PCC-03 |
+| TC-PCC-007 | Command Center | Data Quality tab shows completeness metrics | User logged in as super_admin | 1. Click Data Quality tab. 2. Verify Overall Completeness percentage. 3. Verify per-field progress bars. 4. Verify country breakdown section. | Overall Completeness shows percentage (e.g., 96%). Individual fields (National ID, Email, Phone, DOB, Address) show progress bars with percentages. Data Distribution by Country section lists countries with borrower/account counts. Recommendations section is visible. | Pass | PCC-04 |
+| TC-PCC-008 | Command Center | Data Quality metrics are accurate against database | User logged in as super_admin | 1. Click Data Quality tab. 2. Note borrower total and missing counts. 3. Verify against database counts via SQL. | Displayed metrics match actual database counts for total borrowers, missing fields, total accounts, and per-country breakdowns. | Pass | PCC-04 |
+| TC-PCC-009 | Command Center | Billing tab shows revenue KPIs and pricing tiers | User logged in as super_admin | 1. Click Billing tab. 2. Verify Revenue KPI cards (Total, Collected, Pending, Overdue). 3. Verify Pricing Tiers section with 11 tiers. 4. Verify Monetization Model section. | Revenue KPIs are displayed. 11 pricing tiers listed with event type, tier level, unit price, volume range. Monetization Model explanation section is visible. Recent Invoices section is present. | Pass | PCC-05 |
+| TC-PCC-010 | Command Center | Pricing tier editing with validation | User logged in as super_admin | 1. Click Billing tab. 2. Click Edit on a pricing tier. 3. Enter a negative price. 4. Submit. 5. Enter a valid price. 6. Submit. | Negative price is rejected with error message "unitPriceCents must be a non-negative number". Valid price update succeeds and tier price is updated. Audit log records the pricing tier update. | Pass | PCC-05, PCC-09 |
+| TC-PCC-011 | Command Center | Retention tab shows policies grouped by country | User logged in as super_admin | 1. Click Retention tab. 2. Verify Total Policies, Active count, Countries Covered KPIs. 3. Verify policies are grouped by country with retention years. | Retention policies displayed with country grouping. Each policy shows entity type, retention years, archive years, status, and legal basis. New Policy button is visible. | Pass | PCC-06 |
+| TC-PCC-012 | Command Center | Retention policy creation and validation | User logged in as super_admin | 1. Click New Policy button. 2. Fill in policy details. 3. Submit. 4. Try updating with retentionYears > 100. | New policy is created and appears in the list. Update with retentionYears > 100 is rejected with validation error. | Pass | PCC-06, PCC-09 |
+| TC-PCC-013 | Command Center | Activity Feed auto-refreshes | User logged in as super_admin, on Jurisdictions tab | 1. Verify Activity Feed panel is visible. 2. Note current events. 3. Perform an action (e.g., view a page). 4. Wait 30 seconds for auto-refresh. | Activity Feed shows latest events with color-coded action types. New actions appear after refresh interval. Events show user name, IP, and timestamp. | Pass | PCC-07 |
+| TC-PCC-014 | Command Center | Usage metering table tracks events | super_admin has access to billing | 1. Navigate to Billing tab. 2. Verify pricing tiers exist with correct prices. | 11 pricing tiers seeded: credit reports ($1.50-$2.50), API calls ($0.05-$0.10), batch uploads ($3.50-$5.00), cross-border queries ($3.50), dispute filing ($1.00), data exports ($2.00). | Pass | PCC-08 |
+| TC-PCC-015 | Command Center | Non-super-admin cannot access platform endpoints | User logged in as admin (not super_admin) | 1. Attempt to access /api/platform/audit-logs. 2. Attempt to access /api/platform/billing. 3. Attempt to access /api/platform/data-quality. | All requests return 403 Forbidden. Command Center is not accessible. | Pass | PCC-01 |
+| TC-PCC-016 | Command Center | Input validation on all mutable endpoints | User logged in as super_admin | 1. PUT /api/platform/pricing-tiers/:id with invalid data. 2. PUT /api/platform/retention-policies/:id with invalid data. | Invalid inputs return 400 with descriptive error messages. Valid inputs succeed. | Pass | PCC-09 |
+
+---
+
 **Document End**
 
-*This UAT Test Document covers all modules of the Cross-Jurisdictional Central Data Hub & Credit Registry System v1.2, including the 15 enterprise enhancements (ENT-01 through ENT-15), AI-powered features (AI-001 through AI-004), and additional enhanced features (ENT-16 through ENT-21). Each test case is designed to validate functional and non-functional requirements as defined in the Software Requirements Specification (SRS).*
+*This UAT Test Document covers all modules of the Cross-Jurisdictional Central Data Hub & Credit Registry System v2.0, including the 15 enterprise enhancements (ENT-01 through ENT-15), AI-powered features (AI-001 through AI-004), additional enhanced features (ENT-16 through ENT-21), and Platform Command Center features (PCC-01 through PCC-10). Each test case is designed to validate functional and non-functional requirements as defined in the Software Requirements Specification (SRS).*
 
 *Prepared by: Systems In Motion Limited*  
 *Classification: Confidential*

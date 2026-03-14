@@ -4297,9 +4297,9 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
         keyPrefix: apiKeys.keyPrefix,
         status: apiKeys.status,
         permissions: apiKeys.permissions,
-        organizationId: apiKeys.organizationId,
+        institutionId: apiKeys.institutionId,
+        createdBy: apiKeys.createdBy,
         createdAt: apiKeys.createdAt,
-        expiresAt: apiKeys.expiresAt,
         lastUsedAt: apiKeys.lastUsedAt,
         revokedAt: apiKeys.revokedAt,
       }).from(apiKeys).orderBy(desc(apiKeys.createdAt));
