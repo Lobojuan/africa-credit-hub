@@ -3594,7 +3594,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     try {
       const { country } = req.body;
       if (country === "command_center") {
-        req.session.viewingCountry = undefined;
+        delete req.session.viewingCountry;
         return res.json({ viewingCountry: null, message: "Returned to command center" });
       }
       if (country === "global" || country === null) {
