@@ -22,11 +22,11 @@ import {
 } from "lucide-react";
 
 const SCORE_BANDS = [
-  { min: 750, max: 850, label: "Excellent", color: "hsl(142 55% 40%)", bgClass: "bg-emerald-100 dark:bg-emerald-950/40", textClass: "text-emerald-700 dark:text-emerald-400", description: "Outstanding credit profile. Borrowers in this range demonstrate exceptional payment history, low utilization, and diversified accounts." },
-  { min: 670, max: 749, label: "Good", color: "hsl(175 55% 28%)", bgClass: "bg-teal-100 dark:bg-teal-950/40", textClass: "text-teal-700 dark:text-teal-400", description: "Strong credit profile. Minor issues may exist but overall responsible credit behavior is evident." },
-  { min: 580, max: 669, label: "Fair", color: "hsl(43 80% 55%)", bgClass: "bg-amber-100 dark:bg-amber-950/40", textClass: "text-amber-700 dark:text-amber-400", description: "Moderate credit risk. Some late payments or high utilization may be present. Room for improvement." },
-  { min: 450, max: 579, label: "Poor", color: "hsl(14 70% 50%)", bgClass: "bg-orange-100 dark:bg-orange-950/40", textClass: "text-orange-700 dark:text-orange-400", description: "Below-average credit profile. Multiple negative factors detected including delinquencies or defaults." },
-  { min: 300, max: 449, label: "Very Poor", color: "hsl(0 72% 42%)", bgClass: "bg-red-100 dark:bg-red-950/40", textClass: "text-red-700 dark:text-red-400", description: "Significant credit risk. Severe delinquencies, write-offs, or active court judgments are likely present." },
+  { min: 750, max: 850, label: "Excellent", color: "hsl(142 55% 40%)", bgClass: "bg-emerald-100 dark:bg-emerald-900 dark:bg-emerald-950/40", textClass: "text-emerald-700 dark:text-emerald-300 dark:text-emerald-400", description: "Outstanding credit profile. Borrowers in this range demonstrate exceptional payment history, low utilization, and diversified accounts." },
+  { min: 670, max: 749, label: "Good", color: "hsl(175 55% 28%)", bgClass: "bg-teal-100 dark:bg-teal-900 dark:bg-teal-950/40", textClass: "text-teal-700 dark:text-teal-300 dark:text-teal-400", description: "Strong credit profile. Minor issues may exist but overall responsible credit behavior is evident." },
+  { min: 580, max: 669, label: "Fair", color: "hsl(43 80% 55%)", bgClass: "bg-amber-100 dark:bg-amber-900 dark:bg-amber-950/40", textClass: "text-amber-700 dark:text-amber-300 dark:text-amber-400", description: "Moderate credit risk. Some late payments or high utilization may be present. Room for improvement." },
+  { min: 450, max: 579, label: "Poor", color: "hsl(14 70% 50%)", bgClass: "bg-orange-100 dark:bg-orange-900 dark:bg-orange-950/40", textClass: "text-orange-700 dark:text-orange-300 dark:text-orange-400", description: "Below-average credit profile. Multiple negative factors detected including delinquencies or defaults." },
+  { min: 300, max: 449, label: "Very Poor", color: "hsl(0 72% 42%)", bgClass: "bg-red-100 dark:bg-red-900 dark:bg-red-950/40", textClass: "text-red-700 dark:text-red-300 dark:text-red-400", description: "Significant credit risk. Severe delinquencies, write-offs, or active court judgments are likely present." },
 ];
 
 const SCORING_FACTORS = [
@@ -434,7 +434,7 @@ export default function CreditScoreMethodologyPage() {
                     data-testid="toggle-pep"
                   >
                     <span
-                      className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform shadow-sm ${simParams.isPep ? "translate-x-4" : "translate-x-0.5"}`}
+                      className={`absolute top-0.5 w-4 h-4 rounded-full bg-card transition-transform shadow-sm ${simParams.isPep ? "translate-x-4" : "translate-x-0.5"}`}
                     />
                   </button>
                 </div>

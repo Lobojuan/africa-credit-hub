@@ -90,9 +90,9 @@ export function MfaSetupDialog({ open, onOpenChange, mfaEnabled }: MfaSetupProps
         {mfaEnabled ? (
           <div className="space-y-4">
             <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-              <ShieldCheck className="w-5 h-5 text-green-600" />
+              <ShieldCheck className="w-5 h-5 text-green-600 dark:text-green-400" />
               <div>
-                <p className="text-sm font-medium text-green-700 dark:text-green-400">{t("mfa.enabled")}</p>
+                <p className="text-sm font-medium text-green-700 dark:text-green-300 dark:text-green-400">{t("mfa.enabled")}</p>
                 <p className="text-xs text-muted-foreground">{t("mfa.enabledDesc")}</p>
               </div>
             </div>

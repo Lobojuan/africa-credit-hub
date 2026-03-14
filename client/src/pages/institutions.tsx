@@ -26,10 +26,10 @@ function StatusBadge({ status }: { status: string }) {
   const variant = status === "active" ? "default" : status === "suspended" ? "destructive" : "secondary";
   const className =
     status === "active"
-      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+      ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 dark:bg-green-900 dark:text-green-200"
       : status === "suspended"
         ? ""
-        : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
+        : "bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 dark:bg-yellow-900 dark:text-yellow-200";
 
   return (
     <Badge variant={variant} className={className} data-testid={`badge-status-${status}`}>
@@ -396,7 +396,7 @@ export default function InstitutionsPage() {
                 </div>
                 {selectedInstitution.approvedAt && (
                   <div className="flex items-start gap-3">
-                    <CheckCircle className="w-4 h-4 mt-0.5 text-green-600" />
+                    <CheckCircle className="w-4 h-4 mt-0.5 text-green-600 dark:text-green-400" />
                     <div>
                       <p className="text-xs text-muted-foreground">{t("institutions.approvedOn")}</p>
                       <p className="text-sm font-medium" data-testid="text-detail-approved">{new Date(selectedInstitution.approvedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}</p>

@@ -37,13 +37,13 @@ const ORG_TYPES = [
   { value: "regulator", label: "Regulator", icon: Shield, color: "text-indigo-500" },
   { value: "real_estate", label: "Real Estate", icon: MapPin, color: "text-emerald-500" },
   { value: "investment", label: "Investment", icon: TrendingUp, color: "text-amber-500" },
-  { value: "other", label: "Other", icon: Globe, color: "text-gray-500" },
+  { value: "other", label: "Other", icon: Globe, color: "text-muted-foreground" },
 ];
 
 const SUBSCRIPTION_TIERS = [
-  { value: "standard", label: "Standard", price: "$299/mo", color: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300", icon: null },
-  { value: "professional", label: "Professional", price: "$799/mo", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300", icon: Zap },
-  { value: "enterprise", label: "Enterprise", price: "$1,999/mo", color: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300", icon: Crown },
+  { value: "standard", label: "Standard", price: "$299/mo", color: "bg-muted text-foreground dark:bg-foreground dark:text-muted-foreground", icon: null },
+  { value: "professional", label: "Professional", price: "$799/mo", color: "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 dark:bg-blue-900/40 dark:text-blue-300", icon: Zap },
+  { value: "enterprise", label: "Enterprise", price: "$1,999/mo", color: "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 dark:bg-purple-900/40 dark:text-purple-300", icon: Crown },
 ];
 
 function AnimatedNumber({ value, prefix = "", suffix = "" }: { value: number; prefix?: string; suffix?: string }) {
@@ -66,10 +66,10 @@ function AnimatedNumber({ value, prefix = "", suffix = "" }: { value: number; pr
 
 function PaymentHealthBadge({ health }: { health: string }) {
   const configs: Record<string, { label: string; icon: any; cls: string }> = {
-    current: { label: "Paid Up", icon: CheckCircle2, cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800" },
-    pending: { label: "Payment Due", icon: Clock, cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800" },
-    overdue: { label: "Overdue", icon: AlertTriangle, cls: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800" },
-    no_invoices: { label: "New Client", icon: Sparkles, cls: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800" },
+    current: { label: "Paid Up", icon: CheckCircle2, cls: "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800" },
+    pending: { label: "Payment Due", icon: Clock, cls: "bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800" },
+    overdue: { label: "Overdue", icon: AlertTriangle, cls: "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800" },
+    no_invoices: { label: "New Client", icon: Sparkles, cls: "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800" },
   };
   const cfg = configs[health] || configs.no_invoices;
   const Icon = cfg.icon;
@@ -88,7 +88,7 @@ function StatusDot({ status }: { status: string }) {
   return (
     <span className="relative flex h-2.5 w-2.5">
       {status === "active" && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />}
-      <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${colors[status] || "bg-gray-500"}`} />
+      <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${colors[status] || "bg-muted-foreground"}`} />
     </span>
   );
 }
@@ -574,9 +574,9 @@ function BillingTab({ org }: { org: any }) {
                       <td className="py-2.5">{rec.currency}</td>
                       <td className="py-2.5">
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium
-                          ${rec.status === "paid" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
-                            rec.status === "overdue" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" :
-                            "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"}`}>
+                          ${rec.status === "paid" ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 dark:bg-green-900/30 dark:text-green-400" :
+                            rec.status === "overdue" ? "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 dark:bg-red-900/30 dark:text-red-400" :
+                            "bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 dark:bg-amber-900/30 dark:text-amber-400"}`}>
                           {rec.status === "paid" ? <CheckCircle2 className="w-3 h-3" /> : rec.status === "overdue" ? <AlertTriangle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
                           {rec.status}
                         </span>
@@ -795,7 +795,7 @@ function OrgDetailPanel({ orgId, onBack }: { orgId: string; onBack: () => void }
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50 hover:text-amber-800 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-900/30"
+                  className="gap-1.5 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:bg-amber-950 hover:text-amber-800 dark:text-amber-200 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-900/30"
                   data-testid="button-suspend-detail"
                   disabled={toggleStatusMutation.isPending}
                   onClick={() => {
@@ -810,7 +810,7 @@ function OrgDetailPanel({ orgId, onBack }: { orgId: string; onBack: () => void }
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-1.5 border-green-300 text-green-700 hover:bg-green-50 hover:text-green-800 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-900/30"
+                  className="gap-1.5 border-green-300 dark:border-green-700 text-green-700 dark:text-green-300 hover:bg-green-50 dark:bg-green-950 hover:text-green-800 dark:text-green-200 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-900/30"
                   data-testid="button-reactivate-detail"
                   disabled={toggleStatusMutation.isPending}
                   onClick={() => toggleStatusMutation.mutate("reactivate")}
@@ -845,18 +845,18 @@ function OrgDetailPanel({ orgId, onBack }: { orgId: string; onBack: () => void }
       </div>
 
       {org.status === "suspended" && (
-        <div className="flex items-center gap-3 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-4" data-testid="banner-suspended">
+        <div className="flex items-center gap-3 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950 dark:bg-amber-900/20 p-4" data-testid="banner-suspended">
           <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shrink-0">
             <Ban className="w-5 h-5 text-amber-600 dark:text-amber-400" />
           </div>
           <div className="flex-1">
-            <p className="font-semibold text-amber-800 dark:text-amber-300 text-sm">Account Suspended</p>
-            <p className="text-xs text-amber-700 dark:text-amber-400">This client's users are currently blocked from accessing the platform. Click "Reactivate Client" above once payment has been received.</p>
+            <p className="font-semibold text-amber-800 dark:text-amber-200 dark:text-amber-300 text-sm">Account Suspended</p>
+            <p className="text-xs text-amber-700 dark:text-amber-300 dark:text-amber-400">This client's users are currently blocked from accessing the platform. Click "Reactivate Client" above once payment has been received.</p>
           </div>
           <Button
             variant="outline"
             size="sm"
-            className="shrink-0 gap-1.5 border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-900/30"
+            className="shrink-0 gap-1.5 border-green-300 dark:border-green-700 text-green-700 dark:text-green-300 hover:bg-green-50 dark:bg-green-950 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-900/30"
             data-testid="button-reactivate-banner"
             disabled={toggleStatusMutation.isPending}
             onClick={() => toggleStatusMutation.mutate("reactivate")}
@@ -1524,7 +1524,7 @@ export default function OrganizationsPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-8 text-xs gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50 hover:text-amber-800 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-900/30 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="h-8 text-xs gap-1.5 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:bg-amber-950 hover:text-amber-800 dark:text-amber-200 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-900/30 opacity-0 group-hover:opacity-100 transition-opacity"
                         data-testid={`button-suspend-org-${org.id}`}
                         disabled={suspendMutation.isPending}
                         onClick={() => {
@@ -1539,7 +1539,7 @@ export default function OrganizationsPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-8 text-xs gap-1.5 border-green-300 text-green-700 hover:bg-green-50 hover:text-green-800 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-900/30"
+                        className="h-8 text-xs gap-1.5 border-green-300 dark:border-green-700 text-green-700 dark:text-green-300 hover:bg-green-50 dark:bg-green-950 hover:text-green-800 dark:text-green-200 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-900/30"
                         data-testid={`button-reactivate-org-${org.id}`}
                         disabled={suspendMutation.isPending}
                         onClick={() => suspendMutation.mutate({ id: org.id, action: "reactivate" })}

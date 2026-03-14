@@ -14,12 +14,12 @@ import { BSL_FILE_IDENTIFIERS } from "@shared/bsl-codes";
 type BslFileType = keyof typeof BSL_FILE_IDENTIFIERS;
 
 const FILE_TYPE_DETAILS: Record<BslFileType, { label: string; description: string; color: string }> = {
-  CONC: { label: "CONC - Consumer Credit", description: "Individual borrower credit facility data", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
-  BUSC: { label: "BUSC - Business Credit", description: "Corporate borrower credit facility data", color: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200" },
-  CONJ: { label: "CONJ - Consumer Judgment", description: "Individual borrower court judgment records", color: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" },
-  BUSJ: { label: "BUSJ - Business Judgment", description: "Corporate borrower court judgment records", color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" },
-  COND: { label: "COND - Consumer Dishonoured Cheque", description: "Individual borrower bounced cheque records", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
-  BUSD: { label: "BUSD - Business Dishonoured Cheque", description: "Corporate borrower bounced cheque records", color: "bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200" },
+  CONC: { label: "CONC - Consumer Credit", description: "Individual borrower credit facility data", color: "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 dark:bg-blue-900 dark:text-blue-200" },
+  BUSC: { label: "BUSC - Business Credit", description: "Corporate borrower credit facility data", color: "bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200" },
+  CONJ: { label: "CONJ - Consumer Judgment", description: "Individual borrower court judgment records", color: "bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 dark:bg-amber-900 dark:text-amber-200" },
+  BUSJ: { label: "BUSJ - Business Judgment", description: "Corporate borrower court judgment records", color: "bg-orange-100 dark:bg-orange-900 text-orange-800 dark:bg-orange-900 dark:text-orange-200" },
+  COND: { label: "COND - Consumer Dishonoured Cheque", description: "Individual borrower bounced cheque records", color: "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 dark:bg-red-900 dark:text-red-200" },
+  BUSD: { label: "BUSD - Business Dishonoured Cheque", description: "Corporate borrower bounced cheque records", color: "bg-rose-100 dark:bg-rose-900 text-rose-800 dark:bg-rose-900 dark:text-rose-200" },
 };
 
 function getTodayDate(): string {

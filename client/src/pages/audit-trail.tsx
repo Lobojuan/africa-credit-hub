@@ -195,8 +195,8 @@ export default function AuditTrailPage() {
             <div
               className={`flex items-center gap-2 px-3 py-1.5 rounded-md border text-sm font-medium ${
                 integrity.valid
-                  ? "bg-green-500/10 border-green-500/20 text-green-700 dark:text-green-400"
-                  : "bg-red-500/10 border-red-500/20 text-red-700 dark:text-red-400"
+                  ? "bg-green-500/10 border-green-500/20 text-green-700 dark:text-green-300 dark:text-green-400"
+                  : "bg-red-500/10 border-red-500/20 text-red-700 dark:text-red-300 dark:text-red-400"
               }`}
               data-testid="badge-integrity-status"
             >

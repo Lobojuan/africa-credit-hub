@@ -171,10 +171,10 @@ function DetailContent({ type, data, displayCurrency, convertAmount }: { type: D
             <BarBreakdown data={data.byType} labelKey="type" valueKey="count" />
           </div>
           <div className="flex items-center gap-3 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
-            <ShieldAlert className="w-5 h-5 text-amber-600" />
+            <ShieldAlert className="w-5 h-5 text-amber-600 dark:text-amber-400" />
             <div>
               <p className="text-sm font-semibold">PEP Flagged Borrowers</p>
-              <p className="text-2xl font-extrabold text-amber-600">{data.pepCount?.toLocaleString()}</p>
+              <p className="text-2xl font-extrabold text-amber-600 dark:text-amber-400">{data.pepCount?.toLocaleString()}</p>
             </div>
           </div>
           <div>
@@ -370,10 +370,10 @@ function DetailContent({ type, data, displayCurrency, convertAmount }: { type: D
         <div className="space-y-6">
           {data.slaBreached > 0 && (
             <div className="flex items-center gap-3 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
-              <AlertTriangle className="w-5 h-5 text-red-600" />
+              <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
               <div>
                 <p className="text-sm font-semibold">SLA Breached</p>
-                <p className="text-2xl font-extrabold text-red-600">{data.slaBreached}</p>
+                <p className="text-2xl font-extrabold text-red-600 dark:text-red-400">{data.slaBreached}</p>
                 <p className="text-xs text-muted-foreground">Disputes past their SLA deadline</p>
               </div>
             </div>
@@ -553,7 +553,7 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-3">
             <Select value={displayCurrency} onValueChange={handleCurrencyChange}>
-              <SelectTrigger className="w-[155px] h-9 text-xs bg-white/10 border-white/15 text-white backdrop-blur-sm rounded-lg" data-testid="select-dashboard-currency">
+              <SelectTrigger className="w-[155px] h-9 text-xs bg-card/10 border-white/15 text-white backdrop-blur-sm rounded-lg" data-testid="select-dashboard-currency">
                 <Banknote className="w-3.5 h-3.5 mr-1.5 text-white/60" />
                 <SelectValue />
               </SelectTrigger>
@@ -566,7 +566,7 @@ export default function Dashboard() {
               </SelectContent>
             </Select>
             {isGhanaMode() && <ReferenceRateBadge />}
-            <div className="hidden md:flex items-center gap-2 text-xs text-white/50 bg-white/5 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/10">
+            <div className="hidden md:flex items-center gap-2 text-xs text-white/50 bg-card/5 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/10">
               <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span className="font-medium">Live Data</span>
             </div>

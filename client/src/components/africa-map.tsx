@@ -124,7 +124,7 @@ function GhanaMarketOverview({ countryBreakdown }: { countryBreakdown: AfricaMap
           </div>
           <div className="rounded-lg border border-border/50 bg-muted/30 p-2.5 text-center">
             <AlertTriangle className="w-3.5 h-3.5 mx-auto mb-1 text-muted-foreground" />
-            <p className="text-lg font-bold leading-tight text-amber-600">{ms.nationalDefaultRate}%</p>
+            <p className="text-lg font-bold leading-tight text-amber-600 dark:text-amber-400">{ms.nationalDefaultRate}%</p>
             <p className="text-[9px] text-muted-foreground">Default Rate</p>
           </div>
           <div className="rounded-lg border border-border/50 bg-muted/30 p-2.5 text-center">

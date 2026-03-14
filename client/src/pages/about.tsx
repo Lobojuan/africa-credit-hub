@@ -95,7 +95,7 @@ export default function AboutPage() {
           <div className="w-16 h-16 rounded-2xl mx-auto mb-6 flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(43 80% 55%) 0%, hsl(33 75% 48%) 100%)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
             <Shield className="w-8 h-8 text-white" />
           </div>
-          <Badge className="mb-4 text-[10px] px-3 py-0.5 bg-white/10 text-white/80 border-white/10 hover:bg-white/10">
+          <Badge className="mb-4 text-[10px] px-3 py-0.5 bg-card/10 text-white/80 border-white/10 hover:bg-card/10">
             Est. 2024
           </Badge>
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white tracking-tight leading-[1.15]">

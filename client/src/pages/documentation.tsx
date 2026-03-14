@@ -31,17 +31,17 @@ function formatSize(bytes: number) {
 
 function DocIcon({ id }: { id: string }) {
   const colors: Record<string, string> = {
-    "api-guide": "bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300",
-    uat: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
-    systems: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
-    "users-manual": "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
-    "srs-matrix": "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
-    "data-dictionary": "bg-cyan-100 text-cyan-700 dark:bg-cyan-900 dark:text-cyan-300",
-    deployment: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
-    security: "bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-300",
+    "api-guide": "bg-teal-100 dark:bg-teal-900 text-teal-700 dark:text-teal-300 dark:bg-teal-900 dark:text-teal-300",
+    uat: "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 dark:bg-blue-900 dark:text-blue-300",
+    systems: "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 dark:bg-purple-900 dark:text-purple-300",
+    "users-manual": "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 dark:bg-green-900 dark:text-green-300",
+    "srs-matrix": "bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 dark:bg-amber-900 dark:text-amber-300",
+    "data-dictionary": "bg-cyan-100 dark:bg-cyan-900 text-cyan-700 dark:text-cyan-300 dark:bg-cyan-900 dark:text-cyan-300",
+    deployment: "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 dark:bg-red-900 dark:text-red-300",
+    security: "bg-rose-100 dark:bg-rose-900 text-rose-700 dark:bg-rose-900 dark:text-rose-300",
   };
   return (
-    <div className={`flex items-center justify-center w-12 h-12 rounded-xl ${colors[id] || "bg-gray-100 text-gray-700"}`}>
+    <div className={`flex items-center justify-center w-12 h-12 rounded-xl ${colors[id] || "bg-muted text-foreground"}`}>
       <FileText className="w-6 h-6" />
     </div>
   );

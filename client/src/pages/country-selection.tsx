@@ -74,24 +74,24 @@ function CountryDot({ code, size = "md" }: { code: string; size?: "sm" | "md" | 
     ET: "bg-green-700", ZA: "bg-blue-700",
   };
   const sizeClass = size === "lg" ? "w-4 h-4" : size === "md" ? "w-3 h-3" : "w-2.5 h-2.5";
-  return <div className={`${sizeClass} rounded-full ${colors[code] || "bg-gray-400"} shrink-0`} />;
+  return <div className={`${sizeClass} rounded-full ${colors[code] || "bg-muted-foreground/50"} shrink-0`} />;
 }
 
 function KPICard({ icon: Icon, label, value, sub, color }: {
   icon: typeof Globe; label: string; value: string | number; sub?: string; color: string;
 }) {
   return (
-    <div className="rounded-xl border border-slate-700/50 bg-slate-800/50 p-4">
+    <div className="rounded-xl border border-border bg-foreground/50 p-4">
       <div className="flex items-center gap-3 mb-2">
         <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${color}`}>
           <Icon className="w-4.5 h-4.5 text-white" />
         </div>
-        <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">{label}</span>
+        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{label}</span>
       </div>
       <p className="text-2xl font-bold text-white" data-testid={`text-kpi-${label.toLowerCase().replace(/\s/g, '-')}`}>
         {typeof value === "number" ? value.toLocaleString() : value}
       </p>
-      {sub && <p className="text-[10px] text-slate-500 mt-0.5">{sub}</p>}
+      {sub && <p className="text-[10px] text-muted-foreground mt-0.5">{sub}</p>}
     </div>
   );
 }
@@ -105,7 +105,7 @@ function ComplianceIndicator({ status }: { status: "enacted" | "draft" | "none" 
 function SATAIndicator({ level }: { level: "ready" | "partial" | "planned" }) {
   if (level === "ready") return <Badge variant="outline" className="text-[9px] h-5 border-emerald-500/30 text-emerald-400 bg-emerald-500/10">SATA Ready</Badge>;
   if (level === "partial") return <Badge variant="outline" className="text-[9px] h-5 border-amber-500/30 text-amber-400 bg-amber-500/10">Partial</Badge>;
-  return <Badge variant="outline" className="text-[9px] h-5 border-slate-500/30 text-slate-400 bg-slate-500/10">Planned</Badge>;
+  return <Badge variant="outline" className="text-[9px] h-5 border-border text-muted-foreground bg-muted">Planned</Badge>;
 }
 
 const ACTION_ICON_COLORS: Record<string, string> = {
@@ -126,26 +126,26 @@ function ActivityFeed() {
   const items = (feed || []).slice(0, 15);
 
   return (
-    <div className="rounded-xl border border-slate-700/50 bg-slate-800/50 p-4" data-testid="panel-activity-feed">
+    <div className="rounded-xl border border-border bg-foreground/50 p-4" data-testid="panel-activity-feed">
       <div className="flex items-center gap-2 mb-3">
         <Activity className="w-4 h-4 text-cyan-400" />
         <h3 className="text-sm font-semibold text-white">Live Activity Feed</h3>
-        <span className="text-[9px] text-slate-500 ml-auto">Last 15 events • auto-refresh 30s</span>
+        <span className="text-[9px] text-muted-foreground ml-auto">Last 15 events • auto-refresh 30s</span>
       </div>
       {items.length === 0 ? (
-        <p className="text-sm text-slate-500 text-center py-4">No recent activity</p>
+        <p className="text-sm text-muted-foreground text-center py-4">No recent activity</p>
       ) : (
         <div className="space-y-1 max-h-[280px] overflow-y-auto pr-1">
           {items.map((item: any) => (
-            <div key={item.id} className="flex items-start gap-2 py-1.5 border-b border-slate-700/20 last:border-0" data-testid={`activity-${item.id}`}>
-              <div className={`w-1.5 h-1.5 rounded-full mt-1.5 ${item.action === "LOGIN" ? "bg-violet-400" : item.action === "CREATE" ? "bg-emerald-400" : item.action === "UPDATE" ? "bg-blue-400" : item.action === "DELETE" ? "bg-red-400" : "bg-slate-400"}`} />
+            <div key={item.id} className="flex items-start gap-2 py-1.5 border-b border-border/20 last:border-0" data-testid={`activity-${item.id}`}>
+              <div className={`w-1.5 h-1.5 rounded-full mt-1.5 ${item.action === "LOGIN" ? "bg-violet-400" : item.action === "CREATE" ? "bg-emerald-400" : item.action === "UPDATE" ? "bg-blue-400" : item.action === "DELETE" ? "bg-red-400" : "bg-muted-foreground/50"}`} />
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-slate-300 truncate">
-                  <span className={`font-semibold ${ACTION_ICON_COLORS[item.action] || "text-slate-400"}`}>{item.action}</span>
-                  {" "}<span className="text-slate-500">[{item.entity}]</span>
+                <p className="text-[10px] text-muted-foreground truncate">
+                  <span className={`font-semibold ${ACTION_ICON_COLORS[item.action] || "text-muted-foreground"}`}>{item.action}</span>
+                  {" "}<span className="text-muted-foreground">[{item.entity}]</span>
                   {" "}{item.details || `${item.action} on ${item.entity}`}
                 </p>
-                <p className="text-[9px] text-slate-600">
+                <p className="text-[9px] text-muted-foreground">
                   {item.userName} {item.ipAddress ? `• ${item.ipAddress}` : ""} • {item.createdAt ? new Date(item.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
                 </p>
               </div>
@@ -187,7 +187,7 @@ export default function CountrySelectionPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col">
-      <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-slate-800/50">
+      <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-border">
         <div className="flex items-center gap-3">
           <div
             className="flex items-center justify-center w-9 h-9 rounded-xl"
@@ -200,7 +200,7 @@ export default function CountrySelectionPage() {
           </div>
           <div>
             <p className="text-sm font-bold text-white">Platform Command Center</p>
-            <p className="text-[10px] text-slate-400">Carlson Capital & Systems In Motion Limited</p>
+            <p className="text-[10px] text-muted-foreground">Carlson Capital & Systems In Motion Limited</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -214,7 +214,7 @@ export default function CountrySelectionPage() {
           <Button
             variant="ghost"
             size="sm"
-            className="text-slate-400 hover:text-white h-8 gap-1.5"
+            className="text-muted-foreground hover:text-white h-8 gap-1.5"
             onClick={() => logout()}
             data-testid="button-logout-country-selection"
           >
@@ -236,7 +236,7 @@ export default function CountrySelectionPage() {
                 <h1 className="text-xl sm:text-2xl font-bold text-white" data-testid="text-country-selection-title">
                   Welcome back, {user?.fullName}
                 </h1>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   Review your platform posture, then select a jurisdiction to manage.
                 </p>
               </div>
@@ -262,43 +262,43 @@ export default function CountrySelectionPage() {
               <KPICard icon={Building2} label="Institutions" value={platform?.totalInstitutions ?? "..."} color="bg-amber-500/20" />
               <KPICard icon={Globe} label="Active Countries" value={platform?.activeCountries ?? "..."} sub={`of ${platform?.supportedCountries ?? 10} supported`} color="bg-emerald-500/20" />
               <KPICard icon={CheckCircle2} label="SRS Compliance" value={`${complianceScore}%`} sub={`${srsCompliant}/${srsTotal} requirements`} color="bg-teal-500/20" />
-              <KPICard icon={Shield} label="System Version" value={platform?.systemVersion ?? "CDH v2.1"} sub="Pan-African Registry" color="bg-slate-500/20" />
+              <KPICard icon={Shield} label="System Version" value={platform?.systemVersion ?? "CDH v2.1"} sub="Pan-African Registry" color="bg-muted-foreground/20" />
             </div>
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-            <TabsList className="bg-slate-800/50 border border-slate-700/50 h-9 flex-wrap sm:flex-nowrap w-full overflow-x-auto">
-              <TabsTrigger value="overview" className="text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-white" data-testid="tab-overview">
+            <TabsList className="bg-foreground/50 border border-border h-9 flex-wrap sm:flex-nowrap w-full overflow-x-auto">
+              <TabsTrigger value="overview" className="text-xs data-[state=active]:bg-muted-foreground data-[state=active]:text-white" data-testid="tab-overview">
                 Jurisdictions
               </TabsTrigger>
-              <TabsTrigger value="compliance" className="text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-white" data-testid="tab-compliance">
+              <TabsTrigger value="compliance" className="text-xs data-[state=active]:bg-muted-foreground data-[state=active]:text-white" data-testid="tab-compliance">
                 Compliance & SATA
               </TabsTrigger>
-              <TabsTrigger value="features" className="text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-white" data-testid="tab-features">
+              <TabsTrigger value="features" className="text-xs data-[state=active]:bg-muted-foreground data-[state=active]:text-white" data-testid="tab-features">
                 Feature Matrix
               </TabsTrigger>
-              <TabsTrigger value="users-clients" className="text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-white" data-testid="tab-users-clients">
+              <TabsTrigger value="users-clients" className="text-xs data-[state=active]:bg-muted-foreground data-[state=active]:text-white" data-testid="tab-users-clients">
                 <Users className="w-3 h-3 mr-1" /> Users & Clients
               </TabsTrigger>
-              <TabsTrigger value="country-settings" className="text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-white" data-testid="tab-country-settings">
+              <TabsTrigger value="country-settings" className="text-xs data-[state=active]:bg-muted-foreground data-[state=active]:text-white" data-testid="tab-country-settings">
                 <Settings className="w-3 h-3 mr-1" /> Country Settings
               </TabsTrigger>
-              <TabsTrigger value="system" className="text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-white" data-testid="tab-system">
+              <TabsTrigger value="system" className="text-xs data-[state=active]:bg-muted-foreground data-[state=active]:text-white" data-testid="tab-system">
                 <Activity className="w-3 h-3 mr-1" /> System
               </TabsTrigger>
-              <TabsTrigger value="audit" className="text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-white" data-testid="tab-audit">
+              <TabsTrigger value="audit" className="text-xs data-[state=active]:bg-muted-foreground data-[state=active]:text-white" data-testid="tab-audit">
                 <ScrollText className="w-3 h-3 mr-1" /> Audit Log
               </TabsTrigger>
-              <TabsTrigger value="api-keys" className="text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-white" data-testid="tab-api-keys">
+              <TabsTrigger value="api-keys" className="text-xs data-[state=active]:bg-muted-foreground data-[state=active]:text-white" data-testid="tab-api-keys">
                 <Key className="w-3 h-3 mr-1" /> API Keys
               </TabsTrigger>
-              <TabsTrigger value="data-quality" className="text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-white" data-testid="tab-data-quality">
+              <TabsTrigger value="data-quality" className="text-xs data-[state=active]:bg-muted-foreground data-[state=active]:text-white" data-testid="tab-data-quality">
                 <BarChart3 className="w-3 h-3 mr-1" /> Data Quality
               </TabsTrigger>
-              <TabsTrigger value="billing" className="text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-white" data-testid="tab-billing">
+              <TabsTrigger value="billing" className="text-xs data-[state=active]:bg-muted-foreground data-[state=active]:text-white" data-testid="tab-billing">
                 <DollarSign className="w-3 h-3 mr-1" /> Billing
               </TabsTrigger>
-              <TabsTrigger value="retention" className="text-xs data-[state=active]:bg-slate-700 data-[state=active]:text-white" data-testid="tab-retention">
+              <TabsTrigger value="retention" className="text-xs data-[state=active]:bg-muted-foreground data-[state=active]:text-white" data-testid="tab-retention">
                 <Archive className="w-3 h-3 mr-1" /> Retention
               </TabsTrigger>
             </TabsList>
@@ -314,7 +314,7 @@ export default function CountrySelectionPage() {
                       key={c.code}
                       onClick={() => handleSelect(c.name)}
                       disabled={isSwitching}
-                      className="flex flex-col p-4 rounded-xl border border-slate-700/50 bg-slate-800/50 hover:bg-slate-800 hover:border-slate-600 transition-all duration-200 group text-left"
+                      className="flex flex-col p-4 rounded-xl border border-border bg-foreground/50 hover:bg-foreground hover:border-border transition-all duration-200 group text-left"
                       data-testid={`button-select-country-${c.code}`}
                     >
                       <div className="flex items-start justify-between w-full mb-3">
@@ -329,35 +329,35 @@ export default function CountrySelectionPage() {
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-white">{c.name}</p>
-                            <p className="text-[10px] text-slate-400">{c.regulatoryBody}</p>
+                            <p className="text-[10px] text-muted-foreground">{c.regulatoryBody}</p>
                           </div>
                         </div>
                         {isSwitching && selectedCountry === c.name ? (
-                          <Loader2 className="w-4 h-4 text-slate-400 animate-spin shrink-0 mt-1" />
+                          <Loader2 className="w-4 h-4 text-muted-foreground animate-spin shrink-0 mt-1" />
                         ) : (
-                          <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-slate-300 transition-colors shrink-0 mt-1" />
+                          <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-muted-foreground transition-colors shrink-0 mt-1" />
                         )}
                       </div>
 
                       <div className="grid grid-cols-3 gap-2 mb-3 w-full">
-                        <div className="text-center p-1.5 rounded-lg bg-slate-900/50">
+                        <div className="text-center p-1.5 rounded-lg bg-foreground/50">
                           <p className="text-xs font-bold text-white">{detail?.borrowers?.toLocaleString() ?? "-"}</p>
-                          <p className="text-[9px] text-slate-500">Borrowers</p>
+                          <p className="text-[9px] text-muted-foreground">Borrowers</p>
                         </div>
-                        <div className="text-center p-1.5 rounded-lg bg-slate-900/50">
+                        <div className="text-center p-1.5 rounded-lg bg-foreground/50">
                           <p className="text-xs font-bold text-white">{detail?.accounts?.toLocaleString() ?? "-"}</p>
-                          <p className="text-[9px] text-slate-500">Accounts</p>
+                          <p className="text-[9px] text-muted-foreground">Accounts</p>
                         </div>
-                        <div className="text-center p-1.5 rounded-lg bg-slate-900/50">
+                        <div className="text-center p-1.5 rounded-lg bg-foreground/50">
                           <p className="text-xs font-bold text-white">{detail?.institutions ?? "-"}</p>
-                          <p className="text-[9px] text-slate-500">Institutions</p>
+                          <p className="text-[9px] text-muted-foreground">Institutions</p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-1.5 flex-wrap w-full">
                         {dpStatus && <ComplianceIndicator status={dpStatus} />}
                         {sataLevel && <SATAIndicator level={sataLevel} />}
-                        <Badge variant="outline" className="text-[9px] h-5 border-slate-600/50 text-slate-400">{c.currency}</Badge>
+                        <Badge variant="outline" className="text-[9px] h-5 border-border/50 text-muted-foreground">{c.currency}</Badge>
                       </div>
                     </button>
                   );
@@ -367,7 +367,7 @@ export default function CountrySelectionPage() {
 
             <TabsContent value="compliance" className="space-y-4 mt-0">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div className="rounded-xl border border-slate-700/50 bg-slate-800/50 p-4">
+                <div className="rounded-xl border border-border bg-foreground/50 p-4">
                   <div className="flex items-center gap-2 mb-4">
                     <Scale className="w-4 h-4 text-blue-400" />
                     <h3 className="text-sm font-semibold text-white">Data Protection Law Status</h3>
@@ -377,13 +377,13 @@ export default function CountrySelectionPage() {
                       const detail = countryDetails.find((d) => d.code === c.code);
                       const dpStatus = detail?.dataProtectionStatus || "none";
                       return (
-                        <div key={c.code} className="flex items-center justify-between py-1.5 border-b border-slate-700/30 last:border-0">
+                        <div key={c.code} className="flex items-center justify-between py-1.5 border-b border-border/30 last:border-0">
                           <div className="flex items-center gap-2">
                             <CountryDot code={c.code} size="sm" />
-                            <span className="text-xs text-slate-300">{c.name}</span>
+                            <span className="text-xs text-muted-foreground">{c.name}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] text-slate-500 hidden sm:inline max-w-[180px] truncate">{detail?.dataProtectionLaw || c.dataProtectionLaw}</span>
+                            <span className="text-[10px] text-muted-foreground hidden sm:inline max-w-[180px] truncate">{detail?.dataProtectionLaw || c.dataProtectionLaw}</span>
                             <ComplianceIndicator status={dpStatus} />
                           </div>
                         </div>
@@ -392,28 +392,28 @@ export default function CountrySelectionPage() {
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-slate-700/50 bg-slate-800/50 p-4">
+                <div className="rounded-xl border border-border bg-foreground/50 p-4">
                   <div className="flex items-center gap-2 mb-4">
                     <Globe className="w-4 h-4 text-emerald-400" />
                     <h3 className="text-sm font-semibold text-white">SATA Cross-Border Readiness</h3>
                   </div>
-                  <p className="text-[10px] text-slate-400 mb-3">Smart Africa Trust Alliance compliance for cross-border data sharing</p>
+                  <p className="text-[10px] text-muted-foreground mb-3">Smart Africa Trust Alliance compliance for cross-border data sharing</p>
                   <div className="space-y-2">
                     {countries.map((c) => {
                       const detail = countryDetails.find((d) => d.code === c.code);
                       const bureau = CREDIT_BUREAU_FRAMEWORK[c.code] || "N/A";
                       return (
-                        <div key={c.code} className="flex items-center justify-between py-1.5 border-b border-slate-700/30 last:border-0">
+                        <div key={c.code} className="flex items-center justify-between py-1.5 border-b border-border/30 last:border-0">
                           <div className="flex items-center gap-2">
                             <CountryDot code={c.code} size="sm" />
                             <div>
-                              <span className="text-xs text-slate-300">{c.name}</span>
-                              <p className="text-[9px] text-slate-500">{bureau}</p>
+                              <span className="text-xs text-muted-foreground">{c.name}</span>
+                              <p className="text-[9px] text-muted-foreground">{bureau}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-1.5">
                             {(detail?.regionalBlocs || []).map((b) => (
-                              <Badge key={b} variant="outline" className="text-[8px] h-4 px-1 border-slate-600/50 text-slate-500">{b}</Badge>
+                              <Badge key={b} variant="outline" className="text-[8px] h-4 px-1 border-border/50 text-muted-foreground">{b}</Badge>
                             ))}
                             {detail?.sataReadiness && <SATAIndicator level={detail.sataReadiness} />}
                           </div>
@@ -426,7 +426,7 @@ export default function CountrySelectionPage() {
 
               <ActivityFeed />
 
-              <div className="rounded-xl border border-slate-700/50 bg-slate-800/50 p-4">
+              <div className="rounded-xl border border-border bg-foreground/50 p-4">
                 <div className="flex items-center gap-2 mb-4">
                   <FileText className="w-4 h-4 text-amber-400" />
                   <h3 className="text-sm font-semibold text-white">SRS Requirements Traceability</h3>
@@ -441,10 +441,10 @@ export default function CountrySelectionPage() {
                     { label: "Enterprise", count: 11, compliant: 11, color: "text-teal-400" },
                     { label: "Data Quality", count: 5, compliant: 5, color: "text-indigo-400" },
                   ].map((cat) => (
-                    <div key={cat.label} className="text-center p-3 rounded-lg bg-slate-900/50">
+                    <div key={cat.label} className="text-center p-3 rounded-lg bg-foreground/50">
                       <p className={`text-lg font-bold ${cat.color}`}>{cat.compliant}/{cat.count}</p>
-                      <p className="text-[9px] text-slate-500 mt-0.5">{cat.label}</p>
-                      <div className="w-full h-1 rounded-full bg-slate-700 mt-2">
+                      <p className="text-[9px] text-muted-foreground mt-0.5">{cat.label}</p>
+                      <div className="w-full h-1 rounded-full bg-muted-foreground mt-2">
                         <div className="h-full rounded-full bg-emerald-500" style={{ width: `${(cat.compliant / cat.count) * 100}%` }} />
                       </div>
                     </div>
@@ -454,27 +454,27 @@ export default function CountrySelectionPage() {
             </TabsContent>
 
             <TabsContent value="features" className="mt-0">
-              <div className="rounded-xl border border-slate-700/50 bg-slate-800/50 overflow-hidden">
-                <div className="p-4 border-b border-slate-700/30">
+              <div className="rounded-xl border border-border bg-foreground/50 overflow-hidden">
+                <div className="p-4 border-b border-border/30">
                   <div className="flex items-center gap-2">
                     <Database className="w-4 h-4 text-violet-400" />
                     <h3 className="text-sm font-semibold text-white">Feature Support Matrix</h3>
                   </div>
-                  <p className="text-[10px] text-slate-400 mt-1">Capabilities available per jurisdiction</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">Capabilities available per jurisdiction</p>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
-                      <tr className="border-b border-slate-700/30">
-                        <th className="text-left p-3 text-slate-400 font-medium sticky left-0 bg-slate-800/90">Country</th>
-                        <th className="text-center p-3 text-slate-400 font-medium">Credit Scoring</th>
-                        <th className="text-center p-3 text-slate-400 font-medium">Regulatory Export</th>
-                        <th className="text-center p-3 text-slate-400 font-medium">Dispute Mgmt</th>
-                        <th className="text-center p-3 text-slate-400 font-medium">Consent Tracking</th>
-                        <th className="text-center p-3 text-slate-400 font-medium">Batch Upload</th>
-                        <th className="text-center p-3 text-slate-400 font-medium">API Access</th>
-                        <th className="text-center p-3 text-slate-400 font-medium">KYC Ready</th>
-                        <th className="text-center p-3 text-slate-400 font-medium">SATA</th>
+                      <tr className="border-b border-border/30">
+                        <th className="text-left p-3 text-muted-foreground font-medium sticky left-0 bg-foreground/90">Country</th>
+                        <th className="text-center p-3 text-muted-foreground font-medium">Credit Scoring</th>
+                        <th className="text-center p-3 text-muted-foreground font-medium">Regulatory Export</th>
+                        <th className="text-center p-3 text-muted-foreground font-medium">Dispute Mgmt</th>
+                        <th className="text-center p-3 text-muted-foreground font-medium">Consent Tracking</th>
+                        <th className="text-center p-3 text-muted-foreground font-medium">Batch Upload</th>
+                        <th className="text-center p-3 text-muted-foreground font-medium">API Access</th>
+                        <th className="text-center p-3 text-muted-foreground font-medium">KYC Ready</th>
+                        <th className="text-center p-3 text-muted-foreground font-medium">SATA</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -490,19 +490,19 @@ export default function CountrySelectionPage() {
                         const bogExport = features.find((f) => f.includes("BoG") || f.includes("BSL") || f.includes("Regulatory Export"));
                         const exportLabel = bogExport || "—";
                         const FeatureCheck = ({ enabled }: { enabled: boolean }) => (
-                          enabled ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mx-auto" /> : <AlertTriangle className="w-3.5 h-3.5 text-slate-600 mx-auto" />
+                          enabled ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mx-auto" /> : <AlertTriangle className="w-3.5 h-3.5 text-muted-foreground mx-auto" />
                         );
                         return (
-                          <tr key={c.code} className="border-b border-slate-700/20 hover:bg-slate-700/20">
-                            <td className="p-3 sticky left-0 bg-slate-800/90">
+                          <tr key={c.code} className="border-b border-border/20 hover:bg-muted-foreground/20">
+                            <td className="p-3 sticky left-0 bg-foreground/90">
                               <div className="flex items-center gap-2">
                                 <CountryDot code={c.code} size="sm" />
-                                <span className="text-slate-300 font-medium">{c.name}</span>
+                                <span className="text-muted-foreground font-medium">{c.name}</span>
                               </div>
                             </td>
                             <td className="text-center p-3"><FeatureCheck enabled={hasScoring} /></td>
                             <td className="text-center p-3">
-                              <span className={`text-[10px] font-medium ${bogExport ? "text-emerald-400" : "text-slate-500"}`}>
+                              <span className={`text-[10px] font-medium ${bogExport ? "text-emerald-400" : "text-muted-foreground"}`}>
                                 {exportLabel}
                               </span>
                             </td>
@@ -558,13 +558,13 @@ export default function CountrySelectionPage() {
         </div>
       </div>
 
-      <footer className="px-4 py-3 border-t border-slate-800/50 flex items-center justify-between">
-        <p className="text-[10px] text-slate-600">
+      <footer className="px-4 py-3 border-t border-border flex items-center justify-between">
+        <p className="text-[10px] text-muted-foreground">
           CDH v2.1 | Secured by Carlson Capital & Systems In Motion Limited
         </p>
         <div className="flex items-center gap-1.5">
-          <Lock className="w-3 h-3 text-slate-600" />
-          <span className="text-[10px] text-slate-600">World Bank General Principles | SATA Framework</span>
+          <Lock className="w-3 h-3 text-muted-foreground" />
+          <span className="text-[10px] text-muted-foreground">World Bank General Principles | SATA Framework</span>
         </div>
       </footer>
     </div>

@@ -433,7 +433,7 @@ export default function BatchUploadPage() {
       >
         {fileName ? (
           <div className="flex items-center justify-center gap-2">
-            <FileText className="w-5 h-5 text-green-600" />
+            <FileText className="w-5 h-5 text-green-600 dark:text-green-400" />
             <span className="text-sm font-medium">{fileName}</span>
             <Button
               size="icon"
@@ -503,7 +503,7 @@ export default function BatchUploadPage() {
                     <TableCell className="text-sm font-mono">{row.rowIndex + 1}</TableCell>
                     <TableCell>
                       {row.valid ? (
-                        <CheckCircle className="w-4 h-4 text-green-600" />
+                        <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
                       ) : (
                         <AlertTriangle className="w-4 h-4 text-destructive" />
                       )}
@@ -544,11 +544,11 @@ export default function BatchUploadPage() {
               <p className="text-xs text-muted-foreground">{t('batchUpload.submitted')}</p>
             </div>
             <div className="text-center p-3 bg-green-500/10 rounded-md">
-              <p className="text-lg font-bold text-green-600" data-testid={`text-success-count${testIdPrefix}`}>{result.successCount}</p>
+              <p className="text-lg font-bold text-green-600 dark:text-green-400" data-testid={`text-success-count${testIdPrefix}`}>{result.successCount}</p>
               <p className="text-xs text-muted-foreground">{t('batchUpload.succeeded')}</p>
             </div>
             <div className="text-center p-3 bg-red-500/10 rounded-md">
-              <p className="text-lg font-bold text-red-600" data-testid={`text-error-count${testIdPrefix}`}>{result.errorCount}</p>
+              <p className="text-lg font-bold text-red-600 dark:text-red-400" data-testid={`text-error-count${testIdPrefix}`}>{result.errorCount}</p>
               <p className="text-xs text-muted-foreground">{t('batchUpload.failed')}</p>
             </div>
           </div>
@@ -925,8 +925,8 @@ export default function BatchUploadPage() {
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right text-sm font-mono">{item.totalSubmitted}</TableCell>
-                            <TableCell className="text-right text-sm font-mono text-green-600">{item.successCount}</TableCell>
-                            <TableCell className="text-right text-sm font-mono text-red-600">{item.errorCount}</TableCell>
+                            <TableCell className="text-right text-sm font-mono text-green-600 dark:text-green-400">{item.successCount}</TableCell>
+                            <TableCell className="text-right text-sm font-mono text-red-600 dark:text-red-400">{item.errorCount}</TableCell>
                             <TableCell>
                               <Badge
                                 variant={rate === 100 ? "default" : rate >= 80 ? "secondary" : "destructive"}

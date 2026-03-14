@@ -34,11 +34,11 @@ const countries = SUPPORTED_COUNTRIES.map(c => c.name);
 
 function getCategoryColor(category: string) {
   switch (category) {
-    case "weather": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-    case "judicial": return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
-    case "payment_gateway": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
-    case "exchange_rate": return "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200";
-    default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
+    case "weather": return "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 dark:bg-blue-900 dark:text-blue-200";
+    case "judicial": return "bg-purple-100 dark:bg-purple-900 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
+    case "payment_gateway": return "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 dark:bg-green-900 dark:text-green-200";
+    case "exchange_rate": return "bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 dark:bg-amber-900 dark:text-amber-200";
+    default: return "bg-muted text-foreground dark:bg-foreground dark:text-muted-foreground";
   }
 }
 

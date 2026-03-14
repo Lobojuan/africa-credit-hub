@@ -462,7 +462,7 @@ export default function RegulatoryDashboardPage() {
                 <p className="text-[10px] text-muted-foreground font-medium">{t("regulatoryDashboard.defaulted", "Defaulted")}</p>
               </div>
               <div className="text-center">
-                <p className="text-lg font-bold text-red-800 dark:text-red-300" data-testid="text-written-off-count">{summary.statusBreakdown.writtenOff}</p>
+                <p className="text-lg font-bold text-red-800 dark:text-red-200 dark:text-red-300" data-testid="text-written-off-count">{summary.statusBreakdown.writtenOff}</p>
                 <p className="text-[10px] text-muted-foreground font-medium">{t("regulatoryDashboard.writtenOff", "Written Off")}</p>
               </div>
             </div>

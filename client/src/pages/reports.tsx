@@ -247,13 +247,13 @@ export default function ReportsPage() {
           <Button variant="outline" size="sm" data-testid="button-export-portfolio-csv" onClick={() => window.open("/api/reports/export?format=csv&type=portfolio", "_blank")}>
             <Download className="w-4 h-4 mr-2" />{t('reports.exportPortfolio')} (CSV)
           </Button>
-          <Button variant="outline" size="sm" className="border-emerald-600/40 text-emerald-700 dark:text-emerald-400" data-testid="button-export-portfolio-xlsx" onClick={() => window.open("/api/reports/export?format=xlsx&type=portfolio", "_blank")}>
+          <Button variant="outline" size="sm" className="border-emerald-600/40 text-emerald-700 dark:text-emerald-300 dark:text-emerald-400" data-testid="button-export-portfolio-xlsx" onClick={() => window.open("/api/reports/export?format=xlsx&type=portfolio", "_blank")}>
             <FileSpreadsheet className="w-4 h-4 mr-2" />{t('reports.exportPortfolio')} (Excel)
           </Button>
           <Button variant="outline" size="sm" data-testid="button-export-borrowers-csv" onClick={() => window.open("/api/reports/export?format=csv&type=borrowers", "_blank")}>
             <Download className="w-4 h-4 mr-2" />{t('reports.exportBorrowers')} (CSV)
           </Button>
-          <Button variant="outline" size="sm" className="border-emerald-600/40 text-emerald-700 dark:text-emerald-400" data-testid="button-export-borrowers-xlsx" onClick={() => window.open("/api/reports/export?format=xlsx&type=borrowers", "_blank")}>
+          <Button variant="outline" size="sm" className="border-emerald-600/40 text-emerald-700 dark:text-emerald-300 dark:text-emerald-400" data-testid="button-export-borrowers-xlsx" onClick={() => window.open("/api/reports/export?format=xlsx&type=borrowers", "_blank")}>
             <FileSpreadsheet className="w-4 h-4 mr-2" />{t('reports.exportBorrowers')} (Excel)
           </Button>
         </div>
@@ -262,7 +262,7 @@ export default function ReportsPage() {
       <Card className="border-2 border-primary/20 overflow-hidden" data-testid="card-generate-report">
         <div className="p-5 sm:p-6" style={{ background: "linear-gradient(135deg, hsl(175 55% 28%) 0%, hsl(175 45% 22%) 100%)" }}>
           <div className="flex items-center gap-3 text-white">
-            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-card/10 flex items-center justify-center">
               <FileText className="w-5 h-5" />
             </div>
             <div>
@@ -460,7 +460,7 @@ export default function ReportsPage() {
             <Button variant="outline" size="sm" data-testid="button-export-audit-csv" onClick={() => window.open("/api/reports/export?format=csv&type=audit", "_blank")}>
               <Download className="w-4 h-4 mr-2" />Export Audit Trail (CSV)
             </Button>
-            <Button variant="outline" size="sm" className="border-emerald-600/40 text-emerald-700 dark:text-emerald-400" data-testid="button-export-audit-xlsx" onClick={() => window.open("/api/reports/export?format=xlsx&type=audit", "_blank")}>
+            <Button variant="outline" size="sm" className="border-emerald-600/40 text-emerald-700 dark:text-emerald-300 dark:text-emerald-400" data-testid="button-export-audit-xlsx" onClick={() => window.open("/api/reports/export?format=xlsx&type=audit", "_blank")}>
               <FileSpreadsheet className="w-4 h-4 mr-2" />Export Audit Trail (Excel)
             </Button>
           </div>

@@ -39,7 +39,7 @@ function AgreementStatusBadge({ status }: { status: string }) {
     suspended: "border-amber-500/30 text-amber-400 bg-amber-500/10",
     expired: "border-red-500/30 text-red-400 bg-red-500/10",
   };
-  return <Badge variant="outline" className={`text-[9px] h-5 capitalize ${cls[status] || "border-slate-500/30 text-slate-400"}`}>{status}</Badge>;
+  return <Badge variant="outline" className={`text-[9px] h-5 capitalize ${cls[status] || "border-border text-muted-foreground"}`}>{status}</Badge>;
 }
 
 const DATA_TYPE_MAP: Record<string, string> = {
@@ -106,7 +106,7 @@ function CreateAgreementDialog({ open, onOpenChange }: { open: boolean; onOpenCh
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-slate-900 border-slate-700/50 text-white max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md bg-slate-900 border-slate-700/50 text-card-foreground max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-white">
             <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
@@ -118,58 +118,58 @@ function CreateAgreementDialog({ open, onOpenChange }: { open: boolean; onOpenCh
         <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(form); }} className="space-y-3" data-testid="form-cc-add-agreement">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs text-slate-400">Source Country</Label>
+              <Label className="text-xs text-muted-foreground">Source Country</Label>
               <Select value={form.sourceCountry} onValueChange={(v) => setForm({ ...form, sourceCountry: v })}>
-                <SelectTrigger data-testid="select-cc-source-country" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm"><SelectValue placeholder="Select..." /></SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700">
-                  {countries.map((c) => <SelectItem key={c.code} value={c.name} className="text-slate-300">{c.name}</SelectItem>)}
+                <SelectTrigger data-testid="select-cc-source-country" className="bg-muted border-border text-white mt-1 h-9 text-sm"><SelectValue placeholder="Select..." /></SelectTrigger>
+                <SelectContent className="bg-popover border-border">
+                  {countries.map((c) => <SelectItem key={c.code} value={c.name} className="text-muted-foreground">{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label className="text-xs text-slate-400">Target Country</Label>
+              <Label className="text-xs text-muted-foreground">Target Country</Label>
               <Select value={form.targetCountry} onValueChange={(v) => setForm({ ...form, targetCountry: v })}>
-                <SelectTrigger data-testid="select-cc-target-country" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm"><SelectValue placeholder="Select..." /></SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700">
-                  {countries.map((c) => <SelectItem key={c.code} value={c.name} className="text-slate-300">{c.name}</SelectItem>)}
+                <SelectTrigger data-testid="select-cc-target-country" className="bg-muted border-border text-white mt-1 h-9 text-sm"><SelectValue placeholder="Select..." /></SelectTrigger>
+                <SelectContent className="bg-popover border-border">
+                  {countries.map((c) => <SelectItem key={c.code} value={c.name} className="text-muted-foreground">{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs text-slate-400">Effective Date</Label>
-              <Input data-testid="input-cc-effective-date" type="date" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm" value={form.effectiveDate} onChange={(e) => setForm({ ...form, effectiveDate: e.target.value })} />
+              <Label className="text-xs text-muted-foreground">Effective Date</Label>
+              <Input data-testid="input-cc-effective-date" type="date" className="bg-muted border-border text-white mt-1 h-9 text-sm" value={form.effectiveDate} onChange={(e) => setForm({ ...form, effectiveDate: e.target.value })} />
             </div>
             <div>
-              <Label className="text-xs text-slate-400">Expiry Date</Label>
-              <Input data-testid="input-cc-expiry-date" type="date" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm" value={form.expiryDate} onChange={(e) => setForm({ ...form, expiryDate: e.target.value })} />
+              <Label className="text-xs text-muted-foreground">Expiry Date</Label>
+              <Input data-testid="input-cc-expiry-date" type="date" className="bg-muted border-border text-white mt-1 h-9 text-sm" value={form.expiryDate} onChange={(e) => setForm({ ...form, expiryDate: e.target.value })} />
             </div>
           </div>
           <div>
-            <Label className="text-xs text-slate-400">Legal Basis</Label>
-            <Input data-testid="input-cc-legal-basis" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm" value={form.legalBasis} onChange={(e) => setForm({ ...form, legalBasis: e.target.value })} placeholder="e.g. AfCFTA Protocol, Bilateral MOU" />
+            <Label className="text-xs text-muted-foreground">Legal Basis</Label>
+            <Input data-testid="input-cc-legal-basis" className="bg-muted border-border text-white mt-1 h-9 text-sm" value={form.legalBasis} onChange={(e) => setForm({ ...form, legalBasis: e.target.value })} placeholder="e.g. AfCFTA Protocol, Bilateral MOU" />
           </div>
           <div>
-            <Label className="text-xs text-slate-400">Regional Bloc</Label>
+            <Label className="text-xs text-muted-foreground">Regional Bloc</Label>
             <Select value={form.regionalBloc} onValueChange={(v) => setForm({ ...form, regionalBloc: v })}>
-              <SelectTrigger data-testid="select-cc-bloc" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm"><SelectValue placeholder="Select..." /></SelectTrigger>
-              <SelectContent className="bg-slate-900 border-slate-700">
-                <SelectItem value="none" className="text-slate-300">None</SelectItem>
-                <SelectItem value="ECOWAS" className="text-slate-300">ECOWAS</SelectItem>
-                <SelectItem value="EAC" className="text-slate-300">EAC</SelectItem>
-                <SelectItem value="SADC" className="text-slate-300">SADC</SelectItem>
-                <SelectItem value="COMESA" className="text-slate-300">COMESA</SelectItem>
-                <SelectItem value="AfCFTA" className="text-slate-300">AfCFTA</SelectItem>
+              <SelectTrigger data-testid="select-cc-bloc" className="bg-muted border-border text-white mt-1 h-9 text-sm"><SelectValue placeholder="Select..." /></SelectTrigger>
+              <SelectContent className="bg-popover border-border">
+                <SelectItem value="none" className="text-muted-foreground">None</SelectItem>
+                <SelectItem value="ECOWAS" className="text-muted-foreground">ECOWAS</SelectItem>
+                <SelectItem value="EAC" className="text-muted-foreground">EAC</SelectItem>
+                <SelectItem value="SADC" className="text-muted-foreground">SADC</SelectItem>
+                <SelectItem value="COMESA" className="text-muted-foreground">COMESA</SelectItem>
+                <SelectItem value="AfCFTA" className="text-muted-foreground">AfCFTA</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div>
-            <Label className="text-xs text-slate-400">Description</Label>
-            <Input data-testid="input-cc-description" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Brief description..." />
+            <Label className="text-xs text-muted-foreground">Description</Label>
+            <Input data-testid="input-cc-description" className="bg-muted border-border text-white mt-1 h-9 text-sm" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Brief description..." />
           </div>
           <div>
-            <Label className="text-xs text-slate-400 mb-2 block">Allowed Data Types</Label>
+            <Label className="text-xs text-muted-foreground mb-2 block">Allowed Data Types</Label>
             <div className="grid grid-cols-2 gap-1.5">
               {DATA_TYPES.map((dt) => (
                 <button
@@ -177,7 +177,7 @@ function CreateAgreementDialog({ open, onOpenChange }: { open: boolean; onOpenCh
                   type="button"
                   onClick={() => toggleDataType(dt)}
                   className={`text-[10px] px-2 py-1.5 rounded-md border transition-colors text-left
-                    ${form.allowedDataTypes.includes(dt) ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" : "border-slate-700/50 text-slate-400 hover:bg-slate-800"}`}
+                    ${form.allowedDataTypes.includes(dt) ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" : "border-border text-muted-foreground hover:bg-white/10"}`}
                   data-testid={`toggle-cc-dt-${dt.replace(/\s/g, '-').toLowerCase()}`}
                 >
                   {form.allowedDataTypes.includes(dt) ? <CheckCircle2 className="w-3 h-3 inline mr-1" /> : null}
@@ -245,7 +245,7 @@ function EditAgreementDialog({ agreement, open, onOpenChange }: { agreement: SAT
 
   return (
     <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); }}>
-      <DialogContent className="max-w-md bg-slate-900 border-slate-700/50 text-white max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md bg-slate-900 border-slate-700/50 text-card-foreground max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-white">
             <Pencil className="w-4 h-4 text-blue-400" /> Edit Agreement
@@ -254,58 +254,58 @@ function EditAgreementDialog({ agreement, open, onOpenChange }: { agreement: SAT
         <form onSubmit={(e) => { e.preventDefault(); editMutation.mutate(form); }} className="space-y-3" data-testid="form-cc-edit-agreement">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs text-slate-400">Source Country</Label>
+              <Label className="text-xs text-muted-foreground">Source Country</Label>
               <Select value={form.sourceCountry} onValueChange={(v) => setForm({ ...form, sourceCountry: v })}>
-                <SelectTrigger data-testid="select-cc-edit-source-country" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm"><SelectValue placeholder="Select..." /></SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700">
-                  {countries.map((c) => <SelectItem key={c.code} value={c.name} className="text-slate-300">{c.name}</SelectItem>)}
+                <SelectTrigger data-testid="select-cc-edit-source-country" className="bg-muted border-border text-white mt-1 h-9 text-sm"><SelectValue placeholder="Select..." /></SelectTrigger>
+                <SelectContent className="bg-popover border-border">
+                  {countries.map((c) => <SelectItem key={c.code} value={c.name} className="text-muted-foreground">{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label className="text-xs text-slate-400">Target Country</Label>
+              <Label className="text-xs text-muted-foreground">Target Country</Label>
               <Select value={form.targetCountry} onValueChange={(v) => setForm({ ...form, targetCountry: v })}>
-                <SelectTrigger data-testid="select-cc-edit-target-country" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm"><SelectValue placeholder="Select..." /></SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700">
-                  {countries.map((c) => <SelectItem key={c.code} value={c.name} className="text-slate-300">{c.name}</SelectItem>)}
+                <SelectTrigger data-testid="select-cc-edit-target-country" className="bg-muted border-border text-white mt-1 h-9 text-sm"><SelectValue placeholder="Select..." /></SelectTrigger>
+                <SelectContent className="bg-popover border-border">
+                  {countries.map((c) => <SelectItem key={c.code} value={c.name} className="text-muted-foreground">{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs text-slate-400">Effective Date</Label>
-              <Input data-testid="input-cc-edit-effective-date" type="date" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm" value={form.effectiveDate} onChange={(e) => setForm({ ...form, effectiveDate: e.target.value })} />
+              <Label className="text-xs text-muted-foreground">Effective Date</Label>
+              <Input data-testid="input-cc-edit-effective-date" type="date" className="bg-muted border-border text-white mt-1 h-9 text-sm" value={form.effectiveDate} onChange={(e) => setForm({ ...form, effectiveDate: e.target.value })} />
             </div>
             <div>
-              <Label className="text-xs text-slate-400">Expiry Date</Label>
-              <Input data-testid="input-cc-edit-expiry-date" type="date" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm" value={form.expiryDate} onChange={(e) => setForm({ ...form, expiryDate: e.target.value })} />
+              <Label className="text-xs text-muted-foreground">Expiry Date</Label>
+              <Input data-testid="input-cc-edit-expiry-date" type="date" className="bg-muted border-border text-white mt-1 h-9 text-sm" value={form.expiryDate} onChange={(e) => setForm({ ...form, expiryDate: e.target.value })} />
             </div>
           </div>
           <div>
-            <Label className="text-xs text-slate-400">Legal Basis</Label>
-            <Input data-testid="input-cc-edit-legal-basis" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm" value={form.legalBasis} onChange={(e) => setForm({ ...form, legalBasis: e.target.value })} placeholder="e.g. AfCFTA Protocol, Bilateral MOU" />
+            <Label className="text-xs text-muted-foreground">Legal Basis</Label>
+            <Input data-testid="input-cc-edit-legal-basis" className="bg-muted border-border text-white mt-1 h-9 text-sm" value={form.legalBasis} onChange={(e) => setForm({ ...form, legalBasis: e.target.value })} placeholder="e.g. AfCFTA Protocol, Bilateral MOU" />
           </div>
           <div>
-            <Label className="text-xs text-slate-400">Regional Bloc</Label>
+            <Label className="text-xs text-muted-foreground">Regional Bloc</Label>
             <Select value={form.regionalBloc || "none"} onValueChange={(v) => setForm({ ...form, regionalBloc: v })}>
-              <SelectTrigger data-testid="select-cc-edit-bloc" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm"><SelectValue placeholder="Select..." /></SelectTrigger>
-              <SelectContent className="bg-slate-900 border-slate-700">
-                <SelectItem value="none" className="text-slate-300">None</SelectItem>
-                <SelectItem value="ECOWAS" className="text-slate-300">ECOWAS</SelectItem>
-                <SelectItem value="EAC" className="text-slate-300">EAC</SelectItem>
-                <SelectItem value="SADC" className="text-slate-300">SADC</SelectItem>
-                <SelectItem value="COMESA" className="text-slate-300">COMESA</SelectItem>
-                <SelectItem value="AfCFTA" className="text-slate-300">AfCFTA</SelectItem>
+              <SelectTrigger data-testid="select-cc-edit-bloc" className="bg-muted border-border text-white mt-1 h-9 text-sm"><SelectValue placeholder="Select..." /></SelectTrigger>
+              <SelectContent className="bg-popover border-border">
+                <SelectItem value="none" className="text-muted-foreground">None</SelectItem>
+                <SelectItem value="ECOWAS" className="text-muted-foreground">ECOWAS</SelectItem>
+                <SelectItem value="EAC" className="text-muted-foreground">EAC</SelectItem>
+                <SelectItem value="SADC" className="text-muted-foreground">SADC</SelectItem>
+                <SelectItem value="COMESA" className="text-muted-foreground">COMESA</SelectItem>
+                <SelectItem value="AfCFTA" className="text-muted-foreground">AfCFTA</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div>
-            <Label className="text-xs text-slate-400">Description</Label>
-            <Input data-testid="input-cc-edit-description" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Brief description..." />
+            <Label className="text-xs text-muted-foreground">Description</Label>
+            <Input data-testid="input-cc-edit-description" className="bg-muted border-border text-white mt-1 h-9 text-sm" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Brief description..." />
           </div>
           <div>
-            <Label className="text-xs text-slate-400 mb-2 block">Allowed Data Types</Label>
+            <Label className="text-xs text-muted-foreground mb-2 block">Allowed Data Types</Label>
             <div className="grid grid-cols-2 gap-1.5">
               {DATA_TYPES.map((dt) => (
                 <button
@@ -313,7 +313,7 @@ function EditAgreementDialog({ agreement, open, onOpenChange }: { agreement: SAT
                   type="button"
                   onClick={() => toggleDataType(dt)}
                   className={`text-[10px] px-2 py-1.5 rounded-md border transition-colors text-left
-                    ${form.allowedDataTypes.includes(dt) ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" : "border-slate-700/50 text-slate-400 hover:bg-slate-800"}`}
+                    ${form.allowedDataTypes.includes(dt) ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" : "border-border text-muted-foreground hover:bg-white/10"}`}
                   data-testid={`toggle-cc-edit-dt-${dt.replace(/\s/g, '-').toLowerCase()}`}
                 >
                   {form.allowedDataTypes.includes(dt) ? <CheckCircle2 className="w-3 h-3 inline mr-1" /> : null}
@@ -428,41 +428,41 @@ export function CommandCenterSettingsTab() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="rounded-xl border border-slate-700/50 bg-slate-800/50 p-3 text-center">
+        <div className="rounded-xl border border-border bg-white/5 p-3 text-center">
           <p className="text-xl font-bold text-white" data-testid="text-total-agreements">{agreements.length}</p>
-          <p className="text-[10px] text-slate-500">Total Agreements</p>
+          <p className="text-[10px] text-muted-foreground">Total Agreements</p>
         </div>
-        <div className="rounded-xl border border-slate-700/50 bg-slate-800/50 p-3 text-center">
+        <div className="rounded-xl border border-border bg-white/5 p-3 text-center">
           <p className="text-xl font-bold text-emerald-400" data-testid="text-active-agreements">{activeAgreements}</p>
-          <p className="text-[10px] text-slate-500">Active</p>
+          <p className="text-[10px] text-muted-foreground">Active</p>
         </div>
-        <div className="rounded-xl border border-slate-700/50 bg-slate-800/50 p-3 text-center">
+        <div className="rounded-xl border border-border bg-white/5 p-3 text-center">
           <p className="text-xl font-bold text-blue-400">{draftAgreements}</p>
-          <p className="text-[10px] text-slate-500">Draft</p>
+          <p className="text-[10px] text-muted-foreground">Draft</p>
         </div>
-        <div className="rounded-xl border border-slate-700/50 bg-slate-800/50 p-3 text-center">
+        <div className="rounded-xl border border-border bg-white/5 p-3 text-center">
           <p className="text-xl font-bold text-amber-400">{suspendedAgreements}</p>
-          <p className="text-[10px] text-slate-500">Suspended</p>
+          <p className="text-[10px] text-muted-foreground">Suspended</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-1 space-y-3">
-          <div className="rounded-xl border border-slate-700/50 bg-slate-800/50 p-4">
+          <div className="rounded-xl border border-border bg-white/5 p-4">
             <div className="flex items-center gap-2 mb-3">
               <Globe className="w-4 h-4 text-blue-400" />
               <h3 className="text-sm font-semibold text-white">Country View</h3>
             </div>
-            <p className="text-[10px] text-slate-400 mb-3">Select a country to view its configuration and agreements</p>
+            <p className="text-[10px] text-muted-foreground mb-3">Select a country to view its configuration and agreements</p>
             <div className="space-y-1">
               <button
                 onClick={() => setSelectedCountry(null)}
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-colors ${!selectedCountry ? "bg-blue-500/20 text-blue-300 border border-blue-500/30" : "text-slate-300 hover:bg-slate-700/50"}`}
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-colors ${!selectedCountry ? "bg-blue-500/20 text-blue-300 border border-blue-500/30" : "text-muted-foreground hover:bg-white/10/50"}`}
                 data-testid="button-cc-all-countries"
               >
                 <Globe className="w-3.5 h-3.5" />
                 All Countries
-                <span className="ml-auto text-[10px] text-slate-500">{agreements.length}</span>
+                <span className="ml-auto text-[10px] text-muted-foreground">{agreements.length}</span>
               </button>
               {countries.map((c) => {
                 const count = agreements.filter((a) => a.sourceCountry === c.name || a.targetCountry === c.name).length;
@@ -470,12 +470,12 @@ export function CommandCenterSettingsTab() {
                   <button
                     key={c.code}
                     onClick={() => setSelectedCountry(c.name)}
-                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-colors ${selectedCountry === c.name ? "bg-blue-500/20 text-blue-300 border border-blue-500/30" : "text-slate-300 hover:bg-slate-700/50"}`}
+                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-colors ${selectedCountry === c.name ? "bg-blue-500/20 text-blue-300 border border-blue-500/30" : "text-muted-foreground hover:bg-white/10/50"}`}
                     data-testid={`button-cc-settings-country-${c.code}`}
                   >
                     <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: `hsl(${c.theme.primary})` }} />
                     {c.name}
-                    {count > 0 && <span className="ml-auto text-[10px] text-slate-500">{count}</span>}
+                    {count > 0 && <span className="ml-auto text-[10px] text-muted-foreground">{count}</span>}
                   </button>
                 );
               })}
@@ -485,87 +485,87 @@ export function CommandCenterSettingsTab() {
 
         <div className="lg:col-span-2 space-y-4">
           {selectedConfig && (
-            <div className="rounded-xl border border-slate-700/50 bg-slate-800/50 p-4">
+            <div className="rounded-xl border border-border bg-white/5 p-4">
               <div className="flex items-center gap-2 mb-3">
                 <Settings className="w-4 h-4 text-violet-400" />
                 <h3 className="text-sm font-semibold text-white">{selectedConfig.name} Configuration</h3>
                 {updateSettingsMutation.isPending && <Loader2 className="w-3 h-3 text-blue-400 animate-spin" />}
               </div>
               <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="p-3 rounded-lg bg-slate-900/50">
-                  <p className="text-[10px] text-slate-500 mb-1">Regulatory Body</p>
+                <div className="p-3 rounded-lg bg-white/5">
+                  <p className="text-[10px] text-muted-foreground mb-1">Regulatory Body</p>
                   <Input
                     data-testid="input-cc-country-regulator"
-                    className="bg-transparent border-slate-700/50 text-white h-7 text-xs px-2"
+                    className="bg-transparent border-border text-white h-7 text-xs px-2"
                     defaultValue={selectedSettings?.regulatoryBody || selectedConfig.regulatoryBody || ""}
                     onBlur={(e) => updateMetadataField("regulatoryBody", e.target.value)}
                     key={`reg-${selectedConfig.code}-${selectedSettings?.updatedAt}`}
                   />
                 </div>
-                <div className="p-3 rounded-lg bg-slate-900/50">
-                  <p className="text-[10px] text-slate-500 mb-1">Currency</p>
+                <div className="p-3 rounded-lg bg-white/5">
+                  <p className="text-[10px] text-muted-foreground mb-1">Currency</p>
                   <p className="text-sm font-semibold text-white" data-testid="text-cc-country-currency">{selectedConfig.currency}</p>
                 </div>
-                <div className="p-3 rounded-lg bg-slate-900/50">
-                  <p className="text-[10px] text-slate-500 mb-1">Data Protection Law</p>
+                <div className="p-3 rounded-lg bg-white/5">
+                  <p className="text-[10px] text-muted-foreground mb-1">Data Protection Law</p>
                   <Input
                     data-testid="input-cc-country-dp-law"
-                    className="bg-transparent border-slate-700/50 text-white h-7 text-xs px-2"
+                    className="bg-transparent border-border text-white h-7 text-xs px-2"
                     defaultValue={selectedSettings?.dataProtectionLaw || selectedConfig.dataProtectionLaw || ""}
                     onBlur={(e) => updateMetadataField("dataProtectionLaw", e.target.value)}
                     key={`dpl-${selectedConfig.code}-${selectedSettings?.updatedAt}`}
                   />
                 </div>
-                <div className="p-3 rounded-lg bg-slate-900/50">
-                  <p className="text-[10px] text-slate-500 mb-1">Data Protection Status</p>
+                <div className="p-3 rounded-lg bg-white/5">
+                  <p className="text-[10px] text-muted-foreground mb-1">Data Protection Status</p>
                   <Select
                     value={selectedSettings?.dataProtectionStatus || "none"}
                     onValueChange={(v) => updateMetadataField("dataProtectionStatus", v)}
                   >
-                    <SelectTrigger data-testid="select-cc-country-dp-status" className="bg-transparent border-slate-700/50 text-white h-7 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-slate-900 border-slate-700">
+                    <SelectTrigger data-testid="select-cc-country-dp-status" className="bg-transparent border-border text-white h-7 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border-border">
                       <SelectItem value="enacted" className="text-emerald-400 text-xs">Enacted</SelectItem>
                       <SelectItem value="draft" className="text-amber-400 text-xs">Draft</SelectItem>
                       <SelectItem value="none" className="text-red-400 text-xs">None</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="p-3 rounded-lg bg-slate-900/50">
-                  <p className="text-[10px] text-slate-500 mb-1">SATA Readiness</p>
+                <div className="p-3 rounded-lg bg-white/5">
+                  <p className="text-[10px] text-muted-foreground mb-1">SATA Readiness</p>
                   <Select
                     value={selectedSettings?.sataReadiness || "planned"}
                     onValueChange={(v) => updateMetadataField("sataReadiness", v)}
                   >
-                    <SelectTrigger data-testid="select-cc-country-sata-readiness" className="bg-transparent border-slate-700/50 text-white h-7 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-slate-900 border-slate-700">
+                    <SelectTrigger data-testid="select-cc-country-sata-readiness" className="bg-transparent border-border text-white h-7 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border-border">
                       <SelectItem value="ready" className="text-emerald-400 text-xs">Ready</SelectItem>
                       <SelectItem value="partial" className="text-blue-400 text-xs">Partial</SelectItem>
-                      <SelectItem value="planned" className="text-slate-400 text-xs">Planned</SelectItem>
+                      <SelectItem value="planned" className="text-muted-foreground text-xs">Planned</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="p-3 rounded-lg bg-slate-900/50">
-                  <p className="text-[10px] text-slate-500 mb-1">Country Code</p>
+                <div className="p-3 rounded-lg bg-white/5">
+                  <p className="text-[10px] text-muted-foreground mb-1">Country Code</p>
                   <p className="text-sm font-semibold text-white">{selectedConfig.code}</p>
                 </div>
               </div>
 
               <div>
-                <p className="text-xs font-medium text-slate-400 mb-2">Feature Configuration</p>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Feature Configuration</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {FEATURE_DEFINITIONS.map((feat) => {
                     const enabled = (selectedSettings?.enabledFeatures || []).includes(feat.key);
                     const Icon = feat.icon;
                     return (
-                      <div key={feat.key} className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-colors ${enabled ? "border-emerald-500/20 bg-emerald-500/5" : "border-slate-700/30 bg-slate-900/30"}`}
+                      <div key={feat.key} className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-colors ${enabled ? "border-emerald-500/20 bg-emerald-500/5" : "border-border/30 bg-white/[0.03]"}`}
                         onClick={() => toggleFeature(feat.key)}
                         data-testid={`feature-${feat.key}`}>
-                        <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${enabled ? "bg-emerald-500/20" : "bg-slate-700/50"}`}>
-                          <Icon className={`w-3.5 h-3.5 ${enabled ? "text-emerald-400" : "text-slate-500"}`} />
+                        <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 ${enabled ? "bg-emerald-500/20" : "bg-muted-foreground/50"}`}>
+                          <Icon className={`w-3.5 h-3.5 ${enabled ? "text-emerald-400" : "text-muted-foreground"}`} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className={`text-xs font-medium ${enabled ? "text-emerald-300" : "text-slate-400"}`}>{feat.label}</p>
-                          <p className="text-[10px] text-slate-500 truncate">{feat.description}</p>
+                          <p className={`text-xs font-medium ${enabled ? "text-emerald-300" : "text-muted-foreground"}`}>{feat.label}</p>
+                          <p className="text-[10px] text-muted-foreground truncate">{feat.description}</p>
                         </div>
                         <Switch checked={enabled} onClick={(e) => e.stopPropagation()} onCheckedChange={() => toggleFeature(feat.key)} className="shrink-0 data-[state=checked]:bg-emerald-600" data-testid={`switch-feature-${feat.key}`} />
                       </div>
@@ -576,14 +576,14 @@ export function CommandCenterSettingsTab() {
             </div>
           )}
 
-          <div className="rounded-xl border border-slate-700/50 bg-slate-800/50 p-4">
+          <div className="rounded-xl border border-border bg-white/5 p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Link2 className="w-4 h-4 text-emerald-400" />
                 <h3 className="text-sm font-semibold text-white">
                   {selectedCountry ? `${selectedCountry} SATA Agreements` : "All SATA Agreements"}
                 </h3>
-                <Badge variant="outline" className="text-[9px] h-5 border-slate-600/50 text-slate-400">{countryAgreements.length}</Badge>
+                <Badge variant="outline" className="text-[9px] h-5 border-border/50 text-muted-foreground">{countryAgreements.length}</Badge>
               </div>
               <Button size="sm" className="h-7 text-xs" onClick={() => setCreateAgreementOpen(true)} data-testid="button-cc-add-agreement">
                 <Plus className="w-3 h-3 mr-1" /> New Agreement
@@ -591,26 +591,26 @@ export function CommandCenterSettingsTab() {
             </div>
 
             {agreementsLoading ? (
-              <div className="p-8 text-center"><Loader2 className="w-5 h-5 text-slate-400 animate-spin mx-auto" /></div>
+              <div className="p-8 text-center"><Loader2 className="w-5 h-5 text-muted-foreground animate-spin mx-auto" /></div>
             ) : countryAgreements.length === 0 ? (
               <div className="p-8 text-center">
-                <Link2 className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-                <p className="text-xs text-slate-500">No agreements found</p>
-                <p className="text-[10px] text-slate-600 mt-1">Create a new SATA data sharing agreement to enable cross-border operations</p>
+                <Link2 className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                <p className="text-xs text-muted-foreground">No agreements found</p>
+                <p className="text-[10px] text-muted-foreground mt-1">Create a new SATA data sharing agreement to enable cross-border operations</p>
               </div>
             ) : (
               <div className="space-y-2">
                 {countryAgreements.map((a) => (
-                  <div key={a.id} className="flex items-center gap-3 p-3 rounded-lg border border-slate-700/30 hover:bg-slate-700/20 transition-colors" data-testid={`row-cc-agreement-${a.id}`}>
+                  <div key={a.id} className="flex items-center gap-3 p-3 rounded-lg border border-border/30 hover:bg-white/10 transition-colors" data-testid={`row-cc-agreement-${a.id}`}>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-xs font-medium text-white">{a.sourceCountry}</span>
-                        <ArrowRight className="w-3 h-3 text-slate-500" />
+                        <ArrowRight className="w-3 h-3 text-muted-foreground" />
                         <span className="text-xs font-medium text-white">{a.targetCountry}</span>
                         <AgreementStatusBadge status={a.status} />
-                        {a.regionalBloc && <Badge variant="outline" className="text-[8px] h-4 px-1 border-slate-600/50 text-slate-500">{a.regionalBloc}</Badge>}
+                        {a.regionalBloc && <Badge variant="outline" className="text-[8px] h-4 px-1 border-border/50 text-muted-foreground">{a.regionalBloc}</Badge>}
                       </div>
-                      <div className="flex items-center gap-3 text-[10px] text-slate-500">
+                      <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
                         {a.legalBasis && <span>{a.legalBasis}</span>}
                         {a.effectiveDate && (
                           <span className="flex items-center gap-1">
@@ -648,14 +648,14 @@ export function CommandCenterSettingsTab() {
                       )}
                       <button
                         onClick={() => { setEditAgreement(a); setEditAgreementOpen(true); }}
-                        className="p-1.5 rounded-md hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+                        className="p-1.5 rounded-md hover:bg-white/10 text-muted-foreground hover:text-white transition-colors"
                         data-testid={`button-cc-edit-agreement-${a.id}`}
                       >
                         <Pencil className="w-3 h-3" />
                       </button>
                       <button
                         onClick={() => setDeleteAgreement(a)}
-                        className="p-1.5 rounded-md hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors"
+                        className="p-1.5 rounded-md hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors"
                         data-testid={`button-cc-delete-agreement-${a.id}`}
                       >
                         <Trash2 className="w-3 h-3" />
@@ -673,15 +673,15 @@ export function CommandCenterSettingsTab() {
       <EditAgreementDialog agreement={editAgreement} open={editAgreementOpen} onOpenChange={(v) => { setEditAgreementOpen(v); if (!v) setEditAgreement(null); }} />
 
       <Dialog open={!!deleteAgreement} onOpenChange={(v) => !v && setDeleteAgreement(null)}>
-        <DialogContent className="bg-slate-900 border-slate-700/50 text-white">
+        <DialogContent className="bg-slate-900 border-slate-700/50 text-card-foreground">
           <DialogHeader>
             <DialogTitle className="text-white">Delete Agreement</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-slate-400" data-testid="text-cc-delete-agreement-confirm">
+          <p className="text-sm text-muted-foreground" data-testid="text-cc-delete-agreement-confirm">
             Are you sure you want to delete the agreement between <span className="text-white font-medium">{deleteAgreement?.sourceCountry}</span> and <span className="text-white font-medium">{deleteAgreement?.targetCountry}</span>?
           </p>
           <DialogFooter className="gap-2">
-            <Button variant="ghost" onClick={() => setDeleteAgreement(null)} className="text-slate-400" data-testid="button-cc-cancel-delete-agreement">Cancel</Button>
+            <Button variant="ghost" onClick={() => setDeleteAgreement(null)} className="text-muted-foreground" data-testid="button-cc-cancel-delete-agreement">Cancel</Button>
             <Button variant="destructive" disabled={deleteAgreementMutation.isPending} onClick={() => deleteAgreement && deleteAgreementMutation.mutate(deleteAgreement.id)} data-testid="button-cc-confirm-delete-agreement">
               {deleteAgreementMutation.isPending ? "Deleting..." : "Delete Agreement"}
             </Button>

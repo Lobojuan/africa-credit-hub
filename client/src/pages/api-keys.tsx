@@ -121,7 +121,7 @@ export default function ApiKeysPage() {
                   <div className="p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
                     <p className="text-sm font-medium text-green-800 dark:text-green-200 mb-2">{t("apiKeys.keyGeneratedWarning")}</p>
                     <div className="flex items-center gap-2">
-                      <code className="flex-1 text-xs bg-white dark:bg-black p-2 rounded font-mono break-all" data-testid="text-generated-key">
+                      <code className="flex-1 text-xs bg-card dark:bg-black p-2 rounded font-mono break-all" data-testid="text-generated-key">
                         {showKey ? generatedKey : "••••••••••••••••••••••••••••"}
                       </code>
                       <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setShowKey(!showKey)}>

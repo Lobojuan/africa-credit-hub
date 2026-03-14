@@ -220,8 +220,8 @@ export default function BorrowersPage() {
               {fuzzyMatches.length > 0 && (
                 <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20" data-testid="alert-fuzzy-matches">
                   <div className="flex items-center gap-2 mb-2">
-                    <AlertTriangle className="w-4 h-4 text-amber-600" />
-                    <p className="text-sm font-medium text-amber-700 dark:text-amber-400">{t("borrowers.potentialDuplicates", { count: fuzzyMatches.length })}</p>
+                    <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                    <p className="text-sm font-medium text-amber-700 dark:text-amber-300 dark:text-amber-400">{t("borrowers.potentialDuplicates", { count: fuzzyMatches.length })}</p>
                   </div>
                   <div className="space-y-1.5 max-h-32 overflow-auto">
                     {fuzzyMatches.slice(0, 5).map((m: any) => (

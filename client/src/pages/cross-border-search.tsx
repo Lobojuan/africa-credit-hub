@@ -106,7 +106,7 @@ export default function CrossBorderSearchPage() {
                     <SelectItem key={c} value={c}>
                       <span className="flex items-center gap-1.5">
                         {c}
-                        {connectedCountries.has(c) && <Badge variant="secondary" className="text-[9px] py-0 px-1 bg-green-100 text-green-700">Active Agreement</Badge>}
+                        {connectedCountries.has(c) && <Badge variant="secondary" className="text-[9px] py-0 px-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">Active Agreement</Badge>}
                       </span>
                     </SelectItem>
                   ))}
@@ -142,8 +142,8 @@ export default function CrossBorderSearchPage() {
           )}
 
           {activeAgreements.length === 0 && (
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-              <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+              <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
               <p className="text-xs text-amber-700 dark:text-amber-300">
                 No active data sharing agreements found. Cross-border searches require an active bilateral SATA agreement. Go to Cross-Border Agreements to create one.
               </p>
@@ -199,7 +199,7 @@ export default function CrossBorderSearchPage() {
                   </div>
                   <div className="text-right shrink-0">
                     {r.national_id && <p className="text-xs text-muted-foreground font-mono">{r.national_id}</p>}
-                    <Badge variant="outline" className="text-[9px] border-amber-300 text-amber-700 dark:text-amber-400 mt-1">Read-Only</Badge>
+                    <Badge variant="outline" className="text-[9px] border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 dark:text-amber-400 mt-1">Read-Only</Badge>
                   </div>
                 </div>
               </CardContent>

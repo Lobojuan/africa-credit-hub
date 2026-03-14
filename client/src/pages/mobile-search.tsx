@@ -86,7 +86,7 @@ function MobileLogin({ onLogin }: { onLogin: (u: string, p: string) => Promise<v
       <div className="absolute bottom-0 left-0 w-96 h-96 rounded-full bg-[hsl(175,55%,40%,0.06)] blur-3xl" />
 
       <div className={`relative z-10 flex flex-col items-center w-full max-w-sm transition-all duration-700 ease-out ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
-        <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center mb-5 border border-white/10">
+        <div className="w-16 h-16 rounded-2xl bg-card/10 backdrop-blur-sm flex items-center justify-center mb-5 border border-white/10">
           <ShieldCheck className="w-8 h-8 text-[hsl(43,80%,55%)]" />
         </div>
         <h1 className="text-2xl font-bold text-white mb-1 tracking-tight" data-testid="text-login-title">{getBrandTitle()}</h1>
@@ -103,7 +103,7 @@ function MobileLogin({ onLogin }: { onLogin: (u: string, p: string) => Promise<v
             <Input
               data-testid="input-mobile-username"
               placeholder="Username"
-              className="h-12 text-base rounded-xl pl-11 bg-white/10 border-white/10 text-white placeholder:text-white/40 focus:bg-white/15 focus:border-white/20 transition-colors"
+              className="h-12 text-base rounded-xl pl-11 bg-card/10 border-white/10 text-white placeholder:text-white/40 focus:bg-card/15 focus:border-white/20 transition-colors"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               autoCapitalize="off"
@@ -116,7 +116,7 @@ function MobileLogin({ onLogin }: { onLogin: (u: string, p: string) => Promise<v
               data-testid="input-mobile-password"
               type={show ? "text" : "password"}
               placeholder="Password"
-              className="h-12 text-base rounded-xl pl-11 pr-12 bg-white/10 border-white/10 text-white placeholder:text-white/40 focus:bg-white/15 focus:border-white/20 transition-colors"
+              className="h-12 text-base rounded-xl pl-11 pr-12 bg-card/10 border-white/10 text-white placeholder:text-white/40 focus:bg-card/15 focus:border-white/20 transition-colors"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
@@ -206,7 +206,7 @@ export default function MobileSearchPage() {
       <header className="sticky top-0 z-50 bg-gradient-to-r from-[hsl(175,55%,28%)] to-[hsl(175,45%,22%)] text-white px-4 pt-3 pb-4">
         <div className="flex items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-card/10 flex items-center justify-center shrink-0">
               <ShieldCheck className="w-4 h-4 text-[hsl(43,80%,55%)]" />
             </div>
             <div className="min-w-0">
@@ -230,7 +230,7 @@ export default function MobileSearchPage() {
             ref={inputRef}
             data-testid="input-mobile-search"
             placeholder="Search name or ID..."
-            className="pl-10 pr-9 h-11 text-base rounded-xl bg-white/12 border-white/10 text-white placeholder:text-white/40 focus:bg-white/18 focus:border-white/20 transition-colors"
+            className="pl-10 pr-9 h-11 text-base rounded-xl bg-card/12 border-white/10 text-white placeholder:text-white/40 focus:bg-card/18 focus:border-white/20 transition-colors"
             value={query}
             onChange={(e) => search(e.target.value)}
             autoComplete="off"

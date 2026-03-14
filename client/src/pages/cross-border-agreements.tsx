@@ -32,10 +32,10 @@ const REGIONAL_BLOCS = ["ECOWAS", "EAC", "SADC", "COMESA", "AU", "CEMAC", "UEMOA
 
 function statusBadge(status: string) {
   const map: Record<string, { color: string; icon: any }> = {
-    draft: { color: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300", icon: Clock },
-    active: { color: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300", icon: CheckCircle2 },
-    suspended: { color: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300", icon: AlertTriangle },
-    expired: { color: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300", icon: XCircle },
+    draft: { color: "bg-muted text-foreground dark:bg-foreground dark:text-muted-foreground", icon: Clock },
+    active: { color: "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 dark:bg-green-900 dark:text-green-300", icon: CheckCircle2 },
+    suspended: { color: "bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 dark:bg-amber-900 dark:text-amber-300", icon: AlertTriangle },
+    expired: { color: "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 dark:bg-red-900 dark:text-red-300", icon: XCircle },
   };
   const s = map[status] || map.draft;
   const Icon = s.icon;
@@ -193,8 +193,8 @@ export default function CrossBorderAgreementsPage() {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card><CardContent className="p-4 text-center"><p className="text-2xl font-bold" data-testid="stat-total">{agreements.length}</p><p className="text-xs text-muted-foreground">Total Agreements</p></CardContent></Card>
-        <Card><CardContent className="p-4 text-center"><p className="text-2xl font-bold text-green-600" data-testid="stat-active">{activeAgreements.length}</p><p className="text-xs text-muted-foreground">Active</p></CardContent></Card>
-        <Card><CardContent className="p-4 text-center"><p className="text-2xl font-bold text-gray-500" data-testid="stat-draft">{draftAgreements.length}</p><p className="text-xs text-muted-foreground">Draft</p></CardContent></Card>
+        <Card><CardContent className="p-4 text-center"><p className="text-2xl font-bold text-green-600 dark:text-green-400" data-testid="stat-active">{activeAgreements.length}</p><p className="text-xs text-muted-foreground">Active</p></CardContent></Card>
+        <Card><CardContent className="p-4 text-center"><p className="text-2xl font-bold text-muted-foreground" data-testid="stat-draft">{draftAgreements.length}</p><p className="text-xs text-muted-foreground">Draft</p></CardContent></Card>
         <Card><CardContent className="p-4 text-center"><p className="text-2xl font-bold text-amber-500" data-testid="stat-other">{otherAgreements.length}</p><p className="text-xs text-muted-foreground">Suspended/Expired</p></CardContent></Card>
       </div>
 

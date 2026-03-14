@@ -33,9 +33,9 @@ function CopyButton({ text }: { text: string }) {
 
 function CodeBlock({ method, path, description }: { method: string; path: string; description: string }) {
   const methodColors: Record<string, string> = {
-    GET: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-    POST: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-    DELETE: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+    GET: "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 dark:bg-blue-900 dark:text-blue-200",
+    POST: "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 dark:bg-green-900 dark:text-green-200",
+    DELETE: "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 dark:bg-red-900 dark:text-red-200",
   };
   return (
     <div className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 bg-muted/50 rounded-md">
@@ -153,7 +153,7 @@ function InteractiveExplorer() {
               {API_ENDPOINTS.map(ep => (
                 <SelectItem key={ep.id} value={ep.id}>
                   <span className="flex items-center gap-2">
-                    <Badge variant="outline" className={`text-[9px] font-mono ${ep.method === "GET" ? "text-blue-600" : "text-green-600"}`}>{ep.method}</Badge>
+                    <Badge variant="outline" className={`text-[9px] font-mono ${ep.method === "GET" ? "text-blue-600 dark:text-blue-400" : "text-green-600 dark:text-green-400"}`}>{ep.method}</Badge>
                     <span className="font-mono text-xs">{ep.path}</span>
                   </span>
                 </SelectItem>
@@ -682,7 +682,7 @@ export default function ApiDocsPage() {
       </div>
 
       {isGhanaMode() && (
-        <Card className="border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-950/20" data-testid="card-ghana-api-compliance">
+        <Card className="border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/50 dark:bg-amber-950/20" data-testid="card-ghana-api-compliance">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
               <div className="flex items-center justify-center w-10 h-10 rounded-md bg-amber-100 dark:bg-amber-900/40 shrink-0">

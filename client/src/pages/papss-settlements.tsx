@@ -29,10 +29,10 @@ const CURRENCIES: Record<string, string> = {
 
 function settlementStatusBadge(status: string) {
   const map: Record<string, { color: string; icon: any }> = {
-    pending: { color: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300", icon: Clock },
-    completed: { color: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300", icon: CheckCircle2 },
-    failed: { color: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300", icon: XCircle },
-    reversed: { color: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300", icon: Ban },
+    pending: { color: "bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 dark:bg-amber-900 dark:text-amber-300", icon: Clock },
+    completed: { color: "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 dark:bg-green-900 dark:text-green-300", icon: CheckCircle2 },
+    failed: { color: "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 dark:bg-red-900 dark:text-red-300", icon: XCircle },
+    reversed: { color: "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 dark:bg-purple-900 dark:text-purple-300", icon: Ban },
   };
   const s = map[status] || map.pending;
   const Icon = s.icon;
@@ -214,7 +214,7 @@ export default function PapssSettlementsPage() {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card><CardContent className="p-4 text-center"><p className="text-2xl font-bold" data-testid="stat-total-settlements">{settlements.length}</p><p className="text-xs text-muted-foreground">Total Settlements</p></CardContent></Card>
-        <Card><CardContent className="p-4 text-center"><p className="text-2xl font-bold text-green-600" data-testid="stat-completed">{completedCount}</p><p className="text-xs text-muted-foreground">Completed</p></CardContent></Card>
+        <Card><CardContent className="p-4 text-center"><p className="text-2xl font-bold text-green-600 dark:text-green-400" data-testid="stat-completed">{completedCount}</p><p className="text-xs text-muted-foreground">Completed</p></CardContent></Card>
         <Card><CardContent className="p-4 text-center"><p className="text-2xl font-bold text-amber-500" data-testid="stat-pending">{pendingCount}</p><p className="text-xs text-muted-foreground">Pending</p></CardContent></Card>
         <Card><CardContent className="p-4 text-center"><p className="text-2xl font-bold text-primary" data-testid="stat-volume">{completedTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p><p className="text-xs text-muted-foreground">Total Volume</p></CardContent></Card>
       </div>

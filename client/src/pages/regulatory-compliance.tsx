@@ -512,7 +512,7 @@ export default function RegulatoryCompliancePage() {
                       <div className="col-span-5 text-muted-foreground">{req.description}</div>
                       <div className="col-span-1 text-xs text-muted-foreground">{req.srsRef}</div>
                       <div className="col-span-2 flex justify-center">
-                        <Badge className={req.status === "compliant" ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : "bg-yellow-100 text-yellow-800"}>
+                        <Badge className={req.status === "compliant" ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 dark:bg-green-900 dark:text-green-200" : "bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200"}>
                           <CheckCircle2 className="w-3 h-3 mr-1" />
                           {req.status === "compliant" ? "Compliant" : "Partial"}
                         </Badge>
@@ -603,13 +603,13 @@ export default function RegulatoryCompliancePage() {
                             <span className="text-muted-foreground">Data Protection:</span>{" "}
                             {country.dataProtectionLaw}
                             {country.dataProtectionStatus === "enacted" && (
-                              <Badge className="ml-2 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs">Enacted</Badge>
+                              <Badge className="ml-2 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 dark:bg-green-900 dark:text-green-200 text-xs">Enacted</Badge>
                             )}
                             {country.dataProtectionStatus === "draft" && (
-                              <Badge className="ml-2 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 text-xs">Draft</Badge>
+                              <Badge className="ml-2 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 dark:bg-yellow-900 dark:text-yellow-200 text-xs">Draft</Badge>
                             )}
                             {country.dataProtectionStatus === "none" && (
-                              <Badge className="ml-2 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 text-xs">None</Badge>
+                              <Badge className="ml-2 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 dark:bg-red-900 dark:text-red-200 text-xs">None</Badge>
                             )}
                           </div>
                         </div>
@@ -669,11 +669,11 @@ export default function RegulatoryCompliancePage() {
                         <div className="text-xs text-muted-foreground">Members</div>
                       </div>
                       <div>
-                        <div className="text-xl font-bold text-green-600">{dpEnacted}</div>
+                        <div className="text-xl font-bold text-green-600 dark:text-green-400">{dpEnacted}</div>
                         <div className="text-xs text-muted-foreground">DP Laws</div>
                       </div>
                       <div>
-                        <div className="text-xl font-bold text-purple-600">{withBureau}</div>
+                        <div className="text-xl font-bold text-purple-600 dark:text-purple-400">{withBureau}</div>
                         <div className="text-xs text-muted-foreground">Credit Bureaus</div>
                       </div>
                     </div>
@@ -910,19 +910,19 @@ function SataComplianceTab() {
           <CardContent className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-sm">Active</span>
-              <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">{s?.agreements.active || 0}</Badge>
+              <Badge variant="secondary" className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 dark:bg-green-900 dark:text-green-300">{s?.agreements.active || 0}</Badge>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm">Draft</span>
-              <Badge variant="secondary" className="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">{s?.agreements.draft || 0}</Badge>
+              <Badge variant="secondary" className="bg-muted text-foreground dark:bg-foreground dark:text-muted-foreground">{s?.agreements.draft || 0}</Badge>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm">Suspended</span>
-              <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">{s?.agreements.suspended || 0}</Badge>
+              <Badge variant="secondary" className="bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 dark:bg-amber-900 dark:text-amber-300">{s?.agreements.suspended || 0}</Badge>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm">Expired</span>
-              <Badge variant="secondary" className="bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300">{s?.agreements.expired || 0}</Badge>
+              <Badge variant="secondary" className="bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 dark:bg-red-900 dark:text-red-300">{s?.agreements.expired || 0}</Badge>
             </div>
           </CardContent>
         </Card>
@@ -972,7 +972,7 @@ function SataComplianceTab() {
                     <span className="text-xs font-medium truncate">{a.sourceCountry} — {a.targetCountry}</span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <Badge variant="secondary" className={`text-[10px] ${a.consentDataSharing ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" : "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300"}`}>
+                    <Badge variant="secondary" className={`text-[10px] ${a.consentDataSharing ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 dark:bg-green-900 dark:text-green-300" : "bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 dark:bg-amber-900 dark:text-amber-300"}`}>
                       {a.consentDataSharing ? "Consent Sharing Enabled" : "Consent Not Shared"}
                     </Badge>
                     <span className="text-[9px] text-muted-foreground max-w-[120px] truncate" title={a.legalBasis}>{a.legalBasis}</span>

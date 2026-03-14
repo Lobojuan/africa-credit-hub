@@ -91,19 +91,19 @@ function getPaymentStatusLabel(status: string, daysInArrears?: number | null): s
 }
 
 const PAYMENT_STATUS_COLORS: Record<string, string> = {
-  "OK": "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
-  "30": "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300",
-  "60": "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-  "90": "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
-  "120": "bg-red-200 text-red-800 dark:bg-red-900/50 dark:text-red-300",
-  "180": "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+  "OK": "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 dark:bg-green-900/40 dark:text-green-300",
+  "30": "bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 dark:bg-yellow-900/40 dark:text-yellow-300",
+  "60": "bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 dark:bg-amber-900/40 dark:text-amber-300",
+  "90": "bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 dark:bg-orange-900/40 dark:text-orange-300",
+  "120": "bg-red-200 text-red-800 dark:text-red-200 dark:bg-red-900/50 dark:text-red-300",
+  "180": "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 dark:bg-red-900/40 dark:text-red-300",
   "210": "bg-red-200 text-red-900 dark:bg-red-950/50 dark:text-red-200",
-  "240": "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
-  "270": "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
+  "240": "bg-rose-100 dark:bg-rose-900 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
+  "270": "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 dark:bg-purple-900/40 dark:text-purple-300",
   "270+": "bg-purple-200 text-purple-900 dark:bg-purple-950/50 dark:text-purple-200",
   "ND": "bg-muted text-muted-foreground",
-  "P": "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-  "X": "bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300",
+  "P": "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 dark:bg-blue-900/40 dark:text-blue-300",
+  "X": "bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-300 dark:bg-pink-900/40 dark:text-pink-300",
 };
 
 function getPaymentStatusColor(status: string, daysInArrears?: number | null): string {
@@ -507,7 +507,7 @@ export default function CreditReportPage() {
                     {showAiSummary ? "Collapse" : "Expand"}
                   </Button>
                 </div>
-                <p className="text-[10px] text-purple-600/70 dark:text-purple-300/70 mt-0.5">
+                <p className="text-[10px] text-purple-600 dark:text-purple-400/70 dark:text-purple-300/70 mt-0.5">
                   Generated for {aiSummary.borrowerName} on {new Date(aiSummary.generatedAt).toLocaleString()}
                 </p>
               </div>
@@ -529,7 +529,7 @@ export default function CreditReportPage() {
             </Card>
           )}
 
-          <Card className="border-2 border-primary/20 overflow-hidden print:border print:border-gray-300 print:shadow-none">
+          <Card className="border-2 border-primary/20 overflow-hidden print:border print:border-border print:shadow-none">
             <div className="p-6 print:p-4" style={{ background: "linear-gradient(135deg, hsl(175 55% 28%) 0%, hsl(175 45% 22%) 100%)" }}>
               <div className="flex items-center justify-between gap-4 text-white">
                 <div>
@@ -541,7 +541,7 @@ export default function CreditReportPage() {
                   <p className="text-xs text-white/50 mt-1 print:text-[8px]">Carlson Capital & Systems In Motion Limited</p>
                 </div>
                 <div className="text-right">
-                  <div className="bg-white/10 rounded-lg px-4 py-2 print:px-2 print:py-1">
+                  <div className="bg-card/10 rounded-lg px-4 py-2 print:px-2 print:py-1">
                     <p className="text-[10px] text-white/60 uppercase tracking-wider print:text-[8px]">Order Number</p>
                     <p className="text-sm font-mono font-bold print:text-[10px]" data-testid="text-serial-number">{report.serialNumber}</p>
                   </div>
@@ -682,7 +682,7 @@ export default function CreditReportPage() {
               <div className="space-y-5 print:space-y-3">
                 <div>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-2 print:text-[8px]">Scoring Variables & Weights</p>
-                  <div className="border rounded-lg overflow-hidden print:border-gray-300">
+                  <div className="border rounded-lg overflow-hidden print:border-border">
                     <table className="w-full text-xs print:text-[9px]">
                       <thead>
                         <tr className="bg-muted/50">
@@ -739,7 +739,7 @@ export default function CreditReportPage() {
 
                 <div>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-2 print:text-[8px]">Model Validation Metrics</p>
-                  <div className="border rounded-lg overflow-hidden print:border-gray-300">
+                  <div className="border rounded-lg overflow-hidden print:border-border">
                     <table className="w-full text-xs print:text-[9px]">
                       <thead>
                         <tr className="bg-muted/50">
@@ -789,7 +789,7 @@ export default function CreditReportPage() {
           <Card>
             <CardContent className="p-5 print:p-3">
               <SectionHeader icon={MapPin} title="Address History" />
-              <div className="border rounded-lg overflow-hidden print:border-gray-300">
+              <div className="border rounded-lg overflow-hidden print:border-border">
                 <table className="w-full text-xs print:text-[9px]">
                   <thead>
                     <tr className="bg-muted/50">
@@ -856,7 +856,7 @@ export default function CreditReportPage() {
             <Card>
               <CardContent className="p-5 print:p-3">
                 <SectionHeader icon={BarChart3} title="Credit Profile Overview" number={1} />
-                <div className="border rounded-lg overflow-x-auto print:border-gray-300">
+                <div className="border rounded-lg overflow-x-auto print:border-border">
                   <table className="w-full text-xs print:text-[9px]">
                     <thead>
                       <tr className="bg-muted/50">
@@ -891,7 +891,7 @@ export default function CreditReportPage() {
             <Card>
               <CardContent className="p-5 print:p-3">
                 <SectionHeader icon={Landmark} title="Classification of Active Accounts by Institution" number={2} />
-                <div className="border rounded-lg overflow-x-auto print:border-gray-300">
+                <div className="border rounded-lg overflow-x-auto print:border-border">
                   <table className="w-full text-xs print:text-[9px]">
                     <thead>
                       <tr className="bg-muted/50">
@@ -929,7 +929,7 @@ export default function CreditReportPage() {
             <Card>
               <CardContent className="p-5 print:p-3">
                 <SectionHeader icon={Table} title="Total Liability Summary" number={3} />
-                <div className="border rounded-lg overflow-x-auto print:border-gray-300">
+                <div className="border rounded-lg overflow-x-auto print:border-border">
                   <table className="w-full text-xs print:text-[9px]">
                     <thead>
                       <tr className="bg-muted/50">
@@ -985,7 +985,7 @@ export default function CreditReportPage() {
             <Card>
               <CardContent className="p-5 print:p-3">
                 <SectionHeader icon={Layers} title="Credit Exposure by Product" number={4} />
-                <div className="border rounded-lg overflow-x-auto print:border-gray-300">
+                <div className="border rounded-lg overflow-x-auto print:border-border">
                   <table className="w-full text-xs print:text-[9px]">
                     <thead>
                       <tr className="bg-muted/50">
@@ -1051,7 +1051,7 @@ export default function CreditReportPage() {
                     const isOpen = account.status !== "closed";
 
                     return (
-                      <div key={account.id} className="border rounded-lg overflow-hidden print:border-gray-300 print:break-inside-avoid" data-testid={`report-account-${account.id}`}>
+                      <div key={account.id} className="border rounded-lg overflow-hidden print:border-border print:break-inside-avoid" data-testid={`report-account-${account.id}`}>
                         <div className="bg-muted/40 px-4 py-2 flex items-center justify-between gap-2 print:px-2 print:py-1">
                           <div className="flex items-center gap-2">
                             <span className="text-[10px] font-bold text-muted-foreground print:text-[8px]">Facility {idx + 1} of {report.accounts.length}</span>
@@ -1180,7 +1180,7 @@ export default function CreditReportPage() {
             <CardContent className="p-5 print:p-3">
               <SectionHeader icon={XCircle} title="Dishonoured Cheques" count={report.dishonouredCheques?.length || 0} />
               {report.dishonouredCheques && report.dishonouredCheques.length > 0 ? (
-                <div className="border rounded-lg overflow-hidden print:border-gray-300">
+                <div className="border rounded-lg overflow-hidden print:border-border">
                   <table className="w-full text-xs print:text-[9px]">
                     <thead>
                       <tr className="bg-muted/50">
@@ -1221,7 +1221,7 @@ export default function CreditReportPage() {
                 <CardContent className="p-5 print:p-3">
                   <SectionHeader icon={Shield} title="Guaranteed Loans" count={guaranteedLoans.length} />
                   {guaranteedLoans.length > 0 ? (
-                  <div className="border rounded-lg overflow-hidden print:border-gray-300">
+                  <div className="border rounded-lg overflow-hidden print:border-border">
                     <table className="w-full text-xs print:text-[9px]">
                       <thead>
                         <tr className="bg-muted/50">
@@ -1257,7 +1257,7 @@ export default function CreditReportPage() {
             <Card className="border-destructive/30">
               <CardContent className="p-5 print:p-3">
                 <SectionHeader icon={Gavel} title="Court Judgments & Public Records" number={6} count={report.courtJudgments.length} />
-                <div className="border rounded-lg overflow-hidden print:border-gray-300">
+                <div className="border rounded-lg overflow-hidden print:border-border">
                   <table className="w-full text-xs print:text-[9px]">
                     <thead>
                       <tr className="bg-muted/50">
@@ -1293,7 +1293,7 @@ export default function CreditReportPage() {
             <Card>
               <CardContent className="p-5 print:p-3">
                 <SectionHeader icon={Shield} title="Consent Records" number={7} count={report.consentRecords.length} />
-                <div className="border rounded-lg overflow-hidden print:border-gray-300">
+                <div className="border rounded-lg overflow-hidden print:border-border">
                   <table className="w-full text-xs print:text-[9px]">
                     <thead>
                       <tr className="bg-muted/50">
@@ -1327,7 +1327,7 @@ export default function CreditReportPage() {
             <CardContent className="p-5 print:p-3">
               <SectionHeader icon={Search} title="Credit Search Inquiry History" number={8} count={report.inquiries.length} />
               {report.inquiries.length > 0 ? (
-                <div className="border rounded-lg overflow-hidden print:border-gray-300">
+                <div className="border rounded-lg overflow-hidden print:border-border">
                   <table className="w-full text-xs print:text-[9px]">
                     <thead>
                       <tr className="bg-muted/50">
@@ -1361,7 +1361,7 @@ export default function CreditReportPage() {
             </CardContent>
           </Card>
 
-          <Card className="bg-muted/20 print:bg-white print:break-inside-avoid">
+          <Card className="bg-muted/20 print:bg-card print:break-inside-avoid">
             <CardContent className="p-5 print:p-3">
               <div className="text-center space-y-2 print:space-y-1">
                 <Separator className="mb-4 print:mb-2" />

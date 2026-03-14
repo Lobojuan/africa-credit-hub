@@ -279,9 +279,9 @@ export default function BorrowerDetailPage() {
                   aiRisk.riskLevel === "high" ? "bg-orange-100 dark:bg-orange-900/30" :
                   "bg-red-100 dark:bg-red-900/30"
                 }`}>
-                  {aiRisk.riskLevel === "low" ? <ShieldCheck className="w-5 h-5 text-green-600" /> :
-                   aiRisk.riskLevel === "medium" ? <ShieldAlert className="w-5 h-5 text-yellow-600" /> :
-                   <ShieldX className="w-5 h-5 text-red-600" />}
+                  {aiRisk.riskLevel === "low" ? <ShieldCheck className="w-5 h-5 text-green-600 dark:text-green-400" /> :
+                   aiRisk.riskLevel === "medium" ? <ShieldAlert className="w-5 h-5 text-yellow-600 dark:text-yellow-400" /> :
+                   <ShieldX className="w-5 h-5 text-red-600 dark:text-red-400" />}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
@@ -311,7 +311,7 @@ export default function BorrowerDetailPage() {
                         <div key={i} className="flex items-start gap-2 text-sm">
                           <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
                             f.impact === "positive" ? "bg-green-500" :
-                            f.impact === "negative" ? "bg-red-500" : "bg-gray-400"
+                            f.impact === "negative" ? "bg-red-500" : "bg-muted-foreground/50"
                           }`} />
                           <div>
                             <span className="font-medium">{f.factor}:</span>{" "}
@@ -340,7 +340,7 @@ export default function BorrowerDetailPage() {
                     <h4 className="text-xs font-semibold mb-2 text-muted-foreground uppercase tracking-wide">Regulatory Flags</h4>
                     <div className="flex flex-wrap gap-2">
                       {aiRisk.regulatoryFlags.map((f: string, i: number) => (
-                        <Badge key={i} variant="outline" className="text-[11px] border-orange-300 text-orange-700 dark:text-orange-400">
+                        <Badge key={i} variant="outline" className="text-[11px] border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-300 dark:text-orange-400">
                           <AlertTriangle className="w-3 h-3 mr-1" />{f}
                         </Badge>
                       ))}

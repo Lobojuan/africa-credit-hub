@@ -33,54 +33,54 @@ export function CommandCenterApiKeysTab() {
   return (
     <div className="space-y-4" data-testid="panel-api-keys">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="rounded-xl border border-slate-700/50 bg-slate-800/50 p-3 text-center">
+        <div className="rounded-xl border border-border bg-white/5 p-3 text-center">
           <p className="text-2xl font-bold text-white" data-testid="text-total-keys">{keys.length}</p>
-          <p className="text-[10px] text-slate-400">Total API Keys</p>
+          <p className="text-[10px] text-muted-foreground">Total API Keys</p>
         </div>
         <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-center">
           <p className="text-2xl font-bold text-emerald-400">{activeKeys.length}</p>
-          <p className="text-[10px] text-slate-400">Active Keys</p>
+          <p className="text-[10px] text-muted-foreground">Active Keys</p>
         </div>
         <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-center">
           <p className="text-2xl font-bold text-red-400">{revokedKeys.length}</p>
-          <p className="text-[10px] text-slate-400">Revoked</p>
+          <p className="text-[10px] text-muted-foreground">Revoked</p>
         </div>
         <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3 text-center">
           <p className="text-2xl font-bold text-cyan-400">{configs.length}</p>
-          <p className="text-[10px] text-slate-400">API Integrations</p>
+          <p className="text-[10px] text-muted-foreground">API Integrations</p>
         </div>
       </div>
 
-      <div className="rounded-xl border border-slate-700/50 bg-slate-800/50 p-4">
+      <div className="rounded-xl border border-border bg-white/5 p-4">
         <div className="flex items-center gap-2 mb-3">
           <Key className="w-4 h-4 text-amber-400" />
           <h3 className="text-sm font-semibold text-white">API Keys</h3>
         </div>
         {isLoading ? (
-          <div className="text-center text-slate-500 text-sm py-8">Loading API keys...</div>
+          <div className="text-center text-muted-foreground text-sm py-8">Loading API keys...</div>
         ) : keys.length === 0 ? (
-          <div className="text-center text-slate-500 text-sm py-8">No API keys issued yet</div>
+          <div className="text-center text-muted-foreground text-sm py-8">No API keys issued yet</div>
         ) : (
           <div className="space-y-2">
             {keys.map(key => (
-              <div key={key.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-slate-700/30 bg-slate-800/30 hover:bg-slate-700/20 transition-colors" data-testid={`apikey-row-${key.id}`}>
+              <div key={key.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-border/30 bg-white/[0.03] hover:bg-white/10 transition-colors" data-testid={`apikey-row-${key.id}`}>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-semibold text-white">{key.label}</span>
                     <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${key.status === "active" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-red-500/20 text-red-400 border-red-500/30"}`}>
                       {key.status}
                     </Badge>
-                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-slate-500/20 text-slate-400 border-slate-500/30">
+                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-muted-foreground/20 text-muted-foreground border-border">
                       {key.permissions}
                     </Badge>
                   </div>
                   <div className="flex items-center gap-3 mt-1">
-                    <span className="text-[10px] text-slate-500 font-mono">{key.keyPrefix}••••••••</span>
-                    <span className="text-[10px] text-slate-500">
+                    <span className="text-[10px] text-muted-foreground font-mono">{key.keyPrefix}••••••••</span>
+                    <span className="text-[10px] text-muted-foreground">
                       Created: {key.createdAt ? new Date(key.createdAt).toLocaleDateString() : "—"}
                     </span>
                     {key.lastUsedAt && (
-                      <span className="text-[10px] text-slate-500">
+                      <span className="text-[10px] text-muted-foreground">
                         Last used: {new Date(key.lastUsedAt).toLocaleDateString()}
                       </span>
                     )}
@@ -104,24 +104,24 @@ export function CommandCenterApiKeysTab() {
         )}
       </div>
 
-      <div className="rounded-xl border border-slate-700/50 bg-slate-800/50 p-4">
+      <div className="rounded-xl border border-border bg-white/5 p-4">
         <div className="flex items-center gap-2 mb-3">
           <Globe className="w-4 h-4 text-cyan-400" />
           <h3 className="text-sm font-semibold text-white">External API Integrations</h3>
         </div>
         {configs.length === 0 ? (
-          <div className="text-center text-slate-500 text-sm py-8">No external API integrations configured</div>
+          <div className="text-center text-muted-foreground text-sm py-8">No external API integrations configured</div>
         ) : (
           <div className="space-y-2">
             {configs.map(cfg => (
-              <div key={cfg.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-slate-700/30 bg-slate-800/30" data-testid={`apiconfig-row-${cfg.id}`}>
+              <div key={cfg.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-border/30 bg-white/[0.03]" data-testid={`apiconfig-row-${cfg.id}`}>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-semibold text-white">{cfg.name}</span>
-                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-slate-500/20 text-slate-400 border-slate-500/30">
+                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-muted-foreground/20 text-muted-foreground border-border">
                       {cfg.category}
                     </Badge>
-                    <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${cfg.isActive ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-slate-500/20 text-slate-400 border-slate-500/30"}`}>
+                    <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${cfg.isActive ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-muted-foreground/20 text-muted-foreground border-border"}`}>
                       {cfg.isActive ? "Active" : "Inactive"}
                     </Badge>
                     {cfg.country && (
@@ -131,16 +131,16 @@ export function CommandCenterApiKeysTab() {
                     )}
                   </div>
                   <div className="flex items-center gap-3 mt-1">
-                    <span className="text-[10px] text-slate-500 font-mono truncate">{cfg.baseUrl}</span>
-                    <span className="text-[10px] text-slate-500">Auth: {cfg.authType}</span>
+                    <span className="text-[10px] text-muted-foreground font-mono truncate">{cfg.baseUrl}</span>
+                    <span className="text-[10px] text-muted-foreground">Auth: {cfg.authType}</span>
                     {cfg.lastTestedAt && (
-                      <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                      <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                         {cfg.lastTestStatus === "success" ? <CheckCircle className="w-3 h-3 text-emerald-400" /> : <AlertTriangle className="w-3 h-3 text-amber-400" />}
                         Tested: {new Date(cfg.lastTestedAt).toLocaleDateString()}
                       </span>
                     )}
                   </div>
-                  {cfg.description && <p className="text-[10px] text-slate-500 mt-1">{cfg.description}</p>}
+                  {cfg.description && <p className="text-[10px] text-muted-foreground mt-1">{cfg.description}</p>}
                 </div>
               </div>
             ))}

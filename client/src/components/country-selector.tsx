@@ -33,7 +33,7 @@ function CountryDot({ code }: { code: string }) {
     ET: "bg-green-700",
     ZA: "bg-blue-700",
   };
-  return <div className={`w-2.5 h-2.5 rounded-full ${colors[code] || "bg-gray-400"} shrink-0`} />;
+  return <div className={`w-2.5 h-2.5 rounded-full ${colors[code] || "bg-muted-foreground/50"} shrink-0`} />;
 }
 
 export function CountrySelector() {

@@ -577,7 +577,7 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
           </div>
           <div className="flex items-center gap-3 p-3 rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/20">
             <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center shrink-0"><span className="text-white text-xs font-bold">✓</span></div>
-            <div><p className="text-[11px] font-semibold text-green-700 dark:text-green-300">245 of 250 records imported</p><p className="text-[9px] text-green-600/70 dark:text-green-400/50">5 rows had validation errors</p></div>
+            <div><p className="text-[11px] font-semibold text-green-700 dark:text-green-300">245 of 250 records imported</p><p className="text-[9px] text-green-600 dark:text-green-400/70 dark:text-green-400/50">5 rows had validation errors</p></div>
           </div>
         </div>
       );
@@ -698,7 +698,7 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
               <div key={r.pair} className="border rounded-xl p-3 text-center hover:bg-muted/20 transition-colors">
                 <p className="text-[9px] text-muted-foreground font-medium">{r.pair}</p>
                 <p className="text-base font-black mt-0.5">{r.rate}</p>
-                <p className={`text-[8px] mt-0.5 ${r.change.startsWith("+") ? "text-green-600" : "text-red-500"}`}>{r.change}</p>
+                <p className={`text-[8px] mt-0.5 ${r.change.startsWith("+") ? "text-green-600 dark:text-green-400" : "text-red-500"}`}>{r.change}</p>
               </div>
             ))}
           </div>

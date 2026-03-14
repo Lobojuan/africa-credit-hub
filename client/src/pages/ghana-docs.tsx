@@ -233,8 +233,8 @@ export default function GhanaDocsPage() {
                 >
                   <CardContent className="p-4 space-y-2.5">
                     <div className="flex items-start gap-3">
-                      <div className={`flex items-center justify-center w-10 h-10 rounded-lg shrink-0 ${catConfig?.bgLight || "bg-gray-50 dark:bg-gray-900"}`}>
-                        <CatIcon className={`w-4.5 h-4.5 ${catConfig?.color || "text-gray-600"}`} />
+                      <div className={`flex items-center justify-center w-10 h-10 rounded-lg shrink-0 ${catConfig?.bgLight || "bg-muted/50 dark:bg-foreground"}`}>
+                        <CatIcon className={`w-4.5 h-4.5 ${catConfig?.color || "text-muted-foreground"}`} />
                       </div>
                       <div className="min-w-0 flex-1">
                         <h3 className="text-sm font-semibold leading-tight" data-testid={`text-doc-title-${doc.id}`}>
@@ -300,15 +300,15 @@ export default function GhanaDocsPage() {
                   onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); viewDocument(doc); } }}
                   data-testid={`row-ghana-doc-${doc.id}`}
                 >
-                  <div className={`flex items-center justify-center w-10 h-10 rounded-lg shrink-0 ${catConfig?.bgLight || "bg-gray-50 dark:bg-gray-900"}`}>
-                    <CatIcon className={`w-4 h-4 ${catConfig?.color || "text-gray-600"}`} />
+                  <div className={`flex items-center justify-center w-10 h-10 rounded-lg shrink-0 ${catConfig?.bgLight || "bg-muted/50 dark:bg-foreground"}`}>
+                    <CatIcon className={`w-4 h-4 ${catConfig?.color || "text-muted-foreground"}`} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-[13px] font-semibold leading-tight truncate" data-testid={`text-doc-title-${doc.id}`}>
                       {doc.title}
                     </h3>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className={`text-[10px] font-medium ${catConfig?.color || "text-gray-600"}`}>
+                      <span className={`text-[10px] font-medium ${catConfig?.color || "text-muted-foreground"}`}>
                         {catConfig?.label || doc.category}
                       </span>
                       <span className="text-[10px] text-muted-foreground">{formatSize(doc.size)}</span>

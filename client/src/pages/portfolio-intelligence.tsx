@@ -110,11 +110,11 @@ interface PortfolioReport {
 
 function getRiskColor(rating: RiskRating) {
   const colors: Record<RiskRating, string> = {
-    low: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30",
-    moderate: "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30",
-    elevated: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30",
-    high: "bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30",
-    critical: "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30",
+    low: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 dark:text-emerald-400 border-emerald-500/30",
+    moderate: "bg-blue-500/15 text-blue-700 dark:text-blue-300 dark:text-blue-400 border-blue-500/30",
+    elevated: "bg-amber-500/15 text-amber-700 dark:text-amber-300 dark:text-amber-400 border-amber-500/30",
+    high: "bg-orange-500/15 text-orange-700 dark:text-orange-300 dark:text-orange-400 border-orange-500/30",
+    critical: "bg-red-500/15 text-red-700 dark:text-red-300 dark:text-red-400 border-red-500/30",
   };
   return colors[rating] || colors.moderate;
 }
@@ -132,9 +132,9 @@ function getRiskGlow(rating: RiskRating) {
 
 function getSeverityColor(severity: Severity) {
   const colors: Record<Severity, string> = {
-    warning: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30",
-    alert: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30",
-    critical: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30",
+    warning: "bg-amber-500/10 text-amber-700 dark:text-amber-300 dark:text-amber-400 border-amber-500/30",
+    alert: "bg-orange-500/10 text-orange-700 dark:text-orange-300 dark:text-orange-400 border-orange-500/30",
+    critical: "bg-red-500/10 text-red-700 dark:text-red-300 dark:text-red-400 border-red-500/30",
   };
   return colors[severity] || colors.warning;
 }
@@ -159,19 +159,19 @@ function getTrendLabel(trend: Trend) {
 
 function getQualityColor(quality: Quality) {
   const colors: Record<Quality, string> = {
-    strong: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30",
-    adequate: "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30",
-    weak: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30",
-    critical: "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30",
+    strong: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 dark:text-emerald-400 border-emerald-500/30",
+    adequate: "bg-blue-500/15 text-blue-700 dark:text-blue-300 dark:text-blue-400 border-blue-500/30",
+    weak: "bg-amber-500/15 text-amber-700 dark:text-amber-300 dark:text-amber-400 border-amber-500/30",
+    critical: "bg-red-500/15 text-red-700 dark:text-red-300 dark:text-red-400 border-red-500/30",
   };
   return colors[quality] || colors.adequate;
 }
 
 function getPriorityColor(priority: Priority) {
   const colors: Record<Priority, string> = {
-    immediate: "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30",
-    short_term: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30",
-    medium_term: "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30",
+    immediate: "bg-red-500/15 text-red-700 dark:text-red-300 dark:text-red-400 border-red-500/30",
+    short_term: "bg-amber-500/15 text-amber-700 dark:text-amber-300 dark:text-amber-400 border-amber-500/30",
+    medium_term: "bg-blue-500/15 text-blue-700 dark:text-blue-300 dark:text-blue-400 border-blue-500/30",
   };
   return colors[priority] || colors.medium_term;
 }
@@ -569,7 +569,7 @@ export default function PortfolioIntelligencePage() {
                           <span className="text-xs text-muted-foreground ml-2">({p.borrowerType})</span>
                         </div>
                       </div>
-                      <Badge className={`${p.riskLevel === "critical" ? "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30 shadow-red-500/20" : "bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30 shadow-orange-500/20"} shadow-lg`} variant="outline">
+                      <Badge className={`${p.riskLevel === "critical" ? "bg-red-500/15 text-red-700 dark:text-red-300 dark:text-red-400 border-red-500/30 shadow-red-500/20" : "bg-orange-500/15 text-orange-700 dark:text-orange-300 dark:text-orange-400 border-orange-500/30 shadow-orange-500/20"} shadow-lg`} variant="outline">
                         {p.probabilityOfDefault} PD
                       </Badge>
                     </div>
@@ -624,7 +624,7 @@ export default function PortfolioIntelligencePage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
                         <span className="font-semibold text-sm truncate">{c.borrowerName}</span>
-                        <Badge variant="secondary" className={`text-xs shrink-0 ${c.daysOverdue > 180 ? "bg-red-500/10 text-red-700 dark:text-red-400" : c.daysOverdue > 90 ? "bg-amber-500/10 text-amber-700 dark:text-amber-400" : ""}`}>
+                        <Badge variant="secondary" className={`text-xs shrink-0 ${c.daysOverdue > 180 ? "bg-red-500/10 text-red-700 dark:text-red-300 dark:text-red-400" : c.daysOverdue > 90 ? "bg-amber-500/10 text-amber-700 dark:text-amber-300 dark:text-amber-400" : ""}`}>
                           {c.daysOverdue}d overdue
                         </Badge>
                       </div>
@@ -635,7 +635,7 @@ export default function PortfolioIntelligencePage() {
                       <div className="flex items-center gap-2 justify-end">
                         {c.phone && c.phone !== "N/A" && (
                           <a href={`tel:${c.phone}`} className="w-8 h-8 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 flex items-center justify-center transition-colors" data-testid={`link-call-${i}`} title={`Call ${c.phone}`}>
-                            <Phone className="w-4 h-4 text-emerald-600" />
+                            <Phone className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                           </a>
                         )}
                         {c.email && c.email !== "N/A" && (
@@ -749,7 +749,7 @@ export default function PortfolioIntelligencePage() {
                     <p className="text-sm text-muted-foreground mb-3 leading-relaxed">{r.description}</p>
                     <div className="flex items-center gap-2 text-xs p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
                       <Sparkles className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                      <span className="text-emerald-700 dark:text-emerald-400 font-medium">{r.expectedImpact}</span>
+                      <span className="text-emerald-700 dark:text-emerald-300 dark:text-emerald-400 font-medium">{r.expectedImpact}</span>
                     </div>
                   </div>
                 ))}

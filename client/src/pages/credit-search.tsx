@@ -210,7 +210,7 @@ export default function CreditSearchPage() {
                                 <Badge variant="outline" className="text-[10px]">{inst.country}</Badge>
                                 <Badge
                                   variant={inst.status === "active" ? "default" : "secondary"}
-                                  className={`text-[10px] ${inst.status === "active" ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : inst.status === "suspended" ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" : ""}`}
+                                  className={`text-[10px] ${inst.status === "active" ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 dark:bg-green-900 dark:text-green-200" : inst.status === "suspended" ? "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 dark:bg-red-900 dark:text-red-200" : ""}`}
                                 >
                                   {inst.status}
                                 </Badge>
@@ -254,7 +254,7 @@ export default function CreditSearchPage() {
                                 <Badge variant="outline" className="text-[10px]">{acc.currency} {parseFloat(acc.currentBalance || "0").toLocaleString()}</Badge>
                                 <Badge
                                   variant={acc.status === "current" ? "default" : "secondary"}
-                                  className={`text-[10px] ${acc.status === "current" ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : acc.status === "delinquent" || acc.status === "default" ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" : ""}`}
+                                  className={`text-[10px] ${acc.status === "current" ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 dark:bg-green-900 dark:text-green-200" : acc.status === "delinquent" || acc.status === "default" ? "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 dark:bg-red-900 dark:text-red-200" : ""}`}
                                 >
                                   {acc.status}
                                 </Badge>
