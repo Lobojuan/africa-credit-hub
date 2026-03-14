@@ -56,6 +56,7 @@ function killPortHolder(targetPort: number) {
 killPortHolder(port);
 
 const app = express();
+app.set("etag", false);
 
 app.get("/health", (_req, res) => {
   res.status(200).send("ok");

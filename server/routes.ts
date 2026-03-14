@@ -4404,6 +4404,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
         summary: { totalRevenue, paidRevenue, pendingRevenue, overdueRevenue, invoiceCount: records.length },
         usageByCategory: usageByCat.map(u => ({ eventType: u.eventType, totalEvents: Number(u.totalEvents), totalCents: Number(u.totalCents), unbilledCents: Number(u.unbilledCents) })),
         revenueByOrg: orgBilling.map(o => ({ orgId: o.orgId, name: o.name, total: Number(o.total), invoiceCount: Number(o.count) })),
+        _ts: Date.now(),
       });
     } catch (e: any) { res.status(500).json({ message: e.message }); }
   });
