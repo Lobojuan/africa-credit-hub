@@ -617,6 +617,14 @@ export async function registerRoutes(
     }
     const user = await storage.getUser(req.session.userId);
     if (!user) return res.status(401).json({ message: "User not found" });
+
+    if (req.session.userRole !== user.role) {
+      req.session.userRole = user.role;
+      if (user.role === "super_admin") {
+        delete req.session.viewingCountry;
+      }
+    }
+
     const userData = stripPassword(user);
 
     const PASSWORD_EXPIRY_DAYS = 90;
