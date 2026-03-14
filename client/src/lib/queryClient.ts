@@ -18,6 +18,10 @@ function appendOrgId(url: string): string {
 }
 
 async function throwIfResNotOk(res: Response) {
+  if (res.status === 440) {
+    window.location.href = "/auth";
+    throw new Error("Session expired");
+  }
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
     throw new Error(`${res.status}: ${text}`);
@@ -49,6 +53,11 @@ export const getQueryFn: <T>(options: {
     const res = await fetch(appendOrgId(queryKey[0] as string), {
       credentials: "include",
     });
+
+    if (res.status === 440) {
+      window.location.href = "/auth";
+      throw new Error("Session expired");
+    }
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
       return null;
