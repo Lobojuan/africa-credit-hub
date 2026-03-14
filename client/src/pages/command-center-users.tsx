@@ -124,6 +124,7 @@ function UserCreateDialog({ open, onOpenChange, organizations }: { open: boolean
               <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v })}>
                 <SelectTrigger data-testid="select-cc-role" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-slate-900 border-slate-700">
+                  <SelectItem value="super_admin" className="text-slate-300">Super Admin</SelectItem>
                   <SelectItem value="admin" className="text-slate-300">Admin</SelectItem>
                   <SelectItem value="regulator" className="text-slate-300">Regulator</SelectItem>
                   <SelectItem value="lender" className="text-slate-300">Lender</SelectItem>
@@ -217,6 +218,7 @@ function UserEditDialog({ user, open, onOpenChange, organizations }: { user: Use
               <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v })}>
                 <SelectTrigger data-testid="select-cc-edit-role" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-slate-900 border-slate-700">
+                  <SelectItem value="super_admin" className="text-slate-300">Super Admin</SelectItem>
                   <SelectItem value="admin" className="text-slate-300">Admin</SelectItem>
                   <SelectItem value="regulator" className="text-slate-300">Regulator</SelectItem>
                   <SelectItem value="lender" className="text-slate-300">Lender</SelectItem>
