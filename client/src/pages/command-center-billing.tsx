@@ -98,41 +98,46 @@ export function CommandCenterBillingTab() {
                 <span className="text-right">Max Vol</span>
                 <span className="text-right">Unit Price</span>
               </div>
-              {(data?.pricingTiers || []).map(tier => (
-                <div key={tier.id} className="grid grid-cols-[1fr_120px_80px_80px_80px] gap-2 items-center px-2 py-1.5 rounded hover:bg-white/5 transition-colors" data-testid={`pricing-tier-${tier.id}`}>
-                  <span className="text-xs text-white">{tier.name}</span>
-                  <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-cyan-500/10 text-cyan-400 border-cyan-500/30 justify-center">
-                    {EVENT_LABELS[tier.eventType] || tier.eventType}
-                  </Badge>
-                  <span className="text-[10px] text-muted-foreground text-right font-mono">{tier.minVolume.toLocaleString()}</span>
-                  <span className="text-[10px] text-muted-foreground text-right font-mono">{tier.maxVolume ? tier.maxVolume.toLocaleString() : "∞"}</span>
-                  {editingTier === tier.id ? (
-                    <div className="flex items-center gap-1 justify-end">
-                      <Input
-                        className="h-6 w-16 text-[10px] bg-slate-900 border-slate-700/50 text-card-foreground px-1"
-                        value={editPrice}
-                        onChange={(e) => setEditPrice(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            const cents = Math.round(parseFloat(editPrice) * 100);
-                            if (!isNaN(cents) && cents > 0) updateTierMutation.mutate({ id: tier.id, unitPriceCents: cents });
-                          }
-                          if (e.key === "Escape") setEditingTier(null);
-                        }}
-                        autoFocus
-                      />
-                    </div>
-                  ) : (
-                    <button
-                      className="text-[10px] text-emerald-400 text-right font-mono hover:underline cursor-pointer"
-                      onClick={() => { setEditingTier(tier.id); setEditPrice((tier.unitPriceCents / 100).toFixed(2)); }}
-                      data-testid={`button-edit-price-${tier.id}`}
-                    >
-                      {formatUSD(tier.unitPriceCents)}
-                    </button>
-                  )}
-                </div>
-              ))}
+              {(data?.pricingTiers || []).map(tier => {
+                const minVol = Number(tier.minVolume) || 0;
+                const maxVol = tier.maxVolume != null ? Number(tier.maxVolume) : null;
+                const priceCents = Number(tier.unitPriceCents) || 0;
+                return (
+                  <div key={tier.id} className="grid grid-cols-[1fr_120px_80px_80px_80px] gap-2 items-center px-2 py-1.5 rounded hover:bg-white/5 transition-colors" data-testid={`pricing-tier-${tier.id}`}>
+                    <span className="text-xs text-white">{tier.name}</span>
+                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-cyan-500/10 text-cyan-400 border-cyan-500/30 justify-center">
+                      {EVENT_LABELS[tier.eventType] || tier.eventType}
+                    </Badge>
+                    <span className="text-[10px] text-muted-foreground text-right font-mono">{minVol.toLocaleString()}</span>
+                    <span className="text-[10px] text-muted-foreground text-right font-mono">{maxVol != null ? maxVol.toLocaleString() : "∞"}</span>
+                    {editingTier === tier.id ? (
+                      <div className="flex items-center gap-1 justify-end">
+                        <Input
+                          className="h-6 w-16 text-[10px] bg-slate-900 border-slate-700/50 text-white px-1"
+                          value={editPrice}
+                          onChange={(e) => setEditPrice(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              const cents = Math.round(parseFloat(editPrice) * 100);
+                              if (!isNaN(cents) && cents > 0) updateTierMutation.mutate({ id: tier.id, unitPriceCents: cents });
+                            }
+                            if (e.key === "Escape") setEditingTier(null);
+                          }}
+                          autoFocus
+                        />
+                      </div>
+                    ) : (
+                      <button
+                        className="text-[10px] text-emerald-400 text-right font-mono hover:underline cursor-pointer"
+                        onClick={() => { setEditingTier(tier.id); setEditPrice((priceCents / 100).toFixed(2)); }}
+                        data-testid={`button-edit-price-${tier.id}`}
+                      >
+                        {formatUSD(priceCents)}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
