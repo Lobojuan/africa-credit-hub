@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { Search, Shield, CreditCard, AlertTriangle, CheckCircle2, TrendingUp, User, Loader2, Scale, Phone, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, Shield, CreditCard, AlertTriangle, CheckCircle2, TrendingUp, User, Loader2, Scale, Phone, ChevronDown, ChevronUp, CalendarDays, Lock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,6 @@ import { ScoreFactors } from "@/components/score-factors";
 
 interface ConsumerData {
   borrower: {
-    id: string;
     firstName: string;
     lastName: string;
     companyName: string;
@@ -54,13 +53,20 @@ function getScoreLabel(score: number): { label: string; color: string } {
 
 export default function ConsumerPortalPage() {
   const [nationalId, setNationalId] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
   const [data, setData] = useState<ConsumerData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showAccounts, setShowAccounts] = useState(false);
 
+  const canSubmit = nationalId.length >= 6 && dateOfBirth.length > 0;
+
   const lookupMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`/api/consumer/lookup?nationalId=${encodeURIComponent(nationalId)}`, { credentials: "include" });
+      const res = await fetch("/api/consumer/lookup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nationalId, dateOfBirth }),
+      });
       if (!res.ok) {
         const body = await res.json();
         throw new Error(body.message || "Lookup failed");
@@ -77,6 +83,10 @@ export default function ConsumerPortalPage() {
       setError(err.message);
     },
   });
+
+  const handleSubmit = () => {
+    if (canSubmit) lookupMutation.mutate();
+  };
 
   const borrowerName = data?.borrower.type === "individual"
     ? `${data.borrower.firstName || ""} ${data.borrower.lastName || ""}`.trim()
@@ -98,37 +108,57 @@ export default function ConsumerPortalPage() {
             Check Your Credit Score
           </h1>
           <p className="text-sm text-muted-foreground leading-relaxed max-w-xs mx-auto">
-            Enter your National ID, Ghana Card, or Passport number to view your credit file.
+            Verify your identity to securely access your credit file.
           </p>
         </div>
 
         <Card className="shadow-sm">
-          <CardContent className="p-4 sm:p-5">
-            <label className="text-sm font-medium mb-2 block">ID Number</label>
-            <div className="flex gap-2">
+          <CardContent className="p-4 sm:p-5 space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">National ID / Ghana Card / Passport</label>
               <input
                 type="text"
                 value={nationalId}
                 onChange={(e) => setNationalId(e.target.value)}
                 placeholder="e.g. GHA-123456789"
-                className="flex-1 min-w-0 px-3 py-2.5 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow"
+                className="w-full px-3 py-2.5 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow"
                 data-testid="input-consumer-id"
                 inputMode="text"
                 autoCapitalize="characters"
-                onKeyDown={(e) => e.key === "Enter" && nationalId.length >= 6 && lookupMutation.mutate()}
+                onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
               />
-              <Button
-                onClick={() => lookupMutation.mutate()}
-                disabled={lookupMutation.isPending || nationalId.length < 6}
-                size="lg"
-                className="rounded-xl px-5 shrink-0"
-                data-testid="button-consumer-lookup"
-              >
-                {lookupMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-              </Button>
             </div>
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Date of Birth</label>
+              <input
+                type="date"
+                value={dateOfBirth}
+                onChange={(e) => setDateOfBirth(e.target.value)}
+                className="w-full px-3 py-2.5 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow"
+                data-testid="input-consumer-dob"
+                onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+              />
+            </div>
+            <Button
+              onClick={handleSubmit}
+              disabled={lookupMutation.isPending || !canSubmit}
+              size="lg"
+              className="w-full rounded-xl"
+              data-testid="button-consumer-lookup"
+            >
+              {lookupMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Lock className="w-4 h-4 mr-2" />
+              )}
+              {lookupMutation.isPending ? "Verifying..." : "Verify & View Credit File"}
+            </Button>
+            <p className="text-[10px] text-muted-foreground text-center">
+              <Lock className="w-3 h-3 inline mr-1" />
+              Your identity is verified before any data is shown. Only you can access your credit file.
+            </p>
             {error && (
-              <div className="flex items-center gap-2 mt-3 p-3 rounded-xl bg-destructive/10 text-destructive text-sm" data-testid="text-consumer-error">
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-destructive/10 text-destructive text-sm" data-testid="text-consumer-error">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
                 <span>{error}</span>
               </div>
@@ -139,7 +169,7 @@ export default function ConsumerPortalPage() {
         {lookupMutation.isPending && (
           <div className="flex flex-col items-center justify-center py-12 gap-3">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">Looking up your credit file...</p>
+            <p className="text-sm text-muted-foreground">Verifying your identity...</p>
           </div>
         )}
 
@@ -292,7 +322,16 @@ export default function ConsumerPortalPage() {
                 </div>
                 <div>
                   <p className="text-xs font-semibold">Step 1</p>
-                  <p className="text-[11px] text-muted-foreground">Enter your National ID or Ghana Card number above</p>
+                  <p className="text-[11px] text-muted-foreground">Enter your National ID or Ghana Card number</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 text-left p-3 rounded-xl bg-muted/30">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <CalendarDays className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold">Step 2</p>
+                  <p className="text-[11px] text-muted-foreground">Enter your date of birth to verify your identity</p>
                 </div>
               </div>
               <div className="flex items-start gap-3 text-left p-3 rounded-xl bg-muted/30">
@@ -300,17 +339,8 @@ export default function ConsumerPortalPage() {
                   <TrendingUp className="w-4 h-4 text-primary" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold">Step 2</p>
-                  <p className="text-[11px] text-muted-foreground">View your credit score and account summary instantly</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 text-left p-3 rounded-xl bg-muted/30">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                  <Shield className="w-4 h-4 text-primary" />
-                </div>
-                <div>
                   <p className="text-xs font-semibold">Step 3</p>
-                  <p className="text-[11px] text-muted-foreground">Your data is protected and shown only to you</p>
+                  <p className="text-[11px] text-muted-foreground">View your credit score and account summary securely</p>
                 </div>
               </div>
             </div>

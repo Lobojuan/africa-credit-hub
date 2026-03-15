@@ -56,7 +56,7 @@ The system employs a modern full-stack architecture built for scalability and co
     -   **PAPSS Settlement Tracker**: Tracks Pan-African Payment and Settlement System settlements with multi-currency support.
     -   **Enterprise Features**: Includes a Credit Score Methodology Page, Regulatory Dashboard, Borrower Alerts, Enhanced Audit Trail, Enhanced Batch Upload, and Enhanced API Docs.
     -   **Alternative Data Integration**: Integrates mobile money, utility, and telco data for thin-file borrowers, impacting credit scores.
-    -   **Consumer Self-Service Portal**: Public-facing mobile-first portal (`/my-credit`) for borrowers to look up credit scores. Rendered outside auth guard; API rate-limited (10 req/15min), minimum 6-char ID, response omits internal IDs and financial amounts for privacy.
+    -   **Consumer Self-Service Portal**: Public-facing mobile-first portal (`/my-credit`) with identity verification (National ID + date of birth). POST `/api/consumer/lookup` requires both fields to match before returning data. Rate-limited (10 req/15min), minimum 6-char ID, response omits internal IDs and financial amounts for privacy.
     -   **Fraud Detection Layer**: Real-time fraud risk scoring with velocity checks, identity verification, and geographic anomaly detection.
     -   **Enhanced API Developer Portal**: Interactive sandbox, webhook event documentation, and code examples.
     -   **Dashboard Progressive Disclosure**: Collapsible dashboard sections with localStorage persistence.

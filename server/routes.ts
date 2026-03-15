@@ -1398,11 +1398,14 @@ export async function registerRoutes(
 
   const consumerLookupLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { message: "Too many lookup requests. Please try again later." }, standardHeaders: true, legacyHeaders: false });
 
-  app.get("/api/consumer/lookup", consumerLookupLimiter, async (req, res) => {
+  app.post("/api/consumer/lookup", consumerLookupLimiter, async (req, res) => {
     try {
-      const nationalId = req.query.nationalId as string;
-      if (!nationalId || nationalId.length < 6) {
+      const { nationalId, dateOfBirth } = req.body;
+      if (!nationalId || typeof nationalId !== "string" || nationalId.length < 6) {
         return res.status(400).json({ message: "Please enter a valid National ID (minimum 6 characters)" });
+      }
+      if (!dateOfBirth || typeof dateOfBirth !== "string") {
+        return res.status(400).json({ message: "Date of birth is required for identity verification" });
       }
       const borrowerResult = await db.select().from(borrowers).where(
         or(
@@ -1412,8 +1415,8 @@ export async function registerRoutes(
         )
       ).limit(1);
       const borrower = borrowerResult[0];
-      if (!borrower) {
-        return res.status(404).json({ message: "No credit file found for this ID" });
+      if (!borrower || !borrower.dateOfBirth || borrower.dateOfBirth !== dateOfBirth) {
+        return res.status(404).json({ message: "No matching credit file found. Please verify your ID and date of birth." });
       }
       const accounts = await storage.getCreditAccountsByBorrower(borrower.id);
       const inquiries = await storage.getCreditInquiriesByBorrower(borrower.id);
