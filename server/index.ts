@@ -197,6 +197,94 @@ app.use((req, res, next) => {
   next();
 });
 
+app.get("/api/platform/pricing-tiers-standalone", async (req, res) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.set("Pragma", "no-cache");
+  try {
+    if (!req.session?.userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    const userCheck = await pool.query("SELECT role FROM users WHERE id = $1", [req.session.userId]);
+    if (!userCheck.rows.length || userCheck.rows[0].role !== "super_admin") {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+    const tierResult = await pool.query(
+      "SELECT id, name, event_type, min_volume, max_volume, unit_price_cents, currency, country, is_active, created_at FROM pricing_tiers WHERE is_active = true ORDER BY country, event_type, min_volume"
+    );
+    console.log("[BillingStandalone] Tiers fetched:", tierResult.rows.length);
+    const tiers = tierResult.rows.map((t: any) => ({
+      id: t.id,
+      name: t.name,
+      eventType: t.event_type,
+      minVolume: Number(t.min_volume) || 0,
+      maxVolume: t.max_volume != null ? Number(t.max_volume) : null,
+      unitPriceCents: Number(t.unit_price_cents) || 0,
+      currency: String(t.currency || "USD"),
+      country: String(t.country || "Global"),
+      isActive: t.is_active,
+      createdAt: t.created_at,
+    }));
+    res.json({ pricingTiers: tiers, count: tiers.length, _ts: Date.now() });
+  } catch (e: any) {
+    console.error("[BillingStandalone] Error:", e.message);
+    res.status(500).json({ message: e.message });
+  }
+});
+
+app.put("/api/platform/pricing-tiers-standalone/:id", async (req, res) => {
+  try {
+    if (!req.session?.userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    const userCheck = await pool.query("SELECT role FROM users WHERE id = $1", [req.session.userId]);
+    if (!userCheck.rows.length || userCheck.rows[0].role !== "super_admin") {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+    const { unitPriceCents, isActive } = req.body;
+    if (unitPriceCents !== undefined && (typeof unitPriceCents !== "number" || unitPriceCents < 0)) {
+      return res.status(400).json({ message: "unitPriceCents must be a non-negative number" });
+    }
+    const setClauses: string[] = [];
+    const values: any[] = [];
+    let paramIdx = 1;
+    if (unitPriceCents !== undefined) {
+      setClauses.push(`unit_price_cents = $${paramIdx++}`);
+      values.push(unitPriceCents);
+    }
+    if (isActive !== undefined) {
+      setClauses.push(`is_active = $${paramIdx++}`);
+      values.push(isActive);
+    }
+    if (setClauses.length === 0) {
+      return res.status(400).json({ message: "No fields to update" });
+    }
+    values.push(req.params.id);
+    const result = await pool.query(
+      `UPDATE pricing_tiers SET ${setClauses.join(", ")} WHERE id = $${paramIdx} RETURNING *`,
+      values
+    );
+    if (!result.rows.length) {
+      return res.status(404).json({ message: "Tier not found" });
+    }
+    const t = result.rows[0];
+    res.json({
+      id: t.id,
+      name: t.name,
+      eventType: t.event_type,
+      minVolume: Number(t.min_volume) || 0,
+      maxVolume: t.max_volume != null ? Number(t.max_volume) : null,
+      unitPriceCents: Number(t.unit_price_cents) || 0,
+      currency: String(t.currency || "USD"),
+      country: String(t.country || "Global"),
+      isActive: t.is_active,
+      createdAt: t.created_at,
+    });
+  } catch (e: any) {
+    console.error("[BillingStandalone] Update error:", e.message);
+    res.status(500).json({ message: e.message });
+  }
+});
+
 function gracefulShutdown(signal: string) {
   crashLog(`SHUTDOWN signal=${signal}`);
   console.log(`Received ${signal}, shutting down gracefully...`);

@@ -58,19 +58,27 @@ export function CommandCenterBillingTab() {
     queryKey: ["/api/platform/billing"],
   });
 
+  const { data: tiersData } = useQuery<{
+    pricingTiers: any[];
+    count: number;
+  }>({
+    queryKey: ["/api/platform/pricing-tiers-standalone"],
+    refetchOnMount: "always",
+  });
+
   const updateTierMutation = useMutation({
     mutationFn: async ({ id, unitPriceCents }: { id: string; unitPriceCents: number }) => {
-      await apiRequest("PUT", `/api/platform/pricing-tiers/${id}`, { unitPriceCents });
+      await apiRequest("PUT", `/api/platform/pricing-tiers-standalone/${id}`, { unitPriceCents });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/platform/billing"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/platform/pricing-tiers-standalone"] });
       toast({ title: "Pricing tier updated" });
       setEditingTier(null);
     },
   });
 
   const s = data?.summary;
-  const rawTiers = data?.pricingTiers;
+  const rawTiers = tiersData?.pricingTiers || data?.pricingTiers;
   const allTiers = Array.isArray(rawTiers) ? rawTiers : [];
 
   const countries = allTiers.length > 0
