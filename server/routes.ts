@@ -3,7 +3,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { db, pool } from "./db";
-import { sql, eq, and, or, desc } from "drizzle-orm";
+import { sql, eq, and, or, desc, inArray } from "drizzle-orm";
 import { enqueueBatchAccountCreate, enqueueBatchBorrowerUpdate, enqueueBatchAccountUpdate, getJobStatus, getQueueStats } from "./batch-queue";
 import {
   insertBorrowerSchema, insertCreditAccountSchema, insertCreditInquirySchema,
@@ -4274,9 +4274,8 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
       const userMap: Record<string, string> = {};
       const userIds = [...new Set(logs.map(l => l.userId).filter(Boolean))] as string[];
       if (userIds.length > 0) {
-        const placeholders = userIds.map((_, i) => `$${i + 1}`).join(",");
-        const { rows: userRows } = await pool.query(`SELECT id, full_name FROM users WHERE id IN (${placeholders})`, userIds);
-        for (const u of userRows) userMap[u.id] = u.full_name;
+        const userRows = await db.select({ id: users.id, fullName: users.fullName }).from(users).where(inArray(users.id, userIds));
+        for (const u of userRows) userMap[u.id] = u.fullName;
       }
 
       res.json({
@@ -4484,9 +4483,8 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
       const userIds = [...new Set(recent.map(l => l.userId).filter(Boolean))] as string[];
       const userMap: Record<string, string> = {};
       if (userIds.length > 0) {
-        const placeholders = userIds.map((_, i) => `$${i + 1}`).join(",");
-        const { rows: userRows } = await pool.query(`SELECT id, full_name FROM users WHERE id IN (${placeholders})`, userIds);
-        for (const u of userRows) userMap[u.id] = u.full_name;
+        const userRows = await db.select({ id: users.id, fullName: users.fullName }).from(users).where(inArray(users.id, userIds));
+        for (const u of userRows) userMap[u.id] = u.fullName;
       }
       res.json(recent.map(l => ({
         id: l.id,
