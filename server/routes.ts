@@ -1425,9 +1425,7 @@ export async function registerRoutes(
       try {
         altData = await db.select().from(alternativeData).where(sql`borrower_id::text = ${borrower.id}`);
       } catch {}
-      const { score: creditScore, reasonCodes, factors: scoreFactors } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep, altData);
-      const disputes = await storage.getDisputes();
-      const borrowerDisputes = disputes.filter(d => d.borrowerId === borrower.id);
+      const { score: creditScore } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep, altData);
 
       res.json({
         borrower: {
@@ -1436,24 +1434,8 @@ export async function registerRoutes(
           companyName: borrower.companyName,
           type: borrower.type,
           nationalId: borrower.nationalId?.replace(/(.{3}).+(.{3})/, "$1****$2"),
-          country: borrower.country,
         },
-        creditSummary: {
-          creditScore,
-          reasonCodes,
-          scoreFactors,
-          totalAccounts: accounts.length,
-          activeAccounts: accounts.filter(a => a.status !== "closed").length,
-          delinquentAccounts: accounts.filter(a => a.status === "delinquent" || a.status === "default").length,
-          inquiryCount: inquiries.length,
-          judgmentCount: judgments.filter(j => j.status === "active").length,
-          openDisputes: borrowerDisputes.filter(d => d.status === "open" || d.status === "under_review").length,
-        },
-        accountSummary: accounts.map(a => ({
-          accountType: a.accountType,
-          lender: a.lenderInstitution,
-          status: a.status,
-        })),
+        creditScore,
       });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
