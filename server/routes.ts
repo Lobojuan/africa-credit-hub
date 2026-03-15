@@ -4364,17 +4364,24 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
       const records = await db.select().from(billingRecords).orderBy(desc(billingRecords.createdAt));
       let tiers: any[] = [];
       try {
-        const rawTiers = await db.execute(sql`SELECT id, name, event_type AS "eventType", min_volume AS "minVolume", max_volume AS "maxVolume", unit_price_cents AS "unitPriceCents", currency, COALESCE(country, 'Global') AS country, is_active AS "isActive", created_at AS "createdAt" FROM pricing_tiers WHERE is_active = true ORDER BY country, event_type, min_volume`);
-        tiers = (rawTiers.rows || rawTiers || []).map((t: any) => ({
-          ...t,
-          minVolume: Number(t.minVolume) || 0,
-          maxVolume: t.maxVolume != null ? Number(t.maxVolume) : null,
-          unitPriceCents: Number(t.unitPriceCents) || 0,
-          country: String(t.country || "Global"),
+        const rawTiers = await db.execute(sql`SELECT id, name, event_type, min_volume, max_volume, unit_price_cents, currency, country, is_active, created_at FROM pricing_tiers WHERE is_active = true ORDER BY country, event_type, min_volume`);
+        const rows = rawTiers.rows || rawTiers || [];
+        console.log("[Billing] Raw tiers fetched:", rows.length, "rows");
+        tiers = rows.map((t: any) => ({
+          id: t.id,
+          name: t.name,
+          eventType: t.event_type || t.eventType,
+          minVolume: Number(t.min_volume ?? t.minVolume) || 0,
+          maxVolume: (t.max_volume ?? t.maxVolume) != null ? Number(t.max_volume ?? t.maxVolume) : null,
+          unitPriceCents: Number(t.unit_price_cents ?? t.unitPriceCents) || 0,
           currency: String(t.currency || "USD"),
+          country: String(t.country || "Global"),
+          isActive: t.is_active ?? t.isActive ?? true,
+          createdAt: t.created_at || t.createdAt,
         }));
+        console.log("[Billing] Processed tiers:", tiers.length);
       } catch (tierErr: any) {
-        console.error("[Billing] Pricing tiers query error:", tierErr.message);
+        console.log("[Billing] TIER QUERY ERROR:", tierErr.message);
       }
       const usage = await db.select().from(usageMetering).orderBy(desc(usageMetering.createdAt)).limit(500);
 
