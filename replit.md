@@ -25,14 +25,14 @@ The system employs a modern full-stack architecture built for scalability and co
 -   **Backend**: Express.js API server.
 -   **Database**: PostgreSQL hosted on Neon, managed with Drizzle ORM.
 -   **Authentication**: Session-based with bcryptjs, sessions stored in PostgreSQL (connect-pg-simple, table: `user_sessions`), including 3-attempt lockout, session timeouts, IP tracking, strong password policies, 90-day expiry, and TOTP MFA.
--   **Data Model**: 21 core tables for comprehensive credit and operational data, including `dishonoured_cheques` for compliance, `usage_metering` for transaction billing, and `pricing_tiers` for monetization.
+-   **Data Model**: 22 core tables for comprehensive credit and operational data, including `dishonoured_cheques` for compliance, `usage_metering` for transaction billing, `pricing_tiers` for monetization, and `alternative_data` for mobile money/utility/telco data integration.
 -   **Connection Pool**: PostgreSQL pool sized at 20 max / 2 min connections with keepalive, statement timeout (30s), and connection timeout (5s). Pool stats available via `/api/health`.
 -   **Batch Processing**: In-process async job queue (`server/batch-queue.ts`) for high-volume operations. Endpoints: `POST /api/batch/accounts` (up to 1,000 records), `POST /api/batch/borrowers` (up to 1,000 updates), `GET /api/batch/jobs/:jobId` (status polling), `GET /api/batch/queue-stats`. Chunked transactions (250 rows per chunk).
 -   **API Rate Limiting**: express-rate-limit with tiered limits — auth: 15/15min, global reads: 200/min, writes: 60/min, batch operations: 10/min. Memory-stored (single-process Replit).
 -   **Database Indexes**: 17 performance indexes on high-query columns (borrowers, credit_accounts, audit_logs, data_sharing_agreements, disputes, consent_records, notifications). Created via `server/migrate-indexes.ts` on startup.
 -   **Core Capabilities**:
     -   **Credit Management**: Borrower and credit account management, multi-currency support, collateral, and arrears tracking.
-    -   **Credit Scoring**: Algorithmic scoring (300-850) with reason codes, reports, and transparency section.
+    -   **Credit Scoring**: Algorithmic scoring (300-850) with reason codes, reports, transparency section, and detailed factor-by-factor explainability (ScoreFactor[] breakdown with weights, impact values, and descriptions).
     -   **Workflow**: Maker-checker workflow and dispute management.
     -   **Regulatory Compliance**: Consent management, court judgment tracking, audit trails, and a Regulatory Compliance Dashboard with jurisdiction-specific data retention for 54 African jurisdictions.
     -   **Institutional Management**: Self-registration, approval, billing, and fee management for data providers.
@@ -65,6 +65,11 @@ The system employs a modern full-stack architecture built for scalability and co
         -   **Enhanced Audit Trail**: Hash chain verification UI, CSV export, and advanced filters.
         -   **Enhanced Batch Upload**: CSV, JSON, XBRL, BoG file upload with client-side validation and history.
         -   **Enhanced API Docs**: Interactive API explorer, rate limit documentation, and code examples.
+    -   **Alternative Data Integration**: Mobile money, utility payments, and telco data integration for thin-file borrowers. Schema: `alternative_data` table with source types, payment history, and on-time ratios. Up to +90 bonus points to credit score (30 pts per source, max 3 sources, weighted by on-time ratio). API: `GET/POST /api/borrowers/:id/alternative-data`. UI: `AlternativeDataCard` component in borrower detail page.
+    -   **Consumer Self-Service Portal**: Public-facing `/my-credit` page for borrowers to look up credit score using National ID. Shows read-only credit summary with masked ID, score gauge with factor breakdown, and dispute initiation. No authentication required.
+    -   **Fraud Detection Layer**: Real-time fraud risk scoring with velocity checks (rapid applications, identity changes), identity verification flags, and geographic anomaly detection. `server/fraud-detection.ts` module. Fraud risk indicator component on borrower profiles.
+    -   **Enhanced API Developer Portal**: Interactive sandbox section, webhook event documentation (including `fraud.alert_triggered`, `score.changed`, `alternative_data.submitted`), code examples, and fraud/consumer endpoint docs.
+    -   **Dashboard Progressive Disclosure**: Collapsible dashboard sections (Analytics, Geographic Coverage, Recent Activity) with localStorage persistence and accessibility (aria-expanded, aria-controls). `CollapsibleDashboardSection` component.
     -   **Security Hardening**: Helmet security headers, rate limiting, DOMPurify sanitization, and secure handling of secrets.
 
 ## External Dependencies

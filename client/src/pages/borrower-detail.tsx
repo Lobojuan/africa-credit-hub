@@ -15,6 +15,9 @@ import { CurrencyReference } from "@/components/currency-reference";
 import type { Borrower, CreditAccount, CreditInquiry, CourtJudgment, ConsentRecord, BorrowerAlert } from "@shared/schema";
 import { GhanaCardSample, GhanaPassportSample, SampleDriversLicense } from "@/components/sample-id-cards";
 import { CreditScoreGauge } from "@/components/credit-score-gauge";
+import { FraudRiskIndicator, FraudRiskBadge } from "@/components/fraud-risk-indicator";
+import { ScoreFactors } from "@/components/score-factors";
+import { AlternativeDataCard } from "@/components/alternative-data-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Gavel, FileCheck } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
@@ -114,11 +117,27 @@ export default function BorrowerDetailPage() {
       delinquentAccounts: number;
       creditScore: number;
       inquiryCount: number;
+      scoreFactors?: any[];
     };
   }>({
     queryKey: ['/api/borrowers', borrowerId, 'credit-report'],
     queryFn: async () => {
       const res = await fetch(`/api/borrowers/${borrowerId}/credit-report`);
+      if (!res.ok) throw new Error("Failed to fetch");
+      return res.json();
+    },
+    enabled: !!borrowerId,
+  });
+
+  const { data: fraudRisk } = useQuery<{
+    riskScore: number;
+    riskLevel: string;
+    alerts: any[];
+    checks: any[];
+  }>({
+    queryKey: ['/api/borrowers', borrowerId, 'fraud-risk'],
+    queryFn: async () => {
+      const res = await fetch(`/api/borrowers/${borrowerId}/fraud-risk`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch");
       return res.json();
     },
@@ -381,6 +400,20 @@ export default function BorrowerDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {fraudRisk && (
+        <FraudRiskIndicator data={fraudRisk as any} />
+      )}
+
+      {summary.scoreFactors && summary.scoreFactors.length > 0 && (
+        <Card>
+          <CardContent className="p-5">
+            <ScoreFactors factors={summary.scoreFactors} />
+          </CardContent>
+        </Card>
+      )}
+
+      <AlternativeDataCard borrowerId={borrowerId} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card>

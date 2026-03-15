@@ -598,6 +598,31 @@ export const insertPricingTierSchema = createInsertSchema(pricingTiers).omit({ i
 export type InsertPricingTier = z.infer<typeof insertPricingTierSchema>;
 export type PricingTier = typeof pricingTiers.$inferSelect;
 
+export const alternativeDataSourceEnum = pgEnum("alternative_data_source", ["mobile_money", "utility", "telco", "rent", "insurance", "merchant"]);
+export const alternativeDataStatusEnum = pgEnum("alternative_data_status", ["active", "expired", "revoked"]);
+
+export const alternativeData = pgTable("alternative_data", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  borrowerId: integer("borrower_id").notNull(),
+  source: alternativeDataSourceEnum("source").notNull(),
+  provider: text("provider").notNull(),
+  status: alternativeDataStatusEnum("status").notNull().default("active"),
+  totalTransactions: integer("total_transactions").default(0),
+  onTimePayments: integer("on_time_payments").default(0),
+  latePayments: integer("late_payments").default(0),
+  averageMonthlyAmount: decimal("average_monthly_amount", { precision: 15, scale: 2 }),
+  currency: text("currency").notNull().default("GHS"),
+  dataStartDate: timestamp("data_start_date"),
+  dataEndDate: timestamp("data_end_date"),
+  consentDate: timestamp("consent_date"),
+  rawScore: integer("raw_score"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertAlternativeDataSchema = createInsertSchema(alternativeData).omit({ id: true, createdAt: true });
+export type InsertAlternativeData = z.infer<typeof insertAlternativeDataSchema>;
+export type AlternativeData = typeof alternativeData.$inferSelect;
+
 export const countrySettings = pgTable("country_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   countryCode: text("country_code").notNull().unique(),

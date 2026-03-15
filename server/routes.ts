@@ -16,12 +16,13 @@ import {
   auditLogs, apiKeys, apiConfigurations, billingRecords, retentionPolicies,
   usageMetering, pricingTiers, users, organizations, borrowers,
   creditInquiries, disputes, consentRecords, paymentHistory, courtJudgments,
-  dishonouredCheques, creditReportLogs,
+  dishonouredCheques, creditReportLogs, alternativeData, insertAlternativeDataSchema,
 } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { registerExternalApi, generateApiKey } from "./external-api";
 import { calculateCreditScore, getDefaultCurrencyCode } from "./credit-score";
+import { calculateFraudRisk } from "./fraud-detection";
 import fs from "fs";
 import path from "path";
 import * as OTPAuth from "otpauth";
@@ -1290,10 +1291,11 @@ export async function registerRoutes(
       const inquiries = await storage.getCreditInquiriesByBorrower(req.params.id);
 
       const judgments = await storage.getCourtJudgmentsByBorrower(req.params.id);
+      const altData = await db.select().from(alternativeData).where(eq(alternativeData.borrowerId, parseInt(req.params.id)));
       const totalDebt = accounts.reduce((sum, a) => sum + parseFloat(a.currentBalance || "0"), 0);
       const delinquentCount = accounts.filter(a => a.status === "delinquent" || a.status === "default").length;
       const writtenOffCount = accounts.filter(a => a.status === "written_off").length;
-      const { score: creditScore, reasonCodes } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep);
+      const { score: creditScore, reasonCodes, factors: scoreFactors } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep, altData);
 
       await storage.createAuditLog({
         action: "VIEW", entity: "credit_report", entityId: req.params.id, userId: req.session?.userId,
@@ -1313,9 +1315,140 @@ export async function registerRoutes(
           writtenOffAccounts: writtenOffCount,
           creditScore,
           reasonCodes,
+          scoreFactors,
           inquiryCount: inquiries.length,
           judgmentCount: judgments.length,
         },
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/borrowers/:id/fraud-risk", requireRole("admin", "super_admin", "regulator", "lender"), async (req, res) => {
+    try {
+      const borrower = await storage.getBorrower(req.params.id);
+      if (!borrower) return res.status(404).json({ message: "Borrower not found" });
+      const accounts = await storage.getCreditAccountsByBorrower(req.params.id);
+      const inquiries = await storage.getCreditInquiriesByBorrower(req.params.id);
+      const judgments = await storage.getCourtJudgmentsByBorrower(req.params.id);
+      const allBorrowers = await storage.getBorrowers();
+      const duplicateIdCount = allBorrowers.filter(b => b.nationalId === borrower.nationalId).length;
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      const recentInquiries = inquiries.filter(i => i.createdAt && new Date(i.createdAt) >= thirtyDaysAgo).length;
+      const accountCreatedRecently = accounts.filter(a => a.createdAt && new Date(a.createdAt) >= ninetyDaysAgo).length;
+      const totalDebt = accounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
+      const monthlyIncome = parseFloat(borrower.monthlyIncome || "0");
+      const hasActiveJudgments = judgments.some(j => j.status === "active");
+      const writtenOffCount = accounts.filter(a => a.status === "written_off").length;
+
+      const fraudRisk = calculateFraudRisk({
+        borrowerId: req.params.id,
+        nationalId: borrower.nationalId,
+        phone: borrower.phone,
+        email: borrower.email,
+        accountCount: accounts.length,
+        inquiryCount: inquiries.length,
+        recentInquiries,
+        duplicateIdCount,
+        isPep: borrower.isPep ?? false,
+        hasActiveJudgments,
+        writtenOffCount,
+        totalDebt,
+        monthlyIncome,
+        accountCreatedRecently,
+      });
+
+      res.json(fraudRisk);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/borrowers/:id/alternative-data", requireRole("admin", "super_admin", "regulator", "lender"), async (req, res) => {
+    try {
+      const borrowerId = parseInt(req.params.id);
+      const data = await db.select().from(alternativeData).where(eq(alternativeData.borrowerId, borrowerId));
+      res.json(data);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/borrowers/:id/alternative-data", requireRole("admin", "super_admin", "lender"), async (req, res) => {
+    try {
+      const borrowerId = parseInt(req.params.id);
+      const borrower = await storage.getBorrower(req.params.id);
+      if (!borrower) return res.status(404).json({ message: "Borrower not found" });
+      const parsed = insertAlternativeDataSchema.parse({ ...req.body, borrowerId });
+      const [created] = await db.insert(alternativeData).values(parsed).returning();
+      await storage.createAuditLog({
+        action: "CREATE", entity: "alternative_data", entityId: String(created.id), userId: req.session?.userId,
+        details: `Added ${parsed.source} alternative data from ${parsed.provider} for borrower ${borrower.firstName || borrower.companyName}`,
+        ipAddress: req.ip || null,
+      });
+      res.status(201).json(created);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/consumer/lookup", async (req, res) => {
+    try {
+      const nationalId = req.query.nationalId as string;
+      if (!nationalId || nationalId.length < 3) {
+        return res.status(400).json({ message: "National ID is required (min 3 characters)" });
+      }
+      const allBorrowers = await storage.getBorrowers();
+      const borrower = allBorrowers.find(b =>
+        b.nationalId?.toLowerCase() === nationalId.toLowerCase() ||
+        b.ghanaCardNumber?.toLowerCase() === nationalId.toLowerCase() ||
+        b.passportNumber?.toLowerCase() === nationalId.toLowerCase()
+      );
+      if (!borrower) {
+        return res.status(404).json({ message: "No credit file found for this ID" });
+      }
+      const accounts = await storage.getCreditAccountsByBorrower(borrower.id);
+      const inquiries = await storage.getCreditInquiriesByBorrower(borrower.id);
+      const judgments = await storage.getCourtJudgmentsByBorrower(borrower.id);
+      const altData = await db.select().from(alternativeData).where(eq(alternativeData.borrowerId, borrower.id));
+      const { score: creditScore, reasonCodes, factors: scoreFactors } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep, altData);
+      const totalDebt = accounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
+      const disputes = await storage.getDisputes();
+      const borrowerDisputes = disputes.filter(d => d.borrowerId === borrower.id);
+
+      res.json({
+        borrower: {
+          id: borrower.id,
+          firstName: borrower.firstName,
+          lastName: borrower.lastName,
+          companyName: borrower.companyName,
+          type: borrower.type,
+          nationalId: borrower.nationalId?.replace(/(.{3}).+(.{3})/, "$1****$2"),
+          country: borrower.country,
+        },
+        creditSummary: {
+          creditScore,
+          reasonCodes,
+          scoreFactors,
+          totalAccounts: accounts.length,
+          activeAccounts: accounts.filter(a => a.status !== "closed").length,
+          delinquentAccounts: accounts.filter(a => a.status === "delinquent" || a.status === "default").length,
+          totalDebt: totalDebt.toFixed(2),
+          inquiryCount: inquiries.length,
+          judgmentCount: judgments.filter(j => j.status === "active").length,
+          openDisputes: borrowerDisputes.filter(d => d.status === "open" || d.status === "under_review").length,
+        },
+        accountSummary: accounts.map(a => ({
+          accountType: a.accountType,
+          lender: a.lenderInstitution,
+          status: a.status,
+          currency: a.currency,
+          currentBalance: a.currentBalance,
+          originalAmount: a.originalAmount,
+        })),
       });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -2323,12 +2456,13 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
         }
       }
 
+      const altData = await db.select().from(alternativeData).where(eq(alternativeData.borrowerId, parseInt(borrowerId)));
       const totalDebt = accounts.reduce((sum, a) => sum + parseFloat(a.currentBalance || "0"), 0);
       const delinquentCount = accounts.filter(a => a.status === "delinquent" || a.status === "default").length;
       const writtenOffCount = accounts.filter(a => a.status === "written_off").length;
       const restructuredCount = accounts.filter(a => a.status === "restructured").length;
 
-      const { score: creditScore, reasonCodes } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep);
+      const { score: creditScore, reasonCodes, factors: scoreFactors } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep, altData);
 
       const log = await storage.createCreditReportLog({
         borrowerId,
@@ -2381,6 +2515,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
           restructuredAccounts: restructuredCount,
           creditScore,
           reasonCodes,
+          scoreFactors,
           inquiryCount: inquiries.length,
           judgmentCount: judgments.length,
           isPep: borrower.isPep,

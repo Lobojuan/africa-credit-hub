@@ -6,7 +6,7 @@ import {
   Users, CreditCard, Search, AlertTriangle, DollarSign, ShieldAlert,
   CheckSquare, AlertCircle, TrendingUp, Activity, X, ExternalLink,
   Building2, MapPin, UserCheck, BarChart3, Banknote, Clock, Gavel,
-  Sun, Moon, Sunrise, Sunset
+  Sun, Moon, Sunrise, Sunset, ChevronDown
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -409,6 +409,48 @@ function DetailContent({ type, data, displayCurrency, convertAmount }: { type: D
   }
 }
 
+function CollapsibleDashboardSection({ title, icon: Icon, defaultOpen = true, badge, children, testId }: {
+  title: string;
+  icon: typeof TrendingUp;
+  defaultOpen?: boolean;
+  badge?: string;
+  children: any;
+  testId: string;
+}) {
+  const [isOpen, setIsOpen] = useState(() => {
+    const stored = localStorage.getItem(`dash_section_${testId}`);
+    return stored !== null ? stored === "true" : defaultOpen;
+  });
+
+  const toggle = () => {
+    const next = !isOpen;
+    setIsOpen(next);
+    localStorage.setItem(`dash_section_${testId}`, String(next));
+  };
+
+  return (
+    <div data-testid={`section-${testId}`}>
+      <button
+        onClick={toggle}
+        className="w-full flex items-center justify-between py-2 mb-3 group cursor-pointer"
+        data-testid={`button-toggle-${testId}`}
+        aria-expanded={isOpen}
+        aria-controls={`content-${testId}`}
+      >
+        <div className="flex items-center gap-2">
+          <Icon className="w-4 h-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">{title}</h2>
+          {badge && <Badge variant="secondary" className="text-[10px]">{badge}</Badge>}
+        </div>
+        <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${isOpen ? "" : "-rotate-90"}`} />
+      </button>
+      <div id={`content-${testId}`} role="region" className={`transition-all duration-300 ${isOpen ? "opacity-100" : "opacity-0 h-0 overflow-hidden"}`}>
+        {isOpen && children}
+      </div>
+    </div>
+  );
+}
+
 function getGreeting(): { text: string; Icon: typeof Sun } {
   const hour = new Date().getHours();
   if (hour >= 5 && hour < 12) return { text: "Good morning", Icon: Sunrise };
@@ -602,17 +644,20 @@ export default function Dashboard() {
         ) : null}
       </div>
 
-      <DashboardCharts
-        monthlyTrend={chartProps.monthlyTrend}
-        statusBreakdown={chartProps.statusBreakdown}
-        typeBreakdown={chartProps.typeBreakdown}
-        isLoading={chartsLoading}
-      />
+      <CollapsibleDashboardSection title="Analytics" icon={BarChart3} testId="analytics">
+        <DashboardCharts
+          monthlyTrend={chartProps.monthlyTrend}
+          statusBreakdown={chartProps.statusBreakdown}
+          typeBreakdown={chartProps.typeBreakdown}
+          isLoading={chartsLoading}
+        />
+      </CollapsibleDashboardSection>
 
-      <div className={`grid grid-cols-1 ${isGhanaMode() ? 'lg:grid-cols-3' : 'lg:grid-cols-3'} gap-4`}>
-        <div className={isGhanaMode() ? "lg:col-span-2" : "lg:col-span-2"}>
-          <AfricaMap countryBreakdown={chartData?.countryBreakdown} />
-        </div>
+      <CollapsibleDashboardSection title="Geographic Coverage" icon={MapPin} testId="geography" defaultOpen={true}>
+        <div className={`grid grid-cols-1 ${isGhanaMode() ? 'lg:grid-cols-3' : 'lg:grid-cols-3'} gap-4`}>
+          <div className={isGhanaMode() ? "lg:col-span-2" : "lg:col-span-2"}>
+            <AfricaMap countryBreakdown={chartData?.countryBreakdown} />
+          </div>
         {isGhanaMode() && (
           <Card className="border border-border/30 card-shine premium-glow" data-testid="card-credit-score-factors">
             <CardHeader className="pb-3">
@@ -651,13 +696,15 @@ export default function Dashboard() {
           </Card>
         )}
       </div>
+      </CollapsibleDashboardSection>
 
+      <CollapsibleDashboardSection title="Recent Activity" icon={Activity} testId="recent-activity" badge={`${(recentAccounts?.length || 0) + (auditLogs?.length || 0)} items`}>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="border border-border/30 overflow-hidden card-shine premium-glow">
-          <CardHeader className="pb-3 bg-gradient-to-r from-card via-card to-background/30">
+        <Card className="border border-border/30 overflow-hidden">
+          <CardHeader className="pb-3">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(172 62% 30%) 0%, hsl(172 50% 22%) 100%)", boxShadow: "0 4px 12px -2px hsl(172 62% 26% / 0.3)" }}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(172 62% 30%) 0%, hsl(172 50% 22%) 100%)" }}>
                   <TrendingUp className="w-4.5 h-4.5 text-white" />
                 </div>
                 <div>
@@ -714,11 +761,11 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border border-border/30 overflow-hidden card-shine premium-glow">
-          <CardHeader className="pb-3 bg-gradient-to-r from-card via-card to-background/30">
+        <Card className="border border-border/30 overflow-hidden">
+          <CardHeader className="pb-3">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(42 85% 55%) 0%, hsl(32 78% 46%) 100%)", boxShadow: "0 4px 12px -2px hsl(42 85% 53% / 0.3)" }}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(42 85% 55%) 0%, hsl(32 78% 46%) 100%)" }}>
                   <Activity className="w-4.5 h-4.5 text-white" />
                 </div>
                 <div>
@@ -773,6 +820,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+      </CollapsibleDashboardSection>
 
       <Sheet open={!!selectedDetail} onOpenChange={(open) => { if (!open) setSelectedDetail(null); }}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto" data-testid="sheet-dashboard-detail">

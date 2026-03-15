@@ -36,6 +36,7 @@ import {
   Handshake,
   FileSearch,
   ArrowRightLeft,
+  UserCheck,
 } from "lucide-react";
 import {
   Sidebar,
@@ -114,6 +115,10 @@ const adminItems: NavItem[] = [
   { titleKey: "sidebar.exchangeRates", url: "/exchange-rates", icon: DollarSign, testId: "nav-exchange-rates", roles: ["admin", "super_admin"] },
   { titleKey: "sidebar.apiAdmin", url: "/api-admin", icon: Plug, testId: "nav-api-admin", roles: ["admin", "super_admin"] },
   { titleKey: "sidebar.apiKeys", url: "/api-keys", icon: Key, testId: "nav-api-keys", roles: ["admin", "super_admin"] },
+];
+
+const consumerItems: NavItem[] = [
+  { titleKey: "sidebar.consumerPortal", url: "/my-credit", icon: UserCheck, testId: "nav-consumer-portal" },
 ];
 
 const resourceItems: NavItem[] = [
@@ -304,6 +309,15 @@ export function AppSidebar() {
             icon={Settings}
           />
         )}
+
+        <CollapsibleSection
+          label={t('sidebar.consumer', 'Consumer')}
+          items={filterByRole(consumerItems, role)}
+          location={location}
+          defaultOpen={false}
+          t={t}
+          icon={UserCheck}
+        />
 
         <div className="mx-3 my-1">
           <div className="h-px bg-sidebar-foreground/10" />

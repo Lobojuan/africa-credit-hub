@@ -1,10 +1,22 @@
 import { useId } from "react";
+import { ScoreFactors } from "@/components/score-factors";
+
+interface ScoreFactor {
+  name: string;
+  impact: number;
+  maxImpact: number;
+  direction: "positive" | "negative" | "neutral";
+  description: string;
+  weight: number;
+}
 
 interface CreditScoreGaugeProps {
   score: number;
   size?: number;
   label?: string;
   testId?: string;
+  factors?: ScoreFactor[];
+  showFactors?: boolean;
 }
 
 function getScoreColor(score: number): { main: string; mainDark: string; glow: string; label: string } {
@@ -15,7 +27,7 @@ function getScoreColor(score: number): { main: string; mainDark: string; glow: s
   return { main: "hsl(0 72% 42%)", mainDark: "hsl(0 72% 52%)", glow: "hsl(0 72% 42% / 0.3)", label: "Very Poor" };
 }
 
-export function CreditScoreGauge({ score, size = 180, label, testId }: CreditScoreGaugeProps) {
+export function CreditScoreGauge({ score, size = 180, label, testId, factors, showFactors = false }: CreditScoreGaugeProps) {
   const uid = useId();
   const gradId = `gauge-grad-${uid}`;
   const glowId = `gauge-glow-${uid}`;
@@ -186,6 +198,11 @@ export function CreditScoreGauge({ score, size = 180, label, testId }: CreditSco
           {maxScore}
         </text>
       </svg>
+      {showFactors && factors && factors.length > 0 && (
+        <div className="mt-4 w-full max-w-sm">
+          <ScoreFactors factors={factors} compact />
+        </div>
+      )}
     </div>
   );
 }

@@ -70,6 +70,7 @@ const CreditScoreMethodologyPage = lazy(() => import("@/pages/credit-score-metho
 const CrossBorderAgreementsPage = lazy(() => import("@/pages/cross-border-agreements"));
 const CrossBorderSearchPage = lazy(() => import("@/pages/cross-border-search"));
 const PapssSettlementsPage = lazy(() => import("@/pages/papss-settlements"));
+const ConsumerPortalPage = lazy(() => import("@/pages/consumer-portal"));
 
 function LazyFallback() {
   return (
@@ -121,6 +122,7 @@ function Router() {
         <Route path="/cross-border-agreements" component={CrossBorderAgreementsPage} />
         <Route path="/cross-border-search" component={CrossBorderSearchPage} />
         <Route path="/papss-settlements" component={PapssSettlementsPage} />
+        <Route path="/my-credit" component={ConsumerPortalPage} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>

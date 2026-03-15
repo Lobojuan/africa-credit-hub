@@ -52,7 +52,9 @@ const API_ENDPOINTS = [
   { id: "health", method: "GET", path: "/health", description: "Check API availability and version", params: [], body: null },
   { id: "create-borrower", method: "POST", path: "/borrowers", description: "Create a borrower record", params: [], body: JSON.stringify({ type: "individual", firstName: "John", lastName: "Doe", nationalId: "ETH-123456", phone: "+251911000000" }, null, 2) },
   { id: "search-borrowers", method: "GET", path: "/borrowers/search", description: "Search borrowers by national ID", params: [{ name: "nationalId", placeholder: "ETH-123456" }, { name: "name", placeholder: "John Doe" }], body: null },
-  { id: "credit-report", method: "GET", path: "/borrowers/:id/credit-report", description: "Generate a full credit report", params: [{ name: "id", placeholder: "1" }], body: null },
+  { id: "credit-report", method: "GET", path: "/borrowers/:id/credit-report", description: "Generate a full credit report with score factors", params: [{ name: "id", placeholder: "1" }], body: null },
+  { id: "fraud-risk", method: "GET", path: "/borrowers/:id/fraud-risk", description: "Get fraud risk assessment with velocity checks and alerts", params: [{ name: "id", placeholder: "1" }], body: null },
+  { id: "consumer-lookup", method: "GET", path: "/consumer/lookup", description: "Consumer self-service credit score lookup (public)", params: [{ name: "nationalId", placeholder: "GHA-123456789" }], body: null },
   { id: "create-credit-account", method: "POST", path: "/credit-accounts", description: "Submit credit account data", params: [], body: JSON.stringify({ borrowerId: 1, accountNumber: "ACC-001", accountType: "term_loan", originalAmount: "50000", currentBalance: "35000", currency: "GHS", status: "active", openDate: "2024-01-15" }, null, 2) },
   { id: "get-credit-accounts", method: "GET", path: "/credit-accounts/:borrowerId", description: "Get all credit accounts for a borrower", params: [{ name: "borrowerId", placeholder: "1" }], body: null },
   { id: "create-payment", method: "POST", path: "/payment-history", description: "Submit payment history records", params: [], body: JSON.stringify({ creditAccountId: 1, paymentDate: "2024-06-01", amountDue: "5000", amountPaid: "5000", currency: "GHS", status: "on_time" }, null, 2) },
@@ -542,6 +544,10 @@ function WebhookDocs() {
               { event: "dispute.opened", desc: "New dispute filed by borrower" },
               { event: "dispute.resolved", desc: "Dispute resolved" },
               { event: "payment.recorded", desc: "Payment history record submitted" },
+              { event: "fraud.alert_triggered", desc: "Fraud risk threshold exceeded for a borrower" },
+              { event: "score.changed", desc: "Borrower credit score changed significantly" },
+              { event: "alternative_data.submitted", desc: "Mobile money or utility data submitted" },
+              { event: "consent.revoked", desc: "Borrower consent revoked" },
             ].map(e => (
               <div key={e.event} className="p-2 bg-muted/50 rounded-md" data-testid={`text-webhook-event-${e.event.replace(/\./g, "-")}`}>
                 <code className="text-[10px] sm:text-xs font-mono font-medium">{e.event}</code>
@@ -783,6 +789,48 @@ export default function ApiDocsPage() {
 
               <h3 className="text-sm font-semibold flex items-center gap-2 mt-4"><Gavel className="w-4 h-4" /> {t("apiDocs.courtJudgments")}</h3>
               <CodeBlock method="POST" path="/court-judgments" description={t("apiDocs.courtJudgmentsDesc")} />
+
+              <h3 className="text-sm font-semibold flex items-center gap-2 mt-4"><Shield className="w-4 h-4" /> Fraud Detection</h3>
+              <CodeBlock method="GET" path="/borrowers/:id/fraud-risk" description="Get comprehensive fraud risk assessment including velocity checks, identity verification, and behavioral analysis" />
+
+              <h3 className="text-sm font-semibold flex items-center gap-2 mt-4"><Search className="w-4 h-4" /> Consumer Self-Service</h3>
+              <CodeBlock method="GET" path="/consumer/lookup?nationalId=..." description="Public endpoint for borrower credit score lookup by National ID, Ghana Card, or Passport number" />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="space-y-0 pb-3">
+              <div className="flex items-center gap-2">
+                <Terminal className="w-5 h-5 text-muted-foreground" />
+                <h2 className="text-lg font-semibold">Sandbox Environment</h2>
+                <Badge variant="outline" className="text-[10px] bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300">Available</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Use the sandbox environment to test your integration without affecting production data. All sandbox requests use test data and return realistic responses.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg bg-muted/50 border">
+                  <p className="text-xs font-semibold">Sandbox Base URL</p>
+                  <code className="text-[11px] font-mono text-primary mt-1 block" data-testid="text-sandbox-url">{baseUrl}/api/external/v1</code>
+                  <p className="text-[10px] text-muted-foreground mt-1">Use sandbox API keys (prefix: sim_test_)</p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/50 border">
+                  <p className="text-xs font-semibold">Rate Limits (Sandbox)</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">Reads: 200/min · Writes: 60/min · Batch: 10/min</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">Higher limits available on production keys</p>
+                </div>
+              </div>
+              <div className="space-y-1.5 pt-2">
+                <p className="text-xs font-semibold">Quick Start</p>
+                <ol className="list-decimal list-inside space-y-1 text-xs text-muted-foreground">
+                  <li>Generate a sandbox API key from the <strong>API Keys</strong> page</li>
+                  <li>Use the Interactive Explorer above to test endpoints</li>
+                  <li>Verify webhook delivery with the test ping feature</li>
+                  <li>Switch to production keys when ready to go live</li>
+                </ol>
+              </div>
             </CardContent>
           </Card>
 
