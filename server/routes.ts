@@ -4364,20 +4364,19 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
       const records = await db.select().from(billingRecords).orderBy(desc(billingRecords.createdAt));
       let tiers: any[] = [];
       try {
-        const rawTiers = await db.execute(sql`SELECT id, name, event_type, min_volume, max_volume, unit_price_cents, currency, country, is_active, created_at FROM pricing_tiers WHERE is_active = true ORDER BY country, event_type, min_volume`);
-        const rows = rawTiers.rows || rawTiers || [];
-        console.log("[Billing] Raw tiers fetched:", rows.length, "rows");
-        tiers = rows.map((t: any) => ({
+        const tierResult = await pool.query("SELECT id, name, event_type, min_volume, max_volume, unit_price_cents, currency, country, is_active, created_at FROM pricing_tiers WHERE is_active = true ORDER BY country, event_type, min_volume");
+        console.log("[Billing] Raw tiers fetched:", tierResult.rows.length, "rows");
+        tiers = tierResult.rows.map((t: any) => ({
           id: t.id,
           name: t.name,
-          eventType: t.event_type || t.eventType,
-          minVolume: Number(t.min_volume ?? t.minVolume) || 0,
-          maxVolume: (t.max_volume ?? t.maxVolume) != null ? Number(t.max_volume ?? t.maxVolume) : null,
-          unitPriceCents: Number(t.unit_price_cents ?? t.unitPriceCents) || 0,
+          eventType: t.event_type,
+          minVolume: Number(t.min_volume) || 0,
+          maxVolume: t.max_volume != null ? Number(t.max_volume) : null,
+          unitPriceCents: Number(t.unit_price_cents) || 0,
           currency: String(t.currency || "USD"),
           country: String(t.country || "Global"),
-          isActive: t.is_active ?? t.isActive ?? true,
-          createdAt: t.created_at || t.createdAt,
+          isActive: t.is_active,
+          createdAt: t.created_at,
         }));
         console.log("[Billing] Processed tiers:", tiers.length);
       } catch (tierErr: any) {
