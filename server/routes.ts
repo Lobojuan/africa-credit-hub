@@ -3,7 +3,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { db, pool } from "./db";
-import { sql, eq, and, or, desc, inArray } from "drizzle-orm";
+import { sql, eq, and, or, desc, inArray, ilike } from "drizzle-orm";
 import { enqueueBatchAccountCreate, enqueueBatchBorrowerUpdate, enqueueBatchAccountUpdate, getJobStatus, getQueueStats } from "./batch-queue";
 import {
   insertBorrowerSchema, insertCreditAccountSchema, insertCreditInquirySchema,
@@ -23,6 +23,7 @@ import { z } from "zod";
 import { registerExternalApi, generateApiKey } from "./external-api";
 import { calculateCreditScore, getDefaultCurrencyCode } from "./credit-score";
 import { calculateFraudRisk } from "./fraud-detection";
+import { recordUsageEvent } from "./usage-metering";
 import fs from "fs";
 import path from "path";
 import * as OTPAuth from "otpauth";
@@ -801,7 +802,7 @@ export async function registerRoutes(
   });
 
   app.use("/api", apiLimiter, (req, res, next) => {
-    if (req.path.startsWith("/auth") || req.path.startsWith("/external") || req.path.startsWith("/docs")) return next();
+    if (req.path.startsWith("/auth") || req.path.startsWith("/external") || req.path.startsWith("/docs") || req.path.startsWith("/consumer")) return next();
     requireAuth(req, res, next);
   });
 
@@ -1395,33 +1396,38 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/consumer/lookup", async (req, res) => {
+  const consumerLookupLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { message: "Too many lookup requests. Please try again later." }, standardHeaders: true, legacyHeaders: false });
+
+  app.get("/api/consumer/lookup", consumerLookupLimiter, async (req, res) => {
     try {
       const nationalId = req.query.nationalId as string;
-      if (!nationalId || nationalId.length < 3) {
-        return res.status(400).json({ message: "National ID is required (min 3 characters)" });
+      if (!nationalId || nationalId.length < 6) {
+        return res.status(400).json({ message: "Please enter a valid National ID (minimum 6 characters)" });
       }
-      const allBorrowers = await storage.getBorrowers();
-      const borrower = allBorrowers.find(b =>
-        b.nationalId?.toLowerCase() === nationalId.toLowerCase() ||
-        b.ghanaCardNumber?.toLowerCase() === nationalId.toLowerCase() ||
-        b.passportNumber?.toLowerCase() === nationalId.toLowerCase()
-      );
+      const borrowerResult = await db.select().from(borrowers).where(
+        or(
+          ilike(borrowers.nationalId, nationalId),
+          ilike(borrowers.ghanaCardNumber, nationalId),
+          ilike(borrowers.passportNumber, nationalId)
+        )
+      ).limit(1);
+      const borrower = borrowerResult[0];
       if (!borrower) {
         return res.status(404).json({ message: "No credit file found for this ID" });
       }
       const accounts = await storage.getCreditAccountsByBorrower(borrower.id);
       const inquiries = await storage.getCreditInquiriesByBorrower(borrower.id);
       const judgments = await storage.getCourtJudgmentsByBorrower(borrower.id);
-      const altData = await db.select().from(alternativeData).where(eq(alternativeData.borrowerId, borrower.id));
+      let altData: any[] = [];
+      try {
+        altData = await db.select().from(alternativeData).where(sql`borrower_id::text = ${borrower.id}`);
+      } catch {}
       const { score: creditScore, reasonCodes, factors: scoreFactors } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep, altData);
-      const totalDebt = accounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
       const disputes = await storage.getDisputes();
       const borrowerDisputes = disputes.filter(d => d.borrowerId === borrower.id);
 
       res.json({
         borrower: {
-          id: borrower.id,
           firstName: borrower.firstName,
           lastName: borrower.lastName,
           companyName: borrower.companyName,
@@ -1436,7 +1442,6 @@ export async function registerRoutes(
           totalAccounts: accounts.length,
           activeAccounts: accounts.filter(a => a.status !== "closed").length,
           delinquentAccounts: accounts.filter(a => a.status === "delinquent" || a.status === "default").length,
-          totalDebt: totalDebt.toFixed(2),
           inquiryCount: inquiries.length,
           judgmentCount: judgments.filter(j => j.status === "active").length,
           openDisputes: borrowerDisputes.filter(d => d.status === "open" || d.status === "under_review").length,
@@ -1445,9 +1450,6 @@ export async function registerRoutes(
           accountType: a.accountType,
           lender: a.lenderInstitution,
           status: a.status,
-          currency: a.currency,
-          currentBalance: a.currentBalance,
-          originalAmount: a.originalAmount,
         })),
       });
     } catch (e: any) {
@@ -1685,6 +1687,12 @@ export async function registerRoutes(
             sendDisputeNotification(org.name, org.contactEmail, dispute.id, `${borrower.firstName} ${borrower.lastName}`, dispute.disputeType || "general").catch(() => {});
           }
         }
+        recordUsageEvent({
+          organizationId: borrower?.organizationId || req.session?.organizationId,
+          eventType: "dispute_filing",
+          country: borrower?.country || getCountryFilter(req) || null,
+          metadata: JSON.stringify({ disputeId: dispute.id, disputeType: dispute.disputeType }),
+        });
       } catch {}
 
       res.status(201).json(dispute);
@@ -1764,6 +1772,16 @@ export async function registerRoutes(
         details: `Batch upload: ${results.successCount} succeeded, ${results.errorCount} failed out of ${results.totalSubmitted}`,
         ipAddress: req.ip || null,
       });
+
+      if (results.successCount > 0) {
+        recordUsageEvent({
+          organizationId: req.session?.organizationId,
+          eventType: "batch_upload",
+          quantity: results.successCount,
+          country: getCountryFilter(req) || null,
+          metadata: JSON.stringify({ source: "credit-accounts", successCount: results.successCount, errorCount: results.errorCount }),
+        });
+      }
 
       res.json(results);
     } catch (e: any) {
@@ -2062,6 +2080,13 @@ export async function registerRoutes(
         action: "BATCH_QUEUE_ACCOUNTS", entity: "credit_account", userId: req.session?.userId,
         details: `Queued batch account create: ${records.length} records (job: ${jobId})`,
         ipAddress: req.ip || null,
+      });
+      recordUsageEvent({
+        organizationId: req.session?.organizationId,
+        eventType: "batch_upload",
+        quantity: records.length,
+        country: getCountryFilter(req) || null,
+        metadata: JSON.stringify({ jobId, recordCount: records.length }),
       });
       res.json({ jobId, totalRecords: records.length, status: "queued" });
     } catch (e: any) {
@@ -2478,6 +2503,13 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
         ipAddress: req.ip || null,
       });
 
+      recordUsageEvent({
+        organizationId: borrower.organizationId || req.session?.organizationId,
+        eventType: "credit_report_pull",
+        country: borrower.country || getCountryFilter(req) || null,
+        metadata: JSON.stringify({ serialNumber, borrowerId, purpose }),
+      });
+
       try {
         const borrowerName = borrower.type === "individual"
           ? `${borrower.firstName || ""} ${borrower.lastName || ""}`.trim()
@@ -2890,6 +2922,13 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
       const country = getCountryFilter(req);
       const accounts = await storage.getAllCreditAccounts(orgId, country);
       const borrowersList = (await storage.getBorrowers(1, 200, orgId, country)).data;
+
+      recordUsageEvent({
+        organizationId: orgId || req.session?.organizationId,
+        eventType: "data_export",
+        country: country || null,
+        metadata: JSON.stringify({ format, type, recordCount: type === "portfolio" ? accounts.length : borrowersList.length }),
+      });
 
       if (format === "xlsx") {
         const ExcelJS = (await import("exceljs")).default;
@@ -4518,6 +4557,16 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
       }
       const usage = await db.select().from(usageMetering).orderBy(desc(usageMetering.createdAt)).limit(500);
 
+      const revByCurrency: Record<string, { total: number; paid: number; pending: number; overdue: number }> = {};
+      for (const r of records) {
+        const cur = r.currency || "USD";
+        if (!revByCurrency[cur]) revByCurrency[cur] = { total: 0, paid: 0, pending: 0, overdue: 0 };
+        const amt = parseFloat(r.amount);
+        revByCurrency[cur].total += amt;
+        if (r.status === "paid") revByCurrency[cur].paid += amt;
+        else if (r.status === "pending") revByCurrency[cur].pending += amt;
+        else if (r.status === "overdue") revByCurrency[cur].overdue += amt;
+      }
       const totalRevenue = records.reduce((sum, r) => sum + parseFloat(r.amount), 0);
       const paidRevenue = records.filter(r => r.status === "paid").reduce((sum, r) => sum + parseFloat(r.amount), 0);
       const pendingRevenue = records.filter(r => r.status === "pending").reduce((sum, r) => sum + parseFloat(r.amount), 0);
@@ -4542,6 +4591,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
         pricingTiers: tiers,
         usageEvents: usage,
         summary: { totalRevenue, paidRevenue, pendingRevenue, overdueRevenue, invoiceCount: records.length },
+        revenueByCurrency: revByCurrency,
         usageByCategory: usageByCat.map(u => ({ eventType: u.eventType, totalEvents: Number(u.totalEvents), totalCents: Number(u.totalCents), unbilledCents: Number(u.unbilledCents) })),
         revenueByOrg: orgBilling.map(o => ({ orgId: o.orgId, name: o.name, total: Number(o.total), invoiceCount: Number(o.count) })),
         _ts: Date.now(),
@@ -5327,6 +5377,13 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
         userId: req.session.userId!, action: "CROSS_BORDER_SEARCH", entity: "borrower",
         details: `Cross-border search from ${userCountry} to ${targetCountry}: "${q}" (${(results.rows || []).length} results, agreement: ${activeAgreements[0].id})`,
         ipAddress: req.ip, organizationId: null,
+      });
+
+      recordUsageEvent({
+        organizationId: req.session?.organizationId,
+        eventType: "cross_border_query",
+        country: userCountry,
+        metadata: JSON.stringify({ targetCountry, resultCount: (results.rows || []).length }),
       });
 
       res.json({ results: results.rows || [], agreementId: activeAgreements[0].id, sourceCountry: userCountry, targetCountry });

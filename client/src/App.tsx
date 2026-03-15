@@ -122,7 +122,6 @@ function Router() {
         <Route path="/cross-border-agreements" component={CrossBorderAgreementsPage} />
         <Route path="/cross-border-search" component={CrossBorderSearchPage} />
         <Route path="/papss-settlements" component={PapssSettlementsPage} />
-        <Route path="/my-credit" component={ConsumerPortalPage} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
@@ -312,6 +311,11 @@ function App() {
         <TooltipProvider>
           <Switch>
             <Route path="/investor" component={InvestorLandingPage} />
+            <Route path="/my-credit">
+              <Suspense fallback={<LazyFallback />}>
+                <ConsumerPortalPage />
+              </Suspense>
+            </Route>
             <Route path="/mobile">
               <AuthProvider>
                 <OrgSwitcherProvider>
