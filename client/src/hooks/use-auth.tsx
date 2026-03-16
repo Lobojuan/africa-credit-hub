@@ -4,13 +4,14 @@ import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { User, Organization } from "@shared/schema";
 
-type AuthUser = Omit<User, "password"> & { passwordExpired?: boolean; organization?: Organization | null };
+type AuthUser = Omit<User, "password"> & { passwordExpired?: boolean; organization?: Organization | null; isDemo?: boolean };
 
 interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
   passwordExpired: boolean;
   accountSuspended: boolean;
+  isDemo: boolean;
   login: (username: string, password: string) => Promise<AuthUser>;
   logout: () => Promise<void>;
 }
@@ -51,6 +52,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (body.message === "ACCOUNT_SUSPENDED") {
             setAccountSuspended(true);
           }
+          if (body.message === "DEMO_READ_ONLY") {
+            toast({
+              title: "Demo Mode — Read Only",
+              description: "Data modifications are disabled in the demo. This sandbox uses isolated sample data.",
+              variant: "destructive",
+            });
+          }
         } catch {}
       }
       return response;
@@ -89,9 +97,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const passwordExpired = !!(user && (user as AuthUser).passwordExpired);
+  const isDemo = !!(user && (user as AuthUser).isDemo);
 
   return (
-    <AuthContext.Provider value={{ user: user ?? null, isLoading, passwordExpired, accountSuspended, login, logout }}>
+    <AuthContext.Provider value={{ user: user ?? null, isLoading, passwordExpired, accountSuspended, isDemo, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
