@@ -114,6 +114,7 @@ async function buildAll() {
   for (const route of spaRoutes) {
     await mkdir(`dist/public/${route}`, { recursive: true });
     await copyFile("dist/public/index.html", `dist/public/${route}/index.html`);
+    await copyFile("dist/public/index.html", `dist/public/${route}.html`);
   }
 
   console.log("copying docs folder...");
