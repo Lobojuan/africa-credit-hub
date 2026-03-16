@@ -995,7 +995,27 @@ export async function registerRoutes(
         res.status(500).json({ message: "Auto-login failed" });
       }
     });
+
   }
+
+  app.get("/api/demo-login", loginLimiter, async (req, res) => {
+    try {
+      const { ensureDemoSandbox } = await import("./demo-sandbox");
+      const { userId, organizationId } = await ensureDemoSandbox();
+      req.session.userId = userId;
+      req.session.userRole = "admin";
+      req.session.organizationId = organizationId;
+      req.session.isDemo = true;
+      req.session.lastActivity = Date.now();
+      req.session.save((err) => {
+        if (err) return res.status(500).json({ message: "Session save failed" });
+        res.redirect("/");
+      });
+    } catch (e: any) {
+      console.error("Demo login failed:", e);
+      res.status(500).json({ message: "Demo login failed" });
+    }
+  });
 
   app.get("/api/auth/me", async (req, res) => {
     if (!req.session?.userId) {
