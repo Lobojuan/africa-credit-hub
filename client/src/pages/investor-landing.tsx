@@ -272,6 +272,72 @@ const PLATFORM_MODULES = [
       },
     ],
   },
+  {
+    category: "v2.0 — Competitive Differentiators",
+    color: "hsl(340 55% 42%)",
+    modules: [
+      {
+        icon: TrendingUp,
+        title: "Credit Score Explainability",
+        details: [
+          "Factor-by-factor breakdown of every credit score with weights and impact indicators",
+          "Transparent reason codes aligned with regulatory expectations for lending decisions",
+          "Visual factor bars showing positive and negative contributors side-by-side",
+          "Exportable score explanations for inclusion in loan decision audit trails",
+        ],
+      },
+      {
+        icon: Activity,
+        title: "Alternative Data Scoring",
+        details: [
+          "Integrates mobile money, utility payments, and telco usage into credit scoring",
+          "Addresses thin-file borrowers with no traditional credit history — key for financial inclusion",
+          "Alternative data bonus of up to 90 points for borrowers with consistent on-time records",
+          "Strong Alternative Data reason code when 90%+ on-time with 12+ transactions",
+        ],
+      },
+      {
+        icon: Fingerprint,
+        title: "Fraud Detection Layer",
+        details: [
+          "Real-time fraud risk scoring on every borrower profile using velocity and pattern analysis",
+          "Detects rapid-fire applications, geographic anomalies, and identity verification failures",
+          "Risk-level badges (Low / Medium / High / Critical) displayed on borrower profiles",
+          "Configurable alert thresholds and automated fraud flagging for investigation",
+        ],
+      },
+      {
+        icon: UserCheck,
+        title: "Consumer Self-Service Portal",
+        details: [
+          "Public-facing mobile-first portal for borrowers to check their own credit score",
+          "Identity verification via National ID + date of birth before any data is shown",
+          "Rate-limited and privacy-hardened — consumers see only their score and rating, nothing else",
+          "Fully responsive design works on any device without a separate mobile app",
+        ],
+      },
+      {
+        icon: ServerCog,
+        title: "Enhanced API Developer Portal",
+        details: [
+          "Interactive sandbox for partner institutions to test API calls with live responses",
+          "Code examples in multiple languages (cURL, Python, Node.js, Java) for rapid integration",
+          "Webhook event documentation with payload schemas and delivery retry policies",
+          "Authentication flow guides with step-by-step OAuth 2.1 integration instructions",
+        ],
+      },
+      {
+        icon: Receipt,
+        title: "Usage-Based Billing Engine",
+        details: [
+          "Per-transaction metering wired to credit reports, disputes, batch uploads, and searches",
+          "Volume-based pricing tiers with automatic tier progression as usage grows",
+          "Multi-currency revenue tracking with per-country and per-organization breakdowns",
+          "Billing dashboard with real-time usage analytics and invoice generation",
+        ],
+      },
+    ],
+  },
 ];
 
 const USE_CASES = [
