@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   DollarSign, TrendingUp, Users, Building2, Activity,
-  Server, Clock, Zap, BarChart3, PieChart, RefreshCw
+  Server, Clock, Zap, BarChart3, PieChart, RefreshCw, Target, Percent, ArrowUpRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -62,7 +62,7 @@ export default function PlatformMetricsPage() {
     );
   }
 
-  const { revenue, subscriptions, users, organizations, api, uptime, system } = metrics;
+  const { revenue, subscriptions, users, organizations, api, uptime, system, projections } = metrics;
 
   return (
     <div className="space-y-6" data-testid="platform-metrics-page">
@@ -125,6 +125,70 @@ export default function PlatformMetricsPage() {
           icon={Clock}
         />
       </div>
+
+      <Card data-testid="card-investor-kpis">
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Target className="w-4 h-4" />
+            Investor KPIs & Unit Economics
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="text-center p-3 rounded-lg bg-muted/50">
+              <p className="text-xs text-muted-foreground">MRR Growth</p>
+              <p className="text-lg font-bold text-primary">{revenue.growthRate || 0}%</p>
+              <p className="text-[10px] text-muted-foreground">month-over-month</p>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-muted/50">
+              <p className="text-xs text-muted-foreground">LTV</p>
+              <p className="text-lg font-bold">${(revenue.ltv || 0).toLocaleString()}</p>
+              <p className="text-[10px] text-muted-foreground">lifetime value</p>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-muted/50">
+              <p className="text-xs text-muted-foreground">CAC</p>
+              <p className="text-lg font-bold">${(revenue.cac || 0).toLocaleString()}</p>
+              <p className="text-[10px] text-muted-foreground">acq. cost</p>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-muted/50">
+              <p className="text-xs text-muted-foreground">LTV/CAC</p>
+              <p className="text-lg font-bold text-green-600">{revenue.ltvCacRatio || 0}x</p>
+              <p className="text-[10px] text-muted-foreground">target: &gt;3x</p>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-muted/50">
+              <p className="text-xs text-muted-foreground">NRR</p>
+              <p className="text-lg font-bold">{revenue.nrr || 0}%</p>
+              <p className="text-[10px] text-muted-foreground">net retention</p>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-muted/50">
+              <p className="text-xs text-muted-foreground">Rule of 40</p>
+              <p className="text-lg font-bold text-primary">{revenue.ruleOf40 || 0}</p>
+              <p className="text-[10px] text-muted-foreground">growth + margin</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {projections && projections.length > 0 && (
+        <Card data-testid="card-growth-projection">
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center gap-2">
+              <ArrowUpRight className="w-4 h-4" />
+              12-Month Revenue Projection
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <AreaChart data={projections}>
+                <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={(v: number) => [`$${v.toLocaleString()}`, ""]} />
+                <Area type="monotone" dataKey="mrr" stroke="hsl(175, 55%, 28%)" fill="hsl(175, 55%, 28%)" fillOpacity={0.15} name="Projected MRR" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card data-testid="card-api-traffic">

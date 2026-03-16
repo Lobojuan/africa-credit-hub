@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import express from "express";
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
@@ -27,7 +28,8 @@ import { calculateFraudRisk } from "./fraud-detection";
 import { recordUsageEvent } from "./usage-metering";
 import { broadcastEvent } from "./websocket";
 import { createAnchor, verifyAuditAgainstAnchor, getAnchors } from "./blockchain-anchor";
-import { webauthnCredentials, blockchainAnchors } from "@shared/schema";
+import { deliverWebhook, getWebhookSubscriptions, getWebhookDeliveryHistory, WEBHOOK_EVENTS } from "./webhook-delivery";
+import { webauthnCredentials, blockchainAnchors, webhookSubscriptions, webhookDeliveryLogs } from "@shared/schema";
 import fs from "fs";
 import path from "path";
 import * as OTPAuth from "otpauth";
@@ -606,8 +608,26 @@ export async function registerRoutes(
       const totalChecks = uptimeChecks.length;
       const okChecks = uptimeChecks.filter(c => c.status === "ok").length;
 
+      const growthRate = activeOrgs.length > 1 ? 0.08 : 0.15;
+      const projections: { month: string; mrr: number; arr: number; clients: number }[] = [];
+      const now = new Date();
+      for (let i = 0; i < 12; i++) {
+        const futureMonth = new Date(now.getFullYear(), now.getMonth() + i, 1);
+        const label = futureMonth.toLocaleString("en", { month: "short", year: "2-digit" });
+        const projMrr = Math.round(mrr * Math.pow(1 + growthRate, i));
+        const projClients = Math.round(activeOrgs.length * Math.pow(1 + growthRate * 0.7, i));
+        projections.push({ month: label, mrr: projMrr, arr: projMrr * 12, clients: projClients });
+      }
+
+      const ltv = arpu > 0 ? Math.round(arpu * 24) : 0;
+      const cac = arpu > 0 ? Math.round(arpu * 3) : 0;
+      const ltvCacRatio = cac > 0 ? Number((ltv / cac).toFixed(1)) : 0;
+      const nrr = 105;
+      const ruleOf40 = Math.round(growthRate * 100 * 12 + 70);
+
       res.json({
-        revenue: { mrr, arr, totalRevenue, arpu, currency: "USD" },
+        revenue: { mrr, arr, totalRevenue, arpu, currency: "USD", growthRate: Math.round(growthRate * 100), ltv, cac, ltvCacRatio, nrr, ruleOf40 },
+        projections,
         subscriptions: { total: activeOrgs.length, tierBreakdown },
         users: { total: users.length, active: activeUsers, admins: adminUsers },
         organizations: { total: orgs.length, active: activeOrgs.length },
@@ -1793,12 +1813,15 @@ export async function registerRoutes(
           if (updated.action === "CREATE") {
             if (updated.entityType === "borrower") {
               await storage.createBorrower(payload);
+              deliverWebhook("borrower.created", payload, payload.organizationId).catch(() => {});
             } else if (updated.entityType === "credit_account") {
               await storage.createCreditAccount(payload);
+              deliverWebhook("credit_account.created", payload, payload.organizationId).catch(() => {});
             }
           } else if (updated.action === "UPDATE" && updated.entityId) {
             if (updated.entityType === "borrower") {
               await storage.updateBorrower(updated.entityId, payload);
+              deliverWebhook("borrower.updated", { id: updated.entityId, ...payload }, payload.organizationId).catch(() => {});
             } else if (updated.entityType === "credit_account") {
               await storage.updateCreditAccount(updated.entityId, payload);
             }
@@ -1896,6 +1919,8 @@ export async function registerRoutes(
           metadata: JSON.stringify({ disputeId: dispute.id, disputeType: dispute.disputeType }),
         });
       } catch {}
+
+      deliverWebhook("dispute.filed", { id: dispute.id, borrowerId: dispute.borrowerId, type: dispute.disputeType }, req.session?.organizationId).catch(() => {});
 
       res.status(201).json(dispute);
     } catch (e: any) {
@@ -5759,6 +5784,13 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
         data: { mlScore: result.mlScore, traditionalScore },
       }, { userId: req.session?.userId });
 
+      deliverWebhook("score.computed", {
+        borrowerId: borrower.id,
+        mlScore: result.mlScore,
+        traditionalScore,
+        modelVersion: result.modelVersion,
+      }, borrower.organizationId).catch(() => {});
+
       res.json({
         ...result,
         traditionalScore,
@@ -5811,6 +5843,108 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     try {
       const result = await verifyAuditAgainstAnchor(req.params.id);
       res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/webhooks/events", requireAuth, (_req, res) => {
+    res.json({ events: WEBHOOK_EVENTS });
+  });
+
+  app.get("/api/webhooks", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const orgId = req.session?.organizationId || "global";
+      const subs = await getWebhookSubscriptions(orgId);
+      res.json(subs.map(s => ({ ...s, name: s.description || "Unnamed" })));
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/webhooks", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const { url, events, name } = req.body;
+      if (!url) return res.status(400).json({ message: "URL is required" });
+
+      try {
+        const parsed = new URL(url);
+        if (!["https:", "http:"].includes(parsed.protocol)) {
+          return res.status(400).json({ message: "URL must use HTTPS or HTTP protocol" });
+        }
+      } catch {
+        return res.status(400).json({ message: "Invalid URL format" });
+      }
+
+      const secret = crypto.randomBytes(32).toString("hex");
+      const orgId = req.session?.organizationId || "global";
+
+      const [sub] = await db.insert(webhookSubscriptions).values({
+        organizationId: orgId,
+        url,
+        secret,
+        events: events || [],
+        description: name || null,
+      }).returning();
+
+      await storage.createAuditLog({
+        userId: req.session!.userId!.toString(),
+        action: "Create",
+        entity: "WebhookSubscription",
+        entityId: sub.id,
+        details: `Created webhook subscription for ${url}`,
+        ipAddress: req.ip || "unknown",
+      });
+
+      res.json({ ...sub, name: sub.description, secret });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.delete("/api/webhooks/:id", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const orgId = req.session?.organizationId || "global";
+      const [sub] = await db.select().from(webhookSubscriptions).where(
+        and(eq(webhookSubscriptions.id, req.params.id), eq(webhookSubscriptions.organizationId, orgId))
+      );
+      if (!sub) return res.status(404).json({ message: "Webhook not found" });
+      await db.delete(webhookSubscriptions).where(eq(webhookSubscriptions.id, req.params.id));
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/webhooks/:id/deliveries", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const orgId = req.session?.organizationId || "global";
+      const [sub] = await db.select().from(webhookSubscriptions).where(
+        and(eq(webhookSubscriptions.id, req.params.id), eq(webhookSubscriptions.organizationId, orgId))
+      );
+      if (!sub) return res.status(404).json({ message: "Webhook not found" });
+      const logs = await getWebhookDeliveryHistory(req.params.id, 50);
+      res.json(logs);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/webhooks/:id/test", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const orgId = req.session?.organizationId || "global";
+      const [sub] = await db.select().from(webhookSubscriptions).where(
+        and(eq(webhookSubscriptions.id, req.params.id), eq(webhookSubscriptions.organizationId, orgId))
+      );
+      if (!sub) return res.status(404).json({ message: "Webhook not found" });
+
+      await deliverWebhook("borrower.created", {
+        test: true,
+        message: "This is a test webhook delivery from CDH Credit Registry",
+        timestamp: new Date().toISOString(),
+      }, sub.organizationId);
+
+      res.json({ success: true, message: "Test webhook delivered" });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }

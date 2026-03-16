@@ -39,6 +39,7 @@ import {
   UserCheck,
   Activity,
   Gauge,
+  Webhook,
 } from "lucide-react";
 import {
   Sidebar,
@@ -119,6 +120,7 @@ const adminItems: NavItem[] = [
   { titleKey: "sidebar.apiKeys", url: "/api-keys", icon: Key, testId: "nav-api-keys", roles: ["admin", "super_admin"] },
   { titleKey: "sidebar.systemStatus", url: "/system-status", icon: Activity, testId: "nav-system-status", roles: ["admin", "super_admin"] },
   { titleKey: "sidebar.platformMetrics", url: "/platform-metrics", icon: Gauge, testId: "nav-platform-metrics", roles: ["admin", "super_admin"] },
+  { titleKey: "sidebar.webhookManagement", url: "/webhook-management", icon: Webhook, testId: "nav-webhook-management", roles: ["admin", "super_admin"] },
 ];
 
 const consumerItems: NavItem[] = [

@@ -667,3 +667,34 @@ export const countrySettings = pgTable("country_settings", {
 export const insertCountrySettingsSchema = createInsertSchema(countrySettings).omit({ id: true, updatedAt: true });
 export type InsertCountrySettings = z.infer<typeof insertCountrySettingsSchema>;
 export type CountrySettings = typeof countrySettings.$inferSelect;
+
+export const webhookSubscriptions = pgTable("webhook_subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull(),
+  url: text("url").notNull(),
+  secret: text("secret").notNull(),
+  events: text("events").array().default(sql`ARRAY[]::TEXT[]`),
+  status: text("status").notNull().default("active"),
+  description: text("description"),
+  failureCount: integer("failure_count").default(0),
+  lastDeliveryAt: timestamp("last_delivery_at"),
+  lastDeliveryStatus: text("last_delivery_status"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+export const insertWebhookSubscriptionSchema = createInsertSchema(webhookSubscriptions).omit({ id: true, failureCount: true, lastDeliveryAt: true, lastDeliveryStatus: true, createdAt: true, updatedAt: true });
+export type InsertWebhookSubscription = z.infer<typeof insertWebhookSubscriptionSchema>;
+export type WebhookSubscription = typeof webhookSubscriptions.$inferSelect;
+
+export const webhookDeliveryLogs = pgTable("webhook_delivery_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  subscriptionId: varchar("subscription_id").notNull(),
+  event: text("event").notNull(),
+  payload: text("payload"),
+  responseStatus: integer("response_status"),
+  responseBody: text("response_body"),
+  success: boolean("success").default(false),
+  attemptNumber: integer("attempt_number").default(1),
+  deliveredAt: timestamp("delivered_at").defaultNow(),
+});
+export type WebhookDeliveryLog = typeof webhookDeliveryLogs.$inferSelect;

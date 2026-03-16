@@ -487,6 +487,7 @@ export default function InvestorLandingPage() {
     { label: "Technology", id: "tech" },
     { label: "Roadmap", id: "roadmap" },
     { label: "Pricing", id: "pricing-link" },
+    { label: "Security", id: "security-link" },
   ];
 
   return (
@@ -521,6 +522,8 @@ export default function InvestorLandingPage() {
                 onClick={() => {
                   if (item.id === "pricing-link") {
                     navigate("/pricing");
+                  } else if (item.id === "security-link") {
+                    navigate("/security");
                   } else {
                     document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth" });
                   }
@@ -1064,6 +1067,105 @@ export default function InvestorLandingPage() {
         </div>
       </section>
 
+      <section id="scale" className="py-20 sm:py-28">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <Badge variant="outline" className="mb-4">Distribution & Scale</Badge>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-4">
+              From Solution to Platform
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base">
+              The difference between a one-time sale and a high-value exit is distribution.
+              CDH is built as infrastructure that scales across every financial institution on the continent.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            <Card className="text-center p-6">
+              <CardContent className="pt-2">
+                <div className="text-4xl font-bold text-primary mb-2">500+</div>
+                <p className="font-semibold text-sm mb-1">Addressable Institutions</p>
+                <p className="text-xs text-muted-foreground">Central banks, commercial banks, MFIs, and fintech lenders across 54 African countries</p>
+              </CardContent>
+            </Card>
+            <Card className="text-center p-6">
+              <CardContent className="pt-2">
+                <div className="text-4xl font-bold text-primary mb-2">$18B</div>
+                <p className="font-semibold text-sm mb-1">Total Addressable Market</p>
+                <p className="text-xs text-muted-foreground">African credit reporting and fintech infrastructure market by 2027</p>
+              </CardContent>
+            </Card>
+            <Card className="text-center p-6">
+              <CardContent className="pt-2">
+                <div className="text-4xl font-bold text-primary mb-2">42+</div>
+                <p className="font-semibold text-sm mb-1">Supported Currencies</p>
+                <p className="text-xs text-muted-foreground">Multi-currency billing with real-time exchange rates and PAPSS settlements</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <Card>
+              <CardContent className="pt-6">
+                <h3 className="font-bold text-sm mb-4 flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-primary" />
+                  Revenue Model — Path to $300K ARR
+                </h3>
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span>10 Standard clients × $299/mo</span>
+                    <span className="font-medium">$35,880/yr</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span>8 Professional clients × $799/mo</span>
+                    <span className="font-medium">$76,704/yr</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span>5 Enterprise clients × $1,999/mo</span>
+                    <span className="font-medium">$119,940/yr</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span>Usage-based revenue (API + reports)</span>
+                    <span className="font-medium">$67,476/yr</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 font-bold text-primary">
+                    <span>Total projected ARR</span>
+                    <span>$300,000</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-6">
+                <h3 className="font-bold text-sm mb-4 flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-primary" />
+                  Competitive Moat
+                </h3>
+                <div className="space-y-3">
+                  {[
+                    { name: "Regulatory Compliance Engine", desc: "Per-country regulatory rules, export formats, and data protection — years to replicate" },
+                    { name: "Multi-Tenant Country Isolation", desc: "54-country deployment with isolated data, currencies, and regulatory bodies" },
+                    { name: "Blockchain-Anchored Audit Trail", desc: "Merkle tree integrity verification — tamper-proof compliance evidence" },
+                    { name: "ML Credit Scoring (GBM v2.1)", desc: "10-feature gradient boosting model trained on African credit market dynamics" },
+                    { name: "API-First + Webhook Platform", desc: "OAuth 2.1, HMAC-signed webhooks, SDKs — built for integration, not just demonstration" },
+                    { name: "Deep Vertical Expertise", desc: "Credit registry domain: PAPSS settlements, cross-border agreements, BoG/BSL exports" },
+                  ].map((m) => (
+                    <div key={m.name} className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium">{m.name}</p>
+                        <p className="text-xs text-muted-foreground">{m.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
       <section className="py-20 sm:py-28 relative overflow-hidden">
         <div className="absolute inset-0">
           <img
@@ -1124,7 +1226,7 @@ export default function InvestorLandingPage() {
               </div>
               <span>Carlson Capital & Systems In Motion Limited</span>
             </div>
-            <p>Cross-Jurisdictional Central Data Hub & Credit Registry System v2.0</p>
+            <p>Cross-Jurisdictional Central Data Hub & Credit Registry System v2.1</p>
             <p>Confidential & Proprietary</p>
           </div>
         </div>

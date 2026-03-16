@@ -74,7 +74,9 @@ const PapssSettlementsPage = lazy(() => import("@/pages/papss-settlements"));
 const ConsumerPortalPage = lazy(() => import("@/pages/consumer-portal"));
 const SystemStatusPage = lazy(() => import("@/pages/system-status"));
 const PlatformMetricsPage = lazy(() => import("@/pages/platform-metrics"));
+const WebhookManagementPage = lazy(() => import("@/pages/webhook-management"));
 import PricingPage from "@/pages/pricing";
+import SecurityCompliancePage from "@/pages/security-compliance";
 
 function LazyFallback() {
   return (
@@ -128,6 +130,7 @@ function Router() {
         <Route path="/papss-settlements" component={PapssSettlementsPage} />
         <Route path="/system-status" component={SystemStatusPage} />
         <Route path="/platform-metrics" component={PlatformMetricsPage} />
+        <Route path="/webhook-management" component={WebhookManagementPage} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
@@ -319,6 +322,7 @@ function App() {
             <Route path="/investor" component={InvestorLandingPage} />
             <Route path="/demo" component={InvestorLandingPage} />
             <Route path="/pricing" component={PricingPage} />
+            <Route path="/security" component={SecurityCompliancePage} />
             <Route path="/my-credit">
               <Suspense fallback={<LazyFallback />}>
                 <ConsumerPortalPage />
