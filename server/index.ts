@@ -502,13 +502,6 @@ process.stderr.write = function (...args: any[]) {
 
   await registerRoutes(httpServer, app);
 
-  if (process.env.NODE_ENV === "production") {
-    serveStatic(app);
-  } else {
-    const { setupVite } = await import("./vite");
-    await setupVite(httpServer, app);
-  }
-
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = status >= 500 && process.env.NODE_ENV === "production"
@@ -523,6 +516,13 @@ process.stderr.write = function (...args: any[]) {
 
     return res.status(status).json({ message });
   });
+
+  if (process.env.NODE_ENV === "production") {
+    serveStatic(app);
+  } else {
+    const { setupVite } = await import("./vite");
+    await setupVite(httpServer, app);
+  }
 
   httpServer.listen(port, "0.0.0.0", async () => {
     log(`serving on port ${port}`);
