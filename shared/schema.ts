@@ -623,6 +623,36 @@ export const insertAlternativeDataSchema = createInsertSchema(alternativeData).o
 export type InsertAlternativeData = z.infer<typeof insertAlternativeDataSchema>;
 export type AlternativeData = typeof alternativeData.$inferSelect;
 
+export const webauthnCredentials = pgTable("webauthn_credentials", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  credentialId: text("credential_id").notNull().unique(),
+  publicKey: text("public_key").notNull(),
+  counter: integer("counter").notNull().default(0),
+  deviceType: text("device_type"),
+  transports: text("transports").array().default(sql`ARRAY[]::TEXT[]`),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export const insertWebauthnCredentialSchema = createInsertSchema(webauthnCredentials).omit({ id: true, createdAt: true });
+export type InsertWebauthnCredential = z.infer<typeof insertWebauthnCredentialSchema>;
+export type WebauthnCredential = typeof webauthnCredentials.$inferSelect;
+
+export const blockchainAnchors = pgTable("blockchain_anchors", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  merkleRoot: text("merkle_root").notNull(),
+  auditLogCount: integer("audit_log_count").notNull(),
+  firstLogId: varchar("first_log_id"),
+  lastLogId: varchar("last_log_id"),
+  simulatedTxHash: text("simulated_tx_hash").notNull(),
+  simulatedBlockNumber: integer("simulated_block_number"),
+  simulatedChain: text("simulated_chain").notNull().default("ethereum-sepolia"),
+  status: text("status").notNull().default("anchored"),
+  anchoredAt: timestamp("anchored_at").defaultNow(),
+});
+export const insertBlockchainAnchorSchema = createInsertSchema(blockchainAnchors).omit({ id: true, anchoredAt: true });
+export type InsertBlockchainAnchor = z.infer<typeof insertBlockchainAnchorSchema>;
+export type BlockchainAnchor = typeof blockchainAnchors.$inferSelect;
+
 export const countrySettings = pgTable("country_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   countryCode: text("country_code").notNull().unique(),

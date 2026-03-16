@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Bell, Check, CheckCheck } from "lucide-react";
+import { Bell, Check, CheckCheck, Wifi, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -9,16 +9,48 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Notification } from "@shared/schema";
 import { useLocation } from "wouter";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { connectWebSocket, onWSEvent, isConnected, type WSEvent } from "@/lib/websocket";
+import { useToast } from "@/hooks/use-toast";
 
 export function NotificationBell() {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [, setLocation] = useLocation();
+  const [wsConnected, setWsConnected] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    connectWebSocket();
+    const checkConnection = setInterval(() => {
+      setWsConnected(isConnected());
+    }, 3000);
+
+    const unsubscribe = onWSEvent((event: WSEvent) => {
+      if (event.type === "connected") {
+        setWsConnected(true);
+        return;
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-count"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+
+      toast({
+        title: event.title || "Notification",
+        description: event.message,
+        variant: event.severity === "critical" ? "destructive" : "default",
+      });
+    });
+
+    return () => {
+      clearInterval(checkConnection);
+      unsubscribe();
+    };
+  }, [toast]);
 
   const { data: unreadCount = 0 } = useQuery<number>({
     queryKey: ["/api/notifications/unread-count"],
-    refetchInterval: 30000,
+    refetchInterval: wsConnected ? 60000 : 30000,
   });
 
   const { data: notifications = [], isLoading } = useQuery<Notification[]>({
@@ -93,9 +125,16 @@ export function NotificationBell() {
         data-testid="dropdown-notifications"
       >
         <div className="flex items-center justify-between gap-2 p-3">
-          <span className="text-sm font-medium" data-testid="text-notifications-title">
-            {t("notifications.title")}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium" data-testid="text-notifications-title">
+              {t("notifications.title")}
+            </span>
+            {wsConnected ? (
+              <Wifi className="w-3 h-3 text-green-500" data-testid="icon-ws-connected" />
+            ) : (
+              <WifiOff className="w-3 h-3 text-muted-foreground" data-testid="icon-ws-disconnected" />
+            )}
+          </div>
           {unreadCount > 0 && (
             <Button
               variant="ghost"

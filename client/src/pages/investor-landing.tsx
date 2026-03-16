@@ -441,8 +441,8 @@ const TECH_ARCHITECTURE = [
 ];
 
 const ROADMAP_ITEMS = [
-  { phase: "Current", title: "CDH v2.0", items: ["Full 54-country coverage", "42+ currency support", "Maker-checker workflows", "Visual analytics dashboard", "AI chatbot assistant"], status: "live" },
-  { phase: "Next", title: "CDH v2.1", items: ["Real-time WebSocket notifications", "Mobile-responsive PWA", "Biometric authentication", "Advanced ML credit scoring", "Blockchain audit anchoring"], status: "planned" },
+  { phase: "Foundation", title: "CDH v2.0", items: ["Full 54-country coverage", "42+ currency support", "Maker-checker workflows", "Visual analytics dashboard", "AI chatbot assistant"], status: "live" },
+  { phase: "Current", title: "CDH v2.1", items: ["Real-time WebSocket notifications", "Progressive Web App (PWA)", "Biometric authentication (WebAuthn)", "ML-enhanced credit scoring (GBM)", "Blockchain audit anchoring"], status: "live" },
   { phase: "Future", title: "CDH v3.0", items: ["Open Banking API gateway", "RegTech automation suite", "Predictive default modeling", "Digital identity integration", "Pan-African credit passport"], status: "vision" },
 ];
 

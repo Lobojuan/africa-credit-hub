@@ -84,6 +84,8 @@ declare module "express-session" {
     lastActivity: number;
     mfaPendingUserId: string;
     viewingCountry: string;
+    webauthnChallenge: string;
+    webauthnUserId: string;
   }
 }
 
@@ -493,6 +495,9 @@ process.stderr.write = function (...args: any[]) {
     console.error("Index migration error (non-fatal):", e);
   }
 
+  const { initWebSocket } = await import("./websocket");
+  initWebSocket(httpServer);
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
@@ -525,5 +530,8 @@ process.stderr.write = function (...args: any[]) {
 
     const { startExchangeRateScheduler } = await import("./exchange-rate-scheduler");
     startExchangeRateScheduler();
+
+    const { startAnchorScheduler } = await import("./blockchain-anchor");
+    startAnchorScheduler(6);
   });
 })();

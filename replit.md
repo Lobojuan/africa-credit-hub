@@ -62,11 +62,16 @@ The system employs a modern full-stack architecture built for scalability and co
     -   **Enhanced API Developer Portal**: Interactive sandbox, webhook event documentation, and code examples.
     -   **Dashboard Progressive Disclosure**: Collapsible dashboard sections with localStorage persistence.
     -   **Security Hardening**: Helmet security headers, rate limiting, DOMPurify sanitization, and secure handling of secrets.
+    -   **Real-time WebSocket Notifications**: WebSocket server on `/ws` path, authenticated via session cookies. Broadcasts events for borrower submissions, approval workflows, login events, ML score computations, and blockchain anchoring. Client auto-reconnects with exponential backoff. NotificationBell shows live WS connection indicator and reduces polling when connected.
+    -   **Progressive Web App (PWA)**: Service worker (`sw.js`) with network-first caching strategy. Manifest with app icons for installability. Apple-touch-icon and meta tags for iOS support. Install prompt component with localStorage dismissal persistence.
+    -   **Biometric Authentication (WebAuthn)**: Full FIDO2/WebAuthn flow using `@simplewebauthn/server`. Users can register fingerprint/face credentials and login without passwords. Endpoints: register-options, register-verify, login-options, login-verify, credentials CRUD. Stored in `webauthn_credentials` table.
+    -   **ML-Enhanced Credit Scoring**: Gradient boosting-inspired scoring model (`server/ml-credit-score.ts`) with 10 weighted features: payment velocity, account health ratio, credit utilization, account age diversity, debt service capacity, alternative data reliability, inquiries, judgments, cross-border exposure, PEP status. Outputs: mlScore (300-850), confidence interval, default probability, risk category, feature importance. Model version: GBM-v2.1.0.
+    -   **Blockchain Audit Anchoring**: Merkle tree computation of audit log hashes anchored every 6 hours. Simulated Ethereum Sepolia transactions. Stored in `blockchain_anchors` table. Verification endpoint recomputes Merkle root and compares. Admin can trigger manual anchoring via POST `/api/blockchain/anchor`.
 
 ## External Dependencies
 -   **Database**: PostgreSQL (Neon)
 -   **Frontend Libraries**: React, TypeScript, Vite, Tailwind CSS, shadcn/ui, wouter, react-i18next, Recharts
--   **Backend Libraries**: Express.js, bcryptjs, express-session, Drizzle ORM, compression, jsonwebtoken, otpauth, pdfkit
+-   **Backend Libraries**: Express.js, bcryptjs, express-session, Drizzle ORM, compression, jsonwebtoken, otpauth, pdfkit, ws, @simplewebauthn/server
 -   **Payments**: Stripe integration.
 -   **Email**: SendGrid.
 -   **PDF Generation**: pdfkit.

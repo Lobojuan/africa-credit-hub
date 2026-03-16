@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { LogOut, Loader2, MessageCircle, Building2, LayoutGrid } from "lucide-react";
 import { DisputeChatbot } from "@/components/dispute-chatbot";
 import { OrgSwitcherProvider } from "@/hooks/use-org-switcher";
+import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
 import { OrgSwitcher } from "@/components/org-switcher";
 import { CountryThemeProvider, useCountryTheme } from "@/components/country-theme-provider";
 import { CountrySelector } from "@/components/country-selector";
@@ -336,6 +337,7 @@ function App() {
             </Route>
           </Switch>
           <Toaster />
+          <PWAInstallPrompt />
         </TooltipProvider>
       </QueryClientProvider>
     </ThemeProvider>

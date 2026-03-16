@@ -22,8 +22,12 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { registerExternalApi, generateApiKey } from "./external-api";
 import { calculateCreditScore, getDefaultCurrencyCode } from "./credit-score";
+import { calculateMLCreditScore } from "./ml-credit-score";
 import { calculateFraudRisk } from "./fraud-detection";
 import { recordUsageEvent } from "./usage-metering";
+import { broadcastEvent } from "./websocket";
+import { createAnchor, verifyAuditAgainstAnchor, getAnchors } from "./blockchain-anchor";
+import { webauthnCredentials, blockchainAnchors } from "@shared/schema";
 import fs from "fs";
 import path from "path";
 import * as OTPAuth from "otpauth";
@@ -1074,6 +1078,16 @@ export async function registerRoutes(
           }
         }
       } catch {}
+
+      broadcastEvent({
+        type: "approval_pending",
+        title: "New Borrower Submission",
+        message: `New borrower registration requires review: ${parsed.firstName || parsed.companyName}`,
+        entityId: approval.id,
+        entityType: "borrower",
+        severity: "info",
+        timestamp: new Date().toISOString(),
+      }, { roles: ["super_admin", "admin", "regulator"] });
 
       res.status(201).json({ approval, message: "Submitted for maker-checker approval" });
     } catch (e: any) {
@@ -5481,6 +5495,341 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
   await seedOrganizations();
 
   registerExternalApi(app);
+
+  app.get("/api/borrowers/:id/ml-score", async (req, res) => {
+    try {
+      const borrower = await storage.getBorrower(req.params.id);
+      if (!borrower) return res.status(404).json({ message: "Borrower not found" });
+
+      const accounts = await storage.getCreditAccountsByBorrower(borrower.id);
+      const inquiries = await storage.getCreditInquiriesByBorrower(borrower.id);
+      const judgments = await storage.getCourtJudgmentsByBorrower(borrower.id);
+
+      let altData: any[] = [];
+      try {
+        const altResult = await pool.query(
+          `SELECT * FROM alternative_data WHERE borrower_id::text = $1`,
+          [borrower.id]
+        );
+        altData = altResult.rows.map((r: any) => ({
+          source: r.source,
+          totalTransactions: r.total_transactions || 0,
+          onTimePayments: r.on_time_payments || 0,
+          latePayments: r.late_payments || 0,
+          status: r.status || "active",
+          averageMonthlyAmount: r.average_monthly_amount,
+        }));
+      } catch {}
+
+      const mlAccounts = accounts.map(a => ({
+        status: a.status,
+        currentBalance: a.currentBalance,
+        currency: a.currency,
+        openedDate: a.openedDate,
+        lastPaymentDate: a.lastPaymentDate,
+        creditLimit: a.creditLimit,
+        monthlyPayment: a.monthlyPayment,
+      }));
+
+      const activeJudgments = judgments.filter((j: any) => j.status === "active").length;
+
+      const result = calculateMLCreditScore(
+        mlAccounts,
+        inquiries.length,
+        activeJudgments,
+        borrower.isPep || false,
+        altData
+      );
+
+      const { score: traditionalScore } = calculateCreditScore(
+        accounts, inquiries.length, judgments, borrower.isPep || false, altData
+      );
+
+      broadcastEvent({
+        type: "score_computed",
+        title: "ML Score Computed",
+        message: `ML credit score computed for ${borrower.firstName || borrower.companyName}: ${result.mlScore}`,
+        entityId: borrower.id,
+        entityType: "borrower",
+        severity: "info",
+        timestamp: new Date().toISOString(),
+        data: { mlScore: result.mlScore, traditionalScore },
+      }, { userId: req.session?.userId });
+
+      res.json({
+        ...result,
+        traditionalScore,
+        borrowerId: borrower.id,
+        borrowerName: borrower.firstName
+          ? `${borrower.firstName} ${borrower.lastName || ""}`
+          : borrower.companyName,
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/blockchain/anchors", async (_req, res) => {
+    try {
+      const anchors = await getAnchors(50);
+      res.json(anchors);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/blockchain/anchor", async (req, res) => {
+    try {
+      if (req.session?.userRole !== "super_admin" && req.session?.userRole !== "admin") {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const result = await createAnchor();
+      if (!result) {
+        return res.json({ message: "No new audit logs to anchor", anchored: false });
+      }
+
+      broadcastEvent({
+        type: "anchor_created",
+        title: "Blockchain Anchor Created",
+        message: `${result.auditLogCount} audit logs anchored — Merkle root: ${result.merkleRoot.substring(0, 16)}...`,
+        severity: "info",
+        timestamp: new Date().toISOString(),
+        data: { merkleRoot: result.merkleRoot, txHash: result.txHash },
+      });
+
+      res.json({ ...result, anchored: true });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/blockchain/anchors/:id/verify", async (req, res) => {
+    try {
+      const result = await verifyAuditAgainstAnchor(req.params.id);
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/auth/webauthn/register-options", async (req, res) => {
+    try {
+      if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
+      const user = await storage.getUser(req.session.userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const existingCreds = await db.select().from(webauthnCredentials).where(eq(webauthnCredentials.userId, user.id));
+
+      const { generateRegistrationOptions } = await import("@simplewebauthn/server");
+      const rpName = "CDH Credit Registry";
+      const rpID = req.hostname || "localhost";
+
+      const options = await generateRegistrationOptions({
+        rpName,
+        rpID,
+        userName: user.username,
+        attestationType: "none",
+        excludeCredentials: existingCreds.map(c => ({
+          id: c.credentialId,
+          type: "public-key" as const,
+          transports: (c.transports || []) as AuthenticatorTransport[],
+        })),
+        authenticatorSelection: {
+          residentKey: "preferred",
+          userVerification: "preferred",
+        },
+      });
+
+      req.session.webauthnChallenge = options.challenge;
+      res.json(options);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/auth/webauthn/register-verify", async (req, res) => {
+    try {
+      if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
+      const challenge = req.session.webauthnChallenge;
+      if (!challenge) return res.status(400).json({ message: "No registration challenge found" });
+
+      const { verifyRegistrationResponse } = await import("@simplewebauthn/server");
+      const rpID = req.hostname || "localhost";
+      const origin = `${req.protocol}://${req.get("host")}`;
+
+      const verification = await verifyRegistrationResponse({
+        response: req.body,
+        expectedChallenge: challenge,
+        expectedOrigin: origin,
+        expectedRPID: rpID,
+      });
+
+      if (!verification.verified || !verification.registrationInfo) {
+        return res.status(400).json({ message: "Registration verification failed" });
+      }
+
+      const { credential, credentialDeviceType } = verification.registrationInfo;
+
+      await db.insert(webauthnCredentials).values({
+        userId: req.session.userId,
+        credentialId: Buffer.from(credential.id).toString("base64url"),
+        publicKey: Buffer.from(credential.publicKey).toString("base64url"),
+        counter: credential.counter,
+        deviceType: credentialDeviceType,
+        transports: req.body.response?.transports || [],
+      });
+
+      delete req.session.webauthnChallenge;
+
+      await storage.createAuditLog({
+        action: "WEBAUTHN_REGISTER",
+        entity: "user",
+        entityId: req.session.userId,
+        userId: req.session.userId,
+        details: `Registered biometric credential (${credentialDeviceType})`,
+        ipAddress: req.ip || null,
+      });
+
+      res.json({ verified: true, deviceType: credentialDeviceType });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/auth/webauthn/login-options", async (req, res) => {
+    try {
+      const { username } = req.body;
+      if (!username) return res.status(400).json({ message: "Username required" });
+
+      const user = await storage.getUserByUsername(username);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const creds = await db.select().from(webauthnCredentials).where(eq(webauthnCredentials.userId, user.id));
+      if (creds.length === 0) return res.status(400).json({ message: "No biometric credentials registered" });
+
+      const { generateAuthenticationOptions } = await import("@simplewebauthn/server");
+      const rpID = req.hostname || "localhost";
+
+      const options = await generateAuthenticationOptions({
+        rpID,
+        allowCredentials: creds.map(c => ({
+          id: c.credentialId,
+          type: "public-key" as const,
+          transports: (c.transports || []) as AuthenticatorTransport[],
+        })),
+        userVerification: "preferred",
+      });
+
+      req.session.webauthnChallenge = options.challenge;
+      req.session.webauthnUserId = user.id;
+      res.json(options);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/auth/webauthn/login-verify", async (req, res) => {
+    try {
+      const challenge = req.session?.webauthnChallenge;
+      const userId = req.session?.webauthnUserId;
+      if (!challenge || !userId) return res.status(400).json({ message: "No authentication challenge found" });
+
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const creds = await db.select().from(webauthnCredentials).where(eq(webauthnCredentials.userId, userId));
+
+      const { verifyAuthenticationResponse } = await import("@simplewebauthn/server");
+      const rpID = req.hostname || "localhost";
+      const origin = `${req.protocol}://${req.get("host")}`;
+
+      const credId = typeof req.body.id === "string" ? req.body.id : Buffer.from(req.body.rawId).toString("base64url");
+      const matchingCred = creds.find(c => c.credentialId === credId);
+      if (!matchingCred) return res.status(400).json({ message: "Credential not found" });
+
+      const verification = await verifyAuthenticationResponse({
+        response: req.body,
+        expectedChallenge: challenge,
+        expectedOrigin: origin,
+        expectedRPID: rpID,
+        credential: {
+          id: matchingCred.credentialId,
+          publicKey: Buffer.from(matchingCred.publicKey, "base64url"),
+          counter: matchingCred.counter,
+          transports: (matchingCred.transports || []) as AuthenticatorTransport[],
+        },
+      });
+
+      if (!verification.verified) {
+        return res.status(401).json({ message: "Biometric verification failed" });
+      }
+
+      await db.update(webauthnCredentials)
+        .set({ counter: verification.authenticationInfo.newCounter })
+        .where(eq(webauthnCredentials.id, matchingCred.id));
+
+      req.session.userId = user.id;
+      req.session.userRole = user.role;
+      req.session.organizationId = user.organizationId || undefined;
+      req.session.lastActivity = Date.now();
+      delete req.session.webauthnChallenge;
+      delete req.session.webauthnUserId;
+
+      await storage.createAuditLog({
+        action: "LOGIN_BIOMETRIC",
+        entity: "user",
+        entityId: user.id,
+        userId: user.id,
+        details: `Biometric login successful for user ${user.username}`,
+        ipAddress: req.ip || null,
+      });
+
+      broadcastEvent({
+        type: "login_event",
+        title: "Biometric Login",
+        message: `${user.username} logged in via biometric authentication`,
+        severity: "info",
+        timestamp: new Date().toISOString(),
+      }, { roles: ["super_admin", "admin"] });
+
+      const { password: _, ...safeUser } = user;
+      res.json({ user: safeUser });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/auth/webauthn/credentials", async (req, res) => {
+    try {
+      if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
+      const creds = await db.select({
+        id: webauthnCredentials.id,
+        deviceType: webauthnCredentials.deviceType,
+        createdAt: webauthnCredentials.createdAt,
+      }).from(webauthnCredentials).where(eq(webauthnCredentials.userId, req.session.userId));
+      res.json(creds);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.delete("/api/auth/webauthn/credentials/:id", async (req, res) => {
+    try {
+      if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
+      await db.delete(webauthnCredentials).where(
+        and(eq(webauthnCredentials.id, req.params.id), eq(webauthnCredentials.userId, req.session.userId))
+      );
+      res.json({ deleted: true });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/websocket/status", async (_req, res) => {
+    const { getConnectedClientsCount } = await import("./websocket");
+    res.json({ connectedClients: getConnectedClientsCount() });
+  });
 
   return httpServer;
 }
