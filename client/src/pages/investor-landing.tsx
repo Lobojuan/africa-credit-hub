@@ -12,10 +12,15 @@ import {
   UserCheck, FileCheck, Timer, BadgeCheck, Network,
   BookOpen, Headphones, Receipt, ServerCog, Banknote,
   CircleDollarSign, Activity, Hash, ChevronRight,
+  Sparkles, MonitorSmartphone, Brain,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import heroImage from "@assets/investor-hero.png";
+import dashboardImage from "@assets/investor-dashboard.png";
+import mobileImage from "@assets/investor-mobile.png";
+import networkImage from "@assets/investor-network.png";
 
 function AnimatedCounter({ end, duration = 2000, suffix = "", prefix = "" }: { end: number; duration?: number; suffix?: string; prefix?: string }) {
   const [count, setCount] = useState(0);
@@ -441,6 +446,12 @@ const ROADMAP_ITEMS = [
   { phase: "Future", title: "CDH v3.0", items: ["Open Banking API gateway", "RegTech automation suite", "Predictive default modeling", "Digital identity integration", "Pan-African credit passport"], status: "vision" },
 ];
 
+const DEMO_TOKEN = "sim-review-2026-x7k9m";
+
+function launchDemo() {
+  window.location.href = `/api/auth/auto-login/${DEMO_TOKEN}`;
+}
+
 export default function InvestorLandingPage() {
   const [, navigate] = useLocation();
   const [scrolled, setScrolled] = useState(false);
@@ -514,7 +525,7 @@ export default function InvestorLandingPage() {
             <Button
               size="sm"
               className="text-xs ml-2"
-              onClick={() => navigate("/")}
+              onClick={launchDemo}
               data-testid="nav-login"
             >
               <Play className="w-3.5 h-3.5 mr-1" />
@@ -526,6 +537,12 @@ export default function InvestorLandingPage() {
 
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
         <div className="absolute inset-0 overflow-hidden">
+          <img
+            src={heroImage}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover opacity-[0.06]"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/95 to-background" />
           <div
             className="absolute top-0 left-0 w-full h-full opacity-[0.03]"
             style={{
@@ -568,9 +585,9 @@ export default function InvestorLandingPage() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16">
-            <Button size="lg" className="text-sm px-8 gap-2 shadow-lg" onClick={() => navigate("/")} data-testid="cta-try-demo">
+            <Button size="lg" className="text-sm px-8 gap-2 shadow-lg" onClick={launchDemo} data-testid="cta-try-demo">
               <Play className="w-4 h-4" />
-              Try Interactive Demo
+              Launch Live Demo
             </Button>
             <Button
               variant="outline"
@@ -602,6 +619,62 @@ export default function InvestorLandingPage() {
 
           <div className="mt-16 animate-bounce">
             <ChevronDown className="w-5 h-5 mx-auto text-muted-foreground/50" />
+          </div>
+        </div>
+      </section>
+
+      <section className="py-16 sm:py-24 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+            <div>
+              <Badge variant="outline" className="mb-4 text-xs">
+                <Sparkles className="w-3 h-3 mr-1" />
+                Platform Preview
+              </Badge>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-4">
+                Enterprise Analytics at Your Fingertips
+              </h2>
+              <p className="text-muted-foreground text-sm sm:text-base leading-relaxed mb-6">
+                CDH v2.0 delivers real-time credit intelligence through interactive dashboards,
+                geographic visualization, and role-based views — designed for decision-makers
+                managing portfolio risk across the continent.
+              </p>
+              <div className="space-y-3 mb-6">
+                {[
+                  "Interactive KPI dashboards with drill-down analytics",
+                  "Geographic heat maps showing portfolio distribution across 54 countries",
+                  "Real-time credit score computation with AI-powered explainability",
+                  "Multi-currency exposure tracking with automated exchange rates",
+                ].map((item, i) => (
+                  <div key={i} className="flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                    <span className="text-sm text-muted-foreground">{item}</span>
+                  </div>
+                ))}
+              </div>
+              <Button onClick={launchDemo} className="gap-2" data-testid="cta-preview-demo">
+                <Play className="w-4 h-4" />
+                See It Live
+              </Button>
+            </div>
+            <div className="relative">
+              <div className="rounded-2xl overflow-hidden border border-border/50 shadow-2xl">
+                <img
+                  src={dashboardImage}
+                  alt="CDH v2.0 Analytics Dashboard showing credit portfolio metrics"
+                  className="w-full h-auto"
+                  loading="lazy"
+                />
+              </div>
+              <div className="absolute -bottom-4 -right-4 w-32 sm:w-40 rounded-xl overflow-hidden border-2 border-background shadow-xl">
+                <img
+                  src={mobileImage}
+                  alt="Consumer credit check on mobile device"
+                  className="w-full h-auto"
+                  loading="lazy"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -708,7 +781,52 @@ export default function InvestorLandingPage() {
         </div>
       </section>
 
-      <section id="use-cases" className="py-20 sm:py-28 bg-muted/30">
+      <section className="py-16 sm:py-24 bg-muted/30 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+            <div className="order-2 lg:order-1 relative">
+              <div className="rounded-2xl overflow-hidden border border-border/50 shadow-2xl">
+                <img
+                  src={networkImage}
+                  alt="Pan-African data network connecting 54 countries"
+                  className="w-full h-auto"
+                  loading="lazy"
+                />
+              </div>
+            </div>
+            <div className="order-1 lg:order-2">
+              <Badge variant="outline" className="mb-4 text-xs">
+                <Globe className="w-3 h-3 mr-1" />
+                Continental Coverage
+              </Badge>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-4">
+                Connected Across the Entire Continent
+              </h2>
+              <p className="text-muted-foreground text-sm sm:text-base leading-relaxed mb-6">
+                CDH v2.0 is the only credit registry platform engineered for all 54 African nations —
+                bridging Anglophone, Francophone, Lusophone, and Arabophone regions with
+                unified data standards and real-time cross-border intelligence.
+              </p>
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                {[
+                  { value: "54", label: "Countries", desc: "Full continental coverage" },
+                  { value: "42+", label: "Currencies", desc: "Real-time exchange rates" },
+                  { value: "5", label: "Languages", desc: "Including Arabic RTL" },
+                  { value: "24/7", label: "Automated", desc: "Continuous monitoring" },
+                ].map((item) => (
+                  <div key={item.label} className="rounded-lg border border-border/50 bg-card p-3 text-center">
+                    <div className="text-lg font-bold text-primary">{item.value}</div>
+                    <p className="text-xs font-medium">{item.label}</p>
+                    <p className="text-[10px] text-muted-foreground">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="use-cases" className="py-20 sm:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
             <Badge variant="outline" className="mb-4 text-xs">Use Cases</Badge>
@@ -816,21 +934,25 @@ export default function InvestorLandingPage() {
 
           <div className="mt-8 text-center">
             <p className="text-xs text-muted-foreground mb-4">
-              Try it yourself — log in with any of the demo roles and explore with real data:
+              Experience it yourself — instantly access the full platform with demo data:
             </p>
-            <div className="flex flex-wrap justify-center gap-3">
+            <div className="flex flex-wrap justify-center gap-3 mb-6">
               {[
-                { role: "Admin", desc: "Full system access" },
-                { role: "Regulator", desc: "Supervisory oversight" },
-                { role: "Bank Officer", desc: "Credit operations" },
+                { role: "Admin", desc: "Full system access", icon: Settings },
+                { role: "Regulator", desc: "Supervisory oversight", icon: Gavel },
+                { role: "Bank Officer", desc: "Credit operations", icon: Building2 },
               ].map((r) => (
                 <div key={r.role} className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-border/50 bg-card text-xs">
-                  <UserCheck className="w-3.5 h-3.5 text-primary" />
+                  <r.icon className="w-3.5 h-3.5 text-primary" />
                   <span className="font-medium">{r.role}</span>
                   <span className="text-muted-foreground">— {r.desc}</span>
                 </div>
               ))}
             </div>
+            <Button onClick={launchDemo} className="gap-2" data-testid="cta-live-data-demo">
+              <Play className="w-4 h-4" />
+              Launch Demo — No Login Required
+            </Button>
           </div>
         </div>
       </section>
@@ -936,30 +1058,34 @@ export default function InvestorLandingPage() {
       </section>
 
       <section className="py-20 sm:py-28 relative overflow-hidden">
-        <div
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage: `radial-gradient(circle, hsl(175 55% 28%) 1px, transparent 1px)`,
-            backgroundSize: "40px 40px",
-          }}
-        />
+        <div className="absolute inset-0">
+          <img
+            src={heroImage}
+            alt=""
+            className="w-full h-full object-cover opacity-[0.08]"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-background via-background/95 to-background" />
+        </div>
         <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-primary/20 bg-primary/5 mb-6">
+            <Brain className="w-4 h-4 text-primary" />
+            <span className="text-xs font-medium">Instant Access — No Sign-Up Required</span>
+          </div>
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-4">
             See It in Action
           </h2>
           <p className="text-muted-foreground mb-3 text-sm sm:text-base max-w-xl mx-auto">
-            Explore the full system with our interactive demo. Choose from Admin,
-            Regulator, or Bank Officer roles to see role-based access in action —
-            complete with a guided walkthrough tour.
+            Explore the full system with our interactive demo. Access Admin-level functionality
+            with real data — dashboards, borrower management, credit scoring, and more.
           </p>
           <p className="text-xs text-muted-foreground/70 mb-8 max-w-md mx-auto">
-            No installation required. Live data. Full functionality. Try every feature described above.
+            No installation required. No login needed. Live data. Full functionality.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Button
               size="lg"
               className="text-sm px-10 gap-2 shadow-lg"
-              onClick={() => navigate("/")}
+              onClick={launchDemo}
               data-testid="cta-bottom-demo"
             >
               <Play className="w-4 h-4" />
@@ -969,11 +1095,11 @@ export default function InvestorLandingPage() {
               variant="outline"
               size="lg"
               className="text-sm px-8 gap-2"
-              onClick={() => navigate("/")}
-              data-testid="cta-bottom-login"
+              onClick={() => navigate("/my-credit")}
+              data-testid="cta-bottom-consumer"
             >
-              <Lock className="w-4 h-4" />
-              Sign In
+              <MonitorSmartphone className="w-4 h-4" />
+              Consumer Portal
             </Button>
           </div>
         </div>
