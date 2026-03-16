@@ -65,6 +65,7 @@ app.get("/health", (_req, res) => {
 app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false,
+  frameguard: false,
 }));
 app.use(compression());
 const httpServer = createServer(app);
