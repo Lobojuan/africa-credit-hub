@@ -8,7 +8,6 @@ import {
   ShieldCheck, UserCheck, Layers, Hash, Activity, Scale,
 } from "lucide-react";
 
-const DEMO_TOKEN = "sim-review-2026-x7k9m";
 
 const SECURITY_CONTROLS = [
   {
@@ -104,7 +103,7 @@ export default function SecurityCompliancePage() {
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate("/demo")} data-testid="link-back-overview">Overview</Button>
             <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate("/pricing")} data-testid="link-pricing">Pricing</Button>
-            <Button size="sm" className="text-xs" onClick={() => window.location.href = `/api/auth/auto-login/${DEMO_TOKEN}`} data-testid="button-launch-demo">
+            <Button size="sm" className="text-xs" onClick={() => window.location.href = `/api/demo-login`} data-testid="button-launch-demo">
               Launch Demo <ArrowRight className="w-3 h-3 ml-1" />
             </Button>
           </div>
@@ -237,7 +236,7 @@ export default function SecurityCompliancePage() {
             every data flow has been designed with security and compliance as the primary concern.
           </p>
           <div className="flex items-center justify-center gap-4">
-            <Button size="lg" onClick={() => window.location.href = `/api/auth/auto-login/${DEMO_TOKEN}`} data-testid="button-cta-demo">
+            <Button size="lg" onClick={() => window.location.href = `/api/demo-login`} data-testid="button-cta-demo">
               Explore the Platform
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>

@@ -8,7 +8,6 @@ import {
   Building2, Brain, BarChart3, Headphones, ChevronDown,
 } from "lucide-react";
 
-const DEMO_TOKEN = "sim-review-2026-x7k9m";
 
 const PLANS = [
   {
@@ -136,7 +135,7 @@ export default function PricingPage() {
             <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate("/demo")} data-testid="link-back-investor">
               Overview
             </Button>
-            <Button size="sm" className="text-xs" onClick={() => window.location.href = `/api/auth/auto-login/${DEMO_TOKEN}`} data-testid="button-launch-demo">
+            <Button size="sm" className="text-xs" onClick={() => window.location.href = `/api/demo-login`} data-testid="button-launch-demo">
               Launch Demo
               <ArrowRight className="w-3 h-3 ml-1" />
             </Button>
@@ -205,7 +204,7 @@ export default function PricingPage() {
                   <Button
                     className="w-full mb-6"
                     variant={plan.highlight ? "default" : "outline"}
-                    onClick={() => window.location.href = `/api/auth/auto-login/${DEMO_TOKEN}`}
+                    onClick={() => window.location.href = `/api/demo-login`}
                     data-testid={`button-start-${plan.name.toLowerCase()}`}
                   >
                     Start Free Trial
@@ -311,7 +310,7 @@ export default function PricingPage() {
             Launch a free demo to explore the full platform, or contact our team for a custom quote.
           </p>
           <div className="flex items-center justify-center gap-4">
-            <Button size="lg" onClick={() => window.location.href = `/api/auth/auto-login/${DEMO_TOKEN}`} data-testid="button-cta-demo">
+            <Button size="lg" onClick={() => window.location.href = `/api/demo-login`} data-testid="button-cta-demo">
               Launch Free Demo
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>

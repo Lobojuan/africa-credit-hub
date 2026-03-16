@@ -446,10 +446,8 @@ const ROADMAP_ITEMS = [
   { phase: "Future", title: "CDH v3.0", items: ["Open Banking API gateway", "RegTech automation suite", "Predictive default modeling", "Digital identity integration", "Pan-African credit passport"], status: "vision" },
 ];
 
-const DEMO_TOKEN = "sim-review-2026-x7k9m";
-
 function launchDemo() {
-  window.location.href = `/api/auth/auto-login/${DEMO_TOKEN}`;
+  window.location.href = `/api/demo-login`;
 }
 
 export default function InvestorLandingPage() {
