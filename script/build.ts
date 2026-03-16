@@ -112,11 +112,11 @@ async function buildAll() {
   ];
   console.log("creating SPA fallback routes...");
   for (const route of spaRoutes) {
-    await mkdir(`dist/app/${route}`, { recursive: true });
-    await copyFile("dist/app/index.html", `dist/app/${route}/index.html`);
+    await mkdir(`dist/public/${route}`, { recursive: true });
+    await copyFile("dist/public/index.html", `dist/public/${route}/index.html`);
   }
 
-  await mkdir("dist/public", { recursive: true });
+  await copyFile("dist/public/index.html", "dist/public/404.html");
 
   console.log("copying docs folder...");
   await mkdir("dist/docs", { recursive: true });
