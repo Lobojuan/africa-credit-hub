@@ -37,6 +37,8 @@ import {
   FileSearch,
   ArrowRightLeft,
   UserCheck,
+  Activity,
+  Gauge,
 } from "lucide-react";
 import {
   Sidebar,
@@ -115,6 +117,8 @@ const adminItems: NavItem[] = [
   { titleKey: "sidebar.exchangeRates", url: "/exchange-rates", icon: DollarSign, testId: "nav-exchange-rates", roles: ["admin", "super_admin"] },
   { titleKey: "sidebar.apiAdmin", url: "/api-admin", icon: Plug, testId: "nav-api-admin", roles: ["admin", "super_admin"] },
   { titleKey: "sidebar.apiKeys", url: "/api-keys", icon: Key, testId: "nav-api-keys", roles: ["admin", "super_admin"] },
+  { titleKey: "sidebar.systemStatus", url: "/system-status", icon: Activity, testId: "nav-system-status", roles: ["admin", "super_admin"] },
+  { titleKey: "sidebar.platformMetrics", url: "/platform-metrics", icon: Gauge, testId: "nav-platform-metrics", roles: ["admin", "super_admin"] },
 ];
 
 const consumerItems: NavItem[] = [

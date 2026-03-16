@@ -417,25 +417,228 @@ export async function registerRoutes(
     next();
   });
 
-  app.get("/api/health", (_req, res) => {
+  const SERVER_START_TIME = Date.now();
+  const uptimeChecks: { timestamp: number; status: string; responseMs: number }[] = [];
+
+  setInterval(() => {
+    const start = Date.now();
+    pool.query("SELECT 1").then(() => {
+      uptimeChecks.push({ timestamp: Date.now(), status: "ok", responseMs: Date.now() - start });
+      if (uptimeChecks.length > 2880) uptimeChecks.splice(0, uptimeChecks.length - 2880);
+    }).catch(() => {
+      uptimeChecks.push({ timestamp: Date.now(), status: "degraded", responseMs: Date.now() - start });
+      if (uptimeChecks.length > 2880) uptimeChecks.splice(0, uptimeChecks.length - 2880);
+    });
+  }, 30000);
+
+  app.get("/api/health", async (_req, res) => {
+    let dbStatus = "ok";
+    try {
+      await pool.query("SELECT 1");
+    } catch {
+      dbStatus = "error";
+    }
+    const uptimeSec = Math.round(process.uptime());
+    const totalChecks = uptimeChecks.length;
+    const okChecks = uptimeChecks.filter(c => c.status === "ok").length;
+    const uptimePct = totalChecks > 0 ? ((okChecks / totalChecks) * 100).toFixed(2) : "100.00";
+    res.json({
+      status: dbStatus === "ok" ? "healthy" : "degraded",
+      version: "2.1.0",
+      uptime: {
+        seconds: uptimeSec,
+        formatted: `${Math.floor(uptimeSec / 86400)}d ${Math.floor((uptimeSec % 86400) / 3600)}h ${Math.floor((uptimeSec % 3600) / 60)}m`,
+        slaPercentage: Number(uptimePct),
+      },
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  app.get("/api/admin/health-detail", requireAuth, requireRole("admin", "super_admin"), async (_req, res) => {
     const mem = process.memoryUsage();
     const queueStats = getQueueStats();
+    let dbStatus = "ok";
+    let dbResponseMs = 0;
+    try {
+      const dbStart = Date.now();
+      await pool.query("SELECT 1");
+      dbResponseMs = Date.now() - dbStart;
+    } catch {
+      dbStatus = "error";
+    }
+    const uptimeSec = Math.round(process.uptime());
+    const totalChecks = uptimeChecks.length;
+    const okChecks = uptimeChecks.filter(c => c.status === "ok").length;
+    const uptimePct = totalChecks > 0 ? ((okChecks / totalChecks) * 100).toFixed(2) : "100.00";
     res.json({
-      status: "ok",
-      uptime: Math.round(process.uptime()),
+      status: dbStatus === "ok" ? "healthy" : "degraded",
+      version: "2.1.0",
+      environment: process.env.NODE_ENV || "development",
+      uptime: {
+        seconds: uptimeSec,
+        formatted: `${Math.floor(uptimeSec / 86400)}d ${Math.floor((uptimeSec % 86400) / 3600)}h ${Math.floor((uptimeSec % 3600) / 60)}m`,
+        since: new Date(SERVER_START_TIME).toISOString(),
+        slaPercentage: Number(uptimePct),
+      },
+      database: {
+        status: dbStatus,
+        responseMs: dbResponseMs,
+        pool: { total: pool.totalCount, idle: pool.idleCount, waiting: pool.waitingCount },
+      },
       memory: {
         rss: Math.round(mem.rss / 1024 / 1024),
         heapUsed: Math.round(mem.heapUsed / 1024 / 1024),
         heapTotal: Math.round(mem.heapTotal / 1024 / 1024),
-      },
-      pool: {
-        total: pool.totalCount,
-        idle: pool.idleCount,
-        waiting: pool.waitingCount,
+        external: Math.round((mem.external || 0) / 1024 / 1024),
       },
       queue: queueStats,
+      node: process.version,
       timestamp: new Date().toISOString(),
     });
+  });
+
+  app.get("/api/status", (_req, res) => {
+    const uptimeSec = Math.round(process.uptime());
+    const totalChecks = uptimeChecks.length;
+    const okChecks = uptimeChecks.filter(c => c.status === "ok").length;
+    const uptimePct = totalChecks > 0 ? ((okChecks / totalChecks) * 100).toFixed(2) : "100.00";
+    const lastCheck = uptimeChecks.length > 0 ? uptimeChecks[uptimeChecks.length - 1] : null;
+    const dbOk = lastCheck ? lastCheck.status === "ok" : true;
+    const dbDegraded = pool.waitingCount > 5 || !dbOk;
+    const apiStatus = Number(uptimePct) < 95 ? "degraded" : "operational";
+    const overallStatus = dbDegraded || apiStatus === "degraded" ? "degraded" : "operational";
+
+    res.json({
+      platform: "CDH Credit Registry",
+      version: "2.1.0",
+      status: overallStatus,
+      uptime: {
+        seconds: uptimeSec,
+        since: new Date(SERVER_START_TIME).toISOString(),
+        slaPercentage: Number(uptimePct),
+        slaTarget: 99.9,
+      },
+      services: {
+        api: apiStatus,
+        database: dbDegraded ? "degraded" : "operational",
+        websocket: "operational",
+        batchProcessing: "operational",
+      },
+    });
+  });
+
+  app.get("/api/admin/status-detail", requireAuth, requireRole("admin", "super_admin"), (_req, res) => {
+    const uptimeSec = Math.round(process.uptime());
+    const totalChecks = uptimeChecks.length;
+    const okChecks = uptimeChecks.filter(c => c.status === "ok").length;
+    const uptimePct = totalChecks > 0 ? ((okChecks / totalChecks) * 100).toFixed(2) : "100.00";
+    const recentChecks = uptimeChecks.slice(-60).map(c => ({
+      time: new Date(c.timestamp).toISOString(),
+      status: c.status,
+      ms: c.responseMs,
+    }));
+    const last24h = uptimeChecks.filter(c => c.timestamp > Date.now() - 86400000);
+    const hourlyUptime: { hour: string; pct: number; avg_ms: number }[] = [];
+    for (let i = 23; i >= 0; i--) {
+      const start = Date.now() - (i + 1) * 3600000;
+      const end = Date.now() - i * 3600000;
+      const checks = last24h.filter(c => c.timestamp >= start && c.timestamp < end);
+      const ok = checks.filter(c => c.status === "ok").length;
+      const h = new Date(end);
+      hourlyUptime.push({
+        hour: `${String(h.getHours()).padStart(2, "0")}:00`,
+        pct: checks.length > 0 ? Math.round((ok / checks.length) * 100) : 100,
+        avg_ms: checks.length > 0 ? Math.round(checks.reduce((s, c) => s + c.responseMs, 0) / checks.length) : 0,
+      });
+    }
+    const lastCheck = uptimeChecks.length > 0 ? uptimeChecks[uptimeChecks.length - 1] : null;
+    const dbOk = lastCheck ? lastCheck.status === "ok" : true;
+    const dbDegraded = pool.waitingCount > 5 || !dbOk;
+    const apiStatus = Number(uptimePct) < 95 ? "degraded" : "operational";
+    const overallStatus = dbDegraded || apiStatus === "degraded" ? "degraded" : "operational";
+
+    res.json({
+      platform: "CDH Credit Registry",
+      version: "2.1.0",
+      status: overallStatus,
+      uptime: {
+        seconds: uptimeSec,
+        since: new Date(SERVER_START_TIME).toISOString(),
+        slaPercentage: Number(uptimePct),
+        slaTarget: 99.9,
+      },
+      services: {
+        api: apiStatus,
+        database: dbDegraded ? "degraded" : "operational",
+        websocket: "operational",
+        batchProcessing: "operational",
+      },
+      recentChecks,
+      hourlyUptime,
+    });
+  });
+
+  app.get("/api/admin/platform-metrics", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const apiStats = getApiUsageStats();
+      const country = getCountryFilter(req);
+      const orgs = await storage.getOrganizations(country);
+      const users = await storage.getUsers();
+      const tierPrices: Record<string, number> = { standard: 299, professional: 799, enterprise: 1999 };
+      const activeOrgs = orgs.filter(o => o.status === "active");
+      const mrr = activeOrgs.reduce((s, o) => s + (tierPrices[o.subscriptionTier || "standard"] || 0), 0);
+      const arr = mrr * 12;
+      const totalRevenue = orgs.reduce((s, o) => s + (tierPrices[o.subscriptionTier || "standard"] || 0), 0);
+      const arpu = activeOrgs.length > 0 ? Math.round(mrr / activeOrgs.length) : 0;
+
+      const tierBreakdown = Object.entries(
+        activeOrgs.reduce((acc, o) => {
+          const t = o.subscriptionTier || "standard";
+          acc[t] = (acc[t] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>)
+      ).map(([tier, count]) => ({ tier, count, revenue: (count as number) * (tierPrices[tier] || 0) }));
+
+      const activeUsers = users.filter(u => u.status === "active").length;
+      const adminUsers = users.filter(u => u.role === "admin" || u.role === "super_admin").length;
+
+      const uptimeSec = Math.round(process.uptime());
+      const totalChecks = uptimeChecks.length;
+      const okChecks = uptimeChecks.filter(c => c.status === "ok").length;
+
+      res.json({
+        revenue: { mrr, arr, totalRevenue, arpu, currency: "USD" },
+        subscriptions: { total: activeOrgs.length, tierBreakdown },
+        users: { total: users.length, active: activeUsers, admins: adminUsers },
+        organizations: { total: orgs.length, active: activeOrgs.length },
+        api: {
+          totalRequests: apiStats.totalAllTime,
+          todayRequests: apiStats.totalToday,
+          avgResponseTime: apiStats.responseTime.avg,
+          p95ResponseTime: apiStats.responseTime.p95,
+          p99ResponseTime: apiStats.responseTime.p99,
+          requestsPerSecond: apiStats.requestsPerSecond,
+          statusBreakdown: apiStats.statusBreakdown,
+          hourlyData: apiStats.hourlyData,
+          dailyData: apiStats.dailyData,
+          topEndpoints: apiStats.topEndpoints.slice(0, 10),
+        },
+        uptime: {
+          seconds: uptimeSec,
+          since: new Date(SERVER_START_TIME).toISOString(),
+          slaPercentage: totalChecks > 0 ? Number(((okChecks / totalChecks) * 100).toFixed(2)) : 100,
+        },
+        system: {
+          nodeVersion: process.version,
+          memoryUsedMb: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+          memoryTotalMb: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
+          dbPoolTotal: pool.totalCount,
+          dbPoolIdle: pool.idleCount,
+        },
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
   });
 
   app.post("/api/auth/login", loginLimiter, async (req, res) => {

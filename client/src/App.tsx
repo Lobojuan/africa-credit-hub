@@ -72,6 +72,9 @@ const CrossBorderAgreementsPage = lazy(() => import("@/pages/cross-border-agreem
 const CrossBorderSearchPage = lazy(() => import("@/pages/cross-border-search"));
 const PapssSettlementsPage = lazy(() => import("@/pages/papss-settlements"));
 const ConsumerPortalPage = lazy(() => import("@/pages/consumer-portal"));
+const SystemStatusPage = lazy(() => import("@/pages/system-status"));
+const PlatformMetricsPage = lazy(() => import("@/pages/platform-metrics"));
+import PricingPage from "@/pages/pricing";
 
 function LazyFallback() {
   return (
@@ -123,6 +126,8 @@ function Router() {
         <Route path="/cross-border-agreements" component={CrossBorderAgreementsPage} />
         <Route path="/cross-border-search" component={CrossBorderSearchPage} />
         <Route path="/papss-settlements" component={PapssSettlementsPage} />
+        <Route path="/system-status" component={SystemStatusPage} />
+        <Route path="/platform-metrics" component={PlatformMetricsPage} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
@@ -313,6 +318,7 @@ function App() {
           <Switch>
             <Route path="/investor" component={InvestorLandingPage} />
             <Route path="/demo" component={InvestorLandingPage} />
+            <Route path="/pricing" component={PricingPage} />
             <Route path="/my-credit">
               <Suspense fallback={<LazyFallback />}>
                 <ConsumerPortalPage />

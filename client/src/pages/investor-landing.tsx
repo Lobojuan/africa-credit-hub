@@ -486,6 +486,7 @@ export default function InvestorLandingPage() {
     { label: "Advantage", id: "advantage" },
     { label: "Technology", id: "tech" },
     { label: "Roadmap", id: "roadmap" },
+    { label: "Pricing", id: "pricing-link" },
   ];
 
   return (
@@ -507,7 +508,7 @@ export default function InvestorLandingPage() {
             </div>
             <div>
               <span className="font-bold text-sm tracking-tight">CDH Credit Registry</span>
-              <span className="text-[10px] text-muted-foreground ml-1.5">v2.0</span>
+              <span className="text-[10px] text-muted-foreground ml-1.5">v2.1</span>
             </div>
           </div>
           <div className="flex items-center gap-1 sm:gap-2">
@@ -517,7 +518,13 @@ export default function InvestorLandingPage() {
                 variant="ghost"
                 size="sm"
                 className="text-[11px] px-2 hidden lg:inline-flex"
-                onClick={() => document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth" })}
+                onClick={() => {
+                  if (item.id === "pricing-link") {
+                    navigate("/pricing");
+                  } else {
+                    document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth" });
+                  }
+                }}
               >
                 {item.label}
               </Button>
