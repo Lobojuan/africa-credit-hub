@@ -312,6 +312,7 @@ function App() {
         <TooltipProvider>
           <Switch>
             <Route path="/investor" component={InvestorLandingPage} />
+            <Route path="/demo" component={InvestorLandingPage} />
             <Route path="/my-credit">
               <Suspense fallback={<LazyFallback />}>
                 <ConsumerPortalPage />
