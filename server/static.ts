@@ -1,4 +1,4 @@
-import express, { type Express, type Request, type Response } from "express";
+import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -22,9 +22,9 @@ export function serveStatic(app: Express) {
 
   app.use(express.static(distPath));
 
-  app.get("/{*splat}", (req: Request, res: Response) => {
-    if (req.path.startsWith("/api")) {
-      res.status(404).json({ message: "API endpoint not found" });
+  app.use((req: Request, res: Response, _next: NextFunction) => {
+    if (req.method !== "GET" || req.path.startsWith("/api")) {
+      res.status(404).json({ message: "Not found" });
       return;
     }
     res.sendFile(indexPath);
