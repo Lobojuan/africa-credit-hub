@@ -3,7 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   DollarSign, TrendingUp, Users, Building2, Activity,
-  Server, Clock, Zap, BarChart3, PieChart, RefreshCw, Target, Percent, ArrowUpRight,
+  Server, Clock, Zap, BarChart3, PieChart, RefreshCw, Target, ArrowUpRight,
+  Shield, CheckCircle2, AlertTriangle, XCircle, Briefcase, Award, TrendingDown,
+  Percent, ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,11 +15,11 @@ import {
 
 const COLORS = ["hsl(175, 55%, 28%)", "hsl(175, 55%, 45%)", "hsl(175, 55%, 62%)", "hsl(200, 55%, 45%)"];
 
-function MetricCard({ title, value, subtitle, icon: Icon, trend }: {
-  title: string; value: string | number; subtitle: string; icon: any; trend?: string;
+function MetricCard({ title, value, subtitle, icon: Icon, trend, testId }: {
+  title: string; value: string | number; subtitle: string; icon: any; trend?: string; testId?: string;
 }) {
   return (
-    <Card data-testid={`metric-${title.toLowerCase().replace(/\s/g, "-")}`}>
+    <Card data-testid={testId || `metric-${title.toLowerCase().replace(/\s/g, "-")}`}>
       <CardContent className="pt-6">
         <div className="flex items-start justify-between">
           <div>
@@ -33,6 +35,22 @@ function MetricCard({ title, value, subtitle, icon: Icon, trend }: {
       </CardContent>
     </Card>
   );
+}
+
+function StatusIcon({ status }: { status: string }) {
+  if (status === "excellent") return <CheckCircle2 className="w-4 h-4 text-green-600" />;
+  if (status === "good") return <AlertTriangle className="w-4 h-4 text-yellow-600" />;
+  return <XCircle className="w-4 h-4 text-red-500" />;
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const styles: Record<string, string> = {
+    excellent: "bg-green-500/10 text-green-600 border-green-500/20",
+    good: "bg-yellow-500/10 text-yellow-700 border-yellow-500/20",
+    needs_work: "bg-red-500/10 text-red-600 border-red-500/20",
+  };
+  const labels: Record<string, string> = { excellent: "Excellent", good: "Good", needs_work: "Needs Work" };
+  return <Badge variant="outline" className={`text-[10px] ${styles[status] || ""}`}>{labels[status] || status}</Badge>;
 }
 
 export default function PlatformMetricsPage() {
@@ -62,14 +80,14 @@ export default function PlatformMetricsPage() {
     );
   }
 
-  const { revenue, subscriptions, users, organizations, api, uptime, system, projections } = metrics;
+  const { revenue, subscriptions, users, organizations, api, uptime, system, projections, cohortData, investorReadiness } = metrics;
 
   return (
     <div className="space-y-6" data-testid="platform-metrics-page">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold" data-testid="text-page-title">Platform Metrics</h1>
-          <p className="text-muted-foreground text-sm mt-1">Business intelligence and operational analytics</p>
+          <p className="text-muted-foreground text-sm mt-1">Business intelligence, investor KPIs, and operational analytics</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="button-refresh-metrics">
           <RefreshCw className="w-4 h-4 mr-2" />
@@ -88,7 +106,7 @@ export default function PlatformMetricsPage() {
         <MetricCard
           title="Active Organizations"
           value={organizations.active}
-          subtitle={`${organizations.total} total registered`}
+          subtitle={`${organizations.total} total | ${subscriptions.trialCount || 0} trials | ${subscriptions.churnedCount || 0} churned`}
           icon={Building2}
         />
         <MetricCard
@@ -105,11 +123,231 @@ export default function PlatformMetricsPage() {
         />
       </div>
 
+      {investorReadiness && (
+        <Card data-testid="card-investor-readiness">
+          <CardHeader>
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Award className="w-4 h-4" />
+              Investor Readiness Scorecard
+              <Badge className="ml-auto text-sm px-3" variant={investorReadiness.grade.startsWith("A") ? "default" : "secondary"}>
+                Grade: {investorReadiness.grade}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-4">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="flex-1 h-3 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{
+                      width: `${investorReadiness.overallScore}%`,
+                      background: investorReadiness.overallScore >= 70 ? "hsl(142, 76%, 36%)" : investorReadiness.overallScore >= 40 ? "hsl(48, 96%, 53%)" : "hsl(0, 84%, 60%)"
+                    }}
+                  />
+                </div>
+                <span className="text-sm font-bold w-12 text-right">{investorReadiness.overallScore}/100</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              {[
+                { label: "Net Revenue Retention", value: `${revenue.nrr}%`, target: "> 120%", status: investorReadiness.nrrStatus },
+                { label: "Rule of 40", value: `${revenue.ruleOf40}`, target: "> 40", status: investorReadiness.ruleOf40Status },
+                { label: "LTV / CAC Ratio", value: `${revenue.ltvCacRatio}x`, target: "> 3x", status: investorReadiness.ltvCacStatus },
+                { label: "CAC Payback", value: `${revenue.paybackMonths} mo`, target: "< 12 months", status: investorReadiness.paybackStatus },
+                { label: "Gross Churn", value: `${revenue.grossChurnRate}%`, target: "< 5% monthly", status: investorReadiness.churnStatus },
+              ].map(item => (
+                <div key={item.label} className="p-3 rounded-lg border bg-muted/30 space-y-1.5" data-testid={`readiness-${item.label.toLowerCase().replace(/[\s\/]/g, "-")}`}>
+                  <div className="flex items-center justify-between">
+                    <StatusIcon status={item.status} />
+                    <StatusBadge status={item.status} />
+                  </div>
+                  <p className="text-lg font-bold">{item.value}</p>
+                  <p className="text-xs text-muted-foreground">{item.label}</p>
+                  <p className="text-[10px] text-muted-foreground">Target: {item.target}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card data-testid="card-investor-kpis">
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Target className="w-4 h-4" />
+            Unit Economics & SaaS Metrics
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="text-center p-3 rounded-lg bg-muted/50">
+              <p className="text-xs text-muted-foreground">MRR Growth</p>
+              <p className="text-lg font-bold text-primary">{revenue.growthRate || 0}%</p>
+              <p className="text-[10px] text-muted-foreground">month-over-month</p>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-muted/50">
+              <p className="text-xs text-muted-foreground">LTV</p>
+              <p className="text-lg font-bold">${(revenue.ltv || 0).toLocaleString()}</p>
+              <p className="text-[10px] text-muted-foreground">{revenue.avgMonthsRetained || 0}mo avg retention</p>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-muted/50">
+              <p className="text-xs text-muted-foreground">CAC</p>
+              <p className="text-lg font-bold">${(revenue.cac || 0).toLocaleString()}</p>
+              <p className="text-[10px] text-muted-foreground">{revenue.paybackMonths || 0}mo payback</p>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-muted/50">
+              <p className="text-xs text-muted-foreground">ARPU</p>
+              <p className="text-lg font-bold">${revenue.arpu || 0}</p>
+              <p className="text-[10px] text-muted-foreground">per org/month</p>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-muted/50">
+              <p className="text-xs text-muted-foreground">Gross Retention</p>
+              <p className="text-lg font-bold">{revenue.grossRetention || 0}%</p>
+              <p className="text-[10px] text-muted-foreground">excl. expansion</p>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-muted/50">
+              <p className="text-xs text-muted-foreground">Profit Margin</p>
+              <p className="text-lg font-bold text-green-600">{revenue.profitMargin || 0}%</p>
+              <p className="text-[10px] text-muted-foreground">est. gross margin</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t">
+            <div className="text-center p-3 rounded-lg bg-muted/50">
+              <p className="text-xs text-muted-foreground">Trial Conversion</p>
+              <p className="text-lg font-bold">{revenue.trialConversion || 0}%</p>
+              <p className="text-[10px] text-muted-foreground">trial to paid</p>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-muted/50">
+              <p className="text-xs text-muted-foreground">Burn Multiple</p>
+              <p className="text-lg font-bold">{revenue.burnMultiple || 0}x</p>
+              <p className="text-[10px] text-muted-foreground">lower is better</p>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-muted/50">
+              <p className="text-xs text-muted-foreground">Magic Number</p>
+              <p className="text-lg font-bold">{revenue.magicNumber || 0}</p>
+              <p className="text-[10px] text-muted-foreground">sales efficiency</p>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-muted/50">
+              <p className="text-xs text-muted-foreground">Rev / Employee</p>
+              <p className="text-lg font-bold">${(revenue.revenuePerEmployee || 0).toLocaleString()}</p>
+              <p className="text-[10px] text-muted-foreground">ARR per admin</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card data-testid="card-valuation-estimate">
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Briefcase className="w-4 h-4" />
+            Valuation Estimate
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Estimated Enterprise Value</p>
+              <p className="text-3xl font-bold text-primary">${(revenue.estimatedValuation || 0).toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground mt-1">{revenue.valuationMultiple || 0}x ARR multiple</p>
+            </div>
+            <div className="flex-1 grid grid-cols-3 gap-4">
+              <div className="p-3 rounded-lg bg-muted/50 text-center">
+                <p className="text-xs text-muted-foreground">ARR</p>
+                <p className="font-bold">${(revenue.arr || 0).toLocaleString()}</p>
+              </div>
+              <div className="p-3 rounded-lg bg-muted/50 text-center">
+                <p className="text-xs text-muted-foreground">Expansion MRR</p>
+                <p className="font-bold">${(revenue.expansionRevenue || 0).toLocaleString()}</p>
+              </div>
+              <div className="p-3 rounded-lg bg-muted/50 text-center">
+                <p className="text-xs text-muted-foreground">Contraction</p>
+                <p className="font-bold text-red-600">-${(revenue.contractionRevenue || 0).toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 pt-4 border-t">
+            <p className="text-xs text-muted-foreground">
+              Multiple based on NRR ({revenue.nrr}%) and Rule of 40 ({revenue.ruleOf40}). SaaS companies with NRR &gt; 120% and Rule of 40 &gt; 60 typically trade at 12-20x ARR. This estimate uses a {revenue.valuationMultiple}x multiple.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {projections && projections.length > 0 && (
+          <Card data-testid="card-growth-projection">
+            <CardHeader>
+              <CardTitle className="text-sm flex items-center gap-2">
+                <ArrowUpRight className="w-4 h-4" />
+                12-Month Revenue Projection
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={280}>
+                <AreaChart data={projections}>
+                  <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 10 }} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip formatter={(v: number) => [`$${v.toLocaleString()}`, ""]} />
+                  <Area type="monotone" dataKey="mrr" stroke="hsl(175, 55%, 28%)" fill="hsl(175, 55%, 28%)" fillOpacity={0.15} name="Projected MRR" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+
+        {cohortData && cohortData.length > 0 && (
+          <Card data-testid="card-cohort-retention">
+            <CardHeader>
+              <CardTitle className="text-sm flex items-center gap-2">
+                <TrendingDown className="w-4 h-4" />
+                Cohort Retention (6 Months)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr>
+                      <th className="text-left py-1.5 px-2 font-medium text-muted-foreground">Cohort</th>
+                      <th className="text-center py-1.5 px-2 font-medium text-muted-foreground">Size</th>
+                      {[0, 1, 2, 3, 4, 5].map(m => (
+                        <th key={m} className="text-center py-1.5 px-2 font-medium text-muted-foreground">M{m}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cohortData.map((c: any) => (
+                      <tr key={c.cohort} className="border-t border-border/30">
+                        <td className="py-1.5 px-2 font-medium">{c.cohort}</td>
+                        <td className="py-1.5 px-2 text-center">{c.size}</td>
+                        {[0, 1, 2, 3, 4, 5].map(m => {
+                          const val = c.retained[m];
+                          if (val == null) return <td key={m} className="py-1.5 px-2 text-center text-muted-foreground">—</td>;
+                          const pct = c.size > 0 ? Math.round((val / c.size) * 100) : 0;
+                          const bg = pct >= 90 ? "bg-green-500/20" : pct >= 70 ? "bg-yellow-500/15" : "bg-red-500/15";
+                          return (
+                            <td key={m} className={`py-1.5 px-2 text-center rounded ${bg}`}>
+                              {pct}%
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <MetricCard
           title="ARPU"
           value={`$${revenue.arpu || 0}`}
-          subtitle="Average revenue per user"
+          subtitle="Average revenue per org"
           icon={TrendingUp}
         />
         <MetricCard
@@ -125,70 +363,6 @@ export default function PlatformMetricsPage() {
           icon={Clock}
         />
       </div>
-
-      <Card data-testid="card-investor-kpis">
-        <CardHeader>
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Target className="w-4 h-4" />
-            Investor KPIs & Unit Economics
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <div className="text-center p-3 rounded-lg bg-muted/50">
-              <p className="text-xs text-muted-foreground">MRR Growth</p>
-              <p className="text-lg font-bold text-primary">{revenue.growthRate || 0}%</p>
-              <p className="text-[10px] text-muted-foreground">month-over-month</p>
-            </div>
-            <div className="text-center p-3 rounded-lg bg-muted/50">
-              <p className="text-xs text-muted-foreground">LTV</p>
-              <p className="text-lg font-bold">${(revenue.ltv || 0).toLocaleString()}</p>
-              <p className="text-[10px] text-muted-foreground">lifetime value</p>
-            </div>
-            <div className="text-center p-3 rounded-lg bg-muted/50">
-              <p className="text-xs text-muted-foreground">CAC</p>
-              <p className="text-lg font-bold">${(revenue.cac || 0).toLocaleString()}</p>
-              <p className="text-[10px] text-muted-foreground">acq. cost</p>
-            </div>
-            <div className="text-center p-3 rounded-lg bg-muted/50">
-              <p className="text-xs text-muted-foreground">LTV/CAC</p>
-              <p className="text-lg font-bold text-green-600">{revenue.ltvCacRatio || 0}x</p>
-              <p className="text-[10px] text-muted-foreground">target: &gt;3x</p>
-            </div>
-            <div className="text-center p-3 rounded-lg bg-muted/50">
-              <p className="text-xs text-muted-foreground">NRR</p>
-              <p className="text-lg font-bold">{revenue.nrr || 0}%</p>
-              <p className="text-[10px] text-muted-foreground">net retention</p>
-            </div>
-            <div className="text-center p-3 rounded-lg bg-muted/50">
-              <p className="text-xs text-muted-foreground">Rule of 40</p>
-              <p className="text-lg font-bold text-primary">{revenue.ruleOf40 || 0}</p>
-              <p className="text-[10px] text-muted-foreground">growth + margin</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {projections && projections.length > 0 && (
-        <Card data-testid="card-growth-projection">
-          <CardHeader>
-            <CardTitle className="text-sm flex items-center gap-2">
-              <ArrowUpRight className="w-4 h-4" />
-              12-Month Revenue Projection
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={280}>
-              <AreaChart data={projections}>
-                <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v: number) => [`$${v.toLocaleString()}`, ""]} />
-                <Area type="monotone" dataKey="mrr" stroke="hsl(175, 55%, 28%)" fill="hsl(175, 55%, 28%)" fillOpacity={0.15} name="Projected MRR" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card data-testid="card-api-traffic">
