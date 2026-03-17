@@ -7,11 +7,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   ArrowRight, ArrowLeft, Brain, FileText, AlertTriangle, Globe2, Search,
   Shield, Zap, Loader2, CheckCircle2, XCircle, AlertCircle, TrendingUp,
   Building2, User, Briefcase, BadgeCheck, Clock, Sparkles, Mail, Phone,
-  Database, Lock, ChevronRight
+  Database, Lock, ChevronRight, Edit3
 } from "lucide-react";
 
 function AIDemoPage() {
@@ -27,6 +29,9 @@ function AIDemoPage() {
   const [featuresTriedCount, setFeaturesTriedCount] = useState(0);
   const [showStickyBar, setShowStickyBar] = useState(false);
   const [stickyDismissed, setStickyDismissed] = useState(false);
+  const [useOwnData, setUseOwnData] = useState(false);
+  const [customBorrower, setCustomBorrower] = useState("");
+  const [customPortfolio, setCustomPortfolio] = useState("");
 
   useEffect(() => {
     const triedCount = Object.keys(results).filter(k => !results[k]?.error).length;
@@ -67,20 +72,89 @@ function AIDemoPage() {
   function InlineConversionCTA({ feature }: { feature: string }) {
     const msg = contextualMessages[feature];
     if (!msg || !results[feature] || results[feature]?.error) return null;
+    if (useOwnData && results[feature]?.isCustomData) return null;
     return (
       <div className="mt-6 rounded-xl border-2 border-primary/20 bg-gradient-to-r from-primary/5 via-primary/3 to-transparent p-5" data-testid={`cta-inline-${feature}`}>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <div className="flex-1 min-w-0">
             <h4 className="font-bold text-sm flex items-center gap-2 mb-1">
               <Sparkles className="w-4 h-4 text-primary shrink-0" />
-              {msg.hook}
+              {useOwnData ? "Want the full platform experience?" : msg.hook}
             </h4>
-            <p className="text-xs text-muted-foreground leading-relaxed">{msg.benefit}</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">{useOwnData ? "Start a free trial to run AI analysis across your entire portfolio with full dashboards, alerts, and regulatory reporting." : msg.benefit}</p>
           </div>
-          <Button onClick={() => navigate("/login")} className="gap-2 shrink-0 shadow-md" data-testid={`cta-inline-btn-${feature}`}>
-            Try With Your Data <ArrowRight className="w-4 h-4" />
-          </Button>
+          {!useOwnData ? (
+            <Button onClick={() => setUseOwnData(true)} className="gap-2 shrink-0 shadow-md" data-testid={`cta-inline-btn-${feature}`}>
+              Try With Your Data <ArrowRight className="w-4 h-4" />
+            </Button>
+          ) : (
+            <Button onClick={() => navigate("/start-trial")} className="gap-2 shrink-0 shadow-md" data-testid={`cta-inline-btn-${feature}`}>
+              Start Free Trial <ArrowRight className="w-4 h-4" />
+            </Button>
+          )}
         </div>
+      </div>
+    );
+  }
+
+  function OwnDataToggle() {
+    return (
+      <div className="mb-6 rounded-xl border-2 border-dashed border-primary/30 bg-gradient-to-r from-primary/5 to-transparent p-4" data-testid="own-data-toggle">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <Edit3 className="w-4 h-4 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold text-sm">Use Your Own Data</p>
+              <p className="text-xs text-muted-foreground">Paste your borrower or portfolio data and the AI will analyze it — no account needed</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Label htmlFor="own-data-switch" className="text-xs text-muted-foreground">{useOwnData ? "On" : "Off"}</Label>
+            <Switch id="own-data-switch" checked={useOwnData} onCheckedChange={setUseOwnData} data-testid="switch-own-data" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function BorrowerDataInput() {
+    if (!useOwnData) return null;
+    return (
+      <div className="space-y-3 rounded-lg border border-primary/20 bg-primary/5 p-4" data-testid="custom-borrower-input">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <Edit3 className="w-4 h-4 text-primary" />
+          Enter Your Borrower Data
+        </div>
+        <Textarea
+          value={customBorrower}
+          onChange={e => setCustomBorrower(e.target.value)}
+          placeholder={"Paste or type borrower details, e.g.:\n\nName: John Doe\nCountry: Kenya\nEmployment: Business Owner - Retail Shop\nMonthly Income: KES 250,000\nCredit Accounts: 3\n  - Business Loan: KES 2,000,000 | Status: current\n  - Personal Loan: KES 500,000 | Status: delinquent | 30 days arrears\n  - Mobile Money: KES 50,000 | Status: current\nTotal Balance: KES 2,550,000"}
+          className="min-h-[160px] text-sm font-mono bg-background"
+          data-testid="textarea-custom-borrower"
+        />
+        <p className="text-[10px] text-muted-foreground">Include any details: name, income, loan amounts, payment history, delinquencies, collateral, etc.</p>
+      </div>
+    );
+  }
+
+  function PortfolioDataInput() {
+    if (!useOwnData) return null;
+    return (
+      <div className="space-y-3 rounded-lg border border-primary/20 bg-primary/5 p-4" data-testid="custom-portfolio-input">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <Edit3 className="w-4 h-4 text-primary" />
+          Enter Your Portfolio Data
+        </div>
+        <Textarea
+          value={customPortfolio}
+          onChange={e => setCustomPortfolio(e.target.value)}
+          placeholder={"Paste or type portfolio summary, e.g.:\n\nTotal Borrowers: 320\nTotal Accounts: 580\nAccount Types:\n  - Personal Loans: 200 accounts, KES 45M, 15 delinquent\n  - Business Loans: 180 accounts, KES 120M, 22 delinquent\n  - Mortgages: 50 accounts, KES 890M, 3 delinquent\nBy Lender: Bank A: 300 accounts; Bank B: 280 accounts\nNPL Ratio: 8.2%\nDelinquent Borrowers: 35 (11%)"}
+          className="min-h-[160px] text-sm font-mono bg-background"
+          data-testid="textarea-custom-portfolio"
+        />
+        <p className="text-[10px] text-muted-foreground">Include any details: borrower counts, loan types, delinquencies, NPL ratios, lender breakdown, etc.</p>
       </div>
     );
   }
@@ -177,10 +251,12 @@ function AIDemoPage() {
             AI Credit Intelligence in Action
           </h1>
           <p className="text-muted-foreground max-w-2xl mx-auto text-sm">
-            These are real AI calls using sample African credit data. Click any feature below to see
-            how our AI transforms raw credit data into actionable intelligence — no login required.
+            Real AI calls you can try right now — no login required. Use our sample data or toggle
+            "Use Your Own Data" to paste your borrower and portfolio information for instant AI analysis.
           </p>
         </div>
+
+        <OwnDataToggle />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid grid-cols-3 sm:grid-cols-6 h-auto gap-1 bg-muted/50 p-1">
@@ -197,32 +273,35 @@ function AIDemoPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg"><FileText className="w-5 h-5 text-primary" /> AI Credit Narrative Generator</CardTitle>
-                <CardDescription>Select a sample borrower profile to generate a loan committee-ready credit narrative.</CardDescription>
+                <CardDescription>{useOwnData ? "Paste your borrower data below and our AI will generate a loan committee-ready credit narrative." : "Select a sample borrower profile to generate a loan committee-ready credit narrative."}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {Object.entries(scenarioLabels).map(([key, val]) => (
-                    <div
-                      key={key}
-                      onClick={() => setBorrowerScenario(key)}
-                      className={`p-3 rounded-lg border cursor-pointer transition-all ${borrowerScenario === key ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/50"}`}
-                      data-testid={`scenario-${key}`}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <val.icon className="w-4 h-4 text-primary" />
-                        <span className="font-medium text-sm">{val.name}</span>
+                <BorrowerDataInput />
+                {!useOwnData && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {Object.entries(scenarioLabels).map(([key, val]) => (
+                      <div
+                        key={key}
+                        onClick={() => setBorrowerScenario(key)}
+                        className={`p-3 rounded-lg border cursor-pointer transition-all ${borrowerScenario === key ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/50"}`}
+                        data-testid={`scenario-${key}`}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <val.icon className="w-4 h-4 text-primary" />
+                          <span className="font-medium text-sm">{val.name}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{val.desc}</p>
                       </div>
-                      <p className="text-xs text-muted-foreground">{val.desc}</p>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
                 <Button
-                  onClick={() => runFeature("credit-narrative", { borrowerScenario })}
-                  disabled={loading === "credit-narrative"}
+                  onClick={() => runFeature("credit-narrative", useOwnData && customBorrower.trim() ? { customData: customBorrower } : { borrowerScenario })}
+                  disabled={loading === "credit-narrative" || (useOwnData && !customBorrower.trim())}
                   className="gap-2"
                   data-testid="run-credit-narrative"
                 >
-                  {loading === "credit-narrative" ? <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</> : <><Brain className="w-4 h-4" /> Generate Narrative</>}
+                  {loading === "credit-narrative" ? <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</> : <><Brain className="w-4 h-4" /> {useOwnData ? "Analyze Your Borrower" : "Generate Narrative"}</>}
                 </Button>
 
                 {results["credit-narrative"] && !results["credit-narrative"].error && (
@@ -268,16 +347,17 @@ function AIDemoPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg"><AlertTriangle className="w-5 h-5 text-orange-500" /> Smart Alerts & Anomaly Detection</CardTitle>
-                <CardDescription>AI scans an 847-borrower portfolio to identify unusual patterns, emerging risks, and actionable alerts.</CardDescription>
+                <CardDescription>{useOwnData ? "Paste your portfolio data below and our AI will scan for anomalies and emerging risks." : "AI scans an 847-borrower portfolio to identify unusual patterns, emerging risks, and actionable alerts."}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <PortfolioDataInput />
                 <Button
-                  onClick={() => runFeature("anomaly-detection")}
-                  disabled={loading === "anomaly-detection"}
+                  onClick={() => runFeature("anomaly-detection", useOwnData && customPortfolio.trim() ? { customPortfolio } : {})}
+                  disabled={loading === "anomaly-detection" || (useOwnData && !customPortfolio.trim())}
                   className="gap-2"
                   data-testid="run-anomaly-detection"
                 >
-                  {loading === "anomaly-detection" ? <><Loader2 className="w-4 h-4 animate-spin" /> Scanning Portfolio...</> : <><AlertTriangle className="w-4 h-4" /> Scan for Anomalies</>}
+                  {loading === "anomaly-detection" ? <><Loader2 className="w-4 h-4 animate-spin" /> Scanning Portfolio...</> : <><AlertTriangle className="w-4 h-4" /> {useOwnData ? "Scan Your Portfolio" : "Scan for Anomalies"}</>}
                 </Button>
 
                 {results["anomaly-detection"] && !results["anomaly-detection"].error && (
@@ -326,9 +406,10 @@ function AIDemoPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg"><Shield className="w-5 h-5 text-blue-600" /> AI Regulatory Report Generator</CardTitle>
-                <CardDescription>Generate a central bank regulatory submission for any African country.</CardDescription>
+                <CardDescription>{useOwnData ? "Paste your portfolio data below and select a country to generate a regulatory submission." : "Generate a central bank regulatory submission for any African country."}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <PortfolioDataInput />
                 <div className="flex items-center gap-3">
                   <Select value={country} onValueChange={setCountry}>
                     <SelectTrigger className="w-48" data-testid="select-country">
@@ -344,12 +425,12 @@ function AIDemoPage() {
                     </SelectContent>
                   </Select>
                   <Button
-                    onClick={() => runFeature("regulatory-report", { country })}
-                    disabled={loading === "regulatory-report"}
+                    onClick={() => runFeature("regulatory-report", useOwnData && customPortfolio.trim() ? { country, customPortfolio } : { country })}
+                    disabled={loading === "regulatory-report" || (useOwnData && !customPortfolio.trim())}
                     className="gap-2"
                     data-testid="run-regulatory-report"
                   >
-                    {loading === "regulatory-report" ? <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</> : <><Shield className="w-4 h-4" /> Generate Report</>}
+                    {loading === "regulatory-report" ? <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</> : <><Shield className="w-4 h-4" /> {useOwnData ? "Generate From Your Data" : "Generate Report"}</>}
                   </Button>
                 </div>
 
@@ -403,9 +484,10 @@ function AIDemoPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg"><Search className="w-5 h-5 text-violet-600" /> Ask Your Data</CardTitle>
-                <CardDescription>Query the sample credit portfolio using natural language — ask anything about borrowers, risk, or trends.</CardDescription>
+                <CardDescription>{useOwnData ? "Paste your portfolio data above, then ask questions about it in natural language." : "Query the sample credit portfolio using natural language — ask anything about borrowers, risk, or trends."}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <PortfolioDataInput />
                 <div className="space-y-3">
                   <Textarea
                     value={queryText}
@@ -414,25 +496,27 @@ function AIDemoPage() {
                     className="min-h-[80px] text-sm"
                     data-testid="input-query"
                   />
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      "How many borrowers have delinquent accounts?",
-                      "Which lender has the highest default rate?",
-                      "What is the total microfinance exposure?",
-                      "Compare mortgage vs business loan risk",
-                    ].map((q, i) => (
-                      <Button key={i} variant="outline" size="sm" className="text-xs" onClick={() => setQueryText(q)} data-testid={`quick-query-${i}`}>
-                        {q}
-                      </Button>
-                    ))}
-                  </div>
+                  {!useOwnData && (
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        "How many borrowers have delinquent accounts?",
+                        "Which lender has the highest default rate?",
+                        "What is the total microfinance exposure?",
+                        "Compare mortgage vs business loan risk",
+                      ].map((q, i) => (
+                        <Button key={i} variant="outline" size="sm" className="text-xs" onClick={() => setQueryText(q)} data-testid={`quick-query-${i}`}>
+                          {q}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
                   <Button
-                    onClick={() => runFeature("natural-query", { query: queryText || "How many borrowers have delinquent accounts and what is the total exposure?" })}
-                    disabled={loading === "natural-query"}
+                    onClick={() => runFeature("natural-query", { query: queryText || "How many borrowers have delinquent accounts and what is the total exposure?", ...(useOwnData && customPortfolio.trim() ? { customPortfolio } : {}) })}
+                    disabled={loading === "natural-query" || (useOwnData && !customPortfolio.trim())}
                     className="gap-2"
                     data-testid="run-natural-query"
                   >
-                    {loading === "natural-query" ? <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing...</> : <><Search className="w-4 h-4" /> Ask AI</>}
+                    {loading === "natural-query" ? <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing...</> : <><Search className="w-4 h-4" /> {useOwnData ? "Ask About Your Data" : "Ask AI"}</>}
                   </Button>
                 </div>
 
@@ -479,16 +563,17 @@ function AIDemoPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg"><Globe2 className="w-5 h-5 text-emerald-600" /> Cross-Border Risk Intelligence</CardTitle>
-                <CardDescription>Analyze multi-country exposures across 7 African nations — the kind of intelligence single-country bureaus miss entirely.</CardDescription>
+                <CardDescription>{useOwnData ? "Paste your multi-country exposure data and the AI will identify systemic risks and hidden exposures." : "Analyze multi-country exposures across 7 African nations — the kind of intelligence single-country bureaus miss entirely."}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <PortfolioDataInput />
                 <Button
-                  onClick={() => runFeature("cross-border-risk")}
-                  disabled={loading === "cross-border-risk"}
+                  onClick={() => runFeature("cross-border-risk", useOwnData && customPortfolio.trim() ? { customPortfolio } : {})}
+                  disabled={loading === "cross-border-risk" || (useOwnData && !customPortfolio.trim())}
                   className="gap-2"
                   data-testid="run-cross-border-risk"
                 >
-                  {loading === "cross-border-risk" ? <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing 7 Countries...</> : <><Globe2 className="w-4 h-4" /> Analyze Cross-Border Risk</>}
+                  {loading === "cross-border-risk" ? <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing...</> : <><Globe2 className="w-4 h-4" /> {useOwnData ? "Analyze Your Exposures" : "Analyze Cross-Border Risk"}</>}
                 </Button>
 
                 {results["cross-border-risk"] && !results["cross-border-risk"].error && (
@@ -556,25 +641,28 @@ function AIDemoPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg"><BadgeCheck className="w-5 h-5 text-green-600" /> AI Loan Decision Engine</CardTitle>
-                <CardDescription>Submit a loan application for AI underwriting — get approve/decline decisions with full reasoning and suggested terms.</CardDescription>
+                <CardDescription>{useOwnData ? "Paste your borrower data below and set the loan details for an AI underwriting decision." : "Submit a loan application for AI underwriting — get approve/decline decisions with full reasoning and suggested terms."}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {Object.entries(scenarioLabels).map(([key, val]) => (
-                    <div
-                      key={key}
-                      onClick={() => setBorrowerScenario(key)}
-                      className={`p-3 rounded-lg border cursor-pointer transition-all ${borrowerScenario === key ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/50"}`}
-                      data-testid={`loan-scenario-${key}`}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <val.icon className="w-4 h-4 text-primary" />
-                        <span className="font-medium text-sm">{val.name}</span>
+                <BorrowerDataInput />
+                {!useOwnData && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {Object.entries(scenarioLabels).map(([key, val]) => (
+                      <div
+                        key={key}
+                        onClick={() => setBorrowerScenario(key)}
+                        className={`p-3 rounded-lg border cursor-pointer transition-all ${borrowerScenario === key ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/50"}`}
+                        data-testid={`loan-scenario-${key}`}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <val.icon className="w-4 h-4 text-primary" />
+                          <span className="font-medium text-sm">{val.name}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{val.desc}</p>
                       </div>
-                      <p className="text-xs text-muted-foreground">{val.desc}</p>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs text-muted-foreground mb-1 block">Loan Amount</label>
@@ -596,12 +684,16 @@ function AIDemoPage() {
                   </div>
                 </div>
                 <Button
-                  onClick={() => runFeature("loan-recommendation", { borrowerScenario, loanAmount: parseInt(loanAmount) || 50000, loanType })}
-                  disabled={loading === "loan-recommendation"}
+                  onClick={() => runFeature("loan-recommendation", { 
+                    ...(useOwnData && customBorrower.trim() ? { customData: customBorrower } : { borrowerScenario }), 
+                    loanAmount: parseInt(loanAmount) || 50000, 
+                    loanType 
+                  })}
+                  disabled={loading === "loan-recommendation" || (useOwnData && !customBorrower.trim())}
                   className="gap-2"
                   data-testid="run-loan-recommendation"
                 >
-                  {loading === "loan-recommendation" ? <><Loader2 className="w-4 h-4 animate-spin" /> Evaluating...</> : <><BadgeCheck className="w-4 h-4" /> Run AI Underwriting</>}
+                  {loading === "loan-recommendation" ? <><Loader2 className="w-4 h-4 animate-spin" /> Evaluating...</> : <><BadgeCheck className="w-4 h-4" /> {useOwnData ? "Evaluate Your Application" : "Run AI Underwriting"}</>}
                 </Button>
 
                 {results["loan-recommendation"] && !results["loan-recommendation"].error && (

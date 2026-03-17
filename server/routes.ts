@@ -5537,7 +5537,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
   app.post("/api/ai-demo/:feature", aiDemoLimiter, async (req, res) => {
     try {
       const { feature } = req.params;
-      const { provider: providerRaw, query, country, borrowerScenario, loanAmount, loanType } = req.body || {};
+      const { provider: providerRaw, query, country, borrowerScenario, loanAmount, loanType, customData, customPortfolio } = req.body || {};
       const provider = parseProvider(providerRaw || "claude");
 
       const sampleBorrowers: Record<string, string> = {
@@ -5554,45 +5554,49 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
 
       switch (feature) {
         case "credit-narrative": {
-          const profile = sampleBorrowers[borrowerScenario || "strong"] || sampleBorrowers["strong"];
+          const profile = customData ? String(customData).substring(0, 3000) : (sampleBorrowers[borrowerScenario || "strong"] || sampleBorrowers["strong"]);
           const systemPrompt = `You are an expert credit analyst for the Pan-African Credit Registry. Write a comprehensive credit narrative suitable for a loan committee. Respond in JSON: { "creditworthiness": "Excellent|Good|Fair|Poor|Very Poor", "narrative": "<detailed 3-4 paragraph narrative>", "strengths": ["<strength>"], "risks": ["<risk>"], "recommendation": "<recommendation>" }`;
           const raw = await callAI(systemPrompt, `Write a credit narrative for this borrower:\n\n${profile}`, provider, 2500);
-          result = { ...parseJSON(raw, { creditworthiness: "Fair" }), generatedAt: new Date().toISOString() };
+          result = { ...parseJSON(raw, { creditworthiness: "Fair" }), generatedAt: new Date().toISOString(), isCustomData: !!customData };
           break;
         }
         case "anomaly-detection": {
+          const portfolioData = customPortfolio ? String(customPortfolio).substring(0, 4000) : samplePortfolio;
           const systemPrompt = `You are a portfolio risk analyst for the Pan-African Credit Registry. Analyze portfolio data and identify anomalies, unusual patterns, and emerging risks. Respond in JSON: { "riskScore": <0-100>, "alerts": [{ "severity": "critical|high|medium|low", "type": "<alert type>", "title": "<short title>", "description": "<detail>", "affectedEntities": ["<entity>"], "recommendedAction": "<action>" }], "trendAnalysis": "<2 paragraph trend summary>", "recommendations": ["<recommendation>"] }`;
-          const raw = await callAI(systemPrompt, `Analyze this portfolio for anomalies and risks:\n\n${samplePortfolio}`, provider, 3000);
-          result = { ...parseJSON(raw, { alerts: [], riskScore: 50 }), analyzedAt: new Date().toISOString() };
+          const raw = await callAI(systemPrompt, `Analyze this portfolio for anomalies and risks:\n\n${portfolioData}`, provider, 3000);
+          result = { ...parseJSON(raw, { alerts: [], riskScore: 50 }), analyzedAt: new Date().toISOString(), isCustomData: !!customPortfolio };
           break;
         }
         case "regulatory-report": {
           const targetCountry = country || "Ghana";
+          const regPortfolio = customPortfolio ? String(customPortfolio).substring(0, 4000) : samplePortfolio;
           const systemPrompt = `You are a regulatory compliance expert for African credit bureaus. Generate a regulatory submission report for the central bank. Respond in JSON: { "reportTitle": "<title>", "executiveSummary": "<3-4 paragraph summary>", "portfolioMetrics": { "totalBorrowers": <n>, "totalExposure": "<formatted>", "nplRatio": "<percentage>", "provisioningAdequacy": "<assessment>" }, "complianceStatus": [{ "regulation": "<name>", "status": "compliant|partial|non-compliant", "details": "<detail>" }], "riskAssessment": "<2 paragraph risk assessment>", "recommendations": ["<recommendation>"] }`;
-          const raw = await callAI(systemPrompt, `Generate a regulatory report for ${targetCountry}'s central bank based on this data:\n\n${samplePortfolio}`, provider, 3000);
-          result = { ...parseJSON(raw, { reportTitle: `${targetCountry} Regulatory Report` }), country: targetCountry, generatedAt: new Date().toISOString() };
+          const raw = await callAI(systemPrompt, `Generate a regulatory report for ${targetCountry}'s central bank based on this data:\n\n${regPortfolio}`, provider, 3000);
+          result = { ...parseJSON(raw, { reportTitle: `${targetCountry} Regulatory Report` }), country: targetCountry, generatedAt: new Date().toISOString(), isCustomData: !!customPortfolio };
           break;
         }
         case "natural-query": {
           const userQuery = query || "How many borrowers have delinquent accounts and what is the total exposure?";
+          const nlPortfolio = customPortfolio ? String(customPortfolio).substring(0, 4000) : samplePortfolio;
           const systemPrompt = `You are an AI data analyst for the Pan-African Credit Registry. Answer questions about credit data in natural language. Respond in JSON: { "answer": "<clear, detailed answer with specific numbers>", "dataPoints": [{ "label": "<metric>", "value": "<value>" }], "relatedInsights": ["<insight>"], "confidence": <0-100> }`;
-          const raw = await callAI(systemPrompt, `Based on this portfolio data, answer: "${userQuery}"\n\n${samplePortfolio}`, provider, 2000);
-          result = { ...parseJSON(raw, { answer: "Unable to process query" }), query: userQuery, answeredAt: new Date().toISOString() };
+          const raw = await callAI(systemPrompt, `Based on this portfolio data, answer: "${userQuery}"\n\n${nlPortfolio}`, provider, 2000);
+          result = { ...parseJSON(raw, { answer: "Unable to process query" }), query: userQuery, answeredAt: new Date().toISOString(), isCustomData: !!customPortfolio };
           break;
         }
         case "cross-border-risk": {
+          const cbData = customPortfolio ? String(customPortfolio).substring(0, 4000) : crossBorderData;
           const systemPrompt = `You are a cross-border risk analyst for the Pan-African Credit Registry. Identify systemic risks and hidden exposures across multiple countries. Respond in JSON: { "systemicRisk": { "level": "low|moderate|elevated|high|critical", "score": <0-100>, "summary": "<2 paragraph assessment>" }, "hiddenExposures": [{ "entity": "<name>", "countries": ["<country>"], "totalExposure": "<formatted>", "riskFlag": "<description>" }], "concentrationRisks": [{ "type": "<risk type>", "detail": "<description>" }], "recommendations": ["<recommendation>"] }`;
-          const raw = await callAI(systemPrompt, `Analyze cross-border and multi-institutional credit risk:\n\n${crossBorderData}`, provider, 3000);
-          result = { ...parseJSON(raw, { systemicRisk: { level: "moderate" } }), analyzedAt: new Date().toISOString() };
+          const raw = await callAI(systemPrompt, `Analyze cross-border and multi-institutional credit risk:\n\n${cbData}`, provider, 3000);
+          result = { ...parseJSON(raw, { systemicRisk: { level: "moderate" } }), analyzedAt: new Date().toISOString(), isCustomData: !!customPortfolio };
           break;
         }
         case "loan-recommendation": {
-          const profile = sampleBorrowers[borrowerScenario || "strong"] || sampleBorrowers["strong"];
+          const profile = customData ? String(customData).substring(0, 3000) : (sampleBorrowers[borrowerScenario || "strong"] || sampleBorrowers["strong"]);
           const amount = loanAmount || 50000;
           const type = loanType || "business_expansion";
           const systemPrompt = `You are a loan underwriting AI for the Pan-African Credit Registry. Evaluate loan applications and provide recommendations. Respond in JSON: { "decision": "approve|conditional_approve|decline", "confidence": <0-100>, "reasoning": "<3-4 paragraph detailed reasoning>", "suggestedTerms": { "interestRate": "<rate>", "tenure": "<duration>", "collateralRequired": "<requirement>", "maxApprovedAmount": "<amount>" }, "riskFactors": ["<factor>"], "mitigants": ["<mitigant>"], "conditions": ["<condition if conditional>"] }`;
           const raw = await callAI(systemPrompt, `Evaluate this loan application:\n\nRequested: ${amount.toLocaleString()} for ${type}\n\n${profile}`, provider, 2500);
-          result = { ...parseJSON(raw, { decision: "decline", confidence: 0 }), requestedAmount: amount, loanType: type, generatedAt: new Date().toISOString() };
+          result = { ...parseJSON(raw, { decision: "decline", confidence: 0 }), requestedAmount: amount, loanType: type, generatedAt: new Date().toISOString(), isCustomData: !!customData };
           break;
         }
         default:
