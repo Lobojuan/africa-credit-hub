@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -116,13 +116,17 @@ export default function PricingPage() {
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("monthly");
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
 
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   const discount = billingPeriod === "annual" ? 0.8 : 1;
 
   return (
     <div className="min-h-screen bg-background text-foreground" data-testid="pricing-page">
       <nav className="border-b border-border/50 bg-background/95 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/demo")}>
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/solutions")}>
             <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(175 55% 28%), hsl(175 55% 22%))" }}>
               <Shield className="w-5 h-5 text-white" />
             </div>
