@@ -20,6 +20,9 @@ function AIDemoPage() {
   const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState("credit-narrative");
   const [loading, setLoading] = useState<string | null>(null);
+  const [loadingStartTime, setLoadingStartTime] = useState<number | null>(null);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [loadingStep, setLoadingStep] = useState("");
   const [results, setResults] = useState<Record<string, any>>({});
   const [borrowerScenario, setBorrowerScenario] = useState("strong");
   const [queryText, setQueryText] = useState("");
@@ -32,6 +35,40 @@ function AIDemoPage() {
   const [useOwnData, setUseOwnData] = useState(false);
   const [customBorrower, setCustomBorrower] = useState("");
   const [customPortfolio, setCustomPortfolio] = useState("");
+
+  const AI_STEPS: Record<string, string[]> = {
+    "credit-narrative": ["Parsing borrower profile...", "Analyzing credit history...", "Assessing risk factors...", "Generating narrative report..."],
+    "anomaly-detection": ["Loading portfolio data...", "Scanning transaction patterns...", "Running anomaly models...", "Compiling alerts..."],
+    "regulatory-report": ["Extracting compliance data...", "Mapping to regulatory framework...", "Generating report sections...", "Finalizing export..."],
+    "natural-query": ["Interpreting your question...", "Querying credit data...", "Analyzing results...", "Composing answer..."],
+    "cross-border-risk": ["Mapping cross-border exposures...", "Analyzing currency risks...", "Evaluating regulatory gaps...", "Scoring systemic risk..."],
+    "loan-recommendation": ["Reviewing application data...", "Running credit models...", "Calculating risk scores...", "Generating recommendation..."],
+  };
+
+  useEffect(() => {
+    if (!loading) {
+      setLoadingProgress(0);
+      setLoadingStep("");
+      setLoadingStartTime(null);
+      return;
+    }
+    setLoadingStartTime(Date.now());
+    setLoadingProgress(0);
+    const steps = AI_STEPS[loading] || ["Processing..."];
+    setLoadingStep(steps[0]);
+
+    const interval = setInterval(() => {
+      setLoadingProgress(prev => {
+        const next = prev + (Math.random() * 3 + 1);
+        const capped = Math.min(next, 92);
+        const stepIndex = Math.min(Math.floor(capped / (90 / steps.length)), steps.length - 1);
+        setLoadingStep(steps[stepIndex]);
+        return capped;
+      });
+    }, 400);
+
+    return () => clearInterval(interval);
+  }, [loading]);
 
   useEffect(() => {
     const triedCount = Object.keys(results).filter(k => !results[k]?.error).length;
@@ -159,6 +196,34 @@ function AIDemoPage() {
     );
   }
 
+  function AIProgressBar({ feature }: { feature: string }) {
+    if (loading !== feature) return null;
+    const elapsed = loadingStartTime ? Math.floor((Date.now() - loadingStartTime) / 1000) : 0;
+    return (
+      <div className="mt-3 space-y-2 animate-in fade-in-50 duration-300" data-testid={`progress-${feature}`}>
+        <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-3.5 h-3.5 text-primary animate-pulse" />
+            <span className="font-medium">{loadingStep}</span>
+          </div>
+          <span className="tabular-nums">{Math.round(loadingProgress)}%</span>
+        </div>
+        <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-500 ease-out"
+            style={{
+              width: `${loadingProgress}%`,
+              background: "linear-gradient(90deg, hsl(175 55% 35%), hsl(175 70% 45%))",
+            }}
+          />
+        </div>
+        <p className="text-[10px] text-muted-foreground/60 text-center">
+          AI is analyzing your data — typically completes in 5–15 seconds
+        </p>
+      </div>
+    );
+  }
+
   async function runFeature(feature: string, body: Record<string, any> = {}) {
     setLoading(feature);
     try {
@@ -172,6 +237,9 @@ function AIDemoPage() {
         throw new Error(err.message || "Request failed");
       }
       const data = await res.json();
+      setLoadingProgress(100);
+      setLoadingStep("Complete!");
+      await new Promise(r => setTimeout(r, 400));
       setResults(prev => ({ ...prev, [feature]: data }));
     } catch (e: any) {
       setResults(prev => ({ ...prev, [feature]: { error: e.message } }));
@@ -303,6 +371,7 @@ function AIDemoPage() {
                 >
                   {loading === "credit-narrative" ? <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</> : <><Brain className="w-4 h-4" /> {useOwnData ? "Analyze Your Borrower" : "Generate Narrative"}</>}
                 </Button>
+                <AIProgressBar feature="credit-narrative" />
 
                 {results["credit-narrative"] && !results["credit-narrative"].error && (
                   <div className="mt-4 space-y-4 animate-in fade-in-50 duration-500" data-testid="result-credit-narrative">
@@ -359,6 +428,7 @@ function AIDemoPage() {
                 >
                   {loading === "anomaly-detection" ? <><Loader2 className="w-4 h-4 animate-spin" /> Scanning Portfolio...</> : <><AlertTriangle className="w-4 h-4" /> {useOwnData ? "Scan Your Portfolio" : "Scan for Anomalies"}</>}
                 </Button>
+                <AIProgressBar feature="anomaly-detection" />
 
                 {results["anomaly-detection"] && !results["anomaly-detection"].error && (
                   <div className="mt-4 space-y-4 animate-in fade-in-50 duration-500" data-testid="result-anomaly-detection">
@@ -433,6 +503,7 @@ function AIDemoPage() {
                     {loading === "regulatory-report" ? <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</> : <><Shield className="w-4 h-4" /> {useOwnData ? "Generate From Your Data" : "Generate Report"}</>}
                   </Button>
                 </div>
+                <AIProgressBar feature="regulatory-report" />
 
                 {results["regulatory-report"] && !results["regulatory-report"].error && (
                   <div className="mt-4 space-y-4 animate-in fade-in-50 duration-500" data-testid="result-regulatory-report">
@@ -519,6 +590,7 @@ function AIDemoPage() {
                     {loading === "natural-query" ? <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing...</> : <><Search className="w-4 h-4" /> {useOwnData ? "Ask About Your Data" : "Ask AI"}</>}
                   </Button>
                 </div>
+                <AIProgressBar feature="natural-query" />
 
                 {results["natural-query"] && !results["natural-query"].error && (
                   <div className="mt-4 space-y-4 animate-in fade-in-50 duration-500" data-testid="result-natural-query">
@@ -575,6 +647,7 @@ function AIDemoPage() {
                 >
                   {loading === "cross-border-risk" ? <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing...</> : <><Globe2 className="w-4 h-4" /> {useOwnData ? "Analyze Your Exposures" : "Analyze Cross-Border Risk"}</>}
                 </Button>
+                <AIProgressBar feature="cross-border-risk" />
 
                 {results["cross-border-risk"] && !results["cross-border-risk"].error && (
                   <div className="mt-4 space-y-4 animate-in fade-in-50 duration-500" data-testid="result-cross-border-risk">
@@ -695,6 +768,7 @@ function AIDemoPage() {
                 >
                   {loading === "loan-recommendation" ? <><Loader2 className="w-4 h-4 animate-spin" /> Evaluating...</> : <><BadgeCheck className="w-4 h-4" /> {useOwnData ? "Evaluate Your Application" : "Run AI Underwriting"}</>}
                 </Button>
+                <AIProgressBar feature="loan-recommendation" />
 
                 {results["loan-recommendation"] && !results["loan-recommendation"].error && (
                   <div className="mt-4 space-y-4 animate-in fade-in-50 duration-500" data-testid="result-loan-recommendation">
