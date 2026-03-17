@@ -25,6 +25,7 @@ import borrowersImage from "@assets/app-borrowers.png";
 import creditAccountsImage from "@assets/app-credit-accounts.png";
 import auditImage from "@assets/app-audit.png";
 import reportsImage from "@assets/app-reports.png";
+import aiPortfolioImage from "@assets/app-ai-portfolio.png";
 
 function AnimatedCounter({ end, duration = 2000, suffix = "", prefix = "" }: { end: number; duration?: number; suffix?: string; prefix?: string }) {
   const [count, setCount] = useState(0);
@@ -671,7 +672,146 @@ export default function InvestorLandingPage() {
         </div>
       </section>
 
-      <section id="problem" className="py-20 sm:py-28 bg-muted/30">
+      <section className="py-20 sm:py-28 bg-muted/30 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-[0.03]" style={{
+          backgroundImage: `radial-gradient(circle at 20% 50%, hsl(175 55% 40%) 0%, transparent 50%), radial-gradient(circle at 80% 50%, hsl(43 80% 50%) 0%, transparent 50%)`,
+        }} />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <div className="text-center mb-14">
+            <Badge className="mb-4 text-xs bg-gradient-to-r from-primary/20 to-yellow-500/20 text-primary border-primary/30">
+              <Brain className="w-3 h-3 mr-1" />
+              AI-Powered — What Sets CDH Apart
+            </Badge>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-4">
+              The Only African Credit Registry With Built-In AI
+            </h2>
+            <p className="text-muted-foreground max-w-3xl mx-auto text-sm sm:text-base leading-relaxed">
+              Traditional credit bureaus give you data. CDH gives you intelligence. Our AI engine —
+              powered by GPT-4o — analyzes your live portfolio and turns raw credit data into
+              predictions, warnings, and actions your team can act on today.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-center mb-16">
+            <div className="rounded-2xl overflow-hidden border border-border/50 shadow-2xl">
+              <img
+                src={aiPortfolioImage}
+                alt="AI Portfolio Intelligence dashboard showing Default Predictions, Early Warnings, Collection Priorities, and Sector Analysis powered by GPT-4o"
+                className="w-full h-auto"
+                loading="lazy"
+              />
+            </div>
+            <div>
+              <h3 className="text-xl sm:text-2xl font-bold mb-6">AI Portfolio Intelligence</h3>
+              <div className="space-y-5">
+                {[
+                  {
+                    icon: AlertTriangle,
+                    title: "Default Predictions",
+                    desc: "AI analyzes payment history, account health, and cross-border patterns to flag which borrowers are likely to default — before they miss a payment.",
+                    color: "text-red-500",
+                    bg: "bg-red-500/10",
+                  },
+                  {
+                    icon: Eye,
+                    title: "Early Warning System",
+                    desc: "Automatic severity scoring (Warning, Alert, Critical) on at-risk accounts. Your team gets notified with time to intervene, not after the damage is done.",
+                    color: "text-yellow-500",
+                    bg: "bg-yellow-500/10",
+                  },
+                  {
+                    icon: TrendingUp,
+                    title: "Trend Forecasting",
+                    desc: "3-to-6 month projections on delinquency and default trends across your entire portfolio. Plan provisions, not react to surprises.",
+                    color: "text-blue-500",
+                    bg: "bg-blue-500/10",
+                  },
+                  {
+                    icon: Target,
+                    title: "Collection Priorities",
+                    desc: "AI ranks overdue accounts by recovery probability and recommends specific actions — call, restructure, or escalate — so your team focuses where it matters.",
+                    color: "text-green-500",
+                    bg: "bg-green-500/10",
+                  },
+                ].map((feature) => (
+                  <div key={feature.title} className="flex items-start gap-3.5">
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${feature.bg}`}>
+                      <feature.icon className={`w-4.5 h-4.5 ${feature.color}`} />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-sm mb-0.5">{feature.title}</h4>
+                      <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">{feature.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              {
+                icon: Brain,
+                title: "ML Credit Scoring",
+                desc: "Gradient boosting model scores borrowers 300-850 with confidence intervals. Goes beyond payment history to factor velocity, utilization trends, and cross-border activity.",
+                badge: "GBM v2.1",
+              },
+              {
+                icon: ShieldCheck,
+                title: "Fraud Detection",
+                desc: "Real-time velocity checks catch bust-out patterns. Identity matching flags duplicate National IDs and synthetic identities. PEP screening built in.",
+                badge: "Real-Time",
+              },
+              {
+                icon: Activity,
+                title: "Alternative Data",
+                desc: "Score thin-file borrowers using mobile money transactions, utility payments, and telco data. Critical for the 57% of Africans without traditional credit history.",
+                badge: "Mobile Money",
+              },
+              {
+                icon: Headphones,
+                title: "AI Dispute Assistant",
+                desc: "Intelligent chatbot guides borrowers and officers through dispute resolution. NLP understands intent, generates summaries, and recommends resolutions automatically.",
+                badge: "GPT-4o",
+              },
+            ].map((ai) => (
+              <Card key={ai.title} className="border border-border/60 hover:border-primary/30 transition-colors" data-testid={`ai-${ai.title.toLowerCase().replace(/\s/g, "-")}`}>
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-primary/10">
+                      <ai.icon className="w-4.5 h-4.5 text-primary" />
+                    </div>
+                    <Badge variant="secondary" className="text-[10px] px-2 py-0.5">{ai.badge}</Badge>
+                  </div>
+                  <h4 className="font-semibold text-sm mb-1.5">{ai.title}</h4>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{ai.desc}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <div className="mt-12 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/5 via-transparent to-yellow-500/5 p-6 sm:p-8">
+            <div className="flex flex-col sm:flex-row items-center gap-6">
+              <div className="flex-1">
+                <h3 className="text-lg sm:text-xl font-bold mb-2">Why AI Changes Everything for African Lending</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Africa has 1.4 billion people but only 43% have any formal credit history.
+                  Traditional scoring models fail here. CDH's AI fills the gap — using mobile money data,
+                  payment velocity, and cross-border patterns to assess creditworthiness where conventional
+                  bureaus see nothing. The result: more approvals, fewer defaults, and financial inclusion
+                  at continental scale.
+                </p>
+              </div>
+              <Button onClick={() => navigate("/start-trial")} size="lg" className="gap-2 shrink-0" data-testid="cta-ai-trial">
+                <Zap className="w-4 h-4" />
+                Try AI Features Free
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="problem" className="py-20 sm:py-28 bg-background">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
             <Badge variant="outline" className="mb-4 text-xs">The Challenges You Face</Badge>
