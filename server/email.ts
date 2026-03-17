@@ -1,29 +1,43 @@
-import { storage } from "./storage";
+import nodemailer from "nodemailer";
 import { isGhanaMode } from "./country-mode";
 
-let sendgridClient: any = null;
-let sendgridConfigured = false;
+let transporter: nodemailer.Transporter | null = null;
+let emailConfigured = false;
 
-async function initSendGrid() {
-  try {
-    const sgMail = await import("@sendgrid/mail");
-    if (process.env.SENDGRID_API_KEY) {
-      sgMail.default.setApiKey(process.env.SENDGRID_API_KEY);
-      sendgridClient = sgMail.default;
-      sendgridConfigured = true;
-      console.log("[Email] SendGrid configured successfully");
-    } else {
-      console.log("[Email] SendGrid API key not found — email disabled (stub mode)");
-    }
-  } catch (err) {
-    console.log("[Email] SendGrid package not available — email disabled (stub mode)");
+const FROM_EMAIL = process.env.SMTP_FROM || "noreply@systemsinmotion.co.ke";
+const FROM_NAME = isGhanaMode() ? "Ghana Credit Registry" : "Pan-African Credit Registry";
+
+function initEmail() {
+  const host = process.env.SMTP_HOST;
+  const port = parseInt(process.env.SMTP_PORT || "587");
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+
+  if (!host || !user || !pass) {
+    console.log("[Email] SMTP not configured — set SMTP_HOST, SMTP_USER, SMTP_PASS to enable (stub mode)");
+    return;
   }
+
+  transporter = nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass },
+  });
+
+  transporter.verify((err) => {
+    if (err) {
+      console.error("[Email] SMTP connection failed:", err.message);
+      emailConfigured = false;
+      transporter = null;
+    } else {
+      emailConfigured = true;
+      console.log("[Email] SMTP configured successfully via", host);
+    }
+  });
 }
 
-initSendGrid();
-
-const FROM_EMAIL = "noreply@systemsinmotion.co.ke";
-const FROM_NAME = isGhanaMode() ? "Ghana Credit Registry" : "Pan-African Credit Registry";
+initEmail();
 
 function createEmailHtml(title: string, bodyHtml: string): string {
   return `<!DOCTYPE html>
@@ -33,7 +47,7 @@ function createEmailHtml(title: string, bodyHtml: string): string {
   <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
     <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
       <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);padding:28px 32px;">
-        <h1 style="color:#fff;margin:0;font-size:20px;font-weight:600;">🌍 Pan-African Credit Registry</h1>
+        <h1 style="color:#fff;margin:0;font-size:20px;font-weight:600;">Pan-African Credit Registry</h1>
         <p style="color:rgba(255,255,255,.7);margin:4px 0 0;font-size:13px;">Carlson Capital & Systems In Motion Limited</p>
       </div>
       <div style="padding:32px;">
@@ -50,21 +64,21 @@ function createEmailHtml(title: string, bodyHtml: string): string {
 }
 
 async function sendEmail(to: string, subject: string, htmlBody: string): Promise<boolean> {
-  if (!sendgridConfigured || !sendgridClient) {
+  if (!emailConfigured || !transporter) {
     console.log(`[Email][Stub] Would send to ${to}: "${subject}"`);
     return false;
   }
   try {
-    await sendgridClient.send({
+    await transporter.sendMail({
+      from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
       to,
-      from: { email: FROM_EMAIL, name: FROM_NAME },
       subject,
       html: htmlBody,
     });
     console.log(`[Email] Sent to ${to}: "${subject}"`);
     return true;
   } catch (err: any) {
-    console.error(`[Email] Failed to send to ${to}:`, err?.response?.body || err.message);
+    console.error(`[Email] Failed to send to ${to}:`, err.message);
     return false;
   }
 }
@@ -135,5 +149,5 @@ export async function sendSubscriptionChangeEmail(orgName: string, email: string
 }
 
 export function isEmailConfigured(): boolean {
-  return sendgridConfigured;
+  return emailConfigured;
 }
