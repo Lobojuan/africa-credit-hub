@@ -802,7 +802,7 @@ export default function InvestorLandingPage() {
                   at continental scale.
                 </p>
               </div>
-              <Button onClick={() => navigate("/start-trial")} size="lg" className="gap-2 shrink-0" data-testid="cta-ai-trial">
+              <Button onClick={() => navigate("/ai-demo")} size="lg" className="gap-2 shrink-0" data-testid="cta-ai-trial">
                 <Zap className="w-4 h-4" />
                 Try AI Features Free
               </Button>

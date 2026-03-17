@@ -703,7 +703,7 @@ export async function generateComplianceReport(country: string, provider: AIProv
   }
 }
 
-async function callAI(systemPrompt: string, userPrompt: string, provider: AIProvider = "claude", maxTokens = 2000, temperature = 0.3): Promise<string> {
+export async function callAI(systemPrompt: string, userPrompt: string, provider: AIProvider = "claude", maxTokens = 2000, temperature = 0.3): Promise<string> {
   if (provider === "claude") {
     const response = await anthropic.messages.create({
       model: "claude-opus-4-6",
@@ -726,7 +726,7 @@ async function callAI(systemPrompt: string, userPrompt: string, provider: AIProv
   }
 }
 
-function parseJSON(raw: string, fallback: Record<string, unknown> = {}) {
+export function parseJSON(raw: string, fallback: Record<string, unknown> = {}) {
   const content = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
   try { return JSON.parse(content); } catch { return { ...fallback, rawText: raw }; }
 }

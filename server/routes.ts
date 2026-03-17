@@ -37,7 +37,7 @@ import multer from "multer";
 import rateLimit from "express-rate-limit";
 import { isGhanaMode, getActiveCountryName, isSingleCountryMode, COUNTRY_REGISTRY, getSupportedCountries } from "./country-mode";
 import { sendWelcomeEmail, sendBillingNotification, sendDisputeNotification } from "./email";
-import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport, generatePortfolioIntelligence, parseProvider, generateCreditNarrative, detectAnomalies, generateRegulatoryReport, naturalLanguageQuery, analyzeCrossBorderRisk, generateLoanRecommendation } from "./ai";
+import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport, generatePortfolioIntelligence, parseProvider, generateCreditNarrative, detectAnomalies, generateRegulatoryReport, naturalLanguageQuery, analyzeCrossBorderRisk, generateLoanRecommendation, callAI, parseJSON } from "./ai";
 import { BOG_EXPORT_GENERATORS } from "./bog-export";
 import type { BogFileType } from "@shared/bog-codes";
 import { BSL_EXPORT_GENERATORS } from "./bsl-export";
@@ -1115,7 +1115,7 @@ export async function registerRoutes(
   });
 
   app.use("/api", apiLimiter, (req, res, next) => {
-    if (req.path.startsWith("/auth") || req.path.startsWith("/external") || req.path.startsWith("/docs") || req.path.startsWith("/consumer")) return next();
+    if (req.path.startsWith("/auth") || req.path.startsWith("/external") || req.path.startsWith("/docs") || req.path.startsWith("/consumer") || req.path.startsWith("/ai-demo")) return next();
     requireAuth(req, res, next);
   });
 
@@ -5437,6 +5437,80 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
       res.json(result.rows);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
+    }
+  });
+
+  const aiDemoLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, message: { message: "Too many demo requests. Please wait a moment." } });
+
+  app.post("/api/ai-demo/:feature", aiDemoLimiter, async (req, res) => {
+    try {
+      const { feature } = req.params;
+      const { provider: providerRaw, query, country, borrowerScenario, loanAmount, loanType } = req.body || {};
+      const provider = parseProvider(providerRaw || "claude");
+
+      const sampleBorrowers: Record<string, string> = {
+        "strong": `Name: Kwame Asante (individual)\nCountry: Ghana\nEmployment: Employed - Senior Manager at GCB Bank\nMonthly Income: GHS 18,500\nCredit Accounts: 4\n  - Mortgage: GHS 285,000 | Status: current | Opened: 2021-03-15\n  - Auto Loan: GHS 42,000 | Status: current | Opened: 2022-06-01\n  - Credit Card: GHS 5,200 | Status: current | Opened: 2020-01-10\n  - Business Line: GHS 120,000 | Status: current | Opened: 2023-02-28\nTotal Balance: GHS 452,200\nDelinquent: 0 | Default: 0 | Max Arrears: 0 days\nOpen Disputes: 0`,
+        "risky": `Name: Fatima Diallo (individual)\nCountry: Senegal\nEmployment: Self-employed - Market Trader\nMonthly Income: XOF 450,000\nCredit Accounts: 5\n  - Microloan: XOF 2,500,000 | Status: delinquent | Opened: 2023-01-15 | 45 days arrears\n  - Mobile Money Loan: XOF 350,000 | Status: default | Opened: 2023-06-01\n  - Group Loan: XOF 800,000 | Status: current | Opened: 2024-01-10\n  - Market Stall Finance: XOF 1,200,000 | Status: delinquent | Opened: 2022-11-20 | 30 days arrears\n  - Emergency Loan: XOF 500,000 | Status: closed | Opened: 2023-09-01\nTotal Balance: XOF 5,350,000\nDelinquent: 2 | Default: 1 | Max Arrears: 45 days\nOpen Disputes: 1`,
+        "corporate": `Name: Sahel Agri-Processing Ltd (corporate)\nCountry: Nigeria\nIndustry: Agricultural Processing\nAnnual Revenue: NGN 2.4 billion\nCredit Accounts: 7\n  - Term Loan: NGN 450,000,000 | Status: current | Opened: 2022-01-20\n  - Working Capital: NGN 180,000,000 | Status: current | Opened: 2023-03-15\n  - Equipment Finance: NGN 95,000,000 | Status: current | Opened: 2023-07-01\n  - Trade Finance: NGN 320,000,000 | Status: delinquent | Opened: 2024-01-10 | 15 days arrears\n  - Overdraft: NGN 50,000,000 | Status: current | Opened: 2021-06-01\n  - Export Credit: NGN 200,000,000 | Status: current | Opened: 2023-11-01\n  - Vehicle Fleet: NGN 35,000,000 | Status: current | Opened: 2024-02-15\nTotal Balance: NGN 1,330,000,000\nDelinquent: 1 | Default: 0 | Max Arrears: 15 days\nOpen Disputes: 0`,
+      };
+
+      const samplePortfolio = `Portfolio Overview:\n- Total Borrowers: 847\n- Total Accounts: 2,134\n- Open Disputes: 23\n- Account Types: personal_loan: 612 accounts, GHS 45.2M, 34 delinquent, 8 defaulted; mortgage: 189 accounts, GHS 312.7M, 12 delinquent, 3 defaulted; business_loan: 445 accounts, GHS 89.4M, 28 delinquent, 11 defaulted; credit_card: 388 accounts, GHS 12.1M, 19 delinquent, 5 defaulted; microfinance: 500 accounts, GHS 8.3M, 45 delinquent, 15 defaulted\n- By Lender: GCB Bank: 423 accounts, 18 non-performing; Ecobank Ghana: 389 accounts, 22 non-performing; Fidelity Bank: 312 accounts, 15 non-performing; CalBank: 267 accounts, 12 non-performing; Mobile MFI: 743 accounts, 58 non-performing\n\nHigh-Risk Borrowers:\n  Ama Mensah (individual): 3 accounts, 2 delinquent, 0 defaulted, 67 days max arrears, GHS 34,500\n  Kofi Boateng (individual): 4 accounts, 1 delinquent, 1 defaulted, 120 days max arrears, GHS 89,200\n  TechHub Accra Ltd (corporate): 5 accounts, 2 delinquent, 1 defaulted, 45 days max arrears, GHS 2,340,000\n  Yaw Frimpong (individual): 2 accounts, 1 delinquent, 0 defaulted, 30 days max arrears, GHS 12,800\n  Adwoa Sarpong (individual): 3 accounts, 0 delinquent, 2 defaulted, 180 days max arrears, GHS 156,000`;
+
+      const crossBorderData = `Cross-Border Credit Registry Data:\nTotal Borrowers: 3,240\nTotal Accounts: 8,912\nCountries: Ghana, Nigeria, Kenya, Senegal, South Africa, Tanzania, Rwanda\n\nMulti-Country Exposures:\n  Pan-African Trading Corp: Accounts in Ghana (GHS 2.1M), Nigeria (NGN 450M), Kenya (KES 35M) — delinquent in Nigeria\n  EcoFinance Group: Accounts in Senegal (XOF 890M), Côte d'Ivoire (XOF 1.2B), Mali (XOF 340M) — all current\n  Kigali Tech Ventures: Accounts in Rwanda (RWF 120M), Kenya (KES 45M), Tanzania (TZS 890M) — default in Tanzania\n  West Africa Commodities: Accounts in Ghana (GHS 5.4M), Nigeria (NGN 1.8B), Senegal (XOF 2.3B) — delinquent in Ghana & Nigeria\n\nSystemic Patterns:\n- 23 borrowers have accounts across 3+ countries\n- Average cross-border exposure: $2.4M equivalent\n- NPL ratio for cross-border borrowers: 14.2% (vs 6.8% domestic-only)\n- Currency concentration: 45% NGN, 22% GHS, 15% KES, 18% other`;
+
+      let result: any;
+
+      switch (feature) {
+        case "credit-narrative": {
+          const profile = sampleBorrowers[borrowerScenario || "strong"] || sampleBorrowers["strong"];
+          const systemPrompt = `You are an expert credit analyst for the Pan-African Credit Registry. Write a comprehensive credit narrative suitable for a loan committee. Respond in JSON: { "creditworthiness": "Excellent|Good|Fair|Poor|Very Poor", "narrative": "<detailed 3-4 paragraph narrative>", "strengths": ["<strength>"], "risks": ["<risk>"], "recommendation": "<recommendation>" }`;
+          const raw = await callAI(systemPrompt, `Write a credit narrative for this borrower:\n\n${profile}`, provider, 2500);
+          result = { ...parseJSON(raw, { creditworthiness: "Fair" }), generatedAt: new Date().toISOString() };
+          break;
+        }
+        case "anomaly-detection": {
+          const systemPrompt = `You are a portfolio risk analyst for the Pan-African Credit Registry. Analyze portfolio data and identify anomalies, unusual patterns, and emerging risks. Respond in JSON: { "riskScore": <0-100>, "alerts": [{ "severity": "critical|high|medium|low", "type": "<alert type>", "title": "<short title>", "description": "<detail>", "affectedEntities": ["<entity>"], "recommendedAction": "<action>" }], "trendAnalysis": "<2 paragraph trend summary>", "recommendations": ["<recommendation>"] }`;
+          const raw = await callAI(systemPrompt, `Analyze this portfolio for anomalies and risks:\n\n${samplePortfolio}`, provider, 3000);
+          result = { ...parseJSON(raw, { alerts: [], riskScore: 50 }), analyzedAt: new Date().toISOString() };
+          break;
+        }
+        case "regulatory-report": {
+          const targetCountry = country || "Ghana";
+          const systemPrompt = `You are a regulatory compliance expert for African credit bureaus. Generate a regulatory submission report for the central bank. Respond in JSON: { "reportTitle": "<title>", "executiveSummary": "<3-4 paragraph summary>", "portfolioMetrics": { "totalBorrowers": <n>, "totalExposure": "<formatted>", "nplRatio": "<percentage>", "provisioningAdequacy": "<assessment>" }, "complianceStatus": [{ "regulation": "<name>", "status": "compliant|partial|non-compliant", "details": "<detail>" }], "riskAssessment": "<2 paragraph risk assessment>", "recommendations": ["<recommendation>"] }`;
+          const raw = await callAI(systemPrompt, `Generate a regulatory report for ${targetCountry}'s central bank based on this data:\n\n${samplePortfolio}`, provider, 3000);
+          result = { ...parseJSON(raw, { reportTitle: `${targetCountry} Regulatory Report` }), country: targetCountry, generatedAt: new Date().toISOString() };
+          break;
+        }
+        case "natural-query": {
+          const userQuery = query || "How many borrowers have delinquent accounts and what is the total exposure?";
+          const systemPrompt = `You are an AI data analyst for the Pan-African Credit Registry. Answer questions about credit data in natural language. Respond in JSON: { "answer": "<clear, detailed answer with specific numbers>", "dataPoints": [{ "label": "<metric>", "value": "<value>" }], "relatedInsights": ["<insight>"], "confidence": <0-100> }`;
+          const raw = await callAI(systemPrompt, `Based on this portfolio data, answer: "${userQuery}"\n\n${samplePortfolio}`, provider, 2000);
+          result = { ...parseJSON(raw, { answer: "Unable to process query" }), query: userQuery, answeredAt: new Date().toISOString() };
+          break;
+        }
+        case "cross-border-risk": {
+          const systemPrompt = `You are a cross-border risk analyst for the Pan-African Credit Registry. Identify systemic risks and hidden exposures across multiple countries. Respond in JSON: { "systemicRisk": { "level": "low|moderate|elevated|high|critical", "score": <0-100>, "summary": "<2 paragraph assessment>" }, "hiddenExposures": [{ "entity": "<name>", "countries": ["<country>"], "totalExposure": "<formatted>", "riskFlag": "<description>" }], "concentrationRisks": [{ "type": "<risk type>", "detail": "<description>" }], "recommendations": ["<recommendation>"] }`;
+          const raw = await callAI(systemPrompt, `Analyze cross-border and multi-institutional credit risk:\n\n${crossBorderData}`, provider, 3000);
+          result = { ...parseJSON(raw, { systemicRisk: { level: "moderate" } }), analyzedAt: new Date().toISOString() };
+          break;
+        }
+        case "loan-recommendation": {
+          const profile = sampleBorrowers[borrowerScenario || "strong"] || sampleBorrowers["strong"];
+          const amount = loanAmount || 50000;
+          const type = loanType || "business_expansion";
+          const systemPrompt = `You are a loan underwriting AI for the Pan-African Credit Registry. Evaluate loan applications and provide recommendations. Respond in JSON: { "decision": "approve|conditional_approve|decline", "confidence": <0-100>, "reasoning": "<3-4 paragraph detailed reasoning>", "suggestedTerms": { "interestRate": "<rate>", "tenure": "<duration>", "collateralRequired": "<requirement>", "maxApprovedAmount": "<amount>" }, "riskFactors": ["<factor>"], "mitigants": ["<mitigant>"], "conditions": ["<condition if conditional>"] }`;
+          const raw = await callAI(systemPrompt, `Evaluate this loan application:\n\nRequested: ${amount.toLocaleString()} for ${type}\n\n${profile}`, provider, 2500);
+          result = { ...parseJSON(raw, { decision: "decline", confidence: 0 }), requestedAmount: amount, loanType: type, generatedAt: new Date().toISOString() };
+          break;
+        }
+        default:
+          return res.status(400).json({ message: `Unknown feature: ${feature}` });
+      }
+
+      res.json(result);
+    } catch (e: any) {
+      console.error("AI Demo error:", e);
+      res.status(500).json({ message: e.message || "AI processing failed" });
     }
   });
 

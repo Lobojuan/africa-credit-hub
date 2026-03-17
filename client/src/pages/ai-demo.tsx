@@ -1,0 +1,603 @@
+import { useState } from "react";
+import { useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  ArrowRight, ArrowLeft, Brain, FileText, AlertTriangle, Globe2, Search,
+  Shield, Zap, Loader2, CheckCircle2, XCircle, AlertCircle, TrendingUp,
+  Building2, User, Briefcase, BadgeCheck, Clock
+} from "lucide-react";
+
+function AIDemoPage() {
+  const [, navigate] = useLocation();
+  const [activeTab, setActiveTab] = useState("credit-narrative");
+  const [loading, setLoading] = useState<string | null>(null);
+  const [results, setResults] = useState<Record<string, any>>({});
+  const [borrowerScenario, setBorrowerScenario] = useState("strong");
+  const [queryText, setQueryText] = useState("");
+  const [country, setCountry] = useState("Ghana");
+  const [loanAmount, setLoanAmount] = useState("50000");
+  const [loanType, setLoanType] = useState("business_expansion");
+
+  async function runFeature(feature: string, body: Record<string, any> = {}) {
+    setLoading(feature);
+    try {
+      const res = await fetch(`/api/ai-demo/${feature}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Request failed");
+      }
+      const data = await res.json();
+      setResults(prev => ({ ...prev, [feature]: data }));
+    } catch (e: any) {
+      setResults(prev => ({ ...prev, [feature]: { error: e.message } }));
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  const features = [
+    { id: "credit-narrative", label: "Credit Narrative", icon: FileText, desc: "AI-generated loan committee reports" },
+    { id: "anomaly-detection", label: "Smart Alerts", icon: AlertTriangle, desc: "Portfolio anomaly detection" },
+    { id: "regulatory-report", label: "Regulatory Reports", icon: Shield, desc: "Central bank submissions" },
+    { id: "natural-query", label: "Ask Your Data", icon: Search, desc: "Natural language queries" },
+    { id: "cross-border-risk", label: "Cross-Border Risk", icon: Globe2, desc: "Multi-country risk analysis" },
+    { id: "loan-recommendation", label: "Loan Decisions", icon: BadgeCheck, desc: "AI underwriting recommendations" },
+  ];
+
+  function renderSeverityBadge(severity: string) {
+    const colors: Record<string, string> = {
+      critical: "bg-red-500/10 text-red-600 border-red-200",
+      high: "bg-orange-500/10 text-orange-600 border-orange-200",
+      medium: "bg-yellow-500/10 text-yellow-700 border-yellow-200",
+      low: "bg-green-500/10 text-green-600 border-green-200",
+    };
+    return <Badge variant="outline" className={colors[severity] || ""}>{severity}</Badge>;
+  }
+
+  function renderDecisionBadge(decision: string) {
+    if (decision === "approve") return <Badge className="bg-green-600 text-white gap-1"><CheckCircle2 className="w-3 h-3" /> Approved</Badge>;
+    if (decision === "conditional_approve") return <Badge className="bg-yellow-600 text-white gap-1"><AlertCircle className="w-3 h-3" /> Conditional</Badge>;
+    return <Badge className="bg-red-600 text-white gap-1"><XCircle className="w-3 h-3" /> Declined</Badge>;
+  }
+
+  function renderRiskLevel(level: string) {
+    const colors: Record<string, string> = {
+      low: "text-green-600", moderate: "text-yellow-600", elevated: "text-orange-600", high: "text-red-600", critical: "text-red-700"
+    };
+    return <span className={`font-bold text-lg ${colors[level] || "text-muted-foreground"}`}>{level?.toUpperCase()}</span>;
+  }
+
+  const scenarioLabels: Record<string, { name: string; icon: typeof User; desc: string }> = {
+    strong: { name: "Kwame Asante", icon: User, desc: "Senior banker in Ghana, clean history" },
+    risky: { name: "Fatima Diallo", icon: User, desc: "Market trader in Senegal, some delinquencies" },
+    corporate: { name: "Sahel Agri-Processing Ltd", icon: Building2, desc: "Nigerian agribusiness, large portfolio" },
+  };
+
+  return (
+    <div className="min-h-screen bg-background text-foreground" data-testid="ai-demo-page">
+      <nav className="border-b border-border/50 bg-background/95 backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")} data-testid="nav-home">
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(175 55% 28%), hsl(175 55% 22%))" }}>
+              <Brain className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <span className="font-bold text-sm tracking-tight">CDH Credit Registry</span>
+              <span className="text-[10px] text-muted-foreground ml-1.5">AI Demo</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" className="text-xs gap-1" onClick={() => navigate("/")} data-testid="link-back-home">
+              <ArrowLeft className="w-3 h-3" /> Back
+            </Button>
+            <Button size="sm" className="text-xs" onClick={() => navigate("/start-trial")} data-testid="button-start-trial">
+              Start Free Trial <ArrowRight className="w-3 h-3 ml-1" />
+            </Button>
+          </div>
+        </div>
+      </nav>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium mb-4">
+            <Zap className="w-3 h-3" /> Live AI — Powered by Claude & GPT-4o
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-3" data-testid="page-title">
+            AI Credit Intelligence in Action
+          </h1>
+          <p className="text-muted-foreground max-w-2xl mx-auto text-sm">
+            These are real AI calls using sample African credit data. Click any feature below to see
+            how our AI transforms raw credit data into actionable intelligence — no login required.
+          </p>
+        </div>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid grid-cols-3 sm:grid-cols-6 h-auto gap-1 bg-muted/50 p-1">
+            {features.map(f => (
+              <TabsTrigger key={f.id} value={f.id} className="text-xs py-2 px-2 flex flex-col items-center gap-1 data-[state=active]:shadow-sm" data-testid={`tab-${f.id}`}>
+                <f.icon className="w-4 h-4" />
+                <span className="hidden sm:inline">{f.label}</span>
+                <span className="sm:hidden">{f.label.split(" ")[0]}</span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+
+          <TabsContent value="credit-narrative" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg"><FileText className="w-5 h-5 text-primary" /> AI Credit Narrative Generator</CardTitle>
+                <CardDescription>Select a sample borrower profile to generate a loan committee-ready credit narrative.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {Object.entries(scenarioLabels).map(([key, val]) => (
+                    <div
+                      key={key}
+                      onClick={() => setBorrowerScenario(key)}
+                      className={`p-3 rounded-lg border cursor-pointer transition-all ${borrowerScenario === key ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/50"}`}
+                      data-testid={`scenario-${key}`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <val.icon className="w-4 h-4 text-primary" />
+                        <span className="font-medium text-sm">{val.name}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{val.desc}</p>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  onClick={() => runFeature("credit-narrative", { borrowerScenario })}
+                  disabled={loading === "credit-narrative"}
+                  className="gap-2"
+                  data-testid="run-credit-narrative"
+                >
+                  {loading === "credit-narrative" ? <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</> : <><Brain className="w-4 h-4" /> Generate Narrative</>}
+                </Button>
+
+                {results["credit-narrative"] && !results["credit-narrative"].error && (
+                  <div className="mt-4 space-y-4 animate-in fade-in-50 duration-500" data-testid="result-credit-narrative">
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className="text-sm px-3 py-1">Creditworthiness: {results["credit-narrative"].creditworthiness}</Badge>
+                    </div>
+                    <div className="bg-muted/30 rounded-lg p-4 border">
+                      <h4 className="font-semibold text-sm mb-2">Narrative</h4>
+                      <p className="text-sm whitespace-pre-wrap leading-relaxed">{results["credit-narrative"].narrative}</p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-sm flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-green-600" /> Strengths</h4>
+                        {results["credit-narrative"].strengths?.map((s: string, i: number) => (
+                          <p key={i} className="text-xs bg-green-50 dark:bg-green-900/20 p-2 rounded border border-green-200 dark:border-green-800">{s}</p>
+                        ))}
+                      </div>
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-sm flex items-center gap-1"><AlertTriangle className="w-4 h-4 text-orange-500" /> Risks</h4>
+                        {results["credit-narrative"].risks?.map((r: string, i: number) => (
+                          <p key={i} className="text-xs bg-orange-50 dark:bg-orange-900/20 p-2 rounded border border-orange-200 dark:border-orange-800">{r}</p>
+                        ))}
+                      </div>
+                    </div>
+                    {results["credit-narrative"].recommendation && (
+                      <div className="bg-primary/5 rounded-lg p-3 border border-primary/20">
+                        <h4 className="font-semibold text-sm mb-1">Recommendation</h4>
+                        <p className="text-sm">{results["credit-narrative"].recommendation}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {results["credit-narrative"]?.error && (
+                  <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 text-sm text-red-700 dark:text-red-400" data-testid="error-credit-narrative">{results["credit-narrative"].error}</div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="anomaly-detection" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg"><AlertTriangle className="w-5 h-5 text-orange-500" /> Smart Alerts & Anomaly Detection</CardTitle>
+                <CardDescription>AI scans an 847-borrower portfolio to identify unusual patterns, emerging risks, and actionable alerts.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button
+                  onClick={() => runFeature("anomaly-detection")}
+                  disabled={loading === "anomaly-detection"}
+                  className="gap-2"
+                  data-testid="run-anomaly-detection"
+                >
+                  {loading === "anomaly-detection" ? <><Loader2 className="w-4 h-4 animate-spin" /> Scanning Portfolio...</> : <><AlertTriangle className="w-4 h-4" /> Scan for Anomalies</>}
+                </Button>
+
+                {results["anomaly-detection"] && !results["anomaly-detection"].error && (
+                  <div className="mt-4 space-y-4 animate-in fade-in-50 duration-500" data-testid="result-anomaly-detection">
+                    <div className="flex items-center gap-4">
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-orange-600">{results["anomaly-detection"].riskScore}</div>
+                        <div className="text-xs text-muted-foreground">Risk Score</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-3xl font-bold">{results["anomaly-detection"].alerts?.length || 0}</div>
+                        <div className="text-xs text-muted-foreground">Alerts Found</div>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      {results["anomaly-detection"].alerts?.map((alert: any, i: number) => (
+                        <div key={i} className="border rounded-lg p-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-sm">{alert.title}</span>
+                            {renderSeverityBadge(alert.severity)}
+                          </div>
+                          <p className="text-xs text-muted-foreground">{alert.description}</p>
+                          {alert.recommendedAction && (
+                            <p className="text-xs text-primary font-medium">Action: {alert.recommendedAction}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {results["anomaly-detection"].trendAnalysis && (
+                      <div className="bg-muted/30 rounded-lg p-4 border">
+                        <h4 className="font-semibold text-sm mb-2 flex items-center gap-1"><TrendingUp className="w-4 h-4" /> Trend Analysis</h4>
+                        <p className="text-sm whitespace-pre-wrap">{results["anomaly-detection"].trendAnalysis}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {results["anomaly-detection"]?.error && (
+                  <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 text-sm text-red-700 dark:text-red-400">{results["anomaly-detection"].error}</div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="regulatory-report" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg"><Shield className="w-5 h-5 text-blue-600" /> AI Regulatory Report Generator</CardTitle>
+                <CardDescription>Generate a central bank regulatory submission for any African country.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <Select value={country} onValueChange={setCountry}>
+                    <SelectTrigger className="w-48" data-testid="select-country">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Ghana">Ghana (Bank of Ghana)</SelectItem>
+                      <SelectItem value="Nigeria">Nigeria (CBN)</SelectItem>
+                      <SelectItem value="Kenya">Kenya (CBK)</SelectItem>
+                      <SelectItem value="South Africa">South Africa (SARB)</SelectItem>
+                      <SelectItem value="Senegal">Senegal (BCEAO)</SelectItem>
+                      <SelectItem value="Rwanda">Rwanda (BNR)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    onClick={() => runFeature("regulatory-report", { country })}
+                    disabled={loading === "regulatory-report"}
+                    className="gap-2"
+                    data-testid="run-regulatory-report"
+                  >
+                    {loading === "regulatory-report" ? <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</> : <><Shield className="w-4 h-4" /> Generate Report</>}
+                  </Button>
+                </div>
+
+                {results["regulatory-report"] && !results["regulatory-report"].error && (
+                  <div className="mt-4 space-y-4 animate-in fade-in-50 duration-500" data-testid="result-regulatory-report">
+                    <h3 className="font-bold text-base">{results["regulatory-report"].reportTitle}</h3>
+                    <div className="bg-muted/30 rounded-lg p-4 border">
+                      <h4 className="font-semibold text-sm mb-2">Executive Summary</h4>
+                      <p className="text-sm whitespace-pre-wrap leading-relaxed">{results["regulatory-report"].executiveSummary}</p>
+                    </div>
+                    {results["regulatory-report"].portfolioMetrics && (
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {Object.entries(results["regulatory-report"].portfolioMetrics).map(([key, val]) => (
+                          <div key={key} className="p-3 rounded-lg border text-center">
+                            <div className="text-xs text-muted-foreground capitalize">{key.replace(/([A-Z])/g, " $1").trim()}</div>
+                            <div className="font-bold text-sm mt-1">{String(val)}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {results["regulatory-report"].complianceStatus && (
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-sm">Compliance Status</h4>
+                        {results["regulatory-report"].complianceStatus.map((cs: any, i: number) => (
+                          <div key={i} className="flex items-center justify-between border rounded p-2">
+                            <span className="text-sm">{cs.regulation}</span>
+                            <Badge variant="outline" className={cs.status === "compliant" ? "text-green-600 border-green-200" : cs.status === "partial" ? "text-yellow-600 border-yellow-200" : "text-red-600 border-red-200"}>
+                              {cs.status}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {results["regulatory-report"].riskAssessment && (
+                      <div className="bg-orange-50 dark:bg-orange-900/10 rounded-lg p-4 border border-orange-200 dark:border-orange-800">
+                        <h4 className="font-semibold text-sm mb-2">Risk Assessment</h4>
+                        <p className="text-sm whitespace-pre-wrap">{results["regulatory-report"].riskAssessment}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {results["regulatory-report"]?.error && (
+                  <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 text-sm text-red-700 dark:text-red-400">{results["regulatory-report"].error}</div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="natural-query" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg"><Search className="w-5 h-5 text-violet-600" /> Ask Your Data</CardTitle>
+                <CardDescription>Query the sample credit portfolio using natural language — ask anything about borrowers, risk, or trends.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-3">
+                  <Textarea
+                    value={queryText}
+                    onChange={e => setQueryText(e.target.value)}
+                    placeholder="e.g. What percentage of business loans are delinquent and which lender has the highest NPL ratio?"
+                    className="min-h-[80px] text-sm"
+                    data-testid="input-query"
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      "How many borrowers have delinquent accounts?",
+                      "Which lender has the highest default rate?",
+                      "What is the total microfinance exposure?",
+                      "Compare mortgage vs business loan risk",
+                    ].map((q, i) => (
+                      <Button key={i} variant="outline" size="sm" className="text-xs" onClick={() => setQueryText(q)} data-testid={`quick-query-${i}`}>
+                        {q}
+                      </Button>
+                    ))}
+                  </div>
+                  <Button
+                    onClick={() => runFeature("natural-query", { query: queryText || "How many borrowers have delinquent accounts and what is the total exposure?" })}
+                    disabled={loading === "natural-query"}
+                    className="gap-2"
+                    data-testid="run-natural-query"
+                  >
+                    {loading === "natural-query" ? <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing...</> : <><Search className="w-4 h-4" /> Ask AI</>}
+                  </Button>
+                </div>
+
+                {results["natural-query"] && !results["natural-query"].error && (
+                  <div className="mt-4 space-y-4 animate-in fade-in-50 duration-500" data-testid="result-natural-query">
+                    <div className="bg-muted/30 rounded-lg p-4 border">
+                      <div className="text-xs text-muted-foreground mb-2 flex items-center gap-1"><Search className="w-3 h-3" /> {results["natural-query"].query}</div>
+                      <p className="text-sm whitespace-pre-wrap leading-relaxed">{results["natural-query"].answer}</p>
+                    </div>
+                    {results["natural-query"].dataPoints?.length > 0 && (
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {results["natural-query"].dataPoints.map((dp: any, i: number) => (
+                          <div key={i} className="p-3 rounded-lg border text-center">
+                            <div className="text-xs text-muted-foreground">{dp.label}</div>
+                            <div className="font-bold text-sm mt-1">{dp.value}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {results["natural-query"].relatedInsights?.length > 0 && (
+                      <div className="space-y-1">
+                        <h4 className="font-semibold text-sm">Related Insights</h4>
+                        {results["natural-query"].relatedInsights.map((insight: string, i: number) => (
+                          <p key={i} className="text-xs text-muted-foreground flex items-start gap-1"><TrendingUp className="w-3 h-3 mt-0.5 shrink-0 text-primary" /> {insight}</p>
+                        ))}
+                      </div>
+                    )}
+                    {results["natural-query"].confidence != null && (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <BadgeCheck className="w-3 h-3" /> Confidence: {results["natural-query"].confidence}%
+                      </div>
+                    )}
+                  </div>
+                )}
+                {results["natural-query"]?.error && (
+                  <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 text-sm text-red-700 dark:text-red-400">{results["natural-query"].error}</div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="cross-border-risk" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg"><Globe2 className="w-5 h-5 text-emerald-600" /> Cross-Border Risk Intelligence</CardTitle>
+                <CardDescription>Analyze multi-country exposures across 7 African nations — the kind of intelligence single-country bureaus miss entirely.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button
+                  onClick={() => runFeature("cross-border-risk")}
+                  disabled={loading === "cross-border-risk"}
+                  className="gap-2"
+                  data-testid="run-cross-border-risk"
+                >
+                  {loading === "cross-border-risk" ? <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing 7 Countries...</> : <><Globe2 className="w-4 h-4" /> Analyze Cross-Border Risk</>}
+                </Button>
+
+                {results["cross-border-risk"] && !results["cross-border-risk"].error && (
+                  <div className="mt-4 space-y-4 animate-in fade-in-50 duration-500" data-testid="result-cross-border-risk">
+                    {results["cross-border-risk"].systemicRisk && (
+                      <div className="flex items-center gap-4 p-4 rounded-lg border bg-muted/30">
+                        <div>
+                          <div className="text-xs text-muted-foreground mb-1">Systemic Risk Level</div>
+                          {renderRiskLevel(results["cross-border-risk"].systemicRisk.level)}
+                        </div>
+                        {results["cross-border-risk"].systemicRisk.score != null && (
+                          <div className="text-center">
+                            <div className="text-3xl font-bold">{results["cross-border-risk"].systemicRisk.score}</div>
+                            <div className="text-xs text-muted-foreground">Score</div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {results["cross-border-risk"].systemicRisk?.summary && (
+                      <div className="bg-muted/30 rounded-lg p-4 border">
+                        <p className="text-sm whitespace-pre-wrap">{results["cross-border-risk"].systemicRisk.summary}</p>
+                      </div>
+                    )}
+                    {results["cross-border-risk"].hiddenExposures?.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-sm flex items-center gap-1"><AlertTriangle className="w-4 h-4 text-orange-500" /> Hidden Exposures</h4>
+                        {results["cross-border-risk"].hiddenExposures.map((exp: any, i: number) => (
+                          <div key={i} className="border rounded-lg p-3">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-medium text-sm">{exp.entity}</span>
+                              <span className="text-xs text-muted-foreground">{exp.totalExposure}</span>
+                            </div>
+                            <div className="flex gap-1 mb-1">
+                              {exp.countries?.map((c: string, j: number) => (
+                                <Badge key={j} variant="outline" className="text-[10px]">{c}</Badge>
+                              ))}
+                            </div>
+                            <p className="text-xs text-orange-600 dark:text-orange-400">{exp.riskFlag}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {results["cross-border-risk"].concentrationRisks?.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-sm">Concentration Risks</h4>
+                        {results["cross-border-risk"].concentrationRisks.map((cr: any, i: number) => (
+                          <div key={i} className="border rounded p-2">
+                            <span className="font-medium text-xs">{cr.type}: </span>
+                            <span className="text-xs text-muted-foreground">{cr.detail}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {results["cross-border-risk"]?.error && (
+                  <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 text-sm text-red-700 dark:text-red-400">{results["cross-border-risk"].error}</div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="loan-recommendation" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg"><BadgeCheck className="w-5 h-5 text-green-600" /> AI Loan Decision Engine</CardTitle>
+                <CardDescription>Submit a loan application for AI underwriting — get approve/decline decisions with full reasoning and suggested terms.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {Object.entries(scenarioLabels).map(([key, val]) => (
+                    <div
+                      key={key}
+                      onClick={() => setBorrowerScenario(key)}
+                      className={`p-3 rounded-lg border cursor-pointer transition-all ${borrowerScenario === key ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/50"}`}
+                      data-testid={`loan-scenario-${key}`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <val.icon className="w-4 h-4 text-primary" />
+                        <span className="font-medium text-sm">{val.name}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{val.desc}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Loan Amount</label>
+                    <Input type="number" value={loanAmount} onChange={e => setLoanAmount(e.target.value)} data-testid="input-loan-amount" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Loan Type</label>
+                    <Select value={loanType} onValueChange={setLoanType}>
+                      <SelectTrigger data-testid="select-loan-type"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="business_expansion">Business Expansion</SelectItem>
+                        <SelectItem value="personal_loan">Personal Loan</SelectItem>
+                        <SelectItem value="mortgage">Mortgage</SelectItem>
+                        <SelectItem value="working_capital">Working Capital</SelectItem>
+                        <SelectItem value="trade_finance">Trade Finance</SelectItem>
+                        <SelectItem value="agriculture">Agriculture</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => runFeature("loan-recommendation", { borrowerScenario, loanAmount: parseInt(loanAmount) || 50000, loanType })}
+                  disabled={loading === "loan-recommendation"}
+                  className="gap-2"
+                  data-testid="run-loan-recommendation"
+                >
+                  {loading === "loan-recommendation" ? <><Loader2 className="w-4 h-4 animate-spin" /> Evaluating...</> : <><BadgeCheck className="w-4 h-4" /> Run AI Underwriting</>}
+                </Button>
+
+                {results["loan-recommendation"] && !results["loan-recommendation"].error && (
+                  <div className="mt-4 space-y-4 animate-in fade-in-50 duration-500" data-testid="result-loan-recommendation">
+                    <div className="flex items-center gap-4 p-4 rounded-lg border bg-muted/30">
+                      {renderDecisionBadge(results["loan-recommendation"].decision)}
+                      <div className="text-center">
+                        <div className="text-2xl font-bold">{results["loan-recommendation"].confidence}%</div>
+                        <div className="text-xs text-muted-foreground">Confidence</div>
+                      </div>
+                    </div>
+                    {results["loan-recommendation"].reasoning && (
+                      <div className="bg-muted/30 rounded-lg p-4 border">
+                        <h4 className="font-semibold text-sm mb-2">Reasoning</h4>
+                        <p className="text-sm whitespace-pre-wrap leading-relaxed">{results["loan-recommendation"].reasoning}</p>
+                      </div>
+                    )}
+                    {results["loan-recommendation"].suggestedTerms && (
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {Object.entries(results["loan-recommendation"].suggestedTerms).map(([key, val]) => (
+                          <div key={key} className="p-3 rounded-lg border text-center">
+                            <div className="text-xs text-muted-foreground capitalize">{key.replace(/([A-Z])/g, " $1").trim()}</div>
+                            <div className="font-bold text-sm mt-1">{String(val)}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {results["loan-recommendation"].conditions?.length > 0 && (
+                      <div className="space-y-1">
+                        <h4 className="font-semibold text-sm">Conditions</h4>
+                        {results["loan-recommendation"].conditions.map((c: string, i: number) => (
+                          <p key={i} className="text-xs flex items-start gap-1"><Clock className="w-3 h-3 mt-0.5 shrink-0 text-yellow-600" /> {c}</p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {results["loan-recommendation"]?.error && (
+                  <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 text-sm text-red-700 dark:text-red-400">{results["loan-recommendation"].error}</div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+
+        <div className="mt-12 text-center py-8 border-t">
+          <h3 className="text-xl font-bold mb-2">Ready to use AI on your own data?</h3>
+          <p className="text-sm text-muted-foreground mb-4 max-w-lg mx-auto">
+            Start a 14-day free trial and connect your portfolio. All 6 AI features work on your live data — plus credit scoring, regulatory reporting, and cross-border tracking.
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            <Button size="lg" onClick={() => navigate("/start-trial")} className="gap-2" data-testid="cta-bottom-trial">
+              <Zap className="w-4 h-4" /> Start Free Trial
+            </Button>
+            <Button size="lg" variant="outline" onClick={() => navigate("/pricing")} data-testid="cta-bottom-pricing">
+              View Pricing
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default AIDemoPage;

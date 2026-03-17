@@ -51,7 +51,7 @@ The system employs a modern full-stack architecture built for scalability and co
     -   **Consumer Self-Service Portal**: Public-facing mobile-first portal (`/my-credit`) with identity verification and rate-limited lookups.
     -   **Client Landing Page**: Default landing page (`/solutions`) for unauthenticated users, showcasing platform features and offering trial registration.
     -   **Trial Management**: Self-service registration (`/start-trial`) with sample data seeding and an upgrade path.
-    -   **Demo Sandbox**: Isolated read-only demo environment for review and testing purposes.
+    -   **AI Demo Page** (`/ai-demo`): Public interactive showcase of all 6 AI features using sample African credit data. No login required. Accessible via "Try AI Features Free" button on landing page.
     -   **Fraud Detection Layer**: Real-time fraud risk scoring with velocity checks, identity verification, and geographic anomaly detection.
     -   **Enhanced API Developer Portal**: Interactive sandbox, webhook event documentation, and code examples.
     -   **Security Hardening**: Helmet security headers, rate limiting, DOMPurify sanitization, and secure handling of secrets.

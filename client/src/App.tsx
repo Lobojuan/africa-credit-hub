@@ -67,6 +67,7 @@ const GhanaDocsPage = lazy(() => import("@/pages/ghana-docs"));
 const AboutPage = lazy(() => import("@/pages/about"));
 const PortfolioIntelligencePage = lazy(() => import("@/pages/portfolio-intelligence"));
 const AICommandCenterPage = lazy(() => import("@/pages/ai-command-center"));
+const AIDemoPage = lazy(() => import("@/pages/ai-demo"));
 const BorrowerAlertsPage = lazy(() => import("@/pages/borrower-alerts"));
 const RegulatoryDashboardPage = lazy(() => import("@/pages/regulatory-dashboard"));
 const CreditScoreMethodologyPage = lazy(() => import("@/pages/credit-score-methodology"));
@@ -345,6 +346,7 @@ function App() {
             <Route path="/solutions" component={InvestorLandingPage} />
             <Route path="/investor" component={InvestorLandingPage} />
 
+            <Route path="/ai-demo" component={() => <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="w-8 h-8 animate-spin" /></div>}><AIDemoPage /></Suspense>} />
             <Route path="/pricing" component={PricingPage} />
             <Route path="/security" component={SecurityCompliancePage} />
             <Route path="/market-validation" component={MarketValidationPage} />
