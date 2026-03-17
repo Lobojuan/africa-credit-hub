@@ -5575,8 +5575,8 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
         case "regulatory-report": {
           const targetCountry = country || "Ghana";
           const regPortfolio = customPortfolio ? String(customPortfolio).substring(0, 4000) : samplePortfolio;
-          const systemPrompt = `You are a regulatory compliance expert for African credit bureaus. Generate a regulatory submission report for the central bank. Respond in JSON: { "reportTitle": "<title>", "executiveSummary": "<3-4 paragraph summary>", "portfolioMetrics": { "totalBorrowers": <n>, "totalExposure": "<formatted>", "nplRatio": "<percentage>", "provisioningAdequacy": "<assessment>" }, "complianceStatus": [{ "regulation": "<name>", "status": "compliant|partial|non-compliant", "details": "<detail>" }], "riskAssessment": "<2 paragraph risk assessment>", "recommendations": ["<recommendation>"] }`;
-          const raw = await callAI(systemPrompt, `Generate a regulatory report for ${targetCountry}'s central bank based on this data:\n\n${regPortfolio}`, provider, 3000);
+          const systemPrompt = `You are a regulatory compliance expert for African credit bureaus. Generate a regulatory submission report for the central bank. Keep each text field concise (max 2 short paragraphs). Respond ONLY with valid JSON (no markdown, no code blocks): { "reportTitle": "<title>", "executiveSummary": "<2 paragraph summary>", "portfolioMetrics": { "totalBorrowers": <n>, "totalExposure": "<formatted>", "nplRatio": "<percentage>", "provisioningAdequacy": "<assessment>" }, "complianceStatus": [{ "regulation": "<name>", "status": "compliant|partial|non-compliant", "details": "<detail>" }], "riskAssessment": "<1 paragraph risk assessment>", "recommendations": ["<recommendation>"] }`;
+          const raw = await callAI(systemPrompt, `Generate a regulatory report for ${targetCountry}'s central bank based on this data:\n\n${regPortfolio}`, provider, 4000);
           result = { ...parseJSON(raw, { reportTitle: `${targetCountry} Regulatory Report` }), country: targetCountry, generatedAt: new Date().toISOString(), isCustomData: !!customPortfolio };
           break;
         }

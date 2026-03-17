@@ -249,6 +249,10 @@ function AIDemoPage() {
       setLoadingStep("Complete!");
       await new Promise(r => setTimeout(r, 400));
       setResults(prev => ({ ...prev, [feature]: data }));
+      setTimeout(() => {
+        const el = document.querySelector(`[data-testid="result-${feature}"]`);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
     } catch (e: any) {
       setResults(prev => ({ ...prev, [feature]: { error: e.message } }));
     } finally {
@@ -516,10 +520,17 @@ function AIDemoPage() {
                 {results["regulatory-report"] && !results["regulatory-report"].error && (
                   <div className="mt-4 space-y-4 animate-in fade-in-50 duration-500" data-testid="result-regulatory-report">
                     <h3 className="font-bold text-base">{results["regulatory-report"].reportTitle}</h3>
-                    <div className="bg-muted/30 rounded-lg p-4 border">
-                      <h4 className="font-semibold text-sm mb-2">Executive Summary</h4>
-                      <p className="text-sm whitespace-pre-wrap leading-relaxed">{results["regulatory-report"].executiveSummary}</p>
-                    </div>
+                    {results["regulatory-report"].executiveSummary ? (
+                      <div className="bg-muted/30 rounded-lg p-4 border">
+                        <h4 className="font-semibold text-sm mb-2">Executive Summary</h4>
+                        <p className="text-sm whitespace-pre-wrap leading-relaxed">{results["regulatory-report"].executiveSummary}</p>
+                      </div>
+                    ) : results["regulatory-report"].rawText && (
+                      <div className="bg-muted/30 rounded-lg p-4 border">
+                        <h4 className="font-semibold text-sm mb-2">AI Report</h4>
+                        <p className="text-sm whitespace-pre-wrap leading-relaxed">{results["regulatory-report"].rawText.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim()}</p>
+                      </div>
+                    )}
                     {results["regulatory-report"].portfolioMetrics && (
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         {Object.entries(results["regulatory-report"].portfolioMetrics).map(([key, val]) => (
