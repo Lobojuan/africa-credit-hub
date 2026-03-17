@@ -438,7 +438,7 @@ export async function registerRoutes(
     next();
   });
 
-  const DEMO_SAFE_PREFIXES = ["/api/auth/", "/api/consumer/lookup"];
+  const DEMO_SAFE_PREFIXES = ["/api/auth/", "/api/consumer/lookup", "/api/trial/register", "/api/payments/initiate"];
   app.use("/api", (req, res, next) => {
     if (
       req.session?.isDemo &&
