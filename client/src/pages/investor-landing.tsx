@@ -377,7 +377,7 @@ const USE_CASES = [
     scenarios: [
       "Aggregate multi-currency exposure with real-time exchange rate conversion",
       "Analyze regional credit distribution across all 54 African markets",
-      "Generate investor-grade portfolio analytics with interactive dashboards",
+      "Generate comprehensive portfolio analytics with interactive dashboards",
       "Monitor data retention compliance across jurisdictions with different laws",
       "Access tamper-evident audit trails for governance and transparency reporting",
     ],
@@ -429,22 +429,6 @@ const COMPETITIVE_ADVANTAGES = [
   },
 ];
 
-const TECH_ARCHITECTURE = [
-  { name: "React 19 + TypeScript", desc: "Type-safe, component-driven frontend with hot reload", icon: Layers },
-  { name: "Express.js", desc: "High-performance RESTful API with session management", icon: ServerCog },
-  { name: "PostgreSQL + Drizzle ORM", desc: "Enterprise-grade relational data with type-safe queries", icon: Database },
-  { name: "Recharts", desc: "Interactive, responsive data visualization library", icon: LineChart },
-  { name: "Tailwind CSS + shadcn/ui", desc: "Consistent design system with 50+ UI components", icon: Layers },
-  { name: "i18next", desc: "Internationalization engine with RTL and 5-language support", icon: Languages },
-  { name: "SHA-256 Hash Chains", desc: "Tamper-evident cryptographic audit trail integrity", icon: Hash },
-  { name: "TOTP MFA", desc: "Time-based one-time password multi-factor authentication", icon: Fingerprint },
-];
-
-const ROADMAP_ITEMS = [
-  { phase: "Foundation", title: "CDH v2.0", items: ["Full 54-country coverage", "42+ currency support", "Maker-checker workflows", "Visual analytics dashboard", "AI chatbot assistant"], status: "live" },
-  { phase: "Current", title: "CDH v2.1", items: ["Real-time WebSocket notifications", "Progressive Web App (PWA)", "Biometric authentication (WebAuthn)", "ML-enhanced credit scoring (GBM)", "Blockchain audit anchoring"], status: "live" },
-  { phase: "Future", title: "CDH v3.0", items: ["Open Banking API gateway", "RegTech automation suite", "Predictive default modeling", "Digital identity integration", "Pan-African credit passport"], status: "vision" },
-];
 
 function launchDemo() {
   window.location.href = `/api/demo-login`;
@@ -457,10 +441,10 @@ export default function InvestorLandingPage() {
 
   useEffect(() => {
     document.title = isGhanaMode() 
-      ? "Ghana Credit Registry System | v2.0 — Carlson Capital & Systems In Motion Limited"
-      : "Pan-African Credit Registry System | CDH v2.0 — Carlson Capital & Systems In Motion Limited";
+      ? "Ghana Credit Registry System | CDH v2.1 — Systems In Motion Limited"
+      : "Pan-African Credit Registry | CDH v2.1 — Modernize Your Credit Infrastructure";
     const meta = document.querySelector('meta[name="description"]');
-    const content = "The first SRS-compliant credit information sharing platform covering all 54 African countries with 42+ currencies, 5 AU languages, and enterprise-grade security.";
+    const content = "The only SRS-compliant credit registry platform covering all 54 African countries. Built for central banks, commercial banks, MFIs, and fintechs to manage credit risk, ensure compliance, and expand financial inclusion.";
     if (meta) {
       meta.setAttribute("content", content);
     } else {
@@ -478,13 +462,11 @@ export default function InvestorLandingPage() {
   }, []);
 
   const navItems = [
-    { label: "Problem", id: "problem" },
+    { label: "Challenges", id: "problem" },
     { label: "Platform", id: "platform" },
-    { label: "Use Cases", id: "use-cases" },
-    { label: "Advantage", id: "advantage" },
-    { label: "Technology", id: "tech" },
-    { label: "Roadmap", id: "roadmap" },
-    { label: "Market", id: "market-link" },
+    { label: "Solutions", id: "use-cases" },
+    { label: "Why CDH", id: "advantage" },
+    { label: "Market", id: "market-proof" },
     { label: "Pricing", id: "pricing-link" },
     { label: "Security", id: "security-link" },
   ];
@@ -519,9 +501,7 @@ export default function InvestorLandingPage() {
                 size="sm"
                 className="text-[11px] px-2 hidden lg:inline-flex"
                 onClick={() => {
-                  if (item.id === "market-link") {
-                    navigate("/market-validation");
-                  } else if (item.id === "pricing-link") {
+                  if (item.id === "pricing-link") {
                     navigate("/pricing");
                   } else if (item.id === "security-link") {
                     navigate("/security");
@@ -570,44 +550,44 @@ export default function InvestorLandingPage() {
         <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 text-center">
           <Badge variant="secondary" className="mb-6 text-xs px-3 py-1 font-medium" data-testid="badge-version">
             <Star className="w-3 h-3 mr-1" />
-            Cross-Jurisdictional CDH v2.0 — Carlson Capital & Systems In Motion Limited
+            CDH v2.1 — Trusted by Financial Institutions Across Africa
           </Badge>
 
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1] mb-6">
-            <span className="block">Pan-African</span>
+            <span className="block">Modernize Your</span>
             <span
               className="block bg-clip-text text-transparent"
               style={{ backgroundImage: "linear-gradient(135deg, hsl(175 55% 32%), hsl(175 55% 22%), hsl(43 80% 50%))" }}
             >
-              Credit Registry System
+              Credit Infrastructure
             </span>
           </h1>
 
           <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto mb-4 leading-relaxed">
-            The first fully SRS-compliant credit information sharing platform covering
-            all <strong className="text-foreground">54 African countries</strong> — purpose-built for
-            central banks, commercial banks, DFIs, and fintechs to transform credit risk
-            management across the continent.
+            The only SRS-compliant credit registry platform covering
+            all <strong className="text-foreground">54 African countries</strong>. Manage credit risk,
+            ensure regulatory compliance, and expand financial inclusion — all from
+            one unified platform.
           </p>
 
           <p className="text-sm text-muted-foreground/80 max-w-xl mx-auto mb-10">
-            Built by <strong className="text-foreground/80">Carlson Capital & Systems In Motion Limited</strong> to address
-            Africa's $4.8 trillion credit information gap.
+            Purpose-built for central banks, commercial banks, MFIs, and fintechs
+            by <strong className="text-foreground/80">Systems In Motion Limited</strong>.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16">
             <Button size="lg" className="text-sm px-8 gap-2 shadow-lg" onClick={launchDemo} data-testid="cta-try-demo">
               <Play className="w-4 h-4" />
-              Launch Live Demo
+              Try the Platform Free
             </Button>
             <Button
               variant="outline"
               size="lg"
               className="text-sm px-8 gap-2"
-              onClick={() => document.getElementById("problem")?.scrollIntoView({ behavior: "smooth" })}
+              onClick={() => navigate("/pricing")}
               data-testid="cta-explore"
             >
-              Explore the Opportunity
+              View Plans & Pricing
               <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
@@ -693,14 +673,13 @@ export default function InvestorLandingPage() {
       <section id="problem" className="py-20 sm:py-28 bg-muted/30">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <Badge variant="outline" className="mb-4 text-xs">The Problem</Badge>
+            <Badge variant="outline" className="mb-4 text-xs">The Challenges You Face</Badge>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-4">
-              Africa's Credit Information Crisis
+              The Credit Data Problems Costing Your Institution
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base leading-relaxed">
-              With 1.4 billion people across 54 nations, Africa has no unified credit information
-              infrastructure. This creates systemic risk for lenders and excludes hundreds of millions
-              from formal credit markets.
+              Fragmented credit data across 54 nations means hidden borrower risk, 
+              compliance complexity, and missed lending opportunities. Sound familiar?
             </p>
           </div>
 
@@ -840,13 +819,13 @@ export default function InvestorLandingPage() {
       <section id="use-cases" className="py-20 sm:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <Badge variant="outline" className="mb-4 text-xs">Use Cases</Badge>
+            <Badge variant="outline" className="mb-4 text-xs">Built For Your Institution</Badge>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-4">
-              Who Benefits and How
+              How Your Institution Benefits
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base">
-              CDH v2.0 serves every participant in the African credit ecosystem —
-              from central bank supervisors to microfinance lenders.
+              Whether you're a central bank, commercial bank, MFI, or fintech lender,
+              CDH delivers the specific capabilities your team needs.
             </p>
           </div>
 
@@ -884,13 +863,13 @@ export default function InvestorLandingPage() {
       <section id="advantage" className="py-20 sm:py-28">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <Badge variant="outline" className="mb-4 text-xs">Competitive Advantage</Badge>
+            <Badge variant="outline" className="mb-4 text-xs">Why Choose CDH</Badge>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-4">
-              Why CDH v2.0 Stands Alone
+              What Sets CDH Apart
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base">
-              No other credit bureau platform addresses Africa's unique challenges at this scale,
-              depth, and regulatory rigor.
+              No other platform gives your institution this combination of coverage,
+              compliance, and capability — purpose-built for Africa.
             </p>
           </div>
 
@@ -918,13 +897,13 @@ export default function InvestorLandingPage() {
       <section className="py-20 sm:py-24 bg-muted/30">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <Badge variant="outline" className="mb-4 text-xs">Live System Data</Badge>
+            <Badge variant="outline" className="mb-4 text-xs">Production-Ready Platform</Badge>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-4">
-              Production-Ready, Not a Prototype
+              Deploy Today, Not Next Year
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-sm">
-              CDH v2.0 ships with a fully seeded database for realistic evaluation.
-              Every feature works with real data — not mockups or placeholders.
+              CDH isn't a roadmap — it's a production system with real data you can explore right now.
+              Every module works. Every feature is live.
             </p>
           </div>
 
@@ -971,96 +950,76 @@ export default function InvestorLandingPage() {
       <section id="tech" className="py-20 sm:py-28">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <Badge variant="outline" className="mb-4 text-xs">Technology Architecture</Badge>
+            <Badge variant="outline" className="mb-4 text-xs">Enterprise-Grade Security</Badge>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-4">
-              Enterprise-Grade Technical Foundation
+              Built for Institutional Trust
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base">
-              Built with proven, battle-tested technologies chosen for reliability,
-              security, and long-term maintainability.
+              Your credit data requires the highest levels of protection. CDH implements 
+              defense-in-depth security that satisfies central bank audit requirements.
             </p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 max-w-4xl mx-auto">
-            {TECH_ARCHITECTURE.map((tech) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto mb-8">
+            {[
+              { icon: Lock, title: "Encrypted Sessions", text: "End-to-end encryption with httpOnly secure cookies and automatic session expiry" },
+              { icon: Fingerprint, title: "Multi-Factor Auth", text: "TOTP-based MFA with QR provisioning and biometric WebAuthn (fingerprint/face)" },
+              { icon: Hash, title: "Tamper-Proof Audit", text: "SHA-256 hash chain links every log entry — impossible to modify retroactively" },
+              { icon: ShieldCheck, title: "Role-Based Access", text: "4-tier RBAC: Admin, Regulator, Lender, Viewer with route-level enforcement" },
+              { icon: Scale, title: "Regulatory Compliance", text: "POPIA, NDPR, Ghana DPA, GDPR frameworks with automated data retention" },
+              { icon: BadgeCheck, title: "Maker-Checker Workflows", text: "Four-eye principle for all sensitive data modifications with full change tracking" },
+            ].map((item, i) => (
               <div
-                key={tech.name}
-                className="rounded-xl border border-border/50 bg-card p-4 text-center hover:border-primary/30 transition-colors"
-                data-testid={`tech-${tech.name.toLowerCase().replace(/[^a-z]/g, "-")}`}
+                key={i}
+                className="rounded-xl border border-border/50 bg-card p-4 hover:border-primary/30 transition-colors"
               >
-                <tech.icon className="w-5 h-5 mx-auto mb-2 text-primary/70" />
-                <p className="font-semibold text-xs mb-1">{tech.name}</p>
-                <p className="text-[10px] text-muted-foreground leading-relaxed">{tech.desc}</p>
+                <item.icon className="w-5 h-5 mb-2 text-primary/70" />
+                <p className="font-semibold text-xs mb-1">{item.title}</p>
+                <p className="text-[10px] text-muted-foreground leading-relaxed">{item.text}</p>
               </div>
             ))}
           </div>
 
-          <div className="mt-12 max-w-3xl mx-auto">
-            <div className="rounded-xl border border-border/50 bg-card p-6">
-              <h3 className="font-semibold text-sm mb-4 text-center">Security Architecture Highlights</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {[
-                  { icon: Lock, text: "End-to-end session encryption with httpOnly cookies" },
-                  { icon: Fingerprint, text: "TOTP multi-factor authentication with QR provisioning" },
-                  { icon: Hash, text: "SHA-256 hash chain audit trail (tamper-evident)" },
-                  { icon: ShieldCheck, text: "Route-level RBAC enforcement on all API endpoints" },
-                  { icon: Timer, text: "15-min idle timeout + account lockout after 3 failures" },
-                  { icon: FileCheck, text: "90-day password rotation with complexity requirements" },
-                ].map((item, i) => (
-                  <div key={i} className="flex items-start gap-2.5">
-                    <item.icon className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
-                    <span className="text-xs text-muted-foreground">{item.text}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+          <div className="text-center">
+            <Button variant="outline" size="sm" className="text-xs gap-2" onClick={() => navigate("/security")} data-testid="cta-security-deep">
+              <Shield className="w-3.5 h-3.5" />
+              View Full Security & Compliance Details
+            </Button>
           </div>
         </div>
       </section>
 
-      <section id="roadmap" className="py-20 sm:py-28 bg-muted/30">
+      <section className="py-20 sm:py-28 bg-muted/30">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <Badge variant="outline" className="mb-4 text-xs">Product Roadmap</Badge>
+            <Badge variant="outline" className="mb-4 text-xs">Getting Started</Badge>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-4">
-              Vision & Growth Trajectory
+              Simple Onboarding, Immediate Value
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base">
-              CDH v2.0 is a production-ready foundation with a clear path to becoming
-              the definitive credit infrastructure layer for the African continent.
+              Go from sign-up to production in days, not months. CDH is designed for rapid deployment.
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-            {ROADMAP_ITEMS.map((phase) => (
-              <Card
-                key={phase.phase}
-                className={`border ${phase.status === "live" ? "border-primary/40 shadow-md" : "border-border/60"}`}
-                data-testid={`roadmap-${phase.phase.toLowerCase()}`}
-              >
-                <CardContent className="p-5 sm:p-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Badge
-                      variant={phase.status === "live" ? "default" : "secondary"}
-                      className="text-[10px]"
-                    >
-                      {phase.status === "live" ? "LIVE" : phase.status === "planned" ? "PLANNED" : "VISION"}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">{phase.phase}</span>
+            {[
+              { step: "1", title: "Try the Platform", desc: "Explore the full system with our live demo. No sign-up needed. See every feature with real data.", cta: "Launch Demo", action: launchDemo, testId: "step-demo" },
+              { step: "2", title: "Choose Your Plan", desc: "Standard for MFIs and fintechs. Professional for regional banks. Enterprise for central banks and tier-1 institutions.", cta: "View Pricing", action: () => navigate("/pricing"), testId: "step-pricing" },
+              { step: "3", title: "Go Live", desc: "Connect via API or batch upload. Configure your regulatory profile. Start managing credit data across your jurisdictions.", cta: "Explore Platform", action: launchDemo, testId: "step-deploy" },
+            ].map((item) => (
+              <Card key={item.step} className="border border-border/60" data-testid={item.testId}>
+                <CardContent className="p-5 sm:p-6 text-center">
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-4 text-white font-bold"
+                    style={{ background: "linear-gradient(135deg, hsl(175 55% 28%), hsl(175 45% 22%))" }}
+                  >
+                    {item.step}
                   </div>
-                  <h3 className="font-bold text-base mb-3">{phase.title}</h3>
-                  <ul className="space-y-2">
-                    {phase.items.map((item, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        {phase.status === "live" ? (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
-                        ) : (
-                          <div className="w-3.5 h-3.5 rounded-full border border-muted-foreground/30 shrink-0 mt-0.5" />
-                        )}
-                        <span className="text-xs text-muted-foreground">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <h3 className="font-bold text-base mb-2">{item.title}</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed mb-4">{item.desc}</p>
+                  <Button variant="outline" size="sm" className="text-xs" onClick={item.action}>
+                    {item.cta}
+                  </Button>
                 </CardContent>
               </Card>
             ))}
@@ -1068,145 +1027,100 @@ export default function InvestorLandingPage() {
         </div>
       </section>
 
-      <section id="scale" className="py-20 sm:py-28">
+      <section id="market-proof" className="py-20 sm:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <Badge variant="outline" className="mb-4">Distribution & Scale</Badge>
+            <Badge variant="outline" className="mb-4">Why Institutions Choose CDH</Badge>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-4">
-              From Solution to Platform
+              The Only Platform Built for All of Africa
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base">
-              The difference between a one-time sale and a high-value exit is distribution.
-              CDH is built as infrastructure that scales across every financial institution on the continent.
+              Existing alternatives cover a single country or sub-region. CDH is the only credit registry 
+              platform designed for pan-African operation from day one.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             <Card className="text-center p-6">
               <CardContent className="pt-2">
-                <div className="text-4xl font-bold text-primary mb-2">$47B</div>
-                <p className="font-semibold text-sm mb-1">African Fintech Revenue by 2028</p>
-                <p className="text-xs text-muted-foreground">Credit infrastructure (KYC, scoring APIs, data rails) commands premium pricing as it enables other businesses to operate</p>
+                <div className="text-4xl font-bold text-primary mb-2">54</div>
+                <p className="font-semibold text-sm mb-1">Countries Covered</p>
+                <p className="text-xs text-muted-foreground">Complete continental coverage. No competitor covers more than a single region. Deploy once, operate everywhere.</p>
               </CardContent>
             </Card>
             <Card className="text-center p-6">
               <CardContent className="pt-2">
-                <div className="text-4xl font-bold text-primary mb-2">500+</div>
-                <p className="font-semibold text-sm mb-1">Addressable Institutions</p>
-                <p className="text-xs text-muted-foreground">Central banks, commercial banks, MFIs, and fintech lenders across 54 African countries</p>
+                <div className="text-4xl font-bold text-primary mb-2">37+</div>
+                <p className="font-semibold text-sm mb-1">Central Bank Mandates</p>
+                <p className="text-xs text-muted-foreground">Credit reporting is becoming mandatory across Africa. CDH ensures your institution is compliant in every jurisdiction you operate.</p>
               </CardContent>
             </Card>
             <Card className="text-center p-6">
               <CardContent className="pt-2">
-                <div className="text-4xl font-bold text-primary mb-2">42+</div>
-                <p className="font-semibold text-sm mb-1">Supported Currencies</p>
-                <p className="text-xs text-muted-foreground">Multi-currency billing with real-time exchange rates and PAPSS settlements</p>
+                <div className="text-4xl font-bold text-primary mb-2">350M+</div>
+                <p className="font-semibold text-sm mb-1">Underserved Adults</p>
+                <p className="text-xs text-muted-foreground">Over 350 million adults lack access to formal credit. Alternative data scoring lets your institution serve this untapped market.</p>
               </CardContent>
             </Card>
           </div>
 
-          <div className="rounded-xl border border-primary/20 bg-primary/5 p-6 mb-8" data-testid="section-market-context">
-            <h3 className="font-bold text-sm mb-4 flex items-center gap-2">
-              <Map className="w-4 h-4 text-primary" />
-              African SaaS Market Context — Why Our Pricing Works
+          <div className="mb-10">
+            <h3 className="font-bold text-sm mb-5 text-center flex items-center justify-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-primary" />
+              How CDH Compares to Alternatives
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="rounded-lg bg-background p-3 border border-border/50">
-                <p className="text-xs font-semibold text-primary mb-1">Fintech Infrastructure</p>
-                <p className="text-lg font-bold">$8K–$10K</p>
-                <p className="text-[10px] text-muted-foreground">Enterprise monthly contract value. KYC, credit scoring, and data rail platforms command premium pricing because they enable other businesses to operate.</p>
-              </div>
-              <div className="rounded-lg bg-background p-3 border border-border/50">
-                <p className="text-xs font-semibold text-primary mb-1">Mid-Market Clients</p>
-                <p className="text-lg font-bold">$500–$1,500</p>
-                <p className="text-[10px] text-muted-foreground">Per month for specialized platforms. Agritech platforms target ~$600/mo ARPU. Our Professional tier at $799/mo is market-aligned.</p>
-              </div>
-              <div className="rounded-lg bg-background p-3 border border-border/50">
-                <p className="text-xs font-semibold text-primary mb-1">South Africa</p>
-                <p className="text-lg font-bold">Highest ARPU</p>
-                <p className="text-[10px] text-muted-foreground">Most mature market with strongest GDP per capita among the "Big Four." Supports higher price points and stable monthly recurring revenue.</p>
-              </div>
-              <div className="rounded-lg bg-background p-3 border border-border/50">
-                <p className="text-xs font-semibold text-primary mb-1">Kenya & Nigeria</p>
-                <p className="text-lg font-bold">Volume Play</p>
-                <p className="text-[10px] text-muted-foreground">Kenya's M-Pesa maturity enables easy SaaS collection. Nigeria offers the largest volume potential — our multi-tier model captures both.</p>
-              </div>
+            <div className="space-y-3">
+              {[
+                { name: "TransUnion / Experian Africa", gap: "Coverage limited to South Africa + a few countries. No pan-African reach. Legacy on-premise architecture.", solve: "CDH covers all 54 countries with cloud-native multi-tenant architecture and cross-border entity resolution." },
+                { name: "Country-Specific Bureaus (e.g. CRB Kenya)", gap: "Single-country systems with no cross-border capability. Separate systems per jurisdiction.", solve: "One platform across all jurisdictions. Your team learns one system, not dozens." },
+                { name: "Building In-House", gap: "Years of development per country. No data sharing across institutions. No regulatory compliance automation.", solve: "Production-ready today with 16 integrated modules, regulatory compliance engine, and automated data retention." },
+              ].map((comp) => (
+                <Card key={comp.name} data-testid={`comp-${comp.name.toLowerCase().replace(/[^a-z]/g, "-")}`}>
+                  <CardContent className="p-4 sm:p-5">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+                      <div className="lg:col-span-2">
+                        <h4 className="font-semibold text-xs">{comp.name}</h4>
+                      </div>
+                      <div className="lg:col-span-5">
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-[10px] font-medium text-red-600 mb-0.5">Their Limitation</p>
+                            <p className="text-xs text-muted-foreground">{comp.gap}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="lg:col-span-5">
+                        <div className="flex items-start gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-[10px] font-medium text-green-600 mb-0.5">CDH Advantage</p>
+                            <p className="text-xs text-muted-foreground">{comp.solve}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <Card>
               <CardContent className="pt-6">
-                <h3 className="font-bold text-sm mb-1 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-primary" />
-                  Revenue Model — Path to $343K ARR
-                </h3>
-                <p className="text-[10px] text-muted-foreground mb-4">Aligned with African SaaS median Year 1 revenue benchmarks (~$28.5K/mo)</p>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between items-center py-2 border-b">
-                    <div>
-                      <span>15 Standard clients × $299/mo</span>
-                      <p className="text-[10px] text-muted-foreground">MFIs, small fintechs — aligned with African mid-market pricing</p>
-                    </div>
-                    <span className="font-medium whitespace-nowrap">$53,820/yr</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b">
-                    <div>
-                      <span>8 Professional clients × $799/mo</span>
-                      <p className="text-[10px] text-muted-foreground">Regional banks, DFIs — within $500–$1,500/mo mid-market range</p>
-                    </div>
-                    <span className="font-medium whitespace-nowrap">$76,704/yr</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b">
-                    <div>
-                      <span>3 Enterprise clients × $2,499/mo</span>
-                      <p className="text-[10px] text-muted-foreground">Central banks, tier-1 banks — well below $8K–$10K enterprise ceiling</p>
-                    </div>
-                    <span className="font-medium whitespace-nowrap">$89,964/yr</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b">
-                    <div>
-                      <span>Usage-based revenue (API calls + reports)</span>
-                      <p className="text-[10px] text-muted-foreground">Per-query credit reports, batch uploads, webhook events</p>
-                    </div>
-                    <span className="font-medium whitespace-nowrap">$122,512/yr</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 font-bold text-primary">
-                    <span>Total projected ARR</span>
-                    <span>$343,000</span>
-                  </div>
-                </div>
-                <div className="mt-4 p-3 bg-muted/50 rounded-lg">
-                  <p className="text-[11px] text-muted-foreground">
-                    <strong className="text-foreground">Benchmark:</strong> Successful African SaaS startups average ~$58K/mo by investor pitch stage. 
-                    Our Year 1 target of $28.5K/mo is conservative. With 54-country addressable market and mandatory regulatory adoption, 
-                    path to $1M+ ARR by Year 3 is achievable through per-country rollout.
-                  </p>
-                  <button
-                    onClick={() => navigate("/market-validation")}
-                    className="mt-2 text-[11px] text-primary font-medium hover:underline inline-flex items-center gap-1"
-                    data-testid="link-market-validation"
-                  >
-                    See full market validation with sources <ArrowRight className="w-3 h-3" />
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6">
                 <h3 className="font-bold text-sm mb-4 flex items-center gap-2">
                   <Shield className="w-4 h-4 text-primary" />
-                  Competitive Moat
+                  What You Get With CDH
                 </h3>
                 <div className="space-y-3">
                   {[
-                    { name: "Fintech Infrastructure Play", desc: "Credit data rails are the highest-value vertical in African fintech — $47B market by 2028. We enable banks and fintechs to operate." },
-                    { name: "Regulatory Compliance Engine", desc: "Per-country regulatory rules, export formats, and data protection — years to replicate across 54 jurisdictions" },
-                    { name: "Multi-Tenant Country Isolation", desc: "54-country deployment with isolated data, currencies, and regulatory bodies — network effects compound with each country" },
-                    { name: "Blockchain-Anchored Audit Trail", desc: "Merkle tree integrity verification — tamper-proof compliance evidence required by regulators" },
-                    { name: "ML Credit Scoring (GBM v2.1)", desc: "10-feature gradient boosting model with alternative data (mobile money, utility payments) for thin-file borrowers" },
-                    { name: "Mandatory Adoption Dynamics", desc: "Central banks mandate credit reporting — once adopted, CDH becomes entrenched infrastructure, not optional software" },
+                    { name: "Pan-African Compliance Engine", desc: "Per-country regulatory rules, export formats, and data protection for POPIA, NDPR, Ghana DPA, GDPR, and more — pre-built, not custom." },
+                    { name: "Cross-Border Entity Resolution", desc: "Identify borrowers across jurisdictions by name, passport, or tax ID. No more hidden exposure from unlinked accounts." },
+                    { name: "ML Credit Scoring with Alternative Data", desc: "Score thin-file borrowers using mobile money, utility payments, and telco data. Expand your lending safely." },
+                    { name: "Blockchain-Anchored Audit Trail", desc: "Tamper-proof compliance evidence using Merkle tree verification. Satisfy any regulatory audit with confidence." },
+                    { name: "API-First Integration", desc: "OAuth 2.1 API, HMAC-signed webhooks, and developer sandbox. Connect to your core banking system in days, not months." },
+                    { name: "Multi-Currency Portfolio View", desc: "42+ currencies with automated exchange rates. See your total cross-border exposure in any denomination." },
                   ].map((m) => (
                     <div key={m.name} className="flex items-start gap-2">
                       <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
@@ -1216,6 +1130,47 @@ export default function InvestorLandingPage() {
                       </div>
                     </div>
                   ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-6">
+                <h3 className="font-bold text-sm mb-4 flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-primary" />
+                  The Market Is Moving — Don't Get Left Behind
+                </h3>
+                <div className="space-y-3">
+                  {[
+                    { icon: Scale, title: "Regulatory Mandates Accelerating", desc: "37+ African central banks are enacting credit reporting legislation. Compliance is becoming mandatory, not optional." },
+                    { icon: Globe, title: "AfCFTA Requires Data Harmonization", desc: "The African Continental Free Trade Area (1.4B people) needs harmonized financial data for cross-border lending." },
+                    { icon: Network, title: "Digital Infrastructure Is Ready", desc: "Mobile money (M-Pesa, MTN MoMo) and 43% internet penetration mean the rails exist to deploy SaaS at scale." },
+                    { icon: Users, title: "350M+ Financially Excluded Adults", desc: "Alternative data scoring can bring them into the credit system — but only with shared data infrastructure." },
+                  ].map((item) => (
+                    <div key={item.title} className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/10 flex-shrink-0 mt-0.5">
+                        <item.icon className="w-4 h-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{item.title}</p>
+                        <p className="text-xs text-muted-foreground">{item.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+                  <p className="text-[11px] text-muted-foreground">
+                    <strong className="text-foreground">Source:</strong> World Bank Global Findex, IMF Financial Development Index, 
+                    McKinsey Africa Fintech Report. Institutions that adopt credit infrastructure early gain a structural 
+                    advantage as regulatory mandates expand.
+                  </p>
+                  <button
+                    onClick={() => navigate("/market-validation")}
+                    className="mt-2 text-[11px] text-primary font-medium hover:underline inline-flex items-center gap-1"
+                    data-testid="link-market-validation"
+                  >
+                    See full market analysis with sources <ArrowRight className="w-3 h-3" />
+                  </button>
                 </div>
               </CardContent>
             </Card>
@@ -1238,14 +1193,14 @@ export default function InvestorLandingPage() {
             <span className="text-xs font-medium">Instant Access — No Sign-Up Required</span>
           </div>
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-4">
-            See It in Action
+            Ready to Modernize Your Credit Operations?
           </h2>
           <p className="text-muted-foreground mb-3 text-sm sm:text-base max-w-xl mx-auto">
-            Explore the full system with our interactive demo. Access Admin-level functionality
-            with real data — dashboards, borrower management, credit scoring, and more.
+            Explore the full platform with live data. See dashboards, borrower management, 
+            credit scoring, cross-border matching, and regulatory compliance in action.
           </p>
           <p className="text-xs text-muted-foreground/70 mb-8 max-w-md mx-auto">
-            No installation required. No login needed. Live data. Full functionality.
+            No installation. No sign-up. Full Admin-level access with real data.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Button
@@ -1255,17 +1210,27 @@ export default function InvestorLandingPage() {
               data-testid="cta-bottom-demo"
             >
               <Play className="w-4 h-4" />
-              Launch Interactive Demo
+              Try the Platform Free
             </Button>
             <Button
               variant="outline"
               size="lg"
               className="text-sm px-8 gap-2"
-              onClick={() => navigate("/my-credit")}
-              data-testid="cta-bottom-consumer"
+              onClick={() => navigate("/pricing")}
+              data-testid="cta-bottom-pricing"
             >
-              <MonitorSmartphone className="w-4 h-4" />
-              Consumer Portal
+              <CreditCard className="w-4 h-4" />
+              View Plans & Pricing
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              className="text-sm px-8 gap-2"
+              onClick={() => navigate("/security")}
+              data-testid="cta-bottom-security"
+            >
+              <Shield className="w-4 h-4" />
+              Security & Compliance
             </Button>
           </div>
         </div>
@@ -1281,10 +1246,10 @@ export default function InvestorLandingPage() {
               >
                 <Shield className="w-3.5 h-3.5 text-white" />
               </div>
-              <span>Carlson Capital & Systems In Motion Limited</span>
+              <span>Systems In Motion Limited</span>
             </div>
-            <p>Cross-Jurisdictional Central Data Hub & Credit Registry System v2.1</p>
-            <p>Confidential & Proprietary</p>
+            <p>Pan-African Credit Registry — CDH v2.1</p>
+            <p>&copy; {new Date().getFullYear()} All rights reserved</p>
           </div>
         </div>
       </footer>
