@@ -69,7 +69,7 @@ const COMPLIANCE_FRAMEWORKS = [
   { name: "Ghana Data Protection Act, 2012", region: "Ghana (Act 843)", status: "compliant", detail: "Full compliance with Bank of Ghana CRB requirements and NIA integration" },
   { name: "Nigeria NDPR", region: "Nigeria", status: "compliant", detail: "Nigeria Data Protection Regulation compliance for NIBSS integration" },
   { name: "Kenya Data Protection Act", region: "Kenya", status: "compliant", detail: "Office of Data Protection Commissioner requirements" },
-  { name: "South Africa POPIA", region: "South Africa", status: "compliant", detail: "Protection of Personal Information Act compliance" },
+  { name: "South Africa POPIA", region: "South Africa", status: "compliant", detail: "Full Protection of Personal Information Act compliance — Information Officer designation, lawful processing conditions, data subject access requests (DSARs), cross-border transfer safeguards, breach notification within 72 hours, and purpose limitation enforcement" },
   { name: "ISO 27001", region: "International", status: "aligned", detail: "Information security management system aligned with ISO 27001 controls" },
   { name: "SOC 2 Type II", region: "International", status: "in-progress", detail: "Security, availability, and confidentiality trust services criteria" },
   { name: "PCI DSS", region: "International", status: "aligned", detail: "Payment Card Industry Data Security Standard alignment for financial data" },
@@ -120,10 +120,14 @@ export default function SecurityCompliancePage() {
             Purpose-built for the financial sector with bank-grade security controls,
             regulatory compliance across 54 African jurisdictions, and immutable audit trails.
           </p>
-          <div className="flex items-center justify-center gap-6 mb-12">
+          <div className="flex items-center justify-center gap-6 mb-12 flex-wrap">
             <div className="flex items-center gap-2 text-sm">
               <CheckCircle2 className="w-4 h-4 text-green-500" />
               <span>GDPR Compliant</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <CheckCircle2 className="w-4 h-4 text-green-500" />
+              <span>POPIA Compliant</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <CheckCircle2 className="w-4 h-4 text-green-500" />
@@ -223,6 +227,87 @@ export default function SecurityCompliancePage() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="py-12 px-4" data-testid="section-popia">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Scale className="w-6 h-6 text-primary" />
+            <h2 className="text-2xl font-bold text-center" data-testid="text-popia-title">POPIA Compliance — South Africa</h2>
+          </div>
+          <p className="text-muted-foreground text-center mb-8 text-sm max-w-2xl mx-auto">
+            Full alignment with the Protection of Personal Information Act (Act 4 of 2013), enforced by South Africa's Information Regulator
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Card data-testid="card-popia-information-officer">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <UserCheck className="w-5 h-5 text-blue-600" />
+                  <h3 className="font-semibold text-sm">Information Officer</h3>
+                </div>
+                <p className="text-xs text-muted-foreground">Designated Information Officer role with registered deputy. All processing activities logged and reported to the Information Regulator as required under Section 55.</p>
+              </CardContent>
+            </Card>
+            <Card data-testid="card-popia-lawful-processing">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <FileText className="w-5 h-5 text-green-600" />
+                  <h3 className="font-semibold text-sm">Lawful Processing Conditions</h3>
+                </div>
+                <p className="text-xs text-muted-foreground">All 8 conditions for lawful processing enforced: accountability, purpose limitation, further processing limitation, information quality, openness, security safeguards, and data subject participation.</p>
+              </CardContent>
+            </Card>
+            <Card data-testid="card-popia-dsar">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <Eye className="w-5 h-5 text-violet-600" />
+                  <h3 className="font-semibold text-sm">Data Subject Access Requests</h3>
+                </div>
+                <p className="text-xs text-muted-foreground">Self-service consumer portal for DSARs under Sections 23–25. Borrowers can view, correct, or request deletion of their personal information with full audit trail.</p>
+              </CardContent>
+            </Card>
+            <Card data-testid="card-popia-cross-border">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <Globe className="w-5 h-5 text-orange-600" />
+                  <h3 className="font-semibold text-sm">Cross-Border Transfer Safeguards</h3>
+                </div>
+                <p className="text-xs text-muted-foreground">Section 72 compliance for cross-border data flows. Transfers only to jurisdictions with adequate protection levels. Per-country data residency rules enforced at the query level.</p>
+              </CardContent>
+            </Card>
+            <Card data-testid="card-popia-breach">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle className="w-5 h-5 text-red-600" />
+                  <h3 className="font-semibold text-sm">Breach Notification</h3>
+                </div>
+                <p className="text-xs text-muted-foreground">Automated breach detection and notification pipeline. Information Regulator and affected data subjects notified within 72 hours per Section 22. Incident response runbook with severity classification.</p>
+              </CardContent>
+            </Card>
+            <Card data-testid="card-popia-retention">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <Server className="w-5 h-5 text-teal-600" />
+                  <h3 className="font-semibold text-sm">Purpose Limitation & Retention</h3>
+                </div>
+                <p className="text-xs text-muted-foreground">Data collected only for specified, explicit purposes. Automated retention policies enforce Section 14 requirements — records purged or anonymized when no longer needed for the original purpose.</p>
+              </CardContent>
+            </Card>
+          </div>
+          <div className="mt-6 p-4 bg-muted/50 rounded-lg border border-border/50">
+            <div className="flex items-start gap-3">
+              <ShieldCheck className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium">Continuous Compliance Monitoring</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Every data access, modification, and transfer is recorded in an immutable audit log with blockchain anchoring. 
+                  The platform automatically enforces consent requirements before processing, tracks data subject preferences, 
+                  and generates compliance reports for the Information Regulator on demand.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
