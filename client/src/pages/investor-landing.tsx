@@ -1213,7 +1213,7 @@ export default function InvestorLandingPage() {
             {[
               { step: "1", title: "Start Free Trial", desc: "Register your organization and get full admin access for 14 days. No credit card required. Explore every feature with real data.", cta: "Start Trial", action: () => navigate("/start-trial"), testId: "step-trial" },
               { step: "2", title: "Choose Your Plan", desc: "Standard for MFIs and fintechs. Professional for regional banks. Enterprise for central banks and tier-1 institutions.", cta: "View Pricing", action: () => navigate("/pricing"), testId: "step-pricing" },
-              { step: "3", title: "Go Live", desc: "Connect via API or batch upload. Configure your regulatory profile. Start managing credit data across your jurisdictions.", cta: "Contact Sales", action: () => window.location.href = "mailto:info@systemsinmotion.com", testId: "step-deploy" },
+              { step: "3", title: "Go Live", desc: "Connect via API or batch upload. Configure your regulatory profile. Start managing credit data across your jurisdictions.", cta: "Contact Sales", action: () => window.location.href = "mailto:uffe.carlson@gmail.com", testId: "step-deploy" },
             ].map((item) => (
               <Card key={item.step} className="border border-border/60" data-testid={item.testId}>
                 <CardContent className="p-5 sm:p-6 text-center">
@@ -1454,7 +1454,7 @@ export default function InvestorLandingPage() {
               >
                 <Shield className="w-3.5 h-3.5 text-white" />
               </div>
-              <span>Systems In Motion Limited</span>
+              <span>Carlson Capital & Systems In Motion Limited</span>
             </div>
             <p>Pan-African Credit Registry — CDH v2.1</p>
             <p>&copy; {new Date().getFullYear()} All rights reserved</p>

@@ -13,8 +13,8 @@ export async function seedDatabase() {
   const ghanaMode = isGhanaMode();
 
   const [admin] = await db.insert(users).values([
-    { username: "admin", password: hash("admin0987"), fullName: "Uffe J Carlson", email: "tadesse@systemsinmotionlimited.com", role: "super_admin", status: "active", institution: "Carlson Capital & Systems In Motion Limited" },
-    { username: "platform_admin", password: hash("admin0987"), fullName: "Platform Administrator", email: "platform@systemsinmotionlimited.com", role: "super_admin", status: "active", institution: "Carlson Capital & Systems In Motion Limited" },
+    { username: "admin", password: hash("admin0987"), fullName: "Uffe Jon Carlson", email: "uffe.carlson@gmail.com", role: "super_admin", status: "active", institution: "Carlson Capital & Systems In Motion Limited" },
+    { username: "platform_admin", password: hash("admin0987"), fullName: "Thomas Baafi", email: "uffe.carlson@gmail.com", role: "super_admin", status: "active", institution: "Carlson Capital & Systems In Motion Limited" },
   ]).returning();
 
   const coreBorrowers = ghanaMode ? [

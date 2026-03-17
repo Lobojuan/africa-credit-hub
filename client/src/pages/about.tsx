@@ -287,8 +287,9 @@ export default function AboutPage() {
                   <Mail className="w-4 h-4 text-primary mt-0.5 shrink-0" />
                   <div>
                     <p className="text-sm font-semibold">General Inquiries</p>
-                    <p className="text-xs text-muted-foreground mt-1">admin@systemsinmotion.com</p>
-                    <p className="text-xs text-muted-foreground">api-support@systemsinmotion.com</p>
+                    <p className="text-xs text-muted-foreground mt-1">uffe.carlson@gmail.com</p>
+                    <p className="text-xs text-muted-foreground">+233 552 395 548</p>
+                    <p className="text-xs text-muted-foreground">+233 24 433 9985</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">

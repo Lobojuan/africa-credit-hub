@@ -327,7 +327,7 @@ export default function PricingPage() {
 
       <footer className="border-t py-8 px-4">
         <div className="max-w-7xl mx-auto text-center text-xs text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} Systems In Motion Limited. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Carlson Capital & Systems In Motion Limited. All rights reserved.</p>
           <p className="mt-1">CDH Credit Registry — Pan-African Credit Data Infrastructure</p>
         </div>
       </footer>

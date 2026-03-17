@@ -4,7 +4,7 @@ import { isGhanaMode } from "./country-mode";
 let transporter: nodemailer.Transporter | null = null;
 let emailConfigured = false;
 
-const FROM_EMAIL = process.env.SMTP_FROM || "noreply@systemsinmotion.co.ke";
+const FROM_EMAIL = process.env.SMTP_FROM || "uffe.carlson@gmail.com";
 const FROM_NAME = isGhanaMode() ? "Ghana Credit Registry" : "Pan-African Credit Registry";
 
 function initEmail() {

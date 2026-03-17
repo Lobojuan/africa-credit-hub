@@ -172,7 +172,7 @@ function SuspendedScreen({ orgName, onLogout }: { orgName?: string; onLogout: ()
         </div>
         <div className="space-y-3">
           <p className="text-xs text-muted-foreground">
-            If you believe this is an error, please contact support at <span className="font-medium">support@systemsinmotion.co</span>
+            If you believe this is an error, please contact support at <span className="font-medium">uffe.carlson@gmail.com</span>
           </p>
           <Button variant="outline" onClick={onLogout} data-testid="button-suspended-logout">
             <LogOut className="w-4 h-4 mr-2" />
