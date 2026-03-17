@@ -33,6 +33,10 @@ function AnimatedCounter({ end, duration = 2000, suffix = "", prefix = "" }: { e
   const started = useRef(false);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && !started.current) {
