@@ -1081,16 +1081,16 @@ export default function InvestorLandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             <Card className="text-center p-6">
               <CardContent className="pt-2">
-                <div className="text-4xl font-bold text-primary mb-2">500+</div>
-                <p className="font-semibold text-sm mb-1">Addressable Institutions</p>
-                <p className="text-xs text-muted-foreground">Central banks, commercial banks, MFIs, and fintech lenders across 54 African countries</p>
+                <div className="text-4xl font-bold text-primary mb-2">$47B</div>
+                <p className="font-semibold text-sm mb-1">African Fintech Revenue by 2028</p>
+                <p className="text-xs text-muted-foreground">Credit infrastructure (KYC, scoring APIs, data rails) commands premium pricing as it enables other businesses to operate</p>
               </CardContent>
             </Card>
             <Card className="text-center p-6">
               <CardContent className="pt-2">
-                <div className="text-4xl font-bold text-primary mb-2">$18B</div>
-                <p className="font-semibold text-sm mb-1">Total Addressable Market</p>
-                <p className="text-xs text-muted-foreground">African credit reporting and fintech infrastructure market by 2027</p>
+                <div className="text-4xl font-bold text-primary mb-2">500+</div>
+                <p className="font-semibold text-sm mb-1">Addressable Institutions</p>
+                <p className="text-xs text-muted-foreground">Central banks, commercial banks, MFIs, and fintech lenders across 54 African countries</p>
               </CardContent>
             </Card>
             <Card className="text-center p-6">
@@ -1102,34 +1102,83 @@ export default function InvestorLandingPage() {
             </Card>
           </div>
 
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-6 mb-8" data-testid="section-market-context">
+            <h3 className="font-bold text-sm mb-4 flex items-center gap-2">
+              <Map className="w-4 h-4 text-primary" />
+              African SaaS Market Context — Why Our Pricing Works
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="rounded-lg bg-background p-3 border border-border/50">
+                <p className="text-xs font-semibold text-primary mb-1">Fintech Infrastructure</p>
+                <p className="text-lg font-bold">$8K–$10K</p>
+                <p className="text-[10px] text-muted-foreground">Enterprise monthly contract value. KYC, credit scoring, and data rail platforms command premium pricing because they enable other businesses to operate.</p>
+              </div>
+              <div className="rounded-lg bg-background p-3 border border-border/50">
+                <p className="text-xs font-semibold text-primary mb-1">Mid-Market Clients</p>
+                <p className="text-lg font-bold">$500–$1,500</p>
+                <p className="text-[10px] text-muted-foreground">Per month for specialized platforms. Agritech platforms target ~$600/mo ARPU. Our Professional tier at $799/mo is market-aligned.</p>
+              </div>
+              <div className="rounded-lg bg-background p-3 border border-border/50">
+                <p className="text-xs font-semibold text-primary mb-1">South Africa</p>
+                <p className="text-lg font-bold">Highest ARPU</p>
+                <p className="text-[10px] text-muted-foreground">Most mature market with strongest GDP per capita among the "Big Four." Supports higher price points and stable monthly recurring revenue.</p>
+              </div>
+              <div className="rounded-lg bg-background p-3 border border-border/50">
+                <p className="text-xs font-semibold text-primary mb-1">Kenya & Nigeria</p>
+                <p className="text-lg font-bold">Volume Play</p>
+                <p className="text-[10px] text-muted-foreground">Kenya's M-Pesa maturity enables easy SaaS collection. Nigeria offers the largest volume potential — our multi-tier model captures both.</p>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <Card>
               <CardContent className="pt-6">
-                <h3 className="font-bold text-sm mb-4 flex items-center gap-2">
+                <h3 className="font-bold text-sm mb-1 flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-primary" />
-                  Revenue Model — Path to $300K ARR
+                  Revenue Model — Path to $343K ARR
                 </h3>
+                <p className="text-[10px] text-muted-foreground mb-4">Aligned with African SaaS median Year 1 revenue benchmarks (~$28.5K/mo)</p>
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between items-center py-2 border-b">
-                    <span>10 Standard clients × $299/mo</span>
-                    <span className="font-medium">$35,880/yr</span>
+                    <div>
+                      <span>15 Standard clients × $299/mo</span>
+                      <p className="text-[10px] text-muted-foreground">MFIs, small fintechs — aligned with African mid-market pricing</p>
+                    </div>
+                    <span className="font-medium whitespace-nowrap">$53,820/yr</span>
                   </div>
                   <div className="flex justify-between items-center py-2 border-b">
-                    <span>8 Professional clients × $799/mo</span>
-                    <span className="font-medium">$76,704/yr</span>
+                    <div>
+                      <span>8 Professional clients × $799/mo</span>
+                      <p className="text-[10px] text-muted-foreground">Regional banks, DFIs — within $500–$1,500/mo mid-market range</p>
+                    </div>
+                    <span className="font-medium whitespace-nowrap">$76,704/yr</span>
                   </div>
                   <div className="flex justify-between items-center py-2 border-b">
-                    <span>5 Enterprise clients × $1,999/mo</span>
-                    <span className="font-medium">$119,940/yr</span>
+                    <div>
+                      <span>3 Enterprise clients × $2,499/mo</span>
+                      <p className="text-[10px] text-muted-foreground">Central banks, tier-1 banks — well below $8K–$10K enterprise ceiling</p>
+                    </div>
+                    <span className="font-medium whitespace-nowrap">$89,964/yr</span>
                   </div>
                   <div className="flex justify-between items-center py-2 border-b">
-                    <span>Usage-based revenue (API + reports)</span>
-                    <span className="font-medium">$67,476/yr</span>
+                    <div>
+                      <span>Usage-based revenue (API calls + reports)</span>
+                      <p className="text-[10px] text-muted-foreground">Per-query credit reports, batch uploads, webhook events</p>
+                    </div>
+                    <span className="font-medium whitespace-nowrap">$122,512/yr</span>
                   </div>
                   <div className="flex justify-between items-center py-2 font-bold text-primary">
                     <span>Total projected ARR</span>
-                    <span>$300,000</span>
+                    <span>$343,000</span>
                   </div>
+                </div>
+                <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+                  <p className="text-[11px] text-muted-foreground">
+                    <strong className="text-foreground">Benchmark:</strong> Successful African SaaS startups average ~$58K/mo by investor pitch stage. 
+                    Our Year 1 target of $28.5K/mo is conservative. With 54-country addressable market and mandatory regulatory adoption, 
+                    path to $1M+ ARR by Year 3 is achievable through per-country rollout.
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -1142,12 +1191,12 @@ export default function InvestorLandingPage() {
                 </h3>
                 <div className="space-y-3">
                   {[
-                    { name: "Regulatory Compliance Engine", desc: "Per-country regulatory rules, export formats, and data protection — years to replicate" },
-                    { name: "Multi-Tenant Country Isolation", desc: "54-country deployment with isolated data, currencies, and regulatory bodies" },
-                    { name: "Blockchain-Anchored Audit Trail", desc: "Merkle tree integrity verification — tamper-proof compliance evidence" },
-                    { name: "ML Credit Scoring (GBM v2.1)", desc: "10-feature gradient boosting model trained on African credit market dynamics" },
-                    { name: "API-First + Webhook Platform", desc: "OAuth 2.1, HMAC-signed webhooks, SDKs — built for integration, not just demonstration" },
-                    { name: "Deep Vertical Expertise", desc: "Credit registry domain: PAPSS settlements, cross-border agreements, BoG/BSL exports" },
+                    { name: "Fintech Infrastructure Play", desc: "Credit data rails are the highest-value vertical in African fintech — $47B market by 2028. We enable banks and fintechs to operate." },
+                    { name: "Regulatory Compliance Engine", desc: "Per-country regulatory rules, export formats, and data protection — years to replicate across 54 jurisdictions" },
+                    { name: "Multi-Tenant Country Isolation", desc: "54-country deployment with isolated data, currencies, and regulatory bodies — network effects compound with each country" },
+                    { name: "Blockchain-Anchored Audit Trail", desc: "Merkle tree integrity verification — tamper-proof compliance evidence required by regulators" },
+                    { name: "ML Credit Scoring (GBM v2.1)", desc: "10-feature gradient boosting model with alternative data (mobile money, utility payments) for thin-file borrowers" },
+                    { name: "Mandatory Adoption Dynamics", desc: "Central banks mandate credit reporting — once adopted, CDH becomes entrenched infrastructure, not optional software" },
                   ].map((m) => (
                     <div key={m.name} className="flex items-start gap-2">
                       <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />

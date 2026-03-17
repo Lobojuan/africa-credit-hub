@@ -1,0 +1,22 @@
+Realistic monthly revenue for a SaaS platform in Africa varies significantly based on the target customer segment (SME vs. Enterprise) and the specific vertical, as the continent’s market is characterized by high price sensitivity and lower per-capita disposable income compared to Western hubs.
+
+### Monthly Revenue Potential by Customer Segment
+Realistic revenue per client is typically divided into three tiers:
+*   **SMEs and Micro-Businesses:** Revenue generally ranges from **$1.50 to $100 per month**. In Nigeria, basic accounting or HR tools for small teams often start as low as ₦6,000 to ₦14,000 ($4–$11) per month.
+*   **Mid-Market:** Mid-sized companies typically generate **$500 to $1,500 per month**. For example, specialized agritech platforms like "Farm Ops Manager" target an Average Revenue Per User (ARPU) of approximately **$600 per month**.
+*   **Enterprise:** Large-scale contracts for multinationals or major regional firms can exceed **$8,000 to $10,000 per month**. Enterprise Resource Planning (ERP) implementations in South Africa for large firms are valued at R1.5 million to R5 million+ ($80,000–$265,000+), which translates to substantial recurring support and licensing revenue.[1]
+
+### Revenue Potential by Industry Vertical
+The "true need" and monetization potential are currently highest in sectors solving infrastructure gaps:
+*   **Fintech Infrastructure:** This is the most lucrative vertical, with the total African fintech market projected to reach **$47 billion in revenue by 2028**.[2] Infrastructure plays (KYC, credit scoring APIs, payment rails) command premium pricing because they enable other businesses to operate.
+*   **HR and Payroll:** Competition is high, leading to low per-user pricing. In Nigeria, companies like Bento and SeamlessHR charge roughly **$1.00 to $7.00 per employee per month**. In Kenya, Employer of Record (EOR) services can reach **$300 per employee per month** for managing cross-border compliance.
+*   **Logistics and E-Freight:** Monetization is often transactional rather than fixed. Leading players like Sendy typically take a **13% commission** on the total transaction value.[3] Additional revenue is generated through per-trip insurance and fleet management subscriptions ranging from **$15 to $50 per vehicle per month**.
+*   **Commerce Enablement:** Retail-tech platforms like MarketForce 360 offer tiered SaaS plans for sales teams starting at **$10 to $20 per user per month**.
+
+### Regional Market Revenue Readiness
+*   **South Africa:** The most mature market with the highest GDP per capita among the "Big Four." It supports higher price points and more stable monthly recurring revenue due to the relative strength of the Rand.[4, 5]
+*   **Nigeria:** Offers the largest volume potential but suffers from extreme currency volatility. SaaS startups here often aim for high user counts (e.g., Kippa reaching 350,000+ SMEs) to offset low per-user revenue.
+*   **Kenya:** High digital payment maturity via M-Pesa supports easier collection of small monthly fees, particularly in agritech and retail-tech.[4, 5]
+*   **Egypt:** Fast-growing destination for venture capital with a rapidly digitalizing B2B sector.
+
+On average, successful SaaS startups in Africa are making approximately **$58,000 per month** by the time they pitch to investors. For an early-stage "small-cap" startup, median Year 1 revenue in the region is roughly **$343,000 per year**, or approximately **$28,500 per month**.
