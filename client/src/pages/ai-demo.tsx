@@ -77,7 +77,7 @@ function AIDemoPage() {
             </h4>
             <p className="text-xs text-muted-foreground leading-relaxed">{msg.benefit}</p>
           </div>
-          <Button onClick={() => navigate("/start-trial")} className="gap-2 shrink-0 shadow-md" data-testid={`cta-inline-btn-${feature}`}>
+          <Button onClick={() => navigate("/login")} className="gap-2 shrink-0 shadow-md" data-testid={`cta-inline-btn-${feature}`}>
             Try With Your Data <ArrowRight className="w-4 h-4" />
           </Button>
         </div>
