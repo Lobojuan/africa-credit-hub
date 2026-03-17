@@ -13,6 +13,7 @@ import {
   TrendingUp,
   MapPin,
   Mail,
+  Phone,
   ExternalLink,
   ChevronRight,
   Briefcase,
@@ -304,16 +305,27 @@ export default function AboutPage() {
           </Card>
         </section>
 
-        <div className="text-center pt-4 pb-2">
-          <p className="text-[11px] text-muted-foreground">
-            &copy; {new Date().getFullYear()} Carlson Capital & Systems In Motion Limited. All rights reserved.
-          </p>
-          <p className="text-[10px] text-muted-foreground mt-0.5">
-            Uffe Jon Carlson — uffe.carlson@gmail.com · +233 552 395 548 | Thomas Baafi — Thomas.baafi@prischell.com · +233 24 433 9985 | Accra, Ghana
-          </p>
-          <p className="text-[10px] text-muted-foreground/60 mt-1">
-            Cross-Jurisdictional Central Data Hub & Credit Registry System v2.0 | Confidential & Proprietary
-          </p>
+        <div className="border-t border-border/50 mt-6 pt-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-[11px] text-muted-foreground/80">
+            <div className="space-y-1.5">
+              <p className="text-xs font-semibold text-foreground">Africa Credit Hub</p>
+              <p>Cross-Jurisdictional CDH & Credit Registry v2.1</p>
+              <div className="flex items-center gap-1.5"><MapPin className="w-3 h-3" /><span>Accra, Ghana</span></div>
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-semibold text-foreground/80 uppercase tracking-wider">Carlson Capital</p>
+              <p className="font-medium text-foreground/70">Uffe Jon Carlson</p>
+              <a href="mailto:uffe.carlson@gmail.com" className="flex items-center gap-1.5 hover:text-primary transition-colors"><Mail className="w-3 h-3" />uffe.carlson@gmail.com</a>
+              <a href="tel:+233552395548" className="flex items-center gap-1.5 hover:text-primary transition-colors"><Phone className="w-3 h-3" />+233 552 395 548</a>
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-semibold text-foreground/80 uppercase tracking-wider">Systems In Motion</p>
+              <p className="font-medium text-foreground/70">Thomas Baafi</p>
+              <a href="mailto:Thomas.baafi@prischell.com" className="flex items-center gap-1.5 hover:text-primary transition-colors"><Mail className="w-3 h-3" />Thomas.baafi@prischell.com</a>
+              <a href="tel:+233244339985" className="flex items-center gap-1.5 hover:text-primary transition-colors"><Phone className="w-3 h-3" />+233 24 433 9985</a>
+            </div>
+          </div>
+          <p className="text-center text-[10px] text-muted-foreground/60 mt-6 pb-2">&copy; {new Date().getFullYear()} Carlson Capital & Systems In Motion Limited. All rights reserved.</p>
         </div>
       </div>
     </div>

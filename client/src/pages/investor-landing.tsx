@@ -12,7 +12,7 @@ import {
   UserCheck, FileCheck, Timer, BadgeCheck, Network,
   BookOpen, Headphones, Receipt, ServerCog, Banknote,
   CircleDollarSign, Activity, Hash, ChevronRight,
-  Sparkles, MonitorSmartphone, Brain,
+  Sparkles, MonitorSmartphone, Brain, Mail, Phone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -1444,29 +1444,62 @@ export default function InvestorLandingPage() {
         </div>
       </section>
 
-      <footer className="border-t border-border/50 py-8 bg-muted/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-4 text-xs text-muted-foreground">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
+      <footer className="border-t border-border/50 bg-muted/20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2.5">
                 <div
-                  className="w-6 h-6 rounded flex items-center justify-center"
+                  className="w-7 h-7 rounded-md flex items-center justify-center"
                   style={{ background: "linear-gradient(135deg, hsl(175 55% 28%), hsl(175 55% 22%))" }}
                 >
-                  <Shield className="w-3.5 h-3.5 text-white" />
+                  <Shield className="w-4 h-4 text-white" />
                 </div>
-                <span className="font-semibold">Carlson Capital & Systems In Motion Limited</span>
+                <div>
+                  <p className="text-sm font-semibold text-foreground leading-tight">Africa Credit Hub</p>
+                  <p className="text-[10px] text-muted-foreground leading-tight">Pan-African Credit Registry — CDH v2.1</p>
+                </div>
               </div>
-              <p>Pan-African Credit Registry — CDH v2.1</p>
-              <p>&copy; {new Date().getFullYear()} All rights reserved</p>
+              <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
+                Cross-jurisdictional credit data infrastructure serving 54 African countries. Built for banks, MFIs, regulators, and fintechs.
+              </p>
+              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/70">
+                <MapPin className="w-3 h-3" />
+                <span>Accra, Greater Accra Region, Ghana</span>
+              </div>
             </div>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-[11px] text-muted-foreground/70">
-              <span>Uffe Jon Carlson — uffe.carlson@gmail.com · +233 552 395 548</span>
-              <span className="hidden sm:inline">|</span>
-              <span>Thomas Baafi — Thomas.baafi@prischell.com · +233 24 433 9985</span>
-              <span className="hidden sm:inline">|</span>
-              <span>Accra, Ghana</span>
+
+            <div className="space-y-3">
+              <p className="text-xs font-semibold text-foreground uppercase tracking-wider">Carlson Capital</p>
+              <div className="space-y-2 text-[11px] text-muted-foreground/80">
+                <p className="font-medium text-foreground/80">Uffe Jon Carlson</p>
+                <a href="mailto:uffe.carlson@gmail.com" className="flex items-center gap-1.5 hover:text-primary transition-colors">
+                  <Mail className="w-3 h-3" />uffe.carlson@gmail.com
+                </a>
+                <a href="tel:+233552395548" className="flex items-center gap-1.5 hover:text-primary transition-colors">
+                  <Phone className="w-3 h-3" />+233 552 395 548
+                </a>
+              </div>
             </div>
+
+            <div className="space-y-3">
+              <p className="text-xs font-semibold text-foreground uppercase tracking-wider">Systems In Motion</p>
+              <div className="space-y-2 text-[11px] text-muted-foreground/80">
+                <p className="font-medium text-foreground/80">Thomas Baafi</p>
+                <a href="mailto:Thomas.baafi@prischell.com" className="flex items-center gap-1.5 hover:text-primary transition-colors">
+                  <Mail className="w-3 h-3" />Thomas.baafi@prischell.com
+                </a>
+                <a href="tel:+233244339985" className="flex items-center gap-1.5 hover:text-primary transition-colors">
+                  <Phone className="w-3 h-3" />+233 24 433 9985
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="border-t border-border/30 py-4">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2 text-[10px] text-muted-foreground/60">
+            <p>&copy; {new Date().getFullYear()} Carlson Capital & Systems In Motion Limited. All rights reserved.</p>
+            <p>africacredithub.com</p>
           </div>
         </div>
       </footer>
