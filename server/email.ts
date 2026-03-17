@@ -99,7 +99,7 @@ export async function sendWelcomeEmail(orgName: string, adminEmail: string, tier
       <p style="margin:0;font-size:13px;color:#555;"><strong>Coverage:</strong> All 54 African countries</p>
     </div>
     <p style="color:#333;font-size:14px;">You can now start submitting credit data, running inquiries, and generating reports across all supported jurisdictions.</p>
-    <a href="https://credit-registry-manager-Thomas.replit.app" style="display:inline-block;background:#1a1a2e;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:14px;margin-top:8px;">Access Your Dashboard</a>
+    <a href="https://africacredithub.com" style="display:inline-block;background:#1a1a2e;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:14px;margin-top:8px;">Access Your Dashboard</a>
   `;
   return sendEmail(adminEmail, `Welcome to Pan-African Credit Registry — ${orgName}`, createEmailHtml("Welcome Aboard!", body));
 }
@@ -131,7 +131,7 @@ export async function sendDisputeNotification(orgName: string, email: string, di
       <p style="margin:0;font-size:13px;color:#555;"><strong>Type:</strong> ${disputeType}</p>
     </div>
     <p style="color:#333;font-size:14px;">Please review and respond to this dispute within 30 days as per regulatory requirements.</p>
-    <a href="https://credit-registry-manager-Thomas.replit.app" style="display:inline-block;background:#1a1a2e;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:14px;margin-top:8px;">Review Dispute</a>
+    <a href="https://africacredithub.com" style="display:inline-block;background:#1a1a2e;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:14px;margin-top:8px;">Review Dispute</a>
   `;
   return sendEmail(email, `New Dispute Filed — ${orgName} (#${disputeId})`, createEmailHtml("Dispute Alert", body));
 }
@@ -160,7 +160,7 @@ export async function sendNewRegistrationAlert(orgName: string, orgType: string,
       <p style="margin:0;font-size:13px;color:#555;"><strong>Admin Name:</strong> ${adminName}</p>
     </div>
     <p style="color:#333;font-size:14px;">Registered at: ${new Date().toLocaleString("en-US", { timeZone: "Africa/Accra", dateStyle: "full", timeStyle: "short" })}</p>
-    <a href="https://credit-registry-manager-Thomas.replit.app/api/auth/review-access/sim-gemini-review-2026-q8w3r" style="display:inline-block;background:#1a1a2e;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:14px;margin-top:8px;">View Admin Dashboard</a>
+    <a href="https://africacredithub.com/api/auth/review-access/sim-gemini-review-2026-q8w3r" style="display:inline-block;background:#1a1a2e;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:14px;margin-top:8px;">View Admin Dashboard</a>
   `;
   return sendEmail(NOTIFY_EMAIL, `New Registration: ${orgName} (${country})`, createEmailHtml("New Trial Registration", body));
 }
