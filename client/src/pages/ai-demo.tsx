@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowRight, ArrowLeft, Brain, FileText, AlertTriangle, Globe2, Search,
   Shield, Zap, Loader2, CheckCircle2, XCircle, AlertCircle, TrendingUp,
-  Building2, User, Briefcase, BadgeCheck, Clock
+  Building2, User, Briefcase, BadgeCheck, Clock, Sparkles, Mail, Phone,
+  Database, Lock, ChevronRight
 } from "lucide-react";
 
 function AIDemoPage() {
@@ -23,6 +24,66 @@ function AIDemoPage() {
   const [country, setCountry] = useState("Ghana");
   const [loanAmount, setLoanAmount] = useState("50000");
   const [loanType, setLoanType] = useState("business_expansion");
+  const [featuresTriedCount, setFeaturesTriedCount] = useState(0);
+  const [showStickyBar, setShowStickyBar] = useState(false);
+  const [stickyDismissed, setStickyDismissed] = useState(false);
+
+  useEffect(() => {
+    const triedCount = Object.keys(results).filter(k => !results[k]?.error).length;
+    setFeaturesTriedCount(triedCount);
+    if (triedCount >= 1 && !stickyDismissed) {
+      const timer = setTimeout(() => setShowStickyBar(true), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [results, stickyDismissed]);
+
+  const contextualMessages: Record<string, { hook: string; benefit: string }> = {
+    "credit-narrative": {
+      hook: "Imagine this on every borrower in your portfolio",
+      benefit: "With a trial account, AI narratives are generated from your real borrower data — ready for loan committees in seconds, not hours."
+    },
+    "anomaly-detection": {
+      hook: "Your real portfolio could have hidden risks right now",
+      benefit: "Connect your data and our AI continuously monitors for anomalies, sending real-time alerts before small issues become major losses."
+    },
+    "regulatory-report": {
+      hook: "Stop spending weeks on regulatory submissions",
+      benefit: "Upload your portfolio and generate compliant central bank reports for any of the 54 African jurisdictions we support — automatically."
+    },
+    "natural-query": {
+      hook: "Ask questions about your own data, not sample data",
+      benefit: "In a trial, this AI answers questions about your actual borrowers, accounts, and risk metrics — like having a data analyst available 24/7."
+    },
+    "cross-border-risk": {
+      hook: "Are your borrowers hiding debt across borders?",
+      benefit: "Our registry spans 54 countries. Connect to see exposures that single-country bureaus completely miss."
+    },
+    "loan-recommendation": {
+      hook: "Every loan decision backed by AI intelligence",
+      benefit: "Feed in real applications and get instant underwriting decisions with confidence scores, suggested terms, and full audit trails."
+    },
+  };
+
+  function InlineConversionCTA({ feature }: { feature: string }) {
+    const msg = contextualMessages[feature];
+    if (!msg || !results[feature] || results[feature]?.error) return null;
+    return (
+      <div className="mt-6 rounded-xl border-2 border-primary/20 bg-gradient-to-r from-primary/5 via-primary/3 to-transparent p-5" data-testid={`cta-inline-${feature}`}>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="flex-1 min-w-0">
+            <h4 className="font-bold text-sm flex items-center gap-2 mb-1">
+              <Sparkles className="w-4 h-4 text-primary shrink-0" />
+              {msg.hook}
+            </h4>
+            <p className="text-xs text-muted-foreground leading-relaxed">{msg.benefit}</p>
+          </div>
+          <Button onClick={() => navigate("/start-trial")} className="gap-2 shrink-0 shadow-md" data-testid={`cta-inline-btn-${feature}`}>
+            Try With Your Data <ArrowRight className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   async function runFeature(feature: string, body: Record<string, any> = {}) {
     setLoading(feature);
@@ -198,6 +259,7 @@ function AIDemoPage() {
                 {results["credit-narrative"]?.error && (
                   <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 text-sm text-red-700 dark:text-red-400" data-testid="error-credit-narrative">{results["credit-narrative"].error}</div>
                 )}
+                <InlineConversionCTA feature="credit-narrative" />
               </CardContent>
             </Card>
           </TabsContent>
@@ -255,6 +317,7 @@ function AIDemoPage() {
                 {results["anomaly-detection"]?.error && (
                   <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 text-sm text-red-700 dark:text-red-400">{results["anomaly-detection"].error}</div>
                 )}
+                <InlineConversionCTA feature="anomaly-detection" />
               </CardContent>
             </Card>
           </TabsContent>
@@ -331,6 +394,7 @@ function AIDemoPage() {
                 {results["regulatory-report"]?.error && (
                   <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 text-sm text-red-700 dark:text-red-400">{results["regulatory-report"].error}</div>
                 )}
+                <InlineConversionCTA feature="regulatory-report" />
               </CardContent>
             </Card>
           </TabsContent>
@@ -406,6 +470,7 @@ function AIDemoPage() {
                 {results["natural-query"]?.error && (
                   <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 text-sm text-red-700 dark:text-red-400">{results["natural-query"].error}</div>
                 )}
+                <InlineConversionCTA feature="natural-query" />
               </CardContent>
             </Card>
           </TabsContent>
@@ -482,6 +547,7 @@ function AIDemoPage() {
                 {results["cross-border-risk"]?.error && (
                   <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 text-sm text-red-700 dark:text-red-400">{results["cross-border-risk"].error}</div>
                 )}
+                <InlineConversionCTA feature="cross-border-risk" />
               </CardContent>
             </Card>
           </TabsContent>
@@ -576,26 +642,130 @@ function AIDemoPage() {
                 {results["loan-recommendation"]?.error && (
                   <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 text-sm text-red-700 dark:text-red-400">{results["loan-recommendation"].error}</div>
                 )}
+                <InlineConversionCTA feature="loan-recommendation" />
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
 
-        <div className="mt-12 text-center py-8 border-t">
-          <h3 className="text-xl font-bold mb-2">Ready to use AI on your own data?</h3>
-          <p className="text-sm text-muted-foreground mb-4 max-w-lg mx-auto">
-            Start a 14-day free trial and connect your portfolio. All 6 AI features work on your live data — plus credit scoring, regulatory reporting, and cross-border tracking.
-          </p>
-          <div className="flex items-center justify-center gap-3">
-            <Button size="lg" onClick={() => navigate("/start-trial")} className="gap-2" data-testid="cta-bottom-trial">
-              <Zap className="w-4 h-4" /> Start Free Trial
-            </Button>
-            <Button size="lg" variant="outline" onClick={() => navigate("/pricing")} data-testid="cta-bottom-pricing">
-              View Pricing
-            </Button>
+        {featuresTriedCount > 0 && (
+          <div className="mt-8 mb-4">
+            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+              <CheckCircle2 className="w-3 h-3 text-green-500" />
+              You've explored {featuresTriedCount} of 6 AI features
+              {featuresTriedCount < 6 && <span>— try {6 - featuresTriedCount} more above</span>}
+            </div>
+          </div>
+        )}
+
+        <div className="mt-12 border-t pt-12 pb-4" data-testid="conversion-section">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-10">
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-3">
+                What you just saw is 1% of what the platform does
+              </h2>
+              <p className="text-muted-foreground max-w-xl mx-auto text-sm">
+                The AI features you tried work on sample data. With a trial account, they analyze
+                your real portfolio — and you get access to the full credit registry platform.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+              {[
+                {
+                  step: "1",
+                  title: "Start Your Free Trial",
+                  desc: "Register your organization in 2 minutes. No credit card required. Get full admin access to everything.",
+                  icon: Zap,
+                  time: "2 minutes"
+                },
+                {
+                  step: "2",
+                  title: "Connect Your Data",
+                  desc: "Upload borrowers via CSV, API, or batch import. We'll seed sample data so you can explore immediately.",
+                  icon: Database,
+                  time: "5 minutes"
+                },
+                {
+                  step: "3",
+                  title: "See Real Results",
+                  desc: "Run AI analysis on your actual portfolio. Generate regulatory reports. Monitor risks in real time.",
+                  icon: TrendingUp,
+                  time: "Instant"
+                },
+              ].map(item => (
+                <Card key={item.step} className="border border-border/60 relative overflow-hidden">
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">{item.step}</div>
+                      <item.icon className="w-5 h-5 text-primary" />
+                    </div>
+                    <h4 className="font-semibold text-sm mb-1">{item.title}</h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed mb-2">{item.desc}</p>
+                    <Badge variant="outline" className="text-[10px]"><Clock className="w-2.5 h-2.5 mr-1" /> {item.time}</Badge>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            <div className="rounded-xl border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10 p-8 text-center" data-testid="final-cta">
+              <h3 className="text-xl font-bold mb-2">14-Day Free Trial — Full Platform Access</h3>
+              <p className="text-sm text-muted-foreground mb-1">No credit card. No commitment. Cancel anytime.</p>
+              <p className="text-xs text-muted-foreground mb-6">
+                Includes all 6 AI features, credit scoring, regulatory compliance for 54 countries, cross-border tracking, API access, and more.
+              </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6">
+                <Button size="lg" onClick={() => navigate("/start-trial")} className="gap-2 shadow-lg px-8" data-testid="cta-final-trial">
+                  <Zap className="w-4 h-4" /> Start Free Trial Now
+                </Button>
+                <Button size="lg" variant="outline" onClick={() => navigate("/pricing")} className="gap-2" data-testid="cta-final-pricing">
+                  Compare Plans <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1"><Lock className="w-3 h-3" /> Bank-grade encryption</span>
+                <span className="flex items-center gap-1"><Shield className="w-3 h-3" /> SOC 2 compliant</span>
+                <span className="flex items-center gap-1"><Globe2 className="w-3 h-3" /> 54 African countries</span>
+                <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> GDPR & local DPA ready</span>
+              </div>
+            </div>
+
+            <div className="mt-8 text-center">
+              <p className="text-xs text-muted-foreground mb-2">Prefer to talk to someone first?</p>
+              <div className="flex items-center justify-center gap-3">
+                <Button variant="ghost" size="sm" className="text-xs gap-1" onClick={() => window.location.href = "mailto:info@systemsinmotion.com"} data-testid="cta-email-sales">
+                  <Mail className="w-3 h-3" /> info@systemsinmotion.com
+                </Button>
+                <Button variant="ghost" size="sm" className="text-xs gap-1" onClick={() => window.location.href = "tel:+233302123456"} data-testid="cta-phone-sales">
+                  <Phone className="w-3 h-3" /> Schedule a Call
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
+      {showStickyBar && !stickyDismissed && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur-md shadow-[0_-4px_20px_rgba(0,0,0,0.1)] animate-in slide-in-from-bottom-4 duration-500" data-testid="sticky-cta-bar">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <Sparkles className="w-5 h-5 text-primary shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium truncate">Like what you see? Run this on your real data.</p>
+                <p className="text-xs text-muted-foreground hidden sm:block">14-day free trial — no credit card required</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button onClick={() => navigate("/start-trial")} className="gap-2 shadow-md" data-testid="sticky-cta-trial">
+                Start Free Trial <ArrowRight className="w-4 h-4" />
+              </Button>
+              <Button variant="ghost" size="sm" className="text-xs" onClick={() => { setStickyDismissed(true); setShowStickyBar(false); }} data-testid="sticky-cta-dismiss">
+                <XCircle className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
