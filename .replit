@@ -54,6 +54,9 @@ integrations = ["stripe:1.0.0", "javascript_openai_ai_integrations:2.0.0", "java
 
 [userenv.shared]
 VITE_COUNTRY_MODE = "ghana"
+SMTP_HOST = "smtp.gmail.com"
+SMTP_USER = "uffe.carlson@gmail.com"
+SMTP_FROM = "uffe.carlson@gmail.com"
 
 [userenv.development]
 
