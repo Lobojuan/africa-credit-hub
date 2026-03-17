@@ -5,6 +5,7 @@ const sw: Record<string, any> = {
     administration: "Utawala",
     dashboard: "Dashibodi",
     portfolioIntelligence: "Akili ya Kwingineko ya AI",
+    aiCommandCenter: "Kituo cha Amri cha AI",
     borrowers: "Wakopaji",
     creditAccounts: "Akaunti za Mikopo",
     creditSearch: "Utafutaji wa Jumla",

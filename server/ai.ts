@@ -702,3 +702,332 @@ export async function generateComplianceReport(country: string, provider: AIProv
     return { country, summary: raw, complianceScore: 0 };
   }
 }
+
+async function callAI(systemPrompt: string, userPrompt: string, provider: AIProvider = "claude", maxTokens = 2000, temperature = 0.3): Promise<string> {
+  if (provider === "claude") {
+    const response = await anthropic.messages.create({
+      model: "claude-opus-4-6",
+      max_tokens: maxTokens,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userPrompt }],
+    });
+    return response.content[0]?.type === "text" ? response.content[0].text : "{}";
+  } else {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      max_tokens: maxTokens,
+      temperature,
+    });
+    return response.choices[0]?.message?.content || "{}";
+  }
+}
+
+function parseJSON(raw: string, fallback: Record<string, unknown> = {}) {
+  const content = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+  try { return JSON.parse(content); } catch { return { ...fallback, rawText: raw }; }
+}
+
+export async function generateCreditNarrative(borrowerId: string | number, provider: AIProvider = "claude") {
+  const borrower = await storage.getBorrower(borrowerId);
+  if (!borrower) throw new Error("Borrower not found");
+  const accounts = await storage.getCreditAccountsByBorrower(borrowerId);
+  const disputes = await storage.getDisputesByBorrower(borrowerId);
+  const defaultCurrency = getDefaultCurrencyCode();
+  const totalBalance = accounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
+  const delinquentCount = accounts.filter(a => a.status === "delinquent" || a.status === "default").length;
+  const name = borrower.borrowerType === "corporate" ? (borrower.companyName || "Unknown") : `${borrower.firstName} ${borrower.lastName}`;
+
+  const profile = `
+Borrower: ${name} (${borrower.borrowerType || "individual"})
+Country: ${borrower.country || "Unknown"} | National ID: ${borrower.nationalId || "N/A"}
+Employment: ${borrower.employmentStatus || "Unknown"} | Monthly Income: ${borrower.monthlyIncome || "Not reported"}
+PEP Status: ${borrower.isPep ? "Yes — Politically Exposed Person" : "No"}
+Credit Accounts: ${accounts.length} total
+Active: ${accounts.filter(a => a.status === "current").length} | Delinquent: ${delinquentCount} | Closed: ${accounts.filter(a => a.status === "closed").length}
+Total Outstanding: ${defaultCurrency} ${totalBalance.toLocaleString()}
+Open Disputes: ${disputes.filter(d => d.status === "open" || d.status === "under_review").length}
+Account Details:
+${accounts.map(a => `  - ${a.accountType} at ${a.lenderInstitution || "Unknown"}: ${a.currency || defaultCurrency} ${parseFloat(a.currentBalance || "0").toLocaleString()} (original ${a.currency || defaultCurrency} ${parseFloat(a.originalAmount || "0").toLocaleString()}) | Status: ${a.status} | Rate: ${a.interestRate || "N/A"}% | Opened: ${a.dateOpened || "Unknown"} | Arrears: ${a.daysInArrears || "0"} days`).join("\n")}
+Dispute History:
+${disputes.length > 0 ? disputes.map(d => `  - ${d.disputeType}: ${d.status} — ${d.description || "No details"}`).join("\n") : "  No disputes on record"}
+  `.trim();
+
+  const systemPrompt = `You are a senior credit analyst writing a narrative credit report for a loan committee at an African bank. Write a professional, readable narrative (not bullet points) that a bank executive would present to their board. Cover: overall credit standing, repayment behavior, risk factors, any red flags, and a final recommendation. Use ${defaultCurrency} for all amounts. Write 4-6 paragraphs. Be specific — reference actual account types, amounts, and status. End with a clear creditworthiness assessment: Excellent, Good, Fair, Below Average, or Poor. Respond in JSON:
+{
+  "narrative": "<the full narrative text>",
+  "creditworthiness": "Excellent" | "Good" | "Fair" | "Below Average" | "Poor",
+  "keyStrengths": ["<strength>"],
+  "keyRisks": ["<risk>"],
+  "recommendedActions": ["<action>"]
+}`;
+
+  const raw = await callAI(systemPrompt, `Write a credit narrative for this borrower:\n\n${profile}`, provider, 2500);
+  return { ...parseJSON(raw, { creditworthiness: "Fair" }), borrowerName: name, generatedAt: new Date().toISOString() };
+}
+
+export async function detectAnomalies(provider: AIProvider = "claude", orgId?: string, country?: string) {
+  const data = await buildPortfolioData();
+  const defaultCurrency = getDefaultCurrencyCode();
+
+  const portfolioSummary = `
+Portfolio Overview:
+- Total Borrowers: ${data.borrowerProfiles.length}
+- Total Accounts: ${data.totalAccounts}
+- Open Disputes: ${data.totalDisputes}
+- Account Types: ${Object.entries(data.accountsByType).map(([t, v]) => `${t}: ${v.count} accounts, ${defaultCurrency} ${v.balance.toLocaleString()}, ${v.delinquent} delinquent, ${v.defaulted} defaulted`).join("; ")}
+- By Lender: ${Object.entries(data.accountsByLender).map(([l, v]) => `${l}: ${v.count} accounts, ${v.delinquent + v.defaulted} non-performing`).join("; ")}
+
+High-Risk Borrowers:
+${data.borrowerProfiles.filter(b => b.delinquent > 0 || b.defaulted > 0 || b.maxArrears > 30).slice(0, 20).map(b => `  ${b.name} (${b.type}): ${b.accountCount} accounts, ${b.delinquent} delinquent, ${b.defaulted} defaulted, ${b.maxArrears} days max arrears, ${defaultCurrency} ${b.totalBalance.toLocaleString()}`).join("\n")}
+
+All Borrowers Payment Patterns:
+${data.borrowerProfiles.slice(0, 50).map(b => `  ${b.name}: ${b.accountCount} accounts, current=${b.current}, delinquent=${b.delinquent}, default=${b.defaulted}, maxArrears=${b.maxArrears}, balance=${defaultCurrency} ${b.totalBalance.toLocaleString()}`).join("\n")}
+  `.trim();
+
+  const systemPrompt = `You are an AI risk monitoring system for the Pan-African Credit Registry. Analyze portfolio data and detect anomalies, unusual patterns, and emerging risks. Look for:
+1. Sudden changes in default/delinquency concentration
+2. Unusual borrower behavior (multiple defaults, rapid account opening)
+3. Lender concentration risk
+4. Geographic or sector-specific stress
+5. Potential fraud patterns (duplicate profiles, synthetic identities)
+6. Systemic risks affecting multiple institutions
+
+Respond in JSON:
+{
+  "alerts": [
+    {
+      "severity": "critical" | "warning" | "info",
+      "category": "default_spike" | "fraud_pattern" | "concentration_risk" | "behavioral" | "systemic" | "compliance",
+      "title": "<short alert title>",
+      "description": "<detailed explanation>",
+      "affectedEntities": ["<borrower or lender names>"],
+      "recommendedAction": "<what to do>"
+    }
+  ],
+  "riskScore": <0-100 overall portfolio risk>,
+  "summary": "<2-3 sentence executive summary of portfolio health>"
+}`;
+
+  const raw = await callAI(systemPrompt, `Analyze this portfolio for anomalies and risks:\n\n${portfolioSummary}`, provider, 3000);
+  return { ...parseJSON(raw, { alerts: [], riskScore: 50 }), analyzedAt: new Date().toISOString() };
+}
+
+export async function generateRegulatoryReport(country: string, provider: AIProvider = "claude", orgId?: string) {
+  const data = await buildPortfolioData();
+  const defaultCurrency = getDefaultCurrencyCode();
+
+  const countryBorrowers = data.borrowerProfiles;
+  const totalExposure = countryBorrowers.reduce((s, b) => s + b.totalBalance, 0);
+  const nplCount = countryBorrowers.reduce((s, b) => s + b.delinquent + b.defaulted, 0);
+  const totalAccounts = countryBorrowers.reduce((s, b) => s + b.accountCount, 0);
+
+  const portfolioContext = `
+Registry Data for ${country}:
+- Registered Borrowers: ${countryBorrowers.length}
+- Total Credit Accounts: ${totalAccounts}
+- Total Outstanding Exposure: ${defaultCurrency} ${totalExposure.toLocaleString()}
+- Non-Performing Accounts: ${nplCount}
+- NPL Ratio: ${totalAccounts > 0 ? ((nplCount / totalAccounts) * 100).toFixed(1) : 0}%
+- By Account Type: ${Object.entries(data.accountsByType).map(([t, v]) => `${t}: ${v.count} (${v.delinquent + v.defaulted} NPL)`).join(", ")}
+- By Institution: ${Object.entries(data.accountsByLender).map(([l, v]) => `${l}: ${v.count} accounts`).join(", ")}
+- Active Disputes: ${data.totalDisputes}
+  `.trim();
+
+  const systemPrompt = `You are a regulatory reporting specialist for African central banks. Generate a formal regulatory submission report that meets central bank requirements. The report should be structured like an official filing. Use ${defaultCurrency} for amounts. Respond in JSON:
+{
+  "reportTitle": "<formal title>",
+  "reportingPeriod": "<current quarter>",
+  "regulatoryBody": "<relevant central bank or regulator for ${country}>",
+  "applicableLaws": ["<relevant laws>"],
+  "executiveSummary": "<3-4 paragraph formal summary>",
+  "portfolioMetrics": {
+    "totalBorrowers": <number>,
+    "totalAccounts": <number>,
+    "totalExposure": "<formatted amount>",
+    "nplRatio": "<percentage>",
+    "provisioningRecommendation": "<amount or percentage>"
+  },
+  "complianceStatus": [
+    {"requirement": "<name>", "status": "compliant" | "partially_compliant" | "non_compliant", "detail": "<explanation>"}
+  ],
+  "riskAssessment": "<paragraph on systemic risks>",
+  "dataQualityMetrics": {
+    "completeness": "<percentage>",
+    "accuracy": "<assessment>",
+    "timeliness": "<assessment>"
+  },
+  "recommendations": ["<recommendation>"],
+  "nextActions": ["<required action with deadline>"]
+}`;
+
+  const raw = await callAI(systemPrompt, `Generate a regulatory report for ${country} credit bureau operations:\n\n${portfolioContext}`, provider, 3000);
+  return { ...parseJSON(raw, { reportTitle: `${country} Regulatory Report` }), generatedAt: new Date().toISOString(), country };
+}
+
+export async function naturalLanguageQuery(query: string, provider: AIProvider = "claude", orgId?: string, country?: string) {
+  const data = await buildPortfolioData();
+  const defaultCurrency = getDefaultCurrencyCode();
+
+  const dataContext = `
+Available data:
+- ${data.borrowerProfiles.length} borrowers with fields: name, type (individual/corporate), country, accountCount, totalBalance, current, delinquent, defaulted, writtenOff, closed, maxArrears, disputeCount, isPep, employmentStatus, monthlyIncome
+- ${data.totalAccounts} credit accounts with types: ${Object.keys(data.accountsByType).join(", ")}
+- Account statuses: current, delinquent, default, closed, restructured, written_off
+- Lenders: ${Object.keys(data.accountsByLender).join(", ")}
+- Currency: ${defaultCurrency}
+
+Full borrower dataset (first 100):
+${data.borrowerProfiles.slice(0, 100).map(b => `${b.name} | ${b.type} | accounts=${b.accountCount} | balance=${b.totalBalance} | current=${b.current} | delinquent=${b.delinquent} | defaulted=${b.defaulted} | arrears=${b.maxArrears}d | disputes=${b.disputeCount} | pep=${b.isPep}`).join("\n")}
+  `.trim();
+
+  const systemPrompt = `You are a data query assistant for the Pan-African Credit Registry. Users ask questions in plain English about their credit portfolio data. You have access to the full dataset. Answer the question accurately using the data provided. Be specific with numbers, names, and amounts. Use ${defaultCurrency} for currency. Respond in JSON:
+{
+  "answer": "<clear, detailed answer to the question>",
+  "dataPoints": [
+    {"label": "<metric name>", "value": "<value>"}
+  ],
+  "matchingEntities": [
+    {"name": "<borrower or entity name>", "detail": "<relevant info>"}
+  ],
+  "visualization": "table" | "number" | "list" | "chart",
+  "followUpQuestions": ["<suggested follow-up question>"]
+}`;
+
+  const raw = await callAI(systemPrompt, `User question: "${query}"\n\nData:\n${dataContext}`, provider, 2000);
+  return { ...parseJSON(raw, { answer: "Unable to process query" }), query, answeredAt: new Date().toISOString() };
+}
+
+export async function analyzeCrossBorderRisk(provider: AIProvider = "claude") {
+  const data = await buildPortfolioData();
+  const defaultCurrency = getDefaultCurrencyCode();
+
+  const borrowersByCountry: Record<string, typeof data.borrowerProfiles> = {};
+  for (const b of data.borrowerProfiles) {
+    for (const a of b.accounts) {
+      const lender = a.lender || "Unknown";
+      if (!borrowersByCountry[lender]) borrowersByCountry[lender] = [];
+      borrowersByCountry[lender].push(b);
+    }
+  }
+
+  const crossBorderContext = `
+Cross-Border Credit Registry Data:
+Total Borrowers: ${data.borrowerProfiles.length}
+Total Accounts: ${data.totalAccounts}
+Institutions: ${data.institutions.map(i => `${i.name} (${i.country || "Unknown"})`).join(", ")}
+
+Exposure by Lender/Institution:
+${Object.entries(data.accountsByLender).map(([l, v]) => `${l}: ${v.count} accounts, ${defaultCurrency} ${v.balance.toLocaleString()}, NPL: ${v.delinquent + v.defaulted}`).join("\n")}
+
+Borrowers with Multiple Lenders:
+${data.borrowerProfiles.filter(b => {
+  const lenders = new Set(b.accounts.map(a => a.lender));
+  return lenders.size > 1;
+}).slice(0, 20).map(b => {
+  const lenders = [...new Set(b.accounts.map(a => a.lender))];
+  return `${b.name}: ${b.accountCount} accounts across ${lenders.join(", ")} — total ${defaultCurrency} ${b.totalBalance.toLocaleString()}, delinquent=${b.delinquent}`;
+}).join("\n")}
+
+High Exposure Borrowers (top 20 by balance):
+${data.borrowerProfiles.sort((a, b) => b.totalBalance - a.totalBalance).slice(0, 20).map(b => `${b.name} (${b.type}): ${defaultCurrency} ${b.totalBalance.toLocaleString()}, ${b.accountCount} accounts, ${b.delinquent} delinquent`).join("\n")}
+  `.trim();
+
+  const systemPrompt = `You are a cross-border risk intelligence analyst for the Pan-African Credit Registry. Analyze multi-institutional and multi-country credit exposure. Identify borrowers with obligations across multiple institutions, concentration risks, and hidden exposure that single-country bureaus would miss. Respond in JSON:
+{
+  "crossBorderExposures": [
+    {
+      "borrowerName": "<name>",
+      "totalExposure": "<amount>",
+      "institutions": ["<institution names>"],
+      "riskLevel": "low" | "medium" | "high" | "critical",
+      "concern": "<why this is flagged>"
+    }
+  ],
+  "concentrationRisks": [
+    {
+      "type": "institutional" | "sectoral" | "geographic",
+      "entity": "<name>",
+      "exposure": "<amount or percentage>",
+      "detail": "<explanation>"
+    }
+  ],
+  "hiddenExposures": "<paragraph on exposures that single-country bureaus would miss>",
+  "systemicRisk": {
+    "level": "low" | "moderate" | "elevated" | "high",
+    "summary": "<assessment>"
+  },
+  "recommendations": ["<recommendation>"]
+}`;
+
+  const raw = await callAI(systemPrompt, `Analyze cross-border and multi-institutional credit risk:\n\n${crossBorderContext}`, provider, 3000);
+  return { ...parseJSON(raw, { systemicRisk: { level: "moderate" } }), analyzedAt: new Date().toISOString() };
+}
+
+export async function generateLoanRecommendation(borrowerId: string | number, loanAmount: number, loanType: string, provider: AIProvider = "claude") {
+  const borrower = await storage.getBorrower(borrowerId);
+  if (!borrower) throw new Error("Borrower not found");
+  const accounts = await storage.getCreditAccountsByBorrower(borrowerId);
+  const disputes = await storage.getDisputesByBorrower(borrowerId);
+  const defaultCurrency = getDefaultCurrencyCode();
+  const totalBalance = accounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
+  const totalOriginal = accounts.reduce((s, a) => s + parseFloat(a.originalAmount || "0"), 0);
+  const name = borrower.borrowerType === "corporate" ? (borrower.companyName || "Unknown") : `${borrower.firstName} ${borrower.lastName}`;
+
+  const profile = `
+LOAN APPLICATION:
+Requested Amount: ${defaultCurrency} ${loanAmount.toLocaleString()}
+Loan Type: ${loanType}
+
+APPLICANT PROFILE:
+Name: ${name} (${borrower.borrowerType || "individual"})
+Country: ${borrower.country || "Unknown"}
+Employment: ${borrower.employmentStatus || "Unknown"}
+Monthly Income: ${borrower.monthlyIncome || "Not reported"}
+PEP Status: ${borrower.isPep ? "Yes" : "No"}
+
+EXISTING CREDIT OBLIGATIONS:
+Total Accounts: ${accounts.length}
+Current/Performing: ${accounts.filter(a => a.status === "current").length}
+Delinquent: ${accounts.filter(a => a.status === "delinquent").length}
+Defaulted: ${accounts.filter(a => a.status === "default").length}
+Total Outstanding Balance: ${defaultCurrency} ${totalBalance.toLocaleString()}
+Total Original Credit Extended: ${defaultCurrency} ${totalOriginal.toLocaleString()}
+Max Days in Arrears: ${Math.max(0, ...accounts.map(a => parseInt(a.daysInArrears || "0") || 0))}
+
+ACCOUNT DETAILS:
+${accounts.map(a => `  ${a.accountType} at ${a.lenderInstitution || "N/A"}: ${a.currency || defaultCurrency} ${parseFloat(a.currentBalance || "0").toLocaleString()} | Status: ${a.status} | Rate: ${a.interestRate || "N/A"}% | Arrears: ${a.daysInArrears || "0"}d`).join("\n")}
+
+DISPUTE HISTORY:
+${disputes.length > 0 ? disputes.map(d => `  ${d.disputeType}: ${d.status}`).join("\n") : "  Clean — no disputes"}
+
+DEBT-TO-INCOME: ${borrower.monthlyIncome ? `${((totalBalance / (parseFloat(borrower.monthlyIncome) * 12)) * 100).toFixed(1)}% of annual income` : "Cannot calculate — income not reported"}
+  `.trim();
+
+  const systemPrompt = `You are a senior credit decisioning AI for the Pan-African Credit Registry. Based on the applicant's full credit profile and existing obligations, provide a loan approval recommendation. Be rigorous but fair. Consider African lending context — mobile money history, informal employment, and thin-file borrowers. Use ${defaultCurrency}. Respond in JSON:
+{
+  "decision": "approve" | "approve_with_conditions" | "decline",
+  "confidence": <0-100>,
+  "reasoning": "<3-4 paragraph detailed explanation of the decision>",
+  "riskScore": <0-100, higher = riskier>,
+  "conditions": ["<condition if approve_with_conditions>"],
+  "suggestedTerms": {
+    "maxAmount": "<recommended max loan amount>",
+    "suggestedRate": "<interest rate range>",
+    "maxTenor": "<recommended max loan term>",
+    "collateralRequired": true | false,
+    "collateralType": "<if required>"
+  },
+  "keyFactors": [
+    {"factor": "<name>", "impact": "positive" | "negative", "weight": "high" | "medium" | "low", "detail": "<explanation>"}
+  ],
+  "debtServiceCoverage": "<ratio or assessment>",
+  "comparativeRisk": "<how this borrower compares to the portfolio average>"
+}`;
+
+  const raw = await callAI(systemPrompt, `Evaluate this loan application:\n\n${profile}`, provider, 2500);
+  return { ...parseJSON(raw, { decision: "decline", confidence: 0 }), borrowerName: name, requestedAmount: loanAmount, loanType, generatedAt: new Date().toISOString() };
+}

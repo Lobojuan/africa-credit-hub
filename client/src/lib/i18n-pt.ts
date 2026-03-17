@@ -5,6 +5,7 @@ const pt = {
     administration: "Administração",
     dashboard: "Painel",
     portfolioIntelligence: "Inteligência de Portfólio IA",
+    aiCommandCenter: "Centro de Comando IA",
     borrowers: "Mutuários",
     creditAccounts: "Contas de Crédito",
     creditSearch: "Pesquisa Global",

@@ -37,7 +37,7 @@ import multer from "multer";
 import rateLimit from "express-rate-limit";
 import { isGhanaMode, getActiveCountryName, isSingleCountryMode, COUNTRY_REGISTRY, getSupportedCountries } from "./country-mode";
 import { sendWelcomeEmail, sendBillingNotification, sendDisputeNotification } from "./email";
-import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport, generatePortfolioIntelligence, parseProvider } from "./ai";
+import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport, generatePortfolioIntelligence, parseProvider, generateCreditNarrative, detectAnomalies, generateRegulatoryReport, naturalLanguageQuery, analyzeCrossBorderRisk, generateLoanRecommendation } from "./ai";
 import { BOG_EXPORT_GENERATORS } from "./bog-export";
 import type { BogFileType } from "@shared/bog-codes";
 import { BSL_EXPORT_GENERATORS } from "./bsl-export";
@@ -5583,6 +5583,78 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
       const result = await generateComplianceReport(country, provider);
       res.json(result);
     } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/ai/credit-narrative/:borrowerId", requireAuth, async (req, res) => {
+    try {
+      const provider = parseProvider(req.body?.provider);
+      const result = await generateCreditNarrative(req.params.borrowerId, provider);
+      res.json(result);
+    } catch (e: any) {
+      if (e.message === "Borrower not found") return res.status(404).json({ message: e.message });
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/ai/anomaly-detection", requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
+    try {
+      const provider = parseProvider(req.body?.provider);
+      const result = await detectAnomalies(provider, getOrgScope(req), getCountryFilter(req));
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/ai/regulatory-report", requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
+    try {
+      const { country, provider: reqProvider } = req.body;
+      const provider = parseProvider(reqProvider);
+      if (!country) return res.status(400).json({ message: "country required" });
+      const result = await generateRegulatoryReport(country, provider, getOrgScope(req));
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/ai/natural-query", requireAuth, async (req, res) => {
+    try {
+      const { query, provider: reqProvider } = req.body;
+      const provider = parseProvider(reqProvider);
+      if (!query || typeof query !== "string") return res.status(400).json({ message: "query string required" });
+      const result = await naturalLanguageQuery(query.slice(0, 500), provider, getOrgScope(req), getCountryFilter(req));
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/ai/cross-border-risk", requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
+    try {
+      const provider = parseProvider(req.body?.provider);
+      const result = await analyzeCrossBorderRisk(provider);
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/ai/loan-recommendation/:borrowerId", requireAuth, async (req, res) => {
+    try {
+      const { loanAmount, loanType, provider: reqProvider } = req.body;
+      const provider = parseProvider(reqProvider);
+      if (!loanAmount || !loanType) return res.status(400).json({ message: "loanAmount and loanType required" });
+      const parsedAmount = parseFloat(loanAmount);
+      if (!isFinite(parsedAmount) || parsedAmount <= 0) return res.status(400).json({ message: "loanAmount must be a positive number" });
+      const validTypes = ["personal_loan", "business_loan", "mortgage", "agriculture_loan", "trade_finance", "microfinance", "auto_loan", "education_loan", "overdraft"];
+      if (!validTypes.includes(loanType)) return res.status(400).json({ message: "Invalid loan type" });
+      const result = await generateLoanRecommendation(req.params.borrowerId, parsedAmount, loanType, provider);
+      res.json(result);
+    } catch (e: any) {
+      if (e.message === "Borrower not found") return res.status(404).json({ message: e.message });
       res.status(500).json({ message: e.message });
     }
   });

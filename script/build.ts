@@ -102,6 +102,7 @@ async function buildAll() {
     "ghana-docs",
     "about",
     "portfolio-intelligence",
+    "ai-command-center",
     "credit-score-methodology",
     "regulatory-dashboard",
     "borrower-alerts",

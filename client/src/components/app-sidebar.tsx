@@ -40,6 +40,7 @@ import {
   Activity,
   Gauge,
   Webhook,
+  Sparkles,
 } from "lucide-react";
 import {
   Sidebar,
@@ -86,6 +87,7 @@ const operationsItems: NavItem[] = [
 
 const baseOversightItems: NavItem[] = [
   { titleKey: "sidebar.portfolioIntelligence", url: "/portfolio-intelligence", icon: Brain, testId: "nav-portfolio-intelligence", roles: ["admin", "super_admin", "regulator"] },
+  { titleKey: "sidebar.aiCommandCenter", url: "/ai-command-center", icon: Sparkles, testId: "nav-ai-command-center", roles: ["admin", "super_admin", "regulator"] },
   { titleKey: "sidebar.regulatoryDashboard", url: "/regulatory-dashboard", icon: BarChart3, testId: "nav-regulatory-dashboard", roles: ["admin", "regulator", "super_admin"] },
   { titleKey: "sidebar.auditTrail", url: "/audit", icon: Shield, testId: "nav-audit-trail", roles: ["admin", "regulator", "super_admin"] },
   { titleKey: "sidebar.borrowerAlerts", url: "/borrower-alerts", icon: Bell, testId: "nav-borrower-alerts", roles: ["admin", "regulator", "super_admin"] },

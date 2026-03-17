@@ -42,6 +42,7 @@ The system employs a modern full-stack architecture built for scalability and co
     -   **Low-Bandwidth Optimizations**: Gzip compression and React.lazy code-splitting.
     -   **Chatbot**: Credit Registry Assistant with dispute filing, FAQ, keyword search, and AI-powered Smart Assistant mode with live database context.
     -   **AI Portfolio Intelligence**: Analytics page for AI-powered portfolio reports, including risk ratings and default predictions.
+    -   **AI Command Center** (`/ai-command-center`): Unified hub for 6 AI tools — Credit Narratives, Anomaly Detection, Regulatory Reports, Natural Language Queries, Cross-Border Risk Intelligence, and Loan Approval Recommendations. Powered by Claude and GPT-4o.
     -   **Multi-Country Data Isolation**: Country-level data sandboxing via `VITE_COUNTRY_MODE`, with dynamic country switching for Super Admins.
     -   **Transaction-Based Monetization**: Per-transaction billing with per-country pricing, volume tier discounts, and editable pricing tiers.
     -   **SATA Cross-Border Framework**: Implements Smart Africa Telecommunications Alliance data sharing.
