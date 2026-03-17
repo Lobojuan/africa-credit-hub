@@ -61,6 +61,7 @@ async function buildAll() {
   });
 
   const spaRoutes = [
+    "solutions",
     "investor",
     "demo",
     "pricing",

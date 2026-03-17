@@ -148,7 +148,7 @@ export default function MarketValidationPage() {
     <div className="min-h-screen bg-background text-foreground" data-testid="market-validation-page">
       <nav className="border-b border-border/50 bg-background/95 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/investor")}>
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/solutions")}>
             <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(175 55% 28%), hsl(175 55% 22%))" }}>
               <Shield className="w-5 h-5 text-white" />
             </div>
@@ -158,7 +158,7 @@ export default function MarketValidationPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate("/investor")} data-testid="link-back-investor">Investor Overview</Button>
+            <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate("/solutions")} data-testid="link-back-solutions">Platform Overview</Button>
             <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate("/pricing")} data-testid="link-pricing">Pricing</Button>
             <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate("/security")} data-testid="link-security">Security</Button>
             <Button size="sm" className="text-xs" onClick={() => window.location.href = `/api/demo-login`} data-testid="button-launch-demo">
@@ -466,8 +466,8 @@ export default function MarketValidationPage() {
               Explore the Platform
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
-            <Button size="lg" variant="outline" onClick={() => navigate("/investor")} data-testid="button-cta-investor">
-              Investor Overview
+            <Button size="lg" variant="outline" onClick={() => navigate("/solutions")} data-testid="button-cta-solutions">
+              Platform Overview
             </Button>
             <Button size="lg" variant="outline" onClick={() => navigate("/pricing")} data-testid="button-cta-pricing">
               View Pricing

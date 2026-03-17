@@ -321,6 +321,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Switch>
+            <Route path="/solutions" component={InvestorLandingPage} />
             <Route path="/investor" component={InvestorLandingPage} />
             <Route path="/demo" component={InvestorLandingPage} />
             <Route path="/pricing" component={PricingPage} />

@@ -132,7 +132,7 @@ export default function PricingPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate("/demo")} data-testid="link-back-investor">
+            <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate("/solutions")} data-testid="link-back-solutions">
               Overview
             </Button>
             <Button size="sm" className="text-xs" onClick={() => window.location.href = `/api/demo-login`} data-testid="button-launch-demo">
