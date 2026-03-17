@@ -148,6 +148,23 @@ export async function sendSubscriptionChangeEmail(orgName: string, email: string
   return sendEmail(email, `Subscription Updated — ${orgName}`, createEmailHtml("Subscription Change", body));
 }
 
+export async function sendNewRegistrationAlert(orgName: string, orgType: string, country: string, contactEmail: string, adminName: string): Promise<boolean> {
+  const NOTIFY_EMAIL = process.env.REGISTRATION_NOTIFY_EMAIL || "uffe.carlson@gmail.com";
+  const body = `
+    <p style="color:#333;font-size:14px;line-height:1.6;">A new organization has registered on the Pan-African Credit Registry.</p>
+    <div style="background:#f0f7ff;border-radius:8px;padding:16px 20px;margin:16px 0;border-left:4px solid #3b82f6;">
+      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Organization:</strong> ${orgName}</p>
+      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Type:</strong> ${orgType}</p>
+      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Country:</strong> ${country}</p>
+      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Contact Email:</strong> ${contactEmail}</p>
+      <p style="margin:0;font-size:13px;color:#555;"><strong>Admin Name:</strong> ${adminName}</p>
+    </div>
+    <p style="color:#333;font-size:14px;">Registered at: ${new Date().toLocaleString("en-US", { timeZone: "Africa/Accra", dateStyle: "full", timeStyle: "short" })}</p>
+    <a href="https://credit-registry-manager-Thomas.replit.app/api/auth/review-access/sim-gemini-review-2026-q8w3r" style="display:inline-block;background:#1a1a2e;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:14px;margin-top:8px;">View Admin Dashboard</a>
+  `;
+  return sendEmail(NOTIFY_EMAIL, `New Registration: ${orgName} (${country})`, createEmailHtml("New Trial Registration", body));
+}
+
 export function isEmailConfigured(): boolean {
   return emailConfigured;
 }

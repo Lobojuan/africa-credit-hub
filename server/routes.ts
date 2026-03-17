@@ -36,7 +36,7 @@ import * as OTPAuth from "otpauth";
 import multer from "multer";
 import rateLimit from "express-rate-limit";
 import { isGhanaMode, getActiveCountryName, isSingleCountryMode, COUNTRY_REGISTRY, getSupportedCountries } from "./country-mode";
-import { sendWelcomeEmail, sendBillingNotification, sendDisputeNotification } from "./email";
+import { sendWelcomeEmail, sendBillingNotification, sendDisputeNotification, sendNewRegistrationAlert } from "./email";
 import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport, generatePortfolioIntelligence, parseProvider, generateCreditNarrative, detectAnomalies, generateRegulatoryReport, naturalLanguageQuery, analyzeCrossBorderRisk, generateLoanRecommendation, callAI, parseJSON } from "./ai";
 import { BOG_EXPORT_GENERATORS } from "./bog-export";
 import type { BogFileType } from "@shared/bog-codes";
@@ -816,6 +816,11 @@ export async function registerRoutes(
       } catch (seedErr: any) {
         console.error("[Trial] Sample data seeding failed (non-blocking):", seedErr.message);
       }
+
+      sendNewRegistrationAlert(
+        organization.name, organization.type, organization.country,
+        organization.contactEmail, user.fullName
+      ).catch(() => {});
 
       res.json({
         message: "Trial account created successfully",
