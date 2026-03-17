@@ -36,7 +36,7 @@ export async function ensureDemoSandbox(): Promise<{ userId: string; organizatio
     }
 
     const accountTypes = ["personal_loan", "mortgage", "credit_card", "business_loan", "auto_loan"];
-    const statuses: Array<"active" | "closed" | "defaulted"> = ["active", "active", "active", "closed", "active"];
+    const statuses: Array<"current" | "closed" | "delinquent"> = ["current", "current", "current", "closed", "current"];
     for (let i = 0; i < createdBorrowers.length; i++) {
       await db.insert(creditAccounts).values({
         borrowerId: createdBorrowers[i].id,
