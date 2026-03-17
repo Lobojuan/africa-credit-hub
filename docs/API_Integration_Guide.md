@@ -1,13 +1,14 @@
-# Systems In Motion Limited
+# Carlson Capital & Systems In Motion Limited
 # Pan-African Credit Registry — External API Integration Guide
-## Cross-Jurisdictional Credit Data Hub (CDH) v2.0
+## Cross-Jurisdictional Credit Data Hub (CDH) v2.1
 
 ---
 
-**Document Version:** 2.0  
+**Document Version:** 2.1  
 **Last Updated:** March 2026  
 **Classification:** CONFIDENTIAL — For Authorized Institutions Only  
-**Contact:** Systems In Motion Limited — api-support@systemsinmotion.com
+**Contact:** Carlson Capital & Systems In Motion Limited — uffe.carlson@gmail.com | Thomas.baafi@prischell.com  
+**Website:** https://africacredithub.com
 
 ---
 
@@ -1302,13 +1303,13 @@ Returns the 100 most recent audit events with resolved user names.
 
 | Contact | Details |
 |---|---|
-| **API Support Email** | api-support@systemsinmotion.com |
-| **Onboarding Team** | onboarding@systemsinmotion.com |
+| **Uffe Jon Carlson (Carlson Capital)** | uffe.carlson@gmail.com · +233 552 395 548 |
+| **Thomas Baafi (Systems In Motion)** | Thomas.baafi@prischell.com · +233 24 433 9985 |
 | **Technical Documentation** | This document |
-| **General Inquiries** | info@systemsinmotion.com |
+| **Platform** | https://africacredithub.com |
 
 For urgent production issues, include your institution name, API key prefix (e.g., `sim_a1b2c3d4`), and a description of the error including the full HTTP response.
 
 ---
 
-*© 2026 Systems In Motion Limited. All rights reserved. This document is confidential and intended only for authorized institutions integrating with the Pan-African Credit Registry.*
+*© 2026 Carlson Capital & Systems In Motion Limited. All rights reserved. This document is confidential and intended only for authorized institutions integrating with the Pan-African Credit Registry.*

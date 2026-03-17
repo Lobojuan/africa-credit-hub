@@ -552,8 +552,9 @@ For Liberian nationals with credit exposure in ECOWAS member states:
 **Contact Information**
 
 Carlson Capital & Systems In Motion Limited
-Email: info@systemsinmotion.com
-Platform: Cross-Jurisdictional Central Data Hub (CDH) v2.0
+Uffe Jon Carlson — uffe.carlson@gmail.com · +233 552 395 548
+Thomas Baafi — Thomas.baafi@prischell.com · +233 24 433 9985
+Platform: https://africacredithub.com — Cross-Jurisdictional Central Data Hub (CDH) v2.1
 
 ---
 

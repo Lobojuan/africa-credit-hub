@@ -18,7 +18,7 @@ This Data Protection and Privacy Policy governs the collection, processing, stor
 | Data Controller | Carlson Capital & Systems In Motion Limited |
 | Registration | Data Protection Commission, Ghana |
 | Data Protection Officer | Appointed per Act 843, Section 50 |
-| Contact | dpo@systemsinmotion.com |
+| Contact | uffe.carlson@gmail.com / Thomas.baafi@prischell.com |
 | Registered Office | Accra, Ghana |
 
 ---
@@ -183,7 +183,7 @@ The system implements automated retention policy enforcement:
 
 For data protection inquiries, complaints, or to exercise your rights:
 
-- **Data Protection Officer**: dpo@systemsinmotion.com
+- **Data Protection Officer**: uffe.carlson@gmail.com / Thomas.baafi@prischell.com
 - **Data Protection Commission**: www.dataprotection.org.gh
 - **Bank of Ghana CRB Unit**: www.bog.gov.gh
 
