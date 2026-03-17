@@ -14,6 +14,8 @@ export function DemoBanner() {
   const [dismissed, setDismissed] = useState(false);
 
   if (!user?.isDemo || dismissed) return null;
+  const role = user?.role;
+  if (role === "admin" || role === "super_admin" || role === "user") return null;
 
   return (
     <div

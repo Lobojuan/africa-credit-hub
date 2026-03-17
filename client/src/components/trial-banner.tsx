@@ -16,7 +16,9 @@ export function TrialBanner() {
   const [, navigate] = useLocation();
 
   const isTrial = user?.organization?.subscriptionTier === "trial";
+  const role = user?.role;
   if (!isTrial || dismissed || user?.isDemo) return null;
+  if (role === "admin" || role === "super_admin") return null;
 
   return (
     <div
