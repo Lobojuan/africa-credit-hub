@@ -142,7 +142,7 @@ export default function StartTrialPage() {
       });
 
       setTimeout(() => {
-        window.location.href = "/";
+        window.location.href = "/dashboard";
       }, 1000);
     } catch (err: any) {
       const msg = err.message || "Registration failed";

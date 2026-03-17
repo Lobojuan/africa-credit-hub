@@ -1093,7 +1093,7 @@ export async function registerRoutes(
         req.session.lastActivity = Date.now();
         req.session.save((err) => {
           if (err) return res.status(500).json({ message: "Session save failed" });
-          res.redirect("/");
+          res.redirect("/dashboard");
         });
       } catch (e: any) {
         console.error("Demo auto-login failed:", e);
@@ -1114,7 +1114,7 @@ export async function registerRoutes(
       req.session.lastActivity = Date.now();
       req.session.save((err) => {
         if (err) return res.status(500).json({ message: "Session save failed" });
-        res.redirect("/");
+        res.redirect("/dashboard");
       });
     } catch (e: any) {
       console.error("Demo login failed:", e);

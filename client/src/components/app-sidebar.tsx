@@ -70,7 +70,7 @@ type NavItem = {
 };
 
 const coreItems: NavItem[] = [
-  { titleKey: "sidebar.dashboard", url: "/", icon: LayoutDashboard, testId: "nav-dashboard" },
+  { titleKey: "sidebar.dashboard", url: "/dashboard", icon: LayoutDashboard, testId: "nav-dashboard" },
   { titleKey: "sidebar.borrowers", url: "/borrowers", icon: Users, testId: "nav-borrowers" },
   { titleKey: "sidebar.creditAccounts", url: "/credit-accounts", icon: CreditCard, testId: "nav-credit-accounts" },
   { titleKey: "sidebar.creditSearch", url: "/search", icon: Search, testId: "nav-credit-search" },

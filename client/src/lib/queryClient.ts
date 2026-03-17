@@ -19,7 +19,7 @@ function appendOrgId(url: string): string {
 
 async function throwIfResNotOk(res: Response) {
   if (res.status === 440) {
-    window.location.href = "/auth";
+    window.location.href = "/login";
     throw new Error("Session expired");
   }
   if (!res.ok) {
@@ -55,7 +55,7 @@ export const getQueryFn: <T>(options: {
     });
 
     if (res.status === 440) {
-      window.location.href = "/auth";
+      window.location.href = "/login";
       throw new Error("Session expired");
     }
 

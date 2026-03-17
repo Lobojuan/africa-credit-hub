@@ -96,7 +96,7 @@ function Router() {
   return (
     <Suspense fallback={<LazyFallback />}>
       <Switch>
-        <Route path="/" component={Dashboard} />
+        <Route path="/dashboard" component={Dashboard} />
         <Route path="/borrowers" component={BorrowersPage} />
         <Route path="/borrowers/:id" component={BorrowerDetailPage} />
         <Route path="/credit-accounts" component={CreditAccountsPage} />
@@ -216,7 +216,7 @@ function AuthenticatedApp() {
     if (window.location.pathname === "/login") {
       return <LoginPage />;
     }
-    window.location.replace("/solutions");
+    window.location.replace("/login");
     return (
       <div className="flex items-center justify-center h-screen">
         <Skeleton className="w-32 h-8" />
@@ -274,7 +274,7 @@ function AuthenticatedApp() {
                           refetchType: "all",
                         });
                       } catch {
-                        window.location.href = "/";
+                        window.location.href = "/dashboard";
                       }
                     }}
                     data-testid="button-command-center"
@@ -304,6 +304,7 @@ function AuthenticatedApp() {
                   } catch {
                     window.location.href = "/";
                   }
+
                 }}
                 data-testid="button-logout"
               >
@@ -341,6 +342,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Switch>
+            <Route path="/" component={InvestorLandingPage} />
             <Route path="/solutions" component={InvestorLandingPage} />
             <Route path="/investor" component={InvestorLandingPage} />
             <Route path="/demo" component={InvestorLandingPage} />
