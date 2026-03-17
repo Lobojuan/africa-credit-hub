@@ -18,9 +18,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import heroImage from "@assets/investor-hero.png";
-import dashboardImage from "@assets/investor-dashboard.png";
-import mobileImage from "@assets/investor-mobile.png";
-import networkImage from "@assets/investor-network.png";
+import dashboardImage from "@assets/app-dashboard.png";
+import mobileImage from "@assets/app-consumer-portal.png";
+import networkImage from "@assets/app-command-center.png";
+import borrowersImage from "@assets/app-borrowers.png";
+import creditAccountsImage from "@assets/app-credit-accounts.png";
+import auditImage from "@assets/app-audit.png";
+import reportsImage from "@assets/app-reports.png";
 
 function AnimatedCounter({ end, duration = 2000, suffix = "", prefix = "" }: { end: number; duration?: number; suffix?: string; prefix?: string }) {
   const [count, setCount] = useState(0);
@@ -631,19 +635,19 @@ export default function InvestorLandingPage() {
                 Platform Preview
               </Badge>
               <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-4">
-                Enterprise Analytics at Your Fingertips
+                Your Credit Portfolio, One Dashboard
               </h2>
               <p className="text-muted-foreground text-sm sm:text-base leading-relaxed mb-6">
-                CDH v2.0 delivers real-time credit intelligence through interactive dashboards,
-                geographic visualization, and role-based views — designed for decision-makers
-                managing portfolio risk across the continent.
+                See total borrowers, outstanding balances, delinquency rates, and NPL ratios
+                in real time. Drill into any metric. Switch currencies. Filter by institution.
+                This is what your team sees every day.
               </p>
               <div className="space-y-3 mb-6">
                 {[
-                  "Interactive KPI dashboards with drill-down analytics",
-                  "Geographic heat maps showing portfolio distribution across 54 countries",
-                  "Real-time credit score computation with AI-powered explainability",
-                  "Multi-currency exposure tracking with automated exchange rates",
+                  "Live KPIs: borrowers, accounts, outstanding exposure, delinquencies",
+                  "Multi-currency tracking with GHS, NGN, KES, ZAR, and 40+ African currencies",
+                  "Portfolio growth trends and account status breakdown charts",
+                  "One-click export to CSV and Excel for regulatory reporting",
                 ].map((item, i) => (
                   <div key={i} className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
@@ -651,24 +655,16 @@ export default function InvestorLandingPage() {
                   </div>
                 ))}
               </div>
-              <Button onClick={launchDemo} className="gap-2" data-testid="cta-preview-demo">
+              <Button onClick={() => navigate("/start-trial")} className="gap-2" data-testid="cta-preview-demo">
                 <Play className="w-4 h-4" />
-                See It Live
+                Try It Free
               </Button>
             </div>
             <div className="relative">
               <div className="rounded-2xl overflow-hidden border border-border/50 shadow-2xl">
                 <img
                   src={dashboardImage}
-                  alt="CDH v2.0 Analytics Dashboard showing credit portfolio metrics"
-                  className="w-full h-auto"
-                  loading="lazy"
-                />
-              </div>
-              <div className="absolute -bottom-4 -right-4 w-32 sm:w-40 rounded-xl overflow-hidden border-2 border-background shadow-xl">
-                <img
-                  src={mobileImage}
-                  alt="Consumer credit check on mobile device"
+                  alt="CDH v2.1 dashboard showing 159 borrowers, 305 credit accounts, GHS 12.1M outstanding, and portfolio analytics"
                   className="w-full h-auto"
                   loading="lazy"
                 />
@@ -786,7 +782,7 @@ export default function InvestorLandingPage() {
               <div className="rounded-2xl overflow-hidden border border-border/50 shadow-2xl">
                 <img
                   src={networkImage}
-                  alt="Pan-African data network connecting 54 countries"
+                  alt="Platform Command Center showing 10 African country jurisdictions with borrower and account counts"
                   className="w-full h-auto"
                   loading="lazy"
                 />
@@ -951,6 +947,73 @@ export default function InvestorLandingPage() {
               <Play className="w-4 h-4" />
               Launch Demo — No Login Required
             </Button>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-20 sm:py-28 bg-muted/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <Badge variant="outline" className="mb-4 text-xs">
+              <MonitorSmartphone className="w-3 h-3 mr-1" />
+              See the Platform
+            </Badge>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-4">
+              Every Screen, Built for Africa
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base leading-relaxed">
+              These are real screenshots from the platform. What you see is what your team gets on day one.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[
+              { img: borrowersImage, title: "Borrower Management", desc: "Individual and corporate borrower records with tags, country, and sector classification. Search by name, ID, phone, or email." },
+              { img: creditAccountsImage, title: "Credit Accounts", desc: "Full loan portfolio view with institution, balance, interest rate, status tracking, and days in arrears across multiple currencies." },
+              { img: reportsImage, title: "Credit Reports & Analytics", desc: "Generate D&B-style credit reports per borrower. Portfolio stats including total exposure, NPL ratio, and institution breakdown." },
+              { img: auditImage, title: "Audit Trail & Compliance", desc: "Tamper-proof audit log with SHA-256 hash chain. Filter by action type, entity, date range. Export to CSV or Excel." },
+            ].map((screen, i) => (
+              <div key={i} className="group rounded-2xl overflow-hidden border border-border/50 bg-card hover:border-primary/30 transition-all hover:shadow-lg" data-testid={`screenshot-${i}`}>
+                <div className="overflow-hidden">
+                  <img
+                    src={screen.img}
+                    alt={screen.title}
+                    className="w-full h-auto group-hover:scale-[1.02] transition-transform duration-500"
+                    loading="lazy"
+                  />
+                </div>
+                <div className="p-4 sm:p-5">
+                  <h3 className="font-semibold text-sm sm:text-base mb-1">{screen.title}</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">{screen.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-10 rounded-2xl overflow-hidden border border-border/50 shadow-2xl" data-testid="screenshot-consumer">
+            <div className="grid grid-cols-1 lg:grid-cols-2 items-center">
+              <div className="p-6 sm:p-10">
+                <Badge variant="outline" className="mb-3 text-xs">Consumer Self-Service</Badge>
+                <h3 className="text-xl sm:text-2xl font-bold mb-3">Credit Check Portal</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+                  Give borrowers a public-facing portal to check their own credit score.
+                  Identity verification via National ID and date of birth. No login required.
+                  Builds trust, reduces disputes, meets regulatory transparency requirements.
+                </p>
+                <Button onClick={() => navigate("/my-credit")} variant="outline" className="gap-2" data-testid="cta-consumer-portal">
+                  <Eye className="w-4 h-4" />
+                  View Consumer Portal
+                </Button>
+              </div>
+              <div className="overflow-hidden">
+                <img
+                  src={mobileImage}
+                  alt="Consumer self-service credit check portal with National ID verification"
+                  className="w-full h-auto"
+                  loading="lazy"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </section>
