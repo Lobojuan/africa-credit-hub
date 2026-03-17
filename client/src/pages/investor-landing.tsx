@@ -5,7 +5,7 @@ import {
   Shield, Globe, Users, CreditCard, BarChart3, Zap,
   CheckCircle2, ArrowRight, Building2, Scale, Lock,
   Languages, MapPin, TrendingUp, Bot, Upload,
-  ChevronDown, Play, Star, Eye, FileText, Clock,
+  ChevronDown, Star, Eye, FileText, Clock,
   Database, Layers, AlertTriangle, Target, Workflow,
   Search, Gavel, Settings, Key, RefreshCw, Landmark,
   PieChart, LineChart, Map, Fingerprint, ShieldCheck,
@@ -434,9 +434,6 @@ const COMPETITIVE_ADVANTAGES = [
 ];
 
 
-function launchDemo() {
-  window.location.href = `/api/demo-login`;
-}
 
 export default function InvestorLandingPage() {
   const [, navigate] = useLocation();
@@ -655,9 +652,9 @@ export default function InvestorLandingPage() {
                   </div>
                 ))}
               </div>
-              <Button onClick={() => navigate("/start-trial")} className="gap-2" data-testid="cta-preview-demo">
-                <Play className="w-4 h-4" />
-                Try It Free
+              <Button onClick={() => navigate("/start-trial")} className="gap-2" data-testid="cta-preview-trial">
+                <ArrowRight className="w-4 h-4" />
+                Start Free Trial
               </Button>
             </div>
             <div className="relative">
@@ -928,7 +925,7 @@ export default function InvestorLandingPage() {
 
           <div className="mt-8 text-center">
             <p className="text-xs text-muted-foreground mb-4">
-              Experience it yourself — instantly access the full platform with demo data:
+              Start your 14-day free trial and explore the full platform with sample data:
             </p>
             <div className="flex flex-wrap justify-center gap-3 mb-6">
               {[
@@ -943,9 +940,9 @@ export default function InvestorLandingPage() {
                 </div>
               ))}
             </div>
-            <Button onClick={launchDemo} className="gap-2" data-testid="cta-live-data-demo">
-              <Play className="w-4 h-4" />
-              Launch Demo — No Login Required
+            <Button onClick={() => navigate("/start-trial")} className="gap-2" data-testid="cta-live-data-trial">
+              <ArrowRight className="w-4 h-4" />
+              Start Free Trial
             </Button>
           </div>
         </div>
@@ -1076,7 +1073,7 @@ export default function InvestorLandingPage() {
             {[
               { step: "1", title: "Start Free Trial", desc: "Register your organization and get full admin access for 14 days. No credit card required. Explore every feature with real data.", cta: "Start Trial", action: () => navigate("/start-trial"), testId: "step-demo" },
               { step: "2", title: "Choose Your Plan", desc: "Standard for MFIs and fintechs. Professional for regional banks. Enterprise for central banks and tier-1 institutions.", cta: "View Pricing", action: () => navigate("/pricing"), testId: "step-pricing" },
-              { step: "3", title: "Go Live", desc: "Connect via API or batch upload. Configure your regulatory profile. Start managing credit data across your jurisdictions.", cta: "Explore Platform", action: launchDemo, testId: "step-deploy" },
+              { step: "3", title: "Go Live", desc: "Connect via API or batch upload. Configure your regulatory profile. Start managing credit data across your jurisdictions.", cta: "Contact Sales", action: () => window.location.href = "mailto:info@systemsinmotion.com", testId: "step-deploy" },
             ].map((item) => (
               <Card key={item.step} className="border border-border/60" data-testid={item.testId}>
                 <CardContent className="p-5 sm:p-6 text-center">
