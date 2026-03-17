@@ -99,7 +99,7 @@ const FAQS = [
   },
   {
     q: "Is there a free trial?",
-    a: "Yes, we offer a 30-day free trial with full access to the Professional tier. No credit card required. Contact our sales team to get started.",
+    a: "Yes, we offer a 14-day free trial with full admin access. No credit card required. Click 'Start Free Trial' on any plan to register your organization and get started instantly.",
   },
   {
     q: "How is data privacy handled?",
@@ -208,7 +208,7 @@ export default function PricingPage() {
                   <Button
                     className="w-full mb-6"
                     variant={plan.highlight ? "default" : "outline"}
-                    onClick={() => window.location.href = `/api/demo-login`}
+                    onClick={() => navigate("/start-trial")}
                     data-testid={`button-start-${plan.name.toLowerCase()}`}
                   >
                     Start Free Trial

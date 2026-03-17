@@ -576,9 +576,9 @@ export default function InvestorLandingPage() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16">
-            <Button size="lg" className="text-sm px-8 gap-2 shadow-lg" onClick={launchDemo} data-testid="cta-try-demo">
-              <Play className="w-4 h-4" />
-              Try the Platform Free
+            <Button size="lg" className="text-sm px-8 gap-2 shadow-lg" onClick={() => navigate("/start-trial")} data-testid="cta-try-demo">
+              <ArrowRight className="w-4 h-4" />
+              Start a Free Trial
             </Button>
             <Button
               variant="outline"
@@ -1003,7 +1003,7 @@ export default function InvestorLandingPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             {[
-              { step: "1", title: "Try the Platform", desc: "Explore the full system with our live demo. No sign-up needed. See every feature with real data.", cta: "Launch Demo", action: launchDemo, testId: "step-demo" },
+              { step: "1", title: "Start Free Trial", desc: "Register your organization and get full admin access for 14 days. No credit card required. Explore every feature with real data.", cta: "Start Trial", action: () => navigate("/start-trial"), testId: "step-demo" },
               { step: "2", title: "Choose Your Plan", desc: "Standard for MFIs and fintechs. Professional for regional banks. Enterprise for central banks and tier-1 institutions.", cta: "View Pricing", action: () => navigate("/pricing"), testId: "step-pricing" },
               { step: "3", title: "Go Live", desc: "Connect via API or batch upload. Configure your regulatory profile. Start managing credit data across your jurisdictions.", cta: "Explore Platform", action: launchDemo, testId: "step-deploy" },
             ].map((item) => (
@@ -1200,17 +1200,17 @@ export default function InvestorLandingPage() {
             credit scoring, cross-border matching, and regulatory compliance in action.
           </p>
           <p className="text-xs text-muted-foreground/70 mb-8 max-w-md mx-auto">
-            No installation. No sign-up. Full Admin-level access with real data.
+            Register in under 2 minutes. Full admin access for 14 days. No credit card required.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Button
               size="lg"
               className="text-sm px-10 gap-2 shadow-lg"
-              onClick={launchDemo}
+              onClick={() => navigate("/start-trial")}
               data-testid="cta-bottom-demo"
             >
-              <Play className="w-4 h-4" />
-              Try the Platform Free
+              <ArrowRight className="w-4 h-4" />
+              Start a Free Trial
             </Button>
             <Button
               variant="outline"

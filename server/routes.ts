@@ -70,6 +70,15 @@ const writeLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const registrationLimiter = rateLimit({
+  validate: { trustProxy: false },
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { message: "Too many registration attempts. Please try again in 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 const batchLimiter = rateLimit({
   validate: { trustProxy: false },
   windowMs: 60 * 1000,
@@ -683,6 +692,94 @@ export async function registerRoutes(
       });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/trial/register", registrationLimiter, async (req, res) => {
+    try {
+      const { organization, user } = req.body;
+
+      if (!organization?.name || !organization?.type || !organization?.country || !organization?.contactEmail) {
+        return res.status(400).json({ message: "Organization name, type, country, and contact email are required" });
+      }
+      if (!user?.fullName || !user?.email || !user?.username || !user?.password) {
+        return res.status(400).json({ message: "Full name, email, username, and password are required" });
+      }
+
+      if (user.username.length < 3 || !/^[a-zA-Z0-9_.-]+$/.test(user.username)) {
+        return res.status(400).json({ field: "username", message: "Username must be at least 3 characters and contain only letters, numbers, dots, hyphens, underscores" });
+      }
+      if (user.password.length < 8 || !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(user.password)) {
+        return res.status(400).json({ field: "password", message: "Password must be at least 8 characters with uppercase, lowercase, and a number" });
+      }
+
+      const existingUser = await storage.getUserByUsername(user.username);
+      if (existingUser) {
+        return res.status(409).json({ field: "username", message: "Username already taken. Please choose a different one." });
+      }
+
+      const allUsers = await storage.getUsers();
+      const emailTaken = allUsers.find((u: any) => u.email?.toLowerCase() === user.email.toLowerCase());
+      if (emailTaken) {
+        return res.status(409).json({ field: "email", message: "An account with this email already exists." });
+      }
+
+      const slug = organization.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") + "-trial";
+
+      const org = await storage.createOrganization({
+        name: organization.name,
+        slug,
+        type: organization.type,
+        country: organization.country,
+        contactEmail: organization.contactEmail,
+        contactPhone: organization.contactPhone || null,
+        status: "active",
+        subscriptionTier: "trial",
+        maxUsers: 5,
+      });
+
+      let newUser;
+      try {
+        const hashedPassword = await bcrypt.hash(user.password, 12);
+
+        newUser = await storage.createUser({
+          username: user.username,
+          password: hashedPassword,
+          fullName: user.fullName,
+          email: user.email,
+          role: "admin",
+          status: "active",
+          institution: organization.name,
+          organizationId: org.id,
+        });
+      } catch (userErr: any) {
+        try { await storage.deleteOrganization(org.id); } catch {}
+        throw userErr;
+      }
+
+      req.session.userId = newUser.id;
+      req.session.userRole = newUser.role;
+      req.session.organizationId = org.id;
+      req.session.lastActivity = Date.now();
+      req.session.userCountry = organization.country;
+
+      await storage.createAuditLog({
+        action: "TRIAL_REGISTRATION",
+        entity: "system",
+        userId: newUser.id,
+        details: `Trial registration: ${organization.name} (${organization.type}) - ${organization.country}. Admin: ${user.fullName}`,
+        ipAddress: req.ip || null,
+        organizationId: org.id,
+      });
+
+      res.json({
+        message: "Trial account created successfully",
+        user: { id: newUser.id, username: newUser.username, fullName: newUser.fullName, role: newUser.role },
+        organization: { id: org.id, name: org.name, country: org.country },
+      });
+    } catch (e: any) {
+      console.error("Trial registration error:", e);
+      res.status(500).json({ message: "Registration failed. Please try again." });
     }
   });
 

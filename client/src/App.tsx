@@ -79,6 +79,7 @@ const WebhookManagementPage = lazy(() => import("@/pages/webhook-management"));
 import PricingPage from "@/pages/pricing";
 import SecurityCompliancePage from "@/pages/security-compliance";
 import MarketValidationPage from "@/pages/market-validation";
+import StartTrialPage from "@/pages/start-trial";
 
 function LazyFallback() {
   return (
@@ -327,6 +328,7 @@ function App() {
             <Route path="/pricing" component={PricingPage} />
             <Route path="/security" component={SecurityCompliancePage} />
             <Route path="/market-validation" component={MarketValidationPage} />
+            <Route path="/start-trial" component={StartTrialPage} />
             <Route path="/my-credit">
               <Suspense fallback={<LazyFallback />}>
                 <ConsumerPortalPage />
