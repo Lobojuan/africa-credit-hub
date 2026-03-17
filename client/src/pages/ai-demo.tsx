@@ -59,13 +59,16 @@ function AIDemoPage() {
 
     const interval = setInterval(() => {
       setLoadingProgress(prev => {
-        const next = prev + (Math.random() * 3 + 1);
-        const capped = Math.min(next, 92);
-        const stepIndex = Math.min(Math.floor(capped / (90 / steps.length)), steps.length - 1);
+        const speed = prev < 30 ? (Math.random() * 2.5 + 1) :
+                      prev < 60 ? (Math.random() * 1.5 + 0.5) :
+                      prev < 80 ? (Math.random() * 0.8 + 0.2) :
+                      (Math.random() * 0.3 + 0.05);
+        const capped = Math.min(prev + speed, 95);
+        const stepIndex = Math.min(Math.floor(capped / (95 / steps.length)), steps.length - 1);
         setLoadingStep(steps[stepIndex]);
         return capped;
       });
-    }, 400);
+    }, 600);
 
     return () => clearInterval(interval);
   }, [loading]);
@@ -199,26 +202,31 @@ function AIDemoPage() {
   function AIProgressBar({ feature }: { feature: string }) {
     if (loading !== feature) return null;
     const elapsed = loadingStartTime ? Math.floor((Date.now() - loadingStartTime) / 1000) : 0;
+    const isLongWait = loadingProgress > 85;
     return (
       <div className="mt-3 space-y-2 animate-in fade-in-50 duration-300" data-testid={`progress-${feature}`}>
         <div className="flex items-center justify-between text-[11px] text-muted-foreground">
           <div className="flex items-center gap-2">
             <Sparkles className="w-3.5 h-3.5 text-primary animate-pulse" />
-            <span className="font-medium">{loadingStep}</span>
+            <span className="font-medium">{isLongWait ? "Almost there — finalizing AI response..." : loadingStep}</span>
           </div>
           <span className="tabular-nums">{Math.round(loadingProgress)}%</span>
         </div>
-        <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+        <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
           <div
-            className="h-full rounded-full transition-all duration-500 ease-out"
+            className="h-full rounded-full transition-all duration-700 ease-out"
             style={{
               width: `${loadingProgress}%`,
-              background: "linear-gradient(90deg, hsl(175 55% 35%), hsl(175 70% 45%))",
+              background: loadingProgress >= 100
+                ? "linear-gradient(90deg, hsl(142 55% 40%), hsl(142 70% 50%))"
+                : "linear-gradient(90deg, hsl(175 55% 35%), hsl(175 70% 45%))",
             }}
           />
         </div>
         <p className="text-[10px] text-muted-foreground/60 text-center">
-          AI is analyzing your data — typically completes in 5–15 seconds
+          {isLongWait
+            ? "Complex AI analysis can take up to 60 seconds — hang tight, the result is worth it"
+            : "AI is analyzing your data — this may take up to a minute for detailed reports"}
         </p>
       </div>
     );

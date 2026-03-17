@@ -727,7 +727,17 @@ export async function callAI(systemPrompt: string, userPrompt: string, provider:
 }
 
 export function parseJSON(raw: string, fallback: Record<string, unknown> = {}) {
-  const content = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+  let content = raw.trim();
+  const jsonBlockMatch = content.match(/```(?:json)?\s*\n?([\s\S]*?)```/);
+  if (jsonBlockMatch) {
+    content = jsonBlockMatch[1].trim();
+  } else {
+    content = content.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+  }
+  const jsonMatch = content.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    try { return JSON.parse(jsonMatch[0]); } catch {}
+  }
   try { return JSON.parse(content); } catch { return { ...fallback, rawText: raw }; }
 }
 
