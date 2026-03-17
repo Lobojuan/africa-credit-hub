@@ -1463,7 +1463,7 @@ export default function InvestorLandingPage() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-[11px] text-muted-foreground/70">
               <span>Uffe Jon Carlson — uffe.carlson@gmail.com · +233 552 395 548</span>
               <span className="hidden sm:inline">|</span>
-              <span>Thomas Baafi — +233 24 433 9985</span>
+              <span>Thomas Baafi — Thomas.baafi@prischell.com · +233 24 433 9985</span>
               <span className="hidden sm:inline">|</span>
               <span>Accra, Ghana</span>
             </div>

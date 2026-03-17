@@ -287,9 +287,8 @@ export default function AboutPage() {
                   <Mail className="w-4 h-4 text-primary mt-0.5 shrink-0" />
                   <div>
                     <p className="text-sm font-semibold">General Inquiries</p>
-                    <p className="text-xs text-muted-foreground mt-1">uffe.carlson@gmail.com</p>
-                    <p className="text-xs text-muted-foreground">+233 552 395 548</p>
-                    <p className="text-xs text-muted-foreground">+233 24 433 9985</p>
+                    <p className="text-xs text-muted-foreground mt-1">Uffe Jon Carlson — uffe.carlson@gmail.com · +233 552 395 548</p>
+                    <p className="text-xs text-muted-foreground">Thomas Baafi — Thomas.baafi@prischell.com · +233 24 433 9985</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
@@ -310,7 +309,7 @@ export default function AboutPage() {
             &copy; {new Date().getFullYear()} Carlson Capital & Systems In Motion Limited. All rights reserved.
           </p>
           <p className="text-[10px] text-muted-foreground mt-0.5">
-            Uffe Jon Carlson — uffe.carlson@gmail.com · +233 552 395 548 | Thomas Baafi — +233 24 433 9985 | Accra, Ghana
+            Uffe Jon Carlson — uffe.carlson@gmail.com · +233 552 395 548 | Thomas Baafi — Thomas.baafi@prischell.com · +233 24 433 9985 | Accra, Ghana
           </p>
           <p className="text-[10px] text-muted-foreground/60 mt-1">
             Cross-Jurisdictional Central Data Hub & Credit Registry System v2.0 | Confidential & Proprietary

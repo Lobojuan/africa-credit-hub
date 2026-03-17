@@ -329,7 +329,7 @@ export default function PricingPage() {
         <div className="max-w-7xl mx-auto text-center text-xs text-muted-foreground space-y-1">
           <p>&copy; {new Date().getFullYear()} Carlson Capital & Systems In Motion Limited. All rights reserved.</p>
           <p>CDH Credit Registry — Pan-African Credit Data Infrastructure</p>
-          <p className="text-[11px] text-muted-foreground/70">Uffe Jon Carlson — uffe.carlson@gmail.com · +233 552 395 548 | Thomas Baafi — +233 24 433 9985 | Accra, Ghana</p>
+          <p className="text-[11px] text-muted-foreground/70">Uffe Jon Carlson — uffe.carlson@gmail.com · +233 552 395 548 | Thomas Baafi — Thomas.baafi@prischell.com · +233 24 433 9985 | Accra, Ghana</p>
         </div>
       </footer>
     </div>
