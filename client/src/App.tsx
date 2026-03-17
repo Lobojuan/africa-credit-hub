@@ -211,7 +211,15 @@ function AuthenticatedApp() {
   }
 
   if (!user) {
-    return <LoginPage />;
+    if (window.location.pathname === "/login") {
+      return <LoginPage />;
+    }
+    window.location.replace("/solutions");
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Skeleton className="w-32 h-8" />
+      </div>
+    );
   }
 
   if (accountSuspended) {
@@ -338,6 +346,15 @@ function App() {
             <Route path="/security" component={SecurityCompliancePage} />
             <Route path="/market-validation" component={MarketValidationPage} />
             <Route path="/start-trial" component={StartTrialPage} />
+            <Route path="/login">
+              <AuthProvider>
+                <OrgSwitcherProvider>
+                  <CountryThemeProvider>
+                    <AuthenticatedApp />
+                  </CountryThemeProvider>
+                </OrgSwitcherProvider>
+              </AuthProvider>
+            </Route>
             <Route path="/my-credit">
               <Suspense fallback={<LazyFallback />}>
                 <ConsumerPortalPage />

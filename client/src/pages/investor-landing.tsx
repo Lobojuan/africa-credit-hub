@@ -514,13 +514,21 @@ export default function InvestorLandingPage() {
               </Button>
             ))}
             <Button
+              variant="outline"
               size="sm"
               className="text-xs ml-2"
-              onClick={launchDemo}
+              onClick={() => navigate("/login")}
               data-testid="nav-login"
             >
-              <Play className="w-3.5 h-3.5 mr-1" />
-              Live Demo
+              Log In
+            </Button>
+            <Button
+              size="sm"
+              className="text-xs"
+              onClick={() => navigate("/start-trial")}
+              data-testid="nav-start-trial"
+            >
+              Start Free Trial
             </Button>
           </div>
         </div>

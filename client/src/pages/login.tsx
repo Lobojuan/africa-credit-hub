@@ -47,6 +47,9 @@ export default function LoginPage() {
         return;
       }
       toast({ title: t('login.success') });
+      if (window.location.pathname === "/login") {
+        window.location.replace("/");
+      }
     } catch (err: any) {
       const msg = err.message || t('common.error');
       const cleaned = msg.replace(/^\d+:\s*/, "").replace(/^"?|"?$/g, "");
@@ -75,6 +78,9 @@ export default function LoginPage() {
       const userData = await res.json();
       queryClient.setQueryData(["/api/auth/me"], userData);
       toast({ title: t('login.success') });
+      if (window.location.pathname === "/login") {
+        window.location.replace("/");
+      }
     } catch (err: any) {
       const msg = err.message || t('common.error');
       const cleaned = msg.replace(/^\d+:\s*/, "").replace(/^"?|"?$/g, "");
@@ -384,6 +390,17 @@ export default function LoginPage() {
             <p className="text-[11px]">
               {t('login.lockoutWarning')}
             </p>
+          </div>
+
+          <div className="flex items-center justify-center gap-4 text-sm">
+            <a href="/solutions" className="text-primary hover:underline flex items-center gap-1" data-testid="link-back-home">
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Back to home
+            </a>
+            <span className="text-muted-foreground">·</span>
+            <a href="/start-trial" className="text-primary hover:underline" data-testid="link-start-trial">
+              Start free trial
+            </a>
           </div>
         </div>
       </div>
