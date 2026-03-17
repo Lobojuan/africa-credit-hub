@@ -1446,18 +1446,27 @@ export default function InvestorLandingPage() {
 
       <footer className="border-t border-border/50 py-8 bg-muted/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <div
-                className="w-6 h-6 rounded flex items-center justify-center"
-                style={{ background: "linear-gradient(135deg, hsl(175 55% 28%), hsl(175 55% 22%))" }}
-              >
-                <Shield className="w-3.5 h-3.5 text-white" />
+          <div className="flex flex-col gap-4 text-xs text-muted-foreground">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-6 h-6 rounded flex items-center justify-center"
+                  style={{ background: "linear-gradient(135deg, hsl(175 55% 28%), hsl(175 55% 22%))" }}
+                >
+                  <Shield className="w-3.5 h-3.5 text-white" />
+                </div>
+                <span className="font-semibold">Carlson Capital & Systems In Motion Limited</span>
               </div>
-              <span>Carlson Capital & Systems In Motion Limited</span>
+              <p>Pan-African Credit Registry — CDH v2.1</p>
+              <p>&copy; {new Date().getFullYear()} All rights reserved</p>
             </div>
-            <p>Pan-African Credit Registry — CDH v2.1</p>
-            <p>&copy; {new Date().getFullYear()} All rights reserved</p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-[11px] text-muted-foreground/70">
+              <span>Uffe Jon Carlson — uffe.carlson@gmail.com · +233 552 395 548</span>
+              <span className="hidden sm:inline">|</span>
+              <span>Thomas Baafi — +233 24 433 9985</span>
+              <span className="hidden sm:inline">|</span>
+              <span>Accra, Ghana</span>
+            </div>
           </div>
         </div>
       </footer>

@@ -307,7 +307,10 @@ export default function AboutPage() {
 
         <div className="text-center pt-4 pb-2">
           <p className="text-[11px] text-muted-foreground">
-            &copy; 2026 Carlson Capital & Systems In Motion Limited. All rights reserved.
+            &copy; {new Date().getFullYear()} Carlson Capital & Systems In Motion Limited. All rights reserved.
+          </p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">
+            Uffe Jon Carlson — uffe.carlson@gmail.com · +233 552 395 548 | Thomas Baafi — +233 24 433 9985 | Accra, Ghana
           </p>
           <p className="text-[10px] text-muted-foreground/60 mt-1">
             Cross-Jurisdictional Central Data Hub & Credit Registry System v2.0 | Confidential & Proprietary

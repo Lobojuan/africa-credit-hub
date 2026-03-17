@@ -116,7 +116,7 @@ const PAYMENT_METHODS = [
 
 const BANK_DETAILS = {
   bankName: "Stanbic Bank Ghana",
-  accountName: "Systems In Motion Limited",
+  accountName: "Carlson Capital & Systems In Motion Limited",
   accountNumber: "9040012345678",
   branchCode: "020100",
   swiftCode: "SBICGHAC",
