@@ -438,7 +438,7 @@ export async function registerRoutes(
     next();
   });
 
-  const DEMO_SAFE_PREFIXES = ["/api/auth/", "/api/consumer/lookup", "/api/trial/register", "/api/payments/initiate"];
+  const DEMO_SAFE_PREFIXES = ["/api/auth/", "/api/consumer/lookup", "/api/trial/register", "/api/payments/initiate", "/api/ai/"];
   app.use("/api", (req, res, next) => {
     if (
       req.session?.isDemo &&
@@ -850,6 +850,7 @@ export async function registerRoutes(
       req.session.userRole = user.role;
       req.session.organizationId = user.organizationId || undefined;
       req.session.lastActivity = Date.now();
+      req.session.isDemo = false;
 
       if (user.role === "super_admin") {
         delete req.session.viewingCountry;
