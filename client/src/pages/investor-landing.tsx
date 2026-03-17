@@ -484,6 +484,7 @@ export default function InvestorLandingPage() {
     { label: "Advantage", id: "advantage" },
     { label: "Technology", id: "tech" },
     { label: "Roadmap", id: "roadmap" },
+    { label: "Market", id: "market-link" },
     { label: "Pricing", id: "pricing-link" },
     { label: "Security", id: "security-link" },
   ];
@@ -518,7 +519,9 @@ export default function InvestorLandingPage() {
                 size="sm"
                 className="text-[11px] px-2 hidden lg:inline-flex"
                 onClick={() => {
-                  if (item.id === "pricing-link") {
+                  if (item.id === "market-link") {
+                    navigate("/market-validation");
+                  } else if (item.id === "pricing-link") {
                     navigate("/pricing");
                   } else if (item.id === "security-link") {
                     navigate("/security");
@@ -1179,6 +1182,13 @@ export default function InvestorLandingPage() {
                     Our Year 1 target of $28.5K/mo is conservative. With 54-country addressable market and mandatory regulatory adoption, 
                     path to $1M+ ARR by Year 3 is achievable through per-country rollout.
                   </p>
+                  <button
+                    onClick={() => navigate("/market-validation")}
+                    className="mt-2 text-[11px] text-primary font-medium hover:underline inline-flex items-center gap-1"
+                    data-testid="link-market-validation"
+                  >
+                    See full market validation with sources <ArrowRight className="w-3 h-3" />
+                  </button>
                 </div>
               </CardContent>
             </Card>

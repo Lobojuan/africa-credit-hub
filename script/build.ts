@@ -65,6 +65,7 @@ async function buildAll() {
     "demo",
     "pricing",
     "security",
+    "market-validation",
     "my-credit",
     "mobile",
     "login",
