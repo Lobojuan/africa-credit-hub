@@ -20,6 +20,7 @@ import { DisputeChatbot } from "@/components/dispute-chatbot";
 import { OrgSwitcherProvider } from "@/hooks/use-org-switcher";
 import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
 import { DemoBanner } from "@/components/demo-banner";
+import { TrialBanner } from "@/components/trial-banner";
 import { OrgSwitcher } from "@/components/org-switcher";
 import { CountryThemeProvider, useCountryTheme } from "@/components/country-theme-provider";
 import { CountrySelector } from "@/components/country-selector";
@@ -80,6 +81,7 @@ import PricingPage from "@/pages/pricing";
 import SecurityCompliancePage from "@/pages/security-compliance";
 import MarketValidationPage from "@/pages/market-validation";
 import StartTrialPage from "@/pages/start-trial";
+const UpgradePage = lazy(() => import("@/pages/upgrade"));
 
 function LazyFallback() {
   return (
@@ -134,6 +136,13 @@ function Router() {
         <Route path="/system-status" component={SystemStatusPage} />
         <Route path="/platform-metrics" component={PlatformMetricsPage} />
         <Route path="/webhook-management" component={WebhookManagementPage} />
+        <Route path="/upgrade">
+          {() => (
+            <Suspense fallback={<LazyFallback />}>
+              <UpgradePage />
+            </Suspense>
+          )}
+        </Route>
         <Route component={NotFound} />
       </Switch>
     </Suspense>
@@ -355,6 +364,7 @@ function App() {
           </Switch>
           <Toaster />
           <DemoBanner />
+          <TrialBanner />
           <PWAInstallPrompt />
         </TooltipProvider>
       </QueryClientProvider>

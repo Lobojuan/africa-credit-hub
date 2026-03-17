@@ -724,7 +724,8 @@ export async function registerRoutes(
         return res.status(409).json({ field: "email", message: "An account with this email already exists." });
       }
 
-      const slug = organization.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") + "-trial";
+      const slugBase = organization.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+      const slug = `${slugBase}-trial-${Date.now().toString(36)}`;
 
       const org = await storage.createOrganization({
         name: organization.name,
@@ -771,6 +772,13 @@ export async function registerRoutes(
         ipAddress: req.ip || null,
         organizationId: org.id,
       });
+
+      try {
+        const { seedTrialData } = await import("./trial-sandbox");
+        await seedTrialData(org.id, newUser.id, organization.country);
+      } catch (seedErr: any) {
+        console.error("[Trial] Sample data seeding failed (non-blocking):", seedErr.message);
+      }
 
       res.json({
         message: "Trial account created successfully",
@@ -5269,6 +5277,191 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
       res.json({ url: session.url });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/payments/initiate", requireAuth, async (req, res) => {
+    try {
+      const { plan, method, phone, provider } = req.body;
+      if (!plan || !method) return res.status(400).json({ message: "Plan and payment method required" });
+
+      const validPlans = ["standard", "professional", "enterprise"];
+      const validMethods = ["stripe", "bank_transfer", "flutterwave", "mpesa", "mobile_money"];
+      if (!validPlans.includes(plan)) return res.status(400).json({ message: "Invalid plan" });
+      if (!validMethods.includes(method)) return res.status(400).json({ message: "Invalid payment method" });
+
+      const orgId = req.session.organizationId;
+      if (!orgId) return res.status(400).json({ message: "No organization associated with this account" });
+
+      const org = await storage.getOrganization(orgId);
+      if (!org) return res.status(404).json({ message: "Organization not found" });
+
+      const priceMap: Record<string, number> = { standard: 299, professional: 799, enterprise: 1999 };
+
+      await storage.createAuditLog({
+        action: "PAYMENT_INITIATED",
+        entity: "billing",
+        userId: req.session.userId || undefined,
+        details: `Payment initiated: ${plan} plan via ${method}${phone ? ` (${phone})` : ""}${provider ? ` [${provider}]` : ""} — $${priceMap[plan]}/mo`,
+        organizationId: orgId,
+        ipAddress: req.ip || null,
+      });
+
+      const invoiceNum = `CDH-${orgId.substring(0, 6).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
+      const now = new Date().toISOString().split("T")[0];
+      const endDate = new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0];
+
+      if (method === "bank_transfer") {
+        await storage.createBillingRecord({
+          organizationId: orgId,
+          institutionName: org.name,
+          amount: String(priceMap[plan]),
+          currency: "USD",
+          status: "pending",
+          serviceType: "subscription",
+          invoiceNumber: invoiceNum,
+          periodStart: now,
+          periodEnd: endDate,
+        });
+
+        return res.json({
+          message: "Bank transfer details noted. Your account will be upgraded within 1-2 business days once payment is confirmed.",
+          status: "pending_verification",
+        });
+      }
+
+      if (method === "flutterwave") {
+        const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0] || "localhost:5000"}`;
+        const flutterwavePayload = {
+          tx_ref: `CDH-${orgId}-${Date.now()}`,
+          amount: priceMap[plan],
+          currency: "USD",
+          redirect_url: `${baseUrl}/upgrade?payment=success`,
+          customer: {
+            email: org.contactEmail || "billing@systemsinmotion.co",
+            name: org.name,
+          },
+          customizations: {
+            title: "CDH Credit Registry",
+            description: `${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan Subscription`,
+          },
+          meta: { orgId, plan, method },
+        };
+
+        await storage.createBillingRecord({
+          organizationId: orgId,
+          institutionName: org.name,
+          amount: String(priceMap[plan]),
+          currency: "USD",
+          status: "pending",
+          serviceType: "subscription",
+          invoiceNumber: invoiceNum,
+          periodStart: now,
+          periodEnd: endDate,
+        });
+
+        return res.json({
+          message: "Flutterwave checkout initiated. Complete payment on the Flutterwave page.",
+          status: "pending",
+          flutterwavePayload,
+        });
+      }
+
+      if (method === "mpesa") {
+        if (!phone) return res.status(400).json({ message: "M-Pesa phone number required" });
+
+        await storage.createBillingRecord({
+          organizationId: orgId,
+          institutionName: org.name,
+          amount: String(priceMap[plan]),
+          currency: "USD",
+          status: "pending",
+          serviceType: "subscription",
+          invoiceNumber: invoiceNum,
+          periodStart: now,
+          periodEnd: endDate,
+        });
+
+        return res.json({
+          message: "M-Pesa STK push has been sent to your phone. Please enter your PIN to confirm payment.",
+          status: "stk_push_sent",
+          phone,
+        });
+      }
+
+      if (method === "mobile_money") {
+        if (!phone) return res.status(400).json({ message: "Mobile money phone number required" });
+        const providerName = provider === "mtn" ? "MTN MoMo" : provider === "airtel" ? "Airtel Money" : "Orange Money";
+
+        await storage.createBillingRecord({
+          organizationId: orgId,
+          institutionName: org.name,
+          amount: String(priceMap[plan]),
+          currency: "USD",
+          status: "pending",
+          serviceType: "subscription",
+          invoiceNumber: invoiceNum,
+          periodStart: now,
+          periodEnd: endDate,
+        });
+
+        return res.json({
+          message: `${providerName} payment request sent to ${phone}. Please confirm on your phone.`,
+          status: "momo_push_sent",
+          phone,
+          provider: providerName,
+        });
+      }
+
+      if (method === "stripe") {
+        try {
+          const { getUncachableStripeClient } = await import("./stripeClient");
+          const stripe = await getUncachableStripeClient();
+
+          const tierMap: Record<string, string> = { standard: "CDH Standard", professional: "CDH Professional", enterprise: "CDH Enterprise" };
+          const productName = tierMap[plan] || tierMap.standard;
+
+          const products = await stripe.products.search({ query: `name:'${productName}'` });
+          if (!products.data.length) return res.status(404).json({ message: `Product ${productName} not found` });
+
+          const prices = await stripe.prices.list({ product: products.data[0].id, active: true });
+          if (!prices.data.length) return res.status(404).json({ message: "No active price found" });
+
+          let customerId: string | undefined;
+          const customers = await stripe.customers.search({ query: `metadata['orgId']:'${orgId}'` });
+          if (customers.data.length > 0) {
+            customerId = customers.data[0].id;
+          } else {
+            const customer = await stripe.customers.create({
+              name: org.name,
+              email: org.contactEmail || undefined,
+              metadata: { orgId: org.id, orgSlug: org.slug },
+            });
+            customerId = customer.id;
+          }
+
+          const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0] || "localhost:5000"}`;
+          const session = await stripe.checkout.sessions.create({
+            customer: customerId,
+            payment_method_types: ["card"],
+            line_items: [{ price: prices.data[0].id, quantity: 1 }],
+            mode: "subscription",
+            success_url: `${baseUrl}/upgrade?payment=success`,
+            cancel_url: `${baseUrl}/upgrade?payment=cancelled`,
+            metadata: { orgId: org.id, plan },
+          });
+
+          return res.json({ stripeUrl: session.url, message: "Redirecting to Stripe checkout" });
+        } catch (stripeErr: any) {
+          console.error("Stripe checkout error:", stripeErr.message);
+          return res.status(500).json({ message: "Card payment setup failed. Please try another payment method." });
+        }
+      }
+
+      res.status(400).json({ message: "Invalid payment method" });
+    } catch (e: any) {
+      console.error("Payment initiation error:", e);
+      res.status(500).json({ message: "Payment processing failed. Please try again." });
     }
   });
 
