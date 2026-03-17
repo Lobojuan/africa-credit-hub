@@ -128,7 +128,7 @@ const PRICING_VALIDATION = [
 
 const TRACTION_MILESTONES = [
   { status: "complete", label: "Production-ready platform (CDH v2.1) with 16 integrated modules" },
-  { status: "complete", label: "Live demo with 102K+ borrower records and 172K+ credit accounts across 2 countries" },
+  { status: "complete", label: "Live platform with 102K+ borrower records and 172K+ credit accounts across 2 countries" },
   { status: "complete", label: "Full regulatory compliance engine covering 54 African jurisdictions" },
   { status: "complete", label: "ML credit scoring with alternative data (mobile money, utility payments)" },
   { status: "complete", label: "Usage-based billing engine with multi-currency revenue tracking" },
@@ -161,8 +161,8 @@ export default function MarketValidationPage() {
             <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate("/solutions")} data-testid="link-back-solutions">Platform Overview</Button>
             <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate("/pricing")} data-testid="link-pricing">Pricing</Button>
             <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate("/security")} data-testid="link-security">Security</Button>
-            <Button size="sm" className="text-xs" onClick={() => window.location.href = `/api/demo-login`} data-testid="button-launch-demo">
-              Launch Demo <ArrowRight className="w-3 h-3 ml-1" />
+            <Button size="sm" className="text-xs" onClick={() => navigate("/start-trial")} data-testid="button-start-trial">
+              Start Free Trial <ArrowRight className="w-3 h-3 ml-1" />
             </Button>
           </div>
         </div>
@@ -462,8 +462,8 @@ export default function MarketValidationPage() {
             it's who builds it first.
           </p>
           <div className="flex items-center justify-center gap-4 flex-wrap">
-            <Button size="lg" onClick={() => window.location.href = `/api/demo-login`} data-testid="button-cta-demo">
-              Explore the Platform
+            <Button size="lg" onClick={() => navigate("/start-trial")} data-testid="button-cta-trial">
+              Start Free Trial
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
             <Button size="lg" variant="outline" onClick={() => navigate("/solutions")} data-testid="button-cta-solutions">

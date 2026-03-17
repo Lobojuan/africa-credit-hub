@@ -139,8 +139,8 @@ export default function PricingPage() {
             <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate("/solutions")} data-testid="link-back-solutions">
               Overview
             </Button>
-            <Button size="sm" className="text-xs" onClick={() => window.location.href = `/api/demo-login`} data-testid="button-launch-demo">
-              Launch Demo
+            <Button size="sm" className="text-xs" onClick={() => navigate("/start-trial")} data-testid="button-start-trial">
+              Start Free Trial
               <ArrowRight className="w-3 h-3 ml-1" />
             </Button>
           </div>
@@ -311,14 +311,14 @@ export default function PricingPage() {
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-2xl font-bold mb-4">Ready to Get Started?</h2>
           <p className="text-muted-foreground mb-6 text-sm">
-            Launch a free demo to explore the full platform, or contact our team for a custom quote.
+            Start a free trial to explore the full platform, or contact our team for a custom quote.
           </p>
           <div className="flex items-center justify-center gap-4">
-            <Button size="lg" onClick={() => window.location.href = `/api/demo-login`} data-testid="button-cta-demo">
-              Launch Free Demo
+            <Button size="lg" onClick={() => navigate("/start-trial")} data-testid="button-cta-trial">
+              Start Free Trial
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
-            <Button size="lg" variant="outline" onClick={() => navigate("/demo")} data-testid="button-cta-overview">
+            <Button size="lg" variant="outline" onClick={() => navigate("/solutions")} data-testid="button-cta-overview">
               Back to Overview
             </Button>
           </div>

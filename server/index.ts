@@ -87,7 +87,6 @@ declare module "express-session" {
     viewingCountry: string;
     webauthnChallenge: string;
     webauthnUserId: string;
-    isDemo: boolean;
   }
 }
 

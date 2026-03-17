@@ -19,7 +19,6 @@ import { LogOut, Loader2, MessageCircle, Building2, LayoutGrid } from "lucide-re
 import { DisputeChatbot } from "@/components/dispute-chatbot";
 import { OrgSwitcherProvider } from "@/hooks/use-org-switcher";
 import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
-import { DemoBanner } from "@/components/demo-banner";
 import { TrialBanner } from "@/components/trial-banner";
 import { OrgSwitcher } from "@/components/org-switcher";
 import { CountryThemeProvider, useCountryTheme } from "@/components/country-theme-provider";
@@ -345,7 +344,7 @@ function App() {
             <Route path="/" component={InvestorLandingPage} />
             <Route path="/solutions" component={InvestorLandingPage} />
             <Route path="/investor" component={InvestorLandingPage} />
-            <Route path="/demo" component={InvestorLandingPage} />
+
             <Route path="/pricing" component={PricingPage} />
             <Route path="/security" component={SecurityCompliancePage} />
             <Route path="/market-validation" component={MarketValidationPage} />
@@ -384,7 +383,6 @@ function App() {
             </Route>
           </Switch>
           <Toaster />
-          <DemoBanner />
           <TrialBanner />
           <PWAInstallPrompt />
         </TooltipProvider>

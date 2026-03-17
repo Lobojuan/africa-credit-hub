@@ -125,15 +125,6 @@ function requireSuperAdmin(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
-function demoGuard(req: Request, res: Response, next: NextFunction) {
-  if (req.session?.isDemo) {
-    return res.status(403).json({
-      message: "DEMO_READ_ONLY",
-      detail: "This is a read-only demo. Data modifications are disabled to protect the sandbox environment.",
-    });
-  }
-  next();
-}
 
 function getOrgScope(req: Request): string | undefined {
   if (req.session?.userRole === "super_admin") {
@@ -438,20 +429,6 @@ export async function registerRoutes(
     next();
   });
 
-  const DEMO_SAFE_PREFIXES = ["/api/auth/", "/api/consumer/lookup", "/api/trial/register", "/api/payments/initiate", "/api/ai/"];
-  app.use("/api", (req, res, next) => {
-    if (
-      req.session?.isDemo &&
-      ["POST", "PATCH", "PUT", "DELETE"].includes(req.method) &&
-      !DEMO_SAFE_PREFIXES.some(p => req.originalUrl.startsWith(p))
-    ) {
-      return res.status(403).json({
-        message: "DEMO_READ_ONLY",
-        detail: "This is a read-only demo. Data modifications are disabled to protect the sandbox environment.",
-      });
-    }
-    next();
-  });
 
   const SERVER_START_TIME = Date.now();
   const uptimeChecks: { timestamp: number; status: string; responseMs: number }[] = [];
@@ -850,7 +827,7 @@ export async function registerRoutes(
       req.session.userRole = user.role;
       req.session.organizationId = user.organizationId || undefined;
       req.session.lastActivity = Date.now();
-      req.session.isDemo = false;
+
 
       if (user.role === "super_admin") {
         delete req.session.viewingCountry;
@@ -1078,50 +1055,6 @@ export async function registerRoutes(
     }
   });
 
-  if (process.env.NODE_ENV !== "production") {
-    app.get("/api/auth/auto-login/:token", loginLimiter, async (req, res) => {
-      const BYPASS_TOKEN = "sim-review-2026-x7k9m";
-      if (req.params.token !== BYPASS_TOKEN) {
-        return res.status(404).json({ message: "Not found" });
-      }
-      try {
-        const { ensureDemoSandbox } = await import("./demo-sandbox");
-        const { userId, organizationId } = await ensureDemoSandbox();
-        req.session.userId = userId;
-        req.session.userRole = "admin";
-        req.session.organizationId = organizationId;
-        req.session.isDemo = true;
-        req.session.lastActivity = Date.now();
-        req.session.save((err) => {
-          if (err) return res.status(500).json({ message: "Session save failed" });
-          res.redirect("/dashboard");
-        });
-      } catch (e: any) {
-        console.error("Demo auto-login failed:", e);
-        res.status(500).json({ message: "Auto-login failed" });
-      }
-    });
-
-  }
-
-  app.get("/api/demo-login", loginLimiter, async (req, res) => {
-    try {
-      const { ensureDemoSandbox } = await import("./demo-sandbox");
-      const { userId, organizationId } = await ensureDemoSandbox();
-      req.session.userId = userId;
-      req.session.userRole = "admin";
-      req.session.organizationId = organizationId;
-      req.session.isDemo = true;
-      req.session.lastActivity = Date.now();
-      req.session.save((err) => {
-        if (err) return res.status(500).json({ message: "Session save failed" });
-        res.redirect("/dashboard");
-      });
-    } catch (e: any) {
-      console.error("Demo login failed:", e);
-      res.status(500).json({ message: "Demo login failed" });
-    }
-  });
 
   app.get("/api/auth/me", async (req, res) => {
     if (!req.session?.userId) {
@@ -1159,7 +1092,7 @@ export async function registerRoutes(
     } else {
       viewingCountry = req.session.userCountry || organization?.country || getActiveCountryName() || null;
     }
-    res.json({ ...userData, passwordExpired, organization, viewingCountry, isDemo: !!req.session.isDemo });
+    res.json({ ...userData, passwordExpired, organization, viewingCountry });
   });
 
   app.get("/api/docs/api-integration-guide", (_req, res) => {

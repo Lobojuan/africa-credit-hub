@@ -586,7 +586,7 @@ export default function InvestorLandingPage() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16">
-            <Button size="lg" className="text-sm px-8 gap-2 shadow-lg" onClick={() => navigate("/start-trial")} data-testid="cta-try-demo">
+            <Button size="lg" className="text-sm px-8 gap-2 shadow-lg" onClick={() => navigate("/start-trial")} data-testid="cta-try-trial">
               <ArrowRight className="w-4 h-4" />
               Start a Free Trial
             </Button>
@@ -1211,7 +1211,7 @@ export default function InvestorLandingPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             {[
-              { step: "1", title: "Start Free Trial", desc: "Register your organization and get full admin access for 14 days. No credit card required. Explore every feature with real data.", cta: "Start Trial", action: () => navigate("/start-trial"), testId: "step-demo" },
+              { step: "1", title: "Start Free Trial", desc: "Register your organization and get full admin access for 14 days. No credit card required. Explore every feature with real data.", cta: "Start Trial", action: () => navigate("/start-trial"), testId: "step-trial" },
               { step: "2", title: "Choose Your Plan", desc: "Standard for MFIs and fintechs. Professional for regional banks. Enterprise for central banks and tier-1 institutions.", cta: "View Pricing", action: () => navigate("/pricing"), testId: "step-pricing" },
               { step: "3", title: "Go Live", desc: "Connect via API or batch upload. Configure your regulatory profile. Start managing credit data across your jurisdictions.", cta: "Contact Sales", action: () => window.location.href = "mailto:info@systemsinmotion.com", testId: "step-deploy" },
             ].map((item) => (
@@ -1415,7 +1415,7 @@ export default function InvestorLandingPage() {
               size="lg"
               className="text-sm px-10 gap-2 shadow-lg"
               onClick={() => navigate("/start-trial")}
-              data-testid="cta-bottom-demo"
+              data-testid="cta-bottom-trial"
             >
               <ArrowRight className="w-4 h-4" />
               Start a Free Trial

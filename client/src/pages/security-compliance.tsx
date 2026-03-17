@@ -91,7 +91,7 @@ export default function SecurityCompliancePage() {
     <div className="min-h-screen bg-background text-foreground" data-testid="security-page">
       <nav className="border-b border-border/50 bg-background/95 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/demo")}>
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/solutions")}>
             <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(175 55% 28%), hsl(175 55% 22%))" }}>
               <Shield className="w-5 h-5 text-white" />
             </div>
@@ -101,10 +101,10 @@ export default function SecurityCompliancePage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate("/demo")} data-testid="link-back-overview">Overview</Button>
+            <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate("/solutions")} data-testid="link-back-overview">Overview</Button>
             <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate("/pricing")} data-testid="link-pricing">Pricing</Button>
-            <Button size="sm" className="text-xs" onClick={() => window.location.href = `/api/demo-login`} data-testid="button-launch-demo">
-              Launch Demo <ArrowRight className="w-3 h-3 ml-1" />
+            <Button size="sm" className="text-xs" onClick={() => navigate("/start-trial")} data-testid="button-start-trial">
+              Start Free Trial <ArrowRight className="w-3 h-3 ml-1" />
             </Button>
           </div>
         </div>
@@ -321,8 +321,8 @@ export default function SecurityCompliancePage() {
             every data flow has been designed with security and compliance as the primary concern.
           </p>
           <div className="flex items-center justify-center gap-4">
-            <Button size="lg" onClick={() => window.location.href = `/api/demo-login`} data-testid="button-cta-demo">
-              Explore the Platform
+            <Button size="lg" onClick={() => navigate("/start-trial")} data-testid="button-cta-trial">
+              Start Free Trial
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
             <Button size="lg" variant="outline" onClick={() => navigate("/pricing")} data-testid="button-cta-pricing">
