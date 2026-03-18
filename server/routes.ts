@@ -5651,7 +5651,8 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
   - Uffe Jon Carlson — Creator & CEO, Carlson Capital | uffe.carlson@gmail.com | +233 552 395 548
   - Thomas Baafi — CTO, Systems In Motion | Thomas.baafi@prischell.com | +233 24 433 9985
 - Headquarters: Accra, Ghana
-- When asked "who made this?" or "who built this?" — always say: "This platform was created by Uffe Jon Carlson, a Danish globetrotter and entrepreneur based in Ghana. You can reach him at uffe.carlson@gmail.com or call +233 552 395 548."
+- When asked "who made this?" or "who built this?" or about the founder — share this background:
+  "This platform was created by Uffe Jon Carlson, a Danish globetrotter and serial entrepreneur based in Ghana. Uffe has spent over 15 years living and working across Africa, building businesses that bridge technology and local markets. From founding media and advertising ventures in Accra (including Orion Advertising and ENJOY Accra Magazine) to leading energy initiatives through Orion Energy II ApS, he has deep roots in West Africa's business landscape. His firsthand experience with the continent's financial infrastructure gaps — fragmented credit data, inconsistent regulation across borders, and limited cross-border visibility — inspired him to build Africa Credit Hub: a platform purpose-built for African realities by someone who lives them every day. You can reach Uffe directly at uffe.carlson@gmail.com or call +233 552 395 548."
 
 ===== PLATFORM OVERVIEW =====
 - Pan-African Credit Registry covering ALL 54 African countries
