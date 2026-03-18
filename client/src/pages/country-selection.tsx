@@ -267,38 +267,38 @@ export default function CountrySelectionPage() {
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-            <TabsList className="bg-card/80 backdrop-blur-sm border-2 border-primary/30 shadow-lg shadow-primary/5 h-10 flex-wrap sm:flex-nowrap w-full overflow-x-auto gap-0.5 p-1 rounded-xl">
-              <TabsTrigger value="overview" className="text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg transition-all" data-testid="tab-overview">
+            <TabsList className="bg-background border border-border/60 h-10 flex-wrap sm:flex-nowrap w-full overflow-x-auto gap-0.5 p-1 rounded-lg">
+              <TabsTrigger value="overview" className="text-xs text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-overview">
                 <Globe className="w-3 h-3 mr-1" /> Jurisdictions
               </TabsTrigger>
-              <TabsTrigger value="compliance" className="text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg transition-all" data-testid="tab-compliance">
+              <TabsTrigger value="compliance" className="text-xs text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-compliance">
                 <Shield className="w-3 h-3 mr-1" /> Compliance & SATA
               </TabsTrigger>
-              <TabsTrigger value="features" className="text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg transition-all" data-testid="tab-features">
+              <TabsTrigger value="features" className="text-xs text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-features">
                 <Layers className="w-3 h-3 mr-1" /> Feature Matrix
               </TabsTrigger>
-              <TabsTrigger value="users-clients" className="text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg transition-all" data-testid="tab-users-clients">
+              <TabsTrigger value="users-clients" className="text-xs text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-users-clients">
                 <Users className="w-3 h-3 mr-1" /> Users & Clients
               </TabsTrigger>
-              <TabsTrigger value="country-settings" className="text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg transition-all" data-testid="tab-country-settings">
+              <TabsTrigger value="country-settings" className="text-xs text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-country-settings">
                 <Settings className="w-3 h-3 mr-1" /> Country Settings
               </TabsTrigger>
-              <TabsTrigger value="system" className="text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg transition-all" data-testid="tab-system">
+              <TabsTrigger value="system" className="text-xs text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-system">
                 <Activity className="w-3 h-3 mr-1" /> System
               </TabsTrigger>
-              <TabsTrigger value="audit" className="text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg transition-all" data-testid="tab-audit">
+              <TabsTrigger value="audit" className="text-xs text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-audit">
                 <ScrollText className="w-3 h-3 mr-1" /> Audit Log
               </TabsTrigger>
-              <TabsTrigger value="api-keys" className="text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg transition-all" data-testid="tab-api-keys">
+              <TabsTrigger value="api-keys" className="text-xs text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-api-keys">
                 <Key className="w-3 h-3 mr-1" /> API Keys
               </TabsTrigger>
-              <TabsTrigger value="data-quality" className="text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg transition-all" data-testid="tab-data-quality">
+              <TabsTrigger value="data-quality" className="text-xs text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-data-quality">
                 <BarChart3 className="w-3 h-3 mr-1" /> Data Quality
               </TabsTrigger>
-              <TabsTrigger value="billing" className="text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg transition-all" data-testid="tab-billing">
+              <TabsTrigger value="billing" className="text-xs text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-billing">
                 <DollarSign className="w-3 h-3 mr-1" /> Billing
               </TabsTrigger>
-              <TabsTrigger value="retention" className="text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md rounded-lg transition-all" data-testid="tab-retention">
+              <TabsTrigger value="retention" className="text-xs text-muted-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-retention">
                 <Archive className="w-3 h-3 mr-1" /> Retention
               </TabsTrigger>
             </TabsList>
