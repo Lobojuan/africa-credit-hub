@@ -5816,6 +5816,86 @@ STRATEGIC POSITIONING:
 - The potential is not just in moving money, but in MOVING MARKETS
 - Partnership opportunity: mid-tier banks (like I&M Bank in Kenya) have the license and capital but lack digital agility — Africa Credit Hub provides that agility
 
+===== WORLD BANK & IMF DATA (cite these authoritatively) =====
+
+--- WORLD BANK GLOBAL ECONOMIC PROSPECTS (2024-2026) ---
+Sub-Saharan Africa GDP Growth: 3.5% (2024) → 3.8% (2025) → 4.4% (2026-27)
+Africa Overall (AfDB): 4.2% (2025) → 4.3% (2026)
+Regional Growth: East Africa 5.7% (fastest), North Africa 4.1%, Central Africa 4.1%, Southern Africa 2.6% (slowest)
+
+GDP GROWTH BY COUNTRY (World Bank Global Economic Prospects, Jan 2025):
+Nigeria: 3.1% (2024) → 3.2% (2025) | South Africa: 0.8% (2024) → 1.5% (2025)
+Kenya: 5.0% (2024) → 5.3% (2025) | Ghana: 4.7% (2024) → 4.8% (2025)
+Côte d'Ivoire: 6.5% (2024) → 6.4% (2025) | Senegal: 10.6% (2024, oil/gas boost)
+Ethiopia: 7.1% (2024) → 6.5% (2025) | Tanzania: 5.6% (2024) → 6.1% (2025)
+Rwanda: 8.0% (2024) → 7.5% (2025) | DRC: 4.9% (2024) → 5.0% (2025)
+Benin: 6.3% (2024) → 6.4% (2025) | Cameroon: 3.7% (2024) → 4.0% (2025)
+Angola: 3.2% (2024) → 2.9% (2025) | Botswana: 1.0% (2024) → 5.3% (2025)
+Burkina Faso: 3.7% (2024) → 3.9% (2025) | Cabo Verde: 5.2% (2024) → 4.9% (2025)
+Chad: 3.0% (2024) → 2.1% (2025)
+
+--- IMF REGIONAL ECONOMIC OUTLOOK: SUB-SAHARAN AFRICA ---
+Inflation: Declined from 9.3% (2022) → 4.5% (2024) → 3.9-4.0% (2025-26)
+High inflation countries still in double digits: Angola, Ethiopia, Ghana, Nigeria
+Debt: 23 countries (nearly half SSA) are in or at high risk of debt distress
+External debt service doubled over past decade, reaching 2% of GDP (2024)
+Borrowing costs: African countries face interest costs averaging 11.6% — 8.5 percentage points higher than US benchmarks
+Example: Germany borrows at 2.29% vs Zambia at 22.5%
+Per capita GDP growth: Only 1.7% average — ~30% of economies won't recover to pre-pandemic levels by 2026
+Only 3 of 34 rated African countries hold investment-grade ratings (Botswana, Mauritius, Morocco). 20 countries have NEVER been rated.
+
+--- WORLD BANK GLOBAL FINDEX 2024 (Financial Inclusion) ---
+Sub-Saharan Africa account ownership: 58% (2024), up from 49% (2021) and 34% (2014)
+Mobile money accounts: 40% of adults (HIGHEST globally) | Digital payments: 51% of adults
+88% of account holders made/received digital payments (2024)
+Unbanked: 42% of adults in SSA remain unbanked
+- 80M+ unbanked adults receive agricultural payments in cash
+- 100M+ lack official ID documents
+- Barriers: lack of money (59%), no mobile phone (35%), lack of documentation, distance, high fees, lack of trust (18%, rising to 26% in Central Africa)
+Gender gap: Women 12 percentage points less likely to own a financial account. Women = 55% of global unbanked.
+Formal savings: 35% of adults saved in a financial account (2024), up 12 points from 2021. 20% save exclusively through mobile money.
+Formal borrowing: Only 24% borrowed formally (banks, credit cards, mobile). 35% relied on informal sources (family/friends).
+Only 7% of SSA adults borrowed via mobile money despite hosting 52% of global mobile money accounts — massive untapped lending opportunity.
+
+Country Account Ownership (Findex 2024): Kenya 90%, Mauritius 90%, South Africa 81%, Ghana 81%, Senegal 77%, Uganda 70%, Nigeria 63%, Rwanda 68%, Madagascar 24%, Chad 20%, Niger 14%
+
+--- BANKING SECTOR HEALTH (IMF Financial Soundness Indicators) ---
+Non-Performing Loan (NPL) Ratios:
+- South Africa: 5.2% (Dec 2024) — stable and healthy
+- Ghana: 24.1% (Jun 2024) — elevated, up from 18.8% (2023), driven by sovereign default and FX volatility
+- Sub-Saharan Africa average: ~17% (2023-24)
+- Equatorial Guinea: 55.4% (highest globally)
+- Global average: 5.8%
+Credit growth (2024): Nigeria 45%, Egypt 26%, Ethiopia 36%, DRC 61%
+Private credit to GDP: Nigeria only 14% (among lowest in Africa — showing massive room for credit market deepening)
+
+--- FINTECH & DIGITAL LENDING ECOSYSTEM (IFC/World Bank) ---
+IFC Africa investment FY2024: $14.2B total (23% increase YoY), including $1.1B for digital connectivity, $1.6B for smaller businesses
+Active fintech companies in Africa: 1,263 (Jan 2024), up from 450 (2020) — nearly tripled in 4 years
+"Big Four" fintech hubs: Nigeria (28%), South Africa (20%), Kenya (16%), Egypt (10%) = ~70% of all fintechs
+African financial services market: projected $230B revenue by 2025 (10% annual growth)
+Fintech was the ONLY African tech sector to grow in both deal count (+16%) and funding (+59%) in 2024
+Nigeria fintech funding: $2B in 2024 (35% of Nigeria's total tech funding)
+Africa received just 2% of global VC deals — massive underinvestment relative to opportunity
+IFC launched $225M VC platform (2022) specifically for Africa, Middle East, Central Asia fintech
+
+--- MOBILE MONEY (GSMA 2025 State of the Industry) ---
+Total Africa mobile money transactions (2024): $1.105 TRILLION (+15% YoY)
+Transaction volume: 81.8 billion (74% of ALL global mobile money transactions)
+Registered accounts: 1.1 billion (53% of global total)
+GDP contribution: $190 billion to Sub-Saharan Africa GDP
+By region: East Africa $649B (459M accounts), West Africa $357B (485M accounts), Central Africa $83B (104M accounts)
+
+--- WHY THIS DATA MATTERS FOR AFRICA CREDIT HUB ---
+When citing these statistics, connect them to why credit registry infrastructure is critical:
+- 42% unbanked + only 24% formal borrowing = massive untapped credit market that needs data infrastructure
+- NPL ratios of 17-24% show banks are lending badly without proper credit data — a registry reduces defaults
+- Credit growth of 45-61% in major markets means MORE data is being generated that needs to be captured
+- $1.1 trillion in mobile money creates transaction data that can power alternative credit scoring
+- Only 7% borrow via mobile money despite 40% having accounts = the lending infrastructure hasn't caught up with payments
+- 1,263 fintechs need credit data APIs to underwrite — Africa Credit Hub provides that infrastructure
+- $230B financial services market growing 10%/year needs the credit data backbone to scale responsibly
+
 ===== COUNTRY-BY-COUNTRY INTELLIGENCE (all 54 African countries) =====
 Use this data when asked about specific countries, regions, or markets. Cite numbers confidently.
 
