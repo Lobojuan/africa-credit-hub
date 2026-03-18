@@ -25,7 +25,7 @@ const PLANS = [
       "Standard API access (1,000 calls/day)",
       "Email support (48h response)",
       "Basic fraud detection",
-      "GDPR compliance tools",
+      "African data protection compliance (POPIA, NDPR, Ghana DPA, GDPR)",
       "Monthly data exports",
       "Standard dashboards",
     ],

@@ -599,8 +599,10 @@ export default function InvestorLandingPage() {
           </p>
 
           <p className="text-sm text-muted-foreground/80 max-w-xl mx-auto mb-10">
-            Purpose-built for central banks, commercial banks, MFIs, and fintechs
-            by <strong className="text-foreground/80">Systems In Motion Limited</strong>.
+            Purpose-built for central banks, commercial banks, MFIs, and fintechs.
+            Designed in <strong className="text-foreground/80">Accra, Ghana</strong> by{" "}
+            <strong className="text-foreground/80">Carlson Capital &amp; Systems In Motion Limited</strong> — 
+            for Africa, by people who live and work here.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16">
@@ -638,6 +640,44 @@ export default function InvestorLandingPage() {
 
           <div className="mt-16 animate-bounce">
             <ChevronDown className="w-5 h-5 mx-auto text-muted-foreground/50" />
+          </div>
+        </div>
+      </section>
+
+      <section className="py-10 sm:py-14 border-b border-border/30 bg-muted/30">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <p className="text-center text-xs text-muted-foreground mb-5 font-medium uppercase tracking-wider">Compliant with African Regulatory Frameworks</p>
+          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+            {[
+              { code: "POPIA", country: "South Africa" },
+              { code: "NDPR/NDPA", country: "Nigeria" },
+              { code: "DPA 2012", country: "Ghana" },
+              { code: "DPA 2019", country: "Kenya" },
+              { code: "Law 058/2021", country: "Rwanda" },
+              { code: "BoG CRB", country: "Bank of Ghana" },
+              { code: "CBN", country: "Central Bank of Nigeria" },
+              { code: "GDPR", country: "International" },
+            ].map((reg) => (
+              <div key={reg.code} className="flex items-center gap-1.5" data-testid={`reg-badge-${reg.code.toLowerCase().replace(/\s/g, "-")}`}>
+                <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+                <span className="text-xs font-semibold">{reg.code}</span>
+                <span className="text-[10px] text-muted-foreground">({reg.country})</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+            {[
+              "M-Pesa & Mobile Money payments",
+              "PAPSS cross-border settlements",
+              "42+ African currencies",
+              "5 AU languages",
+              "Offline batch processing",
+            ].map((item) => (
+              <div key={item} className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-3 h-3 text-green-500" />
+                <span className="text-[11px] text-muted-foreground">{item}</span>
+              </div>
+            ))}
           </div>
         </div>
       </section>

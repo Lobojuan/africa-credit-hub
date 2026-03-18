@@ -85,12 +85,12 @@ export default function ConsumerPortalPage() {
         <Card className="shadow-sm">
           <CardContent className="p-4 sm:p-5 space-y-4">
             <div>
-              <label className="text-sm font-medium mb-1.5 block">National ID / Ghana Card / Passport</label>
+              <label className="text-sm font-medium mb-1.5 block">National ID / Passport / Tax ID</label>
               <input
                 type="text"
                 value={nationalId}
                 onChange={(e) => setNationalId(e.target.value)}
-                placeholder="e.g. GHA-123456789"
+                placeholder="e.g. your National ID number"
                 className="w-full px-3 py-2.5 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow"
                 data-testid="input-consumer-id"
                 inputMode="text"
@@ -206,7 +206,7 @@ export default function ConsumerPortalPage() {
                 </div>
                 <div>
                   <p className="text-xs font-semibold">Step 1</p>
-                  <p className="text-[11px] text-muted-foreground">Enter your National ID or Ghana Card number</p>
+                  <p className="text-[11px] text-muted-foreground">Enter your National ID, passport, or tax identification number</p>
                 </div>
               </div>
               <div className="flex items-start gap-3 text-left p-3 rounded-xl bg-muted/30">
