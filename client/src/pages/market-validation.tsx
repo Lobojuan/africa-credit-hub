@@ -55,9 +55,9 @@ const DEMAND_SIGNALS = [
   },
   {
     icon: Lock,
-    title: "POPIA, NDPR, GDPR Compliance Pressure",
-    evidence: "Data protection laws across South Africa (POPIA), Nigeria (NDPR), Kenya (DPA), and Ghana (DPA 2012) create compliance complexity that only a purpose-built multi-jurisdiction platform can handle at scale.",
-    source: "National data protection authorities",
+    title: "36+ African Data Protection Laws Creating Compliance Pressure",
+    evidence: "Data protection laws across South Africa (POPIA), Nigeria (NDPA 2023), Kenya (DPA 2019), Ghana (DPA 2012), the AU Malabo Convention, and 30+ other African jurisdictions create compliance complexity that only a purpose-built multi-jurisdiction platform can handle at scale.",
+    source: "National data protection authorities, African Union",
     strength: "Strong",
   },
 ];
@@ -133,7 +133,7 @@ const TRACTION_MILESTONES = [
   { status: "complete", label: "ML credit scoring with alternative data (mobile money, utility payments)" },
   { status: "complete", label: "Usage-based billing engine with multi-currency revenue tracking" },
   { status: "complete", label: "API platform with OAuth 2.1, webhooks, and developer documentation" },
-  { status: "complete", label: "POPIA, GDPR, NDPR, and Ghana DPA compliance frameworks implemented" },
+  { status: "complete", label: "POPIA, NDPA, Ghana DPA, Kenya DPA, Malabo Convention + 36 African DPA frameworks implemented" },
   { status: "next", label: "First pilot deployment — Ghana (Bank of Ghana regulatory alignment)" },
   { status: "next", label: "Sierra Leone expansion — BSL export format already built" },
   { status: "next", label: "Enterprise sales to 3 Tier-1 banks across West and East Africa" },

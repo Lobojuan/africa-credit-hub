@@ -103,7 +103,7 @@ const FAQS = [
   },
   {
     q: "How is data privacy handled?",
-    a: "We comply with GDPR, Ghana's Data Protection Act, and each country's local data protection regulations. Data is encrypted at rest and in transit, with full audit trails and blockchain anchoring for tamper-proof records.",
+    a: "We comply with 36+ African data protection laws including South Africa's POPIA, Nigeria's NDPA, Ghana's DPA, Kenya's DPA, the AU Malabo Convention, and each country's local regulations. GDPR is also supported for clients with EU exposure. Data is encrypted at rest (AES-256) and in transit (TLS 1.3), with full audit trails and blockchain anchoring for tamper-proof records.",
   },
   {
     q: "Can I switch plans?",
@@ -272,7 +272,7 @@ export default function PricingPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             {[
               { icon: Globe, label: "54 Countries", desc: "Pan-African coverage" },
-              { icon: Lock, label: "Enterprise Security", desc: "SOC 2 + GDPR ready" },
+              { icon: Lock, label: "Enterprise Security", desc: "SOC 2 + POPIA/NDPA ready" },
               { icon: Brain, label: "ML Credit Scoring", desc: "Gradient boosting model" },
               { icon: Headphones, label: "24/7 Support", desc: "Dedicated team" },
             ].map((item) => (

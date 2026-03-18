@@ -911,7 +911,7 @@ function AIDemoPage() {
                 <span className="flex items-center gap-1"><Lock className="w-3 h-3" /> Bank-grade encryption</span>
                 <span className="flex items-center gap-1"><Shield className="w-3 h-3" /> SOC 2 compliant</span>
                 <span className="flex items-center gap-1"><Globe2 className="w-3 h-3" /> 54 African countries</span>
-                <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> GDPR & local DPA ready</span>
+                <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> POPIA, NDPA & 36+ African DPAs</span>
               </div>
             </div>
 

@@ -65,11 +65,15 @@ const SECURITY_CONTROLS = [
 ];
 
 const COMPLIANCE_FRAMEWORKS = [
-  { name: "GDPR", region: "European Union / Global", status: "compliant", detail: "Data subject rights, consent management, data portability, right to erasure" },
-  { name: "Ghana Data Protection Act, 2012", region: "Ghana (Act 843)", status: "compliant", detail: "Full compliance with Bank of Ghana CRB requirements and NIA integration" },
-  { name: "Nigeria NDPR", region: "Nigeria", status: "compliant", detail: "Nigeria Data Protection Regulation compliance for NIBSS integration" },
-  { name: "Kenya Data Protection Act", region: "Kenya", status: "compliant", detail: "Office of Data Protection Commissioner requirements" },
   { name: "South Africa POPIA", region: "South Africa", status: "compliant", detail: "Full Protection of Personal Information Act compliance — Information Officer designation, lawful processing conditions, data subject access requests (DSARs), cross-border transfer safeguards, breach notification within 72 hours, and purpose limitation enforcement" },
+  { name: "Nigeria NDPA 2023", region: "Nigeria", status: "compliant", detail: "Nigeria Data Protection Act compliance (replacing NDPR 2019) — NDPC registration, lawful basis, data subject rights, breach notification, cross-border transfer safeguards. Fines up to 2% global turnover" },
+  { name: "Ghana Data Protection Act, 2012", region: "Ghana (Act 843)", status: "compliant", detail: "Full compliance with Bank of Ghana CRB requirements, Data Protection Commission registration, and NIA integration" },
+  { name: "Kenya Data Protection Act 2019", region: "Kenya", status: "compliant", detail: "Office of Data Protection Commissioner (ODPC) requirements, DPIAs, CBK Credit Reference Bureau Regulations 2020 alignment. Fines up to KES 5M" },
+  { name: "AU Malabo Convention", region: "African Union (Continental)", status: "compliant", detail: "African Union Convention on Cyber Security and Personal Data Protection (2014, entered force June 2023). Continental framework for all 55 AU member states" },
+  { name: "ECOWAS Data Protection Act", region: "West Africa (15 countries)", status: "compliant", detail: "ECOWAS Supplementary Act A/SA.1/01/10 on Personal Data Protection — binding on all 15 ECOWAS member states including Nigeria, Ghana, Senegal, Côte d'Ivoire" },
+  { name: "Rwanda Law 058/2021", region: "Rwanda", status: "compliant", detail: "Protection of Personal Data and Privacy — National Cyber Security Authority oversight, Standard Contractual Clauses for cross-border transfers" },
+  { name: "36+ African DPA Laws", region: "Pan-African", status: "compliant", detail: "Country-specific compliance for Uganda DPA 2019, Tanzania DPA 2022, Ethiopia Proclamation 1321/2024, Zambia DPA 2021, Botswana DPA 2024, Cameroon Law 2024/017, Mauritius DPA 2017, Egypt Law 151/2020, Morocco Loi 09-08, Algeria Loi 18-07, Tunisia Organic Law 2004-63, and more" },
+  { name: "GDPR", region: "European Union / International", status: "compliant", detail: "Data subject rights, consent management, data portability, right to erasure — for clients with EU exposure or EU-based partners" },
   { name: "ISO 27001", region: "International", status: "aligned", detail: "Information security management system aligned with ISO 27001 controls" },
   { name: "SOC 2 Type II", region: "International", status: "in-progress", detail: "Security, availability, and confidentiality trust services criteria" },
   { name: "PCI DSS", region: "International", status: "aligned", detail: "Payment Card Industry Data Security Standard alignment for financial data" },
@@ -123,11 +127,11 @@ export default function SecurityCompliancePage() {
           <div className="flex items-center justify-center gap-6 mb-12 flex-wrap">
             <div className="flex items-center gap-2 text-sm">
               <CheckCircle2 className="w-4 h-4 text-green-500" />
-              <span>GDPR Compliant</span>
+              <span>POPIA Compliant</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <CheckCircle2 className="w-4 h-4 text-green-500" />
-              <span>POPIA Compliant</span>
+              <span>NDPA Compliant</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <CheckCircle2 className="w-4 h-4 text-green-500" />

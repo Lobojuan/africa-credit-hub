@@ -217,10 +217,10 @@ export default function AboutPage() {
               </div>
               <div className="p-6 sm:p-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {[
-                  { icon: Users, title: "Borrower Management", desc: "Individual and corporate borrower registration with ID photos, Ghana Card verification, and fuzzy duplicate detection across jurisdictions." },
+                  { icon: Users, title: "Borrower Management", desc: "Individual and corporate borrower registration with ID photos, national ID verification (Ghana Card, SA ID, NIN, etc.), and fuzzy duplicate detection across jurisdictions." },
                   { icon: TrendingUp, title: "Credit Scoring", desc: "Algorithmic scoring engine (300-850 scale) with weighted factor analysis, reason codes, and comprehensive credit report generation." },
                   { icon: Shield, title: "Maker-Checker Workflow", desc: "Dual-authorization control on all data modifications — every change requires a second authorized user to approve before taking effect." },
-                  { icon: Landmark, title: "Regulatory Compliance", desc: "Bank of Ghana CRB v1.1 export engine with 6 file types, jurisdiction-specific data retention, and SRS compliance tracking dashboard." },
+                  { icon: Landmark, title: "Regulatory Compliance", desc: "Multi-jurisdiction regulatory engine — BoG, CBN, CBK, SARB export formats with 36+ data protection law mappings, jurisdiction-specific data retention, and SRS compliance tracking dashboard." },
                   { icon: Globe, title: "Multi-Language", desc: "Full interface support for English, French, Portuguese, Arabic (with RTL layout), and Swahili — all five African Union working languages." },
                   { icon: Building2, title: "Multi-Tenant SaaS", desc: "Organization-scoped data isolation with self-registration, onboarding wizard, subscription billing, and platform administration." },
                 ].map((item) => (

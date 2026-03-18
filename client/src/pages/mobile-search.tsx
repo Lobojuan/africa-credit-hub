@@ -272,7 +272,7 @@ export default function MobileSearchPage() {
                 <Search className="w-7 h-7 text-muted-foreground/30" />
               </div>
               <p className="font-semibold text-sm" data-testid="text-mobile-prompt">Search for a profile</p>
-              <p className="text-xs text-muted-foreground mt-1.5 max-w-[240px] mx-auto">Enter a name, Ghana Card number, or other ID to look up credit information</p>
+              <p className="text-xs text-muted-foreground mt-1.5 max-w-[240px] mx-auto">Enter a name, national ID number, or other identifier to look up credit information</p>
             </div>
           </div>
         )}
@@ -301,7 +301,7 @@ export default function MobileSearchPage() {
               const score = (b as any).creditScore || (parseInt(b.id.slice(-4), 16) % 450 + 350);
               const name = b.type === "corporate" ? b.companyName : `${b.firstName} ${b.lastName}`;
               const isCorporate = b.type === "corporate";
-              const idLabel = b.nationalId ? "Ghana Card" : b.passportNumber ? "Passport" : b.tinNumber ? "TIN" : null;
+              const idLabel = b.nationalId ? "National ID" : b.passportNumber ? "Passport" : b.tinNumber ? "TIN" : null;
               const idValue = b.nationalId || b.passportNumber || b.tinNumber || null;
 
               return (
