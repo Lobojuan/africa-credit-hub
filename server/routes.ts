@@ -5635,6 +5635,81 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     }
   });
 
+  const publicChatLimiter = rateLimit({ windowMs: 60 * 1000, max: 15, message: { message: "Too many chat requests. Please wait a moment." } });
+  app.post("/api/public/chat", publicChatLimiter, async (req, res) => {
+    try {
+      const { message, history } = req.body;
+      if (!message || typeof message !== "string") {
+        return res.status(400).json({ message: "message required" });
+      }
+      const systemPrompt = `You are the AI assistant for Africa Credit Hub (africacredithub.com) — the Pan-African Credit Registry System (CDH v2.1) built by Carlson Capital & Systems In Motion Limited. You help potential clients understand the platform.
+
+KEY FACTS:
+- Covers all 54 African countries with multi-jurisdiction credit data management
+- Built for central banks, commercial banks, MFIs, fintechs, and regulators
+- AI-powered: credit narratives, anomaly detection, regulatory reports, cross-border risk analysis, loan underwriting
+- Features: borrower registry, credit accounts, audit trail (SHA-256 hash chain), maker-checker workflows, role-based access, batch upload, API access, consumer self-service portal
+- Supports 18+ African currencies with live exchange rates
+- Languages: English, French, Swahili, Arabic, Portuguese
+- Compliance: POPIA, NDPR, Ghana DPA, GDPR frameworks, automated data retention
+- Security: End-to-end encryption, MFA/biometric auth, tamper-proof audit logs
+- Pricing: Standard ($2,500/mo), Professional ($5,000/mo), Enterprise ($12,000/mo). 14-day free trial, no credit card required.
+- Contact: Uffe Jon Carlson (uffe.carlson@gmail.com, +233 552 395 548), Thomas Baafi (Thomas.baafi@prischell.com, +233 24 433 9985)
+- Free trial: /start-trial | Pricing: /pricing | AI Demo: /ai-demo | Security: /security
+
+Be helpful, professional, and concise. Guide users toward starting a free trial. If asked about technical details not covered above, suggest they try the AI demo or contact sales.`;
+
+      const chatHistory = Array.isArray(history)
+        ? history.filter((m: any) => m?.role && m?.content).slice(-10).map((m: any) => ({ role: m.role as string, content: String(m.content).slice(0, 2000) }))
+        : [];
+
+      const messages = [
+        ...chatHistory,
+        { role: "user", content: message.slice(0, 2000) }
+      ];
+
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+
+      const provider = parseProvider(req.body?.provider);
+      if (provider === "claude") {
+        const response = await anthropic.messages.create({
+          model: "claude-opus-4-6",
+          max_tokens: 1000,
+          system: systemPrompt,
+          messages: messages.map(m => ({ role: m.role as "user" | "assistant", content: m.content })),
+          stream: true,
+        });
+        for await (const event of response) {
+          if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+            if (event.delta.text) res.write(`data: ${JSON.stringify({ content: event.delta.text })}\n\n`);
+          }
+        }
+      } else {
+        const response = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [{ role: "system", content: systemPrompt }, ...messages.map(m => ({ role: m.role as "user" | "assistant", content: m.content }))],
+          max_tokens: 1000,
+          stream: true,
+        });
+        for await (const chunk of response) {
+          const content = chunk.choices[0]?.delta?.content || "";
+          if (content) res.write(`data: ${JSON.stringify({ content })}\n\n`);
+        }
+      }
+      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+      res.end();
+    } catch (e: any) {
+      if (res.headersSent) {
+        res.write(`data: ${JSON.stringify({ error: e.message })}\n\n`);
+        res.end();
+      } else {
+        res.status(500).json({ message: e.message });
+      }
+    }
+  });
+
   app.post("/api/ai/chat", requireAuth, async (req, res) => {
     try {
       const { messages, provider: reqProvider } = req.body;

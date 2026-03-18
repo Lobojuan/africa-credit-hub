@@ -1,6 +1,6 @@
 import "./lib/i18n";
 import { lazy, Suspense, useEffect, useState } from "react";
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient, apiRequest } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -19,6 +19,7 @@ import { LogOut, Loader2, MessageCircle, Building2, LayoutGrid } from "lucide-re
 import { DisputeChatbot } from "@/components/dispute-chatbot";
 import { OrgSwitcherProvider } from "@/hooks/use-org-switcher";
 import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
+import { PublicChatbot } from "@/components/public-chatbot";
 import { TrialBanner } from "@/components/trial-banner";
 import { OrgSwitcher } from "@/components/org-switcher";
 import { CountryThemeProvider, useCountryTheme } from "@/components/country-theme-provider";
@@ -336,6 +337,13 @@ function AuthenticatedApp() {
   );
 }
 
+function PublicChatbotWrapper() {
+  const [location] = useLocation();
+  const publicPaths = ["/", "/solutions", "/investor", "/ai-demo", "/pricing", "/security", "/market-validation", "/start-trial", "/my-credit"];
+  if (!publicPaths.includes(location)) return null;
+  return <PublicChatbot />;
+}
+
 function App() {
   return (
     <ThemeProvider>
@@ -387,6 +395,7 @@ function App() {
           <Toaster />
           <TrialBanner />
           <PWAInstallPrompt />
+          <PublicChatbotWrapper />
         </TooltipProvider>
       </QueryClientProvider>
     </ThemeProvider>
