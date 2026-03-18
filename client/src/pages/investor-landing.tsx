@@ -86,23 +86,23 @@ const HERO_STATS = [
 const PROBLEM_STATEMENTS = [
   {
     icon: AlertTriangle,
-    title: "A $4.9 Trillion Credit Gap",
-    desc: "The global MSME credit gap is $4.9 trillion, with Sub-Saharan Africa facing one of the most acute deficits. In Ghana alone, $7.5B in credit demand meets only $2.7B in supply — 64% goes unsatisfied. (World Bank/IFC)",
+    title: "A $331 Billion African Credit Gap",
+    desc: "Sub-Saharan Africa's SME financing gap stands at $331 billion. 51% of Africa's 44 million formal MSMEs lack necessary financing. SMEs represent 90% of all private sector businesses and generate 80% of jobs — yet remain starved of capital. (World Bank/IFC)",
   },
   {
     icon: TrendingUp,
-    title: "Banks Lending Blind",
-    desc: "Nigeria's credit bureau covers just 13.9% of adults vs. South Africa's 70%. Without unified credit data, banks charge SMEs 20-50% interest, and NPL ratios hit 17-24% across Sub-Saharan Africa. (IMF Financial Soundness Indicators)",
+    title: "Banks Lending Blind Across the Continent",
+    desc: "Credit bureau coverage ranges from 70% in South Africa to just 13.9% in Nigeria — and far lower across most of the continent. Non-performing loan ratios average 17% in Sub-Saharan Africa vs. 5.8% globally. Banks are losing billions lending without data. (IMF)",
   },
   {
     icon: CircleDollarSign,
-    title: "$1.1 Trillion in Untapped Data",
-    desc: "Africa processed $1.1 trillion in mobile money transactions in 2024, yet only 7% of adults borrow via mobile money. This transaction data can power credit scoring — but only with the right infrastructure. (GSMA 2025)",
+    title: "$1.1 Trillion in Untapped Transaction Data",
+    desc: "Africa's 1.1 billion mobile money accounts processed $1.1 trillion in 2024 — 74% of all global mobile money transactions. Yet only 7% of adults borrow via mobile. This data can power credit scoring across all 54 countries. (GSMA 2025)",
   },
   {
     icon: Users,
-    title: "42% Still Unbanked",
-    desc: "350M+ adults lack access to formal credit. Women are 12 percentage points less likely to have accounts. The $1.7 trillion gender finance gap is an untapped opportunity for institutions with the right data. (World Bank Findex 2024)",
+    title: "350M+ Adults Excluded from Credit",
+    desc: "42% of Sub-Saharan African adults remain unbanked. Only 24% borrow formally. 100M+ lack official ID. Women are 12 percentage points less likely to have accounts — the $1.7 trillion gender finance gap is the continent's biggest untapped opportunity. (World Bank Findex 2024)",
   },
 ];
 
@@ -1279,9 +1279,9 @@ export default function InvestorLandingPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
             <Card className="text-center p-5">
               <CardContent className="pt-2">
-                <div className="text-3xl font-bold text-primary mb-1">$4.9T</div>
-                <p className="font-semibold text-xs mb-1">Global MSME Credit Gap</p>
-                <p className="text-[11px] text-muted-foreground">Sub-Saharan Africa faces one of the most acute deficits relative to GDP. 64% of demand goes unsatisfied.</p>
+                <div className="text-3xl font-bold text-primary mb-1">$331B</div>
+                <p className="font-semibold text-xs mb-1">Africa SME Financing Gap</p>
+                <p className="text-[11px] text-muted-foreground">51% of Africa's 44 million formal MSMEs lack financing. SMEs drive 80% of jobs yet remain locked out of credit.</p>
                 <p className="text-[10px] text-muted-foreground/60 mt-1">Source: World Bank / IFC</p>
               </CardContent>
             </Card>
@@ -1297,7 +1297,7 @@ export default function InvestorLandingPage() {
               <CardContent className="pt-2">
                 <div className="text-3xl font-bold text-primary mb-1">17%</div>
                 <p className="font-semibold text-xs mb-1">Avg NPL Ratio (SSA)</p>
-                <p className="text-[11px] text-muted-foreground">Banks are making bad loans without credit data. Ghana is at 24.1%. The global average is just 5.8%.</p>
+                <p className="text-[11px] text-muted-foreground">Banks across Africa are making bad loans without credit data. Nearly 3x the global average of 5.8%. Better data = fewer defaults.</p>
                 <p className="text-[10px] text-muted-foreground/60 mt-1">Source: IMF Financial Soundness</p>
               </CardContent>
             </Card>
