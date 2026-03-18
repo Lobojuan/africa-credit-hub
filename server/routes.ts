@@ -1212,7 +1212,7 @@ export async function registerRoutes(
   });
 
   app.use("/api", apiLimiter, (req, res, next) => {
-    if (req.path.startsWith("/auth") || req.path.startsWith("/external") || req.path.startsWith("/docs") || req.path.startsWith("/consumer") || req.path.startsWith("/ai-demo")) return next();
+    if (req.path.startsWith("/auth") || req.path.startsWith("/external") || req.path.startsWith("/docs") || req.path.startsWith("/consumer") || req.path.startsWith("/ai-demo") || req.path.startsWith("/public")) return next();
     requireAuth(req, res, next);
   });
 
@@ -5663,50 +5663,15 @@ Be helpful, professional, and concise. Guide users toward starting a free trial.
         ? history.filter((m: any) => m?.role && m?.content).slice(-10).map((m: any) => ({ role: m.role as string, content: String(m.content).slice(0, 2000) }))
         : [];
 
-      const messages = [
-        ...chatHistory,
-        { role: "user", content: message.slice(0, 2000) }
-      ];
-
-      res.setHeader("Content-Type", "text/event-stream");
-      res.setHeader("Cache-Control", "no-cache");
-      res.setHeader("Connection", "keep-alive");
+      const userPrompt = chatHistory.length > 0
+        ? `Previous conversation:\n${chatHistory.map((m: any) => `${m.role}: ${m.content}`).join("\n")}\n\nUser: ${message.slice(0, 2000)}`
+        : message.slice(0, 2000);
 
       const provider = parseProvider(req.body?.provider);
-      if (provider === "claude") {
-        const response = await anthropic.messages.create({
-          model: "claude-opus-4-6",
-          max_tokens: 1000,
-          system: systemPrompt,
-          messages: messages.map(m => ({ role: m.role as "user" | "assistant", content: m.content })),
-          stream: true,
-        });
-        for await (const event of response) {
-          if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
-            if (event.delta.text) res.write(`data: ${JSON.stringify({ content: event.delta.text })}\n\n`);
-          }
-        }
-      } else {
-        const response = await openai.chat.completions.create({
-          model: "gpt-4o",
-          messages: [{ role: "system", content: systemPrompt }, ...messages.map(m => ({ role: m.role as "user" | "assistant", content: m.content }))],
-          max_tokens: 1000,
-          stream: true,
-        });
-        for await (const chunk of response) {
-          const content = chunk.choices[0]?.delta?.content || "";
-          if (content) res.write(`data: ${JSON.stringify({ content })}\n\n`);
-        }
-      }
-      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-      res.end();
+      const response = await callAI(systemPrompt, userPrompt, provider, 1000);
+      res.json({ response });
     } catch (e: any) {
-      if (res.headersSent) {
-        res.write(`data: ${JSON.stringify({ error: e.message })}\n\n`);
-        res.end();
-      } else {
-        res.status(500).json({ message: e.message });
-      }
+      res.status(500).json({ message: e.message });
     }
   });
 

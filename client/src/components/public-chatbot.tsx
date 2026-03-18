@@ -60,32 +60,12 @@ export function PublicChatbot() {
         throw new Error(err.message || "Failed to get response");
       }
 
-      const reader = res.body?.getReader();
-      const decoder = new TextDecoder();
-      let fullContent = "";
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split("\n").filter(l => l.startsWith("data: "));
-          for (const line of lines) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              if (data.done) break;
-              if (data.content) {
-                fullContent += data.content;
-                setMessages(prev => {
-                  const updated = [...prev];
-                  updated[updated.length - 1] = { role: "assistant", content: fullContent };
-                  return updated;
-                });
-              }
-            } catch {}
-          }
-        }
-      }
+      const data = await res.json();
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = { role: "assistant", content: data.response || "I couldn't generate a response. Please try again." };
+        return updated;
+      });
     } catch (e: any) {
       setMessages(prev => {
         const updated = [...prev];
