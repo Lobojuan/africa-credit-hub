@@ -5816,6 +5816,273 @@ STRATEGIC POSITIONING:
 - The potential is not just in moving money, but in MOVING MARKETS
 - Partnership opportunity: mid-tier banks (like I&M Bank in Kenya) have the license and capital but lack digital agility — Africa Credit Hub provides that agility
 
+===== COUNTRY-BY-COUNTRY INTELLIGENCE (all 54 African countries) =====
+Use this data when asked about specific countries, regions, or markets. Cite numbers confidently.
+
+--- WEST AFRICA ---
+
+GHANA (Priority Market — B2B Infrastructure):
+- GDP: $76B | Population: 34M | Currency: Ghana Cedi (GHS) | Central Bank: Bank of Ghana (BoG)
+- SMEs: 90%+ of all businesses, 85% of workforce | Financing gap: $4.8B ($7.5B demand vs $2.7B supply)
+- Account ownership: 81% (up from 58% in 2017) | Mobile money driving inclusion
+- Data protection: Data Protection Act 2012 (DPA) | Regulator: Data Protection Commission
+- Credit bureau coverage: Growing but limited | Interest rates for SMEs: 20-30%
+- Regulatory environment: Superior in West Africa — ideal first market for B2B credit infrastructure
+- Key opportunity: Government-led digitization, strong fintech ecosystem, regulatory willingness to innovate
+
+NIGERIA (Scale Market — B2C/B2B):
+- GDP: $252B (largest economy in Africa) | Population: 220M | Currency: Nigerian Naira (NGN) | Central Bank: CBN
+- SMEs contribute ~50% of GDP, employ 60M+ people | Naira devalued 50%+ in 2024
+- Credit bureau coverage: 13.9% (vs South Africa's 70%) — massive gap
+- Data protection: Nigeria Data Protection Act (NDPA) 2023, replacing NDPR 2019 | Regulator: NITDA
+- 900K+ fintech/banking agents (OPay, MoniePoint) | 1.5M+ agents being formalized
+- Credit Reporting Act 2017 expanded data sources to utilities, telcos, retailers — increased credit access 5-30%
+- Key opportunity: Sheer scale, huge underserved population, strong fintech adoption
+
+CÔTE D'IVOIRE (Ivory Coast):
+- GDP: $86B | Population: 28M | Currency: West African CFA Franc (XOF) | Central Bank: BCEAO (regional)
+- Only 12% of SMEs seek formal working capital — massive untapped demand
+- Account ownership: Growing via mobile money | French-speaking market
+- Part of UEMOA (8-country monetary union sharing XOF)
+- Key opportunity: Francophone West Africa gateway, Abidjan as regional financial hub
+
+SENEGAL:
+- GDP: $28B | Population: 17M | Currency: XOF (CFA Franc) | Central Bank: BCEAO
+- Account ownership: 77% (+21 points since 2021) | Digital payments: 73% of adults | Formal savings: 58%
+- Strong mobile money growth | French-speaking market
+- Key opportunity: High digital payment adoption, growing fintech scene in Dakar
+
+SIERRA LEONE:
+- GDP: $4B | Population: 8M | Currency: Sierra Leonean Leone (SLL) | Central Bank: Bank of Sierra Leone (BSL)
+- Very limited credit bureau infrastructure | High financial exclusion
+- Key opportunity: Greenfield market for credit registry, regulatory support for digital financial services
+
+MALI, BURKINA FASO, NIGER, TOGO, BENIN, GUINEA-BISSAU:
+- All use XOF (CFA Franc) under BCEAO | Part of UEMOA monetary union
+- Predominantly informal economies | Very low credit bureau coverage
+- French-speaking markets | Key opportunity: Regional deployment through BCEAO partnership
+
+GUINEA:
+- GDP: $16B | Population: 14M | Currency: Guinean Franc (GNF)
+- Mining-dependent economy | Low financial inclusion | French-speaking
+
+LIBERIA:
+- GDP: $4B | Population: 5M | Currency: Liberian Dollar (LRD)
+- English-speaking | Very limited financial infrastructure | Post-conflict rebuilding
+
+GAMBIA:
+- GDP: $2B | Population: 2.5M | Currency: Dalasi (GMD) | English-speaking
+- Small market but strategic location
+
+CAPE VERDE:
+- GDP: $2B | Population: 0.6M | Currency: Cape Verdean Escudo (CVE)
+- Island nation | Tourism-dependent | Portuguese-speaking
+
+MAURITANIA:
+- GDP: $10B | Population: 4.5M | Currency: Ouguiya (MRU)
+- Arabic/French-speaking | Mining and fishing economy
+
+--- EAST AFRICA ---
+
+KENYA (Fintech Leader):
+- GDP: $109B | Population: 55M | Currency: Kenyan Shilling (KES) | Central Bank: Central Bank of Kenya
+- Mobile money penetration: 82% of adults (HIGHEST in Africa) | 38.7M mobile money users
+- M-Pesa: World's most successful mobile money platform | 89% digital payment usage
+- Data protection: Data Protection Act 2019 | Fines up to KES 5M or 1% turnover + 2 years imprisonment
+- KES depreciated 30% vs USD in 2023 | Interest rates: 20-25% for SMEs
+- Key opportunity: Most digitally advanced market, M-Pesa integration, strong developer ecosystem
+
+TANZANIA:
+- GDP: $79B | Population: 65M | Currency: Tanzanian Shilling (TZS) | Central Bank: Bank of Tanzania
+- Mobile money transactions: $62B in 2023 (+33% YoY) — explosive growth
+- Strong mobile money adoption | Swahili-speaking market
+- Key opportunity: Rapid mobile money growth, large underserved population
+
+UGANDA:
+- GDP: $46B | Population: 48M | Currency: Ugandan Shilling (UGX) | Central Bank: Bank of Uganda
+- Account ownership: 70.1% | Digital platform usage: 71% | Formal savings: 54%
+- Data protection: Data Protection and Privacy Act 2019
+- Key opportunity: Young population, growing digital adoption
+
+RWANDA:
+- GDP: $13B | Population: 14M | Currency: Rwandan Franc (RWF) | Central Bank: National Bank of Rwanda
+- Known for strong governance and digital-first policies | Data Protection Law 2021
+- Kigali as emerging tech hub | English/French-speaking
+- Key opportunity: Government digital agenda, favorable regulatory environment
+
+ETHIOPIA:
+- GDP: $205B (5th largest in Africa) | Population: 125M (2nd most populous) | Currency: Ethiopian Birr (ETB)
+- National Bank of Ethiopia | Large unbanked population | Telecom liberalization ongoing
+- Key opportunity: Massive untapped market, recent fintech licensing reforms
+
+BURUNDI:
+- GDP: $3B | Population: 13M | Currency: Burundian Franc (BIF) | Low GDP per capita
+- Very limited financial infrastructure | French-speaking
+
+SOUTH SUDAN:
+- GDP: $5B | Population: 11M | Currency: South Sudanese Pound (SSP)
+- Newest country in Africa (2011) | Oil-dependent | Very limited infrastructure
+
+SOMALIA:
+- GDP: $8B | Population: 17M | Currency: Somali Shilling (SOS)
+- Mobile money (Hormuud, EVC Plus) widely used despite limited banking | Arabic-speaking
+- Key opportunity: Mobile-first credit data collection
+
+DJIBOUTI:
+- GDP: $4B | Population: 1M | Currency: Djiboutian Franc (DJF)
+- Strategic port location | French/Arabic-speaking
+
+ERITREA:
+- GDP: $2B | Population: 3.5M | Currency: Eritrean Nakfa (ERN)
+- Limited market access | Smallest financial sector in East Africa
+
+--- SOUTHERN AFRICA ---
+
+SOUTH AFRICA (Most Advanced Credit Market):
+- GDP: $373B (largest in Africa) | Population: 60M | Currency: South African Rand (ZAR) | Central Bank: SARB
+- Credit bureau coverage: 70% (highest in Africa) — benchmark for continent
+- Data protection: POPIA (Protection of Personal Information Act) 2013, full compliance 2021
+- Most mature financial sector in Africa | Major banks: Standard Bank, FNB, Absa, Nedbank
+- Account ownership: 81% | Strong regulatory framework
+- Key opportunity: Enterprise clients, regulatory compliance expertise, benchmark market
+
+BOTSWANA:
+- GDP: $19B | Population: 2.5M | Currency: Botswana Pula (BWP) | Central Bank: Bank of Botswana
+- Investment-grade credit rating (one of only 4 in Africa) | Mining economy (diamonds)
+- Data Protection Act 2018 | Strong governance
+- Key opportunity: Stable, well-governed market with investment-grade credibility
+
+MOZAMBIQUE:
+- GDP: $18B | Population: 33M | Currency: Mozambican Metical (MZN)
+- Portuguese-speaking | Growing natural gas sector | High financial exclusion
+- Key opportunity: Emerging economy, Portuguese-speaking market linkage
+
+ZAMBIA:
+- GDP: $29B | Population: 20M | Currency: Zambian Kwacha (ZMW) | Data Protection Act 2021
+- Mining economy (copper) | English-speaking | Growing mobile money
+- Key opportunity: Post-debt restructuring growth, mining sector lending
+
+ZIMBABWE:
+- GDP: $28B | Population: 16M | Currency: Zimbabwe Gold (ZiG) — newest currency in Africa (2024)
+- History of hyperinflation and currency instability | Multi-currency use (USD dominant)
+- Key opportunity: Currency stability tools, multi-currency portfolio management
+
+NAMIBIA:
+- GDP: $13B | Population: 2.5M | Currency: Namibian Dollar (NAD, pegged to ZAR)
+- English-speaking | Well-regulated financial sector | Small but stable market
+
+MALAWI:
+- GDP: $14B | Population: 20M | Currency: Malawian Kwacha (MWK)
+- Agriculture-dependent | High poverty rate | Growing mobile money
+- Key opportunity: Agricultural lending, financial inclusion
+
+ESWATINI (Swaziland):
+- GDP: $5B | Population: 1.2M | Currency: Lilangeni (SZL, pegged to ZAR)
+- Small monarchy | Limited market but linked to South African financial system
+
+LESOTHO:
+- GDP: $2B | Population: 2M | Currency: Loti (LSL, pegged to ZAR)
+- Landlocked within South Africa | Small market
+
+MADAGASCAR:
+- GDP: $16B | Population: 29M | Currency: Malagasy Ariary (MGA)
+- Island nation | French-speaking | Very low financial inclusion
+- Key opportunity: Large unbanked population, agriculture-focused lending
+
+COMOROS:
+- GDP: $1.3B | Population: 0.9M | Currency: Comorian Franc (KMF)
+- Small island nation | French/Arabic-speaking
+
+MAURITIUS:
+- GDP: $14B | Population: 1.3M | Currency: Mauritian Rupee (MUR) | Central Bank: Bank of Mauritius
+- Investment-grade credit rating | Account ownership: 89% (2nd highest in Africa)
+- Data Protection Act 2017 | International financial center
+- Key opportunity: Regional hub for Indian Ocean, high compliance standards
+
+SEYCHELLES:
+- GDP: $2B | Population: 0.1M | Currency: Seychellois Rupee (SCR)
+- Smallest African country by population | Tourism-dependent | Offshore finance hub
+
+--- NORTH AFRICA ---
+
+EGYPT:
+- GDP: $348B (2nd largest in Africa) | Population: 110M | Currency: Egyptian Pound (EGP)
+- Central Bank of Egypt | Large banking sector but significant unbanked population
+- Arabic-speaking | Strong regulatory framework
+- Key opportunity: Massive population, growing fintech sector, government digitization push
+
+MOROCCO:
+- GDP: $152B | Population: 38M | Currency: Moroccan Dirham (MAD) | Central Bank: Bank Al-Maghrib
+- Investment-grade credit rating | Strong banking sector (Attijariwafa, BMCE active across Africa)
+- Arabic/French-speaking | Hub for pan-African banking
+- Key opportunity: Moroccan banks expanding across Africa — need pan-African credit data
+
+ALGERIA:
+- GDP: $267B (3rd largest in Africa) | Population: 45M | Currency: Algerian Dinar (DZD)
+- Oil/gas dependent | Large economy but limited fintech adoption | Arabic/French-speaking
+- Key opportunity: Untapped market with significant economic scale
+
+TUNISIA:
+- GDP: $46B | Population: 12M | Currency: Tunisian Dinar (TND)
+- Arabic/French-speaking | Relatively advanced financial sector for North Africa
+- Key opportunity: Strong tech talent pool, startup ecosystem
+
+LIBYA:
+- GDP: $42B | Population: 7M | Currency: Libyan Dinar (LYD)
+- Oil-dependent | Political instability | Limited fintech infrastructure
+
+--- CENTRAL AFRICA ---
+
+DEMOCRATIC REPUBLIC OF CONGO (DRC):
+- GDP: $64B | Population: 100M+ (3rd most populous in Africa) | Currency: Congolese Franc (CDF)
+- Enormous mineral wealth (cobalt, copper) | Very low financial inclusion
+- French-speaking | 6% bank account ownership — one of lowest globally
+- Key opportunity: Massive underserved market, mining sector credit needs
+
+CAMEROON:
+- GDP: $45B | Population: 28M | Currency: Central African CFA Franc (XAF) | Central Bank: BEAC
+- Bilingual (English/French) | Largest economy in CEMAC zone
+- Key opportunity: Gateway to Central African market, bilingual advantage
+
+REPUBLIC OF CONGO (Congo-Brazzaville):
+- GDP: $14B | Population: 6M | Currency: XAF | Oil-dependent | French-speaking
+
+GABON:
+- GDP: $21B | Population: 2.3M | Currency: XAF | Oil economy | Highest GDP per capita in Central Africa
+
+EQUATORIAL GUINEA:
+- GDP: $12B | Population: 1.7M | Currency: XAF | Oil-dependent | Spanish/French-speaking
+
+CHAD:
+- GDP: $12B | Population: 17M | Currency: XAF | Oil and agriculture | French/Arabic-speaking
+
+CENTRAL AFRICAN REPUBLIC:
+- GDP: $2.6B | Population: 5M | Currency: XAF | Conflict-affected | Very low financial inclusion
+
+SÃO TOMÉ AND PRÍNCIPE:
+- GDP: $0.6B | Population: 0.2M | Currency: Dobra (STN) | Portuguese-speaking | Small island nation
+
+--- CURRENCY UNIONS (important for cross-border) ---
+
+UEMOA/BCEAO (West African CFA Franc — XOF): Benin, Burkina Faso, Côte d'Ivoire, Guinea-Bissau, Mali, Niger, Senegal, Togo
+CEMAC/BEAC (Central African CFA Franc — XAF): Cameroon, CAR, Chad, Congo-Brazzaville, Equatorial Guinea, Gabon
+East African Community (EAC): Kenya, Tanzania, Uganda, Rwanda, Burundi, DRC, South Sudan (different currencies but trade integration)
+SADC: 16 Southern African countries with trade integration
+PAPSS (Pan-African Payment and Settlement System): Enables instant cross-border payments in local currencies across Africa
+
+--- MOBILE MONEY LANDSCAPE (2024) ---
+- Total Africa: $1.1 TRILLION in transactions, 1.1 billion registered accounts
+- East Africa: 459M accounts, $649B transactions (led by Kenya M-Pesa)
+- West Africa: 485M accounts, $357B transactions (fastest growing for new accounts)
+- Central Africa: 104M accounts, $83B transactions
+- North Africa: 25M accounts, $10B (higher banking penetration)
+- Southern Africa: 27M accounts, $6B (higher banking penetration)
+- Mobile money contributes $190B to Sub-Saharan Africa GDP
+
+--- FINANCIAL INCLUSION LEADERS (Account Ownership 2024) ---
+Kenya 90% | Mauritius 89% | South Africa 81% | Ghana 81% | Senegal 77% | Uganda 70% | Rwanda 68%
+Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
+
 ===== PAGES & NAVIGATION =====
 - Homepage: africacredithub.com or africacredithub.com/solutions
 - AI Demo (no login): africacredithub.com/ai-demo
