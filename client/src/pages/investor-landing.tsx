@@ -86,23 +86,23 @@ const HERO_STATS = [
 const PROBLEM_STATEMENTS = [
   {
     icon: AlertTriangle,
-    title: "Fragmented Credit Data",
-    desc: "Africa's 54 nations each have isolated credit information systems. A borrower defaulting in Kenya can freely obtain credit in Nigeria with no record trail, creating billions in hidden risk exposure.",
+    title: "A $4.9 Trillion Credit Gap",
+    desc: "The global MSME credit gap is $4.9 trillion, with Sub-Saharan Africa facing one of the most acute deficits. In Ghana alone, $7.5B in credit demand meets only $2.7B in supply — 64% goes unsatisfied. (World Bank/IFC)",
   },
   {
-    icon: Languages,
-    title: "Language & Regulatory Barriers",
-    desc: "Operating across Anglophone, Francophone, Lusophone, and Arabophone regions requires navigating 5 official AU languages and dozens of conflicting regulatory frameworks simultaneously.",
+    icon: TrendingUp,
+    title: "Banks Lending Blind",
+    desc: "Nigeria's credit bureau covers just 13.9% of adults vs. South Africa's 70%. Without unified credit data, banks charge SMEs 20-50% interest, and NPL ratios hit 17-24% across Sub-Saharan Africa. (IMF Financial Soundness Indicators)",
   },
   {
     icon: CircleDollarSign,
-    title: "Currency Complexity",
-    desc: "With 42+ active currencies, financial institutions cannot accurately assess cross-border exposure without real-time exchange rate management and multi-currency portfolio aggregation.",
+    title: "$1.1 Trillion in Untapped Data",
+    desc: "Africa processed $1.1 trillion in mobile money transactions in 2024, yet only 7% of adults borrow via mobile money. This transaction data can power credit scoring — but only with the right infrastructure. (GSMA 2025)",
   },
   {
-    icon: Shield,
-    title: "No Unified Compliance Standard",
-    desc: "Each country has distinct data retention laws, consent requirements, and reporting obligations. No existing system provides a unified compliance framework across all African jurisdictions.",
+    icon: Users,
+    title: "42% Still Unbanked",
+    desc: "350M+ adults lack access to formal credit. Women are 12 percentage points less likely to have accounts. The $1.7 trillion gender finance gap is an untapped opportunity for institutions with the right data. (World Bank Findex 2024)",
   },
 ];
 
@@ -832,13 +832,13 @@ export default function InvestorLandingPage() {
       <section id="problem" className="py-20 sm:py-28 bg-background">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <Badge variant="outline" className="mb-4 text-xs">The Challenges You Face</Badge>
+            <Badge variant="outline" className="mb-4 text-xs">The Data Speaks</Badge>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-4">
-              The Credit Data Problems Costing Your Institution
+              Africa's Credit Infrastructure Crisis — In Numbers
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base leading-relaxed">
-              Fragmented credit data across 54 nations means hidden borrower risk, 
-              compliance complexity, and missed lending opportunities. Sound familiar?
+              World Bank, IMF, and IFC data reveals the scale of the problem. These aren't projections —
+              they're the reality facing every financial institution operating in Africa today.
             </p>
           </div>
 
@@ -863,7 +863,7 @@ export default function InvestorLandingPage() {
           <div className="mt-10 text-center">
             <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-primary/30 bg-primary/5">
               <Target className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium">CDH v2.0 solves all four challenges in a single, unified platform.</span>
+              <span className="text-sm font-medium">CDH v2.1 addresses all four challenges in a single, unified platform — backed by real data.</span>
             </div>
           </div>
         </div>
@@ -1266,36 +1266,47 @@ export default function InvestorLandingPage() {
       <section id="market-proof" className="py-20 sm:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <Badge variant="outline" className="mb-4">Why Institutions Choose CDH</Badge>
+            <Badge variant="outline" className="mb-4">World Bank &amp; IMF Data</Badge>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-4">
-              The Only Platform Built for All of Africa
+              The Numbers Don't Lie
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base">
-              Existing alternatives cover a single country or sub-region. CDH is the only credit registry 
-              platform designed for pan-African operation from day one.
+              Data from the World Bank, IMF, IFC, and GSMA shows a continent ready for modern credit infrastructure.
+              CDH is the only platform built to serve all 54 African markets from day one.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            <Card className="text-center p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
+            <Card className="text-center p-5">
               <CardContent className="pt-2">
-                <div className="text-4xl font-bold text-primary mb-2">54</div>
-                <p className="font-semibold text-sm mb-1">Countries Covered</p>
-                <p className="text-xs text-muted-foreground">Complete continental coverage. No competitor covers more than a single region. Deploy once, operate everywhere.</p>
+                <div className="text-3xl font-bold text-primary mb-1">$4.9T</div>
+                <p className="font-semibold text-xs mb-1">Global MSME Credit Gap</p>
+                <p className="text-[11px] text-muted-foreground">Sub-Saharan Africa faces one of the most acute deficits relative to GDP. 64% of demand goes unsatisfied.</p>
+                <p className="text-[10px] text-muted-foreground/60 mt-1">Source: World Bank / IFC</p>
               </CardContent>
             </Card>
-            <Card className="text-center p-6">
+            <Card className="text-center p-5">
               <CardContent className="pt-2">
-                <div className="text-4xl font-bold text-primary mb-2">37+</div>
-                <p className="font-semibold text-sm mb-1">Central Bank Mandates</p>
-                <p className="text-xs text-muted-foreground">Credit reporting is becoming mandatory across Africa. CDH ensures your institution is compliant in every jurisdiction you operate.</p>
+                <div className="text-3xl font-bold text-primary mb-1">$1.1T</div>
+                <p className="font-semibold text-xs mb-1">Mobile Money Transactions</p>
+                <p className="text-[11px] text-muted-foreground">1.1 billion registered accounts generating data that can power alternative credit scoring across the continent.</p>
+                <p className="text-[10px] text-muted-foreground/60 mt-1">Source: GSMA 2025</p>
               </CardContent>
             </Card>
-            <Card className="text-center p-6">
+            <Card className="text-center p-5">
               <CardContent className="pt-2">
-                <div className="text-4xl font-bold text-primary mb-2">350M+</div>
-                <p className="font-semibold text-sm mb-1">Underserved Adults</p>
-                <p className="text-xs text-muted-foreground">Over 350 million adults lack access to formal credit. Alternative data scoring lets your institution serve this untapped market.</p>
+                <div className="text-3xl font-bold text-primary mb-1">17%</div>
+                <p className="font-semibold text-xs mb-1">Avg NPL Ratio (SSA)</p>
+                <p className="text-[11px] text-muted-foreground">Banks are making bad loans without credit data. Ghana is at 24.1%. The global average is just 5.8%.</p>
+                <p className="text-[10px] text-muted-foreground/60 mt-1">Source: IMF Financial Soundness</p>
+              </CardContent>
+            </Card>
+            <Card className="text-center p-5">
+              <CardContent className="pt-2">
+                <div className="text-3xl font-bold text-primary mb-1">42%</div>
+                <p className="font-semibold text-xs mb-1">Adults Still Unbanked</p>
+                <p className="text-[11px] text-muted-foreground">350M+ adults excluded from formal credit. Only 24% borrow formally. 100M+ lack official ID documents.</p>
+                <p className="text-[10px] text-muted-foreground/60 mt-1">Source: World Bank Findex 2024</p>
               </CardContent>
             </Card>
           </div>
@@ -1374,14 +1385,14 @@ export default function InvestorLandingPage() {
               <CardContent className="pt-6">
                 <h3 className="font-bold text-sm mb-4 flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-primary" />
-                  The Market Is Moving — Don't Get Left Behind
+                  The Data Is Clear — Africa Needs Credit Infrastructure Now
                 </h3>
                 <div className="space-y-3">
                   {[
-                    { icon: Scale, title: "Regulatory Mandates Accelerating", desc: "37+ African central banks are enacting credit reporting legislation. Compliance is becoming mandatory, not optional." },
-                    { icon: Globe, title: "AfCFTA Requires Data Harmonization", desc: "The African Continental Free Trade Area (1.4B people) needs harmonized financial data for cross-border lending." },
-                    { icon: Network, title: "Digital Infrastructure Is Ready", desc: "Mobile money (M-Pesa, MTN MoMo) and 43% internet penetration mean the rails exist to deploy SaaS at scale." },
-                    { icon: Users, title: "350M+ Financially Excluded Adults", desc: "Alternative data scoring can bring them into the credit system — but only with shared data infrastructure." },
+                    { icon: TrendingUp, title: "4.2% GDP Growth Across Africa (2025)", desc: "The African Development Bank forecasts 4.2% growth in 2025, with East Africa at 5.7%. Credit infrastructure must scale with this growth. (AfDB/World Bank)" },
+                    { icon: Activity, title: "1,263 Fintechs Need Credit Data", desc: "Africa's fintech ecosystem tripled from 450 (2020) to 1,263 companies. The $230B financial services market grows 10% annually — all need credit data APIs. (IFC)" },
+                    { icon: Scale, title: "Only 24% Borrow Formally", desc: "35% still rely on family and friends. Only 7% borrow via mobile money despite 40% having accounts. The lending infrastructure hasn't caught up with payments. (World Bank Findex 2024)" },
+                    { icon: Banknote, title: "11.6% Average Borrowing Cost", desc: "African countries pay 8.5 percentage points more than US benchmarks. Germany borrows at 2.29%, Zambia at 22.5%. Better credit data reduces this premium. (IMF)" },
                   ].map((item) => (
                     <div key={item.title} className="flex items-start gap-3">
                       <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/10 flex-shrink-0 mt-0.5">
