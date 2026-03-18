@@ -5702,7 +5702,7 @@ STANDARD — $299/month ($239/month annual)
 - Core credit data submission, basic report generation
 - Standard API access (1,000 calls/day)
 - Email support (48h response), basic fraud detection
-- GDPR compliance tools, monthly data exports
+- African data protection compliance (POPIA, NDPR, Ghana DPA, GDPR), monthly data exports
 
 PROFESSIONAL — $799/month ($639/month annual) [MOST POPULAR]
 - For growing institutions needing advanced analytics
@@ -5737,15 +5737,102 @@ USAGE-BASED PRICING (on top of subscription):
 - Session management with automatic timeout and IP-based access controls
 - Role-based access control with principle of least privilege
 
-Compliance Frameworks Supported:
-- GDPR (EU General Data Protection Regulation)
-- Ghana Data Protection Act (DPA 2012)
-- Nigeria Data Protection Regulation (NDPR)
-- South Africa POPIA (Protection of Personal Information Act)
-- Kenya Data Protection Act
-- Country-specific central bank reporting requirements
-- Automated data retention enforcement per jurisdiction
-- Full audit trail of all retention actions for regulatory proof
+Compliance Frameworks Supported (Africa-first, 36+ African data protection laws):
+
+Data Protection Laws by Region:
+WEST AFRICA:
+- Ghana: Data Protection Act 2012 (Act 843) — Regulator: Data Protection Commission. Amendments pending for children's data, DPIAs, privacy by design
+- Nigeria: Nigeria Data Protection Act (NDPA) 2023, replacing NDPR 2019 — Regulator: Nigeria Data Protection Commission (NDPC, formerly NITDA). Fines up to 2% global turnover or ₦10M
+- Senegal: Loi n° 2008-12 on Personal Data Protection — Regulator: Commission de Protection des Données Personnelles (CDP)
+- Côte d'Ivoire: Loi n° 2013-450 on Personal Data Protection — Regulator: ARTCI
+- Burkina Faso: Loi n° 010-2004 on Personal Data Protection — Regulator: CIL
+- Mali: Loi n° 2013-015 on Personal Data Protection — Regulator: APDP
+- Benin: Loi n° 2017-20 on the Digital Code (includes data protection) — Regulator: APDP
+- Niger: Loi n° 2017-28 on Personal Data Protection
+- Togo: Loi n° 2019-014 on Personal Data Protection
+- Guinea: Loi L/2016/037 on Cybersecurity and Personal Data Protection
+- Cape Verde: Data Protection Law 2001 (Loi 133/V/2001), one of earliest in Africa
+- Gambia: Data Protection Act 2025 (newly enacted)
+- Sierra Leone: No comprehensive DP law yet — draft in progress
+- Liberia: No comprehensive DP law yet
+- Guinea-Bissau: No comprehensive DP law yet
+- Mauritania: No specific DP law, some provisions in Cybercrime Law 2016
+
+EAST AFRICA:
+- Kenya: Data Protection Act 2019 — Regulator: Office of the Data Protection Commissioner (ODPC). Fines up to KES 5M or 1% turnover + 2 years imprisonment
+- Uganda: Data Protection and Privacy Act 2019 — Regulator: Personal Data Protection Office (NITA-U)
+- Tanzania: Personal Data Protection Act 2022 (draft regulations pending) — Regulator: Tanzania Communications Regulatory Authority
+- Rwanda: Law N° 058/2021 on Protection of Personal Data and Privacy — Regulator: National Cyber Security Authority. Published Standard Contractual Clauses
+- Ethiopia: Personal Data Protection Proclamation No. 1321/2024 (enacted July 2024) — first comprehensive DP law
+- Burundi: Loi N° 1/10 of 2022 on Personal Data Protection
+- Djibouti: Digital Code 2025 includes data protection provisions
+- Somalia: No comprehensive DP law
+- South Sudan: No comprehensive DP law
+- Eritrea: No comprehensive DP law
+
+SOUTHERN AFRICA:
+- South Africa: POPIA (Protection of Personal Information Act) 2013, full enforcement July 2021 — Regulator: Information Regulator. Most mature African DP framework. Fines up to R10M or 10 years imprisonment
+- Botswana: Data Protection Act 2024 (revised from 2018), effective January 2025 — stronger controller/processor obligations
+- Zambia: Data Protection Act No. 3 of 2021 — Regulator: Data Protection Commissioner (appointed 2024)
+- Zimbabwe: Data Protection Act 2021 (Cyber and Data Protection Act)
+- Mozambique: No comprehensive DP law yet (draft exists)
+- Malawi: Data Protection Act 2024 (newly enacted) — Regulator: MACRA
+- Mauritius: Data Protection Act 2017 — Regulator: Data Protection Office. One of most advanced in Africa
+- Eswatini: Data Protection Act 2022
+- Lesotho: Data Protection Act 2011
+- Namibia: No comprehensive DP law (draft exists)
+- Madagascar: Loi n° 2014-038 on Personal Data Protection — Regulator: appointed 2024
+- Seychelles: Data Protection Act 2003, incorporated Global CBPR framework
+- Comoros: No comprehensive DP law
+
+NORTH AFRICA:
+- Egypt: Personal Data Protection Law No. 151 of 2020 — executive regulations pending full enforcement
+- Morocco: Loi n° 09-08 on Protection of Individuals re: Processing of Personal Data 2009 — Regulator: CNDP. Attempted EU adequacy
+- Algeria: Loi n° 18-07 of 2018 on Personal Data Protection (amended 2024 with stricter DPO and breach notification rules) — Regulator: ANPDP
+- Tunisia: Organic Law No. 2004-63 on Personal Data Protection — Regulator: INPDP. One of first in Africa
+- Libya: No comprehensive DP law
+
+CENTRAL AFRICA:
+- Cameroon: Law No. 2024/017 on Personal Data Protection (enacted December 2024) — establishes Personal Data Protection Authority
+- DRC: Loi n° 20/017 of 2020 on Telecommunications and ICTs (partial DP provisions)
+- Republic of Congo: Loi n° 29-2019 on Personal Data Protection
+- Gabon: Loi n° 001/2011 on Personal Data Protection — Regulator: CNPDCP
+- Equatorial Guinea: No comprehensive DP law
+- Chad: Loi n° 007/PR/2015 on Cybersecurity (partial DP provisions)
+- Central African Republic: No comprehensive DP law
+- São Tomé and Príncipe: No comprehensive DP law
+
+Continental & Regional Frameworks:
+- African Union Convention on Cyber Security and Personal Data Protection (Malabo Convention, 2014) — entered into force June 2023 after 15th ratification
+- ECOWAS Supplementary Act A/SA.1/01/10 on Personal Data Protection (2010) — binding on 15 ECOWAS member states
+- SADC Model Law on Data Protection (2013) — non-binding model for SADC members
+- East African Community Data Protection Framework — under development
+
+Credit Reporting & Central Bank Regulations:
+- Bank of Ghana (BoG): Credit Reporting Act 2007 (Act 726), CRB operational guidelines
+- Central Bank of Nigeria (CBN): Credit Reporting Act 2017, expanded data sources to utilities/telcos/retailers
+- Central Bank of Kenya (CBK): Credit Reference Bureau Regulations 2020, 3 licensed CRBs (TransUnion, Metropol, CreditInfo)
+- South African NCR: National Credit Act, 4 major bureaus (TransUnion, Experian, Compuscan, XDS)
+- Bank of Tanzania: Credit Reference Bureau framework
+- Bank of Uganda: Credit Reference Bureau regulations
+- National Bank of Rwanda: Credit reporting guidelines
+- BCEAO (8 UEMOA countries): Regional credit reporting framework, Creditinfo-Volo hub-and-spoke model
+- BEAC (6 CEMAC countries): Regional credit information framework
+- Bank of Sierra Leone (BSL): Emerging credit bureau framework
+- Bank Al-Maghrib (Morocco): Credit bureau regulated framework
+- Central Bank of Egypt: Credit bureau (I-Score) regulated framework
+- PAPSS: Pan-African Payment and Settlement System — instant cross-border payments in local currencies
+
+International Standards Also Supported:
+- GDPR (EU General Data Protection Regulation) — for clients with EU exposure
+- ISO 27001 Information Security Management
+- PCI DSS for payment data
+
+Automated data retention enforcement per jurisdiction:
+- 7 years: Ghana (Act 726), South Africa (NCA), Kenya (CBK CRB Regulations)
+- 5 years: Nigeria (NDPA), UEMOA countries (BCEAO), CEMAC countries (BEAC)
+- Country-specific retention periods configured per tenant
+- Full audit trail of all retention actions for regulatory proof of compliance
 
 ===== TECHNICAL ARCHITECTURE =====
 - Cloud-native SaaS, hosted on secure infrastructure
@@ -5925,12 +6012,14 @@ CÔTE D'IVOIRE (Ivory Coast):
 - GDP: $86B | Population: 28M | Currency: West African CFA Franc (XOF) | Central Bank: BCEAO (regional)
 - Only 12% of SMEs seek formal working capital — massive untapped demand
 - Account ownership: Growing via mobile money | French-speaking market
+- Data protection: Loi n° 2013-450 on Personal Data Protection | Regulator: ARTCI
 - Part of UEMOA (8-country monetary union sharing XOF)
 - Key opportunity: Francophone West Africa gateway, Abidjan as regional financial hub
 
 SENEGAL:
 - GDP: $28B | Population: 17M | Currency: XOF (CFA Franc) | Central Bank: BCEAO
 - Account ownership: 77% (+21 points since 2021) | Digital payments: 73% of adults | Formal savings: 58%
+- Data protection: Loi n° 2008-12 on Personal Data Protection | Regulator: CDP (Commission de Protection des Données Personnelles)
 - Strong mobile money growth | French-speaking market
 - Key opportunity: High digital payment adoption, growing fintech scene in Dakar
 
@@ -5942,10 +6031,13 @@ SIERRA LEONE:
 MALI, BURKINA FASO, NIGER, TOGO, BENIN, GUINEA-BISSAU:
 - All use XOF (CFA Franc) under BCEAO | Part of UEMOA monetary union
 - Predominantly informal economies | Very low credit bureau coverage
+- All covered by ECOWAS Supplementary Act on Personal Data Protection (2010)
+- Individual laws: Mali (Loi 2013-015), Burkina Faso (Loi 010-2004), Niger (Loi 2017-28), Togo (Loi 2019-014), Benin (Digital Code 2017-20)
 - French-speaking markets | Key opportunity: Regional deployment through BCEAO partnership
 
 GUINEA:
 - GDP: $16B | Population: 14M | Currency: Guinean Franc (GNF)
+- Data protection: Loi L/2016/037 on Cybersecurity and Personal Data Protection
 - Mining-dependent economy | Low financial inclusion | French-speaking
 
 LIBERIA:
@@ -5977,6 +6069,7 @@ KENYA (Fintech Leader):
 TANZANIA:
 - GDP: $79B | Population: 65M | Currency: Tanzanian Shilling (TZS) | Central Bank: Bank of Tanzania
 - Mobile money transactions: $62B in 2023 (+33% YoY) — explosive growth
+- Data protection: Personal Data Protection Act 2022 | Regulator: TCRA (draft regulations pending)
 - Strong mobile money adoption | Swahili-speaking market
 - Key opportunity: Rapid mobile money growth, large underserved population
 
@@ -5995,6 +6088,7 @@ RWANDA:
 ETHIOPIA:
 - GDP: $205B (5th largest in Africa) | Population: 125M (2nd most populous) | Currency: Ethiopian Birr (ETB)
 - National Bank of Ethiopia | Large unbanked population | Telecom liberalization ongoing
+- Data protection: Personal Data Protection Proclamation No. 1321/2024 (enacted July 2024) — first comprehensive DP law
 - Key opportunity: Massive untapped market, recent fintech licensing reforms
 
 BURUNDI:
@@ -6031,7 +6125,7 @@ SOUTH AFRICA (Most Advanced Credit Market):
 BOTSWANA:
 - GDP: $19B | Population: 2.5M | Currency: Botswana Pula (BWP) | Central Bank: Bank of Botswana
 - Investment-grade credit rating (one of only 4 in Africa) | Mining economy (diamonds)
-- Data Protection Act 2018 | Strong governance
+- Data protection: Data Protection Act 2024 (revised from 2018, effective January 2025) — stronger controller/processor obligations
 - Key opportunity: Stable, well-governed market with investment-grade credibility
 
 MOZAMBIQUE:
@@ -6040,12 +6134,14 @@ MOZAMBIQUE:
 - Key opportunity: Emerging economy, Portuguese-speaking market linkage
 
 ZAMBIA:
-- GDP: $29B | Population: 20M | Currency: Zambian Kwacha (ZMW) | Data Protection Act 2021
+- GDP: $29B | Population: 20M | Currency: Zambian Kwacha (ZMW)
+- Data protection: Data Protection Act No. 3 of 2021 | Data Protection Commissioner appointed 2024
 - Mining economy (copper) | English-speaking | Growing mobile money
 - Key opportunity: Post-debt restructuring growth, mining sector lending
 
 ZIMBABWE:
 - GDP: $28B | Population: 16M | Currency: Zimbabwe Gold (ZiG) — newest currency in Africa (2024)
+- Data protection: Cyber and Data Protection Act 2021
 - History of hyperinflation and currency instability | Multi-currency use (USD dominant)
 - Key opportunity: Currency stability tools, multi-currency portfolio management
 
@@ -6090,22 +6186,26 @@ SEYCHELLES:
 EGYPT:
 - GDP: $348B (2nd largest in Africa) | Population: 110M | Currency: Egyptian Pound (EGP)
 - Central Bank of Egypt | Large banking sector but significant unbanked population
-- Arabic-speaking | Strong regulatory framework
+- Data protection: Personal Data Protection Law No. 151 of 2020 (executive regulations pending)
+- Credit bureau: I-Score (regulated by CBE) | Arabic-speaking | Strong regulatory framework
 - Key opportunity: Massive population, growing fintech sector, government digitization push
 
 MOROCCO:
 - GDP: $152B | Population: 38M | Currency: Moroccan Dirham (MAD) | Central Bank: Bank Al-Maghrib
 - Investment-grade credit rating | Strong banking sector (Attijariwafa, BMCE active across Africa)
+- Data protection: Loi n° 09-08 (2009) on Protection of Individuals re: Personal Data | Regulator: CNDP
 - Arabic/French-speaking | Hub for pan-African banking
 - Key opportunity: Moroccan banks expanding across Africa — need pan-African credit data
 
 ALGERIA:
 - GDP: $267B (3rd largest in Africa) | Population: 45M | Currency: Algerian Dinar (DZD)
+- Data protection: Loi n° 18-07 of 2018 (amended 2024 with stricter DPO/breach rules) | Regulator: ANPDP
 - Oil/gas dependent | Large economy but limited fintech adoption | Arabic/French-speaking
 - Key opportunity: Untapped market with significant economic scale
 
 TUNISIA:
 - GDP: $46B | Population: 12M | Currency: Tunisian Dinar (TND)
+- Data protection: Organic Law No. 2004-63 on Personal Data Protection | Regulator: INPDP. One of first DP laws in Africa
 - Arabic/French-speaking | Relatively advanced financial sector for North Africa
 - Key opportunity: Strong tech talent pool, startup ecosystem
 
@@ -6123,6 +6223,7 @@ DEMOCRATIC REPUBLIC OF CONGO (DRC):
 
 CAMEROON:
 - GDP: $45B | Population: 28M | Currency: Central African CFA Franc (XAF) | Central Bank: BEAC
+- Data protection: Law No. 2024/017 on Personal Data Protection (enacted December 2024) — establishes new Data Protection Authority
 - Bilingual (English/French) | Largest economy in CEMAC zone
 - Key opportunity: Gateway to Central African market, bilingual advantage
 
@@ -6176,6 +6277,9 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 ===== HOW TO RESPOND =====
 - Be professional, knowledgeable, and helpful — you represent Africa Credit Hub
 - Answer with confidence using the facts above. Never say "I don't have information about that" if the answer is in this knowledge base
+- When discussing compliance, ALWAYS lead with African laws and frameworks (POPIA, NDPA, Ghana DPA, Malabo Convention, ECOWAS Act) — mention GDPR only when the user specifically asks about EU/international compliance or has EU exposure
+- When asked about a specific country's regulations, cite the exact law name, year, and regulator from the knowledge base above
+- You are an expert on African data protection, credit reporting regulations, central bank requirements, and financial inclusion frameworks across all 54 countries
 - When relevant, guide users toward starting a free trial (africacredithub.com/start-trial) or trying the AI demo (africacredithub.com/ai-demo)
 - For questions about custom deployments, on-premise, or enterprise partnerships, suggest contacting Uffe or Thomas directly
 - Keep responses concise but thorough. Use bullet points for complex answers
