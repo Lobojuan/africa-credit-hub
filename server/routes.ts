@@ -6040,9 +6040,24 @@ GUINEA:
 - Data protection: Loi L/2016/037 on Cybersecurity and Personal Data Protection
 - Mining-dependent economy | Low financial inclusion | French-speaking
 
-LIBERIA:
-- GDP: $4B | Population: 5M | Currency: Liberian Dollar (LRD)
-- English-speaking | Very limited financial infrastructure | Post-conflict rebuilding
+LIBERIA (Active CRB Market — High Opportunity):
+- GDP: $4B | Population: 5M | Currency: Liberian Dollar (LRD) | Central Bank: Central Bank of Liberia (CBL)
+- English-speaking | Post-conflict rebuilding | NPL ratio: 16.4% (above 10% regulatory threshold)
+- Data protection: No comprehensive DP law yet — draft exists
+- Credit bureau: PRCB (Prime Credit Reference Bureau, prcb-lib.com) — Liberia's FIRST private credit reference bureau, launched 2025
+  - Previously CBL operated a manual Credit Reference System (CRS) — severely limited
+  - PRCB board includes CBL Legal Counsel, Fortune 500 execs (Bank of America, ECOBANK Liberia)
+  - Supported by African Development Bank and World Bank funding
+- CBL CRB Licensing Requirements:
+  - Application fee: US$500 (non-refundable)
+  - License fee: US$5,000
+  - Annual operating levy: US$2,000
+  - Minimum paid-up capital: US$200,000
+  - 6-month approval window after Notice of Approval
+  - Must add "Credit Bureau" to company name
+  - CBL controls approval of all credit report pricing
+  - On-site verification required before Final Operating License
+- Key opportunity: Greenfield market transitioning from manual to digital credit reporting — PRCB needs technology infrastructure (data collection, report generation, compliance systems) that Africa Credit Hub provides
 
 GAMBIA:
 - GDP: $2B | Population: 2.5M | Currency: Dalasi (GMD) | English-speaking
