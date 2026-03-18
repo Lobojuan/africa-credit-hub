@@ -86,19 +86,14 @@ ${accounts.map(a => `  - ${a.accountType}: ${a.currency || defaultCurrency} ${pa
     raw = response.choices[0]?.message?.content || "{}";
   }
 
-  const content = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
-  try {
-    return JSON.parse(content);
-  } catch {
-    return {
-      riskLevel: "medium",
-      riskScore: 50,
-      summary: raw,
-      factors: [],
-      recommendations: [],
-      regulatoryFlags: [],
-    };
-  }
+  return parseJSON(raw, {
+    riskLevel: "medium",
+    riskScore: 50,
+    summary: "Analysis completed. Please try again if content is incomplete.",
+    factors: [],
+    recommendations: [],
+    regulatoryFlags: [],
+  });
 }
 
 export async function generateReportSummary(borrowerId: string | number, provider: AIProvider = "claude") {
@@ -270,7 +265,7 @@ Total portfolio default rate: ${data.totalAccounts > 0 ? ((data.stats.defaultAcc
 Total portfolio delinquency rate: ${data.totalAccounts > 0 ? ((data.stats.delinquentAccounts / data.totalAccounts) * 100).toFixed(1) : 0}%
 `.trim();
 
-  const systemPrompt = `You are a senior credit risk analyst for the Pan-African Credit Registry (CDH v2.0) operating in Ghana. Currency is ${defaultCurrency} (Ghana Cedis). Analyze the portfolio data and generate a comprehensive intelligence report. You must respond in valid JSON with this exact structure:
+  const systemPrompt = `You are a senior credit risk analyst for the Pan-African Credit Registry (CDH v2.0) operating in Ghana. Currency is ${defaultCurrency} (Ghana Cedis). Analyze the portfolio data and generate a comprehensive intelligence report. Respond ONLY with valid JSON (no markdown, no code blocks, no extra text). Use this exact structure:
 {
   "overallRiskRating": "low" | "moderate" | "elevated" | "high" | "critical",
   "portfolioHealthScore": <number 0-100, 100 is healthiest>,
@@ -372,18 +367,13 @@ Total portfolio delinquency rate: ${data.totalAccounts > 0 ? ((data.stats.delinq
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }
       ],
-      max_tokens: 4000,
+      max_tokens: 8000,
       temperature: 0.3,
     });
     raw = response.choices[0]?.message?.content || "{}";
   }
 
-  const content = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
-  try {
-    return JSON.parse(content);
-  } catch {
-    return { executiveSummary: raw, overallRiskRating: "moderate", portfolioHealthScore: 50 };
-  }
+  return parseJSON(raw, { overallRiskRating: "moderate", portfolioHealthScore: 50, executiveSummary: "Report generation completed. Please try again if content is incomplete." });
 }
 
 async function buildLiveContext(): Promise<string> {
@@ -695,12 +685,7 @@ export async function generateComplianceReport(country: string, provider: AIProv
     raw = response.choices[0]?.message?.content || "{}";
   }
 
-  const content = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
-  try {
-    return JSON.parse(content);
-  } catch {
-    return { country, summary: raw, complianceScore: 0 };
-  }
+  return parseJSON(raw, { country, summary: "Compliance report generated. Please try again if content is incomplete.", complianceScore: 0 });
 }
 
 export async function callAI(systemPrompt: string, userPrompt: string, provider: AIProvider = "claude", maxTokens = 2000, temperature = 0.3): Promise<string> {
