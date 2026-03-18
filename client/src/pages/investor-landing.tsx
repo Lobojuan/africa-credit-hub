@@ -12,7 +12,7 @@ import {
   UserCheck, FileCheck, Timer, BadgeCheck, Network,
   BookOpen, Headphones, Receipt, ServerCog, Banknote,
   CircleDollarSign, Activity, Hash, ChevronRight,
-  Sparkles, MonitorSmartphone, Brain, Mail, Phone,
+  Sparkles, MonitorSmartphone, Brain, Mail, Phone, X, ZoomIn,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -449,6 +449,15 @@ export default function InvestorLandingPage() {
   const [, navigate] = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [activeModuleCategory, setActiveModuleCategory] = useState(0);
+  const [lightboxImg, setLightboxImg] = useState<{ src: string; title: string } | null>(null);
+
+  useEffect(() => {
+    if (!lightboxImg) return;
+    const handleKey = (e: KeyboardEvent) => { if (e.key === "Escape") setLightboxImg(null); };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKey);
+    return () => { document.body.style.overflow = ""; window.removeEventListener("keydown", handleKey); };
+  }, [lightboxImg]);
 
   useEffect(() => {
     document.title = isGhanaMode() 
@@ -1119,14 +1128,19 @@ export default function InvestorLandingPage() {
               { img: reportsImage, title: "Credit Reports & Analytics", desc: "Generate D&B-style credit reports per borrower. Portfolio stats including total exposure, NPL ratio, and institution breakdown." },
               { img: auditImage, title: "Audit Trail & Compliance", desc: "Tamper-proof audit log with SHA-256 hash chain. Filter by action type, entity, date range. Export to CSV or Excel." },
             ].map((screen, i) => (
-              <div key={i} className="group rounded-2xl overflow-hidden border border-border/50 bg-card hover:border-primary/30 transition-all hover:shadow-lg" data-testid={`screenshot-${i}`}>
-                <div className="overflow-hidden">
+              <div key={i} className="group rounded-2xl overflow-hidden border border-border/50 bg-card hover:border-primary/30 transition-all hover:shadow-lg cursor-pointer" data-testid={`screenshot-${i}`} onClick={() => setLightboxImg({ src: screen.img, title: screen.title })}>
+                <div className="overflow-hidden relative">
                   <img
                     src={screen.img}
                     alt={screen.title}
                     className="w-full h-auto group-hover:scale-[1.02] transition-transform duration-500"
                     loading="lazy"
                   />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-white/90 dark:bg-black/70 rounded-full p-3 shadow-lg">
+                      <ZoomIn className="w-5 h-5 text-foreground" />
+                    </div>
+                  </div>
                 </div>
                 <div className="p-4 sm:p-5">
                   <h3 className="font-semibold text-sm sm:text-base mb-1">{screen.title}</h3>
@@ -1151,13 +1165,18 @@ export default function InvestorLandingPage() {
                   View Consumer Portal
                 </Button>
               </div>
-              <div className="overflow-hidden">
+              <div className="overflow-hidden relative group cursor-pointer" onClick={() => setLightboxImg({ src: mobileImage, title: "Credit Check Portal" })}>
                 <img
                   src={mobileImage}
                   alt="Consumer self-service credit check portal with National ID verification"
-                  className="w-full h-auto"
+                  className="w-full h-auto group-hover:scale-[1.02] transition-transform duration-500"
                   loading="lazy"
                 />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-white/90 dark:bg-black/70 rounded-full p-3 shadow-lg">
+                    <ZoomIn className="w-5 h-5 text-foreground" />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1512,6 +1531,32 @@ export default function InvestorLandingPage() {
           </div>
         </div>
       </footer>
+
+      {lightboxImg && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 sm:p-8 animate-in fade-in-0 duration-200"
+          onClick={() => setLightboxImg(null)}
+          data-testid="lightbox-overlay"
+        >
+          <button
+            onClick={() => setLightboxImg(null)}
+            className="absolute top-4 right-4 sm:top-6 sm:right-6 z-10 bg-white/10 hover:bg-white/20 text-white rounded-full p-2 transition-colors"
+            data-testid="lightbox-close"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-10">
+            <p className="text-white/80 text-sm font-medium">{lightboxImg.title}</p>
+          </div>
+          <img
+            src={lightboxImg.src}
+            alt={lightboxImg.title}
+            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-300"
+            onClick={(e) => e.stopPropagation()}
+            data-testid="lightbox-image"
+          />
+        </div>
+      )}
     </div>
   );
 }
