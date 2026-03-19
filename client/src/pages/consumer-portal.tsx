@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search, Shield, AlertTriangle, CheckCircle2, TrendingUp, User, Loader2, Scale, Phone, CalendarDays, Lock, LogOut, UserPlus, KeyRound, ArrowLeft, Eye, EyeOff, Mail, MessageSquare, RefreshCw } from "lucide-react";
+import { Search, Shield, AlertTriangle, CheckCircle2, TrendingUp, User, Loader2, Scale, Phone, CalendarDays, Lock, LogOut, UserPlus, KeyRound, ArrowLeft, ArrowRight, Eye, EyeOff, Mail, MessageSquare, RefreshCw, Globe } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CreditScoreGauge } from "@/components/credit-score-gauge";
@@ -532,40 +532,111 @@ export default function ConsumerPortalPage() {
             </div>
 
             {!data && !lookupMutation.isPending && (
-              <Card className="shadow-sm">
-                <CardContent className="p-6 text-center space-y-4">
-                  {sessionQuery.data?.profilePicture ? (
-                    <img src={sessionQuery.data.profilePicture} alt="Profile" className="w-14 h-14 rounded-full mx-auto object-cover" data-testid="img-consumer-avatar" />
-                  ) : (
-                    <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                      <Shield className="w-7 h-7 text-primary" />
+              <>
+                <Card className="shadow-sm">
+                  <CardContent className="p-6 text-center space-y-4">
+                    {sessionQuery.data?.profilePicture ? (
+                      <img src={sessionQuery.data.profilePicture} alt="Profile" className="w-14 h-14 rounded-full mx-auto object-cover" data-testid="img-consumer-avatar" />
+                    ) : (
+                      <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                        <Shield className="w-7 h-7 text-primary" />
+                      </div>
+                    )}
+                    <div>
+                      <h3 className="font-bold text-lg">Welcome{sessionQuery.data?.fullName ? `, ${sessionQuery.data.fullName.split(" ")[0]}` : ""}!</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {sessionQuery.data?.authProvider === "google" && sessionQuery.data?.email ? (
+                          <>Signed in as <strong>{sessionQuery.data.email}</strong></>
+                        ) : (
+                          <>You are signed in as <strong>{sessionQuery.data?.nationalId?.replace(/(.{3}).+(.{3})/, "$1****$2")}</strong></>
+                        )}
+                      </p>
                     </div>
-                  )}
-                  <div>
-                    <h3 className="font-bold text-lg">Welcome back{sessionQuery.data?.fullName ? `, ${sessionQuery.data.fullName.split(" ")[0]}` : ""}</h3>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {sessionQuery.data?.authProvider === "google" && sessionQuery.data?.email ? (
-                        <>Signed in as <strong>{sessionQuery.data.email}</strong></>
-                      ) : (
-                        <>You are signed in as <strong>{sessionQuery.data?.nationalId?.replace(/(.{3}).+(.{3})/, "$1****$2")}</strong></>
-                      )}
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => lookupMutation.mutate()}
-                    size="lg"
-                    className="w-full rounded-xl"
-                    data-testid="button-consumer-view-score"
-                  >
-                    <TrendingUp className="w-4 h-4 mr-2" />
-                    View My Credit Score
-                  </Button>
-                  <p className="text-[10px] text-muted-foreground">
-                    <Lock className="w-3 h-3 inline mr-1" />
-                    Your data is protected under POPIA, NDPA, and Ghana DPA.
-                  </p>
-                </CardContent>
-              </Card>
+
+                    {sessionQuery.data?.nationalId?.startsWith("GOOGLE-") || sessionQuery.data?.nationalId?.startsWith("APPLE-") ? (
+                      <div className="space-y-3 pt-2">
+                        <div className="bg-primary/5 border border-primary/15 rounded-xl p-4 text-left space-y-2">
+                          <h4 className="font-semibold text-sm flex items-center gap-2">
+                            <CheckCircle2 className="w-4 h-4 text-primary" />
+                            Account Created Successfully
+                          </h4>
+                          <p className="text-xs text-muted-foreground">
+                            Your account is set up. Here's what you can do next:
+                          </p>
+                        </div>
+
+                        <div className="grid gap-2">
+                          <a
+                            href="/solutions"
+                            className="flex items-center gap-3 p-3 rounded-xl border hover:bg-muted/50 transition-colors text-left"
+                            data-testid="link-explore-platform"
+                          >
+                            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                              <Globe className="w-4 h-4 text-primary" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">Explore the Platform</p>
+                              <p className="text-[11px] text-muted-foreground">See how Africa Credit Hub works for lenders and institutions</p>
+                            </div>
+                            <ArrowRight className="w-4 h-4 text-muted-foreground ml-auto shrink-0" />
+                          </a>
+
+                          <a
+                            href="/start-trial"
+                            className="flex items-center gap-3 p-3 rounded-xl border hover:bg-muted/50 transition-colors text-left"
+                            data-testid="link-start-trial-from-portal"
+                          >
+                            <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+                              <UserPlus className="w-4 h-4 text-emerald-600" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">Start a Free Trial</p>
+                              <p className="text-[11px] text-muted-foreground">Register your organization for a 14-day free trial</p>
+                            </div>
+                            <ArrowRight className="w-4 h-4 text-muted-foreground ml-auto shrink-0" />
+                          </a>
+
+                          <a
+                            href="/ai-demo"
+                            className="flex items-center gap-3 p-3 rounded-xl border hover:bg-muted/50 transition-colors text-left"
+                            data-testid="link-ai-demo-from-portal"
+                          >
+                            <div className="w-9 h-9 rounded-lg bg-violet-500/10 flex items-center justify-center shrink-0">
+                              <Search className="w-4 h-4 text-violet-600" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">Try the AI Demo</p>
+                              <p className="text-[11px] text-muted-foreground">See our AI-powered credit analysis in action</p>
+                            </div>
+                            <ArrowRight className="w-4 h-4 text-muted-foreground ml-auto shrink-0" />
+                          </a>
+                        </div>
+
+                        <p className="text-[10px] text-muted-foreground pt-1">
+                          <Lock className="w-3 h-3 inline mr-1" />
+                          Your data is protected under POPIA, NDPA, and Ghana DPA.
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        <Button
+                          onClick={() => lookupMutation.mutate()}
+                          size="lg"
+                          className="w-full rounded-xl"
+                          data-testid="button-consumer-view-score"
+                        >
+                          <TrendingUp className="w-4 h-4 mr-2" />
+                          View My Credit Score
+                        </Button>
+                        <p className="text-[10px] text-muted-foreground">
+                          <Lock className="w-3 h-3 inline mr-1" />
+                          Your data is protected under POPIA, NDPA, and Ghana DPA.
+                        </p>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              </>
             )}
 
             {lookupMutation.isPending && (
