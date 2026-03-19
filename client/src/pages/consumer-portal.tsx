@@ -40,6 +40,7 @@ export default function ConsumerPortalPage() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [fallbackOtp, setFallbackOtp] = useState<string | null>(null);
   const [data, setData] = useState<ConsumerData | null>(null);
+  const [noCreditFile, setNoCreditFile] = useState(false);
 
   const sessionQuery = useQuery({
     queryKey: ["/api/consumer/session"],
@@ -178,6 +179,7 @@ export default function ConsumerPortalPage() {
     onError: (err: Error) => {
       setData(null);
       setError(err.message);
+      setNoCreditFile(true);
     },
   });
 
@@ -225,7 +227,7 @@ export default function ConsumerPortalPage() {
           </p>
         </div>
 
-        {error && (
+        {error && !noCreditFile && (
           <div className="flex items-center gap-2 p-3 rounded-xl bg-destructive/10 text-destructive text-sm" data-testid="text-consumer-error">
             <AlertTriangle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
@@ -553,15 +555,26 @@ export default function ConsumerPortalPage() {
                       </p>
                     </div>
 
-                    {sessionQuery.data?.nationalId?.startsWith("GOOGLE-") || sessionQuery.data?.nationalId?.startsWith("APPLE-") ? (
+                    {noCreditFile || sessionQuery.data?.nationalId?.startsWith("GOOGLE-") || sessionQuery.data?.nationalId?.startsWith("APPLE-") ? (
                       <div className="space-y-3 pt-2">
-                        <div className="bg-primary/5 border border-primary/15 rounded-xl p-4 text-left space-y-2">
+                        <div className={`${noCreditFile ? "bg-amber-500/10 border-amber-500/20" : "bg-primary/5 border-primary/15"} border rounded-xl p-4 text-left space-y-2`}>
                           <h4 className="font-semibold text-sm flex items-center gap-2">
-                            <CheckCircle2 className="w-4 h-4 text-primary" />
-                            Account Created Successfully
+                            {noCreditFile ? (
+                              <>
+                                <AlertTriangle className="w-4 h-4 text-amber-600" />
+                                No Credit File Found
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle2 className="w-4 h-4 text-primary" />
+                                Account Created Successfully
+                              </>
+                            )}
                           </h4>
                           <p className="text-xs text-muted-foreground">
-                            Your account is set up. Here's what you can do next:
+                            {noCreditFile
+                              ? "We couldn't find a credit record matching your identity. This could mean your credit history hasn't been reported yet. Here's what you can do:"
+                              : "Your account is set up. Here's what you can do next:"}
                           </p>
                         </div>
 
@@ -576,7 +589,7 @@ export default function ConsumerPortalPage() {
                             </div>
                             <div>
                               <p className="text-sm font-medium">Explore the Platform</p>
-                              <p className="text-[11px] text-muted-foreground">See how Africa Credit Hub works for lenders and institutions</p>
+                              <p className="text-[11px] text-muted-foreground">Learn how Africa Credit Hub serves lenders across 54 countries</p>
                             </div>
                             <ArrowRight className="w-4 h-4 text-muted-foreground ml-auto shrink-0" />
                           </a>
@@ -610,6 +623,23 @@ export default function ConsumerPortalPage() {
                             </div>
                             <ArrowRight className="w-4 h-4 text-muted-foreground ml-auto shrink-0" />
                           </a>
+
+                          {noCreditFile && (
+                            <button
+                              onClick={() => { setNoCreditFile(false); setError(null); }}
+                              className="flex items-center gap-3 p-3 rounded-xl border hover:bg-muted/50 transition-colors text-left"
+                              data-testid="button-try-lookup-again"
+                            >
+                              <div className="w-9 h-9 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
+                                <RefreshCw className="w-4 h-4 text-blue-600" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium">Try Again</p>
+                                <p className="text-[11px] text-muted-foreground">Check your credit score again</p>
+                              </div>
+                              <ArrowRight className="w-4 h-4 text-muted-foreground ml-auto shrink-0" />
+                            </button>
+                          )}
                         </div>
 
                         <p className="text-[10px] text-muted-foreground pt-1">
