@@ -62,6 +62,9 @@ GOOGLE_CLIENT_SECRET = "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"
 
 [userenv.development]
 
+[userenv.production]
+CANONICAL_URL = "https://africacredithub.com"
+
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
