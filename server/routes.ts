@@ -1830,11 +1830,13 @@ export async function registerRoutes(
   }
 
   app.get("/api/consumer/auth/google", (req, res) => {
+    const returnTo = (req.query.from as string) || "/my-credit";
     if (!GOOGLE_CLIENT_ID) {
-      return res.status(503).send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Google Sign-In</title></head><body style="font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#f4f5f7;"><div style="max-width:400px;background:#fff;border-radius:12px;padding:40px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.08);"><h2 style="color:#1a1a2e;">Google Sign-In Coming Soon</h2><p style="color:#555;font-size:14px;">Google Sign-In is being configured. Please use email/password registration for now.</p><a href="/my-credit" style="display:inline-block;margin-top:16px;background:#1a1a2e;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-size:14px;">Back to Login</a></div></body></html>`);
+      return res.status(503).send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Google Sign-In</title></head><body style="font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#f4f5f7;"><div style="max-width:400px;background:#fff;border-radius:12px;padding:40px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.08);"><h2 style="color:#1a1a2e;">Google Sign-In Coming Soon</h2><p style="color:#555;font-size:14px;">Google Sign-In is being configured. Please use email/password registration for now.</p><a href="${returnTo}" style="display:inline-block;margin-top:16px;background:#1a1a2e;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-size:14px;">Go Back</a></div></body></html>`);
     }
     const state = crypto.randomBytes(16).toString("hex");
     (req.session as any).googleOAuthState = state;
+    (req.session as any).googleOAuthReturnTo = returnTo;
     const redirectUri = getGoogleRedirectUri(req);
     const params = new URLSearchParams({
       client_id: GOOGLE_CLIENT_ID,
@@ -1918,12 +1920,13 @@ export async function registerRoutes(
 
       await db.update(consumerAccounts).set({ lastLogin: new Date() }).where(eq(consumerAccounts.id, account.id));
 
+      const returnTo = (req.session as any).googleOAuthReturnTo || "/my-credit";
       req.session.regenerate((err) => {
         if (err) return res.redirect("/my-credit?error=session_error");
         (req.session as any).consumerId = account!.id;
         (req.session as any).consumerNationalId = account!.nationalId;
         console.log(`[Consumer][Google] Login for ${account!.id.slice(0, 8)}... (${googleUser.email})`);
-        res.redirect("/my-credit");
+        res.redirect(returnTo);
       });
     } catch (e: any) {
       console.error("[Consumer][Google] OAuth error:", e.message);
