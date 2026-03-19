@@ -29,7 +29,7 @@ import { recordUsageEvent } from "./usage-metering";
 import { broadcastEvent } from "./websocket";
 import { createAnchor, verifyAuditAgainstAnchor, getAnchors } from "./blockchain-anchor";
 import { deliverWebhook, getWebhookSubscriptions, getWebhookDeliveryHistory, WEBHOOK_EVENTS } from "./webhook-delivery";
-import { webauthnCredentials, blockchainAnchors, webhookSubscriptions, webhookDeliveryLogs } from "@shared/schema";
+import { webauthnCredentials, blockchainAnchors, webhookSubscriptions, webhookDeliveryLogs, consumerAccounts } from "@shared/schema";
 import fs from "fs";
 import path from "path";
 import * as OTPAuth from "otpauth";
@@ -1816,17 +1816,141 @@ export async function registerRoutes(
     }
   });
 
+  const consumerAuthLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 15, message: { message: "Too many attempts. Please try again later." }, standardHeaders: true, legacyHeaders: false });
   const consumerLookupLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { message: "Too many lookup requests. Please try again later." }, standardHeaders: true, legacyHeaders: false });
 
-  app.post("/api/consumer/lookup", consumerLookupLimiter, async (req, res) => {
+  app.post("/api/consumer/register", consumerAuthLimiter, async (req, res) => {
     try {
-      const { nationalId, dateOfBirth } = req.body;
-      if (!nationalId || typeof nationalId !== "string" || nationalId.length < 6) {
-        return res.status(400).json({ message: "Please enter a valid National ID (minimum 6 characters)" });
+      const { nationalId, phone, email, password, dateOfBirth } = req.body;
+      if (!nationalId || nationalId.length < 6) return res.status(400).json({ message: "National ID must be at least 6 characters" });
+      if (!phone || phone.length < 8) return res.status(400).json({ message: "Valid phone number is required" });
+      if (!password || password.length < 8) return res.status(400).json({ message: "Password must be at least 8 characters" });
+      if (!dateOfBirth) return res.status(400).json({ message: "Date of birth is required" });
+
+      const existing = await db.select().from(consumerAccounts).where(eq(consumerAccounts.nationalId, nationalId)).limit(1);
+      if (existing.length > 0) return res.status(409).json({ message: "An account with this ID already exists. Please log in instead." });
+
+      const passwordHash = await bcrypt.hash(password, 12);
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+
+      const [account] = await db.insert(consumerAccounts).values({
+        nationalId,
+        phone,
+        email: email || null,
+        passwordHash,
+        dateOfBirth,
+        otpCode: otp,
+        otpExpiresAt: otpExpires,
+      }).returning();
+
+      console.log(`[Consumer] Registration OTP generated for account ${account.id.slice(0, 8)}...`);
+
+      res.json({ message: "Account created. Please verify with the OTP sent to your phone.", accountId: account.id, requiresVerification: true });
+    } catch (e: any) {
+      console.error("[Consumer] Registration error:", e.message);
+      res.status(500).json({ message: "Registration failed. Please try again." });
+    }
+  });
+
+  app.post("/api/consumer/verify-otp", consumerAuthLimiter, async (req, res) => {
+    try {
+      const { nationalId, otp } = req.body;
+      if (!nationalId || !otp) return res.status(400).json({ message: "National ID and OTP are required" });
+
+      const [account] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.nationalId, nationalId)).limit(1);
+      if (!account) return res.status(404).json({ message: "Account not found" });
+
+      if (account.otpCode !== otp) {
+        await db.update(consumerAccounts).set({ failedAttempts: (account.failedAttempts || 0) + 1 }).where(eq(consumerAccounts.id, account.id));
+        return res.status(401).json({ message: "Invalid verification code" });
       }
-      if (!dateOfBirth || typeof dateOfBirth !== "string") {
-        return res.status(400).json({ message: "Date of birth is required for identity verification" });
+
+      if (account.otpExpiresAt && new Date() > account.otpExpiresAt) {
+        return res.status(401).json({ message: "Verification code expired. Please request a new one." });
       }
+
+      await db.update(consumerAccounts).set({ verified: true, otpCode: null, otpExpiresAt: null, failedAttempts: 0 }).where(eq(consumerAccounts.id, account.id));
+
+      req.session.regenerate((err) => {
+        if (err) return res.status(500).json({ message: "Session error" });
+        (req.session as any).consumerId = account.id;
+        (req.session as any).consumerNationalId = account.nationalId;
+        res.json({ message: "Account verified successfully", verified: true });
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: "Verification failed" });
+    }
+  });
+
+  app.post("/api/consumer/login", consumerAuthLimiter, async (req, res) => {
+    try {
+      const { nationalId, password } = req.body;
+      if (!nationalId || !password) return res.status(400).json({ message: "National ID and password are required" });
+
+      const [account] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.nationalId, nationalId)).limit(1);
+      if (!account) return res.status(401).json({ message: "Invalid credentials" });
+
+      if (account.lockedUntil && new Date() < account.lockedUntil) {
+        const mins = Math.ceil((account.lockedUntil.getTime() - Date.now()) / 60000);
+        return res.status(423).json({ message: `Account locked. Try again in ${mins} minutes.` });
+      }
+
+      const valid = await bcrypt.compare(password, account.passwordHash);
+      if (!valid) {
+        const attempts = (account.failedAttempts || 0) + 1;
+        const updates: any = { failedAttempts: attempts };
+        if (attempts >= 5) updates.lockedUntil = new Date(Date.now() + 30 * 60 * 1000);
+        await db.update(consumerAccounts).set(updates).where(eq(consumerAccounts.id, account.id));
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      if (!account.verified) {
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        await db.update(consumerAccounts).set({ otpCode: otp, otpExpiresAt: new Date(Date.now() + 10 * 60 * 1000) }).where(eq(consumerAccounts.id, account.id));
+        console.log(`[Consumer] Re-verification OTP generated for account ${account.id.slice(0, 8)}...`);
+        return res.status(403).json({ message: "Account not verified. A new OTP has been sent.", requiresVerification: true });
+      }
+
+      await db.update(consumerAccounts).set({ failedAttempts: 0, lockedUntil: null, lastLogin: new Date() }).where(eq(consumerAccounts.id, account.id));
+
+      req.session.regenerate((err) => {
+        if (err) return res.status(500).json({ message: "Session error" });
+        (req.session as any).consumerId = account.id;
+        (req.session as any).consumerNationalId = account.nationalId;
+        res.json({ message: "Login successful", authenticated: true });
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  app.get("/api/consumer/session", async (req, res) => {
+    if (!(req.session as any).consumerId) {
+      return res.status(401).json({ authenticated: false });
+    }
+    res.json({ authenticated: true, nationalId: (req.session as any).consumerNationalId });
+  });
+
+  app.post("/api/consumer/logout", async (req, res) => {
+    req.session.destroy((err) => {
+      res.clearCookie("connect.sid");
+      res.json({ message: "Logged out" });
+    });
+  });
+
+  app.post("/api/consumer/lookup", consumerLookupLimiter, async (req, res) => {
+    if (!(req.session as any).consumerId) {
+      return res.status(401).json({ message: "Please log in to view your credit score" });
+    }
+    try {
+      const consumerNationalId = (req.session as any).consumerNationalId;
+      const [consumerAccount] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.id, (req.session as any).consumerId)).limit(1);
+      if (!consumerAccount) return res.status(401).json({ message: "Session expired. Please log in again." });
+
+      const nationalId = consumerNationalId;
+      const dateOfBirth = consumerAccount.dateOfBirth;
+
       const borrowerResult = await db.select().from(borrowers).where(
         or(
           ilike(borrowers.nationalId, nationalId),
@@ -1836,7 +1960,7 @@ export async function registerRoutes(
       ).limit(1);
       const borrower = borrowerResult[0];
       if (!borrower || !borrower.dateOfBirth || borrower.dateOfBirth !== dateOfBirth) {
-        return res.status(404).json({ message: "No matching credit file found. Please verify your ID and date of birth." });
+        return res.status(404).json({ message: "No credit file found matching your registered identity." });
       }
       const accounts = await storage.getCreditAccountsByBorrower(borrower.id);
       const inquiries = await storage.getCreditInquiriesByBorrower(borrower.id);

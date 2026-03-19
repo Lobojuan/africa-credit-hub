@@ -48,7 +48,7 @@ The system employs a modern full-stack architecture built for scalability and co
     -   **SATA Cross-Border Framework**: Implements Smart Africa Telecommunications Alliance data sharing.
     -   **PAPSS Settlement Tracker**: Tracks Pan-African Payment and Settlement System settlements.
     -   **Alternative Data Integration**: Integrates mobile money, utility, and telco data for thin-file borrowers.
-    -   **Consumer Self-Service Portal**: Public-facing mobile-first portal (`/my-credit`) with identity verification and rate-limited lookups.
+    -   **Consumer Self-Service Portal**: Authenticated consumer portal (`/my-credit`) with registration, login, OTP verification, session management, and rate-limited credit score lookups. Consumer accounts stored in `consumer_accounts` table with bcrypt-hashed passwords, session regeneration, and account lockout after 5 failed attempts.
     -   **Client Landing Page**: Default landing page (`/solutions`) for unauthenticated users, showcasing platform features and offering trial registration.
     -   **Trial Management**: Self-service registration (`/start-trial`) with sample data seeding and an upgrade path.
     -   **AI Demo Page** (`/ai-demo`): Public interactive showcase of all 6 AI features using sample African credit data. No login required. Accessible via "Try AI Features Free" button on landing page.

@@ -698,3 +698,22 @@ export const webhookDeliveryLogs = pgTable("webhook_delivery_logs", {
   deliveredAt: timestamp("delivered_at").defaultNow(),
 });
 export type WebhookDeliveryLog = typeof webhookDeliveryLogs.$inferSelect;
+
+export const consumerAccounts = pgTable("consumer_accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  nationalId: text("national_id").notNull().unique(),
+  phone: text("phone").notNull(),
+  email: text("email"),
+  passwordHash: text("password_hash").notNull(),
+  dateOfBirth: text("date_of_birth").notNull(),
+  verified: boolean("verified").default(false),
+  otpCode: text("otp_code"),
+  otpExpiresAt: timestamp("otp_expires_at"),
+  failedAttempts: integer("failed_attempts").default(0),
+  lockedUntil: timestamp("locked_until"),
+  lastLogin: timestamp("last_login"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export const insertConsumerAccountSchema = createInsertSchema(consumerAccounts).omit({ id: true, createdAt: true, lastLogin: true, failedAttempts: true, lockedUntil: true, otpCode: true, otpExpiresAt: true, verified: true });
+export type InsertConsumerAccount = z.infer<typeof insertConsumerAccountSchema>;
+export type ConsumerAccount = typeof consumerAccounts.$inferSelect;
