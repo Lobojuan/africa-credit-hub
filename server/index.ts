@@ -100,6 +100,7 @@ app.use(helmet({
       baseUri: ["'self'"],
       formAction: ["'self'"],
       upgradeInsecureRequests: [],
+      frameAncestors: ["'self'", "https://*.replit.dev", "https://*.replit.app", "https://*.repl.co"],
     },
   },
   crossOriginEmbedderPolicy: false,
