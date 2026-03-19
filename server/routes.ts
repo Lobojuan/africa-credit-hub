@@ -1823,8 +1823,10 @@ export async function registerRoutes(
   const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
   const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
 
-  function getGoogleRedirectUri(_req: Request) {
+  function getGoogleRedirectUri(req: Request) {
     if (process.env.CANONICAL_URL) return `${process.env.CANONICAL_URL}/api/consumer/auth/google/callback`;
+    const host = req.get("host") || "";
+    if (host.includes("africacredithub.com")) return `https://africacredithub.com/api/consumer/auth/google/callback`;
     if (process.env.REPLIT_DEV_DOMAIN) return `https://${process.env.REPLIT_DEV_DOMAIN}/api/consumer/auth/google/callback`;
     return `https://africacredithub.com/api/consumer/auth/google/callback`;
   }
