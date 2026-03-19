@@ -580,7 +580,7 @@ process.stderr.write = function (...args: any[]) {
     await setupVite(httpServer, app);
   }
 
-  httpServer.listen(port, "0.0.0.0", async () => {
+  httpServer.listen(port, async () => {
     log(`serving on port ${port}`);
 
     startPoolHealthCheck(60000);
