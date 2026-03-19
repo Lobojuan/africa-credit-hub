@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search, Shield, AlertTriangle, CheckCircle2, TrendingUp, User, Loader2, Scale, Phone, CalendarDays, Lock, LogOut, UserPlus, KeyRound, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { Search, Shield, AlertTriangle, CheckCircle2, TrendingUp, User, Loader2, Scale, Phone, CalendarDays, Lock, LogOut, UserPlus, KeyRound, ArrowLeft, Eye, EyeOff, Mail, MessageSquare, RefreshCw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CreditScoreGauge } from "@/components/credit-score-gauge";
@@ -37,6 +37,8 @@ export default function ConsumerPortalPage() {
   const [otp, setOtp] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [fallbackOtp, setFallbackOtp] = useState<string | null>(null);
   const [data, setData] = useState<ConsumerData | null>(null);
 
   const sessionQuery = useQuery({
@@ -66,8 +68,10 @@ export default function ConsumerPortalPage() {
       if (!res.ok) throw new Error(body.message);
       return body;
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       setError(null);
+      setSuccessMsg(result.message);
+      if (result.otp) setFallbackOtp(result.otp);
       setView("verify");
     },
     onError: (err: Error) => setError(err.message),
@@ -82,16 +86,38 @@ export default function ConsumerPortalPage() {
       });
       const body = await res.json();
       if (res.status === 403 && body.requiresVerification) {
+        if (body.otp) setFallbackOtp(body.otp);
+        setSuccessMsg(body.message);
         setView("verify");
-        throw new Error(body.message);
+        return body;
       }
       if (!res.ok) throw new Error(body.message);
       return body;
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if (result?.requiresVerification) return;
       setError(null);
       queryClient.invalidateQueries({ queryKey: ["/api/consumer/session"] });
       setView("dashboard");
+    },
+    onError: (err: Error) => setError(err.message),
+  });
+
+  const resendMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/consumer/resend-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nationalId }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.message);
+      return body;
+    },
+    onSuccess: (result) => {
+      setError(null);
+      setSuccessMsg(result.message);
+      if (result.otp) setFallbackOtp(result.otp);
     },
     onError: (err: Error) => setError(err.message),
   });
@@ -186,6 +212,13 @@ export default function ConsumerPortalPage() {
           <div className="flex items-center gap-2 p-3 rounded-xl bg-destructive/10 text-destructive text-sm" data-testid="text-consumer-error">
             <AlertTriangle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
+          </div>
+        )}
+
+        {successMsg && !error && (
+          <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-sm" data-testid="text-consumer-success">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>{successMsg}</span>
           </div>
         )}
 
@@ -344,13 +377,30 @@ export default function ConsumerPortalPage() {
           <Card className="shadow-sm">
             <CardContent className="p-4 sm:p-5 space-y-4">
               <div className="text-center mb-2">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                  <KeyRound className="w-6 h-6 text-primary" />
+                <div className="flex items-center justify-center gap-3 mb-3">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                    <MessageSquare className="w-6 h-6 text-primary" />
+                  </div>
+                  {email && (
+                    <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center">
+                      <Mail className="w-6 h-6 text-blue-500" />
+                    </div>
+                  )}
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  A 6-digit verification code has been sent to your registered phone number.
+                  {email
+                    ? "We sent a verification code via SMS and a verification link to your email. Use either to verify."
+                    : "A 6-digit verification code has been sent to your phone via SMS."}
                 </p>
               </div>
+
+              {fallbackOtp && (
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center">
+                  <p className="text-xs text-amber-700 dark:text-amber-400 mb-1 font-medium">SMS/Email delivery unavailable — use this code:</p>
+                  <p className="text-2xl font-mono font-bold tracking-[0.3em] text-amber-800 dark:text-amber-300" data-testid="text-fallback-otp">{fallbackOtp}</p>
+                </div>
+              )}
+
               <div>
                 <label className="text-sm font-medium mb-1.5 block">Verification Code</label>
                 <input
@@ -375,13 +425,20 @@ export default function ConsumerPortalPage() {
                 {verifyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
                 {verifyMutation.isPending ? "Verifying..." : "Verify & Continue"}
               </Button>
-              <p className="text-[10px] text-muted-foreground text-center">
-                Check the server console for the OTP code (SMS integration coming soon).
-              </p>
-              <div className="text-center">
+              <div className="text-center space-y-2">
                 <button
-                  onClick={() => { setError(null); setView("login"); }}
-                  className="text-sm text-primary hover:underline"
+                  onClick={() => { setError(null); setSuccessMsg(null); resendMutation.mutate(); }}
+                  disabled={resendMutation.isPending}
+                  className="text-sm text-primary hover:underline disabled:opacity-50"
+                  data-testid="button-resend-otp"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 inline mr-1 ${resendMutation.isPending ? "animate-spin" : ""}`} />
+                  {resendMutation.isPending ? "Sending..." : "Resend verification code"}
+                </button>
+                <br />
+                <button
+                  onClick={() => { setError(null); setSuccessMsg(null); setFallbackOtp(null); setView("login"); }}
+                  className="text-sm text-muted-foreground hover:underline"
                   data-testid="link-back-to-login"
                 >
                   <ArrowLeft className="w-3.5 h-3.5 inline mr-1" />
@@ -514,7 +571,7 @@ export default function ConsumerPortalPage() {
                 </div>
                 <div>
                   <p className="text-xs font-semibold">Step 2</p>
-                  <p className="text-[11px] text-muted-foreground">Verify your identity with an OTP code</p>
+                  <p className="text-[11px] text-muted-foreground">Verify via SMS code or email verification link</p>
                 </div>
               </div>
               <div className="flex items-start gap-3 text-left p-3 rounded-xl bg-muted/30">

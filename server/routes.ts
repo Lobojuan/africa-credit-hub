@@ -36,7 +36,8 @@ import * as OTPAuth from "otpauth";
 import multer from "multer";
 import rateLimit from "express-rate-limit";
 import { isGhanaMode, getActiveCountryName, isSingleCountryMode, COUNTRY_REGISTRY, getSupportedCountries } from "./country-mode";
-import { sendWelcomeEmail, sendBillingNotification, sendDisputeNotification, sendNewRegistrationAlert } from "./email";
+import { sendWelcomeEmail, sendBillingNotification, sendDisputeNotification, sendNewRegistrationAlert, sendConsumerOtpEmail, sendConsumerVerificationLink } from "./email";
+import { sendOtpSms, isSmsConfigured } from "./sms";
 import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport, generatePortfolioIntelligence, parseProvider, generateCreditNarrative, detectAnomalies, generateRegulatoryReport, naturalLanguageQuery, analyzeCrossBorderRisk, generateLoanRecommendation, callAI, parseJSON } from "./ai";
 import { BOG_EXPORT_GENERATORS } from "./bog-export";
 import type { BogFileType } from "@shared/bog-codes";
@@ -1833,6 +1834,8 @@ export async function registerRoutes(
       const passwordHash = await bcrypt.hash(password, 12);
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+      const emailToken = crypto.randomBytes(32).toString("hex");
+      const emailTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
       const [account] = await db.insert(consumerAccounts).values({
         nationalId,
@@ -1842,11 +1845,35 @@ export async function registerRoutes(
         dateOfBirth,
         otpCode: otp,
         otpExpiresAt: otpExpires,
+        emailToken: email ? emailToken : null,
+        emailTokenExpiresAt: email ? emailTokenExpires : null,
       }).returning();
 
-      console.log(`[Consumer] Registration OTP generated for account ${account.id.slice(0, 8)}...`);
+      const smsSent = await sendOtpSms(phone, otp);
+      let emailSent = false;
+      if (email) {
+        emailSent = await sendConsumerVerificationLink(email, emailToken, `${req.protocol}://${req.get("host")}`);
+        if (!emailSent) {
+          emailSent = await sendConsumerOtpEmail(email, otp);
+        }
+      }
 
-      res.json({ message: "Account created. Please verify with the OTP sent to your phone.", accountId: account.id, requiresVerification: true });
+      const deliveryMethod = smsSent ? "sms" : emailSent ? "email" : "none";
+      await db.update(consumerAccounts).set({ verificationMethod: deliveryMethod }).where(eq(consumerAccounts.id, account.id));
+
+      console.log(`[Consumer] Registration for ${account.id.slice(0, 8)}... — SMS: ${smsSent}, Email: ${emailSent}`);
+
+      let message = "Account created. ";
+      if (smsSent) {
+        message += "A verification code has been sent to your phone via SMS.";
+        if (emailSent) message += " A verification link was also sent to your email.";
+      } else if (emailSent) {
+        message += "A verification link has been sent to your email.";
+      } else {
+        message += "Please enter the verification code shown below to continue.";
+      }
+
+      res.json({ message, accountId: account.id, requiresVerification: true, otp: (!smsSent && !emailSent) ? otp : undefined });
     } catch (e: any) {
       console.error("[Consumer] Registration error:", e.message);
       res.status(500).json({ message: "Registration failed. Please try again." });
@@ -1907,9 +1934,28 @@ export async function registerRoutes(
 
       if (!account.verified) {
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        await db.update(consumerAccounts).set({ otpCode: otp, otpExpiresAt: new Date(Date.now() + 10 * 60 * 1000) }).where(eq(consumerAccounts.id, account.id));
-        console.log(`[Consumer] Re-verification OTP generated for account ${account.id.slice(0, 8)}...`);
-        return res.status(403).json({ message: "Account not verified. A new OTP has been sent.", requiresVerification: true });
+        const emailToken = crypto.randomBytes(32).toString("hex");
+        await db.update(consumerAccounts).set({
+          otpCode: otp,
+          otpExpiresAt: new Date(Date.now() + 10 * 60 * 1000),
+          emailToken: account.email ? emailToken : null,
+          emailTokenExpiresAt: account.email ? new Date(Date.now() + 24 * 60 * 60 * 1000) : null,
+        }).where(eq(consumerAccounts.id, account.id));
+
+        const smsSent = await sendOtpSms(account.phone, otp);
+        let emailSent = false;
+        if (account.email) {
+          emailSent = await sendConsumerVerificationLink(account.email, emailToken, `${req.protocol}://${req.get("host")}`);
+          if (!emailSent) emailSent = await sendConsumerOtpEmail(account.email, otp);
+        }
+
+        console.log(`[Consumer] Re-verification for ${account.id.slice(0, 8)}... — SMS: ${smsSent}, Email: ${emailSent}`);
+        let msg = "Account not verified. ";
+        if (smsSent) msg += "A new code has been sent to your phone.";
+        else if (emailSent) msg += "A verification link has been sent to your email.";
+        else msg += "Please enter the verification code to continue.";
+
+        return res.status(403).json({ message: msg, requiresVerification: true, otp: (!smsSent && !emailSent) ? otp : undefined });
       }
 
       await db.update(consumerAccounts).set({ failedAttempts: 0, lockedUntil: null, lastLogin: new Date() }).where(eq(consumerAccounts.id, account.id));
@@ -1930,6 +1976,70 @@ export async function registerRoutes(
       return res.status(401).json({ authenticated: false });
     }
     res.json({ authenticated: true, nationalId: (req.session as any).consumerNationalId });
+  });
+
+  app.get("/api/consumer/verify-email", async (req, res) => {
+    try {
+      const token = req.query.token as string;
+      if (!token) return res.status(400).send("Invalid verification link.");
+
+      const [account] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.emailToken, token)).limit(1);
+      if (!account) return res.status(404).send("Verification link is invalid or has already been used.");
+
+      if (account.emailTokenExpiresAt && new Date() > account.emailTokenExpiresAt) {
+        return res.status(410).send("This verification link has expired. Please log in and request a new one.");
+      }
+
+      await db.update(consumerAccounts).set({
+        verified: true,
+        emailToken: null,
+        emailTokenExpiresAt: null,
+        otpCode: null,
+        otpExpiresAt: null,
+        failedAttempts: 0,
+      }).where(eq(consumerAccounts.id, account.id));
+
+      res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Account Verified</title></head><body style="margin:0;padding:0;background:#f4f5f7;font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;"><div style="max-width:400px;background:#fff;border-radius:12px;padding:40px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.08);"><div style="width:60px;height:60px;border-radius:50%;background:#ecfdf5;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg></div><h1 style="color:#1a1a2e;font-size:22px;margin:0 0 8px;">Account Verified!</h1><p style="color:#555;font-size:14px;line-height:1.5;margin:0 0 24px;">Your Africa Credit Hub account has been successfully verified. You can now sign in.</p><a href="/my-credit" style="display:inline-block;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);color:#fff;padding:12px 32px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;">Sign In Now</a></div></body></html>`);
+    } catch (e: any) {
+      console.error("[Consumer] Email verification error:", e.message);
+      res.status(500).send("Verification failed. Please try again.");
+    }
+  });
+
+  app.post("/api/consumer/resend-otp", consumerAuthLimiter, async (req, res) => {
+    try {
+      const { nationalId } = req.body;
+      if (!nationalId) return res.status(400).json({ message: "National ID is required" });
+
+      const [account] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.nationalId, nationalId)).limit(1);
+      if (!account) return res.status(404).json({ message: "Account not found" });
+      if (account.verified) return res.json({ message: "Account is already verified. Please log in." });
+
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const emailToken = crypto.randomBytes(32).toString("hex");
+      await db.update(consumerAccounts).set({
+        otpCode: otp,
+        otpExpiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        emailToken: account.email ? emailToken : null,
+        emailTokenExpiresAt: account.email ? new Date(Date.now() + 24 * 60 * 60 * 1000) : null,
+      }).where(eq(consumerAccounts.id, account.id));
+
+      const smsSent = await sendOtpSms(account.phone, otp);
+      let emailSent = false;
+      if (account.email) {
+        emailSent = await sendConsumerVerificationLink(account.email, emailToken, `${req.protocol}://${req.get("host")}`);
+        if (!emailSent) emailSent = await sendConsumerOtpEmail(account.email, otp);
+      }
+
+      let message = "";
+      if (smsSent) message = "A new code has been sent to your phone.";
+      else if (emailSent) message = "A verification link has been sent to your email.";
+      else message = "Unable to send verification. Please try again.";
+
+      res.json({ message, otp: (!smsSent && !emailSent) ? otp : undefined });
+    } catch (e: any) {
+      res.status(500).json({ message: "Failed to resend code" });
+    }
   });
 
   app.post("/api/consumer/logout", async (req, res) => {

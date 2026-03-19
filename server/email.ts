@@ -227,6 +227,32 @@ export async function sendNewRegistrationAlert(orgName: string, orgType: string,
   return sendEmail(NOTIFY_EMAIL, `New Registration: ${orgName} (${country})`, createEmailHtml("New Trial Registration", body));
 }
 
+export async function sendConsumerOtpEmail(email: string, otp: string): Promise<boolean> {
+  const body = `
+    <p style="color:#333;font-size:14px;line-height:1.6;">Your verification code for Africa Credit Hub is:</p>
+    <div style="background:#f0f7ff;border-radius:12px;padding:24px;margin:20px 0;text-align:center;">
+      <span style="font-size:36px;font-weight:700;letter-spacing:8px;color:#1a1a2e;font-family:monospace;">${otp}</span>
+    </div>
+    <p style="color:#333;font-size:14px;line-height:1.6;">This code expires in <strong>10 minutes</strong>. Do not share it with anyone.</p>
+    <p style="color:#888;font-size:12px;margin-top:20px;">If you did not request this code, please ignore this email.</p>
+  `;
+  return sendEmail(email, "Your Verification Code — Africa Credit Hub", createEmailHtml("Verify Your Account", body));
+}
+
+export async function sendConsumerVerificationLink(email: string, token: string, baseUrl: string): Promise<boolean> {
+  const verifyUrl = `${baseUrl}/api/consumer/verify-email?token=${encodeURIComponent(token)}`;
+  const body = `
+    <p style="color:#333;font-size:14px;line-height:1.6;">Click the button below to verify your Africa Credit Hub account:</p>
+    <div style="text-align:center;margin:28px 0;">
+      <a href="${verifyUrl}" style="display:inline-block;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);color:#fff;padding:14px 36px;border-radius:8px;text-decoration:none;font-size:15px;font-weight:600;">Verify My Account</a>
+    </div>
+    <p style="color:#555;font-size:13px;line-height:1.5;">Or copy and paste this link into your browser:</p>
+    <p style="color:#3b82f6;font-size:12px;word-break:break-all;">${verifyUrl}</p>
+    <p style="color:#888;font-size:12px;margin-top:20px;">This link expires in <strong>24 hours</strong>. If you did not create this account, please ignore this email.</p>
+  `;
+  return sendEmail(email, "Verify Your Account — Africa Credit Hub", createEmailHtml("Email Verification", body));
+}
+
 export function isEmailConfigured(): boolean {
   return emailConfigured;
 }

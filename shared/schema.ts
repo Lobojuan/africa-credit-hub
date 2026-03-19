@@ -709,11 +709,14 @@ export const consumerAccounts = pgTable("consumer_accounts", {
   verified: boolean("verified").default(false),
   otpCode: text("otp_code"),
   otpExpiresAt: timestamp("otp_expires_at"),
+  emailToken: text("email_token"),
+  emailTokenExpiresAt: timestamp("email_token_expires_at"),
+  verificationMethod: text("verification_method").default("sms"),
   failedAttempts: integer("failed_attempts").default(0),
   lockedUntil: timestamp("locked_until"),
   lastLogin: timestamp("last_login"),
   createdAt: timestamp("created_at").defaultNow(),
 });
-export const insertConsumerAccountSchema = createInsertSchema(consumerAccounts).omit({ id: true, createdAt: true, lastLogin: true, failedAttempts: true, lockedUntil: true, otpCode: true, otpExpiresAt: true, verified: true });
+export const insertConsumerAccountSchema = createInsertSchema(consumerAccounts).omit({ id: true, createdAt: true, lastLogin: true, failedAttempts: true, lockedUntil: true, otpCode: true, otpExpiresAt: true, verified: true, emailToken: true, emailTokenExpiresAt: true, verificationMethod: true });
 export type InsertConsumerAccount = z.infer<typeof insertConsumerAccountSchema>;
 export type ConsumerAccount = typeof consumerAccounts.$inferSelect;
