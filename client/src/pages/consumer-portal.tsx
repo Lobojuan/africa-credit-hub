@@ -57,6 +57,23 @@ export default function ConsumerPortalPage() {
     }
   }, [sessionQuery.data]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const oauthError = params.get("error");
+    if (oauthError) {
+      const errorMessages: Record<string, string> = {
+        missing_params: "Google sign-in was cancelled or failed. Please try again.",
+        invalid_state: "Sign-in session expired. Please try again.",
+        token_failed: "Could not complete Google sign-in. Please try again.",
+        no_email: "Your Google account does not have an email address.",
+        session_error: "Session error during sign-in. Please try again.",
+        oauth_failed: "Google sign-in failed. Please try again or use email/password.",
+      };
+      setError(errorMessages[oauthError] || "Sign-in failed. Please try again.");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
   const registerMutation = useMutation({
     mutationFn: async () => {
       const res = await fetch("/api/consumer/register", {
@@ -517,13 +534,21 @@ export default function ConsumerPortalPage() {
             {!data && !lookupMutation.isPending && (
               <Card className="shadow-sm">
                 <CardContent className="p-6 text-center space-y-4">
-                  <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                    <Shield className="w-7 h-7 text-primary" />
-                  </div>
+                  {sessionQuery.data?.profilePicture ? (
+                    <img src={sessionQuery.data.profilePicture} alt="Profile" className="w-14 h-14 rounded-full mx-auto object-cover" data-testid="img-consumer-avatar" />
+                  ) : (
+                    <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                      <Shield className="w-7 h-7 text-primary" />
+                    </div>
+                  )}
                   <div>
-                    <h3 className="font-bold text-lg">Welcome back</h3>
+                    <h3 className="font-bold text-lg">Welcome back{sessionQuery.data?.fullName ? `, ${sessionQuery.data.fullName.split(" ")[0]}` : ""}</h3>
                     <p className="text-sm text-muted-foreground mt-1">
-                      You are signed in as <strong>{sessionQuery.data?.nationalId?.replace(/(.{3}).+(.{3})/, "$1****$2")}</strong>
+                      {sessionQuery.data?.authProvider === "google" && sessionQuery.data?.email ? (
+                        <>Signed in as <strong>{sessionQuery.data.email}</strong></>
+                      ) : (
+                        <>You are signed in as <strong>{sessionQuery.data?.nationalId?.replace(/(.{3}).+(.{3})/, "$1****$2")}</strong></>
+                      )}
                     </p>
                   </div>
                   <Button

@@ -1820,6 +1820,121 @@ export async function registerRoutes(
   const consumerAuthLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 15, message: { message: "Too many attempts. Please try again later." }, standardHeaders: true, legacyHeaders: false });
   const consumerLookupLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { message: "Too many lookup requests. Please try again later." }, standardHeaders: true, legacyHeaders: false });
 
+  const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
+  const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
+
+  function getGoogleRedirectUri(_req: Request) {
+    if (process.env.CANONICAL_URL) return `${process.env.CANONICAL_URL}/api/consumer/auth/google/callback`;
+    if (process.env.REPLIT_DEV_DOMAIN) return `https://${process.env.REPLIT_DEV_DOMAIN}/api/consumer/auth/google/callback`;
+    return `https://africacredithub.com/api/consumer/auth/google/callback`;
+  }
+
+  app.get("/api/consumer/auth/google", (req, res) => {
+    if (!GOOGLE_CLIENT_ID) {
+      return res.status(503).send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Google Sign-In</title></head><body style="font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#f4f5f7;"><div style="max-width:400px;background:#fff;border-radius:12px;padding:40px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.08);"><h2 style="color:#1a1a2e;">Google Sign-In Coming Soon</h2><p style="color:#555;font-size:14px;">Google Sign-In is being configured. Please use email/password registration for now.</p><a href="/my-credit" style="display:inline-block;margin-top:16px;background:#1a1a2e;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-size:14px;">Back to Login</a></div></body></html>`);
+    }
+    const state = crypto.randomBytes(16).toString("hex");
+    (req.session as any).googleOAuthState = state;
+    const redirectUri = getGoogleRedirectUri(req);
+    const params = new URLSearchParams({
+      client_id: GOOGLE_CLIENT_ID,
+      redirect_uri: redirectUri,
+      response_type: "code",
+      scope: "openid email profile",
+      state,
+      access_type: "offline",
+      prompt: "consent",
+    });
+    res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+  });
+
+  app.get("/api/consumer/auth/google/callback", async (req, res) => {
+    try {
+      const { code, state } = req.query;
+      if (!code || !state) return res.redirect("/my-credit?error=missing_params");
+
+      if (state !== (req.session as any).googleOAuthState) {
+        return res.redirect("/my-credit?error=invalid_state");
+      }
+      delete (req.session as any).googleOAuthState;
+
+      const redirectUri = getGoogleRedirectUri(req);
+      const tokenResp = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          code: code as string,
+          client_id: GOOGLE_CLIENT_ID,
+          client_secret: GOOGLE_CLIENT_SECRET,
+          redirect_uri: redirectUri,
+          grant_type: "authorization_code",
+        }).toString(),
+      });
+
+      const tokenData = await tokenResp.json();
+      if (!tokenData.access_token) {
+        console.error("[Consumer][Google] Token exchange failed:", tokenData);
+        return res.redirect("/my-credit?error=token_failed");
+      }
+
+      const userResp = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+        headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      });
+      const googleUser = await userResp.json();
+
+      if (!googleUser.email) {
+        return res.redirect("/my-credit?error=no_email");
+      }
+
+      let [account] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.googleId, googleUser.id)).limit(1);
+
+      if (!account) {
+        const [existingByEmail] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.email, googleUser.email)).limit(1);
+
+        if (existingByEmail) {
+          await db.update(consumerAccounts).set({
+            googleId: googleUser.id,
+            profilePicture: googleUser.picture || null,
+            fullName: googleUser.name || existingByEmail.fullName,
+            authProvider: existingByEmail.authProvider === "local" ? "google" : existingByEmail.authProvider,
+            verified: true,
+          }).where(eq(consumerAccounts.id, existingByEmail.id));
+          account = { ...existingByEmail, googleId: googleUser.id, verified: true };
+        } else {
+          const nationalIdPlaceholder = `GOOGLE-${googleUser.id.slice(0, 12)}`;
+          const [newAccount] = await db.insert(consumerAccounts).values({
+            nationalId: nationalIdPlaceholder,
+            email: googleUser.email,
+            fullName: googleUser.name || null,
+            googleId: googleUser.id,
+            profilePicture: googleUser.picture || null,
+            authProvider: "google",
+            verified: true,
+            verificationMethod: "google",
+          }).returning();
+          account = newAccount;
+        }
+      }
+
+      await db.update(consumerAccounts).set({ lastLogin: new Date() }).where(eq(consumerAccounts.id, account.id));
+
+      req.session.regenerate((err) => {
+        if (err) return res.redirect("/my-credit?error=session_error");
+        (req.session as any).consumerId = account!.id;
+        (req.session as any).consumerNationalId = account!.nationalId;
+        console.log(`[Consumer][Google] Login for ${account!.id.slice(0, 8)}... (${googleUser.email})`);
+        res.redirect("/my-credit");
+      });
+    } catch (e: any) {
+      console.error("[Consumer][Google] OAuth error:", e.message);
+      res.redirect("/my-credit?error=oauth_failed");
+    }
+  });
+
+  app.get("/api/consumer/auth/apple", (_req, res) => {
+    res.status(503).send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Apple Sign-In</title></head><body style="font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#f4f5f7;"><div style="max-width:400px;background:#fff;border-radius:12px;padding:40px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.08);"><h2 style="color:#1a1a2e;">Apple Sign-In Coming Soon</h2><p style="color:#555;font-size:14px;">Apple Sign-In requires an Apple Developer account and is being set up. Please use Google or email/password registration for now.</p><a href="/my-credit" style="display:inline-block;margin-top:16px;background:#1a1a2e;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-size:14px;">Back to Login</a></div></body></html>`);
+  });
+
   app.post("/api/consumer/register", consumerAuthLimiter, async (req, res) => {
     try {
       const { nationalId, phone, email, password, dateOfBirth } = req.body;
@@ -1923,6 +2038,10 @@ export async function registerRoutes(
         return res.status(423).json({ message: `Account locked. Try again in ${mins} minutes.` });
       }
 
+      if (!account.passwordHash) {
+        const providerName = account.authProvider === "google" ? "Google" : account.authProvider === "apple" ? "Apple" : "social";
+        return res.status(400).json({ message: `This account uses ${providerName} sign-in. Please use the "${providerName}" button to log in.` });
+      }
       const valid = await bcrypt.compare(password, account.passwordHash);
       if (!valid) {
         const attempts = (account.failedAttempts || 0) + 1;
@@ -1975,7 +2094,16 @@ export async function registerRoutes(
     if (!(req.session as any).consumerId) {
       return res.status(401).json({ authenticated: false });
     }
-    res.json({ authenticated: true, nationalId: (req.session as any).consumerNationalId });
+    const [account] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.id, (req.session as any).consumerId)).limit(1);
+    if (!account) return res.status(401).json({ authenticated: false });
+    res.json({
+      authenticated: true,
+      nationalId: (req.session as any).consumerNationalId,
+      fullName: account.fullName || null,
+      email: account.email || null,
+      profilePicture: account.profilePicture || null,
+      authProvider: account.authProvider || "local",
+    });
   });
 
   app.get("/api/consumer/verify-email", async (req, res) => {
