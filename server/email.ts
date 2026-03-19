@@ -3,38 +3,78 @@ import { isGhanaMode } from "./country-mode";
 
 let transporter: nodemailer.Transporter | null = null;
 let emailConfigured = false;
+let emailProvider: "smtp" | "sendgrid" | "stub" = "stub";
 
 const FROM_EMAIL = process.env.SMTP_FROM || "uffe.carlson@gmail.com";
 const FROM_NAME = isGhanaMode() ? "Ghana Credit Registry" : "Pan-African Credit Registry";
 
+async function sendViaSendGrid(to: string, subject: string, htmlBody: string): Promise<boolean> {
+  const apiKey = process.env.SENDGRID_API_KEY;
+  if (!apiKey) return false;
+  try {
+    const resp = await fetch("https://api.sendgrid.com/v3/mail/send", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email: to }] }],
+        from: { email: FROM_EMAIL, name: FROM_NAME },
+        subject,
+        content: [{ type: "text/html", value: htmlBody }],
+      }),
+    });
+    if (resp.ok || resp.status === 202) {
+      console.log(`[Email][SendGrid] Sent to ${to}: "${subject}"`);
+      return true;
+    }
+    console.error(`[Email][SendGrid] Failed ${resp.status}: ${await resp.text()}`);
+    return false;
+  } catch (err: any) {
+    console.error(`[Email][SendGrid] Error:`, err.message);
+    return false;
+  }
+}
+
+let hasSendGrid = false;
+let hasSmtp = false;
+
 function initEmail() {
+  if (process.env.SENDGRID_API_KEY) {
+    hasSendGrid = true;
+    emailProvider = "sendgrid";
+    emailConfigured = true;
+    console.log("[Email] SendGrid configured (API key found)");
+  }
+
   const host = process.env.SMTP_HOST;
   const port = parseInt(process.env.SMTP_PORT || "587");
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
 
-  if (!host || !user || !pass) {
-    console.log("[Email] SMTP not configured — set SMTP_HOST, SMTP_USER, SMTP_PASS to enable (stub mode)");
-    return;
+  if (host && user && pass) {
+    hasSmtp = true;
+    if (!hasSendGrid) emailProvider = "smtp";
+    transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465,
+      auth: { user, pass },
+    });
+
+    transporter.verify((err) => {
+      if (err) {
+        console.error("[Email] SMTP connection failed:", err.message);
+        transporter = null;
+        hasSmtp = false;
+      } else {
+        emailConfigured = true;
+        console.log(`[Email] SMTP configured via ${host} (rate limit: ~500/day for Gmail)`);
+      }
+    });
   }
 
-  transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    auth: { user, pass },
-  });
-
-  transporter.verify((err) => {
-    if (err) {
-      console.error("[Email] SMTP connection failed:", err.message);
-      emailConfigured = false;
-      transporter = null;
-    } else {
-      emailConfigured = true;
-      console.log("[Email] SMTP configured successfully via", host);
-    }
-  });
+  if (!hasSendGrid && !hasSmtp) {
+    console.log("[Email] No email provider configured — set SENDGRID_API_KEY or SMTP_HOST/SMTP_USER/SMTP_PASS (stub mode)");
+  }
 }
 
 initEmail();
@@ -63,11 +103,8 @@ function createEmailHtml(title: string, bodyHtml: string): string {
 </html>`;
 }
 
-async function sendEmail(to: string, subject: string, htmlBody: string): Promise<boolean> {
-  if (!emailConfigured || !transporter) {
-    console.log(`[Email][Stub] Would send to ${to}: "${subject}"`);
-    return false;
-  }
+async function sendViaSmtp(to: string, subject: string, htmlBody: string): Promise<boolean> {
+  if (!transporter) return false;
   try {
     await transporter.sendMail({
       from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
@@ -75,12 +112,37 @@ async function sendEmail(to: string, subject: string, htmlBody: string): Promise
       subject,
       html: htmlBody,
     });
-    console.log(`[Email] Sent to ${to}: "${subject}"`);
+    console.log(`[Email][SMTP] Sent to ${to}: "${subject}"`);
     return true;
   } catch (err: any) {
-    console.error(`[Email] Failed to send to ${to}:`, err.message);
+    console.error(`[Email][SMTP] Failed to send to ${to}:`, err.message);
     return false;
   }
+}
+
+async function sendEmail(to: string, subject: string, htmlBody: string): Promise<boolean> {
+  if (!emailConfigured) {
+    console.log(`[Email][Stub] Would send to ${to}: "${subject}"`);
+    return false;
+  }
+
+  if (emailProvider === "sendgrid") {
+    const ok = await sendViaSendGrid(to, subject, htmlBody);
+    if (ok) return true;
+    if (hasSmtp) {
+      console.log(`[Email] SendGrid failed, falling back to SMTP...`);
+      return sendViaSmtp(to, subject, htmlBody);
+    }
+    return false;
+  }
+
+  const ok = await sendViaSmtp(to, subject, htmlBody);
+  if (ok) return true;
+  if (hasSendGrid) {
+    console.log(`[Email] SMTP failed, falling back to SendGrid...`);
+    return sendViaSendGrid(to, subject, htmlBody);
+  }
+  return false;
 }
 
 export async function sendWelcomeEmail(orgName: string, adminEmail: string, tier: string): Promise<boolean> {

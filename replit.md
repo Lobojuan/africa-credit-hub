@@ -71,3 +71,63 @@ The system employs a modern full-stack architecture built for scalability and co
 -   **AI / LLM Providers**: Anthropic (Claude Opus), OpenAI (GPT-4o).
 -   **Excel Export**: `exceljs`.
 -   **Third-Party APIs**: open.er-api.com (exchange rates), DiceBear (avatars).
+-   **Testing**: Vitest for unit tests (`npx vitest run`).
+
+## Production Hardening
+
+### Security Headers
+- Helmet CSP configured in `server/index.ts` with directives for scripts, styles, images, fonts, frames, and API connections.
+- Cache-control middleware for static assets (1-year immutable for hashed, no-cache for HTML).
+
+### Structured Logging
+- `server/logger.ts` provides JSON structured logging with levels (debug/info/warn/error/fatal), source tagging, and child loggers.
+- Log level controlled via `LOG_LEVEL` environment variable (default: info).
+
+### Database
+- Connection pool optimized in `server/db.ts` with production-aware settings (30 max connections in prod, 20 in dev).
+- Pool health check runs every 60 seconds, warns on latency > 500ms.
+- Connection timeout: 10s, statement timeout: 30s, keepAlive enabled.
+
+### Email
+- Provider abstraction in `server/email.ts`: supports SendGrid (preferred) and Gmail SMTP (fallback).
+- Set `SENDGRID_API_KEY` for production email delivery. Falls back to SMTP if SendGrid fails.
+
+### API Versioning
+- Both `/api/` and `/api/v1/` prefixes work for all routes (v1 alias in `server/index.ts`).
+
+### Data Export
+- Full organization data export at `GET /api/admin/export/:orgId` (admin-only, audit logged).
+- POPIA/NDPA/GDPR Article 20 compliant data portability.
+
+### Scripts
+- `scripts/backup-db.sh` — Database backup with pg_dump, gzip compression, 7-day retention.
+- `scripts/validate.sh` — Pre-deploy validation (TypeScript checks, env vars, DB connectivity, security audit).
+- `scripts/load-test.sh` — Load testing with autocannon (health, landing, chatbot, consumer endpoints).
+
+### Health Monitoring
+- `/health` — Public health endpoint with DB status, pool stats, memory, uptime.
+- `/api/admin/health-detail` — Detailed health with SLA percentage (admin-only).
+
+### Unit Tests
+- Credit score tests in `server/__tests__/credit-score.test.ts` (15 test cases).
+- Logger tests in `server/__tests__/logger.test.ts` (5 test cases).
+- Run with: `npx vitest run`
+
+## Custom Domain & SSL Setup (africacredithub.com)
+
+### Replit Deployment
+1. Go to the Deployments tab in Replit.
+2. Click "Deploy" to publish to production.
+3. In deployment settings, add custom domain: `africacredithub.com`
+4. Replit automatically provisions SSL/TLS via Let's Encrypt.
+
+### DNS Configuration
+Point your domain's DNS records:
+- **A record**: `@` → Replit's IP (shown in deployment settings)
+- **CNAME record**: `www` → your-repl.replit.app
+
+### SSL Certificate
+- Replit handles SSL certificate provisioning and renewal automatically.
+- Supports TLS 1.2 and 1.3.
+- HSTS headers are set via Helmet configuration.
+- Certificate renewal is automatic — no manual intervention needed.

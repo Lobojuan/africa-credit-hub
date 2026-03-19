@@ -7368,6 +7368,61 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     res.json({ connectedClients: getConnectedClientsCount() });
   });
 
+  app.get("/api/admin/export/:orgId", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const orgId = req.params.orgId;
+      if (!orgId) return res.status(400).json({ message: "Invalid organization ID" });
+
+      if (req.session.userRole !== "super_admin" && req.session.organizationId !== orgId) {
+        return res.status(403).json({ message: "You can only export your own organization's data" });
+      }
+
+      const org = await storage.getOrganization(orgId);
+      if (!org) return res.status(404).json({ message: "Organization not found" });
+
+      const { data: borrowers } = await storage.getBorrowers(1, 10000, orgId);
+
+      const exportData = {
+        exportDate: new Date().toISOString(),
+        exportVersion: "2.1.0",
+        compliance: "POPIA/NDPA/Ghana DPA/GDPR Article 20 — Right to Data Portability",
+        organization: {
+          id: org.id,
+          name: org.name,
+          country: org.country,
+          tier: org.subscriptionTier,
+        },
+        statistics: {
+          totalBorrowers: borrowers.length,
+        },
+        borrowers: borrowers.map(b => ({
+          id: b.id,
+          firstName: b.firstName,
+          lastName: b.lastName,
+          nationalId: b.nationalId,
+          dateOfBirth: b.dateOfBirth,
+          country: b.country,
+        })),
+      };
+
+      await storage.createAuditLog({
+        userId: req.session.userId,
+        action: "data_export",
+        entity: "organization",
+        entityId: orgId,
+        details: `Full data export for org ${org.name} (${borrowers.length} borrowers)`,
+        ipAddress: req.ip || "unknown",
+      });
+
+      res.setHeader("Content-Disposition", `attachment; filename="ach_export_${org.name.replace(/[^a-zA-Z0-9]/g, "_")}_${new Date().toISOString().split("T")[0]}.json"`);
+      res.setHeader("Content-Type", "application/json");
+      res.json(exportData);
+    } catch (err: any) {
+      console.error("[Export] Error:", err.message);
+      res.status(500).json({ message: "Export failed" });
+    }
+  });
+
   return httpServer;
 }
 

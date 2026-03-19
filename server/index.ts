@@ -7,7 +7,8 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { readFileSync, readdirSync, readlinkSync, writeFileSync, appendFileSync } from "fs";
-import { pool } from "./db";
+import { pool, startPoolHealthCheck } from "./db";
+import { createLogger } from "./logger";
 
 const port = parseInt(process.env.PORT || "5000", 10);
 
@@ -58,16 +59,62 @@ killPortHolder(port);
 const app = express();
 app.set("etag", false);
 
-app.get("/health", (_req, res) => {
-  res.status(200).send("ok");
+app.get("/health", async (_req, res) => {
+  const start = Date.now();
+  const mem = process.memoryUsage();
+  let dbOk = false;
+  let dbLatency = 0;
+  try {
+    const dbStart = Date.now();
+    await pool.query("SELECT 1");
+    dbLatency = Date.now() - dbStart;
+    dbOk = true;
+  } catch {}
+  const status = dbOk ? "healthy" : "degraded";
+  const uptime = process.uptime();
+  res.status(dbOk ? 200 : 503).json({
+    status,
+    version: "2.1.0",
+    uptime: Math.floor(uptime),
+    uptimeHuman: `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m`,
+    timestamp: new Date().toISOString(),
+    checks: {
+      database: { status: dbOk ? "ok" : "error", latencyMs: dbLatency, pool: { total: pool.totalCount, idle: pool.idleCount, waiting: pool.waitingCount } },
+      memory: { rss: Math.round(mem.rss / 1024 / 1024), heapUsed: Math.round(mem.heapUsed / 1024 / 1024), heapTotal: Math.round(mem.heapTotal / 1024 / 1024), unit: "MB" },
+    },
+    responseMs: Date.now() - start,
+  });
 });
 
 app.use(helmet({
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://js.stripe.com", "https://cdn.jsdelivr.net"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      imgSrc: ["'self'", "data:", "blob:", "https:", "http:"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+      connectSrc: ["'self'", "https://api.stripe.com", "https://api.openai.com", "https://api.anthropic.com", "wss:", "ws:"],
+      frameSrc: ["'self'", "https://js.stripe.com", "https://hooks.stripe.com"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      upgradeInsecureRequests: [],
+    },
+  },
   crossOriginEmbedderPolicy: false,
   frameguard: false,
 }));
 app.use(compression());
+app.use((req, res, next) => {
+  if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/)) {
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+  } else if (req.path.startsWith("/api")) {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
+  }
+  next();
+});
 const httpServer = createServer(app);
 
 declare module "http" {
@@ -160,6 +207,8 @@ app.use((req, res, next) => {
 });
 
 app.set("trust proxy", true);
+
+const httpLogger = createLogger("http");
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -499,6 +548,11 @@ process.stderr.write = function (...args: any[]) {
   const { initWebSocket } = await import("./websocket");
   initWebSocket(httpServer);
 
+  app.use("/api/v1", (req, res, next) => {
+    req.url = "/api" + req.url;
+    next();
+  });
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
@@ -525,6 +579,8 @@ process.stderr.write = function (...args: any[]) {
 
   httpServer.listen(port, "0.0.0.0", async () => {
     log(`serving on port ${port}`);
+
+    startPoolHealthCheck(60000);
 
     const { startRetentionScheduler } = await import("./retention-enforcement");
     startRetentionScheduler(24);
