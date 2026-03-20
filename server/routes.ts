@@ -1847,18 +1847,19 @@ export async function registerRoutes(
       scope: "openid email profile",
       state,
       access_type: "offline",
-      prompt: "consent",
+      prompt: "select_account",
     });
     res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
   });
 
   app.get("/api/consumer/auth/google/callback", async (req, res) => {
     try {
+      const returnTo = (req.session as any).googleOAuthReturnTo || "/my-credit";
       const { code, state } = req.query;
-      if (!code || !state) return res.redirect("/my-credit?error=missing_params");
+      if (!code || !state) return res.redirect(`${returnTo}?error=missing_params`);
 
       if (state !== (req.session as any).googleOAuthState) {
-        return res.redirect("/my-credit?error=invalid_state");
+        return res.redirect(`${returnTo}?error=invalid_state`);
       }
       delete (req.session as any).googleOAuthState;
 
@@ -1878,7 +1879,7 @@ export async function registerRoutes(
       const tokenData = await tokenResp.json();
       if (!tokenData.access_token) {
         console.error("[Consumer][Google] Token exchange failed:", tokenData);
-        return res.redirect("/my-credit?error=token_failed");
+        return res.redirect(`${returnTo}?error=token_failed`);
       }
 
       const userResp = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
@@ -1887,7 +1888,7 @@ export async function registerRoutes(
       const googleUser = await userResp.json();
 
       if (!googleUser.email) {
-        return res.redirect("/my-credit?error=no_email");
+        return res.redirect(`${returnTo}?error=no_email`);
       }
 
       let [account] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.googleId, googleUser.id)).limit(1);
@@ -1922,7 +1923,6 @@ export async function registerRoutes(
 
       await db.update(consumerAccounts).set({ lastLogin: new Date() }).where(eq(consumerAccounts.id, account.id));
 
-      const returnTo = (req.session as any).googleOAuthReturnTo || "/my-credit";
       req.session.regenerate((err) => {
         if (err) return res.redirect("/my-credit?error=session_error");
         (req.session as any).consumerId = account!.id;
@@ -1931,8 +1931,9 @@ export async function registerRoutes(
         res.redirect(returnTo);
       });
     } catch (e: any) {
+      const fallback = (req.session as any)?.googleOAuthReturnTo || "/my-credit";
       console.error("[Consumer][Google] OAuth error:", e.message);
-      res.redirect("/my-credit?error=oauth_failed");
+      res.redirect(`${fallback}?error=oauth_failed`);
     }
   });
 
