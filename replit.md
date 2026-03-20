@@ -48,7 +48,9 @@ The system employs a modern full-stack architecture built for scalability and co
     -   **SATA Cross-Border Framework**: Implements Smart Africa Telecommunications Alliance data sharing.
     -   **PAPSS Settlement Tracker**: Tracks Pan-African Payment and Settlement System settlements.
     -   **Alternative Data Integration**: Integrates mobile money, utility, and telco data for thin-file borrowers.
-    -   **Consumer Self-Service Portal**: Authenticated consumer portal (`/my-credit`) with registration, login, dual-channel verification (SMS via Africa's Talking + email verification link as backup), session management, and rate-limited credit score lookups. Consumer accounts stored in `consumer_accounts` table with bcrypt-hashed passwords, session regeneration, and account lockout after 5 failed attempts. SMS requires `AT_USERNAME` and `AT_API_KEY` env vars. Email verification sends clickable link via SMTP/SendGrid. Fallback: OTP shown in-app when neither SMS nor email is configured.
+    -   **Consumer Self-Service Portal**: Authenticated consumer portal (`/my-credit`) with registration, login, dual-channel verification (SMS via Africa's Talking + email verification link as backup), session management, and rate-limited credit score lookups. Consumer accounts stored in `consumer_accounts` table with bcrypt-hashed passwords, session regeneration, and account lockout after 5 failed attempts. SMS requires `AT_USERNAME` and `AT_API_KEY` env vars (or `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN`/`TWILIO_PHONE_NUMBER` for Twilio). Email verification sends clickable link via SMTP/SendGrid. Fallback: OTP shown in-app when neither SMS nor email is configured.
+    -   **Google OAuth**: Full Google Sign-In integration on `/login`, `/my-credit`, and `/start-trial`. Backend routes handle OAuth flow with CSRF state, account creation/linking, and session regeneration. Google accounts auto-create consumer records with `GOOGLE-` prefixed placeholder national IDs. Environment variables: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `CANONICAL_URL` (production). Apple Sign-In placeholder ready for implementation.
+    -   **Smart Trial Flow**: Google-authenticated users arriving at `/start-trial` see a welcome banner with their profile picture and have name/email/username pre-filled automatically.
     -   **Client Landing Page**: Default landing page (`/solutions`) for unauthenticated users, showcasing platform features and offering trial registration.
     -   **Trial Management**: Self-service registration (`/start-trial`) with sample data seeding and an upgrade path.
     -   **AI Demo Page** (`/ai-demo`): Public interactive showcase of all 6 AI features using sample African credit data. No login required. Accessible via "Try AI Features Free" button on landing page.
@@ -91,6 +93,12 @@ The system employs a modern full-stack architecture built for scalability and co
 ### Email
 - Provider abstraction in `server/email.ts`: supports SendGrid (preferred) and Gmail SMTP (fallback).
 - Set `SENDGRID_API_KEY` for production email delivery. Falls back to SMTP if SendGrid fails.
+- Gmail SMTP configured via `SMTP_PASS` secret (uffe.carlson@gmail.com).
+
+### SMS
+- Provider abstraction in `server/sms.ts`: supports Twilio and Africa's Talking with auto-failover.
+- Twilio: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`.
+- Africa's Talking: `AT_USERNAME`, `AT_API_KEY`.
 
 ### API Versioning
 - Both `/api/` and `/api/v1/` prefixes work for all routes (v1 alias in `server/index.ts`).

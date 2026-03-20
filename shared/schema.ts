@@ -603,7 +603,7 @@ export const alternativeDataStatusEnum = pgEnum("alternative_data_status", ["act
 
 export const alternativeData = pgTable("alternative_data", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  borrowerId: integer("borrower_id").notNull(),
+  borrowerId: text("borrower_id").notNull(),
   source: alternativeDataSourceEnum("source").notNull(),
   provider: text("provider").notNull(),
   status: alternativeDataStatusEnum("status").notNull().default("active"),

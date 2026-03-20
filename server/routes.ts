@@ -1122,36 +1122,8 @@ export async function registerRoutes(
   });
 
 
-  app.get("/api/auth/review-access/:token", loginLimiter, async (req, res) => {
-    const REVIEW_TOKEN = "sim-gemini-review-2026-q8w3r";
-    if (req.params.token !== REVIEW_TOKEN) {
-      return res.status(404).json({ message: "Not found" });
-    }
-    try {
-      const adminUser = await storage.getUserByUsername("admin");
-      if (!adminUser) return res.status(500).json({ message: "Review account not available" });
-      req.session.userId = adminUser.id;
-      req.session.userRole = adminUser.role;
-      req.session.organizationId = adminUser.organizationId || undefined;
-      req.session.lastActivity = Date.now();
-      if (adminUser.organizationId) {
-        const org = await storage.getOrganization(adminUser.organizationId);
-        if (org?.country) {
-          req.session.userCountry = org.country;
-          req.session.viewingCountry = org.country;
-        }
-      }
-      if (!req.session.viewingCountry) {
-        req.session.viewingCountry = "Ghana";
-      }
-      req.session.save((err) => {
-        if (err) return res.status(500).json({ message: "Session save failed" });
-        res.redirect("/dashboard");
-      });
-    } catch (e: any) {
-      console.error("Review access failed:", e);
-      res.status(500).json({ message: "Review access failed" });
-    }
+  app.get("/api/auth/review-access/:token", (_req, res) => {
+    res.status(404).json({ message: "Not found" });
   });
 
   app.get("/api/auth/me", async (req, res) => {
@@ -1791,7 +1763,7 @@ export async function registerRoutes(
 
   app.get("/api/borrowers/:id/alternative-data", requireRole("admin", "super_admin", "regulator", "lender"), async (req, res) => {
     try {
-      const borrowerId = parseInt(req.params.id);
+      const borrowerId = req.params.id;
       const data = await db.select().from(alternativeData).where(eq(alternativeData.borrowerId, borrowerId));
       res.json(data);
     } catch (e: any) {
@@ -1801,7 +1773,7 @@ export async function registerRoutes(
 
   app.post("/api/borrowers/:id/alternative-data", requireRole("admin", "super_admin", "lender"), async (req, res) => {
     try {
-      const borrowerId = parseInt(req.params.id);
+      const borrowerId = req.params.id;
       const borrower = await storage.getBorrower(req.params.id);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
       const parsed = insertAlternativeDataSchema.parse({ ...req.body, borrowerId });
@@ -1831,8 +1803,17 @@ export async function registerRoutes(
     return `https://africacredithub.com/api/consumer/auth/google/callback`;
   }
 
+  const ALLOWED_RETURN_PATHS = ["/my-credit", "/start-trial", "/dashboard", "/solutions", "/pricing", "/ai-demo"];
+  function sanitizeReturnPath(raw: string | undefined): string {
+    if (!raw) return "/my-credit";
+    const cleaned = raw.split("?")[0].split("#")[0];
+    if (ALLOWED_RETURN_PATHS.includes(cleaned)) return cleaned;
+    if (cleaned.startsWith("/") && !cleaned.startsWith("//") && !cleaned.includes("://")) return cleaned;
+    return "/my-credit";
+  }
+
   app.get("/api/consumer/auth/google", (req, res) => {
-    const returnTo = (req.query.from as string) || "/my-credit";
+    const returnTo = sanitizeReturnPath(req.query.from as string);
     if (!GOOGLE_CLIENT_ID) {
       return res.status(503).send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Google Sign-In</title></head><body style="font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#f4f5f7;"><div style="max-width:400px;background:#fff;border-radius:12px;padding:40px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.08);"><h2 style="color:#1a1a2e;">Google Sign-In Coming Soon</h2><p style="color:#555;font-size:14px;">Google Sign-In is being configured. Please use email/password registration for now.</p><a href="${returnTo}" style="display:inline-block;margin-top:16px;background:#1a1a2e;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-size:14px;">Go Back</a></div></body></html>`);
     }
