@@ -28,7 +28,7 @@ type View = "login" | "register" | "verify" | "dashboard";
 
 export default function ConsumerPortalPage() {
   const queryClient = useQueryClient();
-  const [view, setView] = useState<View>("login");
+  const [view, setView] = useState<View | "loading">("loading");
   const [nationalId, setNationalId] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -53,10 +53,13 @@ export default function ConsumerPortalPage() {
   });
 
   useEffect(() => {
+    if (sessionQuery.isLoading) return;
     if (sessionQuery.data?.authenticated) {
       setView("dashboard");
+    } else if (view === "loading") {
+      setView("login");
     }
-  }, [sessionQuery.data]);
+  }, [sessionQuery.data, sessionQuery.isLoading]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -238,6 +241,13 @@ export default function ConsumerPortalPage() {
           <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-sm" data-testid="text-consumer-success">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
             <span>{successMsg}</span>
+          </div>
+        )}
+
+        {view === "loading" && (
+          <div className="flex flex-col items-center justify-center py-12 gap-3">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">Checking your session...</p>
           </div>
         )}
 
