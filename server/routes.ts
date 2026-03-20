@@ -740,15 +740,21 @@ export async function registerRoutes(
       if (!organization?.name || !organization?.type || !organization?.country || !organization?.contactEmail) {
         return res.status(400).json({ message: "Organization name, type, country, and contact email are required" });
       }
-      if (!user?.fullName || !user?.email || !user?.username || !user?.password) {
-        return res.status(400).json({ message: "Full name, email, username, and password are required" });
+      const isGoogleAuth = !!(req.session as any)?.consumerId;
+      if (!user?.fullName || !user?.email || !user?.username) {
+        return res.status(400).json({ message: "Full name, email, and username are required" });
+      }
+      if (!isGoogleAuth && !user?.password) {
+        return res.status(400).json({ message: "Password is required" });
       }
 
       if (user.username.length < 3 || !/^[a-zA-Z0-9_.-]+$/.test(user.username)) {
         return res.status(400).json({ field: "username", message: "Username must be at least 3 characters and contain only letters, numbers, dots, hyphens, underscores" });
       }
-      if (user.password.length < 8 || !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(user.password)) {
-        return res.status(400).json({ field: "password", message: "Password must be at least 8 characters with uppercase, lowercase, and a number" });
+      if (!isGoogleAuth && user.password) {
+        if (user.password.length < 8 || !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(user.password)) {
+          return res.status(400).json({ field: "password", message: "Password must be at least 8 characters with uppercase, lowercase, and a number" });
+        }
       }
 
       const existingUser = await storage.getUserByUsername(user.username);
@@ -779,7 +785,7 @@ export async function registerRoutes(
 
       let newUser;
       try {
-        const hashedPassword = await bcrypt.hash(user.password, 12);
+        const hashedPassword = user.password ? await bcrypt.hash(user.password, 12) : await bcrypt.hash(crypto.randomBytes(32).toString("hex"), 12);
 
         newUser = await storage.createUser({
           username: user.username,

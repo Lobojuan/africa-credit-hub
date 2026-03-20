@@ -100,6 +100,7 @@ export default function StartTrialPage() {
         if (!username) setUsername(emailUser);
       }
       setGooglePrefilled(true);
+      setErrors({});
     }
   }, [consumerSession.data]);
 
@@ -122,10 +123,12 @@ export default function StartTrialPage() {
     if (!username.trim()) e.username = "Username is required";
     else if (username.length < 3) e.username = "Username must be at least 3 characters";
     else if (!/^[a-zA-Z0-9_.-]+$/.test(username)) e.username = "Username can only contain letters, numbers, dots, hyphens, underscores";
-    if (!password) e.password = "Password is required";
-    else if (password.length < 8) e.password = "Password must be at least 8 characters";
-    else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) e.password = "Must include uppercase, lowercase, and a number";
-    if (password !== confirmPassword) e.confirmPassword = "Passwords do not match";
+    if (!googlePrefilled) {
+      if (!password) e.password = "Password is required";
+      else if (password.length < 8) e.password = "Password must be at least 8 characters";
+      else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) e.password = "Must include uppercase, lowercase, and a number";
+      if (password !== confirmPassword) e.confirmPassword = "Passwords do not match";
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -155,7 +158,7 @@ export default function StartTrialPage() {
           fullName: fullName.trim(),
           email: email.trim(),
           username: username.trim(),
-          password,
+          ...(googlePrefilled ? {} : { password }),
         },
       });
 
@@ -413,43 +416,53 @@ export default function StartTrialPage() {
                       {errors.username && <p className="text-xs text-destructive mt-1">{errors.username}</p>}
                     </div>
 
-                    <div>
-                      <Label htmlFor="password" className="text-sm">Password *</Label>
-                      <div className="relative">
-                        <Input
-                          id="password"
-                          type={showPassword ? "text" : "password"}
-                          placeholder="Min 8 chars, uppercase, lowercase, number"
-                          value={password}
-                          onChange={(e) => { setPassword(e.target.value); setErrors(prev => ({ ...prev, password: "" })); }}
-                          className={errors.password ? "border-destructive pr-10" : "pr-10"}
-                          data-testid="input-password"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                          data-testid="button-toggle-password"
-                        >
-                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                      {errors.password && <p className="text-xs text-destructive mt-1">{errors.password}</p>}
-                    </div>
+                    {!googlePrefilled && (
+                      <>
+                        <div>
+                          <Label htmlFor="password" className="text-sm">Password *</Label>
+                          <div className="relative">
+                            <Input
+                              id="password"
+                              type={showPassword ? "text" : "password"}
+                              placeholder="Min 8 chars, uppercase, lowercase, number"
+                              value={password}
+                              onChange={(e) => { setPassword(e.target.value); setErrors(prev => ({ ...prev, password: "" })); }}
+                              className={errors.password ? "border-destructive pr-10" : "pr-10"}
+                              data-testid="input-password"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword(!showPassword)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                              data-testid="button-toggle-password"
+                            >
+                              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
+                          {errors.password && <p className="text-xs text-destructive mt-1">{errors.password}</p>}
+                        </div>
 
-                    <div>
-                      <Label htmlFor="confirmPassword" className="text-sm">Confirm Password *</Label>
-                      <Input
-                        id="confirmPassword"
-                        type="password"
-                        placeholder="Re-enter your password"
-                        value={confirmPassword}
-                        onChange={(e) => { setConfirmPassword(e.target.value); setErrors(prev => ({ ...prev, confirmPassword: "" })); }}
-                        className={errors.confirmPassword ? "border-destructive" : ""}
-                        data-testid="input-confirm-password"
-                      />
-                      {errors.confirmPassword && <p className="text-xs text-destructive mt-1">{errors.confirmPassword}</p>}
-                    </div>
+                        <div>
+                          <Label htmlFor="confirmPassword" className="text-sm">Confirm Password *</Label>
+                          <Input
+                            id="confirmPassword"
+                            type="password"
+                            placeholder="Re-enter your password"
+                            value={confirmPassword}
+                            onChange={(e) => { setConfirmPassword(e.target.value); setErrors(prev => ({ ...prev, confirmPassword: "" })); }}
+                            className={errors.confirmPassword ? "border-destructive" : ""}
+                            data-testid="input-confirm-password"
+                          />
+                          {errors.confirmPassword && <p className="text-xs text-destructive mt-1">{errors.confirmPassword}</p>}
+                        </div>
+                      </>
+                    )}
+                    {googlePrefilled && (
+                      <div className="p-3 rounded-lg bg-muted/50 border text-sm text-muted-foreground" data-testid="text-google-auth-note">
+                        <CheckCircle2 className="w-4 h-4 inline mr-1.5 text-primary" />
+                        You'll sign in with Google — no password needed.
+                      </div>
+                    )}
 
                     <div className="flex gap-3 pt-2">
                       <Button type="button" variant="outline" onClick={() => setStep(1)} className="flex-1" data-testid="button-back">
