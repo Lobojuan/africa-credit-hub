@@ -1,7 +1,7 @@
 import crypto from "crypto";
-import { pool } from "./db";
-import { blockchainAnchors } from "@shared/schema";
 import { db } from "./db";
+import { blockchainAnchors, auditLogs } from "@shared/schema";
+import { desc, asc, eq, gte, lte } from "drizzle-orm";
 
 function computeMerkleRoot(hashes: string[]): string {
   if (hashes.length === 0) return crypto.createHash("sha256").update("EMPTY").digest("hex");
@@ -33,38 +33,55 @@ export async function createAnchor(): Promise<{
   blockNumber: number;
 } | null> {
   try {
-    const lastAnchorResult = await pool.query(
-      `SELECT last_log_id FROM blockchain_anchors ORDER BY anchored_at DESC LIMIT 1`
-    );
+    const [lastAnchor] = await db
+      .select({ lastLogId: blockchainAnchors.lastLogId })
+      .from(blockchainAnchors)
+      .orderBy(desc(blockchainAnchors.anchoredAt))
+      .limit(1);
 
-    let query: string;
-    let params: any[];
+    let auditRows: { id: string; currentHash: string | null }[];
 
-    if (lastAnchorResult.rows.length > 0 && lastAnchorResult.rows[0].last_log_id) {
-      const lastLogId = lastAnchorResult.rows[0].last_log_id;
-      query = `SELECT id, current_hash FROM audit_logs WHERE created_at > (SELECT created_at FROM audit_logs WHERE id = $1) ORDER BY created_at ASC`;
-      params = [lastLogId];
+    if (lastAnchor?.lastLogId) {
+      const [refLog] = await db
+        .select({ createdAt: auditLogs.createdAt })
+        .from(auditLogs)
+        .where(eq(auditLogs.id, lastAnchor.lastLogId))
+        .limit(1);
+
+      if (refLog?.createdAt) {
+        auditRows = await db
+          .select({ id: auditLogs.id, currentHash: auditLogs.currentHash })
+          .from(auditLogs)
+          .where(gte(auditLogs.createdAt, refLog.createdAt))
+          .orderBy(asc(auditLogs.createdAt));
+        auditRows = auditRows.filter((r) => r.id !== lastAnchor.lastLogId);
+      } else {
+        auditRows = await db
+          .select({ id: auditLogs.id, currentHash: auditLogs.currentHash })
+          .from(auditLogs)
+          .orderBy(asc(auditLogs.createdAt));
+      }
     } else {
-      query = `SELECT id, current_hash FROM audit_logs ORDER BY created_at ASC`;
-      params = [];
+      auditRows = await db
+        .select({ id: auditLogs.id, currentHash: auditLogs.currentHash })
+        .from(auditLogs)
+        .orderBy(asc(auditLogs.createdAt));
     }
 
-    const auditResult = await pool.query(query, params);
+    if (auditRows.length === 0) return null;
 
-    if (auditResult.rows.length === 0) return null;
-
-    const hashes = auditResult.rows.map((r: any) => r.current_hash).filter(Boolean);
+    const hashes = auditRows.map((r) => r.currentHash).filter(Boolean) as string[];
     if (hashes.length === 0) return null;
 
     const merkleRoot = computeMerkleRoot(hashes);
     const { txHash, blockNumber } = simulateBlockchainTx(merkleRoot);
 
-    const firstLogId = auditResult.rows[0].id;
-    const lastLogId = auditResult.rows[auditResult.rows.length - 1].id;
+    const firstLogId = auditRows[0].id;
+    const lastLogId = auditRows[auditRows.length - 1].id;
 
     const [anchor] = await db.insert(blockchainAnchors).values({
       merkleRoot,
-      auditLogCount: auditResult.rows.length,
+      auditLogCount: auditRows.length,
       firstLogId,
       lastLogId,
       simulatedTxHash: txHash,
@@ -73,12 +90,12 @@ export async function createAnchor(): Promise<{
       status: "anchored",
     }).returning();
 
-    console.log(`[Blockchain] Anchored ${auditResult.rows.length} audit logs — Merkle root: ${merkleRoot.substring(0, 16)}...`);
+    console.log(`[Blockchain] Anchored ${auditRows.length} audit logs — Merkle root: ${merkleRoot.substring(0, 16)}...`);
 
     return {
       id: anchor.id,
       merkleRoot,
-      auditLogCount: auditResult.rows.length,
+      auditLogCount: auditRows.length,
       txHash,
       blockNumber,
     };
@@ -94,47 +111,67 @@ export async function verifyAuditAgainstAnchor(anchorId: string): Promise<{
   recomputedMerkleRoot: string;
   logCount: number;
 }> {
-  const anchorResult = await pool.query(
-    `SELECT * FROM blockchain_anchors WHERE id = $1`,
-    [anchorId]
-  );
+  const [anchor] = await db
+    .select()
+    .from(blockchainAnchors)
+    .where(eq(blockchainAnchors.id, anchorId))
+    .limit(1);
 
-  if (anchorResult.rows.length === 0) throw new Error("Anchor not found");
+  if (!anchor) throw new Error("Anchor not found");
 
-  const anchor = anchorResult.rows[0];
+  let hashes: string[];
 
-  let query: string;
-  let params: any[];
+  if (anchor.firstLogId && anchor.lastLogId) {
+    const [firstLog] = await db
+      .select({ createdAt: auditLogs.createdAt })
+      .from(auditLogs)
+      .where(eq(auditLogs.id, anchor.firstLogId))
+      .limit(1);
 
-  if (anchor.first_log_id && anchor.last_log_id) {
-    query = `SELECT current_hash FROM audit_logs 
-             WHERE created_at >= (SELECT created_at FROM audit_logs WHERE id = $1) 
-             AND created_at <= (SELECT created_at FROM audit_logs WHERE id = $2) 
-             ORDER BY created_at ASC`;
-    params = [anchor.first_log_id, anchor.last_log_id];
+    const [lastLog] = await db
+      .select({ createdAt: auditLogs.createdAt })
+      .from(auditLogs)
+      .where(eq(auditLogs.id, anchor.lastLogId))
+      .limit(1);
+
+    if (firstLog?.createdAt && lastLog?.createdAt) {
+      const rows = await db
+        .select({ currentHash: auditLogs.currentHash })
+        .from(auditLogs)
+        .where(
+          gte(auditLogs.createdAt, firstLog.createdAt) &&
+          lte(auditLogs.createdAt, lastLog.createdAt)
+        )
+        .orderBy(asc(auditLogs.createdAt));
+      hashes = rows.map((r) => r.currentHash).filter(Boolean) as string[];
+    } else {
+      hashes = [];
+    }
   } else {
-    query = `SELECT current_hash FROM audit_logs ORDER BY created_at ASC LIMIT $1`;
-    params = [anchor.audit_log_count];
+    const rows = await db
+      .select({ currentHash: auditLogs.currentHash })
+      .from(auditLogs)
+      .orderBy(asc(auditLogs.createdAt))
+      .limit(anchor.auditLogCount);
+    hashes = rows.map((r) => r.currentHash).filter(Boolean) as string[];
   }
 
-  const logsResult = await pool.query(query, params);
-  const hashes = logsResult.rows.map((r: any) => r.current_hash).filter(Boolean);
   const recomputedMerkleRoot = computeMerkleRoot(hashes);
 
   return {
-    valid: recomputedMerkleRoot === anchor.merkle_root,
-    anchorMerkleRoot: anchor.merkle_root,
+    valid: recomputedMerkleRoot === anchor.merkleRoot,
+    anchorMerkleRoot: anchor.merkleRoot,
     recomputedMerkleRoot,
     logCount: hashes.length,
   };
 }
 
 export async function getAnchors(limit = 20): Promise<any[]> {
-  const result = await pool.query(
-    `SELECT * FROM blockchain_anchors ORDER BY anchored_at DESC LIMIT $1`,
-    [limit]
-  );
-  return result.rows;
+  return db
+    .select()
+    .from(blockchainAnchors)
+    .orderBy(desc(blockchainAnchors.anchoredAt))
+    .limit(limit);
 }
 
 let anchorInterval: ReturnType<typeof setInterval> | null = null;
