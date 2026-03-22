@@ -13,12 +13,14 @@ import {
   insertInstitutionSchema, insertBillingRecordSchema, insertCreditReportLogSchema,
   insertExchangeRateSchema, insertRetentionPolicySchema, insertApiConfigurationSchema,
   insertOrganizationSchema, insertDataSharingAgreementSchema, insertPapssSettlementSchema,
+  insertGuarantorSchema, insertDishonouredChequeSchema,
   dataSharingAgreements, papssSettlements, creditAccounts, countrySettings,
   auditLogs, apiKeys, apiConfigurations, billingRecords, retentionPolicies,
-  usageMetering, pricingTiers, users, organizations, borrowers,
+  usageMetering, pricingTiers, users, organizations, borrowers, guarantors,
   creditInquiries, disputes, consentRecords, paymentHistory, courtJudgments,
   dishonouredCheques, creditReportLogs, alternativeData, insertAlternativeDataSchema,
 } from "@shared/schema";
+import { processIFFData, detectIFFType, type IFFType } from "./iff-processor";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { registerExternalApi, generateApiKey } from "./external-api";
@@ -2954,6 +2956,206 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     res.status(400).json({ message: "Unsupported format. Use 'csv' or 'json'" });
   });
 
+  const iffUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 }, fileFilter: (_req, file, cb) => {
+    const ext = file.originalname.toLowerCase();
+    if (ext.endsWith(".xlsx") || ext.endsWith(".xls") || ext.endsWith(".csv")) cb(null, true);
+    else cb(new Error("Only .xlsx, .xls and .csv files are accepted"));
+  }});
+
+  app.post("/api/batch-upload/iff", batchLimiter, requireRole("admin", "lender"), iffUpload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+
+      const xlsx = await import("xlsx");
+      const workbook = xlsx.read(req.file.buffer, { type: "buffer" });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const rawData = xlsx.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
+
+      if (rawData.length < 2) return res.status(400).json({ message: "File must contain a header row and at least one data row" });
+
+      const headers = rawData[0].map((h: any) => String(h).trim());
+      const rows: Record<string, any>[] = [];
+      for (let i = 1; i < rawData.length; i++) {
+        const rowObj: Record<string, any> = {};
+        headers.forEach((h, idx) => { rowObj[h] = rawData[i]?.[idx]; });
+        rows.push(rowObj);
+      }
+
+      let iffType: IFFType | null = req.body.iffType || null;
+      if (!iffType) {
+        iffType = detectIFFType(headers);
+      }
+      if (!iffType) {
+        return res.status(400).json({ message: "Could not auto-detect IFF type. Please specify iffType: BUSINESS_CREDIT, CONSUMER_CREDIT, BUSINESS_DISHONOURED_CHEQUES, CONSUMER_DISHONOURED_CHEQUE, BUSINESS_JUDGEMENT, or CONSUMER_JUDGEMENT" });
+      }
+
+      const lenderInstitution = req.body.lenderInstitution || req.session?.institution || "Unknown Institution";
+      const orgId = req.session?.organizationId;
+
+      const result = await processIFFData(iffType, rows, lenderInstitution, orgId);
+
+      await storage.createAuditLog({
+        action: "IFF_UPLOAD", entity: "iff_batch", userId: req.session?.userId,
+        details: `IFF upload (${iffType}): ${result.totalRecords} records, ${result.borrowersCreated} borrowers created, ${result.borrowersUpdated} updated, ${result.accountsCreated} accounts, ${result.chequesCreated} cheques, ${result.judgmentsCreated} judgments, ${result.guarantorsCreated} guarantors, ${result.errors.length} errors`,
+        ipAddress: req.ip || null,
+      });
+
+      if (result.accountsCreated > 0 || result.chequesCreated > 0 || result.judgmentsCreated > 0) {
+        recordUsageEvent({
+          organizationId: orgId,
+          eventType: "batch_upload",
+          quantity: result.accountsCreated + result.chequesCreated + result.judgmentsCreated,
+          country: getCountryFilter(req) || null,
+          metadata: JSON.stringify({ source: "iff-upload", iffType, ...result }),
+        });
+      }
+
+      res.json({ iffType, ...result });
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/batch-upload/iff-json", batchLimiter, requireRole("admin", "lender"), async (req, res) => {
+    try {
+      const { iffType, records, lenderInstitution: li } = req.body;
+      if (!iffType || !records || !Array.isArray(records)) {
+        return res.status(400).json({ message: "Request body must contain 'iffType' and 'records' array" });
+      }
+
+      const validTypes: IFFType[] = ["BUSINESS_CREDIT", "CONSUMER_CREDIT", "BUSINESS_DISHONOURED_CHEQUES", "CONSUMER_DISHONOURED_CHEQUE", "BUSINESS_JUDGEMENT", "CONSUMER_JUDGEMENT"];
+      if (!validTypes.includes(iffType)) {
+        return res.status(400).json({ message: `Invalid iffType. Must be one of: ${validTypes.join(", ")}` });
+      }
+
+      const lenderInstitution = li || req.session?.institution || "Unknown Institution";
+      const orgId = req.session?.organizationId;
+
+      const result = await processIFFData(iffType, records, lenderInstitution, orgId);
+
+      await storage.createAuditLog({
+        action: "IFF_UPLOAD_JSON", entity: "iff_batch", userId: req.session?.userId,
+        details: `IFF JSON upload (${iffType}): ${result.totalRecords} records processed`,
+        ipAddress: req.ip || null,
+      });
+
+      res.json({ iffType, ...result });
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/batch-upload/dishonoured-cheques", batchLimiter, requireRole("admin", "lender"), async (req, res) => {
+    try {
+      const { records } = req.body;
+      if (!Array.isArray(records)) return res.status(400).json({ message: "Request body must contain a 'records' array" });
+
+      const results = { totalSubmitted: records.length, successCount: 0, errorCount: 0, errors: [] as Array<{ index: number; message: string }> };
+
+      for (let i = 0; i < records.length; i++) {
+        try {
+          const parsed = insertDishonouredChequeSchema.parse(records[i]);
+          if (req.session?.organizationId) parsed.organizationId = req.session.organizationId;
+          await storage.createDishonouredCheque(parsed);
+          results.successCount++;
+        } catch (err: any) {
+          results.errorCount++;
+          results.errors.push({ index: i, message: err.message || "Validation failed" });
+        }
+      }
+
+      await storage.createAuditLog({
+        action: "BATCH_UPLOAD", entity: "dishonoured_cheque", userId: req.session?.userId,
+        details: `Batch cheque upload: ${results.successCount} succeeded, ${results.errorCount} failed`,
+        ipAddress: req.ip || null,
+      });
+
+      res.json(results);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/batch-upload/court-judgments", batchLimiter, requireRole("admin", "lender"), async (req, res) => {
+    try {
+      const { records } = req.body;
+      if (!Array.isArray(records)) return res.status(400).json({ message: "Request body must contain a 'records' array" });
+
+      const results = { totalSubmitted: records.length, successCount: 0, errorCount: 0, errors: [] as Array<{ index: number; message: string }> };
+
+      for (let i = 0; i < records.length; i++) {
+        try {
+          const parsed = insertCourtJudgmentSchema.parse(records[i]);
+          if (req.session?.organizationId) parsed.organizationId = req.session.organizationId;
+          await storage.createCourtJudgment(parsed);
+          results.successCount++;
+        } catch (err: any) {
+          results.errorCount++;
+          results.errors.push({ index: i, message: err.message || "Validation failed" });
+        }
+      }
+
+      await storage.createAuditLog({
+        action: "BATCH_UPLOAD", entity: "court_judgment", userId: req.session?.userId,
+        details: `Batch judgment upload: ${results.successCount} succeeded, ${results.errorCount} failed`,
+        ipAddress: req.ip || null,
+      });
+
+      res.json(results);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/guarantors/:creditAccountId", requireRole("admin", "lender", "regulator"), async (req, res) => {
+    try {
+      const list = await storage.getGuarantorsByAccount(req.params.creditAccountId);
+      res.json(list);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/guarantors", requireRole("admin", "lender"), async (req, res) => {
+    try {
+      const parsed = insertGuarantorSchema.parse(req.body);
+      const created = await storage.createGuarantor(parsed);
+      await storage.createAuditLog({
+        action: "CREATE", entity: "guarantor", entityId: created.id, userId: req.session?.userId,
+        details: `Created guarantor ${created.surname || created.companyName || "N/A"} for account ${created.creditAccountId}`,
+        ipAddress: req.ip || null,
+      });
+      res.status(201).json(created);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/borrowers/:id/guarantors", requireRole("admin", "lender", "regulator"), async (req, res) => {
+    try {
+      const list = await storage.getGuarantorsByBorrower(req.params.id);
+      res.json(list);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/iff/supported-types", (_req, res) => {
+    res.json({
+      types: [
+        { code: "BUSINESS_CREDIT", name: "Business Credit", description: "Business credit facility data (158 fields)", recordType: "credit" },
+        { code: "CONSUMER_CREDIT", name: "Consumer Credit", description: "Individual consumer credit data (178 fields)", recordType: "credit" },
+        { code: "BUSINESS_DISHONOURED_CHEQUES", name: "Business Dishonoured Cheques", description: "Business bounced cheque records (46 fields)", recordType: "cheque" },
+        { code: "CONSUMER_DISHONOURED_CHEQUE", name: "Consumer Dishonoured Cheques", description: "Individual bounced cheque records (74 fields)", recordType: "cheque" },
+        { code: "BUSINESS_JUDGEMENT", name: "Business Court Judgments", description: "Business court judgment records (48 fields)", recordType: "judgment" },
+        { code: "CONSUMER_JUDGEMENT", name: "Consumer Court Judgments", description: "Individual court judgment records (76 fields)", recordType: "judgment" },
+      ],
+      acceptedFormats: [".xlsx", ".xls", ".csv"],
+      maxFileSize: "50MB",
+    });
+  });
+
   app.get("/api/notifications", async (req, res) => {
     try {
       if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
@@ -3239,10 +3441,15 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
       const dishonouredChequesList = await storage.getDishonouredChequesByBorrower(borrowerId);
 
       const paymentHistoryMap: Record<string, any[]> = {};
+      const guarantorMap: Record<string, any[]> = {};
       for (const account of accounts) {
         const history = await storage.getPaymentHistoryByAccount(account.id);
         if (history.length > 0) {
           paymentHistoryMap[account.id] = history.slice(0, 12);
+        }
+        const acctGuarantors = await storage.getGuarantorsByAccount(account.id);
+        if (acctGuarantors.length > 0) {
+          guarantorMap[account.id] = acctGuarantors;
         }
       }
 
@@ -3301,6 +3508,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
         courtJudgments: judgments,
         consentRecords: consents,
         dishonouredCheques: dishonouredChequesList,
+        guarantors: guarantorMap,
         paymentHistory: paymentHistoryMap,
         requestedBy: user ? { fullName: user.fullName, institution: user.institution } : null,
         summary: {
@@ -3600,6 +3808,30 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
             { value: j.amount ? `${j.currency || "ETB"} ${parseFloat(j.amount).toLocaleString()}` : "—", width: W * 0.15, align: "right" },
             { value: j.judgmentDate || "—", width: W * 0.12 },
             { value: j.status || "—", width: W * 0.13, color: j.status === "active" ? "#dc2626" : "#16a34a" },
+          ]);
+        });
+      }
+
+      const allGuarantors = reportData.guarantors || {};
+      const guarantorEntries = Object.values(allGuarantors).flat();
+      if (guarantorEntries.length > 0) {
+        sectionTitle("Guarantors", 5);
+        const gCols = [
+          { label: "Name", width: W * 0.25 },
+          { label: "National ID", width: W * 0.2 },
+          { label: "Type", width: W * 0.15 },
+          { label: "Contact", width: W * 0.2 },
+          { label: "Account", width: W * 0.2 },
+        ];
+        tableHeader(gCols);
+        (guarantorEntries as any[]).forEach((g: any) => {
+          const name = g.companyName || [g.surname, g.firstName, g.middleNames].filter(Boolean).join(" ") || "—";
+          tableRow([
+            { value: name, width: W * 0.25 },
+            { value: g.nationalId || g.businessRegNumber || "—", width: W * 0.2 },
+            { value: g.natureOfGuarantor || "—", width: W * 0.15 },
+            { value: g.mobile || g.homeTelephone || "—", width: W * 0.2 },
+            { value: g.creditAccountId?.slice(0, 8) || "—", width: W * 0.2 },
           ]);
         });
       }

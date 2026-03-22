@@ -33,6 +33,7 @@ The system employs a modern full-stack architecture built for scalability and co
     -   **Regulatory Compliance**: Consent management, audit trails, and a Regulatory Compliance Dashboard with jurisdiction-specific data retention for 54 African jurisdictions. Includes country-specific compliance modes (e.g., Ghana BoG CRB, Sierra Leone BSL CRB).
     -   **Institutional Management**: Self-registration, approval, billing, and fee management for data providers.
     -   **Reporting**: Regulatory analytics, CSV export, and bulk data upload (XBRL/XML).
+    -   **IFF Compliance**: Full IFF (Information Furnisher Format) batch upload support for all 6 standard formats — Business Credit, Consumer Credit, Business/Consumer Dishonoured Cheques, and Business/Consumer Court Judgments. Auto-detects IFF type from Excel headers. Supports CorrectionIndicator upsert logic. Guarantors table with up to 4 guarantors per facility. Endpoints: `POST /api/batch-upload/iff` (Excel), `POST /api/batch-upload/iff-json` (JSON), `POST /api/batch-upload/dishonoured-cheques`, `POST /api/batch-upload/court-judgments`, `GET /api/guarantors/:creditAccountId`, `POST /api/guarantors`, `GET /api/borrowers/:id/guarantors`, `GET /api/iff/supported-types`. IFF processor in `server/iff-processor.ts`.
     -   **Role-Based Access Control (RBAC)**: Role-filtered navigation and API access.
     -   **External API**: REST API for data submission and credit report generation, secured via API keys and OAuth 2.1.
     -   **Entity Matching**: Fuzzy entity matching for duplicate detection and cross-border entity resolution.
@@ -71,7 +72,7 @@ The system employs a modern full-stack architecture built for scalability and co
 -   **Email**: SendGrid.
 -   **PDF Generation**: pdfkit.
 -   **AI / LLM Providers**: Anthropic (Claude Opus), OpenAI (GPT-4o).
--   **Excel Export**: `exceljs`.
+-   **Excel Export/Import**: `exceljs`, `xlsx` (SheetJS for IFF batch upload parsing).
 -   **Third-Party APIs**: open.er-api.com (exchange rates), DiceBear (avatars).
 -   **Testing**: Vitest for unit tests (`npx vitest run`).
 

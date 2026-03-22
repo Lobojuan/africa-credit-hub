@@ -128,6 +128,20 @@ export const borrowers = pgTable("borrowers", {
   businessTypeCode: text("business_type_code"),
   registrationDate: text("registration_date"),
   commencementDate: text("commencement_date"),
+  tradingName: text("trading_name"),
+  previousBusinessName: text("previous_business_name"),
+  previousRegNumber: text("previous_reg_number"),
+  website: text("website"),
+  officeTelephone2: text("office_telephone_2"),
+  officeFaxNumber: text("office_fax_number"),
+  mobileTelephone2: text("mobile_telephone_2"),
+  employerPayrollNum: text("employer_payroll_num"),
+  paypoint: text("paypoint"),
+  employerPostalCode: text("employer_postal_code"),
+  otherIdType: text("other_id_type"),
+  otherIdNumber: text("other_id_number"),
+  branchCode: text("branch_code"),
+  customerId: text("customer_id"),
   organizationId: varchar("organization_id").references(() => organizations.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -193,9 +207,39 @@ export const creditAccounts = pgTable("credit_accounts", {
   noParticipantsInAccount: integer("no_participants_in_account"),
   defPaymentStartDate: text("def_payment_start_date"),
   bogAssetClassification: text("bog_asset_classification"),
+  facilityStatusDate: text("facility_status_date"),
+  closedDate: text("closed_date"),
+  correctionIndicator: integer("correction_indicator").default(0),
   organizationId: varchar("organization_id").references(() => organizations.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const guarantors = pgTable("guarantors", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  creditAccountId: varchar("credit_account_id").notNull().references(() => creditAccounts.id),
+  guarantorNumber: integer("guarantor_number").notNull().default(1),
+  natureOfGuarantor: text("nature_of_guarantor"),
+  companyName: text("company_name"),
+  businessRegNumber: text("business_reg_number"),
+  surname: text("surname"),
+  firstName: text("first_name"),
+  middleNames: text("middle_names"),
+  nationalId: text("national_id"),
+  votersId: text("voters_id"),
+  driversLicense: text("drivers_license"),
+  passportNumber: text("passport_number"),
+  ssnitNumber: text("ssnit_number"),
+  gender: text("gender"),
+  dateOfBirth: text("date_of_birth"),
+  address1: text("address_1"),
+  address2: text("address_2"),
+  address3: text("address_3"),
+  homeTelephone: text("home_telephone"),
+  workTelephone: text("work_telephone"),
+  mobile: text("mobile"),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const creditInquiries = pgTable("credit_inquiries", {
@@ -512,6 +556,7 @@ export const insertExchangeRateSchema = createInsertSchema(exchangeRates).omit({
 export const insertRetentionPolicySchema = createInsertSchema(retentionPolicies).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertApiConfigurationSchema = createInsertSchema(apiConfigurations).omit({ id: true, createdAt: true, updatedAt: true, lastTestedAt: true, lastTestStatus: true });
 export const insertDishonouredChequeSchema = createInsertSchema(dishonouredCheques).omit({ id: true, createdAt: true });
+export const insertGuarantorSchema = createInsertSchema(guarantors).omit({ id: true, createdAt: true });
 
 export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
 export type Organization = typeof organizations.$inferSelect;
@@ -553,6 +598,8 @@ export type InsertApiConfiguration = z.infer<typeof insertApiConfigurationSchema
 export type ApiConfiguration = typeof apiConfigurations.$inferSelect;
 export type InsertDishonouredCheque = z.infer<typeof insertDishonouredChequeSchema>;
 export type DishonouredCheque = typeof dishonouredCheques.$inferSelect;
+export type InsertGuarantor = z.infer<typeof insertGuarantorSchema>;
+export type Guarantor = typeof guarantors.$inferSelect;
 export type InsertBorrowerAlert = z.infer<typeof insertBorrowerAlertSchema>;
 export type BorrowerAlert = typeof borrowerAlerts.$inferSelect;
 export type InsertDataSharingAgreement = z.infer<typeof insertDataSharingAgreementSchema>;

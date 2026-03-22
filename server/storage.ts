@@ -5,6 +5,7 @@ import {
   users, borrowers, creditAccounts, creditInquiries, auditLogs, pendingApprovals, disputes, notifications,
   courtJudgments, consentRecords, paymentHistory, institutions, billingRecords, creditReportLogs, apiKeys,
   exchangeRates, retentionPolicies, apiConfigurations, organizations, dishonouredCheques, borrowerAlerts,
+  guarantors,
   type User, type InsertUser,
   type Organization, type InsertOrganization,
   type Borrower, type InsertBorrower,
@@ -26,6 +27,7 @@ import {
   type ApiConfiguration, type InsertApiConfiguration,
   type DishonouredCheque, type InsertDishonouredCheque,
   type BorrowerAlert, type InsertBorrowerAlert,
+  type Guarantor, type InsertGuarantor,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -157,6 +159,10 @@ export interface IStorage {
   getDishonouredChequesByBorrower(borrowerId: string): Promise<DishonouredCheque[]>;
   getAllDishonouredCheques(organizationId?: string): Promise<DishonouredCheque[]>;
   createDishonouredCheque(cheque: InsertDishonouredCheque): Promise<DishonouredCheque>;
+
+  getGuarantorsByAccount(creditAccountId: string): Promise<Guarantor[]>;
+  createGuarantor(guarantor: InsertGuarantor): Promise<Guarantor>;
+  getGuarantorsByBorrower(borrowerId: string): Promise<Guarantor[]>;
 
   getBorrowerAlerts(organizationId?: string, country?: string): Promise<BorrowerAlert[]>;
   getBorrowerAlertsByBorrower(borrowerId: string): Promise<BorrowerAlert[]>;
@@ -1115,6 +1121,22 @@ export class DatabaseStorage implements IStorage {
   async createDishonouredCheque(cheque: InsertDishonouredCheque): Promise<DishonouredCheque> {
     const [created] = await db.insert(dishonouredCheques).values(cheque).returning();
     return created;
+  }
+
+  async getGuarantorsByAccount(creditAccountId: string): Promise<Guarantor[]> {
+    return db.select().from(guarantors).where(eq(guarantors.creditAccountId, creditAccountId)).orderBy(guarantors.guarantorNumber);
+  }
+
+  async createGuarantor(guarantor: InsertGuarantor): Promise<Guarantor> {
+    const [created] = await db.insert(guarantors).values(guarantor).returning();
+    return created;
+  }
+
+  async getGuarantorsByBorrower(borrowerId: string): Promise<Guarantor[]> {
+    const accounts = await db.select({ id: creditAccounts.id }).from(creditAccounts).where(eq(creditAccounts.borrowerId, borrowerId));
+    if (accounts.length === 0) return [];
+    const accountIds = accounts.map(a => a.id);
+    return db.select().from(guarantors).where(inArray(guarantors.creditAccountId, accountIds)).orderBy(guarantors.guarantorNumber);
   }
 
   async getBorrowerAlerts(organizationId?: string, country?: string): Promise<BorrowerAlert[]> {
