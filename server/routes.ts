@@ -3427,7 +3427,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     }
   });
 
-  app.post("/api/billing", requireRole("admin"), async (req, res) => {
+  app.post("/api/billing", requireRole("admin", "super_admin"), async (req, res) => {
     try {
       const parsed = insertBillingRecordSchema.parse(req.body);
       const record = await storage.createBillingRecord(parsed);
@@ -3439,6 +3439,110 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
       res.status(201).json(record);
     } catch (e: any) {
       res.status(400).json({ message: e.message });
+    }
+  });
+
+  app.patch("/api/billing/:id/status", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      if (!["pending", "paid", "overdue"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status. Must be pending, paid, or overdue." });
+      }
+      const record = await storage.getBillingRecord(id);
+      if (!record) return res.status(404).json({ message: "Billing record not found" });
+      const orgId = getOrgScope(req);
+      if (orgId && record.organizationId && record.organizationId !== orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const updated = await storage.updateBillingRecordStatus(id, status);
+      await storage.createAuditLog({
+        action: "UPDATE", entity: "billing_record", entityId: id, userId: req.session?.userId,
+        details: `Updated billing status from ${record.status} to ${status} for ${record.invoiceNumber}`,
+        ipAddress: req.ip || null,
+      });
+      res.json(updated);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/billing/:id/send-reminder", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const record = await storage.getBillingRecord(id);
+      if (!record) return res.status(404).json({ message: "Billing record not found" });
+      if (record.status === "paid") return res.status(400).json({ message: "Cannot send reminder for paid invoices" });
+      const orgId = getOrgScope(req);
+      if (orgId && record.organizationId && record.organizationId !== orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { sendBillingNotification } = await import("./email");
+      let recipientEmail = req.body.email;
+      if (!recipientEmail && record.organizationId) {
+        const org = await storage.getOrganization(record.organizationId);
+        recipientEmail = org?.contactEmail;
+      }
+      if (!recipientEmail) {
+        recipientEmail = process.env.SMTP_FROM || "uffe.carlson@gmail.com";
+      }
+      const sent = await sendBillingNotification(
+        record.institutionName,
+        recipientEmail,
+        parseFloat(record.amount),
+        record.currency,
+        record.serviceType,
+        record.status
+      );
+      await storage.createAuditLog({
+        action: "SEND", entity: "billing_reminder", entityId: id, userId: req.session?.userId,
+        details: `Sent ${record.status} reminder for ${record.invoiceNumber} to ${recipientEmail}`,
+        ipAddress: req.ip || null,
+      });
+      res.json({ sent, message: sent ? "Reminder email sent successfully" : "Email sending failed — check SMTP configuration" });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/billing/send-all-reminders", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
+    try {
+      const orgId = getOrgScope(req);
+      const country = getCountryFilter(req);
+      const records = await storage.getBillingRecords(orgId, country);
+      const overdueRecords = records.filter(r => r.status === "overdue" || r.status === "pending");
+      if (overdueRecords.length === 0) return res.json({ sent: 0, message: "No outstanding invoices to send reminders for" });
+
+      const { sendBillingNotification } = await import("./email");
+      let sentCount = 0;
+      for (const record of overdueRecords) {
+        let recipientEmail: string | undefined;
+        if (record.organizationId) {
+          const org = await storage.getOrganization(record.organizationId);
+          recipientEmail = org?.contactEmail;
+        }
+        if (!recipientEmail) {
+          recipientEmail = process.env.SMTP_FROM || "uffe.carlson@gmail.com";
+        }
+        const sent = await sendBillingNotification(
+          record.institutionName,
+          recipientEmail,
+          parseFloat(record.amount),
+          record.currency,
+          record.serviceType,
+          record.status
+        );
+        if (sent) sentCount++;
+      }
+      await storage.createAuditLog({
+        action: "SEND", entity: "billing_reminders_bulk", entityId: "bulk", userId: req.session?.userId,
+        details: `Sent ${sentCount} of ${overdueRecords.length} billing reminders`,
+        ipAddress: req.ip || null,
+      });
+      res.json({ sent: sentCount, total: overdueRecords.length, message: `Sent ${sentCount} of ${overdueRecords.length} reminder emails` });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
     }
   });
 

@@ -113,6 +113,7 @@ export interface IStorage {
   getBillingRecord(id: string): Promise<BillingRecord | undefined>;
   getBillingRecordsByInstitution(institutionName: string): Promise<BillingRecord[]>;
   createBillingRecord(record: InsertBillingRecord): Promise<BillingRecord>;
+  updateBillingRecordStatus(id: string, status: "pending" | "paid" | "overdue"): Promise<BillingRecord | undefined>;
 
   getCreditReportLogs(organizationId?: string, country?: string): Promise<CreditReportLog[]>;
   getCreditReportLogsByBorrower(borrowerId: string): Promise<CreditReportLog[]>;
@@ -776,6 +777,11 @@ export class DatabaseStorage implements IStorage {
   async createBillingRecord(record: InsertBillingRecord): Promise<BillingRecord> {
     const [created] = await db.insert(billingRecords).values(record).returning();
     return created;
+  }
+
+  async updateBillingRecordStatus(id: string, status: "pending" | "paid" | "overdue"): Promise<BillingRecord | undefined> {
+    const [updated] = await db.update(billingRecords).set({ status }).where(eq(billingRecords.id, id)).returning();
+    return updated;
   }
 
   async getCreditReportLogs(organizationId?: string, country?: string): Promise<CreditReportLog[]> {
