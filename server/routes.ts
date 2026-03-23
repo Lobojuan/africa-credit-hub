@@ -1917,7 +1917,13 @@ export async function registerRoutes(
         (req.session as any).consumerId = account!.id;
         (req.session as any).consumerNationalId = account!.nationalId;
         console.log(`[Consumer][Google] Login for ${account!.id.slice(0, 8)}... (${googleUser.email})`);
-        res.redirect(returnTo);
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error("[Consumer][Google] Session save error:", saveErr);
+            return res.redirect("/my-credit?error=session_error");
+          }
+          res.redirect(returnTo);
+        });
       });
     } catch (e: any) {
       const fallback = (req.session as any)?.googleOAuthReturnTo || "/my-credit";
@@ -2078,7 +2084,10 @@ export async function registerRoutes(
         if (err) return res.status(500).json({ message: "Session error" });
         (req.session as any).consumerId = account.id;
         (req.session as any).consumerNationalId = account.nationalId;
-        res.json({ message: "Login successful", authenticated: true });
+        req.session.save((saveErr) => {
+          if (saveErr) return res.status(500).json({ message: "Session error" });
+          res.json({ message: "Login successful", authenticated: true });
+        });
       });
     } catch (e: any) {
       res.status(500).json({ message: "Login failed" });
