@@ -75,9 +75,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await apiRequest("POST", "/api/auth/logout");
     },
     onSuccess: () => {
-      queryClient.setQueryData(["/api/auth/me"], null);
-      queryClient.clear();
-      window.location.href = "/login";
+      queryClient.removeQueries();
+      window.location.replace("/login");
+    },
+    onError: () => {
+      queryClient.removeQueries();
+      window.location.replace("/login");
     },
   });
 
