@@ -214,3 +214,9 @@ export async function seedDatabase() {
     console.error("Test data seed error:", e);
   }
 }
+
+if (process.argv[1] && (process.argv[1].endsWith("seed.ts") || process.argv[1].endsWith("seed.js"))) {
+  seedDatabase()
+    .then(() => { console.log("Seed complete"); process.exit(0); })
+    .catch((e) => { console.error("Seed failed:", e); process.exit(1); });
+}
