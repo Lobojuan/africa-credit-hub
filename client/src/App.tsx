@@ -15,7 +15,7 @@ import { NotificationBell } from "@/components/notification-bell";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { PasswordChangeDialog } from "@/components/password-change-dialog";
 import { Button } from "@/components/ui/button";
-import { LogOut, Loader2, MessageCircle, Building2, LayoutGrid } from "lucide-react";
+import { LogOut, Loader2, MessageCircle, Building2, LayoutGrid, Languages } from "lucide-react";
 import { DisputeChatbot } from "@/components/dispute-chatbot";
 import { OrgSwitcherProvider } from "@/hooks/use-org-switcher";
 import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
@@ -26,14 +26,6 @@ import { CountryThemeProvider, useCountryTheme } from "@/components/country-them
 import { CountrySelector } from "@/components/country-selector";
 import { QuickAccessBar } from "@/components/quick-access-bar";
 import { SessionTimeoutDialog } from "@/components/session-timeout-dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -323,7 +315,7 @@ function AuthenticatedApp() {
                     data-testid="button-command-center"
                   >
                     <LayoutGrid className="w-3.5 h-3.5 shrink-0" />
-                    <span className="hidden lg:inline">Command Center</span>
+                    <span>Command Center</span>
                   </Button>
                   <CountrySelector />
                   <OrgSwitcher />
@@ -334,38 +326,23 @@ function AuthenticatedApp() {
               </span>
               <NotificationBell />
               <ThemeToggle />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 shrink-0"
-                    data-testid="button-user-menu"
-                  >
-                    <LogOut className="w-4 h-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-                    {user.fullName} ({user.role})
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="gap-2 cursor-pointer text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400"
-                    onClick={async () => {
-                      try {
-                        await logout();
-                      } catch {
-                        window.location.href = "/login";
-                      }
-                    }}
-                    data-testid="button-logout"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    <span>Log Out</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <LanguageSwitcher />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 gap-1.5 text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/30 shrink-0"
+                onClick={async () => {
+                  try {
+                    await logout();
+                  } catch {
+                    window.location.href = "/login";
+                  }
+                }}
+                data-testid="button-logout"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">Log Out</span>
+              </Button>
             </div>
           </header>
           <div className="md:hidden px-2 py-1 border-b">
