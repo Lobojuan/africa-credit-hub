@@ -395,7 +395,7 @@ export default function LoginPage() {
             <Button
               variant="outline"
               className="flex-1 h-11 gap-2 font-medium"
-              onClick={() => window.location.href = "/api/consumer/auth/google?from=/my-credit"}
+              onClick={() => window.location.href = "/api/consumer/auth/google?from=/dashboard"}
               data-testid="button-google-login-institutional"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">

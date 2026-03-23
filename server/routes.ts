@@ -1880,6 +1880,32 @@ export async function registerRoutes(
         return res.redirect(`${returnTo}?error=no_email`);
       }
 
+      const [adminUser] = await db.select().from(users).where(eq(users.email, googleUser.email)).limit(1);
+      if (adminUser && adminUser.status !== "suspended") {
+        let organization = null;
+        if (adminUser.organizationId) {
+          organization = await storage.getOrganization(adminUser.organizationId);
+        }
+        return req.session.regenerate((err) => {
+          if (err) return res.redirect("/login?error=session_error");
+          req.session.userId = adminUser.id;
+          req.session.userRole = adminUser.role;
+          req.session.organizationId = adminUser.organizationId || undefined;
+          req.session.lastActivity = Date.now();
+          if (adminUser.role === "super_admin") {
+            delete req.session.viewingCountry;
+          } else if (organization?.country) {
+            req.session.userCountry = organization.country;
+          }
+          console.log(`[Admin][Google] Login for ${adminUser.fullName} (${googleUser.email}) role=${adminUser.role}`);
+          req.session.save((saveErr) => {
+            if (saveErr) return res.redirect("/login?error=session_error");
+            const dest = adminUser.role === "super_admin" ? "/ai-command-center" : "/dashboard";
+            res.redirect(dest);
+          });
+        });
+      }
+
       let [account] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.googleId, googleUser.id)).limit(1);
 
       if (!account) {
