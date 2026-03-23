@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, Link } from "wouter";
 import {
@@ -154,41 +154,48 @@ function CollapsibleSection({
   label,
   items,
   location,
-  defaultOpen,
   t,
   icon: Icon,
 }: {
   label: string;
   items: NavItem[];
   location: string;
-  defaultOpen: boolean;
   t: (key: string) => string;
   icon?: LucideIcon;
 }) {
   const hasActive = items.some(item => location === item.url || (item.url === "/command-center" && location.startsWith("/command-center")));
-  const [open, setOpen] = useState(defaultOpen || hasActive);
+  const [open, setOpen] = useState(hasActive);
+  const [userToggled, setUserToggled] = useState(false);
+
+  React.useEffect(() => {
+    if (hasActive) {
+      setOpen(true);
+      setUserToggled(false);
+    } else if (!userToggled) {
+      setOpen(false);
+    }
+  }, [hasActive, location]);
 
   if (items.length === 0) return null;
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
+    <Collapsible open={open} onOpenChange={(v) => { setOpen(v); setUserToggled(true); }}>
       <SidebarGroup className="py-0">
-        <CollapsibleTrigger className="w-full">
-          <SidebarGroupLabel className="text-sidebar-foreground/40 text-[10px] font-semibold uppercase tracking-widest px-3 cursor-pointer hover:text-sidebar-foreground/60 transition-colors flex items-center justify-between">
-            <span className="flex items-center gap-1.5">
-              {Icon && <Icon className="w-3 h-3" />}
+        <CollapsibleTrigger className="w-full group">
+          <SidebarGroupLabel className="text-sidebar-foreground/50 text-[10px] font-bold uppercase tracking-widest px-3 cursor-pointer group-hover:text-sidebar-foreground/80 transition-colors flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              {Icon && <Icon className="w-3.5 h-3.5" />}
               {label}
             </span>
             <div className="flex items-center gap-1.5">
               {!open && hasActive && (
-                <div className="w-1.5 h-1.5 rounded-full bg-primary/70" />
+                <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
               )}
-              <span className="text-[9px] font-medium text-sidebar-foreground/30">{items.length}</span>
-              <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${open ? "" : "-rotate-90"}`} />
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-300 ${open ? "" : "-rotate-90"}`} />
             </div>
           </SidebarGroupLabel>
         </CollapsibleTrigger>
-        <CollapsibleContent>
+        <CollapsibleContent className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down overflow-hidden">
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (
@@ -283,7 +290,6 @@ export function AppSidebar() {
           label={t('sidebar.operations', 'Operations')}
           items={visibleOperations}
           location={location}
-          defaultOpen={true}
           t={t}
         />
 
@@ -292,7 +298,6 @@ export function AppSidebar() {
             label={t('sidebar.oversight', 'Oversight')}
             items={visibleOversight}
             location={location}
-            defaultOpen={isSuperAdmin}
             t={t}
             icon={Eye}
           />
@@ -303,7 +308,6 @@ export function AppSidebar() {
             label={t('sidebar.crossBorder', 'Cross-Border')}
             items={visibleCrossBorder}
             location={location}
-            defaultOpen={false}
             t={t}
             icon={Globe}
           />
@@ -314,7 +318,6 @@ export function AppSidebar() {
             label={t('sidebar.administration', 'Administration')}
             items={visibleAdmin}
             location={location}
-            defaultOpen={isSuperAdmin}
             t={t}
             icon={Settings}
           />
@@ -324,7 +327,6 @@ export function AppSidebar() {
           label={t('sidebar.consumer', 'Consumer')}
           items={filterByRole(consumerItems, role)}
           location={location}
-          defaultOpen={false}
           t={t}
           icon={UserCheck}
         />
@@ -337,7 +339,6 @@ export function AppSidebar() {
           label={t('sidebar.resources', 'Resources')}
           items={visibleResources}
           location={location}
-          defaultOpen={false}
           t={t}
         />
       </SidebarContent>

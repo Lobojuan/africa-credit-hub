@@ -101,7 +101,7 @@
   --card: 215 20% 7%;
   --card-foreground: 45 18% 96%;
   --card-border: 215 18% 10%;
-  --sidebar: 172 35% 6%;
+  --sidebar: 172 30% 6% / 0.85;
   --sidebar-foreground: 45 18% 93%;
   --sidebar-border: 172 30% 10%;
   --sidebar-primary: 42 80% 50%;

@@ -126,116 +126,132 @@ export function QuickAccessBar() {
   ];
 
   return (
-    <div className="flex items-center gap-0.5" data-testid="quick-access-bar">
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 px-2 gap-1 text-xs font-medium md:hidden"
-            data-testid="quick-mobile-menu"
-          >
-            <Menu className="w-4 h-4" />
-            <span>Navigate</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-56 max-h-80 overflow-y-auto">
-          <DropdownMenuLabel className="text-xs text-muted-foreground">Quick Navigation</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          {visibleQuickLinks.map((link) => (
-            <DropdownMenuItem
-              key={link.url}
-              className={`gap-2 cursor-pointer ${location === link.url ? "bg-accent" : ""}`}
-              onClick={() => navigate(link.url)}
-              data-testid={`mobile-${link.testId}`}
-            >
-              <link.icon className="w-4 h-4 text-muted-foreground" />
-              <span>{link.label}</span>
-            </DropdownMenuItem>
-          ))}
-          {visibleSections.map((section) => (
-            <DropdownMenuSub key={section.label}>
-              <DropdownMenuSubTrigger className="gap-2">
-                <section.icon className="w-4 h-4 text-muted-foreground" />
-                <span>{section.label}</span>
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="w-48">
-                {section.items.map((item) => (
-                  <DropdownMenuItem
-                    key={item.url}
-                    className={`gap-2 cursor-pointer ${location === item.url ? "bg-accent" : ""}`}
-                    onClick={() => navigate(item.url)}
-                    data-testid={`mobile-${item.testId}`}
-                  >
-                    <item.icon className="w-4 h-4 text-muted-foreground" />
-                    <span>{item.label}</span>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+    <div className="flex items-center justify-center pointer-events-none" data-testid="quick-access-bar">
+      <div className="pointer-events-auto flex items-center gap-1 px-2 py-1.5 rounded-full bg-background/60 backdrop-blur-xl border border-border/40 shadow-sm hover:shadow-md transition-all duration-300">
 
-      {visibleQuickLinks.map((link) => (
-        <Tooltip key={link.url}>
-          <TooltipTrigger asChild>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
             <Button
-              variant={location === link.url ? "secondary" : "ghost"}
+              variant="ghost"
               size="sm"
-              className={`h-8 px-2.5 gap-1.5 text-xs font-medium hidden lg:inline-flex ${location === link.url ? "bg-accent text-accent-foreground" : ""}`}
-              onClick={() => navigate(link.url)}
-              data-testid={link.testId}
+              className="h-8 px-2 gap-1 text-xs font-medium md:hidden"
+              data-testid="quick-mobile-menu"
             >
-              <link.icon className="w-3.5 h-3.5" />
-              <span className="hidden xl:inline">{link.label}</span>
+              <Menu className="w-4 h-4" />
+              <span>Navigate</span>
             </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" className="xl:hidden">
-            {link.label}
-          </TooltipContent>
-        </Tooltip>
-      ))}
-
-      {visibleSections.map((section) => {
-        const isActive = section.items.some((item) => location === item.url);
-
-        return (
-          <DropdownMenu key={section.label}>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant={isActive ? "secondary" : "ghost"}
-                size="sm"
-                className={`h-8 px-2 gap-1 text-xs font-medium hidden md:inline-flex ${isActive ? "bg-accent text-accent-foreground" : ""}`}
-                data-testid={`quick-menu-${section.label.toLowerCase().replace(/\s/g, "-")}`}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-56 max-h-80 overflow-y-auto">
+            <DropdownMenuLabel className="text-xs text-muted-foreground">Quick Navigation</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {visibleQuickLinks.map((link) => (
+              <DropdownMenuItem
+                key={link.url}
+                className={`gap-2 cursor-pointer ${location === link.url ? "bg-accent" : ""}`}
+                onClick={() => navigate(link.url)}
+                data-testid={`mobile-${link.testId}`}
               >
-                <section.icon className="w-3.5 h-3.5" />
-                <span className="hidden lg:inline">{section.label}</span>
-                <ChevronDown className="w-3 h-3 opacity-50" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-52">
-              <DropdownMenuLabel className="text-xs text-muted-foreground font-medium">
-                {section.label}
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                {section.items.map((item) => (
-                  <DropdownMenuItem
-                    key={item.url}
-                    className={`gap-2 cursor-pointer ${location === item.url ? "bg-accent" : ""}`}
-                    onClick={() => navigate(item.url)}
-                    data-testid={item.testId}
+                <link.icon className="w-4 h-4 text-muted-foreground" />
+                <span>{link.label}</span>
+              </DropdownMenuItem>
+            ))}
+            {visibleSections.map((section) => (
+              <DropdownMenuSub key={section.label}>
+                <DropdownMenuSubTrigger className="gap-2">
+                  <section.icon className="w-4 h-4 text-muted-foreground" />
+                  <span>{section.label}</span>
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="w-48">
+                  {section.items.map((item) => (
+                    <DropdownMenuItem
+                      key={item.url}
+                      className={`gap-2 cursor-pointer ${location === item.url ? "bg-accent" : ""}`}
+                      onClick={() => navigate(item.url)}
+                      data-testid={`mobile-${item.testId}`}
+                    >
+                      <item.icon className="w-4 h-4 text-muted-foreground" />
+                      <span>{item.label}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <div className="hidden lg:flex items-center gap-0.5">
+          {visibleQuickLinks.map((link) => (
+            <Tooltip key={link.url}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={location === link.url ? "default" : "ghost"}
+                  size="sm"
+                  className={`h-8 rounded-full px-3 gap-1.5 text-xs font-medium transition-all ${
+                    location === link.url
+                      ? "shadow-sm bg-primary text-primary-foreground scale-105"
+                      : "hover:bg-muted/80 text-muted-foreground hover:text-foreground"
+                  }`}
+                  onClick={() => navigate(link.url)}
+                  data-testid={link.testId}
+                >
+                  <link.icon className="w-3.5 h-3.5" />
+                  <span className="hidden xl:inline">{link.label}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="xl:hidden text-xs rounded-lg">
+                {link.label}
+              </TooltipContent>
+            </Tooltip>
+          ))}
+        </div>
+
+        <div className="hidden md:flex w-px h-5 bg-border/60 mx-1" />
+
+        <div className="hidden md:flex items-center gap-0.5">
+          {visibleSections.map((section) => {
+            const isActive = section.items.some((item) => location === item.url);
+            return (
+              <DropdownMenu key={section.label}>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant={isActive ? "secondary" : "ghost"}
+                    size="sm"
+                    className={`h-8 rounded-full px-3 gap-1.5 text-xs font-medium transition-all ${
+                      isActive
+                        ? "bg-muted text-foreground font-semibold"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    }`}
+                    data-testid={`quick-menu-${section.label.toLowerCase().replace(/\s/g, "-")}`}
                   >
-                    <item.icon className="w-4 h-4 text-muted-foreground" />
-                    <span>{item.label}</span>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        );
-      })}
+                    <section.icon className="w-3.5 h-3.5" />
+                    <span className="hidden lg:inline">{section.label}</span>
+                    <ChevronDown className="w-3 h-3 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56 rounded-xl p-1.5 shadow-xl border-border/50 bg-background/95 backdrop-blur-xl">
+                  <DropdownMenuLabel className="text-xs text-muted-foreground font-medium">
+                    {section.label}
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup>
+                    {section.items.map((item) => (
+                      <DropdownMenuItem
+                        key={item.url}
+                        className={`gap-2 cursor-pointer ${location === item.url ? "bg-accent" : ""}`}
+                        onClick={() => navigate(item.url)}
+                        data-testid={item.testId}
+                      >
+                        <item.icon className="w-4 h-4 text-muted-foreground" />
+                        <span>{item.label}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
