@@ -81,17 +81,17 @@ function KPICard({ icon: Icon, label, value, sub, color }: {
   icon: typeof Globe; label: string; value: string | number; sub?: string; color: string;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-foreground/50 p-4">
+    <div className="rounded-xl border border-slate-700/50 bg-slate-800/50 p-4">
       <div className="flex items-center gap-3 mb-2">
         <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${color}`}>
           <Icon className="w-4.5 h-4.5 text-white" />
         </div>
-        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{label}</span>
+        <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">{label}</span>
       </div>
       <p className="text-2xl font-bold text-white" data-testid={`text-kpi-${label.toLowerCase().replace(/\s/g, '-')}`}>
         {typeof value === "number" ? value.toLocaleString() : value}
       </p>
-      {sub && <p className="text-[10px] text-muted-foreground mt-0.5">{sub}</p>}
+      {sub && <p className="text-[10px] text-slate-400 mt-0.5">{sub}</p>}
     </div>
   );
 }
@@ -126,7 +126,7 @@ function ActivityFeed() {
   const items = (feed || []).slice(0, 15);
 
   return (
-    <div className="rounded-xl border border-border bg-foreground/50 p-4" data-testid="panel-activity-feed">
+    <div className="rounded-xl border border-slate-700/50 bg-slate-800/50 p-4" data-testid="panel-activity-feed">
       <div className="flex items-center gap-2 mb-3">
         <Activity className="w-4 h-4 text-cyan-400" />
         <h3 className="text-sm font-semibold text-white">Live Activity Feed</h3>
@@ -314,7 +314,7 @@ export default function CountrySelectionPage() {
                       key={c.code}
                       onClick={() => handleSelect(c.name)}
                       disabled={isSwitching}
-                      className="flex flex-col p-4 rounded-xl border border-border bg-foreground/50 hover:bg-foreground hover:border-border transition-all duration-200 group text-left"
+                      className="flex flex-col p-4 rounded-xl border border-slate-700/50 bg-slate-800/50 hover:bg-slate-700/50 hover:border-slate-600/60 transition-all duration-200 group text-left"
                       data-testid={`button-select-country-${c.code}`}
                     >
                       <div className="flex items-start justify-between w-full mb-3">
@@ -329,35 +329,35 @@ export default function CountrySelectionPage() {
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-white">{c.name}</p>
-                            <p className="text-[10px] text-muted-foreground">{c.regulatoryBody}</p>
+                            <p className="text-[10px] text-slate-400">{c.regulatoryBody}</p>
                           </div>
                         </div>
                         {isSwitching && selectedCountry === c.name ? (
-                          <Loader2 className="w-4 h-4 text-muted-foreground animate-spin shrink-0 mt-1" />
+                          <Loader2 className="w-4 h-4 text-slate-400 animate-spin shrink-0 mt-1" />
                         ) : (
-                          <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-muted-foreground transition-colors shrink-0 mt-1" />
+                          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors shrink-0 mt-1" />
                         )}
                       </div>
 
                       <div className="grid grid-cols-3 gap-2 mb-3 w-full">
-                        <div className="text-center p-1.5 rounded-lg bg-foreground/50">
+                        <div className="text-center p-1.5 rounded-lg bg-slate-900/60">
                           <p className="text-xs font-bold text-white">{detail?.borrowers?.toLocaleString() ?? "-"}</p>
-                          <p className="text-[9px] text-muted-foreground">Borrowers</p>
+                          <p className="text-[9px] text-slate-400">Borrowers</p>
                         </div>
-                        <div className="text-center p-1.5 rounded-lg bg-foreground/50">
+                        <div className="text-center p-1.5 rounded-lg bg-slate-900/60">
                           <p className="text-xs font-bold text-white">{detail?.accounts?.toLocaleString() ?? "-"}</p>
-                          <p className="text-[9px] text-muted-foreground">Accounts</p>
+                          <p className="text-[9px] text-slate-400">Accounts</p>
                         </div>
-                        <div className="text-center p-1.5 rounded-lg bg-foreground/50">
+                        <div className="text-center p-1.5 rounded-lg bg-slate-900/60">
                           <p className="text-xs font-bold text-white">{detail?.institutions ?? "-"}</p>
-                          <p className="text-[9px] text-muted-foreground">Institutions</p>
+                          <p className="text-[9px] text-slate-400">Institutions</p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-1.5 flex-wrap w-full">
                         {dpStatus && <ComplianceIndicator status={dpStatus} />}
                         {sataLevel && <SATAIndicator level={sataLevel} />}
-                        <Badge variant="outline" className="text-[9px] h-5 border-border/50 text-muted-foreground">{c.currency}</Badge>
+                        <Badge variant="outline" className="text-[9px] h-5 border-slate-600/50 text-slate-300">{c.currency}</Badge>
                       </div>
                     </button>
                   );
@@ -367,7 +367,7 @@ export default function CountrySelectionPage() {
 
             <TabsContent value="compliance" className="space-y-4 mt-0">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div className="rounded-xl border border-border bg-foreground/50 p-4">
+                <div className="rounded-xl border border-border bg-slate-800/50 p-4">
                   <div className="flex items-center gap-2 mb-4">
                     <Scale className="w-4 h-4 text-blue-400" />
                     <h3 className="text-sm font-semibold text-white">Data Protection Law Status</h3>
@@ -392,7 +392,7 @@ export default function CountrySelectionPage() {
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-border bg-foreground/50 p-4">
+                <div className="rounded-xl border border-border bg-slate-800/50 p-4">
                   <div className="flex items-center gap-2 mb-4">
                     <Globe className="w-4 h-4 text-emerald-400" />
                     <h3 className="text-sm font-semibold text-white">SATA Cross-Border Readiness</h3>
@@ -426,7 +426,7 @@ export default function CountrySelectionPage() {
 
               <ActivityFeed />
 
-              <div className="rounded-xl border border-border bg-foreground/50 p-4">
+              <div className="rounded-xl border border-border bg-slate-800/50 p-4">
                 <div className="flex items-center gap-2 mb-4">
                   <FileText className="w-4 h-4 text-amber-400" />
                   <h3 className="text-sm font-semibold text-white">SRS Requirements Traceability</h3>
@@ -441,7 +441,7 @@ export default function CountrySelectionPage() {
                     { label: "Enterprise", count: 11, compliant: 11, color: "text-teal-400" },
                     { label: "Data Quality", count: 5, compliant: 5, color: "text-indigo-400" },
                   ].map((cat) => (
-                    <div key={cat.label} className="text-center p-3 rounded-lg bg-foreground/50">
+                    <div key={cat.label} className="text-center p-3 rounded-lg bg-slate-800/50">
                       <p className={`text-lg font-bold ${cat.color}`}>{cat.compliant}/{cat.count}</p>
                       <p className="text-[9px] text-muted-foreground mt-0.5">{cat.label}</p>
                       <div className="w-full h-1 rounded-full bg-muted-foreground mt-2">
@@ -454,7 +454,7 @@ export default function CountrySelectionPage() {
             </TabsContent>
 
             <TabsContent value="features" className="mt-0">
-              <div className="rounded-xl border border-border bg-foreground/50 overflow-hidden">
+              <div className="rounded-xl border border-border bg-slate-800/50 overflow-hidden">
                 <div className="p-4 border-b border-border/30">
                   <div className="flex items-center gap-2">
                     <Database className="w-4 h-4 text-violet-400" />
@@ -466,7 +466,7 @@ export default function CountrySelectionPage() {
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="border-b border-border/30">
-                        <th className="text-left p-3 text-muted-foreground font-medium sticky left-0 bg-foreground/90">Country</th>
+                        <th className="text-left p-3 text-muted-foreground font-medium sticky left-0 bg-slate-800/90">Country</th>
                         <th className="text-center p-3 text-muted-foreground font-medium">Credit Scoring</th>
                         <th className="text-center p-3 text-muted-foreground font-medium">Regulatory Export</th>
                         <th className="text-center p-3 text-muted-foreground font-medium">Dispute Mgmt</th>
@@ -494,7 +494,7 @@ export default function CountrySelectionPage() {
                         );
                         return (
                           <tr key={c.code} className="border-b border-border/20 hover:bg-muted-foreground/20">
-                            <td className="p-3 sticky left-0 bg-foreground/90">
+                            <td className="p-3 sticky left-0 bg-slate-800/90">
                               <div className="flex items-center gap-2">
                                 <CountryDot code={c.code} size="sm" />
                                 <span className="text-muted-foreground font-medium">{c.name}</span>
