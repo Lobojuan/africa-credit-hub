@@ -65,43 +65,46 @@ export function StatCard({ title, value, subtitle, icon: Icon, testId, colorInde
   return (
     <Card
       data-testid={testId}
-      className={`group card-shine premium-glow transition-all duration-400 border border-border/30 hover:border-border/50 hover:shadow-xl hover:-translate-y-1.5 ${onClick ? "cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 outline-none" : ""}`}
+      className={`group relative overflow-hidden transition-all duration-500 border border-border/40 hover:border-primary/30 hover:shadow-2xl hover:-translate-y-1 ${onClick ? "cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 outline-none" : ""}`}
       style={{
         background: isDark ? cardGradient.dark : cardGradient.light,
-        boxShadow: "0 2px 8px -2px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.03)",
       }}
       onClick={onClick}
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined}
     >
-      <CardContent className="p-5 pb-4">
+      <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+      <CardContent className="p-5 pb-4 relative z-10">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <p className="text-[11px] font-semibold text-muted-foreground/80 uppercase tracking-wider">{title}</p>
-            <p className={`${valueFontSize(value)} font-extrabold mt-2.5 tracking-tight leading-tight break-words`} data-testid={`${testId}-value`}>{value}</p>
+            <p className="text-[11px] font-bold text-muted-foreground/80 uppercase tracking-wider">{title}</p>
+            <p className={`${valueFontSize(value)} font-black mt-2 tracking-tight leading-tight text-foreground drop-shadow-sm`} data-testid={`${testId}-value`}>{value}</p>
             {subtitle && (
-              <p className="text-[11px] text-muted-foreground/70 mt-1.5 font-medium">{subtitle}</p>
+              <p className="text-[11px] text-muted-foreground mt-1.5 font-medium">{subtitle}</p>
             )}
           </div>
-          <div className="flex flex-col items-center gap-2 shrink-0">
+          <div className="flex flex-col items-center gap-2 shrink-0 relative">
+            <div className="absolute inset-0 blur-xl opacity-40 group-hover:opacity-80 transition-opacity duration-500 rounded-full" style={{ background: style.glow }} />
+
             <div
-              className="flex items-center justify-center w-12 h-12 rounded-xl group-hover:scale-110 transition-all duration-400"
+              className="relative flex items-center justify-center w-12 h-12 rounded-xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 z-10"
               style={{
                 background: style.bg,
-                boxShadow: `0 4px 14px -2px ${style.glow}`,
+                boxShadow: `0 4px 14px -2px ${style.glow}, inset 0 1px 1px rgba(255,255,255,0.2)`,
               }}
             >
-              <Icon className="w-5.5 h-5.5 text-white drop-shadow-sm" />
+              <Icon className="w-5 h-5 text-white drop-shadow-md" />
             </div>
             {onClick && (
-              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-1 transition-all duration-300" />
+              <ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1.5 transition-all duration-300" />
             )}
           </div>
         </div>
         {chartData && chartData.length > 0 && (
-          <div className="mt-3.5 -mx-1" data-testid={`${testId}-sparkline`}>
-            <ResponsiveContainer width="100%" height={48}>
+          <div className="mt-4 -mx-2" data-testid={`${testId}-sparkline`}>
+            <ResponsiveContainer width="100%" height={44}>
               <AreaChart data={chartData} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
                 <defs>
                   <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -117,7 +120,7 @@ export function StatCard({ title, value, subtitle, icon: Icon, testId, colorInde
                   strokeWidth={2.5}
                   dot={false}
                   isAnimationActive={true}
-                  animationDuration={1200}
+                  animationDuration={1500}
                   animationEasing="ease-out"
                 />
               </AreaChart>
