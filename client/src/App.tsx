@@ -207,6 +207,7 @@ function SuspendedScreen({ orgName, onLogout }: { orgName?: string; onLogout: ()
 function AuthenticatedApp() {
   const { user, isLoading, logout, passwordExpired, accountSuspended } = useAuth();
   const [chatbotOpen, setChatbotOpen] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
   const { t, i18n } = useTranslation();
   const countryTheme = useCountryTheme();
   const [currentPath] = useLocation();
@@ -233,11 +234,19 @@ function AuthenticatedApp() {
     );
   }
 
-  if (!user) {
-    if (currentPath === "/login") {
-      return <LoginPage />;
+  const doRedirect = (url: string) => {
+    if (!redirecting) {
+      setRedirecting(true);
+      window.location.replace(url);
     }
-    window.location.replace("/login");
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Skeleton className="w-32 h-8" />
+      </div>
+    );
+  };
+
+  if (redirecting) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Skeleton className="w-32 h-8" />
@@ -245,14 +254,16 @@ function AuthenticatedApp() {
     );
   }
 
+  if (!user) {
+    if (currentPath === "/login") {
+      return <LoginPage />;
+    }
+    return doRedirect("/login");
+  }
+
   if (currentPath === "/login") {
-    const dest = user.role === "super_admin" ? "/command-center" : "/";
-    window.location.replace(dest);
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Skeleton className="w-32 h-8" />
-      </div>
-    );
+    const dest = user.role === "super_admin" ? "/command-center" : "/dashboard";
+    return doRedirect(dest);
   }
 
   if (accountSuspended) {
@@ -263,12 +274,7 @@ function AuthenticatedApp() {
   const isCommandCenterPath = currentPath.startsWith("/command-center");
 
   if (user.role === "super_admin" && !viewingCountry && !isCommandCenterPath) {
-    window.location.replace("/command-center");
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Skeleton className="w-32 h-8" />
-      </div>
-    );
+    return doRedirect("/command-center");
   }
 
   const style = {
@@ -283,12 +289,12 @@ function AuthenticatedApp() {
         <div className="flex flex-col flex-1 min-w-0">
           <header className="flex items-center gap-2 px-3 py-2 border-b shrink-0 ltr-header">
             <SidebarTrigger data-testid="button-sidebar-toggle" className="shrink-0" />
-            <div className="h-5 w-px bg-border hidden md:block" />
+            <div className="h-5 w-px bg-border" />
             {user.role === "super_admin" && (
               <Button
                 variant="outline"
                 size="sm"
-                className="h-9 gap-2 text-sm font-medium border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                className="h-9 gap-2 text-sm font-medium border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30"
                 onClick={async () => {
                   try {
                     await apiRequest("POST", "/api/platform/set-country", { country: "command_center" });
@@ -311,48 +317,41 @@ function AuthenticatedApp() {
                 data-testid="button-command-center"
               >
                 <LayoutGrid className="w-4 h-4 shrink-0" />
-                <span>Command Center</span>
+                Command Center
               </Button>
             )}
             {user.role === "super_admin" && <CountrySelector />}
+            {user.role === "super_admin" && <OrgSwitcher />}
             {(user as any)?.organization?.name && user.role !== "super_admin" && (
               <span className="text-sm text-muted-foreground inline-flex items-center gap-1.5" data-testid="text-org-context">
                 <Building2 className="w-4 h-4" />
                 {(user as any).organization.name}
               </span>
             )}
-            <div className="flex-1 min-w-0 overflow-x-auto hidden lg:block">
-              <QuickAccessBar />
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0 ml-auto ltr-header">
-              {user.role === "super_admin" && <OrgSwitcher />}
-              <span className="text-sm text-muted-foreground hidden xl:inline" data-testid="text-current-user">
-                {user.fullName}
-              </span>
-              <NotificationBell />
-              <ThemeToggle />
-              <LanguageSwitcher />
-              <Button
-                variant="destructive"
-                size="sm"
-                className="h-9 gap-2 text-sm font-medium shrink-0"
-                onClick={async () => {
-                  try {
-                    await logout();
-                  } catch {
-                    window.location.href = "/login";
-                  }
-                }}
-                data-testid="button-logout"
-              >
-                <LogOut className="w-4 h-4" />
-                <span>Log Out</span>
-              </Button>
-            </div>
+            <div className="flex-1" />
+            <span className="text-sm text-muted-foreground hidden md:inline" data-testid="text-current-user">
+              {user.fullName}
+            </span>
+            <NotificationBell />
+            <ThemeToggle />
+            <LanguageSwitcher />
+            <Button
+              variant="destructive"
+              size="sm"
+              className="h-9 gap-2 text-sm font-medium shrink-0"
+              onClick={async () => {
+                try {
+                  await logout();
+                } catch {
+                  window.location.href = "/login";
+                }
+              }}
+              data-testid="button-logout"
+            >
+              <LogOut className="w-4 h-4" />
+              Log Out
+            </Button>
           </header>
-          <div className="lg:hidden px-2 py-1 border-b">
-            <QuickAccessBar />
-          </div>
           <main className="flex-1 overflow-auto">
             <ErrorBoundary>
               <Router />
