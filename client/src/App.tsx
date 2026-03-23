@@ -261,9 +261,14 @@ function AuthenticatedApp() {
 
   const viewingCountry = (user as any)?.viewingCountry;
   const isCommandCenterPath = currentPath.startsWith("/command-center");
-  const needsCountrySelection = user.role === "super_admin" && !viewingCountry && !isCommandCenterPath;
-  if (needsCountrySelection) {
-    return <CountrySelectionPage />;
+
+  if (user.role === "super_admin" && !viewingCountry && !isCommandCenterPath) {
+    window.location.replace("/command-center");
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Skeleton className="w-32 h-8" />
+      </div>
+    );
   }
 
   const style = {

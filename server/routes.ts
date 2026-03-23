@@ -1897,10 +1897,14 @@ export async function registerRoutes(
           } else if (organization?.country) {
             req.session.userCountry = organization.country;
           }
-          console.log(`[Admin][Google] Login for ${adminUser.fullName} (${googleUser.email}) role=${adminUser.role}`);
+          const dest = adminUser.role === "super_admin" ? "/command-center" : "/dashboard";
+          console.log(`[Admin][Google] Login for ${adminUser.fullName} (${googleUser.email}) role=${adminUser.role} → redirecting to ${dest}`);
           req.session.save((saveErr) => {
-            if (saveErr) return res.redirect("/login?error=session_error");
-            const dest = adminUser.role === "super_admin" ? "/command-center" : "/dashboard";
+            if (saveErr) {
+              console.error(`[Admin][Google] Session save error:`, saveErr);
+              return res.redirect("/login?error=session_error");
+            }
+            console.log(`[Admin][Google] Session saved OK, sending redirect to ${dest}`);
             res.redirect(dest);
           });
         });
