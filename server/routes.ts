@@ -1900,7 +1900,7 @@ export async function registerRoutes(
           console.log(`[Admin][Google] Login for ${adminUser.fullName} (${googleUser.email}) role=${adminUser.role}`);
           req.session.save((saveErr) => {
             if (saveErr) return res.redirect("/login?error=session_error");
-            const dest = adminUser.role === "super_admin" ? "/ai-command-center" : "/dashboard";
+            const dest = adminUser.role === "super_admin" ? "/command-center" : "/dashboard";
             res.redirect(dest);
           });
         });

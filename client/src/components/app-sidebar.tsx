@@ -41,6 +41,7 @@ import {
   Gauge,
   Webhook,
   Sparkles,
+  Monitor,
 } from "lucide-react";
 import {
   Sidebar,
@@ -112,6 +113,7 @@ const crossBorderItems: NavItem[] = [
 ];
 
 const adminItems: NavItem[] = [
+  { titleKey: "sidebar.commandCenter", url: "/command-center", icon: Monitor, testId: "nav-command-center", roles: ["super_admin"] },
   { titleKey: "sidebar.organizations", url: "/organizations", icon: Building2, testId: "nav-organizations", roles: ["super_admin"] },
   { titleKey: "sidebar.userManagement", url: "/users", icon: Settings, testId: "nav-user-management", roles: ["admin", "super_admin"] },
   { titleKey: "sidebar.institutions", url: "/institutions", icon: Building2, testId: "nav-institutions", roles: ["admin", "super_admin"] },

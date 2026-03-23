@@ -68,6 +68,14 @@ const GhanaDocsPage = lazy(() => import("@/pages/ghana-docs"));
 const AboutPage = lazy(() => import("@/pages/about"));
 const PortfolioIntelligencePage = lazy(() => import("@/pages/portfolio-intelligence"));
 const AICommandCenterPage = lazy(() => import("@/pages/ai-command-center"));
+const CommandCenterSystemPage = lazy(() => import("@/pages/command-center-system"));
+const CommandCenterBillingPage = lazy(() => import("@/pages/command-center-billing"));
+const CommandCenterSettingsPage = lazy(() => import("@/pages/command-center-settings"));
+const CommandCenterRetentionPage = lazy(() => import("@/pages/command-center-retention"));
+const CommandCenterUsersPage = lazy(() => import("@/pages/command-center-users"));
+const CommandCenterDataQualityPage = lazy(() => import("@/pages/command-center-dataquality"));
+const CommandCenterAuditPage = lazy(() => import("@/pages/command-center-audit"));
+const CommandCenterApiKeysPage = lazy(() => import("@/pages/command-center-apikeys"));
 const AIDemoPage = lazy(() => import("@/pages/ai-demo"));
 const BorrowerAlertsPage = lazy(() => import("@/pages/borrower-alerts"));
 const RegulatoryDashboardPage = lazy(() => import("@/pages/regulatory-dashboard"));
@@ -130,6 +138,15 @@ function Router() {
         <Route path="/about" component={AboutPage} />
         <Route path="/portfolio-intelligence" component={PortfolioIntelligencePage} />
         <Route path="/ai-command-center" component={AICommandCenterPage} />
+        <Route path="/command-center" component={CommandCenterSystemPage} />
+        <Route path="/command-center/system" component={CommandCenterSystemPage} />
+        <Route path="/command-center/billing" component={CommandCenterBillingPage} />
+        <Route path="/command-center/settings" component={CommandCenterSettingsPage} />
+        <Route path="/command-center/retention" component={CommandCenterRetentionPage} />
+        <Route path="/command-center/users" component={CommandCenterUsersPage} />
+        <Route path="/command-center/data-quality" component={CommandCenterDataQualityPage} />
+        <Route path="/command-center/audit" component={CommandCenterAuditPage} />
+        <Route path="/command-center/api-keys" component={CommandCenterApiKeysPage} />
         <Route path="/credit-score-methodology" component={CreditScoreMethodologyPage} />
         <Route path="/regulatory-dashboard" component={RegulatoryDashboardPage} />
         <Route path="/borrower-alerts" component={BorrowerAlertsPage} />
@@ -274,8 +291,9 @@ function AuthenticatedApp() {
                           },
                           refetchType: "all",
                         });
+                        window.location.href = "/command-center";
                       } catch {
-                        window.location.href = "/dashboard";
+                        window.location.href = "/command-center";
                       }
                     }}
                     data-testid="button-command-center"
