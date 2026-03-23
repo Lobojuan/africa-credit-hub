@@ -209,6 +209,7 @@ function AuthenticatedApp() {
   const [chatbotOpen, setChatbotOpen] = useState(false);
   const { t, i18n } = useTranslation();
   const countryTheme = useCountryTheme();
+  const [currentPath] = useLocation();
 
   useEffect(() => {
     document.documentElement.dir = i18n.language === "ar" ? "rtl" : "ltr";
@@ -233,7 +234,7 @@ function AuthenticatedApp() {
   }
 
   if (!user) {
-    if (window.location.pathname === "/login") {
+    if (currentPath === "/login") {
       return <LoginPage />;
     }
     window.location.replace("/login");
@@ -244,7 +245,7 @@ function AuthenticatedApp() {
     );
   }
 
-  if (window.location.pathname === "/login") {
+  if (currentPath === "/login") {
     const dest = user.role === "super_admin" ? "/command-center" : "/";
     window.location.replace(dest);
     return (
@@ -259,7 +260,7 @@ function AuthenticatedApp() {
   }
 
   const viewingCountry = (user as any)?.viewingCountry;
-  const isCommandCenterPath = window.location.pathname.startsWith("/command-center");
+  const isCommandCenterPath = currentPath.startsWith("/command-center");
   const needsCountrySelection = user.role === "super_admin" && !viewingCountry && !isCommandCenterPath;
   if (needsCountrySelection) {
     return <CountrySelectionPage />;
