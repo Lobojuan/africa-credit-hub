@@ -211,17 +211,17 @@ export default function CountrySelectionPage() {
             </span>
           </div>
           <ThemeToggle />
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-white h-8 gap-1.5"
-            onClick={() => logout()}
-            data-testid="button-logout-country-selection"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline text-xs">Sign Out</span>
-          </Button>
         </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-muted-foreground hover:text-white h-8 gap-1.5 ml-auto"
+          onClick={() => logout()}
+          data-testid="button-logout-country-selection"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline text-xs">Sign Out</span>
+        </Button>
       </header>
 
       <div className="flex-1 overflow-auto">
