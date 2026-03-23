@@ -255,13 +255,13 @@ function AuthenticatedApp() {
   }
 
   if (!user) {
-    if (currentPath === "/login") {
+    if (currentPath === "/" || currentPath === "/login") {
       return <LoginPage />;
     }
     return doRedirect("/login");
   }
 
-  if (currentPath === "/login") {
+  if (currentPath === "/" || currentPath === "/login") {
     const dest = user.role === "super_admin" ? "/command-center" : "/dashboard";
     return doRedirect(dest);
   }
@@ -386,9 +386,17 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Switch>
-            <Route path="/" component={InvestorLandingPage} />
-            <Route path="/solutions" component={InvestorLandingPage} />
+            <Route path="/">
+              <AuthProvider>
+                <OrgSwitcherProvider>
+                  <CountryThemeProvider>
+                    <AuthenticatedApp />
+                  </CountryThemeProvider>
+                </OrgSwitcherProvider>
+              </AuthProvider>
+            </Route>
             <Route path="/investor" component={InvestorLandingPage} />
+            <Route path="/solutions" component={InvestorLandingPage} />
 
             <Route path="/ai-demo" component={() => <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="w-8 h-8 animate-spin" /></div>}><AIDemoPage /></Suspense>} />
             <Route path="/pricing" component={PricingPage} />
