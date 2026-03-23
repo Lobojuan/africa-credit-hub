@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import heroImage from "@assets/investor-hero.png";
 import dashboardImage from "@assets/app-dashboard.png";
 import mobileImage from "@assets/app-consumer-portal.png";
@@ -513,7 +514,8 @@ export default function InvestorLandingPage() {
               <span className="text-[10px] text-muted-foreground ml-1.5">v2.1</span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <LanguageSwitcher />
             <Button
               variant="outline"
               size="sm"
