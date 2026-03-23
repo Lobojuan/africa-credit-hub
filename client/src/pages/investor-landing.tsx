@@ -513,30 +513,11 @@ export default function InvestorLandingPage() {
               <span className="text-[10px] text-muted-foreground ml-1.5">v2.1</span>
             </div>
           </div>
-          <div className="flex items-center gap-1 sm:gap-2">
-            {navItems.map((item) => (
-              <Button
-                key={item.id}
-                variant="ghost"
-                size="sm"
-                className="text-[11px] px-2 hidden lg:inline-flex"
-                onClick={() => {
-                  if (item.id === "pricing-link") {
-                    navigate("/pricing");
-                  } else if (item.id === "security-link") {
-                    navigate("/security");
-                  } else {
-                    document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth" });
-                  }
-                }}
-              >
-                {item.label}
-              </Button>
-            ))}
+          <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
-              className="text-xs ml-2"
+              className="text-xs"
               onClick={() => navigate("/login")}
               data-testid="nav-login"
             >
