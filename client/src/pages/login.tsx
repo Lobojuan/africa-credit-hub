@@ -48,7 +48,8 @@ export default function LoginPage() {
       }
       toast({ title: t('login.success') });
       if (window.location.pathname === "/login") {
-        window.location.replace("/dashboard");
+        const dest = (result as any)?.role === "super_admin" ? "/command-center" : "/dashboard";
+        window.location.replace(dest);
       }
     } catch (err: any) {
       const msg = err.message || t('common.error');
@@ -79,7 +80,8 @@ export default function LoginPage() {
       queryClient.setQueryData(["/api/auth/me"], userData);
       toast({ title: t('login.success') });
       if (window.location.pathname === "/login") {
-        window.location.replace("/dashboard");
+        const dest = userData?.role === "super_admin" ? "/command-center" : "/dashboard";
+        window.location.replace(dest);
       }
     } catch (err: any) {
       const msg = err.message || t('common.error');
