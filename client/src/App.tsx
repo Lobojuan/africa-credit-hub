@@ -244,6 +244,16 @@ function AuthenticatedApp() {
     );
   }
 
+  if (window.location.pathname === "/login") {
+    const dest = user.role === "super_admin" ? "/command-center" : "/";
+    window.location.replace(dest);
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Skeleton className="w-32 h-8" />
+      </div>
+    );
+  }
+
   if (accountSuspended) {
     return <SuspendedScreen orgName={(user as any)?.organization?.name} onLogout={logout} />;
   }
