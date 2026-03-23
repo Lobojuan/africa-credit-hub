@@ -255,13 +255,13 @@ function AuthenticatedApp() {
   }
 
   if (!user) {
-    if (currentPath === "/" || currentPath === "/login") {
+    if (currentPath === "/login") {
       return <LoginPage />;
     }
     return doRedirect("/login");
   }
 
-  if (currentPath === "/" || currentPath === "/login") {
+  if (currentPath === "/login") {
     const dest = user.role === "super_admin" ? "/command-center" : "/dashboard";
     return doRedirect(dest);
   }
@@ -386,15 +386,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Switch>
-            <Route path="/">
-              <AuthProvider>
-                <OrgSwitcherProvider>
-                  <CountryThemeProvider>
-                    <AuthenticatedApp />
-                  </CountryThemeProvider>
-                </OrgSwitcherProvider>
-              </AuthProvider>
-            </Route>
+            <Route path="/" component={InvestorLandingPage} />
             <Route path="/investor" component={InvestorLandingPage} />
             <Route path="/solutions" component={InvestorLandingPage} />
 
