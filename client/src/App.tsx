@@ -26,6 +26,14 @@ import { CountryThemeProvider, useCountryTheme } from "@/components/country-them
 import { CountrySelector } from "@/components/country-selector";
 import { QuickAccessBar } from "@/components/quick-access-bar";
 import { SessionTimeoutDialog } from "@/components/session-timeout-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -274,13 +282,15 @@ function AuthenticatedApp() {
       <div className="flex h-screen w-full">
         <AppSidebar />
         <div className="flex flex-col flex-1 min-w-0">
-          <header className="flex items-center gap-1 sm:gap-2 px-2 py-1.5 border-b shrink-0 overflow-hidden ltr-header">
+          <header className="flex items-center gap-1 px-2 py-1.5 border-b shrink-0 overflow-hidden ltr-header">
             <SidebarTrigger data-testid="button-sidebar-toggle" className="shrink-0" />
             <div className="h-5 w-px bg-border mx-1 hidden md:block" />
-            <QuickAccessBar />
-            <div className="flex items-center gap-1 sm:gap-2 shrink-0 ml-auto ltr-header">
+            <div className="flex-1 min-w-0 overflow-x-auto hidden md:block">
+              <QuickAccessBar />
+            </div>
+            <div className="flex items-center gap-1 shrink-0 ml-auto ltr-header">
               {(user as any)?.organization?.name && user.role !== "super_admin" && (
-                <span className="text-xs text-muted-foreground hidden lg:inline-flex items-center gap-1" data-testid="text-org-context">
+                <span className="text-xs text-muted-foreground hidden xl:inline-flex items-center gap-1" data-testid="text-org-context">
                   <Building2 className="w-3 h-3" />
                   {(user as any).organization.name}
                 </span>
@@ -290,7 +300,7 @@ function AuthenticatedApp() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-8 gap-1.5 text-xs border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                    className="h-7 gap-1 text-[11px] border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30"
                     onClick={async () => {
                       try {
                         await apiRequest("POST", "/api/platform/set-country", { country: "command_center" });
@@ -313,38 +323,54 @@ function AuthenticatedApp() {
                     data-testid="button-command-center"
                   >
                     <LayoutGrid className="w-3.5 h-3.5 shrink-0" />
-                    <span>Command Center</span>
+                    <span className="hidden lg:inline">Command Center</span>
                   </Button>
                   <CountrySelector />
                   <OrgSwitcher />
                 </>
               )}
-              <span className="text-xs text-muted-foreground hidden md:inline" data-testid="text-current-user">
-                {user.fullName} ({user.role})
+              <span className="text-[11px] text-muted-foreground hidden xl:inline" data-testid="text-current-user">
+                {user.fullName}
               </span>
-              <LanguageSwitcher />
               <NotificationBell />
               <ThemeToggle />
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={async (e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  try {
-                    await logout();
-                  } catch {
-                    window.location.href = "/";
-                  }
-
-                }}
-                data-testid="button-logout"
-              >
-                <LogOut className="w-4 h-4" />
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    data-testid="button-user-menu"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                    {user.fullName} ({user.role})
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="gap-2 cursor-pointer text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400"
+                    onClick={async () => {
+                      try {
+                        await logout();
+                      } catch {
+                        window.location.href = "/login";
+                      }
+                    }}
+                    data-testid="button-logout"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Log Out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </header>
+          <div className="md:hidden px-2 py-1 border-b">
+            <QuickAccessBar />
+          </div>
           <main className="flex-1 overflow-auto">
             <ErrorBoundary>
               <Router />
