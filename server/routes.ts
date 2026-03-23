@@ -39,7 +39,7 @@ import multer from "multer";
 import rateLimit from "express-rate-limit";
 import { isGhanaMode, getActiveCountryName, isSingleCountryMode, COUNTRY_REGISTRY, getSupportedCountries } from "./country-mode";
 import { sendWelcomeEmail, sendBillingNotification, sendDisputeNotification, sendNewRegistrationAlert, sendConsumerOtpEmail, sendConsumerVerificationLink } from "./email";
-import { sendOtpSms, isSmsConfigured } from "./sms";
+import { sendSms, sendOtpSms, isSmsConfigured } from "./sms";
 import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport, generatePortfolioIntelligence, parseProvider, generateCreditNarrative, detectAnomalies, generateRegulatoryReport, naturalLanguageQuery, analyzeCrossBorderRisk, generateLoanRecommendation, callAI, parseJSON } from "./ai";
 import { BOG_EXPORT_GENERATORS } from "./bog-export";
 import type { BogFileType } from "@shared/bog-codes";
@@ -4445,6 +4445,42 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
+  });
+
+  app.post("/api/admin/test-sms", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const { phone, message } = req.body;
+      if (!phone || typeof phone !== "string") {
+        return res.status(400).json({ message: "Phone number is required (E.164 format, e.g. +233552395548)" });
+      }
+      if (!isSmsConfigured()) {
+        return res.status(400).json({ message: "SMS is not configured. Add TWILIO or Africa's Talking credentials." });
+      }
+      const text = message || `Test SMS from Africa Credit Hub.\n\nSent at: ${new Date().toLocaleString("en-US", { timeZone: "Africa/Accra", dateStyle: "full", timeStyle: "short" })}\n\n— Pan-African Credit Registry`;
+      const ok = await sendSms(phone, text);
+      if (ok) {
+        await storage.createAuditLog({
+          userId: req.session.userId!, action: "TEST_SMS", entity: "system",
+          details: `Test SMS sent to ${phone.replace(/(.{4}).+(.{4})/, "$1****$2")}`,
+          ipAddress: req.ip, organizationId: req.session.organizationId,
+        });
+        res.json({ success: true, message: `SMS sent successfully to ${phone.replace(/(.{4}).+(.{4})/, "$1****$2")}` });
+      } else {
+        res.status(500).json({ success: false, message: "SMS delivery failed. Check provider credentials and phone number." });
+      }
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/admin/sms-status", requireAuth, requireRole("super_admin"), async (_req, res) => {
+    res.json({
+      configured: isSmsConfigured(),
+      providers: {
+        twilio: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER),
+        africastalking: !!(process.env.AT_USERNAME && process.env.AT_API_KEY),
+      },
+    });
   });
 
   app.post("/api/admin/seed-test-data", requireAuth, requireRole("admin"), async (_req, res) => {

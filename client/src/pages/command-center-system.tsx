@@ -8,7 +8,10 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { queryClient } from "@/lib/queryClient";
+import { Input } from "@/components/ui/input";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { MessageSquare, Send, Phone } from "lucide-react";
 
 interface SystemStats {
   server: {
@@ -134,6 +137,108 @@ function SectionHeader({ icon: Icon, title, color, badge }: {
       <Icon className={`w-4 h-4 ${color}`} />
       <h3 className="text-sm font-semibold text-white">{title}</h3>
       {badge && <Badge variant="outline" className="text-[8px] h-4 border-border/50 text-muted-foreground ml-auto">{badge}</Badge>}
+    </div>
+  );
+}
+
+function SmsTestPanel() {
+  const [phone, setPhone] = useState("+233");
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
+  const { toast } = useToast();
+
+  const { data: smsStatus } = useQuery<{ configured: boolean; providers: { twilio: boolean; africastalking: boolean } }>({
+    queryKey: ["/api/admin/sms-status"],
+    staleTime: 60000,
+  });
+
+  const handleSend = async () => {
+    if (!phone || phone.length < 10) {
+      toast({ title: "Enter a valid phone number in E.164 format (e.g. +233552395548)", variant: "destructive" });
+      return;
+    }
+    setSending(true);
+    setResult(null);
+    try {
+      const res = await apiRequest("POST", "/api/admin/test-sms", { phone, message: message || undefined });
+      const data = await res.json();
+      setResult({ success: true, message: data.message });
+      toast({ title: "SMS sent successfully!", description: data.message });
+    } catch (e: any) {
+      const msg = e?.message || "Failed to send SMS";
+      setResult({ success: false, message: msg });
+      toast({ title: "SMS failed", description: msg, variant: "destructive" });
+    }
+    setSending(false);
+  };
+
+  return (
+    <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4" data-testid="sms-test-panel">
+      <div className="flex items-center gap-2 mb-3">
+        <MessageSquare className="w-4 h-4 text-blue-400" />
+        <h3 className="text-sm font-semibold text-white">SMS & Communications</h3>
+        <div className="ml-auto flex items-center gap-2">
+          {smsStatus?.providers.twilio && (
+            <Badge variant="outline" className="text-[8px] h-4 border-emerald-500/30 text-emerald-400">Twilio ✓</Badge>
+          )}
+          {smsStatus?.providers.africastalking && (
+            <Badge variant="outline" className="text-[8px] h-4 border-emerald-500/30 text-emerald-400">Africa's Talking ✓</Badge>
+          )}
+          {!smsStatus?.configured && (
+            <Badge variant="outline" className="text-[8px] h-4 border-red-500/30 text-red-400">Not Configured</Badge>
+          )}
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+        <div>
+          <label className="text-[10px] text-muted-foreground mb-1 block">Phone Number (E.164)</label>
+          <div className="relative">
+            <Phone className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+233552395548"
+              className="h-8 text-xs pl-8 bg-white/5 border-border/50"
+              data-testid="input-test-phone"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="text-[10px] text-muted-foreground mb-1 block">Custom Message (optional)</label>
+          <Input
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Leave empty for default test message"
+            className="h-8 text-xs bg-white/5 border-border/50"
+            data-testid="input-test-message"
+          />
+        </div>
+        <div className="flex items-end">
+          <Button
+            size="sm"
+            className="h-8 gap-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white"
+            onClick={handleSend}
+            disabled={sending || !smsStatus?.configured}
+            data-testid="button-send-test-sms"
+          >
+            {sending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+            {sending ? "Sending..." : "Send Test SMS"}
+          </Button>
+        </div>
+      </div>
+
+      {result && (
+        <div className={`mt-3 p-2.5 rounded-lg text-xs flex items-center gap-2 ${result.success ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-red-500/10 text-red-400 border border-red-500/20"}`} data-testid="text-sms-result">
+          {result.success ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> : <XCircle className="w-3.5 h-3.5 shrink-0" />}
+          {result.message}
+        </div>
+      )}
+
+      <p className="text-[9px] text-muted-foreground mt-2">
+        SMS is used for MFA verification, consumer OTP, and critical notifications. Trial Twilio accounts can only send to verified numbers.
+      </p>
     </div>
   );
 }
@@ -772,6 +877,8 @@ export function CommandCenterSystemTab() {
           </div>
         </div>
       </div>
+
+      <SmsTestPanel />
 
       <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
         <div className="flex items-center gap-2 mb-2">
