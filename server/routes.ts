@@ -91,6 +91,24 @@ const batchLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const aiLimiter = rateLimit({
+  validate: { trustProxy: false },
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { message: "AI request limit reached. Please try again in 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const creditReportLimiter = rateLimit({
+  validate: { trustProxy: false },
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { message: "Credit report request limit reached. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 function stripPassword(user: any) {
   const { password, ...safe } = user;
   return safe;
@@ -3546,7 +3564,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     }
   });
 
-  app.get("/api/credit-reports/logs", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
+  app.get("/api/credit-reports/logs", creditReportLimiter, requireRole("admin", "regulator", "super_admin"), async (req, res) => {
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
@@ -3557,7 +3575,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     }
   });
 
-  app.post("/api/credit-reports/generate", async (req, res) => {
+  app.post("/api/credit-reports/generate", creditReportLimiter, requireAuth, async (req, res) => {
     try {
       const { borrowerId, purpose } = req.body;
       if (!borrowerId || !purpose) {
@@ -3671,7 +3689,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     }
   });
 
-  app.post("/api/credit-reports/download-pdf", async (req, res) => {
+  app.post("/api/credit-reports/download-pdf", creditReportLimiter, requireAuth, async (req, res) => {
     try {
       const { reportData } = req.body;
       if (!reportData) return res.status(400).json({ message: "reportData is required" });
@@ -6378,7 +6396,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     }
   });
 
-  app.post("/api/ai/credit-risk/:borrowerId", requireAuth, async (req, res) => {
+  app.post("/api/ai/credit-risk/:borrowerId", aiLimiter, requireAuth, async (req, res) => {
     try {
       const provider = parseProvider(req.body?.provider);
       const result = await analyzeCreditRisk(req.params.borrowerId, provider);
@@ -6388,7 +6406,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     }
   });
 
-  app.post("/api/ai/report-summary/:borrowerId", requireAuth, async (req, res) => {
+  app.post("/api/ai/report-summary/:borrowerId", aiLimiter, requireAuth, async (req, res) => {
     try {
       const provider = parseProvider(req.body?.provider);
       const result = await generateReportSummary(req.params.borrowerId, provider);
@@ -7100,7 +7118,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     }
   });
 
-  app.post("/api/ai/chat", requireAuth, async (req, res) => {
+  app.post("/api/ai/chat", aiLimiter, requireAuth, async (req, res) => {
     try {
       const { messages, provider: reqProvider } = req.body;
       const provider = parseProvider(reqProvider);
@@ -7149,7 +7167,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     }
   });
 
-  app.post("/api/ai/compliance-report", requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
+  app.post("/api/ai/compliance-report", aiLimiter, requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
     try {
       const { country, provider: reqProvider } = req.body;
       const provider = parseProvider(reqProvider);
@@ -7161,7 +7179,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     }
   });
 
-  app.post("/api/ai/credit-narrative/:borrowerId", requireAuth, async (req, res) => {
+  app.post("/api/ai/credit-narrative/:borrowerId", aiLimiter, requireAuth, async (req, res) => {
     try {
       const provider = parseProvider(req.body?.provider);
       const result = await generateCreditNarrative(req.params.borrowerId, provider);
@@ -7172,7 +7190,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     }
   });
 
-  app.post("/api/ai/anomaly-detection", requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
+  app.post("/api/ai/anomaly-detection", aiLimiter, requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
     try {
       const provider = parseProvider(req.body?.provider);
       const result = await detectAnomalies(provider, getOrgScope(req), getCountryFilter(req));
@@ -7182,7 +7200,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     }
   });
 
-  app.post("/api/ai/regulatory-report", requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
+  app.post("/api/ai/regulatory-report", aiLimiter, requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
     try {
       const { country, provider: reqProvider } = req.body;
       const provider = parseProvider(reqProvider);
@@ -7194,7 +7212,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     }
   });
 
-  app.post("/api/ai/natural-query", requireAuth, async (req, res) => {
+  app.post("/api/ai/natural-query", aiLimiter, requireAuth, async (req, res) => {
     try {
       const { query, provider: reqProvider } = req.body;
       const provider = parseProvider(reqProvider);
@@ -7206,7 +7224,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     }
   });
 
-  app.post("/api/ai/cross-border-risk", requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
+  app.post("/api/ai/cross-border-risk", aiLimiter, requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
     try {
       const provider = parseProvider(req.body?.provider);
       const result = await analyzeCrossBorderRisk(provider);
@@ -7216,7 +7234,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     }
   });
 
-  app.post("/api/ai/loan-recommendation/:borrowerId", requireAuth, async (req, res) => {
+  app.post("/api/ai/loan-recommendation/:borrowerId", aiLimiter, requireAuth, async (req, res) => {
     try {
       const { loanAmount, loanType, provider: reqProvider } = req.body;
       const provider = parseProvider(reqProvider);
@@ -7405,7 +7423,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     }
   });
 
-  app.post("/api/ai/portfolio-intelligence", requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
+  app.post("/api/ai/portfolio-intelligence", aiLimiter, requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
     try {
       const provider = parseProvider(req.body?.provider);
       const result = await generatePortfolioIntelligence(provider);

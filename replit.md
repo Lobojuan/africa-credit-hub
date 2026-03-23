@@ -40,7 +40,8 @@ The system employs a modern full-stack architecture built for scalability and co
     -   **Tamper-Evident Audit Logs**: SHA-256 hash chain for integrity, anchored to a blockchain (simulated Ethereum Sepolia).
     -   **Exchange Rate Management**: Multi-currency conversion with automatic live rate fetching.
     -   **Multi-Tenant SaaS**: Supports multiple organizations with tenant scoping and super_admin role, including client management and onboarding wizard.
-    -   **Low-Bandwidth Optimizations**: Gzip compression and React.lazy code-splitting.
+    -   **Low-Bandwidth Optimizations**: Gzip compression and React.lazy code-splitting for all page components (only Login and NotFound eagerly loaded).
+    -   **API Rate Limiting**: Tiered rate limiting — `loginLimiter` (10/min), `apiLimiter` (200/min global), `writeLimiter` (60/min), `batchLimiter` (10/min), `aiLimiter` (10 per 15min for all `/api/ai/*` routes), `creditReportLimiter` (20 per 15min for `/api/credit-reports/*`), plus dedicated limiters for consumer auth, demo, and public chat.
     -   **Chatbot**: Credit Registry Assistant with dispute filing, FAQ, keyword search, and AI-powered Smart Assistant mode with live database context.
     -   **AI Portfolio Intelligence**: Analytics page for AI-powered portfolio reports, including risk ratings and default predictions.
     -   **AI Command Center** (`/ai-command-center`): Unified hub for 6 AI tools — Credit Narratives, Anomaly Detection, Regulatory Reports, Natural Language Queries, Cross-Border Risk Intelligence, and Loan Approval Recommendations. Powered by Claude and GPT-4o.

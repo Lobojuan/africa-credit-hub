@@ -31,9 +31,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorBoundary } from "@/components/error-boundary";
 import LoginPage from "@/pages/login";
 import NotFound from "@/pages/not-found";
-import Dashboard from "@/pages/dashboard";
-import InvestorLandingPage from "@/pages/investor-landing";
-import CountrySelectionPage from "@/pages/country-selection";
+const Dashboard = lazy(() => import("@/pages/dashboard"));
+const InvestorLandingPage = lazy(() => import("@/pages/investor-landing"));
+const CountrySelectionPage = lazy(() => import("@/pages/country-selection"));
 const MobileSearchPage = lazy(() => import("@/pages/mobile-search"));
 
 const BorrowersPage = lazy(() => import("@/pages/borrowers"));
@@ -82,10 +82,10 @@ const ConsumerPortalPage = lazy(() => import("@/pages/consumer-portal"));
 const SystemStatusPage = lazy(() => import("@/pages/system-status"));
 const PlatformMetricsPage = lazy(() => import("@/pages/platform-metrics"));
 const WebhookManagementPage = lazy(() => import("@/pages/webhook-management"));
-import PricingPage from "@/pages/pricing";
-import SecurityCompliancePage from "@/pages/security-compliance";
-import MarketValidationPage from "@/pages/market-validation";
-import StartTrialPage from "@/pages/start-trial";
+const PricingPage = lazy(() => import("@/pages/pricing"));
+const SecurityCompliancePage = lazy(() => import("@/pages/security-compliance"));
+const MarketValidationPage = lazy(() => import("@/pages/market-validation"));
+const StartTrialPage = lazy(() => import("@/pages/start-trial"));
 const UpgradePage = lazy(() => import("@/pages/upgrade"));
 
 function LazyFallback() {
@@ -107,8 +107,18 @@ class LazyErrorBoundary extends Component<{ children: ReactNode }, { hasError: b
   componentDidCatch(_error: Error, _info: ErrorInfo) {}
   render() {
     if (this.state.hasError) {
-      setTimeout(() => this.setState({ hasError: false }), 100);
-      return <LazyFallback />;
+      return (
+        <div className="flex flex-col items-center justify-center h-64 gap-4">
+          <p className="text-muted-foreground text-sm">Failed to load this page.</p>
+          <button
+            onClick={() => this.setState({ hasError: false })}
+            className="px-4 py-2 text-sm rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
+            data-testid="button-retry-load"
+          >
+            Retry
+          </button>
+        </div>
+      );
     }
     return this.props.children;
   }
@@ -387,15 +397,15 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Switch>
-            <Route path="/" component={InvestorLandingPage} />
-            <Route path="/investor" component={InvestorLandingPage} />
-            <Route path="/solutions" component={InvestorLandingPage} />
+            <Route path="/" component={() => <Suspense fallback={<LazyFallback />}><InvestorLandingPage /></Suspense>} />
+            <Route path="/investor" component={() => <Suspense fallback={<LazyFallback />}><InvestorLandingPage /></Suspense>} />
+            <Route path="/solutions" component={() => <Suspense fallback={<LazyFallback />}><InvestorLandingPage /></Suspense>} />
 
             <Route path="/ai-demo" component={() => <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="w-8 h-8 animate-spin" /></div>}><AIDemoPage /></Suspense>} />
-            <Route path="/pricing" component={PricingPage} />
-            <Route path="/security" component={SecurityCompliancePage} />
-            <Route path="/market-validation" component={MarketValidationPage} />
-            <Route path="/start-trial" component={StartTrialPage} />
+            <Route path="/pricing" component={() => <Suspense fallback={<LazyFallback />}><PricingPage /></Suspense>} />
+            <Route path="/security" component={() => <Suspense fallback={<LazyFallback />}><SecurityCompliancePage /></Suspense>} />
+            <Route path="/market-validation" component={() => <Suspense fallback={<LazyFallback />}><MarketValidationPage /></Suspense>} />
+            <Route path="/start-trial" component={() => <Suspense fallback={<LazyFallback />}><StartTrialPage /></Suspense>} />
             <Route path="/login">
               <AuthProvider>
                 <OrgSwitcherProvider>
