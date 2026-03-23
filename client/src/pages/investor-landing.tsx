@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { useTranslation } from "react-i18next";
 import heroImage from "@assets/investor-hero.png";
 import dashboardImage from "@assets/app-dashboard.png";
 import mobileImage from "@assets/app-consumer-portal.png";
@@ -451,6 +452,7 @@ export default function InvestorLandingPage() {
   const [scrolled, setScrolled] = useState(false);
   const [activeModuleCategory, setActiveModuleCategory] = useState(0);
   const [lightboxImg, setLightboxImg] = useState<{ src: string; title: string } | null>(null);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (!lightboxImg) return;
@@ -523,7 +525,7 @@ export default function InvestorLandingPage() {
               onClick={() => navigate("/login")}
               data-testid="nav-login"
             >
-              Log In
+              {t('landing.logIn')}
             </Button>
             <Button
               size="sm"
@@ -531,7 +533,7 @@ export default function InvestorLandingPage() {
               onClick={() => navigate("/start-trial")}
               data-testid="nav-start-trial"
             >
-              Start Free Trial
+              {t('landing.startFreeTrial')}
             </Button>
           </div>
         </div>
@@ -561,37 +563,31 @@ export default function InvestorLandingPage() {
         <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 text-center">
           <Badge variant="secondary" className="mb-6 text-xs px-3 py-1 font-medium" data-testid="badge-version">
             <Star className="w-3 h-3 mr-1" />
-            CDH v2.1 — Trusted by Financial Institutions Across Africa
+            {t('landing.versionBadge')}
           </Badge>
 
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1] mb-6">
-            <span className="block">Modernize Your</span>
+            <span className="block">{t('landing.heroTitle1')}</span>
             <span
               className="block bg-clip-text text-transparent"
               style={{ backgroundImage: "linear-gradient(135deg, hsl(175 55% 32%), hsl(175 55% 22%), hsl(43 80% 50%))" }}
             >
-              Credit Infrastructure
+              {t('landing.heroTitle2')}
             </span>
           </h1>
 
-          <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto mb-4 leading-relaxed">
-            The only SRS-compliant credit registry platform covering
-            all <strong className="text-foreground">54 African countries</strong>. Manage credit risk,
-            ensure regulatory compliance, and expand financial inclusion — all from
-            one unified platform.
-          </p>
+          <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto mb-4 leading-relaxed"
+            dangerouslySetInnerHTML={{ __html: t('landing.heroDesc') }}
+          />
 
-          <p className="text-sm text-muted-foreground/80 max-w-xl mx-auto mb-10">
-            Purpose-built for central banks, commercial banks, MFIs, and fintechs.
-            Designed in <strong className="text-foreground/80">Accra, Ghana</strong> by{" "}
-            <strong className="text-foreground/80">Carlson Capital &amp; Systems In Motion Limited</strong> — 
-            for Africa, by people who live and work here.
-          </p>
+          <p className="text-sm text-muted-foreground/80 max-w-xl mx-auto mb-10"
+            dangerouslySetInnerHTML={{ __html: t('landing.heroSubDesc') }}
+          />
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16">
             <Button size="lg" className="text-sm px-8 gap-2 shadow-lg" onClick={() => navigate("/start-trial")} data-testid="cta-try-trial">
               <ArrowRight className="w-4 h-4" />
-              Start a Free Trial
+              {t('landing.startTrial')}
             </Button>
             <Button
               variant="outline"
@@ -600,7 +596,7 @@ export default function InvestorLandingPage() {
               onClick={() => navigate("/pricing")}
               data-testid="cta-explore"
             >
-              View Plans & Pricing
+              {t('landing.viewPlans')}
               <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
@@ -629,7 +625,7 @@ export default function InvestorLandingPage() {
 
       <section className="py-10 sm:py-14 border-b border-border/30 bg-muted/30">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <p className="text-center text-xs text-muted-foreground mb-5 font-medium uppercase tracking-wider">Compliant with African Regulatory Frameworks</p>
+          <p className="text-center text-xs text-muted-foreground mb-5 font-medium uppercase tracking-wider">{t('landing.compliantWith')}</p>
           <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
             {[
               { code: "POPIA", country: "South Africa" },
@@ -650,11 +646,11 @@ export default function InvestorLandingPage() {
           </div>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
             {[
-              "M-Pesa & Mobile Money payments",
-              "PAPSS cross-border settlements",
-              "42+ African currencies",
-              "5 AU languages",
-              "Offline batch processing",
+              t('landing.mobileMoney'),
+              t('landing.papss'),
+              t('landing.currencies42'),
+              t('landing.auLanguages'),
+              t('landing.offlineBatch'),
             ].map((item) => (
               <div key={item} className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-3 h-3 text-green-500" />
@@ -671,22 +667,20 @@ export default function InvestorLandingPage() {
             <div>
               <Badge variant="outline" className="mb-4 text-xs">
                 <Sparkles className="w-3 h-3 mr-1" />
-                Platform Preview
+                {t('landing.platformPreview')}
               </Badge>
               <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-4">
-                Your Credit Portfolio, One Dashboard
+                {t('landing.dashboardTitle')}
               </h2>
               <p className="text-muted-foreground text-sm sm:text-base leading-relaxed mb-6">
-                See total borrowers, outstanding balances, delinquency rates, and NPL ratios
-                in real time. Drill into any metric. Switch currencies. Filter by institution.
-                This is what your team sees every day.
+                {t('landing.dashboardDesc')}
               </p>
               <div className="space-y-3 mb-6">
                 {[
-                  "Live KPIs: borrowers, accounts, outstanding exposure, delinquencies",
-                  "Multi-currency tracking with GHS, NGN, KES, ZAR, and 40+ African currencies",
-                  "Portfolio growth trends and account status breakdown charts",
-                  "One-click export to CSV and Excel for regulatory reporting",
+                  t('landing.dashboardF1'),
+                  t('landing.dashboardF2'),
+                  t('landing.dashboardF3'),
+                  t('landing.dashboardF4'),
                 ].map((item, i) => (
                   <div key={i} className="flex items-start gap-2.5">
                     <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
@@ -696,7 +690,7 @@ export default function InvestorLandingPage() {
               </div>
               <Button onClick={() => navigate("/start-trial")} className="gap-2" data-testid="cta-preview-trial">
                 <ArrowRight className="w-4 h-4" />
-                Start Free Trial
+                {t('landing.startFreeTrial')}
               </Button>
             </div>
             <div className="relative">
@@ -721,15 +715,13 @@ export default function InvestorLandingPage() {
           <div className="text-center mb-14">
             <Badge className="mb-4 text-xs bg-gradient-to-r from-primary/20 to-yellow-500/20 text-primary border-primary/30">
               <Brain className="w-3 h-3 mr-1" />
-              AI-Powered — What Sets CDH Apart
+              {t('landing.aiBadge')}
             </Badge>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-4">
-              The Only African Credit Registry With Built-In AI
+              {t('landing.aiTitle')}
             </h2>
             <p className="text-muted-foreground max-w-3xl mx-auto text-sm sm:text-base leading-relaxed">
-              Traditional credit bureaus give you data. CDH gives you intelligence. Our AI engine —
-              powered by GPT-4o — analyzes your live portfolio and turns raw credit data into
-              predictions, warnings, and actions your team can act on today.
+              {t('landing.aiDesc')}
             </p>
           </div>
 
@@ -855,13 +847,12 @@ export default function InvestorLandingPage() {
       <section id="problem" className="py-20 sm:py-28 bg-background">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <Badge variant="outline" className="mb-4 text-xs">The Data Speaks</Badge>
+            <Badge variant="outline" className="mb-4 text-xs">{t('landing.problemBadge')}</Badge>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-4">
-              Africa's Credit Infrastructure Crisis — In Numbers
+              {t('landing.problemTitle')}
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base leading-relaxed">
-              World Bank, IMF, and IFC data reveals the scale of the problem. These aren't projections —
-              they're the reality facing every financial institution operating in Africa today.
+              {t('landing.problemDesc')}
             </p>
           </div>
 
@@ -895,13 +886,12 @@ export default function InvestorLandingPage() {
       <section id="platform" className="py-20 sm:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <Badge variant="outline" className="mb-4 text-xs">Platform Deep Dive</Badge>
+            <Badge variant="outline" className="mb-4 text-xs">{t('landing.solutionBadge')}</Badge>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-4">
-              16 Integrated Modules, One Platform
+              {t('landing.solutionTitle')}
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base">
-              Every capability a pan-African credit bureau requires — from borrower registration
-              to regulatory compliance — built into a cohesive, production-ready system.
+              {t('landing.solutionDesc')}
             </p>
           </div>
 
@@ -1001,13 +991,12 @@ export default function InvestorLandingPage() {
       <section id="use-cases" className="py-20 sm:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <Badge variant="outline" className="mb-4 text-xs">Built For Your Institution</Badge>
+            <Badge variant="outline" className="mb-4 text-xs">{t('landing.useCaseBadge')}</Badge>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-4">
-              How Your Institution Benefits
+              {t('landing.useCaseTitle')}
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base">
-              Whether you're a central bank, commercial bank, MFI, or fintech lender,
-              CDH delivers the specific capabilities your team needs.
+              {t('landing.useCaseDesc')}
             </p>
           </div>
 
@@ -1045,13 +1034,12 @@ export default function InvestorLandingPage() {
       <section id="advantage" className="py-20 sm:py-28">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <Badge variant="outline" className="mb-4 text-xs">Why Choose CDH</Badge>
+            <Badge variant="outline" className="mb-4 text-xs">{t('landing.advantageBadge')}</Badge>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-4">
-              What Sets CDH Apart
+              {t('landing.advantageTitle')}
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base">
-              No other platform gives your institution this combination of coverage,
-              compliance, and capability — purpose-built for Africa.
+              {t('landing.advantageDesc')}
             </p>
           </div>
 
@@ -1079,22 +1067,21 @@ export default function InvestorLandingPage() {
       <section className="py-20 sm:py-24 bg-muted/30">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <Badge variant="outline" className="mb-4 text-xs">Production-Ready Platform</Badge>
+            <Badge variant="outline" className="mb-4 text-xs">{t('landing.prodBadge')}</Badge>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-4">
-              Deploy Today, Not Next Year
+              {t('landing.prodTitle')}
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-sm">
-              CDH isn't a roadmap — it's a production system with real data you can explore right now.
-              Every module works. Every feature is live.
+              {t('landing.prodDesc')}
             </p>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-4xl mx-auto">
             {[
-              { label: "Borrower Profiles", value: "102,000+", detail: "Individual & corporate entities across all 54 countries" },
-              { label: "Credit Accounts", value: "172,000+", detail: "Full lifecycle data with payment histories and collateral" },
-              { label: "Audit Trail Entries", value: "Active", detail: "SHA-256 hash-chain verified, tamper-evident logging" },
-              { label: "Exchange Rates", value: "42+ Pairs", detail: "Auto-refreshed every 6 hours from live market data" },
+              { label: t('landing.prodBorrowerProfiles'), value: t('landing.prodBorrowerValue'), detail: t('landing.prodBorrowerDetail') },
+              { label: t('landing.prodCreditAccounts'), value: t('landing.prodCreditValue'), detail: t('landing.prodCreditDetail') },
+              { label: t('landing.prodAuditTrail'), value: t('landing.prodAuditValue'), detail: t('landing.prodAuditDetail') },
+              { label: t('landing.prodExchangeRates'), value: t('landing.prodExchangeValue'), detail: t('landing.prodExchangeDetail') },
             ].map((item) => (
               <div key={item.label} className="rounded-xl border border-border/50 bg-card p-4 text-center" data-testid={`live-data-${item.label.toLowerCase().replace(/\s/g, "-")}`}>
                 <div className="text-lg sm:text-xl font-bold text-primary mb-1">{item.value}</div>
@@ -1106,13 +1093,13 @@ export default function InvestorLandingPage() {
 
           <div className="mt-8 text-center">
             <p className="text-xs text-muted-foreground mb-4">
-              Start your 14-day free trial and explore the full platform with sample data:
+              {t('landing.prodTrialPrompt')}
             </p>
             <div className="flex flex-wrap justify-center gap-3 mb-6">
               {[
-                { role: "Admin", desc: "Full system access", icon: Settings },
-                { role: "Regulator", desc: "Supervisory oversight", icon: Gavel },
-                { role: "Bank Officer", desc: "Credit operations", icon: Building2 },
+                { role: t('landing.prodRoleAdmin'), desc: t('landing.prodRoleAdminDesc'), icon: Settings },
+                { role: t('landing.prodRoleRegulator'), desc: t('landing.prodRoleRegulatorDesc'), icon: Gavel },
+                { role: t('landing.prodRoleBankOfficer'), desc: t('landing.prodRoleBankOfficerDesc'), icon: Building2 },
               ].map((r) => (
                 <div key={r.role} className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-border/50 bg-card text-xs">
                   <r.icon className="w-3.5 h-3.5 text-primary" />
@@ -1123,7 +1110,7 @@ export default function InvestorLandingPage() {
             </div>
             <Button onClick={() => navigate("/start-trial")} className="gap-2" data-testid="cta-live-data-trial">
               <ArrowRight className="w-4 h-4" />
-              Start Free Trial
+              {t('landing.startFreeTrial')}
             </Button>
           </div>
         </div>
@@ -1134,22 +1121,22 @@ export default function InvestorLandingPage() {
           <div className="text-center mb-14">
             <Badge variant="outline" className="mb-4 text-xs">
               <MonitorSmartphone className="w-3 h-3 mr-1" />
-              See the Platform
+              {t('landing.screenshotsBadge')}
             </Badge>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-4">
-              Every Screen, Built for Africa
+              {t('landing.screenshotsTitle')}
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base leading-relaxed">
-              These are real screenshots from the platform. What you see is what your team gets on day one.
+              {t('landing.screenshotsDesc')}
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[
-              { img: borrowersImage, title: "Borrower Management", desc: "Individual and corporate borrower records with tags, country, and sector classification. Search by name, ID, phone, or email." },
-              { img: creditAccountsImage, title: "Credit Accounts", desc: "Full loan portfolio view with institution, balance, interest rate, status tracking, and days in arrears across multiple currencies." },
-              { img: reportsImage, title: "Credit Reports & Analytics", desc: "Generate D&B-style credit reports per borrower. Portfolio stats including total exposure, NPL ratio, and institution breakdown." },
-              { img: auditImage, title: "Audit Trail & Compliance", desc: "Tamper-proof audit log with SHA-256 hash chain. Filter by action type, entity, date range. Export to CSV or Excel." },
+              { img: borrowersImage, title: t('landing.screenshotBorrowers'), desc: t('landing.screenshotBorrowersDesc') },
+              { img: creditAccountsImage, title: t('landing.screenshotCredits'), desc: t('landing.screenshotCreditsDesc') },
+              { img: reportsImage, title: t('landing.screenshotReports'), desc: t('landing.screenshotReportsDesc') },
+              { img: auditImage, title: t('landing.screenshotAudit'), desc: t('landing.screenshotAuditDesc') },
             ].map((screen, i) => (
               <div key={i} className="group rounded-2xl overflow-hidden border border-border/50 bg-card hover:border-primary/30 transition-all hover:shadow-lg cursor-pointer" data-testid={`screenshot-${i}`} onClick={() => setLightboxImg({ src: screen.img, title: screen.title })}>
                 <div className="overflow-hidden relative">
@@ -1176,8 +1163,8 @@ export default function InvestorLandingPage() {
           <div className="mt-10 rounded-2xl overflow-hidden border border-border/50 shadow-2xl" data-testid="screenshot-consumer">
             <div className="grid grid-cols-1 lg:grid-cols-2 items-center">
               <div className="p-6 sm:p-10">
-                <Badge variant="outline" className="mb-3 text-xs">Consumer Self-Service</Badge>
-                <h3 className="text-xl sm:text-2xl font-bold mb-3">Credit Check Portal</h3>
+                <Badge variant="outline" className="mb-3 text-xs">{t('landing.consumerBadge')}</Badge>
+                <h3 className="text-xl sm:text-2xl font-bold mb-3">{t('landing.consumerTitle')}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed mb-4">
                   Give borrowers a public-facing portal to check their own credit score.
                   Identity verification via National ID and date of birth. No login required.
@@ -1209,13 +1196,12 @@ export default function InvestorLandingPage() {
       <section id="tech" className="py-20 sm:py-28">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <Badge variant="outline" className="mb-4 text-xs">Enterprise-Grade Security</Badge>
+            <Badge variant="outline" className="mb-4 text-xs">{t('landing.securityBadge')}</Badge>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-4">
-              Built for Institutional Trust
+              {t('landing.securityTitle')}
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base">
-              Your credit data requires the highest levels of protection. CDH implements 
-              defense-in-depth security that satisfies central bank audit requirements.
+              {t('landing.securityDesc')}
             </p>
           </div>
 
@@ -1242,7 +1228,7 @@ export default function InvestorLandingPage() {
           <div className="text-center">
             <Button variant="outline" size="sm" className="text-xs gap-2" onClick={() => navigate("/security")} data-testid="cta-security-deep">
               <Shield className="w-3.5 h-3.5" />
-              View Full Security & Compliance Details
+              {t('landing.securityViewFull')}
             </Button>
           </div>
         </div>
@@ -1251,20 +1237,20 @@ export default function InvestorLandingPage() {
       <section className="py-20 sm:py-28 bg-muted/30">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <Badge variant="outline" className="mb-4 text-xs">Getting Started</Badge>
+            <Badge variant="outline" className="mb-4 text-xs">{t('landing.onboardBadge')}</Badge>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-4">
-              Simple Onboarding, Immediate Value
+              {t('landing.onboardTitle')}
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base">
-              Go from sign-up to production in days, not months. CDH is designed for rapid deployment.
+              {t('landing.onboardDesc')}
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             {[
-              { step: "1", title: "Start Free Trial", desc: "Register your organization and get full admin access for 14 days. No credit card required. Explore every feature with real data.", cta: "Start Trial", action: () => navigate("/start-trial"), testId: "step-trial" },
-              { step: "2", title: "Choose Your Plan", desc: "Standard for MFIs and fintechs. Professional for regional banks. Enterprise for central banks and tier-1 institutions.", cta: "View Pricing", action: () => navigate("/pricing"), testId: "step-pricing" },
-              { step: "3", title: "Go Live", desc: "Connect via API or batch upload. Configure your regulatory profile. Start managing credit data across your jurisdictions.", cta: "Contact Sales", action: () => window.location.href = "mailto:uffe.carlson@gmail.com", testId: "step-deploy" },
+              { step: "1", title: t('landing.onboardStep1Title'), desc: t('landing.onboardStep1Desc'), cta: t('landing.onboardStep1Cta'), action: () => navigate("/start-trial"), testId: "step-trial" },
+              { step: "2", title: t('landing.onboardStep2Title'), desc: t('landing.onboardStep2Desc'), cta: t('landing.onboardStep2Cta'), action: () => navigate("/pricing"), testId: "step-pricing" },
+              { step: "3", title: t('landing.onboardStep3Title'), desc: t('landing.onboardStep3Desc'), cta: t('landing.onboardStep3Cta'), action: () => window.location.href = "mailto:uffe.carlson@gmail.com", testId: "step-deploy" },
             ].map((item) => (
               <Card key={item.step} className="border border-border/60" data-testid={item.testId}>
                 <CardContent className="p-5 sm:p-6 text-center">
@@ -1289,13 +1275,12 @@ export default function InvestorLandingPage() {
       <section id="market-proof" className="py-20 sm:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <Badge variant="outline" className="mb-4">World Bank &amp; IMF Data</Badge>
+            <Badge variant="outline" className="mb-4">{t('landing.marketBadge')}</Badge>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-4">
-              The Numbers Don't Lie
+              {t('landing.marketTitle')}
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base">
-              Data from the World Bank, IMF, IFC, and GSMA shows a continent ready for modern credit infrastructure.
-              CDH is the only platform built to serve all 54 African markets from day one.
+              {t('landing.marketDesc')}
             </p>
           </div>
 
@@ -1460,19 +1445,15 @@ export default function InvestorLandingPage() {
         <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-primary/20 bg-primary/5 mb-6">
             <Brain className="w-4 h-4 text-primary" />
-            <span className="text-xs font-medium">Instant Access — No Sign-Up Required</span>
+            <span className="text-xs font-medium">{t('landing.ctaBadge')}</span>
           </div>
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-4">
-            Ready to Modernize Your Credit Operations?
+            {t('landing.ctaTitle')}
           </h2>
           <p className="text-muted-foreground mb-3 text-sm sm:text-base max-w-xl mx-auto">
-            Explore the full platform with live data. See dashboards, borrower management, 
-            credit scoring, cross-border matching, and regulatory compliance in action.
+            {t('landing.ctaDesc')}
           </p>
-          <p className="text-xs text-muted-foreground/70 mb-8 max-w-md mx-auto">
-            Register in under 2 minutes. Full admin access for 14 days. No credit card required.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">
             <Button
               size="lg"
               className="text-sm px-10 gap-2 shadow-lg"
@@ -1480,7 +1461,7 @@ export default function InvestorLandingPage() {
               data-testid="cta-bottom-trial"
             >
               <ArrowRight className="w-4 h-4" />
-              Start a Free Trial
+              {t('landing.ctaStartTrial')}
             </Button>
             <Button
               variant="outline"
@@ -1490,7 +1471,7 @@ export default function InvestorLandingPage() {
               data-testid="cta-bottom-pricing"
             >
               <CreditCard className="w-4 h-4" />
-              View Plans & Pricing
+              {t('landing.viewPlans')}
             </Button>
             <Button
               variant="outline"
@@ -1500,7 +1481,7 @@ export default function InvestorLandingPage() {
               data-testid="cta-bottom-security"
             >
               <Shield className="w-4 h-4" />
-              Security & Compliance
+              {t('landing.footerSecurity')}
             </Button>
           </div>
         </div>
