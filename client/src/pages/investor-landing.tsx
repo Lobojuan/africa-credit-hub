@@ -735,34 +735,34 @@ export default function InvestorLandingPage() {
               />
             </div>
             <div>
-              <h3 className="text-xl sm:text-2xl font-bold mb-6">AI Portfolio Intelligence</h3>
+              <h3 className="text-xl sm:text-2xl font-bold mb-6">{t('landing.aiPortfolioTitle')}</h3>
               <div className="space-y-5">
                 {[
                   {
                     icon: AlertTriangle,
-                    title: "Default Predictions",
-                    desc: "AI analyzes payment history, account health, and cross-border patterns to flag which borrowers are likely to default — before they miss a payment.",
+                    title: t('landing.aiDefaultTitle'),
+                    desc: t('landing.aiDefaultDesc'),
                     color: "text-red-500",
                     bg: "bg-red-500/10",
                   },
                   {
                     icon: Eye,
-                    title: "Early Warning System",
-                    desc: "Automatic severity scoring (Warning, Alert, Critical) on at-risk accounts. Your team gets notified with time to intervene, not after the damage is done.",
+                    title: t('landing.aiEarlyTitle'),
+                    desc: t('landing.aiEarlyDesc'),
                     color: "text-yellow-500",
                     bg: "bg-yellow-500/10",
                   },
                   {
                     icon: TrendingUp,
-                    title: "Trend Forecasting",
-                    desc: "3-to-6 month projections on delinquency and default trends across your entire portfolio. Plan provisions, not react to surprises.",
+                    title: t('landing.aiTrendTitle'),
+                    desc: t('landing.aiTrendDesc'),
                     color: "text-blue-500",
                     bg: "bg-blue-500/10",
                   },
                   {
                     icon: Target,
-                    title: "Collection Priorities",
-                    desc: "AI ranks overdue accounts by recovery probability and recommends specific actions — call, restructure, or escalate — so your team focuses where it matters.",
+                    title: t('landing.aiCollectionTitle'),
+                    desc: t('landing.aiCollectionDesc'),
                     color: "text-green-500",
                     bg: "bg-green-500/10",
                   },
@@ -785,27 +785,27 @@ export default function InvestorLandingPage() {
             {[
               {
                 icon: Brain,
-                title: "ML Credit Scoring",
-                desc: "Gradient boosting model scores borrowers 300-850 with confidence intervals. Goes beyond payment history to factor velocity, utilization trends, and cross-border activity.",
-                badge: "GBM v2.1",
+                title: t('landing.aiMlTitle'),
+                desc: t('landing.aiMlDesc'),
+                badge: t('landing.aiMlBadge'),
               },
               {
                 icon: ShieldCheck,
-                title: "Fraud Detection",
-                desc: "Real-time velocity checks catch bust-out patterns. Identity matching flags duplicate National IDs and synthetic identities. PEP screening built in.",
-                badge: "Real-Time",
+                title: t('landing.aiFraudTitle'),
+                desc: t('landing.aiFraudDesc'),
+                badge: t('landing.aiFraudBadge'),
               },
               {
                 icon: Activity,
-                title: "Alternative Data",
-                desc: "Score thin-file borrowers using mobile money transactions, utility payments, and telco data. Critical for the 57% of Africans without traditional credit history.",
-                badge: "Mobile Money",
+                title: t('landing.aiAltTitle'),
+                desc: t('landing.aiAltDesc'),
+                badge: t('landing.aiAltBadge'),
               },
               {
                 icon: Headphones,
-                title: "AI Dispute Assistant",
-                desc: "Intelligent chatbot guides borrowers and officers through dispute resolution. NLP understands intent, generates summaries, and recommends resolutions automatically.",
-                badge: "GPT-4o",
+                title: t('landing.aiDisputeTitle'),
+                desc: t('landing.aiDisputeDesc'),
+                badge: t('landing.aiDisputeBadge'),
               },
             ].map((ai) => (
               <Card key={ai.title} className="border border-border/60 hover:border-primary/30 transition-colors" data-testid={`ai-${ai.title.toLowerCase().replace(/\s/g, "-")}`}>
@@ -826,18 +826,14 @@ export default function InvestorLandingPage() {
           <div className="mt-12 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/5 via-transparent to-yellow-500/5 p-6 sm:p-8">
             <div className="flex flex-col sm:flex-row items-center gap-6">
               <div className="flex-1">
-                <h3 className="text-lg sm:text-xl font-bold mb-2">Why AI Changes Everything for African Lending</h3>
+                <h3 className="text-lg sm:text-xl font-bold mb-2">{t('landing.aiWhyTitle')}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Africa has 1.4 billion people but only 43% have any formal credit history.
-                  Traditional scoring models fail here. CDH's AI fills the gap — using mobile money data,
-                  payment velocity, and cross-border patterns to assess creditworthiness where conventional
-                  bureaus see nothing. The result: more approvals, fewer defaults, and financial inclusion
-                  at continental scale.
+                  {t('landing.aiWhyDesc')}
                 </p>
               </div>
               <Button onClick={() => navigate("/ai-demo")} size="lg" className="gap-2 shrink-0" data-testid="cta-ai-trial">
                 <Zap className="w-4 h-4" />
-                Try AI Features Free
+                {t('landing.aiTryFeatures')}
               </Button>
             </div>
           </div>
