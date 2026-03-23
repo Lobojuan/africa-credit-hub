@@ -165,7 +165,7 @@ function CollapsibleSection({
   t: (key: string) => string;
   icon?: LucideIcon;
 }) {
-  const hasActive = items.some(item => location === item.url);
+  const hasActive = items.some(item => location === item.url || (item.url === "/command-center" && location.startsWith("/command-center")));
   const [open, setOpen] = useState(defaultOpen || hasActive);
 
   if (items.length === 0) return null;
@@ -193,7 +193,7 @@ function CollapsibleSection({
             <SidebarMenu>
               {items.map((item) => (
                 <SidebarMenuItem key={item.titleKey}>
-                  <SidebarMenuButton asChild data-active={location === item.url}>
+                  <SidebarMenuButton asChild data-active={location === item.url || (item.url === "/command-center" && location.startsWith("/command-center"))}>
                     <Link href={item.url} data-testid={item.testId}>
                       <item.icon className="w-4 h-4" />
                       <span>{t(item.titleKey)}</span>

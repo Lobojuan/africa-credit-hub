@@ -295,7 +295,7 @@ function AuthenticatedApp() {
         <div className="flex flex-col flex-1 min-w-0">
           <header className="flex flex-wrap items-center gap-3 px-4 py-2.5 border-b shrink-0 ltr-header">
             <SidebarTrigger data-testid="button-sidebar-toggle" className="shrink-0" />
-            {user.role === "super_admin" && (
+            {user.role === "super_admin" && !currentPath.startsWith("/command-center") && (
               <Button
                 variant="outline"
                 className="h-10 gap-2 text-base font-semibold border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 px-4"

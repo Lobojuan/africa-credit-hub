@@ -187,58 +187,34 @@ export default function CountrySelectionPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col">
-      <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-border">
-        <div className="flex items-center gap-3">
-          <div
-            className="flex items-center justify-center w-9 h-9 rounded-xl"
-            style={{
-              background: "linear-gradient(135deg, hsl(42 85% 55%) 0%, hsl(32 78% 46%) 100%)",
-              boxShadow: "0 4px 16px -2px hsl(42 85% 53% / 0.4)"
-            }}
-          >
-            <Shield className="w-4.5 h-4.5 text-white" />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-white">Platform Command Center</p>
-            <p className="text-[10px] text-muted-foreground">Carlson Capital & Systems In Motion Limited</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-            <Activity className="w-3 h-3 text-emerald-400" />
-            <span className="text-[10px] font-medium text-emerald-400" data-testid="text-system-status">
-              {platform?.systemStatus === "operational" ? "System Online" : platform?.systemStatus || "System Online"}
-            </span>
-          </div>
-          <ThemeToggle />
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-muted-foreground hover:text-white h-8 gap-1.5 ml-auto"
-          onClick={() => logout()}
-          data-testid="button-logout-country-selection"
-        >
-          <LogOut className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline text-xs">Sign Out</span>
-        </Button>
-      </header>
-
       <div className="flex-1 overflow-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
           <div className="mb-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
-              <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 mb-2">
-                  <Shield className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="text-xs font-medium text-amber-400">Platform Administrator</span>
+              <div className="flex items-center gap-3">
+                <div
+                  className="flex items-center justify-center w-10 h-10 rounded-xl shrink-0"
+                  style={{
+                    background: "linear-gradient(135deg, hsl(42 85% 55%) 0%, hsl(32 78% 46%) 100%)",
+                    boxShadow: "0 4px 16px -2px hsl(42 85% 53% / 0.4)"
+                  }}
+                >
+                  <Shield className="w-5 h-5 text-white" />
                 </div>
-                <h1 className="text-xl sm:text-2xl font-bold text-white" data-testid="text-country-selection-title">
-                  Welcome back, {user?.fullName}
-                </h1>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Review your platform posture, then select a jurisdiction to manage.
-                </p>
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-bold text-white" data-testid="text-country-selection-title">
+                    Platform Command Center
+                  </h1>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Select a jurisdiction to manage or review platform-wide posture.
+                  </p>
+                </div>
+                <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 ml-3">
+                  <Activity className="w-3 h-3 text-emerald-400" />
+                  <span className="text-[10px] font-medium text-emerald-400" data-testid="text-system-status">
+                    {platform?.systemStatus === "operational" ? "System Online" : platform?.systemStatus || "System Online"}
+                  </span>
+                </div>
               </div>
               <button
                 onClick={() => handleSelect(null)}
