@@ -179,12 +179,53 @@ app.use(
   })
 );
 
-const IDLE_TIMEOUT_MS = 4 * 60 * 60 * 1000;
+const IDLE_TIMEOUTS: Record<string, number> = {
+  super_admin: 15 * 60 * 1000,
+  admin: 15 * 60 * 1000,
+  regulator: 20 * 60 * 1000,
+  lender: 30 * 60 * 1000,
+  viewer: 30 * 60 * 1000,
+  default: 30 * 60 * 1000,
+};
+
+function getIdleTimeout(role?: string): number {
+  return IDLE_TIMEOUTS[role || "default"] || IDLE_TIMEOUTS.default;
+}
+
+app.get("/api/auth/session-info", (req, res) => {
+  if (!req.session?.userId) {
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+  const role = req.session.userRole || "default";
+  const timeoutMs = getIdleTimeout(role);
+  const lastActivity = req.session.lastActivity || Date.now();
+  const remaining = Math.max(0, timeoutMs - (Date.now() - lastActivity));
+  res.json({ timeoutMs, remaining, role, warningMs: 2 * 60 * 1000 });
+});
+
+app.post("/api/auth/keep-alive", (req, res) => {
+  if (!req.session?.userId) {
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+  req.session.lastActivity = Date.now();
+  const role = req.session.userRole || "default";
+  const timeoutMs = getIdleTimeout(role);
+  res.json({ extended: true, timeoutMs, expiresAt: Date.now() + timeoutMs });
+});
+
 app.use((req, res, next) => {
   if (req.session?.userId && req.session.lastActivity) {
     const idle = Date.now() - req.session.lastActivity;
-    if (idle > IDLE_TIMEOUT_MS) {
+    const timeout = getIdleTimeout(req.session.userRole);
+    if (idle > timeout) {
+      const userId = req.session.userId;
+      const userRole = req.session.userRole;
       req.session.destroy(() => {});
+      pool.query(
+        `INSERT INTO audit_logs (id, user_id, action, entity, details, ip_address, created_at)
+         VALUES (gen_random_uuid(), $1, 'SESSION_TIMEOUT', 'session', $2, $3, NOW())`,
+        [userId, `Session expired after ${Math.round(idle / 60000)}min inactivity (role: ${userRole})`, req.ip]
+      ).catch(() => {});
       return res.status(440).json({ message: "Session expired due to inactivity" });
     }
   }

@@ -25,6 +25,7 @@ import { OrgSwitcher } from "@/components/org-switcher";
 import { CountryThemeProvider, useCountryTheme } from "@/components/country-theme-provider";
 import { CountrySelector } from "@/components/country-selector";
 import { QuickAccessBar } from "@/components/quick-access-bar";
+import { SessionTimeoutDialog } from "@/components/session-timeout-dialog";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -354,6 +355,7 @@ function AuthenticatedApp() {
         </button>
       )}
       <DisputeChatbot open={chatbotOpen} onOpenChange={setChatbotOpen} />
+      <SessionTimeoutDialog />
     </SidebarProvider>
   );
 }
