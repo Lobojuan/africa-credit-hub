@@ -518,6 +518,8 @@ process.stderr.write = function (...args: any[]) {
     console.error("Ghana cleanup error (non-fatal):", e);
   }
 
+  const isProduction = process.env.PRODUCTION_MODE === "true";
+
   const { seedDatabase } = await import("./seed");
   try {
     await seedDatabase();
@@ -525,18 +527,22 @@ process.stderr.write = function (...args: any[]) {
     console.error("Seed error (may be expected on first run):", e);
   }
 
-  try {
-    const { seedTestData } = await import("./seed-test-data");
-    await seedTestData();
-  } catch (e) {
-    console.error("Test data seed error:", e);
-  }
+  if (!isProduction) {
+    try {
+      const { seedTestData } = await import("./seed-test-data");
+      await seedTestData();
+    } catch (e) {
+      console.error("Test data seed error:", e);
+    }
 
-  try {
-    const { seedSierraLeoneData } = await import("./seed-sierra-leone");
-    await seedSierraLeoneData();
-  } catch (e) {
-    console.error("Sierra Leone seed error (non-fatal):", e);
+    try {
+      const { seedSierraLeoneData } = await import("./seed-sierra-leone");
+      await seedSierraLeoneData();
+    } catch (e) {
+      console.error("Sierra Leone seed error (non-fatal):", e);
+    }
+  } else {
+    console.log("[Production] Skipping demo/test data seeding");
   }
 
   try {
@@ -619,5 +625,20 @@ process.stderr.write = function (...args: any[]) {
 
     const { startAnchorScheduler } = await import("./blockchain-anchor");
     startAnchorScheduler(6);
+
+    const { isEmailConfigured } = await import("./email");
+    const { isSmsConfigured } = await import("./sms");
+    const isProduction = process.env.PRODUCTION_MODE === "true";
+    console.log("\n╔══════════════════════════════════════════════════╗");
+    console.log("║     Pan-African Credit Registry — Status         ║");
+    console.log("╠══════════════════════════════════════════════════╣");
+    console.log(`║  Mode:          ${isProduction ? "PRODUCTION" : "DEVELOPMENT"}${isProduction ? "              " : "             "}║`);
+    console.log(`║  Email:         ${isEmailConfigured() ? "✓ Configured" : "✗ Not configured"}${isEmailConfigured() ? "              " : "          "}║`);
+    console.log(`║  SMS:           ${isSmsConfigured() ? "✓ Configured" : "✗ Not configured"}${isSmsConfigured() ? "              " : "          "}║`);
+    console.log(`║  Stripe:        ${process.env.STRIPE_SECRET_KEY ? "✓ Configured" : "✗ Not configured"}${process.env.STRIPE_SECRET_KEY ? "              " : "          "}║`);
+    console.log(`║  Database:      ${process.env.DATABASE_URL ? "✓ Connected" : "✗ Not connected"}${process.env.DATABASE_URL ? "               " : "           "}║`);
+    console.log(`║  Google OAuth:  ${process.env.GOOGLE_CLIENT_ID ? "✓ Configured" : "✗ Not configured"}${process.env.GOOGLE_CLIENT_ID ? "              " : "          "}║`);
+    console.log(`║  Demo Data:     ${isProduction ? "Skipped" : "Seeded"}${isProduction ? "                   " : "                    "}║`);
+    console.log("╚══════════════════════════════════════════════════╝\n");
   });
 })();
