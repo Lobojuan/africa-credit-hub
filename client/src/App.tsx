@@ -1,5 +1,5 @@
 import "./lib/i18n";
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState, Component, type ReactNode, type ErrorInfo } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import { queryClient, apiRequest } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -103,8 +103,27 @@ function LazyFallback() {
   );
 }
 
+class LazyErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(_error: Error, _info: ErrorInfo) {}
+  render() {
+    if (this.state.hasError) {
+      setTimeout(() => this.setState({ hasError: false }), 100);
+      return <LazyFallback />;
+    }
+    return this.props.children;
+  }
+}
+
 function Router() {
   return (
+    <LazyErrorBoundary>
     <Suspense fallback={<LazyFallback />}>
       <Switch>
         <Route path="/dashboard" component={Dashboard} />
@@ -168,6 +187,7 @@ function Router() {
         <Route component={NotFound} />
       </Switch>
     </Suspense>
+    </LazyErrorBoundary>
   );
 }
 
