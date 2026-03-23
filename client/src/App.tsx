@@ -277,11 +277,6 @@ function AuthenticatedApp() {
   }
 
   const viewingCountry = (user as any)?.viewingCountry;
-  const isCommandCenterPath = currentPath.startsWith("/command-center");
-
-  if (user.role === "super_admin" && !viewingCountry && !isCommandCenterPath) {
-    return doRedirect("/command-center");
-  }
 
   const style = {
     "--sidebar-width": "16rem",
