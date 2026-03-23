@@ -259,7 +259,8 @@ function AuthenticatedApp() {
   }
 
   const viewingCountry = (user as any)?.viewingCountry;
-  const needsCountrySelection = user.role === "super_admin" && !viewingCountry;
+  const isCommandCenterPath = window.location.pathname.startsWith("/command-center");
+  const needsCountrySelection = user.role === "super_admin" && !viewingCountry && !isCommandCenterPath;
   if (needsCountrySelection) {
     return <CountrySelectionPage />;
   }
