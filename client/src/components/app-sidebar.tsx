@@ -290,7 +290,7 @@ export function AppSidebar() {
             label={t('sidebar.oversight', 'Oversight')}
             items={visibleOversight}
             location={location}
-            defaultOpen={false}
+            defaultOpen={isSuperAdmin}
             t={t}
             icon={Eye}
           />
@@ -312,7 +312,7 @@ export function AppSidebar() {
             label={t('sidebar.administration', 'Administration')}
             items={visibleAdmin}
             location={location}
-            defaultOpen={false}
+            defaultOpen={isSuperAdmin}
             t={t}
             icon={Settings}
           />
