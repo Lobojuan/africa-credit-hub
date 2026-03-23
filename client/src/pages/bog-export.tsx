@@ -71,13 +71,16 @@ export default function BogExportPage() {
       const filename = filenameMatch ? filenameMatch[1] : `${fileType}-export.csv`;
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      try {
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } finally {
+        URL.revokeObjectURL(url);
+      }
       toast({ title: "Export complete", description: `Downloaded ${filename}` });
     } catch (e: any) {
       toast({ title: "Export failed", description: e.message, variant: "destructive" });

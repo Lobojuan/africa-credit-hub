@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -128,7 +128,7 @@ export default function InstitutionsPage() {
           </div>
           <p className="text-sm text-muted-foreground ml-4">{t("institutions.subtitle")}</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setTimeout(() => { resetForm(); }, 200); } }}>
           <DialogTrigger asChild>
             <Button data-testid="button-register-institution">
               <Plus className="w-4 h-4 mr-2" />
@@ -138,6 +138,7 @@ export default function InstitutionsPage() {
           <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{t("institutions.registerNew")}</DialogTitle>
+              <DialogDescription className="sr-only">Dialog form content</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4" data-testid="form-register-institution">
               <div>
@@ -336,6 +337,7 @@ export default function InstitutionsPage() {
               <Building2 className="w-5 h-5" />
               {selectedInstitution?.name}
             </DialogTitle>
+            <DialogDescription className="sr-only">Dialog form content</DialogDescription>
           </DialogHeader>
           {selectedInstitution && (
             <div className="space-y-5 mt-6">

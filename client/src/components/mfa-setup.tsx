@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -85,6 +85,7 @@ export function MfaSetupDialog({ open, onOpenChange, mfaEnabled }: MfaSetupProps
             <Shield className="w-5 h-5" />
             {t("mfa.title")}
           </DialogTitle>
+          <DialogDescription className="sr-only">Dialog form content</DialogDescription>
         </DialogHeader>
 
         {mfaEnabled ? (

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -138,7 +138,7 @@ export default function UserManagementPage() {
           </div>
           <p className="text-sm text-muted-foreground ml-4">{t('users.subtitle')}</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setTimeout(() => { setFormData({ username: "", password: "", fullName: "", email: "", role: "viewer", status: "active", institution: "" }); }, 200); } }}>
           <DialogTrigger asChild>
             <Button data-testid="button-add-user">
               <Plus className="w-4 h-4 mr-2" />
@@ -148,6 +148,7 @@ export default function UserManagementPage() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>{t('users.addNewUser')}</DialogTitle>
+              <DialogDescription className="sr-only">Dialog form content</DialogDescription>
             </DialogHeader>
             <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(formData); }} className="space-y-4" data-testid="form-add-user">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -194,6 +195,7 @@ export default function UserManagementPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('users.editUser')}</DialogTitle>
+            <DialogDescription className="sr-only">Dialog form content</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleEditSubmit} className="space-y-4" data-testid="form-edit-user">
             <div>
@@ -328,6 +330,7 @@ export default function UserManagementPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('users.confirmDelete')}</DialogTitle>
+            <DialogDescription className="sr-only">Dialog form content</DialogDescription>
           </DialogHeader>
           <p className="text-sm text-muted-foreground" data-testid="text-delete-confirm-message">
             {t('users.confirmDeleteMessage', { name: deleteConfirmUser?.fullName })}

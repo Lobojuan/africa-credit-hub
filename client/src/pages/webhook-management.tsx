@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -104,6 +104,7 @@ export default function WebhookManagementPage() {
             <DialogContent className="max-w-lg">
               <DialogHeader>
                 <DialogTitle>Create Webhook Endpoint</DialogTitle>
+                <DialogDescription className="sr-only">Dialog form content</DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div>

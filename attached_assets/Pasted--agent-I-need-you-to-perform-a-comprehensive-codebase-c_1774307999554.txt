@@ -1,0 +1,94 @@
+@agent I need you to perform a comprehensive codebase checkup and apply a series of critical bug fixes, TypeScript corrections, and UX improvements to my React frontend. Please go through the following fixes file-by-file and apply them exactly as instructed.
+
+Fix 1: TypeScript Signature Mismatch in Avatar Utility
+File: client/src/components/sample-id-cards.tsx
+Issue: The getBorrowerAvatarUrl function requires 3 arguments (borrowerId, name, type), but it is currently only receiving 1 argument.
+Action: Find all three instances of const avatarUrl = getBorrowerAvatarUrl(...) (inside GhanaCardSample, GhanaPassportSample, and SampleDriversLicense) and replace them with:
+
+TypeScript
+  const avatarUrl = getBorrowerAvatarUrl(
+    borrower.nationalId || "unknown", 
+    getFullName(borrower), 
+    borrower.type as "individual" | "corporate"
+  );
+Fix 2: Missing Radix UI Dialog Descriptions (Accessibility Errors)
+Issue: Radix UI throws strict console warnings if a <DialogContent> has a <DialogTitle> but lacks a <DialogDescription>.
+Action: Search through the following files. Wherever you find a <DialogTitle>, check if there is a <DialogDescription> immediately following it. If there is not, insert <DialogDescription className="sr-only">Dialog form content</DialogDescription> right below the <DialogTitle>:
+
+client/src/pages/credit-accounts.tsx
+
+client/src/pages/disputes.tsx
+
+client/src/pages/user-management.tsx
+
+client/src/pages/institutions.tsx
+
+client/src/pages/api-admin.tsx
+
+client/src/pages/webhook-management.tsx
+
+client/src/pages/retention-policies.tsx
+
+client/src/components/mfa-setup.tsx
+
+Fix 3: React Hook Dependency Warning
+File: client/src/components/country-theme-provider.tsx
+Issue: Missing dependency in useCallback.
+Action: Locate the setCountry function definition. Update the dependency array at the end of the useCallback to include switchMutation:
+
+TypeScript
+  }, [isSuperAdmin, switchMutation]); 
+Fix 4: UI Glitch on Dialog Close (State Bleeding / Layout Shift)
+Issue: When closing modal dialogs, the form state is reset instantly. Because the dialog takes ~200ms to animate out, the user sees the form data suddenly vanish or shift while the modal is disappearing.
+Action: In the following files, find the <Dialog onOpenChange={...}> prop where the state is reset on close, and wrap the reset functions in a setTimeout:
+
+In client/src/pages/api-admin.tsx:
+
+TypeScript
+onOpenChange={(open) => { 
+  setDialogOpen(open); 
+  if (!open) { 
+    setTimeout(() => { setEditingId(null); setFormData(defaultFormData); }, 200);
+  } 
+}}
+In client/src/pages/institutions.tsx:
+
+TypeScript
+onOpenChange={(open) => { 
+  setDialogOpen(open); 
+  if (!open) { 
+    setTimeout(() => { resetForm(); }, 200);
+  } 
+}}
+In client/src/pages/user-management.tsx:
+
+TypeScript
+onOpenChange={(open) => { 
+  setDialogOpen(open); 
+  if (!open) { 
+    setTimeout(() => { setFormData({ username: "", password: "", fullName: "", email: "", role: "viewer", status: "active", institution: "" }); }, 200);
+  } 
+}}
+Fix 5: Memory Leak in PDF Blob Creation
+File: client/src/pages/credit-report.tsx and client/src/pages/bog-export.tsx and client/src/pages/bsl-export.tsx
+Issue: URL.createObjectURL(blob) is used to download files, but if an error occurs mid-process, the object URL might not be revoked, causing a memory leak.
+Action: Ensure that in all handleDownloadPdf and handleDownload functions, URL.revokeObjectURL(url) is placed inside a finally block if possible, or ensure it executes safely after the download is triggered.
+
+Fix 6: Safe Navigation in Empty Arrays
+File: client/src/components/dashboard-charts.tsx
+Issue: When pulling the max value for the sparklines, it might return -Infinity if the array is empty.
+Action: Find the calculation for maxH and maxM in the hourly/minute traffic sections and ensure a fallback:
+
+TypeScript
+const maxH = Math.max(...(stats.traffic.hourlyData?.map(h => h.requests) || [0]), 1);
+const maxM = Math.max(...(stats.traffic.minuteData?.map(m => m.requests) || [0]), 1);
+Fix 7: Incorrect Import of PanelLeft
+File: client/src/components/ui/sidebar.tsx
+Issue: PanelLeftIcon is imported from lucide-react, but depending on the lucide-react version, it should simply be PanelLeft.
+Action: Change the import at the top of the file:
+
+TypeScript
+import { PanelLeft } from "lucide-react"
+And replace <PanelLeftIcon /> with <PanelLeft /> inside the SidebarTrigger component.
+
+Please process all 7 of these fixes, verify your changes against the existing code logic, and let me know when you are done!

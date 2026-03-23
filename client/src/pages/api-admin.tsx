@@ -437,7 +437,7 @@ export default function ApiAdminPage() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setEditingId(null); setFormData(defaultFormData); } }}>
+      <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setTimeout(() => { setEditingId(null); setFormData(defaultFormData); }, 200); } }}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingId ? t("apiAdmin.editConfig") : t("apiAdmin.addConfig")}</DialogTitle>

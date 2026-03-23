@@ -93,7 +93,7 @@ export function CountryThemeProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsSwitching(false);
     }
-  }, [isSuperAdmin]);
+  }, [isSuperAdmin, switchMutation]);
 
   return (
     <CountryContext.Provider value={{ activeCountry, activeConfig, activeTheme, isGlobalView, setCountry, isSwitching }}>

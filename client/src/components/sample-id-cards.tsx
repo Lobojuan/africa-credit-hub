@@ -36,7 +36,11 @@ function getFullName(b: BorrowerData): string {
 export function GhanaCardSample({ borrower }: { borrower: BorrowerData }) {
   const uid = useId().replace(/:/g, "");
   const cardNumber = borrower.ghanaCardNumber || borrower.nationalId;
-  const avatarUrl = getBorrowerAvatarUrl(borrower.nationalId);
+  const avatarUrl = getBorrowerAvatarUrl(
+    borrower.nationalId || "unknown",
+    getFullName(borrower),
+    borrower.type as "individual" | "corporate"
+  );
   const name = getFullName(borrower);
 
   const bgId = `gc-bg-${uid}`;
@@ -142,7 +146,11 @@ export function GhanaCardSample({ borrower }: { borrower: BorrowerData }) {
 
 export function GhanaPassportSample({ borrower }: { borrower: BorrowerData }) {
   const uid = useId().replace(/:/g, "");
-  const avatarUrl = getBorrowerAvatarUrl(borrower.nationalId);
+  const avatarUrl = getBorrowerAvatarUrl(
+    borrower.nationalId || "unknown",
+    getFullName(borrower),
+    borrower.type as "individual" | "corporate"
+  );
   const name = getFullName(borrower);
 
   const bgId = `pp-bg-${uid}`;
@@ -244,7 +252,11 @@ export function GhanaPassportSample({ borrower }: { borrower: BorrowerData }) {
 
 export function SampleDriversLicense({ borrower }: { borrower: BorrowerData }) {
   const uid = useId().replace(/:/g, "");
-  const avatarUrl = getBorrowerAvatarUrl(borrower.nationalId);
+  const avatarUrl = getBorrowerAvatarUrl(
+    borrower.nationalId || "unknown",
+    getFullName(borrower),
+    borrower.type as "individual" | "corporate"
+  );
   const name = getFullName(borrower);
 
   const bgId = `dl-bg-${uid}`;

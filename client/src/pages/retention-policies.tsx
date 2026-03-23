@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -315,6 +315,7 @@ export default function RetentionPoliciesPage() {
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingPolicy ? t("retentionPolicies.editPolicy") : t("retentionPolicies.addPolicy")}</DialogTitle>
+            <DialogDescription className="sr-only">Dialog form content</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4" data-testid="form-retention-policy">
             <div>
@@ -381,6 +382,7 @@ export default function RetentionPoliciesPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t("retentionPolicies.deleteConfirm")}</DialogTitle>
+            <DialogDescription className="sr-only">Dialog form content</DialogDescription>
           </DialogHeader>
           <p className="text-sm text-muted-foreground" data-testid="text-delete-confirm-message">
             {t("retentionPolicies.deleteConfirm")} {deleteConfirm?.country} - {getEntityTypeLabel(deleteConfirm?.entityType ?? "")}?
