@@ -287,14 +287,12 @@ function AuthenticatedApp() {
       <div className="flex h-screen w-full">
         <AppSidebar />
         <div className="flex flex-col flex-1 min-w-0">
-          <header className="flex items-center gap-2 px-3 py-2 border-b shrink-0 ltr-header">
+          <header className="flex flex-wrap items-center gap-3 px-4 py-2.5 border-b shrink-0 ltr-header">
             <SidebarTrigger data-testid="button-sidebar-toggle" className="shrink-0" />
-            <div className="h-5 w-px bg-border" />
             {user.role === "super_admin" && (
               <Button
                 variant="outline"
-                size="sm"
-                className="h-9 gap-2 text-sm font-medium border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                className="h-10 gap-2 text-base font-semibold border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 px-4"
                 onClick={async () => {
                   try {
                     await apiRequest("POST", "/api/platform/set-country", { country: "command_center" });
@@ -316,20 +314,19 @@ function AuthenticatedApp() {
                 }}
                 data-testid="button-command-center"
               >
-                <LayoutGrid className="w-4 h-4 shrink-0" />
+                <LayoutGrid className="w-5 h-5 shrink-0" />
                 Command Center
               </Button>
             )}
             {user.role === "super_admin" && <CountrySelector />}
             {user.role === "super_admin" && <OrgSwitcher />}
             {(user as any)?.organization?.name && user.role !== "super_admin" && (
-              <span className="text-sm text-muted-foreground inline-flex items-center gap-1.5" data-testid="text-org-context">
-                <Building2 className="w-4 h-4" />
+              <span className="text-base text-muted-foreground inline-flex items-center gap-2" data-testid="text-org-context">
+                <Building2 className="w-5 h-5" />
                 {(user as any).organization.name}
               </span>
             )}
-            <div className="flex-1" />
-            <span className="text-sm text-muted-foreground hidden md:inline" data-testid="text-current-user">
+            <span className="text-base text-muted-foreground" data-testid="text-current-user">
               {user.fullName}
             </span>
             <NotificationBell />
@@ -337,8 +334,7 @@ function AuthenticatedApp() {
             <LanguageSwitcher />
             <Button
               variant="destructive"
-              size="sm"
-              className="h-9 gap-2 text-sm font-medium shrink-0"
+              className="h-10 gap-2 text-base font-semibold px-5 shrink-0"
               onClick={async () => {
                 try {
                   await logout();
@@ -348,7 +344,7 @@ function AuthenticatedApp() {
               }}
               data-testid="button-logout"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-5 h-5" />
               Log Out
             </Button>
           </header>
