@@ -24,6 +24,7 @@ import { TrialBanner } from "@/components/trial-banner";
 import { OrgSwitcher } from "@/components/org-switcher";
 import { CountryThemeProvider, useCountryTheme } from "@/components/country-theme-provider";
 import { CountrySelector } from "@/components/country-selector";
+import { QuickAccessBar } from "@/components/quick-access-bar";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -262,9 +263,11 @@ function AuthenticatedApp() {
       <div className="flex h-screen w-full">
         <AppSidebar />
         <div className="flex flex-col flex-1 min-w-0">
-          <header className="flex items-center gap-1 sm:gap-2 p-2 border-b shrink-0 overflow-hidden ltr-header">
+          <header className="flex items-center gap-1 sm:gap-2 px-2 py-1.5 border-b shrink-0 overflow-hidden ltr-header">
             <SidebarTrigger data-testid="button-sidebar-toggle" className="shrink-0" />
-            <div className="flex items-center gap-1 sm:gap-3 shrink-0 ml-auto ltr-header">
+            <div className="h-5 w-px bg-border mx-1 hidden md:block" />
+            <QuickAccessBar />
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0 ml-auto ltr-header">
               {(user as any)?.organization?.name && user.role !== "super_admin" && (
                 <span className="text-xs text-muted-foreground hidden lg:inline-flex items-center gap-1" data-testid="text-org-context">
                   <Building2 className="w-3 h-3" />

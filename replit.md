@@ -17,7 +17,7 @@ The system employs a modern full-stack architecture built for scalability and co
 -   **Frontend**: React with TypeScript and Vite, styled using Tailwind CSS and shadcn/ui.
 -   **Internationalization**: Supports English, French, Portuguese, Arabic, and Swahili with RTL support.
 -   **Theming**: Dark/light theme with a premium teal and gold palette.
--   **Responsiveness**: Mobile-first design with adaptive layouts.
+-   **Responsiveness**: Mobile-first design with adaptive layouts. Quick Access Bar in header provides role-filtered dropdown navigation (Oversight, Operations, Admin, Cross-Border) and direct links (Dashboard, Search, Borrowers, Reports, Upload) without opening sidebar. Compact "Navigate" dropdown on mobile.
 -   **Interactive Elements**: Dashboards with drill-down, notifications, Recharts, an interactive SVG Africa map, and a circular SVG credit score gauge.
 -   **Guided Tours**: Interactive demo tour and application walkthroughs.
 
