@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CreditScoreGauge } from "@/components/credit-score-gauge";
 import { useAuth } from "@/hooks/use-auth";
+import { useLocation } from "wouter";
 import {
   Calculator,
   BookOpen,
@@ -264,8 +265,14 @@ function ScoreBandPerformanceTable() {
 export default function CreditScoreMethodologyPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
 
-  const isPrivilegedUser = user && ["admin", "lender", "super_admin", "regulator"].includes(user.role);
+  if (!user) {
+    setLocation("/login");
+    return null;
+  }
+
+  const isPrivilegedUser = ["admin", "lender", "super_admin", "regulator"].includes(user.role);
 
   const [simParams, setSimParams] = useState({
     currentAccounts: 3,
