@@ -1349,22 +1349,16 @@ export async function registerRoutes(
         { label: "Very Poor", min: 300, max: 449 },
       ];
 
+      const allInquiries = await db.select().from(creditInquiries);
+      const allJudgments = await db.select().from(courtJudgments);
+
       const borrowerScores = new Map<string, number>();
       for (const b of allBorrowers) {
         const bAccounts = allAccounts.filter(a => a.borrowerId === b.id);
-        if (bAccounts.length === 0) {
-          borrowerScores.set(b.id, 600);
-          continue;
-        }
-        const totalAccounts = bAccounts.length;
-        const currentAccounts = bAccounts.filter(a => a.status === "current" || a.status === "closed").length;
-        const delinquentAccounts = bAccounts.filter(a => a.status === "delinquent" || a.status === "default").length;
-        const writtenOffAccounts = bAccounts.filter(a => a.status === "written_off").length;
-        const restructuredAccounts = bAccounts.filter(a => a.status === "restructured").length;
-        const onTimeRatio = currentAccounts / totalAccounts;
-        let score = Math.round(300 + onTimeRatio * 500 - delinquentAccounts * 50 - writtenOffAccounts * 75 - restructuredAccounts * 20);
-        score = Math.max(300, Math.min(850, score));
-        borrowerScores.set(b.id, score);
+        const bInquiries = allInquiries.filter(i => i.borrowerId === b.id);
+        const bJudgments = allJudgments.filter(j => j.borrowerId === b.id);
+        const scoreResult = calculateCreditScore(bAccounts, bInquiries.length, bJudgments, b.isPep ?? false);
+        borrowerScores.set(b.id, scoreResult.score);
       }
 
       const result = bands.map(band => {

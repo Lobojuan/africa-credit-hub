@@ -267,12 +267,19 @@ export default function CreditScoreMethodologyPage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
 
+  const allowedRoles = ["admin", "lender", "super_admin", "regulator"];
+
   if (!user) {
     setLocation("/login");
     return null;
   }
 
-  const isPrivilegedUser = ["admin", "lender", "super_admin", "regulator"].includes(user.role);
+  if (!allowedRoles.includes(user.role)) {
+    setLocation("/score-guide");
+    return null;
+  }
+
+  const isPrivilegedUser = true;
 
   const [simParams, setSimParams] = useState({
     currentAccounts: 3,
