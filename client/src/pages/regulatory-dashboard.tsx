@@ -263,7 +263,7 @@ export default function RegulatoryDashboardPage() {
                       <Cell key={idx} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: number) => value.toLocaleString()} />
+                  <Tooltip formatter={(value: number) => value.toLocaleString()} contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", color: "hsl(var(--foreground))", borderRadius: 8 }} />
                   <Legend iconSize={10} wrapperStyle={{ fontSize: "11px" }} />
                 </PieChart>
               </ResponsiveContainer>
@@ -303,14 +303,15 @@ export default function RegulatoryDashboardPage() {
           {sectorChartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={sectorChartData} margin={{ top: 10, right: 20, left: 0, bottom: 40 }}>
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} angle={-30} textAnchor="end" interval={0} />
-                <YAxis tick={{ fontSize: 11 }} unit="%" />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} angle={-30} textAnchor="end" interval={0} />
+                <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} unit="%" />
                 <Tooltip
                   formatter={(value: number) => [`${value.toFixed(1)}%`, "NPL Ratio"]}
                   labelFormatter={(label: string) => {
                     const item = sectorChartData.find(d => d.name === label);
                     return item?.fullName || label;
                   }}
+                  contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", color: "hsl(var(--foreground))", borderRadius: 8 }}
                 />
                 <Bar dataKey="nplRatio" fill="hsl(12 76% 52%)" radius={[4, 4, 0, 0]} maxBarSize={50} />
               </BarChart>

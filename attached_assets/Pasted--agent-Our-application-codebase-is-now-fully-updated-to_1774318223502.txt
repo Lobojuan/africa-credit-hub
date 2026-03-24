@@ -1,0 +1,27 @@
+@agent Our application codebase is now fully updated to v2.1 with enterprise-grade security and compliance features. I need to update our external documentation so technical auditors and investors understand the scope of what we've built. Please execute the following two documentation tasks:
+
+Task 1: Generate a World-Class README.md
+Rewrite the root README.md file to act as a technical whitepaper for the project. It must include:
+
+Project Title & Hook: "Africa Credit Hub (CDH v2.1) - Pan-African Credit Registry Infrastructure".
+
+Overview: Explain that it is a multi-tenant, SaaS credit registry supporting 54 African countries, 42+ currencies, and 5 AU languages (EN, FR, PT, AR, SW).
+
+Core Features: Highlight the AI Portfolio Intelligence (GPT-4o), Cross-Border Entity Resolution, Batch Uploading (XBRL/CSV/JSON), and Consumer Self-Service Portal.
+
+Tech Stack: Mention React, Vite, Tailwind, Radix UI, Node.js, Express, PostgreSQL, Drizzle ORM, and TanStack Query.
+
+Setup Instructions: How to install dependencies, set environment variables (DATABASE_URL, OPENAI_API_KEY, etc.), run the database push, run the seed script, and start the dev server.
+
+Task 2: Create a docs/architecture-and-compliance.md
+Create a new markdown file at docs/architecture-and-compliance.md designed specifically for Central Bank auditors and Data Protection Officers. It must detail how we achieved the following:
+
+Data Sovereignty & Multi-Tenancy: Explain the backend middleware that forces organizationId and countryCode isolation on every database query to comply with POPIA and NDPA.
+
+Cryptographic Audit Trails: Detail the append-only audit_logs table and how the SHA-256 hash chaining works to prevent internal database tampering.
+
+Maker-Checker (Four-Eye) Principle: Explain the pending_approvals table and how the backend explicitly blocks self-approvals for data modifications.
+
+Security & Authentication: Document the TOTP MFA, the 15-minute idle session timeout, the progressive account lockout, and the HMAC-SHA256 signed webhooks.
+
+Please generate these two files. Make them sound highly professional, technical, and authoritative.

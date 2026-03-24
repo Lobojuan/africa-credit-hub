@@ -266,10 +266,10 @@ export default function ApiAdminPage() {
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={usageStats.hourlyData}>
-                        <XAxis dataKey="hour" tick={{ fontSize: 11 }} interval={2} />
-                        <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                        <XAxis dataKey="hour" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} interval={2} />
+                        <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} allowDecimals={false} />
                         <Tooltip
-                          contentStyle={{ borderRadius: "6px", fontSize: "12px" }}
+                          contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", color: "hsl(var(--foreground))", borderRadius: "6px", fontSize: "12px" }}
                           labelFormatter={(label) => `Time: ${label}`}
                         />
                         <Bar dataKey="requests" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} />

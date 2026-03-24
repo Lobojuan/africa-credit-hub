@@ -201,8 +201,8 @@ export function DashboardCharts({ monthlyTrend, statusBreakdown, typeBreakdown, 
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(210, 12%, 44%, 0.12)" />
-              <XAxis dataKey="month" tick={{ fontSize: 11, fontWeight: 500 }} stroke="hsl(210, 12%, 44%, 0.4)" />
-              <YAxis tick={{ fontSize: 11, fontWeight: 500 }} stroke="hsl(210, 12%, 44%, 0.4)" tickFormatter={formatCompact} />
+              <XAxis dataKey="month" tick={{ fontSize: 11, fontWeight: 500, fill: "hsl(var(--muted-foreground))" }} stroke="hsl(210, 12%, 44%, 0.4)" />
+              <YAxis tick={{ fontSize: 11, fontWeight: 500, fill: "hsl(var(--muted-foreground))" }} stroke="hsl(210, 12%, 44%, 0.4)" tickFormatter={formatCompact} />
               <Tooltip content={<CustomTooltip />} />
               <Area
                 type="monotone"
@@ -288,11 +288,11 @@ export function DashboardCharts({ monthlyTrend, statusBreakdown, typeBreakdown, 
           <ResponsiveContainer width="100%" height={Math.max(200, sortedTypes.length * 44)}>
             <BarChart data={sortedTypes} layout="vertical" margin={{ top: 0, right: 30, left: 10, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(210, 12%, 44%, 0.12)" />
-              <XAxis type="number" tick={{ fontSize: 11, fontWeight: 500 }} stroke="hsl(210, 12%, 44%, 0.4)" tickFormatter={formatCompact} />
+              <XAxis type="number" tick={{ fontSize: 11, fontWeight: 500, fill: "hsl(var(--muted-foreground))" }} stroke="hsl(210, 12%, 44%, 0.4)" tickFormatter={formatCompact} />
               <YAxis
                 type="category"
                 dataKey="type"
-                tick={{ fontSize: 11, fontWeight: 500 }}
+                tick={{ fontSize: 11, fontWeight: 500, fill: "hsl(var(--muted-foreground))" }}
                 stroke="hsl(210, 12%, 44%, 0.4)"
                 width={120}
               />

@@ -288,9 +288,9 @@ export default function PlatformMetricsPage() {
               <div className="min-w-0 min-h-0 w-full">
               <ResponsiveContainer width="100%" height={280}>
                 <AreaChart data={projections}>
-                  <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-                  <YAxis tick={{ fontSize: 10 }} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip formatter={(v: number) => [`$${v.toLocaleString()}`, ""]} />
+                  <XAxis dataKey="month" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                  <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip formatter={(v: number) => [`$${v.toLocaleString()}`, ""]} contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", color: "hsl(var(--foreground))", borderRadius: 8 }} />
                   <Area type="monotone" dataKey="mrr" stroke="hsl(175, 55%, 28%)" fill="hsl(175, 55%, 28%)" fillOpacity={0.15} name="Projected MRR" />
                 </AreaChart>
               </ResponsiveContainer>
@@ -378,9 +378,9 @@ export default function PlatformMetricsPage() {
             <div className="min-w-0 min-h-0 w-full">
             <ResponsiveContainer width="100%" height={250}>
               <AreaChart data={api.hourlyData || []}>
-                <XAxis dataKey="hour" tick={{ fontSize: 10 }} interval={3} />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip />
+                <XAxis dataKey="hour" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} interval={3} />
+                <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", color: "hsl(var(--foreground))", borderRadius: 8 }} />
                 <Area type="monotone" dataKey="requests" stroke="hsl(175, 55%, 28%)" fill="hsl(175, 55%, 28%)" fillOpacity={0.2} />
               </AreaChart>
             </ResponsiveContainer>
@@ -399,9 +399,9 @@ export default function PlatformMetricsPage() {
             <div className="min-w-0 min-h-0 w-full">
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={api.dailyData || []}>
-                <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip />
+                <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", color: "hsl(var(--foreground))", borderRadius: 8 }} />
                 <Bar dataKey="requests" fill="hsl(175, 55%, 35%)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -429,7 +429,7 @@ export default function PlatformMetricsPage() {
                         <Cell key={i} fill={COLORS[i % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", color: "hsl(var(--foreground))", borderRadius: 8 }} />
                     <Legend />
                   </RePieChart>
                 </ResponsiveContainer>

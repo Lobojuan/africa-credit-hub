@@ -187,10 +187,10 @@ export default function SystemStatusPage() {
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={hourlyUptime}>
-                <XAxis dataKey="hour" tick={{ fontSize: 10 }} interval={2} />
-                <YAxis yAxisId="pct" domain={[90, 100]} tick={{ fontSize: 10 }} />
-                <YAxis yAxisId="ms" orientation="right" tick={{ fontSize: 10 }} />
-                <Tooltip />
+                <XAxis dataKey="hour" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} interval={2} />
+                <YAxis yAxisId="pct" domain={[90, 100]} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                <YAxis yAxisId="ms" orientation="right" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", color: "hsl(var(--foreground))", borderRadius: 8 }} />
                 <Bar yAxisId="pct" dataKey="pct" fill="hsl(175, 55%, 28%)" radius={[2, 2, 0, 0]} name="Uptime %" />
                 <Bar yAxisId="ms" dataKey="avg_ms" fill="hsl(175, 55%, 50%)" radius={[2, 2, 0, 0]} name="Avg ms" opacity={0.5} />
               </BarChart>
