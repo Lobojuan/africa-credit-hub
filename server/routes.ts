@@ -1349,8 +1349,13 @@ export async function registerRoutes(
         { label: "Very Poor", min: 300, max: 449 },
       ];
 
-      const allInquiries = await db.select().from(creditInquiries);
-      const allJudgments = await db.select().from(courtJudgments);
+      const borrowerIds = allBorrowers.map(b => b.id);
+      const allInquiries = borrowerIds.length > 0
+        ? await db.select().from(creditInquiries).where(inArray(creditInquiries.borrowerId, borrowerIds))
+        : [];
+      const allJudgments = borrowerIds.length > 0
+        ? await db.select().from(courtJudgments).where(inArray(courtJudgments.borrowerId, borrowerIds))
+        : [];
 
       const borrowerScores = new Map<string, number>();
       for (const b of allBorrowers) {
