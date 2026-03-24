@@ -75,6 +75,7 @@ const AIDemoPage = lazy(() => import("@/pages/ai-demo"));
 const BorrowerAlertsPage = lazy(() => import("@/pages/borrower-alerts"));
 const RegulatoryDashboardPage = lazy(() => import("@/pages/regulatory-dashboard"));
 const CreditScoreMethodologyPage = lazy(() => import("@/pages/credit-score-methodology"));
+const ScoreGuidePage = lazy(() => import("@/pages/score-guide"));
 const CrossBorderAgreementsPage = lazy(() => import("@/pages/cross-border-agreements"));
 const CrossBorderSearchPage = lazy(() => import("@/pages/cross-border-search"));
 const PapssSettlementsPage = lazy(() => import("@/pages/papss-settlements"));
@@ -406,6 +407,7 @@ function App() {
             <Route path="/security" component={() => <Suspense fallback={<LazyFallback />}><SecurityCompliancePage /></Suspense>} />
             <Route path="/market-validation" component={() => <Suspense fallback={<LazyFallback />}><MarketValidationPage /></Suspense>} />
             <Route path="/start-trial" component={() => <Suspense fallback={<LazyFallback />}><StartTrialPage /></Suspense>} />
+            <Route path="/score-guide" component={() => <Suspense fallback={<LazyFallback />}><ScoreGuidePage /></Suspense>} />
             <Route path="/login">
               <AuthProvider>
                 <OrgSwitcherProvider>
