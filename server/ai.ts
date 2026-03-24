@@ -5,6 +5,14 @@ import { getDefaultCurrencyCode } from "./credit-score";
 
 export type AIProvider = "openai" | "claude";
 
+export type AITaskType =
+  | "data_analysis"
+  | "customer_chat"
+  | "legal_review"
+  | "credit_risk"
+  | "compliance"
+  | "narrative";
+
 export function isValidProvider(value: unknown): value is AIProvider {
   return value === "openai" || value === "claude";
 }
@@ -12,6 +20,28 @@ export function isValidProvider(value: unknown): value is AIProvider {
 export function parseProvider(value: unknown): AIProvider {
   if (isValidProvider(value)) return value;
   return "claude";
+}
+
+export function parseOptionalProvider(value: unknown): AIProvider | undefined {
+  if (isValidProvider(value)) return value;
+  return undefined;
+}
+
+const TASK_ROUTING: Record<AITaskType, { primary: AIProvider; fallback: AIProvider }> = {
+  data_analysis:  { primary: "openai", fallback: "claude" },
+  credit_risk:    { primary: "openai", fallback: "claude" },
+  customer_chat:  { primary: "claude", fallback: "openai" },
+  legal_review:   { primary: "claude", fallback: "openai" },
+  compliance:     { primary: "claude", fallback: "openai" },
+  narrative:      { primary: "claude", fallback: "openai" },
+};
+
+function getProviderForTask(taskType: AITaskType, explicitProvider?: AIProvider): { primary: AIProvider; fallback: AIProvider } {
+  if (explicitProvider) {
+    const other: AIProvider = explicitProvider === "openai" ? "claude" : "openai";
+    return { primary: explicitProvider, fallback: other };
+  }
+  return TASK_ROUTING[taskType];
 }
 
 const openai = new OpenAI({
@@ -24,7 +54,54 @@ const anthropic = new Anthropic({
   baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
 });
 
-export async function analyzeCreditRisk(borrowerId: string | number, provider: AIProvider = "claude") {
+export async function generateAIResponse(
+  systemPrompt: string,
+  userPrompt: string,
+  taskType: AITaskType,
+  options: { maxTokens?: number; temperature?: number; explicitProvider?: AIProvider } = {}
+): Promise<{ text: string; provider: AIProvider; usedFallback: boolean }> {
+  const { maxTokens = 2000, temperature = 0.3, explicitProvider } = options;
+  const routing = getProviderForTask(taskType, explicitProvider);
+
+  async function callProvider(provider: AIProvider): Promise<string> {
+    if (provider === "claude") {
+      const response = await anthropic.messages.create({
+        model: "claude-opus-4-6",
+        max_tokens: maxTokens,
+        system: systemPrompt,
+        messages: [{ role: "user", content: userPrompt }],
+      });
+      return response.content[0]?.type === "text" ? response.content[0].text : "{}";
+    } else {
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        max_tokens: maxTokens,
+        temperature,
+      });
+      return response.choices[0]?.message?.content || "{}";
+    }
+  }
+
+  try {
+    const text = await callProvider(routing.primary);
+    return { text, provider: routing.primary, usedFallback: false };
+  } catch (primaryError: any) {
+    console.error(`[AI Router] Primary model (${routing.primary}) failed for ${taskType}: ${primaryError.message}. Falling back to ${routing.fallback}...`);
+    try {
+      const text = await callProvider(routing.fallback);
+      return { text, provider: routing.fallback, usedFallback: true };
+    } catch (fallbackError: any) {
+      console.error(`[AI Router] Fallback model (${routing.fallback}) also failed: ${fallbackError.message}`);
+      throw new Error(`Both AI providers failed. Primary (${routing.primary}): ${primaryError.message}. Fallback (${routing.fallback}): ${fallbackError.message}`);
+    }
+  }
+}
+
+export async function analyzeCreditRisk(borrowerId: string | number, provider?: AIProvider) {
   const borrower = await storage.getBorrower(borrowerId);
   if (!borrower) throw new Error("Borrower not found");
 
@@ -64,29 +141,16 @@ ${accounts.map(a => `  - ${a.accountType}: ${a.currency || defaultCurrency} ${pa
 }`;
   const userPrompt = `Analyze this borrower's credit risk:\n\n${borrowerProfile}`;
 
-  let raw: string;
-  if (provider === "claude") {
-    const response = await anthropic.messages.create({
-      model: "claude-opus-4-6",
-      max_tokens: 1500,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userPrompt }],
-    });
-    raw = response.content[0]?.type === "text" ? response.content[0].text : "{}";
-  } else {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      max_tokens: 1500,
-      temperature: 0.3,
-    });
-    raw = response.choices[0]?.message?.content || "{}";
+  const result = await generateAIResponse(systemPrompt, userPrompt, "credit_risk", {
+    maxTokens: 1500,
+    temperature: 0.3,
+    ...(provider && { explicitProvider: provider }),
+  });
+  if (result.usedFallback) {
+    console.log(`[AI Router] analyzeCreditRisk completed via fallback (${result.provider})`);
   }
 
-  return parseJSON(raw, {
+  return parseJSON(result.text, {
     riskLevel: "medium",
     riskScore: 50,
     summary: "Analysis completed. Please try again if content is incomplete.",
@@ -96,7 +160,7 @@ ${accounts.map(a => `  - ${a.accountType}: ${a.currency || defaultCurrency} ${pa
   });
 }
 
-export async function generateReportSummary(borrowerId: string | number, provider: AIProvider = "claude") {
+export async function generateReportSummary(borrowerId: string | number, provider?: AIProvider) {
   const borrower = await storage.getBorrower(borrowerId);
   if (!borrower) throw new Error("Borrower not found");
 
@@ -121,30 +185,17 @@ Disputes: ${disputes.length} total, ${disputes.filter(d => d.status === "open").
   const systemPrompt = `You are a credit report summarizer for the Pan-African Credit Registry. All monetary amounts are in ${defaultCurrency} (${defaultCurrency === "GHS" ? "Ghana Cedis" : defaultCurrency}). Generate clear, professional, plain-language summaries of credit reports suitable for non-technical readers such as bank officers and regulators. Include key highlights, concerns, and an overall assessment. Keep it concise but comprehensive (3-5 paragraphs). Use professional financial language. Always reference amounts in ${defaultCurrency}.`;
   const userPrompt = `Generate a plain-language credit report summary:\n\n${reportData}`;
 
-  let summary: string;
-  if (provider === "claude") {
-    const response = await anthropic.messages.create({
-      model: "claude-opus-4-6",
-      max_tokens: 1000,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userPrompt }],
-    });
-    summary = response.content[0]?.type === "text" ? response.content[0].text : "Unable to generate summary.";
-  } else {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      max_tokens: 1000,
-      temperature: 0.4,
-    });
-    summary = response.choices[0]?.message?.content || "Unable to generate summary.";
+  const result = await generateAIResponse(systemPrompt, userPrompt, "narrative", {
+    maxTokens: 1000,
+    temperature: 0.4,
+    ...(provider && { explicitProvider: provider }),
+  });
+  if (result.usedFallback) {
+    console.log(`[AI Router] generateReportSummary completed via fallback (${result.provider})`);
   }
 
   return {
-    summary,
+    summary: result.text,
     borrowerName: `${borrower.firstName} ${borrower.lastName}`,
     generatedAt: new Date().toISOString(),
   };
@@ -229,7 +280,7 @@ async function buildPortfolioData() {
   return { stats, borrowerProfiles, accountsByType, accountsByLender, totalAccounts: allAccounts.length, totalDisputes: disputes.length, institutions: institutions.data };
 }
 
-export async function generatePortfolioIntelligence(provider: AIProvider = "claude") {
+export async function generatePortfolioIntelligence(provider?: AIProvider) {
   const data = await buildPortfolioData();
   const defaultCurrency = getDefaultCurrencyCode();
 
@@ -351,29 +402,16 @@ Total portfolio delinquency rate: ${data.totalAccounts > 0 ? ((data.stats.delinq
 }`;
   const userPrompt = `Analyze this credit portfolio and generate a comprehensive intelligence report with predictions, early warnings, and actionable recommendations:\n\n${portfolioContext}`;
 
-  let raw: string;
-  if (provider === "claude") {
-    const response = await anthropic.messages.create({
-      model: "claude-opus-4-6",
-      max_tokens: 8192,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userPrompt }],
-    });
-    raw = response.content[0]?.type === "text" ? response.content[0].text : "{}";
-  } else {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      max_tokens: 8000,
-      temperature: 0.3,
-    });
-    raw = response.choices[0]?.message?.content || "{}";
+  const result = await generateAIResponse(systemPrompt, userPrompt, "data_analysis", {
+    maxTokens: 8192,
+    temperature: 0.3,
+    ...(provider && { explicitProvider: provider }),
+  });
+  if (result.usedFallback) {
+    console.log(`[AI Router] generatePortfolioIntelligence completed via fallback (${result.provider})`);
   }
 
-  return parseJSON(raw, { overallRiskRating: "moderate", portfolioHealthScore: 50, executiveSummary: "Report generation completed. Please try again if content is incomplete." });
+  return parseJSON(result.text, { overallRiskRating: "moderate", portfolioHealthScore: 50, executiveSummary: "Report generation completed. Please try again if content is incomplete." });
 }
 
 async function buildLiveContext(): Promise<string> {
@@ -512,7 +550,7 @@ ${borrowerList || "  No borrowers"}
   }
 }
 
-export async function chatWithAI(messages: { role: string; content: string }[], userRole?: string, provider: AIProvider = "claude") {
+export async function chatWithAI(messages: { role: string; content: string }[], userRole?: string, provider?: AIProvider) {
   const defaultCurrency = getDefaultCurrencyCode();
   const liveContext = await buildLiveContext();
 
@@ -627,27 +665,38 @@ ${liveContext}
     content: m.content,
   }));
 
-  if (provider === "claude") {
-    const stream = anthropic.messages.stream({
-      model: "claude-opus-4-6",
-      max_tokens: 2000,
-      system: systemMessage.content,
-      messages: chatMessages,
-    });
-    return { type: "claude" as const, stream };
+  const routing = getProviderForTask("customer_chat", provider || undefined);
+
+  async function tryStream(p: AIProvider): Promise<{ type: "claude"; stream: any } | { type: "openai"; stream: any }> {
+    if (p === "claude") {
+      const stream = anthropic.messages.stream({
+        model: "claude-opus-4-6",
+        max_tokens: 2000,
+        system: systemMessage.content,
+        messages: chatMessages,
+      });
+      return { type: "claude" as const, stream };
+    } else {
+      const stream = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [systemMessage, ...chatMessages],
+        max_tokens: 2000,
+        temperature: 0.4,
+        stream: true,
+      });
+      return { type: "openai" as const, stream };
+    }
   }
 
-  const stream = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [systemMessage, ...chatMessages],
-    max_tokens: 2000,
-    temperature: 0.4,
-    stream: true,
-  });
-  return { type: "openai" as const, stream };
+  try {
+    return await tryStream(routing.primary);
+  } catch (primaryError: any) {
+    console.error(`[AI Router] Streaming primary (${routing.primary}) failed for customer_chat: ${primaryError.message}. Falling back to ${routing.fallback}...`);
+    return await tryStream(routing.fallback);
+  }
 }
 
-export async function generateComplianceReport(country: string, provider: AIProvider = "claude") {
+export async function generateComplianceReport(country: string, provider?: AIProvider) {
   const systemPrompt = `You are a regulatory compliance expert for African credit bureaus. Generate detailed compliance reports for specific countries. Respond in valid JSON:
 {
   "country": "<country name>",
@@ -663,52 +712,28 @@ export async function generateComplianceReport(country: string, provider: AIProv
 }`;
   const userPrompt = `Generate a regulatory compliance report for credit bureau operations in ${country}.`;
 
-  let raw: string;
-  if (provider === "claude") {
-    const response = await anthropic.messages.create({
-      model: "claude-opus-4-6",
-      max_tokens: 2000,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userPrompt }],
-    });
-    raw = response.content[0]?.type === "text" ? response.content[0].text : "{}";
-  } else {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      max_tokens: 2000,
-      temperature: 0.3,
-    });
-    raw = response.choices[0]?.message?.content || "{}";
+  const result = await generateAIResponse(systemPrompt, userPrompt, "compliance", {
+    maxTokens: 2000,
+    temperature: 0.3,
+    ...(provider && { explicitProvider: provider }),
+  });
+  if (result.usedFallback) {
+    console.log(`[AI Router] generateComplianceReport completed via fallback (${result.provider})`);
   }
 
-  return parseJSON(raw, { country, summary: "Compliance report generated. Please try again if content is incomplete.", complianceScore: 0 });
+  return parseJSON(result.text, { country, summary: "Compliance report generated. Please try again if content is incomplete.", complianceScore: 0 });
 }
 
-export async function callAI(systemPrompt: string, userPrompt: string, provider: AIProvider = "claude", maxTokens = 2000, temperature = 0.3): Promise<string> {
-  if (provider === "claude") {
-    const response = await anthropic.messages.create({
-      model: "claude-opus-4-6",
-      max_tokens: maxTokens,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userPrompt }],
-    });
-    return response.content[0]?.type === "text" ? response.content[0].text : "{}";
-  } else {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      max_tokens: maxTokens,
-      temperature,
-    });
-    return response.choices[0]?.message?.content || "{}";
+export async function callAI(systemPrompt: string, userPrompt: string, provider?: AIProvider, maxTokens = 2000, temperature = 0.3, taskType: AITaskType = "narrative"): Promise<string> {
+  const result = await generateAIResponse(systemPrompt, userPrompt, taskType, {
+    maxTokens,
+    temperature,
+    ...(provider && { explicitProvider: provider }),
+  });
+  if (result.usedFallback) {
+    console.log(`[AI Router] callAI completed via fallback (${result.provider}) for taskType=${taskType}`);
   }
+  return result.text;
 }
 
 export function parseJSON(raw: string, fallback: Record<string, unknown> = {}) {
@@ -726,7 +751,7 @@ export function parseJSON(raw: string, fallback: Record<string, unknown> = {}) {
   try { return JSON.parse(content); } catch { return { ...fallback, rawText: raw }; }
 }
 
-export async function generateCreditNarrative(borrowerId: string | number, provider: AIProvider = "claude") {
+export async function generateCreditNarrative(borrowerId: string | number, provider?: AIProvider) {
   const borrower = await storage.getBorrower(borrowerId);
   if (!borrower) throw new Error("Borrower not found");
   const accounts = await storage.getCreditAccountsByBorrower(borrowerId);
@@ -760,11 +785,11 @@ ${disputes.length > 0 ? disputes.map(d => `  - ${d.disputeType}: ${d.status} —
   "recommendedActions": ["<action>"]
 }`;
 
-  const raw = await callAI(systemPrompt, `Write a credit narrative for this borrower:\n\n${profile}`, provider, 2500);
+  const raw = await callAI(systemPrompt, `Write a credit narrative for this borrower:\n\n${profile}`, provider, 2500, 0.3, "narrative");
   return { ...parseJSON(raw, { creditworthiness: "Fair" }), borrowerName: name, generatedAt: new Date().toISOString() };
 }
 
-export async function detectAnomalies(provider: AIProvider = "claude", orgId?: string, country?: string) {
+export async function detectAnomalies(provider?: AIProvider, orgId?: string, country?: string) {
   const data = await buildPortfolioData();
   const defaultCurrency = getDefaultCurrencyCode();
 
@@ -807,11 +832,11 @@ Respond in JSON:
   "summary": "<2-3 sentence executive summary of portfolio health>"
 }`;
 
-  const raw = await callAI(systemPrompt, `Analyze this portfolio for anomalies and risks:\n\n${portfolioSummary}`, provider, 3000);
+  const raw = await callAI(systemPrompt, `Analyze this portfolio for anomalies and risks:\n\n${portfolioSummary}`, provider, 3000, 0.3, "data_analysis");
   return { ...parseJSON(raw, { alerts: [], riskScore: 50 }), analyzedAt: new Date().toISOString() };
 }
 
-export async function generateRegulatoryReport(country: string, provider: AIProvider = "claude", orgId?: string) {
+export async function generateRegulatoryReport(country: string, provider?: AIProvider, orgId?: string) {
   const data = await buildPortfolioData();
   const defaultCurrency = getDefaultCurrencyCode();
 
@@ -859,11 +884,11 @@ Registry Data for ${country}:
   "nextActions": ["<required action with deadline>"]
 }`;
 
-  const raw = await callAI(systemPrompt, `Generate a regulatory report for ${country} credit bureau operations:\n\n${portfolioContext}`, provider, 3000);
+  const raw = await callAI(systemPrompt, `Generate a regulatory report for ${country} credit bureau operations:\n\n${portfolioContext}`, provider, 3000, 0.3, "compliance");
   return { ...parseJSON(raw, { reportTitle: `${country} Regulatory Report` }), generatedAt: new Date().toISOString(), country };
 }
 
-export async function naturalLanguageQuery(query: string, provider: AIProvider = "claude", orgId?: string, country?: string) {
+export async function naturalLanguageQuery(query: string, provider?: AIProvider, orgId?: string, country?: string) {
   const data = await buildPortfolioData();
   const defaultCurrency = getDefaultCurrencyCode();
 
@@ -892,11 +917,11 @@ ${data.borrowerProfiles.slice(0, 100).map(b => `${b.name} | ${b.type} | accounts
   "followUpQuestions": ["<suggested follow-up question>"]
 }`;
 
-  const raw = await callAI(systemPrompt, `User question: "${query}"\n\nData:\n${dataContext}`, provider, 2000);
+  const raw = await callAI(systemPrompt, `User question: "${query}"\n\nData:\n${dataContext}`, provider, 2000, 0.3, "data_analysis");
   return { ...parseJSON(raw, { answer: "Unable to process query" }), query, answeredAt: new Date().toISOString() };
 }
 
-export async function analyzeCrossBorderRisk(provider: AIProvider = "claude") {
+export async function analyzeCrossBorderRisk(provider?: AIProvider) {
   const data = await buildPortfolioData();
   const defaultCurrency = getDefaultCurrencyCode();
 
@@ -958,11 +983,11 @@ ${data.borrowerProfiles.sort((a, b) => b.totalBalance - a.totalBalance).slice(0,
   "recommendations": ["<recommendation>"]
 }`;
 
-  const raw = await callAI(systemPrompt, `Analyze cross-border and multi-institutional credit risk:\n\n${crossBorderContext}`, provider, 3000);
+  const raw = await callAI(systemPrompt, `Analyze cross-border and multi-institutional credit risk:\n\n${crossBorderContext}`, provider, 3000, 0.3, "data_analysis");
   return { ...parseJSON(raw, { systemicRisk: { level: "moderate" } }), analyzedAt: new Date().toISOString() };
 }
 
-export async function generateLoanRecommendation(borrowerId: string | number, loanAmount: number, loanType: string, provider: AIProvider = "claude") {
+export async function generateLoanRecommendation(borrowerId: string | number, loanAmount: number, loanType: string, provider?: AIProvider) {
   const borrower = await storage.getBorrower(borrowerId);
   if (!borrower) throw new Error("Borrower not found");
   const accounts = await storage.getCreditAccountsByBorrower(borrowerId);
@@ -1023,6 +1048,6 @@ DEBT-TO-INCOME: ${borrower.monthlyIncome ? `${((totalBalance / (parseFloat(borro
   "comparativeRisk": "<how this borrower compares to the portfolio average>"
 }`;
 
-  const raw = await callAI(systemPrompt, `Evaluate this loan application:\n\n${profile}`, provider, 2500);
+  const raw = await callAI(systemPrompt, `Evaluate this loan application:\n\n${profile}`, provider, 2500, 0.3, "credit_risk");
   return { ...parseJSON(raw, { decision: "decline", confidence: 0 }), borrowerName: name, requestedAmount: loanAmount, loanType, generatedAt: new Date().toISOString() };
 }

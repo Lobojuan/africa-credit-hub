@@ -40,7 +40,7 @@ import rateLimit from "express-rate-limit";
 import { isGhanaMode, getActiveCountryName, isSingleCountryMode, COUNTRY_REGISTRY, getSupportedCountries } from "./country-mode";
 import { sendWelcomeEmail, sendBillingNotification, sendDisputeNotification, sendNewRegistrationAlert, sendConsumerOtpEmail, sendConsumerVerificationLink } from "./email";
 import { sendSms, sendOtpSms, isSmsConfigured } from "./sms";
-import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport, generatePortfolioIntelligence, parseProvider, generateCreditNarrative, detectAnomalies, generateRegulatoryReport, naturalLanguageQuery, analyzeCrossBorderRisk, generateLoanRecommendation, callAI, parseJSON } from "./ai";
+import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport, generatePortfolioIntelligence, parseProvider, parseOptionalProvider, generateCreditNarrative, detectAnomalies, generateRegulatoryReport, naturalLanguageQuery, analyzeCrossBorderRisk, generateLoanRecommendation, callAI, parseJSON, generateAIResponse } from "./ai";
 import { BOG_EXPORT_GENERATORS } from "./bog-export";
 import type { BogFileType } from "@shared/bog-codes";
 import { BSL_EXPORT_GENERATORS } from "./bsl-export";
@@ -6454,7 +6454,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     try {
       const { feature } = req.params;
       const { provider: providerRaw, query, country, borrowerScenario, loanAmount, loanType, customData, customPortfolio } = req.body || {};
-      const provider = parseProvider(providerRaw || "claude");
+      const provider = parseOptionalProvider(providerRaw);
 
       const sampleBorrowers: Record<string, string> = {
         "strong": `Name: Kwame Asante (individual)\nCountry: Ghana\nEmployment: Employed - Senior Manager at GCB Bank\nMonthly Income: GHS 18,500\nCredit Accounts: 4\n  - Mortgage: GHS 285,000 | Status: current | Opened: 2021-03-15\n  - Auto Loan: GHS 42,000 | Status: current | Opened: 2022-06-01\n  - Credit Card: GHS 5,200 | Status: current | Opened: 2020-01-10\n  - Business Line: GHS 120,000 | Status: current | Opened: 2023-02-28\nTotal Balance: GHS 452,200\nDelinquent: 0 | Default: 0 | Max Arrears: 0 days\nOpen Disputes: 0`,
@@ -6472,14 +6472,14 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
         case "credit-narrative": {
           const profile = customData ? String(customData).substring(0, 3000) : (sampleBorrowers[borrowerScenario || "strong"] || sampleBorrowers["strong"]);
           const systemPrompt = `You are an expert credit analyst for the Pan-African Credit Registry. Write a comprehensive credit narrative suitable for a loan committee. Respond in JSON: { "creditworthiness": "Excellent|Good|Fair|Poor|Very Poor", "narrative": "<detailed 3-4 paragraph narrative>", "strengths": ["<strength>"], "risks": ["<risk>"], "recommendation": "<recommendation>" }`;
-          const raw = await callAI(systemPrompt, `Write a credit narrative for this borrower:\n\n${profile}`, provider, 2500);
+          const raw = await callAI(systemPrompt, `Write a credit narrative for this borrower:\n\n${profile}`, provider, 2500, 0.3, "narrative");
           result = { ...parseJSON(raw, { creditworthiness: "Fair" }), generatedAt: new Date().toISOString(), isCustomData: !!customData };
           break;
         }
         case "anomaly-detection": {
           const portfolioData = customPortfolio ? String(customPortfolio).substring(0, 4000) : samplePortfolio;
           const systemPrompt = `You are a portfolio risk analyst for the Pan-African Credit Registry. Analyze portfolio data and identify anomalies, unusual patterns, and emerging risks. Respond in JSON: { "riskScore": <0-100>, "alerts": [{ "severity": "critical|high|medium|low", "type": "<alert type>", "title": "<short title>", "description": "<detail>", "affectedEntities": ["<entity>"], "recommendedAction": "<action>" }], "trendAnalysis": "<2 paragraph trend summary>", "recommendations": ["<recommendation>"] }`;
-          const raw = await callAI(systemPrompt, `Analyze this portfolio for anomalies and risks:\n\n${portfolioData}`, provider, 3000);
+          const raw = await callAI(systemPrompt, `Analyze this portfolio for anomalies and risks:\n\n${portfolioData}`, provider, 3000, 0.3, "data_analysis");
           result = { ...parseJSON(raw, { alerts: [], riskScore: 50 }), analyzedAt: new Date().toISOString(), isCustomData: !!customPortfolio };
           break;
         }
@@ -6487,7 +6487,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
           const targetCountry = country || "Ghana";
           const regPortfolio = customPortfolio ? String(customPortfolio).substring(0, 4000) : samplePortfolio;
           const systemPrompt = `You are a regulatory compliance expert for African credit bureaus. Generate a regulatory submission report for the central bank. Keep each text field concise (max 2 short paragraphs). Respond ONLY with valid JSON (no markdown, no code blocks): { "reportTitle": "<title>", "executiveSummary": "<2 paragraph summary>", "portfolioMetrics": { "totalBorrowers": <n>, "totalExposure": "<formatted>", "nplRatio": "<percentage>", "provisioningAdequacy": "<assessment>" }, "complianceStatus": [{ "regulation": "<name>", "status": "compliant|partial|non-compliant", "details": "<detail>" }], "riskAssessment": "<1 paragraph risk assessment>", "recommendations": ["<recommendation>"] }`;
-          const raw = await callAI(systemPrompt, `Generate a regulatory report for ${targetCountry}'s central bank based on this data:\n\n${regPortfolio}`, provider, 4000);
+          const raw = await callAI(systemPrompt, `Generate a regulatory report for ${targetCountry}'s central bank based on this data:\n\n${regPortfolio}`, provider, 4000, 0.3, "compliance");
           result = { ...parseJSON(raw, { reportTitle: `${targetCountry} Regulatory Report` }), country: targetCountry, generatedAt: new Date().toISOString(), isCustomData: !!customPortfolio };
           break;
         }
@@ -6495,14 +6495,14 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
           const userQuery = query || "How many borrowers have delinquent accounts and what is the total exposure?";
           const nlPortfolio = customPortfolio ? String(customPortfolio).substring(0, 4000) : samplePortfolio;
           const systemPrompt = `You are an AI data analyst for the Pan-African Credit Registry. Answer questions about credit data in natural language. Respond in JSON: { "answer": "<clear, detailed answer with specific numbers>", "dataPoints": [{ "label": "<metric>", "value": "<value>" }], "relatedInsights": ["<insight>"], "confidence": <0-100> }`;
-          const raw = await callAI(systemPrompt, `Based on this portfolio data, answer: "${userQuery}"\n\n${nlPortfolio}`, provider, 2000);
+          const raw = await callAI(systemPrompt, `Based on this portfolio data, answer: "${userQuery}"\n\n${nlPortfolio}`, provider, 2000, 0.3, "data_analysis");
           result = { ...parseJSON(raw, { answer: "Unable to process query" }), query: userQuery, answeredAt: new Date().toISOString(), isCustomData: !!customPortfolio };
           break;
         }
         case "cross-border-risk": {
           const cbData = customPortfolio ? String(customPortfolio).substring(0, 4000) : crossBorderData;
           const systemPrompt = `You are a cross-border risk analyst for the Pan-African Credit Registry. Identify systemic risks and hidden exposures across multiple countries. Respond in JSON: { "systemicRisk": { "level": "low|moderate|elevated|high|critical", "score": <0-100>, "summary": "<2 paragraph assessment>" }, "hiddenExposures": [{ "entity": "<name>", "countries": ["<country>"], "totalExposure": "<formatted>", "riskFlag": "<description>" }], "concentrationRisks": [{ "type": "<risk type>", "detail": "<description>" }], "recommendations": ["<recommendation>"] }`;
-          const raw = await callAI(systemPrompt, `Analyze cross-border and multi-institutional credit risk:\n\n${cbData}`, provider, 3000);
+          const raw = await callAI(systemPrompt, `Analyze cross-border and multi-institutional credit risk:\n\n${cbData}`, provider, 3000, 0.3, "data_analysis");
           result = { ...parseJSON(raw, { systemicRisk: { level: "moderate" } }), analyzedAt: new Date().toISOString(), isCustomData: !!customPortfolio };
           break;
         }
@@ -6511,7 +6511,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
           const amount = loanAmount || 50000;
           const type = loanType || "business_expansion";
           const systemPrompt = `You are a loan underwriting AI for the Pan-African Credit Registry. Evaluate loan applications and provide recommendations. Respond in JSON: { "decision": "approve|conditional_approve|decline", "confidence": <0-100>, "reasoning": "<3-4 paragraph detailed reasoning>", "suggestedTerms": { "interestRate": "<rate>", "tenure": "<duration>", "collateralRequired": "<requirement>", "maxApprovedAmount": "<amount>" }, "riskFactors": ["<factor>"], "mitigants": ["<mitigant>"], "conditions": ["<condition if conditional>"] }`;
-          const raw = await callAI(systemPrompt, `Evaluate this loan application:\n\nRequested: ${amount.toLocaleString()} for ${type}\n\n${profile}`, provider, 2500);
+          const raw = await callAI(systemPrompt, `Evaluate this loan application:\n\nRequested: ${amount.toLocaleString()} for ${type}\n\n${profile}`, provider, 2500, 0.3, "credit_risk");
           result = { ...parseJSON(raw, { decision: "decline", confidence: 0 }), requestedAmount: amount, loanType: type, generatedAt: new Date().toISOString(), isCustomData: !!customData };
           break;
         }
@@ -6528,7 +6528,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
 
   app.post("/api/ai/credit-risk/:borrowerId", aiLimiter, requireAuth, async (req, res) => {
     try {
-      const provider = parseProvider(req.body?.provider);
+      const provider = parseOptionalProvider(req.body?.provider);
       const result = await analyzeCreditRisk(req.params.borrowerId, provider);
       res.json(result);
     } catch (e: any) {
@@ -6538,7 +6538,7 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
 
   app.post("/api/ai/report-summary/:borrowerId", aiLimiter, requireAuth, async (req, res) => {
     try {
-      const provider = parseProvider(req.body?.provider);
+      const provider = parseOptionalProvider(req.body?.provider);
       const result = await generateReportSummary(req.params.borrowerId, provider);
       res.json(result);
     } catch (e: any) {
@@ -7240,8 +7240,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         ? `Previous conversation:\n${chatHistory.map((m: any) => `${m.role}: ${m.content}`).join("\n")}\n\nUser: ${message.slice(0, 2000)}`
         : message.slice(0, 2000);
 
-      const provider = parseProvider(req.body?.provider);
-      const response = await callAI(systemPrompt, userPrompt, provider, 1500);
+      const provider = parseOptionalProvider(req.body?.provider);
+      const response = await callAI(systemPrompt, userPrompt, provider, 1500, 0.3, "customer_chat");
       res.json({ response });
     } catch (e: any) {
       res.status(500).json({ message: e.message });
@@ -7251,7 +7251,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   app.post("/api/ai/chat", aiLimiter, requireAuth, async (req, res) => {
     try {
       const { messages, provider: reqProvider } = req.body;
-      const provider = parseProvider(reqProvider);
+      const provider = parseOptionalProvider(reqProvider);
       if (!messages || !Array.isArray(messages)) {
         return res.status(400).json({ message: "messages array required" });
       }
@@ -7300,7 +7300,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   app.post("/api/ai/compliance-report", aiLimiter, requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
     try {
       const { country, provider: reqProvider } = req.body;
-      const provider = parseProvider(reqProvider);
+      const provider = parseOptionalProvider(reqProvider);
       if (!country) return res.status(400).json({ message: "country required" });
       const result = await generateComplianceReport(country, provider);
       res.json(result);
@@ -7311,7 +7311,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.post("/api/ai/credit-narrative/:borrowerId", aiLimiter, requireAuth, async (req, res) => {
     try {
-      const provider = parseProvider(req.body?.provider);
+      const provider = parseOptionalProvider(req.body?.provider);
       const result = await generateCreditNarrative(req.params.borrowerId, provider);
       res.json(result);
     } catch (e: any) {
@@ -7322,7 +7322,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.post("/api/ai/anomaly-detection", aiLimiter, requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
     try {
-      const provider = parseProvider(req.body?.provider);
+      const provider = parseOptionalProvider(req.body?.provider);
       const result = await detectAnomalies(provider, getOrgScope(req), getCountryFilter(req));
       res.json(result);
     } catch (e: any) {
@@ -7333,7 +7333,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   app.post("/api/ai/regulatory-report", aiLimiter, requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
     try {
       const { country, provider: reqProvider } = req.body;
-      const provider = parseProvider(reqProvider);
+      const provider = parseOptionalProvider(reqProvider);
       if (!country) return res.status(400).json({ message: "country required" });
       const result = await generateRegulatoryReport(country, provider, getOrgScope(req));
       res.json(result);
@@ -7345,7 +7345,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   app.post("/api/ai/natural-query", aiLimiter, requireAuth, async (req, res) => {
     try {
       const { query, provider: reqProvider } = req.body;
-      const provider = parseProvider(reqProvider);
+      const provider = parseOptionalProvider(reqProvider);
       if (!query || typeof query !== "string") return res.status(400).json({ message: "query string required" });
       const result = await naturalLanguageQuery(query.slice(0, 500), provider, getOrgScope(req), getCountryFilter(req));
       res.json(result);
@@ -7356,7 +7356,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.post("/api/ai/cross-border-risk", aiLimiter, requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
     try {
-      const provider = parseProvider(req.body?.provider);
+      const provider = parseOptionalProvider(req.body?.provider);
       const result = await analyzeCrossBorderRisk(provider);
       res.json(result);
     } catch (e: any) {
@@ -7367,7 +7367,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   app.post("/api/ai/loan-recommendation/:borrowerId", aiLimiter, requireAuth, async (req, res) => {
     try {
       const { loanAmount, loanType, provider: reqProvider } = req.body;
-      const provider = parseProvider(reqProvider);
+      const provider = parseOptionalProvider(reqProvider);
       if (!loanAmount || !loanType) return res.status(400).json({ message: "loanAmount and loanType required" });
       const parsedAmount = parseFloat(loanAmount);
       if (!isFinite(parsedAmount) || parsedAmount <= 0) return res.status(400).json({ message: "loanAmount must be a positive number" });
@@ -7555,7 +7555,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.post("/api/ai/portfolio-intelligence", aiLimiter, requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
     try {
-      const provider = parseProvider(req.body?.provider);
+      const provider = parseOptionalProvider(req.body?.provider);
       const result = await generatePortfolioIntelligence(provider);
       res.json(result);
     } catch (e: any) {
