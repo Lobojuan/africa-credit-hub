@@ -267,7 +267,7 @@ export default function CreditScoreMethodologyPage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
 
-  const allowedRoles = ["admin", "lender", "super_admin", "regulator"];
+  const allowedRoles = ["admin", "lender", "super_admin"];
 
   if (!user) {
     setLocation("/login");

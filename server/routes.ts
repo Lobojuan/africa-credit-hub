@@ -1333,7 +1333,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/score-band-performance", requireAuth, requireRole("admin", "lender", "regulator"), async (req, res) => {
+  app.get("/api/score-band-performance", requireAuth, requireRole("admin", "lender"), async (req, res) => {
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
