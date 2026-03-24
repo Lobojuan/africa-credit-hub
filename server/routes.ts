@@ -2696,6 +2696,20 @@ export async function registerRoutes(
     }
   }
 
+  const BATCH_REQUIRED_BORROWER_FIELDS = ["borrowerName", "dateOfBirth", "address", "nationalId", "phoneNumber", "reportingDate"];
+  const BOG_PIPE_REQUIRED_FIELDS = ["borrowerName", "nationalId", "reportingDate"];
+
+  function validateBatchRequiredFields(record: any, index: number, fieldList?: string[]): string[] {
+    const fields = fieldList || BATCH_REQUIRED_BORROWER_FIELDS;
+    const missing: string[] = [];
+    for (const field of fields) {
+      if (!record[field] || String(record[field]).trim() === "") {
+        missing.push(field);
+      }
+    }
+    return missing;
+  }
+
   app.post("/api/batch-upload/credit-accounts", batchLimiter, requireRole("admin", "lender"), async (req, res) => {
     try {
       const { records } = req.body;
@@ -2712,6 +2726,12 @@ export async function registerRoutes(
 
       const validated: Array<{ index: number; data: any }> = [];
       for (let i = 0; i < records.length; i++) {
+        const missingFields = validateBatchRequiredFields(records[i], i);
+        if (missingFields.length > 0) {
+          results.errorCount++;
+          results.errors.push({ index: i, message: `Missing required fields: ${missingFields.join(", ")}` });
+          continue;
+        }
         try {
           const parsed = insertCreditAccountSchema.parse(records[i]);
           validated.push({ index: i, data: parsed });
@@ -2763,6 +2783,12 @@ export async function registerRoutes(
         };
         records.push({
           borrowerId: extract("borrowerId"),
+          borrowerName: extract("borrowerName"),
+          dateOfBirth: extract("dateOfBirth"),
+          address: extract("address"),
+          nationalId: extract("nationalId"),
+          phoneNumber: extract("phoneNumber"),
+          reportingDate: extract("reportingDate"),
           lenderInstitution: extract("lenderInstitution"),
           accountNumber: extract("accountNumber"),
           accountType: extract("accountType"),
@@ -2784,6 +2810,12 @@ export async function registerRoutes(
       const results = { totalSubmitted: records.length, successCount: 0, errorCount: 0, errors: [] as Array<{ index: number; message: string }> };
       const validated: Array<{ index: number; data: any }> = [];
       for (let i = 0; i < records.length; i++) {
+        const missingFields = validateBatchRequiredFields(records[i], i);
+        if (missingFields.length > 0) {
+          results.errorCount++;
+          results.errors.push({ index: i, message: `Missing required fields: ${missingFields.join(", ")}` });
+          continue;
+        }
         try {
           validated.push({ index: i, data: insertCreditAccountSchema.parse(records[i]) });
         } catch (err: any) {
@@ -2821,9 +2853,9 @@ export async function registerRoutes(
 
       const bogFieldMap: Record<string, string> = {
         "SRN": "_srn",
-        "ReportingDate": "_reportingDate",
-        "BorrowerName": "_borrowerName",
-        "GhanaCardNo": "_ghanaCardNo",
+        "ReportingDate": "reportingDate",
+        "BorrowerName": "borrowerName",
+        "GhanaCardNo": "nationalId",
         "FacilityType": "facilityTypeCode",
         "AccountNumber": "accountNumber",
         "Currency": "currency",
@@ -2862,6 +2894,7 @@ export async function registerRoutes(
           }
         });
 
+        if (record.reportingDate) record.reportingDate = parseBogDate(record.reportingDate);
         if (record.disbursementDate) record.disbursementDate = parseBogDate(record.disbursementDate);
         if (record.maturityDate) record.maturityDate = parseBogDate(record.maturityDate);
         if (record.daysInArrears) record.daysInArrears = parseInt(record.daysInArrears, 10) || 0;
@@ -2891,6 +2924,12 @@ export async function registerRoutes(
 
       const validated: Array<{ index: number; data: any }> = [];
       for (let i = 0; i < records.length; i++) {
+        const missingFields = validateBatchRequiredFields(records[i], i, BOG_PIPE_REQUIRED_FIELDS);
+        if (missingFields.length > 0) {
+          results.errorCount++;
+          results.errors.push({ index: i, message: `Missing required fields: ${missingFields.join(", ")}` });
+          continue;
+        }
         try {
           validated.push({ index: i, data: insertCreditAccountSchema.parse(records[i]) });
         } catch (err: any) {
@@ -2969,6 +3008,12 @@ export async function registerRoutes(
 
       const validated: Array<{ index: number; data: any }> = [];
       for (let i = 0; i < records.length; i++) {
+        const missingFields = validateBatchRequiredFields(records[i], i);
+        if (missingFields.length > 0) {
+          results.errorCount++;
+          results.errors.push({ index: i, message: `Missing required fields: ${missingFields.join(", ")}` });
+          continue;
+        }
         try {
           validated.push({ index: i, data: insertCreditAccountSchema.parse(records[i]) });
         } catch (err: any) {
@@ -3031,6 +3076,21 @@ export async function registerRoutes(
       if (records.length > 1000) {
         return res.status(400).json({ message: "Maximum 1,000 records per batch. Split into multiple requests." });
       }
+
+      const preErrors: Array<{ index: number; message: string }> = [];
+      for (let i = 0; i < records.length; i++) {
+        const missingFields = validateBatchRequiredFields(records[i], i);
+        if (missingFields.length > 0) {
+          preErrors.push({ index: i, message: `Missing required fields: ${missingFields.join(", ")}` });
+        }
+      }
+      if (preErrors.length > 0) {
+        return res.status(400).json({
+          message: `${preErrors.length} record(s) missing required borrower fields`,
+          errors: preErrors,
+        });
+      }
+
       const jobId = await enqueueBatchAccountCreate(records, req.session?.userId || null);
       await storage.createAuditLog({
         action: "BATCH_QUEUE_ACCOUNTS", entity: "credit_account", userId: req.session?.userId,
@@ -3115,9 +3175,9 @@ export async function registerRoutes(
   app.get("/api/batch-upload/template/:format", (_req, res) => {
     const format = _req.params.format;
     if (format === "csv") {
-      const csvTemplate = `borrowerId,lenderInstitution,accountNumber,accountType,originalAmount,currentBalance,currency,interestRate,disbursementDate,maturityDate,status,daysInArrears
-BORROWER_ID_1,Commercial Bank,CB-LN-2025-001,Personal Loan,500000.00,450000.00,ETB,12.50,2025-01-15,2028-01-15,current,0
-BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00,ETB,15.00,2025-02-01,2030-02-01,current,0`;
+      const csvTemplate = `borrowerId,borrowerName,dateOfBirth,address,nationalId,phoneNumber,reportingDate,lenderInstitution,accountNumber,accountType,originalAmount,currentBalance,currency,interestRate,disbursementDate,maturityDate,status,daysInArrears
+BORROWER_ID_1,John Doe,1985-03-15,"12 Independence Ave, Accra",GHA-123456789,+233201234567,2025-01-31,Commercial Bank,CB-LN-2025-001,Personal Loan,500000.00,450000.00,ETB,12.50,2025-01-15,2028-01-15,current,0
+BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209876543,2025-01-31,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00,ETB,15.00,2025-02-01,2030-02-01,current,0`;
       res.setHeader("Content-Type", "text/csv");
       res.setHeader("Content-Disposition", 'attachment; filename="batch-upload-template.csv"');
       return res.send(csvTemplate);
@@ -3125,6 +3185,12 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
       const jsonTemplate = JSON.stringify([
         {
           borrowerId: "BORROWER_ID_1",
+          borrowerName: "John Doe",
+          dateOfBirth: "1985-03-15",
+          address: "12 Independence Ave, Accra",
+          nationalId: "GHA-123456789",
+          phoneNumber: "+233201234567",
+          reportingDate: "2025-01-31",
           lenderInstitution: "Commercial Bank",
           accountNumber: "CB-LN-2025-001",
           accountType: "Personal Loan",

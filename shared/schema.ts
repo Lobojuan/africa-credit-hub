@@ -209,6 +209,7 @@ export const creditAccounts = pgTable("credit_accounts", {
   bogAssetClassification: text("bog_asset_classification"),
   facilityStatusDate: text("facility_status_date"),
   closedDate: text("closed_date"),
+  reportingDate: text("reporting_date"),
   correctionIndicator: integer("correction_indicator").default(0),
   organizationId: varchar("organization_id").references(() => organizations.id),
   createdAt: timestamp("created_at").defaultNow(),

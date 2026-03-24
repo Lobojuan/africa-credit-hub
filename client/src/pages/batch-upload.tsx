@@ -39,11 +39,17 @@ interface UploadHistoryItem {
 
 const ghanaMode = isGhanaMode();
 
-const requiredFields = ["borrowerId", "lenderInstitution", "accountNumber", "accountType", "originalAmount", "currentBalance", "currency", "disbursementDate", "maturityDate", "status"];
+const requiredFields = ["borrowerId", "borrowerName", "dateOfBirth", "address", "nationalId", "phoneNumber", "reportingDate", "lenderInstitution", "accountNumber", "accountType", "originalAmount", "currentBalance", "currency", "disbursementDate", "maturityDate", "status"];
 
 const sampleJson = ghanaMode ? `[
   {
     "borrowerId": "<BORROWER_ID>",
+    "borrowerName": "Kwame Mensah",
+    "dateOfBirth": "1985-03-15",
+    "address": "12 Independence Ave, Accra",
+    "nationalId": "GHA-123456789",
+    "phoneNumber": "+233201234567",
+    "reportingDate": "2025-01-31",
     "lenderInstitution": "GCB Bank Limited",
     "accountNumber": "GCB-LN-2025-001",
     "accountType": "Term Loan",
@@ -63,6 +69,12 @@ const sampleJson = ghanaMode ? `[
 ]` : `[
   {
     "borrowerId": "<BORROWER_ID>",
+    "borrowerName": "Abebe Bekele",
+    "dateOfBirth": "1988-06-20",
+    "address": "Bole Road, Addis Ababa",
+    "nationalId": "ETH-123456789",
+    "phoneNumber": "+251911234567",
+    "reportingDate": "2025-01-31",
     "lenderInstitution": "Commercial Bank of Ethiopia",
     "accountNumber": "CBE-LN-2025-001",
     "accountType": "Personal Loan",
@@ -81,6 +93,12 @@ const sampleXbrl = ghanaMode ? `<?xml version="1.0" encoding="UTF-8"?>
 <creditRegistry xmlns="urn:cdh:credit:1.1">
   <creditAccount>
     <borrowerId>BORROWER_ID</borrowerId>
+    <borrowerName>Kwame Mensah</borrowerName>
+    <dateOfBirth>1985-03-15</dateOfBirth>
+    <address>12 Independence Ave, Accra</address>
+    <nationalId>GHA-123456789</nationalId>
+    <phoneNumber>+233201234567</phoneNumber>
+    <reportingDate>2025-01-31</reportingDate>
     <lenderInstitution>GCB Bank Limited</lenderInstitution>
     <accountNumber>GCB-LN-2025-001</accountNumber>
     <accountType>Term Loan</accountType>
@@ -97,6 +115,12 @@ const sampleXbrl = ghanaMode ? `<?xml version="1.0" encoding="UTF-8"?>
 <creditRegistry xmlns="urn:cdh:credit:1.1">
   <creditAccount>
     <borrowerId>BORROWER_ID</borrowerId>
+    <borrowerName>Abebe Bekele</borrowerName>
+    <dateOfBirth>1988-06-20</dateOfBirth>
+    <address>Bole Road, Addis Ababa</address>
+    <nationalId>ETH-123456789</nationalId>
+    <phoneNumber>+251911234567</phoneNumber>
+    <reportingDate>2025-01-31</reportingDate>
     <lenderInstitution>Commercial Bank of Ethiopia</lenderInstitution>
     <accountNumber>CBE-LN-2025-001</accountNumber>
     <accountType>Personal Loan</accountType>
@@ -116,12 +140,12 @@ GCB001|20250115|Kwame Mensah|GHA-123456789|TML|GCB-LN-2025-001|GHS|150000.00|125
 GCB001|20250115|Abena Osei|GHA-987654321|OVD|GCB-OD-2025-002|GHS|50000.00|35000.00|32.00|20250201|20260201|OLM|QTR|15|PER|UNS|0.00`;
 
 const sampleCsv = ghanaMode
-  ? `borrowerId,lenderInstitution,accountNumber,accountType,originalAmount,currentBalance,currency,interestRate,disbursementDate,maturityDate,status,daysInArrears
-BORROWER_ID_1,GCB Bank Limited,GCB-LN-2025-001,Term Loan,150000.00,125000.00,GHS,28.50,2025-01-15,2028-01-15,current,0
-BORROWER_ID_2,Ecobank Ghana,ECO-OD-2025-002,Overdraft,50000.00,35000.00,GHS,32.00,2025-02-01,2026-02-01,current,15`
-  : `borrowerId,lenderInstitution,accountNumber,accountType,originalAmount,currentBalance,currency,interestRate,disbursementDate,maturityDate,status,daysInArrears
-BORROWER_ID_1,Commercial Bank of Ethiopia,CBE-LN-2025-001,Personal Loan,500000.00,450000.00,ETB,12.50,2025-01-15,2028-01-15,current,0
-BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00,ETB,15.00,2025-02-01,2030-02-01,current,0`;
+  ? `borrowerId,borrowerName,dateOfBirth,address,nationalId,phoneNumber,reportingDate,lenderInstitution,accountNumber,accountType,originalAmount,currentBalance,currency,interestRate,disbursementDate,maturityDate,status,daysInArrears
+BORROWER_ID_1,Kwame Mensah,1985-03-15,"12 Independence Ave, Accra",GHA-123456789,+233201234567,2025-01-31,GCB Bank Limited,GCB-LN-2025-001,Term Loan,150000.00,125000.00,GHS,28.50,2025-01-15,2028-01-15,current,0
+BORROWER_ID_2,Abena Osei,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209876543,2025-01-31,Ecobank Ghana,ECO-OD-2025-002,Overdraft,50000.00,35000.00,GHS,32.00,2025-02-01,2026-02-01,current,15`
+  : `borrowerId,borrowerName,dateOfBirth,address,nationalId,phoneNumber,reportingDate,lenderInstitution,accountNumber,accountType,originalAmount,currentBalance,currency,interestRate,disbursementDate,maturityDate,status,daysInArrears
+BORROWER_ID_1,Abebe Bekele,1988-06-20,"Bole Road, Addis Ababa",ETH-123456789,+251911234567,2025-01-31,Commercial Bank of Ethiopia,CBE-LN-2025-001,Personal Loan,500000.00,450000.00,ETB,12.50,2025-01-15,2028-01-15,current,0
+BORROWER_ID_2,Tigist Hailu,1992-11-10,"Piassa, Addis Ababa",ETH-987654321,+251922345678,2025-01-31,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00,ETB,15.00,2025-02-01,2030-02-01,current,0`;
 
 function parseCSVLine(line: string): string[] {
   const result: string[] = [];
@@ -598,6 +622,23 @@ export default function BatchUploadPage() {
           </Button>
         </div>
       </div>
+
+      <Card>
+        <CardContent className="py-3 px-4">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-xs font-semibold mb-1" data-testid="text-required-fields-title">Required Borrower Fields (all formats)</p>
+              <div className="flex flex-wrap gap-1.5">
+                {["borrowerName", "dateOfBirth", "address", "nationalId", "phoneNumber", "reportingDate"].map(f => (
+                  <Badge key={f} variant="outline" className="text-[10px]" data-testid={`badge-required-${f}`}>{f}</Badge>
+                ))}
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1">These fields are required in addition to account fields (borrowerId, lenderInstitution, accountNumber, etc.) for accurate borrower matching and credit report generation.</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Tabs value={uploadTab} onValueChange={(v) => { setUploadTab(v); setResult(null); }} className="w-full">
         <TabsList className="mb-4">

@@ -145,6 +145,7 @@ export async function enqueueBatchAccountCreate(
         "borrowerId", "lenderInstitution", "accountNumber", "accountType",
         "originalAmount", "currentBalance", "currency", "interestRate",
         "disbursementDate", "maturityDate", "status", "daysInArrears",
+        "reportingDate",
       ];
       await processChunkedInserts(
         job,
