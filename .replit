@@ -58,7 +58,6 @@ SMTP_HOST = "smtp.gmail.com"
 SMTP_USER = "uffe.carlson@gmail.com"
 SMTP_FROM = "uffe.carlson@gmail.com"
 GOOGLE_CLIENT_ID = "22867687760-jl6hempaj2515kgud1tbhu683lhqoohf.apps.googleusercontent.com"
-GOOGLE_CLIENT_SECRET = "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"
 
 [userenv.development]
 
