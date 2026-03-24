@@ -1,9 +1,12 @@
 import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { CreditScoreGauge } from "@/components/credit-score-gauge";
+import { useAuth } from "@/hooks/use-auth";
 import {
   Calculator,
   BookOpen,
@@ -12,13 +15,12 @@ import {
   Info,
   TrendingUp,
   TrendingDown,
-  Percent,
-  Clock,
-  CreditCard,
-  Search,
   Scale,
   BarChart3,
   FileText,
+  ShieldCheck,
+  Table2,
+  Lock,
 } from "lucide-react";
 
 const SCORE_BANDS = [
@@ -30,11 +32,11 @@ const SCORE_BANDS = [
 ];
 
 const SCORING_FACTORS = [
-  { key: "paymentHistory", label: "Payment History", weight: 35, icon: CheckCircle, description: "On-time payments vs. delinquencies, defaults, and write-offs across all accounts." },
-  { key: "creditUtilization", label: "Credit Utilization", weight: 30, icon: Percent, description: "Total outstanding debt relative to credit limits and original loan amounts." },
-  { key: "creditHistoryLength", label: "Length of Credit History", weight: 15, icon: Clock, description: "Age of oldest and newest accounts, and the average age across all credit facilities." },
-  { key: "newCreditInquiries", label: "New Credit Inquiries", weight: 10, icon: Search, description: "Number of recent hard inquiries from lenders checking creditworthiness." },
-  { key: "accountMix", label: "Account Mix", weight: 10, icon: CreditCard, description: "Diversity of credit types: personal loans, mortgages, trade finance, microfinance, etc." },
+  { key: "paymentHistory", label: "Payment History", icon: CheckCircle, description: "On-time payments vs. delinquencies, defaults, and write-offs across all accounts." },
+  { key: "creditUtilization", label: "Credit Utilization", icon: BarChart3, description: "Total outstanding debt relative to credit limits and original loan amounts." },
+  { key: "creditHistoryLength", label: "Length of Credit History", icon: FileText, description: "Age of oldest and newest accounts, and the average age across all credit facilities." },
+  { key: "newCreditInquiries", label: "New Credit Inquiries", icon: ShieldCheck, description: "Number of recent hard inquiries from lenders checking creditworthiness." },
+  { key: "accountMix", label: "Account Mix", icon: Table2, description: "Diversity of credit types: personal loans, mortgages, trade finance, microfinance, etc." },
 ];
 
 const REASON_CODES = [
@@ -145,8 +147,125 @@ function SliderInput({
   );
 }
 
+interface ScoreBandPerformance {
+  band: string;
+  range: string;
+  sampleSize: number;
+  defaultRate: number;
+  goodCount: number;
+  badCount: number;
+  oddsRatio: number;
+}
+
+function ScoreBandPerformanceTable() {
+  const { t } = useTranslation();
+  const { data, isLoading } = useQuery<ScoreBandPerformance[]>({
+    queryKey: ["/api/score-band-performance"],
+  });
+
+  if (isLoading) {
+    return (
+      <Card data-testid="card-score-performance-loading">
+        <CardContent className="p-6 space-y-4">
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-40 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const totalSample = data?.reduce((s, d) => s + d.sampleSize, 0) || 0;
+
+  return (
+    <Card data-testid="card-score-band-performance">
+      <CardContent className="p-6 space-y-5">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(175 55% 28% / 0.15), hsl(43 80% 55% / 0.1))" }}>
+            <Table2 className="w-4 h-4 text-foreground/70" />
+          </div>
+          <h2 className="text-base font-semibold" data-testid="text-performance-heading">
+            {t("creditScoreMethodology.performanceTitle", "Score Band Performance — Good/Bad Odds")}
+          </h2>
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          {t("creditScoreMethodology.performanceDescription", "Observed default rates and good/bad odds ratios by score band, computed from actual portfolio data. A higher odds ratio indicates better creditworthiness.")}
+        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs" data-testid="table-score-performance">
+            <thead>
+              <tr className="border-b">
+                <th className="text-left py-2 px-3 font-semibold">Score Band</th>
+                <th className="text-left py-2 px-3 font-semibold">Range</th>
+                <th className="text-right py-2 px-3 font-semibold">Sample Size</th>
+                <th className="text-right py-2 px-3 font-semibold">Default Rate</th>
+                <th className="text-right py-2 px-3 font-semibold">Good</th>
+                <th className="text-right py-2 px-3 font-semibold">Bad</th>
+                <th className="text-right py-2 px-3 font-semibold">Good:Bad Odds</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data?.map((row) => {
+                const bandInfo = SCORE_BANDS.find(b => b.label === row.band);
+                return (
+                  <tr key={row.band} className="border-b border-border/50 hover:bg-muted/30" data-testid={`row-band-${row.band.toLowerCase().replace(/\s/g, "-")}`}>
+                    <td className="py-2.5 px-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: bandInfo?.color }} />
+                        <span className="font-medium">{row.band}</span>
+                      </div>
+                    </td>
+                    <td className="py-2.5 px-3 font-mono text-muted-foreground">{row.range}</td>
+                    <td className="py-2.5 px-3 text-right tabular-nums">{row.sampleSize.toLocaleString()}</td>
+                    <td className="py-2.5 px-3 text-right tabular-nums">
+                      <Badge variant={row.defaultRate > 20 ? "destructive" : row.defaultRate > 10 ? "secondary" : "default"} className="text-[10px]">
+                        {row.defaultRate}%
+                      </Badge>
+                    </td>
+                    <td className="py-2.5 px-3 text-right tabular-nums text-emerald-600 dark:text-emerald-400">{row.goodCount.toLocaleString()}</td>
+                    <td className="py-2.5 px-3 text-right tabular-nums text-red-600 dark:text-red-400">{row.badCount.toLocaleString()}</td>
+                    <td className="py-2.5 px-3 text-right tabular-nums font-semibold">
+                      {row.oddsRatio >= 999 ? "∞" : `${row.oddsRatio}:1`}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2">
+                <td className="py-2.5 px-3 font-semibold" colSpan={2}>Total</td>
+                <td className="py-2.5 px-3 text-right font-semibold tabular-nums">{totalSample.toLocaleString()}</td>
+                <td className="py-2.5 px-3 text-right font-semibold tabular-nums">
+                  <Badge variant="secondary" className="text-[10px]">
+                    {totalSample > 0 ? ((data?.reduce((s, d) => s + d.badCount, 0) || 0) / totalSample * 100).toFixed(1) : "0"}%
+                  </Badge>
+                </td>
+                <td className="py-2.5 px-3 text-right font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
+                  {(data?.reduce((s, d) => s + d.goodCount, 0) || 0).toLocaleString()}
+                </td>
+                <td className="py-2.5 px-3 text-right font-semibold tabular-nums text-red-600 dark:text-red-400">
+                  {(data?.reduce((s, d) => s + d.badCount, 0) || 0).toLocaleString()}
+                </td>
+                <td className="py-2.5 px-3"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <div className="flex items-start gap-2 text-[10px] text-muted-foreground bg-muted/30 rounded-md p-3">
+          <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+          <span>
+            {t("creditScoreMethodology.performanceNote", "\"Bad\" = borrowers with at least one account in default or written-off status. \"Good\" = all other borrowers. Odds ratio = Good ÷ Bad. Data reflects the current portfolio snapshot.")}
+          </span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function CreditScoreMethodologyPage() {
   const { t } = useTranslation();
+  const { user } = useAuth();
+
+  const isPrivilegedUser = user && ["admin", "lender", "super_admin", "regulator"].includes(user.role);
 
   const [simParams, setSimParams] = useState({
     currentAccounts: 3,
@@ -187,54 +306,49 @@ export default function CreditScoreMethodologyPage() {
           {t("creditScoreMethodology.title", "Credit Score Methodology")}
         </h1>
         <p className="text-sm text-muted-foreground" data-testid="text-page-subtitle">
-          {t("creditScoreMethodology.subtitle", "Understand how credit scores are calculated, what factors matter, and how to interpret results.")}
+          {isPrivilegedUser
+            ? t("creditScoreMethodology.subtitle", "Understand how credit scores are calculated, what factors matter, and how to interpret results.")
+            : t("creditScoreMethodology.subtitlePublic", "Learn about credit score bands and what they mean for your creditworthiness.")}
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         <div className="lg:col-span-3 space-y-6">
-          <Card data-testid="card-scoring-formula">
-            <CardContent className="p-6 space-y-5">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(175 55% 28% / 0.15), hsl(43 80% 55% / 0.1))" }}>
-                  <Calculator className="w-4 h-4 text-foreground/70" />
-                </div>
-                <h2 className="text-base font-semibold" data-testid="text-formula-heading">
-                  {t("creditScoreMethodology.formulaTitle", "Scoring Formula Breakdown")}
-                </h2>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                {t("creditScoreMethodology.formulaDescription", "The credit score ranges from 300 to 850 and is computed using a weighted formula that evaluates five key dimensions of a borrower's credit profile.")}
-              </p>
-              <div className="space-y-3">
-                {SCORING_FACTORS.map((factor) => (
-                  <div key={factor.key} className="flex items-start gap-3" data-testid={`factor-${factor.key}`}>
-                    <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 mt-0.5" style={{ background: `hsl(175 55% 28% / ${factor.weight / 50})` }}>
-                      <factor.icon className="w-3.5 h-3.5 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-semibold">{factor.label}</span>
-                        <Badge variant="secondary" className="text-[10px]">{factor.weight}%</Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{factor.description}</p>
-                    </div>
-                    <div className="w-20 shrink-0">
-                      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{
-                            width: `${(factor.weight / 35) * 100}%`,
-                            background: "linear-gradient(90deg, hsl(175 55% 35%), hsl(142 55% 40%))",
-                          }}
-                        />
-                      </div>
-                    </div>
+
+          {isPrivilegedUser && (
+            <Card data-testid="card-scoring-factors">
+              <CardContent className="p-6 space-y-5">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(175 55% 28% / 0.15), hsl(43 80% 55% / 0.1))" }}>
+                    <Calculator className="w-4 h-4 text-foreground/70" />
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                  <h2 className="text-base font-semibold" data-testid="text-factors-heading">
+                    {t("creditScoreMethodology.factorsTitle", "Scoring Factors")}
+                  </h2>
+                  <Badge variant="secondary" className="text-[9px]">
+                    <Lock className="w-2.5 h-2.5 mr-1" />
+                    Internal
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {t("creditScoreMethodology.factorsDescription", "The credit score ranges from 300 to 850 and evaluates five key dimensions of a borrower's credit profile. Exact weightings are proprietary.")}
+                </p>
+                <div className="space-y-3">
+                  {SCORING_FACTORS.map((factor) => (
+                    <div key={factor.key} className="flex items-start gap-3" data-testid={`factor-${factor.key}`}>
+                      <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 mt-0.5" style={{ background: "hsl(175 55% 28% / 0.3)" }}>
+                        <factor.icon className="w-3.5 h-3.5 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-semibold">{factor.label}</span>
+                        <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{factor.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card data-testid="card-score-bands">
             <CardContent className="p-6 space-y-5">
@@ -286,188 +400,194 @@ export default function CreditScoreMethodologyPage() {
             </CardContent>
           </Card>
 
-          <Card data-testid="card-reason-codes">
-            <CardContent className="p-6 space-y-5">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(175 55% 28% / 0.15), hsl(43 80% 55% / 0.1))" }}>
-                  <BookOpen className="w-4 h-4 text-foreground/70" />
-                </div>
-                <h2 className="text-base font-semibold" data-testid="text-reason-codes-heading">
-                  {t("creditScoreMethodology.reasonCodesTitle", "Reason Code Glossary")}
-                </h2>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                {t("creditScoreMethodology.reasonCodesDescription", "Each credit report includes reason codes explaining the key factors that influenced the score. Here is the complete glossary.")}
-              </p>
-              <div className="space-y-2">
-                {REASON_CODES.map((rc) => (
-                  <div
-                    key={rc.code}
-                    className="flex items-start gap-3 rounded-md p-3 border border-border/50"
-                    data-testid={`reason-code-${rc.code}`}
-                  >
-                    <div className="mt-0.5 shrink-0">
-                      {rc.impact === "positive" ? (
-                        <TrendingUp className="w-4 h-4 text-emerald-500" />
-                      ) : rc.impact === "negative" ? (
-                        <TrendingDown className="w-4 h-4 text-red-500" />
-                      ) : (
-                        <Info className="w-4 h-4 text-amber-500" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <code className="text-xs font-semibold font-mono">{rc.code}</code>
-                        <Badge
-                          variant={rc.impact === "positive" ? "default" : rc.impact === "negative" ? "destructive" : "secondary"}
-                          className="text-[9px]"
-                        >
-                          {rc.impact === "positive" ? "Positive" : rc.impact === "negative" ? "Negative" : "Neutral"}
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{rc.description}</p>
-                    </div>
+          {isPrivilegedUser && <ScoreBandPerformanceTable />}
+
+          {isPrivilegedUser && (
+            <Card data-testid="card-reason-codes">
+              <CardContent className="p-6 space-y-5">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(175 55% 28% / 0.15), hsl(43 80% 55% / 0.1))" }}>
+                    <BookOpen className="w-4 h-4 text-foreground/70" />
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                  <h2 className="text-base font-semibold" data-testid="text-reason-codes-heading">
+                    {t("creditScoreMethodology.reasonCodesTitle", "Reason Code Glossary")}
+                  </h2>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {t("creditScoreMethodology.reasonCodesDescription", "Each credit report includes reason codes explaining the key factors that influenced the score. Here is the complete glossary.")}
+                </p>
+                <div className="space-y-2">
+                  {REASON_CODES.map((rc) => (
+                    <div
+                      key={rc.code}
+                      className="flex items-start gap-3 rounded-md p-3 border border-border/50"
+                      data-testid={`reason-code-${rc.code}`}
+                    >
+                      <div className="mt-0.5 shrink-0">
+                        {rc.impact === "positive" ? (
+                          <TrendingUp className="w-4 h-4 text-emerald-500" />
+                        ) : rc.impact === "negative" ? (
+                          <TrendingDown className="w-4 h-4 text-red-500" />
+                        ) : (
+                          <Info className="w-4 h-4 text-amber-500" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <code className="text-xs font-semibold font-mono">{rc.code}</code>
+                          <Badge
+                            variant={rc.impact === "positive" ? "default" : rc.impact === "negative" ? "destructive" : "secondary"}
+                            className="text-[9px]"
+                          >
+                            {rc.impact === "positive" ? "Positive" : rc.impact === "negative" ? "Negative" : "Neutral"}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{rc.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         <div className="lg:col-span-2 space-y-6">
-          <Card className="lg:sticky lg:top-4" data-testid="card-score-simulator">
-            <CardContent className="p-6 space-y-5">
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(175 55% 28% / 0.15), hsl(43 80% 55% / 0.1))" }}>
-                    <Scale className="w-4 h-4 text-foreground/70" />
+          {isPrivilegedUser && (
+            <Card className="lg:sticky lg:top-4" data-testid="card-score-simulator">
+              <CardContent className="p-6 space-y-5">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(175 55% 28% / 0.15), hsl(43 80% 55% / 0.1))" }}>
+                      <Scale className="w-4 h-4 text-foreground/70" />
+                    </div>
+                    <h2 className="text-base font-semibold" data-testid="text-simulator-heading">
+                      {t("creditScoreMethodology.simulatorTitle", "Score Simulator")}
+                    </h2>
                   </div>
-                  <h2 className="text-base font-semibold" data-testid="text-simulator-heading">
-                    {t("creditScoreMethodology.simulatorTitle", "Score Simulator")}
-                  </h2>
+                  <Button variant="ghost" size="sm" onClick={resetSimulator} data-testid="button-reset-simulator">
+                    {t("creditScoreMethodology.reset", "Reset")}
+                  </Button>
                 </div>
-                <Button variant="ghost" size="sm" onClick={resetSimulator} data-testid="button-reset-simulator">
-                  {t("creditScoreMethodology.reset", "Reset")}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                {t("creditScoreMethodology.simulatorDescription", "Adjust parameters below to see how different factors impact the credit score in real time.")}
-              </p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {t("creditScoreMethodology.simulatorDescription", "Adjust parameters below to see how different factors impact the credit score in real time.")}
+                </p>
 
-              <div className="flex justify-center py-2">
-                <CreditScoreGauge score={simResult.score} size={160} testId="gauge-simulator" />
-              </div>
-
-              <div className="space-y-4">
-                <SliderInput
-                  label={t("creditScoreMethodology.currentAccounts", "Current Accounts")}
-                  value={simParams.currentAccounts}
-                  onChange={(v) => updateParam("currentAccounts", v)}
-                  min={0}
-                  max={20}
-                  testId="current-accounts"
-                />
-                <SliderInput
-                  label={t("creditScoreMethodology.closedAccounts", "Closed Accounts")}
-                  value={simParams.closedAccounts}
-                  onChange={(v) => updateParam("closedAccounts", v)}
-                  min={0}
-                  max={20}
-                  testId="closed-accounts"
-                />
-                <SliderInput
-                  label={t("creditScoreMethodology.delinquentAccounts", "Delinquent / Default Accounts")}
-                  value={simParams.delinquentAccounts}
-                  onChange={(v) => updateParam("delinquentAccounts", v)}
-                  min={0}
-                  max={10}
-                  testId="delinquent-accounts"
-                />
-                <SliderInput
-                  label={t("creditScoreMethodology.writtenOffAccounts", "Written-Off Accounts")}
-                  value={simParams.writtenOffAccounts}
-                  onChange={(v) => updateParam("writtenOffAccounts", v)}
-                  min={0}
-                  max={10}
-                  testId="written-off-accounts"
-                />
-                <SliderInput
-                  label={t("creditScoreMethodology.restructuredAccounts", "Restructured Accounts")}
-                  value={simParams.restructuredAccounts}
-                  onChange={(v) => updateParam("restructuredAccounts", v)}
-                  min={0}
-                  max={10}
-                  testId="restructured-accounts"
-                />
-                <SliderInput
-                  label={t("creditScoreMethodology.activeJudgments", "Active Court Judgments")}
-                  value={simParams.activeJudgments}
-                  onChange={(v) => updateParam("activeJudgments", v)}
-                  min={0}
-                  max={10}
-                  testId="active-judgments"
-                />
-                <SliderInput
-                  label={t("creditScoreMethodology.inquiries", "Credit Inquiries")}
-                  value={simParams.inquiryCount}
-                  onChange={(v) => updateParam("inquiryCount", v)}
-                  min={0}
-                  max={20}
-                  testId="inquiry-count"
-                />
-                <SliderInput
-                  label={t("creditScoreMethodology.totalDebt", "Total Debt")}
-                  value={simParams.totalDebt}
-                  onChange={(v) => updateParam("totalDebt", v)}
-                  min={0}
-                  max={5000000}
-                  step={10000}
-                  testId="total-debt"
-                />
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-medium text-muted-foreground">
-                    {t("creditScoreMethodology.pepFlag", "Politically Exposed Person")}
-                  </label>
-                  <button
-                    onClick={() => updateParam("isPep", !simParams.isPep)}
-                    className={`relative w-9 h-5 rounded-full transition-colors ${simParams.isPep ? "bg-primary" : "bg-muted"}`}
-                    data-testid="toggle-pep"
-                  >
-                    <span
-                      className={`absolute top-0.5 w-4 h-4 rounded-full bg-card transition-transform shadow-sm ${simParams.isPep ? "translate-x-4" : "translate-x-0.5"}`}
-                    />
-                  </button>
+                <div className="flex justify-center py-2">
+                  <CreditScoreGauge score={simResult.score} size={160} testId="gauge-simulator" />
                 </div>
-              </div>
 
-              <div className="space-y-2 pt-2 border-t">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  {t("creditScoreMethodology.activeReasonCodes", "Active Reason Codes")}
-                </h3>
-                <div className="flex flex-wrap gap-1.5">
-                  {simResult.reasonCodes.map((code) => {
-                    const rc = REASON_CODES.find((r) => r.code === code);
-                    return (
-                      <Badge
-                        key={code}
-                        variant={
-                          rc?.impact === "positive"
-                            ? "default"
-                            : rc?.impact === "negative"
-                            ? "destructive"
-                            : "secondary"
-                        }
-                        className="text-[9px] font-mono"
-                        data-testid={`sim-reason-${code}`}
-                      >
-                        {code}
-                      </Badge>
-                    );
-                  })}
+                <div className="space-y-4">
+                  <SliderInput
+                    label={t("creditScoreMethodology.currentAccounts", "Current Accounts")}
+                    value={simParams.currentAccounts}
+                    onChange={(v) => updateParam("currentAccounts", v)}
+                    min={0}
+                    max={20}
+                    testId="current-accounts"
+                  />
+                  <SliderInput
+                    label={t("creditScoreMethodology.closedAccounts", "Closed Accounts")}
+                    value={simParams.closedAccounts}
+                    onChange={(v) => updateParam("closedAccounts", v)}
+                    min={0}
+                    max={20}
+                    testId="closed-accounts"
+                  />
+                  <SliderInput
+                    label={t("creditScoreMethodology.delinquentAccounts", "Delinquent / Default Accounts")}
+                    value={simParams.delinquentAccounts}
+                    onChange={(v) => updateParam("delinquentAccounts", v)}
+                    min={0}
+                    max={10}
+                    testId="delinquent-accounts"
+                  />
+                  <SliderInput
+                    label={t("creditScoreMethodology.writtenOffAccounts", "Written-Off Accounts")}
+                    value={simParams.writtenOffAccounts}
+                    onChange={(v) => updateParam("writtenOffAccounts", v)}
+                    min={0}
+                    max={10}
+                    testId="written-off-accounts"
+                  />
+                  <SliderInput
+                    label={t("creditScoreMethodology.restructuredAccounts", "Restructured Accounts")}
+                    value={simParams.restructuredAccounts}
+                    onChange={(v) => updateParam("restructuredAccounts", v)}
+                    min={0}
+                    max={10}
+                    testId="restructured-accounts"
+                  />
+                  <SliderInput
+                    label={t("creditScoreMethodology.activeJudgments", "Active Court Judgments")}
+                    value={simParams.activeJudgments}
+                    onChange={(v) => updateParam("activeJudgments", v)}
+                    min={0}
+                    max={10}
+                    testId="active-judgments"
+                  />
+                  <SliderInput
+                    label={t("creditScoreMethodology.inquiries", "Credit Inquiries")}
+                    value={simParams.inquiryCount}
+                    onChange={(v) => updateParam("inquiryCount", v)}
+                    min={0}
+                    max={20}
+                    testId="inquiry-count"
+                  />
+                  <SliderInput
+                    label={t("creditScoreMethodology.totalDebt", "Total Debt")}
+                    value={simParams.totalDebt}
+                    onChange={(v) => updateParam("totalDebt", v)}
+                    min={0}
+                    max={5000000}
+                    step={10000}
+                    testId="total-debt"
+                  />
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-muted-foreground">
+                      {t("creditScoreMethodology.pepFlag", "Politically Exposed Person")}
+                    </label>
+                    <button
+                      onClick={() => updateParam("isPep", !simParams.isPep)}
+                      className={`relative w-9 h-5 rounded-full transition-colors ${simParams.isPep ? "bg-primary" : "bg-muted"}`}
+                      data-testid="toggle-pep"
+                    >
+                      <span
+                        className={`absolute top-0.5 w-4 h-4 rounded-full bg-card transition-transform shadow-sm ${simParams.isPep ? "translate-x-4" : "translate-x-0.5"}`}
+                      />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+
+                <div className="space-y-2 pt-2 border-t">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    {t("creditScoreMethodology.activeReasonCodes", "Active Reason Codes")}
+                  </h3>
+                  <div className="flex flex-wrap gap-1.5">
+                    {simResult.reasonCodes.map((code) => {
+                      const rc = REASON_CODES.find((r) => r.code === code);
+                      return (
+                        <Badge
+                          key={code}
+                          variant={
+                            rc?.impact === "positive"
+                              ? "default"
+                              : rc?.impact === "negative"
+                              ? "destructive"
+                              : "secondary"
+                          }
+                          className="text-[9px] font-mono"
+                          data-testid={`sim-reason-${code}`}
+                        >
+                          {code}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card data-testid="card-interpretation-guide">
             <CardContent className="p-6 space-y-4">

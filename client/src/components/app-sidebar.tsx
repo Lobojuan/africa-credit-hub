@@ -132,7 +132,7 @@ const consumerItems: NavItem[] = [
 ];
 
 const resourceItems: NavItem[] = [
-  { titleKey: "sidebar.creditScoreMethodology", url: "/credit-score-methodology", icon: Brain, testId: "nav-credit-score-methodology" },
+  { titleKey: "sidebar.creditScoreMethodology", url: "/credit-score-methodology", icon: Brain, testId: "nav-credit-score-methodology", roles: ["admin", "lender", "super_admin", "regulator"] },
   { titleKey: "sidebar.appGuide", url: "/guide", icon: Play, testId: "nav-app-guide" },
   { titleKey: "sidebar.help", url: "/help", icon: HelpCircle, testId: "nav-help" },
   ...(isGhanaMode() ? [

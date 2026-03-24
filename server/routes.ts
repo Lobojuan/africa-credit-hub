@@ -1333,6 +1333,72 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/score-band-performance", requireAuth, requireRole("admin", "lender", "regulator"), async (req, res) => {
+    try {
+      const orgId = getOrgScope(req);
+      const country = getCountryFilter(req);
+      const allAccounts = await storage.getAllCreditAccounts(orgId, country);
+      const borrowerResult = await storage.getBorrowers(1, 100000, orgId, country);
+      const allBorrowers = borrowerResult.data;
+
+      const bands = [
+        { label: "Excellent", min: 750, max: 850 },
+        { label: "Good", min: 670, max: 749 },
+        { label: "Fair", min: 580, max: 669 },
+        { label: "Poor", min: 450, max: 579 },
+        { label: "Very Poor", min: 300, max: 449 },
+      ];
+
+      const borrowerScores = new Map<string, number>();
+      for (const b of allBorrowers) {
+        const bAccounts = allAccounts.filter(a => a.borrowerId === b.id);
+        if (bAccounts.length === 0) {
+          borrowerScores.set(b.id, 600);
+          continue;
+        }
+        const totalAccounts = bAccounts.length;
+        const currentAccounts = bAccounts.filter(a => a.status === "current" || a.status === "closed").length;
+        const delinquentAccounts = bAccounts.filter(a => a.status === "delinquent" || a.status === "default").length;
+        const writtenOffAccounts = bAccounts.filter(a => a.status === "written_off").length;
+        const restructuredAccounts = bAccounts.filter(a => a.status === "restructured").length;
+        const onTimeRatio = currentAccounts / totalAccounts;
+        let score = Math.round(300 + onTimeRatio * 500 - delinquentAccounts * 50 - writtenOffAccounts * 75 - restructuredAccounts * 20);
+        score = Math.max(300, Math.min(850, score));
+        borrowerScores.set(b.id, score);
+      }
+
+      const result = bands.map(band => {
+        const borrowerIds = Array.from(borrowerScores.entries())
+          .filter(([_, score]) => score >= band.min && score <= band.max)
+          .map(([id]) => id);
+
+        const sampleSize = borrowerIds.length;
+        const badBorrowers = borrowerIds.filter(id => {
+          const bAccounts = allAccounts.filter(a => a.borrowerId === id);
+          return bAccounts.some(a => a.status === "default" || a.status === "written_off");
+        }).length;
+
+        const defaultRate = sampleSize > 0 ? Number(((badBorrowers / sampleSize) * 100).toFixed(1)) : 0;
+        const goodCount = sampleSize - badBorrowers;
+        const oddsRatio = badBorrowers > 0 ? Number((goodCount / badBorrowers).toFixed(1)) : goodCount > 0 ? 999.0 : 0;
+
+        return {
+          band: band.label,
+          range: `${band.min}-${band.max}`,
+          sampleSize,
+          defaultRate,
+          goodCount,
+          badCount: badBorrowers,
+          oddsRatio,
+        };
+      });
+
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   app.get("/api/concentration-alerts", requireAuth, async (req, res) => {
     try {
       const orgId = getOrgScope(req);
