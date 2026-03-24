@@ -1332,6 +1332,103 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/concentration-alerts", requireAuth, async (req, res) => {
+    try {
+      const orgId = getOrgScope(req);
+      const country = getCountryFilter(req);
+      const allAccounts = await storage.getAllCreditAccounts(orgId, country);
+
+      const SINGLE_BORROWER_THRESHOLD = 0.15;
+      const SINGLE_LENDER_THRESHOLD = 0.25;
+      const SECTOR_THRESHOLD = 0.35;
+
+      const totalExposure = allAccounts.reduce((sum, a) => sum + parseFloat(a.currentBalance || "0"), 0);
+      if (totalExposure === 0) {
+        return res.json({ alerts: [], totalExposure: 0, thresholds: { singleBorrower: SINGLE_BORROWER_THRESHOLD, singleLender: SINGLE_LENDER_THRESHOLD, sector: SECTOR_THRESHOLD } });
+      }
+
+      const alerts: Array<{ type: string; severity: "low" | "medium" | "high" | "critical"; entity: string; exposure: number; percentage: number; threshold: number; message: string }> = [];
+
+      const borrowerExposure: Record<string, { name: string; total: number }> = {};
+      for (const a of allAccounts) {
+        const bid = a.borrowerId;
+        if (!borrowerExposure[bid]) borrowerExposure[bid] = { name: bid, total: 0 };
+        borrowerExposure[bid].total += parseFloat(a.currentBalance || "0");
+      }
+
+      const allBorrowers = await storage.searchBorrowers("", orgId, country);
+      const borrowerNameMap: Record<string, string> = {};
+      for (const b of allBorrowers) {
+        borrowerNameMap[b.id] = b.type === "corporate" ? (b.companyName || b.id) : `${b.firstName || ""} ${b.lastName || ""}`.trim() || b.id;
+      }
+
+      for (const [bid, data] of Object.entries(borrowerExposure)) {
+        const pct = data.total / totalExposure;
+        if (pct >= SINGLE_BORROWER_THRESHOLD) {
+          const name = borrowerNameMap[bid] || bid;
+          alerts.push({
+            type: "single_borrower",
+            severity: pct >= 0.30 ? "critical" : pct >= 0.20 ? "high" : "medium",
+            entity: name,
+            exposure: Math.round(data.total * 100) / 100,
+            percentage: Math.round(pct * 10000) / 100,
+            threshold: SINGLE_BORROWER_THRESHOLD * 100,
+            message: `${name} represents ${(pct * 100).toFixed(1)}% of total portfolio exposure (threshold: ${SINGLE_BORROWER_THRESHOLD * 100}%)`,
+          });
+        }
+      }
+
+      const lenderExposure: Record<string, number> = {};
+      for (const a of allAccounts) {
+        const lender = a.lenderInstitution || "Unknown";
+        lenderExposure[lender] = (lenderExposure[lender] || 0) + parseFloat(a.currentBalance || "0");
+      }
+      for (const [lender, total] of Object.entries(lenderExposure)) {
+        const pct = total / totalExposure;
+        if (pct >= SINGLE_LENDER_THRESHOLD) {
+          alerts.push({
+            type: "single_lender",
+            severity: pct >= 0.40 ? "critical" : pct >= 0.30 ? "high" : "medium",
+            entity: lender,
+            exposure: Math.round(total * 100) / 100,
+            percentage: Math.round(pct * 10000) / 100,
+            threshold: SINGLE_LENDER_THRESHOLD * 100,
+            message: `${lender} holds ${(pct * 100).toFixed(1)}% of total portfolio exposure (threshold: ${SINGLE_LENDER_THRESHOLD * 100}%)`,
+          });
+        }
+      }
+
+      const sectorExposure: Record<string, number> = {};
+      for (const a of allAccounts) {
+        const sector = a.accountType || "Unknown";
+        sectorExposure[sector] = (sectorExposure[sector] || 0) + parseFloat(a.currentBalance || "0");
+      }
+      for (const [sector, total] of Object.entries(sectorExposure)) {
+        const pct = total / totalExposure;
+        if (pct >= SECTOR_THRESHOLD) {
+          alerts.push({
+            type: "sector",
+            severity: pct >= 0.50 ? "critical" : pct >= 0.40 ? "high" : "medium",
+            entity: sector,
+            exposure: Math.round(total * 100) / 100,
+            percentage: Math.round(pct * 10000) / 100,
+            threshold: SECTOR_THRESHOLD * 100,
+            message: `${sector} sector accounts for ${(pct * 100).toFixed(1)}% of portfolio (threshold: ${SECTOR_THRESHOLD * 100}%)`,
+          });
+        }
+      }
+
+      alerts.sort((a, b) => {
+        const sev = { critical: 0, high: 1, medium: 2, low: 3 };
+        return (sev[a.severity] - sev[b.severity]) || (b.percentage - a.percentage);
+      });
+
+      res.json({ alerts, totalExposure: Math.round(totalExposure * 100) / 100, thresholds: { singleBorrower: SINGLE_BORROWER_THRESHOLD * 100, singleLender: SINGLE_LENDER_THRESHOLD * 100, sector: SECTOR_THRESHOLD * 100 } });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   app.get("/api/users", requireRole("admin", "super_admin"), async (req, res) => {
     try {
       const orgId = getOrgScope(req);

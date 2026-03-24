@@ -409,6 +409,78 @@ function DetailContent({ type, data, displayCurrency, convertAmount }: { type: D
   }
 }
 
+function ConcentrationAlerts() {
+  const { data, isLoading } = useQuery<{
+    alerts: Array<{ type: string; severity: string; entity: string; exposure: number; percentage: number; threshold: number; message: string }>;
+    totalExposure: number;
+    thresholds: { singleBorrower: number; singleLender: number; sector: number };
+  }>({ queryKey: ["/api/concentration-alerts"] });
+
+  if (isLoading) return (
+    <div data-testid="section-concentration-alerts">
+      <div className="flex items-center gap-2 py-2 mb-3">
+        <ShieldAlert className="w-5 h-5 text-amber-600" />
+        <span className="font-semibold text-sm">Concentration Risk Alerts</span>
+      </div>
+      <Skeleton className="h-24 w-full" />
+    </div>
+  );
+
+  const alerts = data?.alerts || [];
+  const severityColor: Record<string, string> = {
+    critical: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 border-red-200 dark:border-red-800",
+    high: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 border-orange-200 dark:border-orange-800",
+    medium: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-amber-200 dark:border-amber-800",
+    low: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+  };
+  const severityBadge: Record<string, string> = {
+    critical: "destructive",
+    high: "destructive",
+    medium: "secondary",
+    low: "outline",
+  };
+
+  return (
+    <CollapsibleDashboardSection title="Concentration Risk Alerts" icon={ShieldAlert} testId="concentration-alerts" badge={alerts.length > 0 ? `${alerts.length} alert${alerts.length > 1 ? "s" : ""}` : "Clear"}>
+      {alerts.length === 0 ? (
+        <Card data-testid="card-concentration-clear">
+          <CardContent className="py-6 text-center">
+            <CheckSquare className="w-8 h-8 text-green-600 mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">No concentration risk alerts. Portfolio exposure is within acceptable thresholds.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {alerts.map((alert, i) => (
+            <Card key={i} className={`border ${severityColor[alert.severity] || ""}`} data-testid={`card-concentration-alert-${i}`}>
+              <CardContent className="py-3 px-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge variant={severityBadge[alert.severity] as any || "secondary"} className="text-xs" data-testid={`badge-severity-${i}`}>
+                        {alert.severity.toUpperCase()}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs" data-testid={`badge-type-${i}`}>
+                        {alert.type === "single_borrower" ? "Borrower" : alert.type === "single_lender" ? "Lender" : "Sector"}
+                      </Badge>
+                    </div>
+                    <p className="text-sm font-medium truncate" data-testid={`text-alert-entity-${i}`}>{alert.entity}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5" data-testid={`text-alert-message-${i}`}>{alert.message}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-lg font-bold" data-testid={`text-alert-pct-${i}`}>{alert.percentage}%</p>
+                    <p className="text-xs text-muted-foreground">of portfolio</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </CollapsibleDashboardSection>
+  );
+}
+
 function CollapsibleDashboardSection({ title, icon: Icon, defaultOpen = true, badge, children, testId }: {
   title: string;
   icon: typeof TrendingUp;
@@ -821,6 +893,8 @@ export default function Dashboard() {
         </Card>
       </div>
       </CollapsibleDashboardSection>
+
+      <ConcentrationAlerts />
 
       <Sheet open={!!selectedDetail} onOpenChange={(open) => { if (!open) setSelectedDetail(null); }}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto" data-testid="sheet-dashboard-detail">

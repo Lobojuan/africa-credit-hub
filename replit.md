@@ -1,7 +1,7 @@
-# Credit Registry System v2.1 - Systems In Motion Limited
+# Credit Registry System - Systems In Motion Limited
 
 ## Overview
-This project is a web-based Pan-African Credit Registry System (v2.0) designed to centralize credit information, manage borrower records, and support credit risk assessment for financial institutions across 54 African countries. It handles 42+ African currencies plus USD/EUR/GBP, enforces jurisdiction-specific data retention, ensures regulatory compliance, and facilitates cross-border entity resolution. The system aims to bolster financial stability and responsible lending in Africa through robust security, adherence to regulatory workflows, and fault tolerance. The system also includes features for multi-tenant SaaS, AI-powered portfolio intelligence, blockchain audit anchoring, and a consumer self-service portal.
+This project is a web-based Pan-African Credit Registry System designed to centralize credit information, manage borrower records, and support credit risk assessment for financial institutions across Africa. It handles multiple African currencies plus USD/EUR/GBP, enforces jurisdiction-specific data retention, ensures regulatory compliance, and facilitates cross-border entity resolution. The system aims to bolster financial stability and responsible lending through robust security, adherence to regulatory workflows, fault tolerance, multi-tenant SaaS capabilities, AI-powered portfolio intelligence, blockchain audit anchoring, and a consumer self-service portal.
 
 ## User Preferences
 I prefer clear and concise communication.
@@ -17,130 +17,63 @@ The system employs a modern full-stack architecture built for scalability and co
 -   **Frontend**: React with TypeScript and Vite, styled using Tailwind CSS and shadcn/ui.
 -   **Internationalization**: Supports English, French, Portuguese, Arabic, and Swahili with RTL support.
 -   **Theming**: Dark/light theme with a premium teal and gold palette.
--   **Responsiveness**: Mobile-first design with adaptive layouts. Quick Access Bar in header provides role-filtered dropdown navigation (Oversight, Operations, Admin, Cross-Border) and direct links (Dashboard, Search, Borrowers, Reports, Upload) without opening sidebar. Compact "Navigate" dropdown on mobile.
+-   **Responsiveness**: Mobile-first design with adaptive layouts and role-filtered navigation.
 -   **Interactive Elements**: Dashboards with drill-down, notifications, Recharts, an interactive SVG Africa map, and a circular SVG credit score gauge.
 -   **Guided Tours**: Interactive demo tour and application walkthroughs.
 
 **Technical Implementations & Feature Specifications:**
 -   **Backend**: Express.js API server.
--   **Database**: PostgreSQL hosted on Neon, managed with Drizzle ORM, utilizing connection pooling and performance indexes.
--   **Authentication**: Session-based with MFA, strong password policies, and biometric (WebAuthn) support. Includes role-based idle session timeouts (15min admin/super_admin, 20min regulator, 30min lender/viewer) with a 2-minute warning dialog before auto-logout. "Stay Logged In" extends session. Timeouts logged to audit trail. Endpoints: `GET /api/auth/session-info`, `POST /api/auth/keep-alive`.
--   **Data Model**: 22 core tables for comprehensive credit, compliance, usage metering, pricing, and alternative data.
+-   **Database**: PostgreSQL hosted on Neon, managed with Drizzle ORM.
+-   **Authentication**: Session-based with MFA, strong password policies, biometric (WebAuthn) support, and role-based idle session timeouts. Google OAuth integration is also supported.
+-   **Data Model**: 22 core tables for credit, compliance, usage metering, pricing, and alternative data.
 -   **Core Capabilities**:
     -   **Credit Management**: Comprehensive borrower and credit account management with multi-currency support.
-    -   **Credit Scoring**: Algorithmic scoring (300-850) with explainable AI, utilizing a gradient boosting-inspired model (GBM-v2.1.0) with 10 weighted features.
+    -   **Credit Scoring**: Algorithmic scoring (300-850) with explainable AI, utilizing a gradient boosting-inspired model.
     -   **Workflow**: Maker-checker workflow and dispute management.
-    -   **Regulatory Compliance**: Consent management, audit trails, and a Regulatory Compliance Dashboard with jurisdiction-specific data retention for 54 African jurisdictions. Includes country-specific compliance modes (e.g., Ghana BoG CRB, Sierra Leone BSL CRB).
+    -   **Regulatory Compliance**: Consent management, audit trails, and a Regulatory Compliance Dashboard with jurisdiction-specific data retention for 54 African jurisdictions, including country-specific compliance modes.
     -   **Institutional Management**: Self-registration, approval, billing, and fee management for data providers.
-    -   **Reporting**: Regulatory analytics, CSV export, and bulk data upload (XBRL/XML).
-    -   **IFF Compliance**: Full IFF (Information Furnisher Format) batch upload support for all 6 standard formats — Business Credit, Consumer Credit, Business/Consumer Dishonoured Cheques, and Business/Consumer Court Judgments. Auto-detects IFF type from Excel headers. Supports CorrectionIndicator upsert logic. Guarantors table with up to 4 guarantors per facility. Endpoints: `POST /api/batch-upload/iff` (Excel), `POST /api/batch-upload/iff-json` (JSON), `POST /api/batch-upload/dishonoured-cheques`, `POST /api/batch-upload/court-judgments`, `GET /api/guarantors/:creditAccountId`, `POST /api/guarantors`, `GET /api/borrowers/:id/guarantors`, `GET /api/iff/supported-types`. IFF processor in `server/iff-processor.ts`.
+    -   **Reporting**: Regulatory analytics, CSV export, and bulk data upload (XBRL/XML), including IFF (Information Furnisher Format) batch upload support.
     -   **Role-Based Access Control (RBAC)**: Role-filtered navigation and API access.
     -   **External API**: REST API for data submission and credit report generation, secured via API keys and OAuth 2.1.
     -   **Entity Matching**: Fuzzy entity matching for duplicate detection and cross-border entity resolution.
-    -   **Tamper-Evident Audit Logs**: SHA-256 hash chain for integrity (hash includes previousHash + timestamp + action + userId + entityId), anchored to a blockchain (simulated Ethereum Sepolia). Full chain verification via `verifyAuditIntegrity()`.
-    -   **Data Sovereignty Enforcement**: `enforceDataSovereignty` middleware on all borrower/credit/inquiry routes ensures non-super_admin users can only access/modify data within their authorized country. Cross-border access requires active SATA agreements.
-    -   **Maker-Checker Enforcement**: Backend blocks self-approval (403 "Maker cannot be the Checker") and cross-org approval attempts on `PATCH /api/pending-approvals/:id`.
-    -   **HMAC-SHA256 Webhook Signatures**: Outbound webhooks include `X-CDH-Signature: sha256=<hmac>` header for payload verification by recipients.
+    -   **Tamper-Evident Audit Logs**: SHA-256 hash chain for integrity, anchored to a blockchain (simulated Ethereum Sepolia).
+    -   **Data Sovereignty Enforcement**: Ensures users only access/modify data within their authorized country, with cross-border access requiring SATA agreements.
+    -   **HMAC-SHA256 Webhook Signatures**: For payload verification of outbound webhooks.
     -   **Exchange Rate Management**: Multi-currency conversion with automatic live rate fetching.
-    -   **Multi-Tenant SaaS**: Supports multiple organizations with tenant scoping and super_admin role, including client management and onboarding wizard.
-    -   **Low-Bandwidth Optimizations**: Gzip compression and React.lazy code-splitting for all page components (only Login and NotFound eagerly loaded).
-    -   **API Rate Limiting**: Tiered rate limiting — `loginLimiter` (10/min), `apiLimiter` (200/min global), `writeLimiter` (60/min), `batchLimiter` (10/min), `aiLimiter` (10 per 15min for all `/api/ai/*` routes), `creditReportLimiter` (20 per 15min for `/api/credit-reports/*`), plus dedicated limiters for consumer auth, demo, and public chat.
-    -   **Chatbot**: Credit Registry Assistant with dispute filing, FAQ, keyword search, and AI-powered Smart Assistant mode with live database context.
+    -   **Multi-Tenant SaaS**: Supports multiple organizations with tenant scoping and a super_admin role.
+    -   **Low-Bandwidth Optimizations**: Gzip compression and React.lazy code-splitting.
+    -   **API Rate Limiting**: Tiered rate limiting for various endpoints.
+    -   **Chatbot**: Credit Registry Assistant with dispute filing, FAQ, keyword search, and AI-powered Smart Assistant mode.
     -   **AI Portfolio Intelligence**: Analytics page for AI-powered portfolio reports, including risk ratings and default predictions.
-    -   **AI Command Center** (`/ai-command-center`): Unified hub for 6 AI tools — Credit Narratives, Anomaly Detection, Regulatory Reports, Natural Language Queries, Cross-Border Risk Intelligence, and Loan Approval Recommendations. Powered by Claude and GPT-4o.
-    -   **Multi-Country Data Isolation**: Country-level data sandboxing via `VITE_COUNTRY_MODE`, with dynamic country switching for Super Admins.
-    -   **Transaction-Based Monetization**: Per-transaction billing with per-country pricing, volume tier discounts, and editable pricing tiers.
+    -   **Concentration Risk Alerts**: Automated `GET /api/concentration-alerts` endpoint and dashboard widget. Monitors single-borrower (15%), single-lender (25%), and sector (35%) exposure thresholds. Alerts ranked by severity (critical/high/medium/low) with percentage-of-portfolio display.
+    -   **AI Command Center**: Unified hub for 6 AI tools: Credit Narratives, Anomaly Detection, Regulatory Reports, Natural Language Queries, Cross-Border Risk Intelligence, and Loan Approval Recommendations.
+    -   **Multi-Country Data Isolation**: Country-level data sandboxing with dynamic country switching.
+    -   **Transaction-Based Monetization**: Per-transaction billing with per-country pricing and volume tier discounts.
     -   **SATA Cross-Border Framework**: Implements Smart Africa Telecommunications Alliance data sharing.
     -   **PAPSS Settlement Tracker**: Tracks Pan-African Payment and Settlement System settlements.
-    -   **Alternative Data Integration**: Integrates mobile money, utility, and telco data for thin-file borrowers.
-    -   **Consumer Self-Service Portal**: Authenticated consumer portal (`/my-credit`) with registration, login, dual-channel verification (SMS via Africa's Talking + email verification link as backup), session management, and rate-limited credit score lookups. Consumer accounts stored in `consumer_accounts` table with bcrypt-hashed passwords, session regeneration, and account lockout after 5 failed attempts. SMS requires `AT_USERNAME` and `AT_API_KEY` env vars (or `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN`/`TWILIO_PHONE_NUMBER` for Twilio). Email verification sends clickable link via SMTP/SendGrid. Fallback: OTP shown in-app when neither SMS nor email is configured.
-    -   **Google OAuth**: Full Google Sign-In integration on `/login`, `/my-credit`, and `/start-trial`. Backend routes handle OAuth flow with CSRF state, account creation/linking, and session regeneration. Google accounts auto-create consumer records with `GOOGLE-` prefixed placeholder national IDs. Environment variables: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `CANONICAL_URL` (production). Apple Sign-In placeholder ready for implementation.
-    -   **Smart Trial Flow**: Google-authenticated users arriving at `/start-trial` see a welcome banner with their profile picture and have name/email/username pre-filled automatically.
-    -   **Client Landing Page**: Default landing page (`/solutions`) for unauthenticated users, showcasing platform features and offering trial registration.
-    -   **Trial Management**: Self-service registration (`/start-trial`) with sample data seeding and an upgrade path.
-    -   **AI Demo Page** (`/ai-demo`): Public interactive showcase of all 6 AI features using sample African credit data. No login required. Accessible via "Try AI Features Free" button on landing page.
-    -   **Fraud Detection Layer**: Real-time fraud risk scoring with velocity checks, identity verification, and geographic anomaly detection.
-    -   **Enhanced API Developer Portal**: Interactive sandbox, webhook event documentation, and code examples.
-    -   **Security Hardening**: Helmet security headers, rate limiting, DOMPurify sanitization, and secure handling of secrets.
-    -   **Real-time WebSocket Notifications**: Authenticated WebSocket server for event broadcasting (e.g., borrower submissions, ML score computations).
+    -   **Alternative Data Integration**: Integrates mobile money, utility, and telco data.
+    -   **Consumer Self-Service Portal**: Authenticated portal for consumers with registration, login, dual-channel verification, and rate-limited credit score lookups.
+    -   **Smart Trial Flow**: Streamlined trial registration for Google-authenticated users.
+    -   **Client Landing Page**: Default landing page for unauthenticated users showcasing features.
+    -   **Trial Management**: Self-service registration with sample data seeding and upgrade path.
+    -   **AI Demo Page**: Public interactive showcase of AI features using sample data.
+    -   **Fraud Detection Layer**: Real-time fraud risk scoring.
+    -   **Enhanced API Developer Portal**: Interactive sandbox, webhook event documentation.
+    -   **Security Hardening**: Helmet security headers, DOMPurify sanitization.
+    -   **Real-time WebSocket Notifications**: Authenticated WebSocket server for event broadcasting.
     -   **Progressive Web App (PWA)**: Installable with service worker and offline capabilities.
-    -   **System Status & Health Monitoring**: Public and authenticated endpoints for health, status, and detailed diagnostics. Admin page with real-time service cards.
-    -   **Platform Metrics Dashboard**: Admin-only page displaying MRR/ARR, subscription breakdown, API traffic, response times, and investor KPIs.
-    -   **Webhook Delivery System**: HMAC-SHA256 signed webhooks with retry logic and administrative UI for management.
+    -   **System Status & Health Monitoring**: Public and authenticated endpoints for health and diagnostics.
+    -   **Platform Metrics Dashboard**: Admin-only page displaying MRR/ARR, subscription breakdown, and KPIs.
+    -   **Webhook Delivery System**: HMAC-SHA256 signed webhooks with retry logic.
 
 ## External Dependencies
 -   **Database**: PostgreSQL (Neon)
 -   **Frontend Libraries**: React, TypeScript, Vite, Tailwind CSS, shadcn/ui, wouter, react-i18next, Recharts
 -   **Backend Libraries**: Express.js, bcryptjs, express-session, Drizzle ORM, compression, jsonwebtoken, otpauth, pdfkit, ws, @simplewebauthn/server
--   **Payments**: Stripe.
--   **Email**: SendGrid.
--   **PDF Generation**: pdfkit.
--   **AI / LLM Providers**: Anthropic (Claude Opus), OpenAI (GPT-4o).
--   **Excel Export/Import**: `exceljs`, `xlsx` (SheetJS for IFF batch upload parsing).
--   **Third-Party APIs**: open.er-api.com (exchange rates), DiceBear (avatars).
--   **Testing**: Vitest for unit tests (`npx vitest run`).
-
-## Production Hardening
-
-### Security Headers
-- Helmet CSP configured in `server/index.ts` with directives for scripts, styles, images, fonts, frames, and API connections.
-- Cache-control middleware for static assets (1-year immutable for hashed, no-cache for HTML).
-
-### Structured Logging
-- `server/logger.ts` provides JSON structured logging with levels (debug/info/warn/error/fatal), source tagging, and child loggers.
-- Log level controlled via `LOG_LEVEL` environment variable (default: info).
-
-### Database
-- Connection pool optimized in `server/db.ts` with production-aware settings (30 max connections in prod, 20 in dev).
-- Pool health check runs every 60 seconds, warns on latency > 500ms.
-- Connection timeout: 10s, statement timeout: 30s, keepAlive enabled.
-
-### Email
-- Provider abstraction in `server/email.ts`: supports SendGrid (preferred) and Gmail SMTP (fallback).
-- Set `SENDGRID_API_KEY` for production email delivery. Falls back to SMTP if SendGrid fails.
-- Gmail SMTP configured via `SMTP_PASS` secret (uffe.carlson@gmail.com).
-
-### SMS
-- Provider abstraction in `server/sms.ts`: supports Twilio and Africa's Talking with auto-failover.
-- Twilio: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`.
-- Africa's Talking: `AT_USERNAME`, `AT_API_KEY`.
-
-### API Versioning
-- Both `/api/` and `/api/v1/` prefixes work for all routes (v1 alias in `server/index.ts`).
-
-### Data Export
-- Full organization data export at `GET /api/admin/export/:orgId` (admin-only, audit logged).
-- POPIA/NDPA/GDPR Article 20 compliant data portability.
-
-### Scripts
-- `scripts/backup-db.sh` — Database backup with pg_dump, gzip compression, 7-day retention.
-- `scripts/validate.sh` — Pre-deploy validation (TypeScript checks, env vars, DB connectivity, security audit).
-- `scripts/load-test.sh` — Load testing with autocannon (health, landing, chatbot, consumer endpoints).
-
-### Health Monitoring
-- `/health` — Public health endpoint with DB status, pool stats, memory, uptime.
-- `/api/admin/health-detail` — Detailed health with SLA percentage (admin-only).
-
-### Unit Tests
-- Credit score tests in `server/__tests__/credit-score.test.ts` (15 test cases).
-- Logger tests in `server/__tests__/logger.test.ts` (5 test cases).
-- Run with: `npx vitest run`
-
-## Custom Domain & SSL Setup (africacredithub.com)
-
-### Replit Deployment
-1. Go to the Deployments tab in Replit.
-2. Click "Deploy" to publish to production.
-3. In deployment settings, add custom domain: `africacredithub.com`
-4. Replit automatically provisions SSL/TLS via Let's Encrypt.
-
-### DNS Configuration
-Point your domain's DNS records:
-- **A record**: `@` → Replit's IP (shown in deployment settings)
-- **CNAME record**: `www` → your-repl.replit.app
-
-### SSL Certificate
-- Replit handles SSL certificate provisioning and renewal automatically.
-- Supports TLS 1.2 and 1.3.
-- HSTS headers are set via Helmet configuration.
-- Certificate renewal is automatic — no manual intervention needed.
+-   **Payments**: Stripe
+-   **Email**: SendGrid (primary), Gmail SMTP (fallback)
+-   **SMS**: Twilio (primary), Africa's Talking (fallback)
+-   **PDF Generation**: pdfkit
+-   **AI / LLM Providers**: Anthropic (Claude Opus), OpenAI (GPT-4o)
+-   **Excel Export/Import**: `exceljs`, `xlsx` (SheetJS)
+-   **Third-Party APIs**: open.er-api.com (exchange rates), DiceBear (avatars)

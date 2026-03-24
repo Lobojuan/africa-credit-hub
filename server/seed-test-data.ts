@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { borrowers, creditAccounts, courtJudgments, consentRecords, paymentHistory, institutions, billingRecords, disputes, users, dishonouredCheques, organizations, retentionPolicies, apiConfigurations } from "@shared/schema";
+import { borrowers, creditAccounts, creditInquiries, courtJudgments, consentRecords, paymentHistory, institutions, billingRecords, disputes, users, dishonouredCheques, organizations, retentionPolicies, apiConfigurations } from "@shared/schema";
 import { count, like, ne, isNull, eq } from "drizzle-orm";
 import { mapInternalStatusToBog, mapInternalAssetClassToBog, mapDaysInArrearsToPaymentProfile } from "@shared/bog-codes";
 
@@ -596,6 +596,32 @@ export async function seedTestData() {
     await db.insert(paymentHistory).values(paymentValues.slice(i, i + BATCH_SIZE));
   }
   console.log(`  Created ${paymentValues.length} payment history records`);
+
+  const inquiryPurposes: Array<"new_credit" | "review" | "collection" | "regulatory" | "portfolio_monitoring"> = ["new_credit", "new_credit", "new_credit", "review", "review", "collection", "regulatory", "portfolio_monitoring"];
+  const inquiryInstitutions = [
+    "GCB Bank", "Fidelity Bank Ghana", "Ecobank Ghana", "CalBank", "Stanbic Bank Ghana",
+    "Republic Bank Ghana", "Société Générale Ghana", "Agricultural Development Bank",
+    "National Investment Bank", "FBNBank Ghana", "First National Bank Ghana",
+    "OmniBSIC Bank", "Bank of Africa Ghana"
+  ];
+  const inquiryValues: any[] = [];
+  const inquirySample = createdBorrowers.sort(() => Math.random() - 0.5).slice(0, Math.min(40, createdBorrowers.length));
+  for (const b of inquirySample) {
+    const numInquiries = randInt(1, 3);
+    for (let q = 0; q < numInquiries; q++) {
+      inquiryValues.push({
+        borrowerId: b.id,
+        inquiredBy: adminUser.id,
+        purpose: pick(inquiryPurposes),
+        institution: pick(inquiryInstitutions),
+        consentProvided: Math.random() > 0.05,
+      });
+    }
+  }
+  for (let i = 0; i < inquiryValues.length; i += BATCH_SIZE) {
+    await db.insert(creditInquiries).values(inquiryValues.slice(i, i + BATCH_SIZE));
+  }
+  console.log(`  Created ${inquiryValues.length} credit inquiries`);
 
   const disputeTypes = ["incorrect_balance", "wrong_account_status", "identity_theft", "duplicate_entry", "incorrect_personal_info", "unauthorized_inquiry"];
   const disputeStatuses: Array<"open" | "under_review" | "resolved" | "rejected"> = ["open", "open", "under_review", "under_review", "resolved", "rejected"];
