@@ -12,3 +12,15 @@ id = "jrVxSfGr5dcU-kYfLUO8R"
 uri = "file://codebase-export.txt"
 type = "text"
 title = "Africa Credit Hub — Full Codebase Export for Gemini Review"
+
+[[outputs]]
+id = "o-zCKpWxTxdYA4O3wwL1V"
+uri = "file://README.md"
+type = "text"
+title = "README.md — Technical Whitepaper"
+
+[[outputs]]
+id = "RthvihK7Q8vc4ebWbNuTE"
+uri = "file://docs/architecture-and-compliance.md"
+type = "text"
+title = "Architecture & Compliance Reference"
