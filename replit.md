@@ -37,7 +37,10 @@ The system employs a modern full-stack architecture built for scalability and co
     -   **Role-Based Access Control (RBAC)**: Role-filtered navigation and API access.
     -   **External API**: REST API for data submission and credit report generation, secured via API keys and OAuth 2.1.
     -   **Entity Matching**: Fuzzy entity matching for duplicate detection and cross-border entity resolution.
-    -   **Tamper-Evident Audit Logs**: SHA-256 hash chain for integrity, anchored to a blockchain (simulated Ethereum Sepolia).
+    -   **Tamper-Evident Audit Logs**: SHA-256 hash chain for integrity (hash includes previousHash + timestamp + action + userId + entityId), anchored to a blockchain (simulated Ethereum Sepolia). Full chain verification via `verifyAuditIntegrity()`.
+    -   **Data Sovereignty Enforcement**: `enforceDataSovereignty` middleware on all borrower/credit/inquiry routes ensures non-super_admin users can only access/modify data within their authorized country. Cross-border access requires active SATA agreements.
+    -   **Maker-Checker Enforcement**: Backend blocks self-approval (403 "Maker cannot be the Checker") and cross-org approval attempts on `PATCH /api/pending-approvals/:id`.
+    -   **HMAC-SHA256 Webhook Signatures**: Outbound webhooks include `X-CDH-Signature: sha256=<hmac>` header for payload verification by recipients.
     -   **Exchange Rate Management**: Multi-currency conversion with automatic live rate fetching.
     -   **Multi-Tenant SaaS**: Supports multiple organizations with tenant scoping and super_admin role, including client management and onboarding wizard.
     -   **Low-Bandwidth Optimizations**: Gzip compression and React.lazy code-splitting for all page components (only Login and NotFound eagerly loaded).

@@ -62,6 +62,7 @@ export async function deliverWebhook(
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "X-CDH-Signature": `sha256=${signature}`,
             "X-Webhook-Signature": `sha256=${signature}`,
             "X-Webhook-Event": event,
             "X-Webhook-Timestamp": new Date().toISOString(),

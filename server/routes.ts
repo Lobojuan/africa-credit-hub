@@ -187,6 +187,15 @@ async function validateBorrowerCountry(borrowerId: string, req: Request): Promis
   return borrower.country === country;
 }
 
+function enforceDataSovereignty(req: Request, res: Response, next: NextFunction) {
+  if (!req.session?.userId) return res.status(401).json({ message: "Authentication required" });
+  if (req.session.userRole === "super_admin") return next();
+  const userCountry = req.session.userCountry;
+  if (!userCountry) return next();
+  (req as any)._sovereignCountry = userCountry;
+  next();
+}
+
 async function requireCrossBorderAccess(req: Request, res: Response, next: NextFunction) {
   try {
     if (req.session?.userRole === "super_admin") return next();
@@ -1387,7 +1396,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/borrowers", async (req, res) => {
+  app.get("/api/borrowers", enforceDataSovereignty, async (req, res) => {
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
@@ -1452,10 +1461,14 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/borrowers", async (req, res) => {
+  app.post("/api/borrowers", enforceDataSovereignty, async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const parsed = insertBorrowerSchema.parse({ ...req.body, organizationId: orgId });
+      const userCountry = getCountryFilter(req);
+      if (userCountry && req.body.country && req.body.country !== userCountry) {
+        return res.status(403).json({ message: "Data sovereignty violation: cannot create borrower in a different country" });
+      }
+      const parsed = insertBorrowerSchema.parse({ ...req.body, organizationId: orgId, country: req.body.country || userCountry });
       const approval = await storage.createPendingApproval({
         entityType: "borrower",
         action: "CREATE",
@@ -1500,10 +1513,14 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/borrowers/:id", async (req, res) => {
+  app.patch("/api/borrowers/:id", enforceDataSovereignty, async (req, res) => {
     try {
       const existing = await storage.getBorrower(req.params.id);
       if (!existing) return res.status(404).json({ message: "Borrower not found" });
+      const userCountry = getCountryFilter(req);
+      if (userCountry && existing.country && existing.country !== userCountry) {
+        return res.status(403).json({ message: "Data sovereignty violation: cannot modify borrower from a different country" });
+      }
       const approval = await storage.createPendingApproval({
         entityType: "borrower",
         entityId: req.params.id,
@@ -1569,7 +1586,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/credit-accounts", async (req, res) => {
+  app.get("/api/credit-accounts", enforceDataSovereignty, async (req, res) => {
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
@@ -1605,9 +1622,14 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/credit-accounts", async (req, res) => {
+  app.post("/api/credit-accounts", enforceDataSovereignty, async (req, res) => {
     try {
       const orgId = getOrgScope(req);
+      if (req.body.borrowerId) {
+        if (!(await validateBorrowerCountry(req.body.borrowerId, req))) {
+          return res.status(403).json({ message: "Data sovereignty violation: cannot create account for borrower in a different country" });
+        }
+      }
       const parsed = insertCreditAccountSchema.parse({ ...req.body, organizationId: orgId });
       const approval = await storage.createPendingApproval({
         entityType: "credit_account",
@@ -1627,10 +1649,13 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/credit-accounts/:id", async (req, res) => {
+  app.patch("/api/credit-accounts/:id", enforceDataSovereignty, async (req, res) => {
     try {
       const existing = await storage.getCreditAccount(req.params.id);
       if (!existing) return res.status(404).json({ message: "Account not found" });
+      if (!(await validateBorrowerCountry(existing.borrowerId, req))) {
+        return res.status(403).json({ message: "Data sovereignty violation: cannot modify account for borrower in a different country" });
+      }
       const approval = await storage.createPendingApproval({
         entityType: "credit_account",
         entityId: req.params.id,
@@ -1649,7 +1674,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/credit-inquiries", async (req, res) => {
+  app.get("/api/credit-inquiries", enforceDataSovereignty, async (req, res) => {
     try {
       const borrowerId = req.query.borrowerId as string;
       const orgId = getOrgScope(req);
@@ -1667,9 +1692,12 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/credit-inquiries", async (req, res) => {
+  app.post("/api/credit-inquiries", enforceDataSovereignty, async (req, res) => {
     try {
       const parsed = insertCreditInquirySchema.parse(req.body);
+      if (parsed.borrowerId && !(await validateBorrowerCountry(parsed.borrowerId, req))) {
+        return res.status(403).json({ message: "Data sovereignty violation: cannot create inquiry for borrower in a different country" });
+      }
       const inquiry = await storage.createCreditInquiry(parsed);
       await storage.createAuditLog({
         action: "CREATE", entity: "credit_inquiry", entityId: inquiry.id, userId: req.session?.userId,
@@ -2392,7 +2420,12 @@ export async function registerRoutes(
       if (!approval) return res.status(404).json({ message: "Approval not found" });
 
       if (approval.requestedBy === currentUserId) {
-        return res.status(403).json({ message: "Maker-checker: You cannot approve your own request. A different authorized user must review." });
+        return res.status(403).json({ message: "Maker cannot be the Checker." });
+      }
+
+      const reviewerOrgId = req.session?.organizationId;
+      if (req.session?.userRole !== "super_admin" && reviewerOrgId && approval.organizationId && reviewerOrgId !== approval.organizationId) {
+        return res.status(403).json({ message: "You cannot review approvals from a different organization" });
       }
 
       if (approval.status !== "pending") {
