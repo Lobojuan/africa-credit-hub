@@ -2697,7 +2697,6 @@ export async function registerRoutes(
   }
 
   const BATCH_REQUIRED_BORROWER_FIELDS = ["borrowerName", "dateOfBirth", "address", "nationalId", "phoneNumber", "reportingDate"];
-  const BOG_PIPE_REQUIRED_FIELDS = ["borrowerName", "nationalId", "reportingDate"];
 
   function validateBatchRequiredFields(record: any, index: number, fieldList?: string[]): string[] {
     const fields = fieldList || BATCH_REQUIRED_BORROWER_FIELDS;
@@ -2856,6 +2855,9 @@ export async function registerRoutes(
         "ReportingDate": "reportingDate",
         "BorrowerName": "borrowerName",
         "GhanaCardNo": "nationalId",
+        "DateOfBirth": "dateOfBirth",
+        "Address": "address",
+        "PhoneNumber": "phoneNumber",
         "FacilityType": "facilityTypeCode",
         "AccountNumber": "accountNumber",
         "Currency": "currency",
@@ -2924,7 +2926,7 @@ export async function registerRoutes(
 
       const validated: Array<{ index: number; data: any }> = [];
       for (let i = 0; i < records.length; i++) {
-        const missingFields = validateBatchRequiredFields(records[i], i, BOG_PIPE_REQUIRED_FIELDS);
+        const missingFields = validateBatchRequiredFields(records[i], i);
         if (missingFields.length > 0) {
           results.errorCount++;
           results.errors.push({ index: i, message: `Missing required fields: ${missingFields.join(", ")}` });

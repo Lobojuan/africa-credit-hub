@@ -135,9 +135,9 @@ const sampleXbrl = ghanaMode ? `<?xml version="1.0" encoding="UTF-8"?>
   </creditAccount>
 </creditRegistry>`;
 
-const sampleBogPipe = `SRN|ReportingDate|BorrowerName|GhanaCardNo|FacilityType|AccountNumber|Currency|OriginalAmount|CurrentBalance|InterestRate|DisbursementDate|MaturityDate|AssetClassification|RepaymentFrequency|DaysInArrears|PurposeOfFacility|CollateralType|CollateralValue
-GCB001|20250115|Kwame Mensah|GHA-123456789|TML|GCB-LN-2025-001|GHS|150000.00|125000.00|28.50|20250115|20280115|CUR|MTH|0|BUS|PRO|200000.00
-GCB001|20250115|Abena Osei|GHA-987654321|OVD|GCB-OD-2025-002|GHS|50000.00|35000.00|32.00|20250201|20260201|OLM|QTR|15|PER|UNS|0.00`;
+const sampleBogPipe = `SRN|ReportingDate|BorrowerName|GhanaCardNo|DateOfBirth|Address|PhoneNumber|FacilityType|AccountNumber|Currency|OriginalAmount|CurrentBalance|InterestRate|DisbursementDate|MaturityDate|AssetClassification|RepaymentFrequency|DaysInArrears|PurposeOfFacility|CollateralType|CollateralValue
+GCB001|20250115|Kwame Mensah|GHA-123456789|1985-03-15|12 Independence Ave Accra|+233201234567|TML|GCB-LN-2025-001|GHS|150000.00|125000.00|28.50|20250115|20280115|CUR|MTH|0|BUS|PRO|200000.00
+GCB001|20250115|Abena Osei|GHA-987654321|1990-07-22|45 Ring Road Kumasi|+233209876543|OVD|GCB-OD-2025-002|GHS|50000.00|35000.00|32.00|20250201|20260201|OLM|QTR|15|PER|UNS|0.00`;
 
 const sampleCsv = ghanaMode
   ? `borrowerId,borrowerName,dateOfBirth,address,nationalId,phoneNumber,reportingDate,lenderInstitution,accountNumber,accountType,originalAmount,currentBalance,currency,interestRate,disbursementDate,maturityDate,status,daysInArrears
