@@ -691,7 +691,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
         {statsLoading ? (
           Array.from({ length: 8 }).map((_, i) => (
-            <Card key={i} className="border border-border/60"><CardContent className="p-5"><Skeleton className="h-16 w-full" /></CardContent></Card>
+            <Card key={i} className="border border-border/60"><CardContent className="p-5"><Skeleton className="h-[100px] w-full" /></CardContent></Card>
           ))
         ) : stats ? (
           <>
