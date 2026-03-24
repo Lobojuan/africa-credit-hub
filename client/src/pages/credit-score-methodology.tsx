@@ -453,22 +453,21 @@ export default function CreditScoreMethodologyPage() {
         </div>
 
         <div className="lg:col-span-2 space-y-6">
-          {isPrivilegedUser && (
-            <Card className="lg:sticky lg:top-4" data-testid="card-score-simulator">
-              <CardContent className="p-6 space-y-5">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(175 55% 28% / 0.15), hsl(43 80% 55% / 0.1))" }}>
-                      <Scale className="w-4 h-4 text-foreground/70" />
-                    </div>
-                    <h2 className="text-base font-semibold" data-testid="text-simulator-heading">
-                      {t("creditScoreMethodology.simulatorTitle", "Score Simulator")}
-                    </h2>
+          <Card className="lg:sticky lg:top-4" data-testid="card-score-simulator">
+            <CardContent className="p-6 space-y-5">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(175 55% 28% / 0.15), hsl(43 80% 55% / 0.1))" }}>
+                    <Scale className="w-4 h-4 text-foreground/70" />
                   </div>
-                  <Button variant="ghost" size="sm" onClick={resetSimulator} data-testid="button-reset-simulator">
-                    {t("creditScoreMethodology.reset", "Reset")}
-                  </Button>
+                  <h2 className="text-base font-semibold" data-testid="text-simulator-heading">
+                    {t("creditScoreMethodology.simulatorTitle", "Score Simulator")}
+                  </h2>
                 </div>
+                <Button variant="ghost" size="sm" onClick={resetSimulator} data-testid="button-reset-simulator">
+                  {t("creditScoreMethodology.reset", "Reset")}
+                </Button>
+              </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   {t("creditScoreMethodology.simulatorDescription", "Adjust parameters below to see how different factors impact the credit score in real time.")}
                 </p>
@@ -587,7 +586,6 @@ export default function CreditScoreMethodologyPage() {
                 </div>
               </CardContent>
             </Card>
-          )}
 
           <Card data-testid="card-interpretation-guide">
             <CardContent className="p-6 space-y-4">
