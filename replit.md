@@ -66,6 +66,13 @@ The system employs a modern full-stack architecture built for scalability and co
     -   **Platform Metrics Dashboard**: Admin-only page displaying MRR/ARR, subscription breakdown, and KPIs.
     -   **Webhook Delivery System**: HMAC-SHA256 signed webhooks with retry logic.
 
+## Demo Data Seeding
+-   **Seed files**: `server/seed.ts` (core admin + Ghana/Ethiopia base data), `server/seed-test-data.ts` (Ghana borrower expansion), `server/seed-sierra-leone.ts` (Sierra Leone data), `server/seed-pan-african.ts` (all 54 African countries)
+-   **Pan-African seed**: Generates 900+ borrowers, 1800+ credit accounts, 270+ credit inquiries, and 115+ financial institutions across all 54 African countries with authentic names, banks, companies, currencies, and national IDs
+-   **Guard**: Pan-African seed skips if >500 borrowers exist; runs only in non-production mode
+-   **Ghana cleanup**: Disabled in `server/index.ts` — platform is pan-African, no longer purges non-Ghana data
+-   **CLI**: `npx tsx server/seed.ts` or `npx tsx server/seed-pan-african.ts` for manual runs
+
 ## External Dependencies
 -   **Database**: PostgreSQL (Neon)
 -   **Frontend Libraries**: React, TypeScript, Vite, Tailwind CSS, shadcn/ui, wouter, react-i18next, Recharts

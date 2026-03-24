@@ -1,0 +1,41 @@
+@agent I need to populate our database with highly realistic sample data across all 54 African countries so the platform looks incredible for investor demonstrations. Please create a comprehensive database seed script.
+
+Task 1: Create server/seed.ts
+Please create a file at server/seed.ts. This script should use our existing db instance and schema from @shared/schema.ts. It needs to do the following:
+
+Check for existing data: If there are already borrowers in the database, clear the tables or skip seeding to prevent duplicates.
+
+Create a Super Admin: Ensure there is a super admin user (admin / password123) with role: "super_admin".
+
+Use Authentic African Data: Use the following arrays to generate realistic names and institutions:
+
+TypeScript
+const africanFirstNames = ["Kwame", "Amara", "Fatima", "Tadesse", "Ngozi", "Sekou", "Aisha", "Kofi", "Nia", "Chioma", "Tariq", "Zainab", "Oluwaseun", "Abebe", "Chidi", "Makena", "Jabari", "Zuri", "Idris", "Nandi"];
+const africanLastNames = ["Osei", "Diallo", "Mensah", "Bekele", "Okafor", "Traore", "Keita", "Adebayo", "Moyo", "Ndlovu", "Toure", "Diop", "Cisse", "Kamau", "Njoroge", "Mwangi", "Kone", "Sow", "Gueye", "Abubakar"];
+const cities = ["Accra", "Nairobi", "Lagos", "Kigali", "Addis Ababa", "Johannesburg", "Dakar", "Cairo", "Casablanca", "Dar es Salaam", "Kampala", "Luanda", "Abidjan", "Lusaka", "Harare"];
+const bankNames = ["Pan-African Bank", "Standard Trust", "Equatorial Finance", "Sahara Commercial Bank", "Nile Microfinance", "Savannah Credit Union", "Atlas Banking Group", "Oasis Digital Finance"];
+const loanTypes = ["Personal Loan", "Business Loan", "Mortgage", "Overdraft", "Microfinance", "Trade Finance"];
+const statuses = ["current", "current", "current", "delinquent", "default", "closed", "restructured"]; // Weighted towards current
+Generate the Data Loop:
+
+Import our SUPPORTED_COUNTRIES array (or manually define an array of African countries and their currencies: GHS, KES, NGN, ZAR, ETB, etc.).
+
+Loop through at least 20-30 different African countries.
+
+For each country, create 1 to 2 Organizations (Banks).
+
+For each country, create 10 to 30 Borrowers (80% individual using the names above, 20% corporate like "AgriTech Ltd", "Sahara Logistics"). Assign them realistic National IDs (e.g., GHA-102938, KEN-938475).
+
+For each Borrower, create 1 to 4 Credit Accounts. Randomize the currentBalance, originalAmount (make sure balance is <= original), interestRate, and status from the array above. Use the correct local currency for that country.
+
+Generate Audit Logs: Create a few mock audit logs (e.g., "USER_LOGIN", "REPORT_GENERATED") so the Recent Activity feed on the dashboard looks alive.
+
+Task 2: Add the Seed Command
+Update my package.json to include a script to run this seed file. If we are using tsx or ts-node, add:
+
+JSON
+"scripts": {
+  // ... existing scripts
+  "seed": "tsx server/seed.ts"
+}
+Please read @shared/schema.ts to ensure your insert payloads perfectly match the required columns (e.g., ensuring date formats, enums, and non-null constraints are respected). Let me know when the script is created so I can run it!

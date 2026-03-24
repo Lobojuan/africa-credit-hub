@@ -511,12 +511,7 @@ process.stderr.write = function (...args: any[]) {
 } as any;
 
 (async () => {
-  try {
-    const { cleanupNonGhanaData } = await import("./ghana-cleanup");
-    await cleanupNonGhanaData();
-  } catch (e) {
-    console.error("Ghana cleanup error (non-fatal):", e);
-  }
+  // Ghana cleanup disabled — platform is now pan-African with data across all 54 countries
 
   const isProduction = process.env.PRODUCTION_MODE === "true";
 
@@ -540,6 +535,13 @@ process.stderr.write = function (...args: any[]) {
       await seedSierraLeoneData();
     } catch (e) {
       console.error("Sierra Leone seed error (non-fatal):", e);
+    }
+
+    try {
+      const { seedPanAfrican } = await import("./seed-pan-african");
+      await seedPanAfrican();
+    } catch (e) {
+      console.error("Pan-African seed error (non-fatal):", e);
     }
   } else {
     console.log("[Production] Skipping demo/test data seeding");

@@ -213,6 +213,7 @@ export async function seedDatabase() {
   } catch (e) {
     console.error("Test data seed error:", e);
   }
+
 }
 
 if (process.argv[1] && (process.argv[1].endsWith("seed.ts") || process.argv[1].endsWith("seed.js"))) {
