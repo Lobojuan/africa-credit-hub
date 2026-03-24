@@ -637,7 +637,6 @@ process.stderr.write = function (...args: any[]) {
     console.log(`║  Mode:          ${isProduction ? "PRODUCTION" : "DEVELOPMENT"}${isProduction ? "              " : "             "}║`);
     console.log(`║  Email:         ${isEmailConfigured() ? "✓ Configured" : "✗ Not configured"}${isEmailConfigured() ? "              " : "          "}║`);
     console.log(`║  SMS:           ${isSmsConfigured() ? "✓ Configured" : "✗ Not configured"}${isSmsConfigured() ? "              " : "          "}║`);
-    console.log(`║  Stripe:        ${process.env.STRIPE_SECRET_KEY ? "✓ Configured" : "✗ Not configured"}${process.env.STRIPE_SECRET_KEY ? "              " : "          "}║`);
     console.log(`║  Database:      ${process.env.DATABASE_URL ? "✓ Connected" : "✗ Not connected"}${process.env.DATABASE_URL ? "               " : "           "}║`);
     console.log(`║  Google OAuth:  ${process.env.GOOGLE_CLIENT_ID ? "✓ Configured" : "✗ Not configured"}${process.env.GOOGLE_CLIENT_ID ? "              " : "          "}║`);
     console.log(`║  Demo Data:     ${isProduction ? "Skipped" : "Seeded"}${isProduction ? "                   " : "                    "}║`);
