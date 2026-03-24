@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -268,18 +268,7 @@ export default function CreditScoreMethodologyPage() {
   const [, setLocation] = useLocation();
 
   const allowedRoles = ["admin", "lender", "super_admin"];
-
-  if (!user) {
-    setLocation("/login");
-    return null;
-  }
-
-  if (!allowedRoles.includes(user.role)) {
-    setLocation("/score-guide");
-    return null;
-  }
-
-  const isPrivilegedUser = true;
+  const isAllowed = user && allowedRoles.includes(user.role);
 
   const [simParams, setSimParams] = useState({
     currentAccounts: 3,
@@ -294,6 +283,18 @@ export default function CreditScoreMethodologyPage() {
   });
 
   const simResult = useMemo(() => simulateScore(simParams), [simParams]);
+
+  useEffect(() => {
+    if (!user) {
+      setLocation("/login");
+    } else if (!isAllowed) {
+      setLocation("/score-guide");
+    }
+  }, [user, isAllowed, setLocation]);
+
+  if (!isAllowed) {
+    return null;
+  }
 
   const updateParam = (key: keyof typeof simParams, value: number | boolean) => {
     setSimParams((prev) => ({ ...prev, [key]: value }));
