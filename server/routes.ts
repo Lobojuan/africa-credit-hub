@@ -3150,11 +3150,16 @@ BORROWER_ID_2,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
-      const xlsx = await import("xlsx");
-      const workbook = xlsx.read(req.file.buffer, { type: "buffer" });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
-      const rawData = xlsx.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
+      const ExcelJS = await import("exceljs");
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(req.file.buffer);
+      const worksheet = workbook.worksheets[0];
+      if (!worksheet) return res.status(400).json({ message: "No worksheet found in file" });
+      const rawData: any[][] = [];
+      worksheet.eachRow({ includeEmpty: true }, (row) => {
+        // ExcelJS row.values has a null/undefined at index 0, slice from 1
+        rawData.push((row.values as any[]).slice(1));
+      });
 
       if (rawData.length < 2) return res.status(400).json({ message: "File must contain a header row and at least one data row" });
 
