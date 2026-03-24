@@ -497,6 +497,16 @@ export const BOG_PROOF_OF_ADDRESS: BogCode[] = [
   { code: "OTH", label: "Other" },
 ];
 
+export {
+  STANDARD_CREDIT_TYPES,
+  CREDIT_CATEGORIES,
+  CREDIT_TYPE_SYNONYMS as COUNTRY_CREDIT_TYPE_SYNONYMS,
+  BUSINESS_CREDIT_TYPES,
+  normalizeAccountType,
+  inferCreditCategory,
+} from "@shared/credit-types";
+export type { StandardCreditType } from "@shared/credit-types";
+
 export const GHANA_MARKET_STATS = {
   activeBorrowers: 3_400_000,
   creditFacilities: 5_700_000,

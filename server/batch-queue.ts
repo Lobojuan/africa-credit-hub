@@ -145,7 +145,7 @@ export async function enqueueBatchAccountCreate(
         "borrowerId", "lenderInstitution", "accountNumber", "accountType",
         "originalAmount", "currentBalance", "currency", "interestRate",
         "disbursementDate", "maturityDate", "status", "daysInArrears",
-        "reportingDate",
+        "reportingDate", "creditCategory",
       ];
       await processChunkedInserts(
         job,
@@ -311,6 +311,7 @@ export async function enqueueBatchAccountUpdate(
         "status", "currentBalance", "daysInArrears", "interestRate",
         "maturityDate", "currency", "originalAmount", "accountType",
         "lenderInstitution", "collateralType", "collateralValue",
+        "creditCategory",
       ]);
 
       for (let chunkStart = 0; chunkStart < updates.length; chunkStart += CHUNK_SIZE) {

@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatCurrency, SUPPORTED_CURRENCIES } from "@/lib/currency";
-import { isGhanaMode, BOG_FACILITY_TYPES, BOG_PURPOSE_CODES, BOG_ASSET_CLASSIFICATIONS, BOG_REPAYMENT_FREQUENCIES, BOG_COLLATERAL_TYPES } from "@/lib/country-mode";
+import { isGhanaMode, BOG_FACILITY_TYPES, BOG_PURPOSE_CODES, BOG_ASSET_CLASSIFICATIONS, BOG_REPAYMENT_FREQUENCIES, BOG_COLLATERAL_TYPES, STANDARD_CREDIT_TYPES, CREDIT_CATEGORIES, inferCreditCategory } from "@/lib/country-mode";
 import { CurrencyReference } from "@/components/currency-reference";
 import type { CreditAccount, Borrower } from "@shared/schema";
 
@@ -48,6 +48,7 @@ export default function CreditAccountsPage() {
 
   const [formData, setFormData] = useState({
     borrowerId: "", lenderInstitution: "", accountNumber: "", accountType: "",
+    creditCategory: "" as string,
     originalAmount: "", currentBalance: "", currency: ghanaMode ? "GHS" : "ETB",
     interestRate: "", disbursementDate: "", maturityDate: "",
     status: "current" as string, collateralType: "", collateralValue: "",
@@ -120,20 +121,29 @@ export default function CreditAccountsPage() {
                 <div><Label>{t("creditAccounts.lenderInstitution")}</Label><Input data-testid="input-lender" value={formData.lenderInstitution} onChange={(e) => setFormData({ ...formData, lenderInstitution: e.target.value })} required /></div>
                 <div><Label>{t("creditAccounts.accountNumber")}</Label><Input data-testid="input-account-number" value={formData.accountNumber} onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })} required /></div>
               </div>
+              <div>
+                <Label>{t("creditAccounts.accountType")}</Label>
+                <Select value={formData.accountType} onValueChange={(v) => {
+                  const cat = inferCreditCategory(v);
+                  setFormData({ ...formData, accountType: v, creditCategory: cat });
+                }}>
+                  <SelectTrigger data-testid="select-account-type"><SelectValue placeholder={t("creditAccounts.select")} /></SelectTrigger>
+                  <SelectContent>
+                    {STANDARD_CREDIT_TYPES.map(ct => (
+                      <SelectItem key={ct.value} value={ct.value}>{ct.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <Label>{t("creditAccounts.accountType")}</Label>
-                  <Select value={formData.accountType} onValueChange={(v) => setFormData({ ...formData, accountType: v })}>
-                    <SelectTrigger data-testid="select-account-type"><SelectValue placeholder={t("creditAccounts.select")} /></SelectTrigger>
+                  <Label>Credit Category</Label>
+                  <Select value={formData.creditCategory} onValueChange={(v) => setFormData({ ...formData, creditCategory: v })}>
+                    <SelectTrigger data-testid="select-credit-category"><SelectValue placeholder="Auto-detected" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Personal Loan">{t("creditAccounts.personalLoan")}</SelectItem>
-                      <SelectItem value="Mortgage">{t("creditAccounts.mortgage")}</SelectItem>
-                      <SelectItem value="Vehicle Loan">{t("creditAccounts.vehicleLoan")}</SelectItem>
-                      <SelectItem value="Business Loan">{t("creditAccounts.businessLoan")}</SelectItem>
-                      <SelectItem value="Corporate Loan">{t("creditAccounts.corporateLoan")}</SelectItem>
-                      <SelectItem value="Overdraft">{t("creditAccounts.overdraft")}</SelectItem>
-                      <SelectItem value="Credit Card">{t("creditAccounts.creditCard")}</SelectItem>
-                      <SelectItem value="Microfinance">{t("creditAccounts.microfinance")}</SelectItem>
+                      {CREDIT_CATEGORIES.map(c => (
+                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -291,6 +301,7 @@ export default function CreditAccountsPage() {
                     <TableHead>{t("creditAccounts.account")}</TableHead>
                     <TableHead>{t("creditAccounts.institution")}</TableHead>
                     <TableHead>{t("creditAccounts.type")}</TableHead>
+                    <TableHead>Category</TableHead>
                     <TableHead className="text-right">{t("creditAccounts.original")}</TableHead>
                     <TableHead className="text-right">{t("creditAccounts.balance")}</TableHead>
                     <TableHead className="text-right">{t("creditAccounts.rate")}</TableHead>
@@ -304,6 +315,11 @@ export default function CreditAccountsPage() {
                       <TableCell className="font-medium text-sm">{account.accountNumber}</TableCell>
                       <TableCell className="text-sm">{account.lenderInstitution}</TableCell>
                       <TableCell className="text-sm">{account.accountType}</TableCell>
+                      <TableCell className="text-sm">
+                        {account.creditCategory ? (
+                          <Badge variant="outline" className="text-[10px] capitalize" data-testid={`badge-category-${account.id}`}>{account.creditCategory}</Badge>
+                        ) : "—"}
+                      </TableCell>
                       <TableCell className="text-right text-sm">{formatCurrency(account.originalAmount, account.currency)}</TableCell>
                       <TableCell className="text-right text-sm font-medium">{formatCurrency(account.currentBalance, account.currency)}</TableCell>
                       <TableCell className="text-right text-sm">{account.interestRate || "—"}%</TableCell>

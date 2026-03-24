@@ -210,6 +210,7 @@ export const creditAccounts = pgTable("credit_accounts", {
   facilityStatusDate: text("facility_status_date"),
   closedDate: text("closed_date"),
   reportingDate: text("reporting_date"),
+  creditCategory: text("credit_category"),
   correctionIndicator: integer("correction_indicator").default(0),
   organizationId: varchar("organization_id").references(() => organizations.id),
   createdAt: timestamp("created_at").defaultNow(),

@@ -43,6 +43,7 @@ import { sendSms, sendOtpSms, isSmsConfigured } from "./sms";
 import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport, generatePortfolioIntelligence, parseProvider, parseOptionalProvider, generateCreditNarrative, detectAnomalies, generateRegulatoryReport, naturalLanguageQuery, analyzeCrossBorderRisk, generateLoanRecommendation, callAI, parseJSON, generateAIResponse } from "./ai";
 import { BOG_EXPORT_GENERATORS } from "./bog-export";
 import type { BogFileType } from "@shared/bog-codes";
+import { BUSINESS_CREDIT_TYPES, inferCreditCategory } from "@shared/credit-types";
 import { BSL_EXPORT_GENERATORS } from "./bsl-export";
 import type { BslFileType } from "@shared/bsl-codes";
 
@@ -1727,7 +1728,11 @@ export async function registerRoutes(
           return res.status(403).json({ message: "Data sovereignty violation: cannot create account for borrower in a different country" });
         }
       }
-      const parsed = insertCreditAccountSchema.parse({ ...req.body, organizationId: orgId });
+      const bodyWithNormalization = { ...req.body, organizationId: orgId };
+      if (bodyWithNormalization.accountType && !bodyWithNormalization.creditCategory) {
+        bodyWithNormalization.creditCategory = inferCreditCategory(bodyWithNormalization.accountType);
+      }
+      const parsed = insertCreditAccountSchema.parse(bodyWithNormalization);
       const approval = await storage.createPendingApproval({
         entityType: "credit_account",
         action: "CREATE",
@@ -2791,6 +2796,7 @@ export async function registerRoutes(
           lenderInstitution: extract("lenderInstitution"),
           accountNumber: extract("accountNumber"),
           accountType: extract("accountType"),
+          creditCategory: extract("creditCategory") || undefined,
           originalAmount: extract("originalAmount"),
           currentBalance: extract("currentBalance"),
           currency: extract("currency") || "ETB",
@@ -2876,6 +2882,7 @@ export async function registerRoutes(
         "WrittenOffAmount": "writtenOffAmount",
         "LenderInstitution": "lenderInstitution",
         "AccountType": "accountType",
+        "CreditCategory": "creditCategory",
         "BorrowerId": "borrowerId",
         "Status": "status",
       };
@@ -2905,14 +2912,17 @@ export async function registerRoutes(
         if (!record.status) record.status = "current";
         if (!record.accountType) {
           const facilityMap: Record<string, string> = {
-            "OVD": "Overdraft", "TML": "Term Loan", "MTG": "Mortgage", "CRC": "Credit Card",
-            "LAS": "Loan Against Salary", "MFL": "Microfinance Loan", "TRF": "Trade Finance",
-            "LSE": "Lease", "GRT": "Guarantee", "LOC": "Letter of Credit", "BND": "Bond",
+            "OVD": "Overdraft", "TML": "Personal Loan", "MTG": "Mortgage/Housing Loan", "CRC": "Credit Card",
+            "LAS": "Salary Advance", "MFL": "Microfinance Loan", "TRF": "Trade Finance",
+            "LSE": "Lease Finance", "GRT": "Bond/Guarantee", "LOC": "Letter of Credit", "BND": "Bond/Guarantee",
             "STL": "Staff Loan", "GRP": "Group Loan", "OTH": "Other",
           };
           record.accountType = facilityMap[record.facilityTypeCode] || "Other";
         }
         if (!record.lenderInstitution) record.lenderInstitution = "Unknown";
+        if (!record.creditCategory && record.accountType) {
+          record.creditCategory = inferCreditCategory(record.accountType);
+        }
 
         records.push(record);
       }
@@ -2998,6 +3008,9 @@ export async function registerRoutes(
           obj[h] = values[idx] || "";
         });
         if (obj.daysInArrears) obj.daysInArrears = parseInt(obj.daysInArrears, 10) || 0;
+        if (!obj.creditCategory && obj.accountType) {
+          obj.creditCategory = inferCreditCategory(obj.accountType);
+        }
         records.push(obj);
       }
 
@@ -3177,9 +3190,9 @@ export async function registerRoutes(
   app.get("/api/batch-upload/template/:format", (_req, res) => {
     const format = _req.params.format;
     if (format === "csv") {
-      const csvTemplate = `borrowerId,borrowerName,dateOfBirth,address,nationalId,phoneNumber,reportingDate,lenderInstitution,accountNumber,accountType,originalAmount,currentBalance,currency,interestRate,disbursementDate,maturityDate,status,daysInArrears
-BORROWER_ID_1,John Doe,1985-03-15,"12 Independence Ave, Accra",GHA-123456789,+233201234567,2025-01-31,Commercial Bank,CB-LN-2025-001,Personal Loan,500000.00,450000.00,ETB,12.50,2025-01-15,2028-01-15,current,0
-BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209876543,2025-01-31,Development Bank,DB-LN-2025-002,Business Loan,1000000.00,850000.00,ETB,15.00,2025-02-01,2030-02-01,current,0`;
+      const csvTemplate = `borrowerId,borrowerName,dateOfBirth,address,nationalId,phoneNumber,reportingDate,lenderInstitution,accountNumber,accountType,creditCategory,originalAmount,currentBalance,currency,interestRate,disbursementDate,maturityDate,status,daysInArrears
+BORROWER_ID_1,John Doe,1985-03-15,"12 Independence Ave, Accra",GHA-123456789,+233201234567,2025-01-31,Commercial Bank,CB-LN-2025-001,Personal Loan,personal,500000.00,450000.00,ETB,12.50,2025-01-15,2028-01-15,current,0
+BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209876543,2025-01-31,Development Bank,DB-LN-2025-002,Business Loan,business,1000000.00,850000.00,ETB,15.00,2025-02-01,2030-02-01,current,0`;
       res.setHeader("Content-Type", "text/csv");
       res.setHeader("Content-Disposition", 'attachment; filename="batch-upload-template.csv"');
       return res.send(csvTemplate);
@@ -3196,6 +3209,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
           lenderInstitution: "Commercial Bank",
           accountNumber: "CB-LN-2025-001",
           accountType: "Personal Loan",
+          creditCategory: "personal",
           originalAmount: "500000.00",
           currentBalance: "450000.00",
           currency: "ETB",

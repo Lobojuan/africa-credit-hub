@@ -63,7 +63,7 @@ if (AFRICAN_COUNTRIES.length !== 54) {
   throw new Error(`Expected 54 African countries but got ${AFRICAN_COUNTRIES.length}`);
 }
 
-const LOAN_TYPES = ["personal_loan", "business_loan", "mortgage", "overdraft", "microfinance", "trade_finance", "vehicle_loan", "agricultural_loan"];
+const LOAN_TYPES = ["Personal Loan", "Business Loan", "Mortgage/Housing Loan", "Overdraft", "Microfinance Loan", "Trade Finance", "Vehicle Loan", "Agricultural Loan", "Credit Card", "Corporate Loan", "Salary Advance", "Telco Credit", "Utility Credit", "Lease Finance", "Student Loan"];
 const STATUSES: Array<"current" | "delinquent" | "default" | "closed" | "restructured"> = ["current", "current", "current", "current", "current", "delinquent", "delinquent", "default", "closed", "restructured"];
 const SECTORS = ["Banking", "Telecommunications", "Agriculture", "Manufacturing", "Mining", "Energy", "Government", "Healthcare", "Education", "Technology", "Transportation", "Real Estate", "Retail", "Tourism", "Construction"];
 const COLLATERAL_TYPES = ["Property", "Equipment & Machinery", "Vehicles", "Real Estate", "Inventory", "Receivables", "None"];
@@ -184,11 +184,14 @@ export async function seedPanAfrican() {
         const original = parseFloat(randDec(1000, 500000));
         const balRatio = 0.1 + Math.random() * 0.9;
         const status = pick(STATUSES);
+        const chosenType = pick(LOAN_TYPES);
+        const BUSINESS_TYPES = ["Business Loan", "Corporate Loan", "Trade Finance", "Agricultural Loan", "Lease Finance", "Letter of Credit"];
         accountValues.push({
           borrowerId: b.id,
           lenderInstitution: pick(country.banks),
           accountNumber: `${country.code}-LN-${randInt(2020, 2025)}-${randInt(1000, 9999)}`,
-          accountType: pick(LOAN_TYPES),
+          accountType: chosenType,
+          creditCategory: BUSINESS_TYPES.includes(chosenType) ? "business" : "personal",
           originalAmount: original.toFixed(2),
           currentBalance: (status === "closed" ? 0 : original * balRatio).toFixed(2),
           currency: country.currency,

@@ -27,7 +27,7 @@ The system employs a modern full-stack architecture built for scalability and co
 -   **Authentication**: Session-based with MFA, strong password policies, biometric (WebAuthn) support, and role-based idle session timeouts. Google OAuth integration is also supported.
 -   **Data Model**: 22 core tables for credit, compliance, usage metering, pricing, and alternative data.
 -   **Core Capabilities**:
-    -   **Credit Management**: Comprehensive borrower and credit account management with multi-currency support.
+    -   **Credit Management**: Comprehensive borrower and credit account management with multi-currency support. 20 standardized credit types with automatic Personal/Business classification. Shared credit type definitions in `shared/credit-types.ts` used by both client and server.
     -   **Credit Scoring**: Algorithmic scoring (300-850) with explainable AI, utilizing a gradient boosting-inspired model.
     -   **Workflow**: Maker-checker workflow and dispute management.
     -   **Regulatory Compliance**: Consent management, audit trails, and a Regulatory Compliance Dashboard with jurisdiction-specific data retention for 54 African jurisdictions, including country-specific compliance modes.
