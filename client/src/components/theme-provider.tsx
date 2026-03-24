@@ -1,4 +1,11 @@
 import { useState, useEffect, createContext, useContext } from "react";
+import { flushSync } from "react-dom";
+
+declare global {
+  interface Document {
+    startViewTransition?: (callback: () => void) => void;
+  }
+}
 
 type Theme = "light" | "dark";
 
@@ -22,7 +29,20 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("theme", theme);
   }, [theme]);
 
-  const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
+  const toggleTheme = () => {
+    const toggle = (prev: Theme): Theme => prev === "light" ? "dark" : "light";
+
+    if (!document.startViewTransition) {
+      setTheme(toggle);
+      return;
+    }
+
+    document.startViewTransition(() => {
+      flushSync(() => {
+        setTheme(toggle);
+      });
+    });
+  };
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
