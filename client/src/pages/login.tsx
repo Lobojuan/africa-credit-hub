@@ -27,6 +27,20 @@ export default function LoginPage() {
   const { t } = useTranslation();
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const oauthError = params.get("error");
+    if (oauthError) {
+      const messages: Record<string, string> = {
+        google_auth_failed: "Google sign-in failed. Please try again or use email/password.",
+        invalid_state: "Sign-in session expired. Please try again.",
+        missing_params: "Sign-in was cancelled or incomplete. Please try again.",
+      };
+      setError(messages[oauthError] || "Sign-in failed. Please try again.");
+      window.history.replaceState({}, "", "/login");
+    }
+  }, []);
+
+  useEffect(() => {
     if (mounted) return;
     const timer = setTimeout(() => {
       setMounted(true);

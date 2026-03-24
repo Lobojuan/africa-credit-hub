@@ -1948,6 +1948,10 @@ export async function registerRoutes(
 
   function getGoogleRedirectUri(req: Request) {
     if (process.env.CANONICAL_URL) return `${process.env.CANONICAL_URL}/api/consumer/auth/google/callback`;
+    if (process.env.NODE_ENV !== "production") {
+      const host = req.get("host");
+      if (host) return `${req.protocol}://${host}/api/consumer/auth/google/callback`;
+    }
     return `https://africacredithub.com/api/consumer/auth/google/callback`;
   }
 
@@ -1984,11 +1988,14 @@ export async function registerRoutes(
   app.get("/api/consumer/auth/google/callback", async (req, res) => {
     try {
       const returnTo = (req.session as any).googleOAuthReturnTo || "/my-credit";
+      const isAdminFlow = returnTo === "/dashboard" || returnTo === "/command-center";
+      const errorRedirect = isAdminFlow ? "/login" : "/my-credit";
       const { code, state } = req.query;
-      if (!code || !state) return res.redirect(`${returnTo}?error=missing_params`);
+      if (!code || !state) return res.redirect(`${errorRedirect}?error=missing_params`);
 
       if (state !== (req.session as any).googleOAuthState) {
-        return res.redirect(`${returnTo}?error=invalid_state`);
+        console.error("[Google OAuth] State mismatch — possible session/domain issue");
+        return res.redirect(`${errorRedirect}?error=invalid_state`);
       }
       delete (req.session as any).googleOAuthState;
 
@@ -2007,8 +2014,8 @@ export async function registerRoutes(
 
       const tokenData = await tokenResp.json();
       if (!tokenData.access_token) {
-        console.error("[Consumer][Google] Token exchange failed:", tokenData);
-        return res.redirect(`${returnTo}?error=token_failed`);
+        console.error("[Google OAuth] Token exchange failed:", tokenData);
+        return res.redirect(`${errorRedirect}?error=google_auth_failed&detail=token_exchange`);
       }
 
       const userResp = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
@@ -2017,7 +2024,7 @@ export async function registerRoutes(
       const googleUser = await userResp.json();
 
       if (!googleUser.email) {
-        return res.redirect(`${returnTo}?error=no_email`);
+        return res.redirect(`${errorRedirect}?error=google_auth_failed&detail=no_email`);
       }
 
       const [adminUser] = await db.select().from(users).where(eq(users.email, googleUser.email)).limit(1);
@@ -2096,9 +2103,11 @@ export async function registerRoutes(
         });
       });
     } catch (e: any) {
-      const fallback = (req.session as any)?.googleOAuthReturnTo || "/my-credit";
-      console.error("[Consumer][Google] OAuth error:", e.message);
-      res.redirect(`${fallback}?error=oauth_failed`);
+      const returnTo = (req.session as any)?.googleOAuthReturnTo || "/my-credit";
+      const isAdminFlow = returnTo === "/dashboard" || returnTo === "/command-center";
+      const errorRedirect = isAdminFlow ? "/login" : "/my-credit";
+      console.error("[Google OAuth] Error:", e.message);
+      res.redirect(`${errorRedirect}?error=google_auth_failed`);
     }
   });
 

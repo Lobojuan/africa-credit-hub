@@ -72,6 +72,7 @@ export default function ConsumerPortalPage() {
         no_email: "Your Google account does not have an email address.",
         session_error: "Session error during sign-in. Please try again.",
         oauth_failed: "Google sign-in failed. Please try again or use email/password.",
+        google_auth_failed: "Google sign-in failed. Please try again or use email/password.",
       };
       setError(errorMessages[oauthError] || "Sign-in failed. Please try again.");
       window.history.replaceState({}, "", window.location.pathname);

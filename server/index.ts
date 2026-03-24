@@ -157,6 +157,8 @@ app.use(
 
 app.use(express.urlencoded({ extended: false }));
 
+app.set("trust proxy", true);
+
 const PgStore = pgSession(session);
 app.use(
   session({
@@ -234,8 +236,6 @@ app.use((req, res, next) => {
   }
   next();
 });
-
-app.set("trust proxy", true);
 
 const httpLogger = createLogger("http");
 
