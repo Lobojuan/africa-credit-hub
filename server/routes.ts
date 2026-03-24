@@ -43,7 +43,7 @@ import { sendSms, sendOtpSms, isSmsConfigured } from "./sms";
 import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport, generatePortfolioIntelligence, parseProvider, parseOptionalProvider, generateCreditNarrative, detectAnomalies, generateRegulatoryReport, naturalLanguageQuery, analyzeCrossBorderRisk, generateLoanRecommendation, callAI, parseJSON, generateAIResponse } from "./ai";
 import { BOG_EXPORT_GENERATORS } from "./bog-export";
 import type { BogFileType } from "@shared/bog-codes";
-import { BUSINESS_CREDIT_TYPES, inferCreditCategory } from "@shared/credit-types";
+import { BUSINESS_CREDIT_TYPES, inferCreditCategory, normalizeAccountType } from "@shared/credit-types";
 import { BSL_EXPORT_GENERATORS } from "./bsl-export";
 import type { BslFileType } from "@shared/bsl-codes";
 
@@ -1729,8 +1729,11 @@ export async function registerRoutes(
         }
       }
       const bodyWithNormalization = { ...req.body, organizationId: orgId };
-      if (bodyWithNormalization.accountType && !bodyWithNormalization.creditCategory) {
-        bodyWithNormalization.creditCategory = inferCreditCategory(bodyWithNormalization.accountType);
+      if (bodyWithNormalization.accountType) {
+        bodyWithNormalization.accountType = normalizeAccountType(bodyWithNormalization.accountType);
+        if (!bodyWithNormalization.creditCategory) {
+          bodyWithNormalization.creditCategory = inferCreditCategory(bodyWithNormalization.accountType);
+        }
       }
       const parsed = insertCreditAccountSchema.parse(bodyWithNormalization);
       const approval = await storage.createPendingApproval({
@@ -1758,11 +1761,18 @@ export async function registerRoutes(
       if (!(await validateBorrowerCountry(existing.borrowerId, req))) {
         return res.status(403).json({ message: "Data sovereignty violation: cannot modify account for borrower in a different country" });
       }
+      const normalizedBody = { ...req.body };
+      if (normalizedBody.accountType) {
+        normalizedBody.accountType = normalizeAccountType(normalizedBody.accountType);
+        if (!normalizedBody.creditCategory) {
+          normalizedBody.creditCategory = inferCreditCategory(normalizedBody.accountType);
+        }
+      }
       const approval = await storage.createPendingApproval({
         entityType: "credit_account",
         entityId: req.params.id,
         action: "UPDATE",
-        payload: JSON.stringify(req.body),
+        payload: JSON.stringify(normalizedBody),
         requestedBy: req.session?.userId!,
       });
       await storage.createAuditLog({
