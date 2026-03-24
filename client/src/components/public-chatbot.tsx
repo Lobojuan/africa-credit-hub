@@ -24,7 +24,9 @@ export function PublicChatbot() {
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+      setTimeout(() => {
+        scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+      }, 50);
     }
   }, [messages, streaming]);
 
@@ -90,7 +92,7 @@ export function PublicChatbot() {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-5 right-5 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-xl active:scale-95"
+          className="fixed bottom-5 right-5 z-[90] w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-xl active:scale-95"
           style={{
             background: "linear-gradient(135deg, hsl(175 55% 35%), hsl(175 70% 45%))",
             boxShadow: "0 4px 20px rgba(42, 157, 143, 0.4)",
@@ -102,7 +104,7 @@ export function PublicChatbot() {
       )}
 
       {open && (
-        <div className="fixed bottom-5 right-5 z-50 w-[380px] max-w-[calc(100vw-2rem)] h-[520px] max-h-[calc(100vh-6rem)] flex flex-col rounded-2xl shadow-2xl border border-border/50 bg-background overflow-hidden animate-in slide-in-from-bottom-5 fade-in-0 duration-300" data-testid="public-chatbot-panel">
+        <div className="fixed bottom-5 right-5 z-[90] w-[380px] max-w-[calc(100vw-2rem)] h-[520px] max-h-[calc(100vh-6rem)] flex flex-col rounded-2xl shadow-2xl border border-border/50 bg-background overflow-hidden animate-in slide-in-from-bottom-5 fade-in-0 duration-300" data-testid="public-chatbot-panel">
           <div
             className="flex items-center justify-between px-4 py-3 shrink-0"
             style={{ background: "linear-gradient(135deg, hsl(175 55% 35%), hsl(175 70% 45%))" }}
@@ -173,7 +175,7 @@ export function PublicChatbot() {
             ))}
           </div>
 
-          <form onSubmit={handleSubmit} className="p-3 border-t bg-background shrink-0">
+          <form onSubmit={handleSubmit} className="p-3 border-t bg-background shrink-0 pb-[env(safe-area-inset-bottom,0.75rem)]">
             <div className="flex gap-2">
               <input
                 ref={inputRef}

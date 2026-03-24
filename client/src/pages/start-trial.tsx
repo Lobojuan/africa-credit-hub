@@ -170,6 +170,7 @@ export default function StartTrialPage() {
       });
 
       setTimeout(() => {
+        document.body.style.pointerEvents = "auto";
         window.location.href = "/dashboard";
       }, 1000);
     } catch (err: any) {

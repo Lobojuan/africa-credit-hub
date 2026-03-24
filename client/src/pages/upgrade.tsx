@@ -166,6 +166,7 @@ export default function UpgradePage() {
         });
         const data = await res.json();
         if (data.stripeUrl) {
+          document.body.style.pointerEvents = "auto";
           window.location.href = data.stripeUrl;
           return;
         }
@@ -189,6 +190,7 @@ export default function UpgradePage() {
       });
 
       if (data.redirectUrl) {
+        document.body.style.pointerEvents = "auto";
         window.location.href = data.redirectUrl;
       } else {
         setStep("confirm");

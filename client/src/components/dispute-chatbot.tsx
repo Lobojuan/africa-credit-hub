@@ -220,8 +220,10 @@ export function DisputeChatbot({ open, onOpenChange }: ChatbotProps) {
   });
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, aiMessages]);
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    }, 50);
+  }, [messages, aiMessages, aiStreaming]);
 
   useEffect(() => {
     if (open && mode !== "ai" && messages.length === 0) {
@@ -676,7 +678,7 @@ export function DisputeChatbot({ open, onOpenChange }: ChatbotProps) {
         )}
 
         {showInput && (
-          <div className="p-3 border-t flex gap-2 shrink-0">
+          <div className="p-3 border-t flex gap-2 shrink-0 pb-[env(safe-area-inset-bottom,0.75rem)]">
             <Input
               data-testid="input-chatbot-message"
               value={input}

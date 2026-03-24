@@ -285,6 +285,7 @@ export default function PlatformMetricsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
+              <div className="min-w-0 min-h-0 w-full">
               <ResponsiveContainer width="100%" height={280}>
                 <AreaChart data={projections}>
                   <XAxis dataKey="month" tick={{ fontSize: 10 }} />
@@ -293,6 +294,7 @@ export default function PlatformMetricsPage() {
                   <Area type="monotone" dataKey="mrr" stroke="hsl(175, 55%, 28%)" fill="hsl(175, 55%, 28%)" fillOpacity={0.15} name="Projected MRR" />
                 </AreaChart>
               </ResponsiveContainer>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -373,6 +375,7 @@ export default function PlatformMetricsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            <div className="min-w-0 min-h-0 w-full">
             <ResponsiveContainer width="100%" height={250}>
               <AreaChart data={api.hourlyData || []}>
                 <XAxis dataKey="hour" tick={{ fontSize: 10 }} interval={3} />
@@ -381,6 +384,7 @@ export default function PlatformMetricsPage() {
                 <Area type="monotone" dataKey="requests" stroke="hsl(175, 55%, 28%)" fill="hsl(175, 55%, 28%)" fillOpacity={0.2} />
               </AreaChart>
             </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
 
@@ -392,6 +396,7 @@ export default function PlatformMetricsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            <div className="min-w-0 min-h-0 w-full">
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={api.dailyData || []}>
                 <XAxis dataKey="date" tick={{ fontSize: 10 }} />
@@ -400,6 +405,7 @@ export default function PlatformMetricsPage() {
                 <Bar dataKey="requests" fill="hsl(175, 55%, 35%)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -415,7 +421,8 @@ export default function PlatformMetricsPage() {
           <CardContent>
             {subscriptions.tierBreakdown?.length > 0 ? (
               <div className="flex items-center gap-6">
-                <ResponsiveContainer width="50%" height={200}>
+                <div className="min-w-0 min-h-0 w-1/2">
+                <ResponsiveContainer width="100%" height={200}>
                   <RePieChart>
                     <Pie data={subscriptions.tierBreakdown} cx="50%" cy="50%" innerRadius={40} outerRadius={70} dataKey="count" nameKey="tier">
                       {subscriptions.tierBreakdown.map((_: any, i: number) => (
@@ -426,6 +433,7 @@ export default function PlatformMetricsPage() {
                     <Legend />
                   </RePieChart>
                 </ResponsiveContainer>
+                </div>
                 <div className="space-y-3">
                   {subscriptions.tierBreakdown.map((t: any, i: number) => (
                     <div key={t.tier} className="flex items-center gap-3">

@@ -22,7 +22,7 @@ export function TrialBanner() {
 
   return (
     <div
-      className="fixed top-0 left-0 right-0 z-[55] flex items-center justify-center py-1.5 px-4"
+      className="fixed top-0 left-0 right-0 z-[100] flex items-center justify-center py-1.5 px-4"
       style={{ pointerEvents: "none" }}
     >
       <div

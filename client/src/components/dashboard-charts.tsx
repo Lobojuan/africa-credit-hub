@@ -185,6 +185,7 @@ export function DashboardCharts({ monthlyTrend, statusBreakdown, typeBreakdown, 
           </div>
         </CardHeader>
         <CardContent className="p-5 pt-0">
+          <div className="min-w-0 min-h-0 w-full">
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={trendData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
               <defs>
@@ -225,6 +226,7 @@ export function DashboardCharts({ monthlyTrend, statusBreakdown, typeBreakdown, 
               />
             </AreaChart>
           </ResponsiveContainer>
+          </div>
         </CardContent>
       </Card>
 
@@ -236,6 +238,7 @@ export function DashboardCharts({ monthlyTrend, statusBreakdown, typeBreakdown, 
           </div>
         </CardHeader>
         <CardContent className="p-5 pt-0">
+          <div className="min-w-0 min-h-0 w-full">
           <ResponsiveContainer width="100%" height={280}>
             <PieChart>
               <Pie
@@ -269,6 +272,7 @@ export function DashboardCharts({ monthlyTrend, statusBreakdown, typeBreakdown, 
               />
             </PieChart>
           </ResponsiveContainer>
+          </div>
         </CardContent>
       </Card>
 
@@ -280,6 +284,7 @@ export function DashboardCharts({ monthlyTrend, statusBreakdown, typeBreakdown, 
           </div>
         </CardHeader>
         <CardContent className="p-5 pt-0">
+          <div className="min-w-0 min-h-0 w-full">
           <ResponsiveContainer width="100%" height={Math.max(200, sortedTypes.length * 44)}>
             <BarChart data={sortedTypes} layout="vertical" margin={{ top: 0, right: 30, left: 10, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(210, 12%, 44%, 0.12)" />
@@ -299,6 +304,7 @@ export function DashboardCharts({ monthlyTrend, statusBreakdown, typeBreakdown, 
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+          </div>
         </CardContent>
       </Card>
     </div>

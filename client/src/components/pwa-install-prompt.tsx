@@ -42,7 +42,7 @@ export function PWAInstallPrompt() {
 
   return (
     <div
-      className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-80 z-50 rounded-xl border border-border bg-card shadow-2xl p-4"
+      className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-80 z-[100] rounded-xl border border-border bg-card shadow-2xl p-4"
       data-testid="pwa-install-prompt"
     >
       <div className="flex items-start gap-3">
