@@ -623,6 +623,22 @@ export default function InvestorLandingPage() {
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </div>
+
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                {HERO_STATS.map((stat) => (
+                  <div
+                    key={stat.label}
+                    className="rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm p-2.5 text-center"
+                    data-testid={`stat-${stat.label.toLowerCase().replace(/\s/g, "-")}`}
+                  >
+                    <stat.icon className="w-3.5 h-3.5 mx-auto mb-1 text-primary/70" />
+                    <div className="text-lg sm:text-xl font-bold tracking-tight">
+                      <AnimatedCounter end={stat.value} suffix={stat.suffix} />
+                    </div>
+                    <div className="text-[9px] text-muted-foreground mt-0.5">{stat.label}</div>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="relative flex items-center justify-center">
@@ -638,22 +654,6 @@ export default function InvestorLandingPage() {
                 />
               </div>
             </div>
-          </div>
-
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 sm:gap-4 max-w-4xl mx-auto mt-12 lg:mt-16">
-            {HERO_STATS.map((stat) => (
-              <div
-                key={stat.label}
-                className="rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm p-3 text-center"
-                data-testid={`stat-${stat.label.toLowerCase().replace(/\s/g, "-")}`}
-              >
-                <stat.icon className="w-4 h-4 mx-auto mb-1.5 text-primary/70" />
-                <div className="text-xl sm:text-2xl font-bold tracking-tight">
-                  <AnimatedCounter end={stat.value} suffix={stat.suffix} />
-                </div>
-                <div className="text-[10px] text-muted-foreground mt-0.5">{stat.label}</div>
-              </div>
-            ))}
           </div>
 
           <div className="mt-12 animate-bounce">
