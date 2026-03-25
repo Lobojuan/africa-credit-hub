@@ -563,7 +563,7 @@ export default function InvestorLandingPage() {
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-stretch">
-            <div className="text-center lg:text-left flex flex-col justify-center">
+            <div className="text-center lg:text-right flex flex-col justify-center lg:items-end">
               <Badge variant="secondary" className="mb-6 text-xs px-3 py-1 font-medium" data-testid="badge-version">
                 <Star className="w-3 h-3 mr-1" />
                 {t('landing.versionBadge')}
@@ -587,7 +587,7 @@ export default function InvestorLandingPage() {
                 dangerouslySetInnerHTML={{ __html: t('landing.heroSubDesc') }}
               />
 
-              <div className="flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start gap-3 mb-8">
+              <div className="flex flex-col sm:flex-row items-center lg:items-end justify-center lg:justify-end gap-3 mb-8">
                 <Button size="lg" className="text-sm px-8 gap-2 shadow-lg" onClick={() => navigate("/start-trial")} data-testid="cta-try-trial">
                   <ArrowRight className="w-4 h-4" />
                   {t('landing.startTrial')}
