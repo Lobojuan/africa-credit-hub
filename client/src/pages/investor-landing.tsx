@@ -28,6 +28,7 @@ import creditAccountsImage from "@assets/app-credit-accounts.png";
 import auditImage from "@assets/app-audit.png";
 import reportsImage from "@assets/app-reports.png";
 import aiPortfolioImage from "@assets/app-ai-portfolio.png";
+import platformDemoVideo from "@assets/39a45e79-6d03-456d-8d41-f5c491f40a66_1774472320799.mp4";
 
 function AnimatedCounter({ end, duration = 2000, suffix = "", prefix = "" }: { end: number; duration?: number; suffix?: string; prefix?: string }) {
   const [count, setCount] = useState(0);
@@ -694,13 +695,22 @@ export default function InvestorLandingPage() {
               </Button>
             </div>
             <div className="relative">
-              <div className="rounded-2xl overflow-hidden border border-border/50 shadow-2xl">
-                <img
-                  src={dashboardImage}
-                  alt="CDH v2.1 dashboard showing 159 borrowers, 305 credit accounts, GHS 12.1M outstanding, and portfolio analytics"
+              <div className="rounded-2xl overflow-hidden border border-border/50 shadow-2xl bg-black">
+                <video
+                  src={platformDemoVideo}
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
                   className="w-full h-auto"
-                  loading="lazy"
-                />
+                  data-testid="video-platform-demo"
+                >
+                  <img
+                    src={dashboardImage}
+                    alt="CDH v2.1 dashboard"
+                    className="w-full h-auto"
+                  />
+                </video>
               </div>
             </div>
           </div>
