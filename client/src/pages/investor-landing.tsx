@@ -653,7 +653,7 @@ export default function InvestorLandingPage() {
                     <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                       <Play className="w-7 h-7 text-black ml-1" />
                     </div>
-                    <span className="text-white/80 text-xs mt-3 font-medium tracking-wide">Watch Demo</span>
+                    <span className="text-white/80 text-xs mt-3 font-medium tracking-wide">Watch Intro</span>
                   </button>
                 )}
               </div>
