@@ -562,8 +562,8 @@ export default function InvestorLandingPage() {
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-            <div className="text-center lg:text-left">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-stretch">
+            <div className="text-center lg:text-left flex flex-col justify-center">
               <Badge variant="secondary" className="mb-6 text-xs px-3 py-1 font-medium" data-testid="badge-version">
                 <Star className="w-3 h-3 mr-1" />
                 {t('landing.versionBadge')}
@@ -605,16 +605,15 @@ export default function InvestorLandingPage() {
               </div>
             </div>
 
-            <div className="relative max-w-sm lg:max-w-md mx-auto">
-              <div className="rounded-xl overflow-hidden border border-border/50 shadow-xl bg-black">
+            <div className="relative flex items-center">
+              <div className="rounded-xl overflow-hidden border border-border/50 shadow-xl bg-black w-full">
                 <video
                   src={platformDemoVideo}
                   autoPlay
                   muted
-                  loop
                   playsInline
                   controls
-                  className="w-full h-auto"
+                  className="w-full h-full object-cover"
                   data-testid="video-platform-demo"
                 />
               </div>
