@@ -582,7 +582,7 @@ export default function InvestorLandingPage() {
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-stretch">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
             <div className="text-center lg:text-right flex flex-col justify-center lg:items-end">
               <Badge variant="secondary" className="mb-6 text-xs px-3 py-1 font-medium" data-testid="badge-version">
                 <Star className="w-3 h-3 mr-1" />
@@ -626,14 +626,14 @@ export default function InvestorLandingPage() {
             </div>
 
             <div className="relative flex items-center justify-center">
-              <div className="rounded-xl overflow-hidden border border-border/50 shadow-xl bg-black">
+              <div className="rounded-xl overflow-hidden border border-border/50 shadow-xl bg-black" style={{ maxHeight: "360px" }}>
                 <video
                   src={platformDemoVideo}
                   autoPlay
                   muted
                   playsInline
                   controls
-                  className="w-full h-full object-cover"
+                  className="w-auto h-full max-h-[360px] mx-auto"
                   data-testid="video-platform-demo"
                 />
               </div>
