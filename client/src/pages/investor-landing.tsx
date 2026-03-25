@@ -18,6 +18,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { useTheme } from "@/components/theme-provider";
 import { useTranslation } from "react-i18next";
 import heroImage from "@assets/investor-hero.png";
 import dashboardImage from "@assets/app-dashboard.png";
@@ -454,6 +456,23 @@ export default function InvestorLandingPage() {
   const [activeModuleCategory, setActiveModuleCategory] = useState(0);
   const [lightboxImg, setLightboxImg] = useState<{ src: string; title: string } | null>(null);
   const { t } = useTranslation();
+  const { theme, toggleTheme } = useTheme();
+  const previousTheme = useRef<string | null>(null);
+
+  useEffect(() => {
+    previousTheme.current = theme;
+    if (theme !== "dark") {
+      toggleTheme();
+    }
+    return () => {
+      if (previousTheme.current === "light") {
+        const root = document.documentElement;
+        root.classList.remove("dark");
+        root.classList.add("light");
+        localStorage.setItem("theme", "light");
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!lightboxImg) return;
@@ -518,6 +537,7 @@ export default function InvestorLandingPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <LanguageSwitcher />
             <Button
               variant="outline"
