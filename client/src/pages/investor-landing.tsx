@@ -626,14 +626,14 @@ export default function InvestorLandingPage() {
             </div>
 
             <div className="relative flex items-center justify-center">
-              <div className="rounded-xl overflow-hidden border border-border/50 shadow-xl bg-black" style={{ maxHeight: "360px" }}>
+              <div className="rounded-xl overflow-hidden border border-border/50 shadow-xl bg-black" style={{ maxHeight: "470px" }}>
                 <video
                   src={platformDemoVideo}
                   autoPlay
                   muted
                   playsInline
                   controls
-                  className="w-auto h-full max-h-[360px] mx-auto"
+                  className="w-auto h-full max-h-[470px] mx-auto"
                   data-testid="video-platform-demo"
                 />
               </div>
