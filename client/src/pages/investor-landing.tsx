@@ -12,7 +12,7 @@ import {
   UserCheck, FileCheck, Timer, BadgeCheck, Network,
   BookOpen, Headphones, Receipt, ServerCog, Banknote,
   CircleDollarSign, Activity, Hash, ChevronRight,
-  Sparkles, MonitorSmartphone, Brain, Mail, Phone, X, ZoomIn,
+  Sparkles, MonitorSmartphone, Brain, Mail, Phone, X, ZoomIn, Play,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -455,6 +455,8 @@ export default function InvestorLandingPage() {
   const [scrolled, setScrolled] = useState(false);
   const [activeModuleCategory, setActiveModuleCategory] = useState(0);
   const [lightboxImg, setLightboxImg] = useState<{ src: string; title: string } | null>(null);
+  const [videoPlaying, setVideoPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const { t } = useTranslation();
   const { theme, toggleTheme } = useTheme();
   const previousTheme = useRef<string | null>(null);
@@ -626,16 +628,34 @@ export default function InvestorLandingPage() {
             </div>
 
             <div className="relative flex items-center justify-center">
-              <div className="rounded-xl overflow-hidden border border-border/50 shadow-xl bg-black" style={{ maxHeight: "470px" }}>
+              <div className="rounded-xl overflow-hidden border border-border/50 shadow-xl bg-black relative" style={{ maxHeight: "470px" }}>
                 <video
+                  ref={videoRef}
                   src={platformDemoVideo}
-                  autoPlay
-                  muted
                   playsInline
-                  controls
+                  controls={videoPlaying}
                   className="w-auto h-full max-h-[470px] mx-auto"
                   data-testid="video-platform-demo"
+                  onEnded={() => setVideoPlaying(false)}
                 />
+                {!videoPlaying && (
+                  <button
+                    className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 cursor-pointer transition-all hover:bg-black/30 group"
+                    onClick={() => {
+                      setVideoPlaying(true);
+                      if (videoRef.current) {
+                        videoRef.current.currentTime = 0;
+                        videoRef.current.play();
+                      }
+                    }}
+                    data-testid="button-play-video"
+                  >
+                    <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                      <Play className="w-7 h-7 text-black ml-1" />
+                    </div>
+                    <span className="text-white/80 text-xs mt-3 font-medium tracking-wide">Watch Demo</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
