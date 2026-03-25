@@ -561,48 +561,67 @@ export default function InvestorLandingPage() {
           <div className="absolute top-2/3 left-1/2 w-64 h-64 rounded-full opacity-5 blur-3xl" style={{ background: "hsl(200 60% 40%)" }} />
         </div>
 
-        <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 text-center">
-          <Badge variant="secondary" className="mb-6 text-xs px-3 py-1 font-medium" data-testid="badge-version">
-            <Star className="w-3 h-3 mr-1" />
-            {t('landing.versionBadge')}
-          </Badge>
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+            <div className="text-center lg:text-left">
+              <Badge variant="secondary" className="mb-6 text-xs px-3 py-1 font-medium" data-testid="badge-version">
+                <Star className="w-3 h-3 mr-1" />
+                {t('landing.versionBadge')}
+              </Badge>
 
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1] mb-6">
-            <span className="block">{t('landing.heroTitle1')}</span>
-            <span
-              className="block bg-clip-text text-transparent"
-              style={{ backgroundImage: "linear-gradient(135deg, hsl(175 55% 32%), hsl(175 55% 22%), hsl(43 80% 50%))" }}
-            >
-              {t('landing.heroTitle2')}
-            </span>
-          </h1>
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-extrabold tracking-tight leading-[1.1] mb-6">
+                <span className="block">{t('landing.heroTitle1')}</span>
+                <span
+                  className="block bg-clip-text text-transparent"
+                  style={{ backgroundImage: "linear-gradient(135deg, hsl(175 55% 32%), hsl(175 55% 22%), hsl(43 80% 50%))" }}
+                >
+                  {t('landing.heroTitle2')}
+                </span>
+              </h1>
 
-          <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto mb-4 leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: t('landing.heroDesc') }}
-          />
+              <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mb-4 leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: t('landing.heroDesc') }}
+              />
 
-          <p className="text-sm text-muted-foreground/80 max-w-xl mx-auto mb-10"
-            dangerouslySetInnerHTML={{ __html: t('landing.heroSubDesc') }}
-          />
+              <p className="text-sm text-muted-foreground/80 max-w-xl mb-8"
+                dangerouslySetInnerHTML={{ __html: t('landing.heroSubDesc') }}
+              />
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16">
-            <Button size="lg" className="text-sm px-8 gap-2 shadow-lg" onClick={() => navigate("/start-trial")} data-testid="cta-try-trial">
-              <ArrowRight className="w-4 h-4" />
-              {t('landing.startTrial')}
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              className="text-sm px-8 gap-2"
-              onClick={() => navigate("/pricing")}
-              data-testid="cta-explore"
-            >
-              {t('landing.viewPlans')}
-              <ArrowRight className="w-4 h-4" />
-            </Button>
+              <div className="flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start gap-3 mb-8">
+                <Button size="lg" className="text-sm px-8 gap-2 shadow-lg" onClick={() => navigate("/start-trial")} data-testid="cta-try-trial">
+                  <ArrowRight className="w-4 h-4" />
+                  {t('landing.startTrial')}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="text-sm px-8 gap-2"
+                  onClick={() => navigate("/pricing")}
+                  data-testid="cta-explore"
+                >
+                  {t('landing.viewPlans')}
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="relative">
+              <div className="rounded-2xl overflow-hidden border border-border/50 shadow-2xl bg-black">
+                <video
+                  src={platformDemoVideo}
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  controls
+                  className="w-full h-auto"
+                  data-testid="video-platform-demo"
+                />
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 sm:gap-4 max-w-4xl mx-auto">
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 sm:gap-4 max-w-4xl mx-auto mt-12 lg:mt-16">
             {HERO_STATS.map((stat) => (
               <div
                 key={stat.label}
@@ -618,7 +637,7 @@ export default function InvestorLandingPage() {
             ))}
           </div>
 
-          <div className="mt-16 animate-bounce">
+          <div className="mt-12 animate-bounce">
             <ChevronDown className="w-5 h-5 mx-auto text-muted-foreground/50" />
           </div>
         </div>
@@ -695,22 +714,13 @@ export default function InvestorLandingPage() {
               </Button>
             </div>
             <div className="relative">
-              <div className="rounded-2xl overflow-hidden border border-border/50 shadow-2xl bg-black">
-                <video
-                  src={platformDemoVideo}
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
+              <div className="rounded-2xl overflow-hidden border border-border/50 shadow-2xl">
+                <img
+                  src={dashboardImage}
+                  alt="CDH v2.1 dashboard showing borrowers, credit accounts, and portfolio analytics"
                   className="w-full h-auto"
-                  data-testid="video-platform-demo"
-                >
-                  <img
-                    src={dashboardImage}
-                    alt="CDH v2.1 dashboard"
-                    className="w-full h-auto"
-                  />
-                </video>
+                  loading="lazy"
+                />
               </div>
             </div>
           </div>
