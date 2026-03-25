@@ -605,8 +605,8 @@ export default function InvestorLandingPage() {
               </div>
             </div>
 
-            <div className="relative">
-              <div className="rounded-2xl overflow-hidden border border-border/50 shadow-2xl bg-black">
+            <div className="relative max-w-sm lg:max-w-md mx-auto">
+              <div className="rounded-xl overflow-hidden border border-border/50 shadow-xl bg-black">
                 <video
                   src={platformDemoVideo}
                   autoPlay
