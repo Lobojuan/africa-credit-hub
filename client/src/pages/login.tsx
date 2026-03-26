@@ -443,8 +443,8 @@ export default function LoginPage() {
               Back to home
             </a>
             <span className="text-muted-foreground">·</span>
-            <a href="/start-trial" className="text-primary hover:underline" data-testid="link-start-trial">
-              Start free trial
+            <a href="/signup" className="text-primary hover:underline" data-testid="link-signup">
+              Create an account
             </a>
           </div>
         </div>

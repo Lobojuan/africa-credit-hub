@@ -92,6 +92,7 @@ const PricingPage = lazy(() => import("@/pages/pricing"));
 const SecurityCompliancePage = lazy(() => import("@/pages/security-compliance"));
 const MarketValidationPage = lazy(() => import("@/pages/market-validation"));
 const StartTrialPage = lazy(() => import("@/pages/start-trial"));
+const SignUpPage = lazy(() => import("@/pages/signup"));
 const UpgradePage = lazy(() => import("@/pages/upgrade"));
 
 function LazyFallback() {
@@ -401,7 +402,7 @@ function AuthenticatedApp() {
 
 function PublicChatbotWrapper() {
   const [location] = useLocation();
-  const publicPaths = ["/", "/solutions", "/investor", "/ai-demo", "/pricing", "/security", "/market-validation", "/start-trial", "/my-credit"];
+  const publicPaths = ["/", "/solutions", "/investor", "/ai-demo", "/pricing", "/security", "/market-validation", "/start-trial", "/signup", "/my-credit"];
   if (!publicPaths.includes(location)) return null;
   return <PublicChatbot />;
 }
@@ -421,6 +422,7 @@ function App() {
             <Route path="/security" component={() => <Suspense fallback={<LazyFallback />}><SecurityCompliancePage /></Suspense>} />
             <Route path="/market-validation" component={() => <Suspense fallback={<LazyFallback />}><MarketValidationPage /></Suspense>} />
             <Route path="/start-trial" component={() => <Suspense fallback={<LazyFallback />}><StartTrialPage /></Suspense>} />
+            <Route path="/signup" component={() => <Suspense fallback={<LazyFallback />}><SignUpPage /></Suspense>} />
             <Route path="/score-guide" component={() => <Suspense fallback={<LazyFallback />}><ScoreGuidePage /></Suspense>} />
             <Route path="/login">
               <AuthProvider>
