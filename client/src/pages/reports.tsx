@@ -18,6 +18,7 @@ import { formatCurrency, SUPPORTED_COUNTRIES, SUPPORTED_CURRENCIES, getModeCurre
 import { isGhanaMode, getDefaultFallbackCurrency } from "@/lib/country-mode";
 import { apiRequest } from "@/lib/queryClient";
 import type { Borrower, CreditAccount } from "@shared/schema";
+import { ReportsKPIBanner } from "@/components/platform-kpi-banner";
 
 function BorrowerSearchSelect({ onSelect }: { onSelect: (b: Borrower) => void }) {
   const [query, setQuery] = useState("");
@@ -243,6 +244,11 @@ export default function ReportsPage() {
           </div>
           <p className="text-sm text-muted-foreground ml-4">{t('reports.subtitle')}</p>
         </div>
+      </div>
+
+      <ReportsKPIBanner />
+
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" data-testid="button-export-portfolio-csv" onClick={() => window.open("/api/reports/export?format=csv&type=portfolio", "_blank")}>
             <Download className="w-4 h-4 mr-2" />{t('reports.exportPortfolio')} (CSV)

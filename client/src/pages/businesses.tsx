@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Borrower } from "@shared/schema";
 import { getBorrowerAvatarUrl } from "@/lib/avatar";
+import { BusinessKPIBanner } from "@/components/platform-kpi-banner";
 
 const PAGE_SIZE = 50;
 
@@ -40,6 +41,8 @@ export default function BusinessesPage() {
           <p className="text-sm text-muted-foreground ml-4">Corporate borrowers — commercial facilities, trade finance, and business credit</p>
         </div>
       </div>
+
+      <BusinessKPIBanner />
 
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />

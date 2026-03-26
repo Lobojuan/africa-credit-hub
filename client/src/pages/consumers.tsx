@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Borrower } from "@shared/schema";
 import { getBorrowerAvatarUrl } from "@/lib/avatar";
+import { ConsumerKPIBanner } from "@/components/platform-kpi-banner";
 
 const PAGE_SIZE = 50;
 
@@ -40,6 +41,8 @@ export default function ConsumersPage() {
           <p className="text-sm text-muted-foreground ml-4">Individual borrowers — personal loans, mortgages, and retail credit</p>
         </div>
       </div>
+
+      <ConsumerKPIBanner />
 
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />

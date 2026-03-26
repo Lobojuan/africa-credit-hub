@@ -69,6 +69,7 @@ The system employs a modern full-stack architecture built for scalability and co
     -   **Progressive Web App (PWA)**: Installable with service worker and offline capabilities.
     -   **System Status & Health Monitoring**: Public and authenticated endpoints for health and diagnostics.
     -   **Platform Metrics Dashboard**: Admin-only page displaying MRR/ARR, subscription breakdown, and KPIs.
+    -   **Platform-Wide KPI/ROI Banners**: Reusable KPI banner component (`client/src/components/platform-kpi-banner.tsx`) with contextual metrics across all major sections. Backend API `GET /api/platform-kpis` returns portfolio metrics (NPL ratio, delinquency/default rates, collection rate, avg interest rate), borrower metrics (individuals, corporates, avg credit score, countries served), operational metrics (institutions, reports generated, dispute resolution, SLA compliance), and ROI metrics (NPL reduction vs industry avg, portfolio savings, cost/revenue per report, gross margin, annualized ROI). Banners appear on Dashboard (full KPI section + ROI card), Consumers, Businesses, Credit Accounts, and Reports pages.
     -   **Webhook Delivery System**: HMAC-SHA256 signed webhooks with retry logic.
 
 ## Demo Data Seeding

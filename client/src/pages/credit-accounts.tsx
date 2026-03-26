@@ -18,6 +18,7 @@ import { formatCurrency, SUPPORTED_CURRENCIES } from "@/lib/currency";
 import { isGhanaMode, BOG_FACILITY_TYPES, BOG_PURPOSE_CODES, BOG_ASSET_CLASSIFICATIONS, BOG_REPAYMENT_FREQUENCIES, BOG_COLLATERAL_TYPES, STANDARD_CREDIT_TYPES, CREDIT_CATEGORIES, inferCreditCategory } from "@/lib/country-mode";
 import { CurrencyReference } from "@/components/currency-reference";
 import type { CreditAccount, Borrower } from "@shared/schema";
+import { CreditAccountKPIBanner } from "@/components/platform-kpi-banner";
 
 function getStatusVariant(status: string) {
   switch (status) {
@@ -91,6 +92,11 @@ export default function CreditAccountsPage() {
           </div>
           <p className="text-sm text-muted-foreground ml-4">{t("creditAccounts.subtitle")}</p>
         </div>
+      </div>
+
+      <CreditAccountKPIBanner />
+
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-4">
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-add-account">

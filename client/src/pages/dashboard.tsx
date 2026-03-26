@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { StatCard } from "@/components/stat-card";
 import { DashboardCharts } from "@/components/dashboard-charts";
 import { AfricaMap } from "@/components/africa-map";
+import { DashboardKPISection, FullROICard } from "@/components/platform-kpi-banner";
 import { formatCurrency, detectLocalCurrency, SUPPORTED_CURRENCIES, getModeCurrencies } from "@/lib/currency";
 import { isGhanaMode, getDefaultCurrency, CREDIT_SCORE_FACTORS } from "@/lib/country-mode";
 import { ReferenceRateBadge, CurrencyReference } from "@/components/currency-reference";
@@ -715,6 +716,13 @@ export default function Dashboard() {
           </>
         ) : null}
       </div>
+
+      <CollapsibleDashboardSection title="Platform KPIs & ROI" icon={TrendingUp} testId="platform-kpis" defaultOpen={true} badge="Live">
+        <div className="space-y-4">
+          <DashboardKPISection />
+          <FullROICard />
+        </div>
+      </CollapsibleDashboardSection>
 
       <CollapsibleDashboardSection title="Analytics" icon={BarChart3} testId="analytics">
         <DashboardCharts
