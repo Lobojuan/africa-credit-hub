@@ -48,11 +48,88 @@ interface CreditReportData {
 }
 
 function getScoreGrade(score: number) {
-  if (score >= 750) return { label: "Excellent", color: "text-green-600 dark:text-green-400", bg: "bg-green-100 dark:bg-green-900/30" };
-  if (score >= 700) return { label: "Good", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-100 dark:bg-emerald-900/30" };
-  if (score >= 650) return { label: "Fair", color: "text-yellow-600 dark:text-yellow-400", bg: "bg-yellow-100 dark:bg-yellow-900/30" };
-  if (score >= 600) return { label: "Below Average", color: "text-orange-600 dark:text-orange-400", bg: "bg-orange-100 dark:bg-orange-900/30" };
+  if (score >= 800) return { label: "Excellent", color: "text-green-600 dark:text-green-400", bg: "bg-green-100 dark:bg-green-900/30" };
+  if (score >= 740) return { label: "Very Good", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-100 dark:bg-emerald-900/30" };
+  if (score >= 670) return { label: "Good", color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-100 dark:bg-blue-900/30" };
+  if (score >= 580) return { label: "Fair", color: "text-yellow-600 dark:text-yellow-400", bg: "bg-yellow-100 dark:bg-yellow-900/30" };
   return { label: "Poor", color: "text-red-600 dark:text-red-400", bg: "bg-red-100 dark:bg-red-900/30" };
+}
+
+function getAccountRRating(account: CreditAccount): { code: string; label: string; color: string } {
+  const days = account.daysInArrears || 0;
+  const status = account.status;
+  if (status === "written_off") return { code: "R9", label: "Bad debt / placed for collection", color: "text-red-700 dark:text-red-400 bg-red-100 dark:bg-red-900/40" };
+  if (status === "default") return { code: "R8", label: "Repossession / default", color: "text-red-700 dark:text-red-400 bg-red-100 dark:bg-red-900/40" };
+  if (status === "restructured") return { code: "R7", label: "Consolidated / orderly payment via restructure", color: "text-purple-700 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/40" };
+  if (days > 150) return { code: "R6", label: "150+ days past due", color: "text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/40" };
+  if (days > 120) return { code: "R5", label: "120-150 days past due", color: "text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/40" };
+  if (days > 90) return { code: "R4", label: "90-119 days past due", color: "text-orange-700 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/40" };
+  if (days > 60) return { code: "R3", label: "60-89 days past due", color: "text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40" };
+  if (days > 30) return { code: "R2", label: "31-59 days past due", color: "text-yellow-700 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/40" };
+  return { code: "R1", label: "Pays within 30 days / current", color: "text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/40" };
+}
+
+function buildCreditUtilizationSummary(accounts: CreditAccount[]) {
+  const openAccounts = accounts.filter(a => a.status !== "closed");
+  const byCurrency: Record<string, { limit: number; used: number }> = {};
+  openAccounts.forEach(a => {
+    const c = a.currency || getDefaultFallbackCurrency();
+    if (!byCurrency[c]) byCurrency[c] = { limit: 0, used: 0 };
+    byCurrency[c].limit += parseFloat(a.originalAmount || "0");
+    byCurrency[c].used += parseFloat(a.currentBalance || "0");
+  });
+  const totalLimit = openAccounts.reduce((s, a) => s + parseFloat(a.originalAmount || "0"), 0);
+  const totalUsed = openAccounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
+  const ratio = totalLimit > 0 ? ((totalUsed / totalLimit) * 100) : 0;
+  return { totalLimit, totalUsed, ratio, byCurrency };
+}
+
+function buildRiskAssessment(report: CreditReportData) {
+  const strengths: string[] = [];
+  const concerns: string[] = [];
+  const score = report.summary.creditScore;
+
+  if (score >= 700) strengths.push("Strong credit score indicating reliable payment behaviour");
+  if (report.summary.delinquentAccounts === 0) strengths.push("No delinquent accounts on file");
+  if (report.summary.writtenOffAccounts === 0) strengths.push("No written-off or bad debt accounts");
+  if (report.summary.judgmentCount === 0) strengths.push("No court judgments or legal actions recorded");
+  const onTimeRatio = report.accounts.length > 0
+    ? report.accounts.filter(a => a.status === "current" || a.status === "closed").length / report.accounts.length
+    : 0;
+  if (onTimeRatio >= 0.8) strengths.push(`${(onTimeRatio * 100).toFixed(0)}% of accounts are current or closed in good standing`);
+  if (report.summary.activeAccounts >= 3) strengths.push("Diverse credit portfolio with multiple active facilities");
+
+  if (report.summary.delinquentAccounts > 0) concerns.push(`${report.summary.delinquentAccounts} delinquent account(s) on file`);
+  if (report.summary.writtenOffAccounts > 0) concerns.push(`${report.summary.writtenOffAccounts} written-off account(s) totalling bad debt`);
+  if (report.summary.judgmentCount > 0) concerns.push(`${report.summary.judgmentCount} court judgment(s) recorded`);
+  if (report.summary.inquiryCount > 5) concerns.push(`High inquiry volume (${report.summary.inquiryCount}) may indicate credit-seeking behaviour`);
+  const util = buildCreditUtilizationSummary(report.accounts);
+  if (util.ratio > 75) concerns.push(`High credit utilization at ${util.ratio.toFixed(1)}%`);
+  if (score < 580) concerns.push("Low credit score suggests elevated default risk");
+  if (report.summary.restructuredAccounts > 0) concerns.push(`${report.summary.restructuredAccounts} restructured facility/ies indicating past repayment difficulty`);
+
+  let riskLevel = "Low";
+  if (score < 580 || report.summary.writtenOffAccounts > 0 || report.summary.judgmentCount > 0) riskLevel = "High";
+  else if (score < 670 || report.summary.delinquentAccounts > 0 || util.ratio > 75) riskLevel = "Medium";
+
+  if (strengths.length === 0) strengths.push("No notable strengths identified based on current data");
+  if (concerns.length === 0) concerns.push("No significant concerns identified");
+
+  return { riskLevel, strengths, concerns };
+}
+
+function buildCollectionsItems(accounts: CreditAccount[]) {
+  return accounts
+    .filter(a => a.status === "written_off" || a.status === "default")
+    .map(a => ({
+      creditor: a.lenderInstitution,
+      amount: a.currentBalance,
+      currency: a.currency || "GHS",
+      status: a.status === "written_off" ? "Written Off" : "In Default",
+      dateReported: a.updatedAt ? new Date(a.updatedAt).toLocaleDateString("en-GB") : "—",
+      rating: getAccountRRating(a),
+      accountNumber: a.accountNumber,
+    }));
 }
 
 function getPaymentStatusLabel(status: string, daysInArrears?: number | null): string {
@@ -659,6 +736,141 @@ export default function CreditReportPage() {
             </Card>
           </div>
 
+          {(() => {
+            const utilSummary = buildCreditUtilizationSummary(report.accounts);
+            const defaultCurrency = getDefaultFallbackCurrency();
+            const openAccounts = report.accounts.filter(a => a.status !== "closed");
+            const oldestAccount = report.accounts.reduce((oldest, a) => {
+              const d = a.disbursementDate ? new Date(a.disbursementDate) : null;
+              return d && (!oldest || d < oldest) ? d : oldest;
+            }, null as Date | null);
+            const historyYears = oldestAccount ? Math.max(0, Math.floor((Date.now() - oldestAccount.getTime()) / (365.25 * 24 * 60 * 60 * 1000))) : 0;
+            const accountTypes = new Set(openAccounts.map(a => a.accountType || "Unknown"));
+            return (
+              <Card data-testid="card-credit-utilization-summary">
+                <CardContent className="p-5 print:p-3">
+                  <SectionHeader icon={BarChart3} title="Credit Utilization Summary" />
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 print:gap-2 mb-4 print:mb-2">
+                    <div className="text-center p-3 bg-muted/30 rounded-lg print:p-2">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold print:text-[8px]">Total Credit Limit</p>
+                      <p className="text-lg font-bold mt-1 print:text-sm">{formatCurrency(utilSummary.totalLimit.toFixed(2), defaultCurrency)}</p>
+                    </div>
+                    <div className="text-center p-3 bg-muted/30 rounded-lg print:p-2">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold print:text-[8px]">Total Credit Used</p>
+                      <p className="text-lg font-bold mt-1 print:text-sm">{formatCurrency(utilSummary.totalUsed.toFixed(2), defaultCurrency)}</p>
+                    </div>
+                    <div className={`text-center p-3 rounded-lg print:p-2 ${utilSummary.ratio > 75 ? "bg-red-50 dark:bg-red-950/20" : utilSummary.ratio > 50 ? "bg-yellow-50 dark:bg-yellow-950/20" : "bg-green-50 dark:bg-green-950/20"}`}>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold print:text-[8px]">Utilization Ratio</p>
+                      <p className={`text-lg font-bold mt-1 print:text-sm ${utilSummary.ratio > 75 ? "text-red-600 dark:text-red-400" : utilSummary.ratio > 50 ? "text-yellow-600 dark:text-yellow-400" : "text-green-600 dark:text-green-400"}`}>
+                        {utilSummary.ratio.toFixed(1)}%
+                      </p>
+                      <p className="text-[9px] text-muted-foreground print:text-[7px]">{utilSummary.ratio <= 30 ? "Optimal" : utilSummary.ratio <= 50 ? "Moderate" : utilSummary.ratio <= 75 ? "High" : "Very High"}</p>
+                    </div>
+                    <div className="text-center p-3 bg-muted/30 rounded-lg print:p-2">
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold print:text-[8px]">Available Credit</p>
+                      <p className="text-lg font-bold mt-1 print:text-sm">{formatCurrency(Math.max(0, utilSummary.totalLimit - utilSummary.totalUsed).toFixed(2), defaultCurrency)}</p>
+                    </div>
+                  </div>
+                  {Object.keys(utilSummary.byCurrency).length > 1 && (
+                    <div className="border rounded-lg overflow-hidden print:border-border mb-4 print:mb-2">
+                      <table className="w-full text-xs print:text-[9px]">
+                        <thead>
+                          <tr className="bg-muted/50">
+                            <TableCell header>Currency</TableCell>
+                            <TableCell header className="text-right">Credit Limit</TableCell>
+                            <TableCell header className="text-right">Credit Used</TableCell>
+                            <TableCell header className="text-right">Available</TableCell>
+                            <TableCell header className="text-right">Utilization</TableCell>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {Object.entries(utilSummary.byCurrency).map(([cur, data]) => {
+                            const curRatio = data.limit > 0 ? ((data.used / data.limit) * 100) : 0;
+                            return (
+                              <tr key={cur} className="hover:bg-muted/20">
+                                <TableCell className="font-medium">{cur}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(data.limit.toFixed(2), cur)}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(data.used.toFixed(2), cur)}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(Math.max(0, data.limit - data.used).toFixed(2), cur)}</TableCell>
+                                <TableCell className={`text-right font-semibold ${curRatio > 75 ? "text-red-600 dark:text-red-400" : curRatio > 50 ? "text-yellow-600 dark:text-yellow-400" : "text-green-600 dark:text-green-400"}`}>
+                                  {curRatio.toFixed(1)}%
+                                </TableCell>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  <div className="border rounded-lg overflow-hidden print:border-border">
+                    <table className="w-full text-xs print:text-[9px]">
+                      <thead>
+                        <tr className="bg-muted/50">
+                          <TableCell header>Score Factor</TableCell>
+                          <TableCell header>Impact</TableCell>
+                          <TableCell header>Current Value</TableCell>
+                          <TableCell header>Assessment</TableCell>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        <tr className="hover:bg-muted/20">
+                          <TableCell className="font-medium">Payment History</TableCell>
+                          <TableCell className="text-muted-foreground">35% weight</TableCell>
+                          <TableCell className="font-semibold">{report.summary.delinquentAccounts === 0 ? "Clean" : `${report.summary.delinquentAccounts} late`}</TableCell>
+                          <TableCell>
+                            <Badge variant={report.summary.delinquentAccounts === 0 ? "default" : "destructive"} className="text-[9px] print:text-[7px]">
+                              {report.summary.delinquentAccounts === 0 ? "Positive" : "Negative"}
+                            </Badge>
+                          </TableCell>
+                        </tr>
+                        <tr className="hover:bg-muted/20">
+                          <TableCell className="font-medium">Credit Utilization</TableCell>
+                          <TableCell className="text-muted-foreground">30% weight</TableCell>
+                          <TableCell className="font-semibold">{utilSummary.ratio.toFixed(1)}%</TableCell>
+                          <TableCell>
+                            <Badge variant={utilSummary.ratio <= 30 ? "default" : utilSummary.ratio <= 75 ? "secondary" : "destructive"} className="text-[9px] print:text-[7px]">
+                              {utilSummary.ratio <= 30 ? "Excellent" : utilSummary.ratio <= 50 ? "Good" : utilSummary.ratio <= 75 ? "Fair" : "Poor"}
+                            </Badge>
+                          </TableCell>
+                        </tr>
+                        <tr className="hover:bg-muted/20">
+                          <TableCell className="font-medium">Credit History Length</TableCell>
+                          <TableCell className="text-muted-foreground">15% weight</TableCell>
+                          <TableCell className="font-semibold">{historyYears > 0 ? `${historyYears} year${historyYears !== 1 ? "s" : ""}` : "< 1 year"}</TableCell>
+                          <TableCell>
+                            <Badge variant={historyYears >= 5 ? "default" : historyYears >= 2 ? "secondary" : "outline"} className="text-[9px] print:text-[7px]">
+                              {historyYears >= 5 ? "Established" : historyYears >= 2 ? "Developing" : "New"}
+                            </Badge>
+                          </TableCell>
+                        </tr>
+                        <tr className="hover:bg-muted/20">
+                          <TableCell className="font-medium">Credit Mix</TableCell>
+                          <TableCell className="text-muted-foreground">10% weight</TableCell>
+                          <TableCell className="font-semibold">{accountTypes.size} type{accountTypes.size !== 1 ? "s" : ""}</TableCell>
+                          <TableCell>
+                            <Badge variant={accountTypes.size >= 3 ? "default" : accountTypes.size >= 2 ? "secondary" : "outline"} className="text-[9px] print:text-[7px]">
+                              {accountTypes.size >= 3 ? "Diverse" : accountTypes.size >= 2 ? "Moderate" : "Limited"}
+                            </Badge>
+                          </TableCell>
+                        </tr>
+                        <tr className="hover:bg-muted/20">
+                          <TableCell className="font-medium">Recent Inquiries</TableCell>
+                          <TableCell className="text-muted-foreground">10% weight</TableCell>
+                          <TableCell className="font-semibold">{report.summary.inquiryCount}</TableCell>
+                          <TableCell>
+                            <Badge variant={report.summary.inquiryCount <= 2 ? "default" : report.summary.inquiryCount <= 5 ? "secondary" : "destructive"} className="text-[9px] print:text-[7px]">
+                              {report.summary.inquiryCount <= 2 ? "Low" : report.summary.inquiryCount <= 5 ? "Moderate" : "High"}
+                            </Badge>
+                          </TableCell>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
+
           {report.summary.reasonCodes.length > 0 && (
             <Card>
               <CardContent className="p-5 print:p-3">
@@ -1028,6 +1240,18 @@ export default function CreditReportPage() {
                     <span key={code} data-testid={`bog-status-def-${code}`}><span className="font-bold">{code}</span> = {meaning}</span>
                   ))}
                 </div>
+                <p className="text-[10px] font-semibold text-muted-foreground mb-1 mt-3 print:mt-2 print:text-[8px]">Account Rating System (R Codes):</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-x-4 gap-y-0.5 text-[9px] text-muted-foreground print:text-[7px] mb-3 print:mb-2">
+                  <span><span className="font-bold text-green-700 dark:text-green-400">R1</span> = Current / within 30 days</span>
+                  <span><span className="font-bold text-yellow-700 dark:text-yellow-400">R2</span> = 31-59 days past due</span>
+                  <span><span className="font-bold text-amber-700 dark:text-amber-400">R3</span> = 60-89 days past due</span>
+                  <span><span className="font-bold text-orange-700 dark:text-orange-400">R4</span> = 90-119 days past due</span>
+                  <span><span className="font-bold text-red-600 dark:text-red-400">R5</span> = 120-150 days past due</span>
+                  <span><span className="font-bold text-red-600 dark:text-red-400">R6</span> = 150+ days past due</span>
+                  <span><span className="font-bold text-purple-700 dark:text-purple-400">R7</span> = Consolidated / Restructured</span>
+                  <span><span className="font-bold text-red-700 dark:text-red-400">R8</span> = Repossession / Default</span>
+                  <span><span className="font-bold text-red-700 dark:text-red-400">R9</span> = Bad Debt / Collections</span>
+                </div>
                 <p className="text-[10px] font-semibold text-muted-foreground mb-1 print:text-[8px]">Payment History Legend (NDIA Codes):</p>
                 <div className="flex items-center gap-3 flex-wrap text-[9px] text-muted-foreground print:text-[7px]">
                   <span><span className={`inline-block rounded px-1 py-0.5 text-[8px] font-bold ${PAYMENT_STATUS_COLORS["OK"]}`}>OK</span> Up To Date</span>
@@ -1052,11 +1276,12 @@ export default function CreditReportPage() {
                     const currency = account.currency || getDefaultFallbackCurrency();
                     const history = report.paymentHistory?.[account.id] || [];
                     const isOpen = account.status !== "closed";
+                    const rRating = getAccountRRating(account);
 
                     return (
                       <div key={account.id} className="border rounded-lg overflow-hidden print:border-border print:break-inside-avoid" data-testid={`report-account-${account.id}`}>
                         <div className="bg-muted/40 px-4 py-2 flex items-center justify-between gap-2 print:px-2 print:py-1">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-[10px] font-bold text-muted-foreground print:text-[8px]">Facility {idx + 1} of {report.accounts.length}</span>
                             <Badge variant={isOpen ? "default" : "secondary"} className="text-[9px] print:text-[7px]">
                               {isOpen ? "Open" : "Closed"}
@@ -1065,6 +1290,9 @@ export default function CreditReportPage() {
                             <Badge variant="outline" className="text-[9px] font-mono print:text-[7px]" data-testid={`bog-status-badge-${account.id}`}>
                               BoG: {mapInternalStatusToBog(account.status)}
                             </Badge>
+                            <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-bold print:text-[7px] ${rRating.color}`} data-testid={`r-rating-badge-${account.id}`}>
+                              {rRating.code}
+                            </span>
                           </div>
                           <span className="text-[10px] text-muted-foreground print:text-[8px]">{currency}</span>
                         </div>
@@ -1326,41 +1554,187 @@ export default function CreditReportPage() {
             </Card>
           )}
 
-          <Card>
+          {(() => {
+            const HARD_INQUIRY_PURPOSES = ["new_credit", "collection"];
+            const hardInquiries = report.inquiries.filter(inq =>
+              HARD_INQUIRY_PURPOSES.includes(inq.purpose)
+            );
+            const softInquiries = report.inquiries.filter(inq =>
+              !HARD_INQUIRY_PURPOSES.includes(inq.purpose)
+            );
+            return (
+              <Card>
+                <CardContent className="p-5 print:p-3">
+                  <SectionHeader icon={Search} title="Credit Search Inquiry History" number={8} count={report.inquiries.length} />
+                  <div className="flex gap-3 mb-3 print:mb-2">
+                    <Badge variant="outline" className="text-[9px] print:text-[7px]">
+                      Hard Inquiries: {hardInquiries.length}
+                    </Badge>
+                    <Badge variant="secondary" className="text-[9px] print:text-[7px]">
+                      Soft Inquiries: {softInquiries.length}
+                    </Badge>
+                  </div>
+                  {report.inquiries.length > 0 ? (
+                    <div className="border rounded-lg overflow-hidden print:border-border">
+                      <table className="w-full text-xs print:text-[9px]">
+                        <thead>
+                          <tr className="bg-muted/50">
+                            <TableCell header>Institution</TableCell>
+                            <TableCell header>Purpose</TableCell>
+                            <TableCell header>Type</TableCell>
+                            <TableCell header>Date</TableCell>
+                            <TableCell header>Consent</TableCell>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {report.inquiries.map((inq) => {
+                            const isHard = HARD_INQUIRY_PURPOSES.includes(inq.purpose);
+                            return (
+                              <tr key={inq.id} className="hover:bg-muted/20">
+                                <TableCell className="font-medium">{inq.institution}</TableCell>
+                                <TableCell className="capitalize">{inq.purpose.replace(/_/g, " ")}</TableCell>
+                                <TableCell>
+                                  <Badge variant={isHard ? "destructive" : "secondary"} className="text-[9px] print:text-[7px]">
+                                    {isHard ? "Hard" : "Soft"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>{inq.createdAt ? new Date(inq.createdAt).toLocaleDateString("en-GB") : "—"}</TableCell>
+                                <TableCell>
+                                  {inq.consentProvided ? (
+                                    <Badge variant="default" className="text-[9px] print:text-[7px]">Yes</Badge>
+                                  ) : (
+                                    <Badge variant="destructive" className="text-[9px] print:text-[7px]">No</Badge>
+                                  )}
+                                </TableCell>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4 print:py-2">No credit inquiries on file</p>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })()}
+
+          {(() => {
+            const collectionsItems = buildCollectionsItems(report.accounts);
+            return (
+              <Card className={collectionsItems.length > 0 ? "border-destructive/30" : ""} data-testid="card-collections-derogatory">
+                <CardContent className="p-5 print:p-3">
+                  <SectionHeader icon={AlertTriangle} title="Collections & Derogatory Items" number={9} count={collectionsItems.length} />
+                  {collectionsItems.length > 0 ? (
+                    <div className="border rounded-lg overflow-hidden print:border-border">
+                      <table className="w-full text-xs print:text-[9px]">
+                        <thead>
+                          <tr className="bg-muted/50">
+                            <TableCell header>Creditor</TableCell>
+                            <TableCell header>Account No.</TableCell>
+                            <TableCell header>R-Rating</TableCell>
+                            <TableCell header>Status</TableCell>
+                            <TableCell header className="text-right">Amount</TableCell>
+                            <TableCell header>Currency</TableCell>
+                            <TableCell header>Date Reported</TableCell>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {collectionsItems.map((item, i) => (
+                            <tr key={i} className="hover:bg-muted/20">
+                              <TableCell className="font-medium">{item.creditor}</TableCell>
+                              <TableCell className="font-mono">{item.accountNumber}</TableCell>
+                              <TableCell>
+                                <span className={`inline-block rounded px-1.5 py-0.5 text-[9px] font-bold print:text-[7px] ${item.rating.color}`}>
+                                  {item.rating.code}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="destructive" className="text-[9px] print:text-[7px]">{item.status}</Badge>
+                              </TableCell>
+                              <TableCell className="text-right font-semibold">{formatCurrency(item.amount, item.currency)}</TableCell>
+                              <TableCell>{item.currency}</TableCell>
+                              <TableCell>{item.dateReported}</TableCell>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 print:py-2">
+                      <CheckCircle2 className="w-8 h-8 text-green-500 mx-auto mb-2 print:w-5 print:h-5" />
+                      <p className="text-sm text-muted-foreground">No collections or derogatory items on file</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })()}
+
+          {(() => {
+            const risk = buildRiskAssessment(report);
+            return (
+              <Card data-testid="card-risk-assessment">
+                <CardContent className="p-5 print:p-3">
+                  <SectionHeader icon={Shield} title="Risk Assessment Summary" number={10} />
+                  <div className="mb-4 print:mb-2">
+                    <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold print:text-[10px] ${
+                      risk.riskLevel === "Low" ? "bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-300" :
+                      risk.riskLevel === "Medium" ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-950/30 dark:text-yellow-300" :
+                      "bg-red-100 text-red-800 dark:bg-red-950/30 dark:text-red-300"
+                    }`} data-testid="text-overall-risk-level">
+                      Overall Risk Level: {risk.riskLevel}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 print:gap-2">
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-2 print:text-[8px]">Strengths</p>
+                      <div className="space-y-1.5">
+                        {risk.strengths.map((s, i) => (
+                          <div key={i} className="flex items-start gap-2 text-xs print:text-[9px]">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0 mt-0.5" />
+                            <span>{s}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-2 print:text-[8px]">Concerns</p>
+                      <div className="space-y-1.5">
+                        {risk.concerns.map((c, i) => (
+                          <div key={i} className="flex items-start gap-2 text-xs print:text-[9px]">
+                            <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0 mt-0.5" />
+                            <span>{c}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
+
+          <Card data-testid="card-consumer-statement">
             <CardContent className="p-5 print:p-3">
-              <SectionHeader icon={Search} title="Credit Search Inquiry History" number={8} count={report.inquiries.length} />
-              {report.inquiries.length > 0 ? (
-                <div className="border rounded-lg overflow-hidden print:border-border">
-                  <table className="w-full text-xs print:text-[9px]">
-                    <thead>
-                      <tr className="bg-muted/50">
-                        <TableCell header>Institution</TableCell>
-                        <TableCell header>Purpose</TableCell>
-                        <TableCell header>Date</TableCell>
-                        <TableCell header>Consent</TableCell>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {report.inquiries.map((inq) => (
-                        <tr key={inq.id} className="hover:bg-muted/20">
-                          <TableCell className="font-medium">{inq.institution}</TableCell>
-                          <TableCell className="capitalize">{inq.purpose.replace(/_/g, " ")}</TableCell>
-                          <TableCell>{inq.createdAt ? new Date(inq.createdAt).toLocaleDateString("en-GB") : "—"}</TableCell>
-                          <TableCell>
-                            {inq.consentProvided ? (
-                              <Badge variant="default" className="text-[9px] print:text-[7px]">Yes</Badge>
-                            ) : (
-                              <Badge variant="destructive" className="text-[9px] print:text-[7px]">No</Badge>
-                            )}
-                          </TableCell>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4 print:py-2">No credit inquiries on file</p>
-              )}
+              <SectionHeader icon={FileText} title="Consumer Statement" number={11} />
+              <div className="border rounded-lg p-4 print:p-2 bg-muted/10">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-2 print:text-[8px]">
+                  Consumer-Submitted Statement
+                </p>
+                <p className="text-xs text-muted-foreground italic print:text-[9px]">
+                  No consumer statement has been submitted for this file. Consumers have the right to submit a personal statement
+                  of up to 200 words to be included in their credit report, explaining circumstances related to any credit information
+                  contained herein.
+                </p>
+              </div>
+              <div className="mt-3 print:mt-2">
+                <p className="text-[9px] text-muted-foreground/70 print:text-[7px]">
+                  Under the Credit Reporting Act, consumers have the right to dispute inaccurate information and add a personal statement
+                  to their credit file. Contact the Credit Registry to exercise these rights.
+                </p>
+              </div>
             </CardContent>
           </Card>
 
