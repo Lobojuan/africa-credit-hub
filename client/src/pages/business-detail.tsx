@@ -297,9 +297,9 @@ export default function BusinessDetailPage() {
           )}
 
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => navigate(`/credit-report/${borrowerId}`)} data-testid="button-full-report">
+            <Button variant="outline" size="sm" onClick={() => navigate(`/business-credit-report/${borrowerId}`)} data-testid="button-full-report">
               <FileText className="w-4 h-4 mr-2" />
-              Full Credit Report
+              Full Business Credit Report
             </Button>
           </div>
         </div>

@@ -58,6 +58,7 @@ const BillingPage = lazy(() => import("@/pages/billing"));
 const HelpdeskPage = lazy(() => import("@/pages/helpdesk"));
 const creditReportImport = () => import("@/pages/credit-report");
 const CreditReportPage = lazy(creditReportImport);
+const BusinessCreditReportPage = lazy(() => import("@/pages/business-credit-report"));
 const ApiKeysPage = lazy(() => import("@/pages/api-keys"));
 const ApiDocsPage = lazy(() => import("@/pages/api-docs"));
 const OnlineManualPage = lazy(() => import("@/pages/online-manual"));
@@ -157,6 +158,7 @@ function Router() {
         <Route path="/billing" component={BillingPage} />
         <Route path="/helpdesk" component={HelpdeskPage} />
         <Route path="/credit-report/:borrowerId" component={CreditReportPage} />
+        <Route path="/business-credit-report/:borrowerId" component={BusinessCreditReportPage} />
         <Route path="/api-keys" component={ApiKeysPage} />
         <Route path="/api-docs" component={ApiDocsPage} />
         <Route path="/help" component={OnlineManualPage} />
