@@ -675,6 +675,77 @@ export const insertAlternativeDataSchema = createInsertSchema(alternativeData).o
 export type InsertAlternativeData = z.infer<typeof insertAlternativeDataSchema>;
 export type AlternativeData = typeof alternativeData.$inferSelect;
 
+export const telcoProviderEnum = pgEnum("telco_provider", ["mtn", "vodafone", "airtel", "safaricom", "orange", "glo", "tigo", "africell", "econet", "other"]);
+export const telcoKycLevelEnum = pgEnum("telco_kyc_level", ["none", "basic", "standard", "full"]);
+export const momoTransactionTypeEnum = pgEnum("momo_transaction_type", ["p2p_send", "p2p_receive", "merchant_payment", "bill_payment", "airtime_purchase", "airtime_advance", "cash_in", "cash_out", "salary_credit", "loan_disbursement", "loan_repayment", "savings_deposit", "savings_withdrawal", "international_transfer", "other"]);
+export const telcoRiskTierEnum = pgEnum("telco_risk_tier", ["very_low", "low", "medium", "high", "very_high"]);
+
+export const telcoProfiles = pgTable("telco_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  borrowerId: varchar("borrower_id").references(() => borrowers.id),
+  msisdn: text("msisdn").notNull(),
+  provider: telcoProviderEnum("provider").notNull(),
+  country: text("country").notNull(),
+  simRegistrationDate: text("sim_registration_date"),
+  kycLevel: telcoKycLevelEnum("kyc_level").notNull().default("basic"),
+  deviceType: text("device_type"),
+  deviceChanges90d: integer("device_changes_90d").default(0),
+  accountStatus: text("account_status").notNull().default("active"),
+  consentGranted: boolean("consent_granted").default(false),
+  consentDate: timestamp("consent_date"),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertTelcoProfileSchema = createInsertSchema(telcoProfiles).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertTelcoProfile = z.infer<typeof insertTelcoProfileSchema>;
+export type TelcoProfile = typeof telcoProfiles.$inferSelect;
+
+export const momoTransactions = pgTable("momo_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  profileId: varchar("profile_id").notNull().references(() => telcoProfiles.id),
+  transactionType: momoTransactionTypeEnum("transaction_type").notNull(),
+  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("GHS"),
+  counterpartyMsisdn: text("counterparty_msisdn"),
+  counterpartyName: text("counterparty_name"),
+  isMerchant: boolean("is_merchant").default(false),
+  category: text("category"),
+  narration: text("narration"),
+  balanceAfter: decimal("balance_after", { precision: 15, scale: 2 }),
+  transactionDate: timestamp("transaction_date").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertMomoTransactionSchema = createInsertSchema(momoTransactions).omit({ id: true, createdAt: true });
+export type InsertMomoTransaction = z.infer<typeof insertMomoTransactionSchema>;
+export type MomoTransaction = typeof momoTransactions.$inferSelect;
+
+export const telcoCreditScores = pgTable("telco_credit_scores", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  profileId: varchar("profile_id").notNull().references(() => telcoProfiles.id),
+  borrowerId: varchar("borrower_id").references(() => borrowers.id),
+  riskTier: telcoRiskTierEnum("risk_tier").notNull(),
+  riskScore: integer("risk_score").notNull(),
+  creditLimit: decimal("credit_limit", { precision: 15, scale: 2 }),
+  currency: text("currency").notNull().default("GHS"),
+  approvalRecommendation: boolean("approval_recommendation").default(false),
+  reasonCode: text("reason_code"),
+  detailedRationale: text("detailed_rationale"),
+  evaluationPeriodDays: integer("evaluation_period_days").notNull().default(90),
+  kpiSnapshot: text("kpi_snapshot"),
+  aiProvider: text("ai_provider"),
+  aiModel: text("ai_model"),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  country: text("country"),
+  scoredAt: timestamp("scored_at").defaultNow(),
+});
+
+export const insertTelcoCreditScoreSchema = createInsertSchema(telcoCreditScores).omit({ id: true, scoredAt: true });
+export type InsertTelcoCreditScore = z.infer<typeof insertTelcoCreditScoreSchema>;
+export type TelcoCreditScore = typeof telcoCreditScores.$inferSelect;
+
 export const webauthnCredentials = pgTable("webauthn_credentials", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull(),

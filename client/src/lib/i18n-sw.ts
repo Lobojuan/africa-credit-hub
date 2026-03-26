@@ -9,6 +9,7 @@ const sw: Record<string, any> = {
     borrowers: "Wakopaji",
     consumers: "Watumiaji",
     businesses: "Biashara",
+    telcoScoring: "Alama za Simu",
     creditAccounts: "Akaunti za Mikopo",
     creditSearch: "Utafutaji wa Jumla",
     batchUpload: "Upakiaji wa Wingi",

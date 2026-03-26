@@ -1626,6 +1626,225 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/telco/profiles", enforceDataSovereignty, async (req, res) => {
+    try {
+      const orgId = getOrgScope(req);
+      const country = getCountryFilter(req);
+      const profiles = await storage.getTelcoProfiles(orgId, country);
+      res.json(profiles);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/telco/profiles/:id", enforceDataSovereignty, async (req, res) => {
+    try {
+      const profile = await storage.getTelcoProfile(req.params.id);
+      if (!profile) return res.status(404).json({ message: "Profile not found" });
+      const orgId = getOrgScope(req);
+      if (orgId && profile.organizationId && profile.organizationId !== orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      res.json(profile);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/telco/profiles", requireRole("admin", "lender"), async (req, res) => {
+    try {
+      const orgId = getOrgScope(req);
+      const data = { ...req.body, organizationId: orgId || req.body.organizationId };
+      if (data.consentDate && typeof data.consentDate === "string") data.consentDate = new Date(data.consentDate);
+      const profile = await storage.createTelcoProfile(data);
+      await storage.createAuditLog({
+        action: "CREATE", entity: "telco_profile", entityId: profile.id,
+        userId: req.session.userId, details: `Created telco profile for MSISDN ${profile.msisdn}`,
+        organizationId: orgId,
+      });
+      res.json(profile);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/telco/transactions/:profileId", enforceDataSovereignty, async (req, res) => {
+    try {
+      const profile = await storage.getTelcoProfile(req.params.profileId);
+      if (!profile) return res.status(404).json({ message: "Profile not found" });
+      const orgId = getOrgScope(req);
+      if (orgId && profile.organizationId && profile.organizationId !== orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const txns = await storage.getMomoTransactions(req.params.profileId);
+      res.json(txns);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/telco/transactions/import", requireRole("admin", "lender"), async (req, res) => {
+    try {
+      const { profileId, transactions } = req.body;
+      if (!profileId || !Array.isArray(transactions)) {
+        return res.status(400).json({ message: "profileId and transactions array required" });
+      }
+      const profile = await storage.getTelcoProfile(profileId);
+      if (!profile) return res.status(404).json({ message: "Profile not found" });
+      const orgId = getOrgScope(req);
+      if (orgId && profile.organizationId && profile.organizationId !== orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const formatted = transactions.map((t: any) => ({
+        ...t,
+        profileId,
+        transactionDate: new Date(t.transactionDate),
+      }));
+      const created = await storage.createMomoTransactions(formatted);
+      res.json({ imported: created.length });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/telco/score/:profileId", requireRole("admin", "lender"), async (req, res) => {
+    try {
+      const { computeTelcoKPIs, generateTelcoCreditScore } = await import("./telco-scoring");
+      const profile = await storage.getTelcoProfile(req.params.profileId);
+      if (!profile) return res.status(404).json({ message: "Profile not found" });
+      const orgId = getOrgScope(req);
+      if (orgId && profile.organizationId && profile.organizationId !== orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const transactions = await storage.getMomoTransactions(profile.id);
+      if (transactions.length === 0) {
+        return res.status(400).json({ message: "No MoMo transactions found for this profile. Import transactions first." });
+      }
+      const periodDays = parseInt(req.body.periodDays as string) || 90;
+      const kpis = computeTelcoKPIs(profile, transactions, periodDays);
+      const aiResult = await generateTelcoCreditScore(profile, kpis);
+
+      const validTiers = ["very_low", "low", "medium", "high", "very_high"] as const;
+      const normalizedTier = validTiers.includes(aiResult.riskTier) ? aiResult.riskTier : "medium";
+      const normalizedScore = Math.max(1, Math.min(5, Math.round(aiResult.riskScore)));
+
+      const score = await storage.createTelcoCreditScore({
+        profileId: profile.id,
+        borrowerId: profile.borrowerId || undefined,
+        riskTier: normalizedTier as any,
+        riskScore: normalizedScore,
+        creditLimit: aiResult.suggestedCreditLimitUsd?.toString(),
+        currency: "USD",
+        approvalRecommendation: aiResult.approvalRecommendation,
+        reasonCode: aiResult.reasonCode,
+        detailedRationale: aiResult.detailedRationale,
+        evaluationPeriodDays: periodDays,
+        kpiSnapshot: JSON.stringify(kpis),
+        aiProvider: aiResult.aiProvider,
+        aiModel: aiResult.aiModel,
+        organizationId: orgId || profile.organizationId || undefined,
+        country: profile.country,
+      });
+
+      await storage.createAuditLog({
+        action: "AI_TELCO_SCORE", entity: "telco_credit_score", entityId: score.id,
+        userId: req.session.userId,
+        details: `AI telco credit score generated for ${profile.msisdn}: Risk ${aiResult.riskTier} (${aiResult.riskScore}/5), ${aiResult.approvalRecommendation ? "APPROVED" : "DECLINED"}`,
+        organizationId: orgId,
+      });
+
+      res.json({ score, kpis, aiResult });
+    } catch (e: any) {
+      console.error("[TelcoScoring] Error:", e.message);
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/telco/scores", enforceDataSovereignty, async (req, res) => {
+    try {
+      const orgId = getOrgScope(req);
+      const country = getCountryFilter(req);
+      const scores = await storage.getTelcoCreditScores(orgId, country);
+      res.json(scores);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/telco/scores/:profileId", enforceDataSovereignty, async (req, res) => {
+    try {
+      const scores = await storage.getTelcoCreditScoresByProfile(req.params.profileId);
+      res.json(scores);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/telco/seed-demo", requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const demoProfiles = [
+        { msisdn: "+233241234567", provider: "mtn", country: "Ghana", kycLevel: "full", deviceType: "Smartphone", simRegistrationDate: "2021-03-15", consentGranted: true, consentDate: new Date() },
+        { msisdn: "+233201112233", provider: "vodafone", country: "Ghana", kycLevel: "basic", deviceType: "Feature Phone", simRegistrationDate: "2023-06-01", consentGranted: true, consentDate: new Date() },
+        { msisdn: "+254712345678", provider: "safaricom", country: "Kenya", kycLevel: "standard", deviceType: "Smartphone", simRegistrationDate: "2020-01-10", consentGranted: true, consentDate: new Date() },
+        { msisdn: "+256781234567", provider: "mtn", country: "Uganda", kycLevel: "basic", deviceType: "Feature Phone", simRegistrationDate: "2022-09-20", consentGranted: true, consentDate: new Date() },
+        { msisdn: "+233551234567", provider: "airtel", country: "Ghana", kycLevel: "none", deviceType: "Basic Phone", simRegistrationDate: "2024-11-01", consentGranted: true, consentDate: new Date() },
+        { msisdn: "+254798765432", provider: "safaricom", country: "Kenya", kycLevel: "full", deviceType: "Smartphone", simRegistrationDate: "2019-05-22", consentGranted: true, consentDate: new Date() },
+        { msisdn: "+232761234567", provider: "africell", country: "Sierra Leone", kycLevel: "standard", deviceType: "Smartphone", simRegistrationDate: "2022-02-14", consentGranted: true, consentDate: new Date() },
+      ];
+
+      const seedOrgId = getOrgScope(req);
+      const createdProfiles = [];
+      for (const p of demoProfiles) {
+        const profile = await storage.createTelcoProfile({ ...p, organizationId: seedOrgId } as any);
+        createdProfiles.push(profile);
+      }
+
+      const txnTypes = ["cash_in", "cash_out", "p2p_send", "p2p_receive", "merchant_payment", "bill_payment", "airtime_purchase", "salary_credit", "loan_disbursement", "loan_repayment", "savings_deposit"];
+      const categories = ["food", "transport", "utilities", "salary", "remittance", "savings", "airtime", "merchant", "loan", "other"];
+      const counterparties = ["Market Vendor A", "Electric Company", "Water Board", "MTN Airtime", "Landlord", "Savings Group", "M-Pesa Agent", "Shopkeeper B", "Transport Union", "Salary Corp"];
+
+      const now = new Date();
+      for (const profile of createdProfiles) {
+        const txns: any[] = [];
+        const txnCount = 30 + Math.floor(Math.random() * 70);
+        for (let i = 0; i < txnCount; i++) {
+          const daysAgo = Math.floor(Math.random() * 90);
+          const date = new Date(now.getTime() - daysAgo * 86400000);
+          const type = txnTypes[Math.floor(Math.random() * txnTypes.length)];
+          const isInflow = ["cash_in", "salary_credit", "loan_disbursement", "p2p_receive"].includes(type);
+          const amount = (Math.random() * 200 + 5).toFixed(2);
+          txns.push({
+            profileId: profile.id,
+            transactionType: type,
+            amount: amount,
+            currency: profile.country === "Kenya" ? "KES" : profile.country === "Uganda" ? "UGX" : profile.country === "Sierra Leone" ? "SLL" : "GHS",
+            counterpartyMsisdn: `+${Math.floor(Math.random() * 900000000 + 100000000)}`,
+            counterpartyName: counterparties[Math.floor(Math.random() * counterparties.length)],
+            category: categories[Math.floor(Math.random() * categories.length)],
+            transactionDate: date,
+            isMerchant: type === "merchant_payment",
+          });
+        }
+        await storage.createMomoTransactions(txns);
+      }
+
+      res.json({ seeded: createdProfiles.length, message: `Seeded ${createdProfiles.length} telco profiles with MoMo transactions` });
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/telco/dashboard", enforceDataSovereignty, async (req, res) => {
+    try {
+      const orgId = getOrgScope(req);
+      const country = getCountryFilter(req);
+      const stats = await storage.getTelcoDashboardStats(orgId, country);
+      res.json(stats);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   app.get("/api/global-search", async (req, res) => {
     try {
       const orgId = getOrgScope(req);

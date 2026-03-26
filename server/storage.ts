@@ -5,10 +5,13 @@ import {
   users, borrowers, creditAccounts, creditInquiries, auditLogs, pendingApprovals, disputes, notifications,
   courtJudgments, consentRecords, paymentHistory, institutions, billingRecords, creditReportLogs, apiKeys,
   exchangeRates, retentionPolicies, apiConfigurations, organizations, dishonouredCheques, borrowerAlerts,
-  guarantors,
+  guarantors, telcoProfiles, momoTransactions, telcoCreditScores,
   type User, type InsertUser,
   type Organization, type InsertOrganization,
   type Borrower, type InsertBorrower,
+  type TelcoProfile, type InsertTelcoProfile,
+  type MomoTransaction, type InsertMomoTransaction,
+  type TelcoCreditScore, type InsertTelcoCreditScore,
   type CreditAccount, type InsertCreditAccount,
   type CreditInquiry, type InsertCreditInquiry,
   type AuditLog, type InsertAuditLog,
@@ -170,6 +173,16 @@ export interface IStorage {
   getBorrowerAlerts(organizationId?: string, country?: string): Promise<BorrowerAlert[]>;
   getBorrowerAlertsByBorrower(borrowerId: string): Promise<BorrowerAlert[]>;
   createBorrowerAlert(alert: InsertBorrowerAlert): Promise<BorrowerAlert>;
+
+  getTelcoProfiles(organizationId?: string, country?: string): Promise<TelcoProfile[]>;
+  getTelcoProfile(id: string): Promise<TelcoProfile | undefined>;
+  createTelcoProfile(profile: InsertTelcoProfile): Promise<TelcoProfile>;
+  getMomoTransactions(profileId: string): Promise<MomoTransaction[]>;
+  createMomoTransactions(transactions: InsertMomoTransaction[]): Promise<MomoTransaction[]>;
+  getTelcoCreditScores(organizationId?: string, country?: string): Promise<TelcoCreditScore[]>;
+  getTelcoCreditScoresByProfile(profileId: string): Promise<TelcoCreditScore[]>;
+  createTelcoCreditScore(score: InsertTelcoCreditScore): Promise<TelcoCreditScore>;
+  getTelcoDashboardStats(organizationId?: string, country?: string): Promise<{ totalProfiles: number; totalScores: number; avgRiskScore: number; approvalRate: number; tierBreakdown: Record<string, number> }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1212,6 +1225,81 @@ export class DatabaseStorage implements IStorage {
   async createBorrowerAlert(alert: InsertBorrowerAlert): Promise<BorrowerAlert> {
     const [created] = await db.insert(borrowerAlerts).values(alert).returning();
     return created;
+  }
+
+  async getTelcoProfiles(organizationId?: string, country?: string): Promise<TelcoProfile[]> {
+    const filters: any[] = [];
+    if (organizationId) filters.push(eq(telcoProfiles.organizationId, organizationId));
+    if (country) filters.push(eq(telcoProfiles.country, country));
+    const where = filters.length > 1 ? and(...filters) : filters[0];
+    return db.select().from(telcoProfiles).where(where).orderBy(desc(telcoProfiles.createdAt)).limit(500);
+  }
+
+  async getTelcoProfile(id: string): Promise<TelcoProfile | undefined> {
+    const [profile] = await db.select().from(telcoProfiles).where(eq(telcoProfiles.id, id));
+    return profile;
+  }
+
+  async createTelcoProfile(profile: InsertTelcoProfile): Promise<TelcoProfile> {
+    const [created] = await db.insert(telcoProfiles).values(profile).returning();
+    return created;
+  }
+
+  async getMomoTransactions(profileId: string): Promise<MomoTransaction[]> {
+    return db.select().from(momoTransactions).where(eq(momoTransactions.profileId, profileId)).orderBy(desc(momoTransactions.transactionDate)).limit(2000);
+  }
+
+  async createMomoTransactions(transactions: InsertMomoTransaction[]): Promise<MomoTransaction[]> {
+    if (transactions.length === 0) return [];
+    return db.insert(momoTransactions).values(transactions).returning();
+  }
+
+  async getTelcoCreditScores(organizationId?: string, country?: string): Promise<TelcoCreditScore[]> {
+    const filters: any[] = [];
+    if (organizationId) filters.push(eq(telcoCreditScores.organizationId, organizationId));
+    if (country) filters.push(eq(telcoCreditScores.country, country));
+    const where = filters.length > 1 ? and(...filters) : filters[0];
+    return db.select().from(telcoCreditScores).where(where).orderBy(desc(telcoCreditScores.scoredAt)).limit(500);
+  }
+
+  async getTelcoCreditScoresByProfile(profileId: string): Promise<TelcoCreditScore[]> {
+    return db.select().from(telcoCreditScores).where(eq(telcoCreditScores.profileId, profileId)).orderBy(desc(telcoCreditScores.scoredAt)).limit(50);
+  }
+
+  async createTelcoCreditScore(score: InsertTelcoCreditScore): Promise<TelcoCreditScore> {
+    const [created] = await db.insert(telcoCreditScores).values(score).returning();
+    return created;
+  }
+
+  async getTelcoDashboardStats(organizationId?: string, country?: string): Promise<{ totalProfiles: number; totalScores: number; avgRiskScore: number; approvalRate: number; tierBreakdown: Record<string, number> }> {
+    const profileFilters: any[] = [];
+    if (organizationId) profileFilters.push(eq(telcoProfiles.organizationId, organizationId));
+    if (country) profileFilters.push(eq(telcoProfiles.country, country));
+    const profileWhere = profileFilters.length > 1 ? and(...profileFilters) : profileFilters[0];
+
+    const [profileCount] = await db.select({ value: count() }).from(telcoProfiles).where(profileWhere);
+
+    const scoreFilters: any[] = [];
+    if (organizationId) scoreFilters.push(eq(telcoCreditScores.organizationId, organizationId));
+    if (country) scoreFilters.push(eq(telcoCreditScores.country, country));
+    const scoreWhere = scoreFilters.length > 1 ? and(...scoreFilters) : scoreFilters[0];
+
+    const scores = await db.select().from(telcoCreditScores).where(scoreWhere);
+    const totalScores = scores.length;
+    const avgRisk = totalScores > 0 ? scores.reduce((s, sc) => s + sc.riskScore, 0) / totalScores : 0;
+    const approved = scores.filter(s => s.approvalRecommendation).length;
+    const approvalRate = totalScores > 0 ? (approved / totalScores) * 100 : 0;
+
+    const tierBreakdown: Record<string, number> = { very_low: 0, low: 0, medium: 0, high: 0, very_high: 0 };
+    scores.forEach(s => { tierBreakdown[s.riskTier] = (tierBreakdown[s.riskTier] || 0) + 1; });
+
+    return {
+      totalProfiles: profileCount.value,
+      totalScores,
+      avgRiskScore: Math.round(avgRisk * 10) / 10,
+      approvalRate: Math.round(approvalRate * 10) / 10,
+      tierBreakdown,
+    };
   }
 }
 

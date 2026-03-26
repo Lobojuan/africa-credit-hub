@@ -16,6 +16,7 @@ const en = {
     borrowers: "Borrowers",
     consumers: "Consumers",
     businesses: "Businesses",
+    telcoScoring: "Telco Scoring",
     creditAccounts: "Credit Accounts",
     creditSearch: "Global Search",
     batchUpload: "Batch Upload",

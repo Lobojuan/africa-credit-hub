@@ -42,6 +42,7 @@ const ConsumersPage = lazy(() => import("@/pages/consumers"));
 const ConsumerDetailPage = lazy(() => import("@/pages/consumer-detail"));
 const BusinessesPage = lazy(() => import("@/pages/businesses"));
 const BusinessDetailPage = lazy(() => import("@/pages/business-detail"));
+const TelcoScoringPage = lazy(() => import("@/pages/telco-scoring"));
 const CreditAccountsPage = lazy(() => import("@/pages/credit-accounts"));
 const CreditSearchPage = lazy(() => import("@/pages/credit-search"));
 const reportsImport = () => import("@/pages/reports");
@@ -141,6 +142,7 @@ function Router() {
         <Route path="/consumers/:id" component={ConsumerDetailPage} />
         <Route path="/businesses" component={BusinessesPage} />
         <Route path="/businesses/:id" component={BusinessDetailPage} />
+        <Route path="/telco-scoring" component={TelcoScoringPage} />
         <Route path="/credit-accounts" component={CreditAccountsPage} />
         <Route path="/search" component={CreditSearchPage} />
         <Route path="/reports" component={ReportsPage} />
