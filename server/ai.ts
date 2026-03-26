@@ -101,6 +101,60 @@ export async function generateAIResponse(
   }
 }
 
+export async function dualAIEnsemble(
+  quantPrompt: string,
+  compliancePromptTemplate: (quantResult: string) => string,
+  options: { quantMaxTokens?: number; complianceMaxTokens?: number; temperature?: number } = {}
+): Promise<{ quantResult: string; complianceResult: string; quantProvider: AIProvider; complianceProvider: AIProvider }> {
+  const { quantMaxTokens = 1000, complianceMaxTokens = 1500, temperature = 0.1 } = options;
+
+  let quantText: string;
+  let quantProvider: AIProvider = "openai";
+  try {
+    const gptResponse = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: quantPrompt }],
+      max_tokens: quantMaxTokens,
+      temperature,
+      response_format: { type: "json_object" },
+    });
+    quantText = gptResponse.choices[0]?.message?.content || "{}";
+  } catch (gptErr: any) {
+    console.warn(`[DualAI] GPT-4o quant step failed: ${gptErr.message}, falling back to Claude`);
+    quantProvider = "claude";
+    const claudeResponse = await anthropic.messages.create({
+      model: "claude-opus-4-6",
+      max_tokens: quantMaxTokens,
+      messages: [{ role: "user", content: quantPrompt }],
+    });
+    quantText = claudeResponse.content[0]?.type === "text" ? claudeResponse.content[0].text : "{}";
+  }
+
+  const compliancePrompt = compliancePromptTemplate(quantText);
+  let complianceText: string;
+  let complianceProvider: AIProvider = "claude";
+  try {
+    const claudeResponse = await anthropic.messages.create({
+      model: "claude-opus-4-6",
+      max_tokens: complianceMaxTokens,
+      messages: [{ role: "user", content: compliancePrompt }],
+    });
+    complianceText = claudeResponse.content[0]?.type === "text" ? claudeResponse.content[0].text : "{}";
+  } catch (claudeErr: any) {
+    console.warn(`[DualAI] Claude compliance step failed: ${claudeErr.message}, falling back to GPT-4o`);
+    complianceProvider = "openai";
+    const gptResponse = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: compliancePrompt }],
+      max_tokens: complianceMaxTokens,
+      temperature: 0.3,
+    });
+    complianceText = gptResponse.choices[0]?.message?.content || "{}";
+  }
+
+  return { quantResult: quantText, complianceResult: complianceText, quantProvider, complianceProvider };
+}
+
 export async function analyzeCreditRisk(borrowerId: string | number, provider?: AIProvider) {
   const borrower = await storage.getBorrower(borrowerId);
   if (!borrower) throw new Error("Borrower not found");
@@ -665,21 +719,60 @@ ${liveContext}
     content: m.content,
   }));
 
-  const routing = getProviderForTask("customer_chat", provider || undefined);
+  const lastUserMsg = chatMessages.filter(m => m.role === "user").pop()?.content || "";
+  if (!lastUserMsg.trim()) {
+    throw new Error("No user message provided for chat");
+  }
 
-  async function tryStream(p: AIProvider): Promise<{ type: "claude"; stream: any } | { type: "openai"; stream: any }> {
+  const brainPrompt = `You are the data engine for the Africa Credit Hub AI Assistant. A user with role "${userRole || "user"}" asked:
+"${lastUserMsg}"
+
+System context:
+${systemMessage.content}
+
+Previous conversation:
+${chatMessages.slice(0, -1).map(m => `${m.role}: ${m.content}`).join("\n").slice(-3000)}
+
+Extract the core facts, perform any requested calculations, and output a raw bulleted list of facts to answer the query. Do not format for the end user — just provide accurate raw data, numbers, navigation instructions, and regulatory references.`;
+
+  let rawFacts: string;
+  try {
+    const gptResponse = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: brainPrompt }],
+      max_tokens: 1500,
+      temperature: 0.1,
+    });
+    rawFacts = gptResponse.choices[0]?.message?.content || lastUserMsg;
+    console.log("[DualAI Chat] Brain (GPT-4o) extracted facts successfully");
+  } catch (brainErr: any) {
+    console.warn(`[DualAI Chat] Brain (GPT-4o) failed: ${brainErr.message}, using direct Voice mode`);
+    rawFacts = lastUserMsg;
+  }
+
+  const voiceSystemPrompt = `You are the Africa Credit Hub AI Assistant — the Voice. A user asked: "${lastUserMsg}"
+
+Here are the raw facts retrieved by our data engine:
+${rawFacts}
+
+Draft a highly professional, empathetic, and regulatory-compliant response using ONLY these facts. Format beautifully with markdown. Be concise but thorough. You are speaking with a ${userRole || "user"} role user.`;
+
+  async function tryVoiceStream(p: AIProvider): Promise<{ type: "claude"; stream: any } | { type: "openai"; stream: any }> {
     if (p === "claude") {
       const stream = anthropic.messages.stream({
         model: "claude-opus-4-6",
         max_tokens: 2000,
-        system: systemMessage.content,
-        messages: chatMessages,
+        system: voiceSystemPrompt,
+        messages: [{ role: "user", content: lastUserMsg }],
       });
       return { type: "claude" as const, stream };
     } else {
       const stream = await openai.chat.completions.create({
         model: "gpt-4o",
-        messages: [systemMessage, ...chatMessages],
+        messages: [
+          { role: "system", content: voiceSystemPrompt },
+          { role: "user", content: lastUserMsg },
+        ],
         max_tokens: 2000,
         temperature: 0.4,
         stream: true,
@@ -688,11 +781,13 @@ ${liveContext}
     }
   }
 
+  const voicePrimary: AIProvider = provider === "openai" ? "openai" : "claude";
+  const voiceFallback: AIProvider = voicePrimary === "claude" ? "openai" : "claude";
   try {
-    return await tryStream(routing.primary);
+    return await tryVoiceStream(voicePrimary);
   } catch (primaryError: any) {
-    console.error(`[AI Router] Streaming primary (${routing.primary}) failed for customer_chat: ${primaryError.message}. Falling back to ${routing.fallback}...`);
-    return await tryStream(routing.fallback);
+    console.error(`[DualAI Chat] Voice (${voicePrimary}) failed: ${primaryError.message}. Falling back to ${voiceFallback}...`);
+    return await tryVoiceStream(voiceFallback);
   }
 }
 

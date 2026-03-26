@@ -37,7 +37,7 @@ export const paymentStatusEnum = pgEnum("payment_status", ["on_time", "late", "m
 export const institutionStatusEnum = pgEnum("institution_status", ["pending", "active", "suspended"]);
 export const billingStatusEnum = pgEnum("billing_status", ["pending", "paid", "overdue"]);
 
-export const userDivisionEnum = pgEnum("user_division", ["retail", "corporate"]);
+export const userDivisionEnum = pgEnum("user_division", ["retail", "corporate", "telco"]);
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

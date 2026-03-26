@@ -289,7 +289,11 @@ function AuthenticatedApp() {
   }
 
   if (currentPath === "/login") {
-    const dest = user.role === "super_admin" ? "/command-center" : "/dashboard";
+    let dest = "/dashboard";
+    if (user.role === "super_admin") dest = "/command-center";
+    else if ((user as any).division === "corporate") dest = "/businesses";
+    else if ((user as any).division === "telco") dest = "/telco-scoring";
+    else if ((user as any).division === "retail") dest = "/consumers";
     return doRedirect(dest);
   }
 

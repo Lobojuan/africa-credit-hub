@@ -48,7 +48,12 @@ export default function LoginPage() {
       }
       toast({ title: t('login.success') });
       if (window.location.pathname === "/login") {
-        const dest = (result as any)?.role === "super_admin" ? "/command-center" : "/dashboard";
+        const r = result as any;
+        let dest = "/dashboard";
+        if (r?.role === "super_admin") dest = "/command-center";
+        else if (r?.division === "corporate") dest = "/businesses";
+        else if (r?.division === "telco") dest = "/telco-scoring";
+        else if (r?.division === "retail") dest = "/consumers";
         window.location.replace(dest);
       }
     } catch (err: any) {
@@ -80,7 +85,11 @@ export default function LoginPage() {
       queryClient.setQueryData(["/api/auth/me"], userData);
       toast({ title: t('login.success') });
       if (window.location.pathname === "/login") {
-        const dest = userData?.role === "super_admin" ? "/command-center" : "/dashboard";
+        let dest = "/dashboard";
+        if (userData?.role === "super_admin") dest = "/command-center";
+        else if (userData?.division === "corporate") dest = "/businesses";
+        else if (userData?.division === "telco") dest = "/telco-scoring";
+        else if (userData?.division === "retail") dest = "/consumers";
         window.location.replace(dest);
       }
     } catch (err: any) {
@@ -196,13 +205,13 @@ export default function LoginPage() {
               {isGhanaMode() ? (
                 <>Ghana<br /><span style={{ color: "hsl(43 80% 65%)" }}>Credit Registry</span></>
               ) : (
-                <>Cross-Jurisdictional<br /><span style={{ color: "hsl(43 80% 65%)" }}>Credit Data Hub</span></>
+                <>Unified Pan-African<br /><span style={{ color: "hsl(43 80% 65%)" }}>Credit Infrastructure</span></>
               )}
             </h2>
             <p className="text-white/60 mt-4 text-base leading-relaxed">
               {isGhanaMode() 
                 ? "Ghana's unified credit registry system. Empowering financial inclusion and responsible lending across the nation."
-                : t('login.heroDescription')}
+                : "Securely access Consumer, Corporate, and AI-driven Telco credit profiles across 54 African jurisdictions."}
             </p>
 
             <div className="mt-10 grid grid-cols-2 gap-4">

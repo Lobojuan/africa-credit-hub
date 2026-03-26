@@ -1,4 +1,4 @@
-import { generateAIResponse } from "./ai";
+import { generateAIResponse, dualAIEnsemble } from "./ai";
 import type { MomoTransaction, TelcoProfile } from "@shared/schema";
 
 export interface TelcoKPIs {
@@ -214,55 +214,100 @@ export async function generateTelcoCreditScore(
   aiProvider: string;
   aiModel: string;
 }> {
-  const userPrompt = `Evaluate this mobile money subscriber profile for credit scoring:
+  const kpiJson = JSON.stringify(kpis, null, 2);
 
-SUBSCRIBER INFO:
-- MSISDN: ${profile.msisdn}
-- Provider: ${profile.provider}
-- Country: ${profile.country}
-- KYC Level: ${profile.kycLevel}
-- Account Status: ${profile.accountStatus}
+  const quantPrompt = `You are a quantitative credit risk analyst. Analyze this telecom mobile money profile and compute risk metrics.
 
-KPI PROFILE (${kpis.evaluationPeriodDays}-day evaluation period):
-${JSON.stringify(kpis, null, 2)}
+SUBSCRIBER: ${profile.msisdn} (${profile.provider}, ${profile.country}, KYC: ${profile.kycLevel})
 
-Provide your assessment in the specified JSON format.`;
+KPI DATA (${kpis.evaluationPeriodDays}-day window):
+${kpiJson}
 
-  const result = await generateAIResponse(
-    TELCO_SCORING_SYSTEM_PROMPT,
-    userPrompt,
-    "credit_risk",
-    { temperature: 0.2, maxTokens: 2000 }
-  );
+SCORING RULES:
+- Risk Score: 1 (Very Low Risk) to 5 (Very High Risk)
+- Risk Tier: very_low (1), low (2), medium (3), high (4), very_high (5)
+- Credit limit: max 20% of total inflows, capped at $500 for new profiles
+- Approval: recommend if risk_score <= 3
+
+CRITERIA WEIGHTS:
+1. Cash Flow Stability (30%): variance coefficient <0.3=excellent, >0.8=poor; wallet retention ratio
+2. Bill Payment Consistency (20%): utility consistency >0.8=excellent; regular bill payments
+3. Liquidity Stress (20%): airtime advances >3/quarter=concerning; immediate cash-out patterns
+4. Network Quality (15%): >20 unique counterparties=good; >30% merchant payments=positive
+5. Identity Stability (15%): SIM age >365d=good; KYC full=excellent
+
+Output JSON ONLY: {"risk_score": <1-5>, "risk_tier": "<very_low|low|medium|high|very_high>", "credit_limit_usd": <number>, "approval_recommendation": <boolean>, "key_factors": [{"factor": "<name>", "impact": "<positive|negative|neutral>", "detail": "<brief>"}]}`;
+
+  const complianceTemplate = (quantResult: string) =>
+    `You are a regulatory compliance officer for an African credit bureau. The quantitative AI engine produced this assessment:
+
+${quantResult}
+
+Subscriber: ${profile.msisdn} (${profile.provider}, ${profile.country}, KYC: ${profile.kycLevel})
+Raw KPIs: ${kpiJson}
+
+Write a regulatory-compliant assessment. Output JSON ONLY:
+{
+  "reason_code": "<PRIMARY_REASON_CODE e.g. CASH_FLOW_STABLE, HIGH_VARIANCE, LOW_ACTIVITY>",
+  "detailed_rationale": "<2-3 paragraph professional explanation of the credit decision, referencing specific KPI values>",
+  "regulatory_note": "<data protection and regulatory compliance note for ${profile.country}>"
+}`;
 
   try {
-    const jsonMatch = result.text.match(/\{[\s\S]*\}/);
-    const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(result.text);
+    const ensemble = await dualAIEnsemble(quantPrompt, complianceTemplate, {
+      quantMaxTokens: 1000,
+      complianceMaxTokens: 1500,
+      temperature: 0.1,
+    });
+
+    const quantMatch = ensemble.quantResult.match(/\{[\s\S]*\}/);
+    const quantData = quantMatch ? JSON.parse(quantMatch[0]) : JSON.parse(ensemble.quantResult);
+
+    const complianceMatch = ensemble.complianceResult.match(/\{[\s\S]*\}/);
+    const complianceData = complianceMatch ? JSON.parse(complianceMatch[0]) : JSON.parse(ensemble.complianceResult);
 
     return {
-      riskScore: parsed.risk_score || 3,
-      riskTier: parsed.risk_tier || "medium",
-      approvalRecommendation: parsed.approval_recommendation ?? false,
-      suggestedCreditLimitUsd: parsed.suggested_credit_limit_usd || 0,
-      reasonCode: parsed.reason_code || "ASSESSMENT_COMPLETE",
-      detailedRationale: parsed.detailed_rationale || result.text,
-      keyFactors: parsed.key_factors || [],
-      regulatoryNote: parsed.regulatory_note || "",
-      aiProvider: result.provider,
-      aiModel: result.provider === "openai" ? "gpt-4o" : "claude-opus-4-6",
+      riskScore: quantData.risk_score || 3,
+      riskTier: quantData.risk_tier || "medium",
+      approvalRecommendation: quantData.approval_recommendation ?? false,
+      suggestedCreditLimitUsd: quantData.credit_limit_usd || 0,
+      reasonCode: complianceData.reason_code || "ASSESSMENT_COMPLETE",
+      detailedRationale: complianceData.detailed_rationale || ensemble.complianceResult,
+      keyFactors: quantData.key_factors || [],
+      regulatoryNote: complianceData.regulatory_note || "",
+      aiProvider: `${ensemble.quantProvider}+${ensemble.complianceProvider}`,
+      aiModel: `${ensemble.quantProvider === "openai" ? "gpt-4o" : "claude-opus-4-6"}+${ensemble.complianceProvider === "claude" ? "claude-opus-4-6" : "gpt-4o"} (Dual-AI Ensemble)`,
     };
-  } catch {
-    return {
-      riskScore: 3,
-      riskTier: "medium",
-      approvalRecommendation: false,
-      suggestedCreditLimitUsd: 0,
-      reasonCode: "PARSE_ERROR",
-      detailedRationale: result.text,
-      keyFactors: [],
-      regulatoryNote: "Unable to parse structured response",
-      aiProvider: result.provider,
-      aiModel: result.provider === "openai" ? "gpt-4o" : "claude-opus-4-6",
-    };
+  } catch (ensembleErr: any) {
+    console.warn(`[TelcoScoring] Dual-AI ensemble failed: ${ensembleErr.message}, falling back to single-model`);
+    const result = await generateAIResponse(
+      TELCO_SCORING_SYSTEM_PROMPT,
+      `Evaluate this mobile money subscriber for credit scoring:\nSubscriber: ${profile.msisdn} (${profile.provider}, ${profile.country})\nKPIs:\n${kpiJson}\nProvide assessment in JSON format with: risk_score, risk_tier, approval_recommendation, suggested_credit_limit_usd, reason_code, detailed_rationale, key_factors, regulatory_note`,
+      "credit_risk",
+      { temperature: 0.2, maxTokens: 2000 }
+    );
+    try {
+      const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+      const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(result.text);
+      return {
+        riskScore: parsed.risk_score || 3,
+        riskTier: parsed.risk_tier || "medium",
+        approvalRecommendation: parsed.approval_recommendation ?? false,
+        suggestedCreditLimitUsd: parsed.suggested_credit_limit_usd || 0,
+        reasonCode: parsed.reason_code || "ASSESSMENT_COMPLETE",
+        detailedRationale: parsed.detailed_rationale || result.text,
+        keyFactors: parsed.key_factors || [],
+        regulatoryNote: parsed.regulatory_note || "",
+        aiProvider: result.provider,
+        aiModel: result.provider === "openai" ? "gpt-4o" : "claude-opus-4-6",
+      };
+    } catch {
+      return {
+        riskScore: 3, riskTier: "medium", approvalRecommendation: false, suggestedCreditLimitUsd: 0,
+        reasonCode: "PARSE_ERROR", detailedRationale: result.text, keyFactors: [],
+        regulatoryNote: "Unable to parse structured response",
+        aiProvider: result.provider, aiModel: result.provider === "openai" ? "gpt-4o" : "claude-opus-4-6",
+      };
+    }
   }
 }
