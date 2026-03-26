@@ -115,6 +115,7 @@ declare module "express-session" {
   interface SessionData {
     userId: string;
     userRole: string;
+    userDivision: string;
     organizationId: string;
     userCountry: string;
     lastActivity: number;

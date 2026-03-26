@@ -927,6 +927,7 @@ export async function registerRoutes(
 
       req.session.userId = user.id;
       req.session.userRole = user.role;
+      req.session.userDivision = (user as any).division || undefined;
       req.session.organizationId = user.organizationId || undefined;
       req.session.lastActivity = Date.now();
 
@@ -1049,6 +1050,7 @@ export async function registerRoutes(
       delete req.session.mfaPendingUserId;
       req.session.userId = user.id;
       req.session.userRole = user.role;
+      req.session.userDivision = (user as any).division || undefined;
       req.session.organizationId = user.organizationId || undefined;
       req.session.lastActivity = Date.now();
       if (user.role === "super_admin") {
@@ -1559,7 +1561,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/borrowers", enforceDataSovereignty, async (req, res) => {
+  app.get("/api/borrowers", requireRole("super_admin"), enforceDataSovereignty, async (req, res) => {
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
@@ -1571,6 +1573,52 @@ export async function registerRoutes(
         const page = Math.max(1, parseInt(req.query.page as string) || 1);
         const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50));
         const result = await storage.getBorrowers(page, limit, orgId, country);
+        res.json(result);
+      }
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/consumers", enforceDataSovereignty, async (req, res) => {
+    try {
+      const userDivision = req.session?.userDivision;
+      if (userDivision === "corporate") {
+        return res.status(403).json({ message: "Corporate division users cannot access consumer data" });
+      }
+      const orgId = getOrgScope(req);
+      const country = getCountryFilter(req);
+      const search = req.query.search as string;
+      if (search) {
+        const data = await storage.searchBorrowersByType("individual", search, orgId, country);
+        res.json(data);
+      } else {
+        const page = Math.max(1, parseInt(req.query.page as string) || 1);
+        const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50));
+        const result = await storage.getBorrowersByType("individual", page, limit, orgId, country);
+        res.json(result);
+      }
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/businesses", enforceDataSovereignty, async (req, res) => {
+    try {
+      const userDivision = req.session?.userDivision;
+      if (userDivision === "retail") {
+        return res.status(403).json({ message: "Retail division users cannot access business data" });
+      }
+      const orgId = getOrgScope(req);
+      const country = getCountryFilter(req);
+      const search = req.query.search as string;
+      if (search) {
+        const data = await storage.searchBorrowersByType("corporate", search, orgId, country);
+        res.json(data);
+      } else {
+        const page = Math.max(1, parseInt(req.query.page as string) || 1);
+        const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50));
+        const result = await storage.getBorrowersByType("corporate", page, limit, orgId, country);
         res.json(result);
       }
     } catch (e: any) {

@@ -14,6 +14,8 @@ const en = {
     portfolioIntelligence: "AI Portfolio Intelligence",
     aiCommandCenter: "AI Command Center",
     borrowers: "Borrowers",
+    consumers: "Consumers",
+    businesses: "Businesses",
     creditAccounts: "Credit Accounts",
     creditSearch: "Global Search",
     batchUpload: "Batch Upload",

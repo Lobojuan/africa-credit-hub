@@ -42,6 +42,7 @@ import {
   Webhook,
   Sparkles,
   Monitor,
+  User,
 } from "lucide-react";
 import {
   Sidebar,
@@ -72,7 +73,9 @@ type NavItem = {
 
 const coreItems: NavItem[] = [
   { titleKey: "sidebar.dashboard", url: "/dashboard", icon: LayoutDashboard, testId: "nav-dashboard" },
-  { titleKey: "sidebar.borrowers", url: "/borrowers", icon: Users, testId: "nav-borrowers" },
+  { titleKey: "sidebar.consumers", url: "/consumers", icon: User, testId: "nav-consumers" },
+  { titleKey: "sidebar.businesses", url: "/businesses", icon: Building2, testId: "nav-businesses" },
+  { titleKey: "sidebar.borrowers", url: "/borrowers", icon: Users, testId: "nav-borrowers", roles: ["super_admin"] },
   { titleKey: "sidebar.creditAccounts", url: "/credit-accounts", icon: CreditCard, testId: "nav-credit-accounts" },
   { titleKey: "sidebar.creditSearch", url: "/search", icon: Search, testId: "nav-credit-search" },
 ];

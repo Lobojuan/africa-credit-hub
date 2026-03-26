@@ -51,6 +51,8 @@ export interface IStorage {
 
   getBorrower(id: string): Promise<Borrower | undefined>;
   getBorrowers(page?: number, limit?: number, organizationId?: string, country?: string): Promise<{ data: Borrower[]; total: number }>;
+  getBorrowersByType(type: "individual" | "corporate", page?: number, limit?: number, organizationId?: string, country?: string): Promise<{ data: Borrower[]; total: number }>;
+  searchBorrowersByType(type: "individual" | "corporate", query: string, organizationId?: string, country?: string): Promise<Borrower[]>;
   searchBorrowers(query: string, organizationId?: string, country?: string): Promise<Borrower[]>;
   globalSearch(query: string, organizationId?: string, country?: string): Promise<{ borrowers: Borrower[]; institutions: Institution[]; creditAccounts: CreditAccount[] }>;
   createBorrower(borrower: InsertBorrower): Promise<Borrower>;
@@ -289,6 +291,50 @@ export class DatabaseStorage implements IStorage {
     const [totalResult] = await db.select({ value: count() }).from(borrowers).where(where);
     const data = await db.select().from(borrowers).where(where).orderBy(desc(borrowers.createdAt)).limit(safeLimit).offset(offset);
     return { data, total: totalResult.value };
+  }
+
+  async getBorrowersByType(type: "individual" | "corporate", page: number = 1, limit: number = 50, organizationId?: string, country?: string): Promise<{ data: Borrower[]; total: number }> {
+    const safeLimit = Math.min(limit, 200);
+    const offset = (page - 1) * safeLimit;
+    const filters: any[] = [eq(borrowers.type, type)];
+    if (organizationId) filters.push(eq(borrowers.organizationId, organizationId));
+    if (country) filters.push(eq(borrowers.country, country));
+    const where = and(...filters);
+    const [totalResult] = await db.select({ value: count() }).from(borrowers).where(where);
+    const data = await db.select().from(borrowers).where(where).orderBy(desc(borrowers.createdAt)).limit(safeLimit).offset(offset);
+    return { data, total: totalResult.value };
+  }
+
+  async searchBorrowersByType(type: "individual" | "corporate", query: string, organizationId?: string, country?: string): Promise<Borrower[]> {
+    const baseFilters: any[] = [eq(borrowers.type, type)];
+    if (organizationId) baseFilters.push(eq(borrowers.organizationId, organizationId));
+    if (country) baseFilters.push(eq(borrowers.country, country));
+
+    if (!query) {
+      return db.select().from(borrowers)
+        .where(and(...baseFilters))
+        .orderBy(desc(borrowers.createdAt)).limit(200);
+    }
+
+    const searchPattern = `%${query}%`;
+    const searchCondition = or(
+      ilike(borrowers.firstName, searchPattern),
+      ilike(borrowers.lastName, searchPattern),
+      ilike(borrowers.companyName, searchPattern),
+      ilike(borrowers.nationalId, searchPattern),
+      ilike(borrowers.tinNumber, searchPattern),
+      ilike(borrowers.phone, searchPattern),
+      ilike(borrowers.email, searchPattern),
+      ilike(borrowers.city, searchPattern),
+      ilike(borrowers.sector, searchPattern),
+      ilike(borrowers.occupation, searchPattern),
+      ilike(borrowers.employerName, searchPattern),
+      ilike(borrowers.businessRegNumber, searchPattern),
+    );
+
+    return db.select().from(borrowers)
+      .where(and(...baseFilters, searchCondition))
+      .orderBy(desc(borrowers.createdAt)).limit(200);
   }
 
   async searchBorrowers(query: string, organizationId?: string, country?: string): Promise<Borrower[]> {
