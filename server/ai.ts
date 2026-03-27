@@ -784,16 +784,60 @@ Thomas is also a philanthropist — he funded a street hawker named Milicent thr
 His life story is documented in the biography 'The Determined African Boy: A Journey Unveiled' by John Acquaye-Awah, published by Newman Springs Publishing in 2025 (ISBN 979-8-89888-008-8).
 
 UFFE JON CARLSON — Founder & CEO:
-A Danish-born chaos pilot who grew up in Abidjan, Ivory Coast. A Viking raised in West Africa.
-Education: MSc International Relations and Affairs from ESADE Business School, Barcelona (2003–2005, GPA 3.9). Stenhus Boarding College, Denmark (1981–1987).
-Early career: CTO and co-founder of healthcare communications consultancy in Barcelona (1997–2005). Conducted inaugural market entry analysis for Novo Nordisk's insulin pen launch in Spain (1999). 12+ years advising Fortune 500 clients — Microsoft, Sanofi, BMW, Nestlé, Novartis, Bayer, Roche, Boehringer Ingelheim, Honda, L'Oreal — across 20+ countries.
-Media & Africa: Founded Orion Advertising and Publishing Company Ltd in Ghana (2005–2012). Published ENJOY Accra Magazine. Private audience with President John Kufuor of Ghana (2010). Advised Sir Richard Branson on Virgin Atlantic's market operations in Ghana and Nigeria.
-Energy: As MD of Orion Energy II ApS (2022–2024), spearheaded feasibility study for 130MW solar farm in Ghana. Secured $130M investment from Nordic fund and $98M EPC contract. Total project budget exceeded $150M.
-Carlson Capital: Since 2007, Executive Business Advisor specializing in feasibility studies and de-risking market entry in African markets. Secured over $150M in funding.
-Product Owner Consultant for GoldenRace (2022, Seville) — led 35 developers, achieved 40% reduction in support tickets and 25% increase in client retention.
-Lived and worked across Africa: Kinshasa (DRC), Pretoria (South Africa), Lagos (Nigeria), Dakar (Senegal), Banjul (Gambia), Bamako (Mali), Dar es Salaam (Tanzania), Douala (Cameroon), Accra (Ghana). Speaks 5+ languages fluently.
-In 1990, volunteered as technical assistant for ESA and CNES, supervising cooling systems for Ariane 5 launch infrastructure in French Guyana.
-Online: LinkedIn: linkedin.com/in/uffecarlson | Website: carlsonit.com
+A Danish-born chaos pilot who grew up in Abidjan, Ivory Coast. A Viking raised in West Africa. Self-described "super empath" and "AI Integration Geek." Father of two daughters.
+
+Education:
+- MSc International Relations and Affairs from ESADE Business School, Barcelona (2003–2005, GPA 3.9) — one of Europe's top-ranked business schools (est. 1958, Barcelona & Madrid, globally ranked top 10 in MBA programs).
+- Stenhus Boarding College (now Stenhus Gymnasium), Holbæk, Zealand, Denmark (1981–1987) — one of Denmark's largest gymnasiums, founded in 1906, approximately 1,300 students.
+
+Early Career — Pharma & Fortune 500 Consulting (1997–2005):
+- CTO and co-founder of a healthcare communications consultancy in Barcelona.
+- Pioneered feasibility study methodology. In 1999, conducted the inaugural market entry analysis for Novo Nordisk's launch of their groundbreaking insulin pen in Spain — Novo Nordisk is the world's leading insulin manufacturer (32%+ global market share), headquartered in Bagsværd, Denmark.
+- This established his consultancy practice, leading to 12+ years advising Fortune 500 clients: Microsoft, Sanofi, BMW, Nestlé, Novartis, Bayer, Roche Diagnostics, Boehringer Ingelheim, Honda, L'Oreal, Pioneer, Pirelli, and Sony — on market entry, business setup, and operations optimization across 20+ African and European countries.
+
+Media & Africa Years (2005–2012):
+- Founded Orion Advertising and Publishing Company Ltd in Ghana, headquartered at House No. 202, X'Borg Street, Lane 15, Osu, Accra, Ghana.
+- Published ENJOY Accra Magazine — Ghana's only premier free monthly lifestyle magazine since 2005. The magazine ran 70+ issues covering fashion, beauty, travel, food, health, wellness, entertainment, art, culture, restaurants, and Ghanaian personalities. Topics spanned Accra, Kumasi, Takoradi, and Cape Coast.
+- Orion Advertising services: Brand Management, Video Production, Printed Media, System Management & Design.
+- ENJOY Accra is archived on Scribd (multiple issues from 2006–2011+) and Issuu (38+ issues). Listed on BusinessGhana and WebsitesGH as a recognized Ghanaian lifestyle publication. Website: enjoyaccra.com. Instagram: @enjoymagazine_.
+- Private audience with former President John Kufuor of Ghana (2010) to discuss media development and press freedom.
+- Advised Sir Richard Branson on the feasibility and launch strategy for Virgin Atlantic's market operations in Ghana and Nigeria.
+
+Energy & Big Deals (2022–2024):
+- As Managing Director of Orion Energy II ApS (Danish company), spearheaded end-to-end feasibility study for a 130MW decentralized solar farm in Ghana. Orion Energy is a Danish company dedicated to sustainable solar and wind energy solutions (orionenergy-gh.com).
+- Validated project viability, negotiated a 25-year Power Purchase Agreement (PPA) with the Energy Company of Ghana (ECG).
+- Secured $130M, 15-year investment from a Nordic fund and $98M EPC contract. Total project budget exceeded $150M.
+
+Carlson Capital Denmark (2007–present):
+- Executive Business Advisor specializing in comprehensive feasibility studies and de-risking market entry in complex African markets.
+- Projects from Renewable Energy to Pharma, securing over $150M in funding by proving to investors that risk is managed and growth is real.
+- Website: carlsonit.com
+
+GoldenRace — Product Owner Consultant (2022, Seville, Spain):
+- GoldenRace is a global leader in virtual sports & betting solutions, founded 2006 in Malta by CEO Martin Wachter. 300+ employees, serving 60+ countries, powering 60,000+ betting shops, 500+ online platforms, processing up to 25 million betting tickets daily.
+- Uffe led a team of 35 developers and 2 Scrum Masters using Agile/Scrum methodologies to overhaul their B2B SaaS platform at the Seville office (Av. Luis Montoto 107, Edificio Cristal).
+- Results: 40% reduction in support tickets and 25% increase in client retention.
+
+Space Agency Work (1990):
+- Volunteered as technical assistant for the European Space Agency (ESA) and the French space agency CNES, supervising completion of cooling systems for the Ariane 5 launch infrastructure in Kourou, French Guyana.
+
+Pan-African Experience:
+- Over 25 years lived and worked across the continent: Abidjan (Ivory Coast, childhood), Kinshasa (DRC), Pretoria (South Africa), Lagos (Nigeria), Dakar (Senegal), Banjul (Gambia), Bamako (Mali), Bobo-Dioulasso (Burkina Faso), Dar es Salaam (Tanzania), Douala (Cameroon), and Accra (Ghana).
+- Speaks 5+ languages fluently: Danish, English, French, Spanish, Catalan, and more.
+- Self-described passion: "Using AI to solve old problems in new ways — specifically taking the heavy lift out of big data, distilling complex market intelligence into clear narratives." Working with fintech since 2012 when he discovered Bitcoin and AI.
+
+Personal:
+- He's not a polished Silicon Valley founder. He's a problem fixer, a chaos pilot. Give him something broken and complex, and he can't walk away from it. Africa's credit infrastructure was exactly that kind of problem — fragmented across 54 countries, no unified data, millions of businesses unable to get fair credit. So he built Africa Credit Hub with Thomas Baafi.
+- He has two daughters who are, by his own admission, more intelligent than him.
+
+Online Presence:
+- LinkedIn: linkedin.com/in/uffecarlson
+- Facebook: facebook.com/uffe.carlson
+- Instagram: @uffe_j_carlson
+- Flickr: photography portfolio (63 photos)
+- Website: carlsonit.com
+- Email: uffe.carlson@gmail.com | uffe@carlsonit.com
+- Phone: +233 552 395 548
 
 === PLATFORM OVERVIEW ===
 The CDH v2.0 is a multi-tenant SaaS credit registry platform currently operating in Ghana mode, regulated by the Bank of Ghana (BoG). Default currency: ${defaultCurrency} (Ghana Cedis). The platform serves banks, microfinance institutions, savings & loans companies, and rural banks across Ghana.
