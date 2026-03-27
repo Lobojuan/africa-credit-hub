@@ -23,6 +23,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { TelcoProfile, TelcoCreditScore } from "@shared/schema";
@@ -1038,7 +1042,37 @@ export default function TelcoScoringPage() {
                 </div>
                 <div>
                   <Label>Country</Label>
-                  <Input data-testid="input-country" value={profileForm.country} onChange={(e) => setProfileForm({ ...profileForm, country: e.target.value })} required />
+                  <Select value={profileForm.country} onValueChange={(v) => setProfileForm({ ...profileForm, country: v })}>
+                    <SelectTrigger data-testid="select-country"><SelectValue placeholder="Select country" /></SelectTrigger>
+                    <SelectContent className="max-h-[280px]">
+                      <SelectItem value="Ghana">Ghana</SelectItem>
+                      <SelectItem value="Kenya">Kenya</SelectItem>
+                      <SelectItem value="Nigeria">Nigeria</SelectItem>
+                      <SelectItem value="Uganda">Uganda</SelectItem>
+                      <SelectItem value="Tanzania">Tanzania</SelectItem>
+                      <SelectItem value="Rwanda">Rwanda</SelectItem>
+                      <SelectItem value="Sierra Leone">Sierra Leone</SelectItem>
+                      <SelectItem value="Ethiopia">Ethiopia</SelectItem>
+                      <SelectItem value="Senegal">Senegal</SelectItem>
+                      <SelectItem value="South Africa">South Africa</SelectItem>
+                      <SelectItem value="Cameroon">Cameroon</SelectItem>
+                      <SelectItem value="Ivory Coast">Ivory Coast</SelectItem>
+                      <SelectItem value="Zambia">Zambia</SelectItem>
+                      <SelectItem value="Zimbabwe">Zimbabwe</SelectItem>
+                      <SelectItem value="Mozambique">Mozambique</SelectItem>
+                      <SelectItem value="Mali">Mali</SelectItem>
+                      <SelectItem value="Burkina Faso">Burkina Faso</SelectItem>
+                      <SelectItem value="Malawi">Malawi</SelectItem>
+                      <SelectItem value="Benin">Benin</SelectItem>
+                      <SelectItem value="DRC Congo">DRC Congo</SelectItem>
+                      <SelectItem value="Togo">Togo</SelectItem>
+                      <SelectItem value="Guinea">Guinea</SelectItem>
+                      <SelectItem value="Niger">Niger</SelectItem>
+                      <SelectItem value="Chad">Chad</SelectItem>
+                      <SelectItem value="Liberia">Liberia</SelectItem>
+                      <SelectItem value="Madagascar">Madagascar</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -1061,7 +1095,28 @@ export default function TelcoScoringPage() {
               </div>
               <div>
                 <Label>SIM Registration Date</Label>
-                <Input data-testid="input-sim-date" type="date" value={profileForm.simRegistrationDate} onChange={(e) => setProfileForm({ ...profileForm, simRegistrationDate: e.target.value })} />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={`w-full justify-start text-left font-normal ${!profileForm.simRegistrationDate ? "text-muted-foreground" : ""}`}
+                      data-testid="button-sim-date"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {profileForm.simRegistrationDate ? (() => { const [y,m,d] = profileForm.simRegistrationDate.split("-").map(Number); return format(new Date(y, m-1, d), "PPP"); })() : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={profileForm.simRegistrationDate ? (() => { const [y,m,d] = profileForm.simRegistrationDate.split("-").map(Number); return new Date(y, m-1, d); })() : undefined}
+                      onSelect={(date) => setProfileForm({ ...profileForm, simRegistrationDate: date ? `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}` : "" })}
+                      initialFocus
+                      disabled={(date) => date > new Date()}
+                      data-testid="calendar-sim-date"
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
               <Button type="submit" className="w-full" disabled={createProfileMutation.isPending} data-testid="button-submit-profile">
                 {createProfileMutation.isPending ? "Creating..." : "Create Profile"}
