@@ -261,17 +261,17 @@ function AnalyticsDashboard({ analytics }: { analytics: TelcoAnalytics }) {
           <Card className="h-full">
             <CardHeader className="pb-2">
               <div className="flex justify-between items-center">
-                <CardTitle className="text-sm flex items-center gap-2"><Brain className="w-4 h-4" /> Live Applicant Scoring</CardTitle>
+                <CardTitle className="text-sm flex items-center gap-2"><Brain className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Live Applicant Scoring</CardTitle>
                 <span className="flex items-center gap-1 text-[10px] text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-full font-semibold">
                   <Activity size={12} /> Processing
                 </span>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex flex-col items-center justify-center p-5 bg-muted/30 rounded-lg border" data-testid="xai-risk-tier">
-                <span className="text-xs font-medium text-muted-foreground mb-1">AI Risk Tier</span>
+              <div className="flex flex-col items-center justify-center p-5 bg-blue-50/60 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800/40" data-testid="xai-risk-tier">
+                <span className="text-xs font-medium text-blue-600 dark:text-blue-400 mb-1">AI Risk Tier</span>
                 <span className="text-5xl font-black text-emerald-500">2</span>
-                <span className="text-xs font-medium text-emerald-600 mt-2">Low Risk Profile</span>
+                <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mt-2">Low Risk Profile</span>
               </div>
 
               <div>
@@ -308,7 +308,7 @@ function AnalyticsDashboard({ analytics }: { analytics: TelcoAnalytics }) {
         <div className="lg:col-span-2 space-y-4">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2"><BarChart3 className="w-4 h-4" /> Algorithmic Feature Attribution</CardTitle>
+              <CardTitle className="text-sm flex items-center gap-2"><BarChart3 className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Algorithmic Feature Attribution</CardTitle>
               <p className="text-xs text-muted-foreground mt-1">Weight of MoMo KPIs influencing the current AI credit model</p>
             </CardHeader>
             <CardContent>
@@ -350,7 +350,7 @@ function AnalyticsDashboard({ analytics }: { analytics: TelcoAnalytics }) {
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2"><TrendingUp className="w-4 h-4" /> MoMo Ecosystem Cash Flow Trends</CardTitle>
+              <CardTitle className="text-sm flex items-center gap-2"><TrendingUp className="w-4 h-4 text-blue-600 dark:text-blue-400" /> MoMo Ecosystem Cash Flow Trends</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-64" data-testid="chart-cashflow-trends">
