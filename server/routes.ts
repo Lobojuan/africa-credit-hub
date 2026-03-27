@@ -2174,6 +2174,199 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/telco/decision-rules", requireRole("admin", "lender", "super_admin"), async (req, res) => {
+    try {
+      const orgId = getOrgScope(req);
+      const rules = await storage.getDecisionRules(orgId);
+      res.json(rules);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/telco/decision-rules", requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const orgId = getOrgScope(req);
+      const rule = await storage.createDecisionRule({
+        ...req.body,
+        organizationId: orgId || req.body.organizationId,
+        createdBy: req.session.userId,
+      });
+      await storage.createAuditLog({
+        action: "CREATE", entity: "telco_decision_rule", entityId: rule.id,
+        userId: req.session.userId,
+        details: `Created decision rule "${rule.name}": maxRiskTier=${rule.maxAllowableRiskTier}, minUtility=${rule.minUtilityPayments}, autoDisbursement=${rule.autoDisburseApproved}`,
+        organizationId: orgId,
+      });
+      res.json(rule);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.put("/api/telco/decision-rules/:id", requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const existing = await storage.getDecisionRule(req.params.id);
+      if (!existing) return res.status(404).json({ message: "Rule not found" });
+      const orgId = getOrgScope(req);
+      if (orgId && existing.organizationId && existing.organizationId !== orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const updated = await storage.updateDecisionRule(req.params.id, req.body);
+      await storage.createAuditLog({
+        action: "UPDATE", entity: "telco_decision_rule", entityId: updated.id,
+        userId: req.session.userId,
+        details: `Updated decision rule "${updated.name}": maxRiskTier=${updated.maxAllowableRiskTier}, minUtility=${updated.minUtilityPayments}, autoDisbursement=${updated.autoDisburseApproved}`,
+        organizationId: orgId,
+      });
+      res.json(updated);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.get("/api/telco/decision-logs", requireRole("admin", "lender", "super_admin"), async (req, res) => {
+    try {
+      const orgId = getOrgScope(req);
+      const logs = await storage.getDecisionLogs(orgId);
+      res.json(logs);
+    } catch (e: any) {
+      res.status(500).json({ message: e.message });
+    }
+  });
+
+  app.post("/api/telco/decision-engine/:profileId", requireRole("admin", "lender", "super_admin"), async (req, res) => {
+    try {
+      const { computeTelcoKPIs, generateTelcoCreditScore } = await import("./telco-scoring");
+      const profile = await storage.getTelcoProfile(req.params.profileId);
+      if (!profile) return res.status(404).json({ message: "Profile not found" });
+      const orgId = getOrgScope(req);
+      if (orgId && profile.organizationId && profile.organizationId !== orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const rule = await storage.getActiveDecisionRule(orgId, profile.country);
+      if (!rule) {
+        return res.status(400).json({ message: "No active decision rule found. Create a rule in the Decision Engine tab first." });
+      }
+
+      const transactions = await storage.getMomoTransactions(profile.id);
+      if (transactions.length === 0) {
+        return res.status(400).json({ message: "No MoMo transactions found for this profile." });
+      }
+
+      const periodDays = parseInt(req.body.periodDays as string) || 90;
+      const kpis = computeTelcoKPIs(profile, transactions, periodDays);
+      const aiResult = await generateTelcoCreditScore(profile, kpis);
+
+      const validTiers = ["very_low", "low", "medium", "high", "very_high"] as const;
+      const normalizedTier = validTiers.includes(aiResult.riskTier) ? aiResult.riskTier : "medium";
+      const normalizedScore = Math.max(1, Math.min(5, Math.round(aiResult.riskScore)));
+
+      const score = await storage.createTelcoCreditScore({
+        profileId: profile.id,
+        borrowerId: profile.borrowerId || undefined,
+        riskTier: normalizedTier as any,
+        riskScore: normalizedScore,
+        creditLimit: aiResult.suggestedCreditLimitUsd?.toString(),
+        currency: "USD",
+        approvalRecommendation: aiResult.approvalRecommendation,
+        reasonCode: aiResult.reasonCode,
+        detailedRationale: aiResult.detailedRationale,
+        evaluationPeriodDays: periodDays,
+        kpiSnapshot: JSON.stringify(kpis),
+        aiProvider: aiResult.aiProvider,
+        aiModel: aiResult.aiModel,
+        organizationId: orgId || profile.organizationId || undefined,
+        country: profile.country,
+      });
+
+      const rejectionReasons: string[] = [];
+      const kycLevels = ["none", "basic", "standard", "full"];
+      const minKycIndex = kycLevels.indexOf(rule.minKycLevel);
+
+      if (normalizedScore > rule.maxAllowableRiskTier) {
+        rejectionReasons.push(`Risk tier ${normalizedScore} exceeds maximum allowed tier ${rule.maxAllowableRiskTier}`);
+      }
+      if ((kpis.financialMetrics?.utilityPaymentsCount || 0) < rule.minUtilityPayments) {
+        rejectionReasons.push(`Utility payments (${kpis.financialMetrics?.utilityPaymentsCount || 0}) below required minimum (${rule.minUtilityPayments})`);
+      }
+      const walletRetention = Math.round((kpis.financialMetrics?.walletRetentionRatio || 0) * 100);
+      if (walletRetention < rule.minWalletRetentionPct) {
+        rejectionReasons.push(`Wallet retention (${walletRetention}%) below required minimum (${rule.minWalletRetentionPct}%)`);
+      }
+      if ((kpis.telemetricMetrics?.simAgeDays || 0) < rule.minSimAgeDays) {
+        rejectionReasons.push(`SIM age (${kpis.telemetricMetrics?.simAgeDays || 0} days) below required minimum (${rule.minSimAgeDays} days)`);
+      }
+      if ((kpis.riskIndicators?.dormantPeriodDays || 0) > rule.maxDormantDays) {
+        rejectionReasons.push(`Dormant period (${kpis.riskIndicators?.dormantPeriodDays || 0} days) exceeds maximum allowed (${rule.maxDormantDays} days)`);
+      }
+      const profileKycIndex = kycLevels.indexOf(profile.kycLevel);
+      if (profileKycIndex < minKycIndex) {
+        rejectionReasons.push(`KYC level "${profile.kycLevel}" below required minimum "${rule.minKycLevel}"`);
+      }
+
+      const isApproved = rejectionReasons.length === 0;
+      const creditLimit = Math.min(
+        aiResult.suggestedCreditLimitUsd || 0,
+        Number(rule.maxCreditLimitUsd) || 500
+      );
+
+      let status: "approved_disbursed" | "approved_pending" | "rejected" = "rejected";
+      let disbursementRef: string | undefined;
+
+      if (isApproved) {
+        if (rule.autoDisburseApproved) {
+          disbursementRef = `MOMO-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+          status = "approved_disbursed";
+        } else {
+          status = "approved_pending";
+        }
+      }
+
+      const decisionLog = await storage.createDecisionLog({
+        ruleId: rule.id,
+        profileId: profile.id,
+        scoreId: score.id,
+        status,
+        riskScore: normalizedScore,
+        riskTier: normalizedTier,
+        creditLimitUsd: creditLimit.toString(),
+        reasonCode: isApproved ? aiResult.reasonCode : rejectionReasons.join("; "),
+        rejectionReasons: isApproved ? undefined : JSON.stringify(rejectionReasons),
+        disbursementRef,
+        smsNotificationSent: false,
+        applicantMsisdn: profile.msisdn,
+        country: profile.country,
+        organizationId: orgId || profile.organizationId || undefined,
+      });
+
+      await storage.createAuditLog({
+        action: "DECISION_ENGINE", entity: "telco_decision_log", entityId: decisionLog.id,
+        userId: req.session.userId,
+        details: `Decision engine ${status.toUpperCase()} for ${profile.msisdn}: Risk ${normalizedScore}/5, Limit $${creditLimit}${disbursementRef ? `, Ref: ${disbursementRef}` : ""}${rejectionReasons.length > 0 ? `, Reasons: ${rejectionReasons.join("; ")}` : ""}`,
+        organizationId: orgId,
+      });
+
+      res.json({
+        decision: decisionLog,
+        score,
+        kpis,
+        aiResult,
+        ruleApplied: {
+          id: rule.id,
+          name: rule.name,
+          maxRiskTier: rule.maxAllowableRiskTier,
+          minUtilityPayments: rule.minUtilityPayments,
+          autoDisburse: rule.autoDisburseApproved,
+        },
+      });
+    } catch (e: any) {
+      console.error("[DecisionEngine] Error:", e.message);
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   app.get("/api/global-search", async (req, res) => {
     try {
       const orgId = getOrgScope(req);

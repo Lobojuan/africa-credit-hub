@@ -486,6 +486,415 @@ function AnalyticsDashboard({ analytics }: { analytics: TelcoAnalytics }) {
   );
 }
 
+interface DecisionRule {
+  id: string;
+  name: string;
+  maxAllowableRiskTier: number;
+  minUtilityPayments: number;
+  minWalletRetentionPct: number;
+  minSimAgeDays: number;
+  maxDormantDays: number;
+  minKycLevel: string;
+  maxCreditLimitUsd: string;
+  autoDisburseApproved: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface DecisionLog {
+  id: string;
+  ruleId: string;
+  profileId: string;
+  status: string;
+  riskScore: number;
+  riskTier: string;
+  creditLimitUsd: string;
+  reasonCode: string;
+  rejectionReasons: string | null;
+  disbursementRef: string | null;
+  smsNotificationSent: boolean;
+  applicantMsisdn: string;
+  country: string;
+  decidedAt: string;
+}
+
+function DecisionEnginePanel({ profiles }: { profiles: TelcoProfile[] }) {
+  const { toast } = useToast();
+  const [showCreateRule, setShowCreateRule] = useState(false);
+  const [editingRule, setEditingRule] = useState<DecisionRule | null>(null);
+
+  const [ruleForm, setRuleForm] = useState({
+    name: "Default Policy",
+    maxAllowableRiskTier: 3,
+    minUtilityPayments: 2,
+    minWalletRetentionPct: 20,
+    minSimAgeDays: 90,
+    maxDormantDays: 30,
+    minKycLevel: "basic",
+    maxCreditLimitUsd: "500",
+    autoDisburseApproved: false,
+    isActive: true,
+  });
+
+  const { data: rules, isLoading: rulesLoading } = useQuery<DecisionRule[]>({
+    queryKey: ["/api/telco/decision-rules"],
+  });
+
+  const { data: decisionLogs, isLoading: logsLoading } = useQuery<DecisionLog[]>({
+    queryKey: ["/api/telco/decision-logs"],
+  });
+
+  const createRuleMutation = useMutation({
+    mutationFn: async (data: typeof ruleForm) => {
+      const res = await apiRequest("POST", "/api/telco/decision-rules", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/telco/decision-rules"] });
+      setShowCreateRule(false);
+      toast({ title: "Decision rule created" });
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const updateRuleMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<typeof ruleForm> }) => {
+      const res = await apiRequest("PUT", `/api/telco/decision-rules/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/telco/decision-rules"] });
+      setEditingRule(null);
+      toast({ title: "Decision rule updated" });
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const runDecisionMutation = useMutation({
+    mutationFn: async (profileId: string) => {
+      const res = await apiRequest("POST", `/api/telco/decision-engine/${profileId}`, { periodDays: 90 });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/telco/decision-logs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/telco/scores"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/telco/dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/telco/analytics"] });
+      const decision = data.decision;
+      toast({
+        title: decision.status === "rejected" ? "Application Rejected" : "Application Approved",
+        description: decision.status === "approved_disbursed"
+          ? `Funds disbursed to ${decision.applicantMsisdn} ($${Number(decision.creditLimitUsd).toLocaleString()})`
+          : decision.status === "approved_pending"
+          ? `Approved for $${Number(decision.creditLimitUsd).toLocaleString()} — pending disbursement`
+          : `Reason: ${decision.reasonCode?.substring(0, 100)}`,
+        variant: decision.status === "rejected" ? "destructive" : "default",
+      });
+    },
+    onError: (e: Error) => toast({ title: "Decision engine error", description: e.message, variant: "destructive" }),
+  });
+
+  const activeRule = rules?.find(r => r.isActive);
+  const approvedLogs = decisionLogs?.filter(l => l.status !== "rejected") || [];
+  const rejectedLogs = decisionLogs?.filter(l => l.status === "rejected") || [];
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <KpiCard title="Active Rules" value={rules?.filter(r => r.isActive).length || 0} icon={ShieldCheck} subtitle="Decision policies" />
+        <KpiCard title="Total Decisions" value={decisionLogs?.length || 0} icon={Activity} subtitle="Processed through engine" />
+        <KpiCard title="Auto-Approved" value={approvedLogs.length} icon={CheckCircle} subtitle={`${decisionLogs?.length ? Math.round((approvedLogs.length / decisionLogs.length) * 100) : 0}% approval rate`} color="text-green-600 dark:text-green-400" />
+        <KpiCard title="Rejected" value={rejectedLogs.length} icon={XCircle} subtitle="With regulatory reason codes" color="text-red-600 dark:text-red-400" />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Decision Rules
+              </CardTitle>
+              <Button size="sm" onClick={() => setShowCreateRule(true)} data-testid="button-create-rule">
+                <Plus className="w-3 h-3 mr-1" /> New Rule
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {rulesLoading ? (
+              <Skeleton className="h-40 w-full" />
+            ) : rules && rules.length > 0 ? (
+              <div className="space-y-3">
+                {rules.map(rule => (
+                  <div key={rule.id} className={`p-4 rounded-lg border ${rule.isActive ? "border-blue-200 dark:border-blue-800/40 bg-blue-50/40 dark:bg-blue-950/10" : "border-border bg-muted/20"}`} data-testid={`rule-card-${rule.id}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-sm">{rule.name}</span>
+                        {rule.isActive && <Badge variant="outline" className="text-[10px] bg-green-500/10 text-green-600 border-green-500/20">Active</Badge>}
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => {
+                        setEditingRule(rule);
+                        setRuleForm({
+                          name: rule.name,
+                          maxAllowableRiskTier: rule.maxAllowableRiskTier,
+                          minUtilityPayments: rule.minUtilityPayments,
+                          minWalletRetentionPct: rule.minWalletRetentionPct,
+                          minSimAgeDays: rule.minSimAgeDays,
+                          maxDormantDays: rule.maxDormantDays,
+                          minKycLevel: rule.minKycLevel,
+                          maxCreditLimitUsd: rule.maxCreditLimitUsd,
+                          autoDisburseApproved: rule.autoDisburseApproved,
+                          isActive: rule.isActive,
+                        });
+                      }} data-testid={`button-edit-rule-${rule.id}`}>
+                        Edit
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                      <div>
+                        <span className="text-muted-foreground">Max Risk Tier</span>
+                        <p className="font-bold">{rule.maxAllowableRiskTier}/5</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Min Utility Pmts</span>
+                        <p className="font-bold">{rule.minUtilityPayments}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Min Wallet Ret.</span>
+                        <p className="font-bold">{rule.minWalletRetentionPct}%</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Auto-Disburse</span>
+                        <p className="font-bold">{rule.autoDisburseApproved ? "ON" : "OFF"}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Min SIM Age</span>
+                        <p className="font-bold">{rule.minSimAgeDays}d</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Max Dormant</span>
+                        <p className="font-bold">{rule.maxDormantDays}d</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Min KYC</span>
+                        <p className="font-bold capitalize">{rule.minKycLevel}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Max Credit</span>
+                        <p className="font-bold">${Number(rule.maxCreditLimitUsd).toLocaleString()}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <ShieldCheck className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-40" />
+                <p className="font-semibold">No decision rules configured</p>
+                <p className="text-sm text-muted-foreground mt-1">Create a rule to enable automated decisioning</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Zap className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Run Decision Engine
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">Select a MoMo profile to evaluate against the active decision rule</p>
+          </CardHeader>
+          <CardContent>
+            {!activeRule ? (
+              <div className="text-center py-8">
+                <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto mb-3 opacity-60" />
+                <p className="font-semibold text-sm">No active rule</p>
+                <p className="text-xs text-muted-foreground mt-1">Create and activate a decision rule first</p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                {profiles.map(profile => (
+                  <div key={profile.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/30 transition-colors" data-testid={`decision-profile-${profile.id}`}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Signal className="w-4 h-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-xs">{profile.msisdn}</p>
+                        <p className="text-[10px] text-muted-foreground capitalize">{profile.provider} · {profile.country}</p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => runDecisionMutation.mutate(profile.id)}
+                      disabled={runDecisionMutation.isPending}
+                      data-testid={`button-run-decision-${profile.id}`}
+                    >
+                      {runDecisionMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3 mr-1" />}
+                      Evaluate
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {decisionLogs && decisionLogs.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Decision History
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">MSISDN</TableHead>
+                  <TableHead className="text-xs">Status</TableHead>
+                  <TableHead className="text-xs text-right">Risk</TableHead>
+                  <TableHead className="text-xs text-right">Credit Limit</TableHead>
+                  <TableHead className="text-xs">Reason / Ref</TableHead>
+                  <TableHead className="text-xs text-right">Date</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {decisionLogs.slice(0, 50).map(log => (
+                  <TableRow key={log.id} data-testid={`decision-log-${log.id}`}>
+                    <TableCell className="text-xs font-medium">{log.applicantMsisdn}</TableCell>
+                    <TableCell>
+                      {log.status === "approved_disbursed" ? (
+                        <Badge variant="default" className="text-[10px] bg-green-600"><CheckCircle className="w-3 h-3 mr-1" />Disbursed</Badge>
+                      ) : log.status === "approved_pending" ? (
+                        <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-600 border-blue-500/20"><Clock className="w-3 h-3 mr-1" />Pending</Badge>
+                      ) : (
+                        <Badge variant="destructive" className="text-[10px]"><XCircle className="w-3 h-3 mr-1" />Rejected</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-xs text-right font-bold">{log.riskScore}/5</TableCell>
+                    <TableCell className="text-xs text-right">${Number(log.creditLimitUsd).toLocaleString()}</TableCell>
+                    <TableCell className="text-xs max-w-[200px] truncate">
+                      {log.disbursementRef || log.reasonCode?.substring(0, 80)}
+                    </TableCell>
+                    <TableCell className="text-xs text-right">{log.decidedAt ? new Date(log.decidedAt).toLocaleDateString() : ""}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog open={showCreateRule || !!editingRule} onOpenChange={(open) => { if (!open) { setShowCreateRule(false); setEditingRule(null); } }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editingRule ? "Edit Decision Rule" : "Create Decision Rule"}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            if (editingRule) {
+              updateRuleMutation.mutate({ id: editingRule.id, data: ruleForm });
+            } else {
+              createRuleMutation.mutate(ruleForm);
+            }
+          }} className="space-y-4" data-testid="form-decision-rule">
+            <div>
+              <Label>Rule Name</Label>
+              <Input data-testid="input-rule-name" value={ruleForm.name} onChange={e => setRuleForm({ ...ruleForm, name: e.target.value })} required />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Max Allowable Risk Tier (1-5)</Label>
+                <div className="flex items-center gap-3">
+                  <input type="range" min={1} max={5} value={ruleForm.maxAllowableRiskTier} onChange={e => setRuleForm({ ...ruleForm, maxAllowableRiskTier: parseInt(e.target.value) })} className="flex-1 accent-blue-600" data-testid="slider-max-risk" />
+                  <span className="text-lg font-bold w-8 text-center" data-testid="text-max-risk-value">{ruleForm.maxAllowableRiskTier}</span>
+                </div>
+              </div>
+              <div>
+                <Label>Min Utility Payments</Label>
+                <div className="flex items-center gap-3">
+                  <input type="range" min={0} max={20} value={ruleForm.minUtilityPayments} onChange={e => setRuleForm({ ...ruleForm, minUtilityPayments: parseInt(e.target.value) })} className="flex-1 accent-blue-600" data-testid="slider-min-utility" />
+                  <span className="text-lg font-bold w-8 text-center">{ruleForm.minUtilityPayments}</span>
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Min Wallet Retention (%)</Label>
+                <div className="flex items-center gap-3">
+                  <input type="range" min={0} max={100} step={5} value={ruleForm.minWalletRetentionPct} onChange={e => setRuleForm({ ...ruleForm, minWalletRetentionPct: parseInt(e.target.value) })} className="flex-1 accent-blue-600" data-testid="slider-wallet-retention" />
+                  <span className="text-lg font-bold w-10 text-center">{ruleForm.minWalletRetentionPct}%</span>
+                </div>
+              </div>
+              <div>
+                <Label>Min SIM Age (days)</Label>
+                <Input data-testid="input-sim-age" type="number" value={ruleForm.minSimAgeDays} onChange={e => setRuleForm({ ...ruleForm, minSimAgeDays: parseInt(e.target.value) || 0 })} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Max Dormant Days</Label>
+                <Input data-testid="input-max-dormant" type="number" value={ruleForm.maxDormantDays} onChange={e => setRuleForm({ ...ruleForm, maxDormantDays: parseInt(e.target.value) || 0 })} />
+              </div>
+              <div>
+                <Label>Min KYC Level</Label>
+                <Select value={ruleForm.minKycLevel} onValueChange={v => setRuleForm({ ...ruleForm, minKycLevel: v })}>
+                  <SelectTrigger data-testid="select-min-kyc"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="basic">Basic</SelectItem>
+                    <SelectItem value="standard">Standard</SelectItem>
+                    <SelectItem value="full">Full KYC</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Max Credit Limit (USD)</Label>
+                <Input data-testid="input-max-credit" type="number" value={ruleForm.maxCreditLimitUsd} onChange={e => setRuleForm({ ...ruleForm, maxCreditLimitUsd: e.target.value })} />
+              </div>
+              <div className="flex flex-col justify-end">
+                <div className="flex items-center gap-3 p-2 rounded-lg border bg-muted/20">
+                  <input
+                    type="checkbox"
+                    checked={ruleForm.autoDisburseApproved}
+                    onChange={e => setRuleForm({ ...ruleForm, autoDisburseApproved: e.target.checked })}
+                    className="w-4 h-4 accent-blue-600"
+                    data-testid="checkbox-auto-disburse"
+                  />
+                  <div>
+                    <Label className="text-xs font-semibold">Auto-Disburse</Label>
+                    <p className="text-[10px] text-muted-foreground">Instantly send funds on approval</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {editingRule && (
+              <div className="flex items-center gap-3 p-2 rounded-lg border bg-muted/20">
+                <input
+                  type="checkbox"
+                  checked={ruleForm.isActive}
+                  onChange={e => setRuleForm({ ...ruleForm, isActive: e.target.checked })}
+                  className="w-4 h-4 accent-blue-600"
+                  data-testid="checkbox-active"
+                />
+                <Label className="text-xs font-semibold">Active</Label>
+              </div>
+            )}
+            <Button type="submit" className="w-full" disabled={createRuleMutation.isPending || updateRuleMutation.isPending} data-testid="button-submit-rule">
+              {(createRuleMutation.isPending || updateRuleMutation.isPending) ? "Saving..." : editingRule ? "Update Rule" : "Create Rule"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 export default function TelcoScoringPage() {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -665,9 +1074,12 @@ export default function TelcoScoringPage() {
 
       {hasData ? (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid grid-cols-3 w-full max-w-md">
+          <TabsList className="grid grid-cols-4 w-full max-w-xl">
             <TabsTrigger value="analytics" data-testid="tab-analytics">
               <BarChart3 className="w-4 h-4 mr-1.5" /> Analytics & ROI
+            </TabsTrigger>
+            <TabsTrigger value="decision-engine" data-testid="tab-decision-engine">
+              <Zap className="w-4 h-4 mr-1.5" /> Decision Engine
             </TabsTrigger>
             <TabsTrigger value="profiles" data-testid="tab-profiles">
               <Smartphone className="w-4 h-4 mr-1.5" /> Profiles
@@ -695,6 +1107,10 @@ export default function TelcoScoringPage() {
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          <TabsContent value="decision-engine" className="space-y-4">
+            <DecisionEnginePanel profiles={profiles || []} />
           </TabsContent>
 
           <TabsContent value="profiles" className="space-y-4">

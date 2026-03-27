@@ -822,6 +822,54 @@ export const webhookDeliveryLogs = pgTable("webhook_delivery_logs", {
 });
 export type WebhookDeliveryLog = typeof webhookDeliveryLogs.$inferSelect;
 
+export const telcoDecisionStatusEnum = pgEnum("telco_decision_status", ["approved_disbursed", "approved_pending", "rejected", "error"]);
+
+export const telcoDecisionRules = pgTable("telco_decision_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  country: text("country"),
+  maxAllowableRiskTier: integer("max_allowable_risk_tier").notNull().default(3),
+  minUtilityPayments: integer("min_utility_payments").notNull().default(2),
+  minWalletRetentionPct: integer("min_wallet_retention_pct").notNull().default(20),
+  minSimAgeDays: integer("min_sim_age_days").notNull().default(90),
+  maxDormantDays: integer("max_dormant_days").notNull().default(30),
+  minKycLevel: text("min_kyc_level").notNull().default("basic"),
+  maxCreditLimitUsd: decimal("max_credit_limit_usd", { precision: 15, scale: 2 }).notNull().default("500"),
+  autoDisburseApproved: boolean("auto_disburse_approved").notNull().default(false),
+  isActive: boolean("is_active").notNull().default(true),
+  createdBy: varchar("created_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertTelcoDecisionRuleSchema = createInsertSchema(telcoDecisionRules).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertTelcoDecisionRule = z.infer<typeof insertTelcoDecisionRuleSchema>;
+export type TelcoDecisionRule = typeof telcoDecisionRules.$inferSelect;
+
+export const telcoDecisionLogs = pgTable("telco_decision_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ruleId: varchar("rule_id").notNull().references(() => telcoDecisionRules.id),
+  profileId: varchar("profile_id").notNull().references(() => telcoProfiles.id),
+  scoreId: varchar("score_id").references(() => telcoCreditScores.id),
+  status: telcoDecisionStatusEnum("status").notNull(),
+  riskScore: integer("risk_score").notNull(),
+  riskTier: text("risk_tier").notNull(),
+  creditLimitUsd: decimal("credit_limit_usd", { precision: 15, scale: 2 }),
+  reasonCode: text("reason_code"),
+  rejectionReasons: text("rejection_reasons"),
+  disbursementRef: text("disbursement_ref"),
+  smsNotificationSent: boolean("sms_notification_sent").default(false),
+  applicantMsisdn: text("applicant_msisdn"),
+  country: text("country"),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  decidedAt: timestamp("decided_at").defaultNow(),
+});
+
+export const insertTelcoDecisionLogSchema = createInsertSchema(telcoDecisionLogs).omit({ id: true, decidedAt: true });
+export type InsertTelcoDecisionLog = z.infer<typeof insertTelcoDecisionLogSchema>;
+export type TelcoDecisionLog = typeof telcoDecisionLogs.$inferSelect;
+
 export const consumerAccounts = pgTable("consumer_accounts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   nationalId: text("national_id").notNull().unique(),

@@ -6,12 +6,15 @@ import {
   courtJudgments, consentRecords, paymentHistory, institutions, billingRecords, creditReportLogs, apiKeys,
   exchangeRates, retentionPolicies, apiConfigurations, organizations, dishonouredCheques, borrowerAlerts,
   guarantors, telcoProfiles, momoTransactions, telcoCreditScores,
+  telcoDecisionRules, telcoDecisionLogs,
   type User, type InsertUser,
   type Organization, type InsertOrganization,
   type Borrower, type InsertBorrower,
   type TelcoProfile, type InsertTelcoProfile,
   type MomoTransaction, type InsertMomoTransaction,
   type TelcoCreditScore, type InsertTelcoCreditScore,
+  type TelcoDecisionRule, type InsertTelcoDecisionRule,
+  type TelcoDecisionLog, type InsertTelcoDecisionLog,
   type CreditAccount, type InsertCreditAccount,
   type CreditInquiry, type InsertCreditInquiry,
   type AuditLog, type InsertAuditLog,
@@ -183,6 +186,13 @@ export interface IStorage {
   getTelcoCreditScoresByProfile(profileId: string): Promise<TelcoCreditScore[]>;
   createTelcoCreditScore(score: InsertTelcoCreditScore): Promise<TelcoCreditScore>;
   getTelcoDashboardStats(organizationId?: string, country?: string): Promise<{ totalProfiles: number; totalScores: number; avgRiskScore: number; approvalRate: number; tierBreakdown: Record<string, number> }>;
+  getDecisionRules(organizationId?: string): Promise<TelcoDecisionRule[]>;
+  getDecisionRule(id: string): Promise<TelcoDecisionRule | undefined>;
+  getActiveDecisionRule(organizationId?: string, country?: string): Promise<TelcoDecisionRule | undefined>;
+  createDecisionRule(rule: InsertTelcoDecisionRule): Promise<TelcoDecisionRule>;
+  updateDecisionRule(id: string, updates: Partial<InsertTelcoDecisionRule>): Promise<TelcoDecisionRule>;
+  getDecisionLogs(organizationId?: string, limit?: number): Promise<TelcoDecisionLog[]>;
+  createDecisionLog(log: InsertTelcoDecisionLog): Promise<TelcoDecisionLog>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1300,6 +1310,52 @@ export class DatabaseStorage implements IStorage {
       approvalRate: Math.round(approvalRate * 10) / 10,
       tierBreakdown,
     };
+  }
+
+  async getDecisionRules(organizationId?: string): Promise<TelcoDecisionRule[]> {
+    if (organizationId) {
+      return db.select().from(telcoDecisionRules).where(eq(telcoDecisionRules.organizationId, organizationId)).orderBy(desc(telcoDecisionRules.createdAt));
+    }
+    return db.select().from(telcoDecisionRules).orderBy(desc(telcoDecisionRules.createdAt));
+  }
+
+  async getDecisionRule(id: string): Promise<TelcoDecisionRule | undefined> {
+    const [rule] = await db.select().from(telcoDecisionRules).where(eq(telcoDecisionRules.id, id));
+    return rule;
+  }
+
+  async getActiveDecisionRule(organizationId?: string, country?: string): Promise<TelcoDecisionRule | undefined> {
+    const filters: any[] = [eq(telcoDecisionRules.isActive, true)];
+    if (organizationId) {
+      filters.push(or(eq(telcoDecisionRules.organizationId, organizationId), sql`${telcoDecisionRules.organizationId} IS NULL`));
+    }
+    if (country) {
+      filters.push(or(eq(telcoDecisionRules.country, country), sql`${telcoDecisionRules.country} IS NULL`));
+    }
+    const [rule] = await db.select().from(telcoDecisionRules).where(and(...filters)).orderBy(desc(telcoDecisionRules.updatedAt)).limit(1);
+    return rule;
+  }
+
+  async createDecisionRule(rule: InsertTelcoDecisionRule): Promise<TelcoDecisionRule> {
+    const [created] = await db.insert(telcoDecisionRules).values(rule).returning();
+    return created;
+  }
+
+  async updateDecisionRule(id: string, updates: Partial<InsertTelcoDecisionRule>): Promise<TelcoDecisionRule> {
+    const [updated] = await db.update(telcoDecisionRules).set({ ...updates, updatedAt: new Date() }).where(eq(telcoDecisionRules.id, id)).returning();
+    return updated;
+  }
+
+  async getDecisionLogs(organizationId?: string, limit = 100): Promise<TelcoDecisionLog[]> {
+    if (organizationId) {
+      return db.select().from(telcoDecisionLogs).where(eq(telcoDecisionLogs.organizationId, organizationId)).orderBy(desc(telcoDecisionLogs.decidedAt)).limit(limit);
+    }
+    return db.select().from(telcoDecisionLogs).orderBy(desc(telcoDecisionLogs.decidedAt)).limit(limit);
+  }
+
+  async createDecisionLog(log: InsertTelcoDecisionLog): Promise<TelcoDecisionLog> {
+    const [created] = await db.insert(telcoDecisionLogs).values(log).returning();
+    return created;
   }
 }
 
