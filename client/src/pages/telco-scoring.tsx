@@ -2,10 +2,14 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
+  LineChart, Line, BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
+  ResponsiveContainer, Legend, Cell
+} from "recharts";
+import {
   Smartphone, Signal, Shield, TrendingUp, TrendingDown, AlertTriangle, CheckCircle,
   XCircle, Plus, Loader2, ChevronRight, BarChart3, Wallet, Phone, Brain, RefreshCw,
   ArrowUpRight, ArrowDownRight, Minus, Users, Activity, Zap, Globe, DollarSign,
-  Target, PieChart, Award, MapPin, Clock, ShieldCheck, Percent, Banknote
+  Target, PieChart, Award, MapPin, Clock, ShieldCheck, Percent, Banknote, Info
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -250,6 +254,139 @@ function AnalyticsDashboard({ analytics }: { analytics: TelcoAnalytics }) {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-1">
+          <Card className="h-full">
+            <CardHeader className="pb-2">
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-sm flex items-center gap-2"><Brain className="w-4 h-4" /> Live Applicant Scoring</CardTitle>
+                <span className="flex items-center gap-1 text-[10px] text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-full font-semibold">
+                  <Activity size={12} /> Processing
+                </span>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col items-center justify-center p-5 bg-muted/30 rounded-lg border" data-testid="xai-risk-tier">
+                <span className="text-xs font-medium text-muted-foreground mb-1">AI Risk Tier</span>
+                <span className="text-5xl font-black text-emerald-500">2</span>
+                <span className="text-xs font-medium text-emerald-600 mt-2">Low Risk Profile</span>
+              </div>
+
+              <div>
+                <h3 className="text-xs font-bold text-muted-foreground mb-3 flex items-center gap-2 uppercase tracking-wider">
+                  <Info size={14} className="text-blue-500"/> Reason Codes (Explainability)
+                </h3>
+                <ul className="space-y-3 text-xs">
+                  <li className="flex items-start gap-2">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 mt-1 flex-shrink-0" />
+                    <p className="text-muted-foreground"><span className="font-semibold text-foreground">Positive:</span> Consistent utility payments over 6 months indicate strong financial discipline.</p>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 mt-1 flex-shrink-0" />
+                    <p className="text-muted-foreground"><span className="font-semibold text-foreground">Positive:</span> High wallet retention rate; user does not immediately cash out inbound P2P transfers.</p>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-2 h-2 rounded-full bg-amber-500 mt-1 flex-shrink-0" />
+                    <p className="text-muted-foreground"><span className="font-semibold text-foreground">Flag:</span> 2 instances of emergency airtime advances in the last 30 days.</p>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 mt-1 flex-shrink-0" />
+                    <p className="text-muted-foreground"><span className="font-semibold text-foreground">Positive:</span> Regular income pattern detected from employer P2P transfers.</p>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-2 h-2 rounded-full bg-red-500 mt-1 flex-shrink-0" />
+                    <p className="text-muted-foreground"><span className="font-semibold text-foreground">Risk:</span> Dormant period of 12 days detected in last 90-day window.</p>
+                  </li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="lg:col-span-2 space-y-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2"><BarChart3 className="w-4 h-4" /> Algorithmic Feature Attribution</CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">Weight of MoMo KPIs influencing the current AI credit model</p>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64" data-testid="chart-feature-attribution">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RechartsBarChart
+                    data={[
+                      { feature: "Utility Payments", weight: 85 },
+                      { feature: "Wallet Retention", weight: 72 },
+                      { feature: "P2P Regularity", weight: 65 },
+                      { feature: "Merchant Txns", weight: 58 },
+                      { feature: "Income Pattern", weight: 50 },
+                      { feature: "SIM Tenure", weight: 42 },
+                      { feature: "KYC Level", weight: 35 },
+                      { feature: "Airtime Advances", weight: -25 },
+                      { feature: "Dormant Periods", weight: -45 },
+                      { feature: "Device Changes", weight: -30 },
+                    ]}
+                    layout="vertical"
+                    margin={{ top: 5, right: 30, left: 5, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border))" />
+                    <XAxis type="number" domain={[-100, 100]} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                    <YAxis dataKey="feature" type="category" width={115} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
+                    <RechartsTooltip
+                      cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
+                      contentStyle={{ borderRadius: "8px", border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }}
+                    />
+                    <Bar dataKey="weight" radius={[0, 4, 4, 0]}>
+                      {[85, 72, 65, 58, 50, 42, 35, -25, -45, -30].map((w, i) => (
+                        <Cell key={`cell-${i}`} fill={w > 0 ? "#3b82f6" : "#ef4444"} />
+                      ))}
+                    </Bar>
+                  </RechartsBarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2"><TrendingUp className="w-4 h-4" /> MoMo Ecosystem Cash Flow Trends</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64" data-testid="chart-cashflow-trends">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={[
+                      { month: "Jan", inflows: 4000, outflows: 2400 },
+                      { month: "Feb", inflows: 3000, outflows: 1398 },
+                      { month: "Mar", inflows: 2000, outflows: 9800 },
+                      { month: "Apr", inflows: 2780, outflows: 3908 },
+                      { month: "May", inflows: 1890, outflows: 4800 },
+                      { month: "Jun", inflows: 2390, outflows: 3800 },
+                      { month: "Jul", inflows: 3200, outflows: 2900 },
+                      { month: "Aug", inflows: 3800, outflows: 3100 },
+                      { month: "Sep", inflows: 4200, outflows: 2800 },
+                      { month: "Oct", inflows: 3600, outflows: 3400 },
+                      { month: "Nov", inflows: 4500, outflows: 2600 },
+                      { month: "Dec", inflows: 5100, outflows: 3200 },
+                    ]}
+                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                    <XAxis dataKey="month" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
+                    <RechartsTooltip
+                      contentStyle={{ borderRadius: "8px", border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }}
+                    />
+                    <Legend iconType="circle" />
+                    <Line type="monotone" dataKey="inflows" name="Total Inflows" stroke="#10b981" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
+                    <Line type="monotone" dataKey="outflows" name="Total Outflows" stroke="#f43f5e" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

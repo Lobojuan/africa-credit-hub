@@ -1,0 +1,153 @@
+import React, { useState } from 'react';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { ShieldCheck, TrendingUp, Users, AlertTriangle, Info, Activity } from 'lucide-react';
+
+// Mock Data for MoMo Cash Flow Trends
+const cashFlowData = [
+  { month: 'Jan', inflows: 4000, outflows: 2400 },
+  { month: 'Feb', inflows: 3000, outflows: 1398 },
+  { month: 'Mar', inflows: 2000, outflows: 9800 },
+  { month: 'Apr', inflows: 2780, outflows: 3908 },
+  { month: 'May', inflows: 1890, outflows: 4800 },
+  { month: 'Jun', inflows: 2390, outflows: 3800 },
+];
+
+// Mock Data for AI Feature Attribution (Explainable AI)
+const featureImportanceData =;
+
+export default function TelcoCreditDashboard() {
+  const = useState('90 Days');
+
+  return (
+    <div className="min-h-screen bg-slate-50 p-6 font-sans text-slate-800">
+      {/* Header Section */}
+      <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">AI Credit & Risk Intelligence</h1>
+          <p className="text-slate-500 mt-1">Telecommunication & MoMo Portfolio Overview</p>
+        </div>
+        <div className="mt-4 md:mt-0 flex gap-2">
+          {.map((tf) => (
+            <button
+              key={tf}
+              onClick={() => setTimeframe(tf)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                timeframe === tf? 'bg-blue-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              {tf}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Top Level KPIs */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <KPICard title="Total Approvals (NTC)" value="14,205" trend="+12.5%" icon={<Users className="text-blue-500" />} />
+        <KPICard title="Portfolio Disbursed" value="$2.4M" trend="+8.2%" icon={<TrendingUp className="text-emerald-500" />} />
+        <KPICard title="Non-Performing Loans" value="3.1%" trend="-0.4%" isGood={true} icon={<AlertTriangle className="text-amber-500" />} />
+        <KPICard title="AI Decision Accuracy" value="98.4%" trend="+1.1%" icon={<ShieldCheck className="text-indigo-500" />} />
+      </div>
+
+      {/* Main Dashboard Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        
+        {/* Left Column: Individual Risk Profile & Explainability */}
+        <div className="lg:col-span-1 bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-lg font-bold text-slate-800">Live Applicant Scoring</h2>
+            <span className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full font-semibold">
+              <Activity size={14} /> Processing
+            </span>
+          </div>
+          
+          <div className="flex flex-col items-center justify-center p-6 bg-slate-50 rounded-lg border border-slate-100 mb-6">
+            <span className="text-sm font-medium text-slate-500 mb-1">AI Risk Tier</span>
+            <span className="text-5xl font-black text-emerald-500">2</span>
+            <span className="text-sm font-medium text-emerald-600 mt-2">Low Risk Profile</span>
+          </div>
+
+          <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+            <Info size={16} className="text-blue-500"/> Reason Codes (Explainability)
+          </h3>
+          <ul className="space-y-3 text-sm">
+            <li className="flex items-start gap-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0" />
+              <p className="text-slate-600"><span className="font-semibold text-slate-800">Positive:</span> Consistent utility payments over 6 months indicate strong financial discipline.</p>
+            </li>
+            <li className="flex items-start gap-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0" />
+              <p className="text-slate-600"><span className="font-semibold text-slate-800">Positive:</span> High wallet retention rate; user does not immediately cash out inbound P2P transfers.</p>
+            </li>
+            <li className="flex items-start gap-2">
+              <div className="w-2 h-2 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
+              <p className="text-slate-600"><span className="font-semibold text-slate-800">Flag:</span> 2 instances of emergency airtime advances in the last 30 days.</p>
+            </li>
+          </ul>
+        </div>
+
+        {/* Right Column: Visualizations */}
+        <div className="lg:col-span-2 space-y-6">
+          
+          {/* Feature Attribution Chart */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+            <h2 className="text-lg font-bold text-slate-800 mb-4">Algorithmic Feature Attribution</h2>
+            <p className="text-sm text-slate-500 mb-6">Displays the weight of MoMo KPIs influencing the current credit model.</p>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={featureImportanceData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+                  <XAxis type="number" domain={[-100, 100]} />
+                  <YAxis dataKey="feature" type="category" width={120} tick={{fontSize: 12, fill: '#475569'}} />
+                  <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}/>
+                  <Bar dataKey="weight" radius={}>
+                    {featureImportanceData.map((entry, index) => (
+                      <cell key={`cell-${index}`} fill={entry.weight > 0? '#3b82f6' : '#ef4444'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* MoMo Cash Flow Chart */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+            <h2 className="text-lg font-bold text-slate-800 mb-4">MoMo Ecosystem Cash Flow Trends</h2>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={cashFlowData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0"/>
+                  <XAxis dataKey="month" tick={{fill: '#64748b'}} tickLine={false} axisLine={false} />
+                  <YAxis tick={{fill: '#64748b'}} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
+                  <Tooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}/>
+                  <Legend iconType="circle"/>
+                  <Line type="monotone" dataKey="inflows" name="Total Inflows" stroke="#10b981" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
+                  <Line type="monotone" dataKey="outflows" name="Total Outflows" stroke="#f43f5e" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Reusable KPI Card Component
+function KPICard({ title, value, trend, icon, isGood = true }) {
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex items-center justify-between hover:shadow-md transition-shadow">
+      <div>
+        <p className="text-sm font-medium text-slate-500 mb-1">{title}</p>
+        <h3 className="text-2xl font-bold text-slate-900">{value}</h3>
+        <span className={`text-xs font-semibold mt-2 inline-block ${trend.startsWith('+')? (isGood? 'text-emerald-600' : 'text-red-600') : (isGood? 'text-emerald-600' : 'text-red-600')}`}>
+          {trend} from last period
+        </span>
+      </div>
+      <div className="p-4 bg-slate-50 rounded-full">
+        {icon}
+      </div>
+    </div>
+  );
+}
