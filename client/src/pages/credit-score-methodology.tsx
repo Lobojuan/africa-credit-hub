@@ -269,6 +269,7 @@ export default function CreditScoreMethodologyPage() {
 
   const allowedRoles = ["admin", "lender", "super_admin"];
   const isAllowed = user && allowedRoles.includes(user.role);
+  const isPrivilegedUser = isAllowed;
 
   const [simParams, setSimParams] = useState({
     currentAccounts: 3,
