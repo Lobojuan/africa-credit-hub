@@ -470,15 +470,26 @@ Total portfolio delinquency rate: ${data.totalAccounts > 0 ? ((data.stats.delinq
 
 async function buildLiveContext(): Promise<string> {
   try {
-    const [stats, institutions, orgs, retentionPolicies, exchangeRates, borrowersResult, allAccounts, disputes] = await Promise.all([
-      storage.getDashboardStats().catch(() => null),
-      storage.getInstitutions(1, 100).catch(() => ({ data: [], total: 0 })),
-      storage.getOrganizations().catch(() => []),
-      storage.getRetentionPolicies().catch(() => []),
-      storage.getExchangeRates().catch(() => []),
-      storage.getBorrowers(1, 200).catch(() => ({ data: [], total: 0 })),
-      storage.getAllCreditAccounts().catch(() => []),
-      storage.getDisputes().catch(() => []),
+    const [stats, institutions, orgs, retentionPolicies, exchangeRates, borrowersResult, allAccounts, disputes, allInquiries, auditLogs, courtJudgments, consentRecords, users, pendingApprovals, billingRecords, creditReportLogs, telcoProfiles, telcoScores, telcoStats] = await Promise.all([
+      storage.getDashboardStats().catch(e => { console.warn("[AI Context] getDashboardStats failed:", e.message); return null; }),
+      storage.getInstitutions(1, 100).catch(e => { console.warn("[AI Context] getInstitutions failed:", e.message); return { data: [], total: 0 }; }),
+      storage.getOrganizations().catch(e => { console.warn("[AI Context] getOrganizations failed:", e.message); return []; }),
+      storage.getRetentionPolicies().catch(e => { console.warn("[AI Context] getRetentionPolicies failed:", e.message); return []; }),
+      storage.getExchangeRates().catch(e => { console.warn("[AI Context] getExchangeRates failed:", e.message); return []; }),
+      storage.getBorrowers(1, 200).catch(e => { console.warn("[AI Context] getBorrowers failed:", e.message); return { data: [], total: 0 }; }),
+      storage.getAllCreditAccounts().catch(e => { console.warn("[AI Context] getAllCreditAccounts failed:", e.message); return []; }),
+      storage.getDisputes().catch(e => { console.warn("[AI Context] getDisputes failed:", e.message); return []; }),
+      storage.getAllCreditInquiries().catch(e => { console.warn("[AI Context] getAllCreditInquiries failed:", e.message); return []; }),
+      storage.getAuditLogs().catch(e => { console.warn("[AI Context] getAuditLogs failed:", e.message); return []; }),
+      storage.getAllCourtJudgments().catch(e => { console.warn("[AI Context] getAllCourtJudgments failed:", e.message); return []; }),
+      storage.getAllConsentRecords().catch(e => { console.warn("[AI Context] getAllConsentRecords failed:", e.message); return []; }),
+      storage.getUsers().catch(e => { console.warn("[AI Context] getUsers failed:", e.message); return []; }),
+      storage.getPendingApprovals().catch(e => { console.warn("[AI Context] getPendingApprovals failed:", e.message); return []; }),
+      storage.getBillingRecords().catch(e => { console.warn("[AI Context] getBillingRecords failed:", e.message); return []; }),
+      storage.getCreditReportLogs().catch(e => { console.warn("[AI Context] getCreditReportLogs failed:", e.message); return []; }),
+      storage.getTelcoProfiles().catch(e => { console.warn("[AI Context] getTelcoProfiles failed:", e.message); return []; }),
+      storage.getTelcoCreditScores().catch(e => { console.warn("[AI Context] getTelcoCreditScores failed:", e.message); return []; }),
+      storage.getTelcoDashboardStats().catch(e => { console.warn("[AI Context] getTelcoDashboardStats failed:", e.message); return { totalProfiles: 0, totalScores: 0, avgRiskScore: 0, approvalRate: 0, tierBreakdown: {} }; }),
     ]);
 
     const institutionList = institutions.data.map(i => {
@@ -502,6 +513,7 @@ async function buildLiveContext(): Promise<string> {
 
     const usdGhsRate = exchangeRates.find(r => r.baseCurrency === "USD" && r.targetCurrency === "GHS");
     const rateInfo = usdGhsRate ? `USD/GHS: ${usdGhsRate.rate} (as of ${usdGhsRate.effectiveDate})` : "Exchange rates available";
+    const allRates = exchangeRates.slice(0, 20).map(r => `  - ${r.baseCurrency}/${r.targetCurrency}: ${r.rate}`).join("\n");
 
     const accountsByBorrower: Record<string, typeof allAccounts> = {};
     for (const acc of allAccounts) {
@@ -547,7 +559,10 @@ async function buildLiveContext(): Promise<string> {
       return {
         name,
         type: b.borrowerType || "individual",
+        country: b.country || "Ghana",
         nationalId: b.nationalId || "N/A",
+        tinNumber: b.tinNumber || "",
+        creditScore: b.creditScore,
         contact: contactParts.join(" | ") || "No contact info",
         address: addressParts.join(", ") || "No address",
         accountCount: bAccounts.length,
@@ -560,43 +575,180 @@ async function buildLiveContext(): Promise<string> {
         isPep: b.isPep || false,
         employmentStatus: b.employmentStatus || "Unknown",
         monthlyIncome: b.monthlyIncome || "Not reported",
+        sector: (b as any).sector || "",
         flags: statusFlags,
-        accountDetails: bAccounts.map(a => `${a.accountType}: GHS ${parseFloat(a.currentBalance || "0").toLocaleString()} (${a.status}${parseInt(a.daysInArrears || "0") > 0 ? `, ${a.daysInArrears}d arrears` : ""})`).join("; "),
+        accountDetails: bAccounts.map(a => `${a.accountType}: ${a.currency || "GHS"} ${parseFloat(a.currentBalance || "0").toLocaleString()} (${a.status}${parseInt(a.daysInArrears || "0") > 0 ? `, ${a.daysInArrears}d arrears` : ""}) at ${a.lenderInstitution || "unknown"}`).join("; "),
       };
     });
 
     borrowerProfiles.sort((a, b) => (b.defaulted + b.delinquent + b.writtenOff) - (a.defaulted + a.delinquent + a.writtenOff) || b.maxArrears - a.maxArrears || b.totalBalance - a.totalBalance);
 
-    const borrowerList = borrowerProfiles.map(bp => {
+    const borrowerList = borrowerProfiles.slice(0, 100).map(bp => {
       const flagStr = bp.flags.length > 0 ? ` [${bp.flags.join(", ")}]` : "";
-      return `  - ${bp.name} (${bp.type}, ID: ${bp.nationalId}) | ${bp.accountCount} accounts | Outstanding: GHS ${bp.totalBalance.toLocaleString()} | Max Arrears: ${bp.maxArrears}d${flagStr}\n    Contact: ${bp.contact}\n    Address: ${bp.address}\n    Accounts: ${bp.accountDetails || "None"}`;
+      const scoreStr = bp.creditScore ? ` | Score: ${bp.creditScore}` : "";
+      return `  - ${bp.name} (${bp.type}, ${bp.country}, ID: ${bp.nationalId}) | ${bp.accountCount} accounts | Outstanding: ${bp.totalBalance.toLocaleString()} | Max Arrears: ${bp.maxArrears}d${scoreStr}${flagStr}\n    Employment: ${bp.employmentStatus} | Income: ${bp.monthlyIncome}\n    Accounts: ${bp.accountDetails || "None"}`;
     }).join("\n");
+
+    const totalPortfolio = allAccounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
+    const totalOriginal = allAccounts.reduce((s, a) => s + parseFloat(a.originalAmount || "0"), 0);
+    const delinquentVal = allAccounts.filter(a => a.status === "delinquent").reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
+    const defaultedVal = allAccounts.filter(a => a.status === "default").reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
+    const nplRatio = totalPortfolio > 0 ? ((delinquentVal + defaultedVal) / totalPortfolio * 100).toFixed(1) : "0";
+    const statusCounts: Record<string, number> = {};
+    const typeCounts: Record<string, number> = {};
+    const currencyCounts: Record<string, number> = {};
+    const lenderCounts: Record<string, number> = {};
+    for (const a of allAccounts) {
+      statusCounts[a.status] = (statusCounts[a.status] || 0) + 1;
+      typeCounts[a.accountType] = (typeCounts[a.accountType] || 0) + 1;
+      currencyCounts[a.currency || "GHS"] = (currencyCounts[a.currency || "GHS"] || 0) + 1;
+      lenderCounts[a.lenderInstitution || "Unknown"] = (lenderCounts[a.lenderInstitution || "Unknown"] || 0) + 1;
+    }
+
+    const countryCounts: Record<string, number> = {};
+    const individualCount = borrowersResult.data.filter(b => b.type === "individual" || b.borrowerType === "individual").length;
+    const corporateCount = borrowersResult.data.filter(b => b.type === "corporate" || b.borrowerType === "corporate").length;
+    for (const b of borrowersResult.data) {
+      const c = b.country || "Unknown";
+      countryCounts[c] = (countryCounts[c] || 0) + 1;
+    }
+    const creditScores = borrowersResult.data.filter(b => b.creditScore != null).map(b => b.creditScore as number);
+    const avgScore = creditScores.length > 0 ? Math.round(creditScores.reduce((a, b) => a + b, 0) / creditScores.length) : 0;
+
+    const inquiryPurposes: Record<string, number> = {};
+    const inquiryInstitutions: Record<string, number> = {};
+    for (const inq of allInquiries) {
+      inquiryPurposes[inq.purpose || "unknown"] = (inquiryPurposes[inq.purpose || "unknown"] || 0) + 1;
+      inquiryInstitutions[inq.institution || "Unknown"] = (inquiryInstitutions[inq.institution || "Unknown"] || 0) + 1;
+    }
+
+    const disputeStatuses: Record<string, number> = {};
+    const disputeTypes: Record<string, number> = {};
+    for (const d of disputes) {
+      disputeStatuses[d.status] = (disputeStatuses[d.status] || 0) + 1;
+      disputeTypes[d.disputeType || "unknown"] = (disputeTypes[d.disputeType || "unknown"] || 0) + 1;
+    }
+    const disputeList = disputes.slice(0, 30).map(d => {
+      return `  - Dispute #${d.id}: ${d.disputeType} | Status: ${d.status} | Borrower: ${d.borrowerId} | ${d.description?.substring(0, 80) || "No description"}${d.slaDeadline ? ` | SLA: ${new Date(d.slaDeadline).toLocaleDateString()}` : ""}`;
+    }).join("\n");
+
+    const judgmentList = courtJudgments.slice(0, 20).map(j => {
+      return `  - ${(j as any).judgmentType || "Judgment"} | Borrower: ${j.borrowerId} | Amount: ${(j as any).amount || "N/A"} | Status: ${(j as any).status || "active"} | Court: ${(j as any).courtName || "N/A"}`;
+    }).join("\n");
+
+    const approvalList = pendingApprovals.slice(0, 20).map(a => {
+      return `  - ${a.entityType} | Action: ${a.action} | Status: ${a.status} | By: ${a.submittedBy || "system"} | ${a.createdAt ? new Date(a.createdAt).toLocaleDateString() : ""}`;
+    }).join("\n");
+
+    const userList = users.slice(0, 50).map(u => {
+      return `  - ${sanitizeForPrompt(u.firstName || "")} ${sanitizeForPrompt(u.lastName || "")} (${sanitizeForPrompt(u.username)}) | Role: ${u.role} | Status: ${u.isActive ? "active" : "inactive"}${u.mfaEnabled ? " | MFA enabled" : ""}`;
+    }).join("\n");
+
+    const billingList = billingRecords.slice(0, 20).map(b => {
+      return `  - ${(b as any).institutionName || "Unknown"} | Amount: ${(b as any).amount || 0} ${(b as any).currency || "GHS"} | Status: ${(b as any).status || "pending"} | ${(b as any).billingPeriod || ""} | Type: ${(b as any).billingType || "subscription"}`;
+    }).join("\n");
+
+    const reportLogList = creditReportLogs.slice(0, 30).map(r => {
+      return `  - Report #${(r as any).serialNumber || r.id} | Borrower: ${r.borrowerId} | Purpose: ${(r as any).purpose || "inquiry"} | ${r.createdAt ? new Date(r.createdAt).toLocaleDateString() : ""}`;
+    }).join("\n");
+
+    const recentAudit = auditLogs.slice(0, 30).map(l => {
+      const safeDetails = sanitizeForPrompt((l.details || "").substring(0, 100).replace(/key|token|secret|password/gi, "[REDACTED]"));
+      return `  - [${l.createdAt ? new Date(l.createdAt).toLocaleString() : ""}] ${sanitizeForPrompt(l.action)} on ${sanitizeForPrompt(l.entity)} | ${safeDetails}`;
+    }).join("\n");
+
+    const telcoProfileList = telcoProfiles.slice(0, 50).map(p => {
+      return `  - ${sanitizeForPrompt((p as any).subscriberName || "Unknown")} (${(p as any).msisdn || "N/A"}) | Provider: ${(p as any).provider || "N/A"} | Country: ${(p as any).country || "N/A"} | KYC: ${(p as any).kycLevel || "basic"} | Tenure: ${(p as any).accountTenureMonths || 0} months`;
+    }).join("\n");
+
+    const telcoScoreList = telcoScores.slice(0, 30).map(s => {
+      return `  - Profile: ${s.profileId} | Risk: ${(s as any).riskScore || "N/A"}/5 | Tier: ${(s as any).tier || "N/A"} | Credit Limit: ${(s as any).recommendedCreditLimit || 0} | Score: ${(s as any).aiScore || "N/A"}`;
+    }).join("\n");
+
+    const consentSummary: Record<string, number> = {};
+    for (const c of consentRecords) {
+      consentSummary[(c as any).consentType || "inquiry"] = (consentSummary[(c as any).consentType || "inquiry"] || 0) + 1;
+    }
 
     return `
 === LIVE SYSTEM DATA (real-time from database) ===
-Total Borrowers: ${stats?.totalBorrowers?.toLocaleString() || "N/A"}
+
+--- DASHBOARD KPIs ---
+Total Borrowers: ${stats?.totalBorrowers?.toLocaleString() || "N/A"} (${individualCount} individuals, ${corporateCount} corporates)
 Total Credit Accounts: ${stats?.totalAccounts?.toLocaleString() || "N/A"}
-Total Outstanding Portfolio: GHS ${stats?.totalOutstanding ? parseFloat(stats.totalOutstanding).toLocaleString() : "N/A"}
+Total Outstanding Portfolio: ${totalPortfolio.toLocaleString()} (Original: ${totalOriginal.toLocaleString()})
+NPL Ratio: ${nplRatio}% (Delinquent Value: ${delinquentVal.toLocaleString()}, Defaulted Value: ${defaultedVal.toLocaleString()})
 Delinquent Accounts: ${stats?.delinquentAccounts?.toLocaleString() || "N/A"}
 Defaulted Accounts: ${stats?.defaultAccounts?.toLocaleString() || "N/A"}
 Total Credit Inquiries: ${stats?.totalInquiries?.toLocaleString() || "N/A"}
 Pending Approvals: ${stats?.pendingApprovalCount?.toLocaleString() || "N/A"}
 Open Disputes: ${stats?.openDisputeCount?.toLocaleString() || "N/A"}
+Average Credit Score: ${avgScore || "N/A"}
 ${stats?.outstandingByCurrency ? `Outstanding by Currency:\n${stats.outstandingByCurrency.map(b => `  - ${b.currency}: ${parseFloat(b.total).toLocaleString()}`).join("\n")}` : ""}
 
-Connected Institutions (${institutions.total}):
+--- PORTFOLIO BREAKDOWN ---
+Accounts by Status: ${Object.entries(statusCounts).map(([k, v]) => `${k}: ${v}`).join(", ")}
+Accounts by Type: ${Object.entries(typeCounts).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}: ${v}`).join(", ")}
+Accounts by Currency: ${Object.entries(currencyCounts).map(([k, v]) => `${k}: ${v}`).join(", ")}
+Top Lenders: ${Object.entries(lenderCounts).sort((a, b) => b[1] - a[1]).slice(0, 15).map(([k, v]) => `${k}: ${v}`).join(", ")}
+Borrowers by Country: ${Object.entries(countryCounts).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}: ${v}`).join(", ")}
+Countries Served: ${Object.keys(countryCounts).length}
+
+--- CONNECTED INSTITUTIONS (${institutions.total}) ---
 ${institutionList || "  None registered"}
 
-Organizations (${orgs.length}):
+--- ORGANIZATIONS (${orgs.length}) ---
 ${orgList || "  None"}
 
-Data Retention Policies:
+--- SYSTEM USERS (${users.length}) ---
+${userList || "  No users"}
+
+--- CREDIT INQUIRIES (${allInquiries.length} total) ---
+By Purpose: ${Object.entries(inquiryPurposes).map(([k, v]) => `${k}: ${v}`).join(", ")}
+By Institution: ${Object.entries(inquiryInstitutions).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([k, v]) => `${k}: ${v}`).join(", ")}
+
+--- DISPUTES (${disputes.length} total) ---
+By Status: ${Object.entries(disputeStatuses).map(([k, v]) => `${k}: ${v}`).join(", ")}
+By Type: ${Object.entries(disputeTypes).map(([k, v]) => `${k}: ${v}`).join(", ")}
+${disputeList || "  No disputes"}
+
+--- COURT JUDGMENTS (${courtJudgments.length}) ---
+${judgmentList || "  No court judgments"}
+
+--- PENDING APPROVALS (${pendingApprovals.length}) ---
+${approvalList || "  No pending approvals"}
+
+--- CONSENT RECORDS (${consentRecords.length}) ---
+By Type: ${Object.entries(consentSummary).map(([k, v]) => `${k}: ${v}`).join(", ") || "None"}
+
+--- BILLING RECORDS (${billingRecords.length}) ---
+${billingList || "  No billing records"}
+
+--- CREDIT REPORT LOGS (${creditReportLogs.length} reports generated) ---
+${reportLogList || "  No reports generated"}
+
+--- TELCO CREDIT SCORING ---
+Total MoMo Profiles: ${telcoStats.totalProfiles}
+Total AI Scores Generated: ${telcoStats.totalScores}
+Average Risk Score: ${telcoStats.avgRiskScore}/5
+Approval Rate: ${telcoStats.approvalRate}%
+Tier Breakdown: ${Object.entries(telcoStats.tierBreakdown).map(([k, v]) => `${k}: ${v}`).join(", ") || "N/A"}
+Profiles:
+${telcoProfileList || "  No telco profiles"}
+Recent Scores:
+${telcoScoreList || "  No scores"}
+
+--- DATA RETENTION POLICIES ---
 ${retentionList || "  Default policies"}
 
-Exchange Rates: ${rateInfo}
-Rates are updated automatically every 6 hours from live market data.
+--- EXCHANGE RATES ---
+${rateInfo}
+${allRates || "  No rates available"}
 
-=== BORROWER PORTFOLIO (all ${borrowersResult.total} borrowers, sorted by risk — worst first) ===
+--- RECENT AUDIT LOG (last 30 entries) ---
+${recentAudit || "  No audit entries"}
+
+=== BORROWER PORTFOLIO (${borrowersResult.total} borrowers, sorted by risk — worst first) ===
 ${borrowerList || "  No borrowers"}
 === END LIVE DATA ===`.trim();
   } catch (err) {
@@ -663,9 +815,17 @@ The CDH v2.0 is a multi-tenant SaaS credit registry platform currently operating
 
 20. DATA RETENTION: Configurable per jurisdiction. Ghana: 7 years. Automated cleanup scheduler runs every 24 hours.
 
+21. TELCO CREDIT SCORING: AI-driven Mobile Money (MoMo) analytics for financial inclusion. Profiles MoMo subscribers across 7 African countries using transaction volume, frequency, consistency, and P2P patterns. Risk scoring 1-5 scale with credit tiers (Prime, Near-Prime, Developing, Sub-Prime, High-Risk). Recommends credit limits based on AI analysis. Supports MTN, Vodafone Cash, AirtelTigo Money, Orange Money, M-Pesa, Wave. KYC levels: Basic, Enhanced, Full. Dashboard with country-level and provider-level analytics.
+
+22. CONSUMER/BUSINESS RBAC: Division-based role access control. Retail division users → /consumers. Corporate division users → /businesses. Telco division users → /telco-scoring. Super admins → /command-center. Role-based visibility across all platform features.
+
+23. PLATFORM KPI/ROI: Real-time platform performance metrics visible across Dashboard, Consumers, Businesses, Credit Accounts, and Reports pages. Tracks total revenue, data quality score, API uptime, regulatory compliance rate, collection rate, and dispute resolution rate. Full ROI transparency including cost savings and efficiency gains.
+
 === NAVIGATION GUIDE ===
 - Dashboard: / (home page)
 - Borrowers: /borrowers (list), /borrowers/:id (detail)
+- Consumers: /consumers (individual borrowers, retail division)
+- Businesses: /businesses (corporate borrowers, corporate division)
 - Credit Accounts: /credit-accounts
 - Credit Search: /search
 - Credit Reports: /reports
@@ -686,6 +846,9 @@ The CDH v2.0 is a multi-tenant SaaS credit registry platform currently operating
 - API Keys: /api-keys
 - Documentation: /documentation
 - Ghana Docs: /ghana-docs
+- Telco Scoring: /telco-scoring (telco division / admin)
+- Command Center: /command-center (super admin)
+- Credit Score Methodology: /credit-score-methodology
 - App Guide: /guide
 - Help: /help
 - About: /about
@@ -702,7 +865,7 @@ The CDH v2.0 is a multi-tenant SaaS credit registry platform currently operating
 ${liveContext}
 
 === INSTRUCTIONS ===
-- You have access to the live system data shown above. Use exact numbers when answering questions about the system.
+- You have COMPREHENSIVE access to ALL live system data: borrower portfolios, credit accounts, credit inquiries, disputes, court judgments, consent records, audit logs, billing records, telco MoMo profiles/scores, pending approvals, credit report history, institutions, organizations, users, exchange rates, and retention policies. Use exact numbers when answering.
 - When users ask about features, explain how to navigate to them using the sidebar menu.
 - When users ask about regulations, reference the specific Ghanaian laws (Act 726, Act 843).
 - When discussing financial amounts, always use GHS (Ghana Cedis) unless the user specifies otherwise.
@@ -711,6 +874,7 @@ ${liveContext}
 - You are speaking with a ${userRole || "user"} role user. Tailor your responses to their access level.
 - Do not make up data. If something is not in the live data above, say you don't have that specific information.
 - For technical API questions, reference the API Integration Guide available at /documentation.
+- You can answer questions about: individual borrowers, corporate borrowers, their credit accounts, payment history, credit scores, telco MoMo profiles and AI risk scores, dispute statuses and SLA compliance, court judgments, consent records, billing and subscriptions, audit trail entries, pending approval workflows, credit inquiry history, exchange rates, data retention policies, and platform KPI/ROI metrics.
 - The platform is built by Carlson Capital & Systems In Motion Limited.`
   };
 
