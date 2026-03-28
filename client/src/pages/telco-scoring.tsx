@@ -490,6 +490,24 @@ function AnalyticsDashboard({ analytics }: { analytics: TelcoAnalytics }) {
   );
 }
 
+const COUNTRY_CURRENCIES: Record<string, { code: string; symbol: string }> = {
+  ghana: { code: "GHS", symbol: "GH₵" },
+  kenya: { code: "KES", symbol: "KSh" },
+  nigeria: { code: "NGN", symbol: "₦" },
+  "sierra leone": { code: "SLL", symbol: "Le" },
+  "south africa": { code: "ZAR", symbol: "R" },
+  tanzania: { code: "TZS", symbol: "TSh" },
+  uganda: { code: "UGX", symbol: "USh" },
+  rwanda: { code: "RWF", symbol: "RF" },
+  ethiopia: { code: "ETB", symbol: "Br" },
+  egypt: { code: "EGP", symbol: "E£" },
+};
+
+function getCountryCurrency(country?: string) {
+  if (!country) return { code: "USD", symbol: "$" };
+  return COUNTRY_CURRENCIES[country.toLowerCase()] || { code: "USD", symbol: "$" };
+}
+
 interface DecisionRule {
   id: string;
   name: string;
@@ -602,12 +620,13 @@ function DecisionEnginePanel({ profiles }: { profiles: TelcoProfile[] }) {
       queryClient.invalidateQueries({ queryKey: ["/api/telco/dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["/api/telco/analytics"] });
       const decision = data.decision;
+      const cur = getCountryCurrency(decision.country);
       toast({
         title: decision.status === "rejected" ? "Application Rejected" : "Application Approved",
         description: decision.status === "approved_disbursed"
-          ? `Funds disbursed to ${decision.applicantMsisdn} ($${Number(decision.creditLimitUsd).toLocaleString()})`
+          ? `Funds disbursed to ${decision.applicantMsisdn} (${cur.symbol}${Number(decision.creditLimitUsd).toLocaleString()})`
           : decision.status === "approved_pending"
-          ? `Approved for $${Number(decision.creditLimitUsd).toLocaleString()} — pending disbursement`
+          ? `Approved for ${cur.symbol}${Number(decision.creditLimitUsd).toLocaleString()} — pending disbursement`
           : `Reason: ${decision.reasonCode?.substring(0, 100)}`,
         variant: decision.status === "rejected" ? "destructive" : "default",
       });
@@ -740,7 +759,7 @@ function DecisionEnginePanel({ profiles }: { profiles: TelcoProfile[] }) {
                       </div>
                       <div>
                         <span className="text-muted-foreground">Max Credit</span>
-                        <p className="font-bold">${Number(rule.maxCreditLimitUsd).toLocaleString()}</p>
+                        <p className="font-bold">{Number(rule.maxCreditLimitUsd).toLocaleString()}</p>
                       </div>
                     </div>
                   </div>
@@ -852,7 +871,7 @@ function DecisionEnginePanel({ profiles }: { profiles: TelcoProfile[] }) {
                       )}
                     </TableCell>
                     <TableCell className="text-xs text-right font-bold">{log.riskScore}/5</TableCell>
-                    <TableCell className="text-xs text-right">${Number(log.creditLimitUsd).toLocaleString()}</TableCell>
+                    <TableCell className="text-xs text-right">{getCountryCurrency(log.country).symbol}{Number(log.creditLimitUsd).toLocaleString()}</TableCell>
                     <TableCell className="text-xs max-w-[200px] truncate">
                       {log.disbursementRef || log.reasonCode?.substring(0, 80)}
                     </TableCell>
@@ -931,7 +950,7 @@ function DecisionEnginePanel({ profiles }: { profiles: TelcoProfile[] }) {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Max Credit Limit (USD)</Label>
+                <Label>Max Credit Limit</Label>
                 <Input data-testid="input-max-credit" type="number" value={ruleForm.maxCreditLimitUsd} onChange={e => setRuleForm({ ...ruleForm, maxCreditLimitUsd: e.target.value })} />
               </div>
               <div className="flex flex-col justify-end">
@@ -1043,7 +1062,7 @@ function DecisionEnginePanel({ profiles }: { profiles: TelcoProfile[] }) {
               <div className="text-right">
                 <p className="text-xs text-muted-foreground">Active Rule</p>
                 <p className="text-sm font-semibold">{activeRule?.name}</p>
-                <p className="text-[10px] text-muted-foreground">Max risk: {activeRule?.maxAllowableRiskTier}/5 · Max credit: ${Number(activeRule?.maxCreditLimitUsd || 0).toLocaleString()}</p>
+                <p className="text-[10px] text-muted-foreground">Max risk: {activeRule?.maxAllowableRiskTier}/5 · Max credit: {getCountryCurrency(bulkConfig.country).symbol}{Number(activeRule?.maxCreditLimitUsd || 0).toLocaleString()}</p>
               </div>
             </div>
 
@@ -1143,7 +1162,7 @@ function DecisionEnginePanel({ profiles }: { profiles: TelcoProfile[] }) {
                         )}
                       </TableCell>
                       <TableCell className="text-xs text-right font-bold">{d.riskScore ? `${d.riskScore}/5` : "—"}</TableCell>
-                      <TableCell className="text-xs text-right">{d.creditLimit ? `$${d.creditLimit.toLocaleString()}` : "—"}</TableCell>
+                      <TableCell className="text-xs text-right">{d.creditLimit ? `${getCountryCurrency(bulkConfig.country).symbol}${d.creditLimit.toLocaleString()}` : "—"}</TableCell>
                       <TableCell className="text-xs max-w-[250px] truncate">{d.reasonCode || d.reason || "—"}</TableCell>
                     </TableRow>
                   ))}
@@ -1605,7 +1624,7 @@ export default function TelcoScoringPage() {
                                       <div className="flex items-center gap-2">
                                         {score.creditLimit && Number(score.creditLimit) > 0 && (
                                           <Badge variant="outline" className="text-[10px]">
-                                            <Wallet className="w-3 h-3 mr-1" />${Number(score.creditLimit).toLocaleString()}
+                                            <Wallet className="w-3 h-3 mr-1" />{getCountryCurrency(score.country).symbol}{Number(score.creditLimit).toLocaleString()}
                                           </Badge>
                                         )}
                                         {score.approvalRecommendation ? (
@@ -1685,7 +1704,7 @@ export default function TelcoScoringPage() {
                         <div className="flex items-center gap-2">
                           {score.creditLimit && Number(score.creditLimit) > 0 && (
                             <Badge variant="outline" className="text-[10px]">
-                              <Wallet className="w-3 h-3 mr-1" />${Number(score.creditLimit).toLocaleString()}
+                              <Wallet className="w-3 h-3 mr-1" />{getCountryCurrency(score.country).symbol}{Number(score.creditLimit).toLocaleString()}
                             </Badge>
                           )}
                           {score.approvalRecommendation ? (
