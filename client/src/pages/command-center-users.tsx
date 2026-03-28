@@ -76,9 +76,9 @@ function UserCreateDialog({ open, onOpenChange, organizations }: { open: boolean
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-slate-900 border-slate-700/50 text-white max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md bg-card border-border text-card-foreground max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-white">
+          <DialogTitle className="flex items-center gap-2 text-foreground">
             <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
               <Plus className="w-4 h-4 text-blue-400" />
             </div>
@@ -89,28 +89,28 @@ function UserCreateDialog({ open, onOpenChange, organizations }: { open: boolean
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs text-muted-foreground">Username</Label>
-              <Input data-testid="input-cc-username" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required />
+              <Input data-testid="input-cc-username" className="bg-card border-border text-foreground mt-1 h-9 text-sm" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required />
             </div>
             <div>
               <Label className="text-xs text-muted-foreground">Password</Label>
-              <Input data-testid="input-cc-password" type="password" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+              <Input data-testid="input-cc-password" type="password" className="bg-card border-border text-foreground mt-1 h-9 text-sm" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
             </div>
           </div>
           <div>
             <Label className="text-xs text-muted-foreground">Full Name</Label>
-            <Input data-testid="input-cc-fullname" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} required />
+            <Input data-testid="input-cc-fullname" className="bg-card border-border text-foreground mt-1 h-9 text-sm" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} required />
           </div>
           <div>
             <Label className="text-xs text-muted-foreground">Email</Label>
-            <Input data-testid="input-cc-email" type="email" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+            <Input data-testid="input-cc-email" type="email" className="bg-card border-border text-foreground mt-1 h-9 text-sm" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
           </div>
           <div>
             <Label className="text-xs text-muted-foreground">Organization</Label>
             <Select value={form.organizationId} onValueChange={(v) => setForm({ ...form, organizationId: v })}>
-              <SelectTrigger data-testid="select-cc-org" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm">
+              <SelectTrigger data-testid="select-cc-org" className="bg-card border-border text-foreground mt-1 h-9 text-sm">
                 <SelectValue placeholder="Select organization..." />
               </SelectTrigger>
-              <SelectContent className="bg-slate-900 border-slate-700">
+              <SelectContent className="bg-popover border-border">
                 <SelectItem value="none" className="text-muted-foreground">No Organization</SelectItem>
                 {organizations.map((org) => (
                   <SelectItem key={org.id} value={org.id} className="text-muted-foreground">{org.name}</SelectItem>
@@ -122,8 +122,8 @@ function UserCreateDialog({ open, onOpenChange, organizations }: { open: boolean
             <div>
               <Label className="text-xs text-muted-foreground">Role</Label>
               <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v })}>
-                <SelectTrigger data-testid="select-cc-role" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700">
+                <SelectTrigger data-testid="select-cc-role" className="bg-card border-border text-foreground mt-1 h-9 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-popover border-border">
                   <SelectItem value="super_admin" className="text-muted-foreground">Super Admin</SelectItem>
                   <SelectItem value="admin" className="text-muted-foreground">Admin</SelectItem>
                   <SelectItem value="regulator" className="text-muted-foreground">Regulator</SelectItem>
@@ -135,8 +135,8 @@ function UserCreateDialog({ open, onOpenChange, organizations }: { open: boolean
             <div>
               <Label className="text-xs text-muted-foreground">Status</Label>
               <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
-                <SelectTrigger data-testid="select-cc-status" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700">
+                <SelectTrigger data-testid="select-cc-status" className="bg-card border-border text-foreground mt-1 h-9 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-popover border-border">
                   <SelectItem value="active" className="text-muted-foreground">Active</SelectItem>
                   <SelectItem value="suspended" className="text-muted-foreground">Suspended</SelectItem>
                   <SelectItem value="deactivated" className="text-muted-foreground">Deactivated</SelectItem>
@@ -146,7 +146,7 @@ function UserCreateDialog({ open, onOpenChange, organizations }: { open: boolean
           </div>
           <div>
             <Label className="text-xs text-muted-foreground">Institution</Label>
-            <Input data-testid="input-cc-institution" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm" value={form.institution} onChange={(e) => setForm({ ...form, institution: e.target.value })} />
+            <Input data-testid="input-cc-institution" className="bg-card border-border text-foreground mt-1 h-9 text-sm" value={form.institution} onChange={(e) => setForm({ ...form, institution: e.target.value })} />
           </div>
           <Button type="submit" className="w-full" disabled={createMutation.isPending} data-testid="button-cc-submit-user">
             {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
@@ -197,27 +197,27 @@ function UserEditDialog({ user, open, onOpenChange, organizations }: { user: Use
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) setForm({ fullName: "", email: "", role: "", status: "", institution: "", password: "", organizationId: "" }); onOpenChange(v); }}>
-      <DialogContent className="max-w-md bg-slate-900 border-slate-700/50 text-white max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md bg-card border-border text-card-foreground max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-white">
+          <DialogTitle className="flex items-center gap-2 text-foreground">
             <Pencil className="w-4 h-4 text-blue-400" /> Edit User
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={(e) => { e.preventDefault(); if (user) editMutation.mutate({ id: user.id, data: form }); }} className="space-y-3" data-testid="form-cc-edit-user">
           <div>
             <Label className="text-xs text-muted-foreground">Full Name</Label>
-            <Input data-testid="input-cc-edit-fullname" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} required />
+            <Input data-testid="input-cc-edit-fullname" className="bg-card border-border text-foreground mt-1 h-9 text-sm" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} required />
           </div>
           <div>
             <Label className="text-xs text-muted-foreground">Email</Label>
-            <Input data-testid="input-cc-edit-email" type="email" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+            <Input data-testid="input-cc-edit-email" type="email" className="bg-card border-border text-foreground mt-1 h-9 text-sm" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs text-muted-foreground">Role</Label>
               <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v })}>
-                <SelectTrigger data-testid="select-cc-edit-role" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700">
+                <SelectTrigger data-testid="select-cc-edit-role" className="bg-card border-border text-foreground mt-1 h-9 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-popover border-border">
                   <SelectItem value="super_admin" className="text-muted-foreground">Super Admin</SelectItem>
                   <SelectItem value="admin" className="text-muted-foreground">Admin</SelectItem>
                   <SelectItem value="regulator" className="text-muted-foreground">Regulator</SelectItem>
@@ -229,8 +229,8 @@ function UserEditDialog({ user, open, onOpenChange, organizations }: { user: Use
             <div>
               <Label className="text-xs text-muted-foreground">Status</Label>
               <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
-                <SelectTrigger data-testid="select-cc-edit-status" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700">
+                <SelectTrigger data-testid="select-cc-edit-status" className="bg-card border-border text-foreground mt-1 h-9 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-popover border-border">
                   <SelectItem value="active" className="text-muted-foreground">Active</SelectItem>
                   <SelectItem value="suspended" className="text-muted-foreground">Suspended</SelectItem>
                   <SelectItem value="deactivated" className="text-muted-foreground">Deactivated</SelectItem>
@@ -241,7 +241,7 @@ function UserEditDialog({ user, open, onOpenChange, organizations }: { user: Use
           <div>
             <Label className="text-xs text-muted-foreground">Organization</Label>
             <Select value={form.organizationId || "none"} onValueChange={(v) => setForm({ ...form, organizationId: v })}>
-              <SelectTrigger data-testid="select-cc-edit-org" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm"><SelectValue /></SelectTrigger>
+              <SelectTrigger data-testid="select-cc-edit-org" className="bg-card border-border text-foreground mt-1 h-9 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent className="bg-card border-border max-h-[200px]">
                 <SelectItem value="none" className="text-muted-foreground">No Organization</SelectItem>
                 {organizations.map((o) => (
@@ -252,7 +252,7 @@ function UserEditDialog({ user, open, onOpenChange, organizations }: { user: Use
           </div>
           <div>
             <Label className="text-xs text-muted-foreground">New Password (leave blank to keep)</Label>
-            <Input data-testid="input-cc-edit-password" type="password" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Leave blank to keep current" />
+            <Input data-testid="input-cc-edit-password" type="password" className="bg-card border-border text-foreground mt-1 h-9 text-sm" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Leave blank to keep current" />
           </div>
           <Button type="submit" className="w-full" disabled={editMutation.isPending} data-testid="button-cc-save-edit">
             {editMutation.isPending ? "Saving..." : "Save Changes"}
@@ -290,9 +290,9 @@ function OrgCreateDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-slate-900 border-slate-700/50 text-white max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md bg-card border-border text-card-foreground max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-white">
+          <DialogTitle className="flex items-center gap-2 text-foreground">
             <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
               <Plus className="w-4 h-4 text-amber-400" />
             </div>
@@ -302,7 +302,7 @@ function OrgCreateDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
         <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(form); }} className="space-y-3" data-testid="form-cc-add-org">
           <div>
             <Label className="text-xs text-muted-foreground">Organization Name</Label>
-            <Input data-testid="input-cc-org-name" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm" value={form.name}
+            <Input data-testid="input-cc-org-name" className="bg-card border-border text-foreground mt-1 h-9 text-sm" value={form.name}
               onChange={(e) => {
                 const name = e.target.value;
                 const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -311,15 +311,15 @@ function OrgCreateDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
           </div>
           <div>
             <Label className="text-xs text-muted-foreground">URL Slug</Label>
-            <Input data-testid="input-cc-org-slug" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm" value={form.slug}
+            <Input data-testid="input-cc-org-slug" className="bg-card border-border text-foreground mt-1 h-9 text-sm" value={form.slug}
               onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") })} required />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs text-muted-foreground">Type</Label>
               <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
-                <SelectTrigger data-testid="select-cc-org-type" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700">
+                <SelectTrigger data-testid="select-cc-org-type" className="bg-card border-border text-foreground mt-1 h-9 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-popover border-border">
                   {["bank", "microfinance", "insurance", "telecom", "fintech", "utility", "government", "regulator", "real_estate", "investment", "other"].map((t) => (
                     <SelectItem key={t} value={t} className="text-muted-foreground capitalize">{t.replace("_", " ")}</SelectItem>
                   ))}
@@ -329,8 +329,8 @@ function OrgCreateDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
             <div>
               <Label className="text-xs text-muted-foreground">Country</Label>
               <Select value={form.country} onValueChange={(v) => setForm({ ...form, country: v })}>
-                <SelectTrigger data-testid="select-cc-org-country" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm"><SelectValue placeholder="Select..." /></SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700">
+                <SelectTrigger data-testid="select-cc-org-country" className="bg-card border-border text-foreground mt-1 h-9 text-sm"><SelectValue placeholder="Select..." /></SelectTrigger>
+                <SelectContent className="bg-popover border-border">
                   {countries.map((c) => (
                     <SelectItem key={c.code} value={c.name} className="text-muted-foreground">{c.name}</SelectItem>
                   ))}
@@ -341,18 +341,18 @@ function OrgCreateDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs text-muted-foreground">Contact Email</Label>
-              <Input data-testid="input-cc-org-email" type="email" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm" value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} />
+              <Input data-testid="input-cc-org-email" type="email" className="bg-card border-border text-foreground mt-1 h-9 text-sm" value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} />
             </div>
             <div>
               <Label className="text-xs text-muted-foreground">Contact Phone</Label>
-              <Input data-testid="input-cc-org-phone" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm" value={form.contactPhone} onChange={(e) => setForm({ ...form, contactPhone: e.target.value })} />
+              <Input data-testid="input-cc-org-phone" className="bg-card border-border text-foreground mt-1 h-9 text-sm" value={form.contactPhone} onChange={(e) => setForm({ ...form, contactPhone: e.target.value })} />
             </div>
           </div>
           <div>
             <Label className="text-xs text-muted-foreground">Subscription Tier</Label>
             <Select value={form.subscriptionTier} onValueChange={(v) => setForm({ ...form, subscriptionTier: v, maxUsers: v === "enterprise" ? 100 : v === "professional" ? 50 : 10 })}>
-              <SelectTrigger data-testid="select-cc-org-tier" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent className="bg-slate-900 border-slate-700">
+              <SelectTrigger data-testid="select-cc-org-tier" className="bg-card border-border text-foreground mt-1 h-9 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent className="bg-popover border-border">
                 <SelectItem value="standard" className="text-muted-foreground">Standard ($299/mo)</SelectItem>
                 <SelectItem value="professional" className="text-muted-foreground">Professional ($799/mo)</SelectItem>
                 <SelectItem value="enterprise" className="text-muted-foreground">Enterprise ($1,999/mo)</SelectItem>
@@ -410,23 +410,23 @@ function OrgEditDialog({ org, open, onOpenChange }: { org: Organization | null; 
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) setForm({ name: "", contactEmail: "", contactPhone: "", type: "", status: "", country: "", subscriptionTier: "" }); onOpenChange(v); }}>
-      <DialogContent className="max-w-md bg-slate-900 border-slate-700/50 text-white max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md bg-card border-border text-card-foreground max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-white">
+          <DialogTitle className="flex items-center gap-2 text-foreground">
             <Pencil className="w-4 h-4 text-blue-400" /> Edit Organization
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={(e) => { e.preventDefault(); if (org) editMutation.mutate({ id: org.id, data: form }); }} className="space-y-3" data-testid="form-cc-edit-org">
           <div>
             <Label className="text-xs text-muted-foreground">Organization Name</Label>
-            <Input data-testid="input-cc-edit-org-name" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+            <Input data-testid="input-cc-edit-org-name" className="bg-card border-border text-foreground mt-1 h-9 text-sm" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs text-muted-foreground">Type</Label>
               <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
-                <SelectTrigger data-testid="select-cc-edit-org-type" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700">
+                <SelectTrigger data-testid="select-cc-edit-org-type" className="bg-card border-border text-foreground mt-1 h-9 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-popover border-border">
                   {["bank", "microfinance", "insurance", "telecom", "fintech", "utility", "government", "regulator", "real_estate", "investment", "other"].map((t) => (
                     <SelectItem key={t} value={t} className="text-muted-foreground capitalize">{t.replace("_", " ")}</SelectItem>
                   ))}
@@ -436,8 +436,8 @@ function OrgEditDialog({ org, open, onOpenChange }: { org: Organization | null; 
             <div>
               <Label className="text-xs text-muted-foreground">Status</Label>
               <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
-                <SelectTrigger data-testid="select-cc-edit-org-status" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700">
+                <SelectTrigger data-testid="select-cc-edit-org-status" className="bg-card border-border text-foreground mt-1 h-9 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-popover border-border">
                   <SelectItem value="pending" className="text-muted-foreground">Pending</SelectItem>
                   <SelectItem value="active" className="text-muted-foreground">Active</SelectItem>
                   <SelectItem value="suspended" className="text-muted-foreground">Suspended</SelectItem>
@@ -449,8 +449,8 @@ function OrgEditDialog({ org, open, onOpenChange }: { org: Organization | null; 
           <div>
             <Label className="text-xs text-muted-foreground">Country</Label>
             <Select value={form.country} onValueChange={(v) => setForm({ ...form, country: v })}>
-              <SelectTrigger data-testid="select-cc-edit-org-country" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm"><SelectValue placeholder="Select..." /></SelectTrigger>
-              <SelectContent className="bg-slate-900 border-slate-700">
+              <SelectTrigger data-testid="select-cc-edit-org-country" className="bg-card border-border text-foreground mt-1 h-9 text-sm"><SelectValue placeholder="Select..." /></SelectTrigger>
+              <SelectContent className="bg-popover border-border">
                 {countries.map((c) => (
                   <SelectItem key={c.code} value={c.name} className="text-muted-foreground">{c.name}</SelectItem>
                 ))}
@@ -460,18 +460,18 @@ function OrgEditDialog({ org, open, onOpenChange }: { org: Organization | null; 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs text-muted-foreground">Contact Email</Label>
-              <Input data-testid="input-cc-edit-org-email" type="email" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm" value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} />
+              <Input data-testid="input-cc-edit-org-email" type="email" className="bg-card border-border text-foreground mt-1 h-9 text-sm" value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} />
             </div>
             <div>
               <Label className="text-xs text-muted-foreground">Contact Phone</Label>
-              <Input data-testid="input-cc-edit-org-phone" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm" value={form.contactPhone} onChange={(e) => setForm({ ...form, contactPhone: e.target.value })} />
+              <Input data-testid="input-cc-edit-org-phone" className="bg-card border-border text-foreground mt-1 h-9 text-sm" value={form.contactPhone} onChange={(e) => setForm({ ...form, contactPhone: e.target.value })} />
             </div>
           </div>
           <div>
             <Label className="text-xs text-muted-foreground">Subscription Tier</Label>
             <Select value={form.subscriptionTier} onValueChange={(v) => setForm({ ...form, subscriptionTier: v })}>
-              <SelectTrigger data-testid="select-cc-edit-org-tier" className="bg-slate-800/50 border-slate-700/50 text-white mt-1 h-9 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent className="bg-slate-900 border-slate-700">
+              <SelectTrigger data-testid="select-cc-edit-org-tier" className="bg-card border-border text-foreground mt-1 h-9 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent className="bg-popover border-border">
                 <SelectItem value="standard" className="text-muted-foreground">Standard ($299/mo)</SelectItem>
                 <SelectItem value="professional" className="text-muted-foreground">Professional ($799/mo)</SelectItem>
                 <SelectItem value="enterprise" className="text-muted-foreground">Enterprise ($1,999/mo)</SelectItem>
@@ -566,19 +566,19 @@ export function CommandCenterUsersTab() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="rounded-xl border border-border bg-white/5 p-3 text-center">
-          <p className="text-xl font-bold text-white" data-testid="text-total-users">{users.length}</p>
+        <div className="rounded-xl border border-border bg-muted p-3 text-center">
+          <p className="text-xl font-bold text-foreground" data-testid="text-total-users">{users.length}</p>
           <p className="text-[10px] text-muted-foreground">Total Users</p>
         </div>
-        <div className="rounded-xl border border-border bg-white/5 p-3 text-center">
+        <div className="rounded-xl border border-border bg-muted p-3 text-center">
           <p className="text-xl font-bold text-emerald-400" data-testid="text-active-users">{activeUsers}</p>
           <p className="text-[10px] text-muted-foreground">Active Users</p>
         </div>
-        <div className="rounded-xl border border-border bg-white/5 p-3 text-center">
-          <p className="text-xl font-bold text-white" data-testid="text-total-orgs">{orgs.length}</p>
+        <div className="rounded-xl border border-border bg-muted p-3 text-center">
+          <p className="text-xl font-bold text-foreground" data-testid="text-total-orgs">{orgs.length}</p>
           <p className="text-[10px] text-muted-foreground">Organizations</p>
         </div>
-        <div className="rounded-xl border border-border bg-white/5 p-3 text-center">
+        <div className="rounded-xl border border-border bg-muted p-3 text-center">
           <p className="text-xl font-bold text-blue-400">{usersByRole.admin || 0}</p>
           <p className="text-[10px] text-muted-foreground">Administrators</p>
         </div>
@@ -586,11 +586,11 @@ export function CommandCenterUsersTab() {
 
       <Tabs value={subTab} onValueChange={setSubTab}>
         <div className="flex items-center justify-between">
-          <TabsList className="bg-white/5 border border-border h-8">
-            <TabsTrigger value="users" className="text-[11px] data-[state=active]:bg-muted-foreground data-[state=active]:text-white h-6 px-3" data-testid="subtab-users">
+          <TabsList className="bg-muted border border-border h-8">
+            <TabsTrigger value="users" className="text-[11px] data-[state=active]:bg-muted-foreground data-[state=active]:text-primary-foreground h-6 px-3" data-testid="subtab-users">
               <Users className="w-3 h-3 mr-1.5" /> Users ({filteredUsers.length})
             </TabsTrigger>
-            <TabsTrigger value="clients" className="text-[11px] data-[state=active]:bg-muted-foreground data-[state=active]:text-white h-6 px-3" data-testid="subtab-clients">
+            <TabsTrigger value="clients" className="text-[11px] data-[state=active]:bg-muted-foreground data-[state=active]:text-primary-foreground h-6 px-3" data-testid="subtab-clients">
               <Building2 className="w-3 h-3 mr-1.5" /> Clients ({filteredOrgs.length})
             </TabsTrigger>
           </TabsList>
@@ -614,17 +614,17 @@ export function CommandCenterUsersTab() {
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <Input
                 placeholder="Search users..."
-                className="pl-8 bg-slate-800/50 border-slate-700/50 text-white h-8 text-xs"
+                className="pl-8 bg-card border-border text-foreground h-8 text-xs"
                 value={userSearch}
                 onChange={(e) => setUserSearch(e.target.value)}
                 data-testid="input-cc-user-search"
               />
             </div>
             <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-[120px] bg-slate-800/50 border-slate-700/50 text-white h-8 text-xs" data-testid="filter-role">
+              <SelectTrigger className="w-[120px] bg-card border-border text-foreground h-8 text-xs" data-testid="filter-role">
                 <SelectValue placeholder="Role" />
               </SelectTrigger>
-              <SelectContent className="bg-slate-900 border-slate-700">
+              <SelectContent className="bg-popover border-border">
                 <SelectItem value="all" className="text-muted-foreground text-xs">All Roles</SelectItem>
                 <SelectItem value="super_admin" className="text-muted-foreground text-xs">Super Admin</SelectItem>
                 <SelectItem value="admin" className="text-muted-foreground text-xs">Admin</SelectItem>
@@ -634,10 +634,10 @@ export function CommandCenterUsersTab() {
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[120px] bg-slate-800/50 border-slate-700/50 text-white h-8 text-xs" data-testid="filter-status">
+              <SelectTrigger className="w-[120px] bg-card border-border text-foreground h-8 text-xs" data-testid="filter-status">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
-              <SelectContent className="bg-slate-900 border-slate-700">
+              <SelectContent className="bg-popover border-border">
                 <SelectItem value="all" className="text-muted-foreground text-xs">All Status</SelectItem>
                 <SelectItem value="active" className="text-muted-foreground text-xs">Active</SelectItem>
                 <SelectItem value="suspended" className="text-muted-foreground text-xs">Suspended</SelectItem>
@@ -645,10 +645,10 @@ export function CommandCenterUsersTab() {
               </SelectContent>
             </Select>
             <Select value={countryFilter} onValueChange={setCountryFilter}>
-              <SelectTrigger className="w-[130px] bg-slate-800/50 border-slate-700/50 text-white h-8 text-xs" data-testid="filter-country">
+              <SelectTrigger className="w-[130px] bg-card border-border text-foreground h-8 text-xs" data-testid="filter-country">
                 <SelectValue placeholder="Country" />
               </SelectTrigger>
-              <SelectContent className="bg-slate-900 border-slate-700">
+              <SelectContent className="bg-popover border-border">
                 <SelectItem value="all" className="text-muted-foreground text-xs">All Countries</SelectItem>
                 {countries.map((c) => (
                   <SelectItem key={c.code} value={c.name} className="text-muted-foreground text-xs">{c.name}</SelectItem>
@@ -656,7 +656,7 @@ export function CommandCenterUsersTab() {
               </SelectContent>
             </Select>
             <Select value={orgFilter} onValueChange={setOrgFilter}>
-              <SelectTrigger className="w-[150px] bg-slate-800/50 border-slate-700/50 text-white h-8 text-xs" data-testid="filter-org">
+              <SelectTrigger className="w-[150px] bg-card border-border text-foreground h-8 text-xs" data-testid="filter-org">
                 <SelectValue placeholder="Organization" />
               </SelectTrigger>
               <SelectContent className="bg-card border-border max-h-[200px]">
@@ -669,7 +669,7 @@ export function CommandCenterUsersTab() {
             </Select>
           </div>
 
-          <div className="rounded-xl border border-border bg-white/5 overflow-hidden">
+          <div className="rounded-xl border border-border bg-muted overflow-hidden">
             {usersLoading ? (
               <div className="p-8 text-center"><Loader2 className="w-5 h-5 text-muted-foreground animate-spin mx-auto" /></div>
             ) : filteredUsers.length === 0 ? (
@@ -692,14 +692,14 @@ export function CommandCenterUsersTab() {
                   </thead>
                   <tbody>
                     {filteredUsers.map((u) => (
-                      <tr key={u.id} className="border-b border-border/20 hover:bg-white/10" data-testid={`row-cc-user-${u.id}`}>
+                      <tr key={u.id} className="border-b border-border/20 hover:bg-accent" data-testid={`row-cc-user-${u.id}`}>
                         <td className="p-3">
                           <div className="flex items-center gap-2">
                             <div className="w-7 h-7 rounded-full bg-muted-foreground flex items-center justify-center">
                               <span className="text-[10px] font-medium text-muted-foreground">{u.fullName.split(" ").map(n => n[0]).join("").slice(0, 2)}</span>
                             </div>
                             <div>
-                              <p className="text-xs font-medium text-white">{u.fullName}</p>
+                              <p className="text-xs font-medium text-foreground">{u.fullName}</p>
                               <p className="text-[10px] text-muted-foreground">{u.email}</p>
                             </div>
                           </div>
@@ -712,7 +712,7 @@ export function CommandCenterUsersTab() {
                           <div className="flex items-center justify-end gap-1">
                             <button
                               onClick={() => { setEditUser(u); setEditUserOpen(true); }}
-                              className="p-1.5 rounded-md hover:bg-white/10 text-muted-foreground hover:text-white transition-colors"
+                              className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
                               data-testid={`button-cc-edit-user-${u.id}`}
                             >
                               <Pencil className="w-3 h-3" />
@@ -742,14 +742,14 @@ export function CommandCenterUsersTab() {
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <Input
               placeholder="Search organizations..."
-              className="pl-8 bg-slate-800/50 border-slate-700/50 text-white h-8 text-xs"
+              className="pl-8 bg-card border-border text-foreground h-8 text-xs"
               value={orgSearch}
               onChange={(e) => setOrgSearch(e.target.value)}
               data-testid="input-cc-org-search"
             />
           </div>
 
-          <div className="rounded-xl border border-border bg-white/5 overflow-hidden">
+          <div className="rounded-xl border border-border bg-muted overflow-hidden">
             {orgsLoading ? (
               <div className="p-8 text-center"><Loader2 className="w-5 h-5 text-muted-foreground animate-spin mx-auto" /></div>
             ) : filteredOrgs.length === 0 ? (
@@ -773,14 +773,14 @@ export function CommandCenterUsersTab() {
                   </thead>
                   <tbody>
                     {filteredOrgs.map((o) => (
-                      <tr key={o.id} className="border-b border-border/20 hover:bg-white/10" data-testid={`row-cc-org-${o.id}`}>
+                      <tr key={o.id} className="border-b border-border/20 hover:bg-accent" data-testid={`row-cc-org-${o.id}`}>
                         <td className="p-3">
                           <div className="flex items-center gap-2">
                             <div className="w-7 h-7 rounded-full bg-muted-foreground flex items-center justify-center">
                               <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
                             </div>
                             <div>
-                              <p className="text-xs font-medium text-white">{o.name}</p>
+                              <p className="text-xs font-medium text-foreground">{o.name}</p>
                               <p className="text-[10px] text-muted-foreground">{o.contactEmail || "—"}</p>
                             </div>
                           </div>
@@ -805,7 +805,7 @@ export function CommandCenterUsersTab() {
                           <div className="flex items-center justify-end gap-1">
                             <button
                               onClick={() => { setEditOrg(o); setEditOrgOpen(true); }}
-                              className="p-1.5 rounded-md hover:bg-white/10 text-muted-foreground hover:text-white transition-colors"
+                              className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
                               data-testid={`button-cc-edit-org-${o.id}`}
                             >
                               <Pencil className="w-3 h-3" />
@@ -835,12 +835,12 @@ export function CommandCenterUsersTab() {
       <OrgEditDialog org={editOrg} open={editOrgOpen} onOpenChange={(v) => { setEditOrgOpen(v); if (!v) setEditOrg(null); }} />
 
       <Dialog open={!!deleteUser} onOpenChange={(v) => !v && setDeleteUser(null)}>
-        <DialogContent className="bg-slate-900 border-slate-700/50 text-white">
+        <DialogContent className="bg-card border-border text-card-foreground">
           <DialogHeader>
-            <DialogTitle className="text-white">Delete User</DialogTitle>
+            <DialogTitle className="text-foreground">Delete User</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground" data-testid="text-cc-delete-user-confirm">
-            Are you sure you want to delete <span className="text-white font-medium">{deleteUser?.fullName}</span>? This action cannot be undone.
+            Are you sure you want to delete <span className="text-foreground font-medium">{deleteUser?.fullName}</span>? This action cannot be undone.
           </p>
           <DialogFooter className="gap-2">
             <Button variant="ghost" onClick={() => setDeleteUser(null)} className="text-muted-foreground" data-testid="button-cc-cancel-delete-user">Cancel</Button>
@@ -852,12 +852,12 @@ export function CommandCenterUsersTab() {
       </Dialog>
 
       <Dialog open={!!deleteOrg} onOpenChange={(v) => !v && setDeleteOrg(null)}>
-        <DialogContent className="bg-slate-900 border-slate-700/50 text-white">
+        <DialogContent className="bg-card border-border text-card-foreground">
           <DialogHeader>
-            <DialogTitle className="text-white">Delete Organization</DialogTitle>
+            <DialogTitle className="text-foreground">Delete Organization</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground" data-testid="text-cc-delete-org-confirm">
-            Are you sure you want to delete <span className="text-white font-medium">{deleteOrg?.name}</span>? All associated users will also be removed. This cannot be undone.
+            Are you sure you want to delete <span className="text-foreground font-medium">{deleteOrg?.name}</span>? All associated users will also be removed. This cannot be undone.
           </p>
           <DialogFooter className="gap-2">
             <Button variant="ghost" onClick={() => setDeleteOrg(null)} className="text-muted-foreground" data-testid="button-cc-cancel-delete-org">Cancel</Button>

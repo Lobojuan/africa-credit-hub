@@ -96,8 +96,8 @@ export function CommandCenterBillingTab() {
   return (
     <div className="space-y-4" data-testid="panel-billing">
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <div className="rounded-xl border border-border bg-white/5 p-3 text-center">
-          <p className="text-2xl font-bold text-white" data-testid="text-total-revenue">${(s?.totalRevenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+        <div className="rounded-xl border border-border bg-muted p-3 text-center">
+          <p className="text-2xl font-bold text-foreground" data-testid="text-total-revenue">${(s?.totalRevenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
           <p className="text-[10px] text-muted-foreground">Total Revenue</p>
         </div>
         <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-center">
@@ -112,8 +112,8 @@ export function CommandCenterBillingTab() {
           <p className="text-2xl font-bold text-red-400">${(s?.overdueRevenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
           <p className="text-[10px] text-muted-foreground">Overdue</p>
         </div>
-        <div className="rounded-xl border border-border bg-white/5 p-3 text-center">
-          <p className="text-2xl font-bold text-white">{s?.invoiceCount || 0}</p>
+        <div className="rounded-xl border border-border bg-muted p-3 text-center">
+          <p className="text-2xl font-bold text-foreground">{s?.invoiceCount || 0}</p>
           <p className="text-[10px] text-muted-foreground">Invoices</p>
         </div>
       </div>
@@ -125,7 +125,7 @@ export function CommandCenterBillingTab() {
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
             <div className="flex items-center gap-2 mb-3 flex-wrap">
               <Tag className="w-4 h-4 text-amber-400" />
-              <h3 className="text-sm font-semibold text-white">Pricing Tiers</h3>
+              <h3 className="text-sm font-semibold text-foreground">Pricing Tiers</h3>
               <span className="text-[10px] text-amber-400 ml-1">({displayTiers.length} tiers)</span>
               <span className="text-[10px] text-muted-foreground ml-auto">Click any green price to edit</span>
             </div>
@@ -138,7 +138,7 @@ export function CommandCenterBillingTab() {
                 className={`text-[10px] px-2.5 py-1 rounded-full border transition-all ${
                   selectedCountry === "all"
                     ? "bg-amber-500/30 text-amber-300 border-amber-500/40 font-semibold"
-                    : "border-white/10 text-white/50 hover:text-white hover:bg-white/10"
+                    : "border-border text-muted-foreground hover:text-foreground hover:bg-accent"
                 }`}
                 data-testid="filter-country-all"
               >
@@ -151,7 +151,7 @@ export function CommandCenterBillingTab() {
                   className={`text-[10px] px-2.5 py-1 rounded-full border transition-all ${
                     selectedCountry === c
                       ? "bg-amber-500/30 text-amber-300 border-amber-500/40 font-semibold"
-                      : "border-white/10 text-white/50 hover:text-white hover:bg-white/10"
+                      : "border-border text-muted-foreground hover:text-foreground hover:bg-accent"
                   }`}
                   data-testid={`filter-country-${c.toLowerCase().replace(/\s+/g, '-')}`}
                 >
@@ -163,7 +163,7 @@ export function CommandCenterBillingTab() {
             <div className="overflow-x-auto">
               <table className="w-full text-left" data-testid="pricing-tiers-table">
                 <thead>
-                  <tr className="border-b border-white/10">
+                  <tr className="border-b border-border">
                     {selectedCountry === "all" && <th className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider py-2 px-2">Country</th>}
                     <th className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider py-2 px-2">Tier Name</th>
                     <th className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider py-2 px-2">Event Type</th>
@@ -181,14 +181,14 @@ export function CommandCenterBillingTab() {
                     const tierCurrency = String(tier.currency || "USD");
                     const tierCountry = String(tier.country || "Global");
                     return (
-                      <tr key={tier.id} className="border-b border-white/5 hover:bg-white/5 transition-colors" data-testid={`pricing-tier-${tier.id}`}>
+                      <tr key={tier.id} className="border-b border-border/50 hover:bg-muted transition-colors" data-testid={`pricing-tier-${tier.id}`}>
                         {selectedCountry === "all" && (
                           <td className="py-1.5 px-2">
                             <span className="text-[10px] text-amber-400 font-medium">{tierCountry}</span>
                           </td>
                         )}
                         <td className="py-1.5 px-2">
-                          <span className="text-xs text-white">{tier.name}</span>
+                          <span className="text-xs text-foreground">{tier.name}</span>
                         </td>
                         <td className="py-1.5 px-2">
                           <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-cyan-500/10 text-cyan-400 border-cyan-500/30">
@@ -202,13 +202,13 @@ export function CommandCenterBillingTab() {
                           <span className="text-[10px] text-muted-foreground font-mono">{maxVol != null ? maxVol.toLocaleString() : "∞"}</span>
                         </td>
                         <td className="py-1.5 px-2 text-center">
-                          <Badge variant="outline" className="text-[8px] px-1 py-0 border-white/10 text-muted-foreground">{tierCurrency}</Badge>
+                          <Badge variant="outline" className="text-[8px] px-1 py-0 border-border text-muted-foreground">{tierCurrency}</Badge>
                         </td>
                         <td className="py-1.5 px-2 text-right">
                           {editingTier === tier.id ? (
                             <div className="flex items-center gap-1 justify-end">
                               <Input
-                                className="h-6 w-20 text-[10px] bg-slate-900 border-slate-700/50 text-white px-1"
+                                className="h-6 w-20 text-[10px] bg-muted border-border text-foreground px-1"
                                 value={editPrice}
                                 onChange={(e) => setEditPrice(e.target.value)}
                                 onKeyDown={(e) => {
@@ -244,19 +244,19 @@ export function CommandCenterBillingTab() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="rounded-xl border border-border bg-white/5 p-4">
+            <div className="rounded-xl border border-border bg-muted p-4">
               <div className="flex items-center gap-2 mb-3">
                 <TrendingUp className="w-4 h-4 text-cyan-400" />
-                <h3 className="text-sm font-semibold text-white">Usage by Category</h3>
+                <h3 className="text-sm font-semibold text-foreground">Usage by Category</h3>
               </div>
               {(data?.usageByCategory || []).length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">No usage events recorded yet</p>
               ) : (
                 <div className="space-y-2">
                   {data!.usageByCategory.map((u: any) => (
-                    <div key={u.eventType} className="p-2 rounded-lg border border-border/30 bg-white/[0.03]">
+                    <div key={u.eventType} className="p-2 rounded-lg border border-border/30 bg-muted/50">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-white">{EVENT_LABELS[u.eventType] || u.eventType}</span>
+                        <span className="text-xs text-foreground">{EVENT_LABELS[u.eventType] || u.eventType}</span>
                         <span className="text-xs font-mono text-emerald-400">${(u.totalCents / 100).toFixed(2)}</span>
                       </div>
                       <div className="flex items-center justify-between mt-1">
@@ -271,10 +271,10 @@ export function CommandCenterBillingTab() {
               )}
             </div>
 
-            <div className="rounded-xl border border-border bg-white/5 p-4">
+            <div className="rounded-xl border border-border bg-muted p-4">
               <div className="flex items-center gap-2 mb-3">
                 <Building2 className="w-4 h-4 text-violet-400" />
-                <h3 className="text-sm font-semibold text-white">Revenue by Organization</h3>
+                <h3 className="text-sm font-semibold text-foreground">Revenue by Organization</h3>
               </div>
               {(data?.revenueByOrg || []).length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">No billing records yet</p>
@@ -298,10 +298,10 @@ export function CommandCenterBillingTab() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-border bg-white/5 p-4">
+          <div className="rounded-xl border border-border bg-muted p-4">
             <div className="flex items-center gap-2 mb-3">
               <FileText className="w-4 h-4 text-blue-400" />
-              <h3 className="text-sm font-semibold text-white">Recent Invoices</h3>
+              <h3 className="text-sm font-semibold text-foreground">Recent Invoices</h3>
             </div>
             {(data?.invoices || []).length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">No invoices yet</p>
@@ -309,7 +309,7 @@ export function CommandCenterBillingTab() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead>
-                    <tr className="border-b border-white/10">
+                    <tr className="border-b border-border">
                       <th className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider py-2 px-2">Invoice #</th>
                       <th className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider py-2 px-2">Institution</th>
                       <th className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider py-2 px-2">Service</th>
@@ -320,9 +320,9 @@ export function CommandCenterBillingTab() {
                   </thead>
                   <tbody>
                     {data!.invoices.slice(0, 20).map((inv: any) => (
-                      <tr key={inv.id} className="border-b border-white/5 hover:bg-white/5 transition-colors" data-testid={`invoice-row-${inv.id}`}>
+                      <tr key={inv.id} className="border-b border-border/50 hover:bg-muted transition-colors" data-testid={`invoice-row-${inv.id}`}>
                         <td className="py-1.5 px-2"><span className="text-[10px] text-cyan-400 font-mono">{inv.invoiceNumber}</span></td>
-                        <td className="py-1.5 px-2"><span className="text-[10px] text-white truncate block max-w-[180px]">{inv.institutionName}</span></td>
+                        <td className="py-1.5 px-2"><span className="text-[10px] text-foreground truncate block max-w-[180px]">{inv.institutionName}</span></td>
                         <td className="py-1.5 px-2"><span className="text-[10px] text-muted-foreground">{inv.serviceType}</span></td>
                         <td className="py-1.5 px-2 text-right"><span className="text-[10px] text-emerald-400 font-mono">${parseFloat(inv.amount).toLocaleString()}</span></td>
                         <td className="py-1.5 px-2">

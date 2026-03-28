@@ -48,13 +48,13 @@ export function CommandCenterAuditTab() {
   return (
     <div className="space-y-4" data-testid="panel-audit-logs">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="rounded-xl border border-border bg-white/5 p-3 text-center">
-          <p className="text-2xl font-bold text-white" data-testid="text-audit-total">{data?.total ?? "—"}</p>
+        <div className="rounded-xl border border-border bg-muted p-3 text-center">
+          <p className="text-2xl font-bold text-foreground" data-testid="text-audit-total">{data?.total ?? "—"}</p>
           <p className="text-[10px] text-muted-foreground">Total Events</p>
         </div>
         {(data?.actionCounts || []).slice(0, 3).map(a => (
-          <div key={a.action} className="rounded-xl border border-border bg-white/5 p-3 text-center">
-            <p className="text-2xl font-bold text-white">{a.count}</p>
+          <div key={a.action} className="rounded-xl border border-border bg-muted p-3 text-center">
+            <p className="text-2xl font-bold text-foreground">{a.count}</p>
             <p className="text-[10px] text-muted-foreground">{a.action} Events</p>
           </div>
         ))}
@@ -64,7 +64,7 @@ export function CommandCenterAuditTab() {
         <div className="flex items-center gap-1.5">
           <Filter className="w-3.5 h-3.5 text-muted-foreground" />
           <Select value={filterAction} onValueChange={(v) => { setFilterAction(v); setPage(0); }}>
-            <SelectTrigger className="h-8 w-[130px] text-xs bg-muted border-border text-white" data-testid="select-audit-action">
+            <SelectTrigger className="h-8 w-[130px] text-xs bg-muted border-border text-foreground" data-testid="select-audit-action">
               <SelectValue placeholder="Action" />
             </SelectTrigger>
             <SelectContent className="bg-popover border-border">
@@ -76,7 +76,7 @@ export function CommandCenterAuditTab() {
           </Select>
         </div>
         <Select value={filterEntity} onValueChange={(v) => { setFilterEntity(v); setPage(0); }}>
-          <SelectTrigger className="h-8 w-[140px] text-xs bg-muted border-border text-white" data-testid="select-audit-entity">
+          <SelectTrigger className="h-8 w-[140px] text-xs bg-muted border-border text-foreground" data-testid="select-audit-entity">
             <SelectValue placeholder="Entity" />
           </SelectTrigger>
           <SelectContent className="bg-popover border-border">
@@ -91,7 +91,7 @@ export function CommandCenterAuditTab() {
         </span>
       </div>
 
-      <div className="rounded-xl border border-border bg-white/[0.03] overflow-hidden">
+      <div className="rounded-xl border border-border bg-muted/50 overflow-hidden">
         <div className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-0 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border px-3 py-2">
           <span className="w-[70px]">Action</span>
           <span>Details</span>
@@ -105,11 +105,11 @@ export function CommandCenterAuditTab() {
           <div className="p-8 text-center text-muted-foreground text-sm">No audit events found</div>
         ) : (
           (data?.logs || []).map((log: any) => (
-            <div key={log.id} className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-0 items-center border-b border-border/20 px-3 py-2 hover:bg-white/10 transition-colors" data-testid={`audit-row-${log.id}`}>
+            <div key={log.id} className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-0 items-center border-b border-border/20 px-3 py-2 hover:bg-accent transition-colors" data-testid={`audit-row-${log.id}`}>
               <span className="w-[70px]">
                 <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${getActionColor(log.action)}`}>{log.action}</Badge>
               </span>
-              <span className="text-xs text-white truncate pr-2">
+              <span className="text-xs text-foreground truncate pr-2">
                 <span className="text-muted-foreground mr-1">[{log.entity}]</span>
                 {log.details || `${log.action} on ${log.entity}`}
               </span>
@@ -136,7 +136,7 @@ export function CommandCenterAuditTab() {
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="rounded-xl border border-border bg-white/5 p-3">
+        <div className="rounded-xl border border-border bg-muted p-3">
           <p className="text-[10px] text-muted-foreground font-semibold mb-2 uppercase tracking-wider">By Action Type</p>
           <div className="space-y-1.5">
             {(data?.actionCounts || []).sort((a, b) => b.count - a.count).map(a => {
@@ -153,7 +153,7 @@ export function CommandCenterAuditTab() {
             })}
           </div>
         </div>
-        <div className="rounded-xl border border-border bg-white/5 p-3">
+        <div className="rounded-xl border border-border bg-muted p-3">
           <p className="text-[10px] text-muted-foreground font-semibold mb-2 uppercase tracking-wider">By Entity Type</p>
           <div className="space-y-1.5">
             {(data?.entityCounts || []).sort((a, b) => b.count - a.count).slice(0, 10).map(e => {

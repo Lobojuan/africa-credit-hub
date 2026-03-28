@@ -35,24 +35,24 @@ export function CommandCenterDataQualityTab() {
   return (
     <div className="space-y-4" data-testid="panel-data-quality">
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <div className="rounded-xl border border-border bg-white/5 p-3 text-center">
+        <div className="rounded-xl border border-border bg-muted p-3 text-center">
           <p className={`text-3xl font-bold ${ocColor}`} data-testid="text-overall-completeness">{oc}%</p>
           <p className="text-[10px] text-muted-foreground">Overall Completeness</p>
         </div>
-        <div className="rounded-xl border border-border bg-white/5 p-3 text-center">
-          <p className="text-2xl font-bold text-white">{data?.borrowers.total ?? "—"}</p>
+        <div className="rounded-xl border border-border bg-muted p-3 text-center">
+          <p className="text-2xl font-bold text-foreground">{data?.borrowers.total ?? "—"}</p>
           <p className="text-[10px] text-muted-foreground">Borrowers</p>
         </div>
-        <div className="rounded-xl border border-border bg-white/5 p-3 text-center">
-          <p className="text-2xl font-bold text-white">{data?.accounts.total ?? "—"}</p>
+        <div className="rounded-xl border border-border bg-muted p-3 text-center">
+          <p className="text-2xl font-bold text-foreground">{data?.accounts.total ?? "—"}</p>
           <p className="text-[10px] text-muted-foreground">Credit Accounts</p>
         </div>
-        <div className="rounded-xl border border-border bg-white/5 p-3 text-center">
-          <p className="text-2xl font-bold text-white">{data?.relatedEntities.payments ?? "—"}</p>
+        <div className="rounded-xl border border-border bg-muted p-3 text-center">
+          <p className="text-2xl font-bold text-foreground">{data?.relatedEntities.payments ?? "—"}</p>
           <p className="text-[10px] text-muted-foreground">Payment Records</p>
         </div>
-        <div className="rounded-xl border border-border bg-white/5 p-3 text-center">
-          <p className="text-2xl font-bold text-white">{data?.byCountry.length ?? "—"}</p>
+        <div className="rounded-xl border border-border bg-muted p-3 text-center">
+          <p className="text-2xl font-bold text-foreground">{data?.byCountry.length ?? "—"}</p>
           <p className="text-[10px] text-muted-foreground">Countries w/ Data</p>
         </div>
       </div>
@@ -62,10 +62,10 @@ export function CommandCenterDataQualityTab() {
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="rounded-xl border border-border bg-white/5 p-4">
+            <div className="rounded-xl border border-border bg-muted p-4">
               <div className="flex items-center gap-2 mb-3">
                 <Database className="w-4 h-4 text-cyan-400" />
-                <h3 className="text-sm font-semibold text-white">Borrower Data Completeness</h3>
+                <h3 className="text-sm font-semibold text-foreground">Borrower Data Completeness</h3>
               </div>
               <div className="space-y-2">
                 <QualityBar label="National ID" total={data!.borrowers.total} missing={data!.borrowers.missingNationalId} color="cyan" />
@@ -76,10 +76,10 @@ export function CommandCenterDataQualityTab() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-border bg-white/5 p-4">
+            <div className="rounded-xl border border-border bg-muted p-4">
               <div className="flex items-center gap-2 mb-3">
                 <BarChart3 className="w-4 h-4 text-violet-400" />
-                <h3 className="text-sm font-semibold text-white">Credit Account Data Completeness</h3>
+                <h3 className="text-sm font-semibold text-foreground">Credit Account Data Completeness</h3>
               </div>
               <div className="space-y-2">
                 <QualityBar label="Balance" total={data!.accounts.total} missing={data!.accounts.missingBalance} color="violet" />
@@ -98,7 +98,7 @@ export function CommandCenterDataQualityTab() {
                   ].map(item => (
                     <div key={item.label} className="flex items-center justify-between py-1">
                       <span className="text-[10px] text-muted-foreground">{item.label}</span>
-                      <span className="text-[10px] font-mono text-white">{item.value.toLocaleString()}</span>
+                      <span className="text-[10px] font-mono text-foreground">{item.value.toLocaleString()}</span>
                     </div>
                   ))}
                 </div>
@@ -106,10 +106,10 @@ export function CommandCenterDataQualityTab() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-border bg-white/5 p-4">
+          <div className="rounded-xl border border-border bg-muted p-4">
             <div className="flex items-center gap-2 mb-3">
               <Globe className="w-4 h-4 text-emerald-400" />
-              <h3 className="text-sm font-semibold text-white">Data Distribution by Country</h3>
+              <h3 className="text-sm font-semibold text-foreground">Data Distribution by Country</h3>
             </div>
             {(data?.byCountry || []).length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">No country-level data available</p>

@@ -81,17 +81,17 @@ function KPICard({ icon: Icon, label, value, sub, color }: {
   icon: typeof Globe; label: string; value: string | number; sub?: string; color: string;
 }) {
   return (
-    <div className="rounded-xl border border-slate-700/50 bg-slate-800/50 p-4">
+    <div className="rounded-xl border border-border bg-card p-4">
       <div className="flex items-center gap-3 mb-2">
         <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${color}`}>
           <Icon className="w-4.5 h-4.5 text-white" />
         </div>
-        <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">{label}</span>
+        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{label}</span>
       </div>
-      <p className="text-2xl font-bold text-white" data-testid={`text-kpi-${label.toLowerCase().replace(/\s/g, '-')}`}>
+      <p className="text-2xl font-bold text-foreground" data-testid={`text-kpi-${label.toLowerCase().replace(/\s/g, '-')}`}>
         {typeof value === "number" ? value.toLocaleString() : value}
       </p>
-      {sub && <p className="text-[10px] text-slate-400 mt-0.5">{sub}</p>}
+      {sub && <p className="text-[10px] text-muted-foreground mt-0.5">{sub}</p>}
     </div>
   );
 }
@@ -126,10 +126,10 @@ function ActivityFeed() {
   const items = (feed || []).slice(0, 15);
 
   return (
-    <div className="rounded-xl border border-slate-700/50 bg-slate-800/50 p-4" data-testid="panel-activity-feed">
+    <div className="rounded-xl border border-border bg-card p-4" data-testid="panel-activity-feed">
       <div className="flex items-center gap-2 mb-3">
         <Activity className="w-4 h-4 text-cyan-400" />
-        <h3 className="text-sm font-semibold text-white">Live Activity Feed</h3>
+        <h3 className="text-sm font-semibold text-foreground">Live Activity Feed</h3>
         <span className="text-[9px] text-muted-foreground ml-auto">Last 15 events • auto-refresh 30s</span>
       </div>
       {items.length === 0 ? (
@@ -186,7 +186,7 @@ export default function CountrySelectionPage() {
   const complianceScore = srsTotal > 0 ? Math.round((srsCompliant / srsTotal) * 100) : 94;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       <div className="flex-1 overflow-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
           <div className="mb-6">
@@ -202,10 +202,10 @@ export default function CountrySelectionPage() {
                   <Shield className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-xl sm:text-2xl font-bold text-white" data-testid="text-country-selection-title">
+                  <h1 className="text-xl sm:text-2xl font-bold text-foreground" data-testid="text-country-selection-title">
                     Platform Command Center
                   </h1>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     Select a jurisdiction to manage or review platform-wide posture.
                   </p>
                 </div>
@@ -243,38 +243,38 @@ export default function CountrySelectionPage() {
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-            <TabsList className="bg-slate-800/60 border border-slate-700/50 h-10 flex-wrap sm:flex-nowrap w-full overflow-x-auto gap-0.5 p-1 rounded-lg">
-              <TabsTrigger value="overview" className="text-xs text-slate-300 hover:text-white data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-overview">
+            <TabsList className="bg-muted border border-border h-10 flex-wrap sm:flex-nowrap w-full overflow-x-auto gap-0.5 p-1 rounded-lg">
+              <TabsTrigger value="overview" className="text-xs text-muted-foreground hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-overview">
                 <Globe className="w-3 h-3 mr-1" /> Jurisdictions
               </TabsTrigger>
-              <TabsTrigger value="compliance" className="text-xs text-slate-300 hover:text-white data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-compliance">
+              <TabsTrigger value="compliance" className="text-xs text-muted-foreground hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-compliance">
                 <Shield className="w-3 h-3 mr-1" /> Compliance & SATA
               </TabsTrigger>
-              <TabsTrigger value="features" className="text-xs text-slate-300 hover:text-white data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-features">
+              <TabsTrigger value="features" className="text-xs text-muted-foreground hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-features">
                 <Layers className="w-3 h-3 mr-1" /> Feature Matrix
               </TabsTrigger>
-              <TabsTrigger value="users-clients" className="text-xs text-slate-300 hover:text-white data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-users-clients">
+              <TabsTrigger value="users-clients" className="text-xs text-muted-foreground hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-users-clients">
                 <Users className="w-3 h-3 mr-1" /> Users & Clients
               </TabsTrigger>
-              <TabsTrigger value="country-settings" className="text-xs text-slate-300 hover:text-white data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-country-settings">
+              <TabsTrigger value="country-settings" className="text-xs text-muted-foreground hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-country-settings">
                 <Settings className="w-3 h-3 mr-1" /> Country Settings
               </TabsTrigger>
-              <TabsTrigger value="system" className="text-xs text-slate-300 hover:text-white data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-system">
+              <TabsTrigger value="system" className="text-xs text-muted-foreground hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-system">
                 <Activity className="w-3 h-3 mr-1" /> System
               </TabsTrigger>
-              <TabsTrigger value="audit" className="text-xs text-slate-300 hover:text-white data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-audit">
+              <TabsTrigger value="audit" className="text-xs text-muted-foreground hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-audit">
                 <ScrollText className="w-3 h-3 mr-1" /> Audit Log
               </TabsTrigger>
-              <TabsTrigger value="api-keys" className="text-xs text-slate-300 hover:text-white data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-api-keys">
+              <TabsTrigger value="api-keys" className="text-xs text-muted-foreground hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-api-keys">
                 <Key className="w-3 h-3 mr-1" /> API Keys
               </TabsTrigger>
-              <TabsTrigger value="data-quality" className="text-xs text-slate-300 hover:text-white data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-data-quality">
+              <TabsTrigger value="data-quality" className="text-xs text-muted-foreground hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-data-quality">
                 <BarChart3 className="w-3 h-3 mr-1" /> Data Quality
               </TabsTrigger>
-              <TabsTrigger value="billing" className="text-xs text-slate-300 hover:text-white data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-billing">
+              <TabsTrigger value="billing" className="text-xs text-muted-foreground hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-billing">
                 <DollarSign className="w-3 h-3 mr-1" /> Billing
               </TabsTrigger>
-              <TabsTrigger value="retention" className="text-xs text-slate-300 hover:text-white data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-retention">
+              <TabsTrigger value="retention" className="text-xs text-muted-foreground hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-retention">
                 <Archive className="w-3 h-3 mr-1" /> Retention
               </TabsTrigger>
             </TabsList>
@@ -290,7 +290,7 @@ export default function CountrySelectionPage() {
                       key={c.code}
                       onClick={() => handleSelect(c.name)}
                       disabled={isSwitching}
-                      className="flex flex-col p-4 rounded-xl border border-slate-700/50 bg-slate-800/50 hover:bg-slate-700/50 hover:border-slate-600/60 transition-all duration-200 group text-left"
+                      className="flex flex-col p-4 rounded-xl border border-border bg-card hover:bg-accent hover:border-primary/30 transition-all duration-200 group text-left"
                       data-testid={`button-select-country-${c.code}`}
                     >
                       <div className="flex items-start justify-between w-full mb-3">
@@ -304,36 +304,36 @@ export default function CountrySelectionPage() {
                             <CountryDot code={c.code} size="lg" />
                           </div>
                           <div>
-                            <p className="text-sm font-semibold text-white">{c.name}</p>
-                            <p className="text-[10px] text-slate-400">{c.regulatoryBody}</p>
+                            <p className="text-sm font-semibold text-foreground">{c.name}</p>
+                            <p className="text-[10px] text-muted-foreground">{c.regulatoryBody}</p>
                           </div>
                         </div>
                         {isSwitching && selectedCountry === c.name ? (
-                          <Loader2 className="w-4 h-4 text-slate-400 animate-spin shrink-0 mt-1" />
+                          <Loader2 className="w-4 h-4 text-muted-foreground animate-spin shrink-0 mt-1" />
                         ) : (
-                          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors shrink-0 mt-1" />
+                          <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0 mt-1" />
                         )}
                       </div>
 
                       <div className="grid grid-cols-3 gap-2 mb-3 w-full">
-                        <div className="text-center p-1.5 rounded-lg bg-slate-900/60">
-                          <p className="text-xs font-bold text-white">{detail?.borrowers?.toLocaleString() ?? "-"}</p>
-                          <p className="text-[9px] text-slate-400">Borrowers</p>
+                        <div className="text-center p-1.5 rounded-lg bg-muted">
+                          <p className="text-xs font-bold text-foreground">{detail?.borrowers?.toLocaleString() ?? "-"}</p>
+                          <p className="text-[9px] text-muted-foreground">Borrowers</p>
                         </div>
-                        <div className="text-center p-1.5 rounded-lg bg-slate-900/60">
-                          <p className="text-xs font-bold text-white">{detail?.accounts?.toLocaleString() ?? "-"}</p>
-                          <p className="text-[9px] text-slate-400">Accounts</p>
+                        <div className="text-center p-1.5 rounded-lg bg-muted">
+                          <p className="text-xs font-bold text-foreground">{detail?.accounts?.toLocaleString() ?? "-"}</p>
+                          <p className="text-[9px] text-muted-foreground">Accounts</p>
                         </div>
-                        <div className="text-center p-1.5 rounded-lg bg-slate-900/60">
-                          <p className="text-xs font-bold text-white">{detail?.institutions ?? "-"}</p>
-                          <p className="text-[9px] text-slate-400">Institutions</p>
+                        <div className="text-center p-1.5 rounded-lg bg-muted">
+                          <p className="text-xs font-bold text-foreground">{detail?.institutions ?? "-"}</p>
+                          <p className="text-[9px] text-muted-foreground">Institutions</p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-1.5 flex-wrap w-full">
                         {dpStatus && <ComplianceIndicator status={dpStatus} />}
                         {sataLevel && <SATAIndicator level={sataLevel} />}
-                        <Badge variant="outline" className="text-[9px] h-5 border-slate-600/50 text-slate-300">{c.currency}</Badge>
+                        <Badge variant="outline" className="text-[9px] h-5 border-border text-muted-foreground">{c.currency}</Badge>
                       </div>
                     </button>
                   );
@@ -343,10 +343,10 @@ export default function CountrySelectionPage() {
 
             <TabsContent value="compliance" className="space-y-4 mt-0">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div className="rounded-xl border border-border bg-slate-800/50 p-4">
+                <div className="rounded-xl border border-border bg-card p-4">
                   <div className="flex items-center gap-2 mb-4">
                     <Scale className="w-4 h-4 text-blue-400" />
-                    <h3 className="text-sm font-semibold text-white">Data Protection Law Status</h3>
+                    <h3 className="text-sm font-semibold text-foreground">Data Protection Law Status</h3>
                   </div>
                   <div className="space-y-2">
                     {countries.map((c) => {
@@ -368,10 +368,10 @@ export default function CountrySelectionPage() {
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-border bg-slate-800/50 p-4">
+                <div className="rounded-xl border border-border bg-card p-4">
                   <div className="flex items-center gap-2 mb-4">
                     <Globe className="w-4 h-4 text-emerald-400" />
-                    <h3 className="text-sm font-semibold text-white">SATA Cross-Border Readiness</h3>
+                    <h3 className="text-sm font-semibold text-foreground">SATA Cross-Border Readiness</h3>
                   </div>
                   <p className="text-[10px] text-muted-foreground mb-3">Smart Africa Trust Alliance compliance for cross-border data sharing</p>
                   <div className="space-y-2">
@@ -402,10 +402,10 @@ export default function CountrySelectionPage() {
 
               <ActivityFeed />
 
-              <div className="rounded-xl border border-border bg-slate-800/50 p-4">
+              <div className="rounded-xl border border-border bg-card p-4">
                 <div className="flex items-center gap-2 mb-4">
                   <FileText className="w-4 h-4 text-amber-400" />
-                  <h3 className="text-sm font-semibold text-white">SRS Requirements Traceability</h3>
+                  <h3 className="text-sm font-semibold text-foreground">SRS Requirements Traceability</h3>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
                   {[
@@ -417,7 +417,7 @@ export default function CountrySelectionPage() {
                     { label: "Enterprise", count: 11, compliant: 11, color: "text-teal-400" },
                     { label: "Data Quality", count: 5, compliant: 5, color: "text-indigo-400" },
                   ].map((cat) => (
-                    <div key={cat.label} className="text-center p-3 rounded-lg bg-slate-800/50">
+                    <div key={cat.label} className="text-center p-3 rounded-lg bg-card">
                       <p className={`text-lg font-bold ${cat.color}`}>{cat.compliant}/{cat.count}</p>
                       <p className="text-[9px] text-muted-foreground mt-0.5">{cat.label}</p>
                       <div className="w-full h-1 rounded-full bg-muted-foreground mt-2">
@@ -430,11 +430,11 @@ export default function CountrySelectionPage() {
             </TabsContent>
 
             <TabsContent value="features" className="mt-0">
-              <div className="rounded-xl border border-border bg-slate-800/50 overflow-hidden">
+              <div className="rounded-xl border border-border bg-card overflow-hidden">
                 <div className="p-4 border-b border-border/30">
                   <div className="flex items-center gap-2">
                     <Database className="w-4 h-4 text-violet-400" />
-                    <h3 className="text-sm font-semibold text-white">Feature Support Matrix</h3>
+                    <h3 className="text-sm font-semibold text-foreground">Feature Support Matrix</h3>
                   </div>
                   <p className="text-[10px] text-muted-foreground mt-1">Capabilities available per jurisdiction</p>
                 </div>
@@ -442,7 +442,7 @@ export default function CountrySelectionPage() {
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="border-b border-border/30">
-                        <th className="text-left p-3 text-muted-foreground font-medium sticky left-0 bg-slate-800/90">Country</th>
+                        <th className="text-left p-3 text-muted-foreground font-medium sticky left-0 bg-card">Country</th>
                         <th className="text-center p-3 text-muted-foreground font-medium">Credit Scoring</th>
                         <th className="text-center p-3 text-muted-foreground font-medium">Regulatory Export</th>
                         <th className="text-center p-3 text-muted-foreground font-medium">Dispute Mgmt</th>
@@ -470,7 +470,7 @@ export default function CountrySelectionPage() {
                         );
                         return (
                           <tr key={c.code} className="border-b border-border/20 hover:bg-muted-foreground/20">
-                            <td className="p-3 sticky left-0 bg-slate-800/90">
+                            <td className="p-3 sticky left-0 bg-card">
                               <div className="flex items-center gap-2">
                                 <CountryDot code={c.code} size="sm" />
                                 <span className="text-muted-foreground font-medium">{c.name}</span>

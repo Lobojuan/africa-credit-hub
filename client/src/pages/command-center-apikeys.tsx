@@ -33,8 +33,8 @@ export function CommandCenterApiKeysTab() {
   return (
     <div className="space-y-4" data-testid="panel-api-keys">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="rounded-xl border border-border bg-white/5 p-3 text-center">
-          <p className="text-2xl font-bold text-white" data-testid="text-total-keys">{keys.length}</p>
+        <div className="rounded-xl border border-border bg-muted p-3 text-center">
+          <p className="text-2xl font-bold text-foreground" data-testid="text-total-keys">{keys.length}</p>
           <p className="text-[10px] text-muted-foreground">Total API Keys</p>
         </div>
         <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-center">
@@ -51,10 +51,10 @@ export function CommandCenterApiKeysTab() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-white/5 p-4">
+      <div className="rounded-xl border border-border bg-muted p-4">
         <div className="flex items-center gap-2 mb-3">
           <Key className="w-4 h-4 text-amber-400" />
-          <h3 className="text-sm font-semibold text-white">API Keys</h3>
+          <h3 className="text-sm font-semibold text-foreground">API Keys</h3>
         </div>
         {isLoading ? (
           <div className="text-center text-muted-foreground text-sm py-8">Loading API keys...</div>
@@ -63,10 +63,10 @@ export function CommandCenterApiKeysTab() {
         ) : (
           <div className="space-y-2">
             {keys.map(key => (
-              <div key={key.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-border/30 bg-white/[0.03] hover:bg-white/10 transition-colors" data-testid={`apikey-row-${key.id}`}>
+              <div key={key.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-border/30 bg-muted/50 hover:bg-accent transition-colors" data-testid={`apikey-row-${key.id}`}>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-white">{key.label}</span>
+                    <span className="text-xs font-semibold text-foreground">{key.label}</span>
                     <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${key.status === "active" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-red-500/20 text-red-400 border-red-500/30"}`}>
                       {key.status}
                     </Badge>
@@ -104,20 +104,20 @@ export function CommandCenterApiKeysTab() {
         )}
       </div>
 
-      <div className="rounded-xl border border-border bg-white/5 p-4">
+      <div className="rounded-xl border border-border bg-muted p-4">
         <div className="flex items-center gap-2 mb-3">
           <Globe className="w-4 h-4 text-cyan-400" />
-          <h3 className="text-sm font-semibold text-white">External API Integrations</h3>
+          <h3 className="text-sm font-semibold text-foreground">External API Integrations</h3>
         </div>
         {configs.length === 0 ? (
           <div className="text-center text-muted-foreground text-sm py-8">No external API integrations configured</div>
         ) : (
           <div className="space-y-2">
             {configs.map(cfg => (
-              <div key={cfg.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-border/30 bg-white/[0.03]" data-testid={`apiconfig-row-${cfg.id}`}>
+              <div key={cfg.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-border/30 bg-muted/50" data-testid={`apiconfig-row-${cfg.id}`}>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-white">{cfg.name}</span>
+                    <span className="text-xs font-semibold text-foreground">{cfg.name}</span>
                     <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-muted-foreground/20 text-muted-foreground border-border">
                       {cfg.category}
                     </Badge>
