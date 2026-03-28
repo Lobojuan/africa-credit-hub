@@ -2487,13 +2487,13 @@ export async function registerRoutes(
         entity: "telco_decision_log",
         entityId: rule.id,
         userId: req.session.userId,
-        details: `Bulk decision: ${results.approved} approved, ${results.rejected} rejected, ${results.skipped} skipped, ${results.errors} errors out of ${allProfiles.length} profiles`,
+        details: `Bulk decision: ${results.approved} approved, ${results.rejected} rejected, ${results.skipped} skipped, ${results.errors} errors out of ${results.totalEligible} profiles`,
         organizationId: orgId,
       });
 
       res.json({
         summary: {
-          total: allProfiles.length,
+          total: results.totalEligible,
           approved: results.approved,
           rejected: results.rejected,
           skipped: results.skipped,
