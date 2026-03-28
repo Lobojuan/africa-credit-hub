@@ -31,7 +31,7 @@ import { recordUsageEvent } from "./usage-metering";
 import { broadcastEvent } from "./websocket";
 import { createAnchor, verifyAuditAgainstAnchor, getAnchors } from "./blockchain-anchor";
 import { deliverWebhook, getWebhookSubscriptions, getWebhookDeliveryHistory, WEBHOOK_EVENTS } from "./webhook-delivery";
-import { webauthnCredentials, blockchainAnchors, webhookSubscriptions, webhookDeliveryLogs, consumerAccounts } from "@shared/schema";
+import { webauthnCredentials, blockchainAnchors, webhookSubscriptions, webhookDeliveryLogs, consumerAccounts, telcoProfiles } from "@shared/schema";
 import fs from "fs";
 import path from "path";
 import * as OTPAuth from "otpauth";
@@ -100,6 +100,43 @@ const aiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+const idempotencyCache = new Map<string, { response: any; status: number; timestamp: number }>();
+const idempotencyInFlight = new Set<string>();
+const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, val] of idempotencyCache) {
+    if (now - val.timestamp > IDEMPOTENCY_TTL_MS) idempotencyCache.delete(key);
+  }
+}, 60 * 60 * 1000);
+
+function idempotencyMiddleware(req: Request, res: Response, next: NextFunction) {
+  const key = req.headers["idempotency-key"] as string;
+  if (!key) return next();
+
+  const cacheKey = `${req.method}:${req.path}:${key}`;
+  const cached = idempotencyCache.get(cacheKey);
+  if (cached) {
+    res.setHeader("X-Idempotent-Replayed", "true");
+    return res.status(cached.status).json(cached.response);
+  }
+
+  if (idempotencyInFlight.has(cacheKey)) {
+    return res.status(409).json({ message: "A request with this idempotency key is already being processed" });
+  }
+
+  idempotencyInFlight.add(cacheKey);
+  const origJson = res.json.bind(res);
+  res.json = function (body: any) {
+    idempotencyCache.set(cacheKey, { response: body, status: res.statusCode, timestamp: Date.now() });
+    idempotencyInFlight.delete(cacheKey);
+    return origJson(body);
+  };
+  res.on("close", () => idempotencyInFlight.delete(cacheKey));
+  next();
+}
 
 const creditReportLimiter = rateLimit({
   validate: { trustProxy: false },
@@ -2209,7 +2246,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/telco/decision-engine/:profileId", requireRole("admin", "lender", "super_admin"), async (req, res) => {
+  app.post("/api/telco/decision-engine/:profileId", requireRole("admin", "lender", "super_admin"), idempotencyMiddleware, async (req, res) => {
     try {
       const { computeTelcoKPIs, generateTelcoCreditScore } = await import("./telco-scoring");
       const profile = await storage.getTelcoProfile(req.params.profileId);
@@ -2322,11 +2359,43 @@ export async function registerRoutes(
         organizationId: orgId,
       });
 
+      let loan = null;
+      if (isApproved) {
+        const interestRate = "5";
+        const totalRepayable = creditLimit * 1.05;
+        const loanData: any = {
+          profileId: profile.id,
+          decisionLogId: decisionLog.id,
+          scoreId: score.id,
+          loanAmount: creditLimit.toString(),
+          currency: score.currency || "USD",
+          interestRate,
+          fees: "0",
+          totalRepayable: totalRepayable.toFixed(2),
+          outstandingBalance: totalRepayable.toFixed(2),
+          status: status === "approved_disbursed" ? "disbursed" : "pending_disbursement",
+          disbursementStatus: status === "approved_disbursed" ? "confirmed" : "pending",
+          disbursementRef: disbursementRef || undefined,
+          disbursedAt: status === "approved_disbursed" ? new Date() : undefined,
+          tenorDays: 30,
+          country: profile.country,
+          organizationId: orgId || profile.organizationId || undefined,
+        };
+        if (status === "approved_disbursed") {
+          const dueDate = new Date();
+          dueDate.setDate(dueDate.getDate() + 30);
+          loanData.dueDate = dueDate;
+          loanData.nextPaymentDate = dueDate;
+        }
+        loan = await storage.createTelcoLoan(loanData);
+      }
+
       res.json({
         decision: decisionLog,
         score,
         kpis,
         aiResult,
+        loan,
         ruleApplied: {
           id: rule.id,
           name: rule.name,
@@ -2341,7 +2410,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/telco/decision-engine/bulk/run", requireRole("admin", "lender", "super_admin"), async (req, res) => {
+  app.post("/api/telco/decision-engine/bulk/run", requireRole("admin", "lender", "super_admin"), idempotencyMiddleware, async (req, res) => {
     try {
       const { computeTelcoKPIs, generateTelcoCreditScore } = await import("./telco-scoring");
       const orgId = getOrgScope(req);
@@ -2466,8 +2535,38 @@ export async function registerRoutes(
             organizationId: orgId || profile.organizationId || undefined,
           });
 
-          if (isApproved) results.approved++;
-          else results.rejected++;
+          if (isApproved) {
+            results.approved++;
+            const interestRate = "5";
+            const totalRepayable = creditLimit * 1.05;
+            const loanData: any = {
+              profileId: profile.id,
+              decisionLogId: decisionLog.id,
+              scoreId: score.id,
+              loanAmount: creditLimit.toString(),
+              currency: score.currency || "USD",
+              interestRate,
+              fees: "0",
+              totalRepayable: totalRepayable.toFixed(2),
+              outstandingBalance: totalRepayable.toFixed(2),
+              status: status === "approved_disbursed" ? "disbursed" : "pending_disbursement",
+              disbursementStatus: status === "approved_disbursed" ? "confirmed" : "pending",
+              disbursementRef: disbursementRef || undefined,
+              disbursedAt: status === "approved_disbursed" ? new Date() : undefined,
+              tenorDays: 30,
+              country: profile.country,
+              organizationId: orgId || profile.organizationId || undefined,
+            };
+            if (status === "approved_disbursed") {
+              const dueDate = new Date();
+              dueDate.setDate(dueDate.getDate() + 30);
+              loanData.dueDate = dueDate;
+              loanData.nextPaymentDate = dueDate;
+            }
+            await storage.createTelcoLoan(loanData);
+          } else {
+            results.rejected++;
+          }
 
           results.decisions.push({
             profileId: profile.id,
@@ -2508,6 +2607,219 @@ export async function registerRoutes(
       console.error("[BulkDecisionEngine] Error:", e.message);
       res.status(500).json({ message: e.message });
     }
+  });
+
+  // ── Telco Loans ──────────────────────────────────────────
+  app.get("/api/telco/loans", requireRole("admin", "lender", "super_admin"), async (req, res) => {
+    try {
+      const orgId = getOrgScope(req);
+      const country = getCountryFilter(req) || (req.query.country as string);
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const status = req.query.status as string;
+      const profileId = req.query.profileId as string;
+      const result = await storage.getTelcoLoans(orgId, country, { page, limit, status, profileId });
+      res.json(result);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.get("/api/telco/loans/portfolio", requireRole("admin", "lender", "super_admin"), async (req, res) => {
+    try {
+      const orgId = getOrgScope(req);
+      const country = getCountryFilter(req) || (req.query.country as string);
+      const stats = await storage.getTelcoLoanPortfolioStats(orgId, country);
+      res.json(stats);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.get("/api/telco/loans/:id", requireRole("admin", "lender", "super_admin"), async (req, res) => {
+    try {
+      const loan = await storage.getTelcoLoan(req.params.id);
+      if (!loan) return res.status(404).json({ message: "Loan not found" });
+      const orgId = getOrgScope(req);
+      if (orgId && loan.organizationId && loan.organizationId !== orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      res.json(loan);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.post("/api/telco/loans", requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const orgId = getOrgScope(req);
+      const data = { ...req.body, organizationId: orgId || req.body.organizationId };
+      const loan = await storage.createTelcoLoan(data);
+      await storage.createAuditLog({
+        action: "TELCO_LOAN_CREATED",
+        entity: "telco_loans",
+        entityId: loan.id,
+        userId: req.session.userId,
+        details: `Loan created: ${loan.currency} ${loan.loanAmount} for profile ${loan.profileId}`,
+        organizationId: orgId,
+      });
+      res.json(loan);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.patch("/api/telco/loans/:id", requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const orgId = getOrgScope(req);
+      const existing = await storage.getTelcoLoan(req.params.id);
+      if (!existing) return res.status(404).json({ message: "Loan not found" });
+      if (orgId && existing.organizationId && existing.organizationId !== orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const loan = await storage.updateTelcoLoan(req.params.id, req.body);
+      await storage.createAuditLog({
+        action: "TELCO_LOAN_UPDATED",
+        entity: "telco_loans",
+        entityId: loan.id,
+        userId: req.session.userId,
+        details: `Loan updated: status=${loan.status}, disbursement=${loan.disbursementStatus}`,
+        organizationId: orgId,
+      });
+      res.json(loan);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.post("/api/telco/loans/:id/disburse", requireRole("admin", "super_admin"), idempotencyMiddleware, async (req, res) => {
+    try {
+      const loan = await storage.getTelcoLoan(req.params.id);
+      if (!loan) return res.status(404).json({ message: "Loan not found" });
+      const orgId = getOrgScope(req);
+      if (orgId && loan.organizationId && loan.organizationId !== orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      if (loan.status !== "pending_disbursement") {
+        return res.status(400).json({ message: `Loan already in status: ${loan.status}` });
+      }
+      const ref = `DISB-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + (loan.tenorDays || 30));
+      const updated = await storage.updateTelcoLoan(loan.id, {
+        status: "disbursed" as any,
+        disbursementStatus: "confirmed" as any,
+        disbursementRef: ref,
+        disbursedAt: new Date(),
+        dueDate,
+        nextPaymentDate: dueDate,
+      });
+      await storage.createAuditLog({
+        action: "TELCO_LOAN_DISBURSED",
+        entity: "telco_loans",
+        entityId: loan.id,
+        userId: req.session.userId,
+        details: `Loan disbursed: ${loan.currency} ${loan.loanAmount}, ref=${ref}`,
+        organizationId: orgId,
+      });
+      res.json(updated);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  // ── Telco Loan Repayments ──────────────────────────────
+  app.get("/api/telco/loans/:loanId/repayments", requireRole("admin", "lender", "super_admin"), async (req, res) => {
+    try {
+      const loan = await storage.getTelcoLoan(req.params.loanId);
+      if (!loan) return res.status(404).json({ message: "Loan not found" });
+      const orgId = getOrgScope(req);
+      if (orgId && loan.organizationId && loan.organizationId !== orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const repayments = await storage.getTelcoLoanRepayments(req.params.loanId);
+      res.json(repayments);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.post("/api/telco/loans/:loanId/repayments", requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const loan = await storage.getTelcoLoan(req.params.loanId);
+      if (!loan) return res.status(404).json({ message: "Loan not found" });
+      const orgId = getOrgScope(req);
+      if (orgId && loan.organizationId && loan.organizationId !== orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      const repayment = await storage.createTelcoLoanRepayment({
+        ...req.body,
+        loanId: loan.id,
+        profileId: loan.profileId,
+        currency: loan.currency,
+        country: loan.country,
+        organizationId: loan.organizationId,
+      });
+      const newRepaid = Number(loan.amountRepaid || 0) + Number(repayment.amountPaid || 0);
+      const newOutstanding = Number(loan.totalRepayable) - newRepaid;
+      const loanUpdates: any = {
+        amountRepaid: String(newRepaid),
+        outstandingBalance: String(Math.max(0, newOutstanding)),
+        lastPaymentDate: new Date(),
+      };
+      if (newOutstanding <= 0) {
+        loanUpdates.status = "paid_off";
+        loanUpdates.closedAt = new Date();
+        loanUpdates.closureReason = "fully_repaid";
+        loanUpdates.outstandingBalance = "0";
+      } else {
+        loanUpdates.status = "repaying";
+      }
+      await storage.updateTelcoLoan(loan.id, loanUpdates);
+      await storage.createAuditLog({
+        action: "TELCO_REPAYMENT_RECEIVED",
+        entity: "telco_loan_repayments",
+        entityId: repayment.id,
+        userId: req.session.userId,
+        details: `Repayment: ${loan.currency} ${repayment.amountPaid} on loan ${loan.id}`,
+        organizationId: orgId,
+      });
+      res.json(repayment);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  // ── Telco Consent Management ───────────────────────────
+  app.get("/api/telco/consent/:profileId", requireRole("admin", "lender", "super_admin"), async (req, res) => {
+    try {
+      const events = await storage.getTelcoConsentEvents(req.params.profileId);
+      res.json(events);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.post("/api/telco/consent", requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const orgId = getOrgScope(req);
+      const receiptId = `CR-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+      const event = await storage.createTelcoConsentEvent({
+        ...req.body,
+        consentReceiptId: receiptId,
+        ipAddress: req.ip || req.headers["x-forwarded-for"] as string,
+        userAgent: req.headers["user-agent"],
+        organizationId: orgId || req.body.organizationId,
+      });
+      if (req.body.action === "grant") {
+        const profile = await storage.getTelcoProfile(req.body.profileId);
+        if (profile) {
+          await db.update(telcoProfiles).set({ consentGranted: true, consentDate: new Date() }).where(eq(telcoProfiles.id, profile.id));
+        }
+      } else if (req.body.action === "revoke") {
+        await db.update(telcoProfiles).set({ consentGranted: false }).where(eq(telcoProfiles.id, req.body.profileId));
+      }
+      await storage.createAuditLog({
+        action: `TELCO_CONSENT_${req.body.action?.toUpperCase() || "EVENT"}`,
+        entity: "telco_consent_events",
+        entityId: event.id,
+        userId: req.session.userId,
+        details: `Consent ${req.body.action} for profile ${req.body.profileId} via ${req.body.method || "web_portal"}. Receipt: ${receiptId}`,
+        organizationId: orgId,
+      });
+      res.json(event);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.get("/api/telco/consent-summary", requireRole("admin", "lender", "super_admin"), async (req, res) => {
+    try {
+      const orgId = getOrgScope(req);
+      const country = getCountryFilter(req) || (req.query.country as string);
+      const summary = await storage.getTelcoConsentSummary(orgId, country);
+      res.json(summary);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
   });
 
   app.get("/api/global-search", async (req, res) => {

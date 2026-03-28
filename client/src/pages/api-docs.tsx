@@ -801,6 +801,54 @@ export default function ApiDocsPage() {
           <Card>
             <CardHeader className="space-y-0 pb-3">
               <div className="flex items-center gap-2">
+                <Send className="w-5 h-5 text-muted-foreground" />
+                <h2 className="text-lg font-semibold">Telco Integration API</h2>
+                <Badge variant="outline" className="text-[10px] bg-violet-50 dark:bg-violet-950/30 text-violet-700 dark:text-violet-300">Enterprise</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground mb-2">
+                Endpoints for MoMo-based credit scoring, telco loan lifecycle management, and consent compliance. Supports MTN, Orange, Tigo, and Airtel integrations.
+              </p>
+
+              <h3 className="text-sm font-semibold flex items-center gap-2 mt-2" data-testid="section-telco-profiles">Telco Profiles</h3>
+              <CodeBlock method="GET" path="/api/telco/profiles" description="List telco subscriber profiles with optional country, provider, kyc_level, and search filters" />
+              <CodeBlock method="POST" path="/api/telco/profiles" description="Create or import a telco subscriber profile (MSISDN, provider, KYC level)" />
+              <CodeBlock method="GET" path="/api/telco/profiles/:id" description="Get a single telco profile by ID" />
+
+              <h3 className="text-sm font-semibold flex items-center gap-2 mt-4" data-testid="section-telco-scoring">Credit Scoring & Decision Engine</h3>
+              <CodeBlock method="POST" path="/api/telco/decision-engine/:profileId" description="Run AI credit scoring and decision engine for a single profile. Supports Idempotency-Key header." />
+              <CodeBlock method="POST" path="/api/telco/decision-engine/bulk/run" description="Batch decision engine run across multiple profiles. Supports Idempotency-Key header to prevent duplicate processing." />
+              <CodeBlock method="GET" path="/api/telco/scores" description="List credit scores with optional search, provider, and risk tier filters" />
+              <CodeBlock method="GET" path="/api/telco/scores/:id" description="Get a single score detail with KPI snapshot and AI rationale" />
+
+              <h3 className="text-sm font-semibold flex items-center gap-2 mt-4" data-testid="section-telco-loans">Loan Lifecycle</h3>
+              <CodeBlock method="GET" path="/api/telco/loans" description="List loans with pagination, country, and status filters" />
+              <CodeBlock method="GET" path="/api/telco/loans/portfolio" description="Portfolio analytics: total disbursed, outstanding, PAR 30/60/90, default rate, collection rate" />
+              <CodeBlock method="GET" path="/api/telco/loans/:id" description="Get loan details including disbursement status and repayment schedule" />
+              <CodeBlock method="POST" path="/api/telco/loans/:id/disburse" description="Disburse approved loan funds. Supports Idempotency-Key header." />
+              <CodeBlock method="POST" path="/api/telco/loans/:id/repayments" description="Record a repayment against an active loan" />
+              <CodeBlock method="GET" path="/api/telco/loans/:id/repayments" description="Get all repayment records for a loan" />
+
+              <h3 className="text-sm font-semibold flex items-center gap-2 mt-4" data-testid="section-telco-consent">Consent Management</h3>
+              <CodeBlock method="POST" path="/api/telco/consent" description="Record consent grant/revoke event with method (ussd, sms, app, web_portal, agent, ivr), purpose, and IP tracking" />
+              <CodeBlock method="GET" path="/api/telco/consent/:profileId" description="Get consent history for a subscriber profile" />
+              <CodeBlock method="GET" path="/api/telco/consent-summary" description="Aggregated consent statistics: total events, active, revoked, by method" />
+
+              <h3 className="text-sm font-semibold flex items-center gap-2 mt-4" data-testid="section-idempotency">Idempotency</h3>
+              <div className="p-3 rounded-lg bg-muted/50 border">
+                <p className="text-xs text-muted-foreground">
+                  Critical write endpoints (decision engine, disbursement, bulk operations) support the <code className="text-primary">Idempotency-Key</code> header.
+                  Send a unique UUID with your request. If the same key is sent again within 24 hours, the original response is replayed without re-executing the operation.
+                  The response will include <code className="text-primary">X-Idempotent-Replayed: true</code> header.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="space-y-0 pb-3">
+              <div className="flex items-center gap-2">
                 <Terminal className="w-5 h-5 text-muted-foreground" />
                 <h2 className="text-lg font-semibold">Sandbox Environment</h2>
                 <Badge variant="outline" className="text-[10px] bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300">Available</Badge>

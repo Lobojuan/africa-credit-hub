@@ -7,6 +7,7 @@ import {
   exchangeRates, retentionPolicies, apiConfigurations, organizations, dishonouredCheques, borrowerAlerts,
   guarantors, telcoProfiles, momoTransactions, telcoCreditScores,
   telcoDecisionRules, telcoDecisionLogs,
+  telcoLoans, telcoLoanRepayments, telcoConsentEvents,
   type User, type InsertUser,
   type Organization, type InsertOrganization,
   type Borrower, type InsertBorrower,
@@ -15,6 +16,9 @@ import {
   type TelcoCreditScore, type InsertTelcoCreditScore,
   type TelcoDecisionRule, type InsertTelcoDecisionRule,
   type TelcoDecisionLog, type InsertTelcoDecisionLog,
+  type TelcoLoan, type InsertTelcoLoan,
+  type TelcoLoanRepayment, type InsertTelcoLoanRepayment,
+  type TelcoConsentEvent, type InsertTelcoConsentEvent,
   type CreditAccount, type InsertCreditAccount,
   type CreditInquiry, type InsertCreditInquiry,
   type AuditLog, type InsertAuditLog,
@@ -200,6 +204,27 @@ export interface IStorage {
   updateDecisionRule(id: string, updates: Partial<InsertTelcoDecisionRule>): Promise<TelcoDecisionRule>;
   getDecisionLogs(organizationId?: string, limit?: number): Promise<TelcoDecisionLog[]>;
   createDecisionLog(log: InsertTelcoDecisionLog): Promise<TelcoDecisionLog>;
+
+  getTelcoLoans(organizationId?: string, country?: string, options?: { page?: number; limit?: number; status?: string; profileId?: string }): Promise<{ data: TelcoLoan[]; total: number; page: number; totalPages: number }>;
+  getTelcoLoan(id: string): Promise<TelcoLoan | undefined>;
+  createTelcoLoan(loan: InsertTelcoLoan): Promise<TelcoLoan>;
+  updateTelcoLoan(id: string, updates: Partial<InsertTelcoLoan>): Promise<TelcoLoan>;
+  getTelcoLoansByProfile(profileId: string): Promise<TelcoLoan[]>;
+  getTelcoLoanPortfolioStats(organizationId?: string, country?: string): Promise<{
+    totalDisbursed: number; totalOutstanding: number; totalRepaid: number;
+    activeLoans: number; defaultedLoans: number; paidOffLoans: number;
+    defaultRate: number; collectionRate: number;
+    par30: number; par60: number; par90: number;
+    avgLoanSize: number; totalLoans: number;
+  }>;
+
+  getTelcoLoanRepayments(loanId: string): Promise<TelcoLoanRepayment[]>;
+  createTelcoLoanRepayment(repayment: InsertTelcoLoanRepayment): Promise<TelcoLoanRepayment>;
+  updateTelcoLoanRepayment(id: string, updates: Partial<InsertTelcoLoanRepayment>): Promise<TelcoLoanRepayment>;
+
+  getTelcoConsentEvents(profileId: string): Promise<TelcoConsentEvent[]>;
+  createTelcoConsentEvent(event: InsertTelcoConsentEvent): Promise<TelcoConsentEvent>;
+  getTelcoConsentSummary(organizationId?: string, country?: string): Promise<{ total: number; active: number; revoked: number; byMethod: Record<string, number> }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1478,6 +1503,139 @@ export class DatabaseStorage implements IStorage {
   async createDecisionLog(log: InsertTelcoDecisionLog): Promise<TelcoDecisionLog> {
     const [created] = await db.insert(telcoDecisionLogs).values(log).returning();
     return created;
+  }
+
+  async getTelcoLoans(organizationId?: string, country?: string, options?: { page?: number; limit?: number; status?: string; profileId?: string }): Promise<{ data: TelcoLoan[]; total: number; page: number; totalPages: number }> {
+    const page = options?.page || 1;
+    const limit = Math.min(options?.limit || 50, 200);
+    const offset = (page - 1) * limit;
+    const filters: any[] = [];
+    if (organizationId) filters.push(eq(telcoLoans.organizationId, organizationId));
+    if (country) filters.push(eq(telcoLoans.country, country));
+    if (options?.status) filters.push(eq(telcoLoans.status, options.status as any));
+    if (options?.profileId) filters.push(eq(telcoLoans.profileId, options.profileId));
+    const where = filters.length > 1 ? and(...filters) : filters[0];
+    const [totalResult] = await db.select({ value: count() }).from(telcoLoans).where(where);
+    const total = totalResult.value;
+    const data = await db.select().from(telcoLoans).where(where).orderBy(desc(telcoLoans.createdAt)).limit(limit).offset(offset);
+    return { data, total, page, totalPages: Math.ceil(total / limit) };
+  }
+
+  async getTelcoLoan(id: string): Promise<TelcoLoan | undefined> {
+    const [loan] = await db.select().from(telcoLoans).where(eq(telcoLoans.id, id));
+    return loan;
+  }
+
+  async createTelcoLoan(loan: InsertTelcoLoan): Promise<TelcoLoan> {
+    const [created] = await db.insert(telcoLoans).values(loan).returning();
+    return created;
+  }
+
+  async updateTelcoLoan(id: string, updates: Partial<InsertTelcoLoan>): Promise<TelcoLoan> {
+    const [updated] = await db.update(telcoLoans).set({ ...updates, updatedAt: new Date() }).where(eq(telcoLoans.id, id)).returning();
+    return updated;
+  }
+
+  async getTelcoLoansByProfile(profileId: string): Promise<TelcoLoan[]> {
+    return db.select().from(telcoLoans).where(eq(telcoLoans.profileId, profileId)).orderBy(desc(telcoLoans.createdAt));
+  }
+
+  async getTelcoLoanPortfolioStats(organizationId?: string, country?: string): Promise<{
+    totalDisbursed: number; totalOutstanding: number; totalRepaid: number;
+    activeLoans: number; defaultedLoans: number; paidOffLoans: number;
+    defaultRate: number; collectionRate: number;
+    par30: number; par60: number; par90: number;
+    avgLoanSize: number; totalLoans: number;
+  }> {
+    const filters: any[] = [];
+    if (organizationId) filters.push(eq(telcoLoans.organizationId, organizationId));
+    if (country) filters.push(eq(telcoLoans.country, country));
+    const where = filters.length > 1 ? and(...filters) : filters[0];
+
+    const rows = await db.select({
+      status: telcoLoans.status,
+      loanAmount: telcoLoans.loanAmount,
+      outstandingBalance: telcoLoans.outstandingBalance,
+      amountRepaid: telcoLoans.amountRepaid,
+      daysInArrears: telcoLoans.daysInArrears,
+    }).from(telcoLoans).where(where);
+
+    let totalDisbursed = 0, totalOutstanding = 0, totalRepaid = 0;
+    let activeLoans = 0, defaultedLoans = 0, paidOffLoans = 0;
+    let par30Count = 0, par60Count = 0, par90Count = 0;
+    let activeOrRepaying = 0;
+
+    for (const r of rows) {
+      const amt = Number(r.loanAmount || 0);
+      totalDisbursed += amt;
+      totalOutstanding += Number(r.outstandingBalance || 0);
+      totalRepaid += Number(r.amountRepaid || 0);
+      const arrears = r.daysInArrears || 0;
+
+      if (r.status === "active" || r.status === "repaying" || r.status === "disbursed") {
+        activeLoans++;
+        activeOrRepaying++;
+        if (arrears >= 30) par30Count++;
+        if (arrears >= 60) par60Count++;
+        if (arrears >= 90) par90Count++;
+      }
+      if (r.status === "defaulted" || r.status === "written_off") defaultedLoans++;
+      if (r.status === "paid_off") paidOffLoans++;
+    }
+
+    const totalLoans = rows.length;
+    const closedLoans = defaultedLoans + paidOffLoans;
+
+    return {
+      totalDisbursed, totalOutstanding, totalRepaid,
+      activeLoans, defaultedLoans, paidOffLoans,
+      defaultRate: closedLoans > 0 ? Math.round((defaultedLoans / closedLoans) * 10000) / 100 : 0,
+      collectionRate: totalDisbursed > 0 ? Math.round((totalRepaid / totalDisbursed) * 10000) / 100 : 0,
+      par30: activeOrRepaying > 0 ? Math.round((par30Count / activeOrRepaying) * 10000) / 100 : 0,
+      par60: activeOrRepaying > 0 ? Math.round((par60Count / activeOrRepaying) * 10000) / 100 : 0,
+      par90: activeOrRepaying > 0 ? Math.round((par90Count / activeOrRepaying) * 10000) / 100 : 0,
+      avgLoanSize: totalLoans > 0 ? Math.round(totalDisbursed / totalLoans) : 0,
+      totalLoans,
+    };
+  }
+
+  async getTelcoLoanRepayments(loanId: string): Promise<TelcoLoanRepayment[]> {
+    return db.select().from(telcoLoanRepayments).where(eq(telcoLoanRepayments.loanId, loanId)).orderBy(desc(telcoLoanRepayments.dueDate));
+  }
+
+  async createTelcoLoanRepayment(repayment: InsertTelcoLoanRepayment): Promise<TelcoLoanRepayment> {
+    const [created] = await db.insert(telcoLoanRepayments).values(repayment).returning();
+    return created;
+  }
+
+  async updateTelcoLoanRepayment(id: string, updates: Partial<InsertTelcoLoanRepayment>): Promise<TelcoLoanRepayment> {
+    const [updated] = await db.update(telcoLoanRepayments).set(updates).where(eq(telcoLoanRepayments.id, id)).returning();
+    return updated;
+  }
+
+  async getTelcoConsentEvents(profileId: string): Promise<TelcoConsentEvent[]> {
+    return db.select().from(telcoConsentEvents).where(eq(telcoConsentEvents.profileId, profileId)).orderBy(desc(telcoConsentEvents.createdAt));
+  }
+
+  async createTelcoConsentEvent(event: InsertTelcoConsentEvent): Promise<TelcoConsentEvent> {
+    const [created] = await db.insert(telcoConsentEvents).values(event).returning();
+    return created;
+  }
+
+  async getTelcoConsentSummary(organizationId?: string, country?: string): Promise<{ total: number; active: number; revoked: number; byMethod: Record<string, number> }> {
+    const filters: any[] = [];
+    if (organizationId) filters.push(eq(telcoConsentEvents.organizationId, organizationId));
+    if (country) filters.push(eq(telcoConsentEvents.country, country));
+    const where = filters.length > 1 ? and(...filters) : filters[0];
+    const rows = await db.select({ action: telcoConsentEvents.action, method: telcoConsentEvents.method }).from(telcoConsentEvents).where(where);
+    let active = 0, revoked = 0;
+    const byMethod: Record<string, number> = {};
+    for (const r of rows) {
+      if (r.action === "grant") active++;
+      if (r.action === "revoke") revoked++;
+      byMethod[r.method] = (byMethod[r.method] || 0) + 1;
+    }
+    return { total: rows.length, active, revoked, byMethod };
   }
 }
 

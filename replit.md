@@ -58,6 +58,14 @@ The system employs a modern full-stack architecture built for scalability and co
     -   **PAPSS Settlement Tracker**: Tracks Pan-African Payment and Settlement System settlements.
     -   **Alternative Data Integration**: Integrates mobile money, utility, and telco data.
     -   **Telco Credit Scoring**: Dedicated AI-driven mobile money (MoMo) analytics section for credit-scoring unbanked/underbanked populations, including KPI computation, AI credit scores, and a configurable decision engine. Production-scale dataset: 50K+ profiles, 1.45M+ transactions, 35K+ pre-computed scores across 10 African countries. Server-side pagination (50 per page), phone number search, and SQL-aggregated analytics for large-dataset performance. Local currency display per country (GH₵, KSh, ₦, etc.).
+    -   **Telco Lending Lifecycle**: Full loan lifecycle management at `/telco-lending` with:
+        - **Loan Portfolio Dashboard**: KPI cards (total disbursed, outstanding, repaid, avg loan size, active/defaulted/paid-off counts), PAR 30/60/90 progress bars, collection rate, default rate.
+        - **Loan Management**: Paginated loan list with status badges, country/status filters, expandable detail with repayment history, disburse and record-repayment actions.
+        - **Consent Management**: Regulatory-compliant consent tracking (grant/revoke) with method (USSD, SMS, app, web portal, agent, IVR), purpose, IP address, unique receipt IDs, and aggregated consent analytics.
+        - **Auto Loan Creation**: Decision engine approval automatically creates a `telco_loans` record linked to the profile, score, and decision log.
+        - **Disbursement & Reconciliation**: Reconciliation status tracking (pending, confirmed, failed, reversed) with manual disbursement UI.
+    -   **Idempotency Support**: Critical telco endpoints (decision engine, bulk decisions, disbursements) support `Idempotency-Key` header with 24-hour TTL cache. Duplicate requests return `X-Idempotent-Replayed: true`.
+    -   **Telco API Documentation**: Enterprise telco integration endpoints documented in the API Developer Portal with sections for profiles, scoring, loans, consent, and idempotency.
     -   **Business Credit Report Template**: Dedicated page at `/business-credit-report/:borrowerId` with 10 D&B-style sections for comprehensive business credit analysis.
     -   **Credit Score Methodology Page**: Dedicated `/credit-score-methodology` page with RBAC restriction, explaining score bands, factors, reason codes, and an interactive Score Simulator.
     -   **Score Guide**: Public-facing credit score education page at `/score-guide` with score band explanations and improvement tips.

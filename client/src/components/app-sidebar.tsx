@@ -44,6 +44,7 @@ import {
   Monitor,
   User,
   Smartphone,
+  Banknote,
 } from "lucide-react";
 import {
   Sidebar,
@@ -76,6 +77,7 @@ const topItems: NavItem[] = [
   { label: "Consumers", url: "/consumers", icon: User, testId: "nav-consumers" },
   { label: "Businesses", url: "/businesses", icon: Building2, testId: "nav-businesses" },
   { label: "Telco Scoring", url: "/telco-scoring", icon: Smartphone, testId: "nav-telco-scoring" },
+  { label: "Telco Lending", url: "/telco-lending", icon: Banknote, testId: "nav-telco-lending" },
 ];
 
 const creditOpsItems: NavItem[] = [

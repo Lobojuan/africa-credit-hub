@@ -870,6 +870,103 @@ export const insertTelcoDecisionLogSchema = createInsertSchema(telcoDecisionLogs
 export type InsertTelcoDecisionLog = z.infer<typeof insertTelcoDecisionLogSchema>;
 export type TelcoDecisionLog = typeof telcoDecisionLogs.$inferSelect;
 
+export const telcoLoanStatusEnum = pgEnum("telco_loan_status", [
+  "pending_disbursement", "disbursed", "active", "repaying",
+  "paid_off", "defaulted", "written_off", "restructured"
+]);
+
+export const telcoDisbursementStatusEnum = pgEnum("telco_disbursement_status", [
+  "pending", "processing", "confirmed", "failed", "reversed"
+]);
+
+export const telcoRepaymentStatusEnum = pgEnum("telco_repayment_status", [
+  "scheduled", "paid", "partial", "missed", "overdue", "waived"
+]);
+
+export const telcoConsentMethodEnum = pgEnum("telco_consent_method", [
+  "ussd", "sms", "app", "web_portal", "agent", "ivr"
+]);
+
+export const telcoLoans = pgTable("telco_loans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  profileId: varchar("profile_id").notNull().references(() => telcoProfiles.id),
+  decisionLogId: varchar("decision_log_id").references(() => telcoDecisionLogs.id),
+  scoreId: varchar("score_id").references(() => telcoCreditScores.id),
+  loanAmount: decimal("loan_amount", { precision: 15, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("GHS"),
+  interestRate: decimal("interest_rate", { precision: 5, scale: 2 }).notNull().default("0"),
+  fees: decimal("fees", { precision: 15, scale: 2 }).default("0"),
+  totalRepayable: decimal("total_repayable", { precision: 15, scale: 2 }).notNull(),
+  amountRepaid: decimal("amount_repaid", { precision: 15, scale: 2 }).default("0"),
+  outstandingBalance: decimal("outstanding_balance", { precision: 15, scale: 2 }).notNull(),
+  status: telcoLoanStatusEnum("status").notNull().default("pending_disbursement"),
+  disbursementStatus: telcoDisbursementStatusEnum("disbursement_status").notNull().default("pending"),
+  disbursementRef: text("disbursement_ref"),
+  disbursementChannel: text("disbursement_channel").default("mobile_money"),
+  disbursedAt: timestamp("disbursed_at"),
+  tenorDays: integer("tenor_days").notNull().default(30),
+  dueDate: timestamp("due_date"),
+  daysInArrears: integer("days_in_arrears").default(0),
+  repaymentFrequency: text("repayment_frequency").default("lump_sum"),
+  installmentCount: integer("installment_count").default(1),
+  nextPaymentDate: timestamp("next_payment_date"),
+  lastPaymentDate: timestamp("last_payment_date"),
+  closedAt: timestamp("closed_at"),
+  closureReason: text("closure_reason"),
+  country: text("country"),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertTelcoLoanSchema = createInsertSchema(telcoLoans).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertTelcoLoan = z.infer<typeof insertTelcoLoanSchema>;
+export type TelcoLoan = typeof telcoLoans.$inferSelect;
+
+export const telcoLoanRepayments = pgTable("telco_loan_repayments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  loanId: varchar("loan_id").notNull().references(() => telcoLoans.id),
+  profileId: varchar("profile_id").notNull().references(() => telcoProfiles.id),
+  installmentNumber: integer("installment_number").default(1),
+  amountDue: decimal("amount_due", { precision: 15, scale: 2 }).notNull(),
+  amountPaid: decimal("amount_paid", { precision: 15, scale: 2 }).default("0"),
+  status: telcoRepaymentStatusEnum("status").notNull().default("scheduled"),
+  paymentMethod: text("payment_method").default("mobile_money"),
+  paymentRef: text("payment_ref"),
+  dueDate: timestamp("due_date").notNull(),
+  paidAt: timestamp("paid_at"),
+  daysLate: integer("days_late").default(0),
+  currency: text("currency").notNull().default("GHS"),
+  country: text("country"),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertTelcoLoanRepaymentSchema = createInsertSchema(telcoLoanRepayments).omit({ id: true, createdAt: true });
+export type InsertTelcoLoanRepayment = z.infer<typeof insertTelcoLoanRepaymentSchema>;
+export type TelcoLoanRepayment = typeof telcoLoanRepayments.$inferSelect;
+
+export const telcoConsentEvents = pgTable("telco_consent_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  profileId: varchar("profile_id").notNull().references(() => telcoProfiles.id),
+  action: text("action").notNull(),
+  method: telcoConsentMethodEnum("method").notNull().default("web_portal"),
+  purpose: text("purpose").notNull().default("credit_scoring"),
+  dataScope: text("data_scope").default("momo_transactions,sim_data,kyc_data"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  consentReceiptId: text("consent_receipt_id"),
+  validUntil: timestamp("valid_until"),
+  revokedAt: timestamp("revoked_at"),
+  country: text("country"),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertTelcoConsentEventSchema = createInsertSchema(telcoConsentEvents).omit({ id: true, createdAt: true });
+export type InsertTelcoConsentEvent = z.infer<typeof insertTelcoConsentEventSchema>;
+export type TelcoConsentEvent = typeof telcoConsentEvents.$inferSelect;
+
 export const consumerAccounts = pgTable("consumer_accounts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   nationalId: text("national_id").notNull().unique(),
