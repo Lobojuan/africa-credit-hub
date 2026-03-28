@@ -50,7 +50,6 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -65,93 +64,86 @@ import { isGhanaMode, isSierraLeoneMode, isSingleCountryMode, getBrandTitle, get
 import { useCountryTheme } from "@/components/country-theme-provider";
 
 type NavItem = {
-  titleKey: string;
+  label: string;
   url: string;
   icon: LucideIcon;
   testId: string;
   roles?: string[];
 };
 
-const dashboardItem: NavItem = { titleKey: "sidebar.dashboard", url: "/dashboard", icon: LayoutDashboard, testId: "nav-dashboard" };
-
-const consumersGroupItems: NavItem[] = [
-  { titleKey: "sidebar.consumers", url: "/consumers", icon: User, testId: "nav-consumers" },
-  { titleKey: "sidebar.consumerPortal", url: "/my-credit", icon: UserCheck, testId: "nav-consumer-portal" },
-  { titleKey: "sidebar.creditScoreMethodology", url: "/credit-score-methodology", icon: Brain, testId: "nav-credit-score-methodology", roles: ["admin", "lender", "super_admin"] },
-];
-
-const businessesGroupItems: NavItem[] = [
-  { titleKey: "sidebar.businesses", url: "/businesses", icon: Building2, testId: "nav-businesses" },
-  { titleKey: "sidebar.borrowers", url: "/borrowers", icon: Users, testId: "nav-borrowers", roles: ["super_admin"] },
-];
-
-const telcoGroupItems: NavItem[] = [
-  { titleKey: "sidebar.telcoScoring", url: "/telco-scoring", icon: Smartphone, testId: "nav-telco-scoring" },
+const topItems: NavItem[] = [
+  { label: "Dashboard", url: "/dashboard", icon: LayoutDashboard, testId: "nav-dashboard" },
+  { label: "Consumers", url: "/consumers", icon: User, testId: "nav-consumers" },
+  { label: "Businesses", url: "/businesses", icon: Building2, testId: "nav-businesses" },
+  { label: "Telco Scoring", url: "/telco-scoring", icon: Smartphone, testId: "nav-telco-scoring" },
 ];
 
 const creditOpsItems: NavItem[] = [
-  { titleKey: "sidebar.creditAccounts", url: "/credit-accounts", icon: CreditCard, testId: "nav-credit-accounts" },
-  { titleKey: "sidebar.creditSearch", url: "/search", icon: Search, testId: "nav-credit-search" },
-  { titleKey: "sidebar.creditReports", url: "/reports", icon: FileText, testId: "nav-credit-reports" },
-  { titleKey: "sidebar.batchUpload", url: "/batch-upload", icon: Upload, testId: "nav-batch-upload", roles: ["admin", "lender", "super_admin"] },
-  { titleKey: "sidebar.disputes", url: "/disputes", icon: AlertCircle, testId: "nav-disputes" },
-  { titleKey: "sidebar.pendingApprovals", url: "/approvals", icon: CheckSquare, testId: "nav-pending-approvals", roles: ["admin", "regulator", "super_admin"] },
-  { titleKey: "sidebar.consentManagement", url: "/consent", icon: FileCheck, testId: "nav-consent" },
-  { titleKey: "sidebar.helpdesk", url: "/helpdesk", icon: Headset, testId: "nav-helpdesk" },
+  { label: "Credit Accounts", url: "/credit-accounts", icon: CreditCard, testId: "nav-credit-accounts" },
+  { label: "Credit Search", url: "/search", icon: Search, testId: "nav-credit-search" },
+  { label: "Credit Reports", url: "/reports", icon: FileText, testId: "nav-credit-reports" },
+  { label: "Batch Upload", url: "/batch-upload", icon: Upload, testId: "nav-batch-upload", roles: ["admin", "lender", "super_admin"] },
+  { label: "Disputes", url: "/disputes", icon: AlertCircle, testId: "nav-disputes" },
+  { label: "Approvals", url: "/approvals", icon: CheckSquare, testId: "nav-pending-approvals", roles: ["admin", "regulator", "super_admin"] },
+  { label: "Consent", url: "/consent", icon: FileCheck, testId: "nav-consent" },
+  { label: "Helpdesk", url: "/helpdesk", icon: Headset, testId: "nav-helpdesk" },
+  { label: "Score Methodology", url: "/credit-score-methodology", icon: Brain, testId: "nav-credit-score-methodology", roles: ["admin", "lender", "super_admin"] },
+  { label: "My Credit", url: "/my-credit", icon: UserCheck, testId: "nav-consumer-portal" },
 ];
 
 const baseOversightItems: NavItem[] = [
-  { titleKey: "sidebar.portfolioIntelligence", url: "/portfolio-intelligence", icon: Brain, testId: "nav-portfolio-intelligence", roles: ["admin", "super_admin", "regulator"] },
-  { titleKey: "sidebar.aiCommandCenter", url: "/ai-command-center", icon: Sparkles, testId: "nav-ai-command-center", roles: ["admin", "super_admin", "regulator"] },
-  { titleKey: "sidebar.regulatoryDashboard", url: "/regulatory-dashboard", icon: BarChart3, testId: "nav-regulatory-dashboard", roles: ["admin", "regulator", "super_admin"] },
-  { titleKey: "sidebar.auditTrail", url: "/audit", icon: Shield, testId: "nav-audit-trail", roles: ["admin", "regulator", "super_admin"] },
-  { titleKey: "sidebar.borrowerAlerts", url: "/borrower-alerts", icon: Bell, testId: "nav-borrower-alerts", roles: ["admin", "regulator", "super_admin"] },
-  { titleKey: "sidebar.regulatoryCompliance", url: "/regulatory-compliance", icon: Scale, testId: "nav-regulatory-compliance", roles: ["admin", "regulator", "super_admin"] },
+  { label: "Portfolio Intelligence", url: "/portfolio-intelligence", icon: Brain, testId: "nav-portfolio-intelligence", roles: ["admin", "super_admin", "regulator"] },
+  { label: "AI Command Center", url: "/ai-command-center", icon: Sparkles, testId: "nav-ai-command-center", roles: ["admin", "super_admin", "regulator"] },
+  { label: "Regulatory Dashboard", url: "/regulatory-dashboard", icon: BarChart3, testId: "nav-regulatory-dashboard", roles: ["admin", "regulator", "super_admin"] },
+  { label: "Audit Trail", url: "/audit", icon: Shield, testId: "nav-audit-trail", roles: ["admin", "regulator", "super_admin"] },
+  { label: "Borrower Alerts", url: "/borrower-alerts", icon: Bell, testId: "nav-borrower-alerts", roles: ["admin", "regulator", "super_admin"] },
+  { label: "Regulatory Compliance", url: "/regulatory-compliance", icon: Scale, testId: "nav-regulatory-compliance", roles: ["admin", "regulator", "super_admin"] },
 ];
 
 function getOversightItems(activeCountryName?: string): NavItem[] {
   const items = [...baseOversightItems];
   const country = activeCountryName?.toLowerCase().replace(/[\s_-]/g, "") || "";
   if (country === "sierraleone" || isSierraLeoneMode()) {
-    items.push({ titleKey: "sidebar.bslExport", url: "/bsl-export", icon: FileSpreadsheet, testId: "nav-bsl-export", roles: ["admin", "regulator", "super_admin"] });
+    items.push({ label: "BSL Export", url: "/bsl-export", icon: FileSpreadsheet, testId: "nav-bsl-export", roles: ["admin", "regulator", "super_admin"] });
   } else {
-    items.push({ titleKey: "sidebar.bogExport", url: "/bog-export", icon: FileSpreadsheet, testId: "nav-bog-export", roles: ["admin", "regulator", "super_admin"] });
+    items.push({ label: "BOG Export", url: "/bog-export", icon: FileSpreadsheet, testId: "nav-bog-export", roles: ["admin", "regulator", "super_admin"] });
   }
   return items;
 }
 
 const crossBorderItems: NavItem[] = [
-  { titleKey: "sidebar.crossBorderAgreements", url: "/cross-border-agreements", icon: Handshake, testId: "nav-cross-border-agreements", roles: ["admin", "super_admin", "regulator"] },
-  { titleKey: "sidebar.crossBorderSearch", url: "/cross-border-search", icon: FileSearch, testId: "nav-cross-border-search", roles: ["admin", "super_admin", "regulator", "lender"] },
-  { titleKey: "sidebar.papssSettlements", url: "/papss-settlements", icon: ArrowRightLeft, testId: "nav-papss-settlements", roles: ["admin", "super_admin", "regulator"] },
+  { label: "Agreements", url: "/cross-border-agreements", icon: Handshake, testId: "nav-cross-border-agreements", roles: ["admin", "super_admin", "regulator"] },
+  { label: "Cross-Border Search", url: "/cross-border-search", icon: FileSearch, testId: "nav-cross-border-search", roles: ["admin", "super_admin", "regulator", "lender"] },
+  { label: "PAPSS Settlements", url: "/papss-settlements", icon: ArrowRightLeft, testId: "nav-papss-settlements", roles: ["admin", "super_admin", "regulator"] },
 ];
 
 const adminItems: NavItem[] = [
-  { titleKey: "sidebar.commandCenter", url: "/command-center", icon: Monitor, testId: "nav-command-center", roles: ["super_admin"] },
-  { titleKey: "sidebar.organizations", url: "/organizations", icon: Building2, testId: "nav-organizations", roles: ["super_admin"] },
-  { titleKey: "sidebar.userManagement", url: "/users", icon: Settings, testId: "nav-user-management", roles: ["admin", "super_admin"] },
-  { titleKey: "sidebar.institutions", url: "/institutions", icon: Building2, testId: "nav-institutions", roles: ["admin", "super_admin"] },
-  { titleKey: "sidebar.billing", url: "/billing", icon: Receipt, testId: "nav-billing", roles: ["admin", "regulator", "super_admin"] },
-  { titleKey: "sidebar.retentionPolicies", url: "/retention-policies", icon: Archive, testId: "nav-retention-policies", roles: ["admin", "regulator", "super_admin"] },
-  { titleKey: "sidebar.exchangeRates", url: "/exchange-rates", icon: DollarSign, testId: "nav-exchange-rates", roles: ["admin", "super_admin"] },
-  { titleKey: "sidebar.apiAdmin", url: "/api-admin", icon: Plug, testId: "nav-api-admin", roles: ["admin", "super_admin"] },
-  { titleKey: "sidebar.apiKeys", url: "/api-keys", icon: Key, testId: "nav-api-keys", roles: ["admin", "super_admin"] },
-  { titleKey: "sidebar.systemStatus", url: "/system-status", icon: Activity, testId: "nav-system-status", roles: ["admin", "super_admin"] },
-  { titleKey: "sidebar.platformMetrics", url: "/platform-metrics", icon: Gauge, testId: "nav-platform-metrics", roles: ["admin", "super_admin"] },
-  { titleKey: "sidebar.webhookManagement", url: "/webhook-management", icon: Webhook, testId: "nav-webhook-management", roles: ["admin", "super_admin"] },
+  { label: "Command Center", url: "/command-center", icon: Monitor, testId: "nav-command-center", roles: ["super_admin"] },
+  { label: "Organizations", url: "/organizations", icon: Building2, testId: "nav-organizations", roles: ["super_admin"] },
+  { label: "Borrowers (All)", url: "/borrowers", icon: Users, testId: "nav-borrowers", roles: ["super_admin"] },
+  { label: "User Management", url: "/users", icon: Settings, testId: "nav-user-management", roles: ["admin", "super_admin"] },
+  { label: "Institutions", url: "/institutions", icon: Building2, testId: "nav-institutions", roles: ["admin", "super_admin"] },
+  { label: "Billing", url: "/billing", icon: Receipt, testId: "nav-billing", roles: ["admin", "regulator", "super_admin"] },
+  { label: "Retention Policies", url: "/retention-policies", icon: Archive, testId: "nav-retention-policies", roles: ["admin", "regulator", "super_admin"] },
+  { label: "Exchange Rates", url: "/exchange-rates", icon: DollarSign, testId: "nav-exchange-rates", roles: ["admin", "super_admin"] },
+  { label: "API Admin", url: "/api-admin", icon: Plug, testId: "nav-api-admin", roles: ["admin", "super_admin"] },
+  { label: "API Keys", url: "/api-keys", icon: Key, testId: "nav-api-keys", roles: ["admin", "super_admin"] },
+  { label: "System Status", url: "/system-status", icon: Activity, testId: "nav-system-status", roles: ["admin", "super_admin"] },
+  { label: "Platform Metrics", url: "/platform-metrics", icon: Gauge, testId: "nav-platform-metrics", roles: ["admin", "super_admin"] },
+  { label: "Webhooks", url: "/webhook-management", icon: Webhook, testId: "nav-webhook-management", roles: ["admin", "super_admin"] },
 ];
 
 const resourceItems: NavItem[] = [
-  { titleKey: "sidebar.appGuide", url: "/guide", icon: Play, testId: "nav-app-guide" },
-  { titleKey: "sidebar.help", url: "/help", icon: HelpCircle, testId: "nav-help" },
+  { label: "App Guide", url: "/guide", icon: Play, testId: "nav-app-guide" },
+  { label: "Help", url: "/help", icon: HelpCircle, testId: "nav-help" },
   ...(isGhanaMode() ? [
-    { titleKey: "sidebar.ghanaDocs", url: "/ghana-docs", icon: BookOpen, testId: "nav-ghana-docs" } as NavItem,
-    { titleKey: "sidebar.documentation", url: "/documentation", icon: FileText, testId: "nav-documentation" } as NavItem,
+    { label: "Ghana Docs", url: "/ghana-docs", icon: BookOpen, testId: "nav-ghana-docs" } as NavItem,
+    { label: "Documentation", url: "/documentation", icon: FileText, testId: "nav-documentation" } as NavItem,
   ] : [
-    { titleKey: "sidebar.documentation", url: "/documentation", icon: BookOpen, testId: "nav-documentation" } as NavItem,
+    { label: "Documentation", url: "/documentation", icon: BookOpen, testId: "nav-documentation" } as NavItem,
   ]),
-  { titleKey: "sidebar.versionHistory", url: "/version-history", icon: History, testId: "nav-version-history" },
-  { titleKey: "sidebar.about", url: "/about", icon: Info, testId: "nav-about" },
+  { label: "Version History", url: "/version-history", icon: History, testId: "nav-version-history" },
+  { label: "About", url: "/about", icon: Info, testId: "nav-about" },
 ];
 
 function filterByRole(items: NavItem[], role: string | undefined): NavItem[] {
@@ -163,26 +155,22 @@ function CollapsibleSection({
   label,
   items,
   location,
-  t,
   icon: Icon,
-  defaultOpen,
 }: {
   label: string;
   items: NavItem[];
   location: string;
-  t: (key: string) => string;
   icon?: LucideIcon;
-  defaultOpen?: boolean;
 }) {
   const hasActive = items.some(item => location === item.url || (item.url === "/command-center" && location.startsWith("/command-center")));
-  const [open, setOpen] = useState(hasActive || !!defaultOpen);
+  const [open, setOpen] = useState(hasActive);
   const [userToggled, setUserToggled] = useState(false);
 
   React.useEffect(() => {
     if (hasActive) {
       setOpen(true);
       setUserToggled(false);
-    } else if (!userToggled && !defaultOpen) {
+    } else if (!userToggled) {
       setOpen(false);
     }
   }, [hasActive, location]);
@@ -193,7 +181,7 @@ function CollapsibleSection({
     <Collapsible open={open} onOpenChange={(v) => { setOpen(v); setUserToggled(true); }}>
       <SidebarGroup className="py-0">
         <CollapsibleTrigger className="w-full group">
-          <SidebarGroupLabel className="text-sidebar-foreground/50 text-[10px] font-bold uppercase tracking-widest px-3 cursor-pointer group-hover:text-sidebar-foreground/80 transition-colors flex items-center justify-between">
+          <div className="text-sidebar-foreground/50 text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 cursor-pointer group-hover:text-sidebar-foreground/80 transition-colors flex items-center justify-between">
             <span className="flex items-center gap-2">
               {Icon && <Icon className="w-3.5 h-3.5" />}
               {label}
@@ -204,17 +192,17 @@ function CollapsibleSection({
               )}
               <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-300 ${open ? "" : "-rotate-90"}`} />
             </div>
-          </SidebarGroupLabel>
+          </div>
         </CollapsibleTrigger>
         <CollapsibleContent className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down overflow-hidden">
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (
-                <SidebarMenuItem key={item.titleKey}>
+                <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton asChild data-active={location === item.url || (item.url === "/command-center" && location.startsWith("/command-center"))}>
                     <Link href={item.url} data-testid={item.testId}>
                       <item.icon className="w-4 h-4" />
-                      <span>{t(item.titleKey)}</span>
+                      <span>{item.label}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -228,7 +216,8 @@ function CollapsibleSection({
 }
 
 export function AppSidebar() {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
+  const { t } = useTranslation();
   const [location] = useLocation();
   const { user } = useAuth();
   const role = user?.role;
@@ -239,9 +228,7 @@ export function AppSidebar() {
   const dynamicBrandTitle = dynamicCountryConfig?.brandTitle || (isGhanaMode() ? getBrandTitle() : t('sidebar.brandTitle'));
   const dynamicTheme = countryTheme?.activeTheme;
 
-  const visibleConsumers = filterByRole(consumersGroupItems, role);
-  const visibleBusinesses = filterByRole(businessesGroupItems, role);
-  const visibleTelco = filterByRole(telcoGroupItems, role);
+  const visibleTop = filterByRole(topItems, role);
   const visibleCreditOps = filterByRole(creditOpsItems, role);
   const oversightItems = getOversightItems(dynamicCountryConfig?.name);
   const visibleOversight = filterByRole(oversightItems, role);
@@ -281,14 +268,16 @@ export function AppSidebar() {
         <SidebarGroup className="py-0">
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild data-active={location === dashboardItem.url}>
-                  <Link href={dashboardItem.url} data-testid={dashboardItem.testId}>
-                    <dashboardItem.icon className="w-4 h-4" />
-                    <span>{t(dashboardItem.titleKey)}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {visibleTop.map((item) => (
+                <SidebarMenuItem key={item.url}>
+                  <SidebarMenuButton asChild data-active={location === item.url}>
+                    <Link href={item.url} data-testid={item.testId}>
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -297,77 +286,36 @@ export function AppSidebar() {
           <div className="h-px bg-sidebar-foreground/10" />
         </div>
 
-        {visibleConsumers.length > 0 && (
-          <CollapsibleSection
-            label={t('sidebar.consumersGroup', 'Consumers')}
-            items={visibleConsumers}
-            location={location}
-            t={t}
-            icon={User}
-            defaultOpen
-          />
-        )}
-
-        {visibleBusinesses.length > 0 && (
-          <CollapsibleSection
-            label={t('sidebar.businessesGroup', 'Businesses')}
-            items={visibleBusinesses}
-            location={location}
-            t={t}
-            icon={Building2}
-            defaultOpen
-          />
-        )}
-
-        {visibleTelco.length > 0 && (
-          <CollapsibleSection
-            label={t('sidebar.telcoGroup', 'Telco & Mobile Money')}
-            items={visibleTelco}
-            location={location}
-            t={t}
-            icon={Smartphone}
-            defaultOpen
-          />
-        )}
-
-        <div className="mx-3 my-1">
-          <div className="h-px bg-sidebar-foreground/10" />
-        </div>
-
         <CollapsibleSection
-          label={t('sidebar.creditOperations', 'Credit Operations')}
+          label="Credit Operations"
           items={visibleCreditOps}
           location={location}
-          t={t}
           icon={CreditCard}
         />
 
         {visibleOversight.length > 0 && (
           <CollapsibleSection
-            label={t('sidebar.oversight', 'Oversight & Analytics')}
+            label="Oversight & Analytics"
             items={visibleOversight}
             location={location}
-            t={t}
             icon={Eye}
           />
         )}
 
         {visibleCrossBorder.length > 0 && (
           <CollapsibleSection
-            label={t('sidebar.crossBorder', 'Cross-Border')}
+            label="Cross-Border"
             items={visibleCrossBorder}
             location={location}
-            t={t}
             icon={Globe}
           />
         )}
 
         {visibleAdmin.length > 0 && (
           <CollapsibleSection
-            label={t('sidebar.administration', 'Administration')}
+            label="Administration"
             items={visibleAdmin}
             location={location}
-            t={t}
             icon={Settings}
           />
         )}
@@ -377,10 +325,9 @@ export function AppSidebar() {
         </div>
 
         <CollapsibleSection
-          label={t('sidebar.resources', 'Resources')}
+          label="Resources"
           items={visibleResources}
           location={location}
-          t={t}
         />
       </SidebarContent>
       <SidebarFooter className="p-3 pt-0 space-y-1.5">
