@@ -19,6 +19,7 @@ The system employs a modern full-stack architecture built for scalability and co
 -   **Theming**: Dark/light theme with a premium teal and gold palette.
 -   **Responsiveness**: Mobile-first design with adaptive layouts and role-filtered navigation.
 -   **Interactive Elements**: Dashboards with drill-down, notifications, Recharts, an interactive SVG Africa map, and a circular SVG credit score gauge.
+-   **App Footer**: Persistent footer (`client/src/components/app-footer.tsx`) displayed on all authenticated pages. Shows company branding (Carlson Capital & Systems In Motion Limited), leadership (Uffe Jon Carlson — CEO, Thomas Baafi — CTO), location (Accra, Ghana), pan-African coverage, and copyright.
 -   **Guided Tours**: Interactive demo tour and application walkthroughs.
 
 **Technical Implementations & Feature Specifications:**

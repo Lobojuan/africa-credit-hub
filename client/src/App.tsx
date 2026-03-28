@@ -26,6 +26,7 @@ import { CountryThemeProvider, useCountryTheme } from "@/components/country-them
 import { CountrySelector } from "@/components/country-selector";
 import { QuickAccessBar } from "@/components/quick-access-bar";
 import { SessionTimeoutDialog } from "@/components/session-timeout-dialog";
+import { AppFooter } from "@/components/app-footer";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -377,10 +378,13 @@ function AuthenticatedApp() {
               Log Out
             </Button>
           </header>
-          <main className="flex-1 overflow-auto">
-            <ErrorBoundary>
-              <Router />
-            </ErrorBoundary>
+          <main className="flex-1 overflow-auto flex flex-col">
+            <div className="flex-1">
+              <ErrorBoundary>
+                <Router />
+              </ErrorBoundary>
+            </div>
+            <AppFooter />
           </main>
           {passwordExpired && <PasswordChangeDialog open={true} forced={true} />}
         </div>
