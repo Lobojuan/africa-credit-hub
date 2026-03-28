@@ -163,6 +163,9 @@
     },
     "vite": {
       "picomatch": "^4.0.4"
+    },
+    "vitest": {
+      "picomatch": "^4.0.4"
     }
   },
   "optionalDependencies": {
