@@ -88,7 +88,7 @@ export async function seedTelcoLending() {
         amountRepaid: String(amountRepaid),
         outstandingBalance: String(outstanding),
         status,
-        disbursementStatus: status === "pending_disbursement" ? "pending" : "completed",
+        disbursementStatus: status === "pending_disbursement" ? "pending" : "confirmed",
         disbursementChannel: "mobile_money",
         disbursedAt,
         tenorDays,
