@@ -904,6 +904,7 @@ export default function TelcoScoringPage() {
   const { toast } = useToast();
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
+  const [expandedProfileId, setExpandedProfileId] = useState<string | null>(null);
   const [scoreDetailId, setScoreDetailId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("analytics");
 
@@ -963,6 +964,9 @@ export default function TelcoScoringPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/telco/scores"] });
       queryClient.invalidateQueries({ queryKey: ["/api/telco/dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["/api/telco/analytics"] });
+      if (data.score?.profileId) {
+        setExpandedProfileId(data.score.profileId);
+      }
       toast({ title: "Telco credit score generated", description: `Risk: ${getRiskLabel(data.score.riskTier)} (${data.score.riskScore}/5)` });
     },
     onError: (e: Error) => {
@@ -1220,8 +1224,16 @@ export default function TelcoScoringPage() {
               {profilesLoading ? (
                 <Card><CardContent className="p-4"><Skeleton className="h-32 w-full" /></CardContent></Card>
               ) : profiles && profiles.length > 0 ? (
-                profiles.map(profile => (
-                  <Card key={profile.id} className="hover-elevate cursor-pointer" data-testid={`card-profile-${profile.id}`}>
+                profiles.map(profile => {
+                  const profileScores = (scores || []).filter(s => s.profileId === profile.id);
+                  const isExpanded = expandedProfileId === profile.id;
+                  return (
+                  <Card
+                    key={profile.id}
+                    className="hover-elevate cursor-pointer"
+                    onClick={() => setExpandedProfileId(isExpanded ? null : profile.id)}
+                    data-testid={`card-profile-${profile.id}`}
+                  >
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -1246,14 +1258,139 @@ export default function TelcoScoringPage() {
                             {scoreMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Brain className="w-3 h-3 mr-1" />}
                             Score
                           </Button>
+                          <ChevronRight className={`w-4 h-4 text-muted-foreground transition-transform ${isExpanded ? "rotate-90" : ""}`} />
                         </div>
                       </div>
                       {profile.simRegistrationDate && (
                         <p className="text-xs text-muted-foreground mt-2">SIM Registered: {profile.simRegistrationDate}</p>
                       )}
+
+                      {isExpanded && (
+                        <div className="mt-4 space-y-4" data-testid={`profile-detail-${profile.id}`}>
+                          <Separator />
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <div className="p-3 rounded-lg bg-muted/50">
+                              <p className="text-[10px] text-muted-foreground mb-1">Phone Number</p>
+                              <p className="text-sm font-semibold">{profile.msisdn}</p>
+                            </div>
+                            <div className="p-3 rounded-lg bg-muted/50">
+                              <div className="flex items-center gap-1 mb-1">
+                                <Globe className="w-3 h-3 text-muted-foreground" />
+                                <p className="text-[10px] text-muted-foreground">Country</p>
+                              </div>
+                              <p className="text-sm font-semibold">{profile.country}</p>
+                            </div>
+                            <div className="p-3 rounded-lg bg-muted/50">
+                              <div className="flex items-center gap-1 mb-1">
+                                <Signal className="w-3 h-3 text-muted-foreground" />
+                                <p className="text-[10px] text-muted-foreground">Provider</p>
+                              </div>
+                              <p className="text-sm font-semibold capitalize">{profile.provider}</p>
+                            </div>
+                            <div className="p-3 rounded-lg bg-muted/50">
+                              <div className="flex items-center gap-1 mb-1">
+                                <Shield className="w-3 h-3 text-muted-foreground" />
+                                <p className="text-[10px] text-muted-foreground">KYC Level</p>
+                              </div>
+                              <p className="text-sm font-semibold capitalize">{profile.kycLevel}</p>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <div className="p-3 rounded-lg bg-muted/50">
+                              <div className="flex items-center gap-1 mb-1">
+                                <Smartphone className="w-3 h-3 text-muted-foreground" />
+                                <p className="text-[10px] text-muted-foreground">Device Type</p>
+                              </div>
+                              <p className="text-sm font-semibold">{profile.deviceType || "Unknown"}</p>
+                            </div>
+                            <div className="p-3 rounded-lg bg-muted/50">
+                              <div className="flex items-center gap-1 mb-1">
+                                <Clock className="w-3 h-3 text-muted-foreground" />
+                                <p className="text-[10px] text-muted-foreground">SIM Registered</p>
+                              </div>
+                              <p className="text-sm font-semibold">{profile.simRegistrationDate || "N/A"}</p>
+                            </div>
+                            <div className="p-3 rounded-lg bg-muted/50">
+                              <p className="text-[10px] text-muted-foreground mb-1">Device Changes (90d)</p>
+                              <p className="text-sm font-semibold">{profile.deviceChanges90d ?? 0}</p>
+                            </div>
+                            <div className="p-3 rounded-lg bg-muted/50">
+                              <div className="flex items-center gap-1 mb-1">
+                                <ShieldCheck className="w-3 h-3 text-muted-foreground" />
+                                <p className="text-[10px] text-muted-foreground">Consent</p>
+                              </div>
+                              <p className="text-sm font-semibold">{profile.consentGranted ? "Granted" : "Not granted"}</p>
+                            </div>
+                          </div>
+
+                          <div className="p-3 rounded-lg bg-muted/50">
+                            <div className="flex items-center gap-1 mb-1">
+                              <Activity className="w-3 h-3 text-muted-foreground" />
+                              <p className="text-[10px] text-muted-foreground">Account Status</p>
+                            </div>
+                            <Badge variant={profile.accountStatus === "active" ? "default" : "secondary"} className="text-[10px] capitalize mt-1">{profile.accountStatus}</Badge>
+                          </div>
+
+                          {profileScores.length > 0 ? (
+                            <div>
+                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Credit Score History ({profileScores.length} score{profileScores.length !== 1 ? "s" : ""})</p>
+                              <div className="space-y-2">
+                                {profileScores.map(score => (
+                                  <div key={score.id} className="p-3 rounded-lg border border-border bg-card" data-testid={`profile-score-${score.id}`}>
+                                    <div className="flex items-center justify-between mb-1">
+                                      <div className="flex items-center gap-2">
+                                        {getRiskIcon(score.riskTier)}
+                                        <span className={`font-bold ${getRiskColor(score.riskTier)}`}>{score.riskScore}/5</span>
+                                        <Badge variant={getRiskBadgeVariant(score.riskTier)} className="text-[10px]">{getRiskLabel(score.riskTier)}</Badge>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        {score.creditLimit && Number(score.creditLimit) > 0 && (
+                                          <Badge variant="outline" className="text-[10px]">
+                                            <Wallet className="w-3 h-3 mr-1" />${Number(score.creditLimit).toLocaleString()}
+                                          </Badge>
+                                        )}
+                                        {score.approvalRecommendation ? (
+                                          <Badge variant="default" className="text-[10px] bg-green-600"><CheckCircle className="w-3 h-3 mr-1" />Approved</Badge>
+                                        ) : (
+                                          <Badge variant="destructive" className="text-[10px]"><XCircle className="w-3 h-3 mr-1" />Declined</Badge>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">{score.reasonCode}</p>
+                                    <p className="text-[10px] text-muted-foreground mt-1">
+                                      {score.scoredAt ? new Date(score.scoredAt).toLocaleDateString() : ""} · {score.aiProvider}/{score.aiModel} · {score.evaluationPeriodDays}d window
+                                    </p>
+                                    {score.detailedRationale && (
+                                      <p className="text-xs text-muted-foreground mt-2 border-t border-border pt-2">{score.detailedRationale}</p>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="p-4 rounded-lg bg-muted/30 text-center">
+                              <Brain className="w-6 h-6 text-muted-foreground mx-auto mb-2 opacity-40" />
+                              <p className="text-xs text-muted-foreground">No scores generated yet for this profile</p>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="mt-2"
+                                onClick={(e) => { e.stopPropagation(); scoreMutation.mutate(profile.id); }}
+                                disabled={scoreMutation.isPending}
+                                data-testid={`button-score-detail-${profile.id}`}
+                              >
+                                {scoreMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Brain className="w-3 h-3 mr-1" />}
+                                Generate AI Credit Score
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
-                ))
+                  );
+                })
               ) : (
                 <Card>
                   <CardContent className="p-8 text-center">
