@@ -143,7 +143,27 @@
       "@esbuild-kit/esm-loader": "npm:tsx@^4.20.4"
     },
     "path-to-regexp": "8.4.0",
-    "picomatch": "^4.0.4"
+    "chokidar": {
+      "picomatch": "^2.3.2"
+    },
+    "micromatch": {
+      "picomatch": "^2.3.2"
+    },
+    "anymatch": {
+      "picomatch": "^2.3.2"
+    },
+    "readdirp": {
+      "picomatch": "^2.3.2"
+    },
+    "fdir": {
+      "picomatch": "^4.0.4"
+    },
+    "tinyglobby": {
+      "picomatch": "^4.0.4"
+    },
+    "vite": {
+      "picomatch": "^4.0.4"
+    }
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"
