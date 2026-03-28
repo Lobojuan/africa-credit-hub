@@ -177,15 +177,22 @@ export interface IStorage {
   getBorrowerAlertsByBorrower(borrowerId: string): Promise<BorrowerAlert[]>;
   createBorrowerAlert(alert: InsertBorrowerAlert): Promise<BorrowerAlert>;
 
-  getTelcoProfiles(organizationId?: string, country?: string): Promise<TelcoProfile[]>;
+  getTelcoProfiles(organizationId?: string, country?: string, options?: { page?: number; limit?: number; search?: string; provider?: string; kycLevel?: string; accountStatus?: string }): Promise<{ data: TelcoProfile[]; total: number; page: number; totalPages: number }>;
   getTelcoProfile(id: string): Promise<TelcoProfile | undefined>;
   createTelcoProfile(profile: InsertTelcoProfile): Promise<TelcoProfile>;
   getMomoTransactions(profileId: string): Promise<MomoTransaction[]>;
   createMomoTransactions(transactions: InsertMomoTransaction[]): Promise<MomoTransaction[]>;
-  getTelcoCreditScores(organizationId?: string, country?: string): Promise<TelcoCreditScore[]>;
+  getTelcoCreditScores(organizationId?: string, country?: string, options?: { page?: number; limit?: number; riskTier?: string; approved?: string }): Promise<{ data: TelcoCreditScore[]; total: number; page: number; totalPages: number }>;
   getTelcoCreditScoresByProfile(profileId: string): Promise<TelcoCreditScore[]>;
   createTelcoCreditScore(score: InsertTelcoCreditScore): Promise<TelcoCreditScore>;
   getTelcoDashboardStats(organizationId?: string, country?: string): Promise<{ totalProfiles: number; totalScores: number; avgRiskScore: number; approvalRate: number; tierBreakdown: Record<string, number> }>;
+  getTelcoAnalyticsAggregates(organizationId?: string, country?: string): Promise<{
+    countryBreakdown: Record<string, { profiles: number; scored: number; approved: number; totalVolume: number }>;
+    monthlyVolume: { month: string; scored: number; approved: number; declined: number }[];
+    providerBreakdown: Record<string, number>;
+    totalScored: number; totalApproved: number; totalCreditExtended: number;
+  }>;
+  getAllTelcoProfileIds(organizationId?: string, country?: string, kycLevel?: string): Promise<string[]>;
   getDecisionRules(organizationId?: string): Promise<TelcoDecisionRule[]>;
   getDecisionRule(id: string): Promise<TelcoDecisionRule | undefined>;
   getActiveDecisionRule(organizationId?: string, country?: string): Promise<TelcoDecisionRule | undefined>;
@@ -1237,12 +1244,22 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async getTelcoProfiles(organizationId?: string, country?: string): Promise<TelcoProfile[]> {
+  async getTelcoProfiles(organizationId?: string, country?: string, options?: { page?: number; limit?: number; search?: string; provider?: string; kycLevel?: string; accountStatus?: string }): Promise<{ data: TelcoProfile[]; total: number; page: number; totalPages: number }> {
+    const page = options?.page || 1;
+    const limit = Math.min(options?.limit || 50, 200);
+    const offset = (page - 1) * limit;
     const filters: any[] = [];
     if (organizationId) filters.push(eq(telcoProfiles.organizationId, organizationId));
     if (country) filters.push(eq(telcoProfiles.country, country));
+    if (options?.search) filters.push(ilike(telcoProfiles.msisdn, `%${options.search}%`));
+    if (options?.provider) filters.push(eq(telcoProfiles.provider, options.provider as any));
+    if (options?.kycLevel) filters.push(eq(telcoProfiles.kycLevel, options.kycLevel as any));
+    if (options?.accountStatus) filters.push(eq(telcoProfiles.accountStatus, options.accountStatus as any));
     const where = filters.length > 1 ? and(...filters) : filters[0];
-    return db.select().from(telcoProfiles).where(where).orderBy(desc(telcoProfiles.createdAt)).limit(500);
+    const [totalResult] = await db.select({ value: count() }).from(telcoProfiles).where(where);
+    const total = totalResult.value;
+    const data = await db.select().from(telcoProfiles).where(where).orderBy(desc(telcoProfiles.createdAt)).limit(limit).offset(offset);
+    return { data, total, page, totalPages: Math.ceil(total / limit) };
   }
 
   async getTelcoProfile(id: string): Promise<TelcoProfile | undefined> {
@@ -1264,12 +1281,21 @@ export class DatabaseStorage implements IStorage {
     return db.insert(momoTransactions).values(transactions).returning();
   }
 
-  async getTelcoCreditScores(organizationId?: string, country?: string): Promise<TelcoCreditScore[]> {
+  async getTelcoCreditScores(organizationId?: string, country?: string, options?: { page?: number; limit?: number; riskTier?: string; approved?: string }): Promise<{ data: TelcoCreditScore[]; total: number; page: number; totalPages: number }> {
+    const page = options?.page || 1;
+    const limit = Math.min(options?.limit || 50, 200);
+    const offset = (page - 1) * limit;
     const filters: any[] = [];
     if (organizationId) filters.push(eq(telcoCreditScores.organizationId, organizationId));
     if (country) filters.push(eq(telcoCreditScores.country, country));
+    if (options?.riskTier) filters.push(eq(telcoCreditScores.riskTier, options.riskTier as any));
+    if (options?.approved === "true") filters.push(eq(telcoCreditScores.approvalRecommendation, true));
+    if (options?.approved === "false") filters.push(eq(telcoCreditScores.approvalRecommendation, false));
     const where = filters.length > 1 ? and(...filters) : filters[0];
-    return db.select().from(telcoCreditScores).where(where).orderBy(desc(telcoCreditScores.scoredAt)).limit(500);
+    const [totalResult] = await db.select({ value: count() }).from(telcoCreditScores).where(where);
+    const total = totalResult.value;
+    const data = await db.select().from(telcoCreditScores).where(where).orderBy(desc(telcoCreditScores.scoredAt)).limit(limit).offset(offset);
+    return { data, total, page, totalPages: Math.ceil(total / limit) };
   }
 
   async getTelcoCreditScoresByProfile(profileId: string): Promise<TelcoCreditScore[]> {
@@ -1294,14 +1320,23 @@ export class DatabaseStorage implements IStorage {
     if (country) scoreFilters.push(eq(telcoCreditScores.country, country));
     const scoreWhere = scoreFilters.length > 1 ? and(...scoreFilters) : scoreFilters[0];
 
-    const scores = await db.select().from(telcoCreditScores).where(scoreWhere);
-    const totalScores = scores.length;
-    const avgRisk = totalScores > 0 ? scores.reduce((s, sc) => s + sc.riskScore, 0) / totalScores : 0;
-    const approved = scores.filter(s => s.approvalRecommendation).length;
-    const approvalRate = totalScores > 0 ? (approved / totalScores) * 100 : 0;
+    const [scoreAgg] = await db.select({
+      totalScores: count(),
+      avgRisk: sql<number>`COALESCE(AVG(risk_score), 0)`,
+      approved: sql<number>`COUNT(*) FILTER (WHERE approval_recommendation = true)`,
+    }).from(telcoCreditScores).where(scoreWhere);
+
+    const totalScores = scoreAgg.totalScores;
+    const avgRisk = Number(scoreAgg.avgRisk);
+    const approvalRate = totalScores > 0 ? (Number(scoreAgg.approved) / totalScores) * 100 : 0;
+
+    const tierRows = await db.select({
+      tier: telcoCreditScores.riskTier,
+      cnt: count(),
+    }).from(telcoCreditScores).where(scoreWhere).groupBy(telcoCreditScores.riskTier);
 
     const tierBreakdown: Record<string, number> = { very_low: 0, low: 0, medium: 0, high: 0, very_high: 0 };
-    scores.forEach(s => { tierBreakdown[s.riskTier] = (tierBreakdown[s.riskTier] || 0) + 1; });
+    tierRows.forEach(r => { tierBreakdown[r.tier] = r.cnt; });
 
     return {
       totalProfiles: profileCount.value,
@@ -1310,6 +1345,83 @@ export class DatabaseStorage implements IStorage {
       approvalRate: Math.round(approvalRate * 10) / 10,
       tierBreakdown,
     };
+  }
+
+  async getTelcoAnalyticsAggregates(organizationId?: string, country?: string) {
+    const profileFilters: any[] = [];
+    if (organizationId) profileFilters.push(eq(telcoProfiles.organizationId, organizationId));
+    if (country) profileFilters.push(eq(telcoProfiles.country, country));
+    const profileWhere = profileFilters.length > 1 ? and(...profileFilters) : profileFilters[0];
+
+    const scoreFilters: any[] = [];
+    if (organizationId) scoreFilters.push(eq(telcoCreditScores.organizationId, organizationId));
+    if (country) scoreFilters.push(eq(telcoCreditScores.country, country));
+    const scoreWhere = scoreFilters.length > 1 ? and(...scoreFilters) : scoreFilters[0];
+
+    const profilesByCountry = await db.select({
+      country: telcoProfiles.country,
+      cnt: count(),
+    }).from(telcoProfiles).where(profileWhere).groupBy(telcoProfiles.country);
+
+    const scoresByCountry = await db.select({
+      country: telcoCreditScores.country,
+      scored: count(),
+      approved: sql<number>`COUNT(*) FILTER (WHERE approval_recommendation = true)`,
+      totalVolume: sql<number>`COALESCE(SUM(CAST(credit_limit AS numeric)), 0)`,
+    }).from(telcoCreditScores).where(scoreWhere).groupBy(telcoCreditScores.country);
+
+    const monthlyRows = await db.select({
+      month: sql<string>`to_char(scored_at, 'Mon YY')`,
+      scored: count(),
+      approved: sql<number>`COUNT(*) FILTER (WHERE approval_recommendation = true)`,
+      declined: sql<number>`COUNT(*) FILTER (WHERE approval_recommendation = false)`,
+    }).from(telcoCreditScores).where(scoreWhere).groupBy(sql`to_char(scored_at, 'Mon YY')`).orderBy(sql`MIN(scored_at)`);
+
+    const providerRows = await db.select({
+      provider: telcoCreditScores.aiProvider,
+      cnt: count(),
+    }).from(telcoCreditScores).where(scoreWhere).groupBy(telcoCreditScores.aiProvider);
+
+    const [totals] = await db.select({
+      totalScored: count(),
+      totalApproved: sql<number>`COUNT(*) FILTER (WHERE approval_recommendation = true)`,
+      totalCreditExtended: sql<number>`COALESCE(SUM(CAST(credit_limit AS numeric)), 0)`,
+    }).from(telcoCreditScores).where(scoreWhere);
+
+    const countryBreakdown: Record<string, { profiles: number; scored: number; approved: number; totalVolume: number }> = {};
+    for (const r of profilesByCountry) {
+      countryBreakdown[r.country] = { profiles: r.cnt, scored: 0, approved: 0, totalVolume: 0 };
+    }
+    for (const r of scoresByCountry) {
+      if (!countryBreakdown[r.country]) countryBreakdown[r.country] = { profiles: 0, scored: 0, approved: 0, totalVolume: 0 };
+      countryBreakdown[r.country].scored = r.scored;
+      countryBreakdown[r.country].approved = Number(r.approved);
+      countryBreakdown[r.country].totalVolume = Number(r.totalVolume);
+    }
+
+    const providerBreakdown: Record<string, number> = {};
+    for (const r of providerRows) {
+      providerBreakdown[r.provider || "unknown"] = r.cnt;
+    }
+
+    return {
+      countryBreakdown,
+      monthlyVolume: monthlyRows.map(r => ({ month: r.month, scored: r.scored, approved: Number(r.approved), declined: Number(r.declined) })),
+      providerBreakdown,
+      totalScored: totals.totalScored,
+      totalApproved: Number(totals.totalApproved),
+      totalCreditExtended: Number(totals.totalCreditExtended),
+    };
+  }
+
+  async getAllTelcoProfileIds(organizationId?: string, country?: string, kycLevel?: string): Promise<string[]> {
+    const filters: any[] = [];
+    if (organizationId) filters.push(eq(telcoProfiles.organizationId, organizationId));
+    if (country) filters.push(eq(telcoProfiles.country, country));
+    if (kycLevel) filters.push(eq(telcoProfiles.kycLevel, kycLevel as any));
+    const where = filters.length > 1 ? and(...filters) : filters[0];
+    const rows = await db.select({ id: telcoProfiles.id }).from(telcoProfiles).where(where);
+    return rows.map(r => r.id);
   }
 
   async getDecisionRules(organizationId?: string): Promise<TelcoDecisionRule[]> {

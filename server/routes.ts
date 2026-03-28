@@ -1744,8 +1744,14 @@ export async function registerRoutes(
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
-      const profiles = await storage.getTelcoProfiles(orgId, country);
-      res.json(profiles);
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const search = req.query.search as string;
+      const provider = req.query.provider as string;
+      const kycLevel = req.query.kycLevel as string;
+      const accountStatus = req.query.accountStatus as string;
+      const result = await storage.getTelcoProfiles(orgId, country, { page, limit, search, provider, kycLevel, accountStatus });
+      res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
@@ -1878,8 +1884,12 @@ export async function registerRoutes(
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
-      const scores = await storage.getTelcoCreditScores(orgId, country);
-      res.json(scores);
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const riskTier = req.query.riskTier as string;
+      const approved = req.query.approved as string;
+      const result = await storage.getTelcoCreditScores(orgId, country, { page, limit, riskTier, approved });
+      res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });
     }
@@ -2047,46 +2057,18 @@ export async function registerRoutes(
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
       const stats = await storage.getTelcoDashboardStats(orgId, country);
-      const scores = await storage.getTelcoCreditScores(orgId, country);
-      const profiles = await storage.getTelcoProfiles(orgId, country);
+      const agg = await storage.getTelcoAnalyticsAggregates(orgId, country);
 
-      const countryBreakdown: Record<string, { profiles: number; scored: number; approved: number; avgLimit: number; totalVolume: number }> = {};
-      for (const p of profiles) {
-        const c = p.country || "Unknown";
-        if (!countryBreakdown[c]) countryBreakdown[c] = { profiles: 0, scored: 0, approved: 0, avgLimit: 0, totalVolume: 0 };
-        countryBreakdown[c].profiles++;
-      }
-      const monthlyVolume: Record<string, { month: string; scored: number; approved: number; declined: number }> = {};
-      let totalCreditExtended = 0;
-      let totalApproved = 0;
+      const { totalScored, totalApproved, totalCreditExtended, countryBreakdown, monthlyVolume, providerBreakdown } = agg;
 
-      for (const s of scores) {
-        const c = s.country || "Unknown";
-        if (!countryBreakdown[c]) countryBreakdown[c] = { profiles: 0, scored: 0, approved: 0, avgLimit: 0, totalVolume: 0 };
-        countryBreakdown[c].scored++;
-        if (s.approvalRecommendation) {
-          countryBreakdown[c].approved++;
-          totalApproved++;
-        }
-        const limit = Number(s.creditLimit) || 0;
-        countryBreakdown[c].totalVolume += limit;
-        totalCreditExtended += limit;
-
-        if (s.scoredAt) {
-          const month = new Date(s.scoredAt).toLocaleString("en", { month: "short", year: "2-digit" });
-          if (!monthlyVolume[month]) monthlyVolume[month] = { month, scored: 0, approved: 0, declined: 0 };
-          monthlyVolume[month].scored++;
-          if (s.approvalRecommendation) monthlyVolume[month].approved++;
-          else monthlyVolume[month].declined++;
-        }
+      const countryBreakdownWithAvg: Record<string, any> = {};
+      for (const [c, v] of Object.entries(countryBreakdown)) {
+        countryBreakdownWithAvg[c] = {
+          ...v,
+          avgLimit: v.approved > 0 ? Math.round(v.totalVolume / v.approved) : 0,
+        };
       }
 
-      for (const c of Object.keys(countryBreakdown)) {
-        const cb = countryBreakdown[c];
-        cb.avgLimit = cb.approved > 0 ? Math.round(cb.totalVolume / cb.approved) : 0;
-      }
-
-      const totalScored = scores.length;
       const previouslyUnbanked = Math.round(totalScored * 0.72);
       const firstTimeBorrowers = Math.round(totalScored * 0.58);
       const avgScoringTime = 2.3;
@@ -2103,16 +2085,6 @@ export async function registerRoutes(
       const grossMargin = scoringRevenue > 0 ? Math.round(((scoringRevenue - scoringCost) / scoringRevenue) * 100) : 0;
 
       const kycBreakdown: Record<string, number> = { none: 0, basic: 0, standard: 0, full: 0 };
-      for (const s of scores) {
-        const kpi = s.kpiSnapshot ? JSON.parse(s.kpiSnapshot) : null;
-        if (kpi?.telemetricMetrics?.kycLevel) kycBreakdown[kpi.telemetricMetrics.kycLevel] = (kycBreakdown[kpi.telemetricMetrics.kycLevel] || 0) + 1;
-      }
-
-      const providerBreakdown: Record<string, number> = {};
-      for (const s of scores) {
-        const provider = s.aiProvider || "unknown";
-        providerBreakdown[provider] = (providerBreakdown[provider] || 0) + 1;
-      }
 
       res.json({
         overview: {
@@ -2152,8 +2124,8 @@ export async function registerRoutes(
           scoringRevenueUsd: scoringRevenue,
           annualizedROI: grossMargin > 0 ? Math.round((defaultSavings + scoringRevenue - scoringCost) / Math.max(scoringCost, 1) * 100) : 0,
         },
-        countryBreakdown,
-        monthlyVolume: Object.values(monthlyVolume),
+        countryBreakdown: countryBreakdownWithAvg,
+        monthlyVolume,
         tierBreakdown: stats.tierBreakdown,
         kycBreakdown,
         providerBreakdown,
@@ -2379,31 +2351,29 @@ export async function registerRoutes(
         return res.status(400).json({ message: "No active decision rule found. Create a rule in the Decision Engine tab first." });
       }
 
-      let allProfiles = await storage.getTelcoProfiles(orgId);
+      let allProfileIds = await storage.getAllTelcoProfileIds(orgId, filterCountry || undefined, filterKyc || undefined);
       if (profileIds && Array.isArray(profileIds) && profileIds.length > 0) {
-        allProfiles = allProfiles.filter(p => profileIds.includes(p.id));
-      }
-      if (filterCountry) {
-        allProfiles = allProfiles.filter(p => p.country.toLowerCase() === filterCountry.toLowerCase());
-      }
-      if (filterKyc) {
-        const kycLevels = ["none", "basic", "standard", "full"];
-        const minIdx = kycLevels.indexOf(filterKyc);
-        allProfiles = allProfiles.filter(p => kycLevels.indexOf(p.kycLevel) >= minIdx);
+        const requestedSet = new Set(profileIds as string[]);
+        allProfileIds = allProfileIds.filter(id => requestedSet.has(id));
       }
 
       if (skipAlreadyDecided) {
         const existingLogs = await storage.getDecisionLogs(orgId);
-        const decidedProfileIds = new Set(existingLogs.map(l => l.profileId));
-        allProfiles = allProfiles.filter(p => !decidedProfileIds.has(p.id));
+        const decidedSet = new Set(existingLogs.map(l => l.profileId));
+        allProfileIds = allProfileIds.filter(id => !decidedSet.has(id));
       }
 
-      const results: { approved: number; rejected: number; skipped: number; errors: number; decisions: any[] } = {
-        approved: 0, rejected: 0, skipped: 0, errors: 0, decisions: []
+      const maxBulk = 200;
+      const processingIds = allProfileIds.slice(0, maxBulk);
+
+      const results: { approved: number; rejected: number; skipped: number; errors: number; decisions: any[]; totalEligible: number } = {
+        approved: 0, rejected: 0, skipped: 0, errors: 0, decisions: [], totalEligible: allProfileIds.length
       };
 
-      for (const profile of allProfiles) {
+      for (const profileId of processingIds) {
         try {
+          const profile = await storage.getTelcoProfile(profileId);
+          if (!profile) { results.skipped++; continue; }
           const transactions = await storage.getMomoTransactions(profile.id);
           if (transactions.length === 0) {
             results.skipped++;

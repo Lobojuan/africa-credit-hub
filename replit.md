@@ -57,7 +57,7 @@ The system employs a modern full-stack architecture built for scalability and co
     -   **SATA Cross-Border Framework**: Implements Smart Africa Telecommunications Alliance data sharing.
     -   **PAPSS Settlement Tracker**: Tracks Pan-African Payment and Settlement System settlements.
     -   **Alternative Data Integration**: Integrates mobile money, utility, and telco data.
-    -   **Telco Credit Scoring**: Dedicated AI-driven mobile money (MoMo) analytics section for credit-scoring unbanked/underbanked populations, including KPI computation, AI credit scores, and a configurable decision engine.
+    -   **Telco Credit Scoring**: Dedicated AI-driven mobile money (MoMo) analytics section for credit-scoring unbanked/underbanked populations, including KPI computation, AI credit scores, and a configurable decision engine. Production-scale dataset: 50K+ profiles, 1.45M+ transactions, 35K+ pre-computed scores across 10 African countries. Server-side pagination (50 per page), phone number search, and SQL-aggregated analytics for large-dataset performance. Local currency display per country (GH₵, KSh, ₦, etc.).
     -   **Business Credit Report Template**: Dedicated page at `/business-credit-report/:borrowerId` with 10 D&B-style sections for comprehensive business credit analysis.
     -   **Credit Score Methodology Page**: Dedicated `/credit-score-methodology` page with RBAC restriction, explaining score bands, factors, reason codes, and an interactive Score Simulator.
     -   **Score Guide**: Public-facing credit score education page at `/score-guide` with score band explanations and improvement tips.

@@ -7,9 +7,9 @@ import {
 } from "recharts";
 import {
   Smartphone, Signal, Shield, TrendingUp, TrendingDown, AlertTriangle, CheckCircle,
-  XCircle, Plus, Loader2, ChevronRight, BarChart3, Wallet, Phone, Brain, RefreshCw,
+  XCircle, Plus, Loader2, ChevronRight, ChevronLeft, BarChart3, Wallet, Phone, Brain, RefreshCw,
   ArrowUpRight, ArrowDownRight, Minus, Users, Activity, Zap, Globe, DollarSign,
-  Target, PieChart, Award, MapPin, Clock, ShieldCheck, Percent, Banknote, Info
+  Target, PieChart, Award, MapPin, Clock, ShieldCheck, Percent, Banknote, Info, Search
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -665,7 +665,7 @@ function DecisionEnginePanel({ profiles }: { profiles: TelcoProfile[] }) {
   const approvedLogs = decisionLogs?.filter(l => l.status !== "rejected") || [];
   const rejectedLogs = decisionLogs?.filter(l => l.status === "rejected") || [];
 
-  const countries = [...new Set(profiles.map(p => p.country))].sort();
+  const countries = ["Egypt", "Ethiopia", "Ghana", "Kenya", "Nigeria", "Rwanda", "Sierra Leone", "South Africa", "Tanzania", "Uganda"];
   const decidedProfileIds = new Set((decisionLogs || []).map(l => l.profileId));
   const filteredProfileCount = profiles.filter(p => {
     if (bulkConfig.country && p.country.toLowerCase() !== bulkConfig.country.toLowerCase()) return false;
@@ -1176,6 +1176,70 @@ function DecisionEnginePanel({ profiles }: { profiles: TelcoProfile[] }) {
   );
 }
 
+function ProfileScoreHistory({ profileId, onScore, scorePending }: { profileId: string; onScore: () => void; scorePending: boolean }) {
+  const { data: profileScores, isLoading } = useQuery<TelcoCreditScore[]>({
+    queryKey: ["/api/telco/scores", profileId],
+    queryFn: async () => {
+      const res = await fetch(`/api/telco/scores/${profileId}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch scores");
+      return res.json();
+    },
+  });
+
+  if (isLoading) return <Skeleton className="h-16 w-full" />;
+
+  if (!profileScores || profileScores.length === 0) {
+    return (
+      <div className="p-4 rounded-lg bg-muted/30 text-center">
+        <Brain className="w-6 h-6 text-muted-foreground mx-auto mb-2 opacity-40" />
+        <p className="text-xs text-muted-foreground">No scores generated yet for this profile</p>
+        <Button variant="outline" size="sm" className="mt-2" onClick={(e) => { e.stopPropagation(); onScore(); }} disabled={scorePending} data-testid={`button-score-detail-${profileId}`}>
+          {scorePending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Brain className="w-3 h-3 mr-1" />}
+          Generate AI Credit Score
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Credit Score History ({profileScores.length} score{profileScores.length !== 1 ? "s" : ""})</p>
+      <div className="space-y-2">
+        {profileScores.map(score => (
+          <div key={score.id} className="p-3 rounded-lg border border-border bg-card" data-testid={`profile-score-${score.id}`}>
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                {getRiskIcon(score.riskTier)}
+                <span className={`font-bold ${getRiskColor(score.riskTier)}`}>{score.riskScore}/5</span>
+                <Badge variant={getRiskBadgeVariant(score.riskTier)} className="text-[10px]">{getRiskLabel(score.riskTier)}</Badge>
+              </div>
+              <div className="flex items-center gap-2">
+                {score.creditLimit && Number(score.creditLimit) > 0 && (
+                  <Badge variant="outline" className="text-[10px]">
+                    <Wallet className="w-3 h-3 mr-1" />{getCountryCurrency(score.country).symbol}{Number(score.creditLimit).toLocaleString()}
+                  </Badge>
+                )}
+                {score.approvalRecommendation ? (
+                  <Badge variant="default" className="text-[10px] bg-green-600"><CheckCircle className="w-3 h-3 mr-1" />Approved</Badge>
+                ) : (
+                  <Badge variant="destructive" className="text-[10px]"><XCircle className="w-3 h-3 mr-1" />Declined</Badge>
+                )}
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">{score.reasonCode}</p>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              {score.scoredAt ? new Date(score.scoredAt).toLocaleDateString() : ""} · {score.aiProvider}/{score.aiModel} · {score.evaluationPeriodDays}d window
+            </p>
+            {score.detailedRationale && (
+              <p className="text-xs text-muted-foreground mt-2 border-t border-border pt-2">{score.detailedRationale}</p>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function TelcoScoringPage() {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -1184,6 +1248,11 @@ export default function TelcoScoringPage() {
   const [expandedProfileId, setExpandedProfileId] = useState<string | null>(null);
   const [scoreDetailId, setScoreDetailId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("analytics");
+
+  const [profilesPage, setProfilesPage] = useState(1);
+  const [scoresPage, setScoresPage] = useState(1);
+  const [profileSearch, setProfileSearch] = useState("");
+  const [profileSearchInput, setProfileSearchInput] = useState("");
 
   const [profileForm, setProfileForm] = useState({
     msisdn: "",
@@ -1203,13 +1272,30 @@ export default function TelcoScoringPage() {
     queryKey: ["/api/telco/analytics"],
   });
 
-  const { data: profiles, isLoading: profilesLoading } = useQuery<TelcoProfile[]>({
-    queryKey: ["/api/telco/profiles"],
+  type PaginatedProfiles = { data: TelcoProfile[]; total: number; page: number; totalPages: number };
+  const { data: profilesData, isLoading: profilesLoading } = useQuery<PaginatedProfiles>({
+    queryKey: ["/api/telco/profiles", profilesPage, profileSearch],
+    queryFn: async () => {
+      const params = new URLSearchParams({ page: String(profilesPage), limit: "50" });
+      if (profileSearch) params.set("search", profileSearch);
+      const res = await fetch(`/api/telco/profiles?${params}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch profiles");
+      return res.json();
+    },
   });
+  const profiles = profilesData?.data;
 
-  const { data: scores, isLoading: scoresLoading } = useQuery<TelcoCreditScore[]>({
-    queryKey: ["/api/telco/scores"],
+  type PaginatedScores = { data: TelcoCreditScore[]; total: number; page: number; totalPages: number };
+  const { data: scoresData, isLoading: scoresLoading } = useQuery<PaginatedScores>({
+    queryKey: ["/api/telco/scores", scoresPage],
+    queryFn: async () => {
+      const params = new URLSearchParams({ page: String(scoresPage), limit: "50" });
+      const res = await fetch(`/api/telco/scores?${params}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch scores");
+      return res.json();
+    },
   });
+  const scores = scoresData?.data;
 
   const createProfileMutation = useMutation({
     mutationFn: async (data: typeof profileForm) => {
@@ -1497,12 +1583,34 @@ export default function TelcoScoringPage() {
               )}
             </div>
 
+            <div className="flex items-center gap-2 mb-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by phone number..."
+                  value={profileSearchInput}
+                  onChange={(e) => setProfileSearchInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { setProfileSearch(profileSearchInput); setProfilesPage(1); } }}
+                  className="pl-9 h-9"
+                  data-testid="input-profile-search"
+                />
+              </div>
+              <Button variant="outline" size="sm" onClick={() => { setProfileSearch(profileSearchInput); setProfilesPage(1); }} data-testid="button-profile-search">
+                <Search className="w-4 h-4" />
+              </Button>
+              {profileSearch && (
+                <Button variant="ghost" size="sm" onClick={() => { setProfileSearch(""); setProfileSearchInput(""); setProfilesPage(1); }}>
+                  Clear
+                </Button>
+              )}
+              <span className="text-xs text-muted-foreground whitespace-nowrap">{profilesData?.total?.toLocaleString() || 0} profiles</span>
+            </div>
+
             <div className="space-y-3">
               {profilesLoading ? (
                 <Card><CardContent className="p-4"><Skeleton className="h-32 w-full" /></CardContent></Card>
               ) : profiles && profiles.length > 0 ? (
                 profiles.map(profile => {
-                  const profileScores = (scores || []).filter(s => s.profileId === profile.id);
                   const isExpanded = expandedProfileId === profile.id;
                   return (
                   <Card
@@ -1609,59 +1717,11 @@ export default function TelcoScoringPage() {
                             <Badge variant={profile.accountStatus === "active" ? "default" : "secondary"} className="text-[10px] capitalize mt-1">{profile.accountStatus}</Badge>
                           </div>
 
-                          {profileScores.length > 0 ? (
-                            <div>
-                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Credit Score History ({profileScores.length} score{profileScores.length !== 1 ? "s" : ""})</p>
-                              <div className="space-y-2">
-                                {profileScores.map(score => (
-                                  <div key={score.id} className="p-3 rounded-lg border border-border bg-card" data-testid={`profile-score-${score.id}`}>
-                                    <div className="flex items-center justify-between mb-1">
-                                      <div className="flex items-center gap-2">
-                                        {getRiskIcon(score.riskTier)}
-                                        <span className={`font-bold ${getRiskColor(score.riskTier)}`}>{score.riskScore}/5</span>
-                                        <Badge variant={getRiskBadgeVariant(score.riskTier)} className="text-[10px]">{getRiskLabel(score.riskTier)}</Badge>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        {score.creditLimit && Number(score.creditLimit) > 0 && (
-                                          <Badge variant="outline" className="text-[10px]">
-                                            <Wallet className="w-3 h-3 mr-1" />{getCountryCurrency(score.country).symbol}{Number(score.creditLimit).toLocaleString()}
-                                          </Badge>
-                                        )}
-                                        {score.approvalRecommendation ? (
-                                          <Badge variant="default" className="text-[10px] bg-green-600"><CheckCircle className="w-3 h-3 mr-1" />Approved</Badge>
-                                        ) : (
-                                          <Badge variant="destructive" className="text-[10px]"><XCircle className="w-3 h-3 mr-1" />Declined</Badge>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">{score.reasonCode}</p>
-                                    <p className="text-[10px] text-muted-foreground mt-1">
-                                      {score.scoredAt ? new Date(score.scoredAt).toLocaleDateString() : ""} · {score.aiProvider}/{score.aiModel} · {score.evaluationPeriodDays}d window
-                                    </p>
-                                    {score.detailedRationale && (
-                                      <p className="text-xs text-muted-foreground mt-2 border-t border-border pt-2">{score.detailedRationale}</p>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="p-4 rounded-lg bg-muted/30 text-center">
-                              <Brain className="w-6 h-6 text-muted-foreground mx-auto mb-2 opacity-40" />
-                              <p className="text-xs text-muted-foreground">No scores generated yet for this profile</p>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="mt-2"
-                                onClick={(e) => { e.stopPropagation(); scoreMutation.mutate(profile.id); }}
-                                disabled={scoreMutation.isPending}
-                                data-testid={`button-score-detail-${profile.id}`}
-                              >
-                                {scoreMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Brain className="w-3 h-3 mr-1" />}
-                                Generate AI Credit Score
-                              </Button>
-                            </div>
-                          )}
+                          <ProfileScoreHistory
+                            profileId={profile.id}
+                            onScore={() => scoreMutation.mutate(profile.id)}
+                            scorePending={scoreMutation.isPending}
+                          />
                         </div>
                       )}
                     </CardContent>
@@ -1678,6 +1738,23 @@ export default function TelcoScoringPage() {
                 </Card>
               )}
             </div>
+
+            {profilesData && profilesData.totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4">
+                <p className="text-xs text-muted-foreground">
+                  Page {profilesData.page} of {profilesData.totalPages} ({profilesData.total.toLocaleString()} profiles)
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" disabled={profilesPage <= 1} onClick={() => setProfilesPage(p => p - 1)} data-testid="button-profiles-prev">
+                    <ChevronLeft className="w-4 h-4 mr-1" /> Prev
+                  </Button>
+                  <span className="text-sm font-medium">{profilesPage}</span>
+                  <Button variant="outline" size="sm" disabled={profilesPage >= profilesData.totalPages} onClick={() => setProfilesPage(p => p + 1)} data-testid="button-profiles-next">
+                    Next <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="scores" className="space-y-4">
@@ -1775,6 +1852,23 @@ export default function TelcoScoringPage() {
                   <p className="text-sm text-muted-foreground mt-1">Go to Profiles tab and click "Score" to generate AI credit assessments</p>
                 </CardContent>
               </Card>
+            )}
+
+            {scoresData && scoresData.totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4">
+                <p className="text-xs text-muted-foreground">
+                  Page {scoresData.page} of {scoresData.totalPages} ({scoresData.total.toLocaleString()} scores)
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" disabled={scoresPage <= 1} onClick={() => setScoresPage(p => p - 1)} data-testid="button-scores-prev">
+                    <ChevronLeft className="w-4 h-4 mr-1" /> Prev
+                  </Button>
+                  <span className="text-sm font-medium">{scoresPage}</span>
+                  <Button variant="outline" size="sm" disabled={scoresPage >= scoresData.totalPages} onClick={() => setScoresPage(p => p + 1)} data-testid="button-scores-next">
+                    Next <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </div>
+              </div>
             )}
           </TabsContent>
         </Tabs>
