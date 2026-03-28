@@ -9,7 +9,8 @@ import {
   Smartphone, Signal, Shield, TrendingUp, TrendingDown, AlertTriangle, CheckCircle,
   XCircle, Plus, Loader2, ChevronRight, ChevronLeft, BarChart3, Wallet, Phone, Brain, RefreshCw,
   ArrowUpRight, ArrowDownRight, Minus, Users, Activity, Zap, Globe, DollarSign,
-  Target, PieChart, Award, MapPin, Clock, ShieldCheck, Percent, Banknote, Info, Search
+  Target, PieChart, Award, MapPin, Clock, ShieldCheck, Percent, Banknote, Info, Search,
+  SlidersHorizontal, X, Filter
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -1254,6 +1255,25 @@ export default function TelcoScoringPage() {
   const [profileSearch, setProfileSearch] = useState("");
   const [profileSearchInput, setProfileSearchInput] = useState("");
 
+  const [profileFilterCountry, setProfileFilterCountry] = useState("");
+  const [profileFilterProvider, setProfileFilterProvider] = useState("");
+  const [profileFilterKyc, setProfileFilterKyc] = useState("");
+
+  const [scoreFilterCountry, setScoreFilterCountry] = useState("");
+  const [scoreFilterProvider, setScoreFilterProvider] = useState("");
+  const [scoreFilterRisk, setScoreFilterRisk] = useState("");
+  const [scoreFilterApproval, setScoreFilterApproval] = useState("");
+  const [scoreSearchInput, setScoreSearchInput] = useState("");
+  const [scoreSearch, setScoreSearch] = useState("");
+
+  const COUNTRIES = ["Ghana", "Kenya", "Nigeria", "Sierra Leone", "South Africa", "Tanzania", "Uganda", "Rwanda", "Ethiopia", "Egypt"];
+  const PROVIDERS = ["mtn", "vodafone", "airtel", "safaricom", "orange", "glo", "tigo", "africell", "econet", "other"];
+  const KYC_LEVELS = ["none", "basic", "standard", "full"];
+  const RISK_TIERS = ["very_low", "low", "medium", "high", "very_high"];
+
+  const activeProfileFilterCount = [profileFilterCountry, profileFilterProvider, profileFilterKyc].filter(Boolean).length;
+  const activeScoreFilterCount = [scoreFilterCountry, scoreFilterProvider, scoreFilterRisk, scoreFilterApproval].filter(Boolean).length;
+
   const [profileForm, setProfileForm] = useState({
     msisdn: "",
     provider: "mtn" as string,
@@ -1274,10 +1294,13 @@ export default function TelcoScoringPage() {
 
   type PaginatedProfiles = { data: TelcoProfile[]; total: number; page: number; totalPages: number };
   const { data: profilesData, isLoading: profilesLoading } = useQuery<PaginatedProfiles>({
-    queryKey: ["/api/telco/profiles", profilesPage, profileSearch],
+    queryKey: ["/api/telco/profiles", profilesPage, profileSearch, profileFilterCountry, profileFilterProvider, profileFilterKyc],
     queryFn: async () => {
       const params = new URLSearchParams({ page: String(profilesPage), limit: "50" });
       if (profileSearch) params.set("search", profileSearch);
+      if (profileFilterCountry) params.set("country", profileFilterCountry);
+      if (profileFilterProvider) params.set("provider", profileFilterProvider);
+      if (profileFilterKyc) params.set("kycLevel", profileFilterKyc);
       const res = await fetch(`/api/telco/profiles?${params}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch profiles");
       return res.json();
@@ -1287,9 +1310,14 @@ export default function TelcoScoringPage() {
 
   type PaginatedScores = { data: TelcoCreditScore[]; total: number; page: number; totalPages: number };
   const { data: scoresData, isLoading: scoresLoading } = useQuery<PaginatedScores>({
-    queryKey: ["/api/telco/scores", scoresPage],
+    queryKey: ["/api/telco/scores", scoresPage, scoreSearch, scoreFilterCountry, scoreFilterProvider, scoreFilterRisk, scoreFilterApproval],
     queryFn: async () => {
       const params = new URLSearchParams({ page: String(scoresPage), limit: "50" });
+      if (scoreSearch) params.set("search", scoreSearch);
+      if (scoreFilterCountry) params.set("country", scoreFilterCountry);
+      if (scoreFilterProvider) params.set("provider", scoreFilterProvider);
+      if (scoreFilterRisk) params.set("riskTier", scoreFilterRisk);
+      if (scoreFilterApproval) params.set("approved", scoreFilterApproval);
       const res = await fetch(`/api/telco/scores?${params}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch scores");
       return res.json();
@@ -1583,27 +1611,64 @@ export default function TelcoScoringPage() {
               )}
             </div>
 
-            <div className="flex items-center gap-2 mb-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by phone number..."
-                  value={profileSearchInput}
-                  onChange={(e) => setProfileSearchInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") { setProfileSearch(profileSearchInput); setProfilesPage(1); } }}
-                  className="pl-9 h-9"
-                  data-testid="input-profile-search"
-                />
-              </div>
-              <Button variant="outline" size="sm" onClick={() => { setProfileSearch(profileSearchInput); setProfilesPage(1); }} data-testid="button-profile-search">
-                <Search className="w-4 h-4" />
-              </Button>
-              {profileSearch && (
-                <Button variant="ghost" size="sm" onClick={() => { setProfileSearch(""); setProfileSearchInput(""); setProfilesPage(1); }}>
-                  Clear
+            <div className="space-y-2 mb-3">
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by phone number..."
+                    value={profileSearchInput}
+                    onChange={(e) => setProfileSearchInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { setProfileSearch(profileSearchInput); setProfilesPage(1); } }}
+                    className="pl-9 h-9"
+                    data-testid="input-profile-search"
+                  />
+                </div>
+                <Button variant="outline" size="sm" onClick={() => { setProfileSearch(profileSearchInput); setProfilesPage(1); }} data-testid="button-profile-search">
+                  <Search className="w-4 h-4" />
                 </Button>
-              )}
-              <span className="text-xs text-muted-foreground whitespace-nowrap">{profilesData?.total?.toLocaleString() || 0} profiles</span>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Select value={profileFilterCountry} onValueChange={(v) => { setProfileFilterCountry(v === "all" ? "" : v); setProfilesPage(1); }}>
+                  <SelectTrigger className="h-8 w-[140px] text-xs" data-testid="select-profile-country">
+                    <Globe className="w-3 h-3 mr-1 text-muted-foreground" />
+                    <SelectValue placeholder="Country" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Countries</SelectItem>
+                    {COUNTRIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={profileFilterProvider} onValueChange={(v) => { setProfileFilterProvider(v === "all" ? "" : v); setProfilesPage(1); }}>
+                  <SelectTrigger className="h-8 w-[130px] text-xs" data-testid="select-profile-provider">
+                    <Smartphone className="w-3 h-3 mr-1 text-muted-foreground" />
+                    <SelectValue placeholder="Provider" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Providers</SelectItem>
+                    {PROVIDERS.map(p => <SelectItem key={p} value={p}>{p.toUpperCase()}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={profileFilterKyc} onValueChange={(v) => { setProfileFilterKyc(v === "all" ? "" : v); setProfilesPage(1); }}>
+                  <SelectTrigger className="h-8 w-[120px] text-xs" data-testid="select-profile-kyc">
+                    <ShieldCheck className="w-3 h-3 mr-1 text-muted-foreground" />
+                    <SelectValue placeholder="KYC Level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All KYC</SelectItem>
+                    {KYC_LEVELS.map(k => <SelectItem key={k} value={k}>{k.charAt(0).toUpperCase() + k.slice(1)}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {(activeProfileFilterCount > 0 || profileSearch) && (
+                  <Button variant="ghost" size="sm" className="h-8 text-xs gap-1" onClick={() => { setProfileFilterCountry(""); setProfileFilterProvider(""); setProfileFilterKyc(""); setProfileSearch(""); setProfileSearchInput(""); setProfilesPage(1); }} data-testid="button-clear-profile-filters">
+                    <X className="w-3 h-3" /> Clear filters
+                  </Button>
+                )}
+                <span className="text-xs text-muted-foreground whitespace-nowrap ml-auto">
+                  {profilesData?.total?.toLocaleString() || 0} profiles
+                  {activeProfileFilterCount > 0 && <Badge variant="secondary" className="ml-2 text-[10px] h-5">{activeProfileFilterCount} filter{activeProfileFilterCount > 1 ? "s" : ""}</Badge>}
+                </span>
+              </div>
             </div>
 
             <div className="space-y-3">
@@ -1758,6 +1823,81 @@ export default function TelcoScoringPage() {
           </TabsContent>
 
           <TabsContent value="scores" className="space-y-4">
+            <div className="space-y-2 mb-1">
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by phone number..."
+                    value={scoreSearchInput}
+                    onChange={(e) => setScoreSearchInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { setScoreSearch(scoreSearchInput); setScoresPage(1); } }}
+                    className="pl-9 h-9"
+                    data-testid="input-score-search"
+                  />
+                </div>
+                <Button variant="outline" size="sm" onClick={() => { setScoreSearch(scoreSearchInput); setScoresPage(1); }} data-testid="button-score-search">
+                  <Search className="w-4 h-4" />
+                </Button>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Select value={scoreFilterCountry} onValueChange={(v) => { setScoreFilterCountry(v === "all" ? "" : v); setScoresPage(1); }}>
+                  <SelectTrigger className="h-8 w-[140px] text-xs" data-testid="select-score-country">
+                    <Globe className="w-3 h-3 mr-1 text-muted-foreground" />
+                    <SelectValue placeholder="Country" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Countries</SelectItem>
+                    {COUNTRIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={scoreFilterProvider} onValueChange={(v) => { setScoreFilterProvider(v === "all" ? "" : v); setScoresPage(1); }}>
+                  <SelectTrigger className="h-8 w-[130px] text-xs" data-testid="select-score-provider">
+                    <Smartphone className="w-3 h-3 mr-1 text-muted-foreground" />
+                    <SelectValue placeholder="Provider" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Providers</SelectItem>
+                    {PROVIDERS.map(p => <SelectItem key={p} value={p}>{p.toUpperCase()}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={scoreFilterRisk} onValueChange={(v) => { setScoreFilterRisk(v === "all" ? "" : v); setScoresPage(1); }}>
+                  <SelectTrigger className="h-8 w-[120px] text-xs" data-testid="select-score-risk">
+                    <AlertTriangle className="w-3 h-3 mr-1 text-muted-foreground" />
+                    <SelectValue placeholder="Risk Tier" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Risk</SelectItem>
+                    <SelectItem value="very_low">Very Low</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="very_high">Very High</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={scoreFilterApproval} onValueChange={(v) => { setScoreFilterApproval(v === "all" ? "" : v); setScoresPage(1); }}>
+                  <SelectTrigger className="h-8 w-[130px] text-xs" data-testid="select-score-approval">
+                    <CheckCircle className="w-3 h-3 mr-1 text-muted-foreground" />
+                    <SelectValue placeholder="Decision" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Decisions</SelectItem>
+                    <SelectItem value="true">Approved</SelectItem>
+                    <SelectItem value="false">Declined</SelectItem>
+                  </SelectContent>
+                </Select>
+                {(activeScoreFilterCount > 0 || scoreSearch) && (
+                  <Button variant="ghost" size="sm" className="h-8 text-xs gap-1" onClick={() => { setScoreFilterCountry(""); setScoreFilterProvider(""); setScoreFilterRisk(""); setScoreFilterApproval(""); setScoreSearch(""); setScoreSearchInput(""); setScoresPage(1); }} data-testid="button-clear-score-filters">
+                    <X className="w-3 h-3" /> Clear filters
+                  </Button>
+                )}
+                <span className="text-xs text-muted-foreground whitespace-nowrap ml-auto">
+                  {scoresData?.total?.toLocaleString() || 0} scores
+                  {activeScoreFilterCount > 0 && <Badge variant="secondary" className="ml-2 text-[10px] h-5">{activeScoreFilterCount} filter{activeScoreFilterCount > 1 ? "s" : ""}</Badge>}
+                </span>
+              </div>
+            </div>
+
             {scoresLoading ? (
               <Card><CardContent className="p-4"><Skeleton className="h-32 w-full" /></CardContent></Card>
             ) : scores && scores.length > 0 ? (

@@ -1743,7 +1743,7 @@ export async function registerRoutes(
   app.get("/api/telco/profiles", enforceDataSovereignty, async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const country = getCountryFilter(req);
+      const country = getCountryFilter(req) || (req.query.country as string);
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 50;
       const search = req.query.search as string;
@@ -1883,12 +1883,14 @@ export async function registerRoutes(
   app.get("/api/telco/scores", enforceDataSovereignty, async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const country = getCountryFilter(req);
+      const country = getCountryFilter(req) || (req.query.country as string);
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 50;
       const riskTier = req.query.riskTier as string;
       const approved = req.query.approved as string;
-      const result = await storage.getTelcoCreditScores(orgId, country, { page, limit, riskTier, approved });
+      const search = req.query.search as string;
+      const provider = req.query.provider as string;
+      const result = await storage.getTelcoCreditScores(orgId, country, { page, limit, riskTier, approved, search, provider });
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: e.message });

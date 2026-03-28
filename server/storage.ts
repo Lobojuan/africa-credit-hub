@@ -182,7 +182,7 @@ export interface IStorage {
   createTelcoProfile(profile: InsertTelcoProfile): Promise<TelcoProfile>;
   getMomoTransactions(profileId: string): Promise<MomoTransaction[]>;
   createMomoTransactions(transactions: InsertMomoTransaction[]): Promise<MomoTransaction[]>;
-  getTelcoCreditScores(organizationId?: string, country?: string, options?: { page?: number; limit?: number; riskTier?: string; approved?: string }): Promise<{ data: TelcoCreditScore[]; total: number; page: number; totalPages: number }>;
+  getTelcoCreditScores(organizationId?: string, country?: string, options?: { page?: number; limit?: number; riskTier?: string; approved?: string; search?: string; provider?: string }): Promise<{ data: TelcoCreditScore[]; total: number; page: number; totalPages: number }>;
   getTelcoCreditScoresByProfile(profileId: string): Promise<TelcoCreditScore[]>;
   createTelcoCreditScore(score: InsertTelcoCreditScore): Promise<TelcoCreditScore>;
   getTelcoDashboardStats(organizationId?: string, country?: string): Promise<{ totalProfiles: number; totalScores: number; avgRiskScore: number; approvalRate: number; tierBreakdown: Record<string, number> }>;
@@ -1281,17 +1281,27 @@ export class DatabaseStorage implements IStorage {
     return db.insert(momoTransactions).values(transactions).returning();
   }
 
-  async getTelcoCreditScores(organizationId?: string, country?: string, options?: { page?: number; limit?: number; riskTier?: string; approved?: string }): Promise<{ data: TelcoCreditScore[]; total: number; page: number; totalPages: number }> {
+  async getTelcoCreditScores(organizationId?: string, country?: string, options?: { page?: number; limit?: number; riskTier?: string; approved?: string; search?: string; provider?: string }): Promise<{ data: TelcoCreditScore[]; total: number; page: number; totalPages: number }> {
     const page = options?.page || 1;
     const limit = Math.min(options?.limit || 50, 200);
     const offset = (page - 1) * limit;
+    const needsJoin = !!(options?.search || options?.provider);
     const filters: any[] = [];
     if (organizationId) filters.push(eq(telcoCreditScores.organizationId, organizationId));
     if (country) filters.push(eq(telcoCreditScores.country, country));
     if (options?.riskTier) filters.push(eq(telcoCreditScores.riskTier, options.riskTier as any));
     if (options?.approved === "true") filters.push(eq(telcoCreditScores.approvalRecommendation, true));
     if (options?.approved === "false") filters.push(eq(telcoCreditScores.approvalRecommendation, false));
+    if (options?.search) filters.push(ilike(telcoProfiles.msisdn, `%${options.search}%`));
+    if (options?.provider) filters.push(eq(telcoProfiles.provider, options.provider as any));
     const where = filters.length > 1 ? and(...filters) : filters[0];
+    if (needsJoin) {
+      const baseQuery = db.select({ value: count() }).from(telcoCreditScores).innerJoin(telcoProfiles, eq(telcoCreditScores.profileId, telcoProfiles.id));
+      const [totalResult] = await baseQuery.where(where);
+      const total = totalResult.value;
+      const data = await db.select({ score: telcoCreditScores }).from(telcoCreditScores).innerJoin(telcoProfiles, eq(telcoCreditScores.profileId, telcoProfiles.id)).where(where).orderBy(desc(telcoCreditScores.scoredAt)).limit(limit).offset(offset);
+      return { data: data.map(r => r.score), total, page, totalPages: Math.ceil(total / limit) };
+    }
     const [totalResult] = await db.select({ value: count() }).from(telcoCreditScores).where(where);
     const total = totalResult.value;
     const data = await db.select().from(telcoCreditScores).where(where).orderBy(desc(telcoCreditScores.scoredAt)).limit(limit).offset(offset);
