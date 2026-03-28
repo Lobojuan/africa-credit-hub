@@ -2618,8 +2618,30 @@ export async function registerRoutes(
       const limit = parseInt(req.query.limit as string) || 50;
       const status = req.query.status as string;
       const profileId = req.query.profileId as string;
+      const search = req.query.search as string;
+      if (search && search.length >= 3) {
+        const profiles = await db.select({ id: telcoProfiles.id }).from(telcoProfiles)
+          .where(ilike(telcoProfiles.msisdn, `%${search}%`)).limit(200);
+        const matchedProfileIds = profiles.map(p => p.id);
+        if (matchedProfileIds.length === 0) {
+          return res.json({ data: [], total: 0, page: 1, totalPages: 0 });
+        }
+        const result = await storage.getTelcoLoans(orgId, country, { page, limit, status, profileId, profileIds: matchedProfileIds });
+        return res.json(result);
+      }
       const result = await storage.getTelcoLoans(orgId, country, { page, limit, status, profileId });
-      res.json(result);
+      const profileIds = [...new Set(result.data.map(l => l.profileId))];
+      const profileMap = new Map<string, { msisdn: string; provider: string }>();
+      if (profileIds.length > 0) {
+        const profiles = await db.select({ id: telcoProfiles.id, msisdn: telcoProfiles.msisdn, provider: telcoProfiles.provider }).from(telcoProfiles).where(inArray(telcoProfiles.id, profileIds));
+        profiles.forEach(p => profileMap.set(p.id, { msisdn: p.msisdn, provider: p.provider }));
+      }
+      const enriched = result.data.map(l => ({
+        ...l,
+        msisdn: profileMap.get(l.profileId)?.msisdn || null,
+        provider: profileMap.get(l.profileId)?.provider || null,
+      }));
+      res.json({ ...result, data: enriched });
     } catch (e: any) { res.status(500).json({ message: e.message }); }
   });
 

@@ -205,7 +205,7 @@ export interface IStorage {
   getDecisionLogs(organizationId?: string, limit?: number): Promise<TelcoDecisionLog[]>;
   createDecisionLog(log: InsertTelcoDecisionLog): Promise<TelcoDecisionLog>;
 
-  getTelcoLoans(organizationId?: string, country?: string, options?: { page?: number; limit?: number; status?: string; profileId?: string }): Promise<{ data: TelcoLoan[]; total: number; page: number; totalPages: number }>;
+  getTelcoLoans(organizationId?: string, country?: string, options?: { page?: number; limit?: number; status?: string; profileId?: string; profileIds?: string[] }): Promise<{ data: TelcoLoan[]; total: number; page: number; totalPages: number }>;
   getTelcoLoan(id: string): Promise<TelcoLoan | undefined>;
   createTelcoLoan(loan: InsertTelcoLoan): Promise<TelcoLoan>;
   updateTelcoLoan(id: string, updates: Partial<InsertTelcoLoan>): Promise<TelcoLoan>;
@@ -1505,7 +1505,7 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async getTelcoLoans(organizationId?: string, country?: string, options?: { page?: number; limit?: number; status?: string; profileId?: string }): Promise<{ data: TelcoLoan[]; total: number; page: number; totalPages: number }> {
+  async getTelcoLoans(organizationId?: string, country?: string, options?: { page?: number; limit?: number; status?: string; profileId?: string; profileIds?: string[] }): Promise<{ data: TelcoLoan[]; total: number; page: number; totalPages: number }> {
     const page = options?.page || 1;
     const limit = Math.min(options?.limit || 50, 200);
     const offset = (page - 1) * limit;
@@ -1514,6 +1514,7 @@ export class DatabaseStorage implements IStorage {
     if (country) filters.push(eq(telcoLoans.country, country));
     if (options?.status) filters.push(eq(telcoLoans.status, options.status as any));
     if (options?.profileId) filters.push(eq(telcoLoans.profileId, options.profileId));
+    if (options?.profileIds && options.profileIds.length > 0) filters.push(inArray(telcoLoans.profileId, options.profileIds));
     const where = filters.length > 1 ? and(...filters) : filters[0];
     const [totalResult] = await db.select({ value: count() }).from(telcoLoans).where(where);
     const total = totalResult.value;

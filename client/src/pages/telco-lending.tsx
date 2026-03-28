@@ -20,6 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useEffect, useRef } from "react";
 import type { TelcoLoan, TelcoLoanRepayment, TelcoConsentEvent } from "@shared/schema";
 
 const COUNTRIES = ["Ghana", "Kenya", "Nigeria", "Sierra Leone", "South Africa", "Tanzania", "Uganda", "Rwanda", "Ethiopia", "Egypt"];
@@ -78,6 +79,8 @@ export default function TelcoLending() {
   const [filterCountry, setFilterCountry] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [selectedLoanId, setSelectedLoanId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [repaymentDialogOpen, setRepaymentDialogOpen] = useState(false);
   const [repaymentLoanId, setRepaymentLoanId] = useState<string | null>(null);
   const [repaymentAmount, setRepaymentAmount] = useState("");
@@ -86,6 +89,16 @@ export default function TelcoLending() {
   const [consentAction, setConsentAction] = useState<"grant" | "revoke">("grant");
   const [consentMethod, setConsentMethod] = useState("web_portal");
   const [consentPurpose, setConsentPurpose] = useState("credit_scoring");
+
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setLoansPage(1);
+    }, 400);
+    return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
+  }, [searchQuery]);
 
   const { data: portfolioStats, isLoading: statsLoading } = useQuery<PortfolioStats>({
     queryKey: ["/api/telco/loans/portfolio", filterCountry],
@@ -98,13 +111,15 @@ export default function TelcoLending() {
     },
   });
 
-  type PaginatedLoans = { data: TelcoLoan[]; total: number; page: number; totalPages: number };
+  type EnrichedLoan = TelcoLoan & { msisdn?: string | null; provider?: string | null };
+  type PaginatedLoans = { data: EnrichedLoan[]; total: number; page: number; totalPages: number };
   const { data: loansData, isLoading: loansLoading } = useQuery<PaginatedLoans>({
-    queryKey: ["/api/telco/loans", loansPage, filterCountry, filterStatus],
+    queryKey: ["/api/telco/loans", loansPage, filterCountry, filterStatus, debouncedSearch],
     queryFn: async () => {
       const params = new URLSearchParams({ page: String(loansPage), limit: "50" });
       if (filterCountry) params.set("country", filterCountry);
       if (filterStatus) params.set("status", filterStatus);
+      if (debouncedSearch) params.set("search", debouncedSearch);
       const res = await fetch(`/api/telco/loans?${params}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed");
       return res.json();
@@ -372,6 +387,16 @@ export default function TelcoLending() {
         {/* ─── LOANS TAB ─── */}
         <TabsContent value="loans" className="space-y-4">
           <div className="flex items-center gap-2 flex-wrap mb-2">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Search MSISDN..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-8 w-[180px] text-xs pl-8"
+                data-testid="input-search-loans"
+              />
+            </div>
             <Select value={filterCountry} onValueChange={(v) => { setFilterCountry(v === "all" ? "" : v); setLoansPage(1); }}>
               <SelectTrigger className="h-8 w-[140px] text-xs" data-testid="select-loans-country">
                 <Globe className="w-3 h-3 mr-1 text-muted-foreground" />
@@ -392,8 +417,8 @@ export default function TelcoLending() {
                 {LOAN_STATUSES.map(s => <SelectItem key={s} value={s}>{getStatusLabel(s)}</SelectItem>)}
               </SelectContent>
             </Select>
-            {(filterCountry || filterStatus) && (
-              <Button variant="ghost" size="sm" className="h-8 text-xs gap-1" onClick={() => { setFilterCountry(""); setFilterStatus(""); setLoansPage(1); }}>
+            {(filterCountry || filterStatus || searchQuery) && (
+              <Button variant="ghost" size="sm" className="h-8 text-xs gap-1" onClick={() => { setFilterCountry(""); setFilterStatus(""); setSearchQuery(""); setLoansPage(1); }}>
                 <X className="w-3 h-3" /> Clear
               </Button>
             )}
@@ -404,16 +429,28 @@ export default function TelcoLending() {
             <Card><CardContent className="p-4"><Skeleton className="h-32 w-full" /></CardContent></Card>
           ) : loans && loans.length > 0 ? (
             <div className="space-y-2">
-              {loans.map(loan => {
+              {loans.map((loan: any) => {
                 const cur = getCur(loan.country);
                 return (
                   <Card key={loan.id} className="hover-elevate cursor-pointer" onClick={() => setSelectedLoanId(selectedLoanId === loan.id ? null : loan.id)} data-testid={`card-loan-${loan.id}`}>
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                            <Smartphone className="w-4 h-4 text-primary" />
+                          </div>
                           <div className="flex flex-col">
                             <span className="text-lg font-bold">{cur.symbol}{Number(loan.loanAmount).toLocaleString()}</span>
-                            <span className="text-[11px] text-muted-foreground">{loan.profileId?.slice(0, 20)}...</span>
+                            <div className="flex items-center gap-2">
+                              {loan.msisdn ? (
+                                <span className="text-[11px] font-medium text-foreground" data-testid={`text-msisdn-${loan.id}`}>{loan.msisdn}</span>
+                              ) : (
+                                <span className="text-[11px] text-muted-foreground font-mono">{loan.profileId?.slice(0, 16)}...</span>
+                              )}
+                              {loan.provider && (
+                                <Badge variant="secondary" className="text-[9px] px-1 py-0 uppercase">{loan.provider}</Badge>
+                              )}
+                            </div>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
