@@ -27,12 +27,13 @@ The system employs a modern full-stack architecture built for scalability and co
 -   **Authentication**: Session-based with MFA, strong password policies, biometric (WebAuthn) support, and role-based idle session timeouts. Google OAuth integration is also supported.
 -   **Data Model**: 22 core tables for credit, compliance, usage metering, pricing, and alternative data.
 -   **Core Capabilities**:
-    -   **Credit Management**: Comprehensive borrower and credit account management with multi-currency support. 20 standardized credit types with automatic Personal/Business classification. Shared credit type definitions in `shared/credit-types.ts` used by both client and server. **Consumer/Business Split**: Borrowers are segmented into Consumers (B2C, `/consumers`, type=individual) and Businesses (B2B, `/businesses`, type=corporate) with separate API endpoints, navigation items, list pages, and detail views. Division-based RBAC: users with `division="retail"` cannot access business data and vice versa; `super_admin` sees all including the legacy `/borrowers` endpoint.
+    -   **Credit Management**: Comprehensive borrower and credit account management with multi-currency support, including 20 standardized credit types.
+    -   **Consumer/Business Segmentation**: Borrowers are segmented with separate API endpoints, navigation, and RBAC rules.
     -   **Credit Scoring**: Algorithmic scoring (300-850) with explainable AI, utilizing a gradient boosting-inspired model.
     -   **Workflow**: Maker-checker workflow and dispute management.
-    -   **Regulatory Compliance**: Consent management, audit trails, and a Regulatory Compliance Dashboard with jurisdiction-specific data retention for 54 African jurisdictions, including country-specific compliance modes.
+    -   **Regulatory Compliance**: Consent management, audit trails, and a Regulatory Compliance Dashboard with jurisdiction-specific data retention for 54 African jurisdictions.
     -   **Institutional Management**: Self-registration, approval, billing, and fee management for data providers.
-    -   **Reporting**: Regulatory analytics, CSV export, and bulk data upload (XBRL/XML), including IFF (Information Furnisher Format) batch upload support.
+    -   **Reporting**: Regulatory analytics, CSV export, and bulk data upload (XBRL/XML, IFF).
     -   **Role-Based Access Control (RBAC)**: Role-filtered navigation and API access.
     -   **External API**: REST API for data submission and credit report generation, secured via API keys and OAuth 2.1.
     -   **Entity Matching**: Fuzzy entity matching for duplicate detection and cross-border entity resolution.
@@ -45,50 +46,43 @@ The system employs a modern full-stack architecture built for scalability and co
     -   **API Rate Limiting**: Tiered rate limiting for various endpoints.
     -   **Chatbot**: Credit Registry Assistant with dispute filing, FAQ, keyword search, and AI-powered Smart Assistant mode.
     -   **AI Portfolio Intelligence**: Analytics page for AI-powered portfolio reports, including risk ratings and default predictions.
-    -   **Multi-Model AI Ensemble**: Unified AI router (`generateAIResponse` in `server/ai.ts`) with task-type-based routing and automatic failover. Task types: `data_analysis` and `credit_risk` route to OpenAI GPT-4o; `customer_chat`, `legal_review`, `compliance`, and `narrative` route to Anthropic Claude. If the primary model fails, the system automatically retries with the fallback model. Streaming chat also has failover. Route handlers use `parseOptionalProvider()` (returns `undefined` when no provider specified) so the task routing table decides; `parseProvider()` (always returns a valid provider) is reserved for cases needing a hard default.
-    -   **Dual-AI Ensemble (`dualAIEnsemble`)**: Two-step pipeline in `server/ai.ts` — Step 1: GPT-4o for quantitative analysis (JSON output), Step 2: Claude for compliance/regulatory rationale. Each step has cross-provider fallback. Used by Telco Credit Scoring for structured risk assessment.
-    -   **Brain & Voice Chatbot**: Dual-AI architecture in `chatWithAI` — GPT-4o as "The Brain" (data extraction, fact retrieval, calculations) followed by Claude as "The Voice" (formatted, empathetic streaming response). Brain failure gracefully degrades to direct Voice mode. Provider override still supported.
-    -   **Concentration Risk Alerts**: Automated `GET /api/concentration-alerts` endpoint and dashboard widget. Monitors single-borrower (15%), single-lender (25%), and sector (35%) exposure thresholds. Alerts ranked by severity (critical/high/medium/low) with percentage-of-portfolio display.
+    -   **Multi-Model AI Ensemble**: Unified AI router (`generateAIResponse` in `server/ai.ts`) with task-type-based routing and automatic failover, using OpenAI GPT-4o and Anthropic Claude.
+    -   **Dual-AI Ensemble**: Two-step pipeline (`dualAIEnsemble`) for structured risk assessment (e.g., Telco Credit Scoring) where GPT-4o performs quantitative analysis and Claude provides compliance/regulatory rationale, with cross-provider fallback.
+    -   **Brain & Voice Chatbot**: Dual-AI architecture in `chatWithAI` using GPT-4o as "The Brain" and Claude as "The Voice" for empathetic streaming responses.
+    -   **Concentration Risk Alerts**: Automated endpoint (`GET /api/concentration-alerts`) and dashboard widget monitoring single-borrower, single-lender, and sector exposure thresholds.
     -   **AI Command Center**: Unified hub for 6 AI tools: Credit Narratives, Anomaly Detection, Regulatory Reports, Natural Language Queries, Cross-Border Risk Intelligence, and Loan Approval Recommendations.
     -   **Multi-Country Data Isolation**: Country-level data sandboxing with dynamic country switching.
     -   **Transaction-Based Monetization**: Per-transaction billing with per-country pricing and volume tier discounts.
     -   **SATA Cross-Border Framework**: Implements Smart Africa Telecommunications Alliance data sharing.
     -   **PAPSS Settlement Tracker**: Tracks Pan-African Payment and Settlement System settlements.
     -   **Alternative Data Integration**: Integrates mobile money, utility, and telco data.
-    -   **Telco Credit Scoring**: Dedicated AI-driven mobile money (MoMo) analytics section for credit-scoring unbanked/underbanked populations. Five tables: `telcoProfiles` (subscriber info with MSISDN, provider, KYC level), `momoTransactions` (transaction records with type, amount, counterparty), `telcoCreditScores` (AI-generated risk assessments), `telcoDecisionRules` (configurable automated decisioning parameters), `telcoDecisionLogs` (decision audit trail). Backend: `server/telco-scoring.ts` computes 90-day financial/telemetric/network/risk KPIs and generates structured AI credit scores (1-5 risk scale, tier classification, credit limit recommendations). Frontend: `/telco-scoring` page with tabbed dashboard (Analytics & ROI, Decision Engine, Profiles, Scores). Analytics tab includes: Recharts-based Algorithmic Feature Attribution (horizontal bar chart of MoMo KPI weights), MoMo Cash Flow Trends (12-month line chart), Live Applicant Scoring XAI panel with Reason Codes (Explainability). Decision Engine tab provides: configurable rules with sliders (max risk tier, min utility payments, wallet retention %, SIM age, dormant days, KYC level, credit limit), auto-disburse toggle, per-profile evaluation against active rules, and full decision history table. Add MoMo Profile form uses a Select dropdown for Country (26 African countries) and a custom Calendar date picker in a Popover for SIM Registration Date (timezone-safe local date parsing). Custom Calendar component at `client/src/components/ui/calendar.tsx` (no react-day-picker dependency). API: `POST /api/telco/decision-engine/:profileId` evaluates profiles against active rules and logs decisions. Demo seed creates 19 profiles across 7 countries with pre-computed AI scores and full KPI snapshots.
-    -   **Business Credit Report Template**: Dedicated business credit report page at `/business-credit-report/:borrowerId` with 10 D&B-style sections: (1) Company Identification with SIC codes, (2) Business Profile, (3) Credit Scores & Ratings (Risk Score, Delinquency Score, Failure Score on 0-100 scale), (4) Banking & Credit Facilities, (5) Trade Payment History (% on-time/early/delayed with progress bar), (6) Public Filings & Legal Events, (7) Collections & Defaults, (8) Credit Inquiries (last 12 months, hard/soft classification), (9) Financial Summary (3-year view), (10) Risk Assessment Summary with overall risk rating badge. Accessible from business detail page.
-    -   **Credit Score Methodology Page**: Dedicated `/credit-score-methodology` page (`client/src/pages/credit-score-methodology.tsx`, 637 lines) with RBAC restriction (admin, lender, super_admin only — other roles see an access-denied lock screen). Features: 5 score bands (Excellent 750-850, Good 670-749, Fair 580-669, Poor 450-579, Very Poor 300-449) with color-coded cards, 5 scoring factor weights (Payment History, Credit Utilization, Credit History Length, New Credit Inquiries, Account Mix), 11 reason codes with positive/neutral/negative impact classification, interactive Score Simulator with sliders (current/closed/delinquent/written-off/restructured accounts, judgments, inquiries, debt, PEP flag), and a Good/Bad Odds table showing observed default rates and good:bad odds ratios by score band computed from actual portfolio data. Linked from credit report pages and sidebar navigation.
-    -   **Score Guide**: Public-facing credit score education page at `/score-guide` (`client/src/pages/score-guide.tsx`) with score band explanations and improvement tips for consumers.
-    -   **Investor Landing Page**: Marketing/investor-facing landing page at `/investor-landing` (`client/src/pages/investor-landing.tsx`, 1633 lines) with hero section, feature showcases, platform statistics, and call-to-action sections for institutional investors and partners.
+    -   **Telco Credit Scoring**: Dedicated AI-driven mobile money (MoMo) analytics section for credit-scoring unbanked/underbanked populations, including KPI computation, AI credit scores, and a configurable decision engine.
+    -   **Business Credit Report Template**: Dedicated page at `/business-credit-report/:borrowerId` with 10 D&B-style sections for comprehensive business credit analysis.
+    -   **Credit Score Methodology Page**: Dedicated `/credit-score-methodology` page with RBAC restriction, explaining score bands, factors, reason codes, and an interactive Score Simulator.
+    -   **Score Guide**: Public-facing credit score education page at `/score-guide` with score band explanations and improvement tips.
+    -   **Investor Landing Page**: Marketing/investor-facing landing page at `/investor-landing` with feature showcases, platform statistics, and calls-to-action.
     -   **Consumer Self-Service Portal**: Authenticated portal for consumers with registration, login, dual-channel verification, and rate-limited credit score lookups.
     -   **Smart Trial Flow**: Streamlined trial registration for Google-authenticated users.
     -   **Client Landing Page**: Default landing page for unauthenticated users showcasing features.
     -   **Trial Management**: Self-service registration with sample data seeding and upgrade path.
     -   **AI Demo Page**: Public interactive showcase of AI features using sample data.
     -   **Fraud Detection Layer**: Real-time fraud risk scoring.
-    -   **Enhanced API Developer Portal**: Interactive sandbox, webhook event documentation.
+    **Enhanced API Developer Portal**: Interactive sandbox, webhook event documentation.
     -   **Security Hardening**: Helmet security headers, DOMPurify sanitization.
     -   **Real-time WebSocket Notifications**: Authenticated WebSocket server for event broadcasting.
     -   **Progressive Web App (PWA)**: Installable with service worker and offline capabilities.
     -   **System Status & Health Monitoring**: Public and authenticated endpoints for health and diagnostics.
     -   **Platform Metrics Dashboard**: Admin-only page displaying MRR/ARR, subscription breakdown, and KPIs.
-    -   **Platform-Wide KPI/ROI Banners**: Reusable KPI banner component (`client/src/components/platform-kpi-banner.tsx`) with contextual metrics across all major sections. Backend API `GET /api/platform-kpis` returns portfolio metrics (NPL ratio, delinquency/default rates, collection rate, avg interest rate), borrower metrics (individuals, corporates, avg credit score, countries served), operational metrics (institutions, reports generated, dispute resolution, SLA compliance), and ROI metrics (NPL reduction vs industry avg, portfolio savings, cost/revenue per report, gross margin, annualized ROI). Banners appear on Dashboard (full KPI section + ROI card), Consumers, Businesses, Credit Accounts, and Reports pages.
+    -   **Platform-Wide KPI/ROI Banners**: Reusable KPI banner component with contextual metrics across major sections.
     -   **Webhook Delivery System**: HMAC-SHA256 signed webhooks with retry logic.
-
-## Demo Data Seeding
--   **Seed files**: `server/seed.ts` (core admin + Ghana/Ethiopia base data), `server/seed-test-data.ts` (Ghana borrower expansion), `server/seed-sierra-leone.ts` (Sierra Leone data), `server/seed-pan-african.ts` (all 54 African countries)
--   **Pan-African seed**: Generates 900+ borrowers, 1800+ credit accounts, 270+ credit inquiries, and 115+ financial institutions across all 54 African countries with authentic names, banks, companies, currencies, and national IDs
--   **Guard**: Pan-African seed skips if >500 borrowers exist; runs only in non-production mode
--   **Ghana cleanup**: Disabled in `server/index.ts` — platform is pan-African, no longer purges non-Ghana data
--   **CLI**: `npx tsx server/seed.ts` or `npx tsx server/seed-pan-african.ts` for manual runs
 
 ## External Dependencies
 -   **Database**: PostgreSQL (Neon)
 -   **Frontend Libraries**: React, TypeScript, Vite, Tailwind CSS, shadcn/ui, wouter, react-i18next, Recharts
 -   **Backend Libraries**: Express.js, bcryptjs, express-session, Drizzle ORM, compression, jsonwebtoken, otpauth, pdfkit, ws, @simplewebauthn/server
 -   **Payments**: Stripe
--   **Email**: SendGrid (primary), Gmail SMTP (fallback)
--   **SMS**: Twilio (primary), Africa's Talking (fallback)
+-   **Email**: SendGrid, Gmail SMTP
+-   **SMS**: Twilio, Africa's Talking
 -   **PDF Generation**: pdfkit
 -   **AI / LLM Providers**: Anthropic (Claude Opus), OpenAI (GPT-4o)
 -   **Excel Export/Import**: `exceljs`, `xlsx` (SheetJS)

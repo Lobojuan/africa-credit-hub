@@ -72,17 +72,26 @@ type NavItem = {
   roles?: string[];
 };
 
-const coreItems: NavItem[] = [
-  { titleKey: "sidebar.dashboard", url: "/dashboard", icon: LayoutDashboard, testId: "nav-dashboard" },
+const dashboardItem: NavItem = { titleKey: "sidebar.dashboard", url: "/dashboard", icon: LayoutDashboard, testId: "nav-dashboard" };
+
+const consumersGroupItems: NavItem[] = [
   { titleKey: "sidebar.consumers", url: "/consumers", icon: User, testId: "nav-consumers" },
-  { titleKey: "sidebar.businesses", url: "/businesses", icon: Building2, testId: "nav-businesses" },
-  { titleKey: "sidebar.telcoScoring", url: "/telco-scoring", icon: Smartphone, testId: "nav-telco-scoring" },
-  { titleKey: "sidebar.borrowers", url: "/borrowers", icon: Users, testId: "nav-borrowers", roles: ["super_admin"] },
-  { titleKey: "sidebar.creditAccounts", url: "/credit-accounts", icon: CreditCard, testId: "nav-credit-accounts" },
-  { titleKey: "sidebar.creditSearch", url: "/search", icon: Search, testId: "nav-credit-search" },
+  { titleKey: "sidebar.consumerPortal", url: "/my-credit", icon: UserCheck, testId: "nav-consumer-portal" },
+  { titleKey: "sidebar.creditScoreMethodology", url: "/credit-score-methodology", icon: Brain, testId: "nav-credit-score-methodology", roles: ["admin", "lender", "super_admin"] },
 ];
 
-const operationsItems: NavItem[] = [
+const businessesGroupItems: NavItem[] = [
+  { titleKey: "sidebar.businesses", url: "/businesses", icon: Building2, testId: "nav-businesses" },
+  { titleKey: "sidebar.borrowers", url: "/borrowers", icon: Users, testId: "nav-borrowers", roles: ["super_admin"] },
+];
+
+const telcoGroupItems: NavItem[] = [
+  { titleKey: "sidebar.telcoScoring", url: "/telco-scoring", icon: Smartphone, testId: "nav-telco-scoring" },
+];
+
+const creditOpsItems: NavItem[] = [
+  { titleKey: "sidebar.creditAccounts", url: "/credit-accounts", icon: CreditCard, testId: "nav-credit-accounts" },
+  { titleKey: "sidebar.creditSearch", url: "/search", icon: Search, testId: "nav-credit-search" },
   { titleKey: "sidebar.creditReports", url: "/reports", icon: FileText, testId: "nav-credit-reports" },
   { titleKey: "sidebar.batchUpload", url: "/batch-upload", icon: Upload, testId: "nav-batch-upload", roles: ["admin", "lender", "super_admin"] },
   { titleKey: "sidebar.disputes", url: "/disputes", icon: AlertCircle, testId: "nav-disputes" },
@@ -132,12 +141,7 @@ const adminItems: NavItem[] = [
   { titleKey: "sidebar.webhookManagement", url: "/webhook-management", icon: Webhook, testId: "nav-webhook-management", roles: ["admin", "super_admin"] },
 ];
 
-const consumerItems: NavItem[] = [
-  { titleKey: "sidebar.consumerPortal", url: "/my-credit", icon: UserCheck, testId: "nav-consumer-portal" },
-];
-
 const resourceItems: NavItem[] = [
-  { titleKey: "sidebar.creditScoreMethodology", url: "/credit-score-methodology", icon: Brain, testId: "nav-credit-score-methodology", roles: ["admin", "lender", "super_admin"] },
   { titleKey: "sidebar.appGuide", url: "/guide", icon: Play, testId: "nav-app-guide" },
   { titleKey: "sidebar.help", url: "/help", icon: HelpCircle, testId: "nav-help" },
   ...(isGhanaMode() ? [
@@ -161,22 +165,24 @@ function CollapsibleSection({
   location,
   t,
   icon: Icon,
+  defaultOpen,
 }: {
   label: string;
   items: NavItem[];
   location: string;
   t: (key: string) => string;
   icon?: LucideIcon;
+  defaultOpen?: boolean;
 }) {
   const hasActive = items.some(item => location === item.url || (item.url === "/command-center" && location.startsWith("/command-center")));
-  const [open, setOpen] = useState(hasActive);
+  const [open, setOpen] = useState(hasActive || !!defaultOpen);
   const [userToggled, setUserToggled] = useState(false);
 
   React.useEffect(() => {
     if (hasActive) {
       setOpen(true);
       setUserToggled(false);
-    } else if (!userToggled) {
+    } else if (!userToggled && !defaultOpen) {
       setOpen(false);
     }
   }, [hasActive, location]);
@@ -233,8 +239,10 @@ export function AppSidebar() {
   const dynamicBrandTitle = dynamicCountryConfig?.brandTitle || (isGhanaMode() ? getBrandTitle() : t('sidebar.brandTitle'));
   const dynamicTheme = countryTheme?.activeTheme;
 
-  const visibleCore = filterByRole(coreItems, role);
-  const visibleOperations = filterByRole(operationsItems, role);
+  const visibleConsumers = filterByRole(consumersGroupItems, role);
+  const visibleBusinesses = filterByRole(businessesGroupItems, role);
+  const visibleTelco = filterByRole(telcoGroupItems, role);
+  const visibleCreditOps = filterByRole(creditOpsItems, role);
   const oversightItems = getOversightItems(dynamicCountryConfig?.name);
   const visibleOversight = filterByRole(oversightItems, role);
   const { data: crossBorderAccess } = useQuery<{ hasAccess: boolean; reason: string }>({
@@ -273,16 +281,14 @@ export function AppSidebar() {
         <SidebarGroup className="py-0">
           <SidebarGroupContent>
             <SidebarMenu>
-              {visibleCore.map((item) => (
-                <SidebarMenuItem key={item.titleKey}>
-                  <SidebarMenuButton asChild data-active={location === item.url}>
-                    <Link href={item.url} data-testid={item.testId}>
-                      <item.icon className="w-4 h-4" />
-                      <span>{t(item.titleKey)}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild data-active={location === dashboardItem.url}>
+                  <Link href={dashboardItem.url} data-testid={dashboardItem.testId}>
+                    <dashboardItem.icon className="w-4 h-4" />
+                    <span>{t(dashboardItem.titleKey)}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -291,16 +297,54 @@ export function AppSidebar() {
           <div className="h-px bg-sidebar-foreground/10" />
         </div>
 
+        {visibleConsumers.length > 0 && (
+          <CollapsibleSection
+            label={t('sidebar.consumersGroup', 'Consumers')}
+            items={visibleConsumers}
+            location={location}
+            t={t}
+            icon={User}
+            defaultOpen
+          />
+        )}
+
+        {visibleBusinesses.length > 0 && (
+          <CollapsibleSection
+            label={t('sidebar.businessesGroup', 'Businesses')}
+            items={visibleBusinesses}
+            location={location}
+            t={t}
+            icon={Building2}
+            defaultOpen
+          />
+        )}
+
+        {visibleTelco.length > 0 && (
+          <CollapsibleSection
+            label={t('sidebar.telcoGroup', 'Telco & Mobile Money')}
+            items={visibleTelco}
+            location={location}
+            t={t}
+            icon={Smartphone}
+            defaultOpen
+          />
+        )}
+
+        <div className="mx-3 my-1">
+          <div className="h-px bg-sidebar-foreground/10" />
+        </div>
+
         <CollapsibleSection
-          label={t('sidebar.operations', 'Operations')}
-          items={visibleOperations}
+          label={t('sidebar.creditOperations', 'Credit Operations')}
+          items={visibleCreditOps}
           location={location}
           t={t}
+          icon={CreditCard}
         />
 
         {visibleOversight.length > 0 && (
           <CollapsibleSection
-            label={t('sidebar.oversight', 'Oversight')}
+            label={t('sidebar.oversight', 'Oversight & Analytics')}
             items={visibleOversight}
             location={location}
             t={t}
@@ -327,14 +371,6 @@ export function AppSidebar() {
             icon={Settings}
           />
         )}
-
-        <CollapsibleSection
-          label={t('sidebar.consumer', 'Consumer')}
-          items={filterByRole(consumerItems, role)}
-          location={location}
-          t={t}
-          icon={UserCheck}
-        />
 
         <div className="mx-3 my-1">
           <div className="h-px bg-sidebar-foreground/10" />
