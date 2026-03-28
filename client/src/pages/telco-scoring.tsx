@@ -1798,42 +1798,143 @@ export default function TelcoScoringPage() {
                       </p>
 
                       {scoreDetailId === score.id && (
-                        <div className="mt-4 space-y-3">
+                        <div className="mt-4 space-y-4" onClick={(e) => e.stopPropagation()}>
                           <Separator />
-                          <p className="text-sm" data-testid={`text-rationale-${score.id}`}>{score.detailedRationale}</p>
+
+                          <div data-testid={`text-rationale-${score.id}`}>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Brain className="w-4 h-4 text-primary" />
+                              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">AI Assessment</p>
+                            </div>
+                            <div className="p-4 rounded-lg border border-border bg-muted/30 text-sm leading-relaxed max-h-[200px] overflow-y-auto">
+                              {score.detailedRationale}
+                            </div>
+                          </div>
 
                           {(() => {
                             const kpi = score.kpiSnapshot ? JSON.parse(score.kpiSnapshot) : null;
                             if (!kpi) return null;
+                            const cur = getCountryCurrency(score.country).symbol;
                             return (
-                              <div className="grid grid-cols-2 gap-3 text-xs">
-                                <div className="p-2 rounded bg-muted/50">
-                                  <p className="text-muted-foreground mb-1 font-medium">Cash Flow</p>
-                                  <p>Inflows: ${kpi.financialMetrics?.totalInflowsUsd?.toLocaleString()}</p>
-                                  <p>Outflows: ${kpi.financialMetrics?.totalOutflowsUsd?.toLocaleString()}</p>
-                                  <p>Variance: {kpi.financialMetrics?.inflowVarianceCoefficient?.toFixed(2)}</p>
-                                  <p>Wallet Retention: {((kpi.financialMetrics?.walletRetentionRatio || 0) * 100).toFixed(0)}%</p>
+                              <div>
+                                <div className="flex items-center gap-2 mb-3">
+                                  <BarChart3 className="w-4 h-4 text-primary" />
+                                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">KPI Snapshot</p>
                                 </div>
-                                <div className="p-2 rounded bg-muted/50">
-                                  <p className="text-muted-foreground mb-1 font-medium">Payment Behavior</p>
-                                  <p>Utility Payments: {kpi.financialMetrics?.utilityPaymentsCount}</p>
-                                  <p>Consistency: {((kpi.financialMetrics?.utilityPaymentConsistencyScore || 0) * 100).toFixed(0)}%</p>
-                                  <p>Merchant Payments: {kpi.financialMetrics?.merchantPaymentsCount}</p>
-                                  <p>Merchant Volume: ${kpi.financialMetrics?.merchantPaymentsVolume?.toLocaleString()}</p>
-                                </div>
-                                <div className="p-2 rounded bg-muted/50">
-                                  <p className="text-muted-foreground mb-1 font-medium">Telemetric</p>
-                                  <p>SIM Age: {kpi.telemetricMetrics?.simAgeDays?.toLocaleString()} days</p>
-                                  <p>Airtime Advances: {kpi.telemetricMetrics?.airtimeAdvanceFrequency}</p>
-                                  <p>Device Changes: {kpi.telemetricMetrics?.deviceChangesLast90Days}</p>
-                                  <p>KYC: {kpi.telemetricMetrics?.kycLevel}</p>
-                                </div>
-                                <div className="p-2 rounded bg-muted/50">
-                                  <p className="text-muted-foreground mb-1 font-medium">Network & Risk</p>
-                                  <p>P2P Peers: {kpi.networkMetrics?.uniqueP2pCounterparties}</p>
-                                  <p>Merchant %: {kpi.networkMetrics?.percentageTransfersToMerchants?.toFixed(1)}%</p>
-                                  <p>Income: {kpi.networkMetrics?.regularIncomeDetected ? "Detected" : "Not detected"}</p>
-                                  <p>Dormant Gap: {kpi.riskIndicators?.dormantPeriodDays} days</p>
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                                  <div className="p-3 rounded-lg border border-border bg-card">
+                                    <div className="flex items-center gap-2 mb-3">
+                                      <div className="w-7 h-7 rounded-full bg-blue-500/10 flex items-center justify-center">
+                                        <TrendingUp className="w-3.5 h-3.5 text-blue-500" />
+                                      </div>
+                                      <p className="text-xs font-semibold">Cash Flow</p>
+                                    </div>
+                                    <div className="space-y-2">
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-[11px] text-muted-foreground">Inflows</span>
+                                        <span className="text-xs font-semibold text-green-500">{cur}{Number(kpi.financialMetrics?.totalInflowsUsd || kpi.financialMetrics?.totalInflow || 0).toLocaleString()}</span>
+                                      </div>
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-[11px] text-muted-foreground">Outflows</span>
+                                        <span className="text-xs font-semibold text-red-400">{cur}{Number(kpi.financialMetrics?.totalOutflowsUsd || kpi.financialMetrics?.totalOutflow || 0).toLocaleString()}</span>
+                                      </div>
+                                      <Separator className="my-1" />
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-[11px] text-muted-foreground">Variance</span>
+                                        <span className="text-xs font-medium">{(kpi.financialMetrics?.inflowVarianceCoefficient || 0).toFixed(2)}</span>
+                                      </div>
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-[11px] text-muted-foreground">Retention</span>
+                                        <span className="text-xs font-medium">{((kpi.financialMetrics?.walletRetentionRatio || 0) * 100).toFixed(0)}%</span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="p-3 rounded-lg border border-border bg-card">
+                                    <div className="flex items-center gap-2 mb-3">
+                                      <div className="w-7 h-7 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                                        <Banknote className="w-3.5 h-3.5 text-emerald-500" />
+                                      </div>
+                                      <p className="text-xs font-semibold">Payments</p>
+                                    </div>
+                                    <div className="space-y-2">
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-[11px] text-muted-foreground">Utility</span>
+                                        <span className="text-xs font-semibold">{kpi.financialMetrics?.utilityPaymentsCount ?? 0}</span>
+                                      </div>
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-[11px] text-muted-foreground">Consistency</span>
+                                        <span className="text-xs font-medium">{((kpi.financialMetrics?.utilityPaymentConsistencyScore || 0) * 100).toFixed(0)}%</span>
+                                      </div>
+                                      <Separator className="my-1" />
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-[11px] text-muted-foreground">Merchant</span>
+                                        <span className="text-xs font-semibold">{kpi.financialMetrics?.merchantPaymentsCount ?? 0}</span>
+                                      </div>
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-[11px] text-muted-foreground">Volume</span>
+                                        <span className="text-xs font-medium">{cur}{Number(kpi.financialMetrics?.merchantPaymentsVolume || 0).toLocaleString()}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="p-3 rounded-lg border border-border bg-card">
+                                    <div className="flex items-center gap-2 mb-3">
+                                      <div className="w-7 h-7 rounded-full bg-violet-500/10 flex items-center justify-center">
+                                        <Smartphone className="w-3.5 h-3.5 text-violet-500" />
+                                      </div>
+                                      <p className="text-xs font-semibold">Telemetric</p>
+                                    </div>
+                                    <div className="space-y-2">
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-[11px] text-muted-foreground">SIM Age</span>
+                                        <span className="text-xs font-semibold">{(kpi.telemetricMetrics?.simAgeDays || 0).toLocaleString()}d</span>
+                                      </div>
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-[11px] text-muted-foreground">Airtime Adv.</span>
+                                        <span className="text-xs font-medium">{kpi.telemetricMetrics?.airtimeAdvanceFrequency ?? 0}</span>
+                                      </div>
+                                      <Separator className="my-1" />
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-[11px] text-muted-foreground">Device Chg.</span>
+                                        <span className="text-xs font-medium">{kpi.telemetricMetrics?.deviceChangesLast90Days ?? kpi.telemetricMetrics?.deviceChanges ?? 0}</span>
+                                      </div>
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-[11px] text-muted-foreground">KYC Level</span>
+                                        <Badge variant="outline" className="text-[10px] h-5 capitalize">{kpi.telemetricMetrics?.kycLevel || "N/A"}</Badge>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="p-3 rounded-lg border border-border bg-card">
+                                    <div className="flex items-center gap-2 mb-3">
+                                      <div className="w-7 h-7 rounded-full bg-amber-500/10 flex items-center justify-center">
+                                        <Users className="w-3.5 h-3.5 text-amber-500" />
+                                      </div>
+                                      <p className="text-xs font-semibold">Network & Risk</p>
+                                    </div>
+                                    <div className="space-y-2">
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-[11px] text-muted-foreground">P2P Peers</span>
+                                        <span className="text-xs font-semibold">{kpi.networkMetrics?.uniqueP2pCounterparties ?? kpi.telemetricMetrics?.uniqueCounterparties ?? 0}</span>
+                                      </div>
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-[11px] text-muted-foreground">Merchant %</span>
+                                        <span className="text-xs font-medium">{(kpi.networkMetrics?.percentageTransfersToMerchants || 0).toFixed(1)}%</span>
+                                      </div>
+                                      <Separator className="my-1" />
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-[11px] text-muted-foreground">Income</span>
+                                        <Badge variant={kpi.networkMetrics?.regularIncomeDetected ? "default" : "secondary"} className="text-[10px] h-5">
+                                          {kpi.networkMetrics?.regularIncomeDetected ? "Detected" : "None"}
+                                        </Badge>
+                                      </div>
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-[11px] text-muted-foreground">Dormant</span>
+                                        <span className="text-xs font-medium">{kpi.riskIndicators?.dormantPeriodDays ?? 0}d</span>
+                                      </div>
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
                             );
