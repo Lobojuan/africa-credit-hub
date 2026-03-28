@@ -765,11 +765,20 @@ function DecisionEnginePanel({ profiles }: { profiles: TelcoProfile[] }) {
                 </CardTitle>
                 <p className="text-xs text-muted-foreground mt-1">Evaluate profiles individually or run bulk decisions</p>
               </div>
-              {activeRule && (
-                <Button size="sm" variant="default" onClick={() => setShowBulkDialog(true)} data-testid="button-bulk-decision">
-                  <Users className="w-3 h-3 mr-1" /> Bulk Decision
-                </Button>
-              )}
+              <Button
+                size="sm"
+                variant="default"
+                onClick={() => {
+                  if (!activeRule) {
+                    toast({ title: "No active rule", description: "Create and activate a decision rule before running bulk decisions", variant: "destructive" });
+                    return;
+                  }
+                  setShowBulkDialog(true);
+                }}
+                data-testid="button-bulk-decision"
+              >
+                <Users className="w-3 h-3 mr-1" /> Bulk Decision
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
