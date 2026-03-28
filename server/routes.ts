@@ -2367,6 +2367,177 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/telco/decision-engine/bulk/run", requireRole("admin", "lender", "super_admin"), async (req, res) => {
+    try {
+      const { computeTelcoKPIs, generateTelcoCreditScore } = await import("./telco-scoring");
+      const orgId = getOrgScope(req);
+      const { profileIds, periodDays: rawPeriod, country: filterCountry, kycLevel: filterKyc, skipAlreadyDecided, sendSmsNotification } = req.body;
+      const periodDays = parseInt(rawPeriod as string) || 90;
+
+      const rule = await storage.getActiveDecisionRule(orgId, filterCountry || undefined);
+      if (!rule) {
+        return res.status(400).json({ message: "No active decision rule found. Create a rule in the Decision Engine tab first." });
+      }
+
+      let allProfiles = await storage.getTelcoProfiles(orgId);
+      if (profileIds && Array.isArray(profileIds) && profileIds.length > 0) {
+        allProfiles = allProfiles.filter(p => profileIds.includes(p.id));
+      }
+      if (filterCountry) {
+        allProfiles = allProfiles.filter(p => p.country.toLowerCase() === filterCountry.toLowerCase());
+      }
+      if (filterKyc) {
+        const kycLevels = ["none", "basic", "standard", "full"];
+        const minIdx = kycLevels.indexOf(filterKyc);
+        allProfiles = allProfiles.filter(p => kycLevels.indexOf(p.kycLevel) >= minIdx);
+      }
+
+      if (skipAlreadyDecided) {
+        const existingLogs = await storage.getDecisionLogs(orgId);
+        const decidedProfileIds = new Set(existingLogs.map(l => l.profileId));
+        allProfiles = allProfiles.filter(p => !decidedProfileIds.has(p.id));
+      }
+
+      const results: { approved: number; rejected: number; skipped: number; errors: number; decisions: any[] } = {
+        approved: 0, rejected: 0, skipped: 0, errors: 0, decisions: []
+      };
+
+      for (const profile of allProfiles) {
+        try {
+          const transactions = await storage.getMomoTransactions(profile.id);
+          if (transactions.length === 0) {
+            results.skipped++;
+            results.decisions.push({ profileId: profile.id, msisdn: profile.msisdn, status: "skipped", reason: "No transactions" });
+            continue;
+          }
+
+          const kpis = computeTelcoKPIs(profile, transactions, periodDays);
+          const aiResult = await generateTelcoCreditScore(profile, kpis);
+
+          const validTiers = ["very_low", "low", "medium", "high", "very_high"] as const;
+          const normalizedTier = validTiers.includes(aiResult.riskTier) ? aiResult.riskTier : "medium";
+          const normalizedScore = Math.max(1, Math.min(5, Math.round(aiResult.riskScore)));
+
+          const score = await storage.createTelcoCreditScore({
+            profileId: profile.id,
+            borrowerId: profile.borrowerId || undefined,
+            riskTier: normalizedTier as any,
+            riskScore: normalizedScore,
+            creditLimit: aiResult.suggestedCreditLimitUsd?.toString(),
+            currency: "USD",
+            approvalRecommendation: aiResult.approvalRecommendation,
+            reasonCode: aiResult.reasonCode,
+            detailedRationale: aiResult.detailedRationale,
+            evaluationPeriodDays: periodDays,
+            kpiSnapshot: JSON.stringify(kpis),
+            aiProvider: aiResult.aiProvider,
+            aiModel: aiResult.aiModel,
+            organizationId: orgId || profile.organizationId || undefined,
+            country: profile.country,
+          });
+
+          const rejectionReasons: string[] = [];
+          const kycLevels = ["none", "basic", "standard", "full"];
+          const minKycIndex = kycLevels.indexOf(rule.minKycLevel);
+
+          if (normalizedScore > rule.maxAllowableRiskTier) {
+            rejectionReasons.push(`Risk tier ${normalizedScore} exceeds max ${rule.maxAllowableRiskTier}`);
+          }
+          if ((kpis.financialMetrics?.utilityPaymentsCount || 0) < rule.minUtilityPayments) {
+            rejectionReasons.push(`Utility payments below minimum (${rule.minUtilityPayments})`);
+          }
+          const walletRetention = Math.round((kpis.financialMetrics?.walletRetentionRatio || 0) * 100);
+          if (walletRetention < rule.minWalletRetentionPct) {
+            rejectionReasons.push(`Wallet retention ${walletRetention}% below ${rule.minWalletRetentionPct}%`);
+          }
+          if ((kpis.telemetricMetrics?.simAgeDays || 0) < rule.minSimAgeDays) {
+            rejectionReasons.push(`SIM age below ${rule.minSimAgeDays} days`);
+          }
+          if ((kpis.riskIndicators?.dormantPeriodDays || 0) > rule.maxDormantDays) {
+            rejectionReasons.push(`Dormant period exceeds ${rule.maxDormantDays} days`);
+          }
+          const profileKycIndex = kycLevels.indexOf(profile.kycLevel);
+          if (profileKycIndex < minKycIndex) {
+            rejectionReasons.push(`KYC "${profile.kycLevel}" below required "${rule.minKycLevel}"`);
+          }
+
+          const isApproved = rejectionReasons.length === 0;
+          const creditLimit = Math.min(aiResult.suggestedCreditLimitUsd || 0, Number(rule.maxCreditLimitUsd) || 500);
+          let status: "approved_disbursed" | "approved_pending" | "rejected" = "rejected";
+          let disbursementRef: string | undefined;
+
+          if (isApproved) {
+            if (rule.autoDisburseApproved) {
+              disbursementRef = `MOMO-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+              status = "approved_disbursed";
+            } else {
+              status = "approved_pending";
+            }
+          }
+
+          const smsWasSent = sendSmsNotification && isApproved;
+
+          const decisionLog = await storage.createDecisionLog({
+            ruleId: rule.id,
+            profileId: profile.id,
+            scoreId: score.id,
+            status,
+            riskScore: normalizedScore,
+            riskTier: normalizedTier,
+            creditLimitUsd: creditLimit.toString(),
+            reasonCode: isApproved ? aiResult.reasonCode : rejectionReasons.join("; "),
+            rejectionReasons: isApproved ? undefined : JSON.stringify(rejectionReasons),
+            disbursementRef,
+            smsNotificationSent: !!smsWasSent,
+            applicantMsisdn: profile.msisdn,
+            country: profile.country,
+            organizationId: orgId || profile.organizationId || undefined,
+          });
+
+          if (isApproved) results.approved++;
+          else results.rejected++;
+
+          results.decisions.push({
+            profileId: profile.id,
+            msisdn: profile.msisdn,
+            status,
+            riskScore: normalizedScore,
+            riskTier: normalizedTier,
+            creditLimit,
+            reasonCode: decisionLog.reasonCode,
+          });
+        } catch (err: any) {
+          results.errors++;
+          results.decisions.push({ profileId: profile.id, msisdn: profile.msisdn, status: "error", reason: err.message });
+        }
+      }
+
+      await storage.createAuditLog({
+        action: "BULK_DECISION_ENGINE",
+        entity: "telco_decision_log",
+        entityId: rule.id,
+        userId: req.session.userId,
+        details: `Bulk decision: ${results.approved} approved, ${results.rejected} rejected, ${results.skipped} skipped, ${results.errors} errors out of ${allProfiles.length} profiles`,
+        organizationId: orgId,
+      });
+
+      res.json({
+        summary: {
+          total: allProfiles.length,
+          approved: results.approved,
+          rejected: results.rejected,
+          skipped: results.skipped,
+          errors: results.errors,
+        },
+        decisions: results.decisions,
+        ruleApplied: { id: rule.id, name: rule.name },
+      });
+    } catch (e: any) {
+      console.error("[BulkDecisionEngine] Error:", e.message);
+      res.status(500).json({ message: e.message });
+    }
+  });
+
   app.get("/api/global-search", async (req, res) => {
     try {
       const orgId = getOrgScope(req);

@@ -523,10 +523,26 @@ interface DecisionLog {
   decidedAt: string;
 }
 
+interface BulkResult {
+  summary: { total: number; approved: number; rejected: number; skipped: number; errors: number };
+  decisions: Array<{ profileId: string; msisdn: string; status: string; riskScore?: number; riskTier?: string; creditLimit?: number; reasonCode?: string; reason?: string }>;
+  ruleApplied: { id: string; name: string };
+}
+
 function DecisionEnginePanel({ profiles }: { profiles: TelcoProfile[] }) {
   const { toast } = useToast();
   const [showCreateRule, setShowCreateRule] = useState(false);
   const [editingRule, setEditingRule] = useState<DecisionRule | null>(null);
+  const [showBulkDialog, setShowBulkDialog] = useState(false);
+  const [bulkResult, setBulkResult] = useState<BulkResult | null>(null);
+  const [showBulkResults, setShowBulkResults] = useState(false);
+  const [bulkConfig, setBulkConfig] = useState({
+    country: "",
+    kycLevel: "",
+    periodDays: 90,
+    skipAlreadyDecided: true,
+    sendSmsNotification: false,
+  });
 
   const [ruleForm, setRuleForm] = useState({
     name: "Default Policy",
@@ -599,9 +615,48 @@ function DecisionEnginePanel({ profiles }: { profiles: TelcoProfile[] }) {
     onError: (e: Error) => toast({ title: "Decision engine error", description: e.message, variant: "destructive" }),
   });
 
+  const bulkDecisionMutation = useMutation({
+    mutationFn: async (config: typeof bulkConfig) => {
+      const res = await apiRequest("POST", "/api/telco/decision-engine/bulk/run", {
+        country: config.country || undefined,
+        kycLevel: config.kycLevel || undefined,
+        periodDays: config.periodDays,
+        skipAlreadyDecided: config.skipAlreadyDecided,
+        sendSmsNotification: config.sendSmsNotification,
+      });
+      return res.json();
+    },
+    onSuccess: (data: BulkResult) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/telco/decision-logs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/telco/scores"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/telco/dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/telco/analytics"] });
+      setBulkResult(data);
+      setShowBulkDialog(false);
+      setShowBulkResults(true);
+      toast({
+        title: "Bulk decision complete",
+        description: `${data.summary.approved} approved, ${data.summary.rejected} rejected, ${data.summary.skipped} skipped`,
+      });
+    },
+    onError: (e: Error) => toast({ title: "Bulk decision failed", description: e.message, variant: "destructive" }),
+  });
+
   const activeRule = rules?.find(r => r.isActive);
   const approvedLogs = decisionLogs?.filter(l => l.status !== "rejected") || [];
   const rejectedLogs = decisionLogs?.filter(l => l.status === "rejected") || [];
+
+  const countries = [...new Set(profiles.map(p => p.country))].sort();
+  const decidedProfileIds = new Set((decisionLogs || []).map(l => l.profileId));
+  const filteredProfileCount = profiles.filter(p => {
+    if (bulkConfig.country && p.country.toLowerCase() !== bulkConfig.country.toLowerCase()) return false;
+    if (bulkConfig.kycLevel) {
+      const levels = ["none", "basic", "standard", "full"];
+      if (levels.indexOf(p.kycLevel) < levels.indexOf(bulkConfig.kycLevel)) return false;
+    }
+    if (bulkConfig.skipAlreadyDecided && decidedProfileIds.has(p.id)) return false;
+    return true;
+  }).length;
 
   return (
     <div className="space-y-6">
@@ -703,10 +758,19 @@ function DecisionEnginePanel({ profiles }: { profiles: TelcoProfile[] }) {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Zap className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Run Decision Engine
-            </CardTitle>
-            <p className="text-xs text-muted-foreground mt-1">Select a MoMo profile to evaluate against the active decision rule</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-blue-600 dark:text-blue-400" /> Run Decision Engine
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">Evaluate profiles individually or run bulk decisions</p>
+              </div>
+              {activeRule && (
+                <Button size="sm" variant="default" onClick={() => setShowBulkDialog(true)} data-testid="button-bulk-decision">
+                  <Users className="w-3 h-3 mr-1" /> Bulk Decision
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {!activeRule ? (
@@ -893,6 +957,191 @@ function DecisionEnginePanel({ profiles }: { profiles: TelcoProfile[] }) {
               {(createRuleMutation.isPending || updateRuleMutation.isPending) ? "Saving..." : editingRule ? "Update Rule" : "Create Rule"}
             </Button>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showBulkDialog} onOpenChange={setShowBulkDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Users className="w-5 h-5" /> Bulk Decision Engine</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/40">
+              <p className="text-xs text-blue-700 dark:text-blue-300">
+                Run the decision engine across multiple profiles at once. Each profile will be scored by AI and evaluated against the active rule: <span className="font-bold">{activeRule?.name || "None"}</span>
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Filter by Country</Label>
+                <Select value={bulkConfig.country} onValueChange={v => setBulkConfig({ ...bulkConfig, country: v === "all" ? "" : v })}>
+                  <SelectTrigger data-testid="select-bulk-country"><SelectValue placeholder="All countries" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Countries</SelectItem>
+                    {countries.map(c => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Min KYC Level</Label>
+                <Select value={bulkConfig.kycLevel} onValueChange={v => setBulkConfig({ ...bulkConfig, kycLevel: v === "any" ? "" : v })}>
+                  <SelectTrigger data-testid="select-bulk-kyc"><SelectValue placeholder="Any" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="any">Any Level</SelectItem>
+                    <SelectItem value="basic">Basic</SelectItem>
+                    <SelectItem value="standard">Standard</SelectItem>
+                    <SelectItem value="full">Full KYC</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Evaluation Period (days)</Label>
+                <div className="flex items-center gap-3">
+                  <input type="range" min={30} max={365} step={30} value={bulkConfig.periodDays} onChange={e => setBulkConfig({ ...bulkConfig, periodDays: parseInt(e.target.value) })} className="flex-1 accent-blue-600" data-testid="slider-bulk-period" />
+                  <span className="text-lg font-bold w-12 text-center">{bulkConfig.periodDays}d</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 p-2 rounded-lg border bg-muted/20">
+                  <input type="checkbox" checked={bulkConfig.skipAlreadyDecided} onChange={e => setBulkConfig({ ...bulkConfig, skipAlreadyDecided: e.target.checked })} className="w-4 h-4 accent-blue-600" data-testid="checkbox-skip-decided" />
+                  <div>
+                    <Label className="text-xs font-semibold">Skip Already Decided</Label>
+                    <p className="text-[10px] text-muted-foreground">Don't re-evaluate profiles with existing decisions</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 p-2 rounded-lg border bg-muted/20">
+              <input type="checkbox" checked={bulkConfig.sendSmsNotification} onChange={e => setBulkConfig({ ...bulkConfig, sendSmsNotification: e.target.checked })} className="w-4 h-4 accent-blue-600" data-testid="checkbox-bulk-sms" />
+              <div>
+                <Label className="text-xs font-semibold">Send SMS Notifications</Label>
+                <p className="text-[10px] text-muted-foreground">Notify applicants of their decision via SMS</p>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-lg bg-muted/50 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Profiles matching filters</p>
+                <p className="text-xl font-bold">{filteredProfileCount}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground">Active Rule</p>
+                <p className="text-sm font-semibold">{activeRule?.name}</p>
+                <p className="text-[10px] text-muted-foreground">Max risk: {activeRule?.maxAllowableRiskTier}/5 · Max credit: ${Number(activeRule?.maxCreditLimitUsd || 0).toLocaleString()}</p>
+              </div>
+            </div>
+
+            <Button
+              className="w-full"
+              onClick={() => bulkDecisionMutation.mutate(bulkConfig)}
+              disabled={bulkDecisionMutation.isPending || filteredProfileCount === 0}
+              data-testid="button-run-bulk"
+            >
+              {bulkDecisionMutation.isPending ? (
+                <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Processing {filteredProfileCount} profiles...</>
+              ) : (
+                <><Zap className="w-4 h-4 mr-2" /> Run Bulk Decision ({filteredProfileCount} profiles)</>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showBulkResults} onOpenChange={setShowBulkResults}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Activity className="w-5 h-5" /> Bulk Decision Results</DialogTitle>
+          </DialogHeader>
+          {bulkResult && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-5 gap-2">
+                <div className="p-3 rounded-lg bg-muted/50 text-center">
+                  <p className="text-[10px] text-muted-foreground">Total</p>
+                  <p className="text-xl font-bold">{bulkResult.summary.total}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 text-center">
+                  <p className="text-[10px] text-green-600 dark:text-green-400">Approved</p>
+                  <p className="text-xl font-bold text-green-600 dark:text-green-400">{bulkResult.summary.approved}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 text-center">
+                  <p className="text-[10px] text-red-600 dark:text-red-400">Rejected</p>
+                  <p className="text-xl font-bold text-red-600 dark:text-red-400">{bulkResult.summary.rejected}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 text-center">
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400">Skipped</p>
+                  <p className="text-xl font-bold text-amber-600 dark:text-amber-400">{bulkResult.summary.skipped}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/50 text-center">
+                  <p className="text-[10px] text-muted-foreground">Errors</p>
+                  <p className="text-xl font-bold">{bulkResult.summary.errors}</p>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-lg bg-muted/30">
+                <p className="text-xs text-muted-foreground mb-1">Rule Applied</p>
+                <p className="text-sm font-semibold">{bulkResult.ruleApplied.name}</p>
+              </div>
+
+              {bulkResult.summary.total > 0 && (
+                <div className="w-full h-3 rounded-full bg-muted overflow-hidden flex">
+                  {bulkResult.summary.approved > 0 && (
+                    <div className="h-full bg-green-500" style={{ width: `${(bulkResult.summary.approved / bulkResult.summary.total) * 100}%` }} />
+                  )}
+                  {bulkResult.summary.rejected > 0 && (
+                    <div className="h-full bg-red-500" style={{ width: `${(bulkResult.summary.rejected / bulkResult.summary.total) * 100}%` }} />
+                  )}
+                  {bulkResult.summary.skipped > 0 && (
+                    <div className="h-full bg-amber-500" style={{ width: `${(bulkResult.summary.skipped / bulkResult.summary.total) * 100}%` }} />
+                  )}
+                  {bulkResult.summary.errors > 0 && (
+                    <div className="h-full bg-gray-400" style={{ width: `${(bulkResult.summary.errors / bulkResult.summary.total) * 100}%` }} />
+                  )}
+                </div>
+              )}
+
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">MSISDN</TableHead>
+                    <TableHead className="text-xs">Status</TableHead>
+                    <TableHead className="text-xs text-right">Risk</TableHead>
+                    <TableHead className="text-xs text-right">Credit Limit</TableHead>
+                    <TableHead className="text-xs">Reason</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {bulkResult.decisions.map((d, i) => (
+                    <TableRow key={i} data-testid={`bulk-result-${i}`}>
+                      <TableCell className="text-xs font-medium">{d.msisdn}</TableCell>
+                      <TableCell>
+                        {d.status === "approved_disbursed" ? (
+                          <Badge variant="default" className="text-[10px] bg-green-600"><CheckCircle className="w-3 h-3 mr-1" />Disbursed</Badge>
+                        ) : d.status === "approved_pending" ? (
+                          <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-600 border-blue-500/20"><Clock className="w-3 h-3 mr-1" />Approved</Badge>
+                        ) : d.status === "rejected" ? (
+                          <Badge variant="destructive" className="text-[10px]"><XCircle className="w-3 h-3 mr-1" />Rejected</Badge>
+                        ) : d.status === "skipped" ? (
+                          <Badge variant="secondary" className="text-[10px]"><Minus className="w-3 h-3 mr-1" />Skipped</Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-[10px]"><AlertTriangle className="w-3 h-3 mr-1" />Error</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-xs text-right font-bold">{d.riskScore ? `${d.riskScore}/5` : "—"}</TableCell>
+                      <TableCell className="text-xs text-right">{d.creditLimit ? `$${d.creditLimit.toLocaleString()}` : "—"}</TableCell>
+                      <TableCell className="text-xs max-w-[250px] truncate">{d.reasonCode || d.reason || "—"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
