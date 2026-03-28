@@ -549,6 +549,13 @@ process.stderr.write = function (...args: any[]) {
   }
 
   try {
+    const { seedTelcoLending } = await import("./seed-telco-lending");
+    await seedTelcoLending();
+  } catch (e) {
+    console.error("Telco lending seed error (non-fatal):", e);
+  }
+
+  try {
     const { runMigrations } = await import('stripe-replit-sync');
     const databaseUrl = process.env.DATABASE_URL;
     if (databaseUrl) {
