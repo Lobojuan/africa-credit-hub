@@ -99,8 +99,11 @@ export default function AuditTrailPage() {
   const [filter, setFilter] = useState("");
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [viewMode, setViewMode] = useState<"table" | "timeline">("table");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const today = new Date();
+  const thirtyDaysAgo = new Date(today);
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const [dateFrom, setDateFrom] = useState(thirtyDaysAgo.toISOString().slice(0, 10));
+  const [dateTo, setDateTo] = useState(today.toISOString().slice(0, 10));
   const [actionFilter, setActionFilter] = useState("all");
   const [entityFilter, setEntityFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("logs");

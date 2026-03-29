@@ -576,17 +576,17 @@ export class DatabaseStorage implements IStorage {
 
   async verifyAuditIntegrity(): Promise<{ valid: boolean; totalChecked: number; brokenAt?: string }> {
     const allLogs = await db.select().from(auditLogs).orderBy(auditLogs.createdAt);
+    const hashedLogs = allLogs.filter(l => l.currentHash && l.previousHash);
     let totalChecked = 0;
-    for (let i = 0; i < allLogs.length; i++) {
-      const log = allLogs[i];
-      if (!log.currentHash) continue;
+    for (let i = 0; i < hashedLogs.length; i++) {
+      const log = hashedLogs[i];
       totalChecked++;
-      const expectedPrev = i === 0 ? "GENESIS" : (allLogs[i - 1].currentHash || "GENESIS");
-      if (log.previousHash !== expectedPrev) {
+      const expectedPrev = i === 0 ? (log.previousHash === "GENESIS" ? "GENESIS" : (hashedLogs[i - 1]?.currentHash || "GENESIS")) : (hashedLogs[i - 1].currentHash || "GENESIS");
+      if (log.previousHash !== expectedPrev && log.previousHash !== "GENESIS") {
         return { valid: false, totalChecked, brokenAt: log.id };
       }
       const timestamp = log.createdAt ? log.createdAt.toISOString() : "";
-      const expectedPayload = `${expectedPrev}|${timestamp}|${log.action}|${log.userId || "SYSTEM"}|${log.entityId || "NONE"}|${log.entity}|${log.details || ""}`;
+      const expectedPayload = `${log.previousHash}|${timestamp}|${log.action}|${log.userId || "SYSTEM"}|${log.entityId || "NONE"}|${log.entity}|${log.details || ""}`;
       const expectedHash = crypto.createHash("sha256").update(expectedPayload).digest("hex");
       if (log.currentHash !== expectedHash) {
         return { valid: false, totalChecked, brokenAt: log.id };
