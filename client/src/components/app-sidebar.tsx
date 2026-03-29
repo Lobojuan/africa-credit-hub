@@ -191,10 +191,12 @@ function CollapsibleSection({
     <Collapsible open={open} onOpenChange={(v) => { setOpen(v); setUserToggled(true); }}>
       <SidebarGroup className="py-0">
         <CollapsibleTrigger className="w-full group">
-          <div className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 cursor-pointer transition-colors flex items-center justify-between rounded-md mx-1 ${
-            hasActive
-              ? "text-primary bg-primary/8 border border-primary/15"
-              : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground/80"
+          <div className={`text-[10px] font-bold uppercase tracking-widest px-3 py-2 cursor-pointer transition-all duration-200 flex items-center justify-between rounded-lg mx-1.5 my-0.5 ${
+            hasActive && open
+              ? "text-primary-foreground bg-primary/90 shadow-sm"
+              : hasActive && !open
+              ? "text-primary bg-primary/15 border border-primary/25"
+              : "text-sidebar-foreground/50 hover:text-sidebar-foreground/80 hover:bg-sidebar-foreground/5"
           }`}>
             <span className="flex items-center gap-2">
               {Icon && <Icon className="w-3.5 h-3.5" />}
@@ -209,20 +211,25 @@ function CollapsibleSection({
           </div>
         </CollapsibleTrigger>
         <CollapsibleContent className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down overflow-hidden">
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {items.map((item) => (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild data-active={location === item.url || (item.url === "/command-center" && location.startsWith("/command-center"))}>
-                    <Link href={item.url} data-testid={item.testId}>
-                      <item.icon className="w-4 h-4" />
-                      <span>{item.label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
+          <div className="ml-3 mr-1.5 my-1 border-l-2 border-primary/20 pl-0">
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {items.map((item) => {
+                  const isActive = location === item.url || (item.url === "/command-center" && location.startsWith("/command-center"));
+                  return (
+                    <SidebarMenuItem key={item.url}>
+                      <SidebarMenuButton asChild data-active={isActive} className={isActive ? "bg-primary/10 text-primary font-semibold border-r-2 border-primary" : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-foreground/5"}>
+                        <Link href={item.url} data-testid={item.testId}>
+                          <item.icon className="w-4 h-4" />
+                          <span>{item.label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </div>
         </CollapsibleContent>
       </SidebarGroup>
     </Collapsible>
