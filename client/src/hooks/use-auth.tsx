@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useCallback, useState, useRef, type ReactNode } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
+import { apiRequest, queryClient, getQueryFn, clearCSRFToken, fetchCSRFToken } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { User, Organization } from "@shared/schema";
 
@@ -84,6 +84,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (data) => {
       sessionExpiredRef.current = false;
+      clearCSRFToken();
+      fetchCSRFToken();
       queryClient.setQueryData(["/api/auth/me"], data);
     },
   });
@@ -93,10 +95,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await apiRequest("POST", "/api/auth/logout");
     },
     onSuccess: () => {
+      clearCSRFToken();
       queryClient.removeQueries();
       window.location.replace("/login");
     },
     onError: () => {
+      clearCSRFToken();
       queryClient.removeQueries();
       window.location.replace("/login");
     },

@@ -29,7 +29,7 @@ const SECURITY_CONTROLS = [
     color: "text-green-600",
     controls: [
       { name: "TLS/SSL Encryption (In Transit)", status: "implemented", detail: "All data encrypted in transit using HTTPS/TLS 1.3" },
-      { name: "AES-256 Encryption (At Rest)", status: "implemented", detail: "Database encryption at rest via managed PostgreSQL" },
+      { name: "AES-256-GCM Encryption (At Rest)", status: "implemented", detail: "Application-level AES-256-GCM encryption for all PII fields (national IDs, dates of birth, mobile money numbers) plus managed PostgreSQL encryption" },
       { name: "Data Minimization", status: "implemented", detail: "Consumer portal returns only necessary data, no internal IDs or financial amounts" },
       { name: "Data Retention Policies", status: "implemented", detail: "Configurable per-country retention periods with automatic enforcement" },
       { name: "Consent Management", status: "implemented", detail: "Explicit consent tracking with revocation capability" },
@@ -43,9 +43,9 @@ const SECURITY_CONTROLS = [
     controls: [
       { name: "Input Validation (Zod Schemas)", status: "implemented", detail: "Server-side validation on all API endpoints using strict schemas" },
       { name: "XSS Prevention (DOMPurify)", status: "implemented", detail: "Content sanitization on all user-generated content" },
-      { name: "CSRF Protection", status: "implemented", detail: "Session-based CSRF mitigation with SameSite cookies" },
+      { name: "CSRF Protection", status: "implemented", detail: "Per-session CSRF tokens validated on all state-changing requests, plus SameSite cookie policy" },
       { name: "Rate Limiting", status: "implemented", detail: "Per-endpoint rate limiting with progressive throttling" },
-      { name: "Security Headers (Helmet)", status: "implemented", detail: "X-Content-Type-Options, X-Frame-Options, Strict-Transport-Security" },
+      { name: "Security Headers (Helmet)", status: "implemented", detail: "CSP, HSTS (preload), X-Frame-Options: DENY, Referrer-Policy, Permissions-Policy, X-Content-Type-Options" },
       { name: "SQL Injection Prevention", status: "implemented", detail: "Parameterized queries via Drizzle ORM — no raw SQL interpolation" },
     ],
   },

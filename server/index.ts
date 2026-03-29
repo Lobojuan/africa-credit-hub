@@ -87,19 +87,41 @@ app.get("/health", async (_req, res) => {
 });
 
 app.use(helmet({
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+      imgSrc: ["'self'", "data:", "blob:", "https:"],
+      connectSrc: ["'self'", "https:", "wss:"],
+      frameSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      upgradeInsecureRequests: [],
+    },
+  },
   crossOriginEmbedderPolicy: false,
-  crossOriginResourcePolicy: false,
-  crossOriginOpenerPolicy: false,
-  frameguard: false,
+  crossOriginResourcePolicy: { policy: "same-origin" },
+  crossOriginOpenerPolicy: { policy: "same-origin" },
+  referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+  hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
+  frameguard: { action: "deny" },
+  noSniff: true,
+  xssFilter: true,
 }));
 app.use(compression());
 app.use((req, res, next) => {
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
+  res.setHeader("X-Permitted-Cross-Domain-Policies", "none");
+
   if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/)) {
     res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
   } else if (req.path.startsWith("/api")) {
     res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
     res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
   }
   next();
 });
@@ -123,8 +145,11 @@ declare module "express-session" {
     viewingCountry: string;
     webauthnChallenge: string;
     webauthnUserId: string;
+    csrfToken: string;
   }
 }
+
+import { generateCSRFToken } from "./encryption";
 
 import { WebhookHandlers } from "./webhookHandlers";
 app.post(
@@ -179,6 +204,35 @@ app.use(
     },
   })
 );
+
+app.get("/api/auth/csrf-token", (req, res) => {
+  if (!req.session.csrfToken) {
+    req.session.csrfToken = generateCSRFToken();
+  }
+  res.json({ token: req.session.csrfToken });
+});
+
+app.use((req, res, next) => {
+  if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return next();
+  if (req.path === "/api/stripe/webhook") return next();
+  if (req.path.startsWith("/api/external/")) return next();
+  if (req.path === "/api/auth/login") return next();
+  if (req.path === "/api/auth/csrf-token") return next();
+  if (req.path === "/api/trial/register") return next();
+  if (req.path === "/api/consumer/login") return next();
+  if (req.path === "/api/consumer/register") return next();
+
+  const csrfToken = req.headers["x-csrf-token"] as string;
+  if (req.session?.userId) {
+    if (!req.session.csrfToken) {
+      req.session.csrfToken = generateCSRFToken();
+    }
+    if (!csrfToken || csrfToken !== req.session.csrfToken) {
+      return res.status(403).json({ message: "Invalid or missing CSRF token" });
+    }
+  }
+  next();
+});
 
 const IDLE_TIMEOUTS: Record<string, number> = {
   super_admin: 30 * 60 * 1000,

@@ -1,6 +1,7 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 let _selectedOrgId: string | null = null;
+let _csrfToken: string | null = null;
 
 export function setGlobalOrgId(orgId: string | null) {
   _selectedOrgId = orgId;
@@ -8,6 +9,23 @@ export function setGlobalOrgId(orgId: string | null) {
 
 export function getGlobalOrgId(): string | null {
   return _selectedOrgId;
+}
+
+export async function fetchCSRFToken(): Promise<string> {
+  if (_csrfToken) return _csrfToken;
+  try {
+    const res = await fetch("/api/auth/csrf-token", { credentials: "include" });
+    if (res.ok) {
+      const data = await res.json();
+      _csrfToken = data.token;
+      return _csrfToken!;
+    }
+  } catch {}
+  return "";
+}
+
+export function clearCSRFToken() {
+  _csrfToken = null;
 }
 
 function appendOrgId(url: string): string {
@@ -33,9 +51,17 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  const headers: Record<string, string> = {};
+  if (data) headers["Content-Type"] = "application/json";
+
+  if (!["GET", "HEAD", "OPTIONS"].includes(method.toUpperCase())) {
+    const token = await fetchCSRFToken();
+    if (token) headers["X-CSRF-Token"] = token;
+  }
+
   const res = await fetch(appendOrgId(url), {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });

@@ -1,6 +1,7 @@
 import { eq, desc, like, or, and, sql, count, ilike, inArray } from "drizzle-orm";
 import crypto from "crypto";
 import { db } from "./db";
+import { encryptBorrowerPII, decryptBorrowerPII, decryptBorrowerArray } from "./encryption";
 import {
   users, borrowers, creditAccounts, creditInquiries, auditLogs, pendingApprovals, disputes, notifications,
   courtJudgments, consentRecords, paymentHistory, institutions, billingRecords, creditReportLogs, apiKeys,
@@ -334,7 +335,7 @@ export class DatabaseStorage implements IStorage {
 
   async getBorrower(id: string): Promise<Borrower | undefined> {
     const [borrower] = await db.select().from(borrowers).where(eq(borrowers.id, id));
-    return borrower;
+    return borrower ? decryptBorrowerPII(borrower as Record<string, any>) as Borrower : undefined;
   }
 
   async getBorrowers(page: number = 1, limit: number = 50, organizationId?: string, country?: string): Promise<{ data: Borrower[]; total: number }> {
@@ -346,7 +347,7 @@ export class DatabaseStorage implements IStorage {
     const where = filters.length > 1 ? and(...filters) : filters[0];
     const [totalResult] = await db.select({ value: count() }).from(borrowers).where(where);
     const data = await db.select().from(borrowers).where(where).orderBy(desc(borrowers.createdAt)).limit(safeLimit).offset(offset);
-    return { data, total: totalResult.value };
+    return { data: decryptBorrowerArray(data as Record<string, any>[]) as Borrower[], total: totalResult.value };
   }
 
   async getBorrowersByType(type: "individual" | "corporate", page: number = 1, limit: number = 50, organizationId?: string, country?: string): Promise<{ data: Borrower[]; total: number }> {
@@ -358,7 +359,7 @@ export class DatabaseStorage implements IStorage {
     const where = and(...filters);
     const [totalResult] = await db.select({ value: count() }).from(borrowers).where(where);
     const data = await db.select().from(borrowers).where(where).orderBy(desc(borrowers.createdAt)).limit(safeLimit).offset(offset);
-    return { data, total: totalResult.value };
+    return { data: decryptBorrowerArray(data as Record<string, any>[]) as Borrower[], total: totalResult.value };
   }
 
   async searchBorrowersByType(type: "individual" | "corporate", query: string, organizationId?: string, country?: string): Promise<Borrower[]> {
@@ -367,9 +368,10 @@ export class DatabaseStorage implements IStorage {
     if (country) baseFilters.push(eq(borrowers.country, country));
 
     if (!query) {
-      return db.select().from(borrowers)
+      const results = await db.select().from(borrowers)
         .where(and(...baseFilters))
         .orderBy(desc(borrowers.createdAt)).limit(200);
+      return decryptBorrowerArray(results as Record<string, any>[]) as Borrower[];
     }
 
     const searchPattern = `%${query}%`;
@@ -388,9 +390,10 @@ export class DatabaseStorage implements IStorage {
       ilike(borrowers.businessRegNumber, searchPattern),
     );
 
-    return db.select().from(borrowers)
+    const results = await db.select().from(borrowers)
       .where(and(...baseFilters, searchCondition))
       .orderBy(desc(borrowers.createdAt)).limit(200);
+    return decryptBorrowerArray(results as Record<string, any>[]) as Borrower[];
   }
 
   async searchBorrowers(query: string, organizationId?: string, country?: string): Promise<Borrower[]> {
@@ -400,9 +403,10 @@ export class DatabaseStorage implements IStorage {
 
     if (!query) {
       const where = baseFilters.length > 1 ? and(...baseFilters) : baseFilters[0];
-      return db.select().from(borrowers)
+      const results = await db.select().from(borrowers)
         .where(where)
         .orderBy(desc(borrowers.createdAt)).limit(200);
+      return decryptBorrowerArray(results as Record<string, any>[]) as Borrower[];
     }
 
     const searchPattern = `%${query}%`;
@@ -426,7 +430,8 @@ export class DatabaseStorage implements IStorage {
     );
     const filters = [searchCondition, ...baseFilters].filter(Boolean);
     const conditions = filters.length > 1 ? and(...filters) : filters[0];
-    return db.select().from(borrowers).where(conditions!).orderBy(desc(borrowers.createdAt)).limit(200);
+    const results = await db.select().from(borrowers).where(conditions!).orderBy(desc(borrowers.createdAt)).limit(200);
+    return decryptBorrowerArray(results as Record<string, any>[]) as Borrower[];
   }
 
   private countryOrgFilter(table: any, country?: string) {
@@ -494,17 +499,19 @@ export class DatabaseStorage implements IStorage {
       creditAccountResults = await db.select().from(creditAccounts).where(aWhere.length > 1 ? and(...aWhere) : aWhere[0]).orderBy(desc(creditAccounts.createdAt)).limit(20);
     }
 
-    return { borrowers: borrowerResults, institutions: institutionResults, creditAccounts: creditAccountResults };
+    return { borrowers: decryptBorrowerArray(borrowerResults as Record<string, any>[]) as Borrower[], institutions: institutionResults, creditAccounts: creditAccountResults };
   }
 
   async createBorrower(borrower: InsertBorrower): Promise<Borrower> {
-    const [created] = await db.insert(borrowers).values(borrower).returning();
-    return created;
+    const encrypted = encryptBorrowerPII(borrower as Record<string, any>);
+    const [created] = await db.insert(borrowers).values(encrypted as InsertBorrower).returning();
+    return decryptBorrowerPII(created as Record<string, any>) as Borrower;
   }
 
   async updateBorrower(id: string, data: Partial<InsertBorrower>): Promise<Borrower | undefined> {
-    const [updated] = await db.update(borrowers).set({ ...data, updatedAt: new Date() }).where(eq(borrowers.id, id)).returning();
-    return updated;
+    const encrypted = encryptBorrowerPII(data as Record<string, any>);
+    const [updated] = await db.update(borrowers).set({ ...encrypted, updatedAt: new Date() }).where(eq(borrowers.id, id)).returning();
+    return updated ? decryptBorrowerPII(updated as Record<string, any>) as Borrower : undefined;
   }
 
   async getCreditAccount(id: string): Promise<CreditAccount | undefined> {

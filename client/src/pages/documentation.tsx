@@ -39,6 +39,10 @@ function DocIcon({ id }: { id: string }) {
     "data-dictionary": "bg-cyan-100 dark:bg-cyan-900 text-cyan-700 dark:text-cyan-300 dark:bg-cyan-900 dark:text-cyan-300",
     deployment: "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 dark:bg-red-900 dark:text-red-300",
     security: "bg-rose-100 dark:bg-rose-900 text-rose-700 dark:bg-rose-900 dark:text-rose-300",
+    "security-policy": "bg-rose-100 dark:bg-rose-900 text-rose-700 dark:bg-rose-900 dark:text-rose-300",
+    "dr-plan": "bg-orange-100 dark:bg-orange-900 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
+    "change-mgmt": "bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300",
+    "pentest-readiness": "bg-red-100 dark:bg-red-900 text-red-700 dark:bg-red-900 dark:text-red-300",
   };
   return (
     <div className={`flex items-center justify-center w-12 h-12 rounded-xl ${colors[id] || "bg-muted text-foreground"}`}>

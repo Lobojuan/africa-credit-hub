@@ -6000,6 +6000,10 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     { id: "data-dictionary", filename: "Data_Dictionary.md", title: "Data Dictionary", description: "Field-level documentation for all 15 tables" },
     { id: "deployment", filename: "Deployment_Guide.md", title: "Deployment Guide", description: "Step-by-step deployment instructions" },
     { id: "security", filename: "Security_Compliance_Report.md", title: "Security & Compliance Report", description: "Security controls with NFR-SEC compliance matrix" },
+    { id: "security-policy", filename: "Security_Policy.md", title: "Information Security Policy", description: "Comprehensive security policy covering access control, data protection, encryption, incident response, and third-party security" },
+    { id: "dr-plan", filename: "Disaster_Recovery_Plan.md", title: "Disaster Recovery & Business Continuity Plan", description: "DR/BC plan with RTO/RPO targets, backup strategy, recovery procedures, and testing schedule" },
+    { id: "change-mgmt", filename: "Change_Management_Policy.md", title: "Change Management Policy", description: "Formal change control process — categorization, impact assessment, approval workflow, and audit trail" },
+    { id: "pentest-readiness", filename: "Penetration_Test_Readiness.md", title: "Penetration Test Readiness Report", description: "Security controls inventory prepared for formal penetration testing — authentication, authorization, encryption, and API security" },
     { id: "liberia-proposal", filename: "Liberia_Marketing_Proposal.md", title: "Liberia Marketing Proposal", description: "Marketing & technical proposal for the Republic of Liberia — credit bureau solution, compliance assessment, implementation roadmap, and pricing" },
   ];
 
@@ -6288,6 +6292,79 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       if (!deleted) return res.status(404).json({ message: "Policy not found" });
       await storage.createAuditLog({ userId: (req as any).user.id, action: "DELETE", entity: "retention_policy", entityId: req.params.id, details: "Deleted retention policy", ipAddress: req.ip });
       res.json({ message: "Deleted" });
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.post("/api/data-subject/erasure-request", requireRole("admin"), async (req, res) => {
+    try {
+      const { borrowerId, reason } = req.body;
+      if (!borrowerId) return res.status(400).json({ message: "Borrower ID required" });
+
+      const borrower = await storage.getBorrower(borrowerId);
+      if (!borrower) return res.status(404).json({ message: "Borrower not found" });
+
+      const activeAccounts = await storage.getCreditAccountsByBorrower(borrowerId);
+      const hasActiveLoans = activeAccounts.some((a: any) => a.status === "active");
+      if (hasActiveLoans) {
+        return res.status(409).json({ message: "Cannot erase data for borrower with active credit accounts. Close all accounts first." });
+      }
+
+      const userId = req.session?.userId;
+      const username = req.session?.userId ? (await storage.getUser(req.session.userId))?.username || "unknown" : "unknown";
+
+      await storage.createAuditLog({
+        userId: userId || null,
+        action: "DATA_ERASURE_REQUEST",
+        entity: "borrower",
+        entityId: borrowerId,
+        details: `Data erasure requested for borrower ${borrower.firstName} ${borrower.lastName}. Reason: ${reason || "Data subject request"}. Requested by: ${username}`,
+        ipAddress: req.ip,
+      });
+
+      const pendingApproval = await storage.createPendingApproval({
+        type: "data_erasure",
+        entityType: "borrower",
+        entityId: borrowerId,
+        submittedBy: userId || "system",
+        data: { borrowerId, borrowerName: `${borrower.firstName} ${borrower.lastName}`, reason: reason || "Data subject request" },
+      });
+
+      res.json({
+        message: "Erasure request submitted for dual approval.",
+        requestId: pendingApproval.id,
+        borrowerId,
+        status: "pending_approval",
+      });
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.get("/api/security/audit-summary", requireRole("admin", "regulator", "auditor"), async (_req, res) => {
+    try {
+      const result = await pool.query(`
+        SELECT action, COUNT(*) as count
+        FROM audit_logs
+        WHERE created_at > NOW() - INTERVAL '30 days'
+        GROUP BY action
+        ORDER BY count DESC
+        LIMIT 50
+      `);
+      const totalLogs = await pool.query(`SELECT COUNT(*) as total FROM audit_logs`);
+      const recentFailedLogins = await pool.query(`
+        SELECT COUNT(*) as count FROM audit_logs
+        WHERE action = 'LOGIN_FAILED' AND created_at > NOW() - INTERVAL '24 hours'
+      `);
+      const lockedAccounts = await pool.query(`
+        SELECT COUNT(*) as count FROM users
+        WHERE locked_until IS NOT NULL AND locked_until > NOW()
+      `);
+
+      res.json({
+        actionBreakdown: result.rows,
+        totalAuditLogs: parseInt(totalLogs.rows[0]?.total || "0"),
+        recentFailedLogins24h: parseInt(recentFailedLogins.rows[0]?.count || "0"),
+        currentlyLockedAccounts: parseInt(lockedAccounts.rows[0]?.count || "0"),
+        reportGeneratedAt: new Date().toISOString(),
+      });
     } catch (e: any) { res.status(500).json({ message: e.message }); }
   });
 
