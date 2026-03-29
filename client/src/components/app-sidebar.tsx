@@ -72,33 +72,42 @@ type NavItem = {
   roles?: string[];
 };
 
-const topItems: NavItem[] = [
+const globalViewItems: NavItem[] = [
   { label: "Dashboard", url: "/dashboard", icon: LayoutDashboard, testId: "nav-dashboard" },
-  { label: "Consumers", url: "/consumers", icon: User, testId: "nav-consumers" },
-  { label: "Businesses", url: "/businesses", icon: Building2, testId: "nav-businesses" },
+  { label: "Portfolio Intelligence", url: "/portfolio-intelligence", icon: Brain, testId: "nav-portfolio-intelligence", roles: ["admin", "super_admin", "regulator"] },
+  { label: "AI Command Center", url: "/ai-command-center", icon: Sparkles, testId: "nav-ai-command-center", roles: ["admin", "super_admin", "regulator"] },
+  { label: "Platform Metrics", url: "/platform-metrics", icon: Gauge, testId: "nav-platform-metrics", roles: ["admin", "super_admin"] },
+];
+
+const telcoItems: NavItem[] = [
   { label: "Telco Scoring", url: "/telco-scoring", icon: Smartphone, testId: "nav-telco-scoring" },
   { label: "Telco Lending", url: "/telco-lending", icon: Banknote, testId: "nav-telco-lending" },
 ];
 
-const creditOpsItems: NavItem[] = [
+const borrowersLendersItems: NavItem[] = [
+  { label: "Consumers", url: "/consumers", icon: User, testId: "nav-consumers" },
+  { label: "Businesses", url: "/businesses", icon: Building2, testId: "nav-businesses" },
+  { label: "Borrowers (All)", url: "/borrowers", icon: Users, testId: "nav-borrowers", roles: ["super_admin"] },
   { label: "Credit Accounts", url: "/credit-accounts", icon: CreditCard, testId: "nav-credit-accounts" },
   { label: "Credit Search", url: "/search", icon: Search, testId: "nav-credit-search" },
   { label: "Credit Reports", url: "/reports", icon: FileText, testId: "nav-credit-reports" },
+  { label: "Score Methodology", url: "/credit-score-methodology", icon: Brain, testId: "nav-credit-score-methodology", roles: ["admin", "lender", "super_admin"] },
+  { label: "My Credit", url: "/my-credit", icon: UserCheck, testId: "nav-consumer-portal" },
+  { label: "Institutions", url: "/institutions", icon: Building2, testId: "nav-institutions", roles: ["admin", "super_admin"] },
+];
+
+const operationsItems: NavItem[] = [
   { label: "Batch Upload", url: "/batch-upload", icon: Upload, testId: "nav-batch-upload", roles: ["admin", "lender", "super_admin"] },
   { label: "Disputes", url: "/disputes", icon: AlertCircle, testId: "nav-disputes" },
   { label: "Approvals", url: "/approvals", icon: CheckSquare, testId: "nav-pending-approvals", roles: ["admin", "regulator", "super_admin"] },
   { label: "Consent", url: "/consent", icon: FileCheck, testId: "nav-consent" },
   { label: "Helpdesk", url: "/helpdesk", icon: Headset, testId: "nav-helpdesk" },
-  { label: "Score Methodology", url: "/credit-score-methodology", icon: Brain, testId: "nav-credit-score-methodology", roles: ["admin", "lender", "super_admin"] },
-  { label: "My Credit", url: "/my-credit", icon: UserCheck, testId: "nav-consumer-portal" },
+  { label: "Borrower Alerts", url: "/borrower-alerts", icon: Bell, testId: "nav-borrower-alerts", roles: ["admin", "regulator", "super_admin"] },
 ];
 
 const baseOversightItems: NavItem[] = [
-  { label: "Portfolio Intelligence", url: "/portfolio-intelligence", icon: Brain, testId: "nav-portfolio-intelligence", roles: ["admin", "super_admin", "regulator"] },
-  { label: "AI Command Center", url: "/ai-command-center", icon: Sparkles, testId: "nav-ai-command-center", roles: ["admin", "super_admin", "regulator"] },
   { label: "Regulatory Dashboard", url: "/regulatory-dashboard", icon: BarChart3, testId: "nav-regulatory-dashboard", roles: ["admin", "regulator", "super_admin"] },
   { label: "Audit Trail", url: "/audit", icon: Shield, testId: "nav-audit-trail", roles: ["admin", "regulator", "super_admin"] },
-  { label: "Borrower Alerts", url: "/borrower-alerts", icon: Bell, testId: "nav-borrower-alerts", roles: ["admin", "regulator", "super_admin"] },
   { label: "Regulatory Compliance", url: "/regulatory-compliance", icon: Scale, testId: "nav-regulatory-compliance", roles: ["admin", "regulator", "super_admin"] },
 ];
 
@@ -122,31 +131,30 @@ const crossBorderItems: NavItem[] = [
 const adminItems: NavItem[] = [
   { label: "Command Center", url: "/command-center", icon: Monitor, testId: "nav-command-center", roles: ["super_admin"] },
   { label: "Organizations", url: "/organizations", icon: Building2, testId: "nav-organizations", roles: ["super_admin"] },
-  { label: "Borrowers (All)", url: "/borrowers", icon: Users, testId: "nav-borrowers", roles: ["super_admin"] },
   { label: "User Management", url: "/users", icon: Settings, testId: "nav-user-management", roles: ["admin", "super_admin"] },
-  { label: "Institutions", url: "/institutions", icon: Building2, testId: "nav-institutions", roles: ["admin", "super_admin"] },
   { label: "Billing", url: "/billing", icon: Receipt, testId: "nav-billing", roles: ["admin", "regulator", "super_admin"] },
   { label: "Retention Policies", url: "/retention-policies", icon: Archive, testId: "nav-retention-policies", roles: ["admin", "regulator", "super_admin"] },
   { label: "Exchange Rates", url: "/exchange-rates", icon: DollarSign, testId: "nav-exchange-rates", roles: ["admin", "super_admin"] },
   { label: "API Admin", url: "/api-admin", icon: Plug, testId: "nav-api-admin", roles: ["admin", "super_admin"] },
   { label: "API Keys", url: "/api-keys", icon: Key, testId: "nav-api-keys", roles: ["admin", "super_admin"] },
   { label: "System Status", url: "/system-status", icon: Activity, testId: "nav-system-status", roles: ["admin", "super_admin"] },
-  { label: "Platform Metrics", url: "/platform-metrics", icon: Gauge, testId: "nav-platform-metrics", roles: ["admin", "super_admin"] },
   { label: "Webhooks", url: "/webhook-management", icon: Webhook, testId: "nav-webhook-management", roles: ["admin", "super_admin"] },
 ];
 
-const resourceItems: NavItem[] = [
-  { label: "App Guide", url: "/guide", icon: Play, testId: "nav-app-guide" },
-  { label: "Help", url: "/help", icon: HelpCircle, testId: "nav-help" },
-  ...(isGhanaMode() ? [
-    { label: "Ghana Docs", url: "/ghana-docs", icon: BookOpen, testId: "nav-ghana-docs" } as NavItem,
-    { label: "Documentation", url: "/documentation", icon: FileText, testId: "nav-documentation" } as NavItem,
-  ] : [
-    { label: "Documentation", url: "/documentation", icon: BookOpen, testId: "nav-documentation" } as NavItem,
-  ]),
-  { label: "Version History", url: "/version-history", icon: History, testId: "nav-version-history" },
-  { label: "About", url: "/about", icon: Info, testId: "nav-about" },
-];
+function getDocumentItems(): NavItem[] {
+  const items: NavItem[] = [];
+  if (isGhanaMode()) {
+    items.push({ label: "Ghana Docs", url: "/ghana-docs", icon: BookOpen, testId: "nav-ghana-docs" });
+  }
+  items.push(
+    { label: "Documentation", url: "/documentation", icon: FileText, testId: "nav-documentation" },
+    { label: "App Guide", url: "/guide", icon: Play, testId: "nav-app-guide" },
+    { label: "Help", url: "/help", icon: HelpCircle, testId: "nav-help" },
+    { label: "Version History", url: "/version-history", icon: History, testId: "nav-version-history" },
+    { label: "About", url: "/about", icon: Info, testId: "nav-about" },
+  );
+  return items;
+}
 
 function filterByRole(items: NavItem[], role: string | undefined): NavItem[] {
   if (!role) return items.filter(item => !item.roles);
@@ -230,8 +238,10 @@ export function AppSidebar() {
   const dynamicBrandTitle = dynamicCountryConfig?.brandTitle || (isGhanaMode() ? getBrandTitle() : t('sidebar.brandTitle'));
   const dynamicTheme = countryTheme?.activeTheme;
 
-  const visibleTop = filterByRole(topItems, role);
-  const visibleCreditOps = filterByRole(creditOpsItems, role);
+  const visibleGlobal = filterByRole(globalViewItems, role);
+  const visibleTelco = filterByRole(telcoItems, role);
+  const visibleBorrowersLenders = filterByRole(borrowersLendersItems, role);
+  const visibleOperations = filterByRole(operationsItems, role);
   const oversightItems = getOversightItems(dynamicCountryConfig?.name);
   const visibleOversight = filterByRole(oversightItems, role);
   const { data: crossBorderAccess } = useQuery<{ hasAccess: boolean; reason: string }>({
@@ -241,7 +251,7 @@ export function AppSidebar() {
   const hasCrossBorderAccess = crossBorderAccess?.hasAccess ?? false;
   const visibleCrossBorder = hasCrossBorderAccess ? filterByRole(crossBorderItems, role) : [];
   const visibleAdmin = filterByRole(adminItems, role);
-  const visibleResources = filterByRole(resourceItems, role);
+  const visibleDocs = filterByRole(getDocumentItems(), role);
   const isSuperAdmin = role === "super_admin";
   const orgName = (user as any)?.organization?.name;
 
@@ -267,37 +277,37 @@ export function AppSidebar() {
         </Link>
       </SidebarHeader>
       <SidebarContent className="gap-0">
-        <SidebarGroup className="py-0">
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {visibleTop.map((item) => (
-                <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild data-active={location === item.url}>
-                    <Link href={item.url} data-testid={item.testId}>
-                      <item.icon className="w-4 h-4" />
-                      <span>{item.label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <div className="mx-3 my-1">
-          <div className="h-px bg-sidebar-foreground/10" />
-        </div>
+        <CollapsibleSection
+          label="Global View"
+          items={visibleGlobal}
+          location={location}
+          icon={LayoutDashboard}
+        />
 
         <CollapsibleSection
-          label="Credit Operations"
-          items={visibleCreditOps}
+          label="Telco"
+          items={visibleTelco}
+          location={location}
+          icon={Smartphone}
+        />
+
+        <CollapsibleSection
+          label="Borrowers & Lenders"
+          items={visibleBorrowersLenders}
+          location={location}
+          icon={Users}
+        />
+
+        <CollapsibleSection
+          label="Operations"
+          items={visibleOperations}
           location={location}
           icon={CreditCard}
         />
 
         {visibleOversight.length > 0 && (
           <CollapsibleSection
-            label="Oversight & Analytics"
+            label="Oversight & Compliance"
             items={visibleOversight}
             location={location}
             icon={Eye}
@@ -327,9 +337,10 @@ export function AppSidebar() {
         </div>
 
         <CollapsibleSection
-          label="Resources"
-          items={visibleResources}
+          label="Documents"
+          items={visibleDocs}
           location={location}
+          icon={BookOpen}
         />
       </SidebarContent>
       <SidebarFooter className="p-3 pt-0 space-y-1.5">
