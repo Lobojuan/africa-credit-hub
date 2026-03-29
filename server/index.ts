@@ -181,12 +181,12 @@ app.use(
 );
 
 const IDLE_TIMEOUTS: Record<string, number> = {
-  super_admin: 15 * 60 * 1000,
-  admin: 15 * 60 * 1000,
-  regulator: 20 * 60 * 1000,
-  lender: 30 * 60 * 1000,
-  viewer: 30 * 60 * 1000,
-  default: 30 * 60 * 1000,
+  super_admin: 60 * 60 * 1000,
+  admin: 60 * 60 * 1000,
+  regulator: 60 * 60 * 1000,
+  lender: 60 * 60 * 1000,
+  viewer: 60 * 60 * 1000,
+  default: 60 * 60 * 1000,
 };
 
 function getIdleTimeout(role?: string): number {
