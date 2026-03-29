@@ -95,13 +95,15 @@ function NaturalLanguageSearch() {
             {mutation.data.matchingEntities?.length > 0 && (
               <div className="space-y-1.5">
                 <p className="text-xs font-medium text-muted-foreground">Matching entities:</p>
-                {mutation.data.matchingEntities.slice(0, 10).map((e: any, i: number) => (
-                  <div key={i} className="flex items-center gap-2 text-xs">
-                    <ChevronRight className="w-3 h-3 text-primary" />
-                    <span className="font-medium">{e.name}</span>
-                    <span className="text-muted-foreground">{e.detail}</span>
-                  </div>
-                ))}
+                <div className="max-h-64 overflow-y-auto space-y-1.5 pr-1">
+                  {mutation.data.matchingEntities.map((e: any, i: number) => (
+                    <div key={i} className="flex items-center gap-2 text-xs">
+                      <ChevronRight className="w-3 h-3 text-primary shrink-0" />
+                      <span className="font-medium">{e.name}</span>
+                      <span className="text-muted-foreground">{e.detail}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
             {mutation.data.followUpQuestions?.length > 0 && (
@@ -548,19 +550,17 @@ function LoanRecommendation() {
 export default function AICommandCenter() {
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-gradient-to-br from-primary/20 to-yellow-500/20">
-              <Brain className="w-6 h-6 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold" data-testid="page-title-ai">AI Command Center</h1>
-              <p className="text-sm text-muted-foreground">6 AI-powered tools for credit intelligence, risk analysis, and decision support</p>
-            </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-gradient-to-br from-primary/20 to-yellow-500/20 shrink-0">
+            <Brain className="w-6 h-6 text-primary" />
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold" data-testid="page-title-ai">AI Command Center</h1>
+            <p className="text-sm text-muted-foreground">6 AI-powered tools for credit intelligence, risk analysis, and decision support</p>
           </div>
         </div>
-        <Badge className="bg-gradient-to-r from-primary/20 to-yellow-500/20 text-primary border-primary/30">
+        <Badge className="bg-gradient-to-r from-primary/20 to-yellow-500/20 text-primary border-primary/30 shrink-0 whitespace-nowrap">
           <Sparkles className="w-3 h-3 mr-1" />
           Powered by GPT-4o & Claude
         </Badge>
