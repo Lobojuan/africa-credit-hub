@@ -401,6 +401,21 @@ const DEFAULT_PRICING_TIERS = [
   { name: "API Access - Standard", eventType: "api_access", minVolume: 0, maxVolume: null, unitPriceCents: 13000, currency: "RWF", country: "Rwanda" },
   { name: "API Access - Standard", eventType: "api_access", minVolume: 0, maxVolume: null, unitPriceCents: 5700, currency: "ETB", country: "Ethiopia" },
   { name: "API Access - Standard", eventType: "api_access", minVolume: 0, maxVolume: null, unitPriceCents: 4250, currency: "EGP", country: "Egypt" },
+
+  { name: "Telco Credit Score - Standard", eventType: "telco_credit_score", minVolume: 0, maxVolume: 5000, unitPriceCents: 50, currency: "USD", country: "Global" },
+  { name: "Telco Credit Score - Volume", eventType: "telco_credit_score", minVolume: 5001, maxVolume: 50000, unitPriceCents: 25, currency: "USD", country: "Global" },
+  { name: "Telco Credit Score - Enterprise", eventType: "telco_credit_score", minVolume: 50001, maxVolume: null, unitPriceCents: 12, currency: "USD", country: "Global" },
+  { name: "Telco Decision Engine - Standard", eventType: "telco_decision", minVolume: 0, maxVolume: 5000, unitPriceCents: 30, currency: "USD", country: "Global" },
+  { name: "Telco Decision Engine - Volume", eventType: "telco_decision", minVolume: 5001, maxVolume: 50000, unitPriceCents: 15, currency: "USD", country: "Global" },
+  { name: "Telco Decision Engine - Enterprise", eventType: "telco_decision", minVolume: 50001, maxVolume: null, unitPriceCents: 8, currency: "USD", country: "Global" },
+  { name: "MoMo Data Import - Standard", eventType: "telco_data_import", minVolume: 0, maxVolume: 10000, unitPriceCents: 5, currency: "USD", country: "Global" },
+  { name: "MoMo Data Import - Volume", eventType: "telco_data_import", minVolume: 10001, maxVolume: 100000, unitPriceCents: 3, currency: "USD", country: "Global" },
+  { name: "MoMo Data Import - Enterprise", eventType: "telco_data_import", minVolume: 100001, maxVolume: null, unitPriceCents: 1, currency: "USD", country: "Global" },
+  { name: "Consent Management - Standard", eventType: "telco_consent", minVolume: 0, maxVolume: 10000, unitPriceCents: 2, currency: "USD", country: "Global" },
+  { name: "Consent Management - Volume", eventType: "telco_consent", minVolume: 10001, maxVolume: null, unitPriceCents: 1, currency: "USD", country: "Global" },
+  { name: "Loan Disbursement - Standard", eventType: "telco_loan_disbursement", minVolume: 0, maxVolume: 5000, unitPriceCents: 25, currency: "USD", country: "Global" },
+  { name: "Loan Disbursement - Volume", eventType: "telco_loan_disbursement", minVolume: 5001, maxVolume: 50000, unitPriceCents: 15, currency: "USD", country: "Global" },
+  { name: "Loan Disbursement - Enterprise", eventType: "telco_loan_disbursement", minVolume: 50001, maxVolume: null, unitPriceCents: 8, currency: "USD", country: "Global" },
 ];
 
 const IN_MEMORY_TIERS: any[] = DEFAULT_PRICING_TIERS.map((t, i) => ({

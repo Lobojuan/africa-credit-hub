@@ -88,6 +88,15 @@ const USAGE_PRICING = [
   { service: "Data Export", standard: "$5.00", volume: "$3.50", enterprise: "$2.00" },
 ];
 
+const TELCO_PRICING = [
+  { service: "AI Credit Score (MoMo)", standard: "$0.50", volume: "$0.25", enterprise: "$0.12" },
+  { service: "Loan Decision Engine", standard: "$0.30", volume: "$0.15", enterprise: "$0.08" },
+  { service: "MoMo Data Import (per tx)", standard: "$0.05", volume: "$0.03", enterprise: "$0.01" },
+  { service: "Consent Management", standard: "$0.02", volume: "$0.01", enterprise: "$0.01" },
+  { service: "Loan Disbursement", standard: "$0.25", volume: "$0.15", enterprise: "$0.08" },
+  { service: "Score + Decide (one call)", standard: "$0.70", volume: "$0.35", enterprise: "$0.18" },
+];
+
 const FAQS = [
   {
     q: "How does multi-country deployment work?",
@@ -263,6 +272,42 @@ export default function PricingPage() {
               </table>
             </CardContent>
           </Card>
+        </div>
+      </section>
+
+      <section className="py-12 px-4 bg-muted/30">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-2xl font-bold text-center mb-2" data-testid="text-telco-pricing-title">Telco Integration Pricing</h2>
+          <p className="text-muted-foreground text-center mb-8 text-sm">
+            Purpose-built for MTN, Orange, Tigo, Airtel, and Safaricom — AI-powered credit scoring from mobile money data
+          </p>
+          <Card>
+            <CardContent className="pt-6 overflow-x-auto">
+              <table className="w-full text-sm" data-testid="table-telco-pricing">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-3 px-4 font-medium">Service</th>
+                    <th className="text-center py-3 px-4 font-medium">Standard</th>
+                    <th className="text-center py-3 px-4 font-medium">Volume (5k+)</th>
+                    <th className="text-center py-3 px-4 font-medium">Enterprise (50k+)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {TELCO_PRICING.map((row) => (
+                    <tr key={row.service} className="border-b last:border-0">
+                      <td className="py-3 px-4">{row.service}</td>
+                      <td className="text-center py-3 px-4">{row.standard}</td>
+                      <td className="text-center py-3 px-4">{row.volume}</td>
+                      <td className="text-center py-3 px-4">{row.enterprise}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+          <p className="text-xs text-muted-foreground text-center mt-3">
+            All telco pricing is per API call in USD. Local currency pricing available. Contact sales for custom enterprise contracts.
+          </p>
         </div>
       </section>
 

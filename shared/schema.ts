@@ -612,7 +612,7 @@ export type DataSharingAgreement = typeof dataSharingAgreements.$inferSelect;
 export type InsertPapssSettlement = z.infer<typeof insertPapssSettlementSchema>;
 export type PapssSettlement = typeof papssSettlements.$inferSelect;
 
-export const usageMeteringEventEnum = pgEnum("usage_metering_event", ["credit_report_pull", "api_call", "batch_upload", "cross_border_query", "dispute_filing", "data_export"]);
+export const usageMeteringEventEnum = pgEnum("usage_metering_event", ["credit_report_pull", "api_call", "batch_upload", "cross_border_query", "dispute_filing", "data_export", "telco_credit_score", "telco_decision", "telco_data_import", "telco_consent", "telco_loan_disbursement"]);
 
 export const usageMetering = pgTable("usage_metering", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

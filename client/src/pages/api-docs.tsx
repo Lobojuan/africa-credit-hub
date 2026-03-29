@@ -4,7 +4,7 @@ import { useLocation, Link } from "wouter";
 import {
   ArrowLeft, Code2, Lock, Send, Search, FileText, CreditCard, Gavel,
   Clock, KeyRound, Shield, Play, Copy, Check, ChevronRight,
-  Zap, Globe, Bell, Package, AlertTriangle, ArrowRight, Terminal
+  Zap, Globe, Bell, Package, AlertTriangle, ArrowRight, Terminal, Smartphone
 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -842,6 +842,51 @@ export default function ApiDocsPage() {
                   Send a unique UUID with your request. If the same key is sent again within 24 hours, the original response is replayed without re-executing the operation.
                   The response will include <code className="text-primary">X-Idempotent-Replayed: true</code> header.
                 </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="space-y-0 pb-3">
+              <div className="flex items-center gap-2">
+                <Smartphone className="w-5 h-5 text-primary" />
+                <h2 className="text-lg font-semibold">External Telco API (Live Integration)</h2>
+                <Badge variant="outline" className="text-[10px] bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300">API Key Auth</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground mb-2">
+                Production-ready API for telco systems (MTN, Orange, Tigo, Airtel, Safaricom) to perform live MoMo credit scoring, automated loan decisions, and consent management. Authenticate with X-API-Key header or OAuth 2.1 Bearer token.
+              </p>
+
+              <h3 className="text-sm font-semibold flex items-center gap-2 mt-2" data-testid="section-ext-telco-profiles">Profile Management</h3>
+              <CodeBlock method="POST" path="/api/external/v1/telco/profiles" description="Register a subscriber profile (msisdn, provider, country, kycLevel)" />
+              <CodeBlock method="GET" path="/api/external/v1/telco/profiles/:msisdn" description="Look up a subscriber profile by phone number" />
+
+              <h3 className="text-sm font-semibold flex items-center gap-2 mt-4" data-testid="section-ext-telco-import">MoMo Transaction Import</h3>
+              <CodeBlock method="POST" path="/api/external/v1/telco/transactions/import" description="Bulk import MoMo transactions for a subscriber (p2p, cash_in/out, bill_payment, merchant, airtime, salary)" />
+
+              <h3 className="text-sm font-semibold flex items-center gap-2 mt-4" data-testid="section-ext-telco-scoring">AI Credit Scoring</h3>
+              <CodeBlock method="POST" path="/api/external/v1/telco/score" description="Generate AI credit score from MoMo data. Dual-AI ensemble (GPT-4o + Claude). Returns risk score (1-5), risk tier, credit limit, key factors." />
+              <CodeBlock method="POST" path="/api/external/v1/telco/score/batch" description="Batch score up to 50 MSISDNs in a single request" />
+
+              <h3 className="text-sm font-semibold flex items-center gap-2 mt-4" data-testid="section-ext-telco-decision">Automated Loan Decision</h3>
+              <CodeBlock method="POST" path="/api/external/v1/telco/decision" description="Get instant APPROVE/DECLINE decision based on latest credit score and requested amount" />
+              <CodeBlock method="POST" path="/api/external/v1/telco/score-and-decide" description="One-call flow: score + decision in a single API call. The recommended endpoint for real-time lending." />
+
+              <h3 className="text-sm font-semibold flex items-center gap-2 mt-4" data-testid="section-ext-telco-loans-consent">Loans & Consent</h3>
+              <CodeBlock method="POST" path="/api/external/v1/telco/loans" description="Create a loan record after approval (amount, currency, tenor, interest rate)" />
+              <CodeBlock method="POST" path="/api/external/v1/telco/consent" description="Record consent grant/revoke with method and purpose tracking" />
+
+              <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 mt-4">
+                <p className="text-xs font-semibold text-primary mb-1">Typical Integration Flow</p>
+                <ol className="list-decimal list-inside space-y-0.5 text-[11px] text-muted-foreground">
+                  <li>POST /telco/profiles — Register subscriber</li>
+                  <li>POST /telco/consent — Record consent (required for compliance)</li>
+                  <li>POST /telco/transactions/import — Push MoMo transaction history</li>
+                  <li>POST /telco/score-and-decide — Get score + decision in one call</li>
+                  <li>POST /telco/loans — Create loan if approved</li>
+                </ol>
               </div>
             </CardContent>
           </Card>

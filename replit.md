@@ -65,7 +65,8 @@ The system employs a modern full-stack architecture built for scalability and co
         - **Auto Loan Creation**: Decision engine approval automatically creates a `telco_loans` record linked to the profile, score, and decision log.
         - **Disbursement & Reconciliation**: Reconciliation status tracking (pending, confirmed, failed, reversed) with manual disbursement UI.
     -   **Idempotency Support**: Critical telco endpoints (decision engine, bulk decisions, disbursements) support `Idempotency-Key` header with 24-hour TTL cache. Duplicate requests return `X-Idempotent-Replayed: true`.
-    -   **Telco API Documentation**: Enterprise telco integration endpoints documented in the API Developer Portal with sections for profiles, scoring, loans, consent, and idempotency.
+    -   **Telco API Documentation**: Enterprise telco integration endpoints documented in the API Developer Portal with sections for profiles, scoring, loans, consent, idempotency, and a dedicated External Telco API (Live Integration) section covering all 9 external endpoints with typical integration flow guidance.
+    -   **Telco Integration Pricing**: Dedicated pricing table on the Pricing page for telco-specific services (AI Credit Score, Loan Decision Engine, MoMo Data Import, Consent Management, Loan Disbursement, Score+Decide combo) with Standard/Volume/Enterprise tiers.
     -   **Business Credit Report Template**: Dedicated page at `/business-credit-report/:borrowerId` with 10 D&B-style sections for comprehensive business credit analysis.
     -   **Credit Score Methodology Page**: Dedicated `/credit-score-methodology` page with RBAC restriction, explaining score bands, factors, reason codes, and an interactive Score Simulator.
     -   **Score Guide**: Public-facing credit score education page at `/score-guide` with score band explanations and improvement tips.

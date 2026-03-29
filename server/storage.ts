@@ -183,6 +183,7 @@ export interface IStorage {
 
   getTelcoProfiles(organizationId?: string, country?: string, options?: { page?: number; limit?: number; search?: string; provider?: string; kycLevel?: string; accountStatus?: string }): Promise<{ data: TelcoProfile[]; total: number; page: number; totalPages: number }>;
   getTelcoProfile(id: string): Promise<TelcoProfile | undefined>;
+  getTelcoProfileByMsisdn(msisdn: string): Promise<TelcoProfile | undefined>;
   createTelcoProfile(profile: InsertTelcoProfile): Promise<TelcoProfile>;
   getMomoTransactions(profileId: string): Promise<MomoTransaction[]>;
   createMomoTransactions(transactions: InsertMomoTransaction[]): Promise<MomoTransaction[]>;
@@ -1289,6 +1290,11 @@ export class DatabaseStorage implements IStorage {
 
   async getTelcoProfile(id: string): Promise<TelcoProfile | undefined> {
     const [profile] = await db.select().from(telcoProfiles).where(eq(telcoProfiles.id, id));
+    return profile;
+  }
+
+  async getTelcoProfileByMsisdn(msisdn: string): Promise<TelcoProfile | undefined> {
+    const [profile] = await db.select().from(telcoProfiles).where(eq(telcoProfiles.msisdn, msisdn));
     return profile;
   }
 
