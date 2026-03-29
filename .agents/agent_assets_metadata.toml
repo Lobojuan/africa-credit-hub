@@ -24,3 +24,9 @@ id = "RthvihK7Q8vc4ebWbNuTE"
 uri = "file://docs/architecture-and-compliance.md"
 type = "text"
 title = "Architecture & Compliance Reference"
+
+[[outputs]]
+id = "22RJrTV7mTteVBvwmtaBB"
+uri = "file://USER_ACCESS_BLUEPRINT.md"
+type = "text"
+title = "User Access Level Blueprint — CDH v2.1"

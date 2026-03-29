@@ -80,8 +80,8 @@ const globalViewItems: NavItem[] = [
 ];
 
 const telcoItems: NavItem[] = [
-  { label: "Telco Scoring", url: "/telco-scoring", icon: Smartphone, testId: "nav-telco-scoring" },
-  { label: "Telco Lending", url: "/telco-lending", icon: Banknote, testId: "nav-telco-lending" },
+  { label: "Telco Scoring", url: "/telco-scoring", icon: Smartphone, testId: "nav-telco-scoring", roles: ["admin", "lender", "regulator", "super_admin"] },
+  { label: "Telco Lending", url: "/telco-lending", icon: Banknote, testId: "nav-telco-lending", roles: ["admin", "lender", "regulator", "super_admin"] },
 ];
 
 const borrowersLendersItems: NavItem[] = [
@@ -98,9 +98,9 @@ const borrowersLendersItems: NavItem[] = [
 
 const operationsItems: NavItem[] = [
   { label: "Batch Upload", url: "/batch-upload", icon: Upload, testId: "nav-batch-upload", roles: ["admin", "lender", "super_admin"] },
-  { label: "Disputes", url: "/disputes", icon: AlertCircle, testId: "nav-disputes" },
+  { label: "Disputes", url: "/disputes", icon: AlertCircle, testId: "nav-disputes", roles: ["admin", "lender", "regulator", "super_admin"] },
   { label: "Approvals", url: "/approvals", icon: CheckSquare, testId: "nav-pending-approvals", roles: ["admin", "regulator", "super_admin"] },
-  { label: "Consent", url: "/consent", icon: FileCheck, testId: "nav-consent" },
+  { label: "Consent", url: "/consent", icon: FileCheck, testId: "nav-consent", roles: ["admin", "lender", "regulator", "super_admin"] },
   { label: "Helpdesk", url: "/helpdesk", icon: Headset, testId: "nav-helpdesk" },
   { label: "Borrower Alerts", url: "/borrower-alerts", icon: Bell, testId: "nav-borrower-alerts", roles: ["admin", "regulator", "super_admin"] },
 ];
