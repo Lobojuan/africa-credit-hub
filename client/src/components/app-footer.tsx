@@ -25,11 +25,11 @@ export function AppFooter() {
             <div className="space-y-2">
               <div className="space-y-0.5">
                 <p className="text-sm font-medium text-foreground" data-testid="footer-ceo">Uffe Jon Carlson</p>
-                <p className="text-xs text-muted-foreground">CEO, Carlson Capital</p>
+                <p className="text-xs text-muted-foreground">Carlson Capital</p>
               </div>
               <div className="space-y-0.5">
                 <p className="text-sm font-medium text-foreground" data-testid="footer-cto">Thomas Baafi</p>
-                <p className="text-xs text-muted-foreground">CTO, Systems In Motion Limited (Bsystems)</p>
+                <p className="text-xs text-muted-foreground">Systems In Motion Limited (Bsystems)</p>
               </div>
             </div>
           </div>
