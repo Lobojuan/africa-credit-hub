@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useCallback, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useCallback, useState, useRef, type ReactNode } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +20,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const [accountSuspended, setAccountSuspended] = useState(false);
+  const sessionExpiredRef = useRef(false);
 
   const { data: user, isLoading } = useQuery<AuthUser | null>({
     queryKey: ["/api/auth/me"],
@@ -29,17 +30,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const handleIdleTimeout = useCallback(() => {
+    if (sessionExpiredRef.current) return;
+    sessionExpiredRef.current = true;
+
+    queryClient.cancelQueries();
     queryClient.setQueryData(["/api/auth/me"], null);
     queryClient.clear();
+
     toast({
       title: "Session expired due to inactivity",
+      description: "Please log in again to continue.",
       variant: "destructive",
     });
+
+    setTimeout(() => {
+      window.location.replace("/login");
+    }, 100);
   }, []);
 
   useEffect(() => {
     const originalFetch = window.fetch;
     window.fetch = async (...args) => {
+      if (sessionExpiredRef.current) {
+        return new Response(JSON.stringify({ message: "Session expired" }), {
+          status: 440,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
       const response = await originalFetch(...args);
       if (response.status === 440) {
         handleIdleTimeout();
@@ -66,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return res.json() as Promise<AuthUser>;
     },
     onSuccess: (data) => {
+      sessionExpiredRef.current = false;
       queryClient.setQueryData(["/api/auth/me"], data);
     },
   });
