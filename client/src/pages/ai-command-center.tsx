@@ -550,20 +550,20 @@ function LoanRecommendation() {
 export default function AICommandCenter() {
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-gradient-to-br from-primary/20 to-yellow-500/20 shrink-0">
-            <Brain className="w-6 h-6 text-primary" />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-2xl font-bold" data-testid="page-title-ai">AI Command Center</h1>
-            <p className="text-sm text-muted-foreground">6 AI-powered tools for credit intelligence, risk analysis, and decision support</p>
-          </div>
+      <div className="flex items-center gap-3">
+        <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-gradient-to-br from-primary/20 to-yellow-500/20 shrink-0">
+          <Brain className="w-6 h-6 text-primary" />
         </div>
-        <Badge className="bg-gradient-to-r from-primary/20 to-yellow-500/20 text-primary border-primary/30 shrink-0 whitespace-nowrap">
-          <Sparkles className="w-3 h-3 mr-1" />
-          Powered by GPT-4o & Claude
-        </Badge>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-2xl font-bold" data-testid="page-title-ai">AI Command Center</h1>
+            <Badge className="bg-gradient-to-r from-primary/20 to-yellow-500/20 text-primary border-primary/30 whitespace-nowrap">
+              <Sparkles className="w-3 h-3 mr-1" />
+              Powered by GPT-4o & Claude
+            </Badge>
+          </div>
+          <p className="text-sm text-muted-foreground">6 AI-powered tools for credit intelligence, risk analysis, and decision support</p>
+        </div>
       </div>
 
       <NaturalLanguageSearch />

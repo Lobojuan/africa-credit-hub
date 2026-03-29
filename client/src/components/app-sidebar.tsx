@@ -191,7 +191,11 @@ function CollapsibleSection({
     <Collapsible open={open} onOpenChange={(v) => { setOpen(v); setUserToggled(true); }}>
       <SidebarGroup className="py-0">
         <CollapsibleTrigger className="w-full group">
-          <div className="text-sidebar-foreground/50 text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 cursor-pointer group-hover:text-sidebar-foreground/80 transition-colors flex items-center justify-between">
+          <div className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 cursor-pointer transition-colors flex items-center justify-between rounded-md mx-1 ${
+            hasActive
+              ? "text-primary bg-primary/8 border border-primary/15"
+              : "text-sidebar-foreground/50 group-hover:text-sidebar-foreground/80"
+          }`}>
             <span className="flex items-center gap-2">
               {Icon && <Icon className="w-3.5 h-3.5" />}
               {label}
