@@ -1819,7 +1819,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/telco/profiles", enforceDataSovereignty, async (req, res) => {
+  app.get("/api/telco/profiles", requireRole("admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req) || (req.query.country as string);
@@ -1836,7 +1836,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/telco/profiles/:id", enforceDataSovereignty, async (req, res) => {
+  app.get("/api/telco/profiles/:id", requireRole("admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
     try {
       const profile = await storage.getTelcoProfile(req.params.id);
       if (!profile) return res.status(404).json({ message: "Profile not found" });
@@ -1867,7 +1867,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/telco/transactions/:profileId", enforceDataSovereignty, async (req, res) => {
+  app.get("/api/telco/transactions/:profileId", requireRole("admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
     try {
       const profile = await storage.getTelcoProfile(req.params.profileId);
       if (!profile) return res.status(404).json({ message: "Profile not found" });
@@ -1959,7 +1959,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/telco/scores", enforceDataSovereignty, async (req, res) => {
+  app.get("/api/telco/scores", requireRole("admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req) || (req.query.country as string);
@@ -1976,7 +1976,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/telco/scores/:profileId", enforceDataSovereignty, async (req, res) => {
+  app.get("/api/telco/scores/:profileId", requireRole("admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
     try {
       const scores = await storage.getTelcoCreditScoresByProfile(req.params.profileId);
       res.json(scores);
@@ -2133,7 +2133,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/telco/analytics", enforceDataSovereignty, async (req, res) => {
+  app.get("/api/telco/analytics", requireRole("admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
@@ -2216,7 +2216,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/telco/dashboard", enforceDataSovereignty, async (req, res) => {
+  app.get("/api/telco/dashboard", requireRole("admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
@@ -2932,7 +2932,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/borrowers", enforceDataSovereignty, async (req, res) => {
+  app.post("/api/borrowers", requireRole("admin", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
       const orgId = getOrgScope(req);
       const userCountry = getCountryFilter(req);
@@ -2984,7 +2984,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/borrowers/:id", enforceDataSovereignty, async (req, res) => {
+  app.patch("/api/borrowers/:id", requireRole("admin", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
       const existing = await storage.getBorrower(req.params.id);
       if (!existing) return res.status(404).json({ message: "Borrower not found" });
@@ -3093,7 +3093,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/credit-accounts", enforceDataSovereignty, async (req, res) => {
+  app.post("/api/credit-accounts", requireRole("admin", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
       const orgId = getOrgScope(req);
       if (req.body.borrowerId) {
@@ -3127,7 +3127,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/credit-accounts/:id", enforceDataSovereignty, async (req, res) => {
+  app.patch("/api/credit-accounts/:id", requireRole("admin", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
       const existing = await storage.getCreditAccount(req.params.id);
       if (!existing) return res.status(404).json({ message: "Account not found" });
@@ -3177,7 +3177,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/credit-inquiries", enforceDataSovereignty, async (req, res) => {
+  app.post("/api/credit-inquiries", requireRole("admin", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
       const parsed = insertCreditInquirySchema.parse(req.body);
       if (parsed.borrowerId && !(await validateBorrowerCountry(parsed.borrowerId, req))) {
@@ -3881,7 +3881,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/pending-approvals", async (req, res) => {
+  app.post("/api/pending-approvals", requireRole("admin", "lender"), async (req, res) => {
     try {
       const data = {
         ...req.body,
@@ -3994,7 +3994,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/disputes", async (req, res) => {
+  app.post("/api/disputes", requireRole("admin", "lender", "regulator"), async (req, res) => {
     try {
       const data = {
         ...req.body,
@@ -4045,7 +4045,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/disputes/:id", async (req, res) => {
+  app.patch("/api/disputes/:id", requireRole("admin", "regulator"), async (req, res) => {
     try {
       const dispute = await storage.updateDispute(req.params.id, req.body);
       if (!dispute) return res.status(404).json({ message: "Dispute not found" });
@@ -4918,7 +4918,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     }
   });
 
-  app.post("/api/consent-records", async (req, res) => {
+  app.post("/api/consent-records", requireRole("admin", "lender"), async (req, res) => {
     try {
       const receiptNumber = `CR-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       const parsed = insertConsentRecordSchema.parse({ ...req.body, receiptNumber });
@@ -4934,7 +4934,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     }
   });
 
-  app.post("/api/consent-records/:id/revoke", async (req, res) => {
+  app.post("/api/consent-records/:id/revoke", requireRole("admin", "lender", "regulator"), async (req, res) => {
     try {
       const record = await storage.revokeConsent(req.params.id);
       if (!record) return res.status(404).json({ message: "Consent record not found" });
@@ -4968,7 +4968,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     }
   });
 
-  app.post("/api/payment-history/:creditAccountId", async (req, res) => {
+  app.post("/api/payment-history/:creditAccountId", requireRole("admin", "lender"), async (req, res) => {
     try {
       const parsed = insertPaymentHistorySchema.parse({
         ...req.body,
@@ -4994,7 +4994,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     }
   });
 
-  app.post("/api/institutions", async (req, res) => {
+  app.post("/api/institutions", requireRole("admin"), async (req, res) => {
     try {
       const parsed = insertInstitutionSchema.parse(req.body);
       const inst = await storage.createInstitution(parsed);
@@ -9512,7 +9512,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     }
   });
 
-  app.post("/api/blockchain/anchor", async (req, res) => {
+  app.post("/api/blockchain/anchor", requireRole("admin"), async (req, res) => {
     try {
       if (req.session?.userRole !== "super_admin" && req.session?.userRole !== "admin") {
         return res.status(403).json({ message: "Admin access required" });
