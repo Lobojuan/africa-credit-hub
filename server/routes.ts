@@ -2,6 +2,20 @@ import crypto from "crypto";
 import express from "express";
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
+
+function safeErrorMessage(e: any, statusCode: number = 500): string {
+  const msg = e?.message || "An error occurred";
+  if (statusCode >= 500 && (process.env.NODE_ENV === "production" || process.env.PRODUCTION_MODE === "true")) {
+    const ref = crypto.randomBytes(4).toString("hex");
+    console.error(`[Error ${ref}]`, e?.stack || msg);
+    return `An internal error occurred. Reference: ${ref}`;
+  }
+  return msg
+    .replace(/at\s+\S+\s+\(.*?\)/g, "")
+    .replace(/\/[\w/.-]+\.(?:ts|js):\d+:\d+/g, "")
+    .replace(/Error:\s*/g, "")
+    .trim() || "An error occurred";
+}
 import { storage } from "./storage";
 import { db, pool } from "./db";
 import { sql, eq, and, or, desc, inArray, ilike } from "drizzle-orm";
@@ -281,7 +295,7 @@ async function requireCrossBorderAccess(req: Request, res: Response, next: NextF
 
     next();
   } catch (e: any) {
-    res.status(500).json({ message: e.message });
+    res.status(500).json({ message: safeErrorMessage(e) });
   }
 }
 
@@ -796,7 +810,7 @@ export async function registerRoutes(
         },
       });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -957,6 +971,10 @@ export async function registerRoutes(
       await storage.resetFailedAttempts(user.id);
       await storage.updateLastLogin(user.id);
 
+      const { detectLoginAnomaly } = await import("./security-hardening");
+      const loginIp = req.ip || req.socket.remoteAddress || "unknown";
+      const anomalyResult = await detectLoginAnomaly(user.id, loginIp);
+
       if (user.mfaEnabled && user.mfaSecret) {
         req.session.mfaPendingUserId = user.id;
         return res.json({ requireMfa: true, userId: user.id });
@@ -984,8 +1002,8 @@ export async function registerRoutes(
 
       await storage.createAuditLog({
         action: "LOGIN", entity: "system", userId: user.id,
-        details: `${user.fullName} logged in`,
-        ipAddress: req.ip || null,
+        details: `${user.fullName} logged in from IP ${loginIp}${anomalyResult.anomaly ? " [NEW IP - ANOMALY DETECTED]" : ""}`,
+        ipAddress: loginIp,
         organizationId: user.organizationId || undefined,
       });
 
@@ -1003,9 +1021,15 @@ export async function registerRoutes(
       } else {
         viewingCountry = organization?.country || getActiveCountryName() || null;
       }
-      res.json({ ...stripPassword(user), passwordExpired, organization, viewingCountry });
+      res.json({
+        ...stripPassword(user),
+        passwordExpired,
+        organization,
+        viewingCountry,
+        ...(anomalyResult.anomaly ? { loginAnomaly: anomalyResult.reason } : {})
+      });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -1030,19 +1054,27 @@ export async function registerRoutes(
       const valid = await bcrypt.compare(currentPassword, user.password);
       if (!valid) return res.status(401).json({ message: "Current password is incorrect" });
 
+      const { checkPasswordHistory, pushPasswordHistory } = await import("./security-hardening");
+      const historyCheck = await checkPasswordHistory(user.id, newPassword);
+      if (historyCheck.reused) {
+        return res.status(400).json({ message: historyCheck.message });
+      }
+
+      const oldHash = user.password;
       const hashed = await bcrypt.hash(newPassword, 10);
       await storage.updateUser(user.id, { password: hashed } as any);
       await storage.updatePasswordChangedAt(user.id);
+      await pushPasswordHistory(user.id, oldHash);
 
       await storage.createAuditLog({
         action: "PASSWORD_CHANGE", entity: "user", entityId: user.id, userId: user.id,
-        details: "Password changed successfully",
+        details: "Password changed successfully (history check passed)",
         ipAddress: req.ip || null,
       });
 
       res.json({ message: "Password changed successfully" });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -1124,7 +1156,7 @@ export async function registerRoutes(
       }
       res.json({ ...stripPassword(user), passwordExpired, organization, viewingCountry });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -1145,7 +1177,7 @@ export async function registerRoutes(
       await storage.updateUser(user.id, { mfaSecret: secret.base32 } as any);
       res.json({ secret: secret.base32, uri: totp.toString() });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -1175,7 +1207,7 @@ export async function registerRoutes(
       });
       res.json({ message: "MFA enabled successfully" });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -1192,7 +1224,7 @@ export async function registerRoutes(
       });
       res.json({ message: "MFA disabled" });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -1271,7 +1303,7 @@ export async function registerRoutes(
       const stats = await storage.getDashboardStats(orgId, country);
       res.json(stats);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -1304,7 +1336,7 @@ export async function registerRoutes(
         approvals: generateTrend(stats.pendingApprovalCount),
       });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -1315,7 +1347,7 @@ export async function registerRoutes(
       const details = await storage.getDashboardDetails(req.params.type, orgId, country);
       res.json(details);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -1368,7 +1400,7 @@ export async function registerRoutes(
 
       res.json({ monthlyTrend, statusBreakdown, typeBreakdown, countryBreakdown });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -1482,7 +1514,7 @@ export async function registerRoutes(
         },
       });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -1547,7 +1579,7 @@ export async function registerRoutes(
 
       res.json(result);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -1644,7 +1676,7 @@ export async function registerRoutes(
 
       res.json({ alerts, totalExposure: Math.round(totalExposure * 100) / 100, thresholds: { singleBorrower: SINGLE_BORROWER_THRESHOLD * 100, singleLender: SINGLE_LENDER_THRESHOLD * 100, sector: SECTOR_THRESHOLD * 100 } });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -1654,7 +1686,7 @@ export async function registerRoutes(
       const users = await storage.getUsers(orgId);
       res.json(users.map(stripPassword));
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -1679,13 +1711,23 @@ export async function registerRoutes(
     try {
       const data = { ...req.body };
       if (data.password) {
+        const { checkPasswordHistory, pushPasswordHistory } = await import("./security-hardening");
+        const historyCheck = await checkPasswordHistory(req.params.id, data.password);
+        if (historyCheck.reused) {
+          return res.status(400).json({ message: historyCheck.message });
+        }
+        const existingUser = await storage.getUser(req.params.id);
+        const oldHash = existingUser?.password;
         data.password = await bcrypt.hash(data.password, 10);
+        if (oldHash) {
+          await pushPasswordHistory(req.params.id, oldHash);
+        }
       }
       const user = await storage.updateUser(req.params.id, data);
       if (!user) return res.status(404).json({ message: "User not found" });
       await storage.createAuditLog({
         action: "UPDATE", entity: "user", entityId: user.id, userId: req.session?.userId,
-        details: `Updated user: ${user.fullName}`,
+        details: `Updated user: ${user.fullName}${data.password ? " (password changed by admin, history check passed)" : ""}`,
         ipAddress: req.ip || null,
       });
       res.json(stripPassword(user));
@@ -1727,7 +1769,7 @@ export async function registerRoutes(
         res.json(result);
       }
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -1750,7 +1792,7 @@ export async function registerRoutes(
         res.json(result);
       }
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -1773,7 +1815,7 @@ export async function registerRoutes(
         res.json(result);
       }
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -1790,7 +1832,7 @@ export async function registerRoutes(
       const result = await storage.getTelcoProfiles(orgId, country, { page, limit, search, provider, kycLevel, accountStatus });
       res.json(result);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -1804,7 +1846,7 @@ export async function registerRoutes(
       }
       res.json(profile);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -1821,7 +1863,7 @@ export async function registerRoutes(
       });
       res.json(profile);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -1836,7 +1878,7 @@ export async function registerRoutes(
       const txns = await storage.getMomoTransactions(req.params.profileId);
       res.json(txns);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -1860,7 +1902,7 @@ export async function registerRoutes(
       const created = await storage.createMomoTransactions(formatted);
       res.json({ imported: created.length });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -1913,7 +1955,7 @@ export async function registerRoutes(
       res.json({ score, kpis, aiResult });
     } catch (e: any) {
       console.error("[TelcoScoring] Error:", e.message);
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -1930,7 +1972,7 @@ export async function registerRoutes(
       const result = await storage.getTelcoCreditScores(orgId, country, { page, limit, riskTier, approved, search, provider });
       res.json(result);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -1939,7 +1981,7 @@ export async function registerRoutes(
       const scores = await storage.getTelcoCreditScoresByProfile(req.params.profileId);
       res.json(scores);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -2087,7 +2129,7 @@ export async function registerRoutes(
 
       res.json({ seeded: createdProfiles.length, message: `Seeded ${createdProfiles.length} telco profiles with MoMo transactions and pre-computed AI credit scores` });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -2170,7 +2212,7 @@ export async function registerRoutes(
         providerBreakdown,
       });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -2181,7 +2223,7 @@ export async function registerRoutes(
       const stats = await storage.getTelcoDashboardStats(orgId, country);
       res.json(stats);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -2191,7 +2233,7 @@ export async function registerRoutes(
       const rules = await storage.getDecisionRules(orgId);
       res.json(rules);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -2211,7 +2253,7 @@ export async function registerRoutes(
       });
       res.json(rule);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -2232,7 +2274,7 @@ export async function registerRoutes(
       });
       res.json(updated);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -2242,7 +2284,7 @@ export async function registerRoutes(
       const logs = await storage.getDecisionLogs(orgId);
       res.json(logs);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -2406,7 +2448,7 @@ export async function registerRoutes(
       });
     } catch (e: any) {
       console.error("[DecisionEngine] Error:", e.message);
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -2605,7 +2647,7 @@ export async function registerRoutes(
       });
     } catch (e: any) {
       console.error("[BulkDecisionEngine] Error:", e.message);
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -2642,7 +2684,7 @@ export async function registerRoutes(
         provider: profileMap.get(l.profileId)?.provider || null,
       }));
       res.json({ ...result, data: enriched });
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.get("/api/telco/loans/portfolio", requireRole("admin", "lender", "super_admin"), async (req, res) => {
@@ -2651,7 +2693,7 @@ export async function registerRoutes(
       const country = getCountryFilter(req) || (req.query.country as string);
       const stats = await storage.getTelcoLoanPortfolioStats(orgId, country);
       res.json(stats);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.get("/api/telco/loans/:id", requireRole("admin", "lender", "super_admin"), async (req, res) => {
@@ -2663,7 +2705,7 @@ export async function registerRoutes(
         return res.status(403).json({ message: "Access denied" });
       }
       res.json(loan);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.post("/api/telco/loans", requireRole("admin", "super_admin"), async (req, res) => {
@@ -2680,7 +2722,7 @@ export async function registerRoutes(
         organizationId: orgId,
       });
       res.json(loan);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.patch("/api/telco/loans/:id", requireRole("admin", "super_admin"), async (req, res) => {
@@ -2701,7 +2743,7 @@ export async function registerRoutes(
         organizationId: orgId,
       });
       res.json(loan);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.post("/api/telco/loans/:id/disburse", requireRole("admin", "super_admin"), idempotencyMiddleware, async (req, res) => {
@@ -2735,7 +2777,7 @@ export async function registerRoutes(
         organizationId: orgId,
       });
       res.json(updated);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   // ── Telco Loan Repayments ──────────────────────────────
@@ -2749,7 +2791,7 @@ export async function registerRoutes(
       }
       const repayments = await storage.getTelcoLoanRepayments(req.params.loanId);
       res.json(repayments);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.post("/api/telco/loans/:loanId/repayments", requireRole("admin", "super_admin"), async (req, res) => {
@@ -2793,7 +2835,7 @@ export async function registerRoutes(
         organizationId: orgId,
       });
       res.json(repayment);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   // ── Telco Consent Management ───────────────────────────
@@ -2801,7 +2843,7 @@ export async function registerRoutes(
     try {
       const events = await storage.getTelcoConsentEvents(req.params.profileId);
       res.json(events);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.post("/api/telco/consent", requireRole("admin", "super_admin"), async (req, res) => {
@@ -2832,7 +2874,7 @@ export async function registerRoutes(
         organizationId: orgId,
       });
       res.json(event);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.get("/api/telco/consent-summary", requireRole("admin", "lender", "super_admin"), async (req, res) => {
@@ -2841,7 +2883,7 @@ export async function registerRoutes(
       const country = getCountryFilter(req) || (req.query.country as string);
       const summary = await storage.getTelcoConsentSummary(orgId, country);
       res.json(summary);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.get("/api/global-search", async (req, res) => {
@@ -2855,7 +2897,7 @@ export async function registerRoutes(
       const results = await storage.globalSearch(query, orgId, country);
       res.json(results);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -2872,7 +2914,7 @@ export async function registerRoutes(
       });
       res.json(results);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -2886,7 +2928,7 @@ export async function registerRoutes(
       }
       res.json(borrower);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -3030,7 +3072,7 @@ export async function registerRoutes(
       const result = await storage.getAllCreditAccounts(orgId, country);
       res.json(result);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -3047,7 +3089,7 @@ export async function registerRoutes(
       }
       res.json(account);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -3131,7 +3173,7 @@ export async function registerRoutes(
       const result = await storage.getAllCreditInquiries(orgId, country);
       res.json(result);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -3212,7 +3254,7 @@ export async function registerRoutes(
         },
       });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -3254,7 +3296,7 @@ export async function registerRoutes(
 
       res.json(fraudRisk);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -3264,7 +3306,7 @@ export async function registerRoutes(
       const data = await db.select().from(alternativeData).where(eq(alternativeData.borrowerId, borrowerId));
       res.json(data);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -3745,7 +3787,7 @@ export async function registerRoutes(
         creditScore,
       });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -3756,7 +3798,7 @@ export async function registerRoutes(
       const logs = await storage.getAuditLogs(orgId, country);
       res.json(logs);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -3765,7 +3807,7 @@ export async function registerRoutes(
       const result = await storage.verifyAuditIntegrity();
       res.json(result);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -3824,7 +3866,7 @@ export async function registerRoutes(
         uniqueEntities,
       });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -3835,7 +3877,7 @@ export async function registerRoutes(
       const approvals = await storage.getPendingApprovals(orgId, country);
       res.json(approvals);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -3935,7 +3977,7 @@ export async function registerRoutes(
       const disputeList = await storage.getDisputes(orgId, country);
       res.json(disputeList);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -3948,7 +3990,7 @@ export async function registerRoutes(
       }
       res.json(dispute);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -4419,7 +4461,7 @@ export async function registerRoutes(
         });
       res.json(batchLogs);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -4730,7 +4772,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const list = await storage.getGuarantorsByAccount(req.params.creditAccountId);
       res.json(list);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -4754,7 +4796,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const list = await storage.getGuarantorsByBorrower(req.params.id);
       res.json(list);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -4779,7 +4821,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const items = await storage.getNotifications(req.session.userId);
       res.json(items);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -4789,7 +4831,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const count = await storage.getUnreadNotificationCount(req.session.userId);
       res.json({ count });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -4799,7 +4841,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       await storage.markNotificationRead(req.params.id);
       res.json({ message: "Marked as read" });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -4809,7 +4851,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       await storage.markAllNotificationsRead(req.session.userId);
       res.json({ message: "All marked as read" });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -4821,7 +4863,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const related = await storage.getRelatedBorrowers(req.params.id);
       res.json(related);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -4839,7 +4881,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const result = await storage.getAllCourtJudgments(orgId, country);
       res.json(result);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -4872,7 +4914,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const result = await storage.getAllConsentRecords(orgId, country);
       res.json(result);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -4922,7 +4964,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const history = await storage.getPaymentHistoryByAccount(req.params.creditAccountId);
       res.json(history);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -4948,7 +4990,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const result = await storage.getInstitutions(page, limit, orgId, country);
       res.json(result);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -5004,7 +5046,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const records = await storage.getBillingRecords(orgId, country);
       res.json(records);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -5044,7 +5086,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       });
       res.json(updated);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -5083,7 +5125,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       });
       res.json({ sent, message: sent ? "Reminder email sent successfully" : "Email sending failed — check SMTP configuration" });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -5123,7 +5165,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       });
       res.json({ sent: sentCount, total: overdueRecords.length, message: `Sent ${sentCount} of ${overdueRecords.length} reminder emails` });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -5134,7 +5176,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const logs = await storage.getCreditReportLogs(orgId, country);
       res.json(logs);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -5248,7 +5290,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         },
       });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -5588,7 +5630,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       res.send(pdfBuffer);
     } catch (e: any) {
       console.error("PDF generation error:", e);
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -5627,7 +5669,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
       res.json({ totalSearched: identifiers.length, totalFound: results.filter(r => r.found).length, results });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -5743,7 +5785,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         res.status(400).json({ message: "Unsupported format. Use csv or xlsx." });
       }
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -5817,7 +5859,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         portfolioByType: byType,
       });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -5841,7 +5883,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       res.send(content);
     } catch (e: any) {
       console.error("BoG export error:", e);
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -5859,7 +5901,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const lines = content.split("\n");
       res.json({ filename, totalRows: lines.length - 1, headerRow: lines[0], sampleRows: lines.slice(1, 4) });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -5883,7 +5925,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       res.send(content);
     } catch (e: any) {
       console.error("BSL export error:", e);
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -5901,7 +5943,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const lines = content.split("\n");
       res.json({ filename, totalRows: lines.length - 1, headerRow: lines[0], sampleRows: lines.slice(1, 4) });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -5914,7 +5956,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       }));
       res.json(keysWithInstitution);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -5958,7 +6000,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
       res.status(201).json({ ...apiKey, fullKey });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -5978,7 +6020,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
       res.json(revoked);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -6051,7 +6093,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const html = marked(content);
       res.json({ ...doc, content, html });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -6070,7 +6112,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       stream.pipe(res);
       generatePdfFromMarkdown(content, doc.title, stream);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -6084,7 +6126,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       res.setHeader("Content-Disposition", `attachment; filename="${safeName}.md"`);
       res.sendFile(filePath);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -6113,7 +6155,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const html = marked(content);
       res.json({ ...doc, content, html });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -6133,7 +6175,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       stream.pipe(res);
       generatePdfFromMarkdown(content, doc.title, stream);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -6159,7 +6201,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         res.status(500).json({ success: false, message: "SMS delivery failed. Check provider credentials and phone number." });
       }
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -6179,7 +6221,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       await seedTestData();
       res.json({ message: "Test data seeded successfully" });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -6188,7 +6230,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     try {
       const rates = await storage.getExchangeRates();
       res.json(rates);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.post("/api/exchange-rates", requireRole("admin"), async (req, res) => {
@@ -6199,7 +6241,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       res.status(201).json(rate);
     } catch (e: any) {
       if (e instanceof z.ZodError) return res.status(400).json({ message: "Validation error", errors: e.errors });
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -6209,7 +6251,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       if (!rate) return res.status(404).json({ message: "Rate not found" });
       await storage.createAuditLog({ userId: (req as any).user.id, action: "UPDATE", entity: "exchange_rate", entityId: req.params.id, details: JSON.stringify(req.body), ipAddress: req.ip });
       res.json(rate);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.delete("/api/exchange-rates/:id", requireRole("admin"), async (req, res) => {
@@ -6218,7 +6260,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       if (!deleted) return res.status(404).json({ message: "Rate not found" });
       await storage.createAuditLog({ userId: (req as any).user.id, action: "DELETE", entity: "exchange_rate", entityId: req.params.id, details: "Deleted exchange rate", ipAddress: req.ip });
       res.json({ message: "Deleted" });
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.post("/api/exchange-rates/refresh", requireRole("admin"), async (req, res) => {
@@ -6227,7 +6269,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const result = await fetchAndUpdateRates();
       await storage.createAuditLog({ userId: req.session.userId, action: "REFRESH", entity: "exchange_rates", details: `Manual refresh: ${result.updated} updated, ${result.failed} failed`, ipAddress: req.ip });
       res.json({ message: "Exchange rates refreshed", ...result });
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.get("/api/exchange-rates/convert", requireAuth, async (req, res) => {
@@ -6237,7 +6279,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const result = await storage.convertCurrency(parseFloat(amount as string), from as string, to as string);
       if (!result) return res.status(404).json({ message: "No exchange rate found for this pair" });
       res.json(result);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   // Retention Policies
@@ -6254,7 +6296,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       });
       res.json({ message: "Retention enforcement completed", results });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -6262,7 +6304,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     try {
       const policies = await storage.getRetentionPolicies();
       res.json(policies);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.post("/api/retention-policies", requireRole("admin"), async (req, res) => {
@@ -6273,7 +6315,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       res.status(201).json(policy);
     } catch (e: any) {
       if (e instanceof z.ZodError) return res.status(400).json({ message: "Validation error", errors: e.errors });
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -6283,7 +6325,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       if (!policy) return res.status(404).json({ message: "Policy not found" });
       await storage.createAuditLog({ userId: (req as any).user.id, action: "UPDATE", entity: "retention_policy", entityId: req.params.id, details: JSON.stringify(req.body), ipAddress: req.ip });
       res.json(policy);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.delete("/api/retention-policies/:id", requireRole("admin"), async (req, res) => {
@@ -6292,7 +6334,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       if (!deleted) return res.status(404).json({ message: "Policy not found" });
       await storage.createAuditLog({ userId: (req as any).user.id, action: "DELETE", entity: "retention_policy", entityId: req.params.id, details: "Deleted retention policy", ipAddress: req.ip });
       res.json({ message: "Deleted" });
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.post("/api/data-subject/erasure-request", requireRole("admin"), async (req, res) => {
@@ -6335,7 +6377,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         borrowerId,
         status: "pending_approval",
       });
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.get("/api/security/audit-summary", requireRole("admin", "regulator", "auditor"), async (_req, res) => {
@@ -6365,7 +6407,23 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         currentlyLockedAccounts: parseInt(lockedAccounts.rows[0]?.count || "0"),
         reportGeneratedAt: new Date().toISOString(),
       });
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.get("/api/security/health-check", requireRole("admin", "regulator", "auditor"), async (_req, res) => {
+    try {
+      const { runSecurityHealthCheck } = await import("./security-hardening");
+      const result = await runSecurityHealthCheck();
+      res.json(result);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.get("/api/security/pii-integrity", requireRole("admin"), async (_req, res) => {
+    try {
+      const { verifyPIIEncryptionIntegrity } = await import("./security-hardening");
+      const result = await verifyPIIEncryptionIntegrity();
+      res.json(result);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   // API Configurations
@@ -6373,7 +6431,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     try {
       const configs = await storage.getApiConfigurations();
       res.json(configs);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.get("/api/api-configurations/:id", requireRole("admin"), async (req, res) => {
@@ -6381,7 +6439,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const config = await storage.getApiConfiguration(req.params.id);
       if (!config) return res.status(404).json({ message: "Configuration not found" });
       res.json(config);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.post("/api/api-configurations", requireRole("admin"), async (req, res) => {
@@ -6392,7 +6450,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       res.status(201).json(config);
     } catch (e: any) {
       if (e instanceof z.ZodError) return res.status(400).json({ message: "Validation error", errors: e.errors });
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -6402,7 +6460,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       if (!config) return res.status(404).json({ message: "Configuration not found" });
       await storage.createAuditLog({ userId: (req as any).user.id, action: "UPDATE", entity: "api_configuration", entityId: req.params.id, details: JSON.stringify(req.body), ipAddress: req.ip });
       res.json(config);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.delete("/api/api-configurations/:id", requireRole("admin"), async (req, res) => {
@@ -6411,7 +6469,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       if (!deleted) return res.status(404).json({ message: "Configuration not found" });
       await storage.createAuditLog({ userId: (req as any).user.id, action: "DELETE", entity: "api_configuration", entityId: req.params.id, details: "Deleted API configuration", ipAddress: req.ip });
       res.json({ message: "Deleted" });
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.post("/api/api-configurations/:id/test", requireRole("admin"), async (req, res) => {
@@ -6445,7 +6503,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       }
       await storage.updateApiConfiguration(req.params.id, { lastTestedAt: new Date() as any, lastTestStatus: testStatus } as any);
       res.json({ status: testStatus, message: testMessage });
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.get("/api/admin/organizations/list", requireAuth, requireSuperAdmin, async (req, res) => {
@@ -6453,7 +6511,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const country = getCountryFilter(req);
       const orgs = await storage.getOrganizations(country);
       res.json(orgs.map(o => ({ id: o.id, name: o.name, type: o.type, status: o.status, country: o.country, subscriptionTier: o.subscriptionTier })));
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.get("/api/admin/organizations", requireAuth, requireSuperAdmin, async (req, res) => {
@@ -6484,7 +6542,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       }));
       res.json(orgsWithStats);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -6517,7 +6575,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         activeDisputeCount: disputes.filter(d => d.status === "open" || d.status === "under_review").length,
       });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -6592,7 +6650,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const users = await storage.getUsers(req.params.id);
       res.json(users.map(stripPassword));
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -6602,7 +6660,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const stats = await storage.getDashboardStats(req.params.id);
       res.json(stats);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -6611,7 +6669,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const stats = getApiUsageStats();
       res.json(stats);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -6699,7 +6757,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         },
       });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -6717,7 +6775,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         ...globalStats,
       });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -6759,7 +6817,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       req.session.viewingCountry = config.name;
       res.json({ viewingCountry: config.name, message: `Switched to ${config.name}` });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -6802,7 +6860,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         countries: countryStats.sort((a, b) => b.totalBorrowers - a.totalBorrowers),
       });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -6935,7 +6993,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         countries: countryDetails,
       });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -7178,7 +7236,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         },
       });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -7186,7 +7244,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     try {
       const settings = await db.select().from(countrySettings);
       res.json(settings);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.get("/api/platform/country-settings/:code", requireAuth, requireSuperAdmin, async (req, res) => {
@@ -7194,7 +7252,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const [setting] = await db.select().from(countrySettings).where(eq(countrySettings.countryCode, req.params.code));
       if (!setting) return res.status(404).json({ message: "Country settings not found" });
       res.json(setting);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   const countrySettingsUpdateSchema = z.object({
@@ -7289,7 +7347,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         actionCounts: actionCounts.map(a => ({ action: a.action, count: Number(a.count) })),
         entityCounts: entityCounts.map(e => ({ entity: e.entity, count: Number(e.count) })),
       });
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   // ── API Keys & Configurations ──
@@ -7309,7 +7367,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       }).from(apiKeys).orderBy(desc(apiKeys.createdAt));
       const configs = await db.select().from(apiConfigurations).orderBy(desc(apiConfigurations.createdAt));
       res.json({ keys, configurations: configs });
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.post("/api/platform/api-keys/:id/revoke", requireAuth, requireSuperAdmin, async (req, res) => {
@@ -7318,7 +7376,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       if (!updated) return res.status(404).json({ message: "Key not found" });
       await storage.createAuditLog({ userId: req.session.userId!, action: "REVOKE", entity: "api_key", entityId: updated.id, details: `Revoked API key ${updated.keyPrefix}...`, ipAddress: req.ip, organizationId: null });
       res.json(updated);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   // ── Data Quality ──
@@ -7357,7 +7415,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         overallCompleteness: completeness,
         byCountry: countryCounts.map(c => ({ country: c.country || "Unknown", count: Number(c.count) })),
       });
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   // ── Billing & Revenue ──
@@ -7427,7 +7485,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         revenueByOrg: orgBilling.map(o => ({ orgId: o.orgId, name: o.name, total: Number(o.total), invoiceCount: Number(o.count) })),
         _ts: Date.now(),
       });
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.put("/api/platform/pricing-tiers/:id", requireAuth, requireSuperAdmin, async (req, res) => {
@@ -7446,7 +7504,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       if (!updated) return res.status(404).json({ message: "Tier not found" });
       await storage.createAuditLog({ userId: req.session.userId!, action: "UPDATE", entity: "pricing_tier", entityId: updated.id, details: `Updated pricing tier "${updated.name}"`, ipAddress: req.ip, organizationId: null });
       res.json(updated);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   // ── Retention Policies ──
@@ -7454,7 +7512,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     try {
       const policies = await db.select().from(retentionPolicies).orderBy(retentionPolicies.country, retentionPolicies.entityType);
       res.json(policies);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.post("/api/platform/retention-policies", requireAuth, requireSuperAdmin, async (req, res) => {
@@ -7512,7 +7570,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         ipAddress: l.ipAddress,
         createdAt: l.createdAt,
       })));
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.post("/api/admin/organizations/:orgId/billing", requireAuth, requireSuperAdmin, async (req, res) => {
@@ -7666,7 +7724,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       res.setHeader("Content-Length", pdfBuffer.length);
       res.send(pdfBuffer);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -7728,7 +7786,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
       res.json({ url: session.url });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -7936,7 +7994,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
       res.json({ url: session.url });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -7954,7 +8012,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       `);
       res.json(result.rows);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -8042,7 +8100,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const result = await analyzeCreditRisk(req.params.borrowerId, provider);
       res.json(result);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -8052,7 +8110,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const result = await generateReportSummary(req.params.borrowerId, provider);
       res.json(result);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -8754,7 +8812,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const response = await callAI(systemPrompt, userPrompt, provider, 1500, 0.3, "customer_chat");
       res.json({ response });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -8802,7 +8860,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         res.write(`data: ${JSON.stringify({ error: e.message })}\n\n`);
         res.end();
       } else {
-        res.status(500).json({ message: e.message });
+        res.status(500).json({ message: safeErrorMessage(e) });
       }
     }
   });
@@ -8815,7 +8873,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const result = await generateComplianceReport(country, provider);
       res.json(result);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -8826,7 +8884,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       res.json(result);
     } catch (e: any) {
       if (e.message === "Borrower not found") return res.status(404).json({ message: e.message });
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -8836,7 +8894,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const result = await detectAnomalies(provider, getOrgScope(req), getCountryFilter(req));
       res.json(result);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -8848,7 +8906,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const result = await generateRegulatoryReport(country, provider, getOrgScope(req));
       res.json(result);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -8860,7 +8918,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const result = await naturalLanguageQuery(query.slice(0, 500), provider, getOrgScope(req), getCountryFilter(req));
       res.json(result);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -8870,7 +8928,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const result = await analyzeCrossBorderRisk(provider);
       res.json(result);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -8887,7 +8945,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       res.json(result);
     } catch (e: any) {
       if (e.message === "Borrower not found") return res.status(404).json({ message: e.message });
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -8898,7 +8956,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const alerts = await storage.getBorrowerAlerts(orgScope, country);
       res.json(alerts);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -8913,7 +8971,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const alerts = await storage.getBorrowerAlertsByBorrower(req.params.borrowerId);
       res.json(alerts);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -8933,7 +8991,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       });
       res.json({ message: "Alert preferences saved", alertTypes, enabled });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -9050,7 +9108,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         institutionCompliance,
       });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -9059,7 +9117,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const result = await storage.verifyAuditIntegrity();
       res.json(result);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -9069,7 +9127,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const result = await generatePortfolioIntelligence(provider);
       res.json(result);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -9104,7 +9162,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       });
 
       res.json({ hasAccess, reason: hasAccess ? "active_agreement" : "no_agreement", orgCountry, orgName });
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   // ── SATA Data Sharing Agreements ──
@@ -9112,7 +9170,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     try {
       const rows = await db.select().from(dataSharingAgreements).orderBy(desc(dataSharingAgreements.createdAt));
       res.json(rows);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.get("/api/sata/agreements/:id", requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
@@ -9120,7 +9178,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const [row] = await db.select().from(dataSharingAgreements).where(eq(dataSharingAgreements.id, req.params.id));
       if (!row) return res.status(404).json({ message: "Agreement not found" });
       res.json(row);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.post("/api/sata/agreements", requireAuth, requireSuperAdmin, async (req, res) => {
@@ -9152,7 +9210,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (!deleted) return res.status(404).json({ message: "Agreement not found" });
       await storage.createAuditLog({ userId: req.session.userId!, action: "DELETE", entity: "data_sharing_agreement", entityId: deleted.id, details: `Deleted SATA agreement: ${deleted.sourceCountry} → ${deleted.targetCountry}`, ipAddress: req.ip, organizationId: null });
       res.json({ message: "Agreement deleted" });
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.get("/api/sata/agreements/country/:country", requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
@@ -9165,7 +9223,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         )
       );
       res.json(rows);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.get("/api/sata/my-agreements", requireAuth, async (req, res) => {
@@ -9191,7 +9249,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         return isInSource || isInTarget;
       });
       res.json(accessible);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   // Cross-border search — requires active agreement + institution check + role check
@@ -9255,7 +9313,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       });
 
       res.json({ results: results.rows || [], agreementId: activeAgreements[0].id, sourceCountry: userCountry, targetCountry });
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   // SATA compliance stats — admin/super_admin/regulator only
@@ -9300,7 +9358,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         settlements: { total: settlements.length, completed: completedSettlements.length, totalVolumeUsd: totalVolume },
         consent: { activeConsents, agreementConsentStatus: consentByAgreement },
       });
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   // ── PAPSS Settlements ──
@@ -9314,7 +9372,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (country) filtered = filtered.filter(r => r.senderCountry === country || r.receiverCountry === country);
       if (lim) filtered = filtered.slice(0, parseInt(lim as string));
       res.json(filtered);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.get("/api/papss/settlements/:id", requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
@@ -9322,7 +9380,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const [row] = await db.select().from(papssSettlements).where(eq(papssSettlements.id, req.params.id));
       if (!row) return res.status(404).json({ message: "Settlement not found" });
       res.json(row);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.post("/api/papss/settlements", requireAuth, requireSuperAdmin, async (req, res) => {
@@ -9441,7 +9499,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
           : borrower.companyName,
       });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -9450,7 +9508,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const anchors = await getAnchors(50);
       res.json(anchors);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -9476,7 +9534,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
       res.json({ ...result, anchored: true });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -9485,7 +9543,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const result = await verifyAuditAgainstAnchor(req.params.id);
       res.json(result);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -9499,7 +9557,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const subs = await getWebhookSubscriptions(orgId);
       res.json(subs.map(s => ({ ...s, name: s.description || "Unnamed" })));
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -9539,7 +9597,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
       res.json({ ...sub, name: sub.description, secret });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -9553,7 +9611,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       await db.delete(webhookSubscriptions).where(eq(webhookSubscriptions.id, req.params.id));
       res.json({ success: true });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -9567,7 +9625,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const logs = await getWebhookDeliveryHistory(req.params.id, 50);
       res.json(logs);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -9587,7 +9645,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
       res.json({ success: true, message: "Test webhook delivered" });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -9622,7 +9680,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       req.session.webauthnChallenge = options.challenge;
       res.json(options);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -9671,7 +9729,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
       res.json({ verified: true, deviceType: credentialDeviceType });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -9703,7 +9761,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       req.session.webauthnUserId = user.id;
       res.json(options);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -9774,7 +9832,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const { password: _, ...safeUser } = user;
       res.json({ user: safeUser });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -9788,7 +9846,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       }).from(webauthnCredentials).where(eq(webauthnCredentials.userId, req.session.userId));
       res.json(creds);
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -9800,7 +9858,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       );
       res.json({ deleted: true });
     } catch (e: any) {
-      res.status(500).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 

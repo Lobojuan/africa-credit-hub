@@ -20,7 +20,8 @@ const SECURITY_CONTROLS = [
       { name: "Role-Based Access Control (RBAC)", status: "implemented", detail: "5 roles: Super Admin, Admin, Regulator, Lender, Viewer" },
       { name: "Session Management", status: "implemented", detail: "Secure cookie-based sessions with automatic expiration" },
       { name: "Account Lockout Policy", status: "implemented", detail: "Progressive lockout after failed login attempts" },
-      { name: "Password Expiration", status: "implemented", detail: "Forced password change on first login and periodic rotation" },
+      { name: "Password Expiration & History", status: "implemented", detail: "90-day rotation, forced change on first login, and 5-password reuse prevention" },
+      { name: "Login Anomaly Detection", status: "implemented", detail: "New IP address detection with audit logging and session flagging" },
     ],
   },
   {
@@ -34,6 +35,7 @@ const SECURITY_CONTROLS = [
       { name: "Data Retention Policies", status: "implemented", detail: "Configurable per-country retention periods with automatic enforcement" },
       { name: "Consent Management", status: "implemented", detail: "Explicit consent tracking with revocation capability" },
       { name: "PII Redaction in Logs", status: "implemented", detail: "Audit logs exclude sensitive personal data" },
+      { name: "PII Encryption Integrity Monitoring", status: "implemented", detail: "Automated 24-hour verification that all PII fields remain encrypted" },
     ],
   },
   {
@@ -47,6 +49,7 @@ const SECURITY_CONTROLS = [
       { name: "Rate Limiting", status: "implemented", detail: "Per-endpoint rate limiting with progressive throttling" },
       { name: "Security Headers (Helmet)", status: "implemented", detail: "CSP, HSTS (preload), X-Frame-Options: DENY, Referrer-Policy, Permissions-Policy, X-Content-Type-Options" },
       { name: "SQL Injection Prevention", status: "implemented", detail: "Parameterized queries via Drizzle ORM — no raw SQL interpolation" },
+      { name: "Error Sanitization", status: "implemented", detail: "Stack traces and internal paths stripped from all production error responses with unique error reference IDs" },
     ],
   },
   {
@@ -166,7 +169,7 @@ export default function SecurityCompliancePage() {
         <div className="max-w-7xl mx-auto">
           <h2 className="text-2xl font-bold text-center mb-2">Security Controls</h2>
           <p className="text-muted-foreground text-center mb-8 text-sm">
-            24 security controls implemented across 4 domains
+            28 security controls implemented across 4 domains
           </p>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {SECURITY_CONTROLS.map((group) => (

@@ -55,6 +55,9 @@ export const users = pgTable("users", {
   lastLogin: timestamp("last_login"),
   passwordChangedAt: timestamp("password_changed_at"),
   mustChangePassword: boolean("must_change_password").default(false),
+  passwordHistory: text("password_history").array().default([]),
+  lastLoginIp: text("last_login_ip"),
+  knownIps: text("known_ips").array().default([]),
   mfaSecret: text("mfa_secret"),
   mfaEnabled: boolean("mfa_enabled").default(false),
   createdAt: timestamp("created_at").defaultNow(),
@@ -543,7 +546,7 @@ export const insertBorrowerAlertSchema = createInsertSchema(borrowerAlerts).omit
 export const insertOrganizationSchema = createInsertSchema(organizations).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertApiKeySchema = createInsertSchema(apiKeys).omit({ id: true, createdAt: true, lastUsedAt: true, revokedAt: true });
 
-export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, lastLogin: true, failedLoginAttempts: true, lockedUntil: true, passwordChangedAt: true, mustChangePassword: true, mfaSecret: true, mfaEnabled: true });
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, lastLogin: true, failedLoginAttempts: true, lockedUntil: true, passwordChangedAt: true, mustChangePassword: true, passwordHistory: true, lastLoginIp: true, knownIps: true, mfaSecret: true, mfaEnabled: true });
 export const insertBorrowerSchema = createInsertSchema(borrowers).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertCreditAccountSchema = createInsertSchema(creditAccounts).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertCreditInquirySchema = createInsertSchema(creditInquiries).omit({ id: true, createdAt: true });

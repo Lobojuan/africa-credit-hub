@@ -669,16 +669,17 @@ process.stderr.write = function (...args: any[]) {
 
   await registerRoutes(httpServer, app);
 
+  const { sanitizeErrorForResponse } = await import("./security-hardening");
+  const isProductionEnv = process.env.NODE_ENV === "production" || process.env.PRODUCTION_MODE === "true";
+
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = status >= 500 && process.env.NODE_ENV === "production"
-      ? "Internal Server Error"
-      : err.message || "Internal Server Error";
-
-    console.error("Internal Server Error:", err);
-
     if (res.headersSent) {
       return next(err);
+    }
+
+    const { status, message } = sanitizeErrorForResponse(err, isProductionEnv);
+    if (!isProductionEnv) {
+      console.error("Internal Server Error:", err);
     }
 
     return res.status(status).json({ message });
@@ -704,6 +705,9 @@ process.stderr.write = function (...args: any[]) {
 
     const { startAnchorScheduler } = await import("./blockchain-anchor");
     startAnchorScheduler(6);
+
+    const { startIntegrityScheduler } = await import("./security-hardening");
+    startIntegrityScheduler(24);
 
     const { isEmailConfigured } = await import("./email");
     const { isSmsConfigured } = await import("./sms");
