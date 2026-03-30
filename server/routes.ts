@@ -45,7 +45,7 @@ import { recordUsageEvent } from "./usage-metering";
 import { broadcastEvent } from "./websocket";
 import { createAnchor, verifyAuditAgainstAnchor, getAnchors } from "./blockchain-anchor";
 import { deliverWebhook, getWebhookSubscriptions, getWebhookDeliveryHistory, WEBHOOK_EVENTS } from "./webhook-delivery";
-import { webauthnCredentials, blockchainAnchors, webhookSubscriptions, webhookDeliveryLogs, consumerAccounts, telcoProfiles } from "@shared/schema";
+import { webauthnCredentials, blockchainAnchors, webhookSubscriptions, webhookDeliveryLogs, consumerAccounts, telcoProfiles, telcoLoans, telcoLoanRepayments } from "@shared/schema";
 import fs from "fs";
 import path from "path";
 import * as OTPAuth from "otpauth";
@@ -2693,6 +2693,166 @@ export async function registerRoutes(
       const country = getCountryFilter(req) || (req.query.country as string);
       const stats = await storage.getTelcoLoanPortfolioStats(orgId, country);
       res.json(stats);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.get("/api/telco/operations-dashboard", requireRole("admin", "lender", "regulator", "super_admin"), async (req, res) => {
+    try {
+      const orgId = getOrgScope(req);
+      const country = getCountryFilter(req) || (req.query.country as string);
+
+      const where = [];
+      if (orgId) where.push(eq(telcoLoans.organizationId, orgId));
+      if (country) where.push(eq(telcoLoans.country, country));
+      const whereClause = where.length > 0 ? and(...where) : undefined;
+
+      const allLoans = await db.select({
+        id: telcoLoans.id,
+        profileId: telcoLoans.profileId,
+        loanAmount: telcoLoans.loanAmount,
+        outstandingBalance: telcoLoans.outstandingBalance,
+        amountRepaid: telcoLoans.amountRepaid,
+        totalRepayable: telcoLoans.totalRepayable,
+        status: telcoLoans.status,
+        disbursementStatus: telcoLoans.disbursementStatus,
+        daysInArrears: telcoLoans.daysInArrears,
+        dueDate: telcoLoans.dueDate,
+        disbursedAt: telcoLoans.disbursedAt,
+        nextPaymentDate: telcoLoans.nextPaymentDate,
+        currency: telcoLoans.currency,
+        country: telcoLoans.country,
+        createdAt: telcoLoans.createdAt,
+      }).from(telcoLoans).where(whereClause);
+
+      let collectionsOverdue = 0, collectionsOverdueAmount = 0;
+      let bucket1_30 = { count: 0, amount: 0 };
+      let bucket31_60 = { count: 0, amount: 0 };
+      let bucket61_90 = { count: 0, amount: 0 };
+      let bucket90plus = { count: 0, amount: 0 };
+      let pendingDisbursements = 0, pendingDisbursementAmount = 0;
+      let todayDisbursed = 0, todayDisbursedAmount = 0;
+      let activeLoans = 0, totalOutstanding = 0, totalPortfolio = 0;
+      let defaultedLoans = 0, healthyLoans = 0;
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const weekAhead = new Date(today.getTime() + 7 * 86400000);
+      let collectionsDueThisWeek = 0, collectionsDueThisWeekAmount = 0;
+
+      for (const loan of allLoans) {
+        const outstanding = Number(loan.outstandingBalance || 0);
+        const loanAmt = Number(loan.loanAmount || 0);
+        totalPortfolio += loanAmt;
+
+        if (loan.status === "pending_disbursement") {
+          pendingDisbursements++;
+          pendingDisbursementAmount += loanAmt;
+        }
+
+        if (loan.disbursedAt) {
+          const disbDate = new Date(loan.disbursedAt);
+          if (disbDate >= today) {
+            todayDisbursed++;
+            todayDisbursedAmount += loanAmt;
+          }
+        }
+
+        if (["active", "repaying", "disbursed"].includes(loan.status || "")) {
+          activeLoans++;
+          totalOutstanding += outstanding;
+          const arrears = loan.daysInArrears || 0;
+
+          if (arrears > 0) {
+            collectionsOverdue++;
+            collectionsOverdueAmount += outstanding;
+            if (arrears <= 30) { bucket1_30.count++; bucket1_30.amount += outstanding; }
+            else if (arrears <= 60) { bucket31_60.count++; bucket31_60.amount += outstanding; }
+            else if (arrears <= 90) { bucket61_90.count++; bucket61_90.amount += outstanding; }
+            else { bucket90plus.count++; bucket90plus.amount += outstanding; }
+          } else {
+            healthyLoans++;
+          }
+
+          if (loan.nextPaymentDate) {
+            const nextPay = new Date(loan.nextPaymentDate);
+            if (nextPay >= today && nextPay <= weekAhead) {
+              collectionsDueThisWeek++;
+              const installmentEst = outstanding > 0 ? Math.min(outstanding, loanAmt * 0.1) : 0;
+              collectionsDueThisWeekAmount += installmentEst;
+            }
+          }
+        }
+
+        if (loan.status === "defaulted" || loan.status === "written_off") {
+          defaultedLoans++;
+        }
+      }
+
+      const repWhere = [];
+      if (orgId) repWhere.push(eq(telcoLoanRepayments.organizationId, orgId));
+      if (country) repWhere.push(eq(telcoLoanRepayments.country, country));
+      const recentRepayments = await db.select({
+        id: telcoLoanRepayments.id,
+        loanId: telcoLoanRepayments.loanId,
+        profileId: telcoLoanRepayments.profileId,
+        amountPaid: telcoLoanRepayments.amountPaid,
+        amountDue: telcoLoanRepayments.amountDue,
+        status: telcoLoanRepayments.status,
+        paidAt: telcoLoanRepayments.paidAt,
+        dueDate: telcoLoanRepayments.dueDate,
+        daysLate: telcoLoanRepayments.daysLate,
+        currency: telcoLoanRepayments.currency,
+        country: telcoLoanRepayments.country,
+      }).from(telcoLoanRepayments)
+        .where(repWhere.length > 0 ? and(...repWhere) : undefined)
+        .orderBy(desc(telcoLoanRepayments.paidAt))
+        .limit(20);
+
+      const profileIds = [...new Set(recentRepayments.map(r => r.profileId))];
+      const profileMap = new Map<string, string>();
+      if (profileIds.length > 0) {
+        const profiles = await db.select({ id: telcoProfiles.id, msisdn: telcoProfiles.msisdn }).from(telcoProfiles).where(inArray(telcoProfiles.id, profileIds));
+        profiles.forEach(p => profileMap.set(p.id, p.msisdn));
+      }
+
+      const enrichedRepayments = recentRepayments.map(r => ({
+        ...r,
+        msisdn: profileMap.get(r.profileId) || null,
+      }));
+
+      const portfolioHealthScore = activeLoans > 0
+        ? Math.round(Math.max(0, Math.min(100, 100 - (collectionsOverdue / activeLoans) * 100 - (defaultedLoans / Math.max(1, allLoans.length)) * 50)))
+        : 100;
+
+      res.json({
+        collections: {
+          totalOverdue: collectionsOverdue,
+          totalOverdueAmount: collectionsOverdueAmount,
+          aging: {
+            "1-30": bucket1_30,
+            "31-60": bucket31_60,
+            "61-90": bucket61_90,
+            "90+": bucket90plus,
+          },
+          dueThisWeek: collectionsDueThisWeek,
+          dueThisWeekAmount: collectionsDueThisWeekAmount,
+        },
+        disbursements: {
+          pending: pendingDisbursements,
+          pendingAmount: pendingDisbursementAmount,
+          todayDisbursed: todayDisbursed,
+          todayAmount: todayDisbursedAmount,
+        },
+        recentRepayments: enrichedRepayments,
+        portfolioHealth: {
+          score: portfolioHealthScore,
+          activeLoans,
+          healthyLoans,
+          overdueLoans: collectionsOverdue,
+          defaultedLoans,
+          totalOutstanding,
+          totalPortfolio,
+        },
+      });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 

@@ -5,7 +5,7 @@ import {
   ChevronRight, ChevronLeft, Wallet, Globe, Search, X, Shield, ShieldCheck,
   Smartphone, Users, ArrowUpRight, BarChart3, DollarSign, PieChart, RefreshCw,
   FileText, Send, CreditCard, CalendarDays, Receipt, Eye, Loader2, History,
-  Fingerprint, ScrollText, Ban, Check, Info
+  Fingerprint, ScrollText, Ban, Check, Info, Activity
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useEffect, useRef } from "react";
@@ -74,7 +75,7 @@ type PortfolioStats = {
 
 export default function TelcoLending() {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("portfolio");
+  const [activeTab, setActiveTab] = useState("operations");
   const [loansPage, setLoansPage] = useState(1);
   const [filterCountry, setFilterCountry] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
@@ -99,6 +100,58 @@ export default function TelcoLending() {
     }, 400);
     return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
   }, [searchQuery]);
+
+  type OperationsDashboard = {
+    collections: {
+      totalOverdue: number;
+      totalOverdueAmount: number;
+      aging: Record<string, { count: number; amount: number }>;
+      dueThisWeek: number;
+      dueThisWeekAmount: number;
+    };
+    disbursements: {
+      pending: number;
+      pendingAmount: number;
+      todayDisbursed: number;
+      todayAmount: number;
+    };
+    recentRepayments: Array<{
+      id: string;
+      loanId: string;
+      amountPaid: string;
+      amountDue: string;
+      status: string;
+      paidAt: string | null;
+      dueDate: string;
+      daysLate: number;
+      currency: string;
+      country: string | null;
+      msisdn: string | null;
+    }>;
+    portfolioHealth: {
+      score: number;
+      activeLoans: number;
+      healthyLoans: number;
+      overdueLoans: number;
+      defaultedLoans: number;
+      totalOutstanding: number;
+      totalPortfolio: number;
+    };
+  };
+
+  const { data: opsDashboard, isLoading: opsLoading, isError: opsError, error: opsErrorMsg } = useQuery<OperationsDashboard>({
+    queryKey: ["/api/telco/operations-dashboard", filterCountry],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (filterCountry) params.set("country", filterCountry);
+      const res = await fetch(`/api/telco/operations-dashboard?${params}`, { credentials: "include" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ message: "Request failed" }));
+        throw new Error(body.message || `Error ${res.status}`);
+      }
+      return res.json();
+    },
+  });
 
   const { data: portfolioStats, isLoading: statsLoading } = useQuery<PortfolioStats>({
     queryKey: ["/api/telco/loans/portfolio", filterCountry],
@@ -227,7 +280,10 @@ export default function TelcoLending() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-3 w-full max-w-md">
+        <TabsList className="grid grid-cols-4 w-full max-w-xl">
+          <TabsTrigger value="operations" className="text-xs" data-testid="tab-operations">
+            <Activity className="w-3.5 h-3.5 mr-1" /> Operations
+          </TabsTrigger>
           <TabsTrigger value="portfolio" className="text-xs" data-testid="tab-portfolio">
             <BarChart3 className="w-3.5 h-3.5 mr-1" /> Portfolio
           </TabsTrigger>
@@ -238,6 +294,218 @@ export default function TelcoLending() {
             <Fingerprint className="w-3.5 h-3.5 mr-1" /> Consent
           </TabsTrigger>
         </TabsList>
+
+        {/* ─── OPERATIONS TAB ─── */}
+        <TabsContent value="operations" className="space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Select value={filterCountry} onValueChange={(v) => setFilterCountry(v === "all" ? "" : v)}>
+              <SelectTrigger className="h-8 w-[160px] text-xs" data-testid="select-ops-country">
+                <Globe className="w-3 h-3 mr-1 text-muted-foreground" />
+                <SelectValue placeholder="All Countries" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Countries</SelectItem>
+                {COUNTRIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {opsLoading ? (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {[...Array(8)].map((_, i) => <Card key={i}><CardContent className="p-4"><Skeleton className="h-16 w-full" /></CardContent></Card>)}
+            </div>
+          ) : opsError ? (
+            <Card className="border-destructive/50">
+              <CardContent className="p-8 text-center">
+                <AlertTriangle className="w-10 h-10 text-destructive mx-auto mb-3" />
+                <p className="font-semibold text-destructive">Failed to load operations data</p>
+                <p className="text-sm text-muted-foreground mt-1">{(opsErrorMsg as Error)?.message || "An unexpected error occurred"}</p>
+              </CardContent>
+            </Card>
+          ) : opsDashboard ? (
+            <>
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                <Card className="border-l-4 border-l-emerald-500">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                      <span className="text-xs text-muted-foreground">Portfolio Health</span>
+                    </div>
+                    <p className={`text-3xl font-bold ${opsDashboard.portfolioHealth.score >= 80 ? "text-emerald-500" : opsDashboard.portfolioHealth.score >= 60 ? "text-yellow-500" : "text-red-500"}`} data-testid="text-health-score">
+                      {opsDashboard.portfolioHealth.score}%
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">{opsDashboard.portfolioHealth.activeLoans} active loans</p>
+                  </CardContent>
+                </Card>
+                <Card className="border-l-4 border-l-blue-500">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <DollarSign className="w-4 h-4 text-blue-500" />
+                      <span className="text-xs text-muted-foreground">Outstanding</span>
+                    </div>
+                    <p className="text-xl font-bold" data-testid="text-ops-outstanding">{getCur(filterCountry).symbol}{opsDashboard.portfolioHealth.totalOutstanding.toLocaleString()}</p>
+                    <p className="text-[11px] text-muted-foreground">{getCur(filterCountry).symbol}{opsDashboard.portfolioHealth.totalPortfolio.toLocaleString()} total</p>
+                  </CardContent>
+                </Card>
+                <Card className="border-l-4 border-l-yellow-500">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Send className="w-4 h-4 text-yellow-500" />
+                      <span className="text-xs text-muted-foreground">Pending Disbursement</span>
+                    </div>
+                    <p className="text-xl font-bold" data-testid="text-pending-disburse">{opsDashboard.disbursements.pending}</p>
+                    <p className="text-[11px] text-muted-foreground">{getCur(filterCountry).symbol}{opsDashboard.disbursements.pendingAmount.toLocaleString()}</p>
+                  </CardContent>
+                </Card>
+                <Card className="border-l-4 border-l-green-500">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span className="text-xs text-muted-foreground">Disbursed Today</span>
+                    </div>
+                    <p className="text-xl font-bold text-green-500" data-testid="text-today-disbursed">{opsDashboard.disbursements.todayDisbursed}</p>
+                    <p className="text-[11px] text-muted-foreground">{getCur(filterCountry).symbol}{opsDashboard.disbursements.todayAmount.toLocaleString()}</p>
+                  </CardContent>
+                </Card>
+                <Card className="border-l-4 border-l-red-500">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <AlertTriangle className="w-4 h-4 text-red-500" />
+                      <span className="text-xs text-muted-foreground">Overdue</span>
+                    </div>
+                    <p className="text-xl font-bold text-red-500" data-testid="text-overdue-count">{opsDashboard.collections.totalOverdue}</p>
+                    <p className="text-[11px] text-muted-foreground">{getCur(filterCountry).symbol}{opsDashboard.collections.totalOverdueAmount.toLocaleString()}</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-amber-500" /> Collections Aging Buckets
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {[
+                      { label: "1-30 Days", key: "1-30", color: "bg-yellow-500", textColor: "text-yellow-600 dark:text-yellow-400" },
+                      { label: "31-60 Days", key: "31-60", color: "bg-orange-500", textColor: "text-orange-600 dark:text-orange-400" },
+                      { label: "61-90 Days", key: "61-90", color: "bg-red-400", textColor: "text-red-500" },
+                      { label: "90+ Days", key: "90+", color: "bg-red-600", textColor: "text-red-600 dark:text-red-400" },
+                    ].map(bucket => {
+                      const data = opsDashboard.collections.aging[bucket.key] || { count: 0, amount: 0 };
+                      const totalOverdue = opsDashboard.collections.totalOverdue || 1;
+                      const pct = totalOverdue > 0 ? Math.round((data.count / totalOverdue) * 100) : 0;
+                      return (
+                        <div key={bucket.key} data-testid={`aging-bucket-${bucket.key}`}>
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-xs font-medium">{bucket.label}</span>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className={`text-[10px] ${bucket.textColor}`}>{data.count} loans</Badge>
+                              <span className="text-xs font-bold">{getCur(filterCountry).symbol}{data.amount.toLocaleString()}</span>
+                            </div>
+                          </div>
+                          <Progress value={pct} className={`h-2 [&>div]:${bucket.color}`} />
+                        </div>
+                      );
+                    })}
+                    <Separator />
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-medium text-muted-foreground">Due This Week</span>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-600 border-blue-500/20">{opsDashboard.collections.dueThisWeek} loans</Badge>
+                        <span className="text-xs font-bold">{getCur(filterCountry).symbol}{opsDashboard.collections.dueThisWeekAmount.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Activity className="w-4 h-4 text-emerald-500" /> Portfolio Breakdown
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {[
+                      { label: "Healthy (Current)", count: opsDashboard.portfolioHealth.healthyLoans, color: "text-green-500", icon: <CheckCircle className="w-3.5 h-3.5 text-green-500" /> },
+                      { label: "Overdue (In Arrears)", count: opsDashboard.portfolioHealth.overdueLoans, color: "text-amber-500", icon: <Clock className="w-3.5 h-3.5 text-amber-500" /> },
+                      { label: "Defaulted / Written Off", count: opsDashboard.portfolioHealth.defaultedLoans, color: "text-red-500", icon: <XCircle className="w-3.5 h-3.5 text-red-500" /> },
+                      { label: "Pending Disbursement", count: opsDashboard.disbursements.pending, color: "text-blue-500", icon: <Send className="w-3.5 h-3.5 text-blue-500" /> },
+                    ].map(item => {
+                      const total = opsDashboard.portfolioHealth.activeLoans + opsDashboard.portfolioHealth.defaultedLoans + opsDashboard.disbursements.pending;
+                      const pct = total > 0 ? Math.round((item.count / total) * 100) : 0;
+                      return (
+                        <div key={item.label} className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {item.icon}
+                            <span className="text-xs">{item.label}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-sm font-bold ${item.color}`}>{item.count}</span>
+                            <Badge variant="outline" className="text-[10px]">{pct}%</Badge>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <History className="w-4 h-4 text-primary" /> Recent Repayments
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {opsDashboard.recentRepayments.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">No recent repayments</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-xs">MSISDN</TableHead>
+                            <TableHead className="text-xs">Amount Paid</TableHead>
+                            <TableHead className="text-xs">Amount Due</TableHead>
+                            <TableHead className="text-xs">Status</TableHead>
+                            <TableHead className="text-xs">Days Late</TableHead>
+                            <TableHead className="text-xs">Paid At</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {opsDashboard.recentRepayments.map(rep => (
+                            <TableRow key={rep.id} data-testid={`repayment-row-${rep.id}`}>
+                              <TableCell className="text-xs font-mono">{rep.msisdn || "—"}</TableCell>
+                              <TableCell className="text-xs font-bold text-green-600 dark:text-green-400">{getCur(rep.country || filterCountry).symbol}{Number(rep.amountPaid || 0).toLocaleString()}</TableCell>
+                              <TableCell className="text-xs">{getCur(rep.country || filterCountry).symbol}{Number(rep.amountDue || 0).toLocaleString()}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className={`text-[10px] ${rep.status === "paid" ? "bg-green-500/10 text-green-500 border-green-500/20" : rep.status === "partial" ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" : rep.status === "missed" || rep.status === "overdue" ? "bg-red-500/10 text-red-500 border-red-500/20" : ""}`}>
+                                  {rep.status.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className={`text-xs ${(rep.daysLate || 0) > 0 ? "text-red-500 font-bold" : "text-green-500"}`}>{(rep.daysLate || 0) > 0 ? `${rep.daysLate}d` : "On time"}</TableCell>
+                              <TableCell className="text-xs text-muted-foreground">{rep.paidAt ? new Date(rep.paidAt).toLocaleDateString() : "—"}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <Activity className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-40" />
+                <p className="font-semibold">No operations data yet</p>
+                <p className="text-sm text-muted-foreground mt-1">Approve and disburse loans to see your operations dashboard</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
 
         {/* ─── PORTFOLIO TAB ─── */}
         <TabsContent value="portfolio" className="space-y-4">
