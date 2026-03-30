@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { useRoute, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, User, Mail, Phone, MapPin, Briefcase, CreditCard, AlertTriangle, TrendingUp, FileText, Flag, GraduationCap, Users, Camera, Upload, Brain, Loader2, ShieldCheck, ShieldAlert, ShieldX, ChevronDown, ChevronUp, Sparkles, Heart } from "lucide-react";
@@ -49,7 +50,7 @@ export default function ConsumerDetailPage() {
 
   const aiRiskMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`/api/ai/credit-risk/${borrowerId}`, { method: "POST", credentials: "include" });
+      const res = await apiRequest("POST", `/api/ai/credit-risk/${borrowerId}`);
       if (!res.ok) throw new Error("AI analysis failed");
       return res.json();
     },

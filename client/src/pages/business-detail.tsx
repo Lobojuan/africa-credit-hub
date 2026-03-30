@@ -16,7 +16,7 @@ import { FraudRiskIndicator, FraudRiskBadge } from "@/components/fraud-risk-indi
 import { ScoreFactors } from "@/components/score-factors";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Gavel, FileCheck } from "lucide-react";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Borrower, CreditAccount, CreditInquiry, CourtJudgment, ConsentRecord, BorrowerAlert } from "@shared/schema";
 
@@ -42,7 +42,7 @@ export default function BusinessDetailPage() {
 
   const aiRiskMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`/api/ai/credit-risk/${borrowerId}`, { method: "POST", credentials: "include" });
+      const res = await apiRequest("POST", `/api/ai/credit-risk/${borrowerId}`);
       if (!res.ok) throw new Error("AI analysis failed");
       return res.json();
     },

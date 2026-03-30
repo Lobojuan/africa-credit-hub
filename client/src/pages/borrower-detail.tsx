@@ -20,7 +20,7 @@ import { ScoreFactors } from "@/components/score-factors";
 import { AlternativeDataCard } from "@/components/alternative-data-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Gavel, FileCheck } from "lucide-react";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 function getStatusColor(status: string) {
@@ -52,7 +52,7 @@ export default function BorrowerDetailPage() {
 
   const aiRiskMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`/api/ai/credit-risk/${borrowerId}`, { method: "POST", credentials: "include" });
+      const res = await apiRequest("POST", `/api/ai/credit-risk/${borrowerId}`);
       if (!res.ok) throw new Error("AI analysis failed");
       return res.json();
     },
