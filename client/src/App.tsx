@@ -271,18 +271,29 @@ function AuthenticatedApp() {
     if (!redirecting) {
       setRedirecting(true);
       window.location.replace(url);
+      setTimeout(() => {
+        if (window.location.pathname !== url) {
+          window.location.href = url;
+        }
+      }, 1500);
     }
     return (
-      <div className="flex items-center justify-center h-screen">
-        <Skeleton className="w-32 h-8" />
+      <div className="flex items-center justify-center h-screen bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Redirecting...</p>
+        </div>
       </div>
     );
   };
 
   if (redirecting) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <Skeleton className="w-32 h-8" />
+      <div className="flex items-center justify-center h-screen bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Redirecting...</p>
+        </div>
       </div>
     );
   }

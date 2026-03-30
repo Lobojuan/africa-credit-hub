@@ -37,15 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryClient.setQueryData(["/api/auth/me"], null);
     queryClient.clear();
 
-    toast({
-      title: "Session expired due to inactivity",
-      description: "Please log in again to continue.",
-      variant: "destructive",
-    });
-
-    setTimeout(() => {
-      window.location.replace("/login");
-    }, 100);
+    window.location.replace("/login");
   }, []);
 
   useEffect(() => {

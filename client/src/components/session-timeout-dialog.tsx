@@ -66,10 +66,18 @@ export function SessionTimeoutDialog() {
 
   const handleLogout = useCallback(async () => {
     setShowWarning(false);
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current);
+      countdownRef.current = undefined;
+    }
+    if (checkIntervalRef.current) {
+      clearInterval(checkIntervalRef.current);
+      checkIntervalRef.current = undefined;
+    }
     try {
       await logout();
     } catch {
-      window.location.href = "/";
+      window.location.replace("/login");
     }
   }, [logout]);
 
