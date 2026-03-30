@@ -20,7 +20,7 @@ import { ScoreFactors } from "@/components/score-factors";
 import { AlternativeDataCard } from "@/components/alternative-data-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Gavel, FileCheck } from "lucide-react";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient, apiRequest, apiFormRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 function getStatusColor(status: string) {
@@ -70,9 +70,7 @@ export default function BorrowerDetailPage() {
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append("photo", file);
-      const res = await fetch(`/api/borrowers/${borrowerId}/photo`, {
-        method: "POST", body: formData, credentials: "include",
-      });
+      const res = await apiFormRequest("POST", `/api/borrowers/${borrowerId}/photo`, formData);
       if (!res.ok) throw new Error("Upload failed");
       return res.json();
     },
@@ -86,9 +84,7 @@ export default function BorrowerDetailPage() {
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append("document", file);
-      const res = await fetch(`/api/borrowers/${borrowerId}/id-document`, {
-        method: "POST", body: formData, credentials: "include",
-      });
+      const res = await apiFormRequest("POST", `/api/borrowers/${borrowerId}/id-document`, formData);
       if (!res.ok) throw new Error("Upload failed");
       return res.json();
     },

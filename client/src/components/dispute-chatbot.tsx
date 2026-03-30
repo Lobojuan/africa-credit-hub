@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, fetchCSRFToken } from "@/lib/queryClient";
 import type { Borrower, CreditAccount } from "@shared/schema";
 
 interface Message {
@@ -279,10 +279,12 @@ export function DisputeChatbot({ open, onOpenChange }: ChatbotProps) {
     setAiStreaming(true);
 
     try {
+      const csrfToken = await fetchCSRFToken();
       const response = await fetch("/api/ai/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}) },
         body: JSON.stringify({ messages: updatedMessages }),
+        credentials: "include",
       });
 
       if (!response.ok) {

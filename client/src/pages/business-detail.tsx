@@ -16,7 +16,7 @@ import { FraudRiskIndicator, FraudRiskBadge } from "@/components/fraud-risk-indi
 import { ScoreFactors } from "@/components/score-factors";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Gavel, FileCheck } from "lucide-react";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient, apiRequest, apiFormRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Borrower, CreditAccount, CreditInquiry, CourtJudgment, ConsentRecord, BorrowerAlert } from "@shared/schema";
 
@@ -54,7 +54,7 @@ export default function BusinessDetailPage() {
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append("photo", file);
-      const res = await fetch(`/api/borrowers/${borrowerId}/photo`, { method: "POST", body: formData, credentials: "include" });
+      const res = await apiFormRequest("POST", `/api/borrowers/${borrowerId}/photo`, formData);
       if (!res.ok) throw new Error("Upload failed");
       return res.json();
     },

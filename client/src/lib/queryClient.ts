@@ -70,6 +70,29 @@ export async function apiRequest(
   return res;
 }
 
+export async function apiFormRequest(
+  method: string,
+  url: string,
+  formData: FormData,
+): Promise<Response> {
+  const headers: Record<string, string> = {};
+
+  if (!["GET", "HEAD", "OPTIONS"].includes(method.toUpperCase())) {
+    const token = await fetchCSRFToken();
+    if (token) headers["X-CSRF-Token"] = token;
+  }
+
+  const res = await fetch(appendOrgId(url), {
+    method,
+    headers,
+    body: formData,
+    credentials: "include",
+  });
+
+  await throwIfResNotOk(res);
+  return res;
+}
+
 type UnauthorizedBehavior = "returnNull" | "throw";
 export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;

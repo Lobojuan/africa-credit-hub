@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, apiFormRequest } from "@/lib/queryClient";
 import { useRoute, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, User, Mail, Phone, MapPin, Briefcase, CreditCard, AlertTriangle, TrendingUp, FileText, Flag, GraduationCap, Users, Camera, Upload, Brain, Loader2, ShieldCheck, ShieldAlert, ShieldX, ChevronDown, ChevronUp, Sparkles, Heart } from "lucide-react";
@@ -62,7 +62,7 @@ export default function ConsumerDetailPage() {
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append("photo", file);
-      const res = await fetch(`/api/borrowers/${borrowerId}/photo`, { method: "POST", body: formData, credentials: "include" });
+      const res = await apiFormRequest("POST", `/api/borrowers/${borrowerId}/photo`, formData);
       if (!res.ok) throw new Error("Upload failed");
       return res.json();
     },
