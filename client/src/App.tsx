@@ -312,9 +312,13 @@ function AuthenticatedApp() {
     );
   }
 
+  const publicPaths = ["/", "/investor", "/solutions", "/ai-demo", "/pricing", "/security", "/market-validation", "/start-trial", "/signup", "/score-guide", "/my-credit"];
   if (!user) {
     if (currentPath === "/login") {
       return <LoginPage />;
+    }
+    if (publicPaths.includes(currentPath)) {
+      return doRedirect(currentPath);
     }
     return doRedirect("/login");
   }
