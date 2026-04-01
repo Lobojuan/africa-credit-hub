@@ -138,6 +138,27 @@
       color: rgba(148, 163, 184, 0.4);
     }
 
+    .contact {
+      margin-top: 1.5rem;
+      font-size: 0.85rem;
+      color: #94a3b8;
+    }
+    .contact-name {
+      font-weight: 600;
+      color: #e2e8f0;
+      margin-top: 4px;
+    }
+    .contact-phone {
+      display: inline-block;
+      margin-top: 4px;
+      color: #5eead4;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .contact-phone:hover {
+      text-decoration: underline;
+    }
+
     .retry-link {
       display: inline-block;
       margin-top: 1.5rem;
@@ -170,6 +191,11 @@
     <div class="status">
       <span class="status-dot"></span>
       Maintenance in progress
+    </div>
+    <div class="contact">
+      <p>Questions? Contact:</p>
+      <p class="contact-name">Uffe Jon Carlson</p>
+      <a href="tel:+233552395548" class="contact-phone">+233 552 39 55 48</a>
     </div>
     <br />
     <a href="/" class="retry-link" onclick="location.reload(); return false;">Try Again</a>
