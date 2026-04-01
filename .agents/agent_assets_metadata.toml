@@ -36,3 +36,9 @@ id = "mjZQawODDYSxQ5ZgaWpPU"
 uri = "file://full-app-source.txt"
 type = "text"
 title = "Complete App Source Code (all .ts, .tsx, .css files)"
+
+[[outputs]]
+id = "EY7IS5GeKrYIlH__5jKp8"
+uri = "file://app-source-code.zip"
+type = "unspecified"
+title = "App Source Code (ZIP)"
