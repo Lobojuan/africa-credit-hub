@@ -1,0 +1,767 @@
+=== ./uffe_code/client/src/index.css (30375 bytes) ===
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* LIGHT MODE — Pan-African professional palette: deep teal + warm gold accents */
+:root {
+  --button-outline: rgba(0,0,0, .10);
+  --badge-outline: rgba(0,0,0, .05);
+  --opaque-button-border-intensity: -8;
+  --elevate-1: rgba(0,0,0, .03);
+  --elevate-2: rgba(0,0,0, .08);
+  --background: 210 20% 98%;
+  --foreground: 210 30% 8%;
+  --border: 210 12% 89%;
+  --card: 210 18% 97%;
+  --card-foreground: 210 30% 8%;
+  --card-border: 210 12% 90%;
+  --sidebar: 172 40% 11%;
+  --sidebar-foreground: 45 25% 96%;
+  --sidebar-border: 172 35% 15%;
+  --sidebar-primary: 42 85% 53%;
+  --sidebar-primary-foreground: 210 30% 8%;
+  --sidebar-accent: 172 35% 17%;
+  --sidebar-accent-foreground: 45 25% 96%;
+  --sidebar-ring: 42 85% 53%;
+  --popover: 210 15% 96%;
+  --popover-foreground: 210 30% 8%;
+  --popover-border: 210 12% 87%;
+  --primary: 172 62% 26%;
+  --primary-foreground: 45 25% 98%;
+  --secondary: 210 14% 91%;
+  --secondary-foreground: 210 30% 8%;
+  --muted: 210 12% 92%;
+  --muted-foreground: 210 12% 44%;
+  --accent: 42 72% 50%;
+  --accent-foreground: 210 30% 8%;
+  --destructive: 0 76% 40%;
+  --destructive-foreground: 0 90% 98%;
+  --input: 210 12% 84%;
+  --ring: 172 62% 26%;
+  --chart-1: 172 62% 26%;
+  --chart-2: 42 85% 53%;
+  --chart-3: 12 76% 48%;
+  --chart-4: 152 60% 38%;
+  --chart-5: 215 65% 48%;
+  --font-sans: Inter, system-ui, sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: 'JetBrains Mono', Menlo, monospace;
+  --radius: .625rem;
+  --shadow-2xs: 0 1px 2px 0 rgba(0,0,0,.03);
+  --shadow-xs: 0 1px 3px 0 rgba(0,0,0,.04);
+  --shadow-sm: 0 1px 3px 0 rgba(0,0,0,.06), 0 1px 2px -1px rgba(0,0,0,.04);
+  --shadow: 0 2px 6px -1px rgba(0,0,0,.06), 0 1px 3px -1px rgba(0,0,0,.04);
+  --shadow-md: 0 4px 8px -2px rgba(0,0,0,.06), 0 2px 4px -1px rgba(0,0,0,.04);
+  --shadow-lg: 0 8px 16px -4px rgba(0,0,0,.08), 0 4px 6px -2px rgba(0,0,0,.04);
+  --shadow-xl: 0 16px 32px -8px rgba(0,0,0,.1), 0 8px 12px -4px rgba(0,0,0,.04);
+  --shadow-2xl: 0 24px 48px -12px rgba(0,0,0,.14);
+  --tracking-normal: -0.01em;
+  --spacing: 0.25rem;
+
+/* Fallback for older browsers */
+  --sidebar-primary-border: hsl(var(--sidebar-primary));
+  --sidebar-primary-border: hsl(from hsl(var(--sidebar-primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --sidebar-accent-border: hsl(var(--sidebar-accent));
+  --sidebar-accent-border: hsl(from hsl(var(--sidebar-accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --primary-border: hsl(var(--primary));
+  --primary-border: hsl(from hsl(var(--primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --secondary-border: hsl(var(--secondary));
+  --secondary-border: hsl(from hsl(var(--secondary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --muted-border: hsl(var(--muted));
+  --muted-border: hsl(from hsl(var(--muted)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --accent-border: hsl(var(--accent));
+  --accent-border: hsl(from hsl(var(--accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* Fallback for older browsers */
+  --destructive-border: hsl(var(--destructive));
+  --destructive-border: hs
+
+=== ./uffe_code/client/src/components/app-sidebar.tsx (20118 bytes) ===
+import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useLocation, Link } from "wouter";
+import {
+  LayoutDashboard,
+  Users,
+  CreditCard,
+  Search,
+  FileText,
+  Shield,
+  Settings,
+  CheckSquare,
+  AlertCircle,
+  Upload,
+  Building2,
+  FileCheck,
+  Receipt,
+  Headset,
+  Globe,
+  Key,
+  HelpCircle,
+  BookOpen,
+  DollarSign,
+  Plug,
+  Archive,
+  Scale,
+  ChevronDown,
+  History,
+  Play,
+  FileSpreadsheet,
+  Info,
+  Brain,
+  BarChart3,
+  Bell,
+  Eye,
+  Handshake,
+  FileSearch,
+  ArrowRightLeft,
+  UserCheck,
+  Activity,
+  Gauge,
+  Webhook,
+  Sparkles,
+  Monitor,
+  User,
+  Smartphone,
+  Banknote,
+} from "lucide-react";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarHeader,
+  SidebarFooter,
+} from "@/components/ui/sidebar";
+import { useAuth } from "@/hooks/use-auth";
+import { useQuery } from "@tanstack/react-query";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@radix-ui/react-collapsible";
+import type { LucideIcon } from "lucide-react";
+import { isGhanaMode, isSierraLeoneMode, isSingleCountryMode, getBrandTitle, getCountryConfig } from "@/lib/country-mode";
+import { useCountryTheme } from "@/components/country-theme-provider";
+import { useTheme } from "@/components/theme-provider";
+
+type NavItem = {
+  label: string;
+  url: string;
+  icon: LucideIcon;
+  testId: string;
+  roles?: string[];
+};
+
+const globalViewItems: NavItem[] = [
+  { label: "Dashboard", url: "/dashboard", icon: LayoutDashboard, testId: "nav-dashboard" },
+  { label: "Portfolio Intelligence", url: "/portfolio-intelligence", icon: Brain, testId: "nav-portfolio-intelligence", roles: ["admin", "super_admin", "regulator"] },
+  { label: "AI Command Center", url: "/ai-command-center", icon: Sparkles, testId: "nav-ai-command-center", roles: ["admin", "super_admin", "regulator"] },
+  { label: "Platform Metrics", url: "/platform-metrics", icon: Gauge, testId: "nav-platform-metrics", roles: ["admin", "super_admin"] },
+];
+
+const telcoItems: NavItem[] = [
+  { label: "Telco Scoring", url: "/telco-scoring", icon: Smartphone, testId: "nav-telco-scoring", roles: ["admin", "lender", "regulator", "super_admin"] },
+  { label: "Telco Lending", url: "/telco-lending", icon: Banknote, testId: "nav-telco-lending", roles: ["admin", "lender", "regulator", "super_admin"] },
+];
+
+const borrowersLendersItems: NavItem[] = [
+  { label: "Consumers", url: "/consumers", icon: User, testId: "nav-consumers" },
+  { label: "Businesses", url: "/businesses", icon: Building2, testId: "nav-businesses" },
+  { label: "Borrowers (All)", url: "/borrowers", icon: Users, testId: "nav-borrowers", roles: ["super_admin"] },
+  { label: "Credit Accounts", url: "/credit-accounts", icon: CreditCard, testId: "nav-credit-accounts" },
+  { label: "Credit Search", url: "/search", icon: Search, testId: "nav-credit-search" },
+  { label: "Credit Reports", url: "/reports", icon: FileText, testId: "nav-credit-reports" },
+  { label: "Score Methodology", url: "/credit-score-methodology", icon: Brain, testId: "nav-credit-score-methodology", roles: ["admin", "lender", "super_admin"] },
+  { label: "My Credit", url: "/my-credit", icon: UserCheck, testId: "nav-consumer-portal" },
+  { label: "Institutions", url: "/institutions", icon: Building2, testId: "nav-institutions", roles: ["admin", "super_admin"] },
+];
+
+const operationsItems: NavItem[] = [
+  { label: "Batch Upload", url: "/batch-uplo
+
+=== ./uffe_code/client/src/components/stat-card.tsx (8111 bytes) ===
+import { Card, CardContent } from "@/components/ui/card";
+import { type LucideIcon, ChevronRight } from "lucide-react";
+import { AreaChart, Area, ResponsiveContainer } from "recharts";
+
+interface StatCardProps {
+  title: string;
+  value: string | number;
+  subtitle?: string;
+  icon: LucideIcon;
+  trend?: "up" | "down" | "neutral";
+  testId?: string;
+  colorIndex?: number;
+  onClick?: () => void;
+  sparklineData?: number[];
+}
+
+const iconStyles = [
+  { bg: "linear-gradient(135deg, hsl(172 62% 30%) 0%, hsl(172 50% 22%) 100%)", glow: "hsl(172 62% 26% / 0.25)" },
+  { bg: "linear-gradient(135deg, hsl(42 85% 55%) 0%, hsl(32 78% 46%) 100%)", glow: "hsl(42 85% 53% / 0.25)" },
+  { bg: "linear-gradient(135deg, hsl(12 76% 52%) 0%, hsl(2 70% 44%) 100%)", glow: "hsl(12 76% 48% / 0.25)" },
+  { bg: "linear-gradient(135deg, hsl(152 60% 42%) 0%, hsl(162 55% 34%) 100%)", glow: "hsl(152 60% 38% / 0.25)" },
+  { bg: "linear-gradient(135deg, hsl(215 65% 50%) 0%, hsl(225 60% 42%) 100%)", glow: "hsl(215 65% 48% / 0.25)" },
+  { bg: "linear-gradient(135deg, hsl(280 55% 52%) 0%, hsl(270 50% 44%) 100%)", glow: "hsl(280 55% 50% / 0.25)" },
+  { bg: "linear-gradient(135deg, hsl(350 65% 52%) 0%, hsl(340 60% 44%) 100%)", glow: "hsl(350 65% 50% / 0.25)" },
+  { bg: "linear-gradient(135deg, hsl(172 45% 38%) 0%, hsl(182 40% 30%) 100%)", glow: "hsl(172 45% 35% / 0.25)" },
+];
+
+const cardGradients = [
+  { light: "linear-gradient(135deg, hsl(172 62% 26% / 0.06) 0%, hsl(172 50% 22% / 0.015) 100%)", dark: "linear-gradient(135deg, hsl(172 62% 26% / 0.10) 0%, hsl(172 50% 22% / 0.025) 100%)" },
+  { light: "linear-gradient(135deg, hsl(42 85% 53% / 0.06) 0%, hsl(32 78% 46% / 0.015) 100%)", dark: "linear-gradient(135deg, hsl(42 85% 53% / 0.10) 0%, hsl(32 78% 46% / 0.025) 100%)" },
+  { light: "linear-gradient(135deg, hsl(12 76% 48% / 0.06) 0%, hsl(2 70% 44% / 0.015) 100%)", dark: "linear-gradient(135deg, hsl(12 76% 48% / 0.10) 0%, hsl(2 70% 44% / 0.025) 100%)" },
+  { light: "linear-gradient(135deg, hsl(152 60% 38% / 0.06) 0%, hsl(162 55% 34% / 0.015) 100%)", dark: "linear-gradient(135deg, hsl(152 60% 38% / 0.10) 0%, hsl(162 55% 34% / 0.025) 100%)" },
+  { light: "linear-gradient(135deg, hsl(215 65% 48% / 0.06) 0%, hsl(225 60% 42% / 0.015) 100%)", dark: "linear-gradient(135deg, hsl(215 65% 48% / 0.10) 0%, hsl(225 60% 42% / 0.025) 100%)" },
+  { light: "linear-gradient(135deg, hsl(280 55% 50% / 0.06) 0%, hsl(270 50% 44% / 0.015) 100%)", dark: "linear-gradient(135deg, hsl(280 55% 50% / 0.10) 0%, hsl(270 50% 44% / 0.025) 100%)" },
+  { light: "linear-gradient(135deg, hsl(350 65% 50% / 0.06) 0%, hsl(340 60% 44% / 0.015) 100%)", dark: "linear-gradient(135deg, hsl(350 65% 50% / 0.10) 0%, hsl(340 60% 44% / 0.025) 100%)" },
+  { light: "linear-gradient(135deg, hsl(172 45% 35% / 0.06) 0%, hsl(182 40% 30% / 0.015) 100%)", dark: "linear-gradient(135deg, hsl(172 45% 35% / 0.10) 0%, hsl(182 40% 30% / 0.025) 100%)" },
+];
+
+function valueFontSize(val: string | number): string {
+  const len = String(val).length;
+  if (len > 14) return "text-base";
+  if (len > 10) return "text-lg";
+  return "text-2xl";
+}
+
+const sparklineColors = [
+  { stroke: "hsl(172 62% 30%)", gradientStart: "hsl(172 62% 30% / 0.4)", gradientEnd: "hsl(172 62% 30% / 0.02)" },
+  { stroke: "hsl(42 85% 53%)", gradientStart: "hsl(42 85% 53% / 0.4)", gradientEnd: "hsl(42 85% 53% / 0.02)" },
+  { stroke: "hsl(12 76% 48%)", gradientStart: "hsl(12 76% 48% / 0.4)", gradientEnd: "hsl(12 76% 48% / 0.02)" },
+  { stroke: "hsl(152 60% 38%)", gradientStart:
+
+=== ./uffe_code/client/src/pages/command-center-system.tsx (51671 bytes) ===
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Badge } from "@/components/ui/badge";
+import {
+  Server, Database, Shield, Clock, HardDrive, Cpu, MemoryStick, Activity,
+  CheckCircle2, AlertTriangle, XCircle, Users, Building2, FileText, Scale,
+  Lock, Globe, Zap, Monitor, Layers, ArrowUpRight, BarChart3, Gauge,
+  Network, ChevronDown, ChevronRight, RefreshCw, Loader2, Wrench,
+} from "lucide-react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { MessageSquare, Send, Phone } from "lucide-react";
+
+interface SystemStats {
+  server: {
+    nodeVersion: string;
+    platform: string;
+    arch: string;
+    uptime: { ms: number; hours: number; days: number };
+    memory: { heapUsedMB: string; heapTotalMB: string; rssMB: string; externalMB: string };
+    cpu: { userMs: string; systemMs: string };
+    pid: number;
+    env: string;
+  };
+  database: {
+    version: string;
+    sizeMB: number;
+    connections: { total: number; active: number; idle: number; maxConnections: number };
+    tableStats: { table: string; rows: number }[];
+  };
+  dataCounts: {
+    users: { total: number; active: number; superAdmins: number; admins: number; locked: number; mfaEnabled: number };
+    organizations: { total: number; active: number; byType: { type: string; count: number }[]; byCountry: { country: string; count: number }[] };
+    borrowers: number;
+    creditAccounts: { total: number; byStatus: { status: string; count: number }[] };
+    disputes: { total: number; open: number; byStatus: { status: string; count: number }[] };
+    inquiries: number;
+    judgments: number;
+    consents: number;
+    payments: number;
+    cheques: number;
+    auditLogs: number;
+    notifications: number;
+    pendingApprovals: number;
+    sataAgreements: { total: number; active: number };
+  };
+  srs: {
+    requirements: {
+      category: string;
+      items: { id: string; name: string; desc: string; status: "pass" | "warn" | "fail"; table: string }[];
+    }[];
+    total: number;
+    passed: number;
+    warning: number;
+    failed: number;
+  };
+  recentActivity: { action: string; userId: string; details: string; timestamp: string }[];
+  traffic: {
+    totalToday: number;
+    totalThisHour: number;
+    totalAllTime: number;
+    uniqueEndpoints: number;
+    topEndpoints: { endpoint: string; count: number }[];
+    hourlyData: { hour: string; requests: number }[];
+    minuteData: { minute: string; requests: number }[];
+    dailyData: { date: string; requests: number }[];
+    methodBreakdown: { method: string; count: number }[];
+    statusBreakdown: { bucket: string; count: number }[];
+    responseTime: { avg: number; p50: number; p95: number; p99: number; max: number; samples: number };
+    peakHour: { hour: string; requests: number };
+    peakMinute: { minute: string; requests: number };
+    requestsPerSecond: number;
+    projectedDaily: number;
+    capacityTarget: number;
+    capacityUsedPct: number;
+  };
+  sla: {
+    targetUptime: number;
+    currentUptime: number;
+    disputeResolutionSLA: string;
+    dataRetention: string;
+    backupFrequency: string;
+    rpo: string;
+    rto: string;
+  };
+  deployment: {
+    environment: string;
+    region: string;
+    ssl: boolean;
+    sessionStore: string;
+    authMethod: string;
+    apiGateway: string;
+    frontend: string;
+    orm:
+Now I have everything I need. Here's your complete Replit Agent prompt — paste this and sleep well 😴
+
+You are a senior UI/UX engineer. Redesign the entire frontend of this app to a premium Scandinavian (Nordic) design system. The app is built with React + TypeScript + Tailwind CSS + shadcn/ui components.
+
+Apply ALL changes below across the entire codebase.
+
+---
+
+## 1. UPDATE: client/src/index.css — Full Nordic Design System
+
+Replace the :root CSS variables with this Nordic palette:
+
+```css
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* Nordic Color Palette */
+  --background: 210 25% 97%;
+  --foreground: 215 25% 12%;
+  --card: 0 0% 100%;
+  --card-foreground: 215 25% 12%;
+  --border: 214 20% 91%;
+  --input: 214 20% 91%;
+  --primary: 213 94% 38%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 20% 94%;
+  --secondary-foreground: 215 25% 20%;
+  --muted: 210 18% 95%;
+  --muted-foreground: 215 15% 52%;
+  --accent: 210 18% 92%;
+  --accent-foreground: 215 25% 12%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --ring: 213 94% 38%;
+  --radius: 0.75rem;
+
+  /* Sidebar — deep Nordic navy */
+  --sidebar: 222 47% 13%;
+  --sidebar-foreground: 210 30% 88%;
+  --sidebar-border: 222 40% 18%;
+  --sidebar-primary: 213 94% 60%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 222 40% 19%;
+  --sidebar-accent-foreground: 210 30% 92%;
+  --sidebar-ring: 213 94% 60%;
+
+  /* Shadows — very subtle, Nordic */
+  --shadow-xs: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-sm: 0 1px 4px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03);
+  --shadow: 0 2px 8px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.04);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.08), 0 4px 8px rgba(0,0,0,0.04);
+
+  /* Typography */
+  --font-sans: 'Plus Jakarta Sans', Inter, system-ui, sans-serif;
+  --tracking-tight: -0.02em;
+  --tracking-normal: -0.01em;
+}
+
+.dark {
+  --background: 222 47% 9%;
+  --foreground: 210 30% 92%;
+  --card: 222 44% 12%;
+  --card-foreground: 210 30% 92%;
+  --border: 222 35% 18%;
+  --input: 222 35% 18%;
+  --primary: 213 94% 60%;
+  --primary-foreground: 222 47% 9%;
+  --secondary: 222 40% 16%;
+  --secondary-foreground: 210 25% 80%;
+  --muted: 222 38% 15%;
+  --muted-foreground: 215 20% 55%;
+  --accent: 222 38% 18%;
+  --accent-foreground: 210 30% 92%;
+  --sidebar: 222 50% 7%;
+  --sidebar-foreground: 210 25% 80%;
+  --sidebar-border: 222 42% 13%;
+  --sidebar-accent: 222 44% 14%;
+  --sidebar-accent-foreground: 210 30% 88%;
+}
+Then add these global base styles:
+
+css
+Copy
+@layer base {
+  * { @apply border-border; }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    letter-spacing: var(--tracking-normal);
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    letter-spacing: var(--tracking-tight);
+    font-weight: 600;
+  }
+}
+
+@layer components {
+  /* Nordic Card — borderless, floating paper */
+  .nordic-card {
+    @apply bg-card rounded-2xl p-7;
+    box-shadow: var(--shadow);
+    border: 1px solid hsl(var(--border) / 0.6);
+  }
+
+  /* Nordic Stat Card */
+  .nordic-stat {
+    @apply bg-card rounded-2xl p-6;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid hsl(var(--border) / 0.5);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+  }
+  .nordic-stat:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+  }
+
+  /* Nordic Badge */
+  .nordic-badge {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium;
+    letter-spacing: 0.01em;
+  }
+  .nordic-badge-success {
+    @apply nordic-badge bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300;
+  }
+  .nordic-badge-warning {
+    @apply nordic-badge bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300;
+  }
+  .nordic-badge-info {
+    @apply nordic-badge bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300;
+  }
+  .nordic-badge-neutral {
+    @apply nordic-badge bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300;
+  }
+
+  /* Nordic Button */
+  .nordic-btn-primary {
+    @apply inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold;
+    @apply bg-primary text-primary-foreground;
+    @apply transition-all duration-150;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 0 0 1px hsl(var(--primary) / 0.8);
+  }
+  .nordic-btn-primary:hover {
+    filter: brightness(1.08);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.15), 0 0 0 1px hsl(var(--primary));
+  }
+
+  /* Nordic Input */
+  .nordic-input {
+    @apply w-full px-4 py-2.5 rounded-xl text-sm bg-background;
+    @apply border border-border focus:border-primary focus:ring-2 focus:ring-primary/10;
+    @apply transition-all duration-150 outline-none;
+  }
+
+  /* Nordic Table */
+  .nordic-table th {
+    @apply text-xs font-semibold text-muted-foreground uppercase tracking-wide py-3 px-4;
+    letter-spacing: 0.06em;
+  }
+  .nordic-table td {
+    @apply py-3.5 px-4 text-sm border-t border-border/50;
+  }
+  .nordic-table tr:hover td {
+    @apply bg-muted/40;
+  }
+
+  /* Nordic Page Header */
+  .nordic-page-header {
+    @apply mb-8;
+  }
+  .nordic-page-header h1 {
+    @apply text-2xl font-semibold text-foreground;
+    letter-spacing: -0.025em;
+  }
+  .nordic-page-header p {
+    @apply text-sm text-muted-foreground mt-1;
+  }
+
+  /* Nordic Section Divider */
+  .nordic-divider {
+    @apply border-t border-border/60 my-6;
+  }
+
+  /* Nordic Sidebar Item */
+  .nordic-nav-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium;
+    @apply text-sidebar-foreground/70 transition-all duration-150;
+  }
+  .nordic-nav-item:hover {
+    @apply bg-sidebar-accent text-sidebar-foreground;
+  }
+  .nordic-nav-item.active {
+    @apply bg-sidebar-primary/15 text-sidebar-primary font-semibold;
+  }
+}
+2. UPDATE: client/src/components/stat-card.tsx
+Replace the entire component with this cleaner Nordic version:
+
+tsx
+Copy
+import { Card } from "@/components/ui/card";
+import { type LucideIcon } from "lucide-react";
+import { AreaChart, Area, ResponsiveContainer } from "recharts";
+
+interface StatCardProps {
+  title: string;
+  value: string | number;
+  subtitle?: string;
+  icon: LucideIcon;
+  trend?: "up" | "down" | "neutral";
+  testId?: string;
+  colorIndex?: number;
+  onClick?: () => void;
+  sparklineData?: number[];
+}
+
+const ACCENT_COLORS = [
+  { icon: "bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400", stroke: "#3b82f6" },
+  { icon: "bg-violet-50 text-violet-600 dark:bg-violet-950 dark:text-violet-400", stroke: "#8b5cf6" },
+  { icon: "bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400", stroke: "#10b981" },
+  { icon: "bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400", stroke: "#f59e0b" },
+  { icon: "bg-rose-50 text-rose-600 dark:bg-rose-950 dark:text-rose-400", stroke: "#f43f5e" },
+  { icon: "bg-cyan-50 text-cyan-600 dark:bg-cyan-950 dark:text-cyan-400", stroke: "#06b6d4" },
+];
+
+export function StatCard({ title, value, subtitle, icon: Icon, trend, testId, colorIndex = 0, onClick, sparklineData }: StatCardProps) {
+  const color = ACCENT_COLORS[colorIndex % ACCENT_COLORS.length];
+  const sparkData = sparklineData?.map(v => ({ v }));
+
+  return (
+    <div
+      className="nordic-stat cursor-pointer group"
+      data-testid={testId}
+      onClick={onClick}
+    >
+      <div className="flex items-start justify-between mb-4">
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color.icon}`}>
+          <Icon className="w-5 h-5" />
+        </div>
+        {trend && (
+          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+            trend === "up" ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400" :
+            trend === "down" ? "bg-rose-50 text-rose-600 dark:bg-rose-950 dark:text-rose-400" :
+            "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+          }`}>
+            {trend === "up" ? "↑" : trend === "down" ? "↓" : "—"}
+          </span>
+        )}
+      </div>
+
+      <div className="space-y-0.5 mb-3">
+        <p className="text-2xl font-semibold text-foreground tracking-tight">{value}</p>
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{title}</p>
+        {subtitle && <p className="text-xs text-muted-foreground/70">{subtitle}</p>}
+      </div>
+
+      {sparkData && sparkData.length > 0 && (
+        <div className="h-10 -mx-1">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={sparkData}>
+              <defs>
+                <linearGradient id={`sg-${colorIndex}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={color.stroke} stopOpacity={0.25} />
+                  <stop offset="100%" stopColor={color.stroke} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <Area type="monotone" dataKey="v" stroke={color.stroke} strokeWidth={1.5} fill={`url(#sg-${colorIndex})`} dot={false} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </div>
+  );
+}
+3. UPDATE: client/src/components/app-sidebar.tsx
+Apply these changes to the sidebar:
+
+Change the sidebar header logo area — make it cleaner:
+Remove any heavy borders
+Add tracking-tight to the brand name
+Make the logo icon smaller and cleaner
+For every SidebarMenuButton component, replace the className with:
+className="nordic-nav-item w-full"
+For the active state detection, add data-active={isActive} and use:
+className={`nordic-nav-item w-full ${isActive ? 'active' : ''}`}
+For section group labels (GLOBAL VIEW, TELCO, etc.):
+Change to lowercase with first letter capitalized
+Add text-xs font-semibold text-sidebar-foreground/40 uppercase tracking-widest px-3 mb-1
+Remove any heavy dividers between sections — replace with <div className="h-4" /> spacers
+4. UPDATE: All Badge/chip components across pages
+Find all instances of these badge patterns and replace:
+
+Old pattern:
+
+tsx
+Copy
+<Badge className="bg-green-100 text-green-800">Enacted</Badge>
+<Badge className="bg-yellow-100 text-yellow-800">Partial</Badge>
+<Badge className="bg-gray-100 text-gray-600">Draft</Badge>
+<Badge className="bg-blue-100 text-blue-800">SATA Ready</Badge>
+New pattern:
+
+tsx
+Copy
+<span className="nordic-badge-success">Enacted</span>
+<span className="nordic-badge-warning">Partial</span>
+<span className="nordic-badge-neutral">Draft</span>
+<span className="nordic-badge-info">SATA Ready</span>
+5. UPDATE: client/src/pages/dashboard.tsx
+Replace all <Card> wrappers on stat cards with <div className="nordic-stat">
+Replace page title section with:
+tsx
+Copy
+<div className="nordic-page-header">
+  <h1>Dashboard</h1>
+  <p>Welcome back, {user?.fullName}. Here's your platform overview.</p>
+</div>
+Increase grid gap from gap-4 to gap-5 everywhere
+Replace any p-4 card padding with p-6 or p-7
+6. UPDATE: Top navigation bar (App.tsx header area)
+Find the top header/navbar and apply:
+
+tsx
+Copy
+// Replace the header className with:
+className="h-14 border-b border-border/60 bg-background/95 backdrop-blur-sm flex items-center px-6 gap-4 sticky top-0 z-40"
+For the user avatar/name area:
+
+tsx
+Copy
+className="flex items-center gap-2.5 text-sm font-medium text-foreground/80 hover:text-foreground transition-colors"
+For the Log Out button — replace the red button with a subtle ghost version:
+
+tsx
+Copy
+<Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground gap-2">
+  <LogOut className="w-4 h-4" />
+  Log Out
+</Button>
+7. UPDATE: All page layouts — increase breathing room
+In every file under client/src/pages/, find the outermost wrapper div and:
+
+Replace:
+
+tsx
+Copy
+<div className="p-4 space-y-4">
+<div className="p-6 space-y-4">
+With:
+
+tsx
+Copy
+<div className="p-8 space-y-6 max-w-[1400px] mx-auto">
+8. UPDATE: All table components
+Find all <table> or <Table> usages and add className="nordic-table w-full" to the table element.
+
+For table headers, replace any uppercase bold text with:
+
+tsx
+Copy
+className="text-xs font-semibold text-muted-foreground tracking-wide uppercase"
+9. UPDATE: All form inputs
+Find all <Input> components and add:
+
+tsx
+Copy
+className="nordic-input"
+10. UPDATE: client/src/components/ui/card.tsx
+Replace the Card component styles:
+
+tsx
+Copy
+const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn(
+        "rounded-2xl bg-card text-card-foreground",
+        "border border-border/60",
+        "shadow-[0_1px_4px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.03)]",
+        className
+      )}
+      {...props}
+    />
+  )
+);
+
+const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn("flex flex-col space-y-1 p-6 pb-4", className)} {...props} />
+  )
+);
+
+const CardTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLHeadingElement>>(
+  ({ className, ...props }, ref) => (
+    <h3 ref={ref} className={cn("text-base font-semibold leading-tight tracking-tight", className)} {...props} />
+  )
+);
+
+const CardContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
+  )
+);
+11. UPDATE: tailwind.config (if exists)
+Add to the theme extend section:
+
+js
+Copy
+fontFamily: {
+  sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
+},
+borderRadius: {
+  'xl': '0.75rem',
+  '2xl': '1rem',
+  '3xl': '1.5rem',
+},
+FINAL CHECKS after all changes:
+Run npm run build — fix any TypeScript or import errors
+Make sure dark mode still works correctly
+Make sure all existing data-testid attributes are preserved
+Do NOT change any backend logic, API calls, or data fetching
+Do NOT remove any existing functionality — only change visual styling
