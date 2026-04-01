@@ -7,33 +7,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
-const COUNTRY_FLAGS: Record<string, string> = {
-  GH: "GH",
-  LR: "LR",
-  SL: "SL",
-  NG: "NG",
-  KE: "KE",
-  RW: "RW",
-  TZ: "TZ",
-  UG: "UG",
-  ET: "ET",
-  ZA: "ZA",
-};
+function countryCodeToFlag(code: string): string {
+  if (!code || code.length !== 2) return "🏳️";
+  const codePoints = [...code.toUpperCase()].map(c => 0x1F1E6 + c.charCodeAt(0) - 65);
+  return String.fromCodePoint(...codePoints);
+}
 
 function CountryDot({ code }: { code: string }) {
-  const colors: Record<string, string> = {
-    GH: "bg-emerald-500",
-    LR: "bg-red-500",
-    SL: "bg-green-500",
-    NG: "bg-green-600",
-    KE: "bg-red-600",
-    RW: "bg-blue-500",
-    TZ: "bg-blue-600",
-    UG: "bg-yellow-500",
-    ET: "bg-green-700",
-    ZA: "bg-blue-700",
-  };
-  return <div className={`w-2.5 h-2.5 rounded-full ${colors[code] || "bg-muted-foreground/50"} shrink-0`} />;
+  return <span className="text-sm leading-none shrink-0" role="img" aria-label={code}>{countryCodeToFlag(code)}</span>;
 }
 
 export function CountrySelector() {

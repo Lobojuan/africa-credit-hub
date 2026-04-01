@@ -67,14 +67,15 @@ const CREDIT_BUREAU_FRAMEWORK: Record<string, string> = {
   LR: "CBL Credit Registry",
 };
 
+function countryCodeToFlag(code: string): string {
+  if (!code || code.length !== 2) return "🏳️";
+  const codePoints = [...code.toUpperCase()].map(c => 0x1F1E6 + c.charCodeAt(0) - 65);
+  return String.fromCodePoint(...codePoints);
+}
+
 function CountryDot({ code, size = "md" }: { code: string; size?: "sm" | "md" | "lg" }) {
-  const colors: Record<string, string> = {
-    GH: "bg-emerald-500", LR: "bg-red-500", SL: "bg-green-500", NG: "bg-green-600",
-    KE: "bg-red-600", RW: "bg-blue-500", TZ: "bg-blue-600", UG: "bg-yellow-500",
-    ET: "bg-green-700", ZA: "bg-blue-700",
-  };
-  const sizeClass = size === "lg" ? "w-4 h-4" : size === "md" ? "w-3 h-3" : "w-2.5 h-2.5";
-  return <div className={`${sizeClass} rounded-full ${colors[code] || "bg-muted-foreground/50"} shrink-0`} />;
+  const sizeClass = size === "lg" ? "text-xl" : size === "md" ? "text-base" : "text-sm";
+  return <span className={`${sizeClass} leading-none shrink-0`} role="img" aria-label={code}>{countryCodeToFlag(code)}</span>;
 }
 
 function KPICard({ icon: Icon, label, value, sub, color }: {
