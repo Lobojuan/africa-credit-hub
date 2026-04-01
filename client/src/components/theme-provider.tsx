@@ -15,7 +15,7 @@ const ThemeContext = createContext<{
   visualStyle: VisualStyle;
   toggleTheme: () => void;
   setVisualStyle: (style: VisualStyle) => void;
-}>({ theme: "light", visualStyle: "pan-african", toggleTheme: () => {}, setVisualStyle: () => {} });
+}>({ theme: "light", visualStyle: "scandinavian", toggleTheme: () => {}, setVisualStyle: () => {} });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
@@ -31,7 +31,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       const stored = localStorage.getItem("visualStyle");
       if (stored === "pan-african" || stored === "scandinavian") return stored;
     }
-    return "pan-african";
+    return "scandinavian";
   });
 
   useEffect(() => {
