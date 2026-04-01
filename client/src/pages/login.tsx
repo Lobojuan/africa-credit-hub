@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { isGhanaMode, getCountryConfig } from "@/lib/country-mode";
+import { useTheme } from "@/components/theme-provider";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -25,6 +26,28 @@ export default function LoginPage() {
   const { login } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
+  const { visualStyle } = useTheme();
+  const isScandinavian = visualStyle === "scandinavian";
+
+  const colors = isScandinavian ? {
+    panelBg: "linear-gradient(135deg, hsl(210 35% 22%) 0%, hsl(215 30% 16%) 40%, hsl(220 25% 12%) 100%)",
+    accent: "hsl(210 45% 55%)",
+    accentLight: "hsl(210 45% 70%)",
+    accentGlow: "rgba(66, 135, 245, 0.3)",
+    accentGlowFaint: "rgba(66, 135, 245, 0.15)",
+    orb1: "hsl(210 50% 55%)",
+    orb2: "hsl(200 40% 50%)",
+    orb3: "hsl(220 40% 60%)",
+  } : {
+    panelBg: "linear-gradient(135deg, hsl(175 55% 22%) 0%, hsl(175 45% 16%) 40%, hsl(200 30% 12%) 100%)",
+    accent: "hsl(43 80% 55%)",
+    accentLight: "hsl(43 80% 65%)",
+    accentGlow: "rgba(218, 165, 32, 0.3)",
+    accentGlowFaint: "rgba(218, 165, 32, 0.15)",
+    orb1: "hsl(43 80% 55%)",
+    orb2: "hsl(175 55% 45%)",
+    orb3: "hsl(43 60% 60%)",
+  };
 
   useEffect(() => {
     if (mounted) return;
@@ -124,8 +147,8 @@ export default function LoginPage() {
           50% { transform: translate(20px, -15px) rotate(3deg); }
         }
         @keyframes loginPulse {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(218, 165, 32, 0.3); }
-          50% { box-shadow: 0 0 20px 6px rgba(218, 165, 32, 0.15); }
+          0%, 100% { box-shadow: 0 0 0 0 ${colors.accentGlow}; }
+          50% { box-shadow: 0 0 20px 6px ${colors.accentGlowFaint}; }
         }
         @keyframes loginSlideUp {
           from { opacity: 0; transform: translateY(24px); }
@@ -144,7 +167,7 @@ export default function LoginPage() {
       `}</style>
 
       <div className="hidden lg:flex lg:w-[55%] relative overflow-hidden" style={{
-        background: "linear-gradient(135deg, hsl(175 55% 22%) 0%, hsl(175 45% 16%) 40%, hsl(200 30% 12%) 100%)"
+        background: colors.panelBg,
       }}>
         <div className="absolute inset-0 opacity-[0.04]" style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
@@ -157,7 +180,7 @@ export default function LoginPage() {
             height: "400px",
             top: "-80px",
             right: "-60px",
-            background: "radial-gradient(circle, hsl(43 80% 55%) 0%, transparent 70%)",
+            background: `radial-gradient(circle, ${colors.orb1} 0%, transparent 70%)`,
             animation: "loginFloat1 20s ease-in-out infinite",
           }}
         />
@@ -168,7 +191,7 @@ export default function LoginPage() {
             height: "300px",
             bottom: "10%",
             left: "-40px",
-            background: "radial-gradient(circle, hsl(175 55% 45%) 0%, transparent 70%)",
+            background: `radial-gradient(circle, ${colors.orb2} 0%, transparent 70%)`,
             animation: "loginFloat2 25s ease-in-out infinite",
           }}
         />
@@ -179,7 +202,7 @@ export default function LoginPage() {
             height: "200px",
             top: "40%",
             right: "20%",
-            background: "radial-gradient(circle, hsl(43 60% 60%) 0%, transparent 70%)",
+            background: `radial-gradient(circle, ${colors.orb3} 0%, transparent 70%)`,
             animation: "loginFloat3 18s ease-in-out infinite",
           }}
         />
@@ -187,7 +210,9 @@ export default function LoginPage() {
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{
-              background: "linear-gradient(135deg, hsl(43 80% 55%) 0%, hsl(33 75% 50%) 100%)",
+              background: isScandinavian
+                ? "linear-gradient(135deg, hsl(210 45% 52%) 0%, hsl(215 40% 45%) 100%)"
+                : "linear-gradient(135deg, hsl(43 80% 55%) 0%, hsl(33 75% 50%) 100%)",
               animation: "loginPulse 3s ease-in-out infinite",
             }}>
               <Globe className="w-5 h-5 text-white" />
@@ -203,9 +228,9 @@ export default function LoginPage() {
           }}>
             <h2 className="text-4xl font-extrabold text-white leading-tight tracking-tight">
               {isGhanaMode() ? (
-                <>Ghana<br /><span style={{ color: "hsl(43 80% 65%)" }}>Credit Registry</span></>
+                <>Ghana<br /><span style={{ color: colors.accentLight }}>Credit Registry</span></>
               ) : (
-                <>Unified Pan-African<br /><span style={{ color: "hsl(43 80% 65%)" }}>Credit Infrastructure</span></>
+                <>Unified Pan-African<br /><span style={{ color: colors.accentLight }}>Credit Infrastructure</span></>
               )}
             </h2>
             <p className="text-white/60 mt-4 text-base leading-relaxed">
