@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -12,7 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Users, Building2, Plus, Pencil, Trash2, Search, Loader2,
-  UserCircle, Shield, Mail, ChevronRight, Sparkles, MapPin,
+  UserCircle, Shield, Mail, ChevronRight, ChevronDown, Sparkles, MapPin,
+  Phone, Globe, Calendar, Crown, MapPinned, ExternalLink,
 } from "lucide-react";
 import type { User, Organization } from "@shared/schema";
 import { getSupportedCountries } from "@/lib/country-mode";
@@ -506,6 +507,7 @@ export function CommandCenterUsersTab() {
   const [editOrg, setEditOrg] = useState<Organization | null>(null);
   const [editOrgOpen, setEditOrgOpen] = useState(false);
   const [deleteOrg, setDeleteOrg] = useState<Organization | null>(null);
+  const [expandedOrgId, setExpandedOrgId] = useState<string | null>(null);
   const countries = getSupportedCountries();
 
   const { data: users = [], isLoading: usersLoading } = useQuery<User[]>({ queryKey: ["/api/users"] });
@@ -762,6 +764,7 @@ export function CommandCenterUsersTab() {
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b border-border/30">
+                      <th className="w-8 p-3"></th>
                       <th className="text-left p-3 text-muted-foreground font-medium">Organization</th>
                       <th className="text-center p-3 text-muted-foreground font-medium">Type</th>
                       <th className="text-left p-3 text-muted-foreground font-medium">Country</th>
@@ -772,55 +775,170 @@ export function CommandCenterUsersTab() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredOrgs.map((o) => (
-                      <tr key={o.id} className="border-b border-border/20 hover:bg-accent" data-testid={`row-cc-org-${o.id}`}>
-                        <td className="p-3">
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-full bg-muted-foreground flex items-center justify-center">
-                              <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
-                            </div>
-                            <div>
-                              <p className="text-xs font-medium text-foreground">{o.name}</p>
-                              <p className="text-[10px] text-muted-foreground">{o.contactEmail || "—"}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-3 text-center"><OrgTypeBadge type={o.type} /></td>
-                        <td className="p-3 text-muted-foreground">
-                          <div className="flex items-center gap-1.5">
-                            <MapPin className="w-3 h-3 text-muted-foreground" />
-                            {o.country || "—"}
-                          </div>
-                        </td>
-                        <td className="p-3 text-center"><StatusBadge status={o.status} /></td>
-                        <td className="p-3 text-center text-muted-foreground">{o.userCount ?? "—"}</td>
-                        <td className="p-3 text-center">
-                          <Badge variant="outline" className={`text-[9px] h-5 capitalize ${
-                            o.subscriptionTier === "enterprise" ? "border-purple-500/30 text-purple-400 bg-purple-500/10" :
-                            o.subscriptionTier === "professional" ? "border-blue-500/30 text-blue-400 bg-blue-500/10" :
-                            "border-border text-muted-foreground bg-muted"
-                          }`}>{o.subscriptionTier}</Badge>
-                        </td>
-                        <td className="p-3 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <button
-                              onClick={() => { setEditOrg(o); setEditOrgOpen(true); }}
-                              className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-                              data-testid={`button-cc-edit-org-${o.id}`}
-                            >
-                              <Pencil className="w-3 h-3" />
-                            </button>
-                            <button
-                              onClick={() => setDeleteOrg(o)}
-                              className="p-1.5 rounded-md hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors"
-                              data-testid={`button-cc-delete-org-${o.id}`}
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                    {filteredOrgs.map((o) => {
+                      const isExpanded = expandedOrgId === o.id;
+                      const orgUsers = users.filter(u => u.organizationId === o.id);
+                      return (
+                        <React.Fragment key={o.id}>
+                          <tr
+                            className="border-b border-border/20 hover:bg-accent cursor-pointer"
+                            data-testid={`row-cc-org-${o.id}`}
+                            onClick={() => setExpandedOrgId(isExpanded ? null : o.id)}
+                          >
+                            <td className="p-3">
+                              <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
+                            </td>
+                            <td className="p-3">
+                              <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
+                                  <Building2 className="w-3.5 h-3.5 text-primary" />
+                                </div>
+                                <div>
+                                  <p className="text-xs font-medium text-foreground">{o.name}</p>
+                                  <p className="text-[10px] text-muted-foreground">{o.contactEmail || "—"}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-3 text-center"><OrgTypeBadge type={o.type} /></td>
+                            <td className="p-3 text-muted-foreground">
+                              <div className="flex items-center gap-1.5">
+                                <MapPin className="w-3 h-3 text-muted-foreground" />
+                                {o.country || "—"}
+                              </div>
+                            </td>
+                            <td className="p-3 text-center"><StatusBadge status={o.status} /></td>
+                            <td className="p-3 text-center text-muted-foreground">{o.userCount ?? "—"}</td>
+                            <td className="p-3 text-center">
+                              <Badge variant="outline" className={`text-[9px] h-5 capitalize ${
+                                o.subscriptionTier === "enterprise" ? "border-purple-500/30 text-purple-400 bg-purple-500/10" :
+                                o.subscriptionTier === "professional" ? "border-blue-500/30 text-blue-400 bg-blue-500/10" :
+                                "border-border text-muted-foreground bg-muted"
+                              }`}>{o.subscriptionTier}</Badge>
+                            </td>
+                            <td className="p-3 text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setEditOrg(o); setEditOrgOpen(true); }}
+                                  className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                                  data-testid={`button-cc-edit-org-${o.id}`}
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setDeleteOrg(o); }}
+                                  className="p-1.5 rounded-md hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors"
+                                  data-testid={`button-cc-delete-org-${o.id}`}
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                          {isExpanded && (
+                            <tr className="bg-muted/30" data-testid={`row-cc-org-detail-${o.id}`}>
+                              <td colSpan={8} className="p-0">
+                                <div className="px-6 py-4 space-y-3">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <Building2 className="w-4 h-4 text-primary" />
+                                    <span className="text-sm font-semibold text-foreground">{o.name}</span>
+                                    <OrgTypeBadge type={o.type} />
+                                    <StatusBadge status={o.status} />
+                                  </div>
+                                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                    <div className="rounded-lg border p-2.5 bg-background">
+                                      <div className="flex items-center gap-1.5 mb-1">
+                                        <Mail className="w-3 h-3 text-muted-foreground" />
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Email</p>
+                                      </div>
+                                      <p className="text-xs font-medium truncate">{o.contactEmail || "—"}</p>
+                                    </div>
+                                    <div className="rounded-lg border p-2.5 bg-background">
+                                      <div className="flex items-center gap-1.5 mb-1">
+                                        <Phone className="w-3 h-3 text-muted-foreground" />
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Phone</p>
+                                      </div>
+                                      <p className="text-xs font-medium">{o.contactPhone || "—"}</p>
+                                    </div>
+                                    <div className="rounded-lg border p-2.5 bg-background">
+                                      <div className="flex items-center gap-1.5 mb-1">
+                                        <MapPinned className="w-3 h-3 text-muted-foreground" />
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Address</p>
+                                      </div>
+                                      <p className="text-xs font-medium truncate">{o.address || "—"}</p>
+                                    </div>
+                                    <div className="rounded-lg border p-2.5 bg-background">
+                                      <div className="flex items-center gap-1.5 mb-1">
+                                        <Globe className="w-3 h-3 text-muted-foreground" />
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Website</p>
+                                      </div>
+                                      {o.website ? (
+                                        <a href={o.website} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-primary hover:underline flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                          {o.website.replace(/^https?:\/\//, "")} <ExternalLink className="w-2.5 h-2.5" />
+                                        </a>
+                                      ) : (
+                                        <p className="text-xs font-medium">—</p>
+                                      )}
+                                    </div>
+                                    <div className="rounded-lg border p-2.5 bg-background">
+                                      <div className="flex items-center gap-1.5 mb-1">
+                                        <Crown className="w-3 h-3 text-muted-foreground" />
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Subscription</p>
+                                      </div>
+                                      <Badge variant="outline" className={`text-[9px] capitalize ${
+                                        o.subscriptionTier === "enterprise" ? "border-purple-500/30 text-purple-500 bg-purple-500/10" :
+                                        o.subscriptionTier === "professional" ? "border-blue-500/30 text-blue-500 bg-blue-500/10" :
+                                        "border-border text-muted-foreground bg-muted"
+                                      }`}>{o.subscriptionTier}</Badge>
+                                    </div>
+                                    <div className="rounded-lg border p-2.5 bg-background">
+                                      <div className="flex items-center gap-1.5 mb-1">
+                                        <Users className="w-3 h-3 text-muted-foreground" />
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Max Users</p>
+                                      </div>
+                                      <p className="text-xs font-bold">{o.maxUsers ?? "Unlimited"}</p>
+                                    </div>
+                                    <div className="rounded-lg border p-2.5 bg-background">
+                                      <div className="flex items-center gap-1.5 mb-1">
+                                        <MapPin className="w-3 h-3 text-muted-foreground" />
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Country</p>
+                                      </div>
+                                      <p className="text-xs font-medium">{o.country || "—"}</p>
+                                    </div>
+                                    <div className="rounded-lg border p-2.5 bg-background">
+                                      <div className="flex items-center gap-1.5 mb-1">
+                                        <Calendar className="w-3 h-3 text-muted-foreground" />
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Onboarded</p>
+                                      </div>
+                                      <p className="text-xs font-medium">{o.createdAt ? new Date(o.createdAt).toLocaleDateString("en-GB") : "—"}</p>
+                                    </div>
+                                  </div>
+                                  {orgUsers.length > 0 && (
+                                    <div>
+                                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold mb-2 flex items-center gap-1.5">
+                                        <Users className="w-3 h-3" /> Assigned Users ({orgUsers.length})
+                                      </p>
+                                      <div className="flex flex-wrap gap-2">
+                                        {orgUsers.map(u => (
+                                          <div key={u.id} className="flex items-center gap-2 rounded-lg border bg-background px-2.5 py-1.5">
+                                            <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center">
+                                              <span className="text-[8px] font-bold text-primary">{u.fullName.split(" ").map(n => n[0]).join("").slice(0, 2)}</span>
+                                            </div>
+                                            <div>
+                                              <p className="text-[10px] font-medium text-foreground leading-tight">{u.fullName}</p>
+                                              <p className="text-[9px] text-muted-foreground">{u.role}</p>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
