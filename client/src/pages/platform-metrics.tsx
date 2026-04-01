@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useBrandColors } from "@/hooks/use-brand-colors";
 import {
   DollarSign, TrendingUp, Users, Building2, Activity,
   Server, Clock, Zap, BarChart3, PieChart, RefreshCw, Target, ArrowUpRight,
@@ -13,7 +14,6 @@ import {
   BarChart, Bar, PieChart as RePieChart, Pie, Cell, Legend,
 } from "recharts";
 
-const COLORS = ["hsl(175, 55%, 28%)", "hsl(175, 55%, 45%)", "hsl(175, 55%, 62%)", "hsl(200, 55%, 45%)"];
 
 function MetricCard({ title, value, subtitle, icon: Icon, trend, testId }: {
   title: string; value: string | number; subtitle: string; icon: any; trend?: string; testId?: string;
@@ -54,6 +54,8 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function PlatformMetricsPage() {
+  const brandColors = useBrandColors();
+  const COLORS = [brandColors.accent, brandColors.accentLight, brandColors.chartSecondary, brandColors.chartAccent];
   const { data: metrics, isLoading, isError, refetch } = useQuery<any>({
     queryKey: ["/api/admin/platform-metrics"],
     refetchInterval: 60000,
@@ -291,7 +293,7 @@ export default function PlatformMetricsPage() {
                   <XAxis dataKey="month" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                   <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
                   <Tooltip formatter={(v: number) => [`$${v.toLocaleString()}`, ""]} contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", color: "hsl(var(--foreground))", borderRadius: 8 }} />
-                  <Area type="monotone" dataKey="mrr" stroke="hsl(175, 55%, 28%)" fill="hsl(175, 55%, 28%)" fillOpacity={0.15} name="Projected MRR" />
+                  <Area type="monotone" dataKey="mrr" stroke={brandColors.accent} fill={brandColors.accent} fillOpacity={0.15} name="Projected MRR" />
                 </AreaChart>
               </ResponsiveContainer>
               </div>
@@ -381,7 +383,7 @@ export default function PlatformMetricsPage() {
                 <XAxis dataKey="hour" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} interval={3} />
                 <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                 <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", color: "hsl(var(--foreground))", borderRadius: 8 }} />
-                <Area type="monotone" dataKey="requests" stroke="hsl(175, 55%, 28%)" fill="hsl(175, 55%, 28%)" fillOpacity={0.2} />
+                <Area type="monotone" dataKey="requests" stroke={brandColors.accent} fill={brandColors.accent} fillOpacity={0.2} />
               </AreaChart>
             </ResponsiveContainer>
             </div>
@@ -402,7 +404,7 @@ export default function PlatformMetricsPage() {
                 <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                 <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                 <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", color: "hsl(var(--foreground))", borderRadius: 8 }} />
-                <Bar dataKey="requests" fill="hsl(175, 55%, 35%)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="requests" fill={brandColors.accentLight} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
             </div>

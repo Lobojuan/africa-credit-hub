@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CreditScoreGauge } from "@/components/credit-score-gauge";
 import { useAuth } from "@/hooks/use-auth";
+import { useBrandColors } from "@/hooks/use-brand-colors";
 import { useLocation } from "wouter";
 import {
   Calculator,
@@ -27,8 +28,8 @@ import {
 
 const SCORE_BANDS = [
   { min: 750, max: 850, label: "Excellent", color: "hsl(142 55% 40%)", bgClass: "bg-emerald-100 dark:bg-emerald-900 dark:bg-emerald-950/40", textClass: "text-emerald-700 dark:text-emerald-300 dark:text-emerald-400", description: "Outstanding credit profile. Borrowers in this range demonstrate exceptional payment history, low utilization, and diversified accounts." },
-  { min: 670, max: 749, label: "Good", color: "hsl(175 55% 28%)", bgClass: "bg-teal-100 dark:bg-teal-900 dark:bg-teal-950/40", textClass: "text-teal-700 dark:text-teal-300 dark:text-teal-400", description: "Strong credit profile. Minor issues may exist but overall responsible credit behavior is evident." },
-  { min: 580, max: 669, label: "Fair", color: "hsl(43 80% 55%)", bgClass: "bg-amber-100 dark:bg-amber-900 dark:bg-amber-950/40", textClass: "text-amber-700 dark:text-amber-300 dark:text-amber-400", description: "Moderate credit risk. Some late payments or high utilization may be present. Room for improvement." },
+  { min: 670, max: 749, label: "Good", color: "brand-accent", bgClass: "bg-teal-100 dark:bg-teal-900 dark:bg-teal-950/40", textClass: "text-teal-700 dark:text-teal-300 dark:text-teal-400", description: "Strong credit profile. Minor issues may exist but overall responsible credit behavior is evident." },
+  { min: 580, max: 669, label: "Fair", color: "brand-secondary", bgClass: "bg-amber-100 dark:bg-amber-900 dark:bg-amber-950/40", textClass: "text-amber-700 dark:text-amber-300 dark:text-amber-400", description: "Moderate credit risk. Some late payments or high utilization may be present. Room for improvement." },
   { min: 450, max: 579, label: "Poor", color: "hsl(14 70% 50%)", bgClass: "bg-orange-100 dark:bg-orange-900 dark:bg-orange-950/40", textClass: "text-orange-700 dark:text-orange-300 dark:text-orange-400", description: "Below-average credit profile. Multiple negative factors detected including delinquencies or defaults." },
   { min: 300, max: 449, label: "Very Poor", color: "hsl(0 72% 42%)", bgClass: "bg-red-100 dark:bg-red-900 dark:bg-red-950/40", textClass: "text-red-700 dark:text-red-300 dark:text-red-400", description: "Significant credit risk. Severe delinquencies, write-offs, or active court judgments are likely present." },
 ];
@@ -194,6 +195,9 @@ interface ScoreBandPerformance {
 
 function ScoreBandPerformanceTable() {
   const { t } = useTranslation();
+  const brandColors = useBrandColors();
+  const resolveBandColor = (color: string) =>
+    color === "brand-accent" ? brandColors.accent : color === "brand-secondary" ? brandColors.secondary : color;
   const { data, isLoading } = useQuery<ScoreBandPerformance[]>({
     queryKey: ["/api/score-band-performance"],
   });
@@ -215,7 +219,7 @@ function ScoreBandPerformanceTable() {
     <Card data-testid="card-score-band-performance">
       <CardContent className="p-6 space-y-5">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(175 55% 28% / 0.15), hsl(43 80% 55% / 0.1))" }}>
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: brandColors.iconGradientSubtle }}>
             <Table2 className="w-4 h-4 text-foreground/70" />
           </div>
           <h2 className="text-base font-semibold" data-testid="text-performance-heading">
@@ -245,7 +249,7 @@ function ScoreBandPerformanceTable() {
                   <tr key={row.band} className="border-b border-border/50 hover:bg-muted/30" data-testid={`row-band-${row.band.toLowerCase().replace(/\s/g, "-")}`}>
                     <td className="py-2.5 px-3">
                       <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: bandInfo?.color }} />
+                        <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: bandInfo?.color ? resolveBandColor(bandInfo.color) : undefined }} />
                         <span className="font-medium">{row.band}</span>
                       </div>
                     </td>
@@ -299,6 +303,9 @@ function ScoreBandPerformanceTable() {
 export default function CreditScoreMethodologyPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const brandColors = useBrandColors();
+  const resolveBandColor = (color: string) =>
+    color === "brand-accent" ? brandColors.accent : color === "brand-secondary" ? brandColors.secondary : color;
   const [, setLocation] = useLocation();
 
   const allowedRoles = ["admin", "lender", "super_admin"];
@@ -373,7 +380,7 @@ export default function CreditScoreMethodologyPage() {
             <Card data-testid="card-scoring-factors">
               <CardContent className="p-6 space-y-5">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(175 55% 28% / 0.15), hsl(43 80% 55% / 0.1))" }}>
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: brandColors.iconGradientSubtle }}>
                     <Calculator className="w-4 h-4 text-foreground/70" />
                   </div>
                   <h2 className="text-base font-semibold" data-testid="text-factors-heading">
@@ -390,7 +397,7 @@ export default function CreditScoreMethodologyPage() {
                 <div className="space-y-3">
                   {SCORING_FACTORS.map((factor) => (
                     <div key={factor.key} className="flex items-start gap-3" data-testid={`factor-${factor.key}`}>
-                      <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 mt-0.5" style={{ background: "hsl(175 55% 28% / 0.3)" }}>
+                      <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 mt-0.5" style={{ background: brandColors.accentMuted }}>
                         <factor.icon className="w-3.5 h-3.5 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -407,7 +414,7 @@ export default function CreditScoreMethodologyPage() {
           <Card data-testid="card-score-bands">
             <CardContent className="p-6 space-y-5">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(175 55% 28% / 0.15), hsl(43 80% 55% / 0.1))" }}>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: brandColors.iconGradientSubtle }}>
                   <BarChart3 className="w-4 h-4 text-foreground/70" />
                 </div>
                 <h2 className="text-base font-semibold" data-testid="text-bands-heading">
@@ -419,7 +426,7 @@ export default function CreditScoreMethodologyPage() {
                   <div key={band.label} className={`rounded-md p-3 ${band.bgClass}`} data-testid={`band-${band.label.toLowerCase().replace(/\s/g, "-")}`}>
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                       <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: band.color }} />
+                        <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: resolveBandColor(band.color) }} />
                         <span className={`text-sm font-bold ${band.textClass}`}>{band.label}</span>
                       </div>
                       <Badge variant="outline" className="text-[10px] font-mono tabular-nums">
@@ -436,7 +443,7 @@ export default function CreditScoreMethodologyPage() {
                     key={band.label}
                     className="h-full"
                     style={{
-                      backgroundColor: band.color,
+                      backgroundColor: resolveBandColor(band.color),
                       width: `${((band.max - band.min + 1) / 551) * 100}%`,
                     }}
                     title={`${band.label}: ${band.min}-${band.max}`}
@@ -460,7 +467,7 @@ export default function CreditScoreMethodologyPage() {
             <Card data-testid="card-reason-codes">
               <CardContent className="p-6 space-y-5">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(175 55% 28% / 0.15), hsl(43 80% 55% / 0.1))" }}>
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: brandColors.iconGradientSubtle }}>
                     <BookOpen className="w-4 h-4 text-foreground/70" />
                   </div>
                   <h2 className="text-base font-semibold" data-testid="text-reason-codes-heading">
@@ -511,7 +518,7 @@ export default function CreditScoreMethodologyPage() {
             <CardContent className="p-6 space-y-5">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(175 55% 28% / 0.15), hsl(43 80% 55% / 0.1))" }}>
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: brandColors.iconGradientSubtle }}>
                     <Scale className="w-4 h-4 text-foreground/70" />
                   </div>
                   <h2 className="text-base font-semibold" data-testid="text-simulator-heading">
@@ -664,7 +671,7 @@ export default function CreditScoreMethodologyPage() {
           <Card data-testid="card-interpretation-guide">
             <CardContent className="p-6 space-y-4">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(175 55% 28% / 0.15), hsl(43 80% 55% / 0.1))" }}>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: brandColors.iconGradientSubtle }}>
                   <FileText className="w-4 h-4 text-foreground/70" />
                 </div>
                 <h2 className="text-base font-semibold" data-testid="text-guide-heading">

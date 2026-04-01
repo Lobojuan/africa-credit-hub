@@ -20,6 +20,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useTheme } from "@/components/theme-provider";
+import { useBrandColors, withAlpha } from "@/hooks/use-brand-colors";
 import { useTranslation } from "react-i18next";
 import heroImage from "@assets/investor-hero.png";
 import dashboardImage from "@assets/app-dashboard.png";
@@ -114,7 +115,7 @@ const PROBLEM_STATEMENTS = [
 const PLATFORM_MODULES = [
   {
     category: "Credit Data Management",
-    color: "hsl(175 55% 28%)",
+    color: "brand-accent",
     modules: [
       {
         icon: Users,
@@ -206,7 +207,7 @@ const PLATFORM_MODULES = [
   },
   {
     category: "Operations & Integration",
-    color: "hsl(43 65% 45%)",
+    color: "brand-secondary",
     modules: [
       {
         icon: Upload,
@@ -459,6 +460,9 @@ export default function InvestorLandingPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { t } = useTranslation();
   const { theme, toggleTheme } = useTheme();
+  const brandColors = useBrandColors();
+  const resolveModuleColor = (color: string) =>
+    color === "brand-accent" ? brandColors.accent : color === "brand-secondary" ? brandColors.secondary : color;
   const previousTheme = useRef<string | null>(null);
 
   useEffect(() => {
@@ -529,7 +533,7 @@ export default function InvestorLandingPage() {
           <div className="flex items-center gap-3">
             <div
               className="w-9 h-9 rounded-lg flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg, hsl(175 55% 28%), hsl(175 55% 22%))" }}
+              style={{ background: brandColors.headerGradient }}
             >
               <Shield className="w-5 h-5 text-white" />
             </div>
@@ -573,13 +577,12 @@ export default function InvestorLandingPage() {
           <div
             className="absolute top-0 left-0 w-full h-full opacity-[0.03]"
             style={{
-              backgroundImage: `radial-gradient(circle at 25% 25%, hsl(175 55% 28%) 1px, transparent 1px),
-                                radial-gradient(circle at 75% 75%, hsl(43 80% 55%) 1px, transparent 1px)`,
+              backgroundImage: brandColors.heroDotPattern,
               backgroundSize: "60px 60px",
             }}
           />
-          <div className="absolute top-1/4 -left-32 w-96 h-96 rounded-full opacity-10 blur-3xl" style={{ background: "hsl(175 55% 28%)" }} />
-          <div className="absolute bottom-1/4 -right-32 w-96 h-96 rounded-full opacity-10 blur-3xl" style={{ background: "hsl(43 80% 55%)" }} />
+          <div className="absolute top-1/4 -left-32 w-96 h-96 rounded-full opacity-10 blur-3xl" style={{ background: brandColors.glowA }} />
+          <div className="absolute bottom-1/4 -right-32 w-96 h-96 rounded-full opacity-10 blur-3xl" style={{ background: brandColors.glowB }} />
           <div className="absolute top-2/3 left-1/2 w-64 h-64 rounded-full opacity-5 blur-3xl" style={{ background: "hsl(200 60% 40%)" }} />
         </div>
 
@@ -595,7 +598,7 @@ export default function InvestorLandingPage() {
                 <span className="block">{t('landing.heroTitle1')}</span>
                 <span
                   className="block bg-clip-text text-transparent"
-                  style={{ backgroundImage: "linear-gradient(135deg, hsl(175 55% 32%), hsl(175 55% 22%), hsl(43 80% 50%))" }}
+                  style={{ backgroundImage: brandColors.textGradient }}
                 >
                   {t('landing.heroTitle2')}
                 </span>
@@ -768,7 +771,7 @@ export default function InvestorLandingPage() {
 
       <section className="py-20 sm:py-28 bg-muted/30 relative overflow-hidden">
         <div className="absolute inset-0 opacity-[0.03]" style={{
-          backgroundImage: `radial-gradient(circle at 20% 50%, hsl(175 55% 40%) 0%, transparent 50%), radial-gradient(circle at 80% 50%, hsl(43 80% 50%) 0%, transparent 50%)`,
+          backgroundImage: `radial-gradient(circle at 20% 50%, ${brandColors.accentLight} 0%, transparent 50%), radial-gradient(circle at 80% 50%, ${brandColors.secondary} 0%, transparent 50%)`,
         }} />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="text-center mb-14">
@@ -960,7 +963,7 @@ export default function InvestorLandingPage() {
                     ? "text-white shadow-md"
                     : "bg-muted text-muted-foreground hover:bg-muted/80"
                 }`}
-                style={activeModuleCategory === i ? { background: cat.color } : {}}
+                style={activeModuleCategory === i ? { background: resolveModuleColor(cat.color) } : {}}
                 data-testid={`tab-module-${i}`}
               >
                 {cat.category}
@@ -975,7 +978,7 @@ export default function InvestorLandingPage() {
                   <div className="flex items-start gap-4">
                     <div
                       className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-                      style={{ background: `linear-gradient(135deg, ${PLATFORM_MODULES[activeModuleCategory].color}, ${PLATFORM_MODULES[activeModuleCategory].color}dd)` }}
+                      style={{ background: `linear-gradient(135deg, ${resolveModuleColor(PLATFORM_MODULES[activeModuleCategory].color)}, ${withAlpha(resolveModuleColor(PLATFORM_MODULES[activeModuleCategory].color), 0.87)})` }}
                     >
                       <mod.icon className="w-5 h-5 text-white" />
                     </div>
@@ -1062,7 +1065,7 @@ export default function InvestorLandingPage() {
                   <div className="flex items-center gap-3 mb-4">
                     <div
                       className="w-11 h-11 rounded-lg flex items-center justify-center"
-                      style={{ background: "linear-gradient(135deg, hsl(175 55% 28%), hsl(175 45% 22%))" }}
+                      style={{ background: brandColors.headerGradient }}
                     >
                       <uc.icon className="w-5 h-5 text-white" />
                     </div>
@@ -1107,7 +1110,7 @@ export default function InvestorLandingPage() {
               >
                 <div
                   className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-1 bg-clip-text text-transparent"
-                  style={{ backgroundImage: "linear-gradient(135deg, hsl(175 55% 32%), hsl(43 80% 50%))" }}
+                  style={{ backgroundImage: brandColors.textGradient }}
                 >
                   {adv.metric}
                 </div>
@@ -1311,7 +1314,7 @@ export default function InvestorLandingPage() {
                 <CardContent className="p-5 sm:p-6 text-center">
                   <div
                     className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-4 text-white font-bold"
-                    style={{ background: "linear-gradient(135deg, hsl(175 55% 28%), hsl(175 45% 22%))" }}
+                    style={{ background: brandColors.headerGradient }}
                   >
                     {item.step}
                   </div>
@@ -1549,7 +1552,7 @@ export default function InvestorLandingPage() {
               <div className="flex items-center gap-2.5">
                 <div
                   className="w-7 h-7 rounded-md flex items-center justify-center"
-                  style={{ background: "linear-gradient(135deg, hsl(175 55% 28%), hsl(175 55% 22%))" }}
+                  style={{ background: brandColors.headerGradient }}
                 >
                   <Shield className="w-4 h-4 text-white" />
                 </div>

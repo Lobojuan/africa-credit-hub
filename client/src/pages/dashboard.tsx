@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
+import { useBrandColors } from "@/hooks/use-brand-colors";
 import {
   Users, CreditCard, Search, AlertTriangle, DollarSign, ShieldAlert,
   CheckSquare, AlertCircle, TrendingUp, Activity, X, ExternalLink,
@@ -536,6 +537,7 @@ export default function Dashboard() {
   const { t } = useTranslation();
   const [, navigate] = useLocation();
   const { user } = useAuth();
+  const brandColors = useBrandColors();
   const greeting = useMemo(() => getGreeting(), []);
   const [selectedDetail, setSelectedDetail] = useState<DetailType>(null);
   const [detectedCurrency] = useState(() => detectLocalCurrency());
@@ -910,7 +912,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {DetailIcon && (
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(175 55% 28%) 0%, hsl(175 45% 22%) 100%)" }}>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: brandColors.headerGradient }}>
                     <DetailIcon className="w-5 h-5 text-white" />
                   </div>
                 )}

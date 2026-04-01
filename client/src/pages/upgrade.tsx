@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useBrandColors } from "@/hooks/use-brand-colors";
 
 const PLANS = [
   {
@@ -127,6 +128,7 @@ const BANK_DETAILS = {
 export default function UpgradePage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const brandColors = useBrandColors();
 
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
@@ -215,7 +217,7 @@ export default function UpgradePage() {
       <nav className="border-b border-border/50 bg-background/95 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
-            <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(175 55% 28%), hsl(175 55% 22%))" }}>
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: brandColors.headerGradient }}>
               <Shield className="w-5 h-5 text-white" />
             </div>
             <div>

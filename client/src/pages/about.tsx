@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useBrandColors } from "@/hooks/use-brand-colors";
 import {
   Shield,
   Globe,
@@ -26,19 +27,21 @@ import {
 import type { LucideIcon } from "lucide-react";
 
 function StatBlock({ value, label }: { value: string; label: string }) {
+  const brandColors = useBrandColors();
   return (
     <div className="text-center px-3">
-      <p className="text-3xl sm:text-4xl font-black tracking-tight" style={{ background: "linear-gradient(135deg, hsl(175 55% 32%), hsl(43 80% 50%))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{value}</p>
+      <p className="text-3xl sm:text-4xl font-black tracking-tight" style={{ background: brandColors.textGradient, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{value}</p>
       <p className="text-[11px] text-muted-foreground uppercase tracking-[0.12em] mt-1 font-medium">{label}</p>
     </div>
   );
 }
 
 function ValueCard({ icon: Icon, title, description }: { icon: LucideIcon; title: string; description: string }) {
+  const brandColors = useBrandColors();
   return (
     <Card className="group hover-elevate border-border/50 transition-all duration-300" data-testid={`card-value-${title.toLowerCase().replace(/\s/g, "-")}`}>
       <CardContent className="p-6">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background: "linear-gradient(135deg, hsl(175 55% 28% / 0.15), hsl(43 80% 55% / 0.1))" }}>
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background: brandColors.iconGradientSubtle }}>
           <Icon className="w-5 h-5 text-primary" />
         </div>
         <h4 className="font-semibold text-sm mb-2">{title}</h4>
@@ -49,10 +52,11 @@ function ValueCard({ icon: Icon, title, description }: { icon: LucideIcon; title
 }
 
 function TimelineItem({ year, title, description }: { year: string; title: string; description: string }) {
+  const brandColors = useBrandColors();
   return (
     <div className="flex gap-4" data-testid={`timeline-${year}`}>
       <div className="flex flex-col items-center">
-        <div className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style={{ background: "linear-gradient(135deg, hsl(175 55% 28%), hsl(175 55% 22%))" }}>
+        <div className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style={{ background: brandColors.headerGradient }}>
           {year.slice(-2)}
         </div>
         <div className="w-px flex-1 bg-border mt-2" />
@@ -67,9 +71,10 @@ function TimelineItem({ year, title, description }: { year: string; title: strin
 }
 
 function TeamCard({ name, role, icon: Icon }: { name: string; role: string; icon: LucideIcon }) {
+  const brandColors = useBrandColors();
   return (
     <div className="flex items-center gap-3 p-3 rounded-xl border border-border/50 bg-card" data-testid={`team-${role.toLowerCase().replace(/\s/g, "-")}`}>
-      <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: "linear-gradient(135deg, hsl(175 55% 28% / 0.2), hsl(43 80% 55% / 0.15))" }}>
+      <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: brandColors.iconGradientSubtle }}>
         <Icon className="w-4 h-4 text-primary" />
       </div>
       <div className="min-w-0">
@@ -82,18 +87,19 @@ function TeamCard({ name, role, icon: Icon }: { name: string; role: string; icon
 
 export default function AboutPage() {
   const { t } = useTranslation();
+  const brandColors = useBrandColors();
 
   return (
     <div className="min-h-screen pb-16">
-      <div className="relative overflow-hidden rounded-2xl mx-4 mt-4 mb-8" style={{ background: "linear-gradient(135deg, hsl(175 55% 18%) 0%, hsl(175 55% 12%) 40%, hsl(200 30% 10%) 100%)" }}>
+      <div className="relative overflow-hidden rounded-2xl mx-4 mt-4 mb-8" style={{ background: brandColors.heroGradient }}>
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-full opacity-[0.04]" style={{ backgroundImage: "radial-gradient(circle at 25% 25%, hsl(175 55% 28%) 1px, transparent 1px), radial-gradient(circle at 75% 75%, hsl(43 80% 55%) 1px, transparent 1px)", backgroundSize: "50px 50px" }} />
-          <div className="absolute top-1/3 -left-20 w-72 h-72 rounded-full opacity-10 blur-3xl" style={{ background: "hsl(175 55% 28%)" }} />
-          <div className="absolute bottom-1/4 -right-20 w-72 h-72 rounded-full opacity-10 blur-3xl" style={{ background: "hsl(43 80% 55%)" }} />
+          <div className="absolute top-0 left-0 w-full h-full opacity-[0.04]" style={{ backgroundImage: brandColors.heroDotPattern, backgroundSize: "50px 50px" }} />
+          <div className="absolute top-1/3 -left-20 w-72 h-72 rounded-full opacity-10 blur-3xl" style={{ background: brandColors.glowA }} />
+          <div className="absolute bottom-1/4 -right-20 w-72 h-72 rounded-full opacity-10 blur-3xl" style={{ background: brandColors.glowB }} />
         </div>
 
         <div className="relative z-10 px-6 sm:px-10 py-12 sm:py-16 text-center">
-          <div className="w-16 h-16 rounded-2xl mx-auto mb-6 flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(43 80% 55%) 0%, hsl(33 75% 48%) 100%)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
+          <div className="w-16 h-16 rounded-2xl mx-auto mb-6 flex items-center justify-center" style={{ background: brandColors.iconGradient, boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
             <Shield className="w-8 h-8 text-white" />
           </div>
           <Badge className="mb-4 text-[10px] px-3 py-0.5 bg-card/10 text-white/80 border-white/10 hover:bg-card/10">
@@ -133,7 +139,7 @@ export default function AboutPage() {
             </Card>
             <Card className="border-border/50">
               <CardContent className="p-6">
-                <Lightbulb className="w-6 h-6 mb-3" style={{ color: "hsl(43 80% 55%)" }} />
+                <Lightbulb className="w-6 h-6 mb-3" style={{ color: brandColors.secondary }} />
                 <h3 className="font-semibold mb-2">Our Answer</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   The Cross-Jurisdictional Central Data Hub (CDH) v2.0 is the first SRS-compliant credit information sharing platform built for all 54 African countries. We unify credit data across borders, languages, and currencies — giving regulators oversight, lenders confidence, and borrowers fair access to capital.
@@ -153,7 +159,7 @@ export default function AboutPage() {
               <div className="grid md:grid-cols-2 gap-8">
                 <div>
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(43 80% 55%), hsl(33 75% 48%))" }}>
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: brandColors.iconGradient }}>
                       <Briefcase className="w-5 h-5 text-white" />
                     </div>
                     <div>
@@ -167,7 +173,7 @@ export default function AboutPage() {
                 </div>
                 <div>
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(175 55% 28%), hsl(175 55% 22%))" }}>
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: brandColors.headerGradient }}>
                       <Layers className="w-5 h-5 text-white" />
                     </div>
                     <div>
@@ -211,7 +217,7 @@ export default function AboutPage() {
           </div>
           <Card className="border-border/50 overflow-hidden">
             <CardContent className="p-0">
-              <div className="p-6 sm:p-8" style={{ background: "linear-gradient(135deg, hsl(175 55% 28% / 0.05), hsl(43 80% 55% / 0.03))" }}>
+              <div className="p-6 sm:p-8" style={{ background: brandColors.iconGradientSubtle }}>
                 <h3 className="font-bold mb-1">Cross-Jurisdictional Central Data Hub (CDH) v2.0</h3>
                 <p className="text-xs text-muted-foreground">Credit Registry System | Carlson Capital & Systems In Motion Limited</p>
               </div>
@@ -225,7 +231,7 @@ export default function AboutPage() {
                   { icon: Building2, title: "Multi-Tenant SaaS", desc: "Organization-scoped data isolation with self-registration, onboarding wizard, subscription billing, and platform administration." },
                 ].map((item) => (
                   <div key={item.title} className="flex gap-3" data-testid={`platform-${item.title.toLowerCase().replace(/\s/g, "-")}`}>
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5" style={{ background: "linear-gradient(135deg, hsl(175 55% 28% / 0.12), hsl(43 80% 55% / 0.08))" }}>
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5" style={{ background: brandColors.iconGradientSubtle }}>
                       <item.icon className="w-4 h-4 text-primary" />
                     </div>
                     <div>

@@ -20,7 +20,7 @@ The system employs a modern full-stack architecture built for scalability and co
 **UI/UX Decisions:**
 -   **Frontend**: React with TypeScript and Vite, styled using Tailwind CSS and shadcn/ui.
 -   **Internationalization**: Supports English, French, Portuguese, Arabic, and Swahili with RTL support.
--   **Theming**: Dark/light theme with a premium teal and gold palette, and a Scandinavian option.
+-   **Theming**: Dark/light theme with two visual style palettes (Pan-African teal/gold and Scandinavian blue/slate). Brand colors are centralized via `useBrandColors()` hook (`client/src/hooks/use-brand-colors.ts`) which provides theme-aware color values across all pages. The `withAlpha()` utility handles translucent variants safely. The `.scandinavian` CSS class on `document.documentElement` toggles CSS variable overrides for tokenized colors, while the hook handles inline style colors.
 -   **Responsiveness**: Mobile-first design with adaptive layouts and role-filtered navigation.
 -   **Interactive Elements**: Dashboards with drill-down, notifications, charts, an interactive SVG Africa map, and a circular SVG credit score gauge.
 -   **App Footer**: Persistent footer displaying company branding, leadership, location, pan-African coverage, and copyright.

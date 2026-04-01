@@ -3,9 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useBrandColors } from "@/hooks/use-brand-colors";
 
 export default function SignUpPage() {
   const { toast } = useToast();
+  const brandColors = useBrandColors();
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -156,7 +158,7 @@ export default function SignUpPage() {
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2.5 mb-3">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{
-              background: "linear-gradient(135deg, hsl(175 55% 35%) 0%, hsl(175 45% 25%) 100%)",
+              background: brandColors.headerGradientSubtle,
             }}>
               <svg viewBox="0 0 24 24" className="w-4.5 h-4.5" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />

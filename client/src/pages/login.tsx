@@ -10,7 +10,7 @@ import { useTranslation } from "react-i18next";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { isGhanaMode, getCountryConfig } from "@/lib/country-mode";
-import { useTheme } from "@/components/theme-provider";
+import { useBrandColors } from "@/hooks/use-brand-colors";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -26,27 +26,17 @@ export default function LoginPage() {
   const { login } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
-  const { visualStyle } = useTheme();
-  const isScandinavian = visualStyle === "scandinavian";
+  const brandColors = useBrandColors();
 
-  const colors = isScandinavian ? {
-    panelBg: "linear-gradient(135deg, hsl(210 35% 22%) 0%, hsl(215 30% 16%) 40%, hsl(220 25% 12%) 100%)",
-    accent: "hsl(210 45% 55%)",
-    accentLight: "hsl(210 45% 70%)",
-    accentGlow: "rgba(66, 135, 245, 0.3)",
-    accentGlowFaint: "rgba(66, 135, 245, 0.15)",
-    orb1: "hsl(210 50% 55%)",
-    orb2: "hsl(200 40% 50%)",
-    orb3: "hsl(220 40% 60%)",
-  } : {
-    panelBg: "linear-gradient(135deg, hsl(175 55% 22%) 0%, hsl(175 45% 16%) 40%, hsl(200 30% 12%) 100%)",
-    accent: "hsl(43 80% 55%)",
-    accentLight: "hsl(43 80% 65%)",
-    accentGlow: "rgba(218, 165, 32, 0.3)",
-    accentGlowFaint: "rgba(218, 165, 32, 0.15)",
-    orb1: "hsl(43 80% 55%)",
-    orb2: "hsl(175 55% 45%)",
-    orb3: "hsl(43 60% 60%)",
+  const colors = {
+    panelBg: brandColors.panelGradient,
+    accent: brandColors.secondary,
+    accentLight: brandColors.secondaryLight,
+    accentGlow: brandColors.accentGlow,
+    accentGlowFaint: brandColors.accentGlowFaint,
+    orb1: brandColors.glowB,
+    orb2: brandColors.glowA,
+    orb3: brandColors.chartAccent,
   };
 
   useEffect(() => {
@@ -210,9 +200,7 @@ export default function LoginPage() {
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{
-              background: isScandinavian
-                ? "linear-gradient(135deg, hsl(210 45% 52%) 0%, hsl(215 40% 45%) 100%)"
-                : "linear-gradient(135deg, hsl(43 80% 55%) 0%, hsl(33 75% 50%) 100%)",
+              background: brandColors.iconGradient,
               animation: "loginPulse 3s ease-in-out infinite",
             }}>
               <Globe className="w-5 h-5 text-white" />

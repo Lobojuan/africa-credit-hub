@@ -2,6 +2,7 @@ import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useBrandColors } from "@/hooks/use-brand-colors";
 import {
   Shield, Globe, ArrowRight, TrendingUp, CheckCircle2,
   Users, Building2, AlertTriangle, Target, MapPin,
@@ -143,13 +144,14 @@ const TRACTION_MILESTONES = [
 
 export default function MarketValidationPage() {
   const [, navigate] = useLocation();
+  const brandColors = useBrandColors();
 
   return (
     <div className="min-h-screen bg-background text-foreground" data-testid="market-validation-page">
       <nav className="border-b border-border/50 bg-background/95 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/solutions")}>
-            <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(175 55% 28%), hsl(175 55% 22%))" }}>
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: brandColors.headerGradient }}>
               <Shield className="w-5 h-5 text-white" />
             </div>
             <div>

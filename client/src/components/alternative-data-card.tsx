@@ -6,6 +6,7 @@ import {
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useBrandColors } from "@/hooks/use-brand-colors";
 
 interface AlternativeDataRecord {
   id: number;
@@ -38,6 +39,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export function AlternativeDataCard({ borrowerId }: { borrowerId: string }) {
+  const brandColors = useBrandColors();
   const { data, isLoading } = useQuery<AlternativeDataRecord[]>({
     queryKey: ['/api/borrowers', borrowerId, 'alternative-data'],
     queryFn: async () => {
@@ -64,7 +66,7 @@ export function AlternativeDataCard({ borrowerId }: { borrowerId: string }) {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(172 62% 30%), hsl(172 50% 22%))" }}>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: brandColors.headerGradient }}>
               <TrendingUp className="w-4 h-4 text-white" />
             </div>
             <div>

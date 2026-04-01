@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Activity, Database, Server, Wifi, Clock, CheckCircle2, AlertTriangle, Shield, Cpu, HardDrive, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
+import { useBrandColors } from "@/hooks/use-brand-colors";
 
 function StatusBadge({ status }: { status: string }) {
   const color = status === "operational" || status === "ok" || status === "healthy"
@@ -24,6 +25,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function SystemStatusPage() {
+  const brandColors = useBrandColors();
   const { data: status, isLoading, isError, refetch } = useQuery<any>({
     queryKey: ["/api/admin/status-detail"],
     refetchInterval: 30000,
@@ -191,8 +193,8 @@ export default function SystemStatusPage() {
                 <YAxis yAxisId="pct" domain={[90, 100]} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                 <YAxis yAxisId="ms" orientation="right" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
                 <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", color: "hsl(var(--foreground))", borderRadius: 8 }} />
-                <Bar yAxisId="pct" dataKey="pct" fill="hsl(175, 55%, 28%)" radius={[2, 2, 0, 0]} name="Uptime %" />
-                <Bar yAxisId="ms" dataKey="avg_ms" fill="hsl(175, 55%, 50%)" radius={[2, 2, 0, 0]} name="Avg ms" opacity={0.5} />
+                <Bar yAxisId="pct" dataKey="pct" fill={brandColors.accent} radius={[2, 2, 0, 0]} name="Uptime %" />
+                <Bar yAxisId="ms" dataKey="avg_ms" fill={brandColors.chartSecondary} radius={[2, 2, 0, 0]} name="Avg ms" opacity={0.5} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useBrandColors } from "@/hooks/use-brand-colors";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -346,6 +347,7 @@ interface PersistedCountrySettings {
 
 export function CommandCenterSettingsTab() {
   const { toast } = useToast();
+  const brandColors = useBrandColors();
   const countries = getSupportedCountries();
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [createAgreementOpen, setCreateAgreementOpen] = useState(false);

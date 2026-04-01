@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useBrandColors, withAlpha } from "@/hooks/use-brand-colors";
 
 interface Slide {
   id: string;
@@ -207,16 +208,17 @@ function GlowOrb({ className, color }: { className?: string; color: string }) {
 }
 
 function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
+  const brandColors = useBrandColors();
   const base = `rounded-2xl overflow-hidden shadow-2xl transition-all duration-700 ${isActive ? "opacity-100 scale-100" : "opacity-0 scale-95"}`;
 
   switch (type) {
     case "hero":
       return (
-        <div className={`${base} relative`} style={{ background: "linear-gradient(135deg, hsl(175 60% 25%) 0%, hsl(200 40% 18%) 50%, hsl(230 30% 15%) 100%)" }}>
-          <GlowOrb className="w-64 h-64 -top-20 -right-20" color="hsl(175 60% 40%)" />
-          <GlowOrb className="w-48 h-48 -bottom-10 -left-10" color="hsl(43 80% 55%)" />
+        <div className={`${base} relative`} style={{ background: brandColors.heroGradient }}>
+          <GlowOrb className="w-64 h-64 -top-20 -right-20" color={brandColors.glowA} />
+          <GlowOrb className="w-48 h-48 -bottom-10 -left-10" color={brandColors.glowB} />
           <div className="relative z-10 p-10 text-center">
-            <div className="w-20 h-20 rounded-2xl mx-auto mb-6 flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(43 80% 55%) 0%, hsl(33 75% 48%) 100%)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
+            <div className="w-20 h-20 rounded-2xl mx-auto mb-6 flex items-center justify-center" style={{ background: brandColors.iconGradient, boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
               <Globe className="w-10 h-10 text-white" />
             </div>
             <h3 className="text-3xl font-extrabold text-white tracking-tight">Pan-African Credit Registry</h3>
@@ -238,7 +240,7 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
           <div className="p-8">
             <div className="max-w-[280px] mx-auto space-y-5">
               <div className="text-center mb-6">
-                <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center shadow-lg" style={{ background: "linear-gradient(135deg, hsl(43 80% 55%), hsl(33 75% 48%))" }}>
+                <div className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center shadow-lg" style={{ background: brandColors.iconGradient }}>
                   <Globe className="w-7 h-7 text-white" />
                 </div>
                 <p className="font-bold text-sm">Credit Registry System</p>
@@ -246,7 +248,7 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
               </div>
               <div><p className="text-[11px] text-muted-foreground mb-1.5 font-medium">Username</p><div className="h-10 border rounded-lg bg-muted/30 flex items-center px-3 shadow-inner"><span className="text-xs text-muted-foreground">admin</span></div></div>
               <div><p className="text-[11px] text-muted-foreground mb-1.5 font-medium">Password</p><div className="h-10 border rounded-lg bg-muted/30 flex items-center px-3 shadow-inner"><span className="text-xs text-muted-foreground tracking-widest">••••••••</span></div></div>
-              <div className="h-10 rounded-lg flex items-center justify-center font-semibold text-sm text-white shadow-lg" style={{ background: "linear-gradient(135deg, hsl(175 55% 35%), hsl(175 45% 28%))" }}>Sign In <ArrowRight className="w-4 h-4 ml-2" /></div>
+              <div className="h-10 rounded-lg flex items-center justify-center font-semibold text-sm text-white shadow-lg" style={{ background: brandColors.headerGradientSubtle }}>Sign In <ArrowRight className="w-4 h-4 ml-2" /></div>
             </div>
           </div>
         </div>
@@ -256,7 +258,7 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
         <div className={`${base} bg-card border border-border/50 flex`}>
           <div className="w-52 border-r p-4 space-y-1 shrink-0 bg-muted/30">
             <div className="flex items-center gap-2.5 p-2 mb-4">
-              <div className="w-8 h-8 rounded-xl shadow-md" style={{ background: "linear-gradient(135deg, hsl(43 80% 55%), hsl(33 75% 48%))" }} />
+              <div className="w-8 h-8 rounded-xl shadow-md" style={{ background: brandColors.iconGradient }} />
               <span className="text-xs font-bold tracking-tight">Credit Registry</span>
             </div>
             <p className="text-[8px] text-muted-foreground/50 uppercase tracking-[0.2em] px-3 pb-1">Core</p>
@@ -313,7 +315,7 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
                 <p className="text-xl font-black mt-1 tracking-tight">{c.value}</p>
                 <div className="flex items-end gap-[2px] h-3 mt-1.5">
                   {[3, 5, 4, 6, 5, 7, 6].map((h, j) => (
-                    <div key={j} className="flex-1 rounded-t-sm" style={{ height: `${h * 14}%`, background: `linear-gradient(to top, hsl(175 55% 35% / 0.5), hsl(175 55% 35% / 0.1))` }} />
+                    <div key={j} className="flex-1 rounded-t-sm" style={{ height: `${h * 14}%`, background: `linear-gradient(to top, ${withAlpha(brandColors.accentLight, 0.5)}, ${withAlpha(brandColors.accentLight, 0.1)})` }} />
                   ))}
                 </div>
               </div>
@@ -325,7 +327,7 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
               <div className="flex items-end gap-[3px] h-16">
                 {[30, 35, 42, 38, 45, 52, 48, 55, 62, 58, 65, 72].map((h, i) => (
                   <div key={i} className="flex-1 rounded-t-sm relative" style={{ height: `${h}%` }}>
-                    <div className="absolute inset-0 rounded-t-sm" style={{ background: `linear-gradient(to top, hsl(175 55% 35% / 0.6), hsl(175 55% 35% / 0.15))` }} />
+                    <div className="absolute inset-0 rounded-t-sm" style={{ background: `linear-gradient(to top, ${withAlpha(brandColors.accentLight, 0.6)}, ${withAlpha(brandColors.accentLight, 0.15)})` }} />
                   </div>
                 ))}
               </div>
@@ -353,8 +355,8 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
               <div className="flex items-end gap-[3px] h-24">
                 {[25, 30, 38, 32, 42, 48, 44, 52, 58, 54, 62, 68].map((h, i) => (
                   <div key={i} className="flex-1 relative" style={{ height: `${h}%` }}>
-                    <div className="absolute inset-0 rounded-t" style={{ background: `linear-gradient(to top, hsl(175 55% 35% / 0.5), hsl(175 55% 35% / 0.08))` }} />
-                    <div className="absolute bottom-0 left-0 right-0 rounded-t" style={{ height: `${h * 0.55}%`, background: `linear-gradient(to top, hsl(175 55% 45% / 0.7), hsl(175 55% 45% / 0.2))` }} />
+                    <div className="absolute inset-0 rounded-t" style={{ background: `linear-gradient(to top, ${withAlpha(brandColors.accentLight, 0.5)}, ${withAlpha(brandColors.accentLight, 0.08)})` }} />
+                    <div className="absolute bottom-0 left-0 right-0 rounded-t" style={{ height: `${h * 0.55}%`, background: `linear-gradient(to top, ${withAlpha(brandColors.chartSecondary, 0.7)}, ${withAlpha(brandColors.chartSecondary, 0.2)})` }} />
                   </div>
                 ))}
               </div>
@@ -388,7 +390,7 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
                   {[{ l: "Term Loan", w: "82%", v: "82%" }, { l: "Overdraft", w: "58%", v: "58%" }, { l: "Mortgage", w: "37%", v: "37%" }].map(b => (
                     <div key={b.l}>
                       <div className="flex items-center justify-between mb-0.5"><span className="text-[9px] text-muted-foreground">{b.l}</span><span className="text-[9px] font-semibold">{b.v}</span></div>
-                      <div className="h-2 bg-muted/50 rounded-full overflow-hidden"><div className="h-full rounded-full" style={{ width: b.w, background: "linear-gradient(to right, hsl(175 55% 35%), hsl(175 55% 45%))" }} /></div>
+                      <div className="h-2 bg-muted/50 rounded-full overflow-hidden"><div className="h-full rounded-full" style={{ width: b.w, background: `linear-gradient(to right, ${brandColors.accentLight}, ${brandColors.chartSecondary})` }} /></div>
                     </div>
                   ))}
                 </div>
@@ -400,7 +402,7 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
     case "map":
       return (
         <div className={`${base} border border-border/50 relative overflow-hidden`} style={{ background: "linear-gradient(135deg, hsl(200 30% 12%), hsl(210 25% 16%))" }}>
-          <GlowOrb className="w-80 h-80 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" color="hsl(175 55% 35%)" />
+          <GlowOrb className="w-80 h-80 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" color={brandColors.accentLight} />
           <div className="relative z-10 p-6">
             <p className="text-[11px] font-semibold text-white/70 mb-4">Africa Coverage — 54 Countries</p>
             <div className="flex items-center justify-center gap-8">
@@ -408,7 +410,7 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
                 <Globe className="w-32 h-32 text-white/8" />
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="relative">
-                    <MapPin className="w-8 h-8 text-primary" style={{ filter: "drop-shadow(0 0 8px hsl(175 55% 35% / 0.5))" }} />
+                    <MapPin className="w-8 h-8 text-primary" style={{ filter: `drop-shadow(0 0 8px ${brandColors.accentMuted})` }} />
                     <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-ping" />
                   </div>
                 </div>
@@ -442,7 +444,7 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
         <div className={`${base} bg-card border border-border/50`}>
           <div className="flex items-center justify-between p-4 border-b">
             <div className="flex items-center gap-2"><Users className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">Borrowers</span><Badge variant="secondary" className="text-[9px]">102,462</Badge></div>
-            <div className="h-8 px-4 rounded-lg flex items-center text-white text-[11px] font-semibold shadow-md" style={{ background: "linear-gradient(135deg, hsl(175 55% 35%), hsl(175 45% 28%))" }}>+ Add Borrower</div>
+            <div className="h-8 px-4 rounded-lg flex items-center text-white text-[11px] font-semibold shadow-md" style={{ background: brandColors.headerGradientSubtle }}>+ Add Borrower</div>
           </div>
           <div className="p-3"><div className="h-9 border rounded-lg bg-muted/20 flex items-center px-3 shadow-inner"><Search className="w-3.5 h-3.5 text-muted-foreground mr-2" /><span className="text-[11px] text-muted-foreground">Search borrowers...</span></div></div>
           <table className="w-full text-[11px]">
@@ -464,7 +466,7 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
         <div className={`${base} bg-card border border-border/50 p-6 space-y-4`}>
           <div className="flex items-center gap-2"><Users className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">Add New Borrower</span></div>
           <div className="flex gap-2">
-            <div className="h-9 px-5 rounded-lg flex items-center text-white text-[11px] font-semibold shadow-md" style={{ background: "linear-gradient(135deg, hsl(175 55% 35%), hsl(175 45% 28%))" }}>Individual</div>
+            <div className="h-9 px-5 rounded-lg flex items-center text-white text-[11px] font-semibold shadow-md" style={{ background: brandColors.headerGradientSubtle }}>Individual</div>
             <div className="h-9 px-5 border rounded-lg flex items-center text-[11px] text-muted-foreground">Corporate</div>
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -474,7 +476,7 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <div className="h-9 px-5 border rounded-lg flex items-center text-[11px]">Cancel</div>
-            <div className="h-9 px-5 rounded-lg flex items-center text-white text-[11px] font-semibold shadow-md" style={{ background: "linear-gradient(135deg, hsl(175 55% 35%), hsl(175 45% 28%))" }}>Submit for Approval</div>
+            <div className="h-9 px-5 rounded-lg flex items-center text-white text-[11px] font-semibold shadow-md" style={{ background: brandColors.headerGradientSubtle }}>Submit for Approval</div>
           </div>
         </div>
       );
@@ -482,11 +484,11 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
       return (
         <div className={`${base} bg-card border border-border/50 p-6 space-y-4`}>
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: "linear-gradient(135deg, hsl(175 55% 35% / 0.15), hsl(175 55% 35% / 0.05))" }}><Users className="w-7 h-7 text-primary" /></div>
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: brandColors.iconGradientSubtle }}><Users className="w-7 h-7 text-primary" /></div>
             <div><p className="text-base font-bold">Amara Osei</p><p className="text-[11px] text-muted-foreground">Individual · GHA-29384756 · 🇬🇭 Ghana</p></div>
             <div className="ml-auto flex gap-2">
               <div className="h-9 px-4 rounded-lg flex items-center text-white text-[11px] font-semibold shadow-md" style={{ background: "linear-gradient(135deg, hsl(270 60% 50%), hsl(280 55% 40%))" }}><Brain className="w-3.5 h-3.5 mr-2" />AI Risk Analysis</div>
-              <div className="h-9 px-4 rounded-lg flex items-center text-white text-[11px] font-semibold shadow-md" style={{ background: "linear-gradient(135deg, hsl(175 55% 35%), hsl(175 45% 28%))" }}><FileText className="w-3.5 h-3.5 mr-2" />Credit Report</div>
+              <div className="h-9 px-4 rounded-lg flex items-center text-white text-[11px] font-semibold shadow-md" style={{ background: brandColors.headerGradientSubtle }}><FileText className="w-3.5 h-3.5 mr-2" />Credit Report</div>
             </div>
           </div>
           <div className="grid grid-cols-3 gap-3">
@@ -502,7 +504,7 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
         <div className={`${base} bg-card border border-border/50`}>
           <div className="flex items-center justify-between p-4 border-b">
             <div className="flex items-center gap-2"><CreditCard className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">Credit Accounts</span><Badge variant="secondary" className="text-[9px]">172,359</Badge></div>
-            <div className="h-8 px-4 rounded-lg flex items-center text-white text-[11px] font-semibold shadow-md" style={{ background: "linear-gradient(135deg, hsl(175 55% 35%), hsl(175 45% 28%))" }}>+ Add Account</div>
+            <div className="h-8 px-4 rounded-lg flex items-center text-white text-[11px] font-semibold shadow-md" style={{ background: brandColors.headerGradientSubtle }}>+ Add Account</div>
           </div>
           <table className="w-full text-[11px]">
             <thead><tr className="bg-muted/30"><th className="px-4 py-2 text-left text-muted-foreground font-medium">Account #</th><th className="px-4 py-2 text-left text-muted-foreground font-medium">Borrower</th><th className="px-4 py-2 text-left text-muted-foreground font-medium">Type</th><th className="px-4 py-2 text-right text-muted-foreground font-medium">Balance</th><th className="px-4 py-2 text-left text-muted-foreground font-medium">Status</th></tr></thead>
@@ -538,8 +540,8 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
     case "report":
       return (
         <div className={`${base} bg-card border border-border/50 space-y-4`}>
-          <div className="p-5 rounded-t-2xl text-white relative overflow-hidden" style={{ background: "linear-gradient(135deg, hsl(175 55% 28%), hsl(200 40% 18%))" }}>
-            <GlowOrb className="w-32 h-32 -top-10 -right-10" color="hsl(43 80% 55%)" />
+          <div className="p-5 rounded-t-2xl text-white relative overflow-hidden" style={{ background: brandColors.headerGradient }}>
+            <GlowOrb className="w-32 h-32 -top-10 -right-10" color={brandColors.glowB} />
             <div className="relative z-10 flex items-center gap-3">
               <Shield className="w-5 h-5" />
               <div>
@@ -567,7 +569,7 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
         <div className={`${base} bg-card border border-border/50 p-6 space-y-4`}>
           <div className="flex items-center gap-2"><Upload className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">Batch Upload</span></div>
           <div className="flex gap-2">
-            <div className="h-9 px-5 rounded-lg flex items-center text-white text-[11px] font-semibold shadow-md" style={{ background: "linear-gradient(135deg, hsl(175 55% 35%), hsl(175 45% 28%))" }}>Borrowers</div>
+            <div className="h-9 px-5 rounded-lg flex items-center text-white text-[11px] font-semibold shadow-md" style={{ background: brandColors.headerGradientSubtle }}>Borrowers</div>
             <div className="h-9 px-5 border rounded-lg flex items-center text-[11px] text-muted-foreground">Credit Accounts</div>
           </div>
           <div className="border-2 border-dashed border-primary/20 rounded-2xl p-8 text-center bg-primary/[0.02]">
@@ -586,7 +588,7 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
         <div className={`${base} bg-card border border-border/50`}>
           <div className="flex items-center justify-between p-4 border-b">
             <div className="flex items-center gap-2"><AlertCircle className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">Disputes</span></div>
-            <div className="h-8 px-4 rounded-lg flex items-center text-white text-[11px] font-semibold shadow-md" style={{ background: "linear-gradient(135deg, hsl(175 55% 35%), hsl(175 45% 28%))" }}>+ New Dispute</div>
+            <div className="h-8 px-4 rounded-lg flex items-center text-white text-[11px] font-semibold shadow-md" style={{ background: brandColors.headerGradientSubtle }}>+ New Dispute</div>
           </div>
           <div className="divide-y">
             {[
@@ -819,11 +821,11 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
             <div className="flex items-center gap-2"><FileText className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">Reports Export</span></div>
             <div className="flex gap-2">
               <div className="h-8 px-3 rounded-lg flex items-center text-[10px] font-semibold border hover:bg-muted/20 transition-colors gap-1.5"><FileText className="w-3 h-3" />CSV</div>
-              <div className="h-8 px-3 rounded-lg flex items-center text-white text-[10px] font-semibold shadow-md gap-1.5" style={{ background: "linear-gradient(135deg, hsl(175 55% 35%), hsl(175 45% 28%))" }}><FileText className="w-3 h-3" />Excel</div>
+              <div className="h-8 px-3 rounded-lg flex items-center text-white text-[10px] font-semibold shadow-md gap-1.5" style={{ background: brandColors.headerGradientSubtle }}><FileText className="w-3 h-3" />Excel</div>
             </div>
           </div>
           <div className="border rounded-xl overflow-hidden">
-            <div className="grid grid-cols-4 text-[9px] font-semibold text-white" style={{ background: "linear-gradient(135deg, hsl(175 55% 35%), hsl(175 45% 28%))" }}>
+            <div className="grid grid-cols-4 text-[9px] font-semibold text-white" style={{ background: brandColors.headerGradientSubtle }}>
               {["Name", "Account #", "Balance", "Status"].map(h => <div key={h} className="px-3 py-2">{h}</div>)}
             </div>
             {[
@@ -860,7 +862,7 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
             <p className="text-[10px] font-semibold text-muted-foreground mb-3">Hourly Volume — Last 24h</p>
             <div className="flex items-end gap-[3px] h-20">
               {[20, 35, 28, 42, 55, 48, 62, 38, 45, 72, 58, 65, 42, 35, 28, 50, 68, 75, 60, 45, 38, 52, 48, 30].map((h, i) => (
-                <div key={i} className="flex-1 rounded-t-sm" style={{ height: `${h}%`, background: `linear-gradient(to top, hsl(175 55% 35% / 0.6), hsl(175 55% 35% / 0.15))` }} />
+                <div key={i} className="flex-1 rounded-t-sm" style={{ height: `${h}%`, background: `linear-gradient(to top, ${withAlpha(brandColors.accentLight, 0.6)}, ${withAlpha(brandColors.accentLight, 0.15)})` }} />
               ))}
             </div>
             <div className="flex justify-between mt-2">
@@ -872,9 +874,9 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
       );
     case "end":
       return (
-        <div className={`${base} relative overflow-hidden`} style={{ background: "linear-gradient(135deg, hsl(175 60% 25%) 0%, hsl(200 40% 18%) 50%, hsl(230 30% 15%) 100%)" }}>
-          <GlowOrb className="w-80 h-80 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" color="hsl(175 55% 40%)" />
-          <GlowOrb className="w-48 h-48 -bottom-10 -right-10" color="hsl(43 80% 55%)" />
+        <div className={`${base} relative overflow-hidden`} style={{ background: brandColors.heroGradient }}>
+          <GlowOrb className="w-80 h-80 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" color={brandColors.glowA} />
+          <GlowOrb className="w-48 h-48 -bottom-10 -right-10" color={brandColors.glowB} />
           <div className="relative z-10 p-10 text-center">
             <div className="w-20 h-20 rounded-2xl mx-auto mb-6 flex items-center justify-center" style={{ background: "rgba(255,255,255,0.1)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.15)" }}>
               <Globe className="w-10 h-10 text-white" />
@@ -895,6 +897,7 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
 }
 
 export default function AppGuidePage() {
+  const brandColors = useBrandColors();
   const [, navigate] = useLocation();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -971,7 +974,7 @@ export default function AppGuidePage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="flex items-center h-14 gap-4">
             <div className="flex items-center gap-2.5 shrink-0">
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(43 80% 55%), hsl(33 75% 48%))" }}>
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: brandColors.iconGradient }}>
                 <Globe className="w-4 h-4 text-white" />
               </div>
               <div className="hidden sm:block">
@@ -1010,7 +1013,7 @@ export default function AppGuidePage() {
           </div>
 
           <div className="h-0.5 bg-muted -mx-4 sm:-mx-6" data-testid="guide-progress-bar">
-            <div className="h-full transition-all duration-100 ease-linear rounded-full" style={{ width: `${((currentSlide) / (totalSlides - 1)) * 100}%`, background: "linear-gradient(to right, hsl(175 55% 35%), hsl(43 80% 55%))" }} />
+            <div className="h-full transition-all duration-100 ease-linear rounded-full" style={{ width: `${((currentSlide) / (totalSlides - 1)) * 100}%`, background: `linear-gradient(to right, ${brandColors.accentLight}, ${brandColors.secondary})` }} />
           </div>
         </div>
       </div>
@@ -1054,7 +1057,7 @@ export default function AppGuidePage() {
               {isPlaying && !isLastSlide && (
                 <div className="pt-2">
                   <div className="h-1 bg-muted rounded-full overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-100 ease-linear" style={{ width: `${progress}%`, background: "linear-gradient(to right, hsl(175 55% 35%), hsl(175 55% 45%))" }} />
+                    <div className="h-full rounded-full transition-all duration-100 ease-linear" style={{ width: `${progress}%`, background: `linear-gradient(to right, ${brandColors.accentLight}, ${brandColors.chartSecondary})` }} />
                   </div>
                   <p className="text-[9px] text-muted-foreground mt-1.5">Auto-advancing in {Math.max(0, Math.ceil((100 - progress) / 100 * 12))}s</p>
                 </div>
@@ -1073,7 +1076,7 @@ export default function AppGuidePage() {
               <RotateCcw className="w-4 h-4" />
               Replay Guide
             </Button>
-            <Button size="lg" className="gap-2 shadow-lg" style={{ background: "linear-gradient(135deg, hsl(175 55% 35%), hsl(175 45% 28%))" }} onClick={() => navigate("/")} data-testid="button-go-dashboard">
+            <Button size="lg" className="gap-2 shadow-lg" style={{ background: brandColors.headerGradientSubtle }} onClick={() => navigate("/")} data-testid="button-go-dashboard">
               Go to Dashboard
               <ArrowRight className="w-4 h-4" />
             </Button>
@@ -1092,9 +1095,9 @@ export default function AppGuidePage() {
               }`}
               style={{
                 background: i === currentSlide
-                  ? "linear-gradient(to right, hsl(175 55% 35%), hsl(43 80% 55%))"
+                  ? `linear-gradient(to right, ${brandColors.accentLight}, ${brandColors.secondary})`
                   : i < currentSlide
-                    ? "hsl(175 55% 35% / 0.3)"
+                    ? brandColors.accentMuted
                     : "hsl(var(--muted-foreground) / 0.15)"
               }}
               data-testid={`dot-${i}`}

@@ -1,13 +1,15 @@
 import { Globe, Mail, Phone, MapPin } from "lucide-react";
+import { useBrandColors } from "@/hooks/use-brand-colors";
 
 export function AppFooter() {
+  const brandColors = useBrandColors();
   return (
     <footer className="w-full border-t border-border/40 bg-muted/30 dark:bg-muted/10 mt-auto" data-testid="app-footer">
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="space-y-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br from-amber-500 to-amber-700">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${brandColors.secondary}, ${brandColors.accent})` }}>
                 <Globe className="w-4 h-4 text-white" />
               </div>
               <div>

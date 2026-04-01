@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
+import { useBrandColors } from "@/hooks/use-brand-colors";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -161,6 +162,7 @@ function ActivityFeed() {
 export default function CountrySelectionPage() {
   const { setCountry, isSwitching } = useCountryTheme();
   const { user, logout } = useAuth();
+  const brandColors = useBrandColors();
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
   const countries = getSupportedCountries();
@@ -196,8 +198,8 @@ export default function CountrySelectionPage() {
                 <div
                   className="flex items-center justify-center w-10 h-10 rounded-xl shrink-0"
                   style={{
-                    background: "linear-gradient(135deg, hsl(42 85% 55%) 0%, hsl(32 78% 46%) 100%)",
-                    boxShadow: "0 4px 16px -2px hsl(42 85% 53% / 0.4)"
+                    background: brandColors.iconGradient,
+                    boxShadow: `0 4px 16px -2px ${brandColors.accentMuted}`
                   }}
                 >
                   <Shield className="w-5 h-5 text-white" />

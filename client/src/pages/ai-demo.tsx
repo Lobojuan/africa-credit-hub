@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useBrandColors } from "@/hooks/use-brand-colors";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,7 @@ import {
 
 function AIDemoPage() {
   const [, navigate] = useLocation();
+  const brandColors = useBrandColors();
   const [activeTab, setActiveTab] = useState("credit-narrative");
   const [loading, setLoading] = useState<string | null>(null);
   const [loadingStartTime, setLoadingStartTime] = useState<number | null>(null);
@@ -219,7 +221,7 @@ function AIDemoPage() {
               width: `${loadingProgress}%`,
               background: loadingProgress >= 100
                 ? "linear-gradient(90deg, hsl(142 55% 40%), hsl(142 70% 50%))"
-                : "linear-gradient(90deg, hsl(175 55% 35%), hsl(175 70% 45%))",
+                : `linear-gradient(90deg, ${brandColors.accentLight}, ${brandColors.chartSecondary})`,
             }}
           />
         </div>
@@ -303,7 +305,7 @@ function AIDemoPage() {
       <nav className="border-b border-border/50 bg-background/95 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")} data-testid="nav-home">
-            <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(175 55% 28%), hsl(175 55% 22%))" }}>
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: brandColors.headerGradient }}>
               <Brain className="w-5 h-5 text-white" />
             </div>
             <div>

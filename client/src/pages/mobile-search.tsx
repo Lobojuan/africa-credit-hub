@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { useBrandColors, withAlpha } from "@/hooks/use-brand-colors";
 import { getBrandTitle, getBrandSubtitle } from "@/lib/country-mode";
 import type { Borrower } from "@shared/schema";
 
@@ -81,13 +82,13 @@ function MobileLogin({ onLogin }: { onLogin: (u: string, p: string) => Promise<v
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 relative overflow-hidden" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
-      <div className="absolute inset-0 bg-gradient-to-br from-[hsl(175,55%,28%)] via-[hsl(175,45%,22%)] to-[hsl(200,30%,12%)]" />
-      <div className="absolute top-0 right-0 w-72 h-72 rounded-full bg-[hsl(43,80%,55%,0.08)] blur-3xl" />
-      <div className="absolute bottom-0 left-0 w-96 h-96 rounded-full bg-[hsl(175,55%,40%,0.06)] blur-3xl" />
+      <div className="absolute inset-0" style={{ background: brandColors.heroGradient }} />
+      <div className="absolute top-0 right-0 w-72 h-72 rounded-full blur-3xl" style={{ background: `${brandColors.glowB}`, opacity: 0.08 }} />
+      <div className="absolute bottom-0 left-0 w-96 h-96 rounded-full blur-3xl" style={{ background: `${brandColors.glowA}`, opacity: 0.06 }} />
 
       <div className={`relative z-10 flex flex-col items-center w-full max-w-sm transition-all duration-700 ease-out ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}>
         <div className="w-16 h-16 rounded-2xl bg-card/10 backdrop-blur-sm flex items-center justify-center mb-5 border border-white/10">
-          <ShieldCheck className="w-8 h-8 text-[hsl(43,80%,55%)]" />
+          <ShieldCheck className="w-8 h-8" style={{ color: brandColors.secondary }} />
         </div>
         <h1 className="text-2xl font-bold text-white mb-1 tracking-tight" data-testid="text-login-title">{getBrandTitle()}</h1>
         <p className="text-sm text-white/50 mb-8">{getBrandSubtitle()}</p>
@@ -131,7 +132,8 @@ function MobileLogin({ onLogin }: { onLogin: (u: string, p: string) => Promise<v
           </div>
           <Button
             type="submit"
-            className="w-full h-12 text-base rounded-xl bg-[hsl(43,80%,55%)] text-[hsl(200,25%,10%)] font-semibold"
+            className="w-full h-12 text-base rounded-xl font-semibold"
+            style={{ background: brandColors.secondary, color: "hsl(200,25%,10%)" }}
             disabled={loading || !username.trim() || !password.trim()}
             data-testid="button-mobile-login"
           >
@@ -156,6 +158,7 @@ function getGreeting(): string {
 export default function MobileSearchPage() {
   const { user, isLoading: authLoading, login, logout } = useAuth();
   const { toast } = useToast();
+  const brandColors = useBrandColors();
   const [query, setQuery] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [, navigate] = useLocation();
@@ -203,11 +206,11 @@ export default function MobileSearchPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col" style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
-      <header className="sticky top-0 z-50 bg-gradient-to-r from-[hsl(175,55%,28%)] to-[hsl(175,45%,22%)] text-white px-4 pt-3 pb-4">
+      <header className="sticky top-0 z-50 text-white px-4 pt-3 pb-4" style={{ background: brandColors.headerGradient }}>
         <div className="flex items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 rounded-lg bg-card/10 flex items-center justify-center shrink-0">
-              <ShieldCheck className="w-4 h-4 text-[hsl(43,80%,55%)]" />
+              <ShieldCheck className="w-4 h-4" style={{ color: brandColors.secondary }} />
             </div>
             <div className="min-w-0">
               <h1 className="text-sm font-bold truncate" data-testid="text-mobile-title">{getBrandTitle()}</h1>
@@ -260,8 +263,8 @@ export default function MobileSearchPage() {
                 <p className="text-sm font-semibold mt-0.5" data-testid="text-stat-value-searches">Ready</p>
               </div>
               <div className="bg-card border rounded-xl p-4">
-                <div className="w-8 h-8 rounded-lg bg-[hsl(43,80%,55%,0.12)] flex items-center justify-center mb-2">
-                  <Clock className="w-4 h-4 text-[hsl(43,80%,55%)]" />
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center mb-2" style={{ background: withAlpha(brandColors.secondary, 0.12) }}>
+                  <Clock className="w-4 h-4" style={{ color: brandColors.secondary }} />
                 </div>
                 <p className="text-xs text-muted-foreground" data-testid="text-stat-label-recent">Recent</p>
                 <p className="text-sm font-semibold mt-0.5" data-testid="text-stat-value-recent">No activity</p>

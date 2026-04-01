@@ -8,6 +8,7 @@ import {
   BarChart3,
   FileText,
 } from "lucide-react";
+import { useBrandColors } from "@/hooks/use-brand-colors";
 
 const SCORE_BANDS = [
   { min: 750, max: 850, label: "Excellent", color: "hsl(142 55% 40%)", bgClass: "bg-emerald-100 dark:bg-emerald-900/40", textClass: "text-emerald-700 dark:text-emerald-400", description: "Outstanding credit profile. Borrowers in this range demonstrate exceptional payment history and low risk." },
@@ -19,6 +20,7 @@ const SCORE_BANDS = [
 
 export default function ScoreGuidePage() {
   const { t } = useTranslation();
+  const brandColors = useBrandColors();
 
   return (
     <div className="min-h-screen bg-background p-4 sm:p-8">
@@ -35,7 +37,7 @@ export default function ScoreGuidePage() {
         <Card data-testid="card-public-score-bands">
           <CardContent className="p-6 space-y-5">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(175 55% 28% / 0.15), hsl(43 80% 55% / 0.1))" }}>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: brandColors.iconGradientSubtle }}>
                 <BarChart3 className="w-4 h-4 text-foreground/70" />
               </div>
               <h2 className="text-base font-semibold" data-testid="text-public-bands-heading">
@@ -43,11 +45,15 @@ export default function ScoreGuidePage() {
               </h2>
             </div>
             <div className="space-y-2">
-              {SCORE_BANDS.map((band) => (
+              {SCORE_BANDS.map((band) => {
+                const bandColor = band.color === "hsl(175 55% 28%)" ? brandColors.accent
+                  : band.color === "hsl(43 80% 55%)" ? brandColors.secondary
+                  : band.color;
+                return (
                 <div key={band.label} className={`rounded-md p-3 ${band.bgClass}`} data-testid={`public-band-${band.label.toLowerCase().replace(/\s/g, "-")}`}>
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: band.color }} />
+                      <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: bandColor }} />
                       <span className={`text-sm font-bold ${band.textClass}`}>{band.label}</span>
                     </div>
                     <Badge variant="outline" className="text-[10px] font-mono tabular-nums">
@@ -56,20 +62,26 @@ export default function ScoreGuidePage() {
                   </div>
                   <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{band.description}</p>
                 </div>
-              ))}
+                );
+              })}
             </div>
             <div className="h-4 rounded-full overflow-hidden flex">
-              {SCORE_BANDS.slice().reverse().map((band) => (
+              {SCORE_BANDS.slice().reverse().map((band) => {
+                const bandColor = band.color === "hsl(175 55% 28%)" ? brandColors.accent
+                  : band.color === "hsl(43 80% 55%)" ? brandColors.secondary
+                  : band.color;
+                return (
                 <div
                   key={band.label}
                   className="h-full"
                   style={{
-                    backgroundColor: band.color,
+                    backgroundColor: bandColor,
                     width: `${((band.max - band.min + 1) / 551) * 100}%`,
                   }}
                   title={`${band.label}: ${band.min}-${band.max}`}
                 />
-              ))}
+                );
+              })}
             </div>
             <div className="flex items-center justify-between gap-2 text-[10px] text-muted-foreground font-mono">
               <span>300</span>
@@ -85,7 +97,7 @@ export default function ScoreGuidePage() {
         <Card data-testid="card-public-guidance">
           <CardContent className="p-6 space-y-4">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(175 55% 28% / 0.15), hsl(43 80% 55% / 0.1))" }}>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: brandColors.iconGradientSubtle }}>
                 <FileText className="w-4 h-4 text-foreground/70" />
               </div>
               <h2 className="text-base font-semibold" data-testid="text-public-guidance-heading">

@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Globe, Users, CreditCard, TrendingUp, MapPin, Building2, ShieldCheck, AlertTriangle } from "lucide-react";
 import { isGhanaMode, getCountryConfig, GHANA_MARKET_STATS } from "@/lib/country-mode";
+import { useBrandColors } from "@/hooks/use-brand-colors";
 
 interface AfricaMapProps {
   countryBreakdown?: { country: string; borrowers: number; accounts: number }[];
@@ -61,6 +62,7 @@ function formatNum(n: number): string {
 }
 
 function GhanaMarketOverview({ countryBreakdown }: { countryBreakdown: AfricaMapProps["countryBreakdown"] }) {
+  const brandColors = useBrandColors();
   const ghanaConfig = getCountryConfig()!;
   const ms = GHANA_MARKET_STATS;
 
@@ -95,7 +97,7 @@ function GhanaMarketOverview({ countryBreakdown }: { countryBreakdown: AfricaMap
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, hsl(175 55% 28%) 0%, hsl(43 80% 45%) 100%)" }}>
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${brandColors.accent} 0%, ${brandColors.secondary} 100%)` }}>
               <MapPin className="w-3.5 h-3.5 text-white" />
             </div>
             <div>
@@ -159,7 +161,7 @@ function GhanaMarketOverview({ countryBreakdown }: { countryBreakdown: AfricaMap
                     className="h-full rounded-full"
                     style={{
                       width: `${Math.min(100, (region.borrowers / maxRegBorrowers) * 100)}%`,
-                      background: "linear-gradient(90deg, hsl(175 55% 35%), hsl(175 55% 28%))",
+                      background: `linear-gradient(90deg, ${brandColors.accentLight}, ${brandColors.accent})`,
                     }}
                   />
                 </div>
@@ -187,6 +189,7 @@ function GhanaMarketOverview({ countryBreakdown }: { countryBreakdown: AfricaMap
 }
 
 export function AfricaMap({ countryBreakdown = [] }: AfricaMapProps) {
+  const brandColors = useBrandColors();
   const countryMap = useMemo(() => {
     const m = new Map<string, { borrowers: number; accounts: number }>();
     for (const c of countryBreakdown) {
@@ -291,11 +294,11 @@ export function AfricaMap({ countryBreakdown = [] }: AfricaMapProps) {
                     style={{
                       width: `${Math.max(pct * 100, region.activeCountries > 0 ? 8 : 0)}%`,
                       background: pct > 0.6
-                        ? "linear-gradient(90deg, hsl(175 55% 35%), hsl(175 55% 28%))"
+                        ? `linear-gradient(90deg, ${brandColors.accentLight}, ${brandColors.accent})`
                         : pct > 0.3
-                        ? "linear-gradient(90deg, hsl(175 45% 45%), hsl(175 50% 35%))"
+                        ? `linear-gradient(90deg, ${brandColors.secondaryLight}, ${brandColors.accentLight})`
                         : pct > 0
-                        ? "hsl(175 40% 55%)"
+                        ? brandColors.secondaryLight
                         : "transparent",
                     }}
                   />

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Download, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useBrandColors } from "@/hooks/use-brand-colors";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -10,6 +11,7 @@ interface BeforeInstallPromptEvent extends Event {
 export function PWAInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [dismissed, setDismissed] = useState(false);
+  const brandColors = useBrandColors();
 
   useEffect(() => {
     const stored = localStorage.getItem("pwa-install-dismissed");
@@ -47,7 +49,7 @@ export function PWAInstallPrompt() {
     >
       <div className="flex items-start gap-3">
         <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-          style={{ background: "linear-gradient(135deg, hsl(175 55% 28%), hsl(175 55% 22%))" }}>
+          style={{ background: brandColors.headerGradient }}>
           <Download className="w-5 h-5 text-white" />
         </div>
         <div className="flex-1 min-w-0">

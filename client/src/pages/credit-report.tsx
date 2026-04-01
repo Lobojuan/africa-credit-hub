@@ -3,6 +3,7 @@ import { useRoute, useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { apiRequest } from "@/lib/queryClient";
+import { useBrandColors } from "@/hooks/use-brand-colors";
 import { formatCurrency } from "@/lib/currency";
 import { getDefaultFallbackCurrency } from "@/lib/country-mode";
 import { BOG_ACCOUNT_STATUS, mapInternalStatusToBog } from "@shared/bog-codes";
@@ -402,6 +403,7 @@ export default function CreditReportPage() {
   const { t } = useTranslation();
   const [, params] = useRoute("/credit-report/:borrowerId");
   const [, navigate] = useLocation();
+  const brandColors = useBrandColors();
   const borrowerId = params?.borrowerId;
   const [purpose, setPurpose] = useState("new_credit");
   const printRef = useRef<HTMLDivElement>(null);
@@ -613,7 +615,7 @@ export default function CreditReportPage() {
           )}
 
           <Card className="border-2 border-primary/20 overflow-hidden print:border print:border-border print:shadow-none">
-            <div className="p-6 print:p-4" style={{ background: "linear-gradient(135deg, hsl(175 55% 28%) 0%, hsl(175 45% 22%) 100%)" }}>
+            <div className="p-6 print:p-4" style={{ background: brandColors.headerGradient }}>
               <div className="flex items-center justify-between gap-4 text-white">
                 <div>
                   <div className="flex items-center gap-2 mb-1">

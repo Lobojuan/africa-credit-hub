@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { formatCurrency, SUPPORTED_COUNTRIES, SUPPORTED_CURRENCIES, getModeCurrencies } from "@/lib/currency";
 import { isGhanaMode, getDefaultFallbackCurrency } from "@/lib/country-mode";
 import { apiRequest } from "@/lib/queryClient";
+import { useBrandColors } from "@/hooks/use-brand-colors";
 import type { Borrower, CreditAccount } from "@shared/schema";
 import { ReportsKPIBanner } from "@/components/platform-kpi-banner";
 
@@ -132,6 +133,7 @@ function BorrowerSearchSelect({ onSelect }: { onSelect: (b: Borrower) => void })
 
 export default function ReportsPage() {
   const { t } = useTranslation();
+  const brandColors = useBrandColors();
   const [, navigate] = useLocation();
   const [selectedBorrower, setSelectedBorrower] = useState<Borrower | null>(null);
   const [purpose, setPurpose] = useState("new_credit");
@@ -266,7 +268,7 @@ export default function ReportsPage() {
       </div>
 
       <Card className="border-2 border-primary/20 overflow-hidden" data-testid="card-generate-report">
-        <div className="p-5 sm:p-6" style={{ background: "linear-gradient(135deg, hsl(175 55% 28%) 0%, hsl(175 45% 22%) 100%)" }}>
+        <div className="p-5 sm:p-6" style={{ background: brandColors.headerGradient }}>
           <div className="flex items-center gap-3 text-white">
             <div className="w-10 h-10 rounded-xl bg-card/10 flex items-center justify-center">
               <FileText className="w-5 h-5" />
@@ -369,7 +371,7 @@ export default function ReportsPage() {
                     onClick={handleGenerate}
                     disabled={generateMutation.isPending}
                     className="shadow-md"
-                    style={{ background: "linear-gradient(135deg, hsl(175 55% 35%), hsl(175 45% 28%))" }}
+                    style={{ background: brandColors.headerGradientSubtle }}
                     data-testid="button-generate-report"
                   >
                     {generateMutation.isPending ? (

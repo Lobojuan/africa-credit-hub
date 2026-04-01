@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { MessageCircle, X, Send, Bot, User, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useBrandColors } from "@/hooks/use-brand-colors";
 
 interface Message {
   role: "user" | "assistant";
@@ -21,6 +22,7 @@ export function PublicChatbot() {
   const [streaming, setStreaming] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const brandColors = useBrandColors();
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -94,8 +96,8 @@ export function PublicChatbot() {
           onClick={() => setOpen(true)}
           className="fixed bottom-5 right-5 z-[90] w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-xl active:scale-95"
           style={{
-            background: "linear-gradient(135deg, hsl(175 55% 35%), hsl(175 70% 45%))",
-            boxShadow: "0 4px 20px rgba(42, 157, 143, 0.4)",
+            background: `linear-gradient(135deg, ${brandColors.accentLight}, ${brandColors.accent})`,
+            boxShadow: `0 4px 20px ${brandColors.accentMuted}`,
           }}
           data-testid="button-public-chatbot"
         >
@@ -107,7 +109,7 @@ export function PublicChatbot() {
         <div className="fixed bottom-5 right-5 z-[90] w-[380px] max-w-[calc(100vw-2rem)] h-[520px] max-h-[calc(100vh-6rem)] flex flex-col rounded-2xl shadow-2xl border border-border/50 bg-background overflow-hidden animate-in slide-in-from-bottom-5 fade-in-0 duration-300" data-testid="public-chatbot-panel">
           <div
             className="flex items-center justify-between px-4 py-3 shrink-0"
-            style={{ background: "linear-gradient(135deg, hsl(175 55% 35%), hsl(175 70% 45%))" }}
+            style={{ background: `linear-gradient(135deg, ${brandColors.accentLight}, ${brandColors.accent})` }}
           >
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
