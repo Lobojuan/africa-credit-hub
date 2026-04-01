@@ -61,9 +61,15 @@ import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@radix-ui/react-collapsible";
 import type { LucideIcon } from "lucide-react";
-import { isGhanaMode, isSierraLeoneMode, isSingleCountryMode, getBrandTitle, getCountryConfig } from "@/lib/country-mode";
+import { isGhanaMode, isSierraLeoneMode, isSingleCountryMode, getBrandTitle, getCountryConfig, type CountryConfig } from "@/lib/country-mode";
 import { useCountryTheme } from "@/components/country-theme-provider";
 import { useTheme } from "@/components/theme-provider";
+
+function countryCodeToFlag(code: string): string {
+  if (!code || code.length !== 2) return "🌍";
+  const codePoints = [...code.toUpperCase()].map(c => 0x1F1E6 + c.charCodeAt(0) - 65);
+  return String.fromCodePoint(...codePoints);
+}
 
 type NavItem = {
   label: string;
@@ -291,6 +297,28 @@ export function AppSidebar() {
           </div>
         </Link>
       </SidebarHeader>
+      {/* Prominent country indicator */}
+      <div className="px-4 pb-3" data-testid="sidebar-country-indicator">
+        {countryTheme?.isGlobalView ? (
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-sidebar-accent/60 border border-sidebar-border">
+            <Globe className="w-5 h-5 text-sidebar-foreground/60 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-bold text-sidebar-foreground tracking-tight" data-testid="text-active-country">All Countries</p>
+              <p className="text-[10px] text-sidebar-foreground/50 font-medium">Pan-African View</p>
+            </div>
+          </div>
+        ) : dynamicCountryConfig ? (
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-primary/10 border border-primary/20">
+            <span className="text-2xl shrink-0 leading-none" role="img" aria-label={dynamicCountryConfig.name}>
+              {countryCodeToFlag(dynamicCountryConfig.code)}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-bold text-sidebar-foreground tracking-tight" data-testid="text-active-country">{dynamicCountryConfig.name}</p>
+              <p className="text-[10px] text-sidebar-foreground/50 font-medium truncate">{dynamicCountryConfig.regulatoryBody} · {dynamicCountryConfig.currencySymbol}</p>
+            </div>
+          </div>
+        ) : null}
+      </div>
       <SidebarContent className="gap-0">
         <CollapsibleSection
           label="Global View"
