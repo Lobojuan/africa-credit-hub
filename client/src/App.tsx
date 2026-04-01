@@ -412,7 +412,7 @@ function AuthenticatedApp() {
                     <DropdownMenuItem
                       className="gap-2 text-destructive focus:text-destructive"
                       onClick={async () => {
-                        try { await logout(); } catch { window.location.href = "/login"; }
+                        try { await logout(); } catch { window.location.href = "/"; }
                       }}
                       data-testid="button-logout"
                     >
@@ -476,7 +476,7 @@ function AuthenticatedApp() {
                   try {
                     await logout();
                   } catch {
-                    window.location.href = "/login";
+                    window.location.href = "/";
                   }
                 }}
                 data-testid="button-logout"

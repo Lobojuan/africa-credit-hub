@@ -89,12 +89,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onSuccess: () => {
       clearCSRFToken();
       queryClient.removeQueries();
-      window.location.replace("/login");
+      window.location.replace("/");
     },
     onError: () => {
       clearCSRFToken();
       queryClient.removeQueries();
-      window.location.replace("/login");
+      window.location.replace("/");
     },
   });
 
