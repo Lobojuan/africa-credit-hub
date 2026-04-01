@@ -8,26 +8,42 @@ declare global {
 }
 
 type Theme = "light" | "dark";
+type VisualStyle = "pan-african" | "scandinavian";
 
 const ThemeContext = createContext<{
   theme: Theme;
+  visualStyle: VisualStyle;
   toggleTheme: () => void;
-}>({ theme: "light", toggleTheme: () => {} });
+  setVisualStyle: (style: VisualStyle) => void;
+}>({ theme: "light", visualStyle: "pan-african", toggleTheme: () => {}, setVisualStyle: () => {} });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window !== "undefined") {
-      return (localStorage.getItem("theme") as Theme) || "light";
+      const stored = localStorage.getItem("theme");
+      if (stored === "light" || stored === "dark") return stored;
     }
     return "light";
   });
 
+  const [visualStyle, setVisualStyleState] = useState<VisualStyle>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("visualStyle");
+      if (stored === "pan-african" || stored === "scandinavian") return stored;
+    }
+    return "pan-african";
+  });
+
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.remove("light", "dark");
+    root.classList.remove("light", "dark", "scandinavian");
     root.classList.add(theme);
+    if (visualStyle === "scandinavian") {
+      root.classList.add("scandinavian");
+    }
     localStorage.setItem("theme", theme);
-  }, [theme]);
+    localStorage.setItem("visualStyle", visualStyle);
+  }, [theme, visualStyle]);
 
   const toggleTheme = () => {
     const toggle = (prev: Theme): Theme => prev === "light" ? "dark" : "light";
@@ -44,8 +60,21 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const setVisualStyle = (style: VisualStyle) => {
+    if (!document.startViewTransition) {
+      setVisualStyleState(style);
+      return;
+    }
+
+    document.startViewTransition(() => {
+      flushSync(() => {
+        setVisualStyleState(style);
+      });
+    });
+  };
+
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, visualStyle, toggleTheme, setVisualStyle }}>
       {children}
     </ThemeContext.Provider>
   );

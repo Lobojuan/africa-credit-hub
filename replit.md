@@ -3,6 +3,12 @@
 ## Overview
 This project is a web-based Pan-African Credit Registry System designed to centralize credit information, manage borrower records, and support credit risk assessment for financial institutions across Africa. It handles multiple African currencies plus USD/EUR/GBP, enforces jurisdiction-specific data retention, ensures regulatory compliance, and facilitates cross-border entity resolution. The system aims to bolster financial stability and responsible lending through robust security, adherence to regulatory workflows, fault tolerance, multi-tenant SaaS capabilities, AI-powered portfolio intelligence, blockchain audit anchoring, and a consumer self-service portal.
 
+## Visual Styles
+The platform supports two visual styles selectable per-user via the theme toggle dropdown (persisted in localStorage):
+- **Pan-African** (default): Deep teal sidebar, warm gold accents, glass-card effects, gradient banners, premium glow animations. The original colorful identity.
+- **Scandinavian**: Clean light blue-grey palette, white/light sidebar, flat cards (no glassmorphism), minimal shadows, no decorative gradients or glows. Designed for banks and government clients preferring understated, readable layouts.
+Both styles support light and dark modes (4 combinations total). CSS variables in `index.css` under `.scandinavian` and `.scandinavian.dark` override the `:root`/`.dark` defaults. Component-level overrides (glass-card, section-banner, page-header-bar, etc.) are also scoped under `.scandinavian`. Theme state managed in `client/src/components/theme-provider.tsx`.
+
 ## User Preferences
 I prefer clear and concise communication.
 I value iterative development with frequent, small updates.
