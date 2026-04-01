@@ -30,3 +30,9 @@ id = "22RJrTV7mTteVBvwmtaBB"
 uri = "file://USER_ACCESS_BLUEPRINT.md"
 type = "text"
 title = "User Access Level Blueprint — CDH v2.1"
+
+[[outputs]]
+id = "mjZQawODDYSxQ5ZgaWpPU"
+uri = "file://full-app-source.txt"
+type = "text"
+title = "Complete App Source Code (all .ts, .tsx, .css files)"
