@@ -7,6 +7,7 @@ import { useBrandColors } from "@/hooks/use-brand-colors";
 import {
   Shield, Check, ArrowRight, Globe, Users, Zap, Lock,
   Building2, Brain, BarChart3, Headphones, ChevronDown, Mail, Phone, MapPin,
+  Server, GraduationCap, Wrench, Database, FileCheck, Landmark,
 } from "lucide-react";
 
 
@@ -79,6 +80,19 @@ const PLANS = [
     ],
   },
 ];
+
+const CB_PACKAGE = [
+  { icon: FileCheck, item: "Software License (Perpetual)", desc: "Full CDH v2.5 platform license — unlimited modules, all 54 jurisdictions, AI/ML suite, blockchain audit", cost: "$450,000" },
+  { icon: Server, item: "Server Infrastructure & Cloud Setup", desc: "Production + DR environments, load balancers, SSL, backups, monitoring, CDN configuration", cost: "$85,000" },
+  { icon: Wrench, item: "Installation, Configuration & Integration", desc: "Core banking API integration, SWIFT/RTGS connectivity, regulatory export pipelines, SSO/LDAP setup", cost: "$120,000" },
+  { icon: Database, item: "Data Migration & Legacy System Integration", desc: "Historical credit data import, deduplication, entity resolution, data quality validation", cost: "$75,000" },
+  { icon: Landmark, item: "Regulatory Customization", desc: "Local data protection compliance, central bank reporting formats, national ID verification, local currency config", cost: "$65,000" },
+  { icon: GraduationCap, item: "Staff Training (40 hours, up to 30 users)", desc: "Administrator, analyst, and compliance officer training modules with certification", cost: "$35,000" },
+  { icon: Headphones, item: "Year 1 Support & Maintenance", desc: "24/7 dedicated support, SLA guarantee (99.9%), security patches, feature updates, quarterly reviews", cost: "$95,000" },
+];
+
+const CB_TOTAL = "$925,000";
+const CB_ANNUAL_MAINTENANCE = "$95,000";
 
 const USAGE_PRICING = [
   { service: "Credit Report Pull", standard: "$0.50", volume: "$0.35", enterprise: "$0.20" },
@@ -244,7 +258,86 @@ export default function PricingPage() {
         </div>
       </section>
 
-      <section className="py-16 px-4 bg-muted/30">
+      <section className="py-16 px-4 bg-muted/30" data-testid="section-central-bank">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-10">
+            <Badge variant="outline" className="mb-4">
+              <Landmark className="w-3 h-3 mr-1" />
+              Central Bank & National Registry
+            </Badge>
+            <h2 className="text-2xl md:text-3xl font-bold mb-3" data-testid="text-cb-title">
+              Total Software Delivery Package
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto text-sm">
+              Complete turnkey deployment for central banks and national credit registries.
+              Includes perpetual licensing, infrastructure, installation, training, and first-year support.
+            </p>
+          </div>
+
+          <div className="space-y-3 mb-8">
+            {CB_PACKAGE.map((row, i) => (
+              <Card key={i} data-testid={`cb-item-${i}`}>
+                <CardContent className="py-4 px-5">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: brandColors.iconGradientSubtle }}>
+                      <row.icon className="w-5 h-5" style={{ color: brandColors.accent }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-4">
+                        <p className="font-semibold text-sm">{row.item}</p>
+                        <span className="font-bold text-base whitespace-nowrap">{row.cost}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{row.desc}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <Card className="border-primary/30 shadow-lg" data-testid="cb-total-card">
+            <CardContent className="py-6 px-6">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Total Delivery Package</p>
+                  <div className="flex items-baseline gap-3 mt-1">
+                    <span className="text-4xl font-bold" style={{ color: brandColors.accent }} data-testid="text-cb-total">{CB_TOTAL}</span>
+                    <span className="text-sm text-muted-foreground">USD</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Annual maintenance after Year 1: <span className="font-semibold text-foreground">{CB_ANNUAL_MAINTENANCE}/year</span> (includes 24/7 support, updates & security patches)
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2 shrink-0">
+                  <Button size="lg" onClick={() => navigate("/start-trial")} data-testid="button-cb-contact">
+                    <Mail className="w-4 h-4 mr-2" />
+                    Request Proposal
+                  </Button>
+                  <p className="text-[10px] text-muted-foreground text-center">Custom quotes for multi-country deployments</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
+            {[
+              { icon: Shield, title: "Sovereign Hosting", desc: "On-premise or private cloud within national borders — full data sovereignty compliance" },
+              { icon: Building2, title: "Multi-Bank Onboarding", desc: "Structured rollout to all licensed financial institutions with API integration support" },
+              { icon: Globe, title: "Pan-African Scalability", desc: "Expand to additional ECOWAS, EAC, or SADC member states with shared infrastructure" },
+            ].map((item) => (
+              <Card key={item.title} className="border-border/50">
+                <CardContent className="py-5 px-4 text-center">
+                  <item.icon className="w-6 h-6 mx-auto mb-2" style={{ color: brandColors.accent }} />
+                  <p className="font-semibold text-sm mb-1">{item.title}</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="py-16 px-4">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl font-bold text-center mb-2" data-testid="text-usage-title">Usage-Based Pricing</h2>
           <p className="text-muted-foreground text-center mb-8 text-sm">
