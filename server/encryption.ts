@@ -54,7 +54,7 @@ export function decryptPII(ciphertext: string): string {
     const encrypted = parts[3];
 
     const key = getEncryptionKey();
-    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv, { authTagLength: AUTH_TAG_LENGTH });
     decipher.setAuthTag(authTag);
 
     let decrypted = decipher.update(encrypted, "hex", "utf8");
