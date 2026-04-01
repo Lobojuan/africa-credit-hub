@@ -11,6 +11,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { isGhanaMode, getCountryConfig } from "@/lib/country-mode";
 import { useBrandColors } from "@/hooks/use-brand-colors";
+import { useTheme } from "@/components/theme-provider";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -27,8 +28,26 @@ export default function LoginPage() {
   const { toast } = useToast();
   const { t } = useTranslation();
   const brandColors = useBrandColors();
+  const { theme, visualStyle } = useTheme();
+  const isLightScandi = theme === "light" && visualStyle === "scandinavian";
 
-  const colors = {
+  const colors = isLightScandi ? {
+    panelBg: "linear-gradient(135deg, hsl(210 30% 95%) 0%, hsl(215 25% 90%) 40%, hsl(210 20% 86%) 100%)",
+    accent: "hsl(210 45% 48%)",
+    accentLight: "hsl(210 50% 42%)",
+    accentGlow: "rgba(66, 135, 245, 0.2)",
+    accentGlowFaint: "rgba(66, 135, 245, 0.08)",
+    orb1: "hsl(210 40% 78%)",
+    orb2: "hsl(215 35% 82%)",
+    orb3: "hsl(210 30% 75%)",
+    textPrimary: "hsl(215 25% 20%)",
+    textSecondary: "hsl(215 15% 40%)",
+    textMuted: "hsl(215 10% 55%)",
+    cardBg: "rgba(255,255,255,0.65)",
+    cardBorder: "rgba(255,255,255,0.8)",
+    iconBg: "linear-gradient(135deg, hsl(210 45% 48%), hsl(215 40% 38%))",
+    patternFill: "%23334155",
+  } : {
     panelBg: brandColors.panelGradient,
     accent: brandColors.secondary,
     accentLight: brandColors.secondaryLight,
@@ -37,6 +56,13 @@ export default function LoginPage() {
     orb1: brandColors.glowB,
     orb2: brandColors.glowA,
     orb3: brandColors.chartAccent,
+    textPrimary: "white",
+    textSecondary: "rgba(255,255,255,0.6)",
+    textMuted: "rgba(255,255,255,0.5)",
+    cardBg: "rgba(255,255,255,0.06)",
+    cardBorder: "rgba(255,255,255,0.06)",
+    iconBg: brandColors.iconGradient,
+    patternFill: "%23ffffff",
   };
 
   useEffect(() => {
@@ -159,39 +185,43 @@ export default function LoginPage() {
       <div className="hidden lg:flex lg:w-[55%] relative overflow-hidden" style={{
         background: colors.panelBg,
       }}>
-        <div className="absolute inset-0 opacity-[0.04]" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+        <div className="absolute inset-0" style={{
+          opacity: isLightScandi ? 0.03 : 0.04,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='${colors.patternFill}' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
         }} />
 
         <div
-          className="absolute rounded-full opacity-[0.07]"
+          className="absolute rounded-full"
           style={{
             width: "400px",
             height: "400px",
             top: "-80px",
             right: "-60px",
+            opacity: isLightScandi ? 0.25 : 0.07,
             background: `radial-gradient(circle, ${colors.orb1} 0%, transparent 70%)`,
             animation: "loginFloat1 20s ease-in-out infinite",
           }}
         />
         <div
-          className="absolute rounded-full opacity-[0.05]"
+          className="absolute rounded-full"
           style={{
             width: "300px",
             height: "300px",
             bottom: "10%",
             left: "-40px",
+            opacity: isLightScandi ? 0.2 : 0.05,
             background: `radial-gradient(circle, ${colors.orb2} 0%, transparent 70%)`,
             animation: "loginFloat2 25s ease-in-out infinite",
           }}
         />
         <div
-          className="absolute rounded-full opacity-[0.04]"
+          className="absolute rounded-full"
           style={{
             width: "200px",
             height: "200px",
             top: "40%",
             right: "20%",
+            opacity: isLightScandi ? 0.15 : 0.04,
             background: `radial-gradient(circle, ${colors.orb3} 0%, transparent 70%)`,
             animation: "loginFloat3 18s ease-in-out infinite",
           }}
@@ -200,12 +230,12 @@ export default function LoginPage() {
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{
-              background: brandColors.iconGradient,
+              background: colors.iconBg,
               animation: "loginPulse 3s ease-in-out infinite",
             }}>
               <Globe className="w-5 h-5 text-white" />
             </div>
-            <span className="text-white/90 font-semibold text-lg tracking-tight">{isGhanaMode() ? "Ghana Credit Registry" : "CDH Registry"}</span>
+            <span className="font-semibold text-lg tracking-tight" style={{ color: colors.textPrimary }}>{isGhanaMode() ? "Ghana Credit Registry" : "CDH Registry"}</span>
           </div>
 
           <div className="max-w-lg" style={{
@@ -214,14 +244,14 @@ export default function LoginPage() {
             transition: "opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
             transitionDelay: "0.2s",
           }}>
-            <h2 className="text-4xl font-extrabold text-white leading-tight tracking-tight">
+            <h2 className="text-4xl font-extrabold leading-tight tracking-tight" style={{ color: colors.textPrimary }}>
               {isGhanaMode() ? (
                 <>Ghana<br /><span style={{ color: colors.accentLight }}>Credit Registry</span></>
               ) : (
-                <>Unified Pan-African<br /><span style={{ color: colors.accentLight }}>Credit Infrastructure</span></>
+                <>Unified Pan-African<br /><span style={{ color: colors.accent }}>Credit Infrastructure</span></>
               )}
             </h2>
-            <p className="text-white/60 mt-4 text-base leading-relaxed">
+            <p className="mt-4 text-base leading-relaxed" style={{ color: colors.textSecondary }}>
               {isGhanaMode() 
                 ? "Ghana's unified credit registry system. Empowering financial inclusion and responsible lending across the nation."
                 : "Securely access Consumer, Corporate, and AI-driven Telco credit profiles across 54 African jurisdictions."}
@@ -240,16 +270,17 @@ export default function LoginPage() {
                 { label: t('login.languages'), val: "EN / FR / PT / AR / SW" },
               ]).map((item, i) => (
                 <div key={item.label} className="rounded-xl p-4" style={{
-                  background: "rgba(255,255,255,0.06)",
+                  background: colors.cardBg,
                   backdropFilter: "blur(8px)",
-                  border: "1px solid rgba(255,255,255,0.06)",
+                  border: `1px solid ${colors.cardBorder}`,
+                  boxShadow: isLightScandi ? "0 1px 3px rgba(0,0,0,0.04)" : "none",
                   opacity: mounted ? 1 : 0,
                   transform: mounted ? "translateY(0)" : "translateY(16px)",
                   transition: "opacity 0.6s ease-out, transform 0.6s ease-out, background 0.3s ease",
                   transitionDelay: `${0.4 + i * 0.1}s`,
                 }}>
-                  <p className="text-white/60 text-xs font-medium uppercase tracking-wider">{item.label}</p>
-                  <p className="text-white font-semibold mt-1">{item.val}</p>
+                  <p className="text-xs font-medium uppercase tracking-wider" style={{ color: colors.textMuted }}>{item.label}</p>
+                  <p className="font-semibold mt-1" style={{ color: colors.textPrimary }}>{item.val}</p>
                 </div>
               ))}
             </div>
@@ -260,10 +291,10 @@ export default function LoginPage() {
             transition: "opacity 0.6s ease-out",
             transitionDelay: "0.9s",
           }}>
-            <p className="text-white/50">
+            <p style={{ color: colors.textMuted }}>
               Carlson Capital & Systems In Motion Limited\u2122 &middot; {isGhanaMode() ? "Ghana Credit Registry v2.5" : "Cross-Jurisdictional CDH v2.5"}
             </p>
-            <p className="text-white/30 text-[10px]">
+            <p className="text-[10px]" style={{ color: isLightScandi ? "hsl(215 10% 65%)" : "rgba(255,255,255,0.3)" }}>
               &copy; 2026 Carlson Capital & Systems In Motion Limited. All rights reserved.
             </p>
           </div>
