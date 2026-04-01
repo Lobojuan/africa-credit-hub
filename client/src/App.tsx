@@ -15,7 +15,17 @@ import { NotificationBell } from "@/components/notification-bell";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { PasswordChangeDialog } from "@/components/password-change-dialog";
 import { Button } from "@/components/ui/button";
-import { LogOut, Loader2, MessageCircle, Building2, LayoutGrid, Languages } from "lucide-react";
+import { LogOut, Loader2, MessageCircle, Building2, LayoutGrid, User } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { DisputeChatbot } from "@/components/dispute-chatbot";
 import { OrgSwitcherProvider } from "@/hooks/use-org-switcher";
 import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
@@ -261,6 +271,8 @@ function AuthenticatedApp() {
     }
   }, [user]);
 
+  const isMobile = useIsMobile();
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -332,68 +344,149 @@ function AuthenticatedApp() {
       <div className="flex h-screen w-full">
         <AppSidebar />
         <div className="flex flex-col flex-1 min-w-0">
-          <header className="flex flex-wrap items-center gap-3 px-4 py-2.5 border-b shrink-0 ltr-header">
-            <SidebarTrigger data-testid="button-sidebar-toggle" className="shrink-0" />
-            {user.role === "super_admin" && !currentPath.startsWith("/command-center") && (
+          {isMobile ? (
+            <header className="flex items-center justify-between px-3 py-2 border-b shrink-0 ltr-header h-14">
+              <div className="flex items-center gap-2">
+                <SidebarTrigger data-testid="button-sidebar-toggle" className="shrink-0" />
+                <span className="text-sm font-bold tracking-tight truncate max-w-[140px]" data-testid="text-mobile-brand">CDH Registry</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <NotificationBell />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-9 w-9 rounded-full p-0" data-testid="button-mobile-user-menu">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <User className="w-4 h-4 text-primary" />
+                      </div>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel className="font-normal">
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium" data-testid="text-current-user">{user.fullName}</p>
+                        <p className="text-xs text-muted-foreground">{user.role}</p>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {user.role === "super_admin" && !currentPath.startsWith("/command-center") && (
+                      <DropdownMenuItem
+                        className="gap-2"
+                        onClick={async () => {
+                          try {
+                            await apiRequest("POST", "/api/platform/set-country", { country: "command_center" });
+                            queryClient.setQueryData(["/api/auth/me"], (old: any) => old ? { ...old, viewingCountry: null } : old);
+                            await queryClient.invalidateQueries({
+                              predicate: (q) => {
+                                const key = q.queryKey[0] as string;
+                                return key && !key.startsWith("/api/auth/");
+                              },
+                              refetchType: "all",
+                            });
+                            window.location.href = "/command-center";
+                          } catch { window.location.href = "/command-center"; }
+                        }}
+                        data-testid="button-command-center"
+                      >
+                        <LayoutGrid className="w-4 h-4" />
+                        Command Center
+                      </DropdownMenuItem>
+                    )}
+                    {user.role === "super_admin" && (
+                      <>
+                        <DropdownMenuItem className="gap-2 p-0" onSelect={(e) => e.preventDefault()}>
+                          <div className="w-full"><CountrySelector /></div>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="gap-2 p-0" onSelect={(e) => e.preventDefault()}>
+                          <div className="w-full"><OrgSwitcher /></div>
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="gap-2 p-0" onSelect={(e) => e.preventDefault()}>
+                      <div className="flex items-center gap-2 px-2 py-1.5 w-full">
+                        <ThemeToggle />
+                        <LanguageSwitcher />
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="gap-2 text-destructive focus:text-destructive"
+                      onClick={async () => {
+                        try { await logout(); } catch { window.location.href = "/login"; }
+                      }}
+                      data-testid="button-logout"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Log Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </header>
+          ) : (
+            <header className="flex flex-wrap items-center gap-3 px-4 py-2.5 border-b shrink-0 ltr-header">
+              <SidebarTrigger data-testid="button-sidebar-toggle" className="shrink-0" />
+              {user.role === "super_admin" && !currentPath.startsWith("/command-center") && (
+                <Button
+                  variant="outline"
+                  className="h-10 gap-2 text-base font-semibold border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 px-4"
+                  onClick={async () => {
+                    try {
+                      await apiRequest("POST", "/api/platform/set-country", { country: "command_center" });
+                      queryClient.setQueryData(["/api/auth/me"], (old: any) => {
+                        if (!old) return old;
+                        return { ...old, viewingCountry: null };
+                      });
+                      await queryClient.invalidateQueries({
+                        predicate: (q) => {
+                          const key = q.queryKey[0] as string;
+                          return key && !key.startsWith("/api/auth/");
+                        },
+                        refetchType: "all",
+                      });
+                      window.location.href = "/command-center";
+                    } catch {
+                      window.location.href = "/command-center";
+                    }
+                  }}
+                  data-testid="button-command-center"
+                >
+                  <LayoutGrid className="w-5 h-5 shrink-0" />
+                  Command Center
+                </Button>
+              )}
+              {user.role === "super_admin" && <CountrySelector />}
+              {user.role === "super_admin" && <OrgSwitcher />}
+              {(user as any)?.organization?.name && user.role !== "super_admin" && (
+                <span className="text-base text-muted-foreground inline-flex items-center gap-2" data-testid="text-org-context">
+                  <Building2 className="w-5 h-5" />
+                  {(user as any).organization.name}
+                </span>
+              )}
+              <span className="text-base text-muted-foreground" data-testid="text-current-user">
+                {user.fullName}
+              </span>
+              <NotificationBell />
+              <ThemeToggle />
+              <LanguageSwitcher />
               <Button
-                variant="outline"
-                className="h-10 gap-2 text-base font-semibold border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 px-4"
+                variant="destructive"
+                className="h-10 gap-2 text-base font-semibold px-5 shrink-0"
                 onClick={async () => {
                   try {
-                    await apiRequest("POST", "/api/platform/set-country", { country: "command_center" });
-                    queryClient.setQueryData(["/api/auth/me"], (old: any) => {
-                      if (!old) return old;
-                      return { ...old, viewingCountry: null };
-                    });
-                    await queryClient.invalidateQueries({
-                      predicate: (q) => {
-                        const key = q.queryKey[0] as string;
-                        return key && !key.startsWith("/api/auth/");
-                      },
-                      refetchType: "all",
-                    });
-                    window.location.href = "/command-center";
+                    await logout();
                   } catch {
-                    window.location.href = "/command-center";
+                    window.location.href = "/login";
                   }
                 }}
-                data-testid="button-command-center"
+                data-testid="button-logout"
               >
-                <LayoutGrid className="w-5 h-5 shrink-0" />
-                Command Center
+                <LogOut className="w-5 h-5" />
+                Log Out
               </Button>
-            )}
-            {user.role === "super_admin" && <CountrySelector />}
-            {user.role === "super_admin" && <OrgSwitcher />}
-            {(user as any)?.organization?.name && user.role !== "super_admin" && (
-              <span className="text-base text-muted-foreground inline-flex items-center gap-2" data-testid="text-org-context">
-                <Building2 className="w-5 h-5" />
-                {(user as any).organization.name}
-              </span>
-            )}
-            <span className="text-base text-muted-foreground" data-testid="text-current-user">
-              {user.fullName}
-            </span>
-            <NotificationBell />
-            <ThemeToggle />
-            <LanguageSwitcher />
-            <Button
-              variant="destructive"
-              className="h-10 gap-2 text-base font-semibold px-5 shrink-0"
-              onClick={async () => {
-                try {
-                  await logout();
-                } catch {
-                  window.location.href = "/login";
-                }
-              }}
-              data-testid="button-logout"
-            >
-              <LogOut className="w-5 h-5" />
-              Log Out
-            </Button>
-          </header>
-          <main className="flex-1 overflow-auto flex flex-col">
+            </header>
+          )}
+          <main className={`flex-1 overflow-auto flex flex-col ${isMobile ? "pb-16" : ""}`}>
             <div className="flex-1">
               <ErrorBoundary>
                 <Router />
@@ -404,12 +497,13 @@ function AuthenticatedApp() {
           {passwordExpired && <PasswordChangeDialog open={true} forced={true} />}
         </div>
       </div>
+      {isMobile && <MobileBottomNav />}
       {!chatbotOpen && (
         <button
           onClick={() => setChatbotOpen(true)}
           data-testid="button-open-chatbot"
           title={t('chatbot.title')}
-          className="fixed bottom-5 right-5 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-xl active:scale-95 bg-primary text-primary-foreground"
+          className={`fixed right-5 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-xl active:scale-95 bg-primary text-primary-foreground ${isMobile ? "bottom-20" : "bottom-5"}`}
           style={{ boxShadow: "0 4px 14px rgba(0,0,0,0.25)" }}
         >
           <MessageCircle className="w-6 h-6" />
