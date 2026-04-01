@@ -3061,6 +3061,62 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/structured-search", async (req, res) => {
+    try {
+      const orgId = getOrgScope(req);
+      const country = getCountryFilter(req);
+      const { searchType, ghanaCardNumber, firstName, lastName, dateOfBirth, gender, nationalId, registrationNumber, tinNumber, companyName, reasonForRequest, purpose } = req.query;
+      if (!searchType || (searchType !== "consumer" && searchType !== "business")) {
+        return res.status(400).json({ message: "searchType must be 'consumer' or 'business'" });
+      }
+      if (searchType === "consumer") {
+        if (!reasonForRequest) {
+          return res.status(400).json({ message: "reasonForRequest is required for consumer searches" });
+        }
+        if (!ghanaCardNumber && !firstName && !lastName && !nationalId) {
+          return res.status(400).json({ message: "At least one identifier (Ghana Card, name, or National ID) is required" });
+        }
+      }
+      if (searchType === "business") {
+        if (!purpose) {
+          return res.status(400).json({ message: "purpose is required for business searches" });
+        }
+        if (!registrationNumber && !tinNumber && !companyName) {
+          return res.status(400).json({ message: "At least one identifier (Registration Number, TIN, or Company Name) is required" });
+        }
+      }
+      const user = (req as any).user;
+      await storage.createAuditLog({
+        action: "structured_search",
+        entity: "borrower",
+        entityId: "search",
+        userId: user?.id || null,
+        details: JSON.stringify({
+          searchType,
+          reasonForRequest: reasonForRequest || purpose || null,
+          identifiersUsed: Object.entries({ ghanaCardNumber, firstName, lastName, nationalId, registrationNumber, tinNumber, companyName })
+            .filter(([, v]) => v)
+            .map(([k]) => k),
+        }),
+      });
+      const results = await storage.structuredSearch({
+        searchType: searchType as "consumer" | "business",
+        ghanaCardNumber: ghanaCardNumber as string,
+        firstName: firstName as string,
+        lastName: lastName as string,
+        dateOfBirth: dateOfBirth as string,
+        gender: gender as string,
+        nationalId: nationalId as string,
+        registrationNumber: registrationNumber as string,
+        tinNumber: tinNumber as string,
+        companyName: companyName as string,
+      }, orgId, country);
+      res.json(results);
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
   app.get("/api/borrowers/fuzzy-match", async (req, res) => {
     try {
       const { firstName, lastName, nationalId, companyName, passportNumber, tinNumber } = req.query;

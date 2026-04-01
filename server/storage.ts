@@ -83,6 +83,18 @@ export interface IStorage {
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
   verifyAuditIntegrity(): Promise<{ valid: boolean; totalChecked: number; brokenAt?: string }>;
   fuzzyMatchBorrowers(params: { firstName?: string; lastName?: string; nationalId?: string; companyName?: string; passportNumber?: string; tinNumber?: string }): Promise<Array<any>>;
+  structuredSearch(params: {
+    searchType: "consumer" | "business";
+    ghanaCardNumber?: string;
+    firstName?: string;
+    lastName?: string;
+    dateOfBirth?: string;
+    gender?: string;
+    nationalId?: string;
+    registrationNumber?: string;
+    tinNumber?: string;
+    companyName?: string;
+  }, organizationId?: string, country?: string): Promise<Borrower[]>;
 
   getPendingApprovals(organizationId?: string, country?: string): Promise<PendingApproval[]>;
   getPendingApproval(id: string): Promise<PendingApproval | undefined>;
@@ -657,6 +669,60 @@ export class DatabaseStorage implements IStorage {
         ${params.passportNumber ? sql`similarity(COALESCE(${borrowers.passportNumber}, ''), ${params.passportNumber})` : sql`0`},
         ${params.tinNumber ? sql`similarity(COALESCE(${borrowers.tinNumber}, ''), ${params.tinNumber})` : sql`0`}
       ) DESC`).limit(20);
+    return results;
+  }
+
+  async structuredSearch(params: {
+    searchType: "consumer" | "business";
+    ghanaCardNumber?: string;
+    firstName?: string;
+    lastName?: string;
+    dateOfBirth?: string;
+    gender?: string;
+    nationalId?: string;
+    registrationNumber?: string;
+    tinNumber?: string;
+    companyName?: string;
+  }, organizationId?: string, country?: string): Promise<Borrower[]> {
+    const conditions: any[] = [];
+    const typeFilter = params.searchType === "consumer" ? "individual" : "corporate";
+    conditions.push(eq(borrowers.type, typeFilter));
+
+    if (organizationId) conditions.push(eq(borrowers.organizationId, organizationId));
+    if (country) conditions.push(eq(borrowers.country, country));
+
+    if (params.ghanaCardNumber) {
+      conditions.push(ilike(borrowers.ghanaCardNumber, `%${params.ghanaCardNumber}%`));
+    }
+    if (params.nationalId) {
+      conditions.push(ilike(borrowers.nationalId, `%${params.nationalId}%`));
+    }
+    if (params.firstName) {
+      conditions.push(ilike(borrowers.firstName, `%${params.firstName}%`));
+    }
+    if (params.lastName) {
+      conditions.push(ilike(borrowers.lastName, `%${params.lastName}%`));
+    }
+    if (params.dateOfBirth) {
+      conditions.push(eq(borrowers.dateOfBirth, params.dateOfBirth));
+    }
+    if (params.gender) {
+      conditions.push(eq(borrowers.gender, params.gender));
+    }
+    if (params.registrationNumber) {
+      conditions.push(ilike(borrowers.businessRegNumber, `%${params.registrationNumber}%`));
+    }
+    if (params.tinNumber) {
+      conditions.push(ilike(borrowers.tinNumber, `%${params.tinNumber}%`));
+    }
+    if (params.companyName) {
+      conditions.push(ilike(borrowers.companyName, `%${params.companyName}%`));
+    }
+
+    const results = await db.select().from(borrowers)
+      .where(and(...conditions))
+      .orderBy(desc(borrowers.createdAt))
+      .limit(50);
     return results;
   }
 

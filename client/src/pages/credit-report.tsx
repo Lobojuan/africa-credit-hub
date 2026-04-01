@@ -200,6 +200,9 @@ function getReasonCodeLabel(code: string): string {
     STRONG_REPAYMENT_HISTORY: "Strong repayment track record",
     EXCELLENT_PAYMENT_RECORD: "Excellent payment consistency",
     THIN_FILE_LIMITED_HISTORY: "Limited credit history on file",
+    HIGH_NDIA_90_PLUS: "Severe arrears — 90+ days in arrears on one or more accounts",
+    MULTIPLE_DELINQUENCIES: "Multiple accounts in delinquency",
+    HIGH_ARREARS_AMOUNT: "High total amount in arrears",
   };
   return labels[code] || code.replace(/_/g, " ").toLowerCase().replace(/^\w/, c => c.toUpperCase());
 }
