@@ -460,7 +460,7 @@ export default function InvestorLandingPage() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const videoRef = useRef<HTMLVideoElement>(null);
   const { t } = useTranslation();
-  const { theme, toggleTheme } = useTheme();
+  const { theme } = useTheme();
   const brandColors = useBrandColors();
 
   useEffect(() => {
@@ -473,17 +473,6 @@ export default function InvestorLandingPage() {
 
   useEffect(() => {
     previousTheme.current = theme;
-    if (theme !== "dark") {
-      toggleTheme();
-    }
-    return () => {
-      if (previousTheme.current === "light") {
-        const root = document.documentElement;
-        root.classList.remove("dark");
-        root.classList.add("light");
-        localStorage.setItem("theme", "light");
-      }
-    };
   }, []);
 
   useEffect(() => {
