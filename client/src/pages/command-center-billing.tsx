@@ -1,6 +1,6 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { TrendingUp, FileText, CreditCard, Building2, Tag, Globe } from "lucide-react";
+import { TrendingUp, FileText, CreditCard, Building2, Tag, Globe, ChevronDown, Calendar, Hash, DollarSign, Clock, Landmark } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -46,6 +46,7 @@ export function CommandCenterBillingTab() {
   const [editingTier, setEditingTier] = useState<string | null>(null);
   const [editPrice, setEditPrice] = useState("");
   const [selectedCountry, setSelectedCountry] = useState<string>("Global");
+  const [expandedInvoiceId, setExpandedInvoiceId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery<{
     invoices: any[];
@@ -310,6 +311,7 @@ export function CommandCenterBillingTab() {
                 <table className="w-full text-left">
                   <thead>
                     <tr className="border-b border-border">
+                      <th className="w-6 py-2 px-2"></th>
                       <th className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider py-2 px-2">Invoice #</th>
                       <th className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider py-2 px-2">Institution</th>
                       <th className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider py-2 px-2">Service</th>
@@ -319,20 +321,106 @@ export function CommandCenterBillingTab() {
                     </tr>
                   </thead>
                   <tbody>
-                    {data!.invoices.slice(0, 20).map((inv: any) => (
-                      <tr key={inv.id} className="border-b border-border/50 hover:bg-muted transition-colors" data-testid={`invoice-row-${inv.id}`}>
-                        <td className="py-1.5 px-2"><span className="text-[10px] text-cyan-400 font-mono">{inv.invoiceNumber}</span></td>
-                        <td className="py-1.5 px-2"><span className="text-[10px] text-foreground truncate block max-w-[180px]">{inv.institutionName}</span></td>
-                        <td className="py-1.5 px-2"><span className="text-[10px] text-muted-foreground">{inv.serviceType}</span></td>
-                        <td className="py-1.5 px-2 text-right"><span className="text-[10px] text-emerald-400 font-mono">${parseFloat(inv.amount).toLocaleString()}</span></td>
-                        <td className="py-1.5 px-2">
-                          <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${STATUS_COLORS[inv.status] || STATUS_COLORS.pending}`}>
-                            {inv.status}
-                          </Badge>
-                        </td>
-                        <td className="py-1.5 px-2 text-right"><span className="text-[10px] text-muted-foreground">{inv.createdAt ? new Date(inv.createdAt).toLocaleDateString() : "—"}</span></td>
-                      </tr>
-                    ))}
+                    {data!.invoices.slice(0, 20).map((inv: any) => {
+                      const isExpanded = expandedInvoiceId === inv.id;
+                      const cur = CURRENCY_SYMBOLS[inv.currency] || inv.currency || "$";
+                      return (
+                        <React.Fragment key={inv.id}>
+                          <tr
+                            className="border-b border-border/50 hover:bg-muted transition-colors cursor-pointer"
+                            data-testid={`invoice-row-${inv.id}`}
+                            onClick={() => setExpandedInvoiceId(isExpanded ? null : inv.id)}
+                          >
+                            <td className="py-1.5 px-2">
+                              <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
+                            </td>
+                            <td className="py-1.5 px-2"><span className="text-[10px] text-cyan-400 font-mono">{inv.invoiceNumber}</span></td>
+                            <td className="py-1.5 px-2"><span className="text-[10px] text-foreground truncate block max-w-[180px]">{inv.institutionName}</span></td>
+                            <td className="py-1.5 px-2"><span className="text-[10px] text-muted-foreground">{inv.serviceType}</span></td>
+                            <td className="py-1.5 px-2 text-right"><span className="text-[10px] text-emerald-400 font-mono">${parseFloat(inv.amount).toLocaleString()}</span></td>
+                            <td className="py-1.5 px-2">
+                              <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${STATUS_COLORS[inv.status] || STATUS_COLORS.pending}`}>
+                                {inv.status}
+                              </Badge>
+                            </td>
+                            <td className="py-1.5 px-2 text-right"><span className="text-[10px] text-muted-foreground">{inv.createdAt ? new Date(inv.createdAt).toLocaleDateString() : "—"}</span></td>
+                          </tr>
+                          {isExpanded && (
+                            <tr className="bg-muted/40" data-testid={`invoice-detail-${inv.id}`}>
+                              <td colSpan={7} className="p-0">
+                                <div className="px-6 py-4 space-y-3">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <FileText className="w-4 h-4 text-cyan-400" />
+                                    <span className="text-sm font-semibold text-foreground">{inv.invoiceNumber}</span>
+                                    <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${STATUS_COLORS[inv.status] || STATUS_COLORS.pending}`}>
+                                      {inv.status}
+                                    </Badge>
+                                  </div>
+                                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                    <div className="rounded-lg border p-2.5 bg-background">
+                                      <div className="flex items-center gap-1.5 mb-1">
+                                        <Landmark className="w-3 h-3 text-muted-foreground" />
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Institution</p>
+                                      </div>
+                                      <p className="text-xs font-medium truncate">{inv.institutionName}</p>
+                                    </div>
+                                    <div className="rounded-lg border p-2.5 bg-background">
+                                      <div className="flex items-center gap-1.5 mb-1">
+                                        <Tag className="w-3 h-3 text-muted-foreground" />
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Service</p>
+                                      </div>
+                                      <p className="text-xs font-medium">{inv.serviceType}</p>
+                                    </div>
+                                    <div className="rounded-lg border p-2.5 bg-background">
+                                      <div className="flex items-center gap-1.5 mb-1">
+                                        <DollarSign className="w-3 h-3 text-muted-foreground" />
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Amount</p>
+                                      </div>
+                                      <p className="text-xs font-bold text-emerald-500">{cur}{parseFloat(inv.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                    </div>
+                                    <div className="rounded-lg border p-2.5 bg-background">
+                                      <div className="flex items-center gap-1.5 mb-1">
+                                        <CreditCard className="w-3 h-3 text-muted-foreground" />
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Currency</p>
+                                      </div>
+                                      <p className="text-xs font-medium">{inv.currency || "USD"}</p>
+                                    </div>
+                                    <div className="rounded-lg border p-2.5 bg-background">
+                                      <div className="flex items-center gap-1.5 mb-1">
+                                        <Hash className="w-3 h-3 text-muted-foreground" />
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Invoice ID</p>
+                                      </div>
+                                      <p className="text-[10px] font-mono text-muted-foreground truncate">{inv.id}</p>
+                                    </div>
+                                    <div className="rounded-lg border p-2.5 bg-background">
+                                      <div className="flex items-center gap-1.5 mb-1">
+                                        <Calendar className="w-3 h-3 text-muted-foreground" />
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Invoice Date</p>
+                                      </div>
+                                      <p className="text-xs font-medium">{inv.createdAt ? new Date(inv.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}</p>
+                                    </div>
+                                    <div className="rounded-lg border p-2.5 bg-background">
+                                      <div className="flex items-center gap-1.5 mb-1">
+                                        <Clock className="w-3 h-3 text-muted-foreground" />
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Period Start</p>
+                                      </div>
+                                      <p className="text-xs font-medium">{inv.periodStart ? new Date(inv.periodStart).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}</p>
+                                    </div>
+                                    <div className="rounded-lg border p-2.5 bg-background">
+                                      <div className="flex items-center gap-1.5 mb-1">
+                                        <Clock className="w-3 h-3 text-muted-foreground" />
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Period End</p>
+                                      </div>
+                                      <p className="text-xs font-medium">{inv.periodEnd ? new Date(inv.periodEnd).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
