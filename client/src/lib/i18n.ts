@@ -57,7 +57,7 @@ const en = {
     papssSettlements: "PAPSS Settlements",
     brandTitle: "Credit Registry",
     brandSubtitle: "Carlson Capital & Systems In Motion Limited™",
-    version: "v2.1 — Credit Registry",
+    version: "v2.5 — Credit Registry",
   },
   login: {
     title: "Credit Registry System",
@@ -1237,7 +1237,7 @@ const en = {
     },
   },
   landing: {
-    versionBadge: "CDH v2.1 — Trusted by Financial Institutions Across Africa",
+    versionBadge: "CDH v2.5 — Trusted by Financial Institutions Across Africa",
     heroTitle1: "Modernize Your",
     heroTitle2: "Credit Infrastructure",
     heroDesc: "The only SRS-compliant credit registry platform covering all <strong>54 African countries</strong>. Manage credit risk, ensure regulatory compliance, and expand financial inclusion — all from one unified platform.",
@@ -1272,7 +1272,7 @@ const en = {
     aiTrendDesc: "3-to-6 month projections on delinquency and default trends across your entire portfolio. Plan provisions, not react to surprises.",
     aiCollectionTitle: "Collection Priorities",
     aiCollectionDesc: "AI ranks overdue accounts by recovery probability and recommends specific actions — call, restructure, or escalate — so your team focuses where it matters.",
-    aiMlBadge: "GBM v2.1",
+    aiMlBadge: "GBM v2.5",
     aiMlTitle: "ML Credit Scoring",
     aiMlDesc: "Gradient boosting model scores borrowers 300-850 with confidence intervals. Goes beyond payment history to factor velocity, utilization trends, and cross-border activity.",
     aiFraudBadge: "Real-Time",
@@ -1446,7 +1446,7 @@ const fr: typeof en = {
     organizations: "Organisations",
     brandTitle: "Registre de Crédit",
     brandSubtitle: "Carlson Capital & Systems In Motion Limited™",
-    version: "v2.1 — Registre de Crédit",
+    version: "v2.5 — Registre de Crédit",
   },
   login: {
     title: "Système de Registre de Crédit",
@@ -2607,7 +2607,7 @@ const fr: typeof en = {
     },
   },
   landing: {
-    versionBadge: "CDH v2.1 — Approuvé par les Institutions Financières d'Afrique",
+    versionBadge: "CDH v2.5 — Approuvé par les Institutions Financières d'Afrique",
     heroTitle1: "Modernisez Votre",
     heroTitle2: "Infrastructure de Crédit",
     heroDesc: "La seule plateforme de registre de crédit conforme SRS couvrant les <strong>54 pays africains</strong>. Gérez le risque de crédit, assurez la conformité réglementaire et développez l'inclusion financière — le tout depuis une plateforme unifiée.",
@@ -2642,7 +2642,7 @@ const fr: typeof en = {
     aiTrendDesc: "Projections de 3 à 6 mois sur les tendances de délinquance et de défaut de votre portefeuille entier. Planifiez les provisions au lieu de réagir aux surprises.",
     aiCollectionTitle: "Priorités de Recouvrement",
     aiCollectionDesc: "L'IA classe les comptes en retard par probabilité de recouvrement et recommande des actions spécifiques — appeler, restructurer ou escalader — pour que votre équipe se concentre là où ça compte.",
-    aiMlBadge: "GBM v2.1",
+    aiMlBadge: "GBM v2.5",
     aiMlTitle: "Scoring de Crédit ML",
     aiMlDesc: "Le modèle de gradient boosting note les emprunteurs de 300 à 850 avec intervalles de confiance. Va au-delà de l'historique de paiement pour intégrer la vélocité, les tendances d'utilisation et l'activité transfrontalière.",
     aiFraudBadge: "Temps Réel",

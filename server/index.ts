@@ -74,7 +74,7 @@ app.get("/health", async (_req, res) => {
   const uptime = process.uptime();
   res.status(dbOk ? 200 : 503).json({
     status,
-    version: "2.1.0",
+    version: "2.5.0",
     uptime: Math.floor(uptime),
     uptimeHuman: `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m`,
     timestamp: new Date().toISOString(),
@@ -240,9 +240,9 @@ let maintenanceMessage = "We are working hard to improve your experience. The pl
 
 app.get("/api/health", (_req, res) => {
   if (maintenanceMode) {
-    return res.status(503).json({ status: "maintenance", message: maintenanceMessage });
+    return res.status(503).json({ status: "maintenance", version: "2.5.0", message: maintenanceMessage });
   }
-  res.json({ status: "ok" });
+  res.json({ status: "ok", version: "2.5.0", uptime: Math.round(process.uptime()) });
 });
 
 app.get("/api/maintenance/status", (req, res) => {

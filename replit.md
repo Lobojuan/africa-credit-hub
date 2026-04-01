@@ -1,7 +1,16 @@
-# Credit Registry System - Systems In Motion Limited
+# Credit Registry System - Systems In Motion Limited — CDH v2.5
 
 ## Overview
-This project is a web-based Pan-African Credit Registry System designed to centralize credit information, manage borrower records, and support credit risk assessment for financial institutions across Africa. It handles multiple African currencies plus USD/EUR/GBP, enforces jurisdiction-specific data retention, ensures regulatory compliance, and facilitates cross-border entity resolution. The system aims to bolster financial stability and responsible lending through robust security, adherence to regulatory workflows, fault tolerance, multi-tenant SaaS capabilities, AI-powered portfolio intelligence, blockchain audit anchoring, and a consumer self-service portal.
+This project is a web-based Pan-African Credit Registry System (CDH v2.5) designed to centralize credit information, manage borrower records, and support credit risk assessment for financial institutions across Africa. It handles multiple African currencies plus USD/EUR/GBP, enforces jurisdiction-specific data retention, ensures regulatory compliance, and facilitates cross-border entity resolution. The system aims to bolster financial stability and responsible lending through robust security, adherence to regulatory workflows, fault tolerance, multi-tenant SaaS capabilities, AI-powered portfolio intelligence, blockchain audit anchoring, and a consumer self-service portal.
+
+## Version History
+| Version | Date | Description |
+|---------|------|-------------|
+| v1.0 | Jan 2026 | Foundation platform — TOTP MFA, OAuth 2.1, AI chatbot, entity resolution, exchange rates, XBRL uploads, i18n (5 languages), mobile-responsive |
+| v1.2 | Feb 2026 | Enterprise features — maker-checker workflows, dispute management, regulatory compliance dashboard, IFF upload engine |
+| v2.0 | Mar 2026 | Ghana Launch — Bank of Ghana CRB v1.1 compliance, Ghana-specific mode, pipe-delimited BoG export, code catalogs, 17 institutions |
+| v2.1 | Mar 2026 | Intelligence Suite — AI portfolio intelligence, blockchain audit anchoring, ML credit scoring (GBM), consumer portal, cross-border entity resolution, Stripe billing |
+| v2.5 | Apr 2026 | Current Release — Global Scandinavian visual style (centralized `useBrandColors` hook), score methodology transparency with good/bad odds tables, maintenance mode system, security hardening, comprehensive version management, live system clock on landing page |
 
 ## Legal & Copyright
 - **Legal Page** (`/legal`): In-platform page displaying copyright notice, scope of protection, ownership, jurisdictional coverage (10 African nations), license categories, restrictions, trade secrets, database rights, enforcement remedies, dispute resolution, and contact info.

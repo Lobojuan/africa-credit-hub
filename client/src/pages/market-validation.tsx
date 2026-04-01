@@ -128,7 +128,7 @@ const PRICING_VALIDATION = [
 ];
 
 const TRACTION_MILESTONES = [
-  { status: "complete", label: "Production-ready platform (CDH v2.1) with 16 integrated modules" },
+  { status: "complete", label: "Production-ready platform (CDH v2.5) with 16 integrated modules" },
   { status: "complete", label: "Live platform with 102K+ borrower records and 172K+ credit accounts across 2 countries" },
   { status: "complete", label: "Full regulatory compliance engine covering 54 African jurisdictions" },
   { status: "complete", label: "ML credit scoring with alternative data (mobile money, utility payments)" },

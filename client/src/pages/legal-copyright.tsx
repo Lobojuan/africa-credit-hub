@@ -96,7 +96,7 @@ export default function LegalCopyrightPage() {
                   &copy; 2024–2026 Carlson Capital & Systems In Motion Limited. All Rights Reserved.
                 </p>
                 <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
-                  The Pan-African Credit Data Hub (CDH) v2.1, including all source code, object code,
+                  The Pan-African Credit Data Hub (CDH) v2.5, including all source code, object code,
                   algorithms, user interfaces, database schemas, documentation, and related materials,
                   is the exclusive intellectual property of Carlson Capital & Systems In Motion Limited.
                   No part of this software may be reproduced, distributed, modified, reverse-engineered,

@@ -38,7 +38,7 @@ const pt = {
     borrowerAlerts: "Alertas de Mutuários",
     brandTitle: "Registo de Crédito",
     brandSubtitle: "Carlson Capital & Systems In Motion Limited™",
-    version: "v2.1 — Registo de Crédito",
+    version: "v2.5 — Registo de Crédito",
   },
   login: {
     title: "Sistema de Registo de Crédito",

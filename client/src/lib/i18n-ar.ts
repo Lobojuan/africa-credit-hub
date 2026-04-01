@@ -38,7 +38,7 @@ const ar: Record<string, any> = {
     borrowerAlerts: "تنبيهات المقترضين",
     brandTitle: "سجل الائتمان",
     brandSubtitle: "Carlson Capital & Systems In Motion Limited™",
-    version: "v2.1 — سجل الائتمان",
+    version: "v2.5 — سجل الائتمان",
   },
   login: {
     title: "نظام سجل الائتمان",

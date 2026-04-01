@@ -305,6 +305,6 @@ export function calculateMLCreditScore(
     riskCategory,
     defaultProbability,
     featureImportance,
-    modelVersion: "GBM-v2.1.0",
+    modelVersion: "GBM-v2.5.0",
   };
 }

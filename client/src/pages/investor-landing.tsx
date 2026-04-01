@@ -298,7 +298,7 @@ const PLATFORM_MODULES = [
     ],
   },
   {
-    category: "v2.0 — Competitive Differentiators",
+    category: "v2.5 — Competitive Differentiators",
     color: "hsl(340 55% 42%)",
     modules: [
       {
@@ -457,10 +457,16 @@ export default function InvestorLandingPage() {
   const [activeModuleCategory, setActiveModuleCategory] = useState(0);
   const [lightboxImg, setLightboxImg] = useState<{ src: string; title: string } | null>(null);
   const [videoPlaying, setVideoPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
   const videoRef = useRef<HTMLVideoElement>(null);
   const { t } = useTranslation();
   const { theme, toggleTheme } = useTheme();
   const brandColors = useBrandColors();
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
   const resolveModuleColor = (color: string) =>
     color === "brand-accent" ? brandColors.accent : color === "brand-secondary" ? brandColors.secondary : color;
   const previousTheme = useRef<string | null>(null);
@@ -490,8 +496,8 @@ export default function InvestorLandingPage() {
 
   useEffect(() => {
     document.title = isGhanaMode() 
-      ? "Ghana Credit Registry System | CDH v2.1 — Systems In Motion Limited"
-      : "Pan-African Credit Registry | CDH v2.1 — Modernize Your Credit Infrastructure";
+      ? "Ghana Credit Registry System | CDH v2.5 — Systems In Motion Limited"
+      : "Pan-African Credit Registry | CDH v2.5 — Modernize Your Credit Infrastructure";
     const meta = document.querySelector('meta[name="description"]');
     const content = "The only SRS-compliant credit registry platform covering all 54 African countries. Built for central banks, commercial banks, MFIs, and fintechs to manage credit risk, ensure compliance, and expand financial inclusion.";
     if (meta) {
@@ -539,7 +545,7 @@ export default function InvestorLandingPage() {
             </div>
             <div>
               <span className="font-bold text-sm tracking-tight">CDH Credit Registry</span>
-              <span className="text-[10px] text-muted-foreground ml-1.5">v2.1</span>
+              <span className="text-[10px] text-muted-foreground ml-1.5">v2.5</span>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -589,10 +595,20 @@ export default function InvestorLandingPage() {
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
             <div className="text-center lg:text-right flex flex-col justify-center lg:items-end">
-              <Badge variant="secondary" className="mb-6 text-xs px-3 py-1 font-medium" data-testid="badge-version">
+              <Badge variant="secondary" className="mb-4 text-xs px-3 py-1 font-medium" data-testid="badge-version">
                 <Star className="w-3 h-3 mr-1" />
                 {t('landing.versionBadge')}
               </Badge>
+
+              <div className="flex items-center gap-2 mb-6 justify-center lg:justify-end" data-testid="system-clock">
+                <Clock className="w-3.5 h-3.5 text-muted-foreground/60" />
+                <span className="text-xs text-muted-foreground/80 font-mono tracking-tight">
+                  {currentTime.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", year: "numeric" })}
+                  {" "}
+                  {currentTime.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                  {" GMT"}
+                </span>
+              </div>
 
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-extrabold tracking-tight leading-[1.1] mb-6">
                 <span className="block">{t('landing.heroTitle1')}</span>
@@ -759,7 +775,7 @@ export default function InvestorLandingPage() {
               <div className="rounded-2xl overflow-hidden border border-border/50 shadow-2xl">
                 <img
                   src={dashboardImage}
-                  alt="CDH v2.1 dashboard showing borrowers, credit accounts, and portfolio analytics"
+                  alt="CDH v2.5 dashboard showing borrowers, credit accounts, and portfolio analytics"
                   className="w-full h-auto"
                   loading="lazy"
                 />
@@ -935,7 +951,7 @@ export default function InvestorLandingPage() {
           <div className="mt-10 text-center">
             <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-primary/30 bg-primary/5">
               <Target className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium">CDH v2.1 addresses all four challenges in a single, unified platform — backed by real data.</span>
+              <span className="text-sm font-medium">CDH v2.5 addresses all four challenges in a single, unified platform — backed by real data.</span>
             </div>
           </div>
         </div>
@@ -1023,7 +1039,7 @@ export default function InvestorLandingPage() {
                 Connected Across the Entire Continent
               </h2>
               <p className="text-muted-foreground text-sm sm:text-base leading-relaxed mb-6">
-                CDH v2.0 is the only credit registry platform engineered for all 54 African nations —
+                CDH v2.5 is the only credit registry platform engineered for all 54 African nations —
                 bridging Anglophone, Francophone, Lusophone, and Arabophone regions with
                 unified data standards and real-time cross-border intelligence.
               </p>
@@ -1558,7 +1574,7 @@ export default function InvestorLandingPage() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-foreground leading-tight">Africa Credit Hub</p>
-                  <p className="text-[10px] text-muted-foreground leading-tight">Pan-African Credit Registry — CDH v2.1</p>
+                  <p className="text-[10px] text-muted-foreground leading-tight">Pan-African Credit Registry — CDH v2.5</p>
                 </div>
               </div>
               <p className="text-[11px] text-muted-foreground/80 leading-relaxed">

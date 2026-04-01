@@ -41,7 +41,7 @@ const sw: Record<string, any> = {
     borrowerAlerts: "Tahadhari za Wakopaji",
     brandTitle: "Sajili ya Mikopo",
     brandSubtitle: "Carlson Capital & Systems In Motion Limited™",
-    version: "v2.1 — Sajili ya Mikopo",
+    version: "v2.5 — Sajili ya Mikopo",
   },
   login: {
     title: "Mfumo wa Sajili ya Mikopo",

@@ -222,7 +222,7 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
               <Globe className="w-10 h-10 text-white" />
             </div>
             <h3 className="text-3xl font-extrabold text-white tracking-tight">Pan-African Credit Registry</h3>
-            <p className="text-white/40 mt-2 text-sm font-medium tracking-wide">Cross-Jurisdictional Central Data Hub v2.0</p>
+            <p className="text-white/40 mt-2 text-sm font-medium tracking-wide">Cross-Jurisdictional Central Data Hub v2.5</p>
             <div className="flex justify-center gap-10 mt-8">
               {[{ n: "54", l: "Countries" }, { n: "42+", l: "Currencies" }, { n: "100K+", l: "Borrowers" }, { n: "5", l: "Languages" }].map(s => (
                 <div key={s.l} className="text-center">
@@ -979,7 +979,7 @@ export default function AppGuidePage() {
               </div>
               <div className="hidden sm:block">
                 <p className="text-xs font-bold tracking-tight leading-none">App Guide</p>
-                <p className="text-[10px] text-muted-foreground leading-none mt-0.5">CDH v2.0</p>
+                <p className="text-[10px] text-muted-foreground leading-none mt-0.5">CDH v2.5</p>
               </div>
             </div>
 

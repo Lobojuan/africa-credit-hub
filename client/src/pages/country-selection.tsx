@@ -241,7 +241,7 @@ export default function CountrySelectionPage() {
               <KPICard icon={Building2} label="Institutions" value={platform?.totalInstitutions ?? "..."} color="bg-amber-500/20" />
               <KPICard icon={Globe} label="Active Countries" value={platform?.activeCountries ?? "..."} sub={`of ${platform?.supportedCountries ?? 10} supported`} color="bg-emerald-500/20" />
               <KPICard icon={CheckCircle2} label="SRS Compliance" value={`${complianceScore}%`} sub={`${srsCompliant}/${srsTotal} requirements`} color="bg-teal-500/20" />
-              <KPICard icon={Shield} label="System Version" value={platform?.systemVersion ?? "CDH v2.1"} sub="Pan-African Registry" color="bg-muted-foreground/20" />
+              <KPICard icon={Shield} label="System Version" value={platform?.systemVersion ?? "CDH v2.5"} sub="Pan-African Registry" color="bg-muted-foreground/20" />
             </div>
           </div>
 
@@ -532,7 +532,7 @@ export default function CountrySelectionPage() {
 
       <footer className="px-4 py-3 border-t border-border flex items-center justify-between">
         <p className="text-[10px] text-muted-foreground">
-          CDH v2.1 | Secured by Carlson Capital & Systems In Motion Limited
+          CDH v2.5 | Secured by Carlson Capital & Systems In Motion Limited
         </p>
         <div className="flex items-center gap-1.5">
           <Lock className="w-3 h-3 text-muted-foreground" />

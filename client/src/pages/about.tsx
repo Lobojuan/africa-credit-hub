@@ -114,7 +114,7 @@ export default function AboutPage() {
           <div className="flex justify-center gap-8 sm:gap-12 mt-8">
             <StatBlock value="54" label="Countries" />
             <StatBlock value="42+" label="Currencies" />
-            <StatBlock value="v2.0" label="Platform" />
+            <StatBlock value="v2.5" label="Platform" />
             <StatBlock value="5" label="Languages" />
           </div>
         </div>
@@ -142,7 +142,7 @@ export default function AboutPage() {
                 <Lightbulb className="w-6 h-6 mb-3" style={{ color: brandColors.secondary }} />
                 <h3 className="font-semibold mb-2">Our Answer</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  The Cross-Jurisdictional Central Data Hub (CDH) v2.0 is the first SRS-compliant credit information sharing platform built for all 54 African countries. We unify credit data across borders, languages, and currencies — giving regulators oversight, lenders confidence, and borrowers fair access to capital.
+                  The Cross-Jurisdictional Central Data Hub (CDH) v2.5 is the first SRS-compliant credit information sharing platform built for all 54 African countries. We unify credit data across borders, languages, and currencies — giving regulators oversight, lenders confidence, and borrowers fair access to capital.
                 </p>
               </CardContent>
             </Card>
@@ -218,7 +218,7 @@ export default function AboutPage() {
           <Card className="border-border/50 overflow-hidden">
             <CardContent className="p-0">
               <div className="p-6 sm:p-8" style={{ background: brandColors.iconGradientSubtle }}>
-                <h3 className="font-bold mb-1">Cross-Jurisdictional Central Data Hub (CDH) v2.0</h3>
+                <h3 className="font-bold mb-1">Cross-Jurisdictional Central Data Hub (CDH) v2.5</h3>
                 <p className="text-xs text-muted-foreground">Credit Registry System | Carlson Capital & Systems In Motion Limited</p>
               </div>
               <div className="p-6 sm:p-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -255,7 +255,9 @@ export default function AboutPage() {
               <TimelineItem year="2024" title="Foundation" description="Carlson Capital and Systems In Motion Limited established the partnership with a mandate to build Africa's first cross-jurisdictional credit registry." />
               <TimelineItem year="2025" title="Platform Architecture" description="Designed the multi-tenant SaaS architecture covering 54 African countries, 42+ currencies, and 5 AU languages. Built core RBAC, borrower management, and credit scoring engine." />
               <TimelineItem year="2026 Q1" title="CDH v1.0 — v1.2" description="Launched the foundation platform with enterprise features: TOTP MFA, OAuth 2.1, AI chatbot, entity resolution, exchange rates, XBRL uploads, full internationalization, and mobile-responsive design." />
-              <TimelineItem year="2026 Q1" title="CDH v2.0 — Ghana Launch" description="Achieved full Bank of Ghana CRB v1.1 compliance. Deployed Ghana-specific mode with 85 borrowers, 181 credit accounts, 17 institutions, pipe-delimited export engine, and BoG code catalogs." />
+              <TimelineItem year="2026 Q1" title="CDH v2.5 — Ghana Launch" description="Achieved full Bank of Ghana CRB v1.1 compliance. Deployed Ghana-specific mode with 85 borrowers, 181 credit accounts, 17 institutions, pipe-delimited export engine, and BoG code catalogs." />
+              <TimelineItem year="2026 Q1" title="CDH v2.5 — Intelligence Suite" description="Introduced AI-powered portfolio intelligence, blockchain audit anchoring, advanced ML credit scoring (GBM), consumer self-service portal, cross-border entity resolution, and Stripe billing integration." />
+              <TimelineItem year="2026 Q1" title="CDH v2.5 — Current Release" description="Global Scandinavian visual style, score methodology transparency with good/bad odds tables, centralized brand theming across all pages, maintenance mode system, enhanced security hardening, and comprehensive version management. Released April 2026." />
             </CardContent>
           </Card>
         </section>
@@ -302,7 +304,7 @@ export default function AboutPage() {
                   <ExternalLink className="w-4 h-4 text-primary mt-0.5 shrink-0" />
                   <div>
                     <p className="text-sm font-semibold">Platform</p>
-                    <p className="text-xs text-muted-foreground mt-1">CDH v2.0 Credit Registry</p>
+                    <p className="text-xs text-muted-foreground mt-1">CDH v2.5 Credit Registry</p>
                     <p className="text-xs text-muted-foreground">Ghana Mode Active</p>
                   </div>
                 </div>
@@ -315,7 +317,7 @@ export default function AboutPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-[11px] text-muted-foreground/80">
             <div className="space-y-1.5">
               <p className="text-xs font-semibold text-foreground">Africa Credit Hub</p>
-              <p>Cross-Jurisdictional CDH & Credit Registry v2.1</p>
+              <p>Cross-Jurisdictional CDH & Credit Registry v2.5</p>
               <div className="flex items-center gap-1.5"><MapPin className="w-3 h-3" /><span>Accra, Ghana</span></div>
             </div>
             <div className="space-y-1.5">

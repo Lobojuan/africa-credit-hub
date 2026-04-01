@@ -216,7 +216,7 @@ export default function SystemStatusPage() {
             </div>
             <div>
               <span className="text-muted-foreground">Version</span>
-              <p className="font-medium">v{status?.version || "2.1.0"}</p>
+              <p className="font-medium">v{status?.version || "2.5.0"}</p>
             </div>
             <div>
               <span className="text-muted-foreground">Node.js</span>

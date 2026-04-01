@@ -70,7 +70,7 @@ function addFooter(doc: PDFKit.PDFDocument, pageNum: number, totalPages: number)
     .fontSize(7)
     .fillColor(LIGHT_GRAY)
     .text("CONFIDENTIAL", ml, footerY + 5, { width: cw / 3, align: "left" })
-    .text(`CDH v2.1 — Pan-African Credit Registry`, ml + cw / 3, footerY + 5, { width: cw / 3, align: "center" })
+    .text(`CDH v2.5 — Pan-African Credit Registry`, ml + cw / 3, footerY + 5, { width: cw / 3, align: "center" })
     .text(`Page ${pageNum} of ${totalPages}`, ml + (cw * 2 / 3), footerY + 5, { width: cw / 3, align: "right" })
     .restore();
 }
@@ -161,7 +161,7 @@ export function generateCopyrightPdf(): Promise<Buffer> {
         Author: "Carlson Capital & Systems In Motion Limited",
         Subject: "Copyright and IP Protection Document",
         Keywords: "copyright, intellectual property, software, credit registry, pan-african, CDH",
-        Creator: "CDH v2.1 Platform",
+        Creator: "CDH v2.5 Platform",
       },
     });
 
@@ -212,7 +212,7 @@ export function generateCopyrightPdf(): Promise<Buffer> {
 
     doc.moveDown(0.5);
     doc.font("Helvetica").fontSize(10).fillColor("#ffffff").fillOpacity(0.75)
-      .text("Pan-African Credit Data Hub (CDH) v2.1", ml, undefined, { width: cw, align: "center" });
+      .text("Pan-African Credit Data Hub (CDH) v2.5", ml, undefined, { width: cw, align: "center" });
 
     doc.fillOpacity(1);
 
@@ -232,7 +232,7 @@ export function generateCopyrightPdf(): Promise<Buffer> {
 
     const infoItems = [
       ["Document ID:", "CDH-IP-2026-001"],
-      ["Version:", "2.1"],
+      ["Version:", "2.5"],
       ["Classification:", "CONFIDENTIAL — PROPRIETARY"],
       ["Date of Issue:", new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })],
       ["Copyright Holder:", "Carlson Capital & Systems In Motion Limited"],
@@ -294,7 +294,7 @@ export function generateCopyrightPdf(): Promise<Buffer> {
 
     sectionTitle(doc, "1", "Preamble & Copyright Declaration");
 
-    bodyText(doc, "This document constitutes a formal declaration and assertion of copyright and intellectual property rights over the Pan-African Credit Data Hub (\"CDH\" or \"the Platform\"), version 2.1, a comprehensive software system developed by Carlson Capital & Systems In Motion Limited (\"the Company\", \"the Owner\", or \"the Copyright Holder\").");
+    bodyText(doc, "This document constitutes a formal declaration and assertion of copyright and intellectual property rights over the Pan-African Credit Data Hub (\"CDH\" or \"the Platform\"), version 2.5, a comprehensive software system developed by Carlson Capital & Systems In Motion Limited (\"the Company\", \"the Owner\", or \"the Copyright Holder\").");
 
     bodyText(doc, "The Platform is a sophisticated, multi-jurisdiction credit registry and risk assessment system designed and built to serve financial institutions, regulatory bodies, telecommunications companies, and government agencies across the African continent. It represents a significant investment of creative, technical, and financial resources.");
 
@@ -323,7 +323,7 @@ export function generateCopyrightPdf(): Promise<Buffer> {
     bodyText(doc, "For the purposes of this document, the following terms shall have the meanings ascribed below:");
     doc.moveDown(0.2);
 
-    definitionItem(doc, "The Platform", "The Pan-African Credit Data Hub (CDH) v2.1, including all software components, modules, APIs, user interfaces, databases, algorithms, documentation, and related materials.");
+    definitionItem(doc, "The Platform", "The Pan-African Credit Data Hub (CDH) v2.5, including all software components, modules, APIs, user interfaces, databases, algorithms, documentation, and related materials.");
     definitionItem(doc, "Source Code", "The human-readable programming instructions, written in TypeScript, JavaScript, SQL, HTML, CSS, and any other programming languages, that constitute the Platform.");
     definitionItem(doc, "Object Code", "The compiled or interpreted form of the Source Code, including bundled assets, minified scripts, and deployable artifacts.");
     definitionItem(doc, "Algorithms", "The proprietary computational methods, including but not limited to credit scoring models, telco data analysis engines, risk assessment formulas, entity matching algorithms, and machine learning models embedded within the Platform.");
@@ -518,7 +518,7 @@ export function generateCopyrightPdf(): Promise<Buffer> {
 
     bodyText(doc, "12.3  The obligations of confidentiality, non-disclosure, and non-use imposed upon Licensees, employees, contractors, and third parties shall survive the expiration or termination of any license agreement, employment contract, or other arrangement.");
 
-    bodyText(doc, "12.4  The first publication date of the Platform is established as January 2024, with continuous development and enhancement through the current version (v2.1, 2026).");
+    bodyText(doc, "12.4  The first publication date of the Platform is established as January 2024, with continuous development and enhancement through the current version (v2.5, 2026).");
 
     // ──── SECTION 13: DISPUTE RESOLUTION ────
     sectionTitle(doc, "13", "Dispute Resolution");

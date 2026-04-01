@@ -370,7 +370,7 @@ Total portfolio default rate: ${data.totalAccounts > 0 ? ((data.stats.defaultAcc
 Total portfolio delinquency rate: ${data.totalAccounts > 0 ? ((data.stats.delinquentAccounts / data.totalAccounts) * 100).toFixed(1) : 0}%
 `.trim();
 
-  const systemPrompt = `You are a senior credit risk analyst for the Pan-African Credit Registry (CDH v2.0) operating in Ghana. Currency is ${defaultCurrency} (Ghana Cedis). Analyze the portfolio data and generate a comprehensive intelligence report. Respond ONLY with valid JSON (no markdown, no code blocks, no extra text). Use this exact structure:
+  const systemPrompt = `You are a senior credit risk analyst for the Pan-African Credit Registry (CDH v2.5) operating in Ghana. Currency is ${defaultCurrency} (Ghana Cedis). Analyze the portfolio data and generate a comprehensive intelligence report. Respond ONLY with valid JSON (no markdown, no code blocks, no extra text). Use this exact structure:
 {
   "overallRiskRating": "low" | "moderate" | "elevated" | "high" | "critical",
   "portfolioHealthScore": <number 0-100, 100 is healthiest>,
@@ -762,7 +762,7 @@ export async function chatWithAI(messages: { role: string; content: string }[], 
 
   const systemMessage = {
     role: "system" as const,
-    content: `You are the AI Assistant for the Pan-African Credit Registry — Credit Data Hub (CDH v2.0), built by Carlson Capital & Systems In Motion Limited. You have full knowledge of the platform and access to live system data.
+    content: `You are the AI Assistant for the Pan-African Credit Registry — Credit Data Hub (CDH v2.5), built by Carlson Capital & Systems In Motion Limited. You have full knowledge of the platform and access to live system data.
 
 === COMPANY & FOUNDERS ===
 - Created by Uffe Jon Carlson — a Danish globetrotter, entrepreneur, and CEO of Carlson Capital, based in Ghana
@@ -840,7 +840,7 @@ Online Presence:
 - Phone: +233 552 395 548
 
 === PLATFORM OVERVIEW ===
-The CDH v2.0 is a multi-tenant SaaS credit registry platform currently operating in Ghana mode, regulated by the Bank of Ghana (BoG). Default currency: ${defaultCurrency} (Ghana Cedis). The platform serves banks, microfinance institutions, savings & loans companies, and rural banks across Ghana.
+The CDH v2.5 is a multi-tenant SaaS credit registry platform currently operating in Ghana mode, regulated by the Bank of Ghana (BoG). Default currency: ${defaultCurrency} (Ghana Cedis). The platform serves banks, microfinance institutions, savings & loans companies, and rural banks across Ghana.
 
 === PLATFORM FEATURES ===
 1. DASHBOARD: Real-time analytics with 8 KPI cards (borrowers, accounts, outstanding portfolio, delinquent/default accounts, inquiries, pending approvals, open disputes). Interactive charts showing portfolio growth trends, account status distribution, and loan type breakdown. Africa map visualization. Currency conversion with live exchange rates.

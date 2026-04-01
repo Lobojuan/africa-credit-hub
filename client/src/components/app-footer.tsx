@@ -56,7 +56,7 @@ export function AppFooter() {
             &copy; 2024–2026 Carlson Capital & Systems In Motion Limited. All rights reserved.
           </p>
           <p className="text-[11px] text-muted-foreground/40">
-            Cross-Jurisdictional Central Data Hub v2.0
+            Cross-Jurisdictional Central Data Hub v2.5
           </p>
         </div>
       </div>

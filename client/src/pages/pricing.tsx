@@ -40,7 +40,7 @@ const PLANS = [
     highlight: true,
     features: [
       "Everything in Standard, plus:",
-      "Advanced ML credit scoring (GBM v2.1)",
+      "Advanced ML credit scoring (GBM v2.5)",
       "Up to 50 user accounts",
       "Multi-country deployment (up to 5)",
       "Priority API access (10,000 calls/day)",

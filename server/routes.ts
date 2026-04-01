@@ -539,7 +539,7 @@ export async function registerRoutes(
     const uptimePct = totalChecks > 0 ? ((okChecks / totalChecks) * 100).toFixed(2) : "100.00";
     res.json({
       status: dbStatus === "ok" ? "healthy" : "degraded",
-      version: "2.1.0",
+      version: "2.5.0",
       uptime: {
         seconds: uptimeSec,
         formatted: `${Math.floor(uptimeSec / 86400)}d ${Math.floor((uptimeSec % 86400) / 3600)}h ${Math.floor((uptimeSec % 3600) / 60)}m`,
@@ -567,7 +567,7 @@ export async function registerRoutes(
     const uptimePct = totalChecks > 0 ? ((okChecks / totalChecks) * 100).toFixed(2) : "100.00";
     res.json({
       status: dbStatus === "ok" ? "healthy" : "degraded",
-      version: "2.1.0",
+      version: "2.5.0",
       environment: process.env.NODE_ENV || "development",
       uptime: {
         seconds: uptimeSec,
@@ -605,7 +605,7 @@ export async function registerRoutes(
 
     res.json({
       platform: "CDH Credit Registry",
-      version: "2.1.0",
+      version: "2.5.0",
       status: overallStatus,
       uptime: {
         seconds: uptimeSec,
@@ -654,7 +654,7 @@ export async function registerRoutes(
 
     res.json({
       platform: "CDH Credit Registry",
-      version: "2.1.0",
+      version: "2.5.0",
       status: overallStatus,
       uptime: {
         seconds: uptimeSec,
@@ -5531,7 +5531,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         doc.fill("#ffffff").fontSize(14).font("Helvetica-Bold")
           .text("Comprehensive Credit Information Report", 50, 52, { width: W - 140 });
         doc.fontSize(8).font("Helvetica").fill("#cccccc")
-          .text("Cross-Jurisdictional Central Data Hub v2.0 | Carlson Capital & Systems In Motion Limited", 50, 72, { width: W - 140 });
+          .text("Cross-Jurisdictional Central Data Hub v2.5 | Carlson Capital & Systems In Motion Limited", 50, 72, { width: W - 140 });
         doc.fill("#ffffff").fontSize(7).font("Helvetica")
           .text("ORDER NUMBER", W - 90, 52, { width: 80, align: "right" });
         doc.fontSize(9).font("Helvetica-Bold")
@@ -5852,7 +5852,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         .text("The information in this report has been compiled from data submitted by participating financial institutions. While Carlson Capital & Systems In Motion Limited endeavor to ensure accuracy, we do not accept responsibility for any loss or damage resulting from this report.", 40, doc.y, { width: W, align: "center" });
       doc.moveDown(0.3);
       doc.fontSize(6).font("Helvetica").fill(LIGHT)
-        .text("Cross-Jurisdictional Central Data Hub & Credit Registry System v2.0 | Carlson Capital & Systems In Motion Limited | Confidential & Proprietary", 40, doc.y, { width: W, align: "center" });
+        .text("Cross-Jurisdictional Central Data Hub & Credit Registry System v2.5 | Carlson Capital & Systems In Motion Limited | Confidential & Proprietary", 40, doc.y, { width: W, align: "center" });
 
       doc.end();
       await new Promise<void>((resolve, reject) => {
@@ -7242,7 +7242,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
           totalInstitutions: allOrgs.length,
           activeCountries,
           supportedCountries: supportedCountries.length,
-          systemVersion: "CDH v2.1",
+          systemVersion: "CDH v2.5",
           systemStatus: "operational",
         },
         countries: countryDetails,
@@ -8376,7 +8376,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       if (!message || typeof message !== "string") {
         return res.status(400).json({ message: "message required" });
       }
-      const systemPrompt = `You are the AI assistant for Africa Credit Hub (africacredithub.com) — the Pan-African Credit Registry System (CDH v2.1). You are an expert on every aspect of this platform. Answer any question confidently and accurately using the knowledge below.
+      const systemPrompt = `You are the AI assistant for Africa Credit Hub (africacredithub.com) — the Pan-African Credit Registry System (CDH v2.5). You are an expert on every aspect of this platform. Answer any question confidently and accurately using the knowledge below.
 
 ===== COMPANY =====
 - Created by Uffe Jon Carlson — a Danish globetrotter, entrepreneur, and CEO of Carlson Capital, based in Ghana
@@ -8461,7 +8461,7 @@ STANDARD — $299/month ($239/month annual)
 PROFESSIONAL — $799/month ($639/month annual) [MOST POPULAR]
 - For growing institutions needing advanced analytics
 - Up to 50 users, multi-country deployment (up to 5 countries)
-- Everything in Standard plus: Advanced ML credit scoring (GBM v2.1), cross-border credit searches, portfolio intelligence suite
+- Everything in Standard plus: Advanced ML credit scoring (GBM v2.5), cross-border credit searches, portfolio intelligence suite
 - Priority API access (10,000 calls/day)
 - WebAuthn biometric authentication, maker-checker workflows
 - Regulatory compliance dashboards, batch upload processing
@@ -10138,7 +10138,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
       const exportData = {
         exportDate: new Date().toISOString(),
-        exportVersion: "2.1.0",
+        exportVersion: "2.5.0",
         compliance: "POPIA/NDPA/Ghana DPA/GDPR Article 20 — Right to Data Portability",
         organization: {
           id: org.id,

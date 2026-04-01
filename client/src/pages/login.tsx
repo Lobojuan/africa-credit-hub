@@ -261,7 +261,7 @@ export default function LoginPage() {
             transitionDelay: "0.9s",
           }}>
             <p className="text-white/50">
-              Carlson Capital & Systems In Motion Limited\u2122 &middot; {isGhanaMode() ? "Ghana Credit Registry v2.0" : "Cross-Jurisdictional CDH v2.0"}
+              Carlson Capital & Systems In Motion Limited\u2122 &middot; {isGhanaMode() ? "Ghana Credit Registry v2.5" : "Cross-Jurisdictional CDH v2.5"}
             </p>
             <p className="text-white/30 text-[10px]">
               &copy; 2026 Carlson Capital & Systems In Motion Limited. All rights reserved.
