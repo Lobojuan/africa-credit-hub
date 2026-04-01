@@ -1,21 +1,7 @@
 import { pool } from "./db";
-import { insertCreditAccountSchema } from "@shared/schema";
-
-interface BatchJob {
-  id: string;
-  type: "borrower_update" | "account_update" | "account_create";
-  status: "queued" | "processing" | "completed" | "failed";
-  totalRecords: number;
-  processedRecords: number;
-  successCount: number;
-  errorCount: number;
-  errors: Array<{ index: number; message: string }>;
-  createdAt: Date;
-  completedAt: Date | null;
-  userId: string | null;
-}
-
-const jobStore = new Map<string, BatchJob>();
+import { db } from "./db";
+import { insertCreditAccountSchema, batchJobs } from "@shared/schema";
+import { eq, sql } from "drizzle-orm";
 
 const CHUNK_SIZE = 250;
 const MAX_CONCURRENT_JOBS = 3;
@@ -47,14 +33,67 @@ function releaseSlot(): void {
   }
 }
 
+async function createJobInDb(
+  jobId: string,
+  type: "borrower_update" | "account_update" | "account_create",
+  totalRecords: number,
+  userId: string | null,
+  organizationId: string | null = null,
+): Promise<void> {
+  await db.insert(batchJobs).values({
+    id: jobId,
+    type,
+    status: "queued",
+    totalRecords,
+    processedRecords: 0,
+    successCount: 0,
+    errorCount: 0,
+    errors: [],
+    userId,
+    organizationId,
+  });
+}
+
+async function updateJobInDb(
+  jobId: string,
+  updates: {
+    status?: string;
+    processedRecords?: number;
+    successCount?: number;
+    errorCount?: number;
+    errors?: Array<{ index: number; message: string }>;
+    completedAt?: Date;
+  },
+): Promise<void> {
+  const setFields: Record<string, any> = {};
+  if (updates.status !== undefined) setFields.status = updates.status;
+  if (updates.processedRecords !== undefined) setFields.processedRecords = updates.processedRecords;
+  if (updates.successCount !== undefined) setFields.successCount = updates.successCount;
+  if (updates.errorCount !== undefined) setFields.errorCount = updates.errorCount;
+  if (updates.errors !== undefined) setFields.errors = updates.errors;
+  if (updates.completedAt !== undefined) setFields.completedAt = updates.completedAt;
+
+  if (Object.keys(setFields).length > 0) {
+    await db.update(batchJobs).set(setFields).where(eq(batchJobs.id, jobId));
+  }
+}
+
+interface JobProgress {
+  processedRecords: number;
+  successCount: number;
+  errorCount: number;
+  errors: Array<{ index: number; message: string }>;
+}
+
 async function processChunkedInserts(
-  job: BatchJob,
+  jobId: string,
+  progress: JobProgress,
   records: any[],
   tableName: string,
   columns: string[],
   validateFn?: (record: any, index: number) => any
 ): Promise<void> {
-  job.status = "processing";
+  await updateJobInDb(jobId, { status: "processing" });
 
   for (let chunkStart = 0; chunkStart < records.length; chunkStart += CHUNK_SIZE) {
     const chunk = records.slice(chunkStart, chunkStart + CHUNK_SIZE);
@@ -68,9 +107,9 @@ async function processChunkedInserts(
         validRows.push(validated);
         validIndices.push(globalIndex);
       } catch (err: any) {
-        job.errorCount++;
-        job.errors.push({ index: globalIndex, message: err.message || "Validation failed" });
-        job.processedRecords++;
+        progress.errorCount++;
+        progress.errors.push({ index: globalIndex, message: err.message || "Validation failed" });
+        progress.processedRecords++;
       }
     }
 
@@ -100,22 +139,36 @@ async function processChunkedInserts(
       await client.query(query, values);
       await client.query("COMMIT");
 
-      job.successCount += validRows.length;
-      job.processedRecords += validRows.length;
+      progress.successCount += validRows.length;
+      progress.processedRecords += validRows.length;
     } catch (err: any) {
       await client.query("ROLLBACK");
       for (const idx of validIndices) {
-        job.errorCount++;
-        job.errors.push({ index: idx, message: err.message || "Batch insert failed" });
-        job.processedRecords++;
+        progress.errorCount++;
+        progress.errors.push({ index: idx, message: err.message || "Batch insert failed" });
+        progress.processedRecords++;
       }
     } finally {
       client.release();
     }
+
+    await updateJobInDb(jobId, {
+      processedRecords: progress.processedRecords,
+      successCount: progress.successCount,
+      errorCount: progress.errorCount,
+      errors: progress.errors.slice(-100),
+    });
   }
 
-  job.status = job.errorCount > 0 && job.successCount === 0 ? "failed" : "completed";
-  job.completedAt = new Date();
+  const finalStatus = progress.errorCount > 0 && progress.successCount === 0 ? "failed" : "completed";
+  await updateJobInDb(jobId, {
+    status: finalStatus,
+    processedRecords: progress.processedRecords,
+    successCount: progress.successCount,
+    errorCount: progress.errorCount,
+    errors: progress.errors.slice(-100),
+    completedAt: new Date(),
+  });
 }
 
 export async function enqueueBatchAccountCreate(
@@ -123,20 +176,9 @@ export async function enqueueBatchAccountCreate(
   userId: string | null
 ): Promise<string> {
   const jobId = generateJobId();
-  const job: BatchJob = {
-    id: jobId,
-    type: "account_create",
-    status: "queued",
-    totalRecords: records.length,
-    processedRecords: 0,
-    successCount: 0,
-    errorCount: 0,
-    errors: [],
-    createdAt: new Date(),
-    completedAt: null,
-    userId,
-  };
-  jobStore.set(jobId, job);
+  await createJobInDb(jobId, "account_create", records.length, userId);
+
+  const progress: JobProgress = { processedRecords: 0, successCount: 0, errorCount: 0, errors: [] };
 
   (async () => {
     await waitForSlot();
@@ -148,15 +190,15 @@ export async function enqueueBatchAccountCreate(
         "reportingDate", "creditCategory",
       ];
       await processChunkedInserts(
-        job,
+        jobId,
+        progress,
         records,
         "credit_accounts",
         columns,
         (record) => insertCreditAccountSchema.parse(record)
       );
     } catch (err: any) {
-      job.status = "failed";
-      job.completedAt = new Date();
+      await updateJobInDb(jobId, { status: "failed", completedAt: new Date() });
     } finally {
       releaseSlot();
     }
@@ -170,25 +212,14 @@ export async function enqueueBatchBorrowerUpdate(
   userId: string | null
 ): Promise<string> {
   const jobId = generateJobId();
-  const job: BatchJob = {
-    id: jobId,
-    type: "borrower_update",
-    status: "queued",
-    totalRecords: updates.length,
-    processedRecords: 0,
-    successCount: 0,
-    errorCount: 0,
-    errors: [],
-    createdAt: new Date(),
-    completedAt: null,
-    userId,
-  };
-  jobStore.set(jobId, job);
+  await createJobInDb(jobId, "borrower_update", updates.length, userId);
+
+  const progress: JobProgress = { processedRecords: 0, successCount: 0, errorCount: 0, errors: [] };
 
   (async () => {
     await waitForSlot();
     try {
-      job.status = "processing";
+      await updateJobInDb(jobId, { status: "processing" });
       const ALLOWED_BORROWER_FIELDS = new Set([
         "firstName", "lastName", "middleName", "dateOfBirth", "gender",
         "nationalId", "phone", "email", "address", "employerName",
@@ -203,9 +234,9 @@ export async function enqueueBatchBorrowerUpdate(
           const globalIdx = chunkStart + i;
           const { id, fields } = chunk[i];
           if (!id || !fields || Object.keys(fields).length === 0) {
-            job.errorCount++;
-            job.errors.push({ index: globalIdx, message: "Missing id or fields" });
-            job.processedRecords++;
+            progress.errorCount++;
+            progress.errors.push({ index: globalIdx, message: "Missing id or fields" });
+            progress.processedRecords++;
             continue;
           }
           const filtered: Record<string, any> = {};
@@ -213,9 +244,9 @@ export async function enqueueBatchBorrowerUpdate(
             if (ALLOWED_BORROWER_FIELDS.has(key)) filtered[key] = val;
           }
           if (Object.keys(filtered).length === 0) {
-            job.errorCount++;
-            job.errors.push({ index: globalIdx, message: "No valid fields to update" });
-            job.processedRecords++;
+            progress.errorCount++;
+            progress.errors.push({ index: globalIdx, message: "No valid fields to update" });
+            progress.processedRecords++;
             continue;
           }
           validUpdates.push({ globalIdx, id, fields: filtered });
@@ -253,28 +284,35 @@ export async function enqueueBatchBorrowerUpdate(
           const idPlaceholders = ids.map(() => `$${paramIdx++}`).join(", ");
           allValues.push(...ids);
 
-          const sql = `UPDATE borrowers SET ${setClauses.join(", ")} WHERE id IN (${idPlaceholders})`;
-          const result = await client.query(sql, allValues);
+          const sqlStr = `UPDATE borrowers SET ${setClauses.join(", ")} WHERE id IN (${idPlaceholders})`;
+          const result = await client.query(sqlStr, allValues);
           await client.query("COMMIT");
 
-          job.successCount += result.rowCount || validUpdates.length;
-          job.processedRecords += validUpdates.length;
+          progress.successCount += result.rowCount || validUpdates.length;
+          progress.processedRecords += validUpdates.length;
         } catch (err: any) {
           await client.query("ROLLBACK");
           for (const upd of validUpdates) {
-            job.errorCount++;
-            job.errors.push({ index: upd.globalIdx, message: err.message || "Batch update failed" });
-            job.processedRecords++;
+            progress.errorCount++;
+            progress.errors.push({ index: upd.globalIdx, message: err.message || "Batch update failed" });
+            progress.processedRecords++;
           }
         } finally {
           client.release();
         }
+
+        await updateJobInDb(jobId, {
+          processedRecords: progress.processedRecords,
+          successCount: progress.successCount,
+          errorCount: progress.errorCount,
+          errors: progress.errors.slice(-100),
+        });
       }
-      job.status = job.errorCount > 0 && job.successCount === 0 ? "failed" : "completed";
-      job.completedAt = new Date();
+
+      const finalStatus = progress.errorCount > 0 && progress.successCount === 0 ? "failed" : "completed";
+      await updateJobInDb(jobId, { status: finalStatus, completedAt: new Date() });
     } catch (err: any) {
-      job.status = "failed";
-      job.completedAt = new Date();
+      await updateJobInDb(jobId, { status: "failed", completedAt: new Date() });
     } finally {
       releaseSlot();
     }
@@ -288,25 +326,14 @@ export async function enqueueBatchAccountUpdate(
   userId: string | null
 ): Promise<string> {
   const jobId = generateJobId();
-  const job: BatchJob = {
-    id: jobId,
-    type: "account_update",
-    status: "queued",
-    totalRecords: updates.length,
-    processedRecords: 0,
-    successCount: 0,
-    errorCount: 0,
-    errors: [],
-    createdAt: new Date(),
-    completedAt: null,
-    userId,
-  };
-  jobStore.set(jobId, job);
+  await createJobInDb(jobId, "account_update", updates.length, userId);
+
+  const progress: JobProgress = { processedRecords: 0, successCount: 0, errorCount: 0, errors: [] };
 
   (async () => {
     await waitForSlot();
     try {
-      job.status = "processing";
+      await updateJobInDb(jobId, { status: "processing" });
       const ALLOWED_FIELDS = new Set([
         "status", "currentBalance", "daysInArrears", "interestRate",
         "maturityDate", "currency", "originalAmount", "accountType",
@@ -322,9 +349,9 @@ export async function enqueueBatchAccountUpdate(
           const globalIdx = chunkStart + i;
           const { id, fields } = chunk[i];
           if (!id || !fields || Object.keys(fields).length === 0) {
-            job.errorCount++;
-            job.errors.push({ index: globalIdx, message: "Missing id or fields" });
-            job.processedRecords++;
+            progress.errorCount++;
+            progress.errors.push({ index: globalIdx, message: "Missing id or fields" });
+            progress.processedRecords++;
             continue;
           }
           const filtered: Record<string, any> = {};
@@ -332,9 +359,9 @@ export async function enqueueBatchAccountUpdate(
             if (ALLOWED_FIELDS.has(key)) filtered[key] = val;
           }
           if (Object.keys(filtered).length === 0) {
-            job.errorCount++;
-            job.errors.push({ index: globalIdx, message: "No valid fields to update" });
-            job.processedRecords++;
+            progress.errorCount++;
+            progress.errors.push({ index: globalIdx, message: "No valid fields to update" });
+            progress.processedRecords++;
             continue;
           }
           validUpdates.push({ globalIdx, id, fields: filtered });
@@ -372,28 +399,35 @@ export async function enqueueBatchAccountUpdate(
           const idPlaceholders = ids.map(() => `$${paramIdx++}`).join(", ");
           allValues.push(...ids);
 
-          const sql = `UPDATE credit_accounts SET ${setClauses.join(", ")} WHERE id IN (${idPlaceholders})`;
-          const result = await client.query(sql, allValues);
+          const sqlStr = `UPDATE credit_accounts SET ${setClauses.join(", ")} WHERE id IN (${idPlaceholders})`;
+          const result = await client.query(sqlStr, allValues);
           await client.query("COMMIT");
 
-          job.successCount += result.rowCount || validUpdates.length;
-          job.processedRecords += validUpdates.length;
+          progress.successCount += result.rowCount || validUpdates.length;
+          progress.processedRecords += validUpdates.length;
         } catch (err: any) {
           await client.query("ROLLBACK");
           for (const upd of validUpdates) {
-            job.errorCount++;
-            job.errors.push({ index: upd.globalIdx, message: err.message || "Batch update failed" });
-            job.processedRecords++;
+            progress.errorCount++;
+            progress.errors.push({ index: upd.globalIdx, message: err.message || "Batch update failed" });
+            progress.processedRecords++;
           }
         } finally {
           client.release();
         }
+
+        await updateJobInDb(jobId, {
+          processedRecords: progress.processedRecords,
+          successCount: progress.successCount,
+          errorCount: progress.errorCount,
+          errors: progress.errors.slice(-100),
+        });
       }
-      job.status = job.errorCount > 0 && job.successCount === 0 ? "failed" : "completed";
-      job.completedAt = new Date();
+
+      const finalStatus = progress.errorCount > 0 && progress.successCount === 0 ? "failed" : "completed";
+      await updateJobInDb(jobId, { status: finalStatus, completedAt: new Date() });
     } catch (err: any) {
-      job.status = "failed";
-      job.completedAt = new Date();
+      await updateJobInDb(jobId, { status: "failed", completedAt: new Date() });
     } finally {
       releaseSlot();
     }
@@ -402,28 +436,14 @@ export async function enqueueBatchAccountUpdate(
   return jobId;
 }
 
-export function getJobStatus(jobId: string): BatchJob | null {
-  return jobStore.get(jobId) || null;
+export async function getJobStatus(jobId: string) {
+  const rows = await db.select().from(batchJobs).where(eq(batchJobs.id, jobId)).limit(1);
+  return rows[0] || null;
 }
 
 export function getQueueStats() {
-  let queued = 0, processing = 0, completed = 0, failed = 0;
-  for (const job of jobStore.values()) {
-    switch (job.status) {
-      case "queued": queued++; break;
-      case "processing": processing++; break;
-      case "completed": completed++; break;
-      case "failed": failed++; break;
-    }
-  }
-  return { queued, processing, completed, failed, activeJobs, pendingInQueue: pendingQueue.length };
+  return {
+    activeJobs,
+    pendingInQueue: pendingQueue.length,
+  };
 }
-
-setInterval(() => {
-  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-  for (const [id, job] of jobStore.entries()) {
-    if (job.completedAt && job.completedAt.getTime() < cutoff) {
-      jobStore.delete(id);
-    }
-  }
-}, 60 * 60 * 1000);

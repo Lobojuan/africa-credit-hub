@@ -711,6 +711,18 @@ process.stderr.write = function (...args: any[]) {
     next();
   });
 
+  const { validateEncryptionConfig } = await import("./encryption");
+  const { validateExternalApiConfig } = await import("./external-api");
+  try {
+    validateEncryptionConfig();
+    validateExternalApiConfig();
+  } catch (err: any) {
+    console.error("[Startup] Configuration validation failed:", err.message);
+    if (process.env.NODE_ENV === "production") {
+      process.exit(1);
+    }
+  }
+
   await registerRoutes(httpServer, app);
 
   const { sanitizeErrorForResponse } = await import("./security-hardening");

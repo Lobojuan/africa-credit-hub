@@ -1,0 +1,75 @@
+You are working on a full-stack TypeScript app (Express + React + Drizzle ORM + PostgreSQL).
+
+Fix the following issues in priority order:
+
+---
+
+### 1. [CRITICAL] Persist batch jobs to database (batch-queue.ts)
+Replace the in-memory `jobStore = new Map()` with a PostgreSQL-backed job table.
+- Add a `batch_jobs` table to the schema with columns: id, type, status, total_records, processed_records, success_count, error_count, errors (jsonb), created_at, completed_at, user_id, organization_id.
+- Replace all `jobStore.set/get` calls with DB inserts/updates using Drizzle ORM.
+- Ensure job status survives server restarts.
+
+---
+
+### 2. [CRITICAL] Fix PII encryption key derivation (encryption.ts)
+- Replace the hardcoded salt `"cdh-pii-salt-v1"` with a value read from `process.env.PII_ENCRYPTION_SALT`.
+- If `PII_ENCRYPTION_KEY` is missing in production (`NODE_ENV === "production"`), throw a hard error instead of falling back to SESSION_SECRET.
+- Add a startup check in `index.ts` that validates `PII_ENCRYPTION_KEY` and `PII_ENCRYPTION_SALT` are set before the server starts.
+
+---
+
+### 3. [CRITICAL] Use independent JWT secret (external-api.ts)
+- Replace `const JWT_SECRET = process.env.SESSION_SECRET! + "-jwt-ext"` with `const JWT_SECRET = process.env.EXTERNAL_API_JWT_SECRET!`.
+- Add a startup validation that throws if `EXTERNAL_API_JWT_SECRET` is not set.
+
+---
+
+### 4. [HIGH] Add webhook retry logic (webhook-delivery.ts)
+- After a failed delivery, schedule a retry with exponential backoff: retry after 1 min, 5 min, 30 min (max 3 retries).
+- Store `attempt_number` and `next_retry_at` in the `webhook_delivery_logs` table.
+- Add a background interval (every 60s) that picks up pending retries and re-attempts delivery.
+
+---
+
+### 5. [HIGH] Fix window.fetch monkey-patch in use-auth.tsx
+- Remove the `window.fetch = async (...args) => { ... }` override.
+- Instead, use React Query's `onError` global handler via `queryClient.setDefaultOptions` to handle 440 (session expired) and 403 (ACCOUNT_SUSPENDED) responses.
+- Move the redirect logic to a dedicated `handleSessionExpired()` function called from the query client config.
+
+---
+
+### 6. [HIGH] Add pagination to storage list methods (storage.ts)
+- For all methods named `getXxx(...)` that return arrays (e.g., `getBorrowers`, `getCreditAccounts`, `getAuditLogs`), add optional `limit` and `offset` parameters defaulting to `limit=100, offset=0`.
+- Apply `.limit(limit).offset(offset)` to all Drizzle queries that return lists.
+
+---
+
+### 7. [MEDIUM] Sanitize credit score inputs (credit-score.ts)
+- At the top of `calculateCreditScore`, filter out any accounts where `status` is null/undefined.
+- Clamp `currentBalance` and `amountOverdue` to non-negative numbers before calculations.
+- Return a safe default score of 300 with reason code `INVALID_INPUT` if the accounts array contains more than 50% invalid records.
+
+---
+
+### 8. [MEDIUM] Make fraud thresholds configurable (fraud-detection.ts)
+- Extract all hardcoded thresholds (e.g., `recentInquiries > 10`, `accountCreatedRecently > 5`) into a `FraudThresholds` config object parameter.
+- Provide sensible defaults so existing callers don't break.
+- This allows per-country or per-organization threshold customization.
+
+---
+
+### 9. [MEDIUM] Hide raw error messages from ErrorBoundary UI (error-boundary.tsx)
+- In production (`import.meta.env.PROD`), replace `{this.state.error.message}` with a generic message: `"Please try refreshing the page or contact support."`
+- Only show the raw error message in development mode.
+
+---
+
+### 10. [MEDIUM] Add global AI token cap (ai.ts)
+- Add a constant `MAX_ALLOWED_TOKENS = 4000`.
+- In `generateAIResponse`, clamp `maxTokens = Math.min(options.maxTokens ?? 2000, MAX_ALLOWED_TOKENS)`.
+- Log a warning if a caller requests more than the cap.
+
+---
+
+After all fixes, run `tsc --noEmit` to confirm no TypeScript errors were introduced.

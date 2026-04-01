@@ -15,6 +15,32 @@ interface FraudCheckInput {
   accountCreatedRecently: number;
 }
 
+export interface FraudThresholds {
+  recentInquiriesHigh: number;
+  recentInquiriesMedium: number;
+  accountOpeningHigh: number;
+  accountOpeningMedium: number;
+  duplicateIdThreshold: number;
+  dtiCriticalMultiplier: number;
+  dtiWarningMultiplier: number;
+  riskLevelCritical: number;
+  riskLevelHigh: number;
+  riskLevelMedium: number;
+}
+
+const DEFAULT_THRESHOLDS: FraudThresholds = {
+  recentInquiriesHigh: 10,
+  recentInquiriesMedium: 5,
+  accountOpeningHigh: 5,
+  accountOpeningMedium: 3,
+  duplicateIdThreshold: 1,
+  dtiCriticalMultiplier: 60,
+  dtiWarningMultiplier: 36,
+  riskLevelCritical: 70,
+  riskLevelHigh: 45,
+  riskLevelMedium: 20,
+};
+
 export interface FraudAlert {
   type: "velocity" | "identity" | "behavioral" | "financial";
   severity: "low" | "medium" | "high" | "critical";
@@ -36,12 +62,13 @@ export interface FraudCheck {
   detail: string;
 }
 
-export function calculateFraudRisk(input: FraudCheckInput): FraudRiskResult {
+export function calculateFraudRisk(input: FraudCheckInput, thresholds: Partial<FraudThresholds> = {}): FraudRiskResult {
+  const t = { ...DEFAULT_THRESHOLDS, ...thresholds };
   const alerts: FraudAlert[] = [];
   const checks: FraudCheck[] = [];
   let riskScore = 0;
 
-  if (input.recentInquiries > 10) {
+  if (input.recentInquiries > t.recentInquiriesHigh) {
     riskScore += 25;
     alerts.push({
       type: "velocity",
@@ -50,8 +77,8 @@ export function calculateFraudRisk(input: FraudCheckInput): FraudRiskResult {
       description: `${input.recentInquiries} credit inquiries in the last 30 days indicates potential credit shopping fraud`,
       score: 25,
     });
-    checks.push({ name: "Inquiry Velocity", status: "fail", detail: `${input.recentInquiries} inquiries in 30 days (threshold: 10)` });
-  } else if (input.recentInquiries > 5) {
+    checks.push({ name: "Inquiry Velocity", status: "fail", detail: `${input.recentInquiries} inquiries in 30 days (threshold: ${t.recentInquiriesHigh})` });
+  } else if (input.recentInquiries > t.recentInquiriesMedium) {
     riskScore += 10;
     alerts.push({
       type: "velocity",
@@ -65,7 +92,7 @@ export function calculateFraudRisk(input: FraudCheckInput): FraudRiskResult {
     checks.push({ name: "Inquiry Velocity", status: "pass", detail: `${input.recentInquiries} inquiries — within normal range` });
   }
 
-  if (input.accountCreatedRecently > 5) {
+  if (input.accountCreatedRecently > t.accountOpeningHigh) {
     riskScore += 20;
     alerts.push({
       type: "velocity",
@@ -75,14 +102,14 @@ export function calculateFraudRisk(input: FraudCheckInput): FraudRiskResult {
       score: 20,
     });
     checks.push({ name: "Account Opening Velocity", status: "fail", detail: `${input.accountCreatedRecently} accounts in 90 days` });
-  } else if (input.accountCreatedRecently > 3) {
+  } else if (input.accountCreatedRecently > t.accountOpeningMedium) {
     riskScore += 8;
     checks.push({ name: "Account Opening Velocity", status: "warn", detail: `${input.accountCreatedRecently} accounts in 90 days` });
   } else {
     checks.push({ name: "Account Opening Velocity", status: "pass", detail: `${input.accountCreatedRecently} accounts in 90 days` });
   }
 
-  if (input.duplicateIdCount > 1) {
+  if (input.duplicateIdCount > t.duplicateIdThreshold) {
     riskScore += 30;
     alerts.push({
       type: "identity",
@@ -124,17 +151,17 @@ export function calculateFraudRisk(input: FraudCheckInput): FraudRiskResult {
     checks.push({ name: "PEP Status", status: "pass", detail: "Not a politically exposed person" });
   }
 
-  if (input.monthlyIncome > 0 && input.totalDebt > input.monthlyIncome * 60) {
+  if (input.monthlyIncome > 0 && input.totalDebt > input.monthlyIncome * t.dtiCriticalMultiplier) {
     riskScore += 20;
     alerts.push({
       type: "financial",
       severity: "high",
       title: "Debt-to-Income Anomaly",
-      description: `Total debt exceeds 60x monthly income — possible income misrepresentation or overleveraging`,
+      description: `Total debt exceeds ${t.dtiCriticalMultiplier}x monthly income — possible income misrepresentation or overleveraging`,
       score: 20,
     });
     checks.push({ name: "Debt-to-Income Ratio", status: "fail", detail: `DTI ratio: ${Math.round(input.totalDebt / input.monthlyIncome)}x` });
-  } else if (input.monthlyIncome > 0 && input.totalDebt > input.monthlyIncome * 36) {
+  } else if (input.monthlyIncome > 0 && input.totalDebt > input.monthlyIncome * t.dtiWarningMultiplier) {
     riskScore += 8;
     checks.push({ name: "Debt-to-Income Ratio", status: "warn", detail: `DTI ratio: ${Math.round(input.totalDebt / input.monthlyIncome)}x` });
   } else if (input.monthlyIncome > 0) {
@@ -163,9 +190,9 @@ export function calculateFraudRisk(input: FraudCheckInput): FraudRiskResult {
   riskScore = Math.min(100, riskScore);
 
   let riskLevel: "low" | "medium" | "high" | "critical";
-  if (riskScore >= 70) riskLevel = "critical";
-  else if (riskScore >= 45) riskLevel = "high";
-  else if (riskScore >= 20) riskLevel = "medium";
+  if (riskScore >= t.riskLevelCritical) riskLevel = "critical";
+  else if (riskScore >= t.riskLevelHigh) riskLevel = "high";
+  else if (riskScore >= t.riskLevelMedium) riskLevel = "medium";
   else riskLevel = "low";
 
   return { riskScore, riskLevel, alerts, checks };

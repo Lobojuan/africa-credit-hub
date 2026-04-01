@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, decimal, boolean, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, decimal, boolean, timestamp, pgEnum, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -393,6 +393,25 @@ export const institutions = pgTable("institutions", {
   organizationId: varchar("organization_id").references(() => organizations.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+export const batchJobStatusEnum = pgEnum("batch_job_status", ["queued", "processing", "completed", "failed"]);
+export const batchJobTypeEnum = pgEnum("batch_job_type", ["borrower_update", "account_update", "account_create"]);
+
+export const batchJobs = pgTable("batch_jobs", {
+  id: varchar("id").primaryKey(),
+  type: batchJobTypeEnum("type").notNull(),
+  status: batchJobStatusEnum("status").notNull().default("queued"),
+  totalRecords: integer("total_records").notNull().default(0),
+  processedRecords: integer("processed_records").notNull().default(0),
+  successCount: integer("success_count").notNull().default(0),
+  errorCount: integer("error_count").notNull().default(0),
+  errors: jsonb("errors").default([]),
+  userId: varchar("user_id"),
+  organizationId: varchar("organization_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+export type BatchJob = typeof batchJobs.$inferSelect;
 
 export const billingRecords = pgTable("billing_records", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -821,6 +840,7 @@ export const webhookDeliveryLogs = pgTable("webhook_delivery_logs", {
   responseBody: text("response_body"),
   success: boolean("success").default(false),
   attemptNumber: integer("attempt_number").default(1),
+  nextRetryAt: timestamp("next_retry_at"),
   deliveredAt: timestamp("delivered_at").defaultNow(),
 });
 export type WebhookDeliveryLog = typeof webhookDeliveryLogs.$inferSelect;

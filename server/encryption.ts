@@ -11,19 +11,33 @@ function getEncryptionKey(): Buffer {
   if (_cachedKey) return _cachedKey;
 
   const key = process.env.PII_ENCRYPTION_KEY;
+  const salt = process.env.PII_ENCRYPTION_SALT || "cdh-pii-salt-v1";
+
   if (!key) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("CRITICAL: PII_ENCRYPTION_KEY must be set in production. Cannot encrypt/decrypt PII data without a dedicated key.");
+    }
     const fallback = process.env.SESSION_SECRET;
     if (!fallback) {
       throw new Error("CRITICAL: Neither PII_ENCRYPTION_KEY nor SESSION_SECRET is set. Cannot encrypt/decrypt PII data.");
     }
-    if (process.env.NODE_ENV === "production") {
-      console.error("[SECURITY] WARNING: PII_ENCRYPTION_KEY not set. Using SESSION_SECRET as fallback. Set a dedicated PII_ENCRYPTION_KEY for production.");
-    }
-    _cachedKey = crypto.scryptSync(fallback, "cdh-pii-salt-v1", 32);
+    console.warn("[SECURITY] WARNING: PII_ENCRYPTION_KEY not set. Using SESSION_SECRET as fallback. Set a dedicated PII_ENCRYPTION_KEY for production.");
+    _cachedKey = crypto.scryptSync(fallback, salt, 32);
     return _cachedKey;
   }
-  _cachedKey = crypto.scryptSync(key, "cdh-pii-salt-v1", 32);
+  _cachedKey = crypto.scryptSync(key, salt, 32);
   return _cachedKey;
+}
+
+export function validateEncryptionConfig(): void {
+  if (process.env.NODE_ENV === "production") {
+    if (!process.env.PII_ENCRYPTION_KEY) {
+      throw new Error("Startup check failed: PII_ENCRYPTION_KEY is required in production.");
+    }
+    if (!process.env.PII_ENCRYPTION_SALT) {
+      console.warn("[SECURITY] PII_ENCRYPTION_SALT not set — using default salt. Set a unique salt for production.");
+    }
+  }
 }
 
 export function encryptPII(plaintext: string): string {

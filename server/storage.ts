@@ -71,15 +71,15 @@ export interface IStorage {
 
   getCreditAccount(id: string): Promise<CreditAccount | undefined>;
   getCreditAccountsByBorrower(borrowerId: string): Promise<CreditAccount[]>;
-  getAllCreditAccounts(organizationId?: string, country?: string): Promise<CreditAccount[]>;
+  getAllCreditAccounts(organizationId?: string, country?: string, limit?: number, offset?: number): Promise<CreditAccount[]>;
   createCreditAccount(account: InsertCreditAccount): Promise<CreditAccount>;
   updateCreditAccount(id: string, data: Partial<InsertCreditAccount>): Promise<CreditAccount | undefined>;
 
   getCreditInquiriesByBorrower(borrowerId: string): Promise<CreditInquiry[]>;
-  getAllCreditInquiries(organizationId?: string, country?: string): Promise<CreditInquiry[]>;
+  getAllCreditInquiries(organizationId?: string, country?: string, limit?: number, offset?: number): Promise<CreditInquiry[]>;
   createCreditInquiry(inquiry: InsertCreditInquiry): Promise<CreditInquiry>;
 
-  getAuditLogs(organizationId?: string, country?: string): Promise<AuditLog[]>;
+  getAuditLogs(organizationId?: string, country?: string, limit?: number, offset?: number): Promise<AuditLog[]>;
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
   verifyAuditIntegrity(): Promise<{ valid: boolean; totalChecked: number; brokenAt?: string }>;
   fuzzyMatchBorrowers(params: { firstName?: string; lastName?: string; nationalId?: string; companyName?: string; passportNumber?: string; tinNumber?: string }): Promise<Array<any>>;
@@ -535,12 +535,12 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(creditAccounts).where(eq(creditAccounts.borrowerId, borrowerId)).orderBy(desc(creditAccounts.createdAt));
   }
 
-  async getAllCreditAccounts(organizationId?: string, country?: string): Promise<CreditAccount[]> {
+  async getAllCreditAccounts(organizationId?: string, country?: string, limit = 100, offset = 0): Promise<CreditAccount[]> {
     const filters: any[] = [];
     if (organizationId) filters.push(eq(creditAccounts.organizationId, organizationId));
     if (country) filters.push(this.countryOrgFilter(creditAccounts, country));
     const where = filters.length > 1 ? and(...filters) : filters[0];
-    return db.select().from(creditAccounts).where(where).orderBy(desc(creditAccounts.createdAt)).limit(200);
+    return db.select().from(creditAccounts).where(where).orderBy(desc(creditAccounts.createdAt)).limit(limit).offset(offset);
   }
 
   async createCreditAccount(account: InsertCreditAccount): Promise<CreditAccount> {
@@ -557,12 +557,12 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(creditInquiries).where(eq(creditInquiries.borrowerId, borrowerId)).orderBy(desc(creditInquiries.createdAt));
   }
 
-  async getAllCreditInquiries(organizationId?: string, country?: string): Promise<CreditInquiry[]> {
+  async getAllCreditInquiries(organizationId?: string, country?: string, limit = 100, offset = 0): Promise<CreditInquiry[]> {
     const filters: any[] = [];
     if (organizationId) filters.push(sql`${creditInquiries.borrowerId} IN (SELECT id FROM borrowers WHERE organization_id = ${organizationId})`);
     if (country) filters.push(sql`${creditInquiries.borrowerId} IN (SELECT id FROM borrowers WHERE country = ${country})`);
     const where = filters.length > 1 ? and(...filters) : filters[0];
-    return db.select().from(creditInquiries).where(where).orderBy(desc(creditInquiries.createdAt)).limit(200);
+    return db.select().from(creditInquiries).where(where).orderBy(desc(creditInquiries.createdAt)).limit(limit).offset(offset);
   }
 
   async createCreditInquiry(inquiry: InsertCreditInquiry): Promise<CreditInquiry> {
@@ -570,12 +570,12 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async getAuditLogs(organizationId?: string, country?: string): Promise<AuditLog[]> {
+  async getAuditLogs(organizationId?: string, country?: string, limit = 100, offset = 0): Promise<AuditLog[]> {
     const filters: any[] = [];
     if (organizationId) filters.push(eq(auditLogs.organizationId, organizationId));
     if (country) filters.push(this.countryOrgFilter(auditLogs, country));
     const where = filters.length > 1 ? and(...filters) : filters[0];
-    return db.select().from(auditLogs).where(where).orderBy(desc(auditLogs.createdAt)).limit(200);
+    return db.select().from(auditLogs).where(where).orderBy(desc(auditLogs.createdAt)).limit(limit).offset(offset);
   }
 
   async createAuditLog(log: InsertAuditLog): Promise<AuditLog> {

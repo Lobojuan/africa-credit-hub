@@ -54,13 +54,20 @@ const anthropic = new Anthropic({
   baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
 });
 
+const MAX_ALLOWED_TOKENS = 4000;
+
 export async function generateAIResponse(
   systemPrompt: string,
   userPrompt: string,
   taskType: AITaskType,
   options: { maxTokens?: number; temperature?: number; explicitProvider?: AIProvider } = {}
 ): Promise<{ text: string; provider: AIProvider; usedFallback: boolean }> {
-  const { maxTokens = 2000, temperature = 0.3, explicitProvider } = options;
+  const requestedTokens = options.maxTokens ?? 2000;
+  if (requestedTokens > MAX_ALLOWED_TOKENS) {
+    console.warn(`[AI] Requested ${requestedTokens} tokens exceeds cap of ${MAX_ALLOWED_TOKENS}. Clamping to max.`);
+  }
+  const maxTokens = Math.min(requestedTokens, MAX_ALLOWED_TOKENS);
+  const { temperature = 0.3, explicitProvider } = options;
   const routing = getProviderForTask(taskType, explicitProvider);
 
   async function callProvider(provider: AIProvider): Promise<string> {

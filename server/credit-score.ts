@@ -44,7 +44,7 @@ function classifyNDIA(days: number): { bucket: string; penalty: number; risk: st
 }
 
 export function calculateCreditScore(
-  accounts: AccountLike[],
+  rawAccounts: AccountLike[],
   inquiryCount: number,
   judgments: JudgmentLike[] = [],
   isPep = false,
@@ -52,6 +52,30 @@ export function calculateCreditScore(
 ): CreditScoreResult {
   const reasonCodes: string[] = [];
   const factors: ScoreFactor[] = [];
+
+  const validAccounts = rawAccounts.filter(a => a.status != null && a.status !== undefined);
+  const invalidRatio = rawAccounts.length > 0 ? (rawAccounts.length - validAccounts.length) / rawAccounts.length : 0;
+
+  if (invalidRatio > 0.5) {
+    return {
+      score: 300,
+      reasonCodes: ["INVALID_INPUT"],
+      factors: [{
+        name: "Data Quality",
+        impact: 0,
+        maxImpact: 500,
+        direction: "negative" as const,
+        description: `Over 50% of account records have invalid or missing status fields (${rawAccounts.length - validAccounts.length} of ${rawAccounts.length})`,
+        weight: 100,
+      }],
+    };
+  }
+
+  const accounts = validAccounts.map(a => ({
+    ...a,
+    currentBalance: a.currentBalance ? String(Math.max(0, parseFloat(a.currentBalance) || 0)) : a.currentBalance,
+    amountOverdue: a.amountOverdue ? String(Math.max(0, parseFloat(a.amountOverdue) || 0)) : a.amountOverdue,
+  }));
 
   if (accounts.length === 0) {
     reasonCodes.push("THIN_FILE_LIMITED_HISTORY");

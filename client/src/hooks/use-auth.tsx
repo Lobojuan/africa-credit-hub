@@ -41,32 +41,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const originalFetch = window.fetch;
-    window.fetch = async (...args) => {
-      if (sessionExpiredRef.current) {
-        return new Response(JSON.stringify({ message: "Session expired" }), {
-          status: 440,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-      const response = await originalFetch(...args);
-      if (response.status === 440) {
-        handleIdleTimeout();
-      }
-      if (response.status === 403) {
-        try {
-          const cloned = response.clone();
-          const body = await cloned.json();
-          if (body.message === "ACCOUNT_SUSPENDED") {
+    queryClient.setDefaultOptions({
+      queries: {
+        ...queryClient.getDefaultOptions().queries,
+        retry: false,
+        staleTime: Infinity,
+        refetchOnWindowFocus: false,
+      },
+      mutations: {
+        ...queryClient.getDefaultOptions().mutations,
+        onError: (error: any) => {
+          if (error?.message?.includes("440")) {
+            handleIdleTimeout();
+          }
+          if (error?.message?.includes("ACCOUNT_SUSPENDED")) {
             setAccountSuspended(true);
           }
-        } catch {}
-      }
-      return response;
-    };
-    return () => {
-      window.fetch = originalFetch;
-    };
+        },
+      },
+    });
   }, [handleIdleTimeout]);
 
   const loginMutation = useMutation({
