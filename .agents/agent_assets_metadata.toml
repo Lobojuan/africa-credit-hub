@@ -42,3 +42,9 @@ id = "EY7IS5GeKrYIlH__5jKp8"
 uri = "file://app-source-code.zip"
 type = "unspecified"
 title = "App Source Code (ZIP)"
+
+[[outputs]]
+id = "RXIylR6CelK-xVGfcm9Va"
+uri = "file://pan-african-credit-registry.tar.gz"
+type = "unspecified"
+title = "Pan-African Credit Registry - Full Codebase"
