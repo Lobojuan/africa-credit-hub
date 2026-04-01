@@ -1,4 +1,5 @@
-import { pool } from "./db";
+import { pool, db } from "./db";
+import { sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
@@ -84,7 +85,7 @@ export async function runSecurityHealthCheck(): Promise<{
   const checks: Array<{ name: string; status: "pass" | "warn" | "fail"; details: string }> = [];
 
   try {
-    const dbResult = await pool.query(`SELECT 1 AS ok`);
+    const dbResult = await db.execute(sql`SELECT 1 AS ok`);
     checks.push({ name: "Database Connectivity", status: dbResult.rows[0]?.ok === 1 ? "pass" : "fail", details: dbResult.rows[0]?.ok === 1 ? "Database responding" : "Database not responding" });
   } catch {
     checks.push({ name: "Database Connectivity", status: "fail", details: "Cannot connect to database" });
