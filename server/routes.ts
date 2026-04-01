@@ -207,10 +207,16 @@ function getOrgScope(req: Request): string | undefined {
 }
 
 function getCountryFilter(req?: Request): string | undefined {
-  if (req?.session?.userRole === "super_admin") {
-    if (!req.session.viewingCountry) return undefined;
-    if (req.session.viewingCountry === "global") return undefined;
-    return req.session.viewingCountry;
+  const explicitCountry = req?.query?.country as string | undefined;
+  const hasExplicit = explicitCountry && explicitCountry !== "all" && explicitCountry !== "";
+
+  if (req?.session?.userRole === "super_admin" || req?.session?.userRole === "admin") {
+    if (hasExplicit) return explicitCountry;
+    if (req?.session?.userRole === "super_admin") {
+      if (!req.session.viewingCountry) return undefined;
+      if (req.session.viewingCountry === "global") return undefined;
+      return req.session.viewingCountry;
+    }
   }
   if (req?.session?.userCountry) {
     return req.session.userCountry;

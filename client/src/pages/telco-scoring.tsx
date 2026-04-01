@@ -1286,10 +1286,28 @@ export default function TelcoScoringPage() {
 
   const { data: dashboardStats, isLoading: statsLoading } = useQuery<{
     totalProfiles: number; totalScores: number; avgRiskScore: number; approvalRate: number; tierBreakdown: Record<string, number>;
-  }>({ queryKey: ["/api/telco/dashboard"] });
+  }>({
+    queryKey: ["/api/telco/dashboard", profileFilterCountry],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (profileFilterCountry) params.set("country", profileFilterCountry);
+      const url = params.toString() ? `/api/telco/dashboard?${params}` : "/api/telco/dashboard";
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch dashboard");
+      return res.json();
+    },
+  });
 
   const { data: analytics, isLoading: analyticsLoading } = useQuery<TelcoAnalytics>({
-    queryKey: ["/api/telco/analytics"],
+    queryKey: ["/api/telco/analytics", profileFilterCountry],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (profileFilterCountry) params.set("country", profileFilterCountry);
+      const url = params.toString() ? `/api/telco/analytics?${params}` : "/api/telco/analytics";
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch analytics");
+      return res.json();
+    },
   });
 
   type PaginatedProfiles = { data: TelcoProfile[]; total: number; page: number; totalPages: number };
