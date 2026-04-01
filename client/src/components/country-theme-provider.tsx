@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback, type React
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
+import { useTheme } from "@/components/theme-provider";
 import {
   type CountryConfig,
   type CountryTheme,
@@ -22,6 +23,12 @@ interface CountryContextType {
 
 const CountryContext = createContext<CountryContextType | null>(null);
 
+const THEME_PROPERTIES = [
+  "--primary", "--primary-foreground", "--sidebar", "--sidebar-foreground",
+  "--sidebar-border", "--sidebar-primary", "--sidebar-accent", "--accent",
+  "--ring", "--chart-1", "--chart-2",
+];
+
 function applyTheme(theme: CountryTheme) {
   const root = document.documentElement;
   root.style.setProperty("--primary", theme.primary);
@@ -37,8 +44,16 @@ function applyTheme(theme: CountryTheme) {
   root.style.setProperty("--chart-2", theme.chart2);
 }
 
+function clearThemeOverrides() {
+  const root = document.documentElement;
+  for (const prop of THEME_PROPERTIES) {
+    root.style.removeProperty(prop);
+  }
+}
+
 export function CountryThemeProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  const { visualStyle } = useTheme();
   const isSuperAdmin = user?.role === "super_admin";
 
   const serverCountry = (user as any)?.viewingCountry as string | undefined;
@@ -61,8 +76,12 @@ export function CountryThemeProvider({ children }: { children: ReactNode }) {
   const activeTheme = activeConfig?.theme || (isGlobalView ? GLOBAL_VIEW_THEME : (getCountryConfig()?.theme || GLOBAL_VIEW_THEME));
 
   useEffect(() => {
-    applyTheme(activeTheme);
-  }, [activeTheme]);
+    if (visualStyle === "scandinavian") {
+      clearThemeOverrides();
+    } else {
+      applyTheme(activeTheme);
+    }
+  }, [activeTheme, visualStyle]);
 
   const switchMutation = useMutation({
     mutationFn: async (country: string | null) => {
