@@ -76,6 +76,7 @@ const AppGuidePage = lazy(() => import("@/pages/app-guide"));
 const OrganizationsPage = lazy(() => import("@/pages/organizations"));
 const GhanaDocsPage = lazy(() => import("@/pages/ghana-docs"));
 const AboutPage = lazy(() => import("@/pages/about"));
+const LegalCopyrightPage = lazy(() => import("@/pages/legal-copyright"));
 const PortfolioIntelligencePage = lazy(() => import("@/pages/portfolio-intelligence"));
 const AICommandCenterPage = lazy(() => import("@/pages/ai-command-center"));
 const CommandCenterPage = lazy(() => import("@/pages/country-selection"));
@@ -177,6 +178,7 @@ function Router() {
         <Route path="/organizations" component={OrganizationsPage} />
         <Route path="/ghana-docs" component={GhanaDocsPage} />
         <Route path="/about" component={AboutPage} />
+        <Route path="/legal" component={LegalCopyrightPage} />
         <Route path="/portfolio-intelligence" component={PortfolioIntelligencePage} />
         <Route path="/ai-command-center" component={AICommandCenterPage} />
         <Route path="/command-center" component={CommandCenterPage} />

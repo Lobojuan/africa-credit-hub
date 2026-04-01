@@ -151,6 +151,7 @@ function getDocumentItems(): NavItem[] {
     { label: "App Guide", url: "/guide", icon: Play, testId: "nav-app-guide" },
     { label: "Help", url: "/help", icon: HelpCircle, testId: "nav-help" },
     { label: "Version History", url: "/version-history", icon: History, testId: "nav-version-history" },
+    { label: "Legal & Copyright", url: "/legal", icon: Scale, testId: "nav-legal" },
     { label: "About", url: "/about", icon: Info, testId: "nav-about" },
   );
   return items;

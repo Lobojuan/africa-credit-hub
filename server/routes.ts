@@ -5873,6 +5873,22 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     }
   });
 
+  app.get("/api/copyright/download-pdf", async (_req, res) => {
+    try {
+      const { generateCopyrightPdf } = await import("./copyright-pdf");
+      const pdfBuffer = await generateCopyrightPdf();
+      res.set({
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="CDH_Copyright_IP_Protection_${new Date().toISOString().split("T")[0]}.pdf"`,
+        "Content-Length": pdfBuffer.length,
+      });
+      res.send(pdfBuffer);
+    } catch (e: any) {
+      console.error("Copyright PDF generation error:", e);
+      res.status(500).json({ message: "Failed to generate copyright document" });
+    }
+  });
+
   app.post("/api/credit-search/bulk", async (req, res) => {
     try {
       const { identifiers } = req.body;
