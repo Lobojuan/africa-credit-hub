@@ -780,8 +780,8 @@ export default function InvestorLandingPage() {
         }} />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           <div className="text-center mb-14">
-            <Badge className="mb-4 text-xs bg-gradient-to-r from-primary/20 to-yellow-500/20 text-primary border-primary/30">
-              <Brain className="w-3 h-3 mr-1" />
+            <Badge variant="outline" className="mb-4 text-xs border-primary/30 bg-background/80">
+              <Brain className="w-3 h-3 mr-1 text-primary" />
               {t('landing.aiBadge')}
             </Badge>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-4">
