@@ -63,6 +63,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@radix-ui/r
 import type { LucideIcon } from "lucide-react";
 import { isGhanaMode, isSierraLeoneMode, isSingleCountryMode, getBrandTitle, getCountryConfig } from "@/lib/country-mode";
 import { useCountryTheme } from "@/components/country-theme-provider";
+import { useTheme } from "@/components/theme-provider";
 
 type NavItem = {
   label: string;
@@ -245,6 +246,8 @@ export function AppSidebar() {
   const role = user?.role;
   const isRtl = i18n.language === "ar";
   const countryTheme = useCountryTheme();
+  const { visualStyle } = useTheme();
+  const isScandinavian = visualStyle === "scandinavian";
 
   const dynamicCountryConfig = countryTheme?.activeConfig;
   const dynamicBrandTitle = dynamicCountryConfig?.brandTitle || (isGhanaMode() ? getBrandTitle() : t('sidebar.brandTitle'));
@@ -273,8 +276,8 @@ export function AppSidebar() {
         <Link href="/">
           <div className="flex items-center gap-3.5 cursor-pointer group">
             <div
-              className="flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-300 group-hover:scale-110 group-hover:rotate-3"
-              style={{
+              className={`flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 ${isScandinavian ? "bg-primary" : ""}`}
+              style={isScandinavian ? undefined : {
                 background: `linear-gradient(135deg, ${dynamicTheme?.logoGradientFrom || "hsl(42 85% 55%)"} 0%, ${dynamicTheme?.logoGradientTo || "hsl(32 78% 46%)"} 100%)`,
                 boxShadow: `0 4px 16px -2px ${dynamicTheme?.logoGlow || "hsl(42 85% 53% / 0.4)"}, 0 0 0 1px ${dynamicTheme?.logoGlow || "hsl(42 85% 53% / 0.15)"}`
               }}
@@ -357,7 +360,7 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter className="p-3 pt-0 space-y-1.5">
         {orgName && !isSuperAdmin && (
-          <div className="rounded-xl p-2.5 border border-sidebar-foreground/8" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))" }}>
+          <div className="rounded-xl p-2.5 border border-sidebar-foreground/8" style={isScandinavian ? undefined : { background: "linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02))" }}>
             <div className="flex items-center gap-2">
               <Building2 className="w-3.5 h-3.5 text-sidebar-foreground/50" />
               <span className="text-[11px] font-semibold text-sidebar-foreground/80 truncate" data-testid="text-org-name">{orgName}</span>
@@ -365,10 +368,10 @@ export function AppSidebar() {
           </div>
         )}
         {isSuperAdmin && (
-          <div className="rounded-xl p-2.5 border border-amber-500/25" style={{ background: "linear-gradient(135deg, rgba(245,158,11,0.10), rgba(245,158,11,0.04))" }}>
+          <div className={`rounded-xl p-2.5 border ${isScandinavian ? "border-primary/20 bg-primary/5" : "border-amber-500/25"}`} style={isScandinavian ? undefined : { background: "linear-gradient(135deg, rgba(245,158,11,0.10), rgba(245,158,11,0.04))" }}>
             <div className="flex items-center gap-2">
-              <Shield className="w-3.5 h-3.5 text-amber-500" />
-              <span className="text-[11px] font-bold text-amber-400" data-testid="text-super-admin-badge">Platform Admin</span>
+              <Shield className={`w-3.5 h-3.5 ${isScandinavian ? "text-primary" : "text-amber-500"}`} />
+              <span className={`text-[11px] font-bold ${isScandinavian ? "text-primary" : "text-amber-400"}`} data-testid="text-super-admin-badge">Platform Admin</span>
             </div>
           </div>
         )}
@@ -377,21 +380,21 @@ export function AppSidebar() {
           const isGlobal = countryTheme?.isGlobalView;
           if (isGlobal && isSuperAdmin) {
             return (
-              <div className="rounded-xl p-2.5 border border-sidebar-foreground/8" style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.08), rgba(59,130,246,0.03))" }}>
+              <div className={`rounded-xl p-2.5 border ${isScandinavian ? "border-sidebar-border" : "border-sidebar-foreground/8"}`} style={isScandinavian ? undefined : { background: "linear-gradient(135deg, rgba(59,130,246,0.08), rgba(59,130,246,0.03))" }}>
                 <div className="flex items-center gap-2">
-                  <Globe className="w-3.5 h-3.5 text-blue-400" />
-                  <span className="text-[11px] font-bold text-blue-400" data-testid="text-country-mode">Global View</span>
+                  <Globe className={`w-3.5 h-3.5 ${isScandinavian ? "text-primary" : "text-blue-400"}`} />
+                  <span className={`text-[11px] font-bold ${isScandinavian ? "text-primary" : "text-blue-400"}`} data-testid="text-country-mode">Global View</span>
                 </div>
               </div>
             );
           }
           if (cc) {
             return (
-              <div className="rounded-xl p-2.5 border border-sidebar-foreground/8" style={{ background: `linear-gradient(135deg, ${cc.theme?.logoGlow || "rgba(59,130,246,0.08)"}, rgba(59,130,246,0.03))` }}>
+              <div className={`rounded-xl p-2.5 border ${isScandinavian ? "border-sidebar-border" : "border-sidebar-foreground/8"}`} style={isScandinavian ? undefined : { background: `linear-gradient(135deg, ${cc.theme?.logoGlow || "rgba(59,130,246,0.08)"}, rgba(59,130,246,0.03))` }}>
                 <div className="flex items-center gap-2">
-                  <Globe className="w-3.5 h-3.5 text-blue-400" />
+                  <Globe className={`w-3.5 h-3.5 ${isScandinavian ? "text-primary" : "text-blue-400"}`} />
                   <div className="flex flex-col min-w-0 flex-1">
-                    <span className="text-[11px] font-bold text-blue-400" data-testid="text-country-mode">{cc.name} Mode</span>
+                    <span className={`text-[11px] font-bold ${isScandinavian ? "text-primary" : "text-blue-400"}`} data-testid="text-country-mode">{cc.name} Mode</span>
                     <span className="text-[9px] text-sidebar-foreground/40 truncate">{cc.regulatoryBody} | {cc.currency}</span>
                   </div>
                 </div>
@@ -400,9 +403,9 @@ export function AppSidebar() {
           }
           return null;
         })()}
-        <div className="rounded-xl p-2.5" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))" }}>
+        <div className="rounded-xl p-2.5" style={isScandinavian ? undefined : { background: "linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))" }}>
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" style={{ boxShadow: "0 0 8px hsl(152 60% 50% / 0.4)" }} />
+            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" style={isScandinavian ? undefined : { boxShadow: "0 0 8px hsl(152 60% 50% / 0.4)" }} />
             <span className="text-[10px] font-semibold text-sidebar-foreground/70">System Online</span>
           </div>
           <div className="text-[9px] text-sidebar-foreground/40 mt-0.5 font-medium">

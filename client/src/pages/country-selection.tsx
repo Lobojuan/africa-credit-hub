@@ -296,14 +296,7 @@ export default function CountrySelectionPage() {
                     >
                       <div className="flex items-start justify-between w-full mb-3">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-                            style={{
-                              background: `linear-gradient(135deg, ${c.theme.logoGradientFrom}, ${c.theme.logoGradientTo})`,
-                              boxShadow: `0 2px 8px ${c.theme.logoGlow}`
-                            }}
-                          >
-                            <CountryDot code={c.code} size="lg" />
-                          </div>
+                          <span className="text-3xl leading-none shrink-0" role="img" aria-label={c.code}>{countryCodeToFlag(c.code)}</span>
                           <div>
                             <p className="text-sm font-semibold text-foreground">{c.name}</p>
                             <p className="text-[10px] text-muted-foreground">{c.regulatoryBody}</p>
