@@ -255,7 +255,14 @@ function AuthenticatedApp() {
   const [redirecting, setRedirecting] = useState(false);
   const { t, i18n } = useTranslation();
   const countryTheme = useCountryTheme();
-  const [currentPath] = useLocation();
+  const [rawPath, navigate] = useLocation();
+  const currentPath = rawPath.length > 1 && rawPath.endsWith("/") ? rawPath.slice(0, -1) : rawPath;
+
+  useEffect(() => {
+    if (rawPath.length > 1 && rawPath.endsWith("/")) {
+      navigate(currentPath, { replace: true });
+    }
+  }, [rawPath, currentPath, navigate]);
 
   useEffect(() => {
     document.documentElement.dir = i18n.language === "ar" ? "rtl" : "ltr";
