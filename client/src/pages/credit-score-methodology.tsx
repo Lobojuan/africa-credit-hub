@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   Table2,
   Lock,
+  DollarSign,
 } from "lucide-react";
 
 const SCORE_BANDS = [
@@ -33,18 +34,24 @@ const SCORE_BANDS = [
 ];
 
 const SCORING_FACTORS = [
-  { key: "paymentHistory", label: "Payment History", icon: CheckCircle, description: "On-time payments vs. delinquencies, defaults, and write-offs across all accounts." },
-  { key: "creditUtilization", label: "Credit Utilization", icon: BarChart3, description: "Total outstanding debt relative to credit limits and original loan amounts." },
-  { key: "creditHistoryLength", label: "Length of Credit History", icon: FileText, description: "Age of oldest and newest accounts, and the average age across all credit facilities." },
-  { key: "newCreditInquiries", label: "New Credit Inquiries", icon: ShieldCheck, description: "Number of recent hard inquiries from lenders checking creditworthiness." },
-  { key: "accountMix", label: "Account Mix", icon: Table2, description: "Diversity of credit types: personal loans, mortgages, trade finance, microfinance, etc." },
+  { key: "paymentHistory", label: "Payment History", icon: CheckCircle, description: "On-time payments vs. delinquencies, defaults, and write-offs across all accounts. Largest single contributor to the score (35% weight)." },
+  { key: "ndiaSeverity", label: "NDIA (Arrears Severity)", icon: AlertTriangle, description: "Number of Days in Arrears classification per account: Performing (0), Early (1-30d), Moderate (31-90d), High Risk (91-180d), Default (180+d). Mandatory per BOG framework (20% weight)." },
+  { key: "amountInArrears", label: "Amount in Arrears", icon: DollarSign, description: "Total overdue balance across all delinquent accounts. Tiered penalty based on severity of outstanding arrears (10% weight)." },
+  { key: "creditUtilization", label: "Credit Utilization & Debt", icon: BarChart3, description: "Total outstanding debt relative to credit limits and original loan amounts (5% weight)." },
+  { key: "newCreditInquiries", label: "New Credit Inquiries", icon: ShieldCheck, description: "Number of recent hard inquiries from lenders checking creditworthiness (5% weight)." },
+  { key: "courtJudgments", label: "Court Judgments", icon: Scale, description: "Active court judgments, liens, or bankruptcy filings against the borrower (5% weight)." },
+  { key: "alternativeData", label: "Alternative Data", icon: Table2, description: "Mobile money, utility, telco, and other non-traditional payment data that boosts thin-file borrowers (5% weight)." },
 ];
 
 const REASON_CODES = [
-  { code: "STRONG_REPAYMENT_HISTORY", impact: "positive", description: "Over 80% of accounts are current or successfully closed with no delinquencies." },
-  { code: "EXCELLENT_PAYMENT_RECORD", impact: "positive", description: "Three or more accounts with perfect payment history and no write-offs." },
+  { code: "STRONG_REPAYMENT_HISTORY", impact: "positive", description: "Over 80% of accounts are current or successfully closed with no delinquencies and zero arrears." },
+  { code: "EXCELLENT_PAYMENT_RECORD", impact: "positive", description: "Three or more accounts with perfect payment history, no write-offs, and no arrears." },
+  { code: "STRONG_ALTERNATIVE_DATA", impact: "positive", description: "Strong alternative data signals (mobile money, utility) with over 90% on-time from 12+ transactions." },
   { code: "GOOD_STANDING", impact: "positive", description: "No significant negative factors detected. Credit profile is in good standing." },
   { code: "THIN_FILE_LIMITED_HISTORY", impact: "neutral", description: "Insufficient credit history to generate a comprehensive score. Default baseline score applied." },
+  { code: "HIGH_NDIA_90_PLUS", impact: "negative", description: "One or more accounts have NDIA exceeding 90 days — classified as high risk or default per BOG arrears framework." },
+  { code: "MULTIPLE_DELINQUENCIES", impact: "negative", description: "Two or more accounts are simultaneously past due, indicating systemic repayment difficulty." },
+  { code: "HIGH_ARREARS_AMOUNT", impact: "negative", description: "Total amount in arrears exceeds 50,000, representing significant overdue exposure." },
   { code: "DELINQUENT_ACCOUNTS", impact: "negative", description: "One or more accounts are past due (delinquent or in default status)." },
   { code: "WRITTEN_OFF_ACCOUNTS", impact: "negative", description: "One or more accounts have been written off as uncollectable by the lender." },
   { code: "RESTRUCTURED_ACCOUNTS", impact: "negative", description: "One or more accounts have been restructured, indicating prior repayment difficulty." },
@@ -53,6 +60,14 @@ const REASON_CODES = [
   { code: "HIGH_DEBT_LEVEL", impact: "negative", description: "Total outstanding debt exceeds 1,000,000 in the base currency across all accounts." },
   { code: "POLITICALLY_EXPOSED_PERSON", impact: "neutral", description: "Borrower is flagged as a Politically Exposed Person (PEP), requiring enhanced due diligence." },
 ];
+
+function classifyNDIA(days: number): { penalty: number } {
+  if (days <= 0) return { penalty: 0 };
+  if (days <= 30) return { penalty: 15 };
+  if (days <= 90) return { penalty: 40 };
+  if (days <= 180) return { penalty: 70 };
+  return { penalty: 100 };
+}
 
 function simulateScore(params: {
   currentAccounts: number;
@@ -64,6 +79,8 @@ function simulateScore(params: {
   inquiryCount: number;
   totalDebt: number;
   isPep: boolean;
+  avgDaysInArrears: number;
+  totalArrearsAmount: number;
 }) {
   const totalAccounts =
     params.currentAccounts +
@@ -81,10 +98,24 @@ function simulateScore(params: {
   const positiveAccounts = params.currentAccounts + params.closedAccounts;
   const onTimeRatio = positiveAccounts / totalAccounts;
 
+  const ndiaPenalty = params.delinquentAccounts > 0
+    ? params.delinquentAccounts * classifyNDIA(params.avgDaysInArrears).penalty
+    : 0;
+
+  let arrearsPenalty = 0;
+  if (params.totalArrearsAmount > 0) {
+    if (params.totalArrearsAmount <= 5000) arrearsPenalty = 10;
+    else if (params.totalArrearsAmount <= 50000) arrearsPenalty = 25;
+    else if (params.totalArrearsAmount <= 200000) arrearsPenalty = 50;
+    else if (params.totalArrearsAmount <= 1000000) arrearsPenalty = 75;
+    else arrearsPenalty = 100;
+  }
+
   let score = Math.round(
     300 +
       onTimeRatio * 500 -
-      params.delinquentAccounts * 50 -
+      ndiaPenalty -
+      arrearsPenalty -
       params.writtenOffAccounts * 75 -
       params.restructuredAccounts * 20 -
       params.activeJudgments * 40 -
@@ -93,6 +124,9 @@ function simulateScore(params: {
 
   score = Math.max(300, Math.min(850, score));
 
+  if (params.avgDaysInArrears > 90) reasonCodes.push("HIGH_NDIA_90_PLUS");
+  if (params.delinquentAccounts >= 2) reasonCodes.push("MULTIPLE_DELINQUENCIES");
+  if (params.totalArrearsAmount > 50000) reasonCodes.push("HIGH_ARREARS_AMOUNT");
   if (params.delinquentAccounts > 0) reasonCodes.push("DELINQUENT_ACCOUNTS");
   if (params.writtenOffAccounts > 0) reasonCodes.push("WRITTEN_OFF_ACCOUNTS");
   if (params.restructuredAccounts > 0) reasonCodes.push("RESTRUCTURED_ACCOUNTS");
@@ -100,8 +134,8 @@ function simulateScore(params: {
   if (params.inquiryCount > 5) reasonCodes.push("HIGH_INQUIRY_VOLUME");
   if (params.totalDebt > 1000000) reasonCodes.push("HIGH_DEBT_LEVEL");
   if (params.isPep) reasonCodes.push("POLITICALLY_EXPOSED_PERSON");
-  if (onTimeRatio > 0.8 && params.delinquentAccounts === 0) reasonCodes.push("STRONG_REPAYMENT_HISTORY");
-  if (totalAccounts >= 3 && onTimeRatio === 1 && params.writtenOffAccounts === 0) reasonCodes.push("EXCELLENT_PAYMENT_RECORD");
+  if (onTimeRatio > 0.8 && params.delinquentAccounts === 0 && ndiaPenalty === 0) reasonCodes.push("STRONG_REPAYMENT_HISTORY");
+  if (totalAccounts >= 3 && onTimeRatio === 1 && params.writtenOffAccounts === 0 && ndiaPenalty === 0) reasonCodes.push("EXCELLENT_PAYMENT_RECORD");
   if (reasonCodes.length === 0) reasonCodes.push("GOOD_STANDING");
 
   return { score, reasonCodes };
@@ -281,6 +315,8 @@ export default function CreditScoreMethodologyPage() {
     inquiryCount: 2,
     totalDebt: 50000,
     isPep: false,
+    avgDaysInArrears: 0,
+    totalArrearsAmount: 0,
   });
 
   const simResult = useMemo(() => simulateScore(simParams), [simParams]);
@@ -312,6 +348,8 @@ export default function CreditScoreMethodologyPage() {
       inquiryCount: 2,
       totalDebt: 50000,
       isPep: false,
+      avgDaysInArrears: 0,
+      totalArrearsAmount: 0,
     });
   };
 
@@ -516,6 +554,26 @@ export default function CreditScoreMethodologyPage() {
                     min={0}
                     max={10}
                     testId="delinquent-accounts"
+                  />
+                  <SliderInput
+                    label={t("creditScoreMethodology.avgDaysInArrears", "Avg. Days in Arrears (NDIA)")}
+                    value={simParams.avgDaysInArrears}
+                    onChange={(v) => updateParam("avgDaysInArrears", v)}
+                    min={0}
+                    max={365}
+                    step={5}
+                    suffix=" days"
+                    testId="avg-days-in-arrears"
+                  />
+                  <SliderInput
+                    label={t("creditScoreMethodology.totalArrearsAmount", "Total Amount in Arrears")}
+                    value={simParams.totalArrearsAmount}
+                    onChange={(v) => updateParam("totalArrearsAmount", v)}
+                    min={0}
+                    max={2000000}
+                    step={5000}
+                    suffix=""
+                    testId="total-arrears-amount"
                   />
                   <SliderInput
                     label={t("creditScoreMethodology.writtenOffAccounts", "Written-Off Accounts")}

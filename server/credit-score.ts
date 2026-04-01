@@ -4,6 +4,8 @@ interface AccountLike {
   status: string;
   currentBalance?: string | null;
   currency?: string | null;
+  daysInArrears?: number | null;
+  amountOverdue?: string | null;
 }
 
 interface JudgmentLike {
@@ -31,6 +33,14 @@ export interface CreditScoreResult {
   score: number;
   reasonCodes: string[];
   factors: ScoreFactor[];
+}
+
+function classifyNDIA(days: number): { bucket: string; penalty: number; risk: string } {
+  if (days <= 0) return { bucket: "Performing", penalty: 0, risk: "none" };
+  if (days <= 30) return { bucket: "1-30 days", penalty: 15, risk: "early" };
+  if (days <= 90) return { bucket: "31-90 days", penalty: 40, risk: "moderate" };
+  if (days <= 180) return { bucket: "91-180 days", penalty: 70, risk: "high" };
+  return { bucket: "180+ days", penalty: 100, risk: "default" };
 }
 
 export function calculateCreditScore(
@@ -76,17 +86,64 @@ export function calculateCreditScore(
     weight: 35,
   });
 
-  const delinquencyPenalty = delinquentCount * 50;
-  if (delinquentCount > 0) {
-    factors.push({
-      name: "Delinquent Accounts",
-      impact: -delinquencyPenalty,
-      maxImpact: 0,
-      direction: "negative",
-      description: `${delinquentCount} account${delinquentCount > 1 ? "s" : ""} past due or in default`,
-      weight: 20,
-    });
+  let ndiaPenalty = 0;
+  let ndia90PlusCount = 0;
+  let totalDaysInArrears = 0;
+  const ndiaDistribution = { performing: 0, early: 0, moderate: 0, high: 0, defaultBucket: 0 };
+
+  for (const acct of accounts) {
+    const days = acct.daysInArrears ?? 0;
+    totalDaysInArrears += days;
+    const classification = classifyNDIA(days);
+    ndiaPenalty += classification.penalty;
+
+    if (classification.risk === "none") ndiaDistribution.performing++;
+    else if (classification.risk === "early") ndiaDistribution.early++;
+    else if (classification.risk === "moderate") ndiaDistribution.moderate++;
+    else if (classification.risk === "high") { ndiaDistribution.high++; ndia90PlusCount++; }
+    else if (classification.risk === "default") { ndiaDistribution.defaultBucket++; ndia90PlusCount++; }
   }
+
+  const ndiaDesc = [];
+  if (ndiaDistribution.performing > 0) ndiaDesc.push(`${ndiaDistribution.performing} performing`);
+  if (ndiaDistribution.early > 0) ndiaDesc.push(`${ndiaDistribution.early} early (1-30d)`);
+  if (ndiaDistribution.moderate > 0) ndiaDesc.push(`${ndiaDistribution.moderate} moderate (31-90d)`);
+  if (ndiaDistribution.high > 0) ndiaDesc.push(`${ndiaDistribution.high} high risk (91-180d)`);
+  if (ndiaDistribution.defaultBucket > 0) ndiaDesc.push(`${ndiaDistribution.defaultBucket} default (180+d)`);
+
+  factors.push({
+    name: "NDIA (Arrears Severity)",
+    impact: -ndiaPenalty,
+    maxImpact: -(accounts.length * 100),
+    direction: ndiaPenalty === 0 ? "positive" : ndiaPenalty <= 30 ? "neutral" : "negative",
+    description: `Arrears classification: ${ndiaDesc.join(", ")}`,
+    weight: 20,
+  });
+
+  let totalArrearsAmount = 0;
+  for (const acct of accounts) {
+    totalArrearsAmount += parseFloat(acct.amountOverdue || "0");
+  }
+
+  let arrearsPenalty = 0;
+  if (totalArrearsAmount > 0) {
+    if (totalArrearsAmount <= 5000) arrearsPenalty = 10;
+    else if (totalArrearsAmount <= 50000) arrearsPenalty = 25;
+    else if (totalArrearsAmount <= 200000) arrearsPenalty = 50;
+    else if (totalArrearsAmount <= 1000000) arrearsPenalty = 75;
+    else arrearsPenalty = 100;
+  }
+
+  factors.push({
+    name: "Amount in Arrears",
+    impact: -arrearsPenalty,
+    maxImpact: -100,
+    direction: arrearsPenalty === 0 ? "positive" : arrearsPenalty <= 25 ? "neutral" : "negative",
+    description: totalArrearsAmount > 0
+      ? `Total overdue balance of ${totalArrearsAmount.toLocaleString()} across delinquent accounts`
+      : "No outstanding arrears — all accounts current",
+    weight: 10,
+  });
 
   const writeOffPenalty = writtenOffCount * 75;
   if (writtenOffCount > 0) {
@@ -96,7 +153,7 @@ export function calculateCreditScore(
       maxImpact: 0,
       direction: "negative",
       description: `${writtenOffCount} account${writtenOffCount > 1 ? "s" : ""} written off as uncollectable`,
-      weight: 15,
+      weight: 10,
     });
   }
 
@@ -120,7 +177,7 @@ export function calculateCreditScore(
       maxImpact: 0,
       direction: "negative",
       description: `${activeJudgments} active court judgment${activeJudgments > 1 ? "s" : ""} on record`,
-      weight: 10,
+      weight: 5,
     });
   }
 
@@ -131,7 +188,7 @@ export function calculateCreditScore(
     maxImpact: -100,
     direction: inquiryCount <= 3 ? "positive" : inquiryCount <= 8 ? "neutral" : "negative",
     description: `${inquiryCount} credit inquir${inquiryCount === 1 ? "y" : "ies"} in the last 12 months`,
-    weight: 10,
+    weight: 5,
   });
 
   const totalDebt = accounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
@@ -172,7 +229,7 @@ export function calculateCreditScore(
       maxImpact: 90,
       direction: altDataBonus >= 20 ? "positive" : altDataBonus >= 10 ? "neutral" : "positive",
       description: `${activeAltData.length} source${activeAltData.length > 1 ? "s" : ""} (${sources}), ${Math.round(altOnTimeRatio * 100)}% on-time from ${totalAltTxns} transactions`,
-      weight: 10,
+      weight: 5,
     });
 
     if (altOnTimeRatio > 0.9 && totalAltTxns >= 12) reasonCodes.push("STRONG_ALTERNATIVE_DATA");
@@ -181,7 +238,8 @@ export function calculateCreditScore(
   let score = Math.round(
     300
     + (onTimeRatio * 500)
-    - (delinquentCount * 50)
+    - ndiaPenalty
+    - arrearsPenalty
     - (writtenOffCount * 75)
     - (restructuredCount * 20)
     - (activeJudgments * 40)
@@ -191,6 +249,9 @@ export function calculateCreditScore(
 
   score = Math.max(300, Math.min(850, score));
 
+  if (ndia90PlusCount > 0) reasonCodes.push("HIGH_NDIA_90_PLUS");
+  if (delinquentCount >= 2) reasonCodes.push("MULTIPLE_DELINQUENCIES");
+  if (totalArrearsAmount > 50000) reasonCodes.push("HIGH_ARREARS_AMOUNT");
   if (delinquentCount > 0) reasonCodes.push("DELINQUENT_ACCOUNTS");
   if (writtenOffCount > 0) reasonCodes.push("WRITTEN_OFF_ACCOUNTS");
   if (restructuredCount > 0) reasonCodes.push("RESTRUCTURED_ACCOUNTS");
@@ -199,8 +260,8 @@ export function calculateCreditScore(
 
   if (totalDebt > 1000000) reasonCodes.push("HIGH_DEBT_LEVEL");
   if (isPep) reasonCodes.push("POLITICALLY_EXPOSED_PERSON");
-  if (onTimeRatio > 0.8 && delinquentCount === 0) reasonCodes.push("STRONG_REPAYMENT_HISTORY");
-  if (accounts.length >= 3 && onTimeRatio === 1 && writtenOffCount === 0) reasonCodes.push("EXCELLENT_PAYMENT_RECORD");
+  if (onTimeRatio > 0.8 && delinquentCount === 0 && ndiaPenalty === 0) reasonCodes.push("STRONG_REPAYMENT_HISTORY");
+  if (accounts.length >= 3 && onTimeRatio === 1 && writtenOffCount === 0 && ndiaPenalty === 0) reasonCodes.push("EXCELLENT_PAYMENT_RECORD");
   if (reasonCodes.length === 0) reasonCodes.push("GOOD_STANDING");
 
   factors.sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact));

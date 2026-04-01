@@ -30,7 +30,7 @@ The system employs a modern full-stack architecture built for scalability and co
 -   **Core Capabilities**:
     -   **Credit Management**: Comprehensive borrower and credit account management with multi-currency support, including 20 standardized credit types.
     -   **Consumer/Business Segmentation**: Borrowers are segmented with separate API endpoints, navigation, and RBAC rules.
-    -   **Credit Scoring**: Algorithmic scoring (300-850) with explainable AI, utilizing a gradient boosting-inspired model.
+    -   **Credit Scoring**: Algorithmic scoring (300-850) with explainable AI, utilizing a gradient boosting-inspired model. Fully integrates NDIA (Number of Days in Arrears) with tiered penalties (1-30d=early, 31-90d=moderate, 91-180d=high, 180+=default) and Amount in Arrears as distinct weighted scoring factors per BOG framework. Reason codes include `HIGH_NDIA_90_PLUS`, `MULTIPLE_DELINQUENCIES`, `HIGH_ARREARS_AMOUNT`.
     -   **Workflow**: Maker-checker workflow and dispute management.
     -   **Regulatory Compliance**: Consent management, audit trails, and a Regulatory Compliance Dashboard with jurisdiction-specific data retention for 54 African jurisdictions.
     -   **Institutional Management**: Self-registration, approval, billing, and fee management for data providers.
