@@ -2814,9 +2814,40 @@ export async function registerRoutes(
         profiles.forEach(p => profileMap.set(p.id, p.msisdn));
       }
 
+      const loanIds = [...new Set(recentRepayments.map(r => r.loanId))];
+      const loanMap = new Map<string, { loanAmount: string; interestRate: string; tenorDays: number; totalRepayable: string; outstandingBalance: string; loanStatus: string; disbursedAt: Date | null; lenderName: string; lenderType: string }>();
+      if (loanIds.length > 0) {
+        const loansWithOrg = await db.select({
+          id: telcoLoans.id,
+          loanAmount: telcoLoans.loanAmount,
+          interestRate: telcoLoans.interestRate,
+          tenorDays: telcoLoans.tenorDays,
+          totalRepayable: telcoLoans.totalRepayable,
+          outstandingBalance: telcoLoans.outstandingBalance,
+          loanStatus: telcoLoans.status,
+          disbursedAt: telcoLoans.disbursedAt,
+          lenderName: organizations.name,
+          lenderType: organizations.type,
+        }).from(telcoLoans)
+          .leftJoin(organizations, eq(telcoLoans.organizationId, organizations.id))
+          .where(inArray(telcoLoans.id, loanIds));
+        loansWithOrg.forEach(l => loanMap.set(l.id, {
+          loanAmount: l.loanAmount,
+          interestRate: l.interestRate,
+          tenorDays: l.tenorDays,
+          totalRepayable: l.totalRepayable,
+          outstandingBalance: l.outstandingBalance,
+          loanStatus: l.loanStatus,
+          disbursedAt: l.disbursedAt,
+          lenderName: l.lenderName || "Unknown Lender",
+          lenderType: l.lenderType || "other",
+        }));
+      }
+
       const enrichedRepayments = recentRepayments.map(r => ({
         ...r,
         msisdn: profileMap.get(r.profileId) || null,
+        lender: loanMap.get(r.loanId) || null,
       }));
 
       const portfolioHealthScore = activeLoans > 0

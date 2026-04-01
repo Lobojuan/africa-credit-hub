@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import {
   Banknote, TrendingUp, TrendingDown, AlertTriangle, CheckCircle, XCircle, Clock,
-  ChevronRight, ChevronLeft, Wallet, Globe, Search, X, Shield, ShieldCheck,
+  ChevronRight, ChevronLeft, ChevronDown, Wallet, Globe, Search, X, Shield, ShieldCheck,
   Smartphone, Users, ArrowUpRight, BarChart3, DollarSign, PieChart, RefreshCw,
   FileText, Send, CreditCard, CalendarDays, Receipt, Eye, Loader2, History,
-  Fingerprint, ScrollText, Ban, Check, Info, Activity
+  Fingerprint, ScrollText, Ban, Check, Info, Activity, Building2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -55,6 +55,128 @@ function getStatusColor(status: string) {
 
 function getStatusLabel(status: string) {
   return status.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function RepaymentTable({ repayments, filterCountry }: { repayments: any[]; filterCountry: string }) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <History className="w-4 h-4 text-primary" /> Recent Repayments
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {repayments.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">No recent repayments</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs w-8"></TableHead>
+                  <TableHead className="text-xs">MSISDN</TableHead>
+                  <TableHead className="text-xs">Lender</TableHead>
+                  <TableHead className="text-xs">Amount Paid</TableHead>
+                  <TableHead className="text-xs">Amount Due</TableHead>
+                  <TableHead className="text-xs">Status</TableHead>
+                  <TableHead className="text-xs">Days Late</TableHead>
+                  <TableHead className="text-xs">Paid At</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {repayments.map(rep => {
+                  const isExpanded = expandedId === rep.id;
+                  const cur = getCur(rep.country || filterCountry);
+                  return (
+                    <Fragment key={rep.id}>
+                      <TableRow
+                        data-testid={`repayment-row-${rep.id}`}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => setExpandedId(isExpanded ? null : rep.id)}
+                      >
+                        <TableCell className="px-2">
+                          <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
+                        </TableCell>
+                        <TableCell className="text-xs font-mono">{rep.msisdn || "—"}</TableCell>
+                        <TableCell className="text-xs">
+                          <div className="flex items-center gap-1.5">
+                            <Building2 className="w-3 h-3 text-muted-foreground shrink-0" />
+                            <span className="truncate max-w-[120px]" data-testid={`repayment-lender-${rep.id}`}>
+                              {rep.lender?.lenderName || "—"}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs font-bold text-green-600 dark:text-green-400">{cur.symbol}{Number(rep.amountPaid || 0).toLocaleString()}</TableCell>
+                        <TableCell className="text-xs">{cur.symbol}{Number(rep.amountDue || 0).toLocaleString()}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={`text-[10px] ${rep.status === "paid" ? "bg-green-500/10 text-green-500 border-green-500/20" : rep.status === "partial" ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" : rep.status === "missed" || rep.status === "overdue" ? "bg-red-500/10 text-red-500 border-red-500/20" : ""}`}>
+                            {rep.status.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className={`text-xs ${(rep.daysLate || 0) > 0 ? "text-red-500 font-bold" : "text-green-500"}`}>{(rep.daysLate || 0) > 0 ? `${rep.daysLate}d` : "On time"}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{rep.paidAt ? new Date(rep.paidAt).toLocaleDateString() : "—"}</TableCell>
+                      </TableRow>
+                      {isExpanded && rep.lender && (
+                        <TableRow key={`${rep.id}-detail`} className="bg-muted/30">
+                          <TableCell colSpan={8} className="p-0">
+                            <div className="px-6 py-3 space-y-2" data-testid={`repayment-detail-${rep.id}`}>
+                              <div className="flex items-center gap-2 mb-2">
+                                <Building2 className="w-4 h-4 text-primary" />
+                                <span className="text-sm font-semibold">{rep.lender.lenderName}</span>
+                                <Badge variant="outline" className="text-[10px]">{getStatusLabel(rep.lender.lenderType)}</Badge>
+                              </div>
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                <div className="rounded-lg border p-2.5 bg-background">
+                                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Loan Amount</p>
+                                  <p className="text-sm font-bold">{cur.symbol}{Number(rep.lender.loanAmount || 0).toLocaleString()}</p>
+                                </div>
+                                <div className="rounded-lg border p-2.5 bg-background">
+                                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Interest Rate</p>
+                                  <p className="text-sm font-bold">{Number(rep.lender.interestRate || 0)}%</p>
+                                </div>
+                                <div className="rounded-lg border p-2.5 bg-background">
+                                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Tenor</p>
+                                  <p className="text-sm font-bold">{rep.lender.tenorDays} days</p>
+                                </div>
+                                <div className="rounded-lg border p-2.5 bg-background">
+                                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Repayable</p>
+                                  <p className="text-sm font-bold">{cur.symbol}{Number(rep.lender.totalRepayable || 0).toLocaleString()}</p>
+                                </div>
+                                <div className="rounded-lg border p-2.5 bg-background">
+                                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Outstanding</p>
+                                  <p className="text-sm font-bold text-amber-600 dark:text-amber-400">{cur.symbol}{Number(rep.lender.outstandingBalance || 0).toLocaleString()}</p>
+                                </div>
+                                <div className="rounded-lg border p-2.5 bg-background">
+                                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Loan Status</p>
+                                  <Badge variant="outline" className={`text-[10px] mt-0.5 ${getStatusColor(rep.lender.loanStatus)}`}>
+                                    {getStatusLabel(rep.lender.loanStatus)}
+                                  </Badge>
+                                </div>
+                                <div className="rounded-lg border p-2.5 bg-background">
+                                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Disbursed</p>
+                                  <p className="text-sm font-bold">{rep.lender.disbursedAt ? new Date(rep.lender.disbursedAt).toLocaleDateString() : "—"}</p>
+                                </div>
+                                <div className="rounded-lg border p-2.5 bg-background">
+                                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Due Date</p>
+                                  <p className="text-sm font-bold">{rep.dueDate ? new Date(rep.dueDate).toLocaleDateString() : "—"}</p>
+                                </div>
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </Fragment>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 function getDisbursementColor(status: string) {
@@ -452,49 +574,7 @@ export default function TelcoLending() {
                 </Card>
               </div>
 
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <History className="w-4 h-4 text-primary" /> Recent Repayments
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {opsDashboard.recentRepayments.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">No recent repayments</p>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="text-xs">MSISDN</TableHead>
-                            <TableHead className="text-xs">Amount Paid</TableHead>
-                            <TableHead className="text-xs">Amount Due</TableHead>
-                            <TableHead className="text-xs">Status</TableHead>
-                            <TableHead className="text-xs">Days Late</TableHead>
-                            <TableHead className="text-xs">Paid At</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {opsDashboard.recentRepayments.map(rep => (
-                            <TableRow key={rep.id} data-testid={`repayment-row-${rep.id}`}>
-                              <TableCell className="text-xs font-mono">{rep.msisdn || "—"}</TableCell>
-                              <TableCell className="text-xs font-bold text-green-600 dark:text-green-400">{getCur(rep.country || filterCountry).symbol}{Number(rep.amountPaid || 0).toLocaleString()}</TableCell>
-                              <TableCell className="text-xs">{getCur(rep.country || filterCountry).symbol}{Number(rep.amountDue || 0).toLocaleString()}</TableCell>
-                              <TableCell>
-                                <Badge variant="outline" className={`text-[10px] ${rep.status === "paid" ? "bg-green-500/10 text-green-500 border-green-500/20" : rep.status === "partial" ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" : rep.status === "missed" || rep.status === "overdue" ? "bg-red-500/10 text-red-500 border-red-500/20" : ""}`}>
-                                  {rep.status.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className={`text-xs ${(rep.daysLate || 0) > 0 ? "text-red-500 font-bold" : "text-green-500"}`}>{(rep.daysLate || 0) > 0 ? `${rep.daysLate}d` : "On time"}</TableCell>
-                              <TableCell className="text-xs text-muted-foreground">{rep.paidAt ? new Date(rep.paidAt).toLocaleDateString() : "—"}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <RepaymentTable repayments={opsDashboard.recentRepayments} filterCountry={filterCountry} />
             </>
           ) : (
             <Card>
