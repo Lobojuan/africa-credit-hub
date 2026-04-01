@@ -145,10 +145,8 @@ export async function runSecurityHealthCheck(): Promise<{
   }
 
   try {
-    const lockResult = await pool.query(
-      `SELECT COUNT(*) as locked FROM users WHERE locked_until > NOW()`
-    );
-    const lockedCount = parseInt(lockResult.rows[0].locked);
+    const lockResult = await db.execute(sql`SELECT COUNT(*) as locked FROM users WHERE locked_until > NOW()`);
+    const lockedCount = parseInt(lockResult.rows[0].locked as string);
     checks.push({
       name: "Account Lockouts",
       status: lockedCount > 5 ? "warn" : "pass",
