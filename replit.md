@@ -34,7 +34,8 @@ The system employs a modern full-stack architecture built for scalability and co
     -   **Workflow**: Maker-checker workflow and dispute management.
     -   **Regulatory Compliance**: Consent management, audit trails, and a Regulatory Compliance Dashboard with jurisdiction-specific data retention for 54 African jurisdictions.
     -   **Institutional Management**: Self-registration, approval, billing, and fee management for data providers.
-    -   **Reporting**: Regulatory analytics, CSV export, and bulk data upload (XBRL/XML, IFF).
+    -   **Reporting**: Regulatory analytics, CSV export, and bulk data upload (XBRL/XML, IFF). PDF credit reports include human-readable reason codes with color-coded positive/negative indicators, NDIA and arrears totals in the Credit Profile Overview section.
+    -   **IFF Upload UI**: Full drag-and-drop IFF file upload tab on the batch upload page with auto-detect or manual IFF type selection, supporting all 6 BOG IFF types (Consumer/Business Credit, Dishonoured Cheques, Court Judgments). Shows detailed results including borrower/account creation counts and error details.
     -   **Structured Search (BOG Compliant)**: Consumer search (Ghana Card, Name, DOB, Gender, Reason for Request) and Business search (Registration Number, TIN, Company Name, Purpose) with server-side validation, mandatory compliance fields, and audit trail logging. General free-text search preserved as fallback.
     -   **Role-Based Access Control (RBAC)**: Role-filtered navigation and API access.
     -   **External API**: REST API for data submission and credit report generation, secured via API keys and OAuth 2.1.

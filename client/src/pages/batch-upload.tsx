@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { isGhanaMode } from "@/lib/country-mode";
@@ -228,10 +230,15 @@ export default function BatchUploadPage() {
   const [uploadedFileName, setUploadedFileName] = useState<Record<string, string>>({});
   const { toast } = useToast();
 
+  const [iffFile, setIffFile] = useState<File | null>(null);
+  const [iffType, setIffType] = useState("");
+  const [iffResult, setIffResult] = useState<any>(null);
+
   const csvFileRef = useRef<HTMLInputElement>(null);
   const jsonFileRef = useRef<HTMLInputElement>(null);
   const xbrlFileRef = useRef<HTMLInputElement>(null);
   const bogFileRef = useRef<HTMLInputElement>(null);
+  const iffFileRef = useRef<HTMLInputElement>(null);
 
   const historyQuery = useQuery<UploadHistoryItem[]>({
     queryKey: ["/api/batch-upload/history"],
@@ -318,6 +325,48 @@ export default function BatchUploadPage() {
       toast({ title: t('batchUpload.uploadFailed'), description: e.message, variant: "destructive" });
     },
   });
+
+  const iffUploadMutation = useMutation({
+    mutationFn: async ({ file, iffType: type }: { file: File; iffType: string }) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      if (type) formData.append("iffType", type);
+      const res = await fetch("/api/batch-upload/iff", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({ message: "Upload failed" }));
+        throw new Error(errBody.message || "IFF upload failed");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setIffResult(data);
+      queryClient.invalidateQueries({ queryKey: ["/api/credit-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/batch-upload/history"] });
+      toast({
+        title: "IFF Upload Complete",
+        description: `${data.totalRecords} records processed: ${data.borrowersCreated} borrowers, ${data.accountsCreated} accounts, ${data.errors?.length || 0} errors`,
+      });
+    },
+    onError: (e: Error) => {
+      toast({ title: "IFF Upload Failed", description: e.message, variant: "destructive" });
+    },
+  });
+
+  const handleIffSubmit = () => {
+    if (!iffFile) return;
+    setIffResult(null);
+    iffUploadMutation.mutate({ file: iffFile, iffType });
+  };
+
+  const handleIffFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) setIffFile(file);
+  };
 
   const handleCsvValidate = useCallback(() => {
     if (!csvInput.trim()) return;
@@ -645,6 +694,7 @@ export default function BatchUploadPage() {
           <TabsTrigger value="csv" data-testid="tab-csv"><FileSpreadsheet className="w-3.5 h-3.5 mr-1.5" /> CSV</TabsTrigger>
           <TabsTrigger value="json" data-testid="tab-json"><FileText className="w-3.5 h-3.5 mr-1.5" /> JSON</TabsTrigger>
           <TabsTrigger value="xbrl" data-testid="tab-xbrl"><FileCode className="w-3.5 h-3.5 mr-1.5" /> XBRL / XML</TabsTrigger>
+          <TabsTrigger value="iff" data-testid="tab-iff"><Upload className="w-3.5 h-3.5 mr-1.5" /> IFF</TabsTrigger>
           {ghanaMode && (
             <TabsTrigger value="bog" data-testid="tab-bog"><Database className="w-3.5 h-3.5 mr-1.5" /> BoG Format</TabsTrigger>
           )}
@@ -839,6 +889,166 @@ export default function BatchUploadPage() {
               </Card>
 
               {renderResultCard("-xbrl")}
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="iff">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardContent className="p-5 space-y-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <Upload className="w-5 h-5 text-primary" />
+                  <h3 className="font-semibold text-sm">IFF File Upload</h3>
+                  <Badge variant="outline" className="text-[10px] ml-auto">BOG Format</Badge>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Upload Industry File Format (IFF) spreadsheets (.xlsx, .xls, .csv). The system auto-detects the IFF type from column headers, or you can specify it manually.
+                </p>
+
+                <div
+                  className={`border-2 border-dashed rounded-md p-6 text-center cursor-pointer transition-colors ${dragOver === "iff" ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}
+                  onDragOver={(e) => { e.preventDefault(); setDragOver("iff"); }}
+                  onDragLeave={() => setDragOver(null)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragOver(null);
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) setIffFile(file);
+                  }}
+                  onClick={() => iffFileRef.current?.click()}
+                  data-testid="dropzone-iff"
+                >
+                  {iffFile ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <FileSpreadsheet className="w-5 h-5 text-green-600 dark:text-green-400" />
+                      <span className="text-sm font-medium">{iffFile.name}</span>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={(e) => { e.stopPropagation(); setIffFile(null); setIffResult(null); }}
+                        data-testid="button-clear-iff-file"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm font-medium">Upload IFF Spreadsheet</p>
+                      <p className="text-xs text-muted-foreground mt-1">.xlsx, .xls, or .csv files accepted (max 50MB)</p>
+                    </>
+                  )}
+                  <input
+                    ref={iffFileRef}
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    className="hidden"
+                    onChange={handleIffFileSelect}
+                    data-testid="input-file-iff"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">IFF Type (optional — auto-detected from headers)</Label>
+                  <Select value={iffType} onValueChange={setIffType}>
+                    <SelectTrigger data-testid="select-iff-type">
+                      <SelectValue placeholder="Auto-detect from file headers" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="auto">Auto-detect</SelectItem>
+                      <SelectItem value="CONSUMER_CREDIT">Consumer Credit</SelectItem>
+                      <SelectItem value="BUSINESS_CREDIT">Business Credit</SelectItem>
+                      <SelectItem value="CONSUMER_DISHONOURED_CHEQUE">Consumer Dishonoured Cheques</SelectItem>
+                      <SelectItem value="BUSINESS_DISHONOURED_CHEQUES">Business Dishonoured Cheques</SelectItem>
+                      <SelectItem value="CONSUMER_JUDGEMENT">Consumer Court Judgments</SelectItem>
+                      <SelectItem value="BUSINESS_JUDGEMENT">Business Court Judgments</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Button
+                  className="w-full"
+                  onClick={handleIffSubmit}
+                  disabled={iffUploadMutation.isPending || !iffFile}
+                  data-testid="button-submit-iff"
+                >
+                  {iffUploadMutation.isPending ? "Processing IFF..." : "Upload IFF File"}
+                </Button>
+              </CardContent>
+            </Card>
+
+            <div className="space-y-4">
+              <Card>
+                <CardContent className="p-5 space-y-3">
+                  <h3 className="font-semibold text-sm">IFF Format Reference</h3>
+                  <div className="text-[11px] text-muted-foreground space-y-2">
+                    <p>The Industry File Format (IFF) is the standard spreadsheet format defined by the Bank of Ghana for credit data submission to licensed Credit Reference Bureaus.</p>
+                    <div className="border-t border-border/40 pt-2">
+                      <p className="font-semibold text-foreground mb-1">Supported IFF Types:</p>
+                      <div className="space-y-1">
+                        <p><strong>CONSUMER_CREDIT</strong> — Individual borrower credit facilities</p>
+                        <p><strong>BUSINESS_CREDIT</strong> — Corporate/business credit facilities</p>
+                        <p><strong>CONSUMER_DISHONOURED_CHEQUE</strong> — Individual bounced cheques</p>
+                        <p><strong>BUSINESS_DISHONOURED_CHEQUES</strong> — Corporate bounced cheques</p>
+                        <p><strong>CONSUMER_JUDGEMENT</strong> — Individual court judgments</p>
+                        <p><strong>BUSINESS_JUDGEMENT</strong> — Corporate court judgments</p>
+                      </div>
+                    </div>
+                    <div className="border-t border-border/40 pt-2">
+                      <p className="font-semibold text-foreground mb-1">Key Fields (Consumer Credit IFF):</p>
+                      <div className="flex flex-wrap gap-1">
+                        {["SRN", "BorrowerName", "GhanaCardNo", "DateOfBirth", "FacilityType", "AccountNumber", "SanctionedAmount", "OutstandingBalance", "DaysInArrears", "Classification"].map(f => (
+                          <Badge key={f} variant="outline" className="text-[9px]">{f}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {iffResult && (
+                <Card>
+                  <CardContent className="p-5 space-y-3">
+                    <div className="flex items-center gap-2">
+                      {(iffResult.errors?.length || 0) === 0 ? (
+                        <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+                      ) : (
+                        <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                      )}
+                      <h3 className="font-semibold text-sm">IFF Upload Results</h3>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm" data-testid="iff-result-summary">
+                      <div className="bg-muted/50 rounded p-2">
+                        <p className="text-[10px] text-muted-foreground uppercase">Records</p>
+                        <p className="font-bold">{iffResult.totalRecords}</p>
+                      </div>
+                      <div className="bg-muted/50 rounded p-2">
+                        <p className="text-[10px] text-muted-foreground uppercase">Borrowers Created</p>
+                        <p className="font-bold text-green-600 dark:text-green-400">{iffResult.borrowersCreated}</p>
+                      </div>
+                      <div className="bg-muted/50 rounded p-2">
+                        <p className="text-[10px] text-muted-foreground uppercase">Accounts Created</p>
+                        <p className="font-bold text-blue-600 dark:text-blue-400">{iffResult.accountsCreated}</p>
+                      </div>
+                      <div className="bg-muted/50 rounded p-2">
+                        <p className="text-[10px] text-muted-foreground uppercase">Errors</p>
+                        <p className="font-bold text-red-600 dark:text-red-400">{iffResult.errors?.length || 0}</p>
+                      </div>
+                    </div>
+                    {iffResult.errors?.length > 0 && (
+                      <div className="max-h-32 overflow-auto">
+                        {iffResult.errors.slice(0, 10).map((err: any, i: number) => (
+                          <p key={i} className="text-xs text-red-600 dark:text-red-400">Row {err.row}: {err.message}</p>
+                        ))}
+                        {iffResult.errors.length > 10 && (
+                          <p className="text-xs text-muted-foreground">...and {iffResult.errors.length - 10} more errors</p>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         </TabsContent>

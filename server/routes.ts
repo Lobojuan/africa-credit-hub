@@ -5657,10 +5657,29 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
       if (s.reasonCodes && s.reasonCodes.length > 0) {
         sectionTitle("Score Factor Analysis");
+        const reasonLabels: Record<string, string> = {
+          DELINQUENT_ACCOUNTS: "Delinquent accounts on file",
+          WRITTEN_OFF_ACCOUNTS: "Written-off accounts present",
+          RESTRUCTURED_ACCOUNTS: "Restructured loan agreements",
+          HIGH_INQUIRY_VOLUME: "High number of credit inquiries",
+          HIGH_DEBT_LEVEL: "Elevated total debt level",
+          COURT_JUDGMENTS_PRESENT: "Court judgments or liens on record",
+          POLITICALLY_EXPOSED_PERSON: "Politically exposed person (PEP)",
+          STRONG_REPAYMENT_HISTORY: "Strong repayment track record",
+          EXCELLENT_PAYMENT_RECORD: "Excellent payment consistency",
+          THIN_FILE_LIMITED_HISTORY: "Limited credit history on file",
+          HIGH_NDIA_90_PLUS: "Severe arrears — 90+ days in arrears on one or more accounts",
+          MULTIPLE_DELINQUENCIES: "Multiple accounts in delinquency",
+          HIGH_ARREARS_AMOUNT: "High total amount in arrears",
+        };
         s.reasonCodes.forEach((code: string) => {
           ensureSpace(14);
-          const label = code.replace(/_/g, " ").toLowerCase().replace(/^\w/, (c: string) => c.toUpperCase());
-          doc.fontSize(7.5).font("Helvetica").fill(DARK).text(`• ${label}`, 48, doc.y);
+          const isPositive = code === "STRONG_REPAYMENT_HISTORY" || code === "EXCELLENT_PAYMENT_RECORD";
+          const label = reasonLabels[code] || code.replace(/_/g, " ").toLowerCase().replace(/^\w/, (c: string) => c.toUpperCase());
+          const bullet = isPositive ? "+" : "−";
+          const color = isPositive ? "#16a34a" : "#dc2626";
+          doc.fontSize(7.5).font("Helvetica-Bold").fill(color).text(bullet, 48, doc.y, { continued: true, width: 10 });
+          doc.fontSize(7.5).font("Helvetica").fill(DARK).text(` ${code}: ${label}`, { continued: false });
           doc.moveDown(0.15);
         });
       }
@@ -5678,15 +5697,19 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const npl = openAccts.filter((a: any) => (a.daysInArrears || 0) > 90);
       const closedAccts = accounts.filter((a: any) => a.status === "closed");
       const woAccts = accounts.filter((a: any) => a.status === "written_off");
+      const totalArrears = openAccts.reduce((s: number, a: any) => s + parseFloat(a.amountOverdue || "0"), 0);
+      const maxDaysInArrears = openAccts.reduce((m: number, a: any) => Math.max(m, a.daysInArrears || 0), 0);
       const indicators = [
         ["1", "Number of Open Credit Facilities", String(openAccts.length)],
         ["2", "Total Outstanding Balance", totalBal.toLocaleString("en-US", { minimumFractionDigits: 2 })],
         ["3", "Number of Overdue Facilities", String(overdueAccts.length)],
         ["4", "Non-Performing (>90 days)", String(npl.length)],
-        ["5", "Closed Facilities", String(closedAccts.length)],
-        ["6", "Written-Off Facilities", String(woAccts.length)],
-        ["7", "Court Judgments", String(judgments.length)],
-        ["8", "Credit Inquiries", String(inquiries.length)],
+        ["5", "Max Days in Arrears (NDIA)", String(maxDaysInArrears)],
+        ["6", "Total Amount in Arrears", totalArrears.toLocaleString("en-US", { minimumFractionDigits: 2 })],
+        ["7", "Closed Facilities", String(closedAccts.length)],
+        ["8", "Written-Off Facilities", String(woAccts.length)],
+        ["9", "Court Judgments", String(judgments.length)],
+        ["10", "Credit Inquiries", String(inquiries.length)],
       ];
       indicators.forEach(([sno, label, val]) => {
         tableRow([
