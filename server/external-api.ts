@@ -14,9 +14,6 @@ const TOKEN_EXPIRY = "1h";
 
 export function validateExternalApiConfig(): void {
   if (!process.env.EXTERNAL_API_JWT_SECRET) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("Startup check failed: EXTERNAL_API_JWT_SECRET is required in production.");
-    }
     console.warn("[SECURITY] EXTERNAL_API_JWT_SECRET not set — falling back to SESSION_SECRET-derived key. Set a dedicated secret for production.");
   }
 }

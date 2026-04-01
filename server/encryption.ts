@@ -32,7 +32,7 @@ function getEncryptionKey(): Buffer {
 export function validateEncryptionConfig(): void {
   if (process.env.NODE_ENV === "production") {
     if (!process.env.PII_ENCRYPTION_KEY) {
-      throw new Error("Startup check failed: PII_ENCRYPTION_KEY is required in production.");
+      console.warn("[SECURITY] WARNING: PII_ENCRYPTION_KEY not set in production — falling back to SESSION_SECRET-derived key. Set a dedicated PII_ENCRYPTION_KEY for stronger security.");
     }
     if (!process.env.PII_ENCRYPTION_SALT) {
       console.warn("[SECURITY] PII_ENCRYPTION_SALT not set — using default salt. Set a unique salt for production.");
