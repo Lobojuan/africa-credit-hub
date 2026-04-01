@@ -235,6 +235,49 @@ app.use((req, res, next) => {
   next();
 });
 
+let maintenanceMode = false;
+let maintenanceMessage = "We are working hard to improve your experience. The platform will be back shortly.";
+
+app.get("/api/health", (_req, res) => {
+  if (maintenanceMode) {
+    return res.status(503).json({ status: "maintenance", message: maintenanceMessage });
+  }
+  res.json({ status: "ok" });
+});
+
+app.get("/api/maintenance/status", (req, res) => {
+  res.json({ enabled: maintenanceMode, message: maintenanceMessage });
+});
+
+app.post("/api/maintenance/toggle", (req, res) => {
+  if (req.session?.userRole !== "super_admin") {
+    return res.status(403).json({ message: "Super admin access required" });
+  }
+  maintenanceMode = !maintenanceMode;
+  if (req.body?.message) {
+    maintenanceMessage = req.body.message;
+  }
+  res.json({ enabled: maintenanceMode, message: maintenanceMessage });
+});
+
+app.use((req, res, next) => {
+  if (!maintenanceMode) return next();
+
+  if (req.path === "/api/health") return next();
+  if (req.path.startsWith("/api/auth/")) return next();
+  if (req.path.startsWith("/api/maintenance")) return next();
+  if (req.path === "/maintenance.html") return next();
+  if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|json)$/)) return next();
+
+  if (req.session?.userRole === "super_admin") return next();
+
+  if (req.path.startsWith("/api/")) {
+    return res.status(503).json({ status: "maintenance", message: maintenanceMessage });
+  }
+
+  return res.redirect("/maintenance.html");
+});
+
 const IDLE_TIMEOUTS: Record<string, number> = {
   super_admin: 30 * 60 * 1000,
   admin: 30 * 60 * 1000,

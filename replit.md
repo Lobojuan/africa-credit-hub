@@ -84,6 +84,7 @@ The system employs a modern full-stack architecture built for scalability and co
     -   **Real-time WebSocket Notifications**: Authenticated WebSocket server for event broadcasting.
     -   **Progressive Web App (PWA)**: Installable with service worker and offline capabilities.
     -   **System Status & Health Monitoring**: Public and authenticated endpoints for health and diagnostics.
+    -   **Maintenance Mode**: Toggle-able maintenance page (`/maintenance.html`) that shows a branded "We're Updating" page to visitors when enabled. Super admins can toggle it from Command Center > System tab. Auto-refreshes every 15 seconds via `/api/health` polling. Super admins bypass maintenance mode and can still access the full site. API endpoints: `GET /api/maintenance/status`, `POST /api/maintenance/toggle` (super_admin only).
     -   **Platform Metrics Dashboard**: Admin-only page displaying MRR/ARR, subscription breakdown, and KPIs.
     -   **Platform-Wide KPI/ROI Banners**: Reusable KPI banner component with contextual metrics across major sections.
     -   **Webhook Delivery System**: HMAC-SHA256 signed webhooks with retry logic.

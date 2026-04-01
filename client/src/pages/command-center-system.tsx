@@ -1,10 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import {
   Server, Database, Shield, Clock, HardDrive, Cpu, MemoryStick, Activity,
   CheckCircle2, AlertTriangle, XCircle, Users, Building2, FileText, Scale,
   Lock, Globe, Zap, Monitor, Layers, ArrowUpRight, BarChart3, Gauge,
-  Network, ChevronDown, ChevronRight, RefreshCw, Loader2,
+  Network, ChevronDown, ChevronRight, RefreshCw, Loader2, Wrench,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -294,6 +294,57 @@ function SRSCategory({ category, items, defaultOpen = false }: {
   );
 }
 
+function MaintenanceToggle() {
+  const { toast } = useToast();
+  const { data: maintenance } = useQuery<{ enabled: boolean; message: string }>({
+    queryKey: ["/api/maintenance/status"],
+    refetchInterval: 10000,
+  });
+  const toggleMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/maintenance/toggle");
+      return res.json();
+    },
+    onSuccess: (data: { enabled: boolean }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/maintenance/status"] });
+      toast({
+        title: data.enabled ? "Maintenance Mode Enabled" : "Maintenance Mode Disabled",
+        description: data.enabled
+          ? "All non-admin users will see the maintenance page."
+          : "The site is now accessible to all users.",
+      });
+    },
+  });
+  const isEnabled = maintenance?.enabled ?? false;
+
+  return (
+    <div className={`rounded-lg border p-3 flex items-center justify-between ${isEnabled ? "border-amber-500/30 bg-amber-500/5" : "border-border bg-muted"}`} data-testid="maintenance-toggle-card">
+      <div className="flex items-center gap-2.5">
+        <div className={`w-8 h-8 rounded-md flex items-center justify-center ${isEnabled ? "bg-amber-500/20" : "bg-muted-foreground/10"}`}>
+          <Wrench className={`w-4 h-4 ${isEnabled ? "text-amber-500" : "text-muted-foreground"}`} />
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-foreground">Maintenance Mode</p>
+          <p className="text-[9px] text-muted-foreground">
+            {isEnabled ? "Active — visitors see the maintenance page" : "Off — site is live for all users"}
+          </p>
+        </div>
+      </div>
+      <Button
+        variant={isEnabled ? "destructive" : "outline"}
+        size="sm"
+        className="h-7 text-[10px]"
+        onClick={() => toggleMutation.mutate()}
+        disabled={toggleMutation.isPending}
+        data-testid="button-toggle-maintenance"
+      >
+        {toggleMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+        {isEnabled ? "Disable" : "Enable"}
+      </Button>
+    </div>
+  );
+}
+
 export function CommandCenterSystemTab() {
   const { data: stats, isLoading, isRefetching } = useQuery<SystemStats>({
     queryKey: ["/api/platform/system-stats"],
@@ -348,6 +399,8 @@ export function CommandCenterSystemTab() {
           Refresh
         </Button>
       </div>
+
+      <MaintenanceToggle />
 
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
         <StatCard icon={Zap} label="Requests Today" value={stats.traffic.totalToday.toLocaleString()} sub={`${stats.traffic.requestsPerSecond} req/s`} color="bg-cyan-500/20" />
