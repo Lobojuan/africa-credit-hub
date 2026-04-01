@@ -160,7 +160,7 @@ function ActivityFeed() {
 }
 
 export default function CountrySelectionPage() {
-  const { setCountry, isSwitching } = useCountryTheme();
+  const { setCountry, isSwitching, activeCountry, activeConfig, isGlobalView } = useCountryTheme();
   const { user, logout } = useAuth();
   const brandColors = useBrandColors();
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
@@ -233,6 +233,47 @@ export default function CountrySelectionPage() {
                 <span className="text-sm font-semibold text-blue-300">Enter Global View</span>
                 <ArrowRight className="w-3.5 h-3.5 text-blue-400/60 group-hover:text-blue-400 transition-colors" />
               </button>
+            </div>
+
+            <div className={`flex items-center gap-4 px-5 py-4 rounded-xl border mb-5 ${
+              isGlobalView
+                ? "bg-muted/40 border-border"
+                : "bg-primary/5 border-primary/20 dark:bg-primary/10 dark:border-primary/30"
+            }`} data-testid="banner-command-country">
+              {isGlobalView ? (
+                <>
+                  <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center shrink-0">
+                    <Globe className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-lg font-bold text-foreground tracking-tight" data-testid="text-command-country">All Countries</p>
+                    <p className="text-sm text-muted-foreground">Pan-African View — Aggregated data across all jurisdictions</p>
+                  </div>
+                </>
+              ) : activeConfig ? (
+                <>
+                  <span className="text-4xl shrink-0 leading-none" role="img" aria-label={activeConfig.name}>
+                    {countryCodeToFlag(activeConfig.code)}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-lg font-bold text-foreground tracking-tight" data-testid="text-command-country">{activeConfig.name}</p>
+                    <p className="text-sm text-muted-foreground">{activeConfig.regulatoryBody} · {activeConfig.currency} ({activeConfig.currencySymbol})</p>
+                  </div>
+                  <Badge variant="outline" className="shrink-0 text-xs border-primary/30 text-primary">
+                    {activeConfig.code}
+                  </Badge>
+                </>
+              ) : (
+                <>
+                  <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center shrink-0">
+                    <Globe className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-lg font-bold text-foreground tracking-tight" data-testid="text-command-country">No Country Selected</p>
+                    <p className="text-sm text-muted-foreground">Select a jurisdiction below to get started</p>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
