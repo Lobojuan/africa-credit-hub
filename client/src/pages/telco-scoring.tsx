@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { useCountryTheme } from "@/components/country-theme-provider";
+import { getCountryConfigByName } from "@/lib/country-mode";
 import {
   LineChart, Line, BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
   ResponsiveContainer, Legend, Cell
@@ -1244,6 +1246,7 @@ function ProfileScoreHistory({ profileId, onScore, scorePending }: { profileId: 
 export default function TelcoScoringPage() {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const { activeCountry, activeConfig, isGlobalView } = useCountryTheme();
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
   const [expandedProfileId, setExpandedProfileId] = useState<string | null>(null);
@@ -1258,6 +1261,18 @@ export default function TelcoScoringPage() {
   const [profileFilterCountry, setProfileFilterCountry] = useState("");
   const [profileFilterProvider, setProfileFilterProvider] = useState("");
   const [profileFilterKyc, setProfileFilterKyc] = useState("");
+
+  useEffect(() => {
+    if (activeCountry && !isGlobalView) {
+      setProfileFilterCountry(activeCountry);
+      setScoreFilterCountry(activeCountry);
+      setProfilesPage(1);
+      setScoresPage(1);
+    } else {
+      setProfileFilterCountry("");
+      setScoreFilterCountry("");
+    }
+  }, [activeCountry, isGlobalView]);
 
   const [scoreFilterCountry, setScoreFilterCountry] = useState("");
   const [scoreFilterProvider, setScoreFilterProvider] = useState("");
@@ -1403,8 +1418,49 @@ export default function TelcoScoringPage() {
   const hasData = (dashboardStats?.totalProfiles || 0) > 0;
   const hasScores = (dashboardStats?.totalScores || 0) > 0;
 
+  const countryFlag = (code: string) => {
+    if (!code || code.length !== 2) return "🌍";
+    const codePoints = [...code.toUpperCase()].map(c => 0x1F1E6 + c.charCodeAt(0) - 65);
+    return String.fromCodePoint(...codePoints);
+  };
+
+  const displayCountryConfig = profileFilterCountry ? getCountryConfigByName(profileFilterCountry) : null;
+
   return (
     <div className="p-3 sm:p-6 space-y-6 max-w-[1400px] mx-auto animate-page-enter">
+      {/* Country context banner */}
+      <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${
+        profileFilterCountry
+          ? "bg-primary/5 border-primary/20 dark:bg-primary/10 dark:border-primary/30"
+          : "bg-muted/50 border-border"
+      }`} data-testid="banner-country-context">
+        <span className="text-2xl" role="img" aria-label={profileFilterCountry || "global"}>
+          {displayCountryConfig ? countryFlag(displayCountryConfig.code) : "🌍"}
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-foreground" data-testid="text-country-label">
+            {profileFilterCountry ? `${profileFilterCountry} — Telco Credit Data` : "All Countries — Pan-African View"}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {displayCountryConfig
+              ? `${displayCountryConfig.regulatoryBody} · ${displayCountryConfig.currency} (${displayCountryConfig.currencySymbol})`
+              : "Showing aggregated data across all jurisdictions"}
+          </p>
+        </div>
+        {profileFilterCountry && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+            onClick={() => { setProfileFilterCountry(""); setScoreFilterCountry(""); }}
+            data-testid="button-clear-country"
+          >
+            <X className="w-3.5 h-3.5 mr-1" />
+            Clear
+          </Button>
+        )}
+      </div>
+
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
