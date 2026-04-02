@@ -74,6 +74,7 @@ function countryCodeToFlag(code: string): string {
 
 type NavItem = {
   label: string;
+  tKey?: string;
   url: string;
   icon: LucideIcon;
   testId: string;
@@ -81,87 +82,87 @@ type NavItem = {
 };
 
 const globalViewItems: NavItem[] = [
-  { label: "Dashboard", url: "/dashboard", icon: LayoutDashboard, testId: "nav-dashboard" },
-  { label: "Portfolio Intelligence", url: "/portfolio-intelligence", icon: Brain, testId: "nav-portfolio-intelligence", roles: ["admin", "super_admin", "regulator"] },
-  { label: "AI Command Center", url: "/ai-command-center", icon: Sparkles, testId: "nav-ai-command-center", roles: ["admin", "super_admin", "regulator"] },
-  { label: "Platform Metrics", url: "/platform-metrics", icon: Gauge, testId: "nav-platform-metrics", roles: ["admin", "super_admin"] },
+  { label: "Dashboard", tKey: "sidebar.dashboard", url: "/dashboard", icon: LayoutDashboard, testId: "nav-dashboard" },
+  { label: "Portfolio Intelligence", tKey: "sidebar.portfolioIntelligence", url: "/portfolio-intelligence", icon: Brain, testId: "nav-portfolio-intelligence", roles: ["admin", "super_admin", "regulator"] },
+  { label: "AI Command Center", tKey: "sidebar.aiCommandCenter", url: "/ai-command-center", icon: Sparkles, testId: "nav-ai-command-center", roles: ["admin", "super_admin", "regulator"] },
+  { label: "Platform Metrics", tKey: "sidebar.platformMetrics", url: "/platform-metrics", icon: Gauge, testId: "nav-platform-metrics", roles: ["admin", "super_admin"] },
 ];
 
 const telcoItems: NavItem[] = [
-  { label: "Telco Scoring", url: "/telco-scoring", icon: Smartphone, testId: "nav-telco-scoring", roles: ["admin", "lender", "regulator", "super_admin"] },
-  { label: "Telco Lending", url: "/telco-lending", icon: Banknote, testId: "nav-telco-lending", roles: ["admin", "lender", "regulator", "super_admin"] },
+  { label: "Telco Scoring", tKey: "sidebar.telcoScoring", url: "/telco-scoring", icon: Smartphone, testId: "nav-telco-scoring", roles: ["admin", "lender", "regulator", "super_admin"] },
+  { label: "Telco Lending", tKey: "sidebar.telcoLending", url: "/telco-lending", icon: Banknote, testId: "nav-telco-lending", roles: ["admin", "lender", "regulator", "super_admin"] },
 ];
 
 const borrowersLendersItems: NavItem[] = [
-  { label: "Consumers", url: "/consumers", icon: User, testId: "nav-consumers" },
-  { label: "Businesses", url: "/businesses", icon: Building2, testId: "nav-businesses" },
-  { label: "Borrowers (All)", url: "/borrowers", icon: Users, testId: "nav-borrowers", roles: ["super_admin"] },
-  { label: "Credit Accounts", url: "/credit-accounts", icon: CreditCard, testId: "nav-credit-accounts" },
-  { label: "Credit Search", url: "/search", icon: Search, testId: "nav-credit-search" },
-  { label: "Credit Reports", url: "/reports", icon: FileText, testId: "nav-credit-reports" },
-  { label: "Score Methodology", url: "/credit-score-methodology", icon: Brain, testId: "nav-credit-score-methodology", roles: ["admin", "lender", "super_admin"] },
-  { label: "My Credit", url: "/my-credit", icon: UserCheck, testId: "nav-consumer-portal" },
-  { label: "Institutions", url: "/institutions", icon: Building2, testId: "nav-institutions", roles: ["admin", "super_admin"] },
+  { label: "Consumers", tKey: "sidebar.consumers", url: "/consumers", icon: User, testId: "nav-consumers" },
+  { label: "Businesses", tKey: "sidebar.businesses", url: "/businesses", icon: Building2, testId: "nav-businesses" },
+  { label: "Borrowers (All)", tKey: "sidebar.borrowers", url: "/borrowers", icon: Users, testId: "nav-borrowers", roles: ["super_admin"] },
+  { label: "Credit Accounts", tKey: "sidebar.creditAccounts", url: "/credit-accounts", icon: CreditCard, testId: "nav-credit-accounts" },
+  { label: "Credit Search", tKey: "sidebar.creditSearch", url: "/search", icon: Search, testId: "nav-credit-search" },
+  { label: "Credit Reports", tKey: "sidebar.creditReports", url: "/reports", icon: FileText, testId: "nav-credit-reports" },
+  { label: "Score Methodology", tKey: "sidebar.creditScoreMethodology", url: "/credit-score-methodology", icon: Brain, testId: "nav-credit-score-methodology", roles: ["admin", "lender", "super_admin"] },
+  { label: "My Credit", tKey: "sidebar.myCredit", url: "/my-credit", icon: UserCheck, testId: "nav-consumer-portal" },
+  { label: "Institutions", tKey: "sidebar.institutions", url: "/institutions", icon: Building2, testId: "nav-institutions", roles: ["admin", "super_admin"] },
 ];
 
 const operationsItems: NavItem[] = [
-  { label: "Batch Upload", url: "/batch-upload", icon: Upload, testId: "nav-batch-upload", roles: ["admin", "lender", "super_admin"] },
-  { label: "Disputes", url: "/disputes", icon: AlertCircle, testId: "nav-disputes", roles: ["admin", "lender", "regulator", "super_admin"] },
-  { label: "Approvals", url: "/approvals", icon: CheckSquare, testId: "nav-pending-approvals", roles: ["admin", "regulator", "super_admin"] },
-  { label: "Consent", url: "/consent", icon: FileCheck, testId: "nav-consent", roles: ["admin", "lender", "regulator", "super_admin"] },
-  { label: "Helpdesk", url: "/helpdesk", icon: Headset, testId: "nav-helpdesk" },
-  { label: "Borrower Alerts", url: "/borrower-alerts", icon: Bell, testId: "nav-borrower-alerts", roles: ["admin", "regulator", "super_admin"] },
+  { label: "Batch Upload", tKey: "sidebar.batchUpload", url: "/batch-upload", icon: Upload, testId: "nav-batch-upload", roles: ["admin", "lender", "super_admin"] },
+  { label: "Disputes", tKey: "sidebar.disputes", url: "/disputes", icon: AlertCircle, testId: "nav-disputes", roles: ["admin", "lender", "regulator", "super_admin"] },
+  { label: "Approvals", tKey: "sidebar.pendingApprovals", url: "/approvals", icon: CheckSquare, testId: "nav-pending-approvals", roles: ["admin", "regulator", "super_admin"] },
+  { label: "Consent", tKey: "sidebar.consentManagement", url: "/consent", icon: FileCheck, testId: "nav-consent", roles: ["admin", "lender", "regulator", "super_admin"] },
+  { label: "Helpdesk", tKey: "sidebar.helpdesk", url: "/helpdesk", icon: Headset, testId: "nav-helpdesk" },
+  { label: "Borrower Alerts", tKey: "sidebar.borrowerAlerts", url: "/borrower-alerts", icon: Bell, testId: "nav-borrower-alerts", roles: ["admin", "regulator", "super_admin"] },
 ];
 
 const baseOversightItems: NavItem[] = [
-  { label: "Regulatory Dashboard", url: "/regulatory-dashboard", icon: BarChart3, testId: "nav-regulatory-dashboard", roles: ["admin", "regulator", "super_admin"] },
-  { label: "Audit Trail", url: "/audit", icon: Shield, testId: "nav-audit-trail", roles: ["admin", "regulator", "super_admin"] },
-  { label: "Regulatory Compliance", url: "/regulatory-compliance", icon: Scale, testId: "nav-regulatory-compliance", roles: ["admin", "regulator", "super_admin"] },
+  { label: "Regulatory Dashboard", tKey: "sidebar.regulatoryDashboard", url: "/regulatory-dashboard", icon: BarChart3, testId: "nav-regulatory-dashboard", roles: ["admin", "regulator", "super_admin"] },
+  { label: "Audit Trail", tKey: "sidebar.auditTrail", url: "/audit", icon: Shield, testId: "nav-audit-trail", roles: ["admin", "regulator", "super_admin"] },
+  { label: "Regulatory Compliance", tKey: "sidebar.regulatoryCompliance", url: "/regulatory-compliance", icon: Scale, testId: "nav-regulatory-compliance", roles: ["admin", "regulator", "super_admin"] },
 ];
 
 function getOversightItems(activeCountryName?: string): NavItem[] {
   const items = [...baseOversightItems];
   const country = activeCountryName?.toLowerCase().replace(/[\s_-]/g, "") || "";
   if (country === "sierraleone" || isSierraLeoneMode()) {
-    items.push({ label: "BSL Export", url: "/bsl-export", icon: FileSpreadsheet, testId: "nav-bsl-export", roles: ["admin", "regulator", "super_admin"] });
+    items.push({ label: "BSL Export", tKey: "sidebar.bslExport", url: "/bsl-export", icon: FileSpreadsheet, testId: "nav-bsl-export", roles: ["admin", "regulator", "super_admin"] });
   } else {
-    items.push({ label: "BOG Export", url: "/bog-export", icon: FileSpreadsheet, testId: "nav-bog-export", roles: ["admin", "regulator", "super_admin"] });
+    items.push({ label: "BOG Export", tKey: "sidebar.bogExport", url: "/bog-export", icon: FileSpreadsheet, testId: "nav-bog-export", roles: ["admin", "regulator", "super_admin"] });
   }
   return items;
 }
 
 const crossBorderItems: NavItem[] = [
-  { label: "Agreements", url: "/cross-border-agreements", icon: Handshake, testId: "nav-cross-border-agreements", roles: ["admin", "super_admin", "regulator"] },
-  { label: "Cross-Border Search", url: "/cross-border-search", icon: FileSearch, testId: "nav-cross-border-search", roles: ["admin", "super_admin", "regulator", "lender"] },
-  { label: "PAPSS Settlements", url: "/papss-settlements", icon: ArrowRightLeft, testId: "nav-papss-settlements", roles: ["admin", "super_admin", "regulator"] },
+  { label: "Agreements", tKey: "sidebar.crossBorderAgreements", url: "/cross-border-agreements", icon: Handshake, testId: "nav-cross-border-agreements", roles: ["admin", "super_admin", "regulator"] },
+  { label: "Cross-Border Search", tKey: "sidebar.crossBorderSearch", url: "/cross-border-search", icon: FileSearch, testId: "nav-cross-border-search", roles: ["admin", "super_admin", "regulator", "lender"] },
+  { label: "PAPSS Settlements", tKey: "sidebar.papssSettlements", url: "/papss-settlements", icon: ArrowRightLeft, testId: "nav-papss-settlements", roles: ["admin", "super_admin", "regulator"] },
 ];
 
 const adminItems: NavItem[] = [
-  { label: "Command Center", url: "/command-center", icon: Monitor, testId: "nav-command-center", roles: ["super_admin"] },
-  { label: "Organizations", url: "/organizations", icon: Building2, testId: "nav-organizations", roles: ["super_admin"] },
-  { label: "User Management", url: "/users", icon: Settings, testId: "nav-user-management", roles: ["admin", "super_admin"] },
-  { label: "Billing", url: "/billing", icon: Receipt, testId: "nav-billing", roles: ["admin", "regulator", "super_admin"] },
-  { label: "Retention Policies", url: "/retention-policies", icon: Archive, testId: "nav-retention-policies", roles: ["admin", "regulator", "super_admin"] },
-  { label: "Exchange Rates", url: "/exchange-rates", icon: DollarSign, testId: "nav-exchange-rates", roles: ["admin", "super_admin"] },
-  { label: "API Admin", url: "/api-admin", icon: Plug, testId: "nav-api-admin", roles: ["admin", "super_admin"] },
-  { label: "API Keys", url: "/api-keys", icon: Key, testId: "nav-api-keys", roles: ["admin", "super_admin"] },
-  { label: "System Status", url: "/system-status", icon: Activity, testId: "nav-system-status", roles: ["admin", "super_admin"] },
-  { label: "Backup & Recovery", url: "/backup", icon: HardDrive, testId: "nav-backup", roles: ["super_admin"] },
-  { label: "Webhooks", url: "/webhook-management", icon: Webhook, testId: "nav-webhook-management", roles: ["admin", "super_admin"] },
+  { label: "Command Center", tKey: "sidebar.systemConfig", url: "/command-center", icon: Monitor, testId: "nav-command-center", roles: ["super_admin"] },
+  { label: "Organizations", tKey: "sidebar.organizations", url: "/organizations", icon: Building2, testId: "nav-organizations", roles: ["super_admin"] },
+  { label: "User Management", tKey: "sidebar.userManagement", url: "/users", icon: Settings, testId: "nav-user-management", roles: ["admin", "super_admin"] },
+  { label: "Billing", tKey: "sidebar.billing", url: "/billing", icon: Receipt, testId: "nav-billing", roles: ["admin", "regulator", "super_admin"] },
+  { label: "Retention Policies", tKey: "sidebar.retentionPolicies", url: "/retention-policies", icon: Archive, testId: "nav-retention-policies", roles: ["admin", "regulator", "super_admin"] },
+  { label: "Exchange Rates", tKey: "sidebar.exchangeRates", url: "/exchange-rates", icon: DollarSign, testId: "nav-exchange-rates", roles: ["admin", "super_admin"] },
+  { label: "API Admin", tKey: "sidebar.apiAdmin", url: "/api-admin", icon: Plug, testId: "nav-api-admin", roles: ["admin", "super_admin"] },
+  { label: "API Keys", tKey: "sidebar.apiKeys", url: "/api-keys", icon: Key, testId: "nav-api-keys", roles: ["admin", "super_admin"] },
+  { label: "System Status", tKey: "sidebar.systemStatus", url: "/system-status", icon: Activity, testId: "nav-system-status", roles: ["admin", "super_admin"] },
+  { label: "Backup & Recovery", tKey: "sidebar.backupRecovery", url: "/backup", icon: HardDrive, testId: "nav-backup", roles: ["super_admin"] },
+  { label: "Webhooks", tKey: "sidebar.webhookManagement", url: "/webhook-management", icon: Webhook, testId: "nav-webhook-management", roles: ["admin", "super_admin"] },
 ];
 
 function getDocumentItems(): NavItem[] {
   const items: NavItem[] = [];
   if (isGhanaMode()) {
-    items.push({ label: "Ghana Docs", url: "/ghana-docs", icon: BookOpen, testId: "nav-ghana-docs" });
+    items.push({ label: "Ghana Docs", tKey: "sidebar.ghanaDocs", url: "/ghana-docs", icon: BookOpen, testId: "nav-ghana-docs" });
   }
   items.push(
-    { label: "Documentation", url: "/documentation", icon: FileText, testId: "nav-documentation" },
-    { label: "App Guide", url: "/guide", icon: Play, testId: "nav-app-guide" },
-    { label: "Help", url: "/help", icon: HelpCircle, testId: "nav-help" },
-    { label: "Version History", url: "/version-history", icon: History, testId: "nav-version-history" },
-    { label: "Legal & Copyright", url: "/legal", icon: Scale, testId: "nav-legal" },
-    { label: "About", url: "/about", icon: Info, testId: "nav-about" },
+    { label: "Documentation", tKey: "sidebar.documentation", url: "/documentation", icon: FileText, testId: "nav-documentation" },
+    { label: "App Guide", tKey: "sidebar.appGuide", url: "/guide", icon: Play, testId: "nav-app-guide" },
+    { label: "Help", tKey: "sidebar.help", url: "/help", icon: HelpCircle, testId: "nav-help" },
+    { label: "Version History", tKey: "sidebar.versionHistory", url: "/version-history", icon: History, testId: "nav-version-history" },
+    { label: "Legal & Copyright", tKey: "sidebar.legal", url: "/legal", icon: Scale, testId: "nav-legal" },
+    { label: "About", tKey: "sidebar.about", url: "/about", icon: Info, testId: "nav-about" },
   );
   return items;
 }
@@ -173,15 +174,18 @@ function filterByRole(items: NavItem[], role: string | undefined): NavItem[] {
 
 function CollapsibleSection({
   label,
+  tKey: sectionTKey,
   items,
   location,
   icon: Icon,
 }: {
   label: string;
+  tKey?: string;
   items: NavItem[];
   location: string;
   icon?: LucideIcon;
 }) {
+  const { t } = useTranslation();
   const hasActive = items.some(item => location === item.url || (item.url === "/command-center" && location.startsWith("/command-center")));
   const [open, setOpen] = useState(hasActive);
   const [userToggled, setUserToggled] = useState(false);
@@ -197,6 +201,8 @@ function CollapsibleSection({
 
   if (items.length === 0) return null;
 
+  const sectionLabel = sectionTKey ? t(sectionTKey) : label;
+
   return (
     <Collapsible open={open} onOpenChange={(v) => { setOpen(v); setUserToggled(true); }}>
       <SidebarGroup className="py-0">
@@ -210,7 +216,7 @@ function CollapsibleSection({
           }`}>
             <span className="flex items-center gap-2">
               {Icon && <Icon className="w-3.5 h-3.5" />}
-              {label}
+              {sectionLabel}
             </span>
             <div className="flex items-center gap-1.5">
               {!open && hasActive && (
@@ -231,7 +237,7 @@ function CollapsibleSection({
                       <SidebarMenuButton asChild data-active={isActive} className={isActive ? "bg-primary/10 text-primary font-semibold border-r-2 border-primary" : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-foreground/5"}>
                         <Link href={item.url} data-testid={item.testId}>
                           <item.icon className="w-4 h-4" />
-                          <span>{item.label}</span>
+                          <span>{item.tKey ? t(item.tKey) : item.label}</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -324,6 +330,7 @@ export function AppSidebar() {
       <SidebarContent className="gap-0">
         <CollapsibleSection
           label="Global View"
+          tKey="sidebar.main"
           items={visibleGlobal}
           location={location}
           icon={LayoutDashboard}
@@ -331,6 +338,7 @@ export function AppSidebar() {
 
         <CollapsibleSection
           label="Telco"
+          tKey="sidebar.telco"
           items={visibleTelco}
           location={location}
           icon={Smartphone}
@@ -338,6 +346,7 @@ export function AppSidebar() {
 
         <CollapsibleSection
           label="Borrowers & Lenders"
+          tKey="sidebar.borrowersLenders"
           items={visibleBorrowersLenders}
           location={location}
           icon={Users}
@@ -345,6 +354,7 @@ export function AppSidebar() {
 
         <CollapsibleSection
           label="Operations"
+          tKey="sidebar.operations"
           items={visibleOperations}
           location={location}
           icon={CreditCard}
@@ -353,6 +363,7 @@ export function AppSidebar() {
         {visibleOversight.length > 0 && (
           <CollapsibleSection
             label="Oversight & Compliance"
+            tKey="sidebar.reportsCompliance"
             items={visibleOversight}
             location={location}
             icon={Eye}
@@ -362,6 +373,7 @@ export function AppSidebar() {
         {visibleCrossBorder.length > 0 && (
           <CollapsibleSection
             label="Cross-Border"
+            tKey="sidebar.crossBorder"
             items={visibleCrossBorder}
             location={location}
             icon={Globe}
@@ -371,6 +383,7 @@ export function AppSidebar() {
         {visibleAdmin.length > 0 && (
           <CollapsibleSection
             label="Administration"
+            tKey="sidebar.administration"
             items={visibleAdmin}
             location={location}
             icon={Settings}
@@ -383,6 +396,7 @@ export function AppSidebar() {
 
         <CollapsibleSection
           label="Documents"
+          tKey="sidebar.documentation"
           items={visibleDocs}
           location={location}
           icon={BookOpen}
