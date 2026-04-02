@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { useCountryTheme } from "@/components/country-theme-provider";
 import { getSupportedCountries, type CountryConfig } from "@/lib/country-mode";
+import { useToast } from "@/hooks/use-toast";
 import {
   Globe, Loader2, LogOut, Shield, ArrowRight, Building2, Users, Layers,
   CreditCard, CheckCircle2, AlertTriangle, Activity, Database,
@@ -163,6 +165,8 @@ export default function CountrySelectionPage() {
   const { setCountry, isSwitching, activeCountry, activeConfig, isGlobalView } = useCountryTheme();
   const { user, logout } = useAuth();
   const brandColors = useBrandColors();
+  const { toast } = useToast();
+  const [, navigate] = useLocation();
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
   const countries = getSupportedCountries();
@@ -175,6 +179,10 @@ export default function CountrySelectionPage() {
   const handleSelect = async (countryName: string | null) => {
     setSelectedCountry(countryName);
     await setCountry(countryName);
+    if (countryName) {
+      toast({ title: `Switched to ${countryName}`, description: "Navigating to dashboard..." });
+      navigate("/dashboard");
+    }
   };
 
   const platform = commandData?.platform;
