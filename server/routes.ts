@@ -3272,7 +3272,7 @@ export async function registerRoutes(
     else cb(new Error("Only image or PDF files allowed"));
   }});
 
-  app.post("/api/borrowers/:id/photo", requireAuth, memoryUpload.single("photo"), async (req, res) => {
+  app.post("/api/borrowers/:id/photo", requireRole("admin", "super_admin", "lender"), memoryUpload.single("photo"), async (req, res) => {
     try {
       const borrower = await storage.getBorrower(req.params.id);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
@@ -3291,7 +3291,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/borrowers/:id/id-document", requireAuth, memoryUploadDoc.single("document"), async (req, res) => {
+  app.post("/api/borrowers/:id/id-document", requireRole("admin", "super_admin", "lender"), memoryUploadDoc.single("document"), async (req, res) => {
     try {
       const borrower = await storage.getBorrower(req.params.id);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
@@ -3511,15 +3511,14 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/borrowers/:id/fraud-risk", requireRole("admin", "super_admin", "regulator", "lender"), async (req, res) => {
+  app.get("/api/borrowers/:id/fraud-risk", requireRole("admin", "super_admin", "regulator", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
       const borrower = await storage.getBorrower(req.params.id);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
       const accounts = await storage.getCreditAccountsByBorrower(req.params.id);
       const inquiries = await storage.getCreditInquiriesByBorrower(req.params.id);
       const judgments = await storage.getCourtJudgmentsByBorrower(req.params.id);
-      const allBorrowers = await storage.getBorrowers();
-      const duplicateIdCount = allBorrowers.filter(b => b.nationalId === borrower.nationalId).length;
+      const duplicateIdCount = await storage.countBorrowersByNationalId(borrower.nationalId);
       const now = new Date();
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
       const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);

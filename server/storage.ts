@@ -65,6 +65,7 @@ export interface IStorage {
   getBorrowersByType(type: "individual" | "corporate", page?: number, limit?: number, organizationId?: string, country?: string): Promise<{ data: Borrower[]; total: number }>;
   searchBorrowersByType(type: "individual" | "corporate", query: string, organizationId?: string, country?: string): Promise<Borrower[]>;
   searchBorrowers(query: string, organizationId?: string, country?: string): Promise<Borrower[]>;
+  countBorrowersByNationalId(nationalId: string | null): Promise<number>;
   globalSearch(query: string, organizationId?: string, country?: string): Promise<{ borrowers: Borrower[]; institutions: Institution[]; creditAccounts: CreditAccount[] }>;
   createBorrower(borrower: InsertBorrower): Promise<Borrower>;
   updateBorrower(id: string, data: Partial<InsertBorrower>): Promise<Borrower | undefined>;
@@ -444,6 +445,12 @@ export class DatabaseStorage implements IStorage {
     const conditions = filters.length > 1 ? and(...filters) : filters[0];
     const results = await db.select().from(borrowers).where(conditions!).orderBy(desc(borrowers.createdAt)).limit(200);
     return decryptBorrowerArray(results as Record<string, any>[]) as Borrower[];
+  }
+
+  async countBorrowersByNationalId(nationalId: string | null): Promise<number> {
+    if (!nationalId) return 0;
+    const [result] = await db.select({ value: count() }).from(borrowers).where(eq(borrowers.nationalId, nationalId));
+    return result.value;
   }
 
   private countryOrgFilter(table: any, country?: string) {

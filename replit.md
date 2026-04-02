@@ -86,7 +86,7 @@ The system employs a modern full-stack architecture built for scalability and co
     -   **Client Landing Page**: Default landing page for unauthenticated users.
     -   **Trial Management**: Self-service registration with sample data seeding and upgrade path.
     -   **AI Demo Page**: Public interactive showcase of AI features.
-    -   **Fraud Detection Layer**: Real-time fraud risk scoring.
+    -   **Fraud Detection Layer**: Real-time fraud risk scoring with efficient duplicate national ID detection via direct DB count query.
     -   **Enhanced API Developer Portal**: Interactive sandbox, webhook event documentation.
     -   **Security Hardening**: Helmet security headers, DOMPurify sanitization, CSRF token protection, AES-256-GCM PII encryption at rest, data subject erasure request API, production error sanitization, password history enforcement, login anomaly detection, live security health check API, and PII encryption integrity monitoring.
     -   **Compliance Documents**: Information Security Policy, Disaster Recovery & Business Continuity Plan, Change Management Policy, and Penetration Test Readiness Report.
