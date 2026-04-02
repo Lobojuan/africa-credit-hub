@@ -1,0 +1,15 @@
+[
+  {
+    "id": "bk_1775148685095_gtut9o",
+    "filename": "cdh_full_2026-04-02T16-51-25.sql.gz",
+    "type": "full",
+    "sizeMB": 47.15,
+    "status": "completed",
+    "createdAt": "2026-04-02T16:51:25.095Z",
+    "createdBy": "system",
+    "tables": 43,
+    "rows": 133,
+    "durationMs": 9422,
+    "notes": "Initial startup backup"
+  }
+]

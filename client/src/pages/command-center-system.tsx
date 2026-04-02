@@ -5,6 +5,7 @@ import {
   CheckCircle2, AlertTriangle, XCircle, Users, Building2, FileText, Scale,
   Lock, Globe, Zap, Monitor, Layers, ArrowUpRight, BarChart3, Gauge,
   Network, ChevronDown, ChevronRight, RefreshCw, Loader2, Wrench,
+  Download, Upload, Trash2, Archive, Play, AlertCircle,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -137,6 +138,300 @@ function SectionHeader({ icon: Icon, title, color, badge }: {
       <Icon className={`w-4 h-4 ${color}`} />
       <h3 className="text-sm font-semibold text-foreground">{title}</h3>
       {badge && <Badge variant="outline" className="text-[8px] h-4 border-border/50 text-muted-foreground ml-auto">{badge}</Badge>}
+    </div>
+  );
+}
+
+interface BackupRecord {
+  id: string;
+  filename: string;
+  type: "full" | "schema" | "data";
+  sizeMB: number;
+  status: "completed" | "failed" | "in_progress";
+  createdAt: string;
+  createdBy: string;
+  tables: number;
+  rows: number;
+  durationMs: number;
+  notes?: string;
+}
+
+interface BackupStatus {
+  schedulerRunning: boolean;
+  lastAutoBackup: string | null;
+  nextAutoBackup: string | null;
+  totalBackups: number;
+  totalSizeMB: number;
+}
+
+function BackupManagement() {
+  const { toast } = useToast();
+  const [backupType, setBackupType] = useState<"full" | "schema" | "data">("full");
+  const [confirmRestore, setConfirmRestore] = useState<string | null>(null);
+
+  const { data, isLoading, refetch } = useQuery<{ backups: BackupRecord[]; status: BackupStatus }>({
+    queryKey: ["/api/backups"],
+    staleTime: 15000,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (type: string) => {
+      const res = await apiRequest("POST", "/api/backups", { type });
+      return res.json();
+    },
+    onSuccess: (data: BackupRecord) => {
+      toast({ title: "Backup created", description: `${data.filename} (${data.sizeMB}MB)` });
+      queryClient.invalidateQueries({ queryKey: ["/api/backups"] });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Backup failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const restoreMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("POST", `/api/backups/${id}/restore`);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Restore complete", description: "Database has been restored successfully" });
+      setConfirmRestore(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/backups"] });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Restore failed", description: err.message, variant: "destructive" });
+      setConfirmRestore(null);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/backups/${id}`);
+    },
+    onSuccess: () => {
+      toast({ title: "Backup deleted" });
+      queryClient.invalidateQueries({ queryKey: ["/api/backups"] });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Delete failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const backups = data?.backups || [];
+  const status = data?.status;
+
+  const formatDuration = (ms: number) => {
+    if (ms < 1000) return `${ms}ms`;
+    return `${(ms / 1000).toFixed(1)}s`;
+  };
+
+  const formatDate = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) + " " +
+      d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  };
+
+  const timeAgo = (iso: string) => {
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  };
+
+  return (
+    <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4" data-testid="panel-backup-management">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Archive className="w-4 h-4 text-blue-400" />
+          <h3 className="text-sm font-semibold text-foreground">Backup & Recovery</h3>
+          {status?.schedulerRunning && (
+            <Badge variant="secondary" className="text-[9px] bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+              <CheckCircle2 className="w-2.5 h-2.5 mr-1" /> Auto-backup active
+            </Badge>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isLoading}
+            className="h-7 text-xs gap-1"
+            data-testid="button-refresh-backups"
+          >
+            <RefreshCw className={`w-3 h-3 ${isLoading ? "animate-spin" : ""}`} /> Refresh
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+        <div className="p-2.5 rounded-lg bg-muted border border-border/30">
+          <p className="text-[9px] text-muted-foreground uppercase">Total Backups</p>
+          <p className="text-lg font-bold text-foreground" data-testid="text-total-backups">{status?.totalBackups ?? 0}</p>
+        </div>
+        <div className="p-2.5 rounded-lg bg-muted border border-border/30">
+          <p className="text-[9px] text-muted-foreground uppercase">Total Size</p>
+          <p className="text-lg font-bold text-foreground" data-testid="text-total-size">{status?.totalSizeMB ?? 0} MB</p>
+        </div>
+        <div className="p-2.5 rounded-lg bg-muted border border-border/30">
+          <p className="text-[9px] text-muted-foreground uppercase">Last Backup</p>
+          <p className="text-sm font-medium text-foreground" data-testid="text-last-backup">
+            {status?.lastAutoBackup ? timeAgo(status.lastAutoBackup) : "None"}
+          </p>
+        </div>
+        <div className="p-2.5 rounded-lg bg-muted border border-border/30">
+          <p className="text-[9px] text-muted-foreground uppercase">Next Auto-Backup</p>
+          <p className="text-sm font-medium text-foreground" data-testid="text-next-backup">
+            {status?.nextAutoBackup ? formatDate(status.nextAutoBackup) : "Pending"}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 mb-4 p-3 rounded-lg bg-muted/50 border border-border/30">
+        <span className="text-xs text-muted-foreground mr-1">Create backup:</span>
+        <select
+          value={backupType}
+          onChange={(e) => setBackupType(e.target.value as any)}
+          className="text-xs bg-background border border-border rounded px-2 py-1"
+          data-testid="select-backup-type"
+        >
+          <option value="full">Full (schema + data)</option>
+          <option value="schema">Schema only</option>
+          <option value="data">Data only</option>
+        </select>
+        <Button
+          size="sm"
+          onClick={() => createMutation.mutate(backupType)}
+          disabled={createMutation.isPending}
+          className="h-7 text-xs gap-1"
+          data-testid="button-create-backup"
+        >
+          {createMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <HardDrive className="w-3 h-3" />}
+          {createMutation.isPending ? "Creating..." : "Create Backup Now"}
+        </Button>
+      </div>
+
+      <div className="space-y-2 max-h-[300px] overflow-y-auto">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-6">
+            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : backups.length === 0 ? (
+          <div className="text-center py-6 text-muted-foreground text-xs">
+            No backups yet. Create your first backup above or wait for the automated daily backup.
+          </div>
+        ) : (
+          backups.map((backup) => (
+            <div
+              key={backup.id}
+              className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30 border border-border/20 hover:bg-muted/50 transition-colors"
+              data-testid={`backup-row-${backup.id}`}
+            >
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="shrink-0">
+                  {backup.status === "completed" ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  ) : backup.status === "failed" ? (
+                    <XCircle className="w-4 h-4 text-red-500" />
+                  ) : (
+                    <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-foreground truncate">{backup.filename}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <Badge variant="outline" className="text-[9px] px-1.5 py-0">
+                      {backup.type}
+                    </Badge>
+                    <span className="text-[9px] text-muted-foreground">{backup.sizeMB} MB</span>
+                    <span className="text-[9px] text-muted-foreground">{backup.tables} tables</span>
+                    <span className="text-[9px] text-muted-foreground">{backup.rows.toLocaleString()} rows</span>
+                    <span className="text-[9px] text-muted-foreground">{formatDuration(backup.durationMs)}</span>
+                    <span className="text-[9px] text-muted-foreground">{timeAgo(backup.createdAt)}</span>
+                    <span className="text-[9px] text-muted-foreground">by {backup.createdBy === "system" ? "Auto" : "Admin"}</span>
+                  </div>
+                </div>
+              </div>
+
+              {backup.status === "completed" && (
+                <div className="flex items-center gap-1 shrink-0 ml-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    onClick={() => {
+                      window.open(`/api/backups/${backup.id}/download`, "_blank");
+                    }}
+                    title="Download backup"
+                    data-testid={`button-download-backup-${backup.id}`}
+                  >
+                    <Download className="w-3 h-3" />
+                  </Button>
+
+                  {confirmRestore === backup.id ? (
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="h-6 text-[10px] px-2"
+                        onClick={() => restoreMutation.mutate(backup.id)}
+                        disabled={restoreMutation.isPending}
+                        data-testid={`button-confirm-restore-${backup.id}`}
+                      >
+                        {restoreMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Yes, Restore"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-6 text-[10px] px-2"
+                        onClick={() => setConfirmRestore(null)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={() => setConfirmRestore(backup.id)}
+                      title="Restore from this backup"
+                      data-testid={`button-restore-backup-${backup.id}`}
+                    >
+                      <Upload className="w-3 h-3" />
+                    </Button>
+                  )}
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                    onClick={() => deleteMutation.mutate(backup.id)}
+                    disabled={deleteMutation.isPending}
+                    title="Delete backup"
+                    data-testid={`button-delete-backup-${backup.id}`}
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+
+      <div className="mt-3 p-2.5 rounded-lg bg-amber-500/5 border border-amber-500/20">
+        <div className="flex items-start gap-2">
+          <AlertCircle className="w-3.5 h-3.5 text-amber-500 mt-0.5 shrink-0" />
+          <div className="text-[10px] text-muted-foreground">
+            <p><strong className="text-foreground">Automated daily backups</strong> run every 24 hours. Manual backups can be created anytime.</p>
+            <p className="mt-0.5">Backups are compressed SQL dumps (gzip). Up to 30 automated backups are retained before old ones are pruned.</p>
+            <p className="mt-0.5"><strong className="text-foreground">Restore</strong> replaces the current database with the backup data. This action cannot be undone.</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -932,6 +1227,8 @@ export function CommandCenterSystemTab() {
       </div>
 
       <SmsTestPanel />
+
+      <BackupManagement />
 
       <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
         <div className="flex items-center gap-2 mb-2">

@@ -5910,6 +5910,70 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     }
   });
 
+  app.get("/api/backups", requireAuth, requireSuperAdmin, async (_req, res) => {
+    try {
+      const { listBackups, getBackupStatus } = await import("./backup-service");
+      const backups = listBackups();
+      const status = getBackupStatus();
+      res.json({ backups, status });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.post("/api/backups", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const { createBackup } = await import("./backup-service");
+      const type = req.body.type || "full";
+      const notes = req.body.notes || "";
+      const userId = req.session?.userId || "unknown";
+      const record = await createBackup(type, String(userId), notes);
+      res.json(record);
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.get("/api/backups/:id/download", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const { getBackupFilePath, listBackups } = await import("./backup-service");
+      const filepath = getBackupFilePath(req.params.id);
+      if (!filepath) return res.status(404).json({ message: "Backup not found" });
+      const backups = listBackups();
+      const record = backups.find((b: any) => b.id === req.params.id);
+      const filename = record?.filename || "backup.sql.gz";
+      res.setHeader("Content-Type", "application/gzip");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      const fs = await import("fs");
+      const stream = fs.createReadStream(filepath);
+      stream.pipe(res);
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.post("/api/backups/:id/restore", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const { restoreBackup } = await import("./backup-service");
+      const userId = req.session?.userId || "unknown";
+      const result = await restoreBackup(req.params.id, String(userId));
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.delete("/api/backups/:id", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const { deleteBackup } = await import("./backup-service");
+      const deleted = deleteBackup(req.params.id);
+      if (!deleted) return res.status(404).json({ message: "Backup not found" });
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
   app.get("/api/copyright/download-pdf", async (_req, res) => {
     try {
       const { generateCopyrightPdf } = await import("./copyright-pdf");

@@ -758,6 +758,9 @@ process.stderr.write = function (...args: any[]) {
     const { startIntegrityScheduler } = await import("./security-hardening");
     startIntegrityScheduler(24);
 
+    const { startBackupScheduler } = await import("./backup-service");
+    startBackupScheduler();
+
     const { isEmailConfigured } = await import("./email");
     const { isSmsConfigured } = await import("./sms");
     const isProduction = process.env.PRODUCTION_MODE === "true";
