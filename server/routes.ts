@@ -7955,7 +7955,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const colX = [50, 50 + W * 0.45, 50 + W * 0.65, 50 + W * 0.82];
       const colW = [W * 0.45, W * 0.20, W * 0.17, W * 0.18];
 
-      doc.rect(50, doc.y, W, 28).fill(TEAL);
+      doc.rect(50, doc.y, W, 28).fill(NORDIC_BLUE);
       doc.fill("#ffffff").fontSize(9).font("Helvetica-Bold");
       doc.text("Description", colX[0] + 10, doc.y + 8, { width: colW[0] });
       doc.text("Service Type", colX[1] + 5, doc.y + 8, { width: colW[1] });
@@ -7974,7 +7974,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
       doc.y = rowY + 32;
 
-      doc.moveTo(50, doc.y).lineTo(50 + W, doc.y).lineWidth(1).stroke(TEAL);
+      doc.moveTo(50, doc.y).lineTo(50 + W, doc.y).lineWidth(1).stroke(NORDIC_BLUE);
       doc.y += 10;
 
       const summaryX = 50 + W * 0.6;
@@ -7987,7 +7987,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       doc.fill(DARK).font("Helvetica").text(`${billing.currency} 0.00`, summaryX + summaryW * 0.6, doc.y, { width: summaryW * 0.4, align: "right" });
 
       doc.y += 22;
-      doc.rect(summaryX - 5, doc.y - 4, summaryW + 10, 28).fill(TEAL);
+      doc.rect(summaryX - 5, doc.y - 4, summaryW + 10, 28).fill(NORDIC_BLUE);
       doc.fill("#ffffff").fontSize(11).font("Helvetica-Bold").text("TOTAL DUE:", summaryX, doc.y + 2, { width: summaryW * 0.6 });
       doc.text(`${billing.currency} ${parseFloat(billing.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}`, summaryX + summaryW * 0.6, doc.y + 2, { width: summaryW * 0.4, align: "right" });
 
