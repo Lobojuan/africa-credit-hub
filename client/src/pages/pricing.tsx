@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useBrandColors } from "@/hooks/use-brand-colors";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import {
   Shield, Check, ArrowRight, Globe, Users, Zap, Lock,
   Building2, Brain, BarChart3, Headphones, ChevronDown, Mail, Phone, MapPin,
@@ -163,6 +165,14 @@ export default function PricingPage() {
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate("/solutions")} data-testid="link-back-solutions">
               Overview
+            </Button>
+            <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate("/security")} data-testid="link-security">
+              Security
+            </Button>
+            <ThemeToggle />
+            <LanguageSwitcher />
+            <Button variant="outline" size="sm" className="text-xs" onClick={() => navigate("/login")} data-testid="nav-login">
+              Log In
             </Button>
             <Button size="sm" className="text-xs" onClick={() => navigate("/start-trial")} data-testid="button-start-trial">
               Start Free Trial

@@ -312,9 +312,9 @@ export default function SignUpPage() {
         <div className="text-center mt-4">
           <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
             By signing up, you agree to our{" "}
-            <a href="/security" className="hover:underline" style={{ color: "#a78bfa" }}>Terms of Service</a>{" "}
+            <a href="/terms" className="hover:underline" style={{ color: "#a78bfa" }}>Terms of Service</a>{" "}
             and{" "}
-            <a href="/security" className="hover:underline" style={{ color: "#a78bfa" }}>Privacy Policy</a>
+            <a href="/privacy" className="hover:underline" style={{ color: "#a78bfa" }}>Privacy Policy</a>
           </p>
         </div>
 

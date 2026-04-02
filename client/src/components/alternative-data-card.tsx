@@ -122,7 +122,7 @@ export function AlternativeDataCard({ borrowerId }: { borrowerId: string }) {
                   <div>
                     <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Monthly</p>
                     <p className="text-sm font-semibold">
-                      {record.averageMonthlyAmount ? `${record.currency} ${parseFloat(record.averageMonthlyAmount).toLocaleString()}` : "—"}
+                      {record.averageMonthlyAmount ? `${record.currency || "USD"} ${parseFloat(record.averageMonthlyAmount).toLocaleString()}` : "—"}
                     </p>
                   </div>
                 </div>

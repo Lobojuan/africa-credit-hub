@@ -133,29 +133,30 @@ const currencyLocaleMap: Record<string, string> = {
 
 export function formatCurrency(
   value: string | number,
-  currencyCode = "USD",
+  currencyCode?: string | null,
   options?: { compact?: boolean }
 ): string {
+  const code = currencyCode?.trim() || "USD";
   const num = typeof value === "string" ? parseFloat(value) : value;
-  if (isNaN(num)) return `${currencyCode} 0.00`;
+  if (isNaN(num)) return `${code} 0.00`;
 
   if (options?.compact) {
-    if (num >= 1_000_000_000) return `${currencyCode} ${(num / 1_000_000_000).toFixed(1)}B`;
-    if (num >= 1_000_000) return `${currencyCode} ${(num / 1_000_000).toFixed(1)}M`;
-    if (num >= 1_000) return `${currencyCode} ${(num / 1_000).toFixed(0)}K`;
-    return `${currencyCode} ${num.toFixed(0)}`;
+    if (num >= 1_000_000_000) return `${code} ${(num / 1_000_000_000).toFixed(1)}B`;
+    if (num >= 1_000_000) return `${code} ${(num / 1_000_000).toFixed(1)}M`;
+    if (num >= 1_000) return `${code} ${(num / 1_000).toFixed(0)}K`;
+    return `${code} ${num.toFixed(0)}`;
   }
 
-  const locale = currencyLocaleMap[currencyCode] || "en-US";
+  const locale = currencyLocaleMap[code] || "en-US";
   try {
     const formatted = new Intl.NumberFormat(locale, {
       style: "decimal",
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(num);
-    return `${currencyCode} ${formatted}`;
+    return `${code} ${formatted}`;
   } catch {
-    return `${currencyCode} ${num.toFixed(2)}`;
+    return `${code} ${num.toFixed(2)}`;
   }
 }
 

@@ -538,6 +538,12 @@ export default function InvestorLandingPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" className="text-xs hidden sm:inline-flex" onClick={() => navigate("/pricing")} data-testid="nav-pricing">
+              Pricing
+            </Button>
+            <Button variant="ghost" size="sm" className="text-xs hidden sm:inline-flex" onClick={() => navigate("/security")} data-testid="nav-security-link">
+              Security
+            </Button>
             <ThemeToggle />
             <LanguageSwitcher />
             <Button
