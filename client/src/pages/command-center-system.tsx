@@ -708,6 +708,8 @@ export function CommandCenterSystemTab() {
         <StatCard icon={Database} label="DB Size" value={`${stats.database.sizeMB} MB`} sub={`${stats.database.tableStats.length} tables`} color="bg-muted-foreground/20" />
       </div>
 
+      <BackupManagement />
+
       <div className="rounded-xl border border-cyan-500/20 bg-muted p-4">
         <div className="flex items-center justify-between mb-4">
           <SectionHeader icon={Zap} title="Traffic & Performance Monitor" color="text-cyan-400"
@@ -1227,8 +1229,6 @@ export function CommandCenterSystemTab() {
       </div>
 
       <SmsTestPanel />
-
-      <BackupManagement />
 
       <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
         <div className="flex items-center gap-2 mb-2">
