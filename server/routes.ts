@@ -5546,10 +5546,388 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     }
   });
 
+  const PDF_LABELS: Record<string, Record<string, string>> = {
+    en: {
+      headerTitle: "Comprehensive Credit Information Report",
+      headerSub: "Cross-Jurisdictional Central Data Hub v2.5 | Carlson Capital & Systems In Motion Limited",
+      orderNumber: "ORDER NUMBER",
+      cirNumber: "CIR NUMBER",
+      reportOrderDate: "Report Order Date",
+      institution: "Institution",
+      requestedBy: "Requested By",
+      searchDetails: "SEARCH DETAILS",
+      subjectDetails: "Subject Details",
+      fullName: "Full Name",
+      dateOfBirth: "Date of Birth",
+      gender: "Gender",
+      nationalId: "National ID",
+      tin: "TIN",
+      passport: "Passport",
+      employer: "Employer",
+      occupation: "Occupation",
+      phone: "Phone",
+      email: "Email",
+      companyName: "Company Name",
+      businessReg: "Business Reg",
+      sector: "Sector",
+      creditScoreSummary: "Credit Score Summary",
+      scoreFactorAnalysis: "Score Factor Analysis",
+      creditProfileOverview: "Credit Profile Overview",
+      sno: "S.No",
+      indicator: "Indicator",
+      value: "Value",
+      openFacilities: "Number of Open Credit Facilities",
+      totalOutstanding: "Total Outstanding Balance",
+      overdueFacilities: "Number of Overdue Facilities",
+      nonPerforming: "Non-Performing (>90 days)",
+      maxDays: "Max Days in Arrears (NDIA)",
+      totalArrears: "Total Amount in Arrears",
+      closedFacilities: "Closed Facilities",
+      writtenOff: "Written-Off Facilities",
+      courtJudgments: "Court Judgments",
+      creditInquiries: "Credit Inquiries",
+      inquiryHistory: "Inquiry History",
+      purpose: "Purpose",
+      date: "Date",
+      consent: "Consent",
+      yes: "Yes",
+      no: "No",
+      facilityDetails: "Credit Facility Details",
+      facilityOf: "Facility {idx} of {total}",
+      accountNo: "Account No.",
+      type: "Type",
+      classification: "Classification",
+      currentBalance: "Current Balance",
+      sanctionedAmount: "Sanctioned Amount",
+      daysInArrears: "Days in Arrears",
+      interestRate: "Interest Rate",
+      interestFree: "Interest-Free",
+      disbursementDate: "Disbursement Date",
+      maturityDate: "Maturity Date",
+      lastPayment: "Last Payment",
+      restructured: "Restructured",
+      paymentHistory: "Payment History (Last 12 Months):",
+      security: "Security:",
+      courtJudgmentsPublic: "Court Judgments & Public Records",
+      caseNo: "Case No.",
+      court: "Court",
+      amount: "Amount",
+      status: "Status",
+      guarantors: "Guarantors",
+      name: "Name",
+      contact: "Contact",
+      account: "Account",
+      endOfReport: "End of Credit Information Report",
+      disclaimer: "The information in this report has been compiled from data submitted by participating financial institutions. While Carlson Capital & Systems In Motion Limited endeavor to ensure accuracy, we do not accept responsibility for any loss or damage resulting from this report.",
+      footerLine: "Cross-Jurisdictional Central Data Hub & Credit Registry System v2.5 | Carlson Capital & Systems In Motion Limited | Confidential & Proprietary",
+    },
+    fr: {
+      headerTitle: "Rapport Complet d'Information de Crédit",
+      headerSub: "Hub Central de Données Inter-Juridictionnel v2.5 | Carlson Capital & Systems In Motion Limited",
+      orderNumber: "NUMÉRO DE COMMANDE",
+      cirNumber: "NUMÉRO CIR",
+      reportOrderDate: "Date de Commande du Rapport",
+      institution: "Institution",
+      requestedBy: "Demandé Par",
+      searchDetails: "DÉTAILS DE RECHERCHE",
+      subjectDetails: "Détails du Sujet",
+      fullName: "Nom Complet",
+      dateOfBirth: "Date de Naissance",
+      gender: "Genre",
+      nationalId: "Identité Nationale",
+      tin: "NIF",
+      passport: "Passeport",
+      employer: "Employeur",
+      occupation: "Profession",
+      phone: "Téléphone",
+      email: "Email",
+      companyName: "Nom de l'Entreprise",
+      businessReg: "Registre Commercial",
+      sector: "Secteur",
+      creditScoreSummary: "Résumé du Score de Crédit",
+      scoreFactorAnalysis: "Analyse des Facteurs de Score",
+      creditProfileOverview: "Aperçu du Profil de Crédit",
+      sno: "N°",
+      indicator: "Indicateur",
+      value: "Valeur",
+      openFacilities: "Nombre de Facilités de Crédit Ouvertes",
+      totalOutstanding: "Solde Total Impayé",
+      overdueFacilities: "Nombre de Facilités en Retard",
+      nonPerforming: "Non-Performantes (>90 jours)",
+      maxDays: "Jours Maximum d'Arriérés (NDIA)",
+      totalArrears: "Montant Total des Arriérés",
+      closedFacilities: "Facilités Clôturées",
+      writtenOff: "Facilités Radiées",
+      courtJudgments: "Jugements",
+      creditInquiries: "Demandes de Crédit",
+      inquiryHistory: "Historique des Demandes",
+      purpose: "Objet",
+      date: "Date",
+      consent: "Consentement",
+      yes: "Oui",
+      no: "Non",
+      facilityDetails: "Détails des Facilités de Crédit",
+      facilityOf: "Facilité {idx} sur {total}",
+      accountNo: "N° de Compte",
+      type: "Type",
+      classification: "Classification",
+      currentBalance: "Solde Actuel",
+      sanctionedAmount: "Montant Sanctionné",
+      daysInArrears: "Jours d'Arriérés",
+      interestRate: "Taux d'Intérêt",
+      interestFree: "Sans Intérêt",
+      disbursementDate: "Date de Décaissement",
+      maturityDate: "Date d'Échéance",
+      lastPayment: "Dernier Paiement",
+      restructured: "Restructuré",
+      paymentHistory: "Historique des Paiements (12 Derniers Mois) :",
+      security: "Garantie :",
+      courtJudgmentsPublic: "Jugements et Registres Publics",
+      caseNo: "N° d'Affaire",
+      court: "Tribunal",
+      amount: "Montant",
+      status: "Statut",
+      guarantors: "Garants",
+      name: "Nom",
+      contact: "Contact",
+      account: "Compte",
+      endOfReport: "Fin du Rapport d'Information de Crédit",
+      disclaimer: "Les informations de ce rapport proviennent des données soumises par les institutions financières participantes. Bien que Carlson Capital & Systems In Motion Limited s'efforce d'assurer l'exactitude, nous déclinons toute responsabilité pour toute perte ou dommage résultant de ce rapport.",
+      footerLine: "Hub Central de Données Inter-Juridictionnel & Système de Registre de Crédit v2.5 | Carlson Capital & Systems In Motion Limited | Confidentiel & Propriétaire",
+    },
+    pt: {
+      headerTitle: "Relatório Abrangente de Informação de Crédito",
+      headerSub: "Hub Central de Dados Inter-Jurisdicional v2.5 | Carlson Capital & Systems In Motion Limited",
+      orderNumber: "NÚMERO DO PEDIDO",
+      cirNumber: "NÚMERO CIR",
+      reportOrderDate: "Data do Pedido do Relatório",
+      institution: "Instituição",
+      requestedBy: "Solicitado Por",
+      searchDetails: "DETALHES DA PESQUISA",
+      subjectDetails: "Detalhes do Sujeito",
+      fullName: "Nome Completo",
+      dateOfBirth: "Data de Nascimento",
+      gender: "Género",
+      nationalId: "ID Nacional",
+      tin: "NIF",
+      passport: "Passaporte",
+      employer: "Empregador",
+      occupation: "Profissão",
+      phone: "Telefone",
+      email: "Email",
+      companyName: "Nome da Empresa",
+      businessReg: "Registo Comercial",
+      sector: "Setor",
+      creditScoreSummary: "Resumo do Score de Crédito",
+      scoreFactorAnalysis: "Análise de Fatores do Score",
+      creditProfileOverview: "Visão Geral do Perfil de Crédito",
+      sno: "N.º",
+      indicator: "Indicador",
+      value: "Valor",
+      openFacilities: "Número de Facilidades de Crédito Abertas",
+      totalOutstanding: "Saldo Total em Dívida",
+      overdueFacilities: "Número de Facilidades em Atraso",
+      nonPerforming: "Não-Performantes (>90 dias)",
+      maxDays: "Dias Máximos em Atraso (NDIA)",
+      totalArrears: "Montante Total em Atraso",
+      closedFacilities: "Facilidades Encerradas",
+      writtenOff: "Facilidades Abatidas",
+      courtJudgments: "Julgamentos",
+      creditInquiries: "Consultas de Crédito",
+      inquiryHistory: "Histórico de Consultas",
+      purpose: "Finalidade",
+      date: "Data",
+      consent: "Consentimento",
+      yes: "Sim",
+      no: "Não",
+      facilityDetails: "Detalhes das Facilidades de Crédito",
+      facilityOf: "Facilidade {idx} de {total}",
+      accountNo: "N.º de Conta",
+      type: "Tipo",
+      classification: "Classificação",
+      currentBalance: "Saldo Atual",
+      sanctionedAmount: "Montante Sancionado",
+      daysInArrears: "Dias em Atraso",
+      interestRate: "Taxa de Juro",
+      interestFree: "Sem Juros",
+      disbursementDate: "Data de Desembolso",
+      maturityDate: "Data de Vencimento",
+      lastPayment: "Último Pagamento",
+      restructured: "Reestruturado",
+      paymentHistory: "Histórico de Pagamentos (Últimos 12 Meses):",
+      security: "Garantia:",
+      courtJudgmentsPublic: "Julgamentos e Registos Públicos",
+      caseNo: "N.º do Processo",
+      court: "Tribunal",
+      amount: "Montante",
+      status: "Estado",
+      guarantors: "Garantes",
+      name: "Nome",
+      contact: "Contacto",
+      account: "Conta",
+      endOfReport: "Fim do Relatório de Informação de Crédito",
+      disclaimer: "As informações neste relatório foram compiladas a partir de dados submetidos por instituições financeiras participantes. Embora a Carlson Capital & Systems In Motion Limited se esforce por garantir a precisão, não aceitamos responsabilidade por qualquer perda ou dano resultante deste relatório.",
+      footerLine: "Hub Central de Dados Inter-Jurisdicional & Sistema de Registo de Crédito v2.5 | Carlson Capital & Systems In Motion Limited | Confidencial & Proprietário",
+    },
+    ar: {
+      headerTitle: "تقرير معلومات الائتمان الشامل",
+      headerSub: "مركز البيانات المركزي العابر للولايات القضائية الإصدار 2.5 | Carlson Capital & Systems In Motion Limited",
+      orderNumber: "رقم الطلب",
+      cirNumber: "رقم CIR",
+      reportOrderDate: "تاريخ طلب التقرير",
+      institution: "المؤسسة",
+      requestedBy: "مطلوب من",
+      searchDetails: "تفاصيل البحث",
+      subjectDetails: "تفاصيل الموضوع",
+      fullName: "الاسم الكامل",
+      dateOfBirth: "تاريخ الميلاد",
+      gender: "الجنس",
+      nationalId: "الهوية الوطنية",
+      tin: "الرقم الضريبي",
+      passport: "جواز السفر",
+      employer: "جهة العمل",
+      occupation: "المهنة",
+      phone: "الهاتف",
+      email: "البريد الإلكتروني",
+      companyName: "اسم الشركة",
+      businessReg: "السجل التجاري",
+      sector: "القطاع",
+      creditScoreSummary: "ملخص درجة الائتمان",
+      scoreFactorAnalysis: "تحليل عوامل الدرجة",
+      creditProfileOverview: "نظرة عامة على ملف الائتمان",
+      sno: "م",
+      indicator: "المؤشر",
+      value: "القيمة",
+      openFacilities: "عدد التسهيلات الائتمانية المفتوحة",
+      totalOutstanding: "إجمالي الرصيد المستحق",
+      overdueFacilities: "عدد التسهيلات المتأخرة",
+      nonPerforming: "غير العاملة (أكثر من 90 يومًا)",
+      maxDays: "الحد الأقصى لأيام التأخر (NDIA)",
+      totalArrears: "إجمالي مبلغ المتأخرات",
+      closedFacilities: "التسهيلات المغلقة",
+      writtenOff: "التسهيلات المشطوبة",
+      courtJudgments: "الأحكام القضائية",
+      creditInquiries: "الاستعلامات الائتمانية",
+      inquiryHistory: "سجل الاستعلامات",
+      purpose: "الغرض",
+      date: "التاريخ",
+      consent: "الموافقة",
+      yes: "نعم",
+      no: "لا",
+      facilityDetails: "تفاصيل التسهيلات الائتمانية",
+      facilityOf: "التسهيل {idx} من {total}",
+      accountNo: "رقم الحساب",
+      type: "النوع",
+      classification: "التصنيف",
+      currentBalance: "الرصيد الحالي",
+      sanctionedAmount: "المبلغ المعتمد",
+      daysInArrears: "أيام التأخر",
+      interestRate: "سعر الفائدة",
+      interestFree: "بدون فائدة",
+      disbursementDate: "تاريخ الصرف",
+      maturityDate: "تاريخ الاستحقاق",
+      lastPayment: "آخر دفعة",
+      restructured: "معاد هيكلته",
+      paymentHistory: "سجل المدفوعات (آخر 12 شهرًا):",
+      security: "الضمان:",
+      courtJudgmentsPublic: "الأحكام القضائية والسجلات العامة",
+      caseNo: "رقم القضية",
+      court: "المحكمة",
+      amount: "المبلغ",
+      status: "الحالة",
+      guarantors: "الضامنون",
+      name: "الاسم",
+      contact: "التواصل",
+      account: "الحساب",
+      endOfReport: "نهاية تقرير معلومات الائتمان",
+      disclaimer: "تم تجميع المعلومات في هذا التقرير من البيانات المقدمة من المؤسسات المالية المشاركة. بينما تسعى Carlson Capital & Systems In Motion Limited لضمان الدقة، فإننا لا نتحمل المسؤولية عن أي خسارة أو ضرر ناتج عن هذا التقرير.",
+      footerLine: "مركز البيانات المركزي العابر للولايات القضائية ونظام سجل الائتمان الإصدار 2.5 | Carlson Capital & Systems In Motion Limited | سري وملكية خاصة",
+    },
+    sw: {
+      headerTitle: "Ripoti Kamili ya Taarifa za Mikopo",
+      headerSub: "Kituo cha Data Kuu cha Mamlaka Mbalimbali v2.5 | Carlson Capital & Systems In Motion Limited",
+      orderNumber: "NAMBARI YA AGIZO",
+      cirNumber: "NAMBARI YA CIR",
+      reportOrderDate: "Tarehe ya Agizo la Ripoti",
+      institution: "Taasisi",
+      requestedBy: "Imeombwa Na",
+      searchDetails: "MAELEZO YA UTAFUTAJI",
+      subjectDetails: "Maelezo ya Mhusika",
+      fullName: "Jina Kamili",
+      dateOfBirth: "Tarehe ya Kuzaliwa",
+      gender: "Jinsia",
+      nationalId: "Kitambulisho cha Taifa",
+      tin: "Nambari ya Kodi",
+      passport: "Pasipoti",
+      employer: "Mwajiri",
+      occupation: "Kazi",
+      phone: "Simu",
+      email: "Barua Pepe",
+      companyName: "Jina la Kampuni",
+      businessReg: "Usajili wa Biashara",
+      sector: "Sekta",
+      creditScoreSummary: "Muhtasari wa Alama ya Mikopo",
+      scoreFactorAnalysis: "Uchambuzi wa Sababu za Alama",
+      creditProfileOverview: "Muhtasari wa Wasifu wa Mikopo",
+      sno: "Na.",
+      indicator: "Kiashirio",
+      value: "Thamani",
+      openFacilities: "Idadi ya Huduma za Mikopo Zilizo Wazi",
+      totalOutstanding: "Jumla ya Salio la Madeni",
+      overdueFacilities: "Idadi ya Huduma Zilizochelewa",
+      nonPerforming: "Zisizofanya Kazi (zaidi ya siku 90)",
+      maxDays: "Siku za Juu zaidi za Ucheleweshaji (NDIA)",
+      totalArrears: "Jumla ya Kiasi cha Malimbikizo",
+      closedFacilities: "Huduma Zilizofungwa",
+      writtenOff: "Huduma Zilizofutwa",
+      courtJudgments: "Hukumu za Mahakama",
+      creditInquiries: "Uchunguzi wa Mikopo",
+      inquiryHistory: "Historia ya Uchunguzi",
+      purpose: "Madhumuni",
+      date: "Tarehe",
+      consent: "Idhini",
+      yes: "Ndiyo",
+      no: "Hapana",
+      facilityDetails: "Maelezo ya Huduma za Mikopo",
+      facilityOf: "Huduma {idx} kati ya {total}",
+      accountNo: "Nambari ya Akaunti",
+      type: "Aina",
+      classification: "Uainishaji",
+      currentBalance: "Salio la Sasa",
+      sanctionedAmount: "Kiasi Kilichoidhinishwa",
+      daysInArrears: "Siku za Ucheleweshaji",
+      interestRate: "Kiwango cha Riba",
+      interestFree: "Bila Riba",
+      disbursementDate: "Tarehe ya Utoleaji",
+      maturityDate: "Tarehe ya Ukomavu",
+      lastPayment: "Malipo ya Mwisho",
+      restructured: "Iliyoundwa Upya",
+      paymentHistory: "Historia ya Malipo (Miezi 12 Iliyopita):",
+      security: "Dhamana:",
+      courtJudgmentsPublic: "Hukumu za Mahakama na Rekodi za Umma",
+      caseNo: "Nambari ya Kesi",
+      court: "Mahakama",
+      amount: "Kiasi",
+      status: "Hali",
+      guarantors: "Wadhamini",
+      name: "Jina",
+      contact: "Mawasiliano",
+      account: "Akaunti",
+      endOfReport: "Mwisho wa Ripoti ya Taarifa za Mikopo",
+      disclaimer: "Taarifa katika ripoti hii zimekusanywa kutoka kwa data zilizotolewa na taasisi za kifedha zinazoshiriki. Ingawa Carlson Capital & Systems In Motion Limited inajitahidi kuhakikisha usahihi, hatukubali wajibu kwa hasara au uharibifu wowote unaotokana na ripoti hii.",
+      footerLine: "Kituo cha Data Kuu cha Mamlaka Mbalimbali na Mfumo wa Sajili ya Mikopo v2.5 | Carlson Capital & Systems In Motion Limited | Siri na Mali",
+    },
+  };
+
+  function getPdfLabel(lang: string, key: string): string {
+    return PDF_LABELS[lang]?.[key] || PDF_LABELS.en[key] || key;
+  }
+
   app.post("/api/credit-reports/download-pdf", creditReportLimiter, requireAuth, async (req, res) => {
     try {
-      const { reportData } = req.body;
+      const { reportData, lang: bodyLang } = req.body;
       if (!reportData) return res.status(400).json({ message: "reportData is required" });
+      const lang = bodyLang || (req.query.lang as string) || "en";
 
       const PDFDocument = (await import("pdfkit")).default;
       const doc = new PDFDocument({ size: "A4", margins: { top: 40, bottom: 40, left: 40, right: 40 }, bufferPages: true });
@@ -5562,14 +5940,16 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const LIGHT = "#888888";
       const W = doc.page.width - 80;
 
+      const L = (key: string) => getPdfLabel(lang, key);
+
       function drawHeader() {
         doc.rect(40, 40, W, 60).fill(NORDIC_BLUE);
         doc.fill("#ffffff").fontSize(14).font("Helvetica-Bold")
-          .text("Comprehensive Credit Information Report", 50, 52, { width: W - 140 });
+          .text(L("headerTitle"), 50, 52, { width: W - 140 });
         doc.fontSize(8).font("Helvetica").fill("#cccccc")
-          .text("Cross-Jurisdictional Central Data Hub v2.5 | Carlson Capital & Systems In Motion Limited", 50, 72, { width: W - 140 });
+          .text(L("headerSub"), 50, 72, { width: W - 140 });
         doc.fill("#ffffff").fontSize(7).font("Helvetica")
-          .text("ORDER NUMBER", W - 90, 52, { width: 80, align: "right" });
+          .text(L("orderNumber"), W - 90, 52, { width: 80, align: "right" });
         doc.fontSize(9).font("Helvetica-Bold")
           .text(reportData.serialNumber || "", W - 90, 63, { width: 80, align: "right" });
         doc.fill(DARK);
@@ -5642,14 +6022,14 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const inquiries = reportData.inquiries || [];
       const judgments = reportData.courtJudgments || [];
 
-      doc.fontSize(6).font("Helvetica").fill(LIGHT).text("CIR NUMBER", 40, doc.y, { continued: false });
+      doc.fontSize(6).font("Helvetica").fill(LIGHT).text(L("cirNumber"), 40, doc.y, { continued: false });
       doc.fontSize(8).font("Helvetica-Bold").fill(DARK).text(reportData.serialNumber);
       doc.moveDown(0.3);
 
       const grid1 = [
-        ["Report Order Date", new Date(reportData.generatedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })],
-        ["Institution", reportData.requestedBy?.institution || "—"],
-        ["Requested By", reportData.requestedBy?.fullName || "—"],
+        [L("reportOrderDate"), new Date(reportData.generatedAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })],
+        [L("institution"), reportData.requestedBy?.institution || "—"],
+        [L("requestedBy"), reportData.requestedBy?.fullName || "—"],
       ];
       grid1.forEach(([l, v]) => {
         doc.fontSize(6).font("Helvetica").fill(LIGHT).text(l, 40, doc.y, { width: W });
@@ -5658,32 +6038,32 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       });
 
       doc.moveDown(0.3);
-      doc.fontSize(6).font("Helvetica").fill(LIGHT).text("SEARCH DETAILS", 40, doc.y);
+      doc.fontSize(6).font("Helvetica").fill(LIGHT).text(L("searchDetails"), 40, doc.y);
       doc.moveDown(0.2);
       const name = b.type === "corporate" ? (b.companyName || "—") : `${b.firstName} ${b.lastName}`;
-      doc.fontSize(8).font("Helvetica-Bold").fill(DARK).text(`Name: ${name} | ID: ${b.nationalId || b.tinNumber || "—"} | Country: ${b.country || "—"}`);
+      doc.fontSize(8).font("Helvetica-Bold").fill(DARK).text(`${L("name")}: ${name} | ID: ${b.nationalId || b.tinNumber || "—"} | ${L("type")}: ${b.country || "—"}`);
       doc.moveDown(0.5);
 
-      sectionTitle("Subject Details");
+      sectionTitle(L("subjectDetails"));
       if (b.type === "individual") {
         const fields = [
-          ["Full Name", `${b.firstName} ${b.lastName}`], ["Date of Birth", b.dateOfBirth || "—"],
-          ["Gender", b.gender || "—"], ["National ID", b.nationalId || "—"],
-          ["TIN", b.tinNumber || "—"], ["Passport", b.passportNumber || "—"],
-          ["Employer", b.employerName || "—"], ["Occupation", b.occupation || "—"],
-          ["Phone", b.phone || "—"], ["Email", b.email || "—"],
+          [L("fullName"), `${b.firstName} ${b.lastName}`], [L("dateOfBirth"), b.dateOfBirth || "—"],
+          [L("gender"), b.gender || "—"], [L("nationalId"), b.nationalId || "—"],
+          [L("tin"), b.tinNumber || "—"], [L("passport"), b.passportNumber || "—"],
+          [L("employer"), b.employerName || "—"], [L("occupation"), b.occupation || "—"],
+          [L("phone"), b.phone || "—"], [L("email"), b.email || "—"],
         ];
         fields.forEach(([l, v]) => infoRow(l, v, 40, W));
       } else {
         const fields = [
-          ["Company Name", b.companyName || "—"], ["Business Reg", b.businessRegNumber || "—"],
-          ["Sector", b.sector || "—"], ["TIN", b.tinNumber || "—"],
-          ["Phone", b.phone || "—"], ["Email", b.email || "—"],
+          [L("companyName"), b.companyName || "—"], [L("businessReg"), b.businessRegNumber || "—"],
+          [L("sector"), b.sector || "—"], [L("tin"), b.tinNumber || "—"],
+          [L("phone"), b.phone || "—"], [L("email"), b.email || "—"],
         ];
         fields.forEach(([l, v]) => infoRow(l, v, 40, W));
       }
 
-      sectionTitle("Credit Score Summary");
+      sectionTitle(L("creditScoreSummary"));
       ensureSpace(40);
       doc.fontSize(24).font("Helvetica-Bold").fill(s.creditScore >= 700 ? "#16a34a" : s.creditScore >= 600 ? "#ca8a04" : "#dc2626")
         .text(String(s.creditScore), 40, doc.y, { width: W, align: "center" });
@@ -5692,7 +6072,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       doc.moveDown(0.5);
 
       if (s.reasonCodes && s.reasonCodes.length > 0) {
-        sectionTitle("Score Factor Analysis");
+        sectionTitle(L("scoreFactorAnalysis"));
         const reasonLabels: Record<string, string> = {
           DELINQUENT_ACCOUNTS: "Delinquent accounts on file",
           WRITTEN_OFF_ACCOUNTS: "Written-off accounts present",
@@ -5720,11 +6100,11 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         });
       }
 
-      sectionTitle("Credit Profile Overview", 1);
+      sectionTitle(L("creditProfileOverview"), 1);
       const overviewCols = [
-        { label: "S.No", width: 35 },
-        { label: "Indicator", width: W - 135 },
-        { label: "Value", width: 100, align: "right" },
+        { label: L("sno"), width: 35 },
+        { label: L("indicator"), width: W - 135 },
+        { label: L("value"), width: 100, align: "right" },
       ];
       tableHeader(overviewCols);
       const openAccts = accounts.filter((a: any) => a.status !== "closed");
@@ -5736,16 +6116,16 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const totalArrears = openAccts.reduce((s: number, a: any) => s + parseFloat(a.amountOverdue || "0"), 0);
       const maxDaysInArrears = openAccts.reduce((m: number, a: any) => Math.max(m, a.daysInArrears || 0), 0);
       const indicators = [
-        ["1", "Number of Open Credit Facilities", String(openAccts.length)],
-        ["2", "Total Outstanding Balance", totalBal.toLocaleString("en-US", { minimumFractionDigits: 2 })],
-        ["3", "Number of Overdue Facilities", String(overdueAccts.length)],
-        ["4", "Non-Performing (>90 days)", String(npl.length)],
-        ["5", "Max Days in Arrears (NDIA)", String(maxDaysInArrears)],
-        ["6", "Total Amount in Arrears", totalArrears.toLocaleString("en-US", { minimumFractionDigits: 2 })],
-        ["7", "Closed Facilities", String(closedAccts.length)],
-        ["8", "Written-Off Facilities", String(woAccts.length)],
-        ["9", "Court Judgments", String(judgments.length)],
-        ["10", "Credit Inquiries", String(inquiries.length)],
+        ["1", L("openFacilities"), String(openAccts.length)],
+        ["2", L("totalOutstanding"), totalBal.toLocaleString("en-US", { minimumFractionDigits: 2 })],
+        ["3", L("overdueFacilities"), String(overdueAccts.length)],
+        ["4", L("nonPerforming"), String(npl.length)],
+        ["5", L("maxDays"), String(maxDaysInArrears)],
+        ["6", L("totalArrears"), totalArrears.toLocaleString("en-US", { minimumFractionDigits: 2 })],
+        ["7", L("closedFacilities"), String(closedAccts.length)],
+        ["8", L("writtenOff"), String(woAccts.length)],
+        ["9", L("courtJudgments"), String(judgments.length)],
+        ["10", L("creditInquiries"), String(inquiries.length)],
       ];
       indicators.forEach(([sno, label, val]) => {
         tableRow([
@@ -5756,12 +6136,12 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       });
 
       if (inquiries.length > 0) {
-        sectionTitle("Inquiry History", 2);
+        sectionTitle(L("inquiryHistory"), 2);
         const inqCols = [
-          { label: "Institution", width: W * 0.35 },
-          { label: "Purpose", width: W * 0.25 },
-          { label: "Date", width: W * 0.2 },
-          { label: "Consent", width: W * 0.2 },
+          { label: L("institution"), width: W * 0.35 },
+          { label: L("purpose"), width: W * 0.25 },
+          { label: L("date"), width: W * 0.2 },
+          { label: L("consent"), width: W * 0.2 },
         ];
         tableHeader(inqCols);
         inquiries.slice(0, 20).forEach((inq: any) => {
@@ -5769,31 +6149,32 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
             { value: inq.institution, width: W * 0.35 },
             { value: (inq.purpose || "").replace(/_/g, " "), width: W * 0.25 },
             { value: inq.createdAt ? new Date(inq.createdAt).toLocaleDateString("en-GB") : "—", width: W * 0.2 },
-            { value: inq.consentProvided ? "Yes" : "No", width: W * 0.2, color: inq.consentProvided ? "#16a34a" : "#dc2626" },
+            { value: inq.consentProvided ? L("yes") : L("no"), width: W * 0.2, color: inq.consentProvided ? "#16a34a" : "#dc2626" },
           ]);
         });
       }
 
       if (accounts.length > 0) {
-        sectionTitle("Credit Facility Details", 3);
+        sectionTitle(L("facilityDetails"), 3);
         accounts.forEach((acct: any, idx: number) => {
           ensureSpace(100);
           const cur = acct.currency || "ETB";
           doc.moveDown(0.3);
+          const facLabel = L("facilityOf").replace("{idx}", String(idx + 1)).replace("{total}", String(accounts.length));
           doc.fontSize(8).font("Helvetica-Bold").fill(NORDIC_BLUE)
-            .text(`Facility ${idx + 1} of ${accounts.length} — ${acct.status?.toUpperCase()} (${cur})`, 40, doc.y);
+            .text(`${facLabel} — ${acct.status?.toUpperCase()} (${cur})`, 40, doc.y);
           doc.moveDown(0.3);
 
           const facilityFields = [
-            ["Institution", acct.lenderInstitution], ["Account No.", acct.accountNumber],
-            ["Type", (acct.accountType || "").replace(/_/g, " ")], ["Classification", acct.status],
-            ["Current Balance", acct.currentBalance ? `${cur} ${parseFloat(acct.currentBalance).toLocaleString()}` : "—"],
-            ["Sanctioned Amount", acct.originalAmount ? `${cur} ${parseFloat(acct.originalAmount).toLocaleString()}` : "—"],
-            ["Days in Arrears", String(acct.daysInArrears || 0)],
-            ["Interest Rate", acct.isInterestFree ? "Interest-Free" : `${acct.interestRate || "—"}%`],
-            ["Disbursement Date", acct.disbursementDate || "—"], ["Maturity Date", acct.maturityDate || "—"],
-            ["Last Payment", acct.lastPaymentDate || "—"],
-            ["Restructured", (acct.restructureCount || 0) > 0 ? `Yes (${acct.restructureCount}x)` : "No"],
+            [L("institution"), acct.lenderInstitution], [L("accountNo"), acct.accountNumber],
+            [L("type"), (acct.accountType || "").replace(/_/g, " ")], [L("classification"), acct.status],
+            [L("currentBalance"), acct.currentBalance ? `${cur} ${parseFloat(acct.currentBalance).toLocaleString()}` : "—"],
+            [L("sanctionedAmount"), acct.originalAmount ? `${cur} ${parseFloat(acct.originalAmount).toLocaleString()}` : "—"],
+            [L("daysInArrears"), String(acct.daysInArrears || 0)],
+            [L("interestRate"), acct.isInterestFree ? L("interestFree") : `${acct.interestRate || "—"}%`],
+            [L("disbursementDate"), acct.disbursementDate || "—"], [L("maturityDate"), acct.maturityDate || "—"],
+            [L("lastPayment"), acct.lastPaymentDate || "—"],
+            [L("restructured"), (acct.restructureCount || 0) > 0 ? `${L("yes")} (${acct.restructureCount}x)` : L("no")],
           ];
           facilityFields.forEach(([l, v]) => {
             ensureSpace(14);
@@ -5803,7 +6184,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
           const history = reportData.paymentHistory?.[acct.id] || [];
           if (history.length > 0) {
             ensureSpace(20);
-            doc.fontSize(7).font("Helvetica-Bold").fill(GRAY).text("Payment History (Last 12 Months):", 48, doc.y);
+            doc.fontSize(7).font("Helvetica-Bold").fill(GRAY).text(L("paymentHistory"), 48, doc.y);
             doc.moveDown(0.2);
             const statusLine = history.slice(0, 12).map((ph: any) => {
               const label = ph.status === "on_time" ? "OK" : ph.status === "late" ? "30" : ph.status === "missed" ? "X" : ph.status === "partial" ? "P" : "ND";
@@ -5815,7 +6196,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
           if (acct.collateralType) {
             ensureSpace(20);
-            doc.fontSize(7).font("Helvetica-Bold").fill(GRAY).text("Security:", 48, doc.y);
+            doc.fontSize(7).font("Helvetica-Bold").fill(GRAY).text(L("security"), 48, doc.y);
             doc.moveDown(0.15);
             doc.fontSize(7.5).font("Helvetica").fill(DARK)
               .text(`Type: ${acct.collateralType} | Value: ${cur} ${parseFloat(acct.collateralValue || "0").toLocaleString()}`, 48, doc.y, { width: W - 16 });
@@ -5828,14 +6209,14 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       }
 
       if (judgments.length > 0) {
-        sectionTitle("Court Judgments & Public Records", 4);
+        sectionTitle(L("courtJudgmentsPublic"), 4);
         const jCols = [
-          { label: "Case No.", width: W * 0.2 },
-          { label: "Court", width: W * 0.25 },
-          { label: "Type", width: W * 0.15 },
-          { label: "Amount", width: W * 0.15, align: "right" },
-          { label: "Date", width: W * 0.12 },
-          { label: "Status", width: W * 0.13 },
+          { label: L("caseNo"), width: W * 0.2 },
+          { label: L("court"), width: W * 0.25 },
+          { label: L("type"), width: W * 0.15 },
+          { label: L("amount"), width: W * 0.15, align: "right" },
+          { label: L("date"), width: W * 0.12 },
+          { label: L("status"), width: W * 0.13 },
         ];
         tableHeader(jCols);
         judgments.forEach((j: any) => {
@@ -5853,13 +6234,13 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const allGuarantors = reportData.guarantors || {};
       const guarantorEntries = Object.values(allGuarantors).flat();
       if (guarantorEntries.length > 0) {
-        sectionTitle("Guarantors", 5);
+        sectionTitle(L("guarantors"), 5);
         const gCols = [
-          { label: "Name", width: W * 0.25 },
-          { label: "National ID", width: W * 0.2 },
-          { label: "Type", width: W * 0.15 },
-          { label: "Contact", width: W * 0.2 },
-          { label: "Account", width: W * 0.2 },
+          { label: L("name"), width: W * 0.25 },
+          { label: L("nationalId"), width: W * 0.2 },
+          { label: L("type"), width: W * 0.15 },
+          { label: L("contact"), width: W * 0.2 },
+          { label: L("account"), width: W * 0.2 },
         ];
         tableHeader(gCols);
         (guarantorEntries as any[]).forEach((g: any) => {
@@ -5879,16 +6260,16 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       doc.moveTo(40, doc.y).lineTo(40 + W, doc.y).strokeColor("#cccccc").lineWidth(0.5).stroke();
       doc.moveDown(0.5);
       doc.fontSize(8).font("Helvetica-Bold").fill(DARK)
-        .text("End of Credit Information Report", 40, doc.y, { width: W, align: "center" });
+        .text(L("endOfReport"), 40, doc.y, { width: W, align: "center" });
       doc.moveDown(0.3);
       doc.fontSize(7).font("Helvetica").fill(GRAY)
         .text(`Report Serial: ${reportData.serialNumber} | Generated: ${new Date(reportData.generatedAt).toLocaleString("en-GB")}${reportData.requestedBy ? ` | By: ${reportData.requestedBy.fullName} (${reportData.requestedBy.institution})` : ""}`, 40, doc.y, { width: W, align: "center" });
       doc.moveDown(0.3);
       doc.fontSize(6).font("Helvetica").fill(LIGHT)
-        .text("The information in this report has been compiled from data submitted by participating financial institutions. While Carlson Capital & Systems In Motion Limited endeavor to ensure accuracy, we do not accept responsibility for any loss or damage resulting from this report.", 40, doc.y, { width: W, align: "center" });
+        .text(L("disclaimer"), 40, doc.y, { width: W, align: "center" });
       doc.moveDown(0.3);
       doc.fontSize(6).font("Helvetica").fill(LIGHT)
-        .text("Cross-Jurisdictional Central Data Hub & Credit Registry System v2.5 | Carlson Capital & Systems In Motion Limited | Confidential & Proprietary", 40, doc.y, { width: W, align: "center" });
+        .text(L("footerLine"), 40, doc.y, { width: W, align: "center" });
 
       doc.end();
       await new Promise<void>((resolve, reject) => {
@@ -5975,8 +6356,9 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
   app.get("/api/copyright/download-pdf", async (_req, res) => {
     try {
+      const copyrightLang = ((_req.query.lang as string) || "en").substring(0, 2);
       const { generateCopyrightPdf } = await import("./copyright-pdf");
-      const pdfBuffer = await generateCopyrightPdf();
+      const pdfBuffer = await generateCopyrightPdf(copyrightLang);
       res.set({
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="CDH_Copyright_IP_Protection_${new Date().toISOString().split("T")[0]}.pdf"`,
@@ -6387,7 +6769,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     path.resolve(_dirnameCompat, "../../docs"),
   ];
   const DOCS_DIR = DOCS_DIR_CANDIDATES.find(d => fs.existsSync(d)) || path.resolve(process.cwd(), "docs");
-  const SUPPORTED_DOC_LANGS = ["en", "fr", "ar", "sw"];
+  const SUPPORTED_DOC_LANGS = ["en", "fr", "ar", "sw", "pt"];
   const DOCS_LIST = [
     { id: "api-guide", filename: "API_Integration_Guide.md", title: "API Integration Guide", description: "Complete guide for banks and lenders to connect via REST API — authentication, endpoints, data models, and examples" },
     { id: "uat", filename: "UAT_Test_Document.md", title: "UAT Test Document", description: "187 test cases across 22 modules with SRS traceability" },
@@ -6403,6 +6785,128 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     { id: "pentest-readiness", filename: "Penetration_Test_Readiness.md", title: "Penetration Test Readiness Report", description: "Security controls inventory prepared for formal penetration testing — authentication, authorization, encryption, and API security" },
     { id: "liberia-proposal", filename: "Liberia_Marketing_Proposal.md", title: "Liberia Marketing Proposal", description: "Marketing & technical proposal for the Republic of Liberia — credit bureau solution, compliance assessment, implementation roadmap, and pricing" },
   ];
+
+  const DOC_TRANSLATIONS: Record<string, Record<string, { title: string; description: string }>> = {
+    fr: {
+      "api-guide": { title: "Guide d'Intégration API", description: "Guide complet pour les banques et prêteurs pour se connecter via l'API REST — authentification, points d'accès, modèles de données et exemples" },
+      uat: { title: "Document de Tests UAT", description: "187 cas de test répartis sur 22 modules avec traçabilité SRS" },
+      systems: { title: "Documentation Systèmes", description: "Architecture technique, modèle de données, catalogue API, sécurité, déploiement" },
+      "users-manual": { title: "Manuel Utilisateur", description: "Guide utilisateur étape par étape pour tous les rôles avec 24 sections" },
+      "srs-matrix": { title: "Matrice de Traçabilité SRS", description: "57 exigences SRS mappées au statut d'implémentation" },
+      "data-dictionary": { title: "Dictionnaire de Données", description: "Documentation au niveau des champs pour les 15 tables" },
+      deployment: { title: "Guide de Déploiement", description: "Instructions de déploiement étape par étape" },
+      security: { title: "Rapport Sécurité & Conformité", description: "Contrôles de sécurité avec matrice de conformité NFR-SEC" },
+      "security-policy": { title: "Politique de Sécurité de l'Information", description: "Politique de sécurité complète couvrant le contrôle d'accès, la protection des données, le chiffrement, la réponse aux incidents et la sécurité des tiers" },
+      "dr-plan": { title: "Plan de Reprise d'Activité et Continuité", description: "Plan DR/BC avec objectifs RTO/RPO, stratégie de sauvegarde, procédures de récupération et calendrier de tests" },
+      "change-mgmt": { title: "Politique de Gestion des Changements", description: "Processus formel de contrôle des changements — catégorisation, évaluation d'impact, flux d'approbation et piste d'audit" },
+      "pentest-readiness": { title: "Rapport de Préparation aux Tests de Pénétration", description: "Inventaire des contrôles de sécurité préparé pour les tests de pénétration formels — authentification, autorisation, chiffrement et sécurité API" },
+      "liberia-proposal": { title: "Proposition Marketing Libéria", description: "Proposition marketing et technique pour la République du Libéria — solution bureau de crédit, évaluation de conformité, feuille de route et tarification" },
+    },
+    pt: {
+      "api-guide": { title: "Guia de Integração API", description: "Guia completo para bancos e credores se conectarem via API REST — autenticação, endpoints, modelos de dados e exemplos" },
+      uat: { title: "Documento de Testes UAT", description: "187 casos de teste em 22 módulos com rastreabilidade SRS" },
+      systems: { title: "Documentação de Sistemas", description: "Arquitetura técnica, modelo de dados, catálogo de APIs, segurança, implantação" },
+      "users-manual": { title: "Manual do Utilizador", description: "Guia do utilizador passo a passo para todas as funções com 24 secções" },
+      "srs-matrix": { title: "Matriz de Rastreabilidade SRS", description: "57 requisitos SRS mapeados para o estado de implementação" },
+      "data-dictionary": { title: "Dicionário de Dados", description: "Documentação ao nível dos campos para as 15 tabelas" },
+      deployment: { title: "Guia de Implantação", description: "Instruções de implantação passo a passo" },
+      security: { title: "Relatório de Segurança e Conformidade", description: "Controlos de segurança com matriz de conformidade NFR-SEC" },
+      "security-policy": { title: "Política de Segurança da Informação", description: "Política de segurança abrangente cobrindo controlo de acesso, proteção de dados, encriptação, resposta a incidentes e segurança de terceiros" },
+      "dr-plan": { title: "Plano de Recuperação de Desastres e Continuidade", description: "Plano DR/BC com metas RTO/RPO, estratégia de backup, procedimentos de recuperação e cronograma de testes" },
+      "change-mgmt": { title: "Política de Gestão de Mudanças", description: "Processo formal de controlo de mudanças — categorização, avaliação de impacto, fluxo de aprovação e trilha de auditoria" },
+      "pentest-readiness": { title: "Relatório de Preparação para Testes de Penetração", description: "Inventário de controlos de segurança preparado para testes de penetração formais — autenticação, autorização, encriptação e segurança da API" },
+      "liberia-proposal": { title: "Proposta de Marketing Libéria", description: "Proposta de marketing e técnica para a República da Libéria — solução de bureau de crédito, avaliação de conformidade, roteiro de implementação e preços" },
+    },
+    ar: {
+      "api-guide": { title: "دليل تكامل API", description: "دليل شامل للبنوك والمقرضين للاتصال عبر REST API — المصادقة ونقاط النهاية ونماذج البيانات والأمثلة" },
+      uat: { title: "وثيقة اختبار UAT", description: "187 حالة اختبار عبر 22 وحدة مع تتبع SRS" },
+      systems: { title: "توثيق الأنظمة", description: "البنية التقنية ونموذج البيانات وكتالوج API والأمان والنشر" },
+      "users-manual": { title: "دليل المستخدم", description: "دليل المستخدم خطوة بخطوة لجميع الأدوار مع 24 قسمًا" },
+      "srs-matrix": { title: "مصفوفة تتبع SRS", description: "57 متطلب SRS مُربطة بحالة التنفيذ" },
+      "data-dictionary": { title: "قاموس البيانات", description: "توثيق على مستوى الحقول لجميع الجداول الـ 15" },
+      deployment: { title: "دليل النشر", description: "تعليمات النشر خطوة بخطوة" },
+      security: { title: "تقرير الأمان والامتثال", description: "ضوابط الأمان مع مصفوفة امتثال NFR-SEC" },
+      "security-policy": { title: "سياسة أمن المعلومات", description: "سياسة أمنية شاملة تغطي التحكم في الوصول وحماية البيانات والتشفير والاستجابة للحوادث وأمن الأطراف الثالثة" },
+      "dr-plan": { title: "خطة التعافي من الكوارث واستمرارية الأعمال", description: "خطة DR/BC مع أهداف RTO/RPO واستراتيجية النسخ الاحتياطي وإجراءات الاسترداد وجدول الاختبار" },
+      "change-mgmt": { title: "سياسة إدارة التغيير", description: "عملية رسمية لمراقبة التغيير — التصنيف وتقييم الأثر وسير عمل الموافقة ومسار التدقيق" },
+      "pentest-readiness": { title: "تقرير جاهزية اختبار الاختراق", description: "جرد ضوابط الأمان المُعد لاختبار الاختراق الرسمي — المصادقة والتفويض والتشفير وأمان API" },
+      "liberia-proposal": { title: "عرض تسويق ليبيريا", description: "عرض تسويقي وتقني لجمهورية ليبيريا — حل مكتب الائتمان وتقييم الامتثال وخارطة طريق التنفيذ والتسعير" },
+    },
+    sw: {
+      "api-guide": { title: "Mwongozo wa Muunganisho wa API", description: "Mwongozo kamili kwa benki na wakopeshaji kuunganisha kupitia REST API — uthibitishaji, vituo, miundo ya data na mifano" },
+      uat: { title: "Hati ya Majaribio ya UAT", description: "Visa 187 vya majaribio katika moduli 22 na ufuatiliaji wa SRS" },
+      systems: { title: "Nyaraka za Mifumo", description: "Usanifu wa kiufundi, muundo wa data, katalogi ya API, usalama, usambazaji" },
+      "users-manual": { title: "Mwongozo wa Mtumiaji", description: "Mwongozo wa mtumiaji hatua kwa hatua kwa majukumu yote na sehemu 24" },
+      "srs-matrix": { title: "Jedwali la Ufuatiliaji wa SRS", description: "Mahitaji 57 ya SRS yaliyooanishwa na hali ya utekelezaji" },
+      "data-dictionary": { title: "Kamusi ya Data", description: "Nyaraka za kiwango cha sehemu kwa jedwali zote 15" },
+      deployment: { title: "Mwongozo wa Usambazaji", description: "Maagizo ya usambazaji hatua kwa hatua" },
+      security: { title: "Ripoti ya Usalama na Utiifu", description: "Vidhibiti vya usalama na jedwali la utiifu wa NFR-SEC" },
+      "security-policy": { title: "Sera ya Usalama wa Taarifa", description: "Sera kamili ya usalama inayoshughulikia udhibiti wa ufikiaji, ulinzi wa data, usimbaji fiche, majibu ya matukio na usalama wa wahusika wa tatu" },
+      "dr-plan": { title: "Mpango wa Uokoaji na Mwendelezo wa Biashara", description: "Mpango wa DR/BC wenye malengo ya RTO/RPO, mkakati wa hifadhi, taratibu za urejeshaji na ratiba ya majaribio" },
+      "change-mgmt": { title: "Sera ya Usimamizi wa Mabadiliko", description: "Mchakato rasmi wa udhibiti wa mabadiliko — uainishaji, tathmini ya athari, mtiririko wa idhini na njia ya ukaguzi" },
+      "pentest-readiness": { title: "Ripoti ya Utayari wa Majaribio ya Kupenya", description: "Orodha ya vidhibiti vya usalama iliyoandaliwa kwa majaribio rasmi ya kupenya — uthibitishaji, idhini, usimbaji fiche na usalama wa API" },
+      "liberia-proposal": { title: "Pendekezo la Masoko la Liberia", description: "Pendekezo la masoko na kiufundi kwa Jamhuri ya Liberia — suluhisho la ofisi ya mikopo, tathmini ya utiifu, ramani ya utekelezaji na bei" },
+    },
+  };
+
+  const GHANA_DOC_TRANSLATIONS: Record<string, Record<string, { title: string; description: string }>> = {
+    fr: {
+      "ghana-sla": { title: "Accord SLA Ghana", description: "Accord de niveau de service pour le registre de crédit du Ghana — disponibilité, résolution des litiges, soumission des données et indicateurs de performance" },
+      "ghana-compliance": { title: "Cadre de Conformité Réglementaire", description: "Cadre de conformité couvrant la loi 726, la loi 843 sur la protection des données et les directives opérationnelles BoG CRB" },
+      "ghana-e2e": { title: "Plan de Test de Bout en Bout", description: "Plan de test E2E complet pour le mode CRB Ghana — inscription des emprunteurs, comptes de crédit, téléchargement BoG et sécurité" },
+      "ghana-data-standards": { title: "Référence des Normes de Données BoG CRB", description: "Normes de données BoG CRB v1.1 complètes — formats de fichiers, types de facilités, classifications d'actifs et règles de validation" },
+      "ghana-data-protection": { title: "Politique de Protection des Données et de Confidentialité", description: "Politique de protection des données conforme à la loi 843 — base juridique, droits des personnes concernées, mesures de sécurité et gestion des violations" },
+      "ghana-operations": { title: "Manuel de Procédures Opérationnelles", description: "Procédures opérationnelles standard pour la soumission des données, les rapports de crédit, la résolution des litiges et l'intégration des institutions" },
+      "ghana-api-guide": { title: "Guide d'Intégration API Ghana", description: "Guide API spécifique au Ghana avec endpoints BoG CRB v1.1, validation Ghana Card, application GHS et exigences de consentement" },
+      "ghana-connections": { title: "Politique de Connexions et d'Échange de Données", description: "Politique d'échange de données régissant les connexions API, l'intégration NIA, l'échange inter-bureaux et les flux réglementaires BoG" },
+    },
+    pt: {
+      "ghana-sla": { title: "Acordo SLA Gana", description: "Acordo de nível de serviço para o registo de crédito do Gana — disponibilidade, resolução de litígios, submissão de dados e referências de desempenho" },
+      "ghana-compliance": { title: "Quadro de Conformidade Regulatória", description: "Quadro de conformidade cobrindo a Lei 726, Lei 843 de Proteção de Dados e diretrizes operacionais BoG CRB" },
+      "ghana-e2e": { title: "Plano de Testes Ponta a Ponta", description: "Plano de teste E2E completo para o modo CRB Gana — registo de mutuários, contas de crédito, carregamento BoG e segurança" },
+      "ghana-data-standards": { title: "Referência de Padrões de Dados BoG CRB", description: "Padrões de dados BoG CRB v1.1 completos — formatos de ficheiros, tipos de facilidades, classificações de ativos e regras de validação" },
+      "ghana-data-protection": { title: "Política de Proteção de Dados e Privacidade", description: "Política de proteção de dados alinhada com a Lei 843 — base legal, direitos dos titulares, medidas de segurança e gestão de violações" },
+      "ghana-operations": { title: "Manual de Procedimentos Operacionais", description: "Procedimentos operacionais padrão para submissão de dados, relatórios de crédito, resolução de litígios e integração de instituições" },
+      "ghana-api-guide": { title: "Guia de Integração API Gana", description: "Guia de API específico para o Gana com endpoints BoG CRB v1.1, validação de Ghana Card, imposição de GHS e requisitos de consentimento" },
+      "ghana-connections": { title: "Política de Conexões e Troca de Dados", description: "Política de troca de dados regulando conexões API, integração NIA, troca inter-bureaux e fluxos regulatórios BoG" },
+    },
+    ar: {
+      "ghana-sla": { title: "اتفاقية مستوى الخدمة غانا", description: "اتفاقية مستوى الخدمة لسجل الائتمان في غانا — وقت التشغيل وحل النزاعات وتقديم البيانات ومعايير الأداء" },
+      "ghana-compliance": { title: "إطار الامتثال التنظيمي", description: "إطار الامتثال الذي يغطي القانون 726 وقانون حماية البيانات 843 والإرشادات التشغيلية لـ BoG CRB" },
+      "ghana-e2e": { title: "خطة اختبار شاملة", description: "خطة اختبار E2E كاملة لوضع CRB غانا — تسجيل المقترضين وحسابات الائتمان والتحميل المجمع والأمان" },
+      "ghana-data-standards": { title: "مرجع معايير بيانات BoG CRB", description: "معايير بيانات BoG CRB v1.1 الكاملة — تنسيقات الملفات وأنواع التسهيلات وتصنيفات الأصول وقواعد التحقق" },
+      "ghana-data-protection": { title: "سياسة حماية البيانات والخصوصية", description: "سياسة حماية البيانات المتوافقة مع القانون 843 — الأساس القانوني وحقوق أصحاب البيانات وتدابير الأمان وإدارة الانتهاكات" },
+      "ghana-operations": { title: "دليل الإجراءات التشغيلية", description: "إجراءات التشغيل القياسية لتقديم البيانات وإعداد تقارير الائتمان وحل النزاعات وتأهيل المؤسسات" },
+      "ghana-api-guide": { title: "دليل تكامل API غانا", description: "دليل API خاص بغانا مع نقاط نهاية BoG CRB v1.1 والتحقق من بطاقة غانا ومتطلبات الموافقة" },
+      "ghana-connections": { title: "سياسة الاتصالات وتبادل البيانات", description: "سياسة تبادل البيانات التي تحكم اتصالات API وتكامل NIA والتبادل بين المكاتب والتغذية التنظيمية لـ BoG" },
+    },
+    sw: {
+      "ghana-sla": { title: "Mkataba wa SLA wa Ghana", description: "Mkataba wa kiwango cha huduma kwa sajili ya mikopo ya Ghana — muda wa upatikanaji, utatuzi wa migogoro, uwasilishaji wa data na vigezo vya utendaji" },
+      "ghana-compliance": { title: "Mfumo wa Utiifu wa Kanuni", description: "Mfumo wa utiifu unaoshughulikia Sheria 726, Sheria ya Ulinzi wa Data 843 na miongozo ya uendeshaji wa BoG CRB" },
+      "ghana-e2e": { title: "Mpango wa Majaribio ya Mwanzo hadi Mwisho", description: "Mpango kamili wa majaribio ya E2E kwa hali ya CRB ya Ghana — usajili wa wakopaji, akaunti za mikopo, upakiaji wa BoG na usalama" },
+      "ghana-data-standards": { title: "Rejea ya Viwango vya Data vya BoG CRB", description: "Viwango kamili vya data vya BoG CRB v1.1 — muundo wa faili, aina za huduma, uainishaji wa mali na sheria za uthibitishaji" },
+      "ghana-data-protection": { title: "Sera ya Ulinzi wa Data na Faragha", description: "Sera ya ulinzi wa data inayolingana na Sheria 843 — msingi wa kisheria, haki za wahusika wa data, hatua za usalama na usimamizi wa ukiukaji" },
+      "ghana-operations": { title: "Mwongozo wa Taratibu za Uendeshaji", description: "Taratibu za kawaida za uendeshaji kwa uwasilishaji wa data, ripoti za mikopo, utatuzi wa migogoro na ujumuishaji wa taasisi" },
+      "ghana-api-guide": { title: "Mwongozo wa Muunganisho wa API wa Ghana", description: "Mwongozo wa API mahususi kwa Ghana wenye vituo vya BoG CRB v1.1, uthibitishaji wa Kadi ya Ghana na mahitaji ya idhini" },
+      "ghana-connections": { title: "Sera ya Miunganisho na Ubadilishanaji wa Data", description: "Sera ya ubadilishanaji wa data inayosimamia miunganisho ya API, muunganisho wa NIA, ubadilishanaji wa kati ya ofisi na mtiririko wa udhibiti wa BoG" },
+    },
+  };
+
+  function getDocMeta(doc: { id: string; filename: string; title: string; description: string }, lang?: string) {
+    if (lang && lang !== "en" && DOC_TRANSLATIONS[lang]?.[doc.id]) {
+      const t = DOC_TRANSLATIONS[lang][doc.id];
+      return { ...doc, title: t.title, description: t.description };
+    }
+    return doc;
+  }
+
+  function getGhanaDocMeta(doc: { id: string; filename: string; title: string; description: string; category: string }, lang?: string) {
+    if (lang && lang !== "en" && GHANA_DOC_TRANSLATIONS[lang]?.[doc.id]) {
+      const t = GHANA_DOC_TRANSLATIONS[lang][doc.id];
+      return { ...doc, title: t.title, description: t.description };
+    }
+    return doc;
+  }
 
   function resolveDocPath(filename: string, lang?: string): string {
     if (lang && lang !== "en" && SUPPORTED_DOC_LANGS.includes(lang)) {
@@ -6425,14 +6929,16 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
   const GHANA_DOCS_DIR = path.join(process.cwd(), "docs", "ghana");
 
-  app.get("/api/ghana-docs", requireAuth, (_req, res) => {
+  app.get("/api/ghana-docs", requireAuth, (req, res) => {
+    const lang = (req.query.lang as string) || "en";
     const docsWithSize = GHANA_DOCS_LIST.map(doc => {
+      const translated = getGhanaDocMeta(doc, lang);
       try {
         const filePath = path.join(GHANA_DOCS_DIR, doc.filename);
         const stats = fs.statSync(filePath);
-        return { ...doc, size: stats.size };
+        return { ...translated, size: stats.size };
       } catch {
-        return { ...doc, size: 0 };
+        return { ...translated, size: 0 };
       }
     });
     res.json(docsWithSize);
@@ -6442,11 +6948,13 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     const doc = GHANA_DOCS_LIST.find(d => d.id === req.params.id);
     if (!doc) return res.status(404).json({ message: "Document not found" });
     try {
+      const lang = (req.query.lang as string) || "en";
+      const translated = getGhanaDocMeta(doc, lang);
       const filePath = path.join(GHANA_DOCS_DIR, doc.filename);
       const content = fs.readFileSync(filePath, "utf-8");
       const { marked } = await import("marked");
       const html = marked(content);
-      res.json({ ...doc, content, html });
+      res.json({ ...translated, content, html });
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
     }
@@ -6456,16 +6964,18 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     const doc = GHANA_DOCS_LIST.find(d => d.id === req.params.id);
     if (!doc) return res.status(404).json({ message: "Document not found" });
     try {
+      const lang = (req.query.lang as string) || "en";
+      const translated = getGhanaDocMeta(doc, lang);
       const filePath = path.join(GHANA_DOCS_DIR, doc.filename);
       const content = fs.readFileSync(filePath, "utf-8");
       const { PassThrough } = await import("stream");
       const { generatePdfFromMarkdown } = await import("./pdf-generator");
       const stream = new PassThrough();
-      const safeName = doc.title.replace(/[^a-zA-Z0-9_\- ]/g, "").replace(/\s+/g, "_");
+      const safeName = translated.title.replace(/[^a-zA-Z0-9_\- ]/g, "").replace(/\s+/g, "_");
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${safeName}.pdf"`);
       stream.pipe(res);
-      generatePdfFromMarkdown(content, doc.title, stream);
+      generatePdfFromMarkdown(content, translated.title, stream);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
     }
@@ -6488,12 +6998,13 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
   app.get("/api/docs", requireAuth, (req, res) => {
     const lang = (req.query.lang as string) || "en";
     const docsWithSize = DOCS_LIST.map(doc => {
+      const translated = getDocMeta(doc, lang);
       try {
         const filePath = resolveDocPath(doc.filename, lang);
         const stats = fs.statSync(filePath);
-        return { ...doc, size: stats.size };
+        return { ...translated, size: stats.size };
       } catch {
-        return { ...doc, size: 0 };
+        return { ...translated, size: 0 };
       }
     });
     res.json(docsWithSize);
@@ -6504,11 +7015,12 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     if (!doc) return res.status(404).json({ message: "Document not found" });
     try {
       const lang = (req.query.lang as string) || "en";
+      const translated = getDocMeta(doc, lang);
       const filePath = resolveDocPath(doc.filename, lang);
       const content = fs.readFileSync(filePath, "utf-8");
       const { marked } = await import("marked");
       const html = marked(content);
-      res.json({ ...doc, content, html });
+      res.json({ ...translated, content, html });
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
     }
@@ -6519,16 +7031,17 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     if (!doc) return res.status(404).json({ message: "Document not found" });
     try {
       const lang = (req.query.lang as string) || "en";
+      const translated = getDocMeta(doc, lang);
       const filePath = resolveDocPath(doc.filename, lang);
       const content = fs.readFileSync(filePath, "utf-8");
       const { PassThrough } = await import("stream");
       const { generatePdfFromMarkdown } = await import("./pdf-generator");
       const stream = new PassThrough();
-      const safeName = doc.title.replace(/[^a-zA-Z0-9_\- ]/g, "").replace(/\s+/g, "_");
+      const safeName = translated.title.replace(/[^a-zA-Z0-9_\- ]/g, "").replace(/\s+/g, "_");
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${safeName}.pdf"`);
       stream.pipe(res);
-      generatePdfFromMarkdown(content, doc.title, stream);
+      generatePdfFromMarkdown(content, translated.title, stream);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
     }

@@ -48,7 +48,7 @@ function formatSize(bytes: number) {
 }
 
 export default function GhanaDocsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [viewingDoc, setViewingDoc] = useState<string | null>(null);
   const [docHtml, setDocHtml] = useState<string>("");
   const [docTitle, setDocTitle] = useState<string>("");
@@ -56,9 +56,15 @@ export default function GhanaDocsPage() {
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const ghanaMode = isGhanaMode();
+  const currentLang = i18n.language?.startsWith("fr") ? "fr" : i18n.language?.startsWith("ar") ? "ar" : i18n.language?.startsWith("sw") ? "sw" : i18n.language?.startsWith("pt") ? "pt" : "en";
 
   const { data: docs, isLoading } = useQuery<GhanaDoc[]>({
-    queryKey: ["/api/ghana-docs"],
+    queryKey: ["/api/ghana-docs", currentLang],
+    queryFn: async () => {
+      const res = await fetch(`/api/ghana-docs?lang=${currentLang}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch docs");
+      return res.json();
+    },
     enabled: ghanaMode,
   });
 
@@ -92,7 +98,7 @@ export default function GhanaDocsPage() {
     setDocTitle(doc.title);
     setViewingDoc(doc.id);
     try {
-      const res = await apiRequest("GET", `/api/ghana-docs/${doc.id}`);
+      const res = await apiRequest("GET", `/api/ghana-docs/${doc.id}?lang=${currentLang}`);
       const detail: GhanaDocDetail = await res.json();
       setDocHtml(detail.html);
     } catch {
@@ -102,7 +108,7 @@ export default function GhanaDocsPage() {
   };
 
   const downloadPdf = (docId: string) => {
-    window.open(`/api/ghana-docs/${docId}/pdf`, "_blank");
+    window.open(`/api/ghana-docs/${docId}/pdf?lang=${currentLang}`, "_blank");
   };
 
   const downloadMarkdown = (docId: string) => {

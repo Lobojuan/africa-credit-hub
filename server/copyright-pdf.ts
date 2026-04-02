@@ -1,5 +1,192 @@
 import PDFDocument from "pdfkit";
 
+const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
+  en: {
+    softwareCopyright: "SOFTWARE COPYRIGHT",
+    intellectualProperty: "& INTELLECTUAL PROPERTY",
+    protectionDocument: "PROTECTION DOCUMENT",
+    platformSubtitle: "Pan-African Credit Data Hub (CDH) v2.5",
+    docReference: "DOCUMENT REFERENCE",
+    docId: "Document ID:",
+    version: "Version:",
+    classification: "Classification:",
+    classificationValue: "CONFIDENTIAL — PROPRIETARY",
+    dateOfIssue: "Date of Issue:",
+    copyrightHolder: "Copyright Holder:",
+    copyrightHolderValue: "Carlson Capital & Systems In Motion Limited",
+    jurisdiction: "Jurisdiction:",
+    jurisdictionValue: "Republic of Ghana & Pan-African Territories",
+    coverDisclaimer1: "This document and all its contents are the exclusive intellectual property of Carlson Capital & Systems In Motion Limited.",
+    coverDisclaimer2: "Unauthorized reproduction, distribution, or use of this document or the software described herein is strictly prohibited.",
+    tableOfContents: "Table of Contents",
+    s1: "Preamble & Copyright Declaration",
+    s2: "Definitions",
+    s3: "Scope of Protected Works",
+    s4: "Ownership & Authorship",
+    s5: "Jurisdictional Coverage & Applicable Laws",
+    s6: "Rights Reserved",
+    s7: "Licensing Terms & Conditions",
+    s8: "Trade Secret & Confidentiality Provisions",
+    s9: "Database Rights & Data Protection",
+    s10: "Enforcement & Remedies",
+    s11: "International Treaties & Conventions",
+    s12: "Term & Survival",
+    s13: "Dispute Resolution",
+    s14: "Notices & Contact Information",
+    s15: "Schedules & Annexures",
+    confidentialFooter: "CONFIDENTIAL",
+    footerCenter: "CDH v2.5 — Pan-African Credit Registry",
+  },
+  fr: {
+    softwareCopyright: "DROIT D'AUTEUR LOGICIEL",
+    intellectualProperty: "& PROPRIÉTÉ INTELLECTUELLE",
+    protectionDocument: "DOCUMENT DE PROTECTION",
+    platformSubtitle: "Hub de Données de Crédit Panafricain (CDH) v2.5",
+    docReference: "RÉFÉRENCE DU DOCUMENT",
+    docId: "ID du Document :",
+    version: "Version :",
+    classification: "Classification :",
+    classificationValue: "CONFIDENTIEL — PROPRIÉTAIRE",
+    dateOfIssue: "Date d'Émission :",
+    copyrightHolder: "Titulaire du Droit d'Auteur :",
+    copyrightHolderValue: "Carlson Capital & Systems In Motion Limited",
+    jurisdiction: "Juridiction :",
+    jurisdictionValue: "République du Ghana et Territoires Panafricains",
+    coverDisclaimer1: "Ce document et tout son contenu sont la propriété intellectuelle exclusive de Carlson Capital & Systems In Motion Limited.",
+    coverDisclaimer2: "La reproduction, distribution ou utilisation non autorisée de ce document ou du logiciel décrit est strictement interdite.",
+    tableOfContents: "Table des Matières",
+    s1: "Préambule et Déclaration de Droit d'Auteur",
+    s2: "Définitions",
+    s3: "Portée des Œuvres Protégées",
+    s4: "Propriété et Paternité",
+    s5: "Couverture Juridictionnelle et Lois Applicables",
+    s6: "Droits Réservés",
+    s7: "Conditions de Licence",
+    s8: "Secret Commercial et Dispositions de Confidentialité",
+    s9: "Droits de Base de Données et Protection des Données",
+    s10: "Application et Recours",
+    s11: "Traités et Conventions Internationaux",
+    s12: "Durée et Survie",
+    s13: "Résolution des Litiges",
+    s14: "Avis et Coordonnées",
+    s15: "Annexes et Pièces Jointes",
+    confidentialFooter: "CONFIDENTIEL",
+    footerCenter: "CDH v2.5 — Registre de Crédit Panafricain",
+  },
+  pt: {
+    softwareCopyright: "DIREITOS AUTORAIS DE SOFTWARE",
+    intellectualProperty: "& PROPRIEDADE INTELECTUAL",
+    protectionDocument: "DOCUMENTO DE PROTEÇÃO",
+    platformSubtitle: "Hub de Dados de Crédito Pan-Africano (CDH) v2.5",
+    docReference: "REFERÊNCIA DO DOCUMENTO",
+    docId: "ID do Documento:",
+    version: "Versão:",
+    classification: "Classificação:",
+    classificationValue: "CONFIDENCIAL — PROPRIETÁRIO",
+    dateOfIssue: "Data de Emissão:",
+    copyrightHolder: "Titular dos Direitos Autorais:",
+    copyrightHolderValue: "Carlson Capital & Systems In Motion Limited",
+    jurisdiction: "Jurisdição:",
+    jurisdictionValue: "República do Gana e Territórios Pan-Africanos",
+    coverDisclaimer1: "Este documento e todo o seu conteúdo são propriedade intelectual exclusiva da Carlson Capital & Systems In Motion Limited.",
+    coverDisclaimer2: "A reprodução, distribuição ou utilização não autorizada deste documento ou do software aqui descrito é estritamente proibida.",
+    tableOfContents: "Índice",
+    s1: "Preâmbulo e Declaração de Direitos Autorais",
+    s2: "Definições",
+    s3: "Âmbito das Obras Protegidas",
+    s4: "Propriedade e Autoria",
+    s5: "Cobertura Jurisdicional e Leis Aplicáveis",
+    s6: "Direitos Reservados",
+    s7: "Termos e Condições de Licença",
+    s8: "Segredo Comercial e Disposições de Confidencialidade",
+    s9: "Direitos de Base de Dados e Proteção de Dados",
+    s10: "Aplicação e Recursos",
+    s11: "Tratados e Convenções Internacionais",
+    s12: "Prazo e Sobrevivência",
+    s13: "Resolução de Litígios",
+    s14: "Avisos e Informações de Contacto",
+    s15: "Anexos e Apêndices",
+    confidentialFooter: "CONFIDENCIAL",
+    footerCenter: "CDH v2.5 — Registo de Crédito Pan-Africano",
+  },
+  ar: {
+    softwareCopyright: "حقوق نشر البرمجيات",
+    intellectualProperty: "والملكية الفكرية",
+    protectionDocument: "وثيقة الحماية",
+    platformSubtitle: "مركز بيانات الائتمان الأفريقي (CDH) الإصدار 2.5",
+    docReference: "مرجع الوثيقة",
+    docId: "معرّف الوثيقة:",
+    version: "الإصدار:",
+    classification: "التصنيف:",
+    classificationValue: "سري — ملكية خاصة",
+    dateOfIssue: "تاريخ الإصدار:",
+    copyrightHolder: "صاحب حقوق النشر:",
+    copyrightHolderValue: "Carlson Capital & Systems In Motion Limited",
+    jurisdiction: "الاختصاص القضائي:",
+    jurisdictionValue: "جمهورية غانا والأقاليم الأفريقية",
+    coverDisclaimer1: "هذه الوثيقة وجميع محتوياتها هي ملكية فكرية حصرية لشركة Carlson Capital & Systems In Motion Limited.",
+    coverDisclaimer2: "يُحظر تمامًا أي نسخ أو توزيع أو استخدام غير مصرح به لهذه الوثيقة أو البرنامج الموصوف فيها.",
+    tableOfContents: "جدول المحتويات",
+    s1: "المقدمة وإعلان حقوق النشر",
+    s2: "التعريفات",
+    s3: "نطاق الأعمال المحمية",
+    s4: "الملكية والتأليف",
+    s5: "التغطية القضائية والقوانين المعمول بها",
+    s6: "الحقوق المحفوظة",
+    s7: "شروط وأحكام الترخيص",
+    s8: "الأسرار التجارية وأحكام السرية",
+    s9: "حقوق قواعد البيانات وحماية البيانات",
+    s10: "التنفيذ والعلاجات",
+    s11: "المعاهدات والاتفاقيات الدولية",
+    s12: "المدة والاستمرارية",
+    s13: "حل النزاعات",
+    s14: "الإشعارات ومعلومات الاتصال",
+    s15: "الملاحق والمرفقات",
+    confidentialFooter: "سري",
+    footerCenter: "CDH v2.5 — سجل الائتمان الأفريقي",
+  },
+  sw: {
+    softwareCopyright: "HAKIMILIKI YA PROGRAMU",
+    intellectualProperty: "NA MALI YA AKILI",
+    protectionDocument: "HATI YA ULINZI",
+    platformSubtitle: "Kituo cha Data ya Mikopo cha Afrika (CDH) v2.5",
+    docReference: "REJEA YA HATI",
+    docId: "Kitambulisho cha Hati:",
+    version: "Toleo:",
+    classification: "Uainishaji:",
+    classificationValue: "SIRI — MALI BINAFSI",
+    dateOfIssue: "Tarehe ya Kutolewa:",
+    copyrightHolder: "Mmiliki wa Hakimiliki:",
+    copyrightHolderValue: "Carlson Capital & Systems In Motion Limited",
+    jurisdiction: "Mamlaka:",
+    jurisdictionValue: "Jamhuri ya Ghana na Maeneo ya Afrika",
+    coverDisclaimer1: "Hati hii na yaliyomo yote ni mali ya akili ya kipekee ya Carlson Capital & Systems In Motion Limited.",
+    coverDisclaimer2: "Kurudufia, kusambaza au kutumia bila idhini hati hii au programu iliyoelezwa humu ni marufuku kabisa.",
+    tableOfContents: "Yaliyomo",
+    s1: "Utangulizi na Tamko la Hakimiliki",
+    s2: "Ufafanuzi",
+    s3: "Upeo wa Kazi Zilizolindwa",
+    s4: "Umiliki na Uandishi",
+    s5: "Wigo wa Mamlaka na Sheria Zinazotumika",
+    s6: "Haki Zilizohifadhiwa",
+    s7: "Masharti na Vigezo vya Leseni",
+    s8: "Siri za Biashara na Masharti ya Usiri",
+    s9: "Haki za Hifadhidata na Ulinzi wa Data",
+    s10: "Utekelezaji na Tiba",
+    s11: "Mikataba na Makubaliano ya Kimataifa",
+    s12: "Muda na Kuendelea",
+    s13: "Utatuzi wa Migogoro",
+    s14: "Taarifa na Maelezo ya Mawasiliano",
+    s15: "Ratiba na Viambatisho",
+    confidentialFooter: "SIRI",
+    footerCenter: "CDH v2.5 — Sajili ya Mikopo ya Afrika",
+  },
+};
+
+function getCopyrightLabel(lang: string, key: string): string {
+  return COPYRIGHT_PDF_LABELS[lang]?.[key] || COPYRIGHT_PDF_LABELS.en[key] || key;
+}
+
 const NORDIC_BLUE = "#0466C8";
 const NORDIC_NAVY = "#1E3A5F";
 const NORDIC_ACCENT = "#3B82F6";
@@ -55,7 +242,7 @@ function addHeader(doc: PDFKit.PDFDocument) {
   doc.y += 15;
 }
 
-function addFooter(doc: PDFKit.PDFDocument, pageNum: number, totalPages: number) {
+function addFooter(doc: PDFKit.PDFDocument, pageNum: number, totalPages: number, confidentialLabel: string = "CONFIDENTIAL", footerCenterLabel: string = "CDH v2.5 — Pan-African Credit Registry") {
   const pw = doc.page.width;
   const ml = doc.page.margins.left;
   const mr = doc.page.margins.right;
@@ -71,8 +258,8 @@ function addFooter(doc: PDFKit.PDFDocument, pageNum: number, totalPages: number)
     .font("Helvetica")
     .fontSize(7)
     .fillColor(LIGHT_GRAY)
-    .text("CONFIDENTIAL", ml, footerY + 5, { width: cw / 3, align: "left" })
-    .text(`CDH v2.5 — Pan-African Credit Registry`, ml + cw / 3, footerY + 5, { width: cw / 3, align: "center" })
+    .text(confidentialLabel, ml, footerY + 5, { width: cw / 3, align: "left" })
+    .text(footerCenterLabel, ml + cw / 3, footerY + 5, { width: cw / 3, align: "center" })
     .text(`Page ${pageNum} of ${totalPages}`, ml + (cw * 2 / 3), footerY + 5, { width: cw / 3, align: "right" })
     .restore();
 }
@@ -152,7 +339,7 @@ function definitionItem(doc: PDFKit.PDFDocument, term: string, definition: strin
   doc.moveDown(0.15);
 }
 
-export function generateCopyrightPdf(): Promise<Buffer> {
+export function generateCopyrightPdf(lang: string = "en"): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
       size: "A4",
@@ -171,6 +358,8 @@ export function generateCopyrightPdf(): Promise<Buffer> {
     doc.on("data", (chunk: Uint8Array) => chunks.push(chunk));
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
+
+    const CL = (key: string) => getCopyrightLabel(lang, key);
 
     const pw = doc.page.width;
     const ml = doc.page.margins.left;
@@ -206,15 +395,15 @@ export function generateCopyrightPdf(): Promise<Buffer> {
 
     doc.moveDown(1.5);
     doc.font("Helvetica-Bold").fontSize(28).fillColor("#ffffff")
-      .text("SOFTWARE COPYRIGHT", ml, undefined, { width: cw, align: "center" });
+      .text(CL("softwareCopyright"), ml, undefined, { width: cw, align: "center" });
     doc.font("Helvetica-Bold").fontSize(28).fillColor(NORDIC_ACCENT)
-      .text("& INTELLECTUAL PROPERTY", ml, undefined, { width: cw, align: "center" });
+      .text(CL("intellectualProperty"), ml, undefined, { width: cw, align: "center" });
     doc.font("Helvetica-Bold").fontSize(20).fillColor("#ffffff")
-      .text("PROTECTION DOCUMENT", ml, undefined, { width: cw, align: "center" });
+      .text(CL("protectionDocument"), ml, undefined, { width: cw, align: "center" });
 
     doc.moveDown(0.5);
     doc.font("Helvetica").fontSize(10).fillColor("#ffffff").fillOpacity(0.75)
-      .text("Pan-African Credit Data Hub (CDH) v2.5", ml, undefined, { width: cw, align: "center" });
+      .text(CL("platformSubtitle"), ml, undefined, { width: cw, align: "center" });
 
     doc.fillOpacity(1);
 
@@ -229,16 +418,16 @@ export function generateCopyrightPdf(): Promise<Buffer> {
       .restore();
 
     doc.font("Helvetica-Bold").fontSize(9).fillColor(NORDIC_BLUE)
-      .text("DOCUMENT REFERENCE", ml + 50, boxY + 18, { width: cw - 100 });
+      .text(CL("docReference"), ml + 50, boxY + 18, { width: cw - 100 });
     doc.moveDown(0.5);
 
     const infoItems = [
-      ["Document ID:", "CDH-IP-2026-001"],
-      ["Version:", "2.5"],
-      ["Classification:", "CONFIDENTIAL — PROPRIETARY"],
-      ["Date of Issue:", new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })],
-      ["Copyright Holder:", "Carlson Capital & Systems In Motion Limited"],
-      ["Jurisdiction:", "Republic of Ghana & Pan-African Territories"],
+      [CL("docId"), "CDH-IP-2026-001"],
+      [CL("version"), "2.5"],
+      [CL("classification"), CL("classificationValue")],
+      [CL("dateOfIssue"), new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })],
+      [CL("copyrightHolder"), CL("copyrightHolderValue")],
+      [CL("jurisdiction"), CL("jurisdictionValue")],
     ];
 
     for (const [label, value] of infoItems) {
@@ -251,35 +440,35 @@ export function generateCopyrightPdf(): Promise<Buffer> {
 
     doc.y = doc.page.height - 100;
     doc.font("Helvetica").fontSize(7.5).fillColor(LIGHT_GRAY)
-      .text("This document and all its contents are the exclusive intellectual property of Carlson Capital & Systems In Motion Limited.", ml, undefined, { width: cw, align: "center" })
-      .text("Unauthorized reproduction, distribution, or use of this document or the software described herein is strictly prohibited.", ml, undefined, { width: cw, align: "center" });
+      .text(CL("coverDisclaimer1"), ml, undefined, { width: cw, align: "center" })
+      .text(CL("coverDisclaimer2"), ml, undefined, { width: cw, align: "center" });
 
     // ──── PAGE 2: TABLE OF CONTENTS ────
     doc.addPage();
     addHeader(doc);
 
     doc.font("Helvetica-Bold").fontSize(18).fillColor(NORDIC_BLUE)
-      .text("Table of Contents", ml);
+      .text(CL("tableOfContents"), ml);
     doc.moveDown(0.5);
     doc.save().rect(ml, doc.y, 60, 2).fill(NORDIC_ACCENT).restore();
     doc.moveDown(1);
 
     const toc = [
-      ["1", "Preamble & Copyright Declaration"],
-      ["2", "Definitions"],
-      ["3", "Scope of Protected Works"],
-      ["4", "Ownership & Authorship"],
-      ["5", "Jurisdictional Coverage & Applicable Laws"],
-      ["6", "Rights Reserved"],
-      ["7", "Licensing Terms & Conditions"],
-      ["8", "Trade Secret & Confidentiality Provisions"],
-      ["9", "Database Rights & Data Protection"],
-      ["10", "Enforcement & Remedies"],
-      ["11", "International Treaties & Conventions"],
-      ["12", "Term & Survival"],
-      ["13", "Dispute Resolution"],
-      ["14", "Notices & Contact Information"],
-      ["15", "Schedules & Annexures"],
+      ["1", CL("s1")],
+      ["2", CL("s2")],
+      ["3", CL("s3")],
+      ["4", CL("s4")],
+      ["5", CL("s5")],
+      ["6", CL("s6")],
+      ["7", CL("s7")],
+      ["8", CL("s8")],
+      ["9", CL("s9")],
+      ["10", CL("s10")],
+      ["11", CL("s11")],
+      ["12", CL("s12")],
+      ["13", CL("s13")],
+      ["14", CL("s14")],
+      ["15", CL("s15")],
     ];
 
     for (const [num, title] of toc) {
@@ -295,7 +484,7 @@ export function generateCopyrightPdf(): Promise<Buffer> {
     doc.addPage();
     addHeader(doc);
 
-    sectionTitle(doc, "1", "Preamble & Copyright Declaration");
+    sectionTitle(doc, "1", CL("s1"));
 
     bodyText(doc, "This document constitutes a formal declaration and assertion of copyright and intellectual property rights over the Pan-African Credit Data Hub (\"CDH\" or \"the Platform\"), version 2.5, a comprehensive software system developed by Carlson Capital & Systems In Motion Limited (\"the Company\", \"the Owner\", or \"the Copyright Holder\").");
 
@@ -321,7 +510,7 @@ export function generateCopyrightPdf(): Promise<Buffer> {
     doc.y = noticeY + 88;
 
     // ──── SECTION 2: DEFINITIONS ────
-    sectionTitle(doc, "2", "Definitions");
+    sectionTitle(doc, "2", CL("s2"));
 
     bodyText(doc, "For the purposes of this document, the following terms shall have the meanings ascribed below:");
     doc.moveDown(0.2);
@@ -338,7 +527,7 @@ export function generateCopyrightPdf(): Promise<Buffer> {
     definitionItem(doc, "Confidential Information", "All non-public information about the Platform's architecture, algorithms, business logic, security mechanisms, and operational data.");
 
     // ──── SECTION 3: SCOPE ────
-    sectionTitle(doc, "3", "Scope of Protected Works");
+    sectionTitle(doc, "3", CL("s3"));
 
     bodyText(doc, "The copyright protection asserted herein covers, without limitation, the following components of the Platform:");
 
@@ -380,7 +569,7 @@ export function generateCopyrightPdf(): Promise<Buffer> {
     bulletPoint(doc, "User training materials and application guides");
 
     // ──── SECTION 4: OWNERSHIP ────
-    sectionTitle(doc, "4", "Ownership & Authorship");
+    sectionTitle(doc, "4", CL("s4"));
 
     bodyText(doc, "4.1  The Platform, in its entirety and in all its individual components, is the sole and exclusive intellectual property of Carlson Capital & Systems In Motion Limited, a company duly incorporated and registered in the Republic of Ghana.");
 
@@ -393,7 +582,7 @@ export function generateCopyrightPdf(): Promise<Buffer> {
     bodyText(doc, "4.5  Contributions, customizations, or configurations made by or for Licensees shall not create any ownership interest in the underlying Platform or its source code.");
 
     // ──── SECTION 5: JURISDICTIONAL COVERAGE ────
-    sectionTitle(doc, "5", "Jurisdictional Coverage & Applicable Laws");
+    sectionTitle(doc, "5", CL("s5"));
 
     bodyText(doc, "The copyright protection asserted herein is claimed under the laws of the following jurisdictions and international frameworks:");
 
@@ -421,7 +610,7 @@ export function generateCopyrightPdf(): Promise<Buffer> {
     bulletPoint(doc, "African Union — African Charter on Human and Peoples' Rights (Article 14, protection of property)");
 
     // ──── SECTION 6: RIGHTS RESERVED ────
-    sectionTitle(doc, "6", "Rights Reserved");
+    sectionTitle(doc, "6", CL("s6"));
 
     bodyText(doc, "The Company expressly reserves all rights not specifically granted in any license agreement, including but not limited to:");
 
@@ -434,7 +623,7 @@ export function generateCopyrightPdf(): Promise<Buffer> {
     numberedItem(doc, "(g)", "The right to control the means, methods, and formats of deployment and distribution.");
 
     // ──── SECTION 7: LICENSING ────
-    sectionTitle(doc, "7", "Licensing Terms & Conditions");
+    sectionTitle(doc, "7", CL("s7"));
 
     subSection(doc, "7.1", "General Licensing Principles");
     bodyText(doc, "Access to and use of the Platform is granted exclusively through written license agreements executed between the Company and each Licensee. No license is implied by possession, access, demonstration, or evaluation of the Platform.");
@@ -456,7 +645,7 @@ export function generateCopyrightPdf(): Promise<Buffer> {
     numberedItem(doc, "(vii)", "Disclose any Confidential Information about the Platform's architecture, algorithms, or security mechanisms.");
 
     // ──── SECTION 8: TRADE SECRETS ────
-    sectionTitle(doc, "8", "Trade Secret & Confidentiality Provisions");
+    sectionTitle(doc, "8", CL("s8"));
 
     bodyText(doc, "8.1  The Company asserts trade secret protection over the following aspects of the Platform, which derive independent economic value from not being generally known:");
 
@@ -472,7 +661,7 @@ export function generateCopyrightPdf(): Promise<Buffer> {
     bodyText(doc, "8.3  The Company maintains reasonable measures to protect the secrecy of its trade secrets, including but not limited to: role-based access controls, code repository access restrictions, encrypted communications, employment agreements with confidentiality clauses, and physical and logical security measures at all development and deployment facilities.");
 
     // ──── SECTION 9: DATABASE RIGHTS ────
-    sectionTitle(doc, "9", "Database Rights & Data Protection");
+    sectionTitle(doc, "9", CL("s9"));
 
     bodyText(doc, "9.1  The structural design, schema architecture, and organization of all databases within the Platform constitute original compilations protected by copyright. The selection, arrangement, and coordination of data fields, relationships, and indexes reflect substantial creative judgment.");
 
@@ -487,7 +676,7 @@ export function generateCopyrightPdf(): Promise<Buffer> {
     bulletPoint(doc, "African Union Convention on Cyber Security and Personal Data Protection (Malabo Convention)");
 
     // ──── SECTION 10: ENFORCEMENT ────
-    sectionTitle(doc, "10", "Enforcement & Remedies");
+    sectionTitle(doc, "10", CL("s10"));
 
     bodyText(doc, "10.1  The Company shall vigorously enforce its intellectual property rights against any unauthorized use, reproduction, distribution, or exploitation of the Platform. Available remedies include, but are not limited to:");
 
@@ -502,7 +691,7 @@ export function generateCopyrightPdf(): Promise<Buffer> {
     bodyText(doc, "10.2  The Company maintains the right to conduct audits of Licensees' use of the Platform to verify compliance with license terms, upon reasonable notice.");
 
     // ──── SECTION 11: INTERNATIONAL TREATIES ────
-    sectionTitle(doc, "11", "International Treaties & Conventions");
+    sectionTitle(doc, "11", CL("s11"));
 
     bodyText(doc, "The Company claims protection under the following international copyright treaties and conventions, to the extent that each is applicable in the relevant jurisdiction:");
 
@@ -513,7 +702,7 @@ export function generateCopyrightPdf(): Promise<Buffer> {
     bulletPoint(doc, "WIPO Performances and Phonograms Treaty (WPPT) — Protection for digital content and performances embedded in the Platform.");
 
     // ──── SECTION 12: TERM ────
-    sectionTitle(doc, "12", "Term & Survival");
+    sectionTitle(doc, "12", CL("s12"));
 
     bodyText(doc, "12.1  Copyright protection in the Platform subsists for the duration provided by the copyright laws of each applicable jurisdiction. Under Ghana's Copyright Act, 2005, copyright in a work made by a body corporate endures for seventy (70) years from the date of first publication.");
 
@@ -524,7 +713,7 @@ export function generateCopyrightPdf(): Promise<Buffer> {
     bodyText(doc, "12.4  The first publication date of the Platform is established as January 2024, with continuous development and enhancement through the current version (v2.5, 2026).");
 
     // ──── SECTION 13: DISPUTE RESOLUTION ────
-    sectionTitle(doc, "13", "Dispute Resolution");
+    sectionTitle(doc, "13", CL("s13"));
 
     bodyText(doc, "13.1  Any dispute arising out of or in connection with the intellectual property rights asserted in this document shall be resolved in accordance with the following procedure:");
 
@@ -536,7 +725,7 @@ export function generateCopyrightPdf(): Promise<Buffer> {
     bodyText(doc, "13.2  The governing law for this document and all related disputes shall be the laws of the Republic of Ghana, without regard to conflict of law principles.");
 
     // ──── SECTION 14: NOTICES ────
-    sectionTitle(doc, "14", "Notices & Contact Information");
+    sectionTitle(doc, "14", CL("s14"));
 
     bodyText(doc, "All notices, requests, and communications relating to the intellectual property rights described herein shall be directed to:");
 
@@ -560,7 +749,7 @@ export function generateCopyrightPdf(): Promise<Buffer> {
     doc.y = contactY + 115;
 
     // ──── SECTION 15: SCHEDULES ────
-    sectionTitle(doc, "15", "Schedules & Annexures");
+    sectionTitle(doc, "15", CL("s15"));
 
     subSection(doc, "15.1", "Schedule A — Protected Software Modules");
     const modules = [
@@ -692,7 +881,7 @@ export function generateCopyrightPdf(): Promise<Buffer> {
       doc.switchToPage(i);
       drawPageBorder(doc);
       if (i > 0) {
-        addFooter(doc, i, pages.count - 1);
+        addFooter(doc, i, pages.count - 1, CL("confidentialFooter"), CL("footerCenter"));
       }
     }
 

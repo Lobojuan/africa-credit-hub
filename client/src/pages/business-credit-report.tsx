@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { apiRequest } from "@/lib/queryClient";
 import { formatCurrency } from "@/lib/currency";
 import { getDefaultFallbackCurrency } from "@/lib/country-mode";
@@ -209,6 +210,7 @@ function ScoreCard({ title, score, interpretation, description }: {
 export default function BusinessCreditReportPage() {
   const [, params] = useRoute("/business-credit-report/:borrowerId");
   const [, navigate] = useLocation();
+  const { i18n } = useTranslation();
   const borrowerId = params?.borrowerId;
   const [purpose, setPurpose] = useState("new_credit");
   const printRef = useRef<HTMLDivElement>(null);
@@ -232,8 +234,10 @@ export default function BusinessCreditReportPage() {
     if (!report) return;
     setIsDownloading(true);
     try {
+      const currentLang = i18n.language?.startsWith("fr") ? "fr" : i18n.language?.startsWith("ar") ? "ar" : i18n.language?.startsWith("sw") ? "sw" : i18n.language?.startsWith("pt") ? "pt" : "en";
       const res = await apiRequest("POST", "/api/credit-reports/download-pdf", {
         reportData: report,
+        lang: currentLang,
       });
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);

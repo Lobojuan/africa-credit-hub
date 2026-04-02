@@ -132,7 +132,7 @@ function BorrowerSearchSelect({ onSelect }: { onSelect: (b: Borrower) => void })
 }
 
 export default function ReportsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const brandColors = useBrandColors();
   const [, navigate] = useLocation();
   const [selectedBorrower, setSelectedBorrower] = useState<Borrower | null>(null);
@@ -184,7 +184,8 @@ export default function ReportsPage() {
         reportCurrency,
       });
       const reportData = await genRes.json();
-      const pdfRes = await apiRequest("POST", "/api/credit-reports/download-pdf", { reportData });
+      const currentLang = i18n.language?.startsWith("fr") ? "fr" : i18n.language?.startsWith("ar") ? "ar" : i18n.language?.startsWith("sw") ? "sw" : i18n.language?.startsWith("pt") ? "pt" : "en";
+      const pdfRes = await apiRequest("POST", "/api/credit-reports/download-pdf", { reportData, lang: currentLang });
       const blob = await pdfRes.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
