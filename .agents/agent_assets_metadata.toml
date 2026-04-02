@@ -48,3 +48,9 @@ id = "RXIylR6CelK-xVGfcm9Va"
 uri = "file://pan-african-credit-registry.tar.gz"
 type = "unspecified"
 title = "Pan-African Credit Registry - Complete Codebase"
+
+[[outputs]]
+id = "cYvkjPXfz6i18m_WdE7TB"
+uri = "file://pan-african-credit-registry.zip"
+type = "unspecified"
+title = "Pan-African Credit Registry - Complete Codebase (.zip)"
