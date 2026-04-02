@@ -7,7 +7,7 @@ import {
   Users, CreditCard, Search, AlertTriangle, DollarSign, ShieldAlert,
   CheckSquare, AlertCircle, TrendingUp, Activity, X, ExternalLink,
   Building2, MapPin, UserCheck, BarChart3, Banknote, Clock, Gavel,
-  Sun, Moon, Sunrise, Sunset, ChevronDown
+  Sun, Moon, Sunrise, Sunset, ChevronDown, Globe
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -21,7 +21,8 @@ import { DashboardCharts } from "@/components/dashboard-charts";
 import { AfricaMap } from "@/components/africa-map";
 import { DashboardKPISection, FullROICard } from "@/components/platform-kpi-banner";
 import { formatCurrency, detectLocalCurrency, SUPPORTED_CURRENCIES, getModeCurrencies } from "@/lib/currency";
-import { isGhanaMode, getDefaultCurrency, CREDIT_SCORE_FACTORS } from "@/lib/country-mode";
+import { isGhanaMode, getDefaultCurrency, CREDIT_SCORE_FACTORS, getCountryConfigByName } from "@/lib/country-mode";
+import { useCountryTheme } from "@/components/country-theme-provider";
 import { ReferenceRateBadge, CurrencyReference } from "@/components/currency-reference";
 import type { CreditAccount, AuditLog, ExchangeRate } from "@shared/schema";
 
@@ -538,7 +539,14 @@ export default function Dashboard() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const brandColors = useBrandColors();
+  const { activeCountry, activeConfig, isGlobalView } = useCountryTheme();
   const greeting = useMemo(() => getGreeting(), []);
+
+  const countryFlag = (code: string) => {
+    if (!code || code.length !== 2) return "🌍";
+    const codePoints = [...code.toUpperCase()].map(c => 0x1F1E6 + c.charCodeAt(0) - 65);
+    return String.fromCodePoint(...codePoints);
+  };
   const [selectedDetail, setSelectedDetail] = useState<DetailType>(null);
   const [detectedCurrency] = useState(() => detectLocalCurrency());
   const [displayCurrency, setDisplayCurrency] = useState(() => {
@@ -689,6 +697,38 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Big country indicator */}
+      <div className={`flex items-center gap-4 px-5 py-4 rounded-xl border ${
+        isGlobalView
+          ? "bg-muted/40 border-border"
+          : "bg-primary/5 border-primary/20 dark:bg-primary/10 dark:border-primary/30"
+      }`} data-testid="banner-dashboard-country">
+        {isGlobalView ? (
+          <>
+            <div className="w-14 h-14 rounded-xl bg-muted flex items-center justify-center shrink-0">
+              <Globe className="w-7 h-7 text-muted-foreground" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xl font-bold text-foreground tracking-tight" data-testid="text-dashboard-country">All Countries</p>
+              <p className="text-sm text-muted-foreground">Pan-African View — Aggregated data across all jurisdictions</p>
+            </div>
+          </>
+        ) : activeConfig ? (
+          <>
+            <span className="text-5xl shrink-0 leading-none" role="img" aria-label={activeConfig.name}>
+              {countryFlag(activeConfig.code)}
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-xl font-bold text-foreground tracking-tight" data-testid="text-dashboard-country">{activeConfig.name}</p>
+              <p className="text-sm text-muted-foreground">{activeConfig.regulatoryBody} · {activeConfig.currency} ({activeConfig.currencySymbol})</p>
+            </div>
+            <Badge variant="outline" className="shrink-0 text-sm font-bold border-primary/30 text-primary px-3 py-1">
+              {activeConfig.code}
+            </Badge>
+          </>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
