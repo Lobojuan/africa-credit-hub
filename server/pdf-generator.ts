@@ -1,8 +1,8 @@
 import PDFDocument from "pdfkit";
 import type { PassThrough } from "stream";
 
-const TEAL = "#0d4a42";
-const GOLD = "#d4a843";
+const NORDIC_BLUE = "#0466C8";
+const NORDIC_ACCENT = "#3B82F6";
 const DARK = "#1a1a1a";
 const GRAY = "#555555";
 const LIGHT_GRAY = "#888888";
@@ -112,9 +112,9 @@ export function generatePdfFromMarkdown(markdownContent: string, title: string, 
   const barWidth = 80;
   for (let i = 0; i < gradientSteps; i++) {
     const ratio = i / gradientSteps;
-    const r = Math.round(13 + (212 - 13) * ratio);
-    const g = Math.round(74 + (168 - 74) * ratio);
-    const b = Math.round(66 + (67 - 66) * ratio);
+    const r = Math.round(4 + (59 - 4) * ratio);
+    const g = Math.round(102 + (130 - 102) * ratio);
+    const b = Math.round(200 + (246 - 200) * ratio);
     const segWidth = barWidth / gradientSteps;
     doc.rect(doc.page.margins.left + i * segWidth, doc.y, segWidth, barHeight)
       .fill(`rgb(${r},${g},${b})`);
@@ -122,7 +122,7 @@ export function generatePdfFromMarkdown(markdownContent: string, title: string, 
   doc.restore();
   doc.y += barHeight + 12;
 
-  doc.font("Helvetica-Bold").fontSize(20).fillColor(TEAL).text(title);
+  doc.font("Helvetica-Bold").fontSize(20).fillColor(NORDIC_BLUE).text(title);
   doc.moveDown(0.3);
   doc.font("Helvetica").fontSize(9).fillColor(LIGHT_GRAY)
     .text("Carlson Capital & Systems In Motion Limited™ — Cross-Jurisdictional Central Data Hub & Credit Registry System v1.1");
@@ -160,7 +160,7 @@ export function generatePdfFromMarkdown(markdownContent: string, title: string, 
           doc.moveDown(0.5);
         }
 
-        doc.font("Helvetica-Bold").fontSize(fontSize).fillColor(depth <= 2 ? TEAL : DARK).text(text);
+        doc.font("Helvetica-Bold").fontSize(fontSize).fillColor(depth <= 2 ? NORDIC_BLUE : DARK).text(text);
 
         if (depth === 2) {
           doc.moveDown(0.15);
@@ -288,7 +288,7 @@ export function generatePdfFromMarkdown(markdownContent: string, title: string, 
       const savedY = doc.y;
       doc.font("Helvetica-Oblique").fontSize(9).fillColor(GRAY)
         .text(text, qx + 12, undefined, { width: pageWidth - 20 });
-      doc.moveTo(qx, savedY).lineTo(qx, doc.y).strokeColor(TEAL).lineWidth(2).stroke();
+      doc.moveTo(qx, savedY).lineTo(qx, doc.y).strokeColor(NORDIC_BLUE).lineWidth(2).stroke();
       doc.moveDown(0.3);
       i++;
       continue;
@@ -321,7 +321,7 @@ export function generatePdfFromMarkdown(markdownContent: string, title: string, 
   ensureSpace(doc, 50);
   doc.moveTo(doc.page.margins.left, doc.y)
     .lineTo(doc.page.margins.left + pageWidth, doc.y)
-    .strokeColor(TEAL)
+    .strokeColor(NORDIC_BLUE)
     .lineWidth(1)
     .stroke();
   doc.moveDown(0.5);

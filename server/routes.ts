@@ -5557,14 +5557,14 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const chunks: Buffer[] = [];
       doc.on("data", (chunk: Buffer) => chunks.push(chunk));
 
-      const TEAL = "#0d4a42";
+      const NORDIC_BLUE = "#0466C8";
       const DARK = "#1a1a1a";
       const GRAY = "#555555";
       const LIGHT = "#888888";
       const W = doc.page.width - 80;
 
       function drawHeader() {
-        doc.rect(40, 40, W, 60).fill(TEAL);
+        doc.rect(40, 40, W, 60).fill(NORDIC_BLUE);
         doc.fill("#ffffff").fontSize(14).font("Helvetica-Bold")
           .text("Comprehensive Credit Information Report", 50, 52, { width: W - 140 });
         doc.fontSize(8).font("Helvetica").fill("#cccccc")
@@ -5582,12 +5582,12 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         doc.moveDown(0.5);
         const y = doc.y;
         if (num !== undefined) {
-          doc.fill(TEAL).fontSize(8).font("Helvetica-Bold")
+          doc.fill(NORDIC_BLUE).fontSize(8).font("Helvetica-Bold")
             .text(`${num}`, 40, y, { width: 15 });
-          doc.fill(TEAL).fontSize(10).font("Helvetica-Bold")
+          doc.fill(NORDIC_BLUE).fontSize(10).font("Helvetica-Bold")
             .text(title, 58, y);
         } else {
-          doc.fill(TEAL).fontSize(10).font("Helvetica-Bold")
+          doc.fill(NORDIC_BLUE).fontSize(10).font("Helvetica-Bold")
             .text(title, 40, y);
         }
         doc.moveDown(0.3);
@@ -5781,7 +5781,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
           ensureSpace(100);
           const cur = acct.currency || "ETB";
           doc.moveDown(0.3);
-          doc.fontSize(8).font("Helvetica-Bold").fill(TEAL)
+          doc.fontSize(8).font("Helvetica-Bold").fill(NORDIC_BLUE)
             .text(`Facility ${idx + 1} of ${accounts.length} — ${acct.status?.toUpperCase()} (${cur})`, 40, doc.y);
           doc.moveDown(0.3);
 
@@ -7907,13 +7907,13 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const chunks: Buffer[] = [];
       doc.on("data", (chunk: Buffer) => chunks.push(chunk));
 
-      const TEAL = "#0d4a42";
+      const NORDIC_BLUE = "#0466C8";
       const DARK = "#1a1a1a";
       const GRAY = "#666666";
       const LIGHT_BG = "#f8f9fa";
       const W = doc.page.width - 100;
 
-      doc.rect(50, 50, W, 70).fill(TEAL);
+      doc.rect(50, 50, W, 70).fill(NORDIC_BLUE);
       doc.fill("#ffffff").fontSize(20).font("Helvetica-Bold")
         .text("INVOICE", 65, 65, { width: W - 30 });
       doc.fontSize(9).font("Helvetica").fill("#cccccc")
@@ -7927,7 +7927,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       doc.y = 140;
 
       doc.rect(50, doc.y, W / 2 - 10, 100).fill(LIGHT_BG);
-      doc.fill(TEAL).fontSize(9).font("Helvetica-Bold").text("FROM", 65, doc.y - 100 + 12);
+      doc.fill(NORDIC_BLUE).fontSize(9).font("Helvetica-Bold").text("FROM", 65, doc.y - 100 + 12);
       doc.fill(DARK).fontSize(10).font("Helvetica-Bold").text("Carlson Capital & Systems In Motion Limited", 65, doc.y - 100 + 28);
       doc.fill(GRAY).fontSize(8).font("Helvetica")
         .text("CDH Credit Registry Platform", 65, doc.y - 100 + 42)
@@ -7936,7 +7936,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
       const rightX = 50 + W / 2 + 10;
       doc.rect(rightX, doc.y - 100, W / 2 - 10, 100).fill(LIGHT_BG);
-      doc.fill(TEAL).fontSize(9).font("Helvetica-Bold").text("BILL TO", rightX + 15, doc.y - 100 + 12);
+      doc.fill(NORDIC_BLUE).fontSize(9).font("Helvetica-Bold").text("BILL TO", rightX + 15, doc.y - 100 + 12);
       doc.fill(DARK).fontSize(10).font("Helvetica-Bold").text(org.name, rightX + 15, doc.y - 100 + 28, { width: W / 2 - 40 });
       doc.fill(GRAY).fontSize(8).font("Helvetica")
         .text(org.country || "", rightX + 15, doc.y - 100 + 42)
