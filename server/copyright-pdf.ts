@@ -1,7 +1,9 @@
 import PDFDocument from "pdfkit";
 
-const TEAL = "#0d4a42";
-const GOLD = "#c9952b";
+const NORDIC_BLUE = "#0466C8";
+const NORDIC_NAVY = "#1E3A5F";
+const NORDIC_ACCENT = "#3B82F6";
+const NORDIC_LIGHT_BG = "#EFF6FF";
 const DARK = "#1a1a2e";
 const GRAY = "#4a4a5a";
 const LIGHT_GRAY = "#7a7a8a";
@@ -19,14 +21,14 @@ function drawPageBorder(doc: PDFKit.PDFDocument) {
   const m = 25;
   doc.save()
     .lineWidth(0.5)
-    .strokeColor(TEAL)
+    .strokeColor(NORDIC_BLUE)
     .rect(m, m, doc.page.width - m * 2, doc.page.height - m * 2)
     .stroke()
     .restore();
 
   doc.save()
     .lineWidth(0.3)
-    .strokeColor(GOLD)
+    .strokeColor(NORDIC_ACCENT)
     .rect(m + 3, m + 3, doc.page.width - (m + 3) * 2, doc.page.height - (m + 3) * 2)
     .stroke()
     .restore();
@@ -40,14 +42,14 @@ function addHeader(doc: PDFKit.PDFDocument) {
 
   doc.save()
     .rect(ml, doc.y, cw, 3)
-    .fill(TEAL)
+    .fill(NORDIC_BLUE)
     .restore();
 
   doc.y += 5;
 
   doc.save()
     .rect(ml, doc.y, cw, 1)
-    .fill(GOLD)
+    .fill(NORDIC_ACCENT)
     .restore();
 
   doc.y += 15;
@@ -84,10 +86,10 @@ function sectionTitle(doc: PDFKit.PDFDocument, num: string, title: string) {
 
   doc.save()
     .rect(ml, doc.y, 4, 18)
-    .fill(GOLD)
+    .fill(NORDIC_ACCENT)
     .restore();
 
-  doc.font("Helvetica-Bold").fontSize(13).fillColor(TEAL)
+  doc.font("Helvetica-Bold").fontSize(13).fillColor(NORDIC_BLUE)
     .text(`${num}. ${title}`, ml + 12, doc.y + 2, { width: cw - 12 });
 
   doc.moveDown(0.3);
@@ -121,7 +123,7 @@ function bulletPoint(doc: PDFKit.PDFDocument, text: string, indent = 16) {
   ensureSpace(doc, 18);
   const ml = doc.page.margins.left + indent;
   const cw = doc.page.width - ml - doc.page.margins.right - 12;
-  doc.font("Helvetica").fontSize(9.5).fillColor(GOLD)
+  doc.font("Helvetica").fontSize(9.5).fillColor(NORDIC_ACCENT)
     .text("●", ml, undefined, { continued: true });
   doc.fillColor(GRAY)
     .text(`  ${text}`, { width: cw, lineGap: 2.5 });
@@ -132,7 +134,7 @@ function numberedItem(doc: PDFKit.PDFDocument, num: string, text: string, indent
   ensureSpace(doc, 18);
   const ml = doc.page.margins.left + indent;
   const cw = doc.page.width - ml - doc.page.margins.right - 12;
-  doc.font("Helvetica-Bold").fontSize(9.5).fillColor(TEAL)
+  doc.font("Helvetica-Bold").fontSize(9.5).fillColor(NORDIC_BLUE)
     .text(`${num}`, ml, undefined, { continued: true });
   doc.font("Helvetica").fillColor(GRAY)
     .text(`  ${text}`, { width: cw, lineGap: 2.5 });
@@ -183,18 +185,18 @@ export function generateCopyrightPdf(): Promise<Buffer> {
 
     doc.save()
       .rect(0, 0, pw, 280)
-      .fill(TEAL)
+      .fill(NORDIC_BLUE)
       .restore();
 
     doc.save()
       .rect(0, 275, pw, 6)
-      .fill(GOLD)
+      .fill(NORDIC_ACCENT)
       .restore();
 
     doc.save()
       .rect(ml - 10, 295, cw + 20, 0.5)
       .fillOpacity(0.15)
-      .fill(TEAL)
+      .fill(NORDIC_BLUE)
       .restore();
 
     doc.font("Helvetica-Bold").fontSize(11).fillColor("#ffffff").fillOpacity(0.6)
@@ -205,7 +207,7 @@ export function generateCopyrightPdf(): Promise<Buffer> {
     doc.moveDown(1.5);
     doc.font("Helvetica-Bold").fontSize(28).fillColor("#ffffff")
       .text("SOFTWARE COPYRIGHT", ml, undefined, { width: cw, align: "center" });
-    doc.font("Helvetica-Bold").fontSize(28).fillColor(GOLD)
+    doc.font("Helvetica-Bold").fontSize(28).fillColor(NORDIC_ACCENT)
       .text("& INTELLECTUAL PROPERTY", ml, undefined, { width: cw, align: "center" });
     doc.font("Helvetica-Bold").fontSize(20).fillColor("#ffffff")
       .text("PROTECTION DOCUMENT", ml, undefined, { width: cw, align: "center" });
@@ -226,7 +228,7 @@ export function generateCopyrightPdf(): Promise<Buffer> {
       .fillAndStroke("#ffffff", RULE_COLOR)
       .restore();
 
-    doc.font("Helvetica-Bold").fontSize(9).fillColor(TEAL)
+    doc.font("Helvetica-Bold").fontSize(9).fillColor(NORDIC_BLUE)
       .text("DOCUMENT REFERENCE", ml + 50, boxY + 18, { width: cw - 100 });
     doc.moveDown(0.5);
 
@@ -256,10 +258,10 @@ export function generateCopyrightPdf(): Promise<Buffer> {
     doc.addPage();
     addHeader(doc);
 
-    doc.font("Helvetica-Bold").fontSize(18).fillColor(TEAL)
+    doc.font("Helvetica-Bold").fontSize(18).fillColor(NORDIC_BLUE)
       .text("Table of Contents", ml);
     doc.moveDown(0.5);
-    doc.save().rect(ml, doc.y, 60, 2).fill(GOLD).restore();
+    doc.save().rect(ml, doc.y, 60, 2).fill(NORDIC_ACCENT).restore();
     doc.moveDown(1);
 
     const toc = [
@@ -281,11 +283,12 @@ export function generateCopyrightPdf(): Promise<Buffer> {
     ];
 
     for (const [num, title] of toc) {
-      doc.font("Helvetica-Bold").fontSize(10).fillColor(TEAL)
-        .text(num, ml + 10, undefined, { continued: true, width: 25 });
-      doc.font("Helvetica").fillColor(GRAY)
-        .text(title, { width: cw - 80 });
-      doc.moveDown(0.15);
+      const tocY = doc.y;
+      doc.font("Helvetica-Bold").fontSize(10).fillColor(NORDIC_BLUE)
+        .text(num, ml + 10, tocY, { width: 20 });
+      doc.font("Helvetica").fontSize(10).fillColor(GRAY)
+        .text(title, ml + 35, tocY, { width: cw - 50 });
+      doc.moveDown(0.3);
     }
 
     // ──── SECTION 1: PREAMBLE ────
@@ -304,11 +307,11 @@ export function generateCopyrightPdf(): Promise<Buffer> {
 
     doc.save()
       .roundedRect(ml + 10, doc.y, cw - 20, 80, 4)
-      .fill("#f0f7f5")
+      .fill(NORDIC_LIGHT_BG)
       .restore();
 
     const noticeY = doc.y;
-    doc.font("Helvetica-Bold").fontSize(10).fillColor(TEAL)
+    doc.font("Helvetica-Bold").fontSize(10).fillColor(NORDIC_BLUE)
       .text("COPYRIGHT NOTICE", ml + 25, noticeY + 12, { width: cw - 50 });
     doc.font("Helvetica-Bold").fontSize(9.5).fillColor(DARK)
       .text("© 2024–2026 Carlson Capital & Systems In Motion Limited. All Rights Reserved.", ml + 25, undefined, { width: cw - 50 });
@@ -545,7 +548,7 @@ export function generateCopyrightPdf(): Promise<Buffer> {
       .restore();
 
     const contactY = doc.y;
-    doc.font("Helvetica-Bold").fontSize(10).fillColor(TEAL)
+    doc.font("Helvetica-Bold").fontSize(10).fillColor(NORDIC_BLUE)
       .text("Carlson Capital & Systems In Motion Limited", ml + 35, contactY + 12, { width: cw - 70 });
     doc.font("Helvetica").fontSize(9).fillColor(GRAY)
       .text("Intellectual Property Department", ml + 35, undefined, { width: cw - 70 })
@@ -609,10 +612,10 @@ export function generateCopyrightPdf(): Promise<Buffer> {
     addHeader(doc);
 
     doc.moveDown(2);
-    doc.font("Helvetica-Bold").fontSize(16).fillColor(TEAL)
+    doc.font("Helvetica-Bold").fontSize(16).fillColor(NORDIC_BLUE)
       .text("Execution & Authentication", ml, undefined, { width: cw, align: "center" });
     doc.moveDown(0.3);
-    doc.save().rect(ml + (cw / 2) - 30, doc.y, 60, 2).fill(GOLD).restore();
+    doc.save().rect(ml + (cw / 2) - 30, doc.y, 60, 2).fill(NORDIC_ACCENT).restore();
     doc.moveDown(2);
 
     bodyText(doc, "This Software Copyright and Intellectual Property Protection Document has been duly authorized, executed, and issued by the undersigned authorized representative(s) of Carlson Capital & Systems In Motion Limited.");
@@ -678,7 +681,7 @@ export function generateCopyrightPdf(): Promise<Buffer> {
       .restore();
 
     const sealY = doc.y;
-    doc.font("Helvetica-Bold").fontSize(8).fillColor(TEAL)
+    doc.font("Helvetica-Bold").fontSize(8).fillColor(NORDIC_BLUE)
       .text("CORPORATE SEAL / STAMP", ml + 30, sealY + 8, { width: cw - 60 });
     doc.font("Helvetica").fontSize(7.5).fillColor(LIGHT_GRAY)
       .text("Affix company seal or official stamp here", ml + 30, undefined, { width: cw - 60 });
