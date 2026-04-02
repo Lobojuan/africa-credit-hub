@@ -100,6 +100,7 @@ const CrossBorderSearchPage = lazy(() => import("@/pages/cross-border-search"));
 const PapssSettlementsPage = lazy(() => import("@/pages/papss-settlements"));
 const ConsumerPortalPage = lazy(() => import("@/pages/consumer-portal"));
 const SystemStatusPage = lazy(() => import("@/pages/system-status"));
+const BackupPage = lazy(() => import("@/pages/backup"));
 const PlatformMetricsPage = lazy(() => import("@/pages/platform-metrics"));
 const WebhookManagementPage = lazy(() => import("@/pages/webhook-management"));
 const PricingPage = lazy(() => import("@/pages/pricing"));
@@ -200,6 +201,7 @@ function Router() {
         <Route path="/cross-border-search" component={CrossBorderSearchPage} />
         <Route path="/papss-settlements" component={PapssSettlementsPage} />
         <Route path="/system-status" component={SystemStatusPage} />
+        <Route path="/backup" component={BackupPage} />
         <Route path="/platform-metrics" component={PlatformMetricsPage} />
         <Route path="/webhook-management" component={WebhookManagementPage} />
         <Route path="/upgrade">

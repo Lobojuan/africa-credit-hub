@@ -45,6 +45,7 @@ import {
   User,
   Smartphone,
   Banknote,
+  HardDrive,
 } from "lucide-react";
 import {
   Sidebar,
@@ -145,6 +146,7 @@ const adminItems: NavItem[] = [
   { label: "API Admin", url: "/api-admin", icon: Plug, testId: "nav-api-admin", roles: ["admin", "super_admin"] },
   { label: "API Keys", url: "/api-keys", icon: Key, testId: "nav-api-keys", roles: ["admin", "super_admin"] },
   { label: "System Status", url: "/system-status", icon: Activity, testId: "nav-system-status", roles: ["admin", "super_admin"] },
+  { label: "Backup & Recovery", url: "/backup", icon: HardDrive, testId: "nav-backup", roles: ["super_admin"] },
   { label: "Webhooks", url: "/webhook-management", icon: Webhook, testId: "nav-webhook-management", roles: ["admin", "super_admin"] },
 ];
 
