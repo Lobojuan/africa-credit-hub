@@ -1,12 +1,20 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 
 export default function PricingPage() {
   return (
     <div className="py-20 bg-background min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        <div className="mb-6">
+          <Button asChild variant="ghost" size="sm" data-testid="link-back-home">
+            <Link href="/">
+              <ArrowLeft className="w-4 h-4 mr-1" /> Back to Home
+            </Link>
+          </Button>
+        </div>
 
         <div className="text-center max-w-3xl mx-auto mb-16">
           <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl" data-testid="text-pricing-title">
