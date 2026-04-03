@@ -3597,7 +3597,7 @@ export async function registerRoutes(
   function getGoogleRedirectUri(req: Request) {
     if (process.env.CANONICAL_URL) return `${process.env.CANONICAL_URL}/api/consumer/auth/google/callback`;
     const host = req.get('host');
-    if (host && !host.includes('africacredithub.com')) {
+    if (host) {
       const protocol = req.get('x-forwarded-proto') || req.protocol || 'https';
       return `${protocol}://${host}/api/consumer/auth/google/callback`;
     }
