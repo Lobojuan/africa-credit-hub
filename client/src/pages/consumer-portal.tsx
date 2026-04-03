@@ -57,7 +57,8 @@ export default function ConsumerPortalPage() {
     if (sessionQuery.data?.authenticated) {
       setView("dashboard");
     } else if (view === "loading") {
-      setView("login");
+      const isRegisterPath = window.location.pathname === "/consumer/register";
+      setView(isRegisterPath ? "register" : "login");
     }
   }, [sessionQuery.data, sessionQuery.isLoading]);
 

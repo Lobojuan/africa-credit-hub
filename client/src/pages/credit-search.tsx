@@ -201,7 +201,6 @@ export default function CreditSearchPage() {
 
   const handleTelcoSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!telcoForm.msisdn && !telcoForm.provider && !telcoForm.accountStatus) return;
     setActiveTelcoParams({ ...telcoForm });
     setTelcoSubmitted(true);
   };
@@ -216,7 +215,7 @@ export default function CreditSearchPage() {
 
   const consumerFormValid = (consumerForm.ghanaCardNumber || consumerForm.firstName || consumerForm.lastName) && consumerForm.reasonForRequest;
   const businessFormValid = (businessForm.registrationNumber || businessForm.tinNumber || businessForm.companyName) && businessForm.purpose;
-  const telcoFormValid = telcoForm.msisdn || telcoForm.provider || telcoForm.accountStatus;
+  const telcoFormValid = true;
 
   return (
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-[1000px] mx-auto animate-page-enter">

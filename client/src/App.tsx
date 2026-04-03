@@ -196,6 +196,7 @@ function Router() {
         <Route path="/ai-command-center" component={AICommandCenterPage} />
         <Route path="/command-center" component={CommandCenterPage} />
         <Route path="/command-center/:rest*" component={CommandCenterPage} />
+        <Route path="/command-center-settings" component={CommandCenterPage} />
         <Route path="/credit-score-methodology" component={CreditScoreMethodologyPage} />
         <Route path="/regulatory-dashboard" component={RegulatoryDashboardPage} />
         <Route path="/borrower-alerts" component={BorrowerAlertsPage} />
@@ -323,7 +324,7 @@ function AuthenticatedApp() {
     );
   }
 
-  const publicPaths = ["/", "/investor", "/solutions", "/ai-demo", "/pricing", "/security", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/score-guide", "/my-credit"];
+  const publicPaths = ["/", "/investor", "/solutions", "/ai-demo", "/pricing", "/security", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/score-guide", "/my-credit", "/api-docs", "/consumer/register"];
   if (!user) {
     if (currentPath === "/login") {
       return <LoginPage />;
@@ -532,7 +533,7 @@ function AuthenticatedApp() {
 
 function PublicChatbotWrapper() {
   const [location] = useLocation();
-  const publicPaths = ["/", "/solutions", "/investor", "/ai-demo", "/pricing", "/security", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/my-credit"];
+  const publicPaths = ["/", "/solutions", "/investor", "/ai-demo", "/pricing", "/security", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/my-credit", "/api-docs", "/consumer/register"];
   if (!publicPaths.includes(location)) return null;
   return <PublicChatbot />;
 }
@@ -556,6 +557,12 @@ function App() {
             <Route path="/start-trial" component={() => <Suspense fallback={<LazyFallback />}><StartTrialPage /></Suspense>} />
             <Route path="/signup" component={() => <Suspense fallback={<LazyFallback />}><SignUpPage /></Suspense>} />
             <Route path="/score-guide" component={() => <Suspense fallback={<LazyFallback />}><ScoreGuidePage /></Suspense>} />
+            <Route path="/api-docs" component={() => <Suspense fallback={<LazyFallback />}><ApiDocsPage /></Suspense>} />
+            <Route path="/consumer/register">
+              <Suspense fallback={<LazyFallback />}>
+                <ConsumerPortalPage />
+              </Suspense>
+            </Route>
             <Route path="/login">
               <AuthProvider>
                 <OrgSwitcherProvider>

@@ -3098,7 +3098,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/structured-search", async (req, res) => {
+  app.get("/api/structured-search", requireAuth, async (req, res) => {
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
@@ -3123,9 +3123,6 @@ export async function registerRoutes(
         }
       }
       if (searchType === "telco") {
-        if (!msisdn && !provider && !accountStatus) {
-          return res.status(400).json({ message: "At least one identifier (MSISDN, provider, or account status) is required" });
-        }
       }
       const user = (req as any).user;
       await storage.createAuditLog({
@@ -4475,7 +4472,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/pending-approvals", async (req, res) => {
+  app.get("/api/pending-approvals", requireAuth, async (req, res) => {
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);

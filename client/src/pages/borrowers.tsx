@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { Plus, Search, Building2, User, Users, ChevronRight, ChevronLeft, Flag, AlertTriangle, Camera } from "lucide-react";
+import { Plus, Search, Building2, User, Users, ChevronRight, ChevronLeft, Flag, AlertTriangle, Camera, Clock, ArrowRight } from "lucide-react";
 import { SUPPORTED_COUNTRIES } from "@/lib/currency";
 import { isGhanaMode, isSierraLeoneMode, getDefaultCountry, getCountryConfig, BOG_MARITAL_STATUSES, BOG_PROOF_OF_ADDRESS, BOG_BUSINESS_TYPES, BOG_INDUSTRY_CODES, BOG_EMPLOYMENT_TYPES } from "@/lib/country-mode";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -118,8 +118,27 @@ export default function BorrowersPage() {
     createMutation.mutate(formData);
   };
 
+  const { data: pendingApprovals } = useQuery<any[]>({
+    queryKey: ["/api/pending-approvals"],
+  });
+  const pendingBorrowers = (pendingApprovals || []).filter((a: any) => a.entityType === "borrower" && a.status === "pending");
+
   return (
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-[1400px] mx-auto animate-page-enter">
+      {pendingBorrowers.length > 0 && (
+        <div className="flex items-center gap-3 p-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30" data-testid="banner-pending-borrowers">
+          <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+              {pendingBorrowers.length} borrower{pendingBorrowers.length !== 1 ? "s" : ""} pending approval
+            </p>
+            <p className="text-xs text-amber-600 dark:text-amber-400">New borrower registrations require maker-checker approval before appearing in the list.</p>
+          </div>
+          <Button variant="outline" size="sm" className="shrink-0 border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-900" onClick={() => navigate("/approvals")} data-testid="link-view-pending-approvals">
+            Review <ArrowRight className="w-3.5 h-3.5 ml-1" />
+          </Button>
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
