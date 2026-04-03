@@ -38,7 +38,7 @@ The system employs a modern full-stack architecture built for scalability and co
 **Technical Implementations & Feature Specifications:**
 -   **Backend**: Express.js API server.
 -   **Database**: PostgreSQL hosted on Neon, managed with Drizzle ORM.
--   **Authentication**: Session-based with MFA, strong password policies, biometric (WebAuthn) support, role-based idle session timeouts, and Google OAuth.
+-   **Authentication**: Session-based with MFA (TOTP), strong password policies, biometric (WebAuthn) support, role-based idle session timeouts, Google OAuth, Microsoft/Azure AD OAuth, and SAML 2.0 SSO for enterprise identity providers.
 -   **Data Model**: Supports credit, compliance, usage metering, pricing, and alternative data.
 -   **Core Capabilities**:
     -   **Credit Management**: Comprehensive borrower and credit account management with multi-currency support and 20 standardized credit types.

@@ -772,6 +772,9 @@ process.stderr.write = function (...args: any[]) {
     console.log(`║  SMS:           ${isSmsConfigured() ? "✓ Configured" : "✗ Not configured"}${isSmsConfigured() ? "              " : "          "}║`);
     console.log(`║  Database:      ${process.env.DATABASE_URL ? "✓ Connected" : "✗ Not connected"}${process.env.DATABASE_URL ? "               " : "           "}║`);
     console.log(`║  Google OAuth:  ${process.env.GOOGLE_CLIENT_ID ? "✓ Configured" : "✗ Not configured"}${process.env.GOOGLE_CLIENT_ID ? "              " : "          "}║`);
+    console.log(`║  Microsoft SSO: ${process.env.MICROSOFT_CLIENT_ID ? "✓ Configured" : "✗ Not configured"}${process.env.MICROSOFT_CLIENT_ID ? "              " : "          "}║`);
+    console.log(`║  SAML SSO:      ${process.env.SAML_IDP_ENTRY_POINT ? "✓ Configured" : "✗ Not configured"}${process.env.SAML_IDP_ENTRY_POINT ? "              " : "          "}║`);
+    console.log(`║  MFA/TOTP:      ✓ Available                    ║`);
     console.log(`║  Demo Data:     ${isProduction ? "Skipped" : "Seeded"}${isProduction ? "                   " : "                    "}║`);
     console.log("╚══════════════════════════════════════════════════╝\n");
   });

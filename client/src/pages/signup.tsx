@@ -203,9 +203,7 @@ export default function SignUpPage() {
           <button
             type="button"
             className="signup-social-btn"
-            onClick={() => {
-              toast({ title: "Microsoft Sign-In", description: "Microsoft authentication is being configured. Please use email/password for now." });
-            }}
+            onClick={() => window.location.href = "/api/auth/microsoft?from=/signup"}
             data-testid="button-signup-microsoft"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">

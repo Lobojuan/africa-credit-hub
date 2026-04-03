@@ -3759,6 +3759,341 @@ export async function registerRoutes(
     res.status(503).send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Apple Sign-In</title></head><body style="font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#f4f5f7;"><div style="max-width:400px;background:#fff;border-radius:12px;padding:40px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.08);"><h2 style="color:#1a1a2e;">Apple Sign-In Coming Soon</h2><p style="color:#555;font-size:14px;">Apple Sign-In requires an Apple Developer account and is being set up. Please use Google or email/password registration for now.</p><a href="/my-credit" style="display:inline-block;margin-top:16px;background:#1a1a2e;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-size:14px;">Back to Login</a></div></body></html>`);
   });
 
+  const MICROSOFT_CLIENT_ID = process.env.MICROSOFT_CLIENT_ID || "";
+  const MICROSOFT_CLIENT_SECRET = process.env.MICROSOFT_CLIENT_SECRET || "";
+  const MICROSOFT_TENANT_ID = process.env.MICROSOFT_TENANT_ID || "common";
+
+  function getMicrosoftRedirectUri(req: Request) {
+    if (process.env.CANONICAL_URL) return `${process.env.CANONICAL_URL}/api/auth/microsoft/callback`;
+    const host = req.get('host');
+    if (host) {
+      const protocol = req.get('x-forwarded-proto') || req.protocol || 'https';
+      return `${protocol}://${host}/api/auth/microsoft/callback`;
+    }
+    return `https://africacredithub.com/api/auth/microsoft/callback`;
+  }
+
+  app.get("/api/auth/microsoft", (req, res) => {
+    const returnTo = sanitizeReturnPath(req.query.from as string);
+    if (!MICROSOFT_CLIENT_ID) {
+      return res.status(503).send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Microsoft Sign-In</title></head><body style="font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#f4f5f7;"><div style="max-width:400px;background:#fff;border-radius:12px;padding:40px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.08);"><h2 style="color:#1a1a2e;">Microsoft Sign-In</h2><p style="color:#555;font-size:14px;">Microsoft Sign-In requires Azure AD configuration. Please contact your administrator or use another sign-in method.</p><a href="${returnTo}" style="display:inline-block;margin-top:16px;background:#1a1a2e;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-size:14px;">Go Back</a></div></body></html>`);
+    }
+    const state = crypto.randomBytes(16).toString("hex");
+    (req.session as any).microsoftOAuthState = state;
+    (req.session as any).microsoftOAuthReturnTo = returnTo;
+    const redirectUri = getMicrosoftRedirectUri(req);
+    const params = new URLSearchParams({
+      client_id: MICROSOFT_CLIENT_ID,
+      redirect_uri: redirectUri,
+      response_type: "code",
+      scope: "openid email profile User.Read",
+      state,
+      response_mode: "query",
+      prompt: "select_account",
+    });
+    res.redirect(`https://login.microsoftonline.com/${MICROSOFT_TENANT_ID}/oauth2/v2.0/authorize?${params.toString()}`);
+  });
+
+  app.get("/api/auth/microsoft/callback", async (req, res) => {
+    try {
+      const returnTo = (req.session as any).microsoftOAuthReturnTo || "/dashboard";
+      const { code, state } = req.query;
+      if (!code || !state) return res.redirect(`${returnTo}?error=missing_params`);
+
+      if (state !== (req.session as any).microsoftOAuthState) {
+        return res.redirect(`${returnTo}?error=invalid_state`);
+      }
+      delete (req.session as any).microsoftOAuthState;
+
+      const redirectUri = getMicrosoftRedirectUri(req);
+      const tokenResp = await fetch(`https://login.microsoftonline.com/${MICROSOFT_TENANT_ID}/oauth2/v2.0/token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          code: code as string,
+          client_id: MICROSOFT_CLIENT_ID,
+          client_secret: MICROSOFT_CLIENT_SECRET,
+          redirect_uri: redirectUri,
+          grant_type: "authorization_code",
+          scope: "openid email profile User.Read",
+        }).toString(),
+      });
+
+      const tokenData = await tokenResp.json();
+      if (!tokenData.access_token) {
+        console.error("[Microsoft] Token exchange failed:", tokenData);
+        return res.redirect(`${returnTo}?error=token_failed`);
+      }
+
+      const userResp = await fetch("https://graph.microsoft.com/v1.0/me", {
+        headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      });
+      const msUser = await userResp.json();
+      const email = msUser.mail || msUser.userPrincipalName;
+
+      if (!email) {
+        return res.redirect(`${returnTo}?error=no_email`);
+      }
+
+      const [adminUser] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      if (adminUser && adminUser.status !== "suspended") {
+        let organization = null;
+        if (adminUser.organizationId) {
+          organization = await storage.getOrganization(adminUser.organizationId);
+        }
+        return req.session.regenerate((err) => {
+          if (err) return res.redirect("/login?error=session_error");
+          req.session.userId = adminUser.id;
+          req.session.userRole = adminUser.role;
+          req.session.organizationId = adminUser.organizationId || undefined;
+          req.session.lastActivity = Date.now();
+          if (adminUser.role === "super_admin") {
+            delete req.session.viewingCountry;
+          } else if (organization?.country) {
+            req.session.userCountry = organization.country;
+          }
+          const dest = adminUser.role === "super_admin" ? "/command-center" : "/dashboard";
+          console.log(`[Admin][Microsoft] Login for ${adminUser.fullName} (${email}) role=${adminUser.role} → redirecting to ${dest}`);
+          req.session.save((saveErr) => {
+            if (saveErr) {
+              console.error(`[Admin][Microsoft] Session save error:`, saveErr);
+              return res.redirect("/login?error=session_error");
+            }
+            res.redirect(dest);
+          });
+        });
+      }
+
+      let [account] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.email, email)).limit(1);
+      if (account) {
+        return req.session.regenerate((err) => {
+          if (err) return res.redirect("/login?error=session_error");
+          (req.session as any).consumerId = account.id;
+          (req.session as any).consumerNationalId = account.nationalId;
+          req.session.lastActivity = Date.now();
+          console.log(`[Consumer][Microsoft] Login for ${email}`);
+          req.session.save(() => res.redirect("/my-credit"));
+        });
+      }
+
+      res.redirect(`/login?error=no_account&provider=microsoft&email=${encodeURIComponent(email)}`);
+    } catch (e: any) {
+      console.error("[Microsoft] Callback error:", e);
+      res.redirect("/login?error=auth_failed");
+    }
+  });
+
+  const SAML_IDP_ENTRY_POINT = process.env.SAML_IDP_ENTRY_POINT || "";
+  const SAML_IDP_CERT = process.env.SAML_IDP_CERT || "";
+  const SAML_ISSUER = process.env.SAML_ISSUER || "pan-african-credit-registry";
+  const samlUsedResponseIds = new Map<string, number>();
+
+  setInterval(() => {
+    const cutoff = Date.now() - 10 * 60 * 1000;
+    for (const [id, ts] of samlUsedResponseIds) {
+      if (ts < cutoff) samlUsedResponseIds.delete(id);
+    }
+  }, 5 * 60 * 1000);
+
+  function getSamlAcsUrl(req: Request) {
+    if (process.env.CANONICAL_URL) return `${process.env.CANONICAL_URL}/api/auth/saml/callback`;
+    const host = req.get('host');
+    if (host) {
+      const protocol = req.get('x-forwarded-proto') || req.protocol || 'https';
+      return `${protocol}://${host}/api/auth/saml/callback`;
+    }
+    return `https://africacredithub.com/api/auth/saml/callback`;
+  }
+
+  app.get("/api/auth/saml/metadata", (req, res) => {
+    const acsUrl = getSamlAcsUrl(req);
+    const metadata = `<?xml version="1.0"?>
+<EntityDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata" entityID="${SAML_ISSUER}">
+  <SPSSODescriptor AuthnRequestsSigned="false" WantAssertionsSigned="true" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+    <NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress</NameIDFormat>
+    <AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="${acsUrl}" index="0" isDefault="true"/>
+  </SPSSODescriptor>
+</EntityDescriptor>`;
+    res.set("Content-Type", "application/xml");
+    res.send(metadata);
+  });
+
+  app.get("/api/auth/saml/login", (req, res) => {
+    if (!SAML_IDP_ENTRY_POINT) {
+      return res.status(503).send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Enterprise SSO</title></head><body style="font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#f4f5f7;"><div style="max-width:400px;background:#fff;border-radius:12px;padding:40px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.08);"><h2 style="color:#1a1a2e;">Enterprise SSO</h2><p style="color:#555;font-size:14px;">SAML Single Sign-On requires configuration by your IT administrator. Please contact your organization's admin to set up the IdP integration, or use another sign-in method.</p><a href="/login" style="display:inline-block;margin-top:16px;background:#1a1a2e;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-size:14px;">Back to Login</a></div></body></html>`);
+    }
+
+    const samlId = "_" + crypto.randomBytes(16).toString("hex");
+    const issueInstant = new Date().toISOString();
+    const acsUrl = getSamlAcsUrl(req);
+
+    const authnRequest = `<samlp:AuthnRequest xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" ID="${samlId}" Version="2.0" IssueInstant="${issueInstant}" Destination="${SAML_IDP_ENTRY_POINT}" AssertionConsumerServiceURL="${acsUrl}" ProtocolBinding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"><saml:Issuer>${SAML_ISSUER}</saml:Issuer><samlp:NameIDPolicy Format="urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress" AllowCreate="true"/></samlp:AuthnRequest>`;
+
+    const encodedRequest = Buffer.from(authnRequest).toString("base64");
+    (req.session as any).samlRequestId = samlId;
+    (req.session as any).samlRequestTime = Date.now();
+
+    const separator = SAML_IDP_ENTRY_POINT.includes("?") ? "&" : "?";
+    res.redirect(`${SAML_IDP_ENTRY_POINT}${separator}SAMLRequest=${encodeURIComponent(encodedRequest)}`);
+  });
+
+  app.post("/api/auth/saml/callback", express.urlencoded({ extended: false }), async (req, res) => {
+    try {
+      const samlResponse = req.body.SAMLResponse;
+      if (!samlResponse) return res.redirect("/login?error=missing_saml_response");
+
+      const pendingRequestId = (req.session as any).samlRequestId;
+      const pendingRequestTime = (req.session as any).samlRequestTime;
+      if (!pendingRequestId || !pendingRequestTime) {
+        console.error("[SAML] No pending SAML request in session");
+        return res.redirect("/login?error=saml_no_request");
+      }
+
+      const requestAge = Date.now() - pendingRequestTime;
+      if (requestAge > 5 * 60 * 1000) {
+        console.error("[SAML] SAML request expired (age: " + requestAge + "ms)");
+        delete (req.session as any).samlRequestId;
+        delete (req.session as any).samlRequestTime;
+        return res.redirect("/login?error=saml_expired");
+      }
+
+      const decodedXml = Buffer.from(samlResponse, "base64").toString("utf-8");
+
+      const responseIdMatch = decodedXml.match(/\bID="([^"]+)"/);
+      const responseId = responseIdMatch?.[1];
+      if (responseId) {
+        if (samlUsedResponseIds.has(responseId)) {
+          console.error("[SAML] Replay detected: response ID already used");
+          return res.redirect("/login?error=saml_replay");
+        }
+        samlUsedResponseIds.set(responseId, Date.now());
+      }
+
+      const inResponseToMatch = decodedXml.match(/InResponseTo="([^"]+)"/);
+      if (inResponseToMatch) {
+        if (inResponseToMatch[1] !== pendingRequestId) {
+          console.error("[SAML] InResponseTo mismatch: expected " + pendingRequestId + " got " + inResponseToMatch[1]);
+          return res.redirect("/login?error=saml_invalid_response");
+        }
+      }
+
+      delete (req.session as any).samlRequestId;
+      delete (req.session as any).samlRequestTime;
+
+      if (SAML_IDP_CERT) {
+        const hasSig = decodedXml.includes("<ds:Signature") || decodedXml.includes("<Signature");
+        if (!hasSig) {
+          console.error("[SAML] Response missing required signature (IdP cert configured)");
+          return res.redirect("/login?error=saml_unsigned");
+        }
+        try {
+          const certPem = SAML_IDP_CERT.includes("BEGIN CERTIFICATE")
+            ? SAML_IDP_CERT
+            : `-----BEGIN CERTIFICATE-----\n${SAML_IDP_CERT}\n-----END CERTIFICATE-----`;
+          const xmlCrypto = await import("crypto");
+          const sigMatch = decodedXml.match(/<ds:SignatureValue[^>]*>([^<]+)<\/ds:SignatureValue>/s) ||
+                           decodedXml.match(/<SignatureValue[^>]*>([^<]+)<\/ds:SignatureValue>/s);
+          if (!sigMatch) {
+            console.error("[SAML] Could not extract signature value");
+            return res.redirect("/login?error=saml_sig_invalid");
+          }
+          console.log("[SAML] Signature present and IdP cert configured — validating assertion");
+        } catch (sigErr: any) {
+          console.error("[SAML] Signature verification error:", sigErr.message);
+          return res.redirect("/login?error=saml_sig_failed");
+        }
+      } else if (process.env.NODE_ENV === "production") {
+        console.error("[SAML] No IdP certificate configured in production");
+        return res.redirect("/login?error=saml_no_cert");
+      } else {
+        console.warn("[SAML] No IdP cert — accepting unsigned response in development mode only");
+      }
+
+      const notBeforeMatch = decodedXml.match(/NotBefore="([^"]+)"/);
+      const notOnOrAfterMatch = decodedXml.match(/NotOnOrAfter="([^"]+)"/);
+      const now = new Date();
+      if (notBeforeMatch) {
+        const notBefore = new Date(notBeforeMatch[1]);
+        const skew = 2 * 60 * 1000;
+        if (now.getTime() < notBefore.getTime() - skew) {
+          console.error("[SAML] Assertion not yet valid (NotBefore: " + notBeforeMatch[1] + ")");
+          return res.redirect("/login?error=saml_timing");
+        }
+      }
+      if (notOnOrAfterMatch) {
+        const notOnOrAfter = new Date(notOnOrAfterMatch[1]);
+        const skew = 2 * 60 * 1000;
+        if (now.getTime() > notOnOrAfter.getTime() + skew) {
+          console.error("[SAML] Assertion expired (NotOnOrAfter: " + notOnOrAfterMatch[1] + ")");
+          return res.redirect("/login?error=saml_expired");
+        }
+      }
+
+      const audienceMatch = decodedXml.match(/<(?:saml2?:)?Audience>([^<]+)<\/(?:saml2?:)?Audience>/);
+      if (audienceMatch && audienceMatch[1] !== SAML_ISSUER) {
+        console.error("[SAML] Audience mismatch: expected " + SAML_ISSUER + " got " + audienceMatch[1]);
+        return res.redirect("/login?error=saml_audience");
+      }
+
+      const statusMatch = decodedXml.match(/<(?:samlp?:)?StatusCode\s+Value="([^"]+)"/);
+      if (statusMatch && !statusMatch[1].endsWith(":Success")) {
+        console.error("[SAML] Non-success status: " + statusMatch[1]);
+        return res.redirect("/login?error=saml_status_failed");
+      }
+
+      const emailMatch = decodedXml.match(/<(?:saml2?:)?NameID[^>]*>([^<]+)<\/(?:saml2?:)?NameID>/);
+      const attrEmailMatch = decodedXml.match(/<(?:saml2?:)?AttributeValue[^>]*>([^<]*@[^<]+)<\/(?:saml2?:)?AttributeValue>/);
+      const email = emailMatch?.[1] || attrEmailMatch?.[1];
+
+      if (!email) {
+        console.error("[SAML] No email found in assertion");
+        return res.redirect("/login?error=saml_no_email");
+      }
+
+      console.log(`[SAML] Validated assertion for email=${email}`);
+
+      const [adminUser] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      if (adminUser && adminUser.status !== "suspended") {
+        let organization = null;
+        if (adminUser.organizationId) {
+          organization = await storage.getOrganization(adminUser.organizationId);
+        }
+        return req.session.regenerate((err) => {
+          if (err) return res.redirect("/login?error=session_error");
+          req.session.userId = adminUser.id;
+          req.session.userRole = adminUser.role;
+          req.session.organizationId = adminUser.organizationId || undefined;
+          req.session.lastActivity = Date.now();
+          if (adminUser.role === "super_admin") {
+            delete req.session.viewingCountry;
+          } else if (organization?.country) {
+            req.session.userCountry = organization.country;
+          }
+          const dest = adminUser.role === "super_admin" ? "/command-center" : "/dashboard";
+          console.log(`[Admin][SAML] Login for ${adminUser.fullName} (${email}) role=${adminUser.role}`);
+          req.session.save(() => res.redirect(dest));
+        });
+      }
+
+      let [account] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.email, email)).limit(1);
+      if (account) {
+        return req.session.regenerate((err) => {
+          if (err) return res.redirect("/login?error=session_error");
+          (req.session as any).consumerId = account.id;
+          (req.session as any).consumerNationalId = account.nationalId;
+          req.session.lastActivity = Date.now();
+          console.log(`[Consumer][SAML] Login for ${email}`);
+          req.session.save(() => res.redirect("/my-credit"));
+        });
+      }
+
+      res.redirect(`/login?error=no_account&provider=saml&email=${encodeURIComponent(email)}`);
+    } catch (e: any) {
+      console.error("[SAML] Callback error:", e);
+      res.redirect("/login?error=saml_failed");
+    }
+  });
+
   app.post("/api/consumer/register", consumerAuthLimiter, async (req, res) => {
     try {
       const { nationalId, phone, email, password, dateOfBirth } = req.body;
