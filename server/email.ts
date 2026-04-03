@@ -253,6 +253,26 @@ export async function sendConsumerVerificationLink(email: string, token: string,
   return sendEmail(email, "Verify Your Account — Africa Credit Hub", createEmailHtml("Email Verification", body));
 }
 
+export async function sendContactSalesEmail(data: { name: string; email: string; phone?: string; organization: string; title?: string; country?: string; tier?: string; message?: string }): Promise<boolean> {
+  const adminEmail = process.env.ADMIN_EMAIL || "uffe.carlson@gmail.com";
+  const tierLabel = data.tier === "commercial" ? "Commercial" : data.tier === "sovereign" ? "Sovereign" : data.tier || "Not specified";
+  const body = `
+    <h2 style="color:#0d9488;">New Enterprise Inquiry</h2>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600;width:140px;">Name</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">${data.name}</td></tr>
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600;">Email</td><td style="padding:8px 12px;border-bottom:1px solid #eee;"><a href="mailto:${data.email}">${data.email}</a></td></tr>
+      ${data.phone ? `<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600;">Phone</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">${data.phone}</td></tr>` : ""}
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600;">Organization</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">${data.organization}</td></tr>
+      ${data.title ? `<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600;">Job Title</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">${data.title}</td></tr>` : ""}
+      ${data.country ? `<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600;">Country</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">${data.country}</td></tr>` : ""}
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600;">Interested In</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">${tierLabel}</td></tr>
+    </table>
+    ${data.message ? `<h3 style="margin-top:20px;">Message</h3><p style="background:#f8f9fa;padding:16px;border-radius:8px;white-space:pre-wrap;">${data.message}</p>` : ""}
+    <p style="color:#888;font-size:12px;margin-top:24px;">This inquiry was submitted via the CDH Contact Sales page.</p>
+  `;
+  return sendEmail(adminEmail, `[CDH Sales Inquiry] ${data.organization} — ${tierLabel}`, createEmailHtml("New Sales Inquiry", body));
+}
+
 export function isEmailConfigured(): boolean {
   return emailConfigured;
 }

@@ -52,7 +52,7 @@ import * as OTPAuth from "otpauth";
 import multer from "multer";
 import rateLimit from "express-rate-limit";
 import { isGhanaMode, getActiveCountryName, isSingleCountryMode, COUNTRY_REGISTRY, getSupportedCountries } from "./country-mode";
-import { sendWelcomeEmail, sendBillingNotification, sendDisputeNotification, sendNewRegistrationAlert, sendConsumerOtpEmail, sendConsumerVerificationLink } from "./email";
+import { sendWelcomeEmail, sendBillingNotification, sendDisputeNotification, sendNewRegistrationAlert, sendConsumerOtpEmail, sendConsumerVerificationLink, sendContactSalesEmail } from "./email";
 import { sendSms, sendOtpSms, isSmsConfigured } from "./sms";
 import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport, generatePortfolioIntelligence, parseProvider, parseOptionalProvider, generateCreditNarrative, detectAnomalies, generateRegulatoryReport, naturalLanguageQuery, analyzeCrossBorderRisk, generateLoanRecommendation, callAI, parseJSON, generateAIResponse } from "./ai";
 import { BOG_EXPORT_GENERATORS } from "./bog-export";
@@ -1298,7 +1298,7 @@ export async function registerRoutes(
   });
 
   app.use("/api", apiLimiter, (req, res, next) => {
-    if (req.path.startsWith("/auth") || req.path.startsWith("/external") || req.path.startsWith("/docs") || req.path.startsWith("/consumer") || req.path.startsWith("/ai-demo") || req.path.startsWith("/public")) return next();
+    if (req.path.startsWith("/auth") || req.path.startsWith("/external") || req.path.startsWith("/docs") || req.path.startsWith("/consumer") || req.path.startsWith("/ai-demo") || req.path.startsWith("/public") || req.path.startsWith("/contact-sales")) return next();
     requireAuth(req, res, next);
   });
 
@@ -4098,6 +4098,28 @@ export async function registerRoutes(
     } catch (e: any) {
       console.error("[SAML] Callback error:", e);
       res.redirect("/login?error=saml_failed");
+    }
+  });
+
+  app.post("/api/contact-sales", async (req, res) => {
+    try {
+      const { name, email, phone, organization, title, country, tier, message } = req.body;
+      if (!name || !email || !organization) {
+        return res.status(400).json({ message: "Name, email, and organization are required" });
+      }
+      await sendContactSalesEmail({ name, email, phone, organization, title, country, tier, message });
+      await storage.createAuditLog({
+        action: "contact_sales",
+        entity: "inquiry",
+        entityId: email,
+        userId: null,
+        details: `Sales inquiry from ${name} at ${organization} (${tier || "unspecified"} tier)`,
+        ipAddress: req.ip || null,
+      });
+      res.json({ message: "Inquiry received. We'll be in touch within 24 hours." });
+    } catch (e: any) {
+      console.error("[ContactSales] Error:", e.message);
+      res.status(500).json({ message: "Failed to submit inquiry. Please try again." });
     }
   });
 

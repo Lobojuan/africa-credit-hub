@@ -69,7 +69,7 @@ export default function PricingPage() {
             </CardContent>
             <CardFooter>
               <Button asChild className="w-full bg-teal-600 hover:bg-teal-700" data-testid="button-contact-sales">
-                <Link href="/start-trial">Contact Sales</Link>
+                <Link href="/contact-sales">Contact Sales</Link>
               </Button>
             </CardFooter>
           </Card>
@@ -94,7 +94,7 @@ export default function PricingPage() {
             </CardContent>
             <CardFooter>
               <Button asChild className="w-full" variant="outline" data-testid="button-request-briefing">
-                <Link href="/start-trial">Request Executive Briefing</Link>
+                <Link href="/contact-sales?tier=sovereign">Request Executive Briefing</Link>
               </Button>
             </CardFooter>
           </Card>
