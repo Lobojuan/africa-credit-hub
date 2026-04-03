@@ -66,7 +66,7 @@ export interface IStorage {
   searchBorrowersByType(type: "individual" | "corporate", query: string, organizationId?: string, country?: string): Promise<Borrower[]>;
   searchBorrowers(query: string, organizationId?: string, country?: string): Promise<Borrower[]>;
   countBorrowersByNationalId(nationalId: string | null): Promise<number>;
-  globalSearch(query: string, organizationId?: string, country?: string): Promise<{ borrowers: Borrower[]; institutions: Institution[]; creditAccounts: CreditAccount[] }>;
+  globalSearch(query: string, organizationId?: string, country?: string): Promise<{ borrowers: Borrower[]; institutions: Institution[]; creditAccounts: CreditAccount[]; telcoProfiles: TelcoProfile[] }>;
   createBorrower(borrower: InsertBorrower): Promise<Borrower>;
   updateBorrower(id: string, data: Partial<InsertBorrower>): Promise<Borrower | undefined>;
 
@@ -85,7 +85,7 @@ export interface IStorage {
   verifyAuditIntegrity(): Promise<{ valid: boolean; totalChecked: number; brokenAt?: string }>;
   fuzzyMatchBorrowers(params: { firstName?: string; lastName?: string; nationalId?: string; companyName?: string; passportNumber?: string; tinNumber?: string }): Promise<Array<any>>;
   structuredSearch(params: {
-    searchType: "consumer" | "business";
+    searchType: "consumer" | "business" | "telco";
     ghanaCardNumber?: string;
     firstName?: string;
     lastName?: string;
@@ -95,7 +95,10 @@ export interface IStorage {
     registrationNumber?: string;
     tinNumber?: string;
     companyName?: string;
-  }, organizationId?: string, country?: string): Promise<Borrower[]>;
+    msisdn?: string;
+    provider?: string;
+    accountStatus?: string;
+  }, organizationId?: string, country?: string): Promise<Borrower[] | TelcoProfile[]>;
 
   getPendingApprovals(organizationId?: string, country?: string): Promise<PendingApproval[]>;
   getPendingApproval(id: string): Promise<PendingApproval | undefined>;
@@ -458,17 +461,20 @@ export class DatabaseStorage implements IStorage {
     return sql`${table.organizationId} IN (SELECT id FROM organizations WHERE country = ${country})`;
   }
 
-  async globalSearch(query: string, organizationId?: string, country?: string): Promise<{ borrowers: Borrower[]; institutions: Institution[]; creditAccounts: CreditAccount[] }> {
+  async globalSearch(query: string, organizationId?: string, country?: string): Promise<{ borrowers: Borrower[]; institutions: Institution[]; creditAccounts: CreditAccount[]; telcoProfiles: TelcoProfile[] }> {
     const orgBorrowerFilter = organizationId ? eq(borrowers.organizationId, organizationId) : undefined;
     const orgInstFilter = organizationId ? eq(institutions.organizationId, organizationId) : undefined;
     const orgAccFilter = organizationId ? eq(creditAccounts.organizationId, organizationId) : undefined;
+    const orgTelcoFilter = organizationId ? eq(telcoProfiles.organizationId, organizationId) : undefined;
     const countryBorrowerFilter = country ? eq(borrowers.country, country) : undefined;
     const countryInstFilter = country ? eq(institutions.country, country) : undefined;
     const countryAccFilter = country ? this.countryOrgFilter(creditAccounts, country) : undefined;
+    const countryTelcoFilter = country ? eq(telcoProfiles.country, country) : undefined;
 
     let borrowerResults: Borrower[] = [];
     let institutionResults: Institution[] = [];
     let creditAccountResults: CreditAccount[] = [];
+    let telcoProfileResults: TelcoProfile[] = [];
 
     if (query) {
       const searchPattern = `%${query}%`;
@@ -509,6 +515,17 @@ export class DatabaseStorage implements IStorage {
       const accFilters = [accSearch, orgAccFilter, countryAccFilter].filter(Boolean);
       const accCond = accFilters.length > 1 ? and(...accFilters) : accFilters[0];
       creditAccountResults = await db.select().from(creditAccounts).where(accCond!).orderBy(desc(creditAccounts.createdAt)).limit(20);
+
+      const telcoSearch = or(
+        ilike(telcoProfiles.msisdn, searchPattern),
+        sql`${telcoProfiles.provider}::text ILIKE ${searchPattern}`,
+        ilike(telcoProfiles.country, searchPattern),
+        ilike(telcoProfiles.deviceType, searchPattern),
+        ilike(telcoProfiles.accountStatus, searchPattern),
+      );
+      const tFilters = [telcoSearch, orgTelcoFilter, countryTelcoFilter].filter(Boolean);
+      const tConditions = tFilters.length > 1 ? and(...tFilters) : tFilters[0];
+      telcoProfileResults = await db.select().from(telcoProfiles).where(tConditions!).orderBy(desc(telcoProfiles.createdAt)).limit(20);
     } else if (organizationId || country) {
       const bWhere = [orgBorrowerFilter, countryBorrowerFilter].filter(Boolean);
       borrowerResults = await db.select().from(borrowers).where(bWhere.length > 1 ? and(...bWhere) : bWhere[0]).orderBy(desc(borrowers.createdAt)).limit(50);
@@ -516,9 +533,13 @@ export class DatabaseStorage implements IStorage {
       institutionResults = await db.select().from(institutions).where(iWhere.length > 1 ? and(...iWhere) : iWhere[0]).orderBy(institutions.name).limit(20);
       const aWhere = [orgAccFilter, countryAccFilter].filter(Boolean);
       creditAccountResults = await db.select().from(creditAccounts).where(aWhere.length > 1 ? and(...aWhere) : aWhere[0]).orderBy(desc(creditAccounts.createdAt)).limit(20);
+      const tWhere = [orgTelcoFilter, countryTelcoFilter].filter(Boolean);
+      if (tWhere.length > 0) {
+        telcoProfileResults = await db.select().from(telcoProfiles).where(tWhere.length > 1 ? and(...tWhere) : tWhere[0]).orderBy(desc(telcoProfiles.createdAt)).limit(20);
+      }
     }
 
-    return { borrowers: decryptBorrowerArray(borrowerResults as Record<string, any>[]) as Borrower[], institutions: institutionResults, creditAccounts: creditAccountResults };
+    return { borrowers: decryptBorrowerArray(borrowerResults as Record<string, any>[]) as Borrower[], institutions: institutionResults, creditAccounts: creditAccountResults, telcoProfiles: telcoProfileResults };
   }
 
   async createBorrower(borrower: InsertBorrower): Promise<Borrower> {
@@ -680,7 +701,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async structuredSearch(params: {
-    searchType: "consumer" | "business";
+    searchType: "consumer" | "business" | "telco";
     ghanaCardNumber?: string;
     firstName?: string;
     lastName?: string;
@@ -690,7 +711,27 @@ export class DatabaseStorage implements IStorage {
     registrationNumber?: string;
     tinNumber?: string;
     companyName?: string;
-  }, organizationId?: string, country?: string): Promise<Borrower[]> {
+    msisdn?: string;
+    provider?: string;
+    accountStatus?: string;
+  }, organizationId?: string, country?: string): Promise<Borrower[] | TelcoProfile[]> {
+    if (params.searchType === "telco") {
+      const conditions: any[] = [];
+      if (organizationId) conditions.push(eq(telcoProfiles.organizationId, organizationId));
+      if (country) conditions.push(eq(telcoProfiles.country, country));
+      if (params.msisdn) conditions.push(ilike(telcoProfiles.msisdn, `%${params.msisdn}%`));
+      if (params.provider) conditions.push(eq(telcoProfiles.provider, params.provider));
+      if (params.accountStatus) conditions.push(eq(telcoProfiles.accountStatus, params.accountStatus));
+
+      if (conditions.length === 0) {
+        return db.select().from(telcoProfiles).orderBy(desc(telcoProfiles.createdAt)).limit(50);
+      }
+      return db.select().from(telcoProfiles)
+        .where(conditions.length > 1 ? and(...conditions) : conditions[0])
+        .orderBy(desc(telcoProfiles.createdAt))
+        .limit(50);
+    }
+
     const conditions: any[] = [];
     const typeFilter = params.searchType === "consumer" ? "individual" : "corporate";
     conditions.push(eq(borrowers.type, typeFilter));

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { Search, User, Building2, FileText, ChevronRight, Globe, Landmark, CreditCard, Calendar, IdCard } from "lucide-react";
+import { Search, User, Building2, FileText, ChevronRight, Globe, Landmark, CreditCard, Calendar, IdCard, Smartphone, Phone } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,14 +13,35 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { SUPPORTED_COUNTRIES } from "@/lib/currency";
 import { isGhanaMode } from "@/lib/country-mode";
-import type { Borrower, Institution, CreditAccount } from "@shared/schema";
+import type { Borrower, Institution, CreditAccount, TelcoProfile } from "@shared/schema";
 import { getBorrowerAvatarUrl } from "@/lib/avatar";
 
 interface GlobalSearchResults {
   borrowers: Borrower[];
   institutions: Institution[];
   creditAccounts: CreditAccount[];
+  telcoProfiles: TelcoProfile[];
 }
+
+const TELCO_PROVIDERS = [
+  { value: "mtn", label: "MTN" },
+  { value: "vodafone", label: "Vodafone" },
+  { value: "airtel", label: "Airtel" },
+  { value: "safaricom", label: "Safaricom" },
+  { value: "orange", label: "Orange" },
+  { value: "glo", label: "Glo" },
+  { value: "tigo", label: "Tigo" },
+  { value: "africell", label: "Africell" },
+  { value: "econet", label: "Econet" },
+  { value: "other", label: "Other" },
+];
+
+const TELCO_ACCOUNT_STATUSES = [
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+  { value: "suspended", label: "Suspended" },
+  { value: "dormant", label: "Dormant" },
+];
 
 const SEARCH_REASONS = [
   { value: "credit_application", label: "Credit Application" },
@@ -44,7 +65,7 @@ const BUSINESS_PURPOSES = [
 export default function CreditSearchPage() {
   const { t } = useTranslation();
   const [, navigate] = useLocation();
-  const [searchTab, setSearchTab] = useState<"consumer" | "business" | "general">("consumer");
+  const [searchTab, setSearchTab] = useState<"consumer" | "business" | "telco" | "general">("consumer");
 
   const [consumerForm, setConsumerForm] = useState({
     ghanaCardNumber: "",
@@ -65,6 +86,14 @@ export default function CreditSearchPage() {
   });
   const [businessSubmitted, setBusinessSubmitted] = useState(false);
   const [activeBusinessParams, setActiveBusinessParams] = useState<typeof businessForm | null>(null);
+
+  const [telcoForm, setTelcoForm] = useState({
+    msisdn: "",
+    provider: "",
+    accountStatus: "",
+  });
+  const [telcoSubmitted, setTelcoSubmitted] = useState(false);
+  const [activeTelcoParams, setActiveTelcoParams] = useState<typeof telcoForm | null>(null);
 
   const [generalQuery, setGeneralQuery] = useState("");
   const [generalSearchTerm, setGeneralSearchTerm] = useState("");
@@ -115,6 +144,26 @@ export default function CreditSearchPage() {
     enabled: businessSubmitted && !!activeBusinessParams,
   });
 
+  const buildTelcoUrl = () => {
+    if (!activeTelcoParams) return "";
+    const params = new URLSearchParams();
+    params.set("searchType", "telco");
+    if (activeTelcoParams.msisdn) params.set("msisdn", activeTelcoParams.msisdn);
+    if (activeTelcoParams.provider) params.set("provider", activeTelcoParams.provider);
+    if (activeTelcoParams.accountStatus) params.set("accountStatus", activeTelcoParams.accountStatus);
+    return `/api/structured-search?${params.toString()}`;
+  };
+
+  const { data: telcoResults, isLoading: telcoLoading } = useQuery<TelcoProfile[]>({
+    queryKey: ["/api/structured-search", "telco", activeTelcoParams],
+    queryFn: async () => {
+      const res = await fetch(buildTelcoUrl());
+      if (!res.ok) throw new Error("Search failed");
+      return res.json();
+    },
+    enabled: telcoSubmitted && !!activeTelcoParams,
+  });
+
   const buildGeneralSearchUrl = () => {
     const params = new URLSearchParams();
     if (generalSearchTerm) params.set("q", generalSearchTerm);
@@ -150,16 +199,24 @@ export default function CreditSearchPage() {
     setBusinessSubmitted(true);
   };
 
+  const handleTelcoSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!telcoForm.msisdn && !telcoForm.provider && !telcoForm.accountStatus) return;
+    setActiveTelcoParams({ ...telcoForm });
+    setTelcoSubmitted(true);
+  };
+
   const handleGeneralSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setGeneralSearchTerm(generalQuery);
     setActiveCountry(country === "all" ? "" : country);
   };
 
-  const generalTotalResults = (generalResults?.borrowers?.length || 0) + (generalResults?.institutions?.length || 0) + (generalResults?.creditAccounts?.length || 0);
+  const generalTotalResults = (generalResults?.borrowers?.length || 0) + (generalResults?.institutions?.length || 0) + (generalResults?.creditAccounts?.length || 0) + (generalResults?.telcoProfiles?.length || 0);
 
   const consumerFormValid = (consumerForm.ghanaCardNumber || consumerForm.firstName || consumerForm.lastName) && consumerForm.reasonForRequest;
   const businessFormValid = (businessForm.registrationNumber || businessForm.tinNumber || businessForm.companyName) && businessForm.purpose;
+  const telcoFormValid = telcoForm.msisdn || telcoForm.provider || telcoForm.accountStatus;
 
   return (
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-[1000px] mx-auto animate-page-enter">
@@ -174,7 +231,7 @@ export default function CreditSearchPage() {
       </div>
 
       <Tabs value={searchTab} onValueChange={(v) => setSearchTab(v as any)} className="max-w-2xl mx-auto">
-        <TabsList className="grid w-full grid-cols-3" data-testid="tabs-search-type">
+        <TabsList className="grid w-full grid-cols-4" data-testid="tabs-search-type">
           <TabsTrigger value="consumer" data-testid="tab-consumer-search">
             <User className="w-4 h-4 mr-1.5" />
             Consumer
@@ -182,6 +239,10 @@ export default function CreditSearchPage() {
           <TabsTrigger value="business" data-testid="tab-business-search">
             <Building2 className="w-4 h-4 mr-1.5" />
             Business
+          </TabsTrigger>
+          <TabsTrigger value="telco" data-testid="tab-telco-search">
+            <Smartphone className="w-4 h-4 mr-1.5" />
+            Telco
           </TabsTrigger>
           <TabsTrigger value="general" data-testid="tab-general-search">
             <Search className="w-4 h-4 mr-1.5" />
@@ -395,6 +456,89 @@ export default function CreditSearchPage() {
           )}
         </TabsContent>
 
+        <TabsContent value="telco" className="space-y-4 mt-4">
+          <Card>
+            <CardContent className="p-5">
+              <form onSubmit={handleTelcoSearch} className="space-y-4" data-testid="form-telco-search">
+                <div className="flex items-center gap-2 mb-3">
+                  <Smartphone className="w-5 h-5 text-primary" />
+                  <h3 className="font-semibold text-sm">Telco Subscriber Search</h3>
+                  <Badge variant="outline" className="text-[10px] ml-auto">MoMo / Airtime</Badge>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label htmlFor="msisdn" className="text-xs font-medium">
+                      MSISDN (Phone Number) <span className="text-muted-foreground">(Primary Identifier)</span>
+                    </Label>
+                    <Input
+                      id="msisdn"
+                      data-testid="input-telco-msisdn"
+                      placeholder="+233XXXXXXXXX"
+                      value={telcoForm.msisdn}
+                      onChange={(e) => setTelcoForm(prev => ({ ...prev, msisdn: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Provider</Label>
+                    <Select value={telcoForm.provider} onValueChange={(v) => setTelcoForm(prev => ({ ...prev, provider: v }))}>
+                      <SelectTrigger data-testid="select-telco-provider">
+                        <SelectValue placeholder="Select provider" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TELCO_PROVIDERS.map(p => (
+                          <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Account Status</Label>
+                    <Select value={telcoForm.accountStatus} onValueChange={(v) => setTelcoForm(prev => ({ ...prev, accountStatus: v }))}>
+                      <SelectTrigger data-testid="select-telco-status">
+                        <SelectValue placeholder="All statuses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TELCO_ACCOUNT_STATUSES.map(s => (
+                          <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <Button type="submit" disabled={!telcoFormValid} data-testid="button-telco-search">
+                    <Search className="w-4 h-4 mr-1.5" />
+                    Search Telco
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+
+          {telcoSubmitted && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground" data-testid="text-telco-result-count">
+                {telcoLoading ? "Searching..." : `${telcoResults?.length || 0} telco profile(s) found`}
+              </p>
+              {telcoLoading ? (
+                <div className="space-y-3">
+                  {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
+                </div>
+              ) : (telcoResults && telcoResults.length > 0) ? (
+                <div className="space-y-3">
+                  {telcoResults.map((profile) => (
+                    <TelcoResultCard key={profile.id} profile={profile} navigate={navigate} />
+                  ))}
+                </div>
+              ) : (
+                <NoResults />
+              )}
+            </div>
+          )}
+        </TabsContent>
+
         <TabsContent value="general" className="space-y-4 mt-4">
           <form onSubmit={handleGeneralSearch} className="space-y-3" data-testid="form-credit-search">
             <div className="flex gap-2">
@@ -562,6 +706,19 @@ export default function CreditSearchPage() {
                       ))}
                     </div>
                   )}
+                  {generalResults!.telcoProfiles && generalResults!.telcoProfiles.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Smartphone className="w-4 h-4 text-muted-foreground" />
+                        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground" data-testid="section-telco-profiles">
+                          Telco Profiles ({generalResults!.telcoProfiles.length})
+                        </h2>
+                      </div>
+                      {generalResults!.telcoProfiles.map((profile) => (
+                        <TelcoResultCard key={profile.id} profile={profile} navigate={navigate} />
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <NoResults />
@@ -571,7 +728,7 @@ export default function CreditSearchPage() {
         </TabsContent>
       </Tabs>
 
-      {searchTab !== "general" && !consumerSubmitted && !businessSubmitted && (
+      {searchTab !== "general" && !consumerSubmitted && !businessSubmitted && !telcoSubmitted && (
         <Card className="max-w-2xl mx-auto">
           <CardContent className="p-6 text-center">
             <p className="text-sm text-muted-foreground">
@@ -624,6 +781,55 @@ function BorrowerResultCard({ borrower, navigate, t }: { borrower: Borrower; nav
             >
               <FileText className="w-3.5 h-3.5 mr-1.5" />
               {t('search.viewReport')}
+            </Button>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function TelcoResultCard({ profile, navigate }: { profile: TelcoProfile; navigate: (path: string) => void }) {
+  return (
+    <Card
+      className="cursor-pointer hover-elevate"
+      onClick={() => navigate(`/telco-scoring`)}
+      data-testid={`result-telco-${profile.id}`}
+    >
+      <CardContent className="p-5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="flex items-center justify-center w-11 h-11 rounded-md bg-emerald-50 dark:bg-emerald-950 shrink-0">
+              <Phone className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold truncate">{profile.msisdn}</p>
+              <p className="text-xs text-muted-foreground capitalize">{profile.provider} &middot; {profile.country}</p>
+              {profile.deviceType && <p className="text-xs text-muted-foreground">Device: {profile.deviceType}</p>}
+              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                <Badge variant="secondary" className="text-[10px] capitalize">{profile.provider}</Badge>
+                <Badge variant="outline" className="text-[10px] capitalize">{profile.kycLevel} KYC</Badge>
+                <Badge
+                  variant={profile.accountStatus === "active" ? "default" : "secondary"}
+                  className={`text-[10px] capitalize ${profile.accountStatus === "active" ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200" : profile.accountStatus === "suspended" ? "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200" : ""}`}
+                >
+                  {profile.accountStatus}
+                </Badge>
+                {profile.consentGranted && (
+                  <Badge variant="outline" className="text-[10px] bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300">Consent</Badge>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              data-testid={`button-view-telco-${profile.id}`}
+              onClick={(e) => { e.stopPropagation(); navigate(`/telco-scoring`); }}
+            >
+              View Score
             </Button>
             <ChevronRight className="w-4 h-4 text-muted-foreground" />
           </div>

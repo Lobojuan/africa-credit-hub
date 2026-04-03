@@ -3089,7 +3089,7 @@ export async function registerRoutes(
       const country = getCountryFilter(req);
       const query = (req.query.q as string) || "";
       if (!query) {
-        return res.json({ borrowers: [], institutions: [], creditAccounts: [] });
+        return res.json({ borrowers: [], institutions: [], creditAccounts: [], telcoProfiles: [] });
       }
       const results = await storage.globalSearch(query, orgId, country);
       res.json(results);
@@ -3102,9 +3102,9 @@ export async function registerRoutes(
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
-      const { searchType, ghanaCardNumber, firstName, lastName, dateOfBirth, gender, nationalId, registrationNumber, tinNumber, companyName, reasonForRequest, purpose } = req.query;
-      if (!searchType || (searchType !== "consumer" && searchType !== "business")) {
-        return res.status(400).json({ message: "searchType must be 'consumer' or 'business'" });
+      const { searchType, ghanaCardNumber, firstName, lastName, dateOfBirth, gender, nationalId, registrationNumber, tinNumber, companyName, reasonForRequest, purpose, msisdn, provider, accountStatus } = req.query;
+      if (!searchType || (searchType !== "consumer" && searchType !== "business" && searchType !== "telco")) {
+        return res.status(400).json({ message: "searchType must be 'consumer', 'business', or 'telco'" });
       }
       if (searchType === "consumer") {
         if (!reasonForRequest) {
@@ -3122,22 +3122,27 @@ export async function registerRoutes(
           return res.status(400).json({ message: "At least one identifier (Registration Number, TIN, or Company Name) is required" });
         }
       }
+      if (searchType === "telco") {
+        if (!msisdn && !provider && !accountStatus) {
+          return res.status(400).json({ message: "At least one identifier (MSISDN, provider, or account status) is required" });
+        }
+      }
       const user = (req as any).user;
       await storage.createAuditLog({
         action: "structured_search",
-        entity: "borrower",
+        entity: searchType === "telco" ? "telco_profile" : "borrower",
         entityId: "search",
         userId: user?.id || null,
         details: JSON.stringify({
           searchType,
           reasonForRequest: reasonForRequest || purpose || null,
-          identifiersUsed: Object.entries({ ghanaCardNumber, firstName, lastName, nationalId, registrationNumber, tinNumber, companyName })
+          identifiersUsed: Object.entries({ ghanaCardNumber, firstName, lastName, nationalId, registrationNumber, tinNumber, companyName, msisdn, provider, accountStatus })
             .filter(([, v]) => v)
             .map(([k]) => k),
         }),
       });
       const results = await storage.structuredSearch({
-        searchType: searchType as "consumer" | "business",
+        searchType: searchType as "consumer" | "business" | "telco",
         ghanaCardNumber: ghanaCardNumber as string,
         firstName: firstName as string,
         lastName: lastName as string,
@@ -3147,6 +3152,9 @@ export async function registerRoutes(
         registrationNumber: registrationNumber as string,
         tinNumber: tinNumber as string,
         companyName: companyName as string,
+        msisdn: msisdn as string,
+        provider: provider as string,
+        accountStatus: accountStatus as string,
       }, orgId, country);
       res.json(results);
     } catch (e: any) {
