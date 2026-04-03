@@ -3622,6 +3622,7 @@ export async function registerRoutes(
     (req.session as any).googleOAuthState = state;
     (req.session as any).googleOAuthReturnTo = returnTo;
     const redirectUri = getGoogleRedirectUri(req);
+    console.log(`[Google] Initiating OAuth: redirect_uri=${redirectUri}, returnTo=${returnTo}`);
     const params = new URLSearchParams({
       client_id: GOOGLE_CLIENT_ID,
       redirect_uri: redirectUri,
@@ -3631,16 +3632,25 @@ export async function registerRoutes(
       access_type: "offline",
       prompt: "select_account",
     });
-    res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+    req.session.save((err) => {
+      if (err) console.error("[Google] Session save error before redirect:", err);
+      res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+    });
   });
 
   app.get("/api/consumer/auth/google/callback", async (req, res) => {
     try {
       const returnTo = (req.session as any).googleOAuthReturnTo || "/my-credit";
-      const { code, state } = req.query;
+      const { code, state, error: oauthError } = req.query;
+      console.log(`[Google] Callback received: code=${code ? "yes" : "no"}, state=${state ? "yes" : "no"}, error=${oauthError || "none"}, sessionState=${(req.session as any).googleOAuthState ? "yes" : "no"}`);
+      if (oauthError) {
+        console.error(`[Google] OAuth error from Google: ${oauthError}`);
+        return res.redirect(`/login?error=${oauthError}`);
+      }
       if (!code || !state) return res.redirect(`${returnTo}?error=missing_params`);
 
       if (state !== (req.session as any).googleOAuthState) {
+        console.error(`[Google] State mismatch: expected=${(req.session as any).googleOAuthState}, got=${state}`);
         return res.redirect(`${returnTo}?error=invalid_state`);
       }
       delete (req.session as any).googleOAuthState;
