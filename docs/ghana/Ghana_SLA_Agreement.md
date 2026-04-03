@@ -1,7 +1,7 @@
 # Ghana Credit Registry — Service Level Agreement (SLA)
 
 **Carlson Capital & Systems In Motion Limited**
-**Version 2.1 | Effective Date: January 2026 | CDH v2.1**
+**Version 2.5 | Effective Date: January 2026 | CDH v2.5**
 **Regulatory Framework: Credit Reporting Act, 2007 (Act 726)**
 
 ---

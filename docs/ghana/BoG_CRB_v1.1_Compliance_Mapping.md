@@ -1,7 +1,7 @@
 # BoG CRB v1.1 Compliance Mapping
 
 **Carlson Capital & Systems In Motion Limited**
-**Version 2.1 | Bank of Ghana Credit Reporting Bureau Data Format Compliance | CDH v2.1**
+**Version 2.5 | Bank of Ghana Credit Reporting Bureau Data Format Compliance | CDH v2.5**
 
 ---
 

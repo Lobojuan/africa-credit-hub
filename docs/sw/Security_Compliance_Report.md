@@ -1,17 +1,17 @@
 # Ripoti ya Utiifu wa Usalama
 
-## Mfumo wa Kituo cha Kati cha Data na Rejista ya Mikopo ya Mipaka Mbalimbali v1.2
+## Mfumo wa Kituo cha Kati cha Data na Rejista ya Mikopo ya Mipaka Mbalimbali v2.5
 
 **Imeandaliwa kwa:** Systems In Motion Limited  
-**Toleo la Hati:** 1.2  
-**Tarehe:** Machi 2026  
+**Toleo la Hati:** 2.5  
+**Tarehe:** Aprili 2026  
 **Uainishaji:** Siri
 
 ---
 
 ## 1. Muhtasari wa Utendaji
 
-Hati hii inatoa tathmini ya kina ya udhibiti wa usalama uliotekelezwa katika Mfumo wa Rejista ya Mikopo dhidi ya mahitaji yaliyofafanuliwa katika Maelezo ya Mahitaji ya Programu (SRS) v1.2. Mfumo unashughulikia data nyeti za kifedha na za kibinafsi katika nchi zote 54 za Afrika na unasaidia lugha tatu (Kiingereza, Kifaransa, Kireno) na lazima uzingatie mahitaji ya ulinzi wa data na udhibiti wa kifedha.
+Hati hii inatoa tathmini ya kina ya udhibiti wa usalama uliotekelezwa katika Mfumo wa Rejista ya Mikopo dhidi ya mahitaji yaliyofafanuliwa katika Maelezo ya Mahitaji ya Programu (SRS) v1.2. Mfumo unashughulikia data nyeti za kifedha na za kibinafsi katika nchi zote 54 za Afrika na unasaidia lugha tano (Kiingereza, Kifaransa, Kireno, Kiarabu, Kiswahili) na lazima uzingatie mahitaji ya ulinzi wa data na udhibiti wa kifedha.
 
 Mahitaji yote kumi ya usalama yasiyo ya kitendaji (NFR-SEC-01 hadi NFR-SEC-10) yametekelezwa, pamoja na uboreshaji kumi na tano wa usalama wa biashara (ENT-01 hadi ENT-15) ikiwa ni pamoja na uthibitishaji wa hatua nyingi wa TOTP, ubadilishanaji wa tokeni ya OAuth 2.1 Bearer, mnyororo wa hash wa kumbukumbu za ukaguzi zinazostahimili uharibifu, ulinganishaji wa huluki zisizo kamili, chatbot ya migogoro, uboreshaji wa bandwidth ndogo, msaada wa kupakia XBRL, utekelezaji wa uhifadhi wa data, usimamizi wa viwango vya ubadilishaji, usimamizi wa API, utafutaji wa kimataifa, kupakia picha/hati za kitambulisho, mazingira ya maonyesho ya wawekezaji, uchambuzi wa kuona wa dashibodi, na ziara ya maonyesho ya maingiliano. Ripoti hii inaelezea kila udhibiti wa usalama, utekelezaji wake, na hali ya utiifu.
 

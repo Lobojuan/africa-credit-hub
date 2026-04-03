@@ -2,7 +2,7 @@
 # Marketing & Technical Proposal
 
 **Prepared by: Carlson Capital & Systems In Motion Limited**
-**Version 1.0 | Cross-Jurisdictional Central Data Hub (CDH) v2.0**
+**Version 1.0 | Cross-Jurisdictional Central Data Hub (CDH) v2.5**
 **Date: March 2026**
 
 ---
@@ -27,7 +27,7 @@
 
 ## 1. Executive Summary
 
-Carlson Capital & Systems In Motion Limited presents its Cross-Jurisdictional Central Data Hub (CDH) v2.0 as a turnkey credit bureau and credit registry solution for the Republic of Liberia. Our platform is purpose-built for the African financial ecosystem and is already operational in Ghana under Bank of Ghana CRB v1.1 compliance standards.
+Carlson Capital & Systems In Motion Limited presents its Cross-Jurisdictional Central Data Hub (CDH) v2.5 as a turnkey credit bureau and credit registry solution for the Republic of Liberia. Our platform is purpose-built for the African financial ecosystem and is already operational in Ghana under Bank of Ghana CRB v1.1 compliance standards.
 
 Liberia's financial sector is at a critical inflection point. The Central Bank of Liberia (CBL) has established the regulatory foundation for credit reporting through CBL Credit Reference Bureau Regulations (CBL/SD/003/2010), and the growing demand for financial inclusion requires a robust, modern credit information system that serves banks, microfinance institutions, mobile money operators, and the CBL itself.
 
@@ -80,7 +80,7 @@ The World Bank's Doing Business indicators highlight credit information systems 
 
 ## 3. Solution Overview
 
-### CDH v2.0 Platform at a Glance
+### CDH v2.5 Platform at a Glance
 
 | Feature | Description |
 |---------|-------------|
@@ -96,7 +96,7 @@ The World Bank's Doing Business indicators highlight credit information systems 
 
 ### Platform Screenshots
 
-The CDH v2.0 platform provides an intuitive, modern interface designed for financial professionals:
+The CDH v2.5 platform provides an intuitive, modern interface designed for financial professionals:
 
 - **Dashboard**: Real-time portfolio analytics with drill-down capabilities
 - **Borrower Profiles**: 360-degree view of individual and commercial borrowers
@@ -181,7 +181,7 @@ Our credit reports follow international best practices and include the following
 
 ### 5.1 CBL Credit Reference Bureau Regulations Compliance
 
-| Regulation Area | CBL Requirement | CDH v2.0 Status | Notes |
+| Regulation Area | CBL Requirement | CDH v2.5 Status | Notes |
 |----------------|-----------------|------------------|-------|
 | Licensing & Registration | CRB must be licensed by CBL | Ready for Application | Platform meets all technical requirements |
 | Data Collection Scope | All licensed financial institutions must submit data | Supported | Automated submission tracking and reminders |
@@ -229,7 +229,7 @@ Based on our assessment against CBL regulations and international standards:
                      +------------+--------------+
                                   |
                      +------------v--------------+
-                     |   CDH v2.0 Platform        |
+                     |   CDH v2.5 Platform        |
                      |   (Cloud-Hosted SaaS)      |
                      |                            |
                      |  +--------+  +---------+  |
@@ -382,7 +382,7 @@ Each credit score is accompanied by transparent reason codes explaining the key 
 
 ### 9.1 Currency Support
 
-The CDH v2.0 platform supports all currencies relevant to Liberia's economic environment:
+The CDH v2.5 platform supports all currencies relevant to Liberia's economic environment:
 
 | Currency | Code | Use Case |
 |----------|------|----------|
@@ -468,7 +468,7 @@ For Liberian nationals with credit exposure in ECOWAS member states:
 
 ### 11.3 Value Proposition
 
-| Without CDH v2.0 | With CDH v2.0 |
+| Without CDH v2.5 | With CDH v2.5 |
 |-------------------|---------------|
 | NPL ratio 15-25% | Target NPL ratio 8-12% |
 | Manual credit checks (2-5 days) | Instant automated credit reports |
@@ -554,7 +554,7 @@ For Liberian nationals with credit exposure in ECOWAS member states:
 Carlson Capital & Systems In Motion Limited
 Uffe Jon Carlson — uffe.carlson@gmail.com · +233 552 395 548
 Thomas Baafi — Thomas.baafi@prischell.com · +233 24 433 9985
-Platform: https://africacredithub.com — Cross-Jurisdictional Central Data Hub (CDH) v2.1
+Platform: https://africacredithub.com — Cross-Jurisdictional Central Data Hub (CDH) v2.5
 
 ---
 

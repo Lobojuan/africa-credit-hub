@@ -1,10 +1,10 @@
 # Kamusi ya Data
 
-## Mfumo wa Kituo Kikuu cha Data cha Mamlaka Mbalimbali & Sajili ya Mikopo v1.2
+## Mfumo wa Kituo Kikuu cha Data cha Mamlaka Mbalimbali & Sajili ya Mikopo v2.5
 
 **Imeandaliwa kwa:** Systems In Motion Limited  
-**Toleo la Hati:** 1.2  
-**Tarehe:** Machi 2026
+**Toleo la Hati:** 2.5  
+**Tarehe:** Aprili 2026
 
 ---
 

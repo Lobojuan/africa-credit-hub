@@ -1,10 +1,10 @@
 # Dictionnaire de Données
 
-## Système de Hub Central de Données Inter-Juridictionnel et Registre de Crédit v1.2
+## Système de Hub Central de Données Inter-Juridictionnel et Registre de Crédit v2.5
 
 **Préparé pour :** Systems In Motion Limited  
-**Version du Document :** 1.2  
-**Date :** Mars 2026
+**Version du Document :** 2.5  
+**Date :** Avril 2026
 
 ---
 

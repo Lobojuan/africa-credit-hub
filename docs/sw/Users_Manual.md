@@ -1,12 +1,12 @@
-# Mfumo wa Daftari la Mikopo — Mwongozo wa Watumiaji v1.2
+# Mfumo wa Daftari la Mikopo — Mwongozo wa Watumiaji v2.5
 
 **Kituo cha Kati cha Data na Daftari la Mikopo kwa Mamlaka Mbalimbali**
 
 **Imeandaliwa kwa:** Systems In Motion Limited
 
-**Toleo:** 1.2
+**Toleo:** 2.5
 
-**Tarehe:** Machi 2026
+**Tarehe:** Aprili 2026
 
 ---
 
@@ -76,11 +76,13 @@ Algeria, Djibouti, Egypt, Eritrea, Libya, Mauritania, Morocco, Somalia, Sudan, T
 
 ### 1.3 Lugha Zinazotumika
 
-Mfumo unaunga mkono lugha tatu:
+Mfumo unaunga mkono lugha tano:
 
 - **Kiingereza (EN)** — Lugha ya chaguo-msingi
 - **Kifaransa (FR)** — Tafsiri kamili ya Kifaransa inapatikana
 - **Kireno (PT)** — Tafsiri kamili ya Kireno inapatikana
+- **Kiarabu (AR)** — Tafsiri kamili ya Kiarabu inapatikana
+- **Kiswahili (SW)** — Tafsiri kamili ya Kiswahili inapatikana
 
 Watumiaji wanaweza kubadili kati ya lugha wakati wowote kwa kutumia kitufe cha kubadili lugha kinachopatikana kwenye ukurasa wa kuingia na katika kichwa cha programu.
 

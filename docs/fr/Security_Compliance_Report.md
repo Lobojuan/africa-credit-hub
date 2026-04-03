@@ -1,17 +1,17 @@
 # Rapport de Conformité Sécuritaire
 
-## Système de Hub Central de Données Inter-Juridictionnel & Registre de Crédit v1.2
+## Système de Hub Central de Données Inter-Juridictionnel & Registre de Crédit v2.5
 
 **Préparé pour :** Systems In Motion Limited  
-**Version du Document :** 1.2  
-**Date :** Mars 2026  
+**Version du Document :** 2.5  
+**Date :** Avril 2026  
 **Classification :** Confidentiel
 
 ---
 
 ## 1. Résumé Exécutif
 
-Ce document fournit une évaluation complète des contrôles de sécurité mis en œuvre dans le Système de Registre de Crédit par rapport aux exigences définies dans la Spécification des Exigences Logicielles (SRS) v1.2. Le système traite des données financières et personnelles sensibles à travers les 54 pays africains et prend en charge trois langues (anglais, français, portugais) et doit se conformer aux exigences réglementaires en matière de protection des données et de réglementation financière.
+Ce document fournit une évaluation complète des contrôles de sécurité mis en œuvre dans le Système de Registre de Crédit par rapport aux exigences définies dans la Spécification des Exigences Logicielles (SRS) v1.2. Le système traite des données financières et personnelles sensibles à travers les 54 pays africains et prend en charge cinq langues (anglais, français, portugais, arabe, swahili) et doit se conformer aux exigences réglementaires en matière de protection des données et de réglementation financière.
 
 Les dix exigences de sécurité non fonctionnelles (NFR-SEC-01 à NFR-SEC-10) ont été mises en œuvre, ainsi que quinze améliorations de sécurité entreprise (ENT-01 à ENT-15) incluant l'authentification multifacteur TOTP, l'échange de jetons porteur OAuth 2.1, les chaînes de hachage de journaux d'audit à preuve de falsification, la correspondance floue d'entités, le chatbot de litiges, les optimisations pour faible bande passante, la prise en charge du téléchargement XBRL, l'application de la rétention des données, la gestion des taux de change, l'administration API, la recherche globale, le téléversement de photos/documents d'identité, l'environnement de démonstration pour investisseurs, les analyses visuelles du tableau de bord et la visite guidée interactive de démonstration. Ce rapport détaille chaque contrôle de sécurité, sa mise en œuvre et son statut de conformité.
 

@@ -1,12 +1,12 @@
-# Credit Registry System — Users Manual v2.0
+# Credit Registry System — Users Manual v2.5
 
 **Cross-Jurisdictional Central Data Hub & Credit Registry System**
 
 **Prepared for:** Systems In Motion Limited
 
-**Version:** 1.2
+**Version:** 2.5
 
-**Date:** March 2026
+**Date:** April 2026
 
 ---
 
@@ -77,11 +77,13 @@ Algeria, Djibouti, Egypt, Eritrea, Libya, Mauritania, Morocco, Somalia, Sudan, T
 
 ### 1.3 Supported Languages
 
-The system supports three languages:
+The system supports five languages:
 
 - **English (EN)** — Default language
 - **French (FR)** — Full French translation available
 - **Portuguese (PT)** — Full Portuguese translation available
+- **Arabic (AR)** — Full Arabic translation available
+- **Swahili (SW)** — Full Swahili translation available
 
 Users can switch between languages at any time using the language switcher available on the login page and in the application header.
 

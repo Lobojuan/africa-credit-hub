@@ -1,10 +1,10 @@
 # Guide de Déploiement
 
-## Système Central de Hub de Données Inter-Juridictionnel et Registre de Crédit v1.2
+## Système Central de Hub de Données Inter-Juridictionnel et Registre de Crédit v2.5
 
 **Préparé pour :** Systems In Motion Limited  
-**Version du Document :** 1.2  
-**Date :** Mars 2026
+**Version du Document :** 2.5  
+**Date :** Avril 2026
 
 ---
 
@@ -27,12 +27,52 @@ Ce guide fournit des instructions de déploiement étape par étape pour le Syst
 
 ### 2.2 Exigences Matérielles
 
-| Ressource | Minimum | Recommandé |
-|-----------|---------|------------|
-| CPU | 1 vCPU | 2+ vCPU |
-| RAM | 512 Mo | 2 Go+ |
-| Disque | 1 Go | 5 Go+ (espace supplémentaire requis pour les photos et documents d'identité téléversés dans le répertoire `uploads/`) |
-| Réseau | 1 Mbps | 10 Mbps+ |
+La plateforme CDH peut être déployée à différentes échelles selon le volume d'emprunteurs, les utilisateurs simultanés et la portée réglementaire.
+
+#### 2.2.1 Développement / Pilote (Bureau Unique, < 50K Emprunteurs)
+
+| Ressource | Spécification |
+|-----------|---------------|
+| **Serveur d'Application** | 2 vCPU, 4 Go RAM, 20 Go SSD |
+| **Serveur de Base de Données** | 2 vCPU, 4 Go RAM, 50 Go SSD (ou PostgreSQL géré — Neon, RDS, etc.) |
+| **Réseau** | 10 Mbps symétrique, IPv4 publique |
+| **OS** | Ubuntu 22.04 LTS / RHEL 9 / Debian 12 (64-bit) |
+| **Utilisateurs Simultanés** | Jusqu'à 25 |
+
+#### 2.2.2 Production — Pays Unique (Bureau National, 50K–500K Emprunteurs)
+
+| Ressource | Spécification |
+|-----------|---------------|
+| **Serveur d'Application** | 4 vCPU, 8 Go RAM, 50 Go SSD |
+| **Serveur de Base de Données** | 4 vCPU, 16 Go RAM, 200 Go SSD (NVMe recommandé), extension pg_trgm |
+| **Stockage de Fichiers** | 100 Go+ (photos d'identité, documents, PDFs générés dans `uploads/`) |
+| **Réseau** | 100 Mbps symétrique, liaison redondante |
+| **Utilisateurs Simultanés** | Jusqu'à 100 |
+| **Connexions BD** | Pool de 10–20 (voir Section 4.4) |
+
+#### 2.2.3 Production — Multi-Pays / Pan-Africain (500K+ Emprunteurs)
+
+| Ressource | Spécification |
+|-----------|---------------|
+| **Serveurs d'Application** | 2× (8 vCPU, 16 Go RAM, 50 Go SSD) derrière un répartiteur de charge |
+| **Serveur BD (Principal)** | 8 vCPU, 32 Go RAM, 500 Go NVMe SSD, archivage WAL activé |
+| **Serveur BD (Réplique)** | 4 vCPU, 16 Go RAM, 500 Go NVMe SSD (réplication en continu) |
+| **Stockage Fichiers/Objets** | 500 Go+ (compatible S3 ou montage NFS local pour `uploads/`) |
+| **Réseau** | 1 Gbps symétrique, liaisons redondantes, protection DDoS |
+| **Répartiteur de Charge** | Nginx / HAProxy avec terminaison TLS et sessions persistantes |
+| **Utilisateurs Simultanés** | 100–500+ |
+| **Connexions BD** | Pool de 20–50 |
+
+#### 2.2.4 Minimum Quick-Start (Développement Uniquement)
+
+| Ressource | Minimum |
+|-----------|---------|
+| CPU | 1 vCPU |
+| RAM | 512 Mo |
+| Disque | 1 Go |
+| Réseau | 1 Mbps |
+
+> **Note :** Ces minimums conviennent uniquement au développement et à la démonstration.
 
 ### 2.3 Exigences Réseau
 
@@ -41,6 +81,7 @@ Ce guide fournit des instructions de déploiement étape par étape pour le Syst
 - Terminaison HTTPS (via un proxy inverse ou fournie par la plateforme)
 - Accès HTTPS sortant vers `api.dicebear.com` (avatars auto-générés pour les emprunteurs)
 - Accès HTTPS sortant vers `open.er-api.com` (récupération des taux de change en direct)
+- Accès HTTPS sortant vers l'API OpenAI (fonctionnalités IA ; URL configurée via `AI_INTEGRATIONS_OPENAI_BASE_URL`)
 
 ---
 
@@ -540,7 +581,7 @@ Le Système de Registre de Crédit comprend les modules et capacités suivants :
 | Fonctionnalité | Description |
 |----------------|-------------|
 | Traitement Multi-Devises | Prise en charge de plus de 42 devises africaines plus USD, EUR, GBP à travers les 54 juridictions |
-| Internationalisation (i18n) | Trois langues prises en charge : Anglais (EN), Français (FR) et Portugais (PT) |
+| Internationalisation (i18n) | Cinq langues prises en charge : Anglais (EN), Français (FR), Portugais (PT), Arabe (AR) et Swahili (SW) |
 | Sélecteur de Langue sur la Page de Connexion | Les utilisateurs peuvent sélectionner leur langue préférée directement depuis l'écran de connexion |
 | Gestion des Taux de Change | Module de gestion et de mise à jour des taux de change des devises prises en charge |
 | Administration API | Interface d'administration pour la gestion des clés API, la surveillance de l'utilisation et la configuration de l'accès API externe |
@@ -564,7 +605,7 @@ Le Système de Registre de Crédit comprend les modules et capacités suivants :
 
 | Composant | Version |
 |-----------|---------|
-| Application | v1.2 (Améliorations Entreprise) |
+| Application | v2.5 (Améliorations Entreprise) |
 | Environnement d'exécution Node.js | 20.x LTS |
 | Express.js | 4.x |
 | Drizzle ORM | Dernière version |

@@ -1,10 +1,10 @@
 # Hati ya Majaribio ya Kukubalika na Mtumiaji (UAT)
 
-## Mfumo wa Kituo cha Kati cha Data na Daftari la Mikopo kwa Mamlaka Mbalimbali v1.2
+## Mfumo wa Kituo cha Kati cha Data na Daftari la Mikopo kwa Mamlaka Mbalimbali v2.5
 
 **Imeandaliwa kwa:** Systems In Motion Limited  
-**Toleo la Hati:** 1.2  
-**Tarehe:** Machi 2026  
+**Toleo la Hati:** 2.5  
+**Tarehe:** Aprili 2026  
 **Uainishaji:** Siri
 
 ---
@@ -60,7 +60,7 @@
 
 | Kipengele | Maelezo |
 |------|--------|
-| Programu | Mfumo wa Kituo cha Kati cha Data na Daftari la Mikopo kwa Mamlaka Mbalimbali v1.2 |
+| Programu | Mfumo wa Kituo cha Kati cha Data na Daftari la Mikopo kwa Mamlaka Mbalimbali v2.5 |
 | Hifadhidata | PostgreSQL yenye meza 21 |
 | Majukumu ya Watumiaji | Admin, Regulator, Lender, Viewer |
 | Sarafu Zinazotumika | Sarafu 42+ za Afrika pamoja na USD, EUR, GBP |
@@ -667,7 +667,7 @@
 
 **Mwisho wa Hati**
 
-*Hati hii ya Majaribio ya UAT inashughulikia moduli zote za Mfumo wa Kituo cha Kati cha Data na Daftari la Mikopo kwa Mamlaka Mbalimbali v1.2, ikijumuisha uboreshaji 15 wa biashara (ENT-01 hadi ENT-15). Kila kisa cha jaribio kimeundwa kuthibitisha mahitaji ya kitendaji na yasiyo ya kitendaji kama ilivyofafanuliwa katika Maelezo ya Mahitaji ya Programu (SRS).*
+*Hati hii ya Majaribio ya UAT inashughulikia moduli zote za Mfumo wa Kituo cha Kati cha Data na Daftari la Mikopo kwa Mamlaka Mbalimbali v2.5, ikijumuisha uboreshaji 15 wa biashara (ENT-01 hadi ENT-15). Kila kisa cha jaribio kimeundwa kuthibitisha mahitaji ya kitendaji na yasiyo ya kitendaji kama ilivyofafanuliwa katika Maelezo ya Mahitaji ya Programu (SRS).*
 
 *Imeandaliwa na: Systems In Motion Limited*  
 *Uainishaji: Siri*

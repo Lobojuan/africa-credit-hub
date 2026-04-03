@@ -1,8 +1,8 @@
-# Cross-Jurisdictional Central Data Hub & Credit Registry System v1.3 — Systems Documentation
+# Cross-Jurisdictional Central Data Hub & Credit Registry System v2.5 — Systems Documentation
 
 **Prepared for:** Systems In Motion Limited  
-**Document Version:** 1.3  
-**Date:** March 2026  
+**Document Version:** 2.5  
+**Date:** April 2026  
 **Classification:** Confidential
 
 ---
@@ -21,12 +21,12 @@
 10. [Error Handling](#10-error-handling)
 11. [Performance](#11-performance)
 12. [Monitoring & Logging](#12-monitoring--logging)
-13. [Enterprise Enhancements (v1.1 — v2.0)](#13-enterprise-enhancements-v11--v12)
-14. [AI Integration Architecture (v1.3)](#14-ai-integration-architecture-v13)
-15. [API Usage Tracking (v1.3)](#15-api-usage-tracking-v13)
-16. [Excel Export System (v1.3)](#16-excel-export-system-v13)
-17. [Real-time Notifications (v1.3)](#17-real-time-notifications-v13)
-18. [Dashboard Trends (v1.3)](#18-dashboard-trends-v13)
+13. [Enterprise Enhancements (v1.1 — v2.5)](#13-enterprise-enhancements-v11--v25)
+14. [AI Integration Architecture (v2.5)](#14-ai-integration-architecture-v25)
+15. [API Usage Tracking (v2.5)](#15-api-usage-tracking-v25)
+16. [Excel Export System (v2.5)](#16-excel-export-system-v25)
+17. [Real-time Notifications (v2.5)](#17-real-time-notifications-v25)
+18. [Dashboard Trends (v2.5)](#18-dashboard-trends-v25)
 
 ---
 
@@ -1464,7 +1464,7 @@ All significant system actions are recorded in the `audit_logs` table. The audit
 **Action Types:**
 `LOGIN`, `LOGIN_FAILED`, `ACCOUNT_LOCKED`, `LOGOUT`, `PASSWORD_CHANGE`, `CREATE`, `UPDATE`, `SUBMIT_APPROVAL`, `APPROVE`, `REJECT`, `FILE_DISPUTE`, `UPDATE_DISPUTE`, `GRANT_CONSENT`, `REVOKE_CONSENT`, `VIEW`, `GENERATE_REPORT`, `BATCH_UPLOAD`, `BULK_SEARCH`, `API_SUBMIT`, `API_BATCH_SUBMIT`, `API_CREDIT_REPORT`, `UPLOAD_PHOTO`, `UPLOAD_ID_DOCUMENT`, `MFA_ENABLED`, `MFA_DISABLED`
 
-**Enhanced Audit Trail UI (v1.3):**
+**Enhanced Audit Trail UI (v2.5):**
 - **Timeline View:** Toggle between table view and vertical timeline feed. Timeline displays colored activity dots: green for CREATE actions, blue for UPDATE actions, red for DELETE actions.
 - **Date Range Filters:** "From" and "To" date input fields to narrow audit log results to a specific date range.
 - **Export:** CSV and Excel (XLSX) export buttons allow downloading filtered audit trail data in both formats.
@@ -1497,7 +1497,7 @@ Error conditions are logged via `console.error()` for:
 
 ---
 
-## 13. Enterprise Enhancements (v1.1 — v2.0)
+## 13. Enterprise Enhancements (v1.1 — v2.5)
 
 ### 13.1 TOTP Multi-Factor Authentication (ENT-01)
 
@@ -1537,7 +1537,7 @@ Error conditions are logged via `console.error()` for:
 - **i18n:** Full EN/FR/PT translations under `chatbot.*` keys (askBorrower, searching, confirmSummary, cancelled, startNew)
 - **Dispute Types:** Uses `disputes.types.*` i18n keys for localized type names
 
-**AI Assistant Mode (v1.3):**
+**AI Assistant Mode (v2.5):**
 - **Toggle:** Sparkles icon button in chatbot header switches between guided dispute filing mode and AI assistant mode
 - **Backend:** `POST /api/ai/chat` endpoint with SSE streaming via the `chatWithAI()` function in `server/ai.ts`
 - **Capabilities:** Answers questions about credit data, regulations across 54 African countries, platform features, dispute processes, and compliance requirements
@@ -1693,7 +1693,7 @@ Error conditions are logged via `console.error()` for:
 
 ---
 
-## 14. AI Integration Architecture (v1.3)
+## 14. AI Integration Architecture (v2.5)
 
 ### 14.1 Overview
 
@@ -1830,7 +1830,7 @@ data: [DONE]
 
 ---
 
-## 15. API Usage Tracking (v1.3)
+## 15. API Usage Tracking (v2.5)
 
 ### 15.1 Architecture
 
@@ -1879,7 +1879,7 @@ The API Administration page (`client/src/pages/api-admin.tsx`) includes an "API 
 
 ---
 
-## 16. Excel Export System (v1.3)
+## 16. Excel Export System (v2.5)
 
 ### 16.1 Architecture
 
@@ -1910,7 +1910,7 @@ Response headers:
 
 ---
 
-## 17. Real-time Notifications (v1.3)
+## 17. Real-time Notifications (v2.5)
 
 ### 17.1 Database Schema
 
@@ -1945,7 +1945,7 @@ The `NotificationBell` component (`client/src/components/notification-bell.tsx`)
 
 ---
 
-## 18. Dashboard Trends (v1.3)
+## 18. Dashboard Trends (v2.5)
 
 ### 18.1 API Endpoint
 
@@ -1988,7 +1988,7 @@ The `StatCard` component (`client/src/components/stat-card.tsx`) displays sparkl
 
 ---
 
-## 19. Platform Command Center Architecture (v2.0)
+## 19. Platform Command Center Architecture (v2.5)
 
 ### 19.1 Overview
 
@@ -2035,7 +2035,7 @@ The Platform Command Center is the super admin landing page providing platform-w
 
 ---
 
-## 20. Transaction-Based Monetization System (v2.0)
+## 20. Transaction-Based Monetization System (v2.5)
 
 ### 20.1 Architecture
 
@@ -2067,4 +2067,4 @@ The monetization system tracks per-transaction billable events across organizati
 *End of Systems Documentation*
 
 *Document prepared by Systems In Motion Limited*  
-*Cross-Jurisdictional Central Data Hub & Credit Registry System v2.0*
+*Cross-Jurisdictional Central Data Hub & Credit Registry System v2.5*

@@ -1,8 +1,8 @@
-# Mfumo wa Kituo Kikuu cha Data cha Mamlaka Mbalimbali na Rejista ya Mikopo v1.2 — Nyaraka za Mfumo
+# Mfumo wa Kituo Kikuu cha Data cha Mamlaka Mbalimbali na Rejista ya Mikopo v2.5 — Nyaraka za Mfumo
 
 **Imeandaliwa kwa:** Systems In Motion Limited  
-**Toleo la Hati:** 1.2  
-**Tarehe:** Machi 2026  
+**Toleo la Hati:** 2.5  
+**Tarehe:** Aprili 2026  
 **Uainishaji:** Siri
 
 ---
@@ -1248,7 +1248,7 @@ Hali za makosa zinarekodwa kupitia `console.error()` kwa:
 
 ---
 
-## 13. Maboresho ya Biashara (v1.1 — v1.2)
+## 13. Maboresho ya Biashara (v1.1 — v2.5)
 
 ### 13.1 Uthibitishaji wa Hatua Nyingi wa TOTP (ENT-01)
 
@@ -1409,4 +1409,4 @@ Hali za makosa zinarekodwa kupitia `console.error()` kwa:
 *Mwisho wa Nyaraka za Mfumo*
 
 *Hati imeandaliwa na Systems In Motion Limited*  
-*Mfumo wa Kituo Kikuu cha Data cha Mamlaka Mbalimbali na Rejista ya Mikopo v1.2*
+*Mfumo wa Kituo Kikuu cha Data cha Mamlaka Mbalimbali na Rejista ya Mikopo v2.5*

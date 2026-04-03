@@ -1,10 +1,10 @@
 # Mwongozo wa Kupeleka (Deployment Guide)
 
-## Kituo cha Data cha Kati cha Mamlaka Mbalimbali na Mfumo wa Rejista ya Mikopo v1.2
+## Kituo cha Data cha Kati cha Mamlaka Mbalimbali na Mfumo wa Rejista ya Mikopo v2.5
 
 **Imeandaliwa kwa:** Systems In Motion Limited  
-**Toleo la Hati:** 1.2  
-**Tarehe:** Machi 2026
+**Toleo la Hati:** 2.5  
+**Tarehe:** Aprili 2026
 
 ---
 
@@ -27,12 +27,52 @@ Mwongozo huu unatoa maelekezo ya hatua kwa hatua ya kupeleka Mfumo wa Rejista ya
 
 ### 2.2 Mahitaji ya Vifaa
 
-| Rasilimali | Kiwango cha Chini | Kilichopendekezwa |
-|------------|-------------------|-------------------|
-| CPU | 1 vCPU | 2+ vCPU |
-| RAM | 512 MB | 2 GB+ |
-| Diski | 1 GB | 5 GB+ (nafasi ya ziada inahitajika kwa picha na hati za kitambulisho zilizopakiwa katika saraka ya `uploads/`) |
-| Mtandao | 1 Mbps | 10 Mbps+ |
+Jukwaa la CDH linaweza kupelekwa kwa viwango tofauti kulingana na idadi ya waombaji mikopo, watumiaji wa wakati mmoja, na wigo wa udhibiti.
+
+#### 2.2.1 Maendeleo / Majaribio (Ofisi Moja, < 50K Waombaji Mikopo)
+
+| Rasilimali | Maelezo |
+|------------|---------|
+| **Seva ya Programu** | 2 vCPU, 4 GB RAM, 20 GB SSD |
+| **Seva ya Hifadhidata** | 2 vCPU, 4 GB RAM, 50 GB SSD (au PostgreSQL inayosimamiwa — Neon, RDS, n.k.) |
+| **Mtandao** | 10 Mbps sawa, IPv4 ya umma |
+| **OS** | Ubuntu 22.04 LTS / RHEL 9 / Debian 12 (64-bit) |
+| **Watumiaji wa Wakati Mmoja** | Hadi 25 |
+
+#### 2.2.2 Uzalishaji — Nchi Moja (Ofisi ya Kitaifa, 50K–500K Waombaji Mikopo)
+
+| Rasilimali | Maelezo |
+|------------|---------|
+| **Seva ya Programu** | 4 vCPU, 8 GB RAM, 50 GB SSD |
+| **Seva ya Hifadhidata** | 4 vCPU, 16 GB RAM, 200 GB SSD (NVMe inapendekezwa), kiendelezi cha pg_trgm |
+| **Hifadhi ya Faili** | 100 GB+ (picha za kitambulisho, hati, PDF zilizozalishwa katika `uploads/`) |
+| **Mtandao** | 100 Mbps sawa, kiungo mbadala |
+| **Watumiaji wa Wakati Mmoja** | Hadi 100 |
+| **Viunganisho vya BD** | Ukubwa wa pool 10–20 (tazama Sehemu 4.4) |
+
+#### 2.2.3 Uzalishaji — Nchi Nyingi / Pan-Afrika (500K+ Waombaji Mikopo)
+
+| Rasilimali | Maelezo |
+|------------|---------|
+| **Seva za Programu** | 2× (8 vCPU, 16 GB RAM, 50 GB SSD) nyuma ya msawazishaji wa mzigo |
+| **Seva ya BD (Msingi)** | 8 vCPU, 32 GB RAM, 500 GB NVMe SSD, uhifadhi wa WAL umewezeshwa |
+| **Seva ya BD (Nakala)** | 4 vCPU, 16 GB RAM, 500 GB NVMe SSD (replication ya kuendelea) |
+| **Hifadhi ya Faili/Vitu** | 500 GB+ (S3-compatible au NFS mount kwa `uploads/`) |
+| **Mtandao** | 1 Gbps sawa, viungo vya akiba, ulinzi wa DDoS |
+| **Msawazishaji wa Mzigo** | Nginx / HAProxy na TLS na vikao vya kudumu |
+| **Watumiaji wa Wakati Mmoja** | 100–500+ |
+| **Viunganisho vya BD** | Ukubwa wa pool 20–50 |
+
+#### 2.2.4 Kiwango cha Chini (Maendeleo Pekee)
+
+| Rasilimali | Kiwango cha Chini |
+|------------|-------------------|
+| CPU | 1 vCPU |
+| RAM | 512 MB |
+| Diski | 1 GB |
+| Mtandao | 1 Mbps |
+
+> **Kumbuka:** Kiwango hiki cha chini kinafaa tu kwa maendeleo na maonyesho.
 
 ### 2.3 Mahitaji ya Mtandao
 
@@ -41,6 +81,7 @@ Mwongozo huu unatoa maelekezo ya hatua kwa hatua ya kupeleka Mfumo wa Rejista ya
 - Usimbaji wa HTTPS (kupitia proksi ya nyuma au inayotolewa na jukwaa)
 - Ufikiaji wa HTTPS wa nje kwa `api.dicebear.com` (picha za waombaji mikopo zinazozalishwa kiotomatiki)
 - Ufikiaji wa HTTPS wa nje kwa `open.er-api.com` (kupata viwango vya ubadilishaji wa fedha vya moja kwa moja)
+- Ufikiaji wa HTTPS wa nje kwa OpenAI API (vipengele vya AI; URL imesanidiwa kupitia `AI_INTEGRATIONS_OPENAI_BASE_URL`)
 
 ---
 
@@ -522,7 +563,7 @@ psql $DATABASE_URL -c "\dt"
 
 ## 15. Vitegemezi vya Uboreshaji wa Biashara (Enterprise Enhancement Dependencies)
 
-Vifurushi vifuatavyo vya ziada viliongezwa kwa uboreshaji wa biashara (v1.1 na v1.2):
+Vifurushi vifuatavyo vya ziada viliongezwa kwa uboreshaji wa biashara (v1.1 na v2.5):
 
 | Kifurushi | Madhumuni | Uboreshaji |
 |-----------|-----------|------------|
@@ -544,7 +585,7 @@ Mfumo wa Rejista ya Mikopo unajumuisha moduli na uwezo ufuatao:
 | Kipengele | Maelezo |
 |-----------|---------|
 | Usindikaji wa Fedha Nyingi | Msaada kwa fedha 42+ za Afrika pamoja na USD, EUR, GBP katika mamlaka 54 |
-| Kimataifa (i18n) | Lugha tatu zinazosaidiwa: Kiingereza (EN), Kifaransa (FR), na Kireno (PT) |
+| Kimataifa (i18n) | Lugha tano zinazosaidiwa: Kiingereza (EN), Kifaransa (FR), Kireno (PT), Kiarabu (AR), na Kiswahili (SW) |
 | Kibadilishi cha Lugha kwenye Ukurasa wa Kuingia | Watumiaji wanaweza kuchagua lugha wanayopendelea moja kwa moja kutoka kwenye skrini ya kuingia |
 | Usimamizi wa Viwango vya Ubadilishaji | Moduli ya kusimamia na kusasisha viwango vya ubadilishaji wa fedha kati ya fedha zinazosaidiwa |
 | Utawala wa API | Kiolesura cha utawala kwa kusimamia funguo za API, kufuatilia matumizi, na kusanidi ufikiaji wa API ya nje |
@@ -568,7 +609,7 @@ Mfumo wa Rejista ya Mikopo unajumuisha moduli na uwezo ufuatao:
 
 | Kipengele | Toleo |
 |-----------|-------|
-| Programu | v1.2 (Uboreshaji wa Biashara) |
+| Programu | v2.5 (Uboreshaji wa Biashara) |
 | Node.js Runtime | 20.x LTS |
 | Express.js | 4.x |
 | Drizzle ORM | Toleo la Hivi Karibuni |

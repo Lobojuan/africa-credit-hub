@@ -1,7 +1,7 @@
 # Ghana Credit Registry — End-to-End Test Plan
 
 **Carlson Capital & Systems In Motion Limited**
-**Version 2.1 | BoG CRB Standards Compliance Testing | CDH v2.1**
+**Version 2.5 | BoG CRB Standards Compliance Testing | CDH v2.5**
 
 ---
 

@@ -1,10 +1,10 @@
 # Data Dictionary
 
-## Cross-Jurisdictional Central Data Hub & Credit Registry System v2.0
+## Cross-Jurisdictional Central Data Hub & Credit Registry System v2.5
 
 **Prepared for:** Systems In Motion Limited  
-**Document Version:** 2.0  
-**Date:** March 2026
+**Document Version:** 2.5  
+**Date:** April 2026
 
 ---
 

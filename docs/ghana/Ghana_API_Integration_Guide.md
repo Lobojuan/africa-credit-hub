@@ -1,7 +1,7 @@
 # Ghana Credit Registry — API Integration Guide
 
 **Carlson Capital & Systems In Motion Limited**
-**Version 2.1 | Bank of Ghana CRB v1.1 Compliant API | CDH v2.1**
+**Version 2.5 | Bank of Ghana CRB v1.1 Compliant API | CDH v2.5**
 
 ---
 

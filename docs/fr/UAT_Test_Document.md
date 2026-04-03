@@ -1,10 +1,10 @@
 # Document de Tests d'Acceptation Utilisateur (UAT)
 
-## Système de Hub Central de Données Inter-Juridictionnel & Registre de Crédit v1.2
+## Système de Hub Central de Données Inter-Juridictionnel & Registre de Crédit v2.5
 
 **Préparé pour :** Systems In Motion Limited  
-**Version du Document :** 1.2  
-**Date :** Mars 2026  
+**Version du Document :** 2.5  
+**Date :** Avril 2026  
 **Classification :** Confidentiel
 
 ---
@@ -60,7 +60,7 @@
 
 | Élément | Détail |
 |---------|--------|
-| Application | Système de Hub Central de Données Inter-Juridictionnel & Registre de Crédit v1.2 |
+| Application | Système de Hub Central de Données Inter-Juridictionnel & Registre de Crédit v2.5 |
 | Base de Données | PostgreSQL avec 21 tables |
 | Rôles Utilisateur | Admin, Régulateur, Prêteur, Observateur |
 | Devises Supportées | Plus de 42 devises africaines plus USD, EUR, GBP |
@@ -691,7 +691,7 @@
 
 **Fin du Document**
 
-*Ce document de test UAT couvre tous les modules du Système de Hub Central de Données Inter-Juridictionnel & Registre de Crédit v1.2, y compris les 15 améliorations entreprise (ENT-01 à ENT-15). Chaque cas de test est conçu pour valider les exigences fonctionnelles et non fonctionnelles telles que définies dans la Spécification des Exigences Logicielles (SRS).*
+*Ce document de test UAT couvre tous les modules du Système de Hub Central de Données Inter-Juridictionnel & Registre de Crédit v2.5, y compris les 15 améliorations entreprise (ENT-01 à ENT-15). Chaque cas de test est conçu pour valider les exigences fonctionnelles et non fonctionnelles telles que définies dans la Spécification des Exigences Logicielles (SRS).*
 
 *Préparé par : Systems In Motion Limited*  
 *Classification : Confidentiel*

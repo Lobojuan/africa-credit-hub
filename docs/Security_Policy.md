@@ -1,7 +1,7 @@
-# CDH v2.1 — Information Security Policy
+# CDH v2.5 — Information Security Policy
 
 **Document Classification:** CONFIDENTIAL
-**Version:** 2.1.0
+**Version:** 2.5.0
 **Effective Date:** 2026-01-01
 **Review Date:** 2026-06-30
 **Approved By:** Chief Information Security Officer (CISO)
@@ -15,7 +15,7 @@ This Information Security Policy establishes the framework for protecting the co
 ## 2. Scope
 
 This policy covers:
-- All data processed, stored, or transmitted by CDH v2.1
+- All data processed, stored, or transmitted by CDH v2.5
 - All system users across 54 African jurisdictions
 - All telco and financial institution integrations
 - Development, staging, and production environments
@@ -161,4 +161,4 @@ This policy is reviewed semi-annually or upon:
 
 ---
 
-*This document is maintained as part of CDH v2.1 and is subject to version control.*
+*This document is maintained as part of CDH v2.5 and is subject to version control.*

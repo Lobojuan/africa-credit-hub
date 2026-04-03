@@ -1,12 +1,12 @@
-# Système de Registre de Crédit — Manuel de l'Utilisateur v1.2
+# Système de Registre de Crédit — Manuel de l'Utilisateur v2.5
 
 **Hub Central de Données Inter-Juridictionnel & Système de Registre de Crédit**
 
 **Préparé pour :** Systems In Motion Limited
 
-**Version :** 1.2
+**Version :** 2.5
 
-**Date :** Mars 2026
+**Date :** Avril 2026
 
 ---
 
@@ -76,11 +76,13 @@ Algérie, Djibouti, Égypte, Érythrée, Libye, Mauritanie, Maroc, Somalie, Soud
 
 ### 1.3 Langues Prises en Charge
 
-Le système prend en charge trois langues :
+Le système prend en charge cinq langues :
 
 - **Anglais (EN)** — Langue par défaut
 - **Français (FR)** — Traduction française complète disponible
 - **Portugais (PT)** — Traduction portugaise complète disponible
+- **Arabe (AR)** — Traduction arabe complète disponible
+- **Swahili (SW)** — Traduction swahili complète disponible
 
 Les utilisateurs peuvent changer de langue à tout moment en utilisant le sélecteur de langue disponible sur la page de connexion et dans l'en-tête de l'application.
 

@@ -1,7 +1,7 @@
-# CDH v2.1 — Disaster Recovery & Business Continuity Plan
+# CDH v2.5 — Disaster Recovery & Business Continuity Plan
 
 **Document Classification:** CONFIDENTIAL
-**Version:** 2.1.0
+**Version:** 2.5.0
 **Effective Date:** 2026-01-01
 **Review Date:** 2026-06-30
 **Approved By:** Chief Technology Officer (CTO)
@@ -148,4 +148,4 @@ This plan is reviewed:
 
 ---
 
-*This document is maintained as part of CDH v2.1 and is subject to version control.*
+*This document is maintained as part of CDH v2.5 and is subject to version control.*

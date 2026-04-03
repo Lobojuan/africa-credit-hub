@@ -1,7 +1,7 @@
 # Ghana Credit Registry — Operational Procedures Manual
 
 **Carlson Capital & Systems In Motion Limited**
-**Version 2.1 | Standard Operating Procedures for Ghana CRB Operations | CDH v2.1**
+**Version 2.5 | Standard Operating Procedures for Ghana CRB Operations | CDH v2.5**
 
 ---
 

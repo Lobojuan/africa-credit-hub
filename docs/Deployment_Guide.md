@@ -1,10 +1,10 @@
 # Deployment Guide
 
-## Cross-Jurisdictional Central Data Hub & Credit Registry System v2.0
+## Cross-Jurisdictional Central Data Hub & Credit Registry System v2.5
 
 **Prepared for:** Systems In Motion Limited  
-**Document Version:** 1.2  
-**Date:** March 2026
+**Document Version:** 2.5  
+**Date:** April 2026
 
 ---
 
@@ -27,21 +27,113 @@ This guide provides step-by-step deployment instructions for the Credit Registry
 
 ### 2.2 Hardware Requirements
 
-| Resource | Minimum | Recommended |
-|----------|---------|-------------|
-| CPU | 1 vCPU | 2+ vCPU |
-| RAM | 512 MB | 2 GB+ |
-| Disk | 1 GB | 5 GB+ (additional space required for uploaded photos and ID documents in `uploads/` directory) |
-| Network | 1 Mbps | 10 Mbps+ |
+The CDH platform can be deployed at different scales depending on borrower volume, concurrent users, and regulatory scope. Choose the tier that best matches the deployment target.
+
+#### 2.2.1 Development / Pilot (Single Bureau, < 50K Borrowers)
+
+| Resource | Specification |
+|----------|---------------|
+| **Application Server** | 2 vCPU, 4 GB RAM, 20 GB SSD |
+| **Database Server** | 2 vCPU, 4 GB RAM, 50 GB SSD (or managed PostgreSQL — Neon, RDS, etc.) |
+| **Network** | 10 Mbps symmetric, public IPv4 |
+| **OS** | Ubuntu 22.04 LTS / RHEL 9 / Debian 12 (64-bit) |
+| **Concurrent Users** | Up to 25 |
+| **Estimated Borrowers** | Up to 50,000 |
+
+#### 2.2.2 Production — Single Country (National Bureau, 50K–500K Borrowers)
+
+| Resource | Specification |
+|----------|---------------|
+| **Application Server** | 4 vCPU, 8 GB RAM, 50 GB SSD |
+| **Database Server** | 4 vCPU, 16 GB RAM, 200 GB SSD (NVMe preferred), pg_trgm extension |
+| **File Storage** | 100 GB+ (uploaded ID photos, documents, generated PDFs in `uploads/`) |
+| **Network** | 100 Mbps symmetric, redundant uplink |
+| **OS** | Ubuntu 22.04 LTS / RHEL 9 (64-bit, hardened) |
+| **Concurrent Users** | Up to 100 |
+| **Estimated Borrowers** | 50,000–500,000 |
+| **Database Connections** | Pool size 10–20 (see Section 4.4) |
+
+#### 2.2.3 Production — Multi-Country / Pan-African (500K+ Borrowers)
+
+| Resource | Specification |
+|----------|---------------|
+| **Application Servers** | 2× (8 vCPU, 16 GB RAM, 50 GB SSD) behind load balancer |
+| **Database Server (Primary)** | 8 vCPU, 32 GB RAM, 500 GB NVMe SSD, WAL archiving enabled |
+| **Database Server (Read Replica)** | 4 vCPU, 16 GB RAM, 500 GB NVMe SSD (streaming replication) |
+| **File / Object Storage** | 500 GB+ (S3-compatible or local NFS mount for `uploads/`) |
+| **Network** | 1 Gbps symmetric, redundant uplinks, DDoS protection |
+| **Load Balancer** | Nginx / HAProxy with TLS termination and sticky sessions |
+| **OS** | Ubuntu 22.04 LTS / RHEL 9 (64-bit, CIS-hardened) |
+| **Concurrent Users** | 100–500+ |
+| **Estimated Borrowers** | 500,000–5,000,000+ |
+| **Database Connections** | Pool size 20–50 |
+
+#### 2.2.4 Storage Growth Projections
+
+| Data Type | Approximate Size per Record | Growth Notes |
+|-----------|----------------------------|--------------|
+| Borrower record | ~2 KB | 102K records ≈ 200 MB baseline |
+| Credit account | ~1.5 KB | 172K records ≈ 260 MB baseline |
+| Audit log entry | ~500 bytes | ~5K/day; 10-year retention ≈ 9 GB |
+| Uploaded ID photo | 200 KB–2 MB each | Depends on photo requirements |
+| Uploaded documents | 500 KB–10 MB each | XBRL, PDF, scanned documents |
+| Generated PDF reports | 50–200 KB each | Credit reports, copyright PDFs |
+| Payment history | ~200 bytes | 120K records ≈ 24 MB baseline |
+| PostgreSQL indexes (pg_trgm) | ~30% of indexed data | Trigram GIN indexes for fuzzy matching |
+
+**Recommended:** Provision 2× the projected storage for year one, with auto-expansion or volume resize capability.
+
+#### 2.2.5 Minimum Quick-Start (Development Only)
+
+For local development, testing, or Replit deployment:
+
+| Resource | Minimum |
+|----------|---------|
+| CPU | 1 vCPU |
+| RAM | 512 MB |
+| Disk | 1 GB |
+| Network | 1 Mbps |
+
+> **Note:** These minimums are suitable only for development and demonstration. Production deployments should use the tiered specifications above.
 
 ### 2.3 Network Requirements
 
 - Outbound access to PostgreSQL database (port 5432 or provider-specific)
 - Inbound access on application port (default 5000)
-- HTTPS termination (via reverse proxy or platform-provided)
+- HTTPS termination (via reverse proxy or platform-provided TLS)
 - Outbound HTTPS access to `api.dicebear.com` (auto-generated borrower avatars)
 - Outbound HTTPS access to `open.er-api.com` (live exchange rate fetching)
 - Outbound HTTPS access to OpenAI API endpoint (AI-powered features; URL configured via `AI_INTEGRATIONS_OPENAI_BASE_URL`)
+- Outbound HTTPS access to Anthropic API endpoint (optional; AI features via `AI_INTEGRATIONS_ANTHROPIC_BASE_URL`)
+
+### 2.4 Firewall and Security
+
+| Rule | Direction | Port | Protocol | Purpose |
+|------|-----------|------|----------|---------|
+| Application | Inbound | 443 (HTTPS) | TCP | Client access via reverse proxy |
+| Application | Inbound | 5000 | TCP | Direct access (dev only; block in production) |
+| PostgreSQL | Inbound | 5432 | TCP | Database (restrict to app server IPs only) |
+| SSH | Inbound | 22 | TCP | Administration (key-based auth, restrict by IP) |
+| External APIs | Outbound | 443 | TCP | DiceBear, ExchangeRate API, OpenAI, Anthropic |
+| All other | Inbound | * | * | DENY |
+
+### 2.5 TLS / Certificate Requirements
+
+- TLS 1.2 or higher required for all client-facing connections
+- Valid X.509 certificate (Let's Encrypt, commercial CA, or organization PKI)
+- Reverse proxy (Nginx, Caddy, or cloud load balancer) handles TLS termination
+- Database connections should use `sslmode=require` or `sslmode=verify-full`
+
+### 2.6 Operating System Recommendations
+
+| OS | Version | Notes |
+|----|---------|-------|
+| Ubuntu Server | 22.04 LTS | Recommended; widest ecosystem support |
+| RHEL / Rocky Linux | 9.x | Enterprise environments; SELinux support |
+| Debian | 12 (Bookworm) | Stable alternative to Ubuntu |
+| Amazon Linux | 2023 | AWS-optimized deployments |
+
+All deployments require 64-bit architecture. ARM64 (aarch64) and x86_64 are both supported by Node.js 18+.
 
 ---
 
@@ -536,7 +628,7 @@ psql $DATABASE_URL -c "\dt"
 
 ## 15. Enterprise Enhancement Dependencies
 
-The following additional packages were added for enterprise enhancements (v1.1 and v2.0):
+The following additional packages were added for enterprise enhancements (v1.1 and v2.5):
 
 | Package | Purpose | Enhancement |
 |---------|---------|-------------|
@@ -559,7 +651,7 @@ The Credit Registry System includes the following modules and capabilities:
 | Feature | Description |
 |---------|-------------|
 | Multi-Currency Processing | Support for 42+ African currencies plus USD, EUR, GBP across 54 jurisdictions |
-| Internationalization (i18n) | Three languages supported: English (EN), French (FR), and Portuguese (PT) |
+| Internationalization (i18n) | Five languages supported: English (EN), French (FR), Portuguese (PT), Arabic (AR), and Swahili (SW) |
 | Login Page Language Switcher | Users can select their preferred language directly from the login screen |
 | Exchange Rate Management | Module for managing and updating currency exchange rates across supported currencies |
 | API Administration | Administrative interface for managing API keys, monitoring usage, and configuring external API access |
@@ -593,7 +685,7 @@ The Credit Registry System includes the following modules and capabilities:
 
 | Component | Version |
 |-----------|---------|
-| Application | v2.0 (Enterprise Enhancements) |
+| Application | v2.5 (Enterprise Enhancements) |
 | Node.js Runtime | 20.x LTS |
 | Express.js | 4.x |
 | Drizzle ORM | Latest |

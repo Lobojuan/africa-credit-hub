@@ -1,11 +1,11 @@
 # Carlson Capital & Systems In Motion Limited
 # Pan-African Credit Registry — External API Integration Guide
-## Cross-Jurisdictional Credit Data Hub (CDH) v2.1
+## Cross-Jurisdictional Credit Data Hub (CDH) v2.5
 
 ---
 
-**Document Version:** 2.1  
-**Last Updated:** March 2026  
+**Document Version:** 2.5  
+**Last Updated:** April 2026  
 **Classification:** CONFIDENTIAL — For Authorized Institutions Only  
 **Contact:** Carlson Capital & Systems In Motion Limited — uffe.carlson@gmail.com | Thomas.baafi@prischell.com  
 **Website:** https://africacredithub.com
