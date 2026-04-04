@@ -11,5 +11,18 @@
     "rows": 133,
     "durationMs": 9422,
     "notes": "Initial startup backup"
+  },
+  {
+    "id": "bk_1775315851142_ppnymu",
+    "filename": "cdh_full_2026-04-04T15-17-31.sql.gz",
+    "type": "full",
+    "sizeMB": 47.16,
+    "status": "completed",
+    "createdAt": "2026-04-04T15:17:31.142Z",
+    "createdBy": "system",
+    "tables": 43,
+    "rows": 0,
+    "durationMs": 8232,
+    "notes": "Initial startup backup"
   }
 ]
