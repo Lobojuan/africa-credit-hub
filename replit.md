@@ -67,7 +67,7 @@ The system employs a modern full-stack architecture built for scalability and co
     -   **Brain & Voice Chatbot**: Dual-AI architecture using GPT-4o as "The Brain" and Claude as "The Voice" for empathetic streaming responses.
     -   **Concentration Risk Alerts**: Automated endpoint and dashboard widget monitoring exposure thresholds.
     -   **AI Command Center**: Unified hub for 6 AI tools: Credit Narratives, Anomaly Detection, Regulatory Reports, Natural Language Queries, Cross-Border Risk Intelligence, and Loan Approval Recommendations.
-    -   **Multi-Country Data Isolation**: Country-level data sandboxing with dynamic country switching.
+    -   **Multi-Country Data Isolation**: Country-level data sandboxing with dynamic country switching. Country switcher uses explicit session save + global `?country=` query parameter injection via `appendGlobalParams` in `queryClient.ts`, with per-country query key differentiation in dashboard queries and inactive cache removal on switch to prevent cache pollution.
     -   **Transaction-Based Monetization**: Per-transaction billing with per-country pricing and volume tier discounts.
     -   **SATA Cross-Border Framework**: Implements Smart Africa Telecommunications Alliance data sharing.
     -   **PAPSS Settlement Tracker**: Tracks Pan-African Payment and Settlement System settlements.

@@ -564,7 +564,7 @@ export default function Dashboard() {
     defaultAccounts: number;
     pendingApprovalCount: number;
     openDisputeCount: number;
-  }>({ queryKey: ["/api/dashboard/stats"] });
+  }>({ queryKey: ["/api/dashboard/stats", { country: activeCountry }] });
 
   const { data: exchangeRates } = useQuery<ExchangeRate[]>({
     queryKey: ["/api/exchange-rates"],
@@ -613,7 +613,7 @@ export default function Dashboard() {
   };
 
   const { data: detailData, isLoading: detailLoading } = useQuery({
-    queryKey: [`/api/dashboard/details/${selectedDetail}`],
+    queryKey: [`/api/dashboard/details/${selectedDetail}`, { country: activeCountry }],
     enabled: !!selectedDetail,
   });
 
@@ -625,7 +625,7 @@ export default function Dashboard() {
     delinquent: number[];
     defaults: number[];
     approvals: number[];
-  }>({ queryKey: ["/api/dashboard/trends"] });
+  }>({ queryKey: ["/api/dashboard/trends", { country: activeCountry }] });
 
   const { data: chartData, isLoading: chartsLoading } = useQuery<{
     monthlyTrend: { month: string; borrowers: number; accounts: number }[];
@@ -633,7 +633,7 @@ export default function Dashboard() {
     typeBreakdown: { name: string; value: number }[];
     countryBreakdown: { country: string; borrowers: number; accounts: number }[];
   }>({
-    queryKey: ["/api/dashboard/chart-data"],
+    queryKey: ["/api/dashboard/chart-data", { country: activeCountry }],
   });
 
   const chartProps = useMemo(() => {
@@ -646,11 +646,11 @@ export default function Dashboard() {
   }, [chartData]);
 
   const { data: recentAccounts, isLoading: accountsLoading } = useQuery<CreditAccount[]>({
-    queryKey: ["/api/credit-accounts"],
+    queryKey: ["/api/credit-accounts", { country: activeCountry }],
   });
 
   const { data: auditLogs, isLoading: logsLoading } = useQuery<AuditLog[]>({
-    queryKey: ["/api/audit-logs"],
+    queryKey: ["/api/audit-logs", { country: activeCountry }],
   });
 
   const config = selectedDetail ? detailConfig[selectedDetail] : null;

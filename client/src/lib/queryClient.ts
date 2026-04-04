@@ -1,6 +1,7 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 let _selectedOrgId: string | null = null;
+let _selectedCountry: string | null = null;
 let _csrfToken: string | null = null;
 
 export function setGlobalOrgId(orgId: string | null) {
@@ -9,6 +10,14 @@ export function setGlobalOrgId(orgId: string | null) {
 
 export function getGlobalOrgId(): string | null {
   return _selectedOrgId;
+}
+
+export function setGlobalCountry(country: string | null) {
+  _selectedCountry = country;
+}
+
+export function getGlobalCountry(): string | null {
+  return _selectedCountry;
 }
 
 export async function fetchCSRFToken(): Promise<string> {
@@ -28,11 +37,18 @@ export function clearCSRFToken() {
   _csrfToken = null;
 }
 
-function appendOrgId(url: string): string {
-  if (!_selectedOrgId) return url;
+function appendGlobalParams(url: string): string {
   if (url.startsWith("/api/auth/") || url.startsWith("/api/external/")) return url;
-  const separator = url.includes("?") ? "&" : "?";
-  return `${url}${separator}orgId=${_selectedOrgId}`;
+  let result = url;
+  if (_selectedOrgId) {
+    const sep = result.includes("?") ? "&" : "?";
+    result = `${result}${sep}orgId=${_selectedOrgId}`;
+  }
+  if (_selectedCountry) {
+    const sep = result.includes("?") ? "&" : "?";
+    result = `${result}${sep}country=${encodeURIComponent(_selectedCountry)}`;
+  }
+  return result;
 }
 
 async function throwIfResNotOk(res: Response) {
@@ -59,7 +75,7 @@ export async function apiRequest(
     if (token) headers["X-CSRF-Token"] = token;
   }
 
-  const res = await fetch(appendOrgId(url), {
+  const res = await fetch(appendGlobalParams(url), {
     method,
     headers,
     body: data ? JSON.stringify(data) : undefined,
@@ -82,7 +98,7 @@ export async function apiFormRequest(
     if (token) headers["X-CSRF-Token"] = token;
   }
 
-  const res = await fetch(appendOrgId(url), {
+  const res = await fetch(appendGlobalParams(url), {
     method,
     headers,
     body: formData,
@@ -99,7 +115,7 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(appendOrgId(queryKey[0] as string), {
+    const res = await fetch(appendGlobalParams(queryKey[0] as string), {
       credentials: "include",
     });
 

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, setGlobalCountry } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/components/theme-provider";
 import {
@@ -58,16 +58,21 @@ export function CountryThemeProvider({ children }: { children: ReactNode }) {
 
   const serverCountry = (user as any)?.viewingCountry as string | undefined;
 
-  const [activeCountry, setActiveCountry] = useState<string | null>(
-    serverCountry && serverCountry !== "global" ? serverCountry : null
-  );
+  const initialCountry = serverCountry && serverCountry !== "global" ? serverCountry : null;
+  const [activeCountry, setActiveCountry] = useState<string | null>(initialCountry);
   const [isSwitching, setIsSwitching] = useState(false);
+
+  useEffect(() => {
+    setGlobalCountry(initialCountry);
+  }, []);
 
   useEffect(() => {
     if (serverCountry && serverCountry !== "global") {
       setActiveCountry(serverCountry);
+      setGlobalCountry(serverCountry);
     } else if (serverCountry === "global") {
       setActiveCountry(null);
+      setGlobalCountry(null);
     }
   }, [serverCountry]);
 
@@ -98,12 +103,20 @@ export function CountryThemeProvider({ children }: { children: ReactNode }) {
     try {
       await switchMutation.mutateAsync(country);
       setActiveCountry(country);
+      setGlobalCountry(country);
+      queryClient.removeQueries({
+        predicate: (q) => {
+          const key = q.queryKey[0] as string;
+          if (!key || key.startsWith("/api/auth/")) return false;
+          return !q.isActive();
+        },
+      });
       await queryClient.invalidateQueries({
         predicate: (q) => {
           const key = q.queryKey[0] as string;
           return key && !key.startsWith("/api/auth/");
         },
-        refetchType: "all",
+        refetchType: "active",
       });
       queryClient.setQueryData(["/api/auth/me"], (old: any) => {
         if (!old) return old;

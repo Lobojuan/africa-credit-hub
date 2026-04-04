@@ -8102,11 +8102,17 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const { country } = req.body;
       if (country === "command_center") {
         delete req.session.viewingCountry;
-        return res.json({ viewingCountry: null, message: "Returned to command center" });
+        return req.session.save((err) => {
+          if (err) return res.status(500).json({ message: "Failed to save session" });
+          res.json({ viewingCountry: null, message: "Returned to command center" });
+        });
       }
       if (country === "global" || country === null) {
         req.session.viewingCountry = "global";
-        return res.json({ viewingCountry: "global", message: "Switched to global view" });
+        return req.session.save((err) => {
+          if (err) return res.status(500).json({ message: "Failed to save session" });
+          res.json({ viewingCountry: "global", message: "Switched to global view" });
+        });
       }
       const normalized = country.toLowerCase().replace(/[\s_-]/g, "");
       const config = COUNTRY_REGISTRY[normalized];
@@ -8114,7 +8120,10 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         return res.status(400).json({ message: "Invalid country" });
       }
       req.session.viewingCountry = config.name;
-      res.json({ viewingCountry: config.name, message: `Switched to ${config.name}` });
+      req.session.save((err) => {
+        if (err) return res.status(500).json({ message: "Failed to save session" });
+        res.json({ viewingCountry: config.name, message: `Switched to ${config.name}` });
+      });
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
     }
