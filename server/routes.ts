@@ -3102,7 +3102,7 @@ export async function registerRoutes(
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
-      const { searchType, ghanaCardNumber, firstName, lastName, dateOfBirth, gender, nationalId, registrationNumber, tinNumber, companyName, reasonForRequest, purpose, msisdn, provider, accountStatus } = req.query;
+      const { searchType, ghanaCardNumber, firstName, middleName, lastName, dateOfBirth, mobileNumber, gender, email, otherIdType, otherIdNumber, nationalId, registrationNumber, registrationDate, tinNumber, companyName, reasonForRequest, purpose, amountRequested, reportType, msisdn, provider, accountStatus } = req.query;
       if (!searchType || (searchType !== "consumer" && searchType !== "business" && searchType !== "telco")) {
         return res.status(400).json({ message: "searchType must be 'consumer', 'business', or 'telco'" });
       }
@@ -3110,16 +3110,40 @@ export async function registerRoutes(
         if (!reasonForRequest) {
           return res.status(400).json({ message: "reasonForRequest is required for consumer searches" });
         }
-        if (!ghanaCardNumber && !firstName && !lastName && !nationalId) {
-          return res.status(400).json({ message: "At least one identifier (Ghana Card, name, or National ID) is required" });
+        if (!ghanaCardNumber) {
+          return res.status(400).json({ message: "Ghana Card Number is required (Primary Identifier)" });
+        }
+        if (!firstName || !lastName) {
+          return res.status(400).json({ message: "First Name and Last Name are required" });
+        }
+        if (!dateOfBirth) {
+          return res.status(400).json({ message: "Date of Birth is required" });
+        }
+        if (!mobileNumber) {
+          return res.status(400).json({ message: "Mobile Number is required" });
+        }
+        if (!gender) {
+          return res.status(400).json({ message: "Gender is required" });
+        }
+        if (!reportType) {
+          return res.status(400).json({ message: "Report Type is required" });
         }
       }
       if (searchType === "business") {
         if (!purpose) {
           return res.status(400).json({ message: "purpose is required for business searches" });
         }
-        if (!registrationNumber && !tinNumber && !companyName) {
-          return res.status(400).json({ message: "At least one identifier (Registration Number, TIN, or Company Name) is required" });
+        if (!companyName) {
+          return res.status(400).json({ message: "Business Name is required" });
+        }
+        if (!registrationNumber) {
+          return res.status(400).json({ message: "Registration Number is required (Primary ID)" });
+        }
+        if (!registrationDate) {
+          return res.status(400).json({ message: "Registration Date is required" });
+        }
+        if (!amountRequested) {
+          return res.status(400).json({ message: "Amount Requested is required" });
         }
       }
       if (searchType === "telco") {
@@ -3133,7 +3157,9 @@ export async function registerRoutes(
         details: JSON.stringify({
           searchType,
           reasonForRequest: reasonForRequest || purpose || null,
-          identifiersUsed: Object.entries({ ghanaCardNumber, firstName, lastName, nationalId, registrationNumber, tinNumber, companyName, msisdn, provider, accountStatus })
+          amountRequested: amountRequested || null,
+          reportType: reportType || null,
+          identifiersUsed: Object.entries({ ghanaCardNumber, firstName, middleName, lastName, dateOfBirth, mobileNumber, gender, email, otherIdType, otherIdNumber, nationalId, registrationNumber, registrationDate, tinNumber, companyName, msisdn, provider, accountStatus })
             .filter(([, v]) => v)
             .map(([k]) => k),
         }),
@@ -3142,9 +3168,12 @@ export async function registerRoutes(
         searchType: searchType as "consumer" | "business" | "telco",
         ghanaCardNumber: ghanaCardNumber as string,
         firstName: firstName as string,
+        middleName: middleName as string,
         lastName: lastName as string,
         dateOfBirth: dateOfBirth as string,
+        mobileNumber: mobileNumber as string,
         gender: gender as string,
+        email: email as string,
         nationalId: nationalId as string,
         registrationNumber: registrationNumber as string,
         tinNumber: tinNumber as string,
@@ -6317,9 +6346,9 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       function drawHeader() {
         doc.rect(40, 40, W, 60).fill(NORDIC_BLUE);
         doc.fill("#ffffff").fontSize(14).font("Helvetica-Bold")
-          .text(L("headerTitle"), 50, 52, { width: W - 140 });
+          .text(L("headerTitle"), 55, 52, { width: W - 160 });
         doc.fontSize(8).font("Helvetica").fill("#cccccc")
-          .text(L("headerSub"), 50, 72, { width: W - 140 });
+          .text(L("headerSub"), 55, 72, { width: W - 160 });
         doc.fill("#ffffff").fontSize(7).font("Helvetica")
           .text(L("orderNumber"), W - 90, 52, { width: 80, align: "right" });
         doc.fontSize(9).font("Helvetica-Bold")
@@ -6329,62 +6358,86 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       }
 
       function sectionTitle(title: string, num?: number) {
-        ensureSpace(30);
-        doc.moveDown(0.5);
+        ensureSpace(40);
+        doc.moveDown(0.6);
         const y = doc.y;
+        doc.rect(40, y - 2, W, 22).fill("#f8f9fa");
         if (num !== undefined) {
-          doc.fill(NORDIC_BLUE).fontSize(8).font("Helvetica-Bold")
-            .text(`${num}`, 40, y, { width: 15 });
+          doc.fill(NORDIC_BLUE).fontSize(9).font("Helvetica-Bold")
+            .text(`${num}.`, 46, y + 3, { width: 18 });
           doc.fill(NORDIC_BLUE).fontSize(10).font("Helvetica-Bold")
-            .text(title, 58, y);
+            .text(title, 62, y + 3);
         } else {
           doc.fill(NORDIC_BLUE).fontSize(10).font("Helvetica-Bold")
-            .text(title, 40, y);
+            .text(title, 46, y + 3);
         }
-        doc.moveDown(0.3);
-        doc.moveTo(40, doc.y).lineTo(40 + W, doc.y).strokeColor("#dddddd").lineWidth(0.5).stroke();
-        doc.moveDown(0.3);
+        doc.y = y + 24;
+        doc.moveTo(40, doc.y).lineTo(40 + W, doc.y).strokeColor(NORDIC_BLUE).lineWidth(0.8).stroke();
+        doc.moveDown(0.4);
         doc.fill(DARK);
       }
 
       function infoRow(label: string, value: string, x: number, w: number) {
-        doc.fontSize(6).font("Helvetica").fill(LIGHT).text(label.toUpperCase(), x, doc.y, { width: w });
+        ensureSpace(20);
+        doc.fontSize(6.5).font("Helvetica").fill(LIGHT).text(label.toUpperCase(), x, doc.y, { width: w });
         doc.fontSize(8.5).font("Helvetica-Bold").fill(DARK).text(value || "—", x, doc.y, { width: w });
+        doc.moveDown(0.3);
+      }
+
+      function infoGrid(fields: [string, string][], x: number, w: number) {
+        const colW = (w - 20) / 2;
+        for (let i = 0; i < fields.length; i += 2) {
+          ensureSpace(22);
+          const y = doc.y;
+          doc.fontSize(6.5).font("Helvetica").fill(LIGHT).text(fields[i][0].toUpperCase(), x, y, { width: colW });
+          doc.fontSize(8.5).font("Helvetica-Bold").fill(DARK).text(fields[i][1] || "—", x, y + 9, { width: colW });
+          if (i + 1 < fields.length) {
+            doc.fontSize(6.5).font("Helvetica").fill(LIGHT).text(fields[i + 1][0].toUpperCase(), x + colW + 20, y, { width: colW });
+            doc.fontSize(8.5).font("Helvetica-Bold").fill(DARK).text(fields[i + 1][1] || "—", x + colW + 20, y + 9, { width: colW });
+          }
+          doc.y = y + 22;
+        }
         doc.moveDown(0.2);
       }
 
       function ensureSpace(needed: number) {
         if (doc.y + needed > doc.page.height - 60) {
           doc.addPage();
-          doc.y = 40;
+          doc.y = 50;
         }
       }
 
       function tableHeader(cols: { label: string; width: number; align?: string }[]) {
-        ensureSpace(20);
+        ensureSpace(22);
         const y = doc.y;
-        doc.rect(40, y, W, 16).fill("#f0f0f0");
+        doc.rect(40, y, W, 18).fill(NORDIC_BLUE);
         let x = 44;
         cols.forEach(col => {
-          doc.fill(GRAY).fontSize(6).font("Helvetica-Bold")
-            .text(col.label.toUpperCase(), x, y + 4, { width: col.width - 8, align: (col.align as any) || "left" });
+          doc.fill("#ffffff").fontSize(6.5).font("Helvetica-Bold")
+            .text(col.label.toUpperCase(), x, y + 5, { width: col.width - 8, align: (col.align as any) || "left" });
           x += col.width;
         });
-        doc.y = y + 18;
+        doc.y = y + 20;
       }
 
+      let tableRowIdx = 0;
       function tableRow(cols: { value: string; width: number; align?: string; bold?: boolean; color?: string }[]) {
-        ensureSpace(16);
+        ensureSpace(18);
         const y = doc.y;
+        const bg = tableRowIdx % 2 === 0 ? "#ffffff" : "#f8f9fa";
+        doc.rect(40, y, W, 17).fill(bg);
         let x = 44;
         cols.forEach(col => {
           doc.fill(col.color || DARK).fontSize(7.5).font(col.bold ? "Helvetica-Bold" : "Helvetica")
-            .text(col.value || "—", x, y + 3, { width: col.width - 8, align: (col.align as any) || "left" });
+            .text(col.value || "—", x, y + 4, { width: col.width - 8, align: (col.align as any) || "left" });
           x += col.width;
         });
-        doc.moveTo(40, y + 15).lineTo(40 + W, y + 15).strokeColor("#eeeeee").lineWidth(0.3).stroke();
-        doc.y = y + 16;
+        doc.moveTo(40, y + 17).lineTo(40 + W, y + 17).strokeColor("#e5e5e5").lineWidth(0.3).stroke();
+        doc.y = y + 18;
+        tableRowIdx++;
       }
+
+      function resetTableRowIdx() { tableRowIdx = 0; }
 
       drawHeader();
 
@@ -6418,21 +6471,21 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
       sectionTitle(L("subjectDetails"));
       if (b.type === "individual") {
-        const fields = [
+        const fields: [string, string][] = [
           [L("fullName"), `${b.firstName} ${b.lastName}`], [L("dateOfBirth"), b.dateOfBirth || "—"],
           [L("gender"), b.gender || "—"], [L("nationalId"), b.nationalId || "—"],
           [L("tin"), b.tinNumber || "—"], [L("passport"), b.passportNumber || "—"],
           [L("employer"), b.employerName || "—"], [L("occupation"), b.occupation || "—"],
           [L("phone"), b.phone || "—"], [L("email"), b.email || "—"],
         ];
-        fields.forEach(([l, v]) => infoRow(l, v, 40, W));
+        infoGrid(fields, 40, W);
       } else {
-        const fields = [
+        const fields: [string, string][] = [
           [L("companyName"), b.companyName || "—"], [L("businessReg"), b.businessRegNumber || "—"],
           [L("sector"), b.sector || "—"], [L("tin"), b.tinNumber || "—"],
           [L("phone"), b.phone || "—"], [L("email"), b.email || "—"],
         ];
-        fields.forEach(([l, v]) => infoRow(l, v, 40, W));
+        infoGrid(fields, 40, W);
       }
 
       sectionTitle(L("creditScoreSummary"));
@@ -6473,6 +6526,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       }
 
       sectionTitle(L("creditProfileOverview"), 1);
+      resetTableRowIdx();
       const overviewCols = [
         { label: L("sno"), width: 35 },
         { label: L("indicator"), width: W - 135 },
@@ -6509,6 +6563,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
       if (inquiries.length > 0) {
         sectionTitle(L("inquiryHistory"), 2);
+        resetTableRowIdx();
         const inqCols = [
           { label: L("institution"), width: W * 0.35 },
           { label: L("purpose"), width: W * 0.25 },
@@ -6529,15 +6584,20 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       if (accounts.length > 0) {
         sectionTitle(L("facilityDetails"), 3);
         accounts.forEach((acct: any, idx: number) => {
-          ensureSpace(100);
-          const cur = acct.currency || "ETB";
-          doc.moveDown(0.3);
+          ensureSpace(80);
+          const cur = acct.currency || "GHS";
+          doc.moveDown(0.4);
           const facLabel = L("facilityOf").replace("{idx}", String(idx + 1)).replace("{total}", String(accounts.length));
-          doc.fontSize(8).font("Helvetica-Bold").fill(NORDIC_BLUE)
-            .text(`${facLabel} — ${acct.status?.toUpperCase()} (${cur})`, 40, doc.y);
-          doc.moveDown(0.3);
+          const statusColor = acct.status === "current" || acct.status === "closed" ? "#16a34a" : acct.status === "written_off" ? "#dc2626" : "#ca8a04";
+          const fy = doc.y;
+          doc.rect(40, fy, W, 20).fill("#f0f4f8");
+          doc.fontSize(8.5).font("Helvetica-Bold").fill(NORDIC_BLUE)
+            .text(`${facLabel}`, 46, fy + 4, { continued: true, width: W - 200 });
+          doc.fill(statusColor).font("Helvetica-Bold")
+            .text(` — ${(acct.status || "").toUpperCase()} (${cur})`, { continued: false });
+          doc.y = fy + 24;
 
-          const facilityFields = [
+          const facilityFields: [string, string][] = [
             [L("institution"), acct.lenderInstitution], [L("accountNo"), acct.accountNumber],
             [L("type"), (acct.accountType || "").replace(/_/g, " ")], [L("classification"), acct.status],
             [L("currentBalance"), acct.currentBalance ? `${cur} ${parseFloat(acct.currentBalance).toLocaleString()}` : "—"],
@@ -6548,10 +6608,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
             [L("lastPayment"), acct.lastPaymentDate || "—"],
             [L("restructured"), (acct.restructureCount || 0) > 0 ? `${L("yes")} (${acct.restructureCount}x)` : L("no")],
           ];
-          facilityFields.forEach(([l, v]) => {
-            ensureSpace(14);
-            infoRow(l, v, 48, W - 8);
-          });
+          infoGrid(facilityFields, 48, W - 8);
 
           const history = reportData.paymentHistory?.[acct.id] || [];
           if (history.length > 0) {
@@ -6582,6 +6639,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
       if (judgments.length > 0) {
         sectionTitle(L("courtJudgmentsPublic"), 4);
+        resetTableRowIdx();
         const jCols = [
           { label: L("caseNo"), width: W * 0.2 },
           { label: L("court"), width: W * 0.25 },
@@ -6607,6 +6665,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const guarantorEntries = Object.values(allGuarantors).flat();
       if (guarantorEntries.length > 0) {
         sectionTitle(L("guarantors"), 5);
+        resetTableRowIdx();
         const gCols = [
           { label: L("name"), width: W * 0.25 },
           { label: L("nationalId"), width: W * 0.2 },

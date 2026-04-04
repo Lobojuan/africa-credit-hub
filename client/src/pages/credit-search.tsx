@@ -70,19 +70,28 @@ export default function CreditSearchPage() {
   const [consumerForm, setConsumerForm] = useState({
     ghanaCardNumber: "",
     firstName: "",
+    middleName: "",
     lastName: "",
     dateOfBirth: "",
+    mobileNumber: "",
     gender: "",
+    email: "",
+    otherIdType: "",
+    otherIdNumber: "",
     reasonForRequest: "",
+    amountRequested: "",
+    reportType: "",
   });
   const [consumerSubmitted, setConsumerSubmitted] = useState(false);
   const [activeConsumerParams, setActiveConsumerParams] = useState<typeof consumerForm | null>(null);
 
   const [businessForm, setBusinessForm] = useState({
-    registrationNumber: "",
-    tinNumber: "",
     companyName: "",
+    registrationNumber: "",
+    registrationDate: "",
+    tinNumber: "",
     purpose: "",
+    amountRequested: "",
   });
   const [businessSubmitted, setBusinessSubmitted] = useState(false);
   const [activeBusinessParams, setActiveBusinessParams] = useState<typeof businessForm | null>(null);
@@ -106,10 +115,17 @@ export default function CreditSearchPage() {
     params.set("searchType", "consumer");
     if (activeConsumerParams.ghanaCardNumber) params.set("ghanaCardNumber", activeConsumerParams.ghanaCardNumber);
     if (activeConsumerParams.firstName) params.set("firstName", activeConsumerParams.firstName);
+    if (activeConsumerParams.middleName) params.set("middleName", activeConsumerParams.middleName);
     if (activeConsumerParams.lastName) params.set("lastName", activeConsumerParams.lastName);
     if (activeConsumerParams.dateOfBirth) params.set("dateOfBirth", activeConsumerParams.dateOfBirth);
+    if (activeConsumerParams.mobileNumber) params.set("mobileNumber", activeConsumerParams.mobileNumber);
     if (activeConsumerParams.gender) params.set("gender", activeConsumerParams.gender);
+    if (activeConsumerParams.email) params.set("email", activeConsumerParams.email);
+    if (activeConsumerParams.otherIdType) params.set("otherIdType", activeConsumerParams.otherIdType);
+    if (activeConsumerParams.otherIdNumber) params.set("otherIdNumber", activeConsumerParams.otherIdNumber);
     if (activeConsumerParams.reasonForRequest) params.set("reasonForRequest", activeConsumerParams.reasonForRequest);
+    if (activeConsumerParams.amountRequested) params.set("amountRequested", activeConsumerParams.amountRequested);
+    if (activeConsumerParams.reportType) params.set("reportType", activeConsumerParams.reportType);
     return `/api/structured-search?${params.toString()}`;
   };
 
@@ -117,10 +133,12 @@ export default function CreditSearchPage() {
     if (!activeBusinessParams) return "";
     const params = new URLSearchParams();
     params.set("searchType", "business");
-    if (activeBusinessParams.registrationNumber) params.set("registrationNumber", activeBusinessParams.registrationNumber);
-    if (activeBusinessParams.tinNumber) params.set("tinNumber", activeBusinessParams.tinNumber);
     if (activeBusinessParams.companyName) params.set("companyName", activeBusinessParams.companyName);
+    if (activeBusinessParams.registrationNumber) params.set("registrationNumber", activeBusinessParams.registrationNumber);
+    if (activeBusinessParams.registrationDate) params.set("registrationDate", activeBusinessParams.registrationDate);
+    if (activeBusinessParams.tinNumber) params.set("tinNumber", activeBusinessParams.tinNumber);
     if (activeBusinessParams.purpose) params.set("purpose", activeBusinessParams.purpose);
+    if (activeBusinessParams.amountRequested) params.set("amountRequested", activeBusinessParams.amountRequested);
     return `/api/structured-search?${params.toString()}`;
   };
 
@@ -185,16 +203,24 @@ export default function CreditSearchPage() {
 
   const handleConsumerSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!consumerForm.ghanaCardNumber && !consumerForm.firstName && !consumerForm.lastName) return;
+    if (!consumerForm.ghanaCardNumber) return;
+    if (!consumerForm.firstName || !consumerForm.lastName) return;
+    if (!consumerForm.dateOfBirth) return;
+    if (!consumerForm.mobileNumber) return;
+    if (!consumerForm.gender) return;
     if (!consumerForm.reasonForRequest) return;
+    if (!consumerForm.reportType) return;
     setActiveConsumerParams({ ...consumerForm });
     setConsumerSubmitted(true);
   };
 
   const handleBusinessSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!businessForm.registrationNumber && !businessForm.tinNumber && !businessForm.companyName) return;
+    if (!businessForm.companyName) return;
+    if (!businessForm.registrationNumber) return;
+    if (!businessForm.registrationDate) return;
     if (!businessForm.purpose) return;
+    if (!businessForm.amountRequested) return;
     setActiveBusinessParams({ ...businessForm });
     setBusinessSubmitted(true);
   };
@@ -213,8 +239,8 @@ export default function CreditSearchPage() {
 
   const generalTotalResults = (generalResults?.borrowers?.length || 0) + (generalResults?.institutions?.length || 0) + (generalResults?.creditAccounts?.length || 0) + (generalResults?.telcoProfiles?.length || 0);
 
-  const consumerFormValid = (consumerForm.ghanaCardNumber || consumerForm.firstName || consumerForm.lastName) && consumerForm.reasonForRequest;
-  const businessFormValid = (businessForm.registrationNumber || businessForm.tinNumber || businessForm.companyName) && businessForm.purpose;
+  const consumerFormValid = consumerForm.ghanaCardNumber && consumerForm.firstName && consumerForm.lastName && consumerForm.dateOfBirth && consumerForm.mobileNumber && consumerForm.gender && consumerForm.reasonForRequest && consumerForm.reportType;
+  const businessFormValid = businessForm.companyName && businessForm.registrationNumber && businessForm.registrationDate && businessForm.purpose && businessForm.amountRequested;
   const telcoFormValid = true;
 
   return (
@@ -259,10 +285,10 @@ export default function CreditSearchPage() {
                   <Badge variant="outline" className="text-[10px] ml-auto">BOG Compliant</Badge>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1.5 sm:col-span-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-1.5 sm:col-span-3">
                     <Label htmlFor="ghanaCard" className="text-xs font-medium">
-                      Ghana Card Number <span className="text-muted-foreground">(Primary Identifier)</span>
+                      Ghana Card Number <span className="text-red-500">*</span> <span className="text-muted-foreground">(Primary Identifier)</span>
                     </Label>
                     <Input
                       id="ghanaCard"
@@ -273,7 +299,9 @@ export default function CreditSearchPage() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="firstName" className="text-xs font-medium">First Name</Label>
+                    <Label htmlFor="firstName" className="text-xs font-medium">
+                      First Name <span className="text-red-500">*</span>
+                    </Label>
                     <Input
                       id="firstName"
                       data-testid="input-consumer-firstname"
@@ -283,7 +311,19 @@ export default function CreditSearchPage() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="lastName" className="text-xs font-medium">Last Name</Label>
+                    <Label htmlFor="middleName" className="text-xs font-medium">Middle Name</Label>
+                    <Input
+                      id="middleName"
+                      data-testid="input-consumer-middlename"
+                      placeholder="Middle name (optional)"
+                      value={consumerForm.middleName}
+                      onChange={(e) => setConsumerForm(prev => ({ ...prev, middleName: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="lastName" className="text-xs font-medium">
+                      Last Name <span className="text-red-500">*</span>
+                    </Label>
                     <Input
                       id="lastName"
                       data-testid="input-consumer-lastname"
@@ -293,7 +333,9 @@ export default function CreditSearchPage() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="dob" className="text-xs font-medium">Date of Birth</Label>
+                    <Label htmlFor="dob" className="text-xs font-medium">
+                      Date of Birth <span className="text-red-500">*</span>
+                    </Label>
                     <Input
                       id="dob"
                       type="date"
@@ -303,7 +345,21 @@ export default function CreditSearchPage() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-medium">Gender</Label>
+                    <Label htmlFor="mobileNumber" className="text-xs font-medium">
+                      Mobile Number <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="mobileNumber"
+                      data-testid="input-consumer-mobile"
+                      placeholder="+233 XXX XXX XXXX"
+                      value={consumerForm.mobileNumber}
+                      onChange={(e) => setConsumerForm(prev => ({ ...prev, mobileNumber: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">
+                      Gender <span className="text-red-500">*</span>
+                    </Label>
                     <Select value={consumerForm.gender} onValueChange={(v) => setConsumerForm(prev => ({ ...prev, gender: v }))}>
                       <SelectTrigger data-testid="select-consumer-gender">
                         <SelectValue placeholder="Select gender" />
@@ -314,7 +370,43 @@ export default function CreditSearchPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-1.5 sm:col-span-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="email" className="text-xs font-medium">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      data-testid="input-consumer-email"
+                      placeholder="email@example.com (optional)"
+                      value={consumerForm.email}
+                      onChange={(e) => setConsumerForm(prev => ({ ...prev, email: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Other ID Type</Label>
+                    <Select value={consumerForm.otherIdType} onValueChange={(v) => setConsumerForm(prev => ({ ...prev, otherIdType: v }))}>
+                      <SelectTrigger data-testid="select-consumer-other-id-type">
+                        <SelectValue placeholder="Select ID type (optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="passport">Passport</SelectItem>
+                        <SelectItem value="voters_id">Voter's ID</SelectItem>
+                        <SelectItem value="drivers_license">Driver's License</SelectItem>
+                        <SelectItem value="ssnit">SSNIT Number</SelectItem>
+                        <SelectItem value="national_id">National ID</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="otherIdNumber" className="text-xs font-medium">Other ID Number</Label>
+                    <Input
+                      id="otherIdNumber"
+                      data-testid="input-consumer-other-id-number"
+                      placeholder="ID number (optional)"
+                      value={consumerForm.otherIdNumber}
+                      onChange={(e) => setConsumerForm(prev => ({ ...prev, otherIdNumber: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
                     <Label className="text-xs font-medium">
                       Reason for Request <span className="text-red-500">*</span>
                     </Label>
@@ -326,6 +418,32 @@ export default function CreditSearchPage() {
                         {SEARCH_REASONS.map(r => (
                           <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
                         ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="amountRequested" className="text-xs font-medium">Amount Requested</Label>
+                    <Input
+                      id="amountRequested"
+                      data-testid="input-consumer-amount"
+                      placeholder="e.g. 50000 (optional)"
+                      type="number"
+                      value={consumerForm.amountRequested}
+                      onChange={(e) => setConsumerForm(prev => ({ ...prev, amountRequested: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">
+                      Report Type <span className="text-red-500">*</span>
+                    </Label>
+                    <Select value={consumerForm.reportType} onValueChange={(v) => setConsumerForm(prev => ({ ...prev, reportType: v }))}>
+                      <SelectTrigger data-testid="select-consumer-report-type">
+                        <SelectValue placeholder="Select report type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="full_report">Full Credit Report</SelectItem>
+                        <SelectItem value="score_only">Score Only</SelectItem>
+                        <SelectItem value="summary">Summary Report</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -374,9 +492,21 @@ export default function CreditSearchPage() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label htmlFor="companyName" className="text-xs font-medium">
+                      Business Name <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="companyName"
+                      data-testid="input-business-name"
+                      placeholder="Registered company name"
+                      value={businessForm.companyName}
+                      onChange={(e) => setBusinessForm(prev => ({ ...prev, companyName: e.target.value }))}
+                    />
+                  </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="regNumber" className="text-xs font-medium">
-                      Registration Number
+                      Registration Number <span className="text-red-500">*</span> <span className="text-muted-foreground">(Primary ID)</span>
                     </Label>
                     <Input
                       id="regNumber"
@@ -387,26 +517,28 @@ export default function CreditSearchPage() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="tin" className="text-xs font-medium">TIN</Label>
+                    <Label htmlFor="regDate" className="text-xs font-medium">
+                      Registration Date <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="regDate"
+                      type="date"
+                      data-testid="input-business-regdate"
+                      value={businessForm.registrationDate}
+                      onChange={(e) => setBusinessForm(prev => ({ ...prev, registrationDate: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="tin" className="text-xs font-medium">TIN Number</Label>
                     <Input
                       id="tin"
                       data-testid="input-business-tin"
-                      placeholder="Tax Identification Number"
+                      placeholder="Tax Identification Number (optional)"
                       value={businessForm.tinNumber}
                       onChange={(e) => setBusinessForm(prev => ({ ...prev, tinNumber: e.target.value }))}
                     />
                   </div>
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <Label htmlFor="companyName" className="text-xs font-medium">Company Name</Label>
-                    <Input
-                      id="companyName"
-                      data-testid="input-business-name"
-                      placeholder="Registered company name"
-                      value={businessForm.companyName}
-                      onChange={(e) => setBusinessForm(prev => ({ ...prev, companyName: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-1.5 sm:col-span-2">
+                  <div className="space-y-1.5">
                     <Label className="text-xs font-medium">
                       Purpose of Inquiry <span className="text-red-500">*</span>
                     </Label>
@@ -420,6 +552,19 @@ export default function CreditSearchPage() {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label htmlFor="bizAmountRequested" className="text-xs font-medium">
+                      Amount Requested <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="bizAmountRequested"
+                      data-testid="input-business-amount"
+                      placeholder="e.g. 500000"
+                      type="number"
+                      value={businessForm.amountRequested}
+                      onChange={(e) => setBusinessForm(prev => ({ ...prev, amountRequested: e.target.value }))}
+                    />
                   </div>
                 </div>
 

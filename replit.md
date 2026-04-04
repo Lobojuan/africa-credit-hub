@@ -10,7 +10,7 @@ This project is a web-based Pan-African Credit Registry System (CDH v2.5) design
 | v1.2 | Feb 2026 | Enterprise features — maker-checker workflows, dispute management, regulatory compliance dashboard, IFF upload engine |
 | v2.0 | Mar 2026 | Ghana Launch — Bank of Ghana CRB v1.1 compliance, Ghana-specific mode, pipe-delimited BoG export, code catalogs, 17 institutions |
 | v2.1 | Mar 2026 | Intelligence Suite — AI portfolio intelligence, blockchain audit anchoring, ML credit scoring (GBM), consumer portal, cross-border entity resolution, Stripe billing |
-| v2.5 | Apr 2026 | Current Release — Global Scandinavian visual style (centralized `useBrandColors` hook), score methodology transparency with good/bad odds tables, maintenance mode system, security hardening, comprehensive version management, live system clock on landing page |
+| v2.5 | Apr 2026 | Current Release — Global Scandinavian visual style (centralized `useBrandColors` hook), score methodology transparency with good/bad odds tables, maintenance mode system, security hardening, comprehensive version management, live system clock on landing page, BOG-compliant structured search parameters (consumer: 13 fields with Ghana Card mandatory; business: 6 fields with Registration Number mandatory), improved PDF credit report layout (two-column grids, styled section headers, alternating table rows, proper page breaks) |
 
 ## Legal & Copyright
 - **Legal Page** (`/legal`): In-platform page displaying copyright notice, scope of protection, ownership, jurisdictional coverage (10 African nations), license categories, restrictions, trade secrets, database rights, enforcement remedies, dispute resolution, and contact info.

@@ -88,9 +88,12 @@ export interface IStorage {
     searchType: "consumer" | "business" | "telco";
     ghanaCardNumber?: string;
     firstName?: string;
+    middleName?: string;
     lastName?: string;
     dateOfBirth?: string;
+    mobileNumber?: string;
     gender?: string;
+    email?: string;
     nationalId?: string;
     registrationNumber?: string;
     tinNumber?: string;
@@ -704,9 +707,12 @@ export class DatabaseStorage implements IStorage {
     searchType: "consumer" | "business" | "telco";
     ghanaCardNumber?: string;
     firstName?: string;
+    middleName?: string;
     lastName?: string;
     dateOfBirth?: string;
+    mobileNumber?: string;
     gender?: string;
+    email?: string;
     nationalId?: string;
     registrationNumber?: string;
     tinNumber?: string;
@@ -748,14 +754,21 @@ export class DatabaseStorage implements IStorage {
     if (params.firstName) {
       conditions.push(ilike(borrowers.firstName, `%${params.firstName}%`));
     }
+    
     if (params.lastName) {
       conditions.push(ilike(borrowers.lastName, `%${params.lastName}%`));
     }
     if (params.dateOfBirth) {
       conditions.push(eq(borrowers.dateOfBirth, params.dateOfBirth));
     }
+    if (params.mobileNumber) {
+      conditions.push(ilike(borrowers.phone, `%${params.mobileNumber}%`));
+    }
     if (params.gender) {
       conditions.push(eq(borrowers.gender, params.gender));
+    }
+    if (params.email) {
+      conditions.push(ilike(borrowers.email, `%${params.email}%`));
     }
     if (params.registrationNumber) {
       conditions.push(ilike(borrowers.businessRegNumber, `%${params.registrationNumber}%`));
