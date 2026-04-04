@@ -32,6 +32,10 @@ import {
   FileCheck,
   BookOpen,
   PanelLeft,
+  Palette,
+  Wrench,
+  MapPin,
+  Phone,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -48,6 +52,22 @@ type VersionEntry = {
 };
 
 const versions: VersionEntry[] = [
+  {
+    version: "v2.5",
+    dateKey: "versionHistory.v25.date",
+    tagKey: "versionHistory.v25.tag",
+    descriptionKey: "versionHistory.v25.description",
+    features: [
+      { icon: Palette, titleKey: "versionHistory.v25.f1.title", descriptionKey: "versionHistory.v25.f1.desc" },
+      { icon: Search, titleKey: "versionHistory.v25.f2.title", descriptionKey: "versionHistory.v25.f2.desc" },
+      { icon: FileText, titleKey: "versionHistory.v25.f3.title", descriptionKey: "versionHistory.v25.f3.desc" },
+      { icon: Globe, titleKey: "versionHistory.v25.f4.title", descriptionKey: "versionHistory.v25.f4.desc" },
+      { icon: Phone, titleKey: "versionHistory.v25.f5.title", descriptionKey: "versionHistory.v25.f5.desc" },
+      { icon: Wrench, titleKey: "versionHistory.v25.f6.title", descriptionKey: "versionHistory.v25.f6.desc" },
+      { icon: Shield, titleKey: "versionHistory.v25.f7.title", descriptionKey: "versionHistory.v25.f7.desc" },
+      { icon: Clock, titleKey: "versionHistory.v25.f8.title", descriptionKey: "versionHistory.v25.f8.desc" },
+    ],
+  },
   {
     version: "v2.1",
     dateKey: "versionHistory.v21.date",

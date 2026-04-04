@@ -1260,9 +1260,22 @@ const pt = {
   versionHistory: {
     title: "Histórico de Versões",
     subtitle: "Notas de versão e registo de alterações do Sistema de Registo de Crédito",
+    v25: {
+      date: "Abril 2026",
+      tag: "Atual",
+      description: "Renovação visual global, pesquisa estruturada conforme BOG, relatórios PDF melhorados, comutação dinâmica multi-país, pontuação e empréstimos telco, e reforço abrangente de segurança.",
+      f1: { title: "Estilo Visual Escandinavo", desc: "Sistema de design global com hook useBrandColors centralizado, paleta azul/ardósia, modo claro/escuro e variáveis CSS tokenizadas" },
+      f2: { title: "Pesquisa Estruturada BOG", desc: "Pesquisa de consumidores com 13 campos (Ghana Card obrigatório), pesquisa empresarial com 6 campos, validação no servidor e registo de auditoria" },
+      f3: { title: "Redesenho Relatório PDF", desc: "Grelhas de informação em duas colunas, cabeçalhos de tabela azuis, cores de linhas alternadas, cabeçalhos de secção estilizados e quebras de página" },
+      f4: { title: "Comutação Multi-País", desc: "Seletor de país dinâmico para super admins com filtragem em tempo real, tematização por país e contexto de sessão persistente" },
+      f5: { title: "Crédito & Empréstimos Telco", desc: "Análise de dinheiro móvel por IA, pontuação MoMo para populações sem conta bancária, gestão completa do ciclo de vida de empréstimos" },
+      f6: { title: "Modo Manutenção", desc: "Página de manutenção com interface de marca, atualização automática, bypass de super admin e ativação API a partir do Centro de Comando" },
+      f7: { title: "Reforço de Segurança", desc: "Cabeçalhos Helmet, sanitização DOMPurify, proteção CSRF, encriptação AES-256-GCM, histórico de palavras-passe e deteção de anomalias" },
+      f8: { title: "Melhorias da Plataforma", desc: "Relógio do sistema em direto, transparência da metodologia de pontuação com tabelas de probabilidades, gestão de versões e RBAC de 5 funções" },
+    },
     v21: {
       date: "Março 2026",
-      tag: "Atual",
+      tag: "Suite Inteligência",
       description: "Prontidão de nível empresarial para banco central com 6 novas capacidades de supervisão e conformidade, navegação redesenhada e segurança multi-inquilino reforçada.",
       f1: { title: "Metodologia de Pontuação", desc: "Página transparente do modelo de pontuação com simulador interativo, pesos dos fatores, bandas 300-850 e glossário de códigos de razão" },
       f2: { title: "Painel Regulatório", desc: "Supervisão do banco central com rácios NPL, mapa setorial, conformidade institucional e métricas de qualidade de dados" },

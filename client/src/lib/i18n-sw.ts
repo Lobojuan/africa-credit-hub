@@ -1273,9 +1273,22 @@ const sw: Record<string, any> = {
   versionHistory: {
     title: "Historia ya Matoleo",
     subtitle: "Maelezo ya matoleo na kumbukumbu za mabadiliko ya Mfumo wa Sajili ya Mikopo",
+    v25: {
+      date: "Aprili 2026",
+      tag: "Ya Sasa",
+      description: "Upya wa muonekano wa kimataifa, utafutaji uliopangwa kwa BOG, ripoti za PDF zilizoimarishwa, ubadilishaji wa nchi nyingi kwa nguvu, alama za mikopo za telco na mikopo, na uimarishaji wa kina wa usalama.",
+      f1: { title: "Mtindo wa Kuona wa Skandinavia", desc: "Mfumo wa muundo wa kimataifa na ndoano ya useBrandColors iliyokusanywa, paleti ya bluu/slate, hali ya mwanga/giza na vigezo vya CSS vilivyotokeni" },
+      f2: { title: "Utafutaji Uliopangwa BOG", desc: "Utafutaji wa watumiaji na sehemu 13 (Kadi ya Ghana ni lazima), utafutaji wa biashara na sehemu 6, uthibitishaji wa seva na kumbukumbu za ukaguzi" },
+      f3: { title: "Muundo Mpya wa Ripoti PDF", desc: "Gridi za habari za safu wima mbili, vichwa vya jedwali vya bluu, rangi za safu mbadala, vichwa vya sehemu vilivyopambwa na mapumziko ya kurasa" },
+      f4: { title: "Ubadilishaji wa Nchi Nyingi", desc: "Kichaguzi cha nchi chenye nguvu kwa wasimamizi wakuu na uchujaji wa wakati halisi, mandhari kwa nchi na muktadha wa kikao unaoendelea" },
+      f5: { title: "Mikopo ya Telco na Mkopo", desc: "Uchambuzi wa pesa za simu kwa AI, alama za MoMo kwa watu wasio na akaunti ya benki, usimamizi kamili wa mzunguko wa mikopo" },
+      f6: { title: "Hali ya Matengenezo", desc: "Ukurasa wa matengenezo na kiolesura chenye chapa, upya otomatiki, kupita kwa msimamizi mkuu na uanzishaji wa API kutoka Kituo cha Amri" },
+      f7: { title: "Uimarishaji wa Usalama", desc: "Vichwa vya Helmet, usafishaji wa DOMPurify, ulinzi wa CSRF, usimbuaji wa AES-256-GCM, historia ya nywila na ugunduzi wa hali zisizo za kawaida" },
+      f8: { title: "Maboresho ya Jukwaa", desc: "Saa ya mfumo moja kwa moja, uwazi wa mbinu ya alama na jedwali za uwezekano, usimamizi wa matoleo na RBAC ya majukumu 5" },
+    },
     v21: {
       date: "Machi 2026",
-      tag: "Ya Sasa",
+      tag: "Seti ya Akili",
       description: "Utayari wa benki kuu kwa biashara na uwezo 6 mpya wa usimamizi na utiifu, urambazaji uliobuniwa upya, na usalama wa wapangaji wengi ulioimarishwa.",
       f1: { title: "Mbinu ya Alama ya Mikopo", desc: "Ukurasa wa uwazi wa mfano wa alama na kiigaji shirikishi, uzito wa sababu, bendi 300-850, na kamusi ya nambari za sababu" },
       f2: { title: "Dashibodi ya Udhibiti", desc: "Usimamizi wa benki kuu na uwiano wa NPL, ramani ya sekta, utiifu wa taasisi, na vipimo vya ubora wa data" },
