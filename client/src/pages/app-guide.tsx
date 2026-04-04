@@ -5,6 +5,7 @@ import {
   CheckSquare, AlertCircle, Upload, Building2, Headset, Globe, DollarSign,
   Scale, ChevronRight, ChevronLeft, Play, Pause, RotateCcw,
   Monitor, MapPin, BookOpen, ArrowRight, Brain, Bell, Sparkles,
+  Smartphone, Eye, Activity, UserCheck, BarChart3, Network, Lock, Server,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,29 +27,30 @@ const slides: Slide[] = [
   {
     id: "welcome", section: "Welcome", sectionIcon: Globe,
     title: "Welcome to the Credit Registry System",
-    narration: "This walkthrough will guide you through every feature of the Pan-African Credit Registry System. The system covers all 54 African countries, supports 42+ currencies, and provides comprehensive credit information management. Let's take a tour of what you'll find inside.",
+    narration: "This walkthrough will guide you through every feature of the Pan-African Credit Registry System. The system covers all 54 African countries, supports 42+ currencies, and provides comprehensive credit information management across five languages — English, French, Portuguese, Arabic, and Swahili. Let's take a tour of what you'll find inside.",
     visual: "hero",
   },
   {
     id: "login", section: "Getting Started", sectionIcon: Monitor,
     title: "Logging In",
-    narration: "To get started, enter your username and password on the login page and click 'Sign In'. The system supports four user roles — Administrator, Regulator, Lender, and Viewer — each with different access levels. Your role determines which features and data you can see.",
+    narration: "To get started, enter your username and password on the login page and click 'Sign In'. You can also sign in using Google, Microsoft, Apple, or Enterprise SSO via the social login buttons below the form. The system supports five user roles — Super Admin, Administrator, Regulator, Lender, and Viewer — each with different access levels. After login, you can enable Multi-Factor Authentication (MFA/TOTP) from your profile for extra security using any authenticator app.",
     visual: "login",
-    tips: ["Passwords expire every 90 days for security", "After 3 failed attempts, your account is temporarily locked", "Two-factor authentication (MFA) can be enabled for extra security"],
+    tips: ["Passwords expire every 90 days for security", "After 3 failed attempts, your account is temporarily locked", "Enable MFA/TOTP from your profile for two-factor authentication", "Social login supports Google, Microsoft, Apple, and Enterprise SSO"],
   },
   {
     id: "sidebar", section: "Getting Started", sectionIcon: Monitor,
     title: "Navigating the Sidebar",
-    narration: "Once logged in, the sidebar on the left is your main navigation. It's organized into sections: Core features at the top (Dashboard, Borrowers, Credit Accounts, Search, Batch Upload), then Reports & Compliance, System administration, Integrations, and Resources. Items you don't have access to are automatically hidden based on your role.",
+    narration: "Once logged in, the sidebar on the left is your main navigation. It's organized into eight sections: Global View (Dashboard, Portfolio Intelligence, AI Command Center, Platform Metrics), Telco (Scoring & Lending), Borrowers & Lenders (Consumers, Businesses, Credit Accounts, Search, Reports, Score Methodology, Institutions), Operations (Batch Upload, Disputes, Approvals, Consent, Helpdesk, Alerts), Oversight & Compliance (Regulatory Dashboard, Audit Trail, Compliance, BOG/BSL Export), Cross-Border (Agreements, Search, PAPSS Settlements), Administration (Command Center, Organizations, Users, Billing, and more), and Documents. Items you don't have access to are automatically hidden based on your role.",
     visual: "sidebar", highlight: "sidebar",
   },
   {
     id: "dashboard-overview", section: "Dashboard", sectionIcon: LayoutDashboard,
     title: "Your Dashboard — The Command Center",
-    narration: "The Dashboard is your landing page after login. At the top, four summary cards show you the key numbers at a glance: Total Borrowers, Total Credit Accounts, Active Disputes, and Pending Approvals. Each card includes a sparkline mini-chart showing 7-day trends below the stat number. These update in real time as data flows into the system. Look for the notification bell in the header area — it shows a red badge with your unread notification count.",
+    narration: "The Dashboard is your landing page after login. At the top, summary cards show you the key numbers at a glance: Total Borrowers, Total Credit Accounts, Active Disputes, and Pending Approvals. Each card includes a sparkline mini-chart showing 7-day trends below the stat number. These update in real time as data flows into the system. Look for the notification bell in the header area — it shows a red badge with your unread notification count.",
     visual: "dashboard",
     roleNotes: [
-      { role: "Administrator", note: "You see data across ALL institutions and countries" },
+      { role: "Super Admin", note: "You see data across ALL countries and institutions" },
+      { role: "Administrator", note: "You see data across all institutions in your country" },
       { role: "Lender", note: "Numbers reflect only YOUR institution's data" },
       { role: "Regulator", note: "You see data within your regulatory jurisdiction" },
     ],
@@ -67,9 +69,16 @@ const slides: Slide[] = [
     visual: "map",
   },
   {
+    id: "consumer-portal", section: "Consumer Portal", sectionIcon: UserCheck,
+    title: "Consumer Self-Service Portal",
+    narration: "The Consumer Portal at '/my-credit' lets individuals check their own credit standing. Consumers can register via '/consumer/register' with their national ID and personal details. Once registered, they can view their credit score, credit accounts, dispute history, and consent records — all without needing a system login. This self-service portal supports all five platform languages.",
+    visual: "consumer-portal",
+    tips: ["Consumers register directly — no admin setup needed", "The portal shows a read-only view of their credit data", "Consumers can file disputes directly from the portal"],
+  },
+  {
     id: "borrowers-list", section: "Borrowers", sectionIcon: Users,
-    title: "Viewing the Borrower List",
-    narration: "Click 'Borrowers' in the sidebar. You'll see a table listing all borrowers with columns for Name, Type (Individual or Corporate), National ID, Country, Status, and Risk Level. Use the search bar to filter by name or ID.",
+    title: "Consumers & Businesses",
+    narration: "The system separates borrowers into Consumers (individuals) and Businesses (corporates). Click 'Consumers' or 'Businesses' in the sidebar to see dedicated list views with columns for Name, National ID, Country, Status, and Risk Level. Super Admins also see a combined 'Borrowers (All)' view. Use the search bar to filter by name, ID, phone, or email.",
     visual: "table-borrowers",
     roleNotes: [
       { role: "Administrator", note: "You see ALL borrowers across all institutions" },
@@ -80,7 +89,7 @@ const slides: Slide[] = [
   {
     id: "borrowers-add", section: "Borrowers", sectionIcon: Users,
     title: "Adding a New Borrower",
-    narration: "Click '+ Add Borrower' to open the registration form. Select Individual or Corporate, then fill in the required fields. After submitting, the record enters the maker-checker approval queue — another authorized user must approve it before it becomes active.",
+    narration: "Click 'Register Borrower' to open the registration form. Select Individual or Corporate, then fill in the required fields including national ID, contact details, employer, and education level. After submitting, the record enters the maker-checker approval queue — another authorized user must approve it before it becomes active. A pending-approval amber banner appears on records awaiting review.",
     visual: "form-borrower",
     tips: ["National ID must be unique within a country", "Set the PEP flag for Politically Exposed Persons", "Select the correct country — it determines the jurisdiction"],
   },
@@ -93,86 +102,155 @@ const slides: Slide[] = [
   {
     id: "credit-accounts", section: "Credit Accounts", sectionIcon: CreditCard,
     title: "Managing Credit Accounts",
-    narration: "Navigate to 'Credit Accounts' in the sidebar. The table shows all credit facilities: Account Number, Borrower, Institution, Type, Status, Currency, Amount, and Days in Arrears. Click '+ Add Account' to record a new facility. The system supports 42+ African currencies.",
+    narration: "Navigate to 'Credit Accounts' in the sidebar. The table shows all credit facilities: Account Number, Borrower, Institution, Type, Status, Currency, Amount, and Days in Arrears. Click '+ Add Account' to record a new facility. The system supports 42+ African currencies with automatic exchange rate conversion.",
     visual: "table-accounts",
-    tips: ["For Islamic finance, check the 'Interest-Free' checkbox", "Days in Arrears should reflect the latest reporting date"],
+    tips: ["For Islamic finance, check the 'Interest-Free' checkbox", "Days in Arrears should reflect the latest reporting date", "Supports 42+ currencies including ETB, GHS, NGN, KES, ZAR, XOF, and more"],
   },
   {
-    id: "search", section: "Global Search", sectionIcon: Search,
-    title: "Searching the Registry",
-    narration: "Click 'Global Search' in the sidebar. Type any name, national ID, TIN, passport number, or account number. The system searches across borrowers, credit accounts, and institutions simultaneously. Cross-border entity resolution automatically finds matches across jurisdictions.",
+    id: "search", section: "Credit Search", sectionIcon: Search,
+    title: "Structured Credit Search",
+    narration: "Click 'Credit Search' in the sidebar. The search page has four structured tabs — Consumer, Business, Telco, and General. The Consumer tab searches by name, national ID, or phone. The Business tab searches by company name, registration number, or TIN. The Telco tab searches telco subscriber profiles by provider, MSISDN, or account ID. The General tab performs a broad cross-entity search. Each tab returns detailed results with direct links to reports.",
     visual: "search",
-    tips: ["Partial matching is supported — no need to type the full name", "Click any result to navigate directly to the record"],
+    tips: ["Use the tab that matches your search type for best results", "Partial matching is supported — no need to type the full name", "All searches are logged in the audit trail for compliance"],
   },
   {
     id: "credit-report", section: "Credit Reports", sectionIcon: FileText,
     title: "Generating Credit Reports",
-    narration: "From a borrower's detail page, click 'Generate Credit Report'. The system produces a comprehensive D&B-style report with a Credit Profile Overview, liability breakdown, aging analysis, credit exposure, and detailed facility cards with 24-month payment history grids. Use the 'AI Summary' button to generate a plain-language overview of the report. When downloading as PDF, choose from English, French, Arabic, or Swahili using the language selector.",
+    narration: "From a borrower's detail page, click 'Generate Credit Report'. The system produces a comprehensive D&B-style report with a Credit Profile Overview, liability breakdown, aging analysis, credit exposure, and detailed facility cards with 24-month payment history grids. Use the 'AI Summary' button to generate a plain-language overview. When downloading as PDF, choose from all five languages — English, French, Portuguese, Arabic, or Swahili — using the language selector. Business borrowers get a separate Business Credit Report format.",
     visual: "report",
-    tips: ["Each report gets a unique serial number for audit tracking", "Bureau Score ranges from 300 to 850 with grade and factor analysis", "Every report generation is logged in the audit trail"],
+    tips: ["Each report gets a unique serial number for audit tracking", "Bureau Score ranges from 300 to 850 with grade and factor analysis", "Every report generation is logged in the audit trail", "PDF reports are available in EN, FR, PT, AR, and SW"],
   },
   {
-    id: "batch-upload", section: "Batch Upload", sectionIcon: Upload,
+    id: "score-methodology", section: "Credit Reports", sectionIcon: BarChart3,
+    title: "Score Methodology",
+    narration: "Navigate to 'Score Methodology' in the sidebar to understand how credit scores are calculated. The page explains the 300–850 scoring model, the weight of each factor (payment history, credit utilization, length of credit, credit mix, and new inquiries), grade bands (Excellent, Good, Fair, Poor, Very Poor), and how reason codes are assigned. A public Score Guide is also available at '/score-guide' for external stakeholders.",
+    visual: "score-methodology",
+  },
+  {
+    id: "telco", section: "Telco", sectionIcon: Smartphone,
+    title: "Telco Scoring & Lending",
+    narration: "The Telco module brings mobile network data into credit decisioning. 'Telco Scoring' lets you view and score telco subscriber profiles — airtime usage, mobile money transactions, top-up frequency, and data consumption — to generate alternative credit scores for the unbanked. 'Telco Lending' manages micro-loans originated through telco channels with automated decisioning based on telco scores. Search telco profiles by provider, MSISDN, or account ID.",
+    visual: "telco",
+    tips: ["Telco scores complement traditional bureau scores", "Supports major African mobile networks and mobile money providers", "Search allows empty filters to browse all telco profiles"],
+  },
+  {
+    id: "batch-upload", section: "Operations", sectionIcon: Upload,
     title: "Uploading Records in Bulk",
-    narration: "Click 'Batch Upload' in the sidebar. Select Borrowers or Credit Accounts, then choose your CSV file. Download the template first for the required column format. The system validates every row and shows a summary of successful imports and errors.",
+    narration: "Click 'Batch Upload' in the sidebar. Select Borrowers or Credit Accounts, then choose your CSV or JSON file. Download the template first for the required column format. The system validates every row and shows a summary of successful imports and errors. You can also paste JSON data directly.",
     visual: "upload",
     tips: ["Date format must be YYYY-MM-DD", "Currency codes must be valid ISO 4217 (ETB, KES, NGN, etc.)", "Maximum file size is 10MB per upload"],
   },
   {
-    id: "disputes", section: "Disputes", sectionIcon: AlertCircle,
+    id: "disputes", section: "Operations", sectionIcon: AlertCircle,
     title: "Managing Disputes",
-    narration: "Navigate to 'Disputes' in the sidebar. View all dispute cases with their status, priority, and SLA deadline. File a new dispute by selecting the borrower, disputed record, dispute type, and description. Disputes approaching their deadline are highlighted in red.",
+    narration: "Navigate to 'Disputes' in the sidebar. View all dispute cases with their status, priority, and SLA deadline. File a new dispute by selecting the borrower, disputed record, dispute type, and description. Financial corrections have a 2-day SLA, non-financial corrections have a 5-day SLA. Disputes approaching their deadline are highlighted in red. Breached SLAs appear in regulatory reports.",
     visual: "disputes",
   },
   {
-    id: "approvals", section: "Approvals", sectionIcon: CheckSquare,
+    id: "approvals", section: "Operations", sectionIcon: CheckSquare,
     title: "Maker-Checker Approvals",
-    narration: "Go to 'Pending Approvals'. When any user creates or modifies a record, the change enters this queue. Click to see full before/after details. Click 'Approve' to apply or 'Reject' with a reason. Important: you cannot approve your own submissions.",
+    narration: "Go to 'Pending Approvals'. When any user creates or modifies a record, the change enters this queue. Click to see full before/after details. Click 'Approve' to apply or 'Reject' with a reason. Important: you cannot approve your own submissions. Only Admin, Regulator, and Super Admin roles can approve or reject changes.",
     visual: "approval",
     tips: ["You cannot approve your own submissions", "All approval actions are logged in the audit trail"],
   },
   {
-    id: "audit", section: "Audit Trail", sectionIcon: Shield,
+    id: "borrower-alerts", section: "Operations", sectionIcon: Bell,
+    title: "Borrower Alerts",
+    narration: "Navigate to 'Borrower Alerts' in the sidebar. This page shows system-generated alerts for significant borrower events — new delinquencies, status changes, large balance movements, PEP flag changes, and SLA breaches. Alerts are color-coded by severity and can be filtered by type, date range, or institution.",
+    visual: "borrower-alerts",
+  },
+  {
+    id: "audit", section: "Oversight", sectionIcon: Shield,
     title: "Tamper-Evident Audit Trail",
     narration: "Click 'Audit Trail' to see every action: record creations, modifications, report generations, login attempts, and approvals. Each entry shows Timestamp, User, Action, Entity, and Details. The audit log uses SHA-256 hash chaining — entries cannot be tampered with. Toggle between table and timeline views, use date range filters to narrow results, and export filtered records as CSV or Excel using the export buttons.",
     visual: "audit",
   },
   {
+    id: "regulatory-dashboard", section: "Oversight", sectionIcon: Eye,
+    title: "Regulatory Dashboard",
+    narration: "Navigate to 'Regulatory Dashboard' for a high-level supervisory overview. See NPL ratios across institutions, data submission compliance rates, dispute resolution performance, and sector exposure breakdowns. This dashboard is designed for regulators and senior management who need a panoramic view of credit market health across jurisdictions.",
+    visual: "regulatory-dashboard",
+    roleNotes: [
+      { role: "Regulator", note: "Primary view for regulatory oversight" },
+      { role: "Administrator", note: "Full access to all regulatory metrics" },
+    ],
+  },
+  {
+    id: "compliance", section: "Oversight", sectionIcon: Scale,
+    title: "Regulatory Compliance",
+    narration: "Navigate to 'Regulatory Compliance'. This dashboard shows compliance metrics: data submission rates, dispute resolution SLA performance, consent coverage, and NPL ratios. Traffic-light indicators show green (compliant), yellow (at risk), or red (non-compliant). Use the 'Generate AI Compliance Report' button with the country selector to produce an AI-powered compliance assessment for any of the 54 African jurisdictions.",
+    visual: "compliance",
+  },
+  {
+    id: "bog-bsl-export", section: "Oversight", sectionIcon: FileText,
+    title: "Regulatory Export (BOG / BSL)",
+    narration: "Depending on your country mode, the sidebar shows either 'BOG Export' (Ghana — Bank of Ghana) or 'BSL Export' (Sierra Leone — Bank of Sierra Leone). These pages let you generate regulatory submission files in the format required by the central bank — batch upload data, borrower records, and credit accounts formatted per BoG CRB v1.1 or BSL standards.",
+    visual: "bog-export",
+  },
+  {
+    id: "cross-border", section: "Cross-Border", sectionIcon: Network,
+    title: "Cross-Border Features",
+    narration: "The Cross-Border section enables pan-African data sharing. 'Agreements' manages bilateral and multilateral data-sharing agreements between countries. 'Cross-Border Search' lets authorized users search borrower records across jurisdictions for cross-border entity resolution. 'PAPSS Settlements' integrates with the Pan-African Payment and Settlement System for cross-border payment tracking and reconciliation.",
+    visual: "cross-border",
+    tips: ["Cross-border access requires a valid data-sharing agreement", "PAPSS settlements track real-time cross-border payments", "Access is controlled per user role and agreement scope"],
+  },
+  {
+    id: "portfolio-intelligence", section: "AI Features", sectionIcon: BarChart3,
+    title: "Portfolio Intelligence",
+    narration: "Navigate to 'Portfolio Intelligence' for AI-driven portfolio analytics. This page provides deep-dive analysis of your credit portfolio — concentration risk, sector exposure, geographic distribution, vintage analysis, and trend forecasting. AI-generated insights highlight emerging risks and opportunities across your book.",
+    visual: "portfolio-intelligence",
+    roleNotes: [{ role: "Administrator", note: "Full portfolio view across all institutions" }],
+  },
+  {
+    id: "ai-command-center", section: "AI Features", sectionIcon: Brain,
+    title: "AI Command Center",
+    narration: "The AI Command Center is your natural-language interface to the entire registry. Ask questions like 'Show me all defaulted borrowers in Ghana' or 'What is the NPL ratio for microfinance institutions?' The AI interprets your query, runs the appropriate analysis, and returns formatted results with charts and tables. It combines GPT-4o intelligence with real-time registry data.",
+    visual: "ai-command-center",
+  },
+  {
+    id: "ai-features", section: "AI Features", sectionIcon: Brain,
+    title: "AI-Powered Intelligence",
+    narration: "The platform integrates AI for intelligent analysis throughout. On any borrower's detail page, click the purple 'AI Risk Analysis' button to get a comprehensive risk assessment with score, risk factors, and recommendations. On credit reports, use 'AI Summary' for a plain-language overview. The floating chatbot (bottom-right) includes an AI Assistant mode for answering questions about credit data and regulations with streaming responses.",
+    visual: "ai-features",
+    tips: ["AI analysis considers all borrower data including accounts, disputes, and payment history", "AI responses are generated fresh each time based on current data", "The AI chatbot supports streaming responses for real-time interaction"],
+  },
+  {
     id: "institutions", section: "Administration", sectionIcon: Building2,
     title: "Institution Management",
-    narration: "Navigate to 'Institutions' (Admin only). View and manage all registered financial institutions — their code, name, type, country, status, and contact details. Click '+ Add Institution' to register a new participating institution.",
+    narration: "Navigate to 'Institutions' (Admin only). View and manage all registered financial institutions — their code, name, type (Bank, MFI, Utility, Telecom, Digital Lender, SACCO), country, status, and contact details. Click '+ Add Institution' to register a new participating institution. Newly registered institutions start with 'Pending' status and must be approved.",
     visual: "institutions",
   },
   {
     id: "users", section: "Administration", sectionIcon: Settings,
     title: "User Management & Roles",
-    narration: "Go to 'User Management' (Admin only). Create and manage user accounts with four roles: Administrator (full access), Regulator (oversight), Lender (own institution data), or Viewer (read-only). Password policies enforce complexity and 90-day expiry.",
+    narration: "Go to 'User Management' (Admin only). Create and manage user accounts with five roles: Super Admin (multi-country full access), Administrator (full access within country), Regulator (oversight and approvals), Lender (own institution data entry), or Viewer (read-only). Password policies enforce complexity and 90-day expiry. Accounts lock after 3 failed login attempts.",
     visual: "users",
+  },
+  {
+    id: "command-center", section: "Administration", sectionIcon: Server,
+    title: "Command Center & Organizations",
+    narration: "Super Admins have access to the 'Command Center' — a multi-country management console for overseeing all jurisdictions, switching country contexts, and managing system-wide settings. The 'Organizations' page manages top-level organizational entities that group institutions. These features are exclusive to the Super Admin role for centralized platform governance.",
+    visual: "command-center",
+    roleNotes: [{ role: "Super Admin", note: "Exclusive access — not visible to other roles" }],
   },
   {
     id: "exchange-rates", section: "Administration", sectionIcon: DollarSign,
     title: "Exchange Rate Management",
-    narration: "Under Integrations, find 'Exchange Rates' (Admin only). The system supports 42+ African currencies. View current rates, update manually, or let the system auto-sync every 6 hours. These rates are used when consolidating multi-currency exposure in credit reports.",
+    narration: "Under Administration, find 'Exchange Rates' (Admin only). The system supports 42+ African currencies. View current rates, update manually, or let the system auto-sync every 6 hours. These rates are used when consolidating multi-currency exposure in credit reports.",
     visual: "exchange",
   },
   {
-    id: "compliance", section: "Compliance", sectionIcon: Scale,
-    title: "Regulatory Compliance Dashboard",
-    narration: "Navigate to 'Regulatory Compliance'. This dashboard shows compliance metrics: data submission rates, dispute resolution SLA performance, consent coverage, and NPL ratios. Traffic-light indicators show green (compliant), yellow (at risk), or red (non-compliant). Use the 'Generate AI Compliance Report' button with the country selector to produce an AI-powered compliance assessment for any jurisdiction.",
-    visual: "compliance",
+    id: "system-admin", section: "Administration", sectionIcon: Activity,
+    title: "System Administration",
+    narration: "Several tools keep the platform running smoothly. 'System Status' shows real-time health of all services — database, API, background jobs, and integrations. 'Backup & Recovery' (Super Admin) manages database backups with restore capabilities. 'Webhook Management' configures outbound event notifications to external systems. 'Retention Policies' sets data retention rules per regulation. 'Platform Metrics' tracks system-wide usage statistics.",
+    visual: "system-admin",
+    tips: ["System Status shows green/yellow/red health indicators", "Backups can be triggered manually or run on schedule", "Webhooks notify external systems of key events in real time"],
   },
   {
     id: "helpdesk", section: "Support", sectionIcon: Headset,
     title: "Getting Help",
-    narration: "Need assistance? Use the Helpdesk for support tickets, the Online Manual for searchable help articles, or the Documentation page for the API Integration Guide. The floating chatbot (bottom-right) lets you ask questions, file disputes, or browse FAQs without leaving the page. Click the Sparkles icon in the chatbot to switch to AI Assistant mode — it uses GPT-4o to answer questions about credit data, regulations, and system features.",
+    narration: "Need assistance? Use the Helpdesk for support tickets, the Online Manual for searchable help articles, or the Documentation page for downloadable guides — 13 general documents plus 8 Ghana-specific documents, all available in five languages with PDF download. The floating chatbot (bottom-right) lets you ask questions, file disputes, or browse FAQs without leaving the page. Click the Sparkles icon in the chatbot to switch to AI Assistant mode.",
     visual: "help",
-  },
-  {
-    id: "ai-features", section: "AI Features", sectionIcon: Brain,
-    title: "AI-Powered Intelligence",
-    narration: "The platform integrates OpenAI GPT-4o for intelligent analysis. On any borrower's detail page, click the purple 'AI Risk Analysis' button to get a comprehensive risk assessment with score, risk factors, and recommendations. On credit reports, use 'AI Summary' for a plain-language overview. The chatbot includes an AI Assistant mode for answering questions about credit data and regulations.",
-    visual: "ai-features",
-    tips: ["AI analysis considers all borrower data including accounts, disputes, and payment history", "AI responses are generated fresh each time based on current data", "The AI chatbot supports streaming responses for real-time interaction"],
   },
   {
     id: "notifications", section: "Notifications", sectionIcon: Bell,
@@ -189,14 +267,14 @@ const slides: Slide[] = [
   {
     id: "api-usage", section: "Administration", sectionIcon: Building2,
     title: "API Usage Analytics",
-    narration: "Administrators can monitor API usage from the 'API Administration' page. Switch to the 'API Usage Analytics' tab to see total requests today, requests this hour, and a breakdown of the most-called endpoints. A bar chart shows hourly request volume for the last 24 hours.",
+    narration: "Administrators can monitor API usage from the 'API Administration' page. Switch to the 'API Usage Analytics' tab to see total requests today, requests this hour, and a breakdown of the most-called endpoints. A bar chart shows hourly request volume for the last 24 hours. The public API documentation is available at '/api-docs'.",
     visual: "api-usage",
     roleNotes: [{ role: "Administrator", note: "Only administrators and super admins can view API usage analytics" }],
   },
   {
     id: "end", section: "That's It!", sectionIcon: Globe,
     title: "You're Ready to Go",
-    narration: "That covers all the key features — including AI-powered risk analysis, AI report summaries, the AI chatbot assistant, real-time notifications, multi-language PDF reports, and Excel exports. Remember: the sidebar is your main navigation, the dashboard gives you real-time overview, and every action is logged for audit compliance. Replay this guide anytime from the sidebar under 'App Guide'.",
+    narration: "That covers all the key features — AI-powered risk analysis, AI Command Center, Portfolio Intelligence, Telco Scoring & Lending, Cross-Border data sharing, Consumer Self-Service Portal, multi-language support in five languages, real-time notifications, regulatory exports, and comprehensive system administration. The platform spans 54 African countries with 42+ currencies. Remember: the sidebar is your main navigation, the dashboard gives you real-time overview, and every action is logged for audit compliance. Replay this guide anytime from 'App Guide' in the sidebar.",
     visual: "end",
   },
 ];
@@ -249,6 +327,15 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
               <div><p className="text-[11px] text-muted-foreground mb-1.5 font-medium">Username</p><div className="h-10 border rounded-lg bg-muted/30 flex items-center px-3 shadow-inner"><span className="text-xs text-muted-foreground">admin</span></div></div>
               <div><p className="text-[11px] text-muted-foreground mb-1.5 font-medium">Password</p><div className="h-10 border rounded-lg bg-muted/30 flex items-center px-3 shadow-inner"><span className="text-xs text-muted-foreground tracking-widest">••••••••</span></div></div>
               <div className="h-10 rounded-lg flex items-center justify-center font-semibold text-sm text-white shadow-lg" style={{ background: brandColors.headerGradientSubtle }}>Sign In <ArrowRight className="w-4 h-4 ml-2" /></div>
+              <div className="grid grid-cols-2 gap-2 mt-1">
+                {["Google", "Microsoft", "Apple", "Enterprise SSO"].map(p => (
+                  <div key={p} className="h-8 border rounded-lg flex items-center justify-center text-[9px] text-muted-foreground hover:bg-muted/20 transition-colors">{p}</div>
+                ))}
+              </div>
+              <div className="flex items-center gap-2 p-2.5 rounded-lg border bg-purple-50 dark:bg-purple-950/20">
+                <Lock className="w-3 h-3 text-purple-500 shrink-0" />
+                <p className="text-[9px] text-muted-foreground">MFA/TOTP available after login</p>
+              </div>
             </div>
           </div>
         </div>
@@ -261,28 +348,48 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
               <div className="w-8 h-8 rounded-xl shadow-md" style={{ background: brandColors.iconGradient }} />
               <span className="text-xs font-bold tracking-tight">Credit Registry</span>
             </div>
-            <p className="text-[8px] text-muted-foreground/50 uppercase tracking-[0.2em] px-3 pb-1">Core</p>
+            <p className="text-[8px] text-muted-foreground/50 uppercase tracking-[0.2em] px-3 pb-1">Global View</p>
             {[
               { icon: LayoutDashboard, label: "Dashboard", active: true },
-              { icon: Users, label: "Borrowers" },
-              { icon: CreditCard, label: "Credit Accounts" },
-              { icon: Search, label: "Global Search" },
-              { icon: Upload, label: "Batch Upload" },
+              { icon: BarChart3, label: "Portfolio Intelligence" },
+              { icon: Brain, label: "AI Command Center" },
             ].map(item => (
-              <div key={item.label} className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-[11px] transition-colors ${item.active ? "bg-primary/10 text-primary font-semibold shadow-sm" : "text-muted-foreground hover:bg-muted/50"}`}>
-                <item.icon className="w-3.5 h-3.5" />
+              <div key={item.label} className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[10px] transition-colors ${item.active ? "bg-primary/10 text-primary font-semibold shadow-sm" : "text-muted-foreground hover:bg-muted/50"}`}>
+                <item.icon className="w-3 h-3" />
                 {item.label}
               </div>
             ))}
-            <p className="text-[8px] text-muted-foreground/50 uppercase tracking-[0.2em] px-3 pt-3 pb-1">Reports</p>
+            <p className="text-[8px] text-muted-foreground/50 uppercase tracking-[0.2em] px-3 pt-2 pb-1">Borrowers</p>
             {[
-              { icon: FileText, label: "Credit Reports" },
+              { icon: Users, label: "Consumers" },
+              { icon: Building2, label: "Businesses" },
+              { icon: CreditCard, label: "Credit Accounts" },
+              { icon: Search, label: "Credit Search" },
+            ].map(item => (
+              <div key={item.label} className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[10px] text-muted-foreground">
+                <item.icon className="w-3 h-3" />
+                {item.label}
+              </div>
+            ))}
+            <p className="text-[8px] text-muted-foreground/50 uppercase tracking-[0.2em] px-3 pt-2 pb-1">Operations</p>
+            {[
+              { icon: Upload, label: "Batch Upload" },
               { icon: AlertCircle, label: "Disputes" },
               { icon: CheckSquare, label: "Approvals" },
-              { icon: Shield, label: "Audit Trail" },
             ].map(item => (
-              <div key={item.label} className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[11px] text-muted-foreground">
-                <item.icon className="w-3.5 h-3.5" />
+              <div key={item.label} className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[10px] text-muted-foreground">
+                <item.icon className="w-3 h-3" />
+                {item.label}
+              </div>
+            ))}
+            <p className="text-[8px] text-muted-foreground/50 uppercase tracking-[0.2em] px-3 pt-2 pb-1">Oversight</p>
+            {[
+              { icon: Eye, label: "Regulatory Dashboard" },
+              { icon: Shield, label: "Audit Trail" },
+              { icon: Globe, label: "Cross-Border" },
+            ].map(item => (
+              <div key={item.label} className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[10px] text-muted-foreground">
+                <item.icon className="w-3 h-3" />
                 {item.label}
               </div>
             ))}
@@ -668,10 +775,11 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
     case "users":
       return (
         <div className={`${base} bg-card border border-border/50 p-6 space-y-4`}>
-          <div className="flex items-center gap-2"><Settings className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">User Management — Roles</span></div>
+          <div className="flex items-center gap-2"><Settings className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">User Management — 5 Roles</span></div>
           <div className="grid grid-cols-2 gap-3">
             {[
-              { role: "Administrator", color: "from-purple-500 to-purple-600", desc: "Full system access", icon: Shield },
+              { role: "Super Admin", color: "from-red-500 to-red-600", desc: "Multi-country full access", icon: Server },
+              { role: "Administrator", color: "from-purple-500 to-purple-600", desc: "Full access within country", icon: Shield },
               { role: "Regulator", color: "from-blue-500 to-blue-600", desc: "Oversight + approvals", icon: Scale },
               { role: "Lender", color: "from-green-500 to-green-600", desc: "Own institution data", icon: Building2 },
               { role: "Viewer", color: "from-gray-400 to-gray-500", desc: "Read-only access", icon: Search },
@@ -872,6 +980,244 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
           </div>
         </div>
       );
+    case "consumer-portal":
+      return (
+        <div className={`${base} bg-card border border-border/50 p-6 space-y-4`}>
+          <div className="flex items-center gap-2"><UserCheck className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">Consumer Self-Service Portal</span></div>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: "Credit Score", value: "742", sub: "Good", gradient: "from-green-500 to-green-600" },
+              { label: "Active Accounts", value: "3", sub: "All current", gradient: "from-blue-500 to-blue-600" },
+              { label: "Disputes", value: "0", sub: "None open", gradient: "from-teal-500 to-teal-600" },
+            ].map(c => (
+              <div key={c.label} className="relative rounded-xl p-4 border text-center overflow-hidden">
+                <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${c.gradient}`} />
+                <p className="text-[9px] text-muted-foreground uppercase tracking-wider mt-1">{c.label}</p>
+                <p className="text-2xl font-black mt-1">{c.value}</p>
+                <p className="text-[9px] text-muted-foreground">{c.sub}</p>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-3 p-3 rounded-xl border bg-blue-50 dark:bg-blue-950/20">
+            <UserCheck className="w-4 h-4 text-blue-500 shrink-0" />
+            <p className="text-[10px] text-muted-foreground">Consumers register and view their own credit data — no system login required</p>
+          </div>
+        </div>
+      );
+    case "score-methodology":
+      return (
+        <div className={`${base} bg-card border border-border/50 p-6 space-y-4`}>
+          <div className="flex items-center gap-2"><BarChart3 className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">Score Methodology — 300 to 850</span></div>
+          <div className="space-y-2">
+            {[
+              { grade: "Excellent", range: "750–850", color: "bg-green-500", w: "100%" },
+              { grade: "Good", range: "700–749", color: "bg-blue-500", w: "82%" },
+              { grade: "Fair", range: "650–699", color: "bg-amber-500", w: "64%" },
+              { grade: "Poor", range: "550–649", color: "bg-orange-500", w: "46%" },
+              { grade: "Very Poor", range: "300–549", color: "bg-red-500", w: "28%" },
+            ].map(b => (
+              <div key={b.grade} className="flex items-center gap-3">
+                <span className="text-[10px] font-semibold w-16 text-right">{b.grade}</span>
+                <div className="flex-1 h-5 bg-muted/30 rounded-full overflow-hidden"><div className={`h-full ${b.color} rounded-full`} style={{ width: b.w }} /></div>
+                <span className="text-[9px] text-muted-foreground w-14">{b.range}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    case "telco":
+      return (
+        <div className={`${base} bg-card border border-border/50 p-6 space-y-4`}>
+          <div className="flex items-center gap-2"><Smartphone className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">Telco Scoring & Lending</span></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="border rounded-xl p-4 space-y-3">
+              <p className="text-[10px] font-semibold text-muted-foreground">Telco Score Factors</p>
+              {[
+                { l: "Airtime Usage", v: "85%", c: "bg-blue-500" },
+                { l: "Mobile Money", v: "72%", c: "bg-green-500" },
+                { l: "Top-up Frequency", v: "91%", c: "bg-purple-500" },
+                { l: "Data Usage", v: "68%", c: "bg-amber-500" },
+              ].map(f => (
+                <div key={f.l}>
+                  <div className="flex justify-between mb-0.5"><span className="text-[9px] text-muted-foreground">{f.l}</span><span className="text-[9px] font-semibold">{f.v}</span></div>
+                  <div className="h-1.5 bg-muted/30 rounded-full overflow-hidden"><div className={`h-full ${f.c} rounded-full`} style={{ width: f.v }} /></div>
+                </div>
+              ))}
+            </div>
+            <div className="border rounded-xl p-4 space-y-3">
+              <p className="text-[10px] font-semibold text-muted-foreground">Micro-Loan Pipeline</p>
+              {[
+                { status: "Approved", count: "234", c: "text-green-600" },
+                { status: "Pending", count: "58", c: "text-amber-600" },
+                { status: "Disbursed", count: "189", c: "text-blue-600" },
+                { status: "Repaid", count: "1,204", c: "text-teal-600" },
+              ].map(s => (
+                <div key={s.status} className="flex items-center justify-between">
+                  <span className="text-[10px] text-muted-foreground">{s.status}</span>
+                  <span className={`text-sm font-bold ${s.c}`}>{s.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    case "borrower-alerts":
+      return (
+        <div className={`${base} bg-card border border-border/50 p-5 space-y-3`}>
+          <div className="flex items-center gap-2"><Bell className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">Borrower Alerts</span></div>
+          <div className="space-y-2">
+            {[
+              { severity: "High", title: "New delinquency detected", borrower: "Amara Osei", color: "border-l-red-500 bg-red-50 dark:bg-red-950/20" },
+              { severity: "Medium", title: "Large balance movement", borrower: "Safaricom Holdings", color: "border-l-amber-500 bg-amber-50 dark:bg-amber-950/20" },
+              { severity: "Low", title: "Status changed to Current", borrower: "Fatima El-Rashid", color: "border-l-blue-500 bg-blue-50 dark:bg-blue-950/20" },
+            ].map(a => (
+              <div key={a.title} className={`flex items-center gap-3 p-3 rounded-lg border-l-4 ${a.color}`}>
+                <div><p className="text-[11px] font-semibold">{a.title}</p><p className="text-[9px] text-muted-foreground">{a.borrower}</p></div>
+                <Badge variant="outline" className="ml-auto text-[8px]">{a.severity}</Badge>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    case "regulatory-dashboard":
+      return (
+        <div className={`${base} bg-card border border-border/50 p-6 space-y-4`}>
+          <div className="flex items-center gap-2"><Eye className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">Regulatory Dashboard</span></div>
+          <div className="grid grid-cols-4 gap-3">
+            {[
+              { label: "NPL Ratio", value: "4.2%", color: "text-green-600" },
+              { label: "Submission Rate", value: "98%", color: "text-green-600" },
+              { label: "SLA Performance", value: "95%", color: "text-green-600" },
+              { label: "Sectors Covered", value: "12", color: "text-blue-600" },
+            ].map(m => (
+              <div key={m.label} className="rounded-xl p-3 border text-center">
+                <p className="text-[8px] text-muted-foreground uppercase tracking-wider">{m.label}</p>
+                <p className={`text-lg font-black mt-1 ${m.color}`}>{m.value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    case "bog-export":
+      return (
+        <div className={`${base} bg-card border border-border/50 p-6 space-y-4`}>
+          <div className="flex items-center gap-2"><FileText className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">Regulatory Export</span></div>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { label: "BOG Export", desc: "Bank of Ghana — CRB v1.1 format", icon: "🇬🇭" },
+              { label: "BSL Export", desc: "Bank of Sierra Leone format", icon: "🇸🇱" },
+            ].map(e => (
+              <div key={e.label} className="border rounded-xl p-4 text-center hover:bg-muted/20 transition-colors">
+                <p className="text-2xl mb-2">{e.icon}</p>
+                <p className="text-[11px] font-bold">{e.label}</p>
+                <p className="text-[9px] text-muted-foreground mt-1">{e.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    case "cross-border":
+      return (
+        <div className={`${base} border border-border/50 relative overflow-hidden`} style={{ background: "linear-gradient(135deg, hsl(200 30% 12%), hsl(210 25% 16%))" }}>
+          <GlowOrb className="w-48 h-48 top-0 right-0" color={brandColors.accentLight} />
+          <div className="relative z-10 p-6 space-y-4">
+            <div className="flex items-center gap-2"><Network className="w-4 h-4 text-white/70" /><span className="text-sm font-semibold text-white">Cross-Border Data Sharing</span></div>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label: "Agreements", icon: FileText, desc: "Bilateral & multilateral" },
+                { label: "Cross-Border Search", icon: Search, desc: "Multi-jurisdiction lookup" },
+                { label: "PAPSS Settlements", icon: DollarSign, desc: "Pan-African payments" },
+              ].map(f => (
+                <div key={f.label} className="rounded-xl p-3 text-center border border-white/10" style={{ background: "rgba(255,255,255,0.05)" }}>
+                  <f.icon className="w-5 h-5 text-white/60 mx-auto mb-2" />
+                  <p className="text-[10px] font-semibold text-white">{f.label}</p>
+                  <p className="text-[8px] text-white/40 mt-0.5">{f.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    case "portfolio-intelligence":
+      return (
+        <div className={`${base} bg-card border border-border/50 p-6 space-y-4`}>
+          <div className="flex items-center gap-2"><BarChart3 className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">Portfolio Intelligence</span></div>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: "Concentration Risk", value: "Low", color: "text-green-600" },
+              { label: "Sector Diversity", value: "High", color: "text-green-600" },
+              { label: "Trend", value: "Improving", color: "text-blue-600" },
+            ].map(m => (
+              <div key={m.label} className="rounded-xl p-3 border text-center">
+                <p className="text-[8px] text-muted-foreground uppercase tracking-wider">{m.label}</p>
+                <p className={`text-sm font-black mt-1 ${m.color}`}>{m.value}</p>
+              </div>
+            ))}
+          </div>
+          <div className="border rounded-xl p-4">
+            <p className="text-[10px] font-semibold text-muted-foreground mb-2">AI-Generated Insights</p>
+            <div className="space-y-1.5">
+              {["Microfinance sector shows 12% growth — consider exposure limits", "NPL ratio trending down across all regions", "Geographic diversification score improved by 8%"].map(i => (
+                <div key={i} className="flex items-start gap-2"><Sparkles className="w-3 h-3 text-purple-500 shrink-0 mt-0.5" /><p className="text-[9px] text-muted-foreground">{i}</p></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    case "ai-command-center":
+      return (
+        <div className={`${base} bg-card border border-border/50 p-6 space-y-4`}>
+          <div className="p-4 rounded-xl text-white relative overflow-hidden" style={{ background: "linear-gradient(135deg, hsl(270 60% 45%), hsl(280 50% 35%))" }}>
+            <div className="flex items-center gap-2"><Brain className="w-5 h-5" /><span className="text-sm font-bold">AI Command Center</span></div>
+            <p className="text-[9px] text-white/50 mt-1">Natural-language interface to the entire registry</p>
+          </div>
+          <div className="border rounded-xl p-3 bg-muted/20">
+            <p className="text-[10px] text-muted-foreground italic">"Show me all defaulted borrowers in Ghana with balances over GHS 100,000"</p>
+          </div>
+          <div className="border rounded-xl p-3 space-y-2">
+            <div className="flex items-center gap-2"><Sparkles className="w-3 h-3 text-purple-500" /><span className="text-[10px] font-semibold">AI Response</span></div>
+            <p className="text-[9px] text-muted-foreground">Found 12 defaulted borrowers in Ghana matching criteria. Total exposure: GHS 4.2M across 3 institutions...</p>
+          </div>
+        </div>
+      );
+    case "command-center":
+      return (
+        <div className={`${base} bg-card border border-border/50 p-6 space-y-4`}>
+          <div className="flex items-center gap-2"><Server className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">Command Center</span><Badge variant="destructive" className="text-[8px]">Super Admin</Badge></div>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { label: "Active Countries", value: "12", icon: Globe },
+              { label: "Organizations", value: "8", icon: Building2 },
+              { label: "Total Users", value: "342", icon: Users },
+              { label: "System Health", value: "100%", icon: Activity },
+            ].map(c => (
+              <div key={c.label} className="border rounded-xl p-3 flex items-center gap-3">
+                <c.icon className="w-5 h-5 text-muted-foreground" />
+                <div><p className="text-[9px] text-muted-foreground">{c.label}</p><p className="text-base font-black">{c.value}</p></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    case "system-admin":
+      return (
+        <div className={`${base} bg-card border border-border/50 p-6 space-y-4`}>
+          <div className="flex items-center gap-2"><Activity className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">System Administration</span></div>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { label: "System Status", desc: "Real-time health monitoring", icon: Activity, color: "text-green-500" },
+              { label: "Backup & Recovery", desc: "Database backup management", icon: Server, color: "text-blue-500" },
+              { label: "Webhooks", desc: "Outbound event notifications", icon: Network, color: "text-purple-500" },
+              { label: "Retention Policies", desc: "Data retention rules", icon: Shield, color: "text-amber-500" },
+            ].map(t => (
+              <div key={t.label} className="border rounded-xl p-3 flex items-center gap-3 hover:bg-muted/20 transition-colors">
+                <t.icon className={`w-5 h-5 ${t.color} shrink-0`} />
+                <div><p className="text-[10px] font-semibold">{t.label}</p><p className="text-[8px] text-muted-foreground">{t.desc}</p></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
     case "end":
       return (
         <div className={`${base} relative overflow-hidden`} style={{ background: brandColors.heroGradient }}>
@@ -882,7 +1228,7 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
               <Globe className="w-10 h-10 text-white" />
             </div>
             <h3 className="text-2xl font-extrabold text-white tracking-tight">You're All Set!</h3>
-            <p className="text-white/50 mt-3 text-sm max-w-md mx-auto leading-relaxed">Explore the system, add records, generate reports, and monitor compliance across all 54 African countries.</p>
+            <p className="text-white/50 mt-3 text-sm max-w-md mx-auto leading-relaxed">Explore the system, add records, generate reports, and monitor compliance across all 54 African countries with 42+ currencies and five languages.</p>
             <p className="text-white/30 text-xs mt-6">Replay this guide anytime from the sidebar → App Guide</p>
           </div>
         </div>

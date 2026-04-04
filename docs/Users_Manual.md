@@ -97,16 +97,19 @@ Open a modern web browser (Chrome, Firefox, Safari, or Edge) and navigate to the
 
 ### 2.2 Logging In
 
-1. On the login page, select your **preferred language** (EN/FR/PT) using the language switcher if desired.
+1. On the login page, select your **preferred language** (EN/FR/PT/AR/SW) using the language switcher if desired.
 2. Enter your **Username** in the username field.
 3. Enter your **Password** in the password field.
 4. Click the **Sign In** button.
-5. Upon successful authentication, you will be redirected to the Dashboard.
+5. Alternatively, use one of the **social login** options: **Google**, **Microsoft**, **Apple**, or **Enterprise SSO (SAML)** — click the corresponding button below the sign-in form.
+6. If MFA/TOTP is enabled on your account, you will be prompted for a 6-digit code from your authenticator app.
+7. Upon successful authentication, you will be redirected to the Dashboard.
 
 **Important Notes:**
 - Accounts are locked for **15 minutes** after **3 consecutive failed login attempts**.
 - If your account is locked, wait for the lockout period to expire before trying again.
 - If your account is suspended or deactivated, contact your system administrator.
+- Social login (Google, Microsoft, Apple, Enterprise SSO) is available if configured by your administrator.
 
 ### 2.3 First-Time Password Change
 
@@ -127,12 +130,13 @@ To change your password:
 
 You can also change your password at any time by clicking the password change option in the sidebar.
 
-### 2.4 Language Switching (EN/FR/PT)
+### 2.4 Language Switching (EN/FR/PT/AR/SW)
 
 To switch the interface language:
-1. Locate the language switcher button in the top header bar or on the login page (shows "EN", "FR", or "PT").
-2. Click the button to cycle between English, French, and Portuguese.
+1. Locate the language switcher button in the top header bar or on the login page.
+2. Click the button to select from five available languages: English (EN), French (FR), Portuguese (PT), Arabic (AR), and Swahili (SW).
 3. The entire interface will update immediately to the selected language.
+4. All downloadable documents (PDF and Markdown) are also available in all five languages.
 
 ### 2.5 Theme Toggle (Light/Dark)
 
@@ -143,32 +147,71 @@ The system supports both light and dark themes:
 
 ### 2.6 Understanding the Sidebar Navigation
 
-The sidebar provides access to all system modules, organized into three sections:
+The sidebar provides access to all system modules, organized into eight sections:
 
-**Main:**
+**Global View:**
 - Dashboard
-- Borrowers
-- Credit Accounts
-- Credit Search
-- Batch Upload
+- Portfolio Intelligence (Admin/Super Admin/Regulator)
+- AI Command Center (Admin/Super Admin/Regulator)
+- Platform Metrics (Admin/Super Admin)
 
-**Reports & Compliance:**
-- Pending Approvals
-- Disputes
-- Audit Trail
-- Consent Management
-- Billing
-- Helpdesk
+**Telco:**
+- Telco Scoring (Admin/Lender/Regulator/Super Admin)
+- Telco Lending (Admin/Lender/Regulator/Super Admin)
+
+**Borrowers & Lenders:**
+- Consumers (All roles)
+- Businesses (All roles)
+- Borrowers — All (Super Admin only)
+- Credit Accounts (All roles)
+- Credit Search (All roles)
+- Credit Reports (All roles)
+- Score Methodology (Admin/Lender/Super Admin)
+- My Credit — Consumer Portal (All roles)
+- Institutions (Admin/Super Admin)
+
+**Operations:**
+- Batch Upload (Admin/Lender/Super Admin)
+- Disputes (Admin/Lender/Regulator/Super Admin)
+- Pending Approvals (Admin/Regulator/Super Admin)
+- Consent Management (Admin/Lender/Regulator/Super Admin)
+- Helpdesk (All roles)
+- Borrower Alerts (Admin/Regulator/Super Admin)
+
+**Oversight & Compliance:**
+- Regulatory Dashboard (Admin/Regulator/Super Admin)
+- Audit Trail (Admin/Regulator/Super Admin)
+- Regulatory Compliance (Admin/Regulator/Super Admin)
+- BOG Export or BSL Export (Admin/Regulator/Super Admin — depends on country mode)
+
+**Cross-Border:**
+- Agreements (Admin/Super Admin/Regulator)
+- Cross-Border Search (Admin/Super Admin/Regulator/Lender)
+- PAPSS Settlements (Admin/Super Admin/Regulator)
 
 **Administration:**
-- User Management (Admin only)
-- Institutions (Admin only)
-- API Keys (Admin only)
-- Exchange Rates (Admin only)
-- API Administration (Admin only)
-- Retention Policies (Admin/Regulator)
+- Command Center (Super Admin only)
+- Organizations (Super Admin only)
+- User Management (Admin/Super Admin)
+- Billing (Admin/Regulator/Super Admin)
+- Retention Policies (Admin/Regulator/Super Admin)
+- Exchange Rates (Admin/Super Admin)
+- API Administration (Admin/Super Admin)
+- API Keys (Admin/Super Admin)
+- System Status (Admin/Super Admin)
+- Backup & Recovery (Super Admin only)
+- Webhook Management (Admin/Super Admin)
 
-The sidebar can be collapsed by clicking the sidebar toggle button in the header. In collapsed mode, only icons are visible. On mobile devices, the sidebar opens as a slide-out panel.
+**Documents:**
+- Ghana Docs (Ghana mode only)
+- Documentation (All roles)
+- App Guide (All roles)
+- Help / Online Manual (All roles)
+- Version History (All roles)
+- Legal & Copyright (All roles)
+- About (All roles)
+
+The sidebar can be collapsed by clicking the sidebar toggle button in the header. In collapsed mode, only icons are visible. On mobile devices, the sidebar opens as a slide-out panel. Items you don't have access to based on your role are automatically hidden.
 
 ### 2.7 Multi-Factor Authentication (MFA)
 
@@ -1012,9 +1055,9 @@ The audit trail supports exporting entries in both CSV and Excel formats:
 
 ---
 
-## 16. User Management (Admin Only)
+## 16. User Management (Admin/Super Admin Only)
 
-The User Management module is available only to users with the **Admin** role.
+The User Management module is available to users with the **Admin** or **Super Admin** role.
 
 ### 16.1 Creating Users
 
@@ -1025,19 +1068,20 @@ The User Management module is available only to users with the **Admin** role.
    - **Password** — Initial password (must meet complexity requirements)
    - **Full Name** — User's full name
    - **Email** — User's email address
-   - **Role** — Select from Admin, Regulator, Lender, or Viewer
+   - **Role** — Select from Super Admin, Admin, Regulator, Lender, or Viewer
    - **Institution** — Associated institution name (optional)
 4. Click **Create User** to save.
 
 ### 16.2 Assigning Roles
 
-Each user is assigned one of four roles:
+Each user is assigned one of five roles:
 
 | Role | Description |
 |------|-------------|
-| **Admin** | Full system access including user management, institutions, and API keys |
-| **Regulator** | Access to most modules including approvals, audit trail, and billing |
-| **Lender** | Access to borrowers, credit accounts, disputes, and batch upload |
+| **Super Admin** | Multi-country full access including Command Center, Organizations, and Backup & Recovery |
+| **Admin** | Full system access within country including user management, institutions, and API keys |
+| **Regulator** | Oversight access including approvals, audit trail, regulatory dashboard, and billing |
+| **Lender** | Access to borrowers, credit accounts, disputes, batch upload, and telco features |
 | **Viewer** | Read-only access to borrowers, credit accounts, and reports |
 
 ### 16.3 Changing User Status
@@ -1774,31 +1818,46 @@ The following credentials are pre-configured in the system for testing and demon
 
 ## Appendix B: Role Access Matrix
 
-> **Note:** MFA setup/disable is available to all authenticated users. Audit integrity verification requires Admin or Regulator role. The dispute chatbot and XBRL upload follow the same access rules as Helpdesk and Batch Upload respectively.
+> **Note:** The system supports five user roles: **Super Admin** (multi-country full access), **Admin** (full access within country), **Regulator** (oversight and approvals), **Lender** (own institution data entry), and **Viewer** (read-only). MFA setup/disable is available to all authenticated users.
 
-| Module / Feature | Admin | Regulator | Lender | Viewer |
-|-----------------|-------|-----------|--------|--------|
-| Dashboard | Full Access | Full Access | Full Access | Full Access |
-| Borrower Management | Full Access | Full Access | Full Access | Read Only |
-| Credit Accounts | Full Access | Full Access | Full Access | Read Only |
-| Credit Search & Reports | Full Access | Full Access | Full Access | Read Only |
-| Pending Approvals (Review) | Approve/Reject | Approve/Reject | View Only | View Only |
-| Dispute Management | Full Access | Full Access | Full Access | Read Only |
-| Court Judgments (Create) | Yes | Yes | No | No |
-| Consent Management | Full Access | Full Access | Full Access | Read Only |
-| Audit Trail | Full Access | Full Access | No Access | No Access |
-| Billing | Full Access | Full Access | No Access | No Access |
-| Helpdesk | Full Access | Full Access | Full Access | Full Access |
-| Batch Upload | Full Access | No Access | Full Access | No Access |
-| User Management | Full Access | No Access | No Access | No Access |
-| Institution Management | Full Access | No Access | No Access | No Access |
-| API Keys | Full Access | No Access | No Access | No Access |
-| Exchange Rates | Full Access | No Access | No Access | No Access |
-| API Administration | Full Access | No Access | No Access | No Access |
-| Retention Policies | Full Access | Full Access | No Access | No Access |
-| Global Search | Full Access | Full Access | Full Access | Read Only |
-| Reports & Export | Full Access | Full Access | Full Access | Full Access |
-| Notifications | Full Access | Full Access | Full Access | Full Access |
+| Module / Feature | Super Admin | Admin | Regulator | Lender | Viewer |
+|-----------------|-------------|-------|-----------|--------|--------|
+| Dashboard | Full Access | Full Access | Full Access | Full Access | Full Access |
+| Consumers & Businesses | Full Access | Full Access | Full Access | Full Access | Read Only |
+| Credit Accounts | Full Access | Full Access | Full Access | Full Access | Read Only |
+| Credit Search (4 tabs) | Full Access | Full Access | Full Access | Full Access | Read Only |
+| Telco Scoring & Lending | Full Access | Full Access | Full Access | Full Access | No Access |
+| Portfolio Intelligence | Full Access | Full Access | Full Access | No Access | No Access |
+| AI Command Center | Full Access | Full Access | Full Access | No Access | No Access |
+| Regulatory Dashboard | Full Access | Full Access | Full Access | No Access | No Access |
+| Pending Approvals | Approve/Reject | Approve/Reject | Approve/Reject | No Access | No Access |
+| Dispute Management | Full Access | Full Access | Full Access | Full Access | Read Only |
+| Borrower Alerts | Full Access | Full Access | Full Access | No Access | No Access |
+| Court Judgments (Create) | Yes | Yes | Yes | No | No |
+| Consent Management | Full Access | Full Access | Full Access | Full Access | Read Only |
+| Audit Trail | Full Access | Full Access | Full Access | No Access | No Access |
+| Regulatory Compliance | Full Access | Full Access | Full Access | No Access | No Access |
+| BOG/BSL Export | Full Access | Full Access | Full Access | No Access | No Access |
+| Cross-Border (Agreements, Search, PAPSS) | Full Access | Full Access | Full Access | Search Only | No Access |
+| Billing | Full Access | Full Access | Full Access | No Access | No Access |
+| Helpdesk | Full Access | Full Access | Full Access | Full Access | Full Access |
+| Batch Upload | Full Access | Full Access | No Access | Full Access | No Access |
+| User Management | Full Access | Full Access | No Access | No Access | No Access |
+| Institution Management | Full Access | Full Access | No Access | No Access | No Access |
+| API Keys | Full Access | Full Access | No Access | No Access | No Access |
+| Exchange Rates | Full Access | Full Access | No Access | No Access | No Access |
+| API Administration | Full Access | Full Access | No Access | No Access | No Access |
+| Retention Policies | Full Access | Full Access | Full Access | No Access | No Access |
+| System Status | Full Access | Full Access | No Access | No Access | No Access |
+| Webhook Management | Full Access | Full Access | No Access | No Access | No Access |
+| Platform Metrics | Full Access | Full Access | No Access | No Access | No Access |
+| Command Center | Full Access | No Access | No Access | No Access | No Access |
+| Organizations | Full Access | No Access | No Access | No Access | No Access |
+| Backup & Recovery | Full Access | No Access | No Access | No Access | No Access |
+| Reports & Export | Full Access | Full Access | Full Access | Full Access | Full Access |
+| Notifications | Full Access | Full Access | Full Access | Full Access | Full Access |
+| Consumer Portal (/my-credit) | Full Access | Full Access | Full Access | Full Access | Full Access |
+| Score Methodology | Full Access | Full Access | No Access | Full Access | No Access |
 
 ---
 
