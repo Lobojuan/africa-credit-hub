@@ -57,7 +57,7 @@ import { sendSms, sendOtpSms, isSmsConfigured } from "./sms";
 import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport, generatePortfolioIntelligence, parseProvider, parseOptionalProvider, generateCreditNarrative, detectAnomalies, generateRegulatoryReport, naturalLanguageQuery, analyzeCrossBorderRisk, generateLoanRecommendation, callAI, parseJSON, generateAIResponse } from "./ai";
 import { BOG_EXPORT_GENERATORS } from "./bog-export";
 import type { BogFileType } from "@shared/bog-codes";
-import { BOG_CHEQUE_RETURN_REASON, BOG_NATURE_OF_GUARANTOR, BOG_EMPLOYMENT_TYPE } from "@shared/bog-codes";
+import { BOG_CHEQUE_RETURN_REASON, BOG_NATURE_OF_GUARANTOR, BOG_EMPLOYMENT_TYPE, BOG_OWNER_TENANT } from "@shared/bog-codes";
 import { BUSINESS_CREDIT_TYPES, inferCreditCategory, normalizeAccountType } from "@shared/credit-types";
 import { BSL_EXPORT_GENERATORS } from "./bsl-export";
 import type { BslFileType } from "@shared/bsl-codes";
@@ -6651,7 +6651,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         { value: [b.address, b.postalCode].filter(Boolean).join(", ") || "—", width: W * 0.35 },
         { value: [b.city, b.region, b.country].filter(Boolean).join(", ") || "—", width: W * 0.3 },
         { value: b.dateMovedCurrentRes || "—", width: W * 0.15 },
-        { value: "Current", width: W * 0.2, align: "right", color: "#16a34a", bold: true },
+        { value: b.ownerOrTenant ? (BOG_OWNER_TENANT[b.ownerOrTenant] || b.ownerOrTenant) : "Current", width: W * 0.2, align: "right", color: "#16a34a", bold: true },
       ]);
       const previousAddresses = [b.previousAddress1, b.previousAddress2, b.previousAddress3, b.previousAddress4].filter(Boolean);
       previousAddresses.forEach((addr: string) => {
@@ -7162,20 +7162,25 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
       // === SECTION 11: CONSUMER STATEMENT ===
       sectionTitle("Consumer Statement", 11);
-      ensureSpace(50);
       const consumerStatement = reportData.consumerStatement || b.consumerStatement || "";
+      const csHeaderText = "CONSUMER-SUBMITTED STATEMENT";
+      const csBodyText = consumerStatement
+        ? consumerStatement
+        : "No consumer statement has been submitted for this file. Consumers have the right to submit a personal statement of up to 200 words to be included in their credit report, explaining circumstances related to any credit information contained herein.";
+      const csBodyFont = consumerStatement ? "Helvetica" : "Helvetica";
+      const csBodySize = consumerStatement ? 7.5 : 7;
+      const csBodyColor = consumerStatement ? DARK : GRAY;
+      const csHeaderHeight = 14;
+      const csBodyHeight = doc.fontSize(csBodySize).font(csBodyFont).heightOfString(csBodyText, { width: W - 24 });
+      const csPadding = 12;
+      const csBoxHeight = csHeaderHeight + csBodyHeight + csPadding;
+      ensureSpace(csBoxHeight + 30);
       const csY = doc.y;
-      doc.rect(46, csY, W - 12, consumerStatement ? 60 : 50).fill("#f8f9fa");
-      doc.fontSize(7).font("Helvetica-Bold").fill(GRAY).text("CONSUMER-SUBMITTED STATEMENT", 52, csY + 6, { width: W - 24 });
-      if (consumerStatement) {
-        doc.fontSize(7.5).font("Helvetica").fill(DARK)
-          .text(consumerStatement, 52, csY + 18, { width: W - 24 });
-        doc.y = csY + 64;
-      } else {
-        doc.fontSize(7).font("Helvetica").fill(GRAY)
-          .text("No consumer statement has been submitted for this file. Consumers have the right to submit a personal statement of up to 200 words to be included in their credit report, explaining circumstances related to any credit information contained herein.", 52, csY + 18, { width: W - 24 });
-        doc.y = csY + 54;
-      }
+      doc.rect(46, csY, W - 12, csBoxHeight).fill("#f8f9fa");
+      doc.fontSize(7).font("Helvetica-Bold").fill(GRAY).text(csHeaderText, 52, csY + 6, { width: W - 24 });
+      doc.fontSize(csBodySize).font(csBodyFont).fill(csBodyColor)
+        .text(csBodyText, 52, csY + 6 + csHeaderHeight, { width: W - 24 });
+      doc.y = csY + csBoxHeight + 4;
       doc.moveDown(0.2);
       doc.fontSize(6).font("Helvetica").fill(LIGHT)
         .text("Under the Credit Reporting Act, consumers have the right to dispute inaccurate information and add a personal statement to their credit file. Contact the Credit Registry to exercise these rights.", 46, doc.y, { width: W - 12 });
