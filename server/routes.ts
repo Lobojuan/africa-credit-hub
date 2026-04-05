@@ -6560,7 +6560,8 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       tableRow([{ value: "Credit Utilization", width: W * 0.25 }, { value: "30% weight", width: W * 0.2 }, { value: `${utilRatio.toFixed(1)}%`, width: W * 0.25, bold: true }, { value: utilRatio <= 30 ? "Excellent" : utilRatio <= 50 ? "Good" : utilRatio <= 75 ? "Fair" : "Poor", width: W * 0.3, align: "right", color: utilRatio <= 30 ? "#16a34a" : utilRatio <= 75 ? "#ca8a04" : "#dc2626" }]);
       tableRow([{ value: "Credit History Length", width: W * 0.25 }, { value: "15% weight", width: W * 0.2 }, { value: historyYears > 0 ? `${historyYears} year${historyYears !== 1 ? "s" : ""}` : "< 1 year", width: W * 0.25, bold: true }, { value: historyYears >= 5 ? "Established" : historyYears >= 2 ? "Developing" : "New", width: W * 0.3, align: "right" }]);
       tableRow([{ value: "Credit Mix", width: W * 0.25 }, { value: "10% weight", width: W * 0.2 }, { value: `${accountTypes.size} type${accountTypes.size !== 1 ? "s" : ""}`, width: W * 0.25, bold: true }, { value: accountTypes.size >= 3 ? "Diverse" : accountTypes.size >= 2 ? "Moderate" : "Limited", width: W * 0.3, align: "right" }]);
-      tableRow([{ value: "Recent Inquiries", width: W * 0.25 }, { value: "10% weight", width: W * 0.2 }, { value: String(s.inquiryCount || inquiries.length), width: W * 0.25, bold: true }, { value: (s.inquiryCount || inquiries.length) <= 2 ? "Low" : (s.inquiryCount || inquiries.length) <= 5 ? "Moderate" : "High", width: W * 0.3, align: "right", color: (s.inquiryCount || inquiries.length) > 5 ? "#dc2626" : undefined }]);
+      const inqCount = s.inquiryCount ?? inquiries.length;
+      tableRow([{ value: "Recent Inquiries", width: W * 0.25 }, { value: "10% weight", width: W * 0.2 }, { value: String(inqCount), width: W * 0.25, bold: true }, { value: inqCount <= 2 ? "Low" : inqCount <= 5 ? "Moderate" : "High", width: W * 0.3, align: "right", color: inqCount > 5 ? "#dc2626" : undefined }]);
 
       // === SCORE FACTOR ANALYSIS (unnumbered) ===
       if (s.reasonCodes && s.reasonCodes.length > 0) {
@@ -6885,7 +6886,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
           if (history.length > 0) {
             const phSlice = history.slice(0, 24);
             const phCount = phSlice.length;
-            const phGridHeight = 36;
+            const phGridHeight = 48;
             ensureSpace(phGridHeight + 16);
             doc.fontSize(7).font("Helvetica-Bold").fill(GRAY).text("Payment History (Last 24 Months)", 48, doc.y);
             doc.moveDown(0.25);
@@ -6902,7 +6903,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
             });
 
             doc.fontSize(5).font("Helvetica-Bold").fill(GRAY).text("Status", phX0, phStartY + phRowH + 2, { width: phLabelW });
-            phSlice.forEach((ph: { status: string; daysLate?: number }, i: number) => {
+            phSlice.forEach((ph: { status: string; daysLate?: number; amountDue?: string }, i: number) => {
               let code = "ND";
               let color = GRAY;
               if (ph.status === "on_time") { code = "OK"; color = "#16a34a"; }
@@ -6913,7 +6914,14 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
                 .text(code, phX0 + phLabelW + i * phCellW, phStartY + phRowH + 2, { width: phCellW, align: "center" });
             });
 
-            doc.y = phStartY + phRowH * 2 + 6;
+            doc.fontSize(5).font("Helvetica-Bold").fill(GRAY).text("Amt. Due", phX0, phStartY + phRowH * 2 + 2, { width: phLabelW });
+            phSlice.forEach((ph: { amountDue?: string }, i: number) => {
+              const amt = ph.amountDue ? Number(ph.amountDue).toLocaleString() : "0";
+              doc.fontSize(5).font("Helvetica").fill(GRAY)
+                .text(amt, phX0 + phLabelW + i * phCellW, phStartY + phRowH * 2 + 2, { width: phCellW, align: "center" });
+            });
+
+            doc.y = phStartY + phRowH * 3 + 6;
             doc.moveDown(0.3);
           }
 
@@ -7142,7 +7150,8 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       if (s.delinquentAccounts > 0) riskConcerns.push(`${s.delinquentAccounts} delinquent account(s) on file`);
       if (s.writtenOffAccounts > 0) riskConcerns.push(`${s.writtenOffAccounts} written-off account(s) totalling bad debt`);
       if (s.judgmentCount > 0) riskConcerns.push(`${s.judgmentCount} court judgment(s) recorded`);
-      if ((s.inquiryCount || inquiries.length) > 5) riskConcerns.push(`High inquiry volume (${s.inquiryCount || inquiries.length}) may indicate credit-seeking behaviour`);
+      const riskInqCount = s.inquiryCount ?? inquiries.length;
+      if (riskInqCount > 5) riskConcerns.push(`High inquiry volume (${riskInqCount}) may indicate credit-seeking behaviour`);
       if (utilRatio > 75) riskConcerns.push(`High credit utilization at ${utilRatio.toFixed(1)}%`);
       if (score < 580) riskConcerns.push("Low credit score suggests elevated default risk");
       if (s.restructuredAccounts > 0) riskConcerns.push(`${s.restructuredAccounts} restructured facility/ies indicating past repayment difficulty`);
