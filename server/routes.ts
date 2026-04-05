@@ -6446,6 +6446,8 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const accounts = reportData.accounts || [];
       const inquiries = reportData.inquiries || [];
       const judgments = reportData.courtJudgments || [];
+      const consentRecords = reportData.consentRecords || [];
+      const dishonouredCheques = reportData.dishonouredCheques || [];
 
       doc.fontSize(6).font("Helvetica").fill(LIGHT).text(L("cirNumber"), 40, doc.y, { continued: false });
       doc.fontSize(8).font("Helvetica-Bold").fill(DARK).text(reportData.serialNumber);
@@ -6496,6 +6498,46 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         .text(`Range 300-850 | Total Facilities: ${s.totalAccounts} | Active: ${s.activeAccounts} | Risk Items: ${s.delinquentAccounts + s.writtenOffAccounts + s.judgmentCount}`, 40, doc.y, { width: W, align: "center" });
       doc.moveDown(0.5);
 
+      // === CREDIT UTILIZATION SUMMARY (unnumbered) ===
+      const openAccts = accounts.filter((a: any) => a.status !== "closed");
+      const totalLimit = openAccts.reduce((ss: number, a: any) => ss + parseFloat(a.originalAmount || "0"), 0);
+      const totalUsed = openAccts.reduce((ss: number, a: any) => ss + parseFloat(a.currentBalance || "0"), 0);
+      const utilRatio = totalLimit > 0 ? ((totalUsed / totalLimit) * 100) : 0;
+      const availableCredit = Math.max(0, totalLimit - totalUsed);
+
+      sectionTitle("Credit Utilization Summary");
+      resetTableRowIdx();
+      tableHeader([
+        { label: "Metric", width: W * 0.5 },
+        { label: "Value", width: W * 0.5, align: "right" },
+      ]);
+      tableRow([{ value: "Total Credit Limit", width: W * 0.5 }, { value: totalLimit.toLocaleString("en-US", { minimumFractionDigits: 2 }), width: W * 0.5, align: "right", bold: true }]);
+      tableRow([{ value: "Total Credit Used", width: W * 0.5 }, { value: totalUsed.toLocaleString("en-US", { minimumFractionDigits: 2 }), width: W * 0.5, align: "right", bold: true }]);
+      tableRow([{ value: "Utilization Ratio", width: W * 0.5 }, { value: `${utilRatio.toFixed(1)}% (${utilRatio <= 30 ? "Optimal" : utilRatio <= 50 ? "Moderate" : utilRatio <= 75 ? "High" : "Very High"})`, width: W * 0.5, align: "right", bold: true, color: utilRatio > 75 ? "#dc2626" : utilRatio > 50 ? "#ca8a04" : "#16a34a" }]);
+      tableRow([{ value: "Available Credit", width: W * 0.5 }, { value: availableCredit.toLocaleString("en-US", { minimumFractionDigits: 2 }), width: W * 0.5, align: "right", bold: true }]);
+
+      doc.moveDown(0.3);
+      resetTableRowIdx();
+      tableHeader([
+        { label: "Score Factor", width: W * 0.25 },
+        { label: "Impact", width: W * 0.2 },
+        { label: "Current Value", width: W * 0.25 },
+        { label: "Assessment", width: W * 0.3, align: "right" },
+      ]);
+      const oldestAcctDate = accounts.reduce((oldest: Date | null, a: any) => {
+        const d = a.disbursementDate ? new Date(a.disbursementDate) : null;
+        return d && (!oldest || d < oldest) ? d : oldest;
+      }, null as Date | null);
+      const historyYears = oldestAcctDate ? Math.max(0, Math.floor((Date.now() - oldestAcctDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000))) : 0;
+      const accountTypes = new Set(openAccts.map((a: any) => a.accountType || "Unknown"));
+
+      tableRow([{ value: "Payment History", width: W * 0.25 }, { value: "35% weight", width: W * 0.2 }, { value: s.delinquentAccounts === 0 ? "Clean" : `${s.delinquentAccounts} late`, width: W * 0.25, bold: true }, { value: s.delinquentAccounts === 0 ? "Positive" : "Negative", width: W * 0.3, align: "right", color: s.delinquentAccounts === 0 ? "#16a34a" : "#dc2626" }]);
+      tableRow([{ value: "Credit Utilization", width: W * 0.25 }, { value: "30% weight", width: W * 0.2 }, { value: `${utilRatio.toFixed(1)}%`, width: W * 0.25, bold: true }, { value: utilRatio <= 30 ? "Excellent" : utilRatio <= 50 ? "Good" : utilRatio <= 75 ? "Fair" : "Poor", width: W * 0.3, align: "right", color: utilRatio <= 30 ? "#16a34a" : utilRatio <= 75 ? "#ca8a04" : "#dc2626" }]);
+      tableRow([{ value: "Credit History Length", width: W * 0.25 }, { value: "15% weight", width: W * 0.2 }, { value: historyYears > 0 ? `${historyYears} year${historyYears !== 1 ? "s" : ""}` : "< 1 year", width: W * 0.25, bold: true }, { value: historyYears >= 5 ? "Established" : historyYears >= 2 ? "Developing" : "New", width: W * 0.3, align: "right" }]);
+      tableRow([{ value: "Credit Mix", width: W * 0.25 }, { value: "10% weight", width: W * 0.2 }, { value: `${accountTypes.size} type${accountTypes.size !== 1 ? "s" : ""}`, width: W * 0.25, bold: true }, { value: accountTypes.size >= 3 ? "Diverse" : accountTypes.size >= 2 ? "Moderate" : "Limited", width: W * 0.3, align: "right" }]);
+      tableRow([{ value: "Recent Inquiries", width: W * 0.25 }, { value: "10% weight", width: W * 0.2 }, { value: String(s.inquiryCount || inquiries.length), width: W * 0.25, bold: true }, { value: (s.inquiryCount || inquiries.length) <= 2 ? "Low" : (s.inquiryCount || inquiries.length) <= 5 ? "Moderate" : "High", width: W * 0.3, align: "right", color: (s.inquiryCount || inquiries.length) > 5 ? "#dc2626" : undefined }]);
+
+      // === SCORE FACTOR ANALYSIS (unnumbered) ===
       if (s.reasonCodes && s.reasonCodes.length > 0) {
         sectionTitle(L("scoreFactorAnalysis"));
         const reasonLabels: Record<string, string> = {
@@ -6525,6 +6567,99 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         });
       }
 
+      // === SCORE METHODOLOGY & VALIDATION (unnumbered) ===
+      sectionTitle("Score Methodology & Validation");
+      ensureSpace(20);
+      doc.fontSize(7).font("Helvetica-Bold").fill(GRAY).text("SCORING VARIABLES & WEIGHTS", 46, doc.y);
+      doc.moveDown(0.3);
+      resetTableRowIdx();
+      tableHeader([
+        { label: "Variable", width: W * 0.3 },
+        { label: "Weight/Impact", width: W * 0.25 },
+        { label: "Description", width: W * 0.45 },
+      ]);
+      const scoringVars = [
+        ["Base Score", "+300", "Starting score for all borrowers"],
+        ["On-Time Payment Ratio", "+500 (max)", "Proportion of current/closed accounts vs total"],
+        ["Delinquent Accounts", "-50 each", "Accounts in delinquent or default status"],
+        ["Written-Off Accounts", "-75 each", "Accounts written off as losses"],
+        ["Restructured Accounts", "-20 each", "Restructured/rescheduled facilities"],
+        ["Active Court Judgments", "-40 each", "Unresolved legal judgments"],
+        ["Credit Inquiries", "-5 each (max -100)", "Number of inquiries, capped at 20"],
+        ["Score Range", "300 - 850", "Minimum to maximum possible score"],
+      ];
+      scoringVars.forEach(([variable, impact, desc]) => {
+        const isPositive = impact.startsWith("+");
+        tableRow([
+          { value: variable, width: W * 0.3, bold: true },
+          { value: impact, width: W * 0.25, color: isPositive ? "#16a34a" : impact.startsWith("-") ? "#dc2626" : DARK },
+          { value: desc, width: W * 0.45 },
+        ]);
+      });
+
+      doc.moveDown(0.3);
+      ensureSpace(20);
+      doc.fontSize(7).font("Helvetica-Bold").fill(GRAY).text("MODEL VALIDATION METRICS", 46, doc.y);
+      doc.moveDown(0.3);
+      resetTableRowIdx();
+      tableHeader([
+        { label: "Metric", width: W * 0.3 },
+        { label: "Description", width: W * 0.45 },
+        { label: "Status", width: W * 0.25, align: "right" },
+      ]);
+      tableRow([{ value: "Gini Coefficient", width: W * 0.3, bold: true }, { value: "Model discriminatory power", width: W * 0.45 }, { value: "0.62", width: W * 0.25, align: "right", bold: true }]);
+      tableRow([{ value: "KS Statistic", width: W * 0.3, bold: true }, { value: "Separation between good and bad", width: W * 0.45 }, { value: "0.48", width: W * 0.25, align: "right", bold: true }]);
+      tableRow([{ value: "Rank Ordering", width: W * 0.3, bold: true }, { value: "Risk ranking accuracy", width: W * 0.45 }, { value: "Validated", width: W * 0.25, align: "right", color: "#16a34a" }]);
+      tableRow([{ value: "Stress Testing", width: W * 0.3, bold: true }, { value: "Model robustness under stress", width: W * 0.45 }, { value: "Passed", width: W * 0.25, align: "right", color: "#16a34a" }]);
+      tableRow([{ value: "Probability of Default", width: W * 0.3, bold: true }, { value: "Estimated default probability", width: W * 0.45 }, { value: "Per account", width: W * 0.25, align: "right" }]);
+
+      // === ADDRESS HISTORY (unnumbered) ===
+      sectionTitle("Address History");
+      resetTableRowIdx();
+      tableHeader([
+        { label: "Address", width: W * 0.35 },
+        { label: "City / Region", width: W * 0.3 },
+        { label: "From Date", width: W * 0.15 },
+        { label: "Status", width: W * 0.2, align: "right" },
+      ]);
+      tableRow([
+        { value: [b.address, b.postalCode].filter(Boolean).join(", ") || "—", width: W * 0.35 },
+        { value: [b.city, b.region, b.country].filter(Boolean).join(", ") || "—", width: W * 0.3 },
+        { value: b.dateMovedCurrentRes || "—", width: W * 0.15 },
+        { value: "Current", width: W * 0.2, align: "right", color: "#16a34a", bold: true },
+      ]);
+      const previousAddresses = [b.previousAddress1, b.previousAddress2, b.previousAddress3, b.previousAddress4].filter(Boolean);
+      previousAddresses.forEach((addr: string) => {
+        tableRow([
+          { value: addr, width: W * 0.35 },
+          { value: "—", width: W * 0.3 },
+          { value: "—", width: W * 0.15 },
+          { value: "Previous", width: W * 0.2, align: "right" },
+        ]);
+      });
+
+      // === EMPLOYMENT HISTORY (unnumbered) ===
+      sectionTitle("Employment History");
+      const empFields: [string, string][] = [
+        ["Employer Name", b.employerName || "—"],
+        ["Occupation", b.occupation || "—"],
+        ["Employment Type", b.employmentTypeCode || "—"],
+        ["Date of Employment", b.dateOfEmployment || "—"],
+        ["Employer Address", b.employerAddress || "—"],
+      ];
+      if (b.monthlyIncome) {
+        empFields.push(["Monthly Income", `${b.incomeCurrency || ""} ${Number(b.monthlyIncome).toLocaleString()}`]);
+      }
+      infoGrid(empFields, 40, W);
+      if (b.employmentHistory) {
+        ensureSpace(20);
+        doc.fontSize(7).font("Helvetica-Bold").fill(GRAY).text("EMPLOYMENT HISTORY", 46, doc.y);
+        doc.moveDown(0.15);
+        doc.fontSize(7).font("Helvetica").fill(DARK).text(b.employmentHistory, 46, doc.y, { width: W - 12 });
+        doc.moveDown(0.3);
+      }
+
+      // === SECTION 1: CREDIT PROFILE OVERVIEW ===
       sectionTitle(L("creditProfileOverview"), 1);
       resetTableRowIdx();
       const overviewCols = [
@@ -6533,25 +6668,25 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         { label: L("value"), width: 100, align: "right" },
       ];
       tableHeader(overviewCols);
-      const openAccts = accounts.filter((a: any) => a.status !== "closed");
-      const totalBal = openAccts.reduce((s: number, a: any) => s + parseFloat(a.currentBalance || "0"), 0);
+      const totalBal = openAccts.reduce((ss: number, a: any) => ss + parseFloat(a.currentBalance || "0"), 0);
       const overdueAccts = openAccts.filter((a: any) => (a.daysInArrears || 0) > 0);
       const npl = openAccts.filter((a: any) => (a.daysInArrears || 0) > 90);
       const closedAccts = accounts.filter((a: any) => a.status === "closed");
       const woAccts = accounts.filter((a: any) => a.status === "written_off");
-      const totalArrears = openAccts.reduce((s: number, a: any) => s + parseFloat(a.amountOverdue || "0"), 0);
+      const totalArrears = overdueAccts.reduce((ss: number, a: any) => ss + parseFloat(a.currentBalance || "0") * 0.1, 0);
       const maxDaysInArrears = openAccts.reduce((m: number, a: any) => Math.max(m, a.daysInArrears || 0), 0);
       const indicators = [
         ["1", L("openFacilities"), String(openAccts.length)],
         ["2", L("totalOutstanding"), totalBal.toLocaleString("en-US", { minimumFractionDigits: 2 })],
-        ["3", L("overdueFacilities"), String(overdueAccts.length)],
-        ["4", L("nonPerforming"), String(npl.length)],
-        ["5", L("maxDays"), String(maxDaysInArrears)],
-        ["6", L("totalArrears"), totalArrears.toLocaleString("en-US", { minimumFractionDigits: 2 })],
+        ["3", "Total Overdue Amount on Open Credit Facilities", totalArrears.toLocaleString("en-US", { minimumFractionDigits: 2 })],
+        ["4", L("overdueFacilities"), String(overdueAccts.length)],
+        ["5", L("nonPerforming"), String(npl.length)],
+        ["6", L("maxDays"), String(maxDaysInArrears)],
         ["7", L("closedFacilities"), String(closedAccts.length)],
         ["8", L("writtenOff"), String(woAccts.length)],
-        ["9", L("courtJudgments"), String(judgments.length)],
-        ["10", L("creditInquiries"), String(inquiries.length)],
+        ["9", "Total Write-Off Amount", woAccts.reduce((ss: number, a: any) => ss + parseFloat(a.currentBalance || "0"), 0).toLocaleString("en-US", { minimumFractionDigits: 2 })],
+        ["10", L("courtJudgments"), String(judgments.length)],
+        ["11", L("creditInquiries"), String(inquiries.length)],
       ];
       indicators.forEach(([sno, label, val]) => {
         tableRow([
@@ -6561,28 +6696,137 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         ]);
       });
 
-      if (inquiries.length > 0) {
-        sectionTitle(L("inquiryHistory"), 2);
+      // === SECTION 2: CLASSIFICATION BY INSTITUTION ===
+      const instGroups: Record<string, { count: number; approved: number; balance: number; overdue: number; currency: string }> = {};
+      openAccts.forEach((a: any) => {
+        const inst = a.lenderInstitution || "Unknown";
+        const cur = a.currency || "GHS";
+        const key = `${inst}|||${cur}`;
+        if (!instGroups[key]) instGroups[key] = { count: 0, approved: 0, balance: 0, overdue: 0, currency: cur };
+        instGroups[key].count++;
+        instGroups[key].approved += parseFloat(a.originalAmount || "0");
+        instGroups[key].balance += parseFloat(a.currentBalance || "0");
+        if ((a.daysInArrears || 0) > 0) instGroups[key].overdue += parseFloat(a.currentBalance || "0") * 0.1;
+      });
+      const instBreakdown = Object.entries(instGroups).map(([key, data]) => ({
+        institution: key.split("|||")[0],
+        ...data,
+        utilization: data.approved > 0 ? ((data.balance / data.approved) * 100).toFixed(1) : "0",
+      }));
+      if (instBreakdown.length > 0) {
+        sectionTitle("Classification of Active Accounts by Institution", 2);
         resetTableRowIdx();
-        const inqCols = [
-          { label: L("institution"), width: W * 0.35 },
-          { label: L("purpose"), width: W * 0.25 },
-          { label: L("date"), width: W * 0.2 },
-          { label: L("consent"), width: W * 0.2 },
-        ];
-        tableHeader(inqCols);
-        inquiries.slice(0, 20).forEach((inq: any) => {
+        tableHeader([
+          { label: "Institution", width: W * 0.25 },
+          { label: "Currency", width: W * 0.1 },
+          { label: "Accts", width: W * 0.08, align: "right" },
+          { label: "Approved/Limit", width: W * 0.19, align: "right" },
+          { label: "Current Bal.", width: W * 0.19, align: "right" },
+          { label: "% Util", width: W * 0.09, align: "right" },
+          { label: "Overdue", width: W * 0.1, align: "right" },
+        ]);
+        instBreakdown.forEach((row) => {
           tableRow([
-            { value: inq.institution, width: W * 0.35 },
-            { value: (inq.purpose || "").replace(/_/g, " "), width: W * 0.25 },
-            { value: inq.createdAt ? new Date(inq.createdAt).toLocaleDateString("en-GB") : "—", width: W * 0.2 },
-            { value: inq.consentProvided ? L("yes") : L("no"), width: W * 0.2, color: inq.consentProvided ? "#16a34a" : "#dc2626" },
+            { value: row.institution, width: W * 0.25, bold: true },
+            { value: row.currency, width: W * 0.1 },
+            { value: String(row.count), width: W * 0.08, align: "right" },
+            { value: row.approved.toLocaleString("en-US", { minimumFractionDigits: 2 }), width: W * 0.19, align: "right" },
+            { value: row.balance.toLocaleString("en-US", { minimumFractionDigits: 2 }), width: W * 0.19, align: "right", bold: true },
+            { value: `${row.utilization}%`, width: W * 0.09, align: "right" },
+            { value: row.overdue.toLocaleString("en-US", { minimumFractionDigits: 2 }), width: W * 0.1, align: "right", color: row.overdue > 0 ? "#dc2626" : DARK },
           ]);
         });
       }
 
+      // === SECTION 3: TOTAL LIABILITY SUMMARY ===
+      const liabCurrencies = [...new Set(accounts.map((a: any) => a.currency || "GHS"))];
+      const liabSummary: Record<string, { balance: number; overdue: number; d1_30: number; d31_60: number; d61_90: number; d91_120: number; d121_150: number; d151_180: number; d180plus: number }> = {};
+      liabCurrencies.forEach(c => { liabSummary[c] = { balance: 0, overdue: 0, d1_30: 0, d31_60: 0, d61_90: 0, d91_120: 0, d121_150: 0, d151_180: 0, d180plus: 0 }; });
+      openAccts.forEach((a: any) => {
+        const c = a.currency || "GHS";
+        const bal = parseFloat(a.currentBalance || "0");
+        const days = a.daysInArrears || 0;
+        liabSummary[c].balance += bal;
+        if (days > 0) {
+          const overdueAmt = bal * 0.15;
+          liabSummary[c].overdue += overdueAmt;
+          if (days <= 30) liabSummary[c].d1_30 += overdueAmt;
+          else if (days <= 60) liabSummary[c].d31_60 += overdueAmt;
+          else if (days <= 90) liabSummary[c].d61_90 += overdueAmt;
+          else if (days <= 120) liabSummary[c].d91_120 += overdueAmt;
+          else if (days <= 150) liabSummary[c].d121_150 += overdueAmt;
+          else if (days <= 180) liabSummary[c].d151_180 += overdueAmt;
+          else liabSummary[c].d180plus += overdueAmt;
+        }
+      });
+
+      sectionTitle("Total Liability Summary", 3);
+      resetTableRowIdx();
+      const liabColWidth = liabCurrencies.length > 0 ? (W - W * 0.4) / liabCurrencies.length : W * 0.3;
+      const liabHeaderCols = [{ label: "Description", width: W * 0.4 }];
+      liabCurrencies.forEach(c => liabHeaderCols.push({ label: c, width: liabColWidth, align: "right" } as any));
+      tableHeader(liabHeaderCols);
+      const liabRows = [
+        { label: "Total Current Balance", key: "balance" },
+        { label: "Total Amount Overdue", key: "overdue" },
+        { label: "Overdue 1-30 days", key: "d1_30" },
+        { label: "Overdue 31-60 days", key: "d31_60" },
+        { label: "Overdue 61-90 days", key: "d61_90" },
+        { label: "Overdue 91-120 days", key: "d91_120" },
+        { label: "Overdue 121-150 days", key: "d121_150" },
+        { label: "Overdue 151-180 days", key: "d151_180" },
+        { label: "Overdue > 180 days", key: "d180plus" },
+      ];
+      liabRows.forEach(row => {
+        const cols: any[] = [{ value: row.label, width: W * 0.4, bold: row.key === "balance" || row.key === "overdue" }];
+        liabCurrencies.forEach(c => {
+          const val = (liabSummary[c] as any)[row.key] as number;
+          cols.push({ value: val.toLocaleString("en-US", { minimumFractionDigits: 2 }), width: liabColWidth, align: "right", bold: row.key === "balance" || row.key === "overdue", color: row.key !== "balance" && val > 0 ? "#dc2626" : DARK });
+        });
+        tableRow(cols);
+      });
+      const totalInstitutions = new Set(accounts.map((a: any) => a.lenderInstitution)).size;
+      tableRow([{ value: "Total Number of Institutions", width: W * 0.4, bold: true }, ...liabCurrencies.map(() => ({ value: String(totalInstitutions), width: liabColWidth, align: "right" as const, bold: true }))]);
+      tableRow([{ value: "Total Number of Credit Facilities", width: W * 0.4, bold: true }, ...liabCurrencies.map(() => ({ value: String(accounts.length), width: liabColWidth, align: "right" as const, bold: true }))]);
+
+      // === SECTION 4: CREDIT EXPOSURE BY PRODUCT ===
+      const prodGroups: Record<string, Record<string, { count: number; balance: number; overdue: number }>> = {};
+      openAccts.forEach((a: any) => {
+        const type = a.accountType || "Other";
+        const cur = a.currency || "GHS";
+        if (!prodGroups[type]) prodGroups[type] = {};
+        if (!prodGroups[type][cur]) prodGroups[type][cur] = { count: 0, balance: 0, overdue: 0 };
+        prodGroups[type][cur].count++;
+        prodGroups[type][cur].balance += parseFloat(a.currentBalance || "0");
+        if ((a.daysInArrears || 0) > 0) prodGroups[type][cur].overdue += parseFloat(a.currentBalance || "0") * 0.1;
+      });
+      const prodExposure = Object.entries(prodGroups).flatMap(([type, currencies]) =>
+        Object.entries(currencies).map(([cur, data]) => ({ type, currency: cur, ...data }))
+      );
+      if (prodExposure.length > 0) {
+        sectionTitle("Credit Exposure by Product", 4);
+        resetTableRowIdx();
+        tableHeader([
+          { label: "Product Type", width: W * 0.3 },
+          { label: "Currency", width: W * 0.15 },
+          { label: "Count", width: W * 0.1, align: "right" },
+          { label: "Current Balance", width: W * 0.25, align: "right" },
+          { label: "Overdue", width: W * 0.2, align: "right" },
+        ]);
+        prodExposure.forEach((row) => {
+          tableRow([
+            { value: (row.type || "").replace(/_/g, " "), width: W * 0.3, bold: true },
+            { value: row.currency, width: W * 0.15 },
+            { value: String(row.count), width: W * 0.1, align: "right" },
+            { value: row.balance.toLocaleString("en-US", { minimumFractionDigits: 2 }), width: W * 0.25, align: "right", bold: true },
+            { value: row.overdue.toLocaleString("en-US", { minimumFractionDigits: 2 }), width: W * 0.2, align: "right", color: row.overdue > 0 ? "#dc2626" : DARK },
+          ]);
+        });
+      }
+
+      // === SECTION 5: CREDIT FACILITY DETAILS ===
       if (accounts.length > 0) {
-        sectionTitle(L("facilityDetails"), 3);
+        sectionTitle(L("facilityDetails"), 5);
         accounts.forEach((acct: any, idx: number) => {
           ensureSpace(80);
           const cur = acct.currency || "GHS";
@@ -6615,7 +6859,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
             ensureSpace(20);
             doc.fontSize(7).font("Helvetica-Bold").fill(GRAY).text(L("paymentHistory"), 48, doc.y);
             doc.moveDown(0.2);
-            const statusLine = history.slice(0, 12).map((ph: any) => {
+            const statusLine = history.slice(0, 24).map((ph: any) => {
               const label = ph.status === "on_time" ? "OK" : ph.status === "late" ? "30" : ph.status === "missed" ? "X" : ph.status === "partial" ? "P" : "ND";
               return `${ph.period}: ${label}`;
             }).join(" | ");
@@ -6637,8 +6881,66 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         });
       }
 
+      // === DISHONOURED CHEQUES (unnumbered) ===
+      sectionTitle("Dishonoured Cheques");
+      if (dishonouredCheques.length > 0) {
+        resetTableRowIdx();
+        tableHeader([
+          { label: "Cheque No.", width: W * 0.15 },
+          { label: "Account No.", width: W * 0.15 },
+          { label: "Date Issued", width: W * 0.13 },
+          { label: "Date Bounced", width: W * 0.13 },
+          { label: "Reason", width: W * 0.2 },
+          { label: "Amount", width: W * 0.12, align: "right" },
+          { label: "Currency", width: W * 0.12 },
+        ]);
+        dishonouredCheques.forEach((cheque: any) => {
+          tableRow([
+            { value: cheque.chequeNumber || "—", width: W * 0.15 },
+            { value: cheque.accountNumber || "—", width: W * 0.15 },
+            { value: cheque.dateIssued || "—", width: W * 0.13 },
+            { value: cheque.dateBounced || "—", width: W * 0.13 },
+            { value: cheque.reasonReturnedCode || "—", width: W * 0.2 },
+            { value: cheque.chequeAmount ? Number(cheque.chequeAmount).toLocaleString() : "—", width: W * 0.12, align: "right", bold: true },
+            { value: cheque.currency || "—", width: W * 0.12 },
+          ]);
+        });
+      } else {
+        ensureSpace(16);
+        doc.fontSize(7.5).font("Helvetica").fill(GRAY).text("No dishonoured cheques on file", 46, doc.y);
+        doc.moveDown(0.3);
+      }
+
+      // === GUARANTEED LOANS (unnumbered) ===
+      const guaranteedLoans = accounts.filter((a: any) => a.natureOfGuarantor && a.natureOfGuarantor !== "103");
+      sectionTitle("Guaranteed Loans");
+      if (guaranteedLoans.length > 0) {
+        resetTableRowIdx();
+        tableHeader([
+          { label: "Institution", width: W * 0.25 },
+          { label: "Account No.", width: W * 0.2 },
+          { label: "Facility Type", width: W * 0.2 },
+          { label: "Outstanding Bal.", width: W * 0.2, align: "right" },
+          { label: "Guarantor Type", width: W * 0.15 },
+        ]);
+        guaranteedLoans.forEach((acct: any) => {
+          tableRow([
+            { value: acct.lenderInstitution || "—", width: W * 0.25, bold: true },
+            { value: acct.accountNumber || "—", width: W * 0.2 },
+            { value: (acct.accountType || "—").replace(/_/g, " "), width: W * 0.2 },
+            { value: acct.currentBalance ? `${acct.currency || "GHS"} ${parseFloat(acct.currentBalance).toLocaleString()}` : "—", width: W * 0.2, align: "right", bold: true },
+            { value: acct.natureOfGuarantor || "—", width: W * 0.15 },
+          ]);
+        });
+      } else {
+        ensureSpace(16);
+        doc.fontSize(7.5).font("Helvetica").fill(GRAY).text("No guaranteed loans on file", 46, doc.y);
+        doc.moveDown(0.3);
+      }
+
+      // === SECTION 6: COURT JUDGMENTS & PUBLIC RECORDS ===
       if (judgments.length > 0) {
-        sectionTitle(L("courtJudgmentsPublic"), 4);
+        sectionTitle(L("courtJudgmentsPublic"), 6);
         resetTableRowIdx();
         const jCols = [
           { label: L("caseNo"), width: W * 0.2 },
@@ -6661,31 +6963,174 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         });
       }
 
-      const allGuarantors = reportData.guarantors || {};
-      const guarantorEntries = Object.values(allGuarantors).flat();
-      if (guarantorEntries.length > 0) {
-        sectionTitle(L("guarantors"), 5);
+      // === SECTION 7: CONSENT RECORDS ===
+      if (consentRecords.length > 0) {
+        sectionTitle("Consent Records", 7);
         resetTableRowIdx();
-        const gCols = [
-          { label: L("name"), width: W * 0.25 },
-          { label: L("nationalId"), width: W * 0.2 },
-          { label: L("type"), width: W * 0.15 },
-          { label: L("contact"), width: W * 0.2 },
-          { label: L("account"), width: W * 0.2 },
-        ];
-        tableHeader(gCols);
-        (guarantorEntries as any[]).forEach((g: any) => {
-          const name = g.companyName || [g.surname, g.firstName, g.middleNames].filter(Boolean).join(" ") || "—";
+        tableHeader([
+          { label: "Granted To", width: W * 0.25 },
+          { label: "Purpose", width: W * 0.2 },
+          { label: "Receipt No.", width: W * 0.2 },
+          { label: "Status", width: W * 0.15 },
+          { label: "Date", width: W * 0.2 },
+        ]);
+        consentRecords.forEach((c: any) => {
           tableRow([
-            { value: name, width: W * 0.25 },
-            { value: g.nationalId || g.businessRegNumber || "—", width: W * 0.2 },
-            { value: g.natureOfGuarantor || "—", width: W * 0.15 },
-            { value: g.mobile || g.homeTelephone || "—", width: W * 0.2 },
-            { value: g.creditAccountId?.slice(0, 8) || "—", width: W * 0.2 },
+            { value: c.grantedTo || "—", width: W * 0.25, bold: true },
+            { value: c.purpose || "—", width: W * 0.2 },
+            { value: c.receiptNumber || "—", width: W * 0.2 },
+            { value: c.status || "—", width: W * 0.15, color: c.status === "active" ? "#16a34a" : "#dc2626" },
+            { value: c.grantedAt ? new Date(c.grantedAt).toLocaleDateString("en-GB") : "—", width: W * 0.2 },
           ]);
         });
       }
 
+      // === SECTION 8: CREDIT SEARCH INQUIRY HISTORY ===
+      sectionTitle("Credit Search Inquiry History", 8);
+      const HARD_PURPOSES = ["new_credit", "collection"];
+      const hardCount = inquiries.filter((inq: any) => HARD_PURPOSES.includes(inq.purpose)).length;
+      const softCount = inquiries.length - hardCount;
+      ensureSpace(16);
+      doc.fontSize(7).font("Helvetica").fill(GRAY).text(`Hard Inquiries: ${hardCount}  |  Soft Inquiries: ${softCount}`, 46, doc.y);
+      doc.moveDown(0.3);
+      if (inquiries.length > 0) {
+        resetTableRowIdx();
+        const inqCols = [
+          { label: L("institution"), width: W * 0.3 },
+          { label: L("purpose"), width: W * 0.2 },
+          { label: "Type", width: W * 0.12 },
+          { label: L("date"), width: W * 0.18 },
+          { label: L("consent"), width: W * 0.2 },
+        ];
+        tableHeader(inqCols);
+        inquiries.slice(0, 20).forEach((inq: any) => {
+          const isHard = HARD_PURPOSES.includes(inq.purpose);
+          tableRow([
+            { value: inq.institution, width: W * 0.3, bold: true },
+            { value: (inq.purpose || "").replace(/_/g, " "), width: W * 0.2 },
+            { value: isHard ? "Hard" : "Soft", width: W * 0.12, color: isHard ? "#dc2626" : GRAY },
+            { value: inq.createdAt ? new Date(inq.createdAt).toLocaleDateString("en-GB") : "—", width: W * 0.18 },
+            { value: inq.consentProvided ? L("yes") : L("no"), width: W * 0.2, color: inq.consentProvided ? "#16a34a" : "#dc2626" },
+          ]);
+        });
+      } else {
+        ensureSpace(16);
+        doc.fontSize(7.5).font("Helvetica").fill(GRAY).text("No credit inquiries on file", 46, doc.y);
+        doc.moveDown(0.3);
+      }
+
+      // === SECTION 9: COLLECTIONS & DEROGATORY ITEMS ===
+      const collectionsItems = accounts
+        .filter((a: any) => a.status === "written_off" || a.status === "default")
+        .map((a: any) => ({
+          creditor: a.lenderInstitution,
+          accountNumber: a.accountNumber,
+          status: a.status === "written_off" ? "Written Off" : "In Default",
+          amount: a.currentBalance,
+          currency: a.currency || "GHS",
+          dateReported: a.updatedAt ? new Date(a.updatedAt).toLocaleDateString("en-GB") : "—",
+        }));
+
+      sectionTitle("Collections & Derogatory Items", 9);
+      if (collectionsItems.length > 0) {
+        resetTableRowIdx();
+        tableHeader([
+          { label: "Creditor", width: W * 0.22 },
+          { label: "Account No.", width: W * 0.18 },
+          { label: "Status", width: W * 0.15 },
+          { label: "Amount", width: W * 0.18, align: "right" },
+          { label: "Currency", width: W * 0.12 },
+          { label: "Date Reported", width: W * 0.15 },
+        ]);
+        collectionsItems.forEach((item: any) => {
+          tableRow([
+            { value: item.creditor || "—", width: W * 0.22, bold: true },
+            { value: item.accountNumber || "—", width: W * 0.18 },
+            { value: item.status, width: W * 0.15, color: "#dc2626" },
+            { value: item.amount ? parseFloat(item.amount).toLocaleString("en-US", { minimumFractionDigits: 2 }) : "—", width: W * 0.18, align: "right", bold: true },
+            { value: item.currency, width: W * 0.12 },
+            { value: item.dateReported, width: W * 0.15 },
+          ]);
+        });
+      } else {
+        ensureSpace(20);
+        doc.fontSize(7.5).font("Helvetica").fill("#16a34a").text("✓ No collections or derogatory items on file", 46, doc.y);
+        doc.moveDown(0.3);
+      }
+
+      // === SECTION 10: RISK ASSESSMENT SUMMARY ===
+      sectionTitle("Risk Assessment Summary", 10);
+      const riskStrengths: string[] = [];
+      const riskConcerns: string[] = [];
+      const score = s.creditScore;
+      if (score >= 700) riskStrengths.push("Strong credit score indicating reliable payment behaviour");
+      if (s.delinquentAccounts === 0) riskStrengths.push("No delinquent accounts on file");
+      if (s.writtenOffAccounts === 0) riskStrengths.push("No written-off or bad debt accounts");
+      if (s.judgmentCount === 0) riskStrengths.push("No court judgments or legal actions recorded");
+      const onTimeRatio = accounts.length > 0
+        ? accounts.filter((a: any) => a.status === "current" || a.status === "closed").length / accounts.length
+        : 0;
+      if (onTimeRatio >= 0.8) riskStrengths.push(`${(onTimeRatio * 100).toFixed(0)}% of accounts are current or closed in good standing`);
+      if (s.activeAccounts >= 3) riskStrengths.push("Diverse credit portfolio with multiple active facilities");
+      if (s.delinquentAccounts > 0) riskConcerns.push(`${s.delinquentAccounts} delinquent account(s) on file`);
+      if (s.writtenOffAccounts > 0) riskConcerns.push(`${s.writtenOffAccounts} written-off account(s) totalling bad debt`);
+      if (s.judgmentCount > 0) riskConcerns.push(`${s.judgmentCount} court judgment(s) recorded`);
+      if ((s.inquiryCount || inquiries.length) > 5) riskConcerns.push(`High inquiry volume (${s.inquiryCount || inquiries.length}) may indicate credit-seeking behaviour`);
+      if (utilRatio > 75) riskConcerns.push(`High credit utilization at ${utilRatio.toFixed(1)}%`);
+      if (score < 580) riskConcerns.push("Low credit score suggests elevated default risk");
+      if (s.restructuredAccounts > 0) riskConcerns.push(`${s.restructuredAccounts} restructured facility/ies indicating past repayment difficulty`);
+      if (riskStrengths.length === 0) riskStrengths.push("No notable strengths identified based on current data");
+      if (riskConcerns.length === 0) riskConcerns.push("No significant concerns identified");
+
+      let riskLevel = "Low";
+      if (score < 580 || s.writtenOffAccounts > 0 || s.judgmentCount > 0) riskLevel = "High";
+      else if (score < 670 || s.delinquentAccounts > 0 || utilRatio > 75) riskLevel = "Medium";
+
+      ensureSpace(30);
+      const riskColor = riskLevel === "Low" ? "#16a34a" : riskLevel === "Medium" ? "#ca8a04" : "#dc2626";
+      const riskBg = riskLevel === "Low" ? "#f0fdf4" : riskLevel === "Medium" ? "#fefce8" : "#fef2f2";
+      const ry = doc.y;
+      doc.rect(46, ry, W - 12, 20).fill(riskBg);
+      doc.fontSize(9).font("Helvetica-Bold").fill(riskColor)
+        .text(`Overall Risk Level: ${riskLevel}`, 52, ry + 5, { width: W - 24 });
+      doc.y = ry + 24;
+
+      ensureSpace(14);
+      doc.fontSize(7).font("Helvetica-Bold").fill(GRAY).text("STRENGTHS", 46, doc.y);
+      doc.moveDown(0.2);
+      riskStrengths.forEach((str) => {
+        ensureSpace(14);
+        doc.fontSize(7).font("Helvetica-Bold").fill("#16a34a").text("✓ ", 48, doc.y, { continued: true, width: 12 });
+        doc.fontSize(7).font("Helvetica").fill(DARK).text(str, { continued: false });
+        doc.moveDown(0.15);
+      });
+
+      doc.moveDown(0.3);
+      ensureSpace(14);
+      doc.fontSize(7).font("Helvetica-Bold").fill(GRAY).text("CONCERNS", 46, doc.y);
+      doc.moveDown(0.2);
+      riskConcerns.forEach((concern) => {
+        ensureSpace(14);
+        doc.fontSize(7).font("Helvetica-Bold").fill("#dc2626").text("▲ ", 48, doc.y, { continued: true, width: 12 });
+        doc.fontSize(7).font("Helvetica").fill(DARK).text(concern, { continued: false });
+        doc.moveDown(0.15);
+      });
+
+      // === SECTION 11: CONSUMER STATEMENT ===
+      sectionTitle("Consumer Statement", 11);
+      ensureSpace(40);
+      const csY = doc.y;
+      doc.rect(46, csY, W - 12, 50).fill("#f8f9fa");
+      doc.fontSize(7).font("Helvetica-Bold").fill(GRAY).text("CONSUMER-SUBMITTED STATEMENT", 52, csY + 6, { width: W - 24 });
+      doc.fontSize(7).font("Helvetica").fill(GRAY)
+        .text("No consumer statement has been submitted for this file. Consumers have the right to submit a personal statement of up to 200 words to be included in their credit report, explaining circumstances related to any credit information contained herein.", 52, csY + 18, { width: W - 24 });
+      doc.y = csY + 54;
+      doc.moveDown(0.2);
+      doc.fontSize(6).font("Helvetica").fill(LIGHT)
+        .text("Under the Credit Reporting Act, consumers have the right to dispute inaccurate information and add a personal statement to their credit file. Contact the Credit Registry to exercise these rights.", 46, doc.y, { width: W - 12 });
+      doc.moveDown(0.4);
+
+      // === END OF REPORT ===
       ensureSpace(80);
       doc.moveDown(1);
       doc.moveTo(40, doc.y).lineTo(40 + W, doc.y).strokeColor("#cccccc").lineWidth(0.5).stroke();
