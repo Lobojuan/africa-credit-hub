@@ -24,5 +24,18 @@
     "rows": 0,
     "durationMs": 8232,
     "notes": "Initial startup backup"
+  },
+  {
+    "id": "bk_1775417506651_5rqjrz",
+    "filename": "cdh_full_2026-04-05T19-31-46.sql.gz",
+    "type": "full",
+    "sizeMB": 47.16,
+    "status": "completed",
+    "createdAt": "2026-04-05T19:31:46.651Z",
+    "createdBy": "system",
+    "tables": 43,
+    "rows": 0,
+    "durationMs": 8291,
+    "notes": "Initial startup backup"
   }
 ]
