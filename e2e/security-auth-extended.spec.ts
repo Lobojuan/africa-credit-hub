@@ -140,4 +140,21 @@ test.describe('Security & Authentication [NFR-SEC]', () => {
     expect(typeof logs[0].ipAddress).toBe('string');
   });
 
+  test('RBAC-UNAUTH: unauthenticated requests denied for all protected endpoints', async ({ request }) => {
+    const protectedEndpoints = [
+      '/api/borrowers',
+      '/api/credit-accounts',
+      '/api/disputes',
+      '/api/audit-logs',
+      '/api/dashboard/stats',
+      '/api/pending-approvals',
+      '/api/users',
+      '/api/organizations'
+    ];
+    for (const endpoint of protectedEndpoints) {
+      const response = await request.get(endpoint);
+      expect([401, 403]).toContain(response.status());
+    }
+  });
+
 });

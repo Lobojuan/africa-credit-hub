@@ -42,6 +42,7 @@ export default defineConfig({
         'sla-performance.spec.ts',
         'consumer-portal-docs.spec.ts',
         'mfa-session-security.spec.ts',
+        'sovereignty-password-rbac.spec.ts',
       ],
       use: {
         baseURL: 'http://localhost:5000',

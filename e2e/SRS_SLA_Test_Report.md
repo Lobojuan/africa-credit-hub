@@ -3,8 +3,8 @@
 **Report Generated**: 2026-04-05  
 **Platform Version**: 2.5.0  
 **Test Framework**: Playwright E2E  
-**Total Spec Files**: 24  
-**Total Tests**: 170  
+**Total Spec Files**: 25  
+**Total Tests**: 215  
 
 ---
 
@@ -24,8 +24,9 @@
 | platform-command-center.spec.ts | 13 | 13 | 0 | PCC-01/02/03/04/05/06/07/10 |
 | admin-configuration.spec.ts | 19 | 19 | 0 | FR-DP-01, FR-COMM-01, ENT-08/09/10/17/18 |
 | regulatory-compliance-extended.spec.ts | 12 | 12 | 0 | FR-REG-01, INT-RPT-04, ENT-14/19/20 |
-| consumer-portal-docs.spec.ts | 14 | 14 | 0 | FR-CP-01/02/03, DOC-01/02/03 |
-| security-auth-extended.spec.ts | 7 | 5 | 2 | NFR-SEC-01/02/03/04/05/06 |
+| consumer-portal-docs.spec.ts | 17 | 17 | 0 | FR-CP-01/02/03/04/05/06/07, DOC-01/02/03 |
+| sovereignty-password-rbac.spec.ts | 13 | 13 | 0 | NFR-SEC-12/13/14, ENT-11-01/02/03, RBAC-01/02/03/04/05/06/07 |
+| security-auth-extended.spec.ts | 8 | 6 | 2 | NFR-SEC-01/02/03/04/05/06, RBAC-UNAUTH |
 | mfa-session-security.spec.ts | 6 | 6 | 0 | ENT-01 (MFA), NFR-SEC-09/10, ENT-07 |
 | external-api.spec.ts | 2 | 2 | 0 | INT-RPT-02, ENT-04 |
 | dashboard-navigation.spec.ts | 4 | 4 | 0 | UI-01/02 |
@@ -165,6 +166,40 @@
 | ENT-01 | MFA verify | security-auth-extended.spec.ts | POST /api/auth/mfa/verify rejects invalid code with 400 |
 | ENT-01 | MFA disable | security-auth-extended.spec.ts | POST /api/auth/mfa/disable with correct password returns 200 |
 | NFR-SEC-10 | Password expiry fields | security-auth-extended.spec.ts | Login response has passwordExpired boolean and passwordChangedAt timestamp |
+| NFR-SEC-12 | 90-day password expiry | sovereignty-password-rbac.spec.ts | Login response includes passwordExpired boolean |
+| NFR-SEC-13 | Session expiry check | sovereignty-password-rbac.spec.ts | /api/auth/me returns passwordExpired boolean |
+| NFR-SEC-14 | Password change validation | sovereignty-password-rbac.spec.ts | Wrong password returns 400/401/403 with message |
+
+### 3.1 Data Sovereignty (ENT-11)
+
+| Req ID | Requirement | Test | Assertion |
+|--------|-------------|------|-----------|
+| ENT-11-01 | Sovereignty on creation | sovereignty-password-rbac.spec.ts | Invalid country returns 400/403 or sovereignty violation message |
+| ENT-11-02 | Sovereignty data scoping | sovereignty-password-rbac.spec.ts | Borrower list returns scoped data based on user role |
+
+### 3.2 RBAC Access Control
+
+| Req ID | Requirement | Test | Assertion |
+|--------|-------------|------|-----------|
+| RBAC-01 | Dashboard access | sovereignty-password-rbac.spec.ts | Admin gets 200, response has totalBorrowers |
+| RBAC-02 | Borrower access | sovereignty-password-rbac.spec.ts | Admin gets 200, response has data array |
+| RBAC-03 | Credit account access | sovereignty-password-rbac.spec.ts | Admin gets 200 |
+| RBAC-04 | Dispute access | sovereignty-password-rbac.spec.ts | Admin gets 200 |
+| RBAC-05 | Audit log access | sovereignty-password-rbac.spec.ts | Admin gets 200, logs array with action/userId fields |
+| RBAC-06 | Unauthenticated denial | sovereignty-password-rbac.spec.ts | Consumer session returns 401 without auth |
+| RBAC-07 | Maker-checker | sovereignty-password-rbac.spec.ts | Self-approval returns 403 "Maker cannot be the Checker" |
+
+### 3.3 Consumer Portal (FR-CP)
+
+| Req ID | Requirement | Test | Assertion |
+|--------|-------------|------|-----------|
+| FR-CP-01 | Consumer registration | consumer-portal-docs.spec.ts | Registration with valid fields returns 200/201 |
+| FR-CP-02 | Invalid login rejection | consumer-portal-docs.spec.ts | Invalid credentials return 401/400 |
+| FR-CP-03 | Consumer session | consumer-portal-docs.spec.ts | Unauthenticated session check returns 401 |
+| FR-CP-04 | OTP verification | consumer-portal-docs.spec.ts | Invalid OTP returns 400/401/404 with message |
+| FR-CP-05 | OTP resend | consumer-portal-docs.spec.ts | Nonexistent account returns 400/404 |
+| FR-CP-06 | Google OAuth | consumer-portal-docs.spec.ts | OAuth endpoint redirects (302/303) to accounts.google.com |
+| FR-CP-07 | Consumer lookup | consumer-portal-docs.spec.ts | Unauthenticated lookup returns 401/403 |
 
 ---
 
