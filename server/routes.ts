@@ -7800,6 +7800,8 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     { id: "credit-procedures", filename: "Credit_Reporting_Procedures_Manual.md", title: "Credit Reporting Procedures Manual", description: "Data submission workflows, report generation, scoring methodology, dispute SLAs, data correction, and regulatory reporting procedures" },
     { id: "data-protection", filename: "Data_Protection_Compliance_Guide.md", title: "Data Protection Compliance Guide", description: "GDPR/AU Convention alignment, Ghana Act 843, data subject rights, cross-border safeguards, retention policies, breach notification, and DPO role" },
     { id: "regulatory-pack", filename: "Regulatory_Engagement_Pack.md", title: "Regulatory Engagement Pack", description: "System capabilities summary, compliance evidence matrix, security controls attestation, and go-live readiness checklist for regulators" },
+    { id: "data-submission", filename: "Data_Submission_Guide.md", title: "Data Submission Guide", description: "Step-by-step instructions for submitting credit data — manual entry, batch CSV upload, REST API, and BoG IFF file formats" },
+    { id: "dispute-procedures", filename: "Dispute_Handling_Procedures.md", title: "Dispute Handling Procedures", description: "Standard operating procedures for dispute intake, investigation, SLA timelines, escalation paths, cross-border disputes, and resolution actions" },
   ];
 
   const DOC_TRANSLATIONS: Record<string, Record<string, { title: string; description: string }>> = {
@@ -7820,6 +7822,8 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       "credit-procedures": { title: "Manuel de Procédures de Reporting Crédit", description: "Flux de soumission des données, génération de rapports, méthodologie de notation, SLA de litiges, correction des données et procédures de reporting réglementaire" },
       "data-protection": { title: "Guide de Conformité Protection des Données", description: "Alignement RGPD/Convention UA, Loi 843 du Ghana, droits des personnes concernées, garanties transfrontalières, politiques de rétention, notification de violation et rôle du DPO" },
       "regulatory-pack": { title: "Pack d'Engagement Réglementaire", description: "Résumé des capacités du système, matrice de preuves de conformité, attestation des contrôles de sécurité et liste de contrôle de préparation au lancement" },
+      "data-submission": { title: "Guide de Soumission des Données", description: "Instructions étape par étape pour soumettre des données de crédit — saisie manuelle, téléchargement CSV par lot, API REST et formats de fichiers BoG IFF" },
+      "dispute-procedures": { title: "Procédures de Traitement des Litiges", description: "Procédures opérationnelles standard pour l'admission, l'investigation, les délais SLA, les voies d'escalade, les litiges transfrontaliers et les actions de résolution" },
     },
     pt: {
       "api-guide": { title: "Guia de Integração API", description: "Guia completo para bancos e credores se conectarem via API REST — autenticação, endpoints, modelos de dados e exemplos" },
@@ -7838,6 +7842,8 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       "credit-procedures": { title: "Manual de Procedimentos de Reporte de Crédito", description: "Fluxos de submissão de dados, geração de relatórios, metodologia de pontuação, SLAs de litígios, correção de dados e procedimentos de reporte regulatório" },
       "data-protection": { title: "Guia de Conformidade de Proteção de Dados", description: "Alinhamento RGPD/Convenção UA, Lei 843 do Gana, direitos dos titulares, salvaguardas transfronteiriças, políticas de retenção, notificação de violação e papel do DPO" },
       "regulatory-pack": { title: "Pacote de Engajamento Regulatório", description: "Resumo das capacidades do sistema, matriz de evidências de conformidade, atestado de controlos de segurança e lista de verificação de preparação para lançamento" },
+      "data-submission": { title: "Guia de Submissão de Dados", description: "Instruções passo a passo para submeter dados de crédito — entrada manual, carregamento CSV em lote, API REST e formatos de ficheiros BoG IFF" },
+      "dispute-procedures": { title: "Procedimentos de Tratamento de Litígios", description: "Procedimentos operacionais padrão para admissão, investigação, prazos SLA, vias de escalada, litígios transfronteiriços e ações de resolução" },
     },
     ar: {
       "api-guide": { title: "دليل تكامل API", description: "دليل شامل للبنوك والمقرضين للاتصال عبر REST API — المصادقة ونقاط النهاية ونماذج البيانات والأمثلة" },
@@ -7856,6 +7862,8 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       "credit-procedures": { title: "دليل إجراءات التقارير الائتمانية", description: "مسارات تقديم البيانات وإنشاء التقارير ومنهجية التصنيف واتفاقيات مستوى الخدمة للنزاعات وتصحيح البيانات وإجراءات التقارير التنظيمية" },
       "data-protection": { title: "دليل الامتثال لحماية البيانات", description: "التوافق مع GDPR/اتفاقية الاتحاد الأفريقي والقانون 843 لغانا وحقوق أصحاب البيانات والضمانات العابرة للحدود وسياسات الاحتفاظ والإخطار بالانتهاك ودور مسؤول حماية البيانات" },
       "regulatory-pack": { title: "حزمة المشاركة التنظيمية", description: "ملخص قدرات النظام ومصفوفة أدلة الامتثال وشهادة ضوابط الأمان وقائمة مراجعة الجاهزية للإطلاق" },
+      "data-submission": { title: "دليل تقديم البيانات", description: "تعليمات خطوة بخطوة لتقديم بيانات الائتمان — الإدخال اليدوي والتحميل المجمع بصيغة CSV وواجهة REST API وتنسيقات ملفات BoG IFF" },
+      "dispute-procedures": { title: "إجراءات التعامل مع النزاعات", description: "إجراءات التشغيل القياسية لقبول النزاعات والتحقيق والجداول الزمنية لاتفاقية مستوى الخدمة ومسارات التصعيد والنزاعات العابرة للحدود وإجراءات الحل" },
     },
     sw: {
       "api-guide": { title: "Mwongozo wa Muunganisho wa API", description: "Mwongozo kamili kwa benki na wakopeshaji kuunganisha kupitia REST API — uthibitishaji, vituo, miundo ya data na mifano" },
@@ -7874,6 +7882,8 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       "credit-procedures": { title: "Mwongozo wa Taratibu za Taarifa za Mikopo", description: "Mtiririko wa uwasilishaji wa data, uzalishaji wa ripoti, mbinu ya alama, SLA za migogoro, marekebisho ya data na taratibu za taarifa za udhibiti" },
       "data-protection": { title: "Mwongozo wa Utiifu wa Ulinzi wa Data", description: "Ulinganifu wa GDPR/Mkataba wa UA, Sheria 843 ya Ghana, haki za wahusika wa data, ulinzi wa kuvuka mipaka, sera za uhifadhi, arifa ya ukiukaji na jukumu la DPO" },
       "regulatory-pack": { title: "Kifurushi cha Ushirikiano wa Udhibiti", description: "Muhtasari wa uwezo wa mfumo, jedwali la ushahidi wa utiifu, uthibitisho wa vidhibiti vya usalama na orodha ya ukaguzi wa utayari wa uzinduzi" },
+      "data-submission": { title: "Mwongozo wa Uwasilishaji wa Data", description: "Maagizo hatua kwa hatua ya kuwasilisha data ya mikopo — uingizaji wa mikono, upakiaji wa CSV kwa wingi, API ya REST na muundo wa faili za BoG IFF" },
+      "dispute-procedures": { title: "Taratibu za Kushughulikia Migogoro", description: "Taratibu za kawaida za uendeshaji kwa mapokezi ya migogoro, uchunguzi, ratiba za SLA, njia za kupandisha, migogoro ya kuvuka mipaka na hatua za utatuzi" },
     },
   };
 
