@@ -46,10 +46,11 @@
 32. [Multi-Country & Country Switching](#32-multi-country--country-switching)
 33. [Telco Scoring & Lending](#33-telco-scoring--lending)
 34. [Platform Command Center](#34-platform-command-center-super-admin)
-35. [Appendix A: Seed Credentials](#appendix-a-seed-credentials)
-36. [Appendix B: Role Access Matrix](#appendix-b-role-access-matrix)
-37. [Appendix C: Supported Currencies](#appendix-c-supported-currencies)
-38. [Appendix D: Glossary of Terms](#appendix-d-glossary-of-terms)
+35. [Maintenance Mode](#35-maintenance-mode-super-admin)
+36. [Appendix A: Seed Credentials](#appendix-a-seed-credentials)
+37. [Appendix B: Role Access Matrix](#appendix-b-role-access-matrix)
+38. [Appendix C: Supported Currencies](#appendix-c-supported-currencies)
+39. [Appendix D: Glossary of Terms](#appendix-d-glossary-of-terms)
 
 ---
 
@@ -1803,186 +1804,6 @@ For details on the AI-powered chatbot assistant, see **Section 22.4 — AI Assis
 
 ---
 
-## Appendix A: Seed Credentials
-
-The following credentials are pre-configured in the system for testing and demonstration purposes:
-
-| Username | Password | Role | Institution |
-|----------|----------|------|-------------|
-| admin | admin123 | Admin | NBE |
-| regulator1 | reg123 | Regulator | NBE |
-| cbe_user | cbe123 | Lender | CBE (Commercial Bank of Ethiopia) |
-| dashen_user | dashen123 | Lender | Dashen Bank |
-| awash_user | awash123 | Lender | Awash Bank |
-
-**Important:** These credentials should be changed immediately in a production environment. All passwords should meet the system's password complexity requirements.
-
----
-
-## Appendix B: Role Access Matrix
-
-> **Note:** The system supports five user roles: **Super Admin** (multi-country full access), **Admin** (full access within country), **Regulator** (oversight and approvals), **Lender** (own institution data entry), and **Viewer** (read-only). MFA setup/disable is available to all authenticated users.
-
-| Module / Feature | Super Admin | Admin | Regulator | Lender | Viewer |
-|-----------------|-------------|-------|-----------|--------|--------|
-| Dashboard | Full Access | Full Access | Full Access | Full Access | Full Access |
-| Consumers & Businesses | Full Access | Full Access | Full Access | Full Access | Read Only |
-| Credit Accounts | Full Access | Full Access | Full Access | Full Access | Read Only |
-| Credit Search (4 tabs) | Full Access | Full Access | Full Access | Full Access | Read Only |
-| Telco Scoring & Lending | Full Access | Full Access | Full Access | Full Access | No Access |
-| Portfolio Intelligence | Full Access | Full Access | Full Access | No Access | No Access |
-| AI Command Center | Full Access | Full Access | Full Access | No Access | No Access |
-| Regulatory Dashboard | Full Access | Full Access | Full Access | No Access | No Access |
-| Pending Approvals | Approve/Reject | Approve/Reject | Approve/Reject | No Access | No Access |
-| Dispute Management | Full Access | Full Access | Full Access | Full Access | Read Only |
-| Borrower Alerts | Full Access | Full Access | Full Access | No Access | No Access |
-| Court Judgments (Create) | Yes | Yes | Yes | No | No |
-| Consent Management | Full Access | Full Access | Full Access | Full Access | Read Only |
-| Audit Trail | Full Access | Full Access | Full Access | No Access | No Access |
-| Regulatory Compliance | Full Access | Full Access | Full Access | No Access | No Access |
-| BOG/BSL Export | Full Access | Full Access | Full Access | No Access | No Access |
-| Cross-Border (Agreements, Search, PAPSS) | Full Access | Full Access | Full Access | Search Only | No Access |
-| Billing | Full Access | Full Access | Full Access | No Access | No Access |
-| Helpdesk | Full Access | Full Access | Full Access | Full Access | Full Access |
-| Batch Upload | Full Access | Full Access | No Access | Full Access | No Access |
-| User Management | Full Access | Full Access | No Access | No Access | No Access |
-| Institution Management | Full Access | Full Access | No Access | No Access | No Access |
-| API Keys | Full Access | Full Access | No Access | No Access | No Access |
-| Exchange Rates | Full Access | Full Access | No Access | No Access | No Access |
-| API Administration | Full Access | Full Access | No Access | No Access | No Access |
-| Retention Policies | Full Access | Full Access | Full Access | No Access | No Access |
-| System Status | Full Access | Full Access | No Access | No Access | No Access |
-| Webhook Management | Full Access | Full Access | No Access | No Access | No Access |
-| Platform Metrics | Full Access | Full Access | No Access | No Access | No Access |
-| Command Center | Full Access | No Access | No Access | No Access | No Access |
-| Organizations | Full Access | No Access | No Access | No Access | No Access |
-| Backup & Recovery | Full Access | No Access | No Access | No Access | No Access |
-| Reports & Export | Full Access | Full Access | Full Access | Full Access | Full Access |
-| Notifications | Full Access | Full Access | Full Access | Full Access | Full Access |
-| Consumer Portal (/my-credit) | Full Access | Full Access | Full Access | Full Access | Full Access |
-| Score Methodology | Full Access | Full Access | No Access | Full Access | No Access |
-
----
-
-## Appendix C: Supported Currencies
-
-The system supports **42+ African currencies** plus USD, EUR, and GBP (45+ total), organized by region:
-
-### East Africa
-
-| Code | Currency Name | Symbol |
-|------|--------------|--------|
-| BIF | Burundian Franc | FBu |
-| CDF | Congolese Franc | FC |
-| DJF | Djiboutian Franc | Fdj |
-| ERN | Eritrean Nakfa | Nfk |
-| ETB | Ethiopian Birr | Br |
-| KES | Kenyan Shilling | KSh |
-| KMF | Comorian Franc | CF |
-| RWF | Rwandan Franc | FRw |
-| SOS | Somali Shilling | Sh |
-| SSP | South Sudanese Pound | £ |
-| TZS | Tanzanian Shilling | TSh |
-| UGX | Ugandan Shilling | USh |
-
-### West Africa
-
-| Code | Currency Name | Symbol |
-|------|--------------|--------|
-| CVE | Cape Verdean Escudo | Esc |
-| GHS | Ghanaian Cedi | ₵ |
-| GMD | Gambian Dalasi | D |
-| GNF | Guinean Franc | FG |
-| LRD | Liberian Dollar | L$ |
-| NGN | Nigerian Naira | ₦ |
-| SLL | Sierra Leonean Leone | Le |
-| XOF | West African CFA Franc | CFA |
-
-### Southern Africa
-
-| Code | Currency Name | Symbol |
-|------|--------------|--------|
-| AOA | Angolan Kwanza | Kz |
-| BWP | Botswana Pula | P |
-| LSL | Lesotho Loti | L |
-| MGA | Malagasy Ariary | Ar |
-| MUR | Mauritian Rupee | ₨ |
-| MWK | Malawian Kwacha | MK |
-| MZN | Mozambican Metical | MT |
-| NAD | Namibian Dollar | N$ |
-| SCR | Seychellois Rupee | ₨ |
-| SZL | Swazi Lilangeni | E |
-| ZAR | South African Rand | R |
-| ZMW | Zambian Kwacha | ZK |
-| ZWL | Zimbabwean Dollar | Z$ |
-
-### Central Africa
-
-| Code | Currency Name | Symbol |
-|------|--------------|--------|
-| STN | São Tomé Dobra | Db |
-| XAF | Central African CFA Franc | FCFA |
-
-### North Africa
-
-| Code | Currency Name | Symbol |
-|------|--------------|--------|
-| DZD | Algerian Dinar | د.ج |
-| EGP | Egyptian Pound | E£ |
-| LYD | Libyan Dinar | ل.د |
-| MAD | Moroccan Dirham | MAD |
-| MRU | Mauritanian Ouguiya | UM |
-| SDG | Sudanese Pound | ج.س |
-| TND | Tunisian Dinar | د.ت |
-
-### International
-
-| Code | Currency Name | Symbol |
-|------|--------------|--------|
-| USD | US Dollar | $ |
-| EUR | Euro | € |
-| GBP | British Pound | £ |
-
----
-
-## Appendix D: Glossary of Terms
-
-| Term | Definition |
-|------|-----------|
-| **Borrower** | An individual or corporate entity that has obtained credit from a financial institution |
-| **CDH** | Central Data Hub — the centralized repository for credit data across jurisdictions |
-| **Consent** | Authorization granted by a data subject (borrower) for their credit information to be accessed |
-| **Credit Account** | A loan, credit facility, or financial obligation associated with a borrower |
-| **Credit Bureau** | An organization that collects and provides credit information |
-| **Credit Inquiry** | A search/request for a borrower's credit information |
-| **Credit Report** | A comprehensive summary of a borrower's credit history and creditworthiness |
-| **Credit Score** | A numerical value (300-850) representing a borrower's creditworthiness |
-| **Delinquent** | An account with past-due payments |
-| **Default** | An account classified as non-performing due to prolonged non-payment |
-| **Dispute** | A formal complaint about the accuracy of credit information |
-| **Four-Eye Principle** | A control mechanism requiring two independent parties to verify an action (maker-checker) |
-| **Grace Period** | A period after loan disbursement during which no payments are required |
-| **ISU** | Inquiry Service Unit — the helpdesk function for consumer inquiries |
-| **Lien** | A legal claim against property used as security for a debt |
-| **Maker-Checker** | A workflow requiring one user to create/modify data and another to approve it |
-| **MFI** | Microfinance Institution |
-| **NPL** | Non-Performing Loan — a loan where the borrower is in default or close to default |
-| **PEP** | Politically Exposed Person — someone holding or having held a prominent public position |
-| **RBAC** | Role-Based Access Control — security model restricting access based on user roles |
-| **Receipt Number** | A unique identifier issued when consent is granted |
-| **Restructured** | A loan whose terms have been modified to provide relief to the borrower |
-| **SACCO** | Savings and Credit Cooperative Organization |
-| **Serial Number** | A unique identifier assigned to each generated credit report |
-| **SLA** | Service Level Agreement — the agreed timeframe for resolving disputes |
-| **SRS** | Software Requirements Specification |
-| **TIN** | Tax Identification Number |
-| **UAT** | User Acceptance Testing |
-| **Written Off** | An account that has been classified as uncollectible and removed from active portfolios |
-
----
-
----
-
 ## 32. Multi-Country & Country Switching
 
 The CDH operates across all 54 African Union member states simultaneously. The system provides multi-country data management with built-in data sovereignty controls.
@@ -2204,6 +2025,222 @@ Manage data retention policies per jurisdiction:
 - **Policy Listing** — Grouped by country, showing entity type, retention years, archive years, status, and legal basis.
 - **New Policy** — Click "New Policy" to create a retention policy for a specific country and entity type.
 - **Edit Policy** — Modify retention years (1-100), archive years, active status, and description.
+
+---
+
+## 35. Maintenance Mode (Super Admin)
+
+The Maintenance Mode feature allows Super Administrators to temporarily take the platform offline for non-admin users during planned maintenance, updates, or emergency interventions.
+
+### 35.1 Activating Maintenance Mode
+
+1. Navigate to the **Platform Command Center** (Super Admin access required).
+2. Locate the **System** tab.
+3. Find the **Maintenance Mode** toggle card.
+4. Click the **toggle switch** to enable maintenance mode.
+5. A confirmation notification appears: "Maintenance Mode Enabled — All non-admin users will see the maintenance page."
+
+### 35.2 Effects of Maintenance Mode
+
+When maintenance mode is active:
+
+- **Non-admin users** (Lender, Viewer, Regulator) see a maintenance page when they attempt to access the system. They cannot access any platform features.
+- **Admin and Super Admin users** can continue to use the system normally for administrative tasks, data corrections, and configuration changes.
+- **External API calls** from authenticated API keys continue to function to avoid disrupting automated integrations.
+- The maintenance mode status is indicated by a visual indicator in the System tab.
+
+### 35.3 Deactivating Maintenance Mode
+
+1. Return to the **System** tab in the Platform Command Center.
+2. Click the maintenance mode toggle to switch it off.
+3. A confirmation notification appears: "Maintenance Mode Disabled — Site is live for all users."
+4. All users can immediately resume normal access.
+
+### 35.4 Best Practices
+
+- **Notify users in advance** — Use the notification system or email to inform users before enabling maintenance mode.
+- **Schedule maintenance windows** — Plan maintenance during low-usage periods (e.g., weekends, after business hours in the primary time zone).
+- **Keep maintenance brief** — Minimize downtime to maintain user trust and data submission schedules.
+- **Document the maintenance** — Record the reason, duration, and any changes made in the audit trail.
+
+---
+
+## Appendix A: Seed Credentials
+
+The following credentials are pre-configured in the system for testing and demonstration purposes:
+
+| Username | Password | Role | Institution |
+|----------|----------|------|-------------|
+| admin | admin123 | Admin | NBE |
+| regulator1 | reg123 | Regulator | NBE |
+| cbe_user | cbe123 | Lender | CBE (Commercial Bank of Ethiopia) |
+| dashen_user | dashen123 | Lender | Dashen Bank |
+| awash_user | awash123 | Lender | Awash Bank |
+
+**Important:** These credentials should be changed immediately in a production environment. All passwords should meet the system's password complexity requirements.
+
+---
+
+## Appendix B: Role Access Matrix
+
+> **Note:** The system supports five user roles: **Super Admin** (multi-country full access), **Admin** (full access within country), **Regulator** (oversight and approvals), **Lender** (own institution data entry), and **Viewer** (read-only). MFA setup/disable is available to all authenticated users.
+
+| Module / Feature | Super Admin | Admin | Regulator | Lender | Viewer |
+|-----------------|-------------|-------|-----------|--------|--------|
+| Dashboard | Full Access | Full Access | Full Access | Full Access | Full Access |
+| Consumers & Businesses | Full Access | Full Access | Full Access | Full Access | Read Only |
+| Credit Accounts | Full Access | Full Access | Full Access | Full Access | Read Only |
+| Credit Search (4 tabs) | Full Access | Full Access | Full Access | Full Access | Read Only |
+| Telco Scoring & Lending | Full Access | Full Access | Full Access | Full Access | No Access |
+| Portfolio Intelligence | Full Access | Full Access | Full Access | No Access | No Access |
+| AI Command Center | Full Access | Full Access | Full Access | No Access | No Access |
+| Regulatory Dashboard | Full Access | Full Access | Full Access | No Access | No Access |
+| Pending Approvals | Approve/Reject | Approve/Reject | Approve/Reject | No Access | No Access |
+| Dispute Management | Full Access | Full Access | Full Access | Full Access | Read Only |
+| Borrower Alerts | Full Access | Full Access | Full Access | No Access | No Access |
+| Court Judgments (Create) | Yes | Yes | Yes | No | No |
+| Consent Management | Full Access | Full Access | Full Access | Full Access | Read Only |
+| Audit Trail | Full Access | Full Access | Full Access | No Access | No Access |
+| Regulatory Compliance | Full Access | Full Access | Full Access | No Access | No Access |
+| BOG/BSL Export | Full Access | Full Access | Full Access | No Access | No Access |
+| Cross-Border (Agreements, Search, PAPSS) | Full Access | Full Access | Full Access | Search Only | No Access |
+| Billing | Full Access | Full Access | Full Access | No Access | No Access |
+| Helpdesk | Full Access | Full Access | Full Access | Full Access | Full Access |
+| Batch Upload | Full Access | Full Access | No Access | Full Access | No Access |
+| User Management | Full Access | Full Access | No Access | No Access | No Access |
+| Institution Management | Full Access | Full Access | No Access | No Access | No Access |
+| API Keys | Full Access | Full Access | No Access | No Access | No Access |
+| Exchange Rates | Full Access | Full Access | No Access | No Access | No Access |
+| API Administration | Full Access | Full Access | No Access | No Access | No Access |
+| Retention Policies | Full Access | Full Access | Full Access | No Access | No Access |
+| System Status | Full Access | Full Access | No Access | No Access | No Access |
+| Webhook Management | Full Access | Full Access | No Access | No Access | No Access |
+| Platform Metrics | Full Access | Full Access | No Access | No Access | No Access |
+| Command Center | Full Access | No Access | No Access | No Access | No Access |
+| Organizations | Full Access | No Access | No Access | No Access | No Access |
+| Backup & Recovery | Full Access | No Access | No Access | No Access | No Access |
+| Reports & Export | Full Access | Full Access | Full Access | Full Access | Full Access |
+| Notifications | Full Access | Full Access | Full Access | Full Access | Full Access |
+| Consumer Portal (/my-credit) | Full Access | Full Access | Full Access | Full Access | Full Access |
+| Score Methodology | Full Access | Full Access | No Access | Full Access | No Access |
+| Maintenance Mode | Full Access | No Access | No Access | No Access | No Access |
+
+---
+
+## Appendix C: Supported Currencies
+
+The system supports **42+ African currencies** plus USD, EUR, and GBP (45+ total), organized by region:
+
+### East Africa
+
+| Code | Currency Name | Symbol |
+|------|--------------|--------|
+| BIF | Burundian Franc | FBu |
+| CDF | Congolese Franc | FC |
+| DJF | Djiboutian Franc | Fdj |
+| ERN | Eritrean Nakfa | Nfk |
+| ETB | Ethiopian Birr | Br |
+| KES | Kenyan Shilling | KSh |
+| KMF | Comorian Franc | CF |
+| RWF | Rwandan Franc | FRw |
+| SOS | Somali Shilling | Sh |
+| SSP | South Sudanese Pound | £ |
+| TZS | Tanzanian Shilling | TSh |
+| UGX | Ugandan Shilling | USh |
+
+### West Africa
+
+| Code | Currency Name | Symbol |
+|------|--------------|--------|
+| CVE | Cape Verdean Escudo | Esc |
+| GHS | Ghanaian Cedi | ₵ |
+| GMD | Gambian Dalasi | D |
+| GNF | Guinean Franc | FG |
+| LRD | Liberian Dollar | L$ |
+| NGN | Nigerian Naira | ₦ |
+| SLL | Sierra Leonean Leone | Le |
+| XOF | West African CFA Franc | CFA |
+
+### Southern Africa
+
+| Code | Currency Name | Symbol |
+|------|--------------|--------|
+| AOA | Angolan Kwanza | Kz |
+| BWP | Botswana Pula | P |
+| LSL | Lesotho Loti | L |
+| MGA | Malagasy Ariary | Ar |
+| MUR | Mauritian Rupee | ₨ |
+| MWK | Malawian Kwacha | MK |
+| MZN | Mozambican Metical | MT |
+| NAD | Namibian Dollar | N$ |
+| SCR | Seychellois Rupee | ₨ |
+| SZL | Swazi Lilangeni | E |
+| ZAR | South African Rand | R |
+| ZMW | Zambian Kwacha | ZK |
+| ZWL | Zimbabwean Dollar | Z$ |
+
+### Central Africa
+
+| Code | Currency Name | Symbol |
+|------|--------------|--------|
+| STN | São Tomé Dobra | Db |
+| XAF | Central African CFA Franc | FCFA |
+
+### North Africa
+
+| Code | Currency Name | Symbol |
+|------|--------------|--------|
+| DZD | Algerian Dinar | د.ج |
+| EGP | Egyptian Pound | E£ |
+| LYD | Libyan Dinar | ل.د |
+| MAD | Moroccan Dirham | MAD |
+| MRU | Mauritanian Ouguiya | UM |
+| SDG | Sudanese Pound | ج.س |
+| TND | Tunisian Dinar | د.ت |
+
+### International
+
+| Code | Currency Name | Symbol |
+|------|--------------|--------|
+| USD | US Dollar | $ |
+| EUR | Euro | € |
+| GBP | British Pound | £ |
+
+---
+
+## Appendix D: Glossary of Terms
+
+| Term | Definition |
+|------|-----------|
+| **Borrower** | An individual or corporate entity that has obtained credit from a financial institution |
+| **CDH** | Central Data Hub — the centralized repository for credit data across jurisdictions |
+| **Consent** | Authorization granted by a data subject (borrower) for their credit information to be accessed |
+| **Credit Account** | A loan, credit facility, or financial obligation associated with a borrower |
+| **Credit Bureau** | An organization that collects and provides credit information |
+| **Credit Inquiry** | A search/request for a borrower's credit information |
+| **Credit Report** | A comprehensive summary of a borrower's credit history and creditworthiness |
+| **Credit Score** | A numerical value (300-850) representing a borrower's creditworthiness |
+| **Delinquent** | An account with past-due payments |
+| **Default** | An account classified as non-performing due to prolonged non-payment |
+| **Dispute** | A formal complaint about the accuracy of credit information |
+| **Four-Eye Principle** | A control mechanism requiring two independent parties to verify an action (maker-checker) |
+| **Grace Period** | A period after loan disbursement during which no payments are required |
+| **ISU** | Inquiry Service Unit — the helpdesk function for consumer inquiries |
+| **Lien** | A legal claim against property used as security for a debt |
+| **Maker-Checker** | A workflow requiring one user to create/modify data and another to approve it |
+| **MFI** | Microfinance Institution |
+| **NPL** | Non-Performing Loan — a loan where the borrower is in default or close to default |
+| **PEP** | Politically Exposed Person — someone holding or having held a prominent public position |
+| **RBAC** | Role-Based Access Control — security model restricting access based on user roles |
+| **Receipt Number** | A unique identifier issued when consent is granted |
+| **Restructured** | A loan whose terms have been modified to provide relief to the borrower |
+| **SACCO** | Savings and Credit Cooperative Organization |
+| **Serial Number** | A unique identifier assigned to each generated credit report |
+| **SLA** | Service Level Agreement — the agreed timeframe for resolving disputes |
+| **SRS** | Software Requirements Specification |
+| **TIN** | Tax Identification Number |
+| **UAT** | User Acceptance Testing |
+| **Written Off** | An account that has been classified as uncollectible and removed from active portfolios |
 
 ---
 

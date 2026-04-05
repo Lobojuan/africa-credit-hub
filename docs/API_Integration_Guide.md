@@ -35,13 +35,20 @@
 11. [Security Requirements](#11-security-requirements)
 12. [Testing & Sandbox](#12-testing--sandbox)
 13. [Frequently Asked Questions](#13-frequently-asked-questions)
-14. [Support & Onboarding Contact](#14-support--onboarding-contact)
+14. [Additional Platform APIs (Session-Authenticated)](#14-additional-platform-apis-session-authenticated)
+   - 14.1 [Telco Scoring & Lending Endpoints](#141-telco-scoring--lending-endpoints)
+   - 14.2 [Consumer Self-Service Portal Endpoints](#142-consumer-self-service-portal-endpoints)
+   - 14.3 [Cross-Border & PAPSS Endpoints](#143-cross-border--papss-endpoints)
+   - 14.4 [Multi-Country Management](#144-multi-country-management)
+   - 14.5 [AI Command Center Endpoints](#145-ai-command-center-endpoints)
 15. [Internal API Endpoints (Session-Authenticated)](#15-internal-api-endpoints-session-authenticated)
    - 15.1 [AI-Powered Analysis Endpoints](#151-ai-powered-analysis-endpoints)
    - 15.2 [Excel Export Endpoint](#152-excel-export-endpoint)
    - 15.3 [Notification Endpoints](#153-notification-endpoints)
    - 15.4 [API Usage Analytics](#154-api-usage-analytics)
    - 15.5 [Dashboard Trends](#155-dashboard-trends)
+   - 15.6 [Platform Command Center Endpoints](#156-platform-command-center-endpoints-super-admin-only)
+16. [Support & Onboarding Contact](#16-support--onboarding-contact)
 
 ---
 
