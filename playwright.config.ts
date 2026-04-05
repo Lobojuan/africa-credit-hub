@@ -41,6 +41,7 @@ export default defineConfig({
         'platform-command-center.spec.ts',
         'sla-performance.spec.ts',
         'consumer-portal-docs.spec.ts',
+        'mfa-session-security.spec.ts',
       ],
       use: {
         baseURL: 'http://localhost:5000',

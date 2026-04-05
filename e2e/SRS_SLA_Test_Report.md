@@ -3,8 +3,8 @@
 **Report Generated**: 2026-04-05  
 **Platform Version**: 2.5.0  
 **Test Framework**: Playwright E2E  
-**Total Spec Files**: 23  
-**Total Tests**: 161  
+**Total Spec Files**: 24  
+**Total Tests**: 164  
 
 ---
 
@@ -17,7 +17,7 @@
 | borrower-data-extended.spec.ts | 13 | 13 | 0 | FR-COL-01/02/04/05/08, FR-SPEC-01, ENT-02 |
 | credit-accounts.spec.ts | 2 | 2 | 0 | FR-COL-02 |
 | credit-reports-extended.spec.ts | 11 | 11 | 0 | FR-CR-01/02/03/04/06/07/08, ENT-16, INT-RPT-01 |
-| operations-disputes-consent.spec.ts | 12 | 12 | 0 | FR-CON-01/02/04/05/06, DQ-04/05, FR-REG-03 |
+| operations-disputes-consent.spec.ts | 13 | 13 | 0 | FR-CON-01/02/04/05/06, DQ-04/05, FR-REG-03 |
 | telco-scoring-lending.spec.ts | 14 | 14 | 0 | FR-TEL-01/02/03/04, ENT-13 |
 | cross-border-papss.spec.ts | 10 | 10 | 0 | SATA-01/02/03, PAPSS-01/02 |
 | ai-command-center.spec.ts | 8 | 2 | 6 | AI-001/002/003/004 |
@@ -25,7 +25,8 @@
 | admin-configuration.spec.ts | 19 | 19 | 0 | FR-DP-01, FR-COMM-01, ENT-08/09/10/17/18 |
 | regulatory-compliance-extended.spec.ts | 12 | 12 | 0 | FR-REG-01, INT-RPT-04, ENT-14/19/20 |
 | consumer-portal-docs.spec.ts | 14 | 14 | 0 | FR-CP-01/02/03, DOC-01/02/03 |
-| security-auth-extended.spec.ts | 12 | 5 | 7 | NFR-SEC-01/02/03/04/05/06/09, ENT-07, MFA lifecycle |
+| security-auth-extended.spec.ts | 7 | 5 | 2 | NFR-SEC-01/02/03/04/05/06 |
+| mfa-session-security.spec.ts | 6 | 6 | 0 | ENT-01 (MFA), NFR-SEC-09/10, ENT-07 |
 | external-api.spec.ts | 2 | 2 | 0 | INT-RPT-02, ENT-04 |
 | dashboard-navigation.spec.ts | 4 | 4 | 0 | UI-01/02 |
 | search.spec.ts | 4 | 4 | 0 | FR-COL-08 |
@@ -88,8 +89,8 @@
 
 | Req ID | Requirement | Test | Assertion |
 |--------|-------------|------|-----------|
-| DQ-04 | Financial dispute SLA | operations-disputes-consent.spec.ts | Creates data_correction dispute, validates SLA deadline is exactly 5 days from creation (Math.round) |
-| DQ-05 | Non-financial dispute SLA | operations-disputes-consent.spec.ts | Same 5-day SLA deadline validated |
+| DQ-04 | Financial dispute SLA (2 days) | operations-disputes-consent.spec.ts | Creates financial dispute, validates SLA deadline is exactly 2 days from creation |
+| DQ-05 | Non-financial dispute SLA (5 days) | operations-disputes-consent.spec.ts | Creates data_correction dispute, validates SLA deadline is exactly 5 days from creation |
 
 ### 2.6 Regulatory (FR-REG)
 
@@ -223,8 +224,8 @@
 
 | Test | Reason |
 |------|--------|
-| AI-001 through AI-004, anomaly, natural-query | AI rate limit (429) or service unavailable (503) — tests skip and assert only when service is healthy; proves rate limiting works correctly |
+| AI-001 through AI-004, anomaly, natural-query | AI rate limit (429) or service unavailable (503) — tests skip and assert only when service is healthy |
 | NFR-SEC-01 (non-admin role) | Skipped if test user account does not exist |
-| NFR-SEC-09, ENT-07, MFA setup/verify/disable, password expiry | Login rate limit (429) — proves brute-force protection active; tests skip rather than mask failures |
+| NFR-SEC-04 (lockout enforcement) | Skipped if admin login rate-limited (429) during user creation step |
 | FR-SPEC-01 | Skipped if no credit accounts in DB |
 | Self-approval prevention | Skipped if no pending approvals from current user |

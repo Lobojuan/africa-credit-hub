@@ -16,35 +16,50 @@ interface AuditLogEntry {
   timestamp: string;
 }
 
-interface AuditVerification {
-  verified: boolean;
-  totalLogs: number;
-}
-
-interface LoginResponse {
-  id: string;
-  username: string;
-  role: string;
-  mfaEnabled: boolean;
-  passwordExpired: boolean;
-  passwordChangedAt: string | null;
-  mustChangePassword: boolean;
-}
-
-interface MFASetupResponse {
-  secret: string;
-  uri: string;
-}
 
 test.describe('Security & Authentication [NFR-SEC]', () => {
 
-  test('NFR-SEC-04: repeated failed logins return 401', async ({ request }) => {
-    for (let i = 0; i < 3; i++) {
+  test('NFR-SEC-04: account lockout after 3 failed attempts returns 423', async ({ request }) => {
+    const lockoutUser = 'lockout_e2e_' + Date.now();
+    const loginRes = await request.post('/api/auth/login', {
+      data: { username: 'admin', password: 'admin0987' }
+    });
+    if (loginRes.status() === 429) { test.skip(); return; }
+
+    const csrfRes = await request.get('/api/auth/csrf-token');
+    const csrfData = await csrfRes.json() as { token: string };
+
+    const createRes = await request.post('/api/users', {
+      data: {
+        username: lockoutUser,
+        password: 'TestLockout123!',
+        fullName: 'Lockout Test',
+        email: `${lockoutUser}@test.com`,
+        role: 'admin',
+        division: 'Testing',
+        institution: 'Test',
+        status: 'active'
+      },
+      headers: { 'x-csrf-token': csrfData.token }
+    });
+    if (!createRes.ok()) { test.skip(); return; }
+
+    const results: number[] = [];
+    for (let i = 0; i < 4; i++) {
       const res = await request.post('/api/auth/login', {
-        data: { username: 'lockout_test_user', password: `wrong${i}` }
+        data: { username: lockoutUser, password: 'wrongpassword' }
       });
-      expect(res.status()).toBe(401);
+      results.push(res.status());
     }
+    expect(results.slice(0, 3).every((s) => s === 401)).toBeTruthy();
+    expect(results[3]).toBe(423);
+  });
+
+  test('NFR-SEC-04: invalid credentials return 401', async ({ request }) => {
+    const res = await request.post('/api/auth/login', {
+      data: { username: 'nonexistent_user_test', password: 'wrong' }
+    });
+    expect(res.status()).toBe(401);
   });
 
   test('NFR-SEC-03: weak passwords are rejected', async ({ request }) => {
@@ -125,101 +140,4 @@ test.describe('Security & Authentication [NFR-SEC]', () => {
     expect(typeof logs[0].ipAddress).toBe('string');
   });
 
-  test('NFR-SEC-09: session returns user with security fields', async ({ request }) => {
-    const loginRes = await request.post('/api/auth/login', {
-      data: { username: 'admin', password: 'admin0987' }
-    });
-    if (loginRes.status() === 429) { test.skip(); return; }
-    expect(loginRes.ok()).toBeTruthy();
-
-    const loginData = await loginRes.json() as LoginResponse;
-    expect(loginData).toHaveProperty('mfaEnabled');
-    expect(loginData).toHaveProperty('passwordExpired');
-    expect(loginData).toHaveProperty('passwordChangedAt');
-    expect(loginData).toHaveProperty('mustChangePassword');
-    expect(typeof loginData.mfaEnabled).toBe('boolean');
-  });
-
-  test('ENT-07: audit log integrity verification', async ({ request }) => {
-    const loginRes = await request.post('/api/auth/login', {
-      data: { username: 'admin', password: 'admin0987' }
-    });
-    if (loginRes.status() === 429) { test.skip(); return; }
-    expect(loginRes.ok()).toBeTruthy();
-
-    const verifyRes = await request.get('/api/audit/verify-integrity');
-    expect(verifyRes.ok()).toBeTruthy();
-    const data = await verifyRes.json() as AuditVerification;
-    expect(data).toHaveProperty('verified');
-    expect(data.verified).toBe(true);
-  });
-
-  test('MFA setup returns TOTP secret and URI', async ({ request }) => {
-    const loginRes = await request.post('/api/auth/login', {
-      data: { username: 'admin', password: 'admin0987' }
-    });
-    if (loginRes.status() === 429) { test.skip(); return; }
-    expect(loginRes.ok()).toBeTruthy();
-
-    const csrfRes = await request.get('/api/auth/csrf-token');
-    const csrfData = await csrfRes.json() as { token: string };
-
-    const setupRes = await request.post('/api/auth/mfa/setup', {
-      headers: { 'x-csrf-token': csrfData.token }
-    });
-    expect(setupRes.ok()).toBeTruthy();
-    const setup = await setupRes.json() as MFASetupResponse;
-    expect(setup).toHaveProperty('secret');
-    expect(setup).toHaveProperty('uri');
-    expect(setup.uri).toContain('otpauth://totp/');
-    expect(setup.secret.length).toBeGreaterThanOrEqual(16);
-  });
-
-  test('MFA verify rejects invalid code', async ({ request }) => {
-    const loginRes = await request.post('/api/auth/login', {
-      data: { username: 'admin', password: 'admin0987' }
-    });
-    if (loginRes.status() === 429) { test.skip(); return; }
-
-    const csrfRes = await request.get('/api/auth/csrf-token');
-    const csrfData = await csrfRes.json() as { token: string };
-
-    const verifyRes = await request.post('/api/auth/mfa/verify', {
-      data: { code: '000000' },
-      headers: { 'x-csrf-token': csrfData.token }
-    });
-    expect(verifyRes.status()).toBe(400);
-  });
-
-  test('MFA disable works with correct password', async ({ request }) => {
-    const loginRes = await request.post('/api/auth/login', {
-      data: { username: 'admin', password: 'admin0987' }
-    });
-    if (loginRes.status() === 429) { test.skip(); return; }
-
-    const csrfRes = await request.get('/api/auth/csrf-token');
-    const csrfData = await csrfRes.json() as { token: string };
-
-    const disableRes = await request.post('/api/auth/mfa/disable', {
-      data: { password: 'admin0987' },
-      headers: { 'x-csrf-token': csrfData.token }
-    });
-    expect(disableRes.ok()).toBeTruthy();
-  });
-
-  test('login response exposes password expiry fields', async ({ request }) => {
-    const loginRes = await request.post('/api/auth/login', {
-      data: { username: 'admin', password: 'admin0987' }
-    });
-    if (loginRes.status() === 429) { test.skip(); return; }
-    expect(loginRes.ok()).toBeTruthy();
-
-    const data = await loginRes.json() as LoginResponse;
-    expect(typeof data.passwordExpired).toBe('boolean');
-    expect(typeof data.mustChangePassword).toBe('boolean');
-    if (data.passwordChangedAt) {
-      const changedDate = new Date(data.passwordChangedAt);
-      expect(changedDate.getTime()).toBeGreaterThan(0);
-    }
-  });
 });
