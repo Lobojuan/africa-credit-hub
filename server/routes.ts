@@ -57,6 +57,7 @@ import { sendSms, sendOtpSms, isSmsConfigured } from "./sms";
 import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport, generatePortfolioIntelligence, parseProvider, parseOptionalProvider, generateCreditNarrative, detectAnomalies, generateRegulatoryReport, naturalLanguageQuery, analyzeCrossBorderRisk, generateLoanRecommendation, callAI, parseJSON, generateAIResponse } from "./ai";
 import { BOG_EXPORT_GENERATORS } from "./bog-export";
 import type { BogFileType } from "@shared/bog-codes";
+import { BOG_CHEQUE_RETURN_REASON, BOG_NATURE_OF_GUARANTOR, BOG_EMPLOYMENT_TYPE } from "@shared/bog-codes";
 import { BUSINESS_CREDIT_TYPES, inferCreditCategory, normalizeAccountType } from "@shared/credit-types";
 import { BSL_EXPORT_GENERATORS } from "./bsl-export";
 import type { BslFileType } from "@shared/bsl-codes";
@@ -6667,7 +6668,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const empFields: [string, string][] = [
         ["Employer Name", b.employerName || "—"],
         ["Occupation", b.occupation || "—"],
-        ["Employment Type", b.employmentTypeCode || "—"],
+        ["Employment Type", b.employmentTypeCode ? (BOG_EMPLOYMENT_TYPE[b.employmentTypeCode] || b.employmentTypeCode) : "—"],
         ["Date of Employment", b.dateOfEmployment || "—"],
         ["Employer Address", b.employerAddress || "—"],
       ];
@@ -6773,7 +6774,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         const days = a.daysInArrears || 0;
         liabSummary[c].balance += bal;
         if (days > 0) {
-          const overdueAmt = bal * 0.1;
+          const overdueAmt = bal * 0.15;
           liabSummary[c].overdue += overdueAmt;
           if (days <= 30) liabSummary[c].d1_30 += overdueAmt;
           else if (days <= 60) liabSummary[c].d31_60 += overdueAmt;
@@ -6926,7 +6927,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
             { value: cheque.accountNumber || "—", width: W * 0.15 },
             { value: cheque.dateIssued || "—", width: W * 0.13 },
             { value: cheque.dateBounced || "—", width: W * 0.13 },
-            { value: cheque.reasonReturnedCode || "—", width: W * 0.2 },
+            { value: (cheque.reasonReturnedCode ? (BOG_CHEQUE_RETURN_REASON[cheque.reasonReturnedCode] || cheque.reasonReturnedCode) : "—"), width: W * 0.2 },
             { value: cheque.chequeAmount ? Number(cheque.chequeAmount).toLocaleString() : "—", width: W * 0.12, align: "right", bold: true },
             { value: cheque.currency || "—", width: W * 0.12 },
           ]);
@@ -6955,7 +6956,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
             { value: acct.accountNumber || "—", width: W * 0.2 },
             { value: (acct.accountType || "—").replace(/_/g, " "), width: W * 0.2 },
             { value: acct.currentBalance ? `${acct.currency || "GHS"} ${parseFloat(acct.currentBalance).toLocaleString()}` : "—", width: W * 0.2, align: "right", bold: true },
-            { value: acct.natureOfGuarantor || "—", width: W * 0.15 },
+            { value: (acct.natureOfGuarantor ? (BOG_NATURE_OF_GUARANTOR[acct.natureOfGuarantor] || acct.natureOfGuarantor) : "—"), width: W * 0.15 },
           ]);
         });
       } else {
@@ -7029,7 +7030,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
           { label: L("consent"), width: W * 0.2 },
         ];
         tableHeader(inqCols);
-        inquiries.slice(0, 20).forEach((inq: any) => {
+        inquiries.forEach((inq: any) => {
           const isHard = HARD_PURPOSES.includes(inq.purpose);
           tableRow([
             { value: inq.institution, width: W * 0.3, bold: true },
