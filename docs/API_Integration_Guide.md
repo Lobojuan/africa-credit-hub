@@ -1097,9 +1097,12 @@ After authentication, consumers can look up their credit record by providing the
 #### Data Sharing Agreements
 
 ```
-GET /api/data-sharing-agreements
-POST /api/data-sharing-agreements
-PATCH /api/data-sharing-agreements/:id
+GET /api/sata/agreements
+POST /api/sata/agreements
+PATCH /api/sata/agreements/:id
+DELETE /api/sata/agreements/:id
+GET /api/sata/agreements/country/:country
+GET /api/sata/my-agreements
 ```
 
 **Access:** Admin, Super Admin, Regulator
@@ -1137,8 +1140,9 @@ The CDH supports 54 African jurisdictions simultaneously. Session-based country 
 #### Country Settings
 
 ```
-GET /api/country-settings
-PUT /api/country-settings/:country
+GET /api/platform/country-settings
+GET /api/platform/country-settings/:code
+PUT /api/platform/country-settings/:code
 ```
 
 **Access:** Super Admin
