@@ -6541,6 +6541,37 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       tableRow([{ value: "Utilization Ratio", width: W * 0.5 }, { value: `${utilRatio.toFixed(1)}% (${utilRatio <= 30 ? "Optimal" : utilRatio <= 50 ? "Moderate" : utilRatio <= 75 ? "High" : "Very High"})`, width: W * 0.5, align: "right", bold: true, color: utilRatio > 75 ? "#dc2626" : utilRatio > 50 ? "#ca8a04" : "#16a34a" }]);
       tableRow([{ value: "Available Credit", width: W * 0.5 }, { value: availableCredit.toLocaleString("en-US", { minimumFractionDigits: 2 }), width: W * 0.5, align: "right", bold: true }]);
 
+      const utilByCurrency: Record<string, { limit: number; used: number }> = {};
+      openAccts.forEach((a) => {
+        const c = a.currency || "GHS";
+        if (!utilByCurrency[c]) utilByCurrency[c] = { limit: 0, used: 0 };
+        utilByCurrency[c].limit += parseFloat(a.originalAmount || "0");
+        utilByCurrency[c].used += parseFloat(a.currentBalance || "0");
+      });
+      const utilCurrencyKeys = Object.keys(utilByCurrency);
+      if (utilCurrencyKeys.length > 1) {
+        doc.moveDown(0.2);
+        resetTableRowIdx();
+        tableHeader([
+          { label: "Currency", width: W * 0.15 },
+          { label: "Credit Limit", width: W * 0.22, align: "right" },
+          { label: "Credit Used", width: W * 0.22, align: "right" },
+          { label: "Available", width: W * 0.22, align: "right" },
+          { label: "Utilization", width: W * 0.19, align: "right" },
+        ]);
+        utilCurrencyKeys.forEach(cur => {
+          const d = utilByCurrency[cur];
+          const curRatio = d.limit > 0 ? ((d.used / d.limit) * 100) : 0;
+          tableRow([
+            { value: cur, width: W * 0.15, bold: true },
+            { value: d.limit.toLocaleString("en-US", { minimumFractionDigits: 2 }), width: W * 0.22, align: "right" },
+            { value: d.used.toLocaleString("en-US", { minimumFractionDigits: 2 }), width: W * 0.22, align: "right" },
+            { value: Math.max(0, d.limit - d.used).toLocaleString("en-US", { minimumFractionDigits: 2 }), width: W * 0.22, align: "right" },
+            { value: `${curRatio.toFixed(1)}%`, width: W * 0.19, align: "right", bold: true, color: curRatio > 75 ? "#dc2626" : curRatio > 50 ? "#ca8a04" : "#16a34a" },
+          ]);
+        });
+      }
+
       doc.moveDown(0.3);
       resetTableRowIdx();
       tableHeader([
@@ -6883,9 +6914,15 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
           infoGrid(facilityFields, 48, W - 8);
 
           const history = reportData.paymentHistory?.[acct.id] || [];
-          if (history.length > 0) {
-            const phSlice = history.slice(0, 24);
-            const phCount = phSlice.length;
+          {
+            const phSlice = history.length > 0 ? history.slice(0, 24) : [];
+            const defaultMonths = Array.from({ length: 12 }, (_, i) => {
+              const d = new Date();
+              d.setMonth(d.getMonth() - i);
+              return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+            });
+            const phMonths = phSlice.length > 0 ? phSlice.map((ph: { period: string }) => ph.period) : defaultMonths;
+            const phCount = phMonths.length;
             const phGridHeight = 48;
             ensureSpace(phGridHeight + 16);
             doc.fontSize(7).font("Helvetica-Bold").fill(GRAY).text("Payment History (Last 24 Months)", 48, doc.y);
@@ -6897,26 +6934,30 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
             const phStartY = doc.y;
 
             doc.fontSize(5).font("Helvetica-Bold").fill(GRAY).text("Month", phX0, phStartY + 2, { width: phLabelW });
-            phSlice.forEach((ph: { period: string }, i: number) => {
+            phMonths.forEach((month: string, i: number) => {
               doc.fontSize(5).font("Helvetica").fill(GRAY)
-                .text(ph.period || "", phX0 + phLabelW + i * phCellW, phStartY + 2, { width: phCellW, align: "center" });
+                .text(month || "", phX0 + phLabelW + i * phCellW, phStartY + 2, { width: phCellW, align: "center" });
             });
 
             doc.fontSize(5).font("Helvetica-Bold").fill(GRAY).text("Status", phX0, phStartY + phRowH + 2, { width: phLabelW });
-            phSlice.forEach((ph: { status: string; daysLate?: number; amountDue?: string }, i: number) => {
+            phMonths.forEach((_: string, i: number) => {
+              const ph = phSlice[i] as { status: string; daysLate?: number } | undefined;
               let code = "ND";
               let color = GRAY;
-              if (ph.status === "on_time") { code = "OK"; color = "#16a34a"; }
-              else if (ph.status === "late") { code = String(ph.daysLate || 30); color = "#ca8a04"; }
-              else if (ph.status === "missed") { code = "X"; color = "#dc2626"; }
-              else if (ph.status === "partial") { code = "P"; color = "#ea580c"; }
+              if (ph) {
+                if (ph.status === "on_time") { code = "OK"; color = "#16a34a"; }
+                else if (ph.status === "late") { code = String(ph.daysLate || 30); color = "#ca8a04"; }
+                else if (ph.status === "missed") { code = "X"; color = "#dc2626"; }
+                else if (ph.status === "partial") { code = "P"; color = "#ea580c"; }
+              }
               doc.fontSize(5.5).font("Helvetica-Bold").fill(color)
                 .text(code, phX0 + phLabelW + i * phCellW, phStartY + phRowH + 2, { width: phCellW, align: "center" });
             });
 
             doc.fontSize(5).font("Helvetica-Bold").fill(GRAY).text("Amt. Due", phX0, phStartY + phRowH * 2 + 2, { width: phLabelW });
-            phSlice.forEach((ph: { amountDue?: string }, i: number) => {
-              const amt = ph.amountDue ? Number(ph.amountDue).toLocaleString() : "0";
+            phMonths.forEach((_: string, i: number) => {
+              const ph = phSlice[i] as { amountDue?: string } | undefined;
+              const amt = ph?.amountDue ? Number(ph.amountDue).toLocaleString() : "ND";
               doc.fontSize(5).font("Helvetica").fill(GRAY)
                 .text(amt, phX0 + phLabelW + i * phCellW, phStartY + phRowH * 2 + 2, { width: phCellW, align: "center" });
             });
@@ -6997,8 +7038,8 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       }
 
       // === SECTION 6: COURT JUDGMENTS & PUBLIC RECORDS ===
+      sectionTitle(L("courtJudgmentsPublic"), 6);
       if (judgments.length > 0) {
-        sectionTitle(L("courtJudgmentsPublic"), 6);
         resetTableRowIdx();
         const jCols = [
           { label: L("caseNo"), width: W * 0.2 },
@@ -7019,11 +7060,15 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
             { value: j.status || "—", width: W * 0.13, color: j.status === "active" ? "#dc2626" : "#16a34a" },
           ]);
         });
+      } else {
+        ensureSpace(16);
+        doc.fontSize(7.5).font("Helvetica").fill("#16a34a").text("✓ No court judgments or public records on file", 46, doc.y);
+        doc.moveDown(0.3);
       }
 
       // === SECTION 7: CONSENT RECORDS ===
+      sectionTitle("Consent Records", 7);
       if (consentRecords.length > 0) {
-        sectionTitle("Consent Records", 7);
         resetTableRowIdx();
         tableHeader([
           { label: "Granted To", width: W * 0.25 },
@@ -7041,6 +7086,10 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
             { value: c.grantedAt ? new Date(c.grantedAt).toLocaleDateString("en-GB") : "—", width: W * 0.2 },
           ]);
         });
+      } else {
+        ensureSpace(16);
+        doc.fontSize(7.5).font("Helvetica").fill(GRAY).text("No consent records on file", 46, doc.y);
+        doc.moveDown(0.3);
       }
 
       // === SECTION 8: CREDIT SEARCH INQUIRY HISTORY ===
