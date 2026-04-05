@@ -57,6 +57,8 @@ These procedures apply to:
 | Court Judgment Error | Incorrect or unrelated court judgment on record | 5 |
 | Consent Violation | Data shared without proper consent authorization | 5 |
 
+> **Summary:** Financial data disputes (incorrect balance, wrong personal information) must be resolved within **2 business days**. Non-financial and complex disputes (unauthorized accounts, classification disputes, consent violations, court judgment errors) must be resolved within **5 business days**. Identity theft cases are allowed up to **10 business days** due to the investigation complexity involved.
+
 ### 2.2 Dispute Priority Levels
 
 | Priority | Criteria | Response Time |

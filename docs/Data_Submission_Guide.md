@@ -264,7 +264,7 @@ Submit dishonoured (bounced) cheque records to flag borrowers with a history of 
 ### 8.1 Adding a Borrower
 
 1. Navigate to **Consumers & Businesses** from the sidebar.
-2. Click the **Add Borrower** button.
+2. Click the **Add Borrower** button (see *Figure 1: Add Borrower form*).
 3. Select the borrower type: **Individual** or **Corporate**.
 4. Fill in the required and recommended fields.
 5. Click **Submit**.
@@ -291,7 +291,7 @@ Submit dishonoured (bounced) cheque records to flag borrowers with a history of 
 
 ### 9.1 Accessing Batch Upload
 
-1. Navigate to **Batch Upload** from the sidebar (Admin or Lender role required).
+1. Navigate to **Batch Upload** from the sidebar (Admin or Lender role required; see *Figure 2: Batch Upload screen*).
 2. Select the **entity type** you wish to upload:
    - Borrowers
    - Credit Accounts
@@ -414,7 +414,7 @@ If a request with the same idempotency key is received within 24 hours, the orig
 
 ### 11.1 Overview
 
-Ghana-mode institutions must submit data in the Bank of Ghana (BoG) Institutional Fact File (IFF) format. The CDH accepts 6 IFF file types.
+Ghana-mode institutions must submit data in the Bank of Ghana (BoG) Institutional Fact File (IFF) format. The CDH accepts 6 IFF file types (see *Figure 3: IFF Upload interface*).
 
 ### 11.2 IFF File Types
 
