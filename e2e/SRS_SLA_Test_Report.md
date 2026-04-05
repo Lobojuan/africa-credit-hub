@@ -4,7 +4,7 @@
 **Platform Version**: 2.5.0  
 **Test Framework**: Playwright E2E  
 **Total Spec Files**: 24  
-**Total Tests**: 164  
+**Total Tests**: 170  
 
 ---
 
@@ -12,7 +12,7 @@
 
 | Spec File | Tests | Passed | Skipped | SRS Refs |
 |-----------|-------|--------|---------|----------|
-| sla-performance.spec.ts | 13 | 13 | 0 | SLA-01 through SLA-13 |
+| sla-performance.spec.ts | 16 | 16 | 0 | SLA-01 through SLA-16 |
 | borrowers.spec.ts | 5 | 5 | 0 | FR-COL-01 |
 | borrower-data-extended.spec.ts | 13 | 13 | 0 | FR-COL-01/02/04/05/08, FR-SPEC-01, ENT-02 |
 | credit-accounts.spec.ts | 2 | 2 | 0 | FR-COL-02 |
@@ -185,6 +185,9 @@
 | SLA-11 | Platform status | Status endpoint OK | PASS |
 | SLA-12 | JSON responses | Content-Type: application/json | PASS |
 | SLA-13 | CSRF protection | Token endpoint returns non-empty string | PASS |
+| SLA-14 | Credit score calculation | Response < 3 seconds | PASS |
+| SLA-15 | PDF download | Response < 30 seconds with correct content type | PASS |
+| SLA-16 | API response times | All core endpoints respond < 5 seconds | PASS |
 
 ---
 

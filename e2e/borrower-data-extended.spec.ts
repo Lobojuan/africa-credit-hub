@@ -65,10 +65,9 @@ test.describe('Borrower & Credit Data Extended [FR-COL, FR-SPEC]', () => {
 
   test('FR-COL-05: court judgments endpoint returns array', async ({ page }) => {
     const response = await page.request.get('/api/court-judgments');
-    if (response.ok()) {
-      const data = await response.json() as unknown[];
-      expect(Array.isArray(data)).toBeTruthy();
-    }
+    expect(response.ok()).toBeTruthy();
+    const data = await response.json() as unknown[];
+    expect(Array.isArray(data)).toBeTruthy();
   });
 
   test('FR-COL-04: data validation rejects invalid borrower data', async ({ page }) => {
@@ -82,10 +81,9 @@ test.describe('Borrower & Credit Data Extended [FR-COL, FR-SPEC]', () => {
 
   test('ENT-02: fuzzy matching endpoint returns array', async ({ page }) => {
     const response = await page.request.get('/api/borrowers/fuzzy-match?name=John');
-    if (response.ok()) {
-      const data = await response.json() as unknown[];
-      expect(Array.isArray(data)).toBeTruthy();
-    }
+    expect(response.ok()).toBeTruthy();
+    const data = await response.json() as unknown[];
+    expect(Array.isArray(data)).toBeTruthy();
   });
 
   test('FR-COL-08: global search returns borrowers', async ({ page }) => {

@@ -57,9 +57,9 @@ test.describe('SLA & Performance Validation', () => {
     expect(elapsed).toBeLessThan(5000);
   });
 
-  test('SLA-05: search endpoint < 3 seconds', async ({ page }) => {
+  test('SLA-05: global search < 3 seconds', async ({ page }) => {
     const start = Date.now();
-    const response = await page.request.get('/api/credit-search?query=loan');
+    const response = await page.request.get('/api/global-search?query=test');
     const elapsed = Date.now() - start;
     expect(response.ok()).toBeTruthy();
     expect(elapsed).toBeLessThan(3000);
@@ -123,5 +123,38 @@ test.describe('SLA & Performance Validation', () => {
     expect(data).toHaveProperty('token');
     expect(typeof data.token).toBe('string');
     expect(data.token.length).toBeGreaterThan(0);
+  });
+
+  test('SLA-14: credit score calculation < 3 seconds', async ({ page }) => {
+    const borrowersRes = await page.request.get('/api/borrowers');
+    const body = await borrowersRes.json() as BorrowerListResponse;
+    if (body.data.length === 0) { test.skip(); return; }
+
+    const start = Date.now();
+    const response = await page.request.get(`/api/borrowers/${body.data[0].id}/credit-report`);
+    const elapsed = Date.now() - start;
+    expect(response.ok()).toBeTruthy();
+    expect(elapsed).toBeLessThan(3000);
+  });
+
+  test('SLA-15: PDF download < 30 seconds', async ({ page }) => {
+    const start = Date.now();
+    const response = await page.request.get('/api/docs/users-manual/pdf');
+    const elapsed = Date.now() - start;
+    expect(response.ok()).toBeTruthy();
+    expect(elapsed).toBeLessThan(30000);
+    const contentType = response.headers()['content-type'] || '';
+    expect(contentType).toMatch(/pdf|octet-stream/i);
+  });
+
+  test('SLA-16: API response < 5 seconds for all endpoints', async ({ page }) => {
+    const endpoints = ['/api/borrowers', '/api/credit-accounts', '/api/disputes', '/api/consent-records'];
+    for (const endpoint of endpoints) {
+      const start = Date.now();
+      const response = await page.request.get(endpoint);
+      const elapsed = Date.now() - start;
+      expect(response.ok()).toBeTruthy();
+      expect(elapsed).toBeLessThan(5000);
+    }
   });
 });

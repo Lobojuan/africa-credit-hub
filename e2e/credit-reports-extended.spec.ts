@@ -39,15 +39,17 @@ test.describe('Credit Reports & Scoring [FR-CR, ENT-21]', () => {
   });
 
   test('FR-CR-06: credit report generation returns serial number', async ({ page }) => {
+    const borrowersRes = await page.request.get('/api/borrowers');
+    const body = await borrowersRes.json() as BorrowerListResponse;
+    if (body.data.length === 0) { test.skip(); return; }
+
     const generateRes = await postWithCSRF(page, '/api/credit-reports/generate', {
-      borrowerId: 1, purpose: 'new_credit'
+      borrowerId: body.data[0].id, purpose: 'new_credit'
     });
-    if (generateRes.ok()) {
-      const data = await generateRes.json() as Record<string, unknown>;
-      if (data.serialNumber) {
-        expect(data.serialNumber).toMatch(/^CR-/);
-      }
-    }
+    expect(generateRes.ok()).toBeTruthy();
+    const data = await generateRes.json() as Record<string, unknown>;
+    expect(data).toHaveProperty('serialNumber');
+    expect(String(data.serialNumber)).toMatch(/^CR-/);
   });
 
   test('FR-CR-07: credit report includes reason codes array', async ({ page }) => {
@@ -57,25 +59,29 @@ test.describe('Credit Reports & Scoring [FR-CR, ENT-21]', () => {
     const borrowerId = body.data[0].id;
 
     const reportRes = await page.request.get(`/api/borrowers/${borrowerId}/credit-report`);
-    if (reportRes.ok()) {
-      const report = await reportRes.json() as CreditReport;
-      expect(report.summary).toHaveProperty('reasonCodes');
-      expect(Array.isArray(report.summary.reasonCodes)).toBeTruthy();
-    }
+    expect(reportRes.ok()).toBeTruthy();
+    const report = await reportRes.json() as CreditReport;
+    expect(report.summary).toHaveProperty('reasonCodes');
+    expect(Array.isArray(report.summary.reasonCodes)).toBeTruthy();
   });
 
   test('FR-CR-03: bulk credit search returns results', async ({ page }) => {
-    const response = await page.request.get('/api/credit-search?query=loan');
+    const response = await postWithCSRF(page, '/api/credit-search/bulk', {
+      identifiers: ['test', 'loan']
+    });
     expect(response.ok()).toBeTruthy();
+    const data = await response.json() as Record<string, unknown>;
+    expect(data).toHaveProperty('results');
   });
 
   test('FR-CR-04: credit inquiry tracks consent purpose', async ({ page }) => {
     const response = await page.request.get('/api/credit-inquiries');
-    if (response.ok()) {
-      const data = await response.json() as Array<{ purpose: string }>;
-      if (Array.isArray(data) && data.length > 0) {
-        expect(data[0]).toHaveProperty('purpose');
-      }
+    expect(response.ok()).toBeTruthy();
+    const data = await response.json() as Array<{ purpose: string }>;
+    expect(Array.isArray(data)).toBeTruthy();
+    if (data.length > 0) {
+      expect(data[0]).toHaveProperty('purpose');
+      expect(typeof data[0].purpose).toBe('string');
     }
   });
 
