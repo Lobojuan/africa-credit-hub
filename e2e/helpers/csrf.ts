@@ -26,6 +26,14 @@ export async function putWithCSRF(page: Page, url: string, body: Record<string, 
   });
 }
 
+export async function patchWithCSRF(page: Page, url: string, body: Record<string, unknown>) {
+  const token = await getCSRFToken(page);
+  return page.request.patch(url, {
+    data: body,
+    headers: { 'x-csrf-token': token }
+  });
+}
+
 export async function deleteWithCSRF(page: Page, url: string) {
   const token = await getCSRFToken(page);
   return page.request.delete(url, {

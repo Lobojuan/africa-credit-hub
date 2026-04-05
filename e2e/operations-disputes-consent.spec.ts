@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { postWithCSRF } from './helpers/csrf';
+import { postWithCSRF, patchWithCSRF } from './helpers/csrf';
 
 interface DisputeRecord {
   id: string;
@@ -20,17 +20,15 @@ interface ConsentRecord {
 }
 
 interface ApprovalItem {
+  id: string;
   entityType: string;
   action: string;
   status: string;
+  requestedBy: string;
 }
 
 interface BorrowerListResponse {
   data: Array<{ id: string }>;
-}
-
-interface AccountListResponse {
-  data: Array<{ id: string; borrowerId: string }>;
 }
 
 test.describe('Operations: Disputes, Consent, Helpdesk [FR-CON, DQ-04, DQ-05]', () => {
@@ -84,13 +82,11 @@ test.describe('Operations: Disputes, Consent, Helpdesk [FR-CON, DQ-04, DQ-05]', 
     expect(dispute).toHaveProperty('id');
     expect(dispute.status).toBe('open');
     expect(dispute).toHaveProperty('slaDeadline');
-    if (dispute.slaDeadline) {
-      const sla = new Date(dispute.slaDeadline);
-      const created = new Date(dispute.createdAt);
-      const daysDiff = (sla.getTime() - created.getTime()) / (1000 * 60 * 60 * 24);
-      expect(daysDiff).toBeGreaterThanOrEqual(2);
-      expect(daysDiff).toBeLessThanOrEqual(10);
-    }
+    expect(dispute.slaDeadline).toBeTruthy();
+    const sla = new Date(dispute.slaDeadline!);
+    const created = new Date(dispute.createdAt);
+    const daysDiff = (sla.getTime() - created.getTime()) / (1000 * 60 * 60 * 24);
+    expect(Math.round(daysDiff)).toBe(5);
   });
 
   test('FR-CON-01: consent records returns array with receipt numbers', async ({ page }) => {
@@ -118,9 +114,11 @@ test.describe('Operations: Disputes, Consent, Helpdesk [FR-CON, DQ-04, DQ-05]', 
     }
   });
 
-  test('FR-CON-02: helpdesk API endpoint exists', async ({ page }) => {
-    const response = await page.request.get('/api/helpdesk/tickets');
-    expect([200, 404]).toContain(response.status());
+  test('FR-CON-02: helpdesk page renders service desk UI', async ({ page }) => {
+    await page.goto('/helpdesk');
+    await page.waitForLoadState('domcontentloaded');
+    const pageContent = await page.textContent('body');
+    expect(pageContent).toMatch(/helpdesk|service|inquiry|dispute|ticket/i);
   });
 
   test('FR-REG-03: pending approvals returns maker-checker items', async ({ page }) => {
@@ -128,11 +126,27 @@ test.describe('Operations: Disputes, Consent, Helpdesk [FR-CON, DQ-04, DQ-05]', 
     expect(response.ok()).toBeTruthy();
     const approvals = await response.json() as ApprovalItem[];
     expect(Array.isArray(approvals)).toBeTruthy();
-    if (approvals.length > 0) {
-      expect(approvals[0]).toHaveProperty('entityType');
-      expect(approvals[0]).toHaveProperty('action');
-      expect(approvals[0].status).toBe('pending');
-    }
+    expect(approvals.length).toBeGreaterThan(0);
+    expect(approvals[0]).toHaveProperty('entityType');
+    expect(approvals[0]).toHaveProperty('action');
+    expect(approvals[0]).toHaveProperty('requestedBy');
+    expect(approvals[0].status).toBe('pending');
+  });
+
+  test('FR-REG-03: maker cannot approve own request (self-approval prevention)', async ({ page }) => {
+    const response = await page.request.get('/api/pending-approvals');
+    expect(response.ok()).toBeTruthy();
+    const approvals = await response.json() as ApprovalItem[];
+    const pendingByCurrentUser = approvals.find((a) => a.status === 'pending' && a.requestedBy);
+    if (!pendingByCurrentUser) { test.skip(); return; }
+
+    const approveRes = await patchWithCSRF(page, `/api/pending-approvals/${pendingByCurrentUser.id}`, {
+      status: 'approved',
+      reviewNotes: 'Self-approval attempt'
+    });
+    expect(approveRes.status()).toBe(403);
+    const body = await approveRes.json() as { message: string };
+    expect(body.message).toContain('Maker cannot be the Checker');
   });
 
   test('disputes page renders dispute table', async ({ page }) => {

@@ -21,6 +21,21 @@ interface AuditVerification {
   totalLogs: number;
 }
 
+interface LoginResponse {
+  id: string;
+  username: string;
+  role: string;
+  mfaEnabled: boolean;
+  passwordExpired: boolean;
+  passwordChangedAt: string | null;
+  mustChangePassword: boolean;
+}
+
+interface MFASetupResponse {
+  secret: string;
+  uri: string;
+}
+
 test.describe('Security & Authentication [NFR-SEC]', () => {
 
   test('NFR-SEC-04: repeated failed logins return 401', async ({ request }) => {
@@ -39,10 +54,15 @@ test.describe('Security & Authentication [NFR-SEC]', () => {
     if (loginRes.status() === 429) { test.skip(); return; }
     expect(loginRes.ok()).toBeTruthy();
 
+    const csrfRes = await request.get('/api/auth/csrf-token');
+    const csrfData = await csrfRes.json() as { token: string };
+    const csrfToken = csrfData.token;
+
     const weakPasswords = ['short', '12345678', 'alllowercase1!', 'ALLUPPERCASE1!', 'NoSpecialChar1'];
     for (const weak of weakPasswords) {
       const res = await request.post('/api/auth/change-password', {
-        data: { currentPassword: 'admin0987', newPassword: weak }
+        data: { currentPassword: 'admin0987', newPassword: weak },
+        headers: { 'x-csrf-token': csrfToken }
       });
       expect(res.ok()).toBeFalsy();
     }
@@ -105,17 +125,19 @@ test.describe('Security & Authentication [NFR-SEC]', () => {
     expect(typeof logs[0].ipAddress).toBe('string');
   });
 
-  test('NFR-SEC-09: session endpoint returns session data', async ({ request }) => {
+  test('NFR-SEC-09: session returns user with security fields', async ({ request }) => {
     const loginRes = await request.post('/api/auth/login', {
       data: { username: 'admin', password: 'admin0987' }
     });
     if (loginRes.status() === 429) { test.skip(); return; }
     expect(loginRes.ok()).toBeTruthy();
 
-    const sessionRes = await request.get('/api/auth/session');
-    expect(sessionRes.ok()).toBeTruthy();
-    const session = await sessionRes.json() as Record<string, unknown>;
-    expect(session).toHaveProperty('user');
+    const loginData = await loginRes.json() as LoginResponse;
+    expect(loginData).toHaveProperty('mfaEnabled');
+    expect(loginData).toHaveProperty('passwordExpired');
+    expect(loginData).toHaveProperty('passwordChangedAt');
+    expect(loginData).toHaveProperty('mustChangePassword');
+    expect(typeof loginData.mfaEnabled).toBe('boolean');
   });
 
   test('ENT-07: audit log integrity verification', async ({ request }) => {
@@ -130,5 +152,74 @@ test.describe('Security & Authentication [NFR-SEC]', () => {
     const data = await verifyRes.json() as AuditVerification;
     expect(data).toHaveProperty('verified');
     expect(data.verified).toBe(true);
+  });
+
+  test('MFA setup returns TOTP secret and URI', async ({ request }) => {
+    const loginRes = await request.post('/api/auth/login', {
+      data: { username: 'admin', password: 'admin0987' }
+    });
+    if (loginRes.status() === 429) { test.skip(); return; }
+    expect(loginRes.ok()).toBeTruthy();
+
+    const csrfRes = await request.get('/api/auth/csrf-token');
+    const csrfData = await csrfRes.json() as { token: string };
+
+    const setupRes = await request.post('/api/auth/mfa/setup', {
+      headers: { 'x-csrf-token': csrfData.token }
+    });
+    expect(setupRes.ok()).toBeTruthy();
+    const setup = await setupRes.json() as MFASetupResponse;
+    expect(setup).toHaveProperty('secret');
+    expect(setup).toHaveProperty('uri');
+    expect(setup.uri).toContain('otpauth://totp/');
+    expect(setup.secret.length).toBeGreaterThanOrEqual(16);
+  });
+
+  test('MFA verify rejects invalid code', async ({ request }) => {
+    const loginRes = await request.post('/api/auth/login', {
+      data: { username: 'admin', password: 'admin0987' }
+    });
+    if (loginRes.status() === 429) { test.skip(); return; }
+
+    const csrfRes = await request.get('/api/auth/csrf-token');
+    const csrfData = await csrfRes.json() as { token: string };
+
+    const verifyRes = await request.post('/api/auth/mfa/verify', {
+      data: { code: '000000' },
+      headers: { 'x-csrf-token': csrfData.token }
+    });
+    expect(verifyRes.status()).toBe(400);
+  });
+
+  test('MFA disable works with correct password', async ({ request }) => {
+    const loginRes = await request.post('/api/auth/login', {
+      data: { username: 'admin', password: 'admin0987' }
+    });
+    if (loginRes.status() === 429) { test.skip(); return; }
+
+    const csrfRes = await request.get('/api/auth/csrf-token');
+    const csrfData = await csrfRes.json() as { token: string };
+
+    const disableRes = await request.post('/api/auth/mfa/disable', {
+      data: { password: 'admin0987' },
+      headers: { 'x-csrf-token': csrfData.token }
+    });
+    expect(disableRes.ok()).toBeTruthy();
+  });
+
+  test('login response exposes password expiry fields', async ({ request }) => {
+    const loginRes = await request.post('/api/auth/login', {
+      data: { username: 'admin', password: 'admin0987' }
+    });
+    if (loginRes.status() === 429) { test.skip(); return; }
+    expect(loginRes.ok()).toBeTruthy();
+
+    const data = await loginRes.json() as LoginResponse;
+    expect(typeof data.passwordExpired).toBe('boolean');
+    expect(typeof data.mustChangePassword).toBe('boolean');
+    if (data.passwordChangedAt) {
+      const changedDate = new Date(data.passwordChangedAt);
+      expect(changedDate.getTime()).toBeGreaterThan(0);
+    }
   });
 });

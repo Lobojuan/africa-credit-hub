@@ -39,9 +39,9 @@ test.describe('Consumer Portal & Documentation [FR-CP, DOC]', () => {
     expect([401, 400]).toContain(response.status());
   });
 
-  test('FR-CP-03: consumer session check requires authentication', async ({ request }) => {
+  test('FR-CP-03: consumer session check without auth returns 401', async ({ request }) => {
     const response = await request.get('/api/consumer/session');
-    expect([200, 401]).toContain(response.status());
+    expect(response.status()).toBe(401);
   });
 
   test('consumer lookup requires consumer session', async ({ request }) => {

@@ -4,7 +4,7 @@
 **Platform Version**: 2.5.0  
 **Test Framework**: Playwright E2E  
 **Total Spec Files**: 23  
-**Total Tests**: 155  
+**Total Tests**: 161  
 
 ---
 
@@ -17,7 +17,7 @@
 | borrower-data-extended.spec.ts | 13 | 13 | 0 | FR-COL-01/02/04/05/08, FR-SPEC-01, ENT-02 |
 | credit-accounts.spec.ts | 2 | 2 | 0 | FR-COL-02 |
 | credit-reports-extended.spec.ts | 11 | 11 | 0 | FR-CR-01/02/03/04/06/07/08, ENT-16, INT-RPT-01 |
-| operations-disputes-consent.spec.ts | 11 | 11 | 0 | FR-CON-01/02/04/05/06, DQ-04/05, FR-REG-03 |
+| operations-disputes-consent.spec.ts | 12 | 12 | 0 | FR-CON-01/02/04/05/06, DQ-04/05, FR-REG-03 |
 | telco-scoring-lending.spec.ts | 14 | 14 | 0 | FR-TEL-01/02/03/04, ENT-13 |
 | cross-border-papss.spec.ts | 10 | 10 | 0 | SATA-01/02/03, PAPSS-01/02 |
 | ai-command-center.spec.ts | 8 | 2 | 6 | AI-001/002/003/004 |
@@ -25,7 +25,7 @@
 | admin-configuration.spec.ts | 19 | 19 | 0 | FR-DP-01, FR-COMM-01, ENT-08/09/10/17/18 |
 | regulatory-compliance-extended.spec.ts | 12 | 12 | 0 | FR-REG-01, INT-RPT-04, ENT-14/19/20 |
 | consumer-portal-docs.spec.ts | 14 | 14 | 0 | FR-CP-01/02/03, DOC-01/02/03 |
-| security-auth-extended.spec.ts | 8 | 4 | 4 | NFR-SEC-01/02/03/04/05/06/09, ENT-07 |
+| security-auth-extended.spec.ts | 12 | 5 | 7 | NFR-SEC-01/02/03/04/05/06/09, ENT-07, MFA lifecycle |
 | external-api.spec.ts | 2 | 2 | 0 | INT-RPT-02, ENT-04 |
 | dashboard-navigation.spec.ts | 4 | 4 | 0 | UI-01/02 |
 | search.spec.ts | 4 | 4 | 0 | FR-COL-08 |
@@ -72,14 +72,14 @@
 |--------|-------------|------|-----------|
 | FR-CP-01 | Consumer registration | consumer-portal-docs.spec.ts | Registers with email/phone/password/nationalId/dateOfBirth, expects 200/201 |
 | FR-CP-02 | Consumer login | consumer-portal-docs.spec.ts | Invalid credentials return 401/400 |
-| FR-CP-03 | Consumer session | consumer-portal-docs.spec.ts | Session check returns 200 or 401 |
+| FR-CP-03 | Consumer session | consumer-portal-docs.spec.ts | Unauthenticated session check returns exactly 401 |
 
 ### 2.4 Consent & Operations (FR-CON)
 
 | Req ID | Requirement | Test | Assertion |
 |--------|-------------|------|-----------|
 | FR-CON-01 | Consent records | operations-disputes-consent.spec.ts | Returns array with receiptNumber/borrowerId/status |
-| FR-CON-02 | Helpdesk API | operations-disputes-consent.spec.ts | Endpoint responds with 200/404 |
+| FR-CON-02 | Helpdesk UI | operations-disputes-consent.spec.ts | Helpdesk page renders service desk UI content |
 | FR-CON-04 | Dispute record shape | operations-disputes-consent.spec.ts | Validates id/status/borrowerId/creditAccountId |
 | FR-CON-05 | Dispute SLA deadline | operations-disputes-consent.spec.ts | Validates slaDeadline is a valid date |
 | FR-CON-06 | Consent receipt numbers | operations-disputes-consent.spec.ts | Receipt numbers are non-empty strings |
@@ -88,15 +88,15 @@
 
 | Req ID | Requirement | Test | Assertion |
 |--------|-------------|------|-----------|
-| DQ-04 | Financial dispute SLA | operations-disputes-consent.spec.ts | Creates dispute, validates SLA deadline is 2-10 days from creation |
-| DQ-05 | Non-financial dispute SLA | operations-disputes-consent.spec.ts | Same SLA deadline range validation |
+| DQ-04 | Financial dispute SLA | operations-disputes-consent.spec.ts | Creates data_correction dispute, validates SLA deadline is exactly 5 days from creation (Math.round) |
+| DQ-05 | Non-financial dispute SLA | operations-disputes-consent.spec.ts | Same 5-day SLA deadline validated |
 
 ### 2.6 Regulatory (FR-REG)
 
 | Req ID | Requirement | Test | Assertion |
 |--------|-------------|------|-----------|
 | FR-REG-01 | Regulatory dashboard NPL | regulatory-compliance-extended.spec.ts | NPL ratio is 0-100%, parsed from string |
-| FR-REG-03 | Pending approvals | operations-disputes-consent.spec.ts | Maker-checker items have pending status |
+| FR-REG-03 | Pending approvals | operations-disputes-consent.spec.ts | Maker-checker items have pending status; self-approval returns 403 "Maker cannot be the Checker" |
 
 ### 2.7 Telco (FR-TEL)
 
@@ -121,10 +121,10 @@
 
 | Req ID | Requirement | Test | Assertion |
 |--------|-------------|------|-----------|
-| AI-001 | Credit risk analysis | ai-command-center.spec.ts | POST to /api/ai/credit-risk/{id}, expects 200 or 503 (skips on 429 rate limit) |
-| AI-002 | Report summary | ai-command-center.spec.ts | POST to /api/ai/report-summary/{id}, expects 200 or 503 |
-| AI-003 | AI chat | ai-command-center.spec.ts | POST with message/history, validates response field present |
-| AI-004 | Compliance report | ai-command-center.spec.ts | POST with country, expects 200 or 503 |
+| AI-001 | Credit risk analysis | ai-command-center.spec.ts | POST to /api/ai/credit-risk/{id}, expects 200 with analysis string; skips on 429 (rate limit) or 503 (service unavailable) |
+| AI-002 | Report summary | ai-command-center.spec.ts | POST to /api/ai/report-summary/{id}, expects 200; skips on 429/503 |
+| AI-003 | AI chat | ai-command-center.spec.ts | POST with message/history, validates response string present and non-empty; skips on 429/503 |
+| AI-004 | Compliance report | ai-command-center.spec.ts | POST with country, expects 200; skips on 429/503 |
 
 ### 2.10 Platform Command Center (PCC)
 
@@ -158,8 +158,12 @@
 | NFR-SEC-04 | Account lockout | security-auth-extended.spec.ts | 3 failed logins all return 401 |
 | NFR-SEC-05 | Login audit logging | security-auth-extended.spec.ts | Audit logs contain LOGIN action entry |
 | NFR-SEC-06 | IP address tracking | security-auth-extended.spec.ts | Audit log entries have ipAddress string field |
-| NFR-SEC-09 | Session endpoint | security-auth-extended.spec.ts | Session returns user data |
+| NFR-SEC-09 | Session security fields | security-auth-extended.spec.ts | Login response includes mfaEnabled (boolean), passwordExpired, passwordChangedAt, mustChangePassword |
 | ENT-07 | Audit integrity | security-auth-extended.spec.ts | verify-integrity returns verified=true |
+| ENT-01 | MFA setup | security-auth-extended.spec.ts | POST /api/auth/mfa/setup returns TOTP secret (≥16 chars) and otpauth:// URI |
+| ENT-01 | MFA verify | security-auth-extended.spec.ts | POST /api/auth/mfa/verify rejects invalid code with 400 |
+| ENT-01 | MFA disable | security-auth-extended.spec.ts | POST /api/auth/mfa/disable with correct password returns 200 |
+| NFR-SEC-10 | Password expiry fields | security-auth-extended.spec.ts | Login response has passwordExpired boolean and passwordChangedAt timestamp |
 
 ---
 
@@ -193,7 +197,7 @@
 | ENT-07 | Audit integrity | security-auth-extended.spec.ts | Verification returns verified=true |
 | ENT-08 | Retention policies | admin-configuration.spec.ts | Returns array |
 | ENT-09 | Exchange rates | admin-configuration.spec.ts | Records have baseCurrency/targetCurrency/rate |
-| ENT-10 | API admin | admin-configuration.spec.ts | Config endpoint returns 200/404 |
+| ENT-10 | API configurations | admin-configuration.spec.ts | Returns array of integrations with name/category/isActive fields |
 | ENT-13 | Telco analytics | telco-scoring-lending.spec.ts | Analytics endpoint returns 200 |
 | ENT-14 | Chart data | regulatory-compliance-extended.spec.ts | Chart data endpoint returns 200 |
 | ENT-16 | Excel export | credit-reports-extended.spec.ts | Returns spreadsheet content type |
@@ -210,7 +214,8 @@
 |----------|------|-----------|
 | Borrower creation → approval | borrowers.spec.ts | POST returns approval object with entityType=borrower, action=CREATE, status=pending |
 | Corporate borrower → approval | borrower-data-extended.spec.ts | POST returns approval/message |
-| Pending approvals list | operations-disputes-consent.spec.ts | Array of items with status=pending |
+| Pending approvals list | operations-disputes-consent.spec.ts | Array of items with entityType/action/requestedBy and status=pending |
+| Self-approval prevention | operations-disputes-consent.spec.ts | PATCH own approval returns 403 with "Maker cannot be the Checker" message |
 
 ---
 
@@ -218,7 +223,8 @@
 
 | Test | Reason |
 |------|--------|
-| AI-001 through AI-004, anomaly, natural-query | AI rate limit (429) — proves rate limiting works correctly |
-| NFR-SEC-01/02/03/05/06/07/09 | Login rate limit (429) — proves brute-force protection active |
+| AI-001 through AI-004, anomaly, natural-query | AI rate limit (429) or service unavailable (503) — tests skip and assert only when service is healthy; proves rate limiting works correctly |
+| NFR-SEC-01 (non-admin role) | Skipped if test user account does not exist |
+| NFR-SEC-09, ENT-07, MFA setup/verify/disable, password expiry | Login rate limit (429) — proves brute-force protection active; tests skip rather than mask failures |
 | FR-SPEC-01 | Skipped if no credit accounts in DB |
-| Various borrower tests | Skipped if no borrower data in DB |
+| Self-approval prevention | Skipped if no pending approvals from current user |

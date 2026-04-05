@@ -5,6 +5,14 @@ interface BorrowerListResponse {
   data: Array<{ id: string }>;
 }
 
+interface CreditRiskAnalysis {
+  analysis: string;
+}
+
+interface ChatResponse {
+  response: string;
+}
+
 test.describe('AI Command Center [AI-001 through AI-004]', () => {
   test.setTimeout(15000);
 
@@ -16,11 +24,12 @@ test.describe('AI Command Center [AI-001 through AI-004]', () => {
 
     const response = await postWithCSRF(page, `/api/ai/credit-risk/${borrowerId}`, {});
     if (response.status() === 429) { test.skip(); return; }
-    expect([200, 503]).toContain(response.status());
-    if (response.ok()) {
-      const data = await response.json() as Record<string, unknown>;
-      expect(data).toHaveProperty('analysis');
-    }
+    if (response.status() === 503) { test.skip(); return; }
+    expect(response.ok()).toBeTruthy();
+    const data = await response.json() as CreditRiskAnalysis;
+    expect(data).toHaveProperty('analysis');
+    expect(typeof data.analysis).toBe('string');
+    expect(data.analysis.length).toBeGreaterThan(0);
   });
 
   test('AI-002: report summary endpoint accepts request', async ({ page }) => {
@@ -31,7 +40,8 @@ test.describe('AI Command Center [AI-001 through AI-004]', () => {
 
     const response = await postWithCSRF(page, `/api/ai/report-summary/${borrowerId}`, {});
     if (response.status() === 429) { test.skip(); return; }
-    expect([200, 503]).toContain(response.status());
+    if (response.status() === 503) { test.skip(); return; }
+    expect(response.ok()).toBeTruthy();
   });
 
   test('AI-003: AI chat endpoint processes messages', async ({ page }) => {
@@ -40,11 +50,12 @@ test.describe('AI Command Center [AI-001 through AI-004]', () => {
       history: []
     });
     if (response.status() === 429) { test.skip(); return; }
-    expect([200, 503]).toContain(response.status());
-    if (response.ok()) {
-      const data = await response.json() as Record<string, unknown>;
-      expect(data).toHaveProperty('response');
-    }
+    if (response.status() === 503) { test.skip(); return; }
+    expect(response.ok()).toBeTruthy();
+    const data = await response.json() as ChatResponse;
+    expect(data).toHaveProperty('response');
+    expect(typeof data.response).toBe('string');
+    expect(data.response.length).toBeGreaterThan(0);
   });
 
   test('AI-004: compliance report endpoint accepts country', async ({ page }) => {
@@ -53,13 +64,15 @@ test.describe('AI Command Center [AI-001 through AI-004]', () => {
       country: 'Ghana'
     });
     if (response.status() === 429) { test.skip(); return; }
-    expect([200, 503]).toContain(response.status());
+    if (response.status() === 503) { test.skip(); return; }
+    expect(response.ok()).toBeTruthy();
   });
 
   test('AI anomaly detection endpoint accepts request', async ({ page }) => {
     const response = await postWithCSRF(page, '/api/ai/anomaly-detection', {});
     if (response.status() === 429) { test.skip(); return; }
-    expect([200, 503]).toContain(response.status());
+    if (response.status() === 503) { test.skip(); return; }
+    expect(response.ok()).toBeTruthy();
   });
 
   test('AI natural query endpoint processes queries', async ({ page }) => {
@@ -67,7 +80,8 @@ test.describe('AI Command Center [AI-001 through AI-004]', () => {
       query: 'How many borrowers are in Ghana?'
     });
     if (response.status() === 429) { test.skip(); return; }
-    expect([200, 503]).toContain(response.status());
+    if (response.status() === 503) { test.skip(); return; }
+    expect(response.ok()).toBeTruthy();
   });
 
   test('AI command center page loads', async ({ page }) => {

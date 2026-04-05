@@ -70,9 +70,15 @@ test.describe('Admin & Configuration [FR-DP, FR-COMM, ENT]', () => {
     }
   });
 
-  test('ENT-10: API admin configuration endpoint', async ({ page }) => {
-    const response = await page.request.get('/api/api-admin/config');
-    expect([200, 404]).toContain(response.status());
+  test('ENT-10: API configurations endpoint returns integrations', async ({ page }) => {
+    const response = await page.request.get('/api/api-configurations');
+    expect(response.ok()).toBeTruthy();
+    const data = await response.json() as Array<{ id: string; name: string; category: string; isActive: boolean }>;
+    expect(Array.isArray(data)).toBeTruthy();
+    expect(data.length).toBeGreaterThan(0);
+    expect(data[0]).toHaveProperty('name');
+    expect(data[0]).toHaveProperty('category');
+    expect(typeof data[0].isActive).toBe('boolean');
   });
 
   test('ENT-08: retention policies returns array', async ({ page }) => {
@@ -118,9 +124,16 @@ test.describe('Admin & Configuration [FR-DP, FR-COMM, ENT]', () => {
     expect(typeof data.totalToday).toBe('number');
   });
 
-  test('webhook management endpoint', async ({ page }) => {
+  test('webhook management endpoint returns webhooks array', async ({ page }) => {
     const response = await page.request.get('/api/webhooks');
-    expect([200, 404]).toContain(response.status());
+    expect(response.ok()).toBeTruthy();
+    const data = await response.json() as Array<{ id: string; url: string; status: string; events: string[] }>;
+    expect(Array.isArray(data)).toBeTruthy();
+    if (data.length > 0) {
+      expect(data[0]).toHaveProperty('url');
+      expect(data[0]).toHaveProperty('status');
+      expect(data[0]).toHaveProperty('events');
+    }
   });
 
   test('system status endpoint', async ({ page }) => {

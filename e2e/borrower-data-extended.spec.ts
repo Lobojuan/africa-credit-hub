@@ -77,7 +77,7 @@ test.describe('Borrower & Credit Data Extended [FR-COL, FR-SPEC]', () => {
       firstName: '',
       lastName: '',
     });
-    expect([400, 201]).toContain(response.status());
+    expect(response.ok()).toBeFalsy();
   });
 
   test('ENT-02: fuzzy matching endpoint returns array', async ({ page }) => {
