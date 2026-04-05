@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { postWithCSRF } from './helpers/csrf';
 
 test.describe('Borrower Management', () => {
   test('borrowers list API returns data', async ({ page }) => {
@@ -34,18 +35,16 @@ test.describe('Borrower Management', () => {
 
   test('borrower creation submits for approval', async ({ page }) => {
     const uniqueId = `E2E-TEST-${Date.now()}`;
-    const response = await page.request.post('/api/borrowers', {
-      data: {
-        type: 'individual',
-        firstName: 'E2E Test',
-        lastName: 'Borrower',
-        nationalId: uniqueId,
-        country: 'Ghana',
-        phone: '+233200000000',
-        email: 'e2e-test@example.com',
-        gender: 'male',
-        dateOfBirth: '1990-01-01',
-      },
+    const response = await postWithCSRF(page, '/api/borrowers', {
+      type: 'individual',
+      firstName: 'E2E Test',
+      lastName: 'Borrower',
+      nationalId: uniqueId,
+      country: 'Ghana',
+      phone: '+233200000000',
+      email: 'e2e-test@example.com',
+      gender: 'male',
+      dateOfBirth: '1990-01-01',
     });
     expect(response.status()).toBe(201);
     const data = await response.json();

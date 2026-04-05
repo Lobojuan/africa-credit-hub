@@ -11,7 +11,7 @@ export default defineConfig({
   projects: [
     {
       name: 'unauthenticated',
-      testMatch: ['auth.spec.ts', 'error-handling.spec.ts'],
+      testMatch: ['auth.spec.ts', 'error-handling.spec.ts', 'security-auth-extended.spec.ts', 'external-api.spec.ts'],
       use: {
         baseURL: 'http://localhost:5000',
         headless: true,
@@ -21,7 +21,27 @@ export default defineConfig({
     },
     {
       name: 'authenticated',
-      testMatch: ['dashboard-navigation.spec.ts', 'borrowers.spec.ts', 'credit-accounts.spec.ts', 'search.spec.ts', 'super-admin.spec.ts', 'compliance.spec.ts', 'reports-regulatory.spec.ts', 'supporting-pages.spec.ts'],
+      testMatch: [
+        'dashboard-navigation.spec.ts',
+        'borrowers.spec.ts',
+        'borrower-data-extended.spec.ts',
+        'credit-accounts.spec.ts',
+        'credit-reports-extended.spec.ts',
+        'search.spec.ts',
+        'super-admin.spec.ts',
+        'compliance.spec.ts',
+        'operations-disputes-consent.spec.ts',
+        'reports-regulatory.spec.ts',
+        'regulatory-compliance-extended.spec.ts',
+        'supporting-pages.spec.ts',
+        'admin-configuration.spec.ts',
+        'telco-scoring-lending.spec.ts',
+        'cross-border-papss.spec.ts',
+        'ai-command-center.spec.ts',
+        'platform-command-center.spec.ts',
+        'sla-performance.spec.ts',
+        'consumer-portal-docs.spec.ts',
+      ],
       use: {
         baseURL: 'http://localhost:5000',
         headless: true,
