@@ -955,6 +955,271 @@ A: Yes, the API is designed for continuous availability. Planned maintenance win
 
 ---
 
+## 14. Additional Platform APIs (Session-Authenticated)
+
+The following sections document APIs for telco scoring & lending, consumer self-service, cross-border data sharing, multi-country management, and the AI Command Center. All endpoints use session-based authentication and are available to authenticated CDH web application users.
+
+### 14.1 Telco Scoring & Lending Endpoints
+
+The Telco Scoring & Lending module enables credit scoring of unbanked and underbanked populations using mobile money and telecom transaction data.
+
+#### Telco Profiles
+
+```
+GET /api/telco/profiles
+GET /api/telco/profiles/:id
+POST /api/telco/profiles
+```
+
+**Access:** Admin, Lender, Regulator (read); Admin, Lender (create)
+
+Manage telco subscriber profiles including MSISDN (phone number), mobile money provider, KYC status, and transaction history links.
+
+#### Transaction Import
+
+```
+POST /api/telco/transactions/import
+```
+
+**Access:** Admin, Lender
+
+Bulk-import mobile money transaction data (top-ups, P2P transfers, bill payments, merchant transactions) for a telco profile. Transactions are used to calculate alternative credit scores.
+
+#### Telco Credit Scoring
+
+```
+POST /api/telco/score/:profileId
+GET /api/telco/scores
+GET /api/telco/scores/:profileId
+```
+
+**Access:** Admin, Lender (score); Admin, Lender, Regulator (read)
+
+Triggers AI-powered credit scoring based on mobile money transaction patterns. The score (300–850) considers transaction frequency, consistency, volume growth, P2P network size, bill payment regularity, and balance stability. Returns a score with detailed factor breakdown.
+
+#### Decision Engine
+
+```
+POST /api/telco/decision-engine/:profileId
+POST /api/telco/decision-engine/bulk/run
+GET /api/telco/decision-rules
+POST /api/telco/decision-rules
+PUT /api/telco/decision-rules/:id
+GET /api/telco/decision-logs
+```
+
+**Access:** Admin, Lender, Super Admin
+
+Automated loan decisioning based on configurable rules. The decision engine evaluates telco scores, transaction patterns, and risk thresholds to produce approve/decline/review decisions. Supports bulk decisioning for portfolio-level processing.
+
+#### Telco Loan Management
+
+```
+GET /api/telco/loans
+GET /api/telco/loans/:id
+POST /api/telco/loans
+PATCH /api/telco/loans/:id
+POST /api/telco/loans/:id/disburse
+GET /api/telco/loans/:loanId/repayments
+POST /api/telco/loans/:loanId/repayments
+GET /api/telco/loans/portfolio
+```
+
+**Access:** Admin, Super Admin (write); Admin, Lender, Super Admin (read)
+
+Full loan lifecycle management for telco-originated loans — creation, disbursement, repayment tracking, and portfolio analytics.
+
+#### Telco Consent
+
+```
+GET /api/telco/consent/:profileId
+GET /api/telco/consent-summary
+POST /api/telco/consent
+```
+
+**Access:** Admin, Lender, Super Admin
+
+Manages borrower consent for telco data usage in credit scoring. Tracks consent grants, revocations, and expiry dates.
+
+#### Telco Analytics & Dashboard
+
+```
+GET /api/telco/analytics
+GET /api/telco/dashboard
+GET /api/telco/operations-dashboard
+```
+
+**Access:** Admin, Lender, Regulator
+
+Real-time analytics including score distribution, approval rates, portfolio performance, default rates, and operational KPIs.
+
+---
+
+### 14.2 Consumer Self-Service Portal Endpoints
+
+The Consumer Portal (`/my-credit`) allows borrowers to access their own credit information without institutional involvement.
+
+#### Consumer Authentication
+
+```
+POST /api/consumer/register
+POST /api/consumer/verify-otp
+POST /api/consumer/login
+POST /api/consumer/resend-otp
+GET /api/consumer/verify-email
+GET /api/consumer/session
+POST /api/consumer/logout
+GET /api/consumer/auth/google
+GET /api/consumer/auth/google/callback
+```
+
+Consumer accounts use email-based OTP authentication or Google OAuth. Registration requires a valid email; a 6-digit OTP is sent for verification.
+
+#### Consumer Credit Lookup
+
+```
+POST /api/consumer/lookup
+```
+
+After authentication, consumers can look up their credit record by providing their national ID. The system matches against the registry and returns their credit report data including accounts, payment history, credit score, and inquiries.
+
+---
+
+### 14.3 Cross-Border & PAPSS Endpoints
+
+#### Data Sharing Agreements
+
+```
+GET /api/data-sharing-agreements
+POST /api/data-sharing-agreements
+PATCH /api/data-sharing-agreements/:id
+```
+
+**Access:** Admin, Super Admin, Regulator
+
+Manages bilateral data sharing agreements between countries, defining which institutions can exchange credit data across borders.
+
+#### Cross-Border Search
+
+Cross-border borrower search is available through standard search endpoints when an active data sharing agreement exists. The `requireCrossBorderAccess` middleware validates that the requesting institution has an active agreement covering the target jurisdiction.
+
+#### PAPSS Settlements
+
+```
+GET /api/papss/settlements
+GET /api/papss/settlements/:id
+POST /api/papss/settlements
+PATCH /api/papss/settlements/:id
+```
+
+**Access:** Admin, Super Admin, Regulator (read); Super Admin (write)
+
+Manages Pan-African Payment and Settlement System (PAPSS) settlement records for cross-border transactions.
+
+---
+
+### 14.4 Multi-Country Management
+
+#### Country Context
+
+The CDH supports 54 African jurisdictions simultaneously. Session-based country context is managed via:
+
+- **Super Admin users**: Can view any country or the global "all countries" view. The `viewingCountry` session property controls which jurisdiction's data is displayed.
+- **Admin/Regulator/Lender users**: Automatically scoped to their organization's country. The `userCountry` session property is derived from the organization's country setting.
+
+#### Country Settings
+
+```
+GET /api/country-settings
+PUT /api/country-settings/:country
+```
+
+**Access:** Super Admin
+
+Manages per-country configuration including regulatory body, data protection law, reporting frequency, default currency, and feature toggles.
+
+#### Data Sovereignty
+
+All API endpoints enforce data sovereignty — users can only access data from their authorized jurisdiction(s) unless cross-border access has been explicitly granted through a data sharing agreement.
+
+---
+
+### 14.5 AI Command Center Endpoints
+
+The AI Command Center provides advanced AI-powered analytics beyond basic credit risk analysis.
+
+#### Credit Narrative Generation
+
+```
+POST /api/ai/credit-narrative/:borrowerId
+```
+
+**Access:** Authenticated user
+
+Generates a detailed narrative summary of a borrower's credit history in natural language.
+
+#### Anomaly Detection
+
+```
+POST /api/ai/anomaly-detection
+```
+
+**Access:** Admin, Super Admin, Regulator
+
+Detects anomalies in credit data patterns across the portfolio — unusual balance changes, suspicious account activity, and data quality issues.
+
+#### Regulatory Report Generation
+
+```
+POST /api/ai/regulatory-report
+```
+
+**Access:** Admin, Super Admin, Regulator
+
+Generates AI-powered regulatory compliance reports for submission to national authorities.
+
+#### Natural Language Query
+
+```
+POST /api/ai/natural-query
+```
+
+**Access:** Authenticated user
+
+Allows users to query credit data using natural language questions (e.g., "How many borrowers in Ghana have defaulted in the last 6 months?").
+
+#### Cross-Border Risk Analysis
+
+```
+POST /api/ai/cross-border-risk
+```
+
+**Access:** Admin, Super Admin, Regulator
+
+Analyzes risk factors for cross-border lending and data sharing between jurisdictions.
+
+#### AI Loan Recommendation
+
+```
+POST /api/ai/loan-recommendation/:borrowerId
+```
+
+**Access:** Authenticated user
+
+Generates AI-powered loan product recommendations based on a borrower's credit profile, risk level, and financial capacity.
+
+#### Portfolio Intelligence
+
+```
+POST /api/ai/portfolio-intelligence
+```
+
+**Access:** Admin, Super Admin, Regulator
+
+Comprehensive AI analysis of portfolio health, concentration risk, trend forecasting, and strategic recommendations.
+
+---
+
 ## 15. Internal API Endpoints (Session-Authenticated)
 
 The following endpoints are available for authenticated users of the CDH web application. These endpoints use session-based authentication (not API key authentication) and are intended for internal platform use.

@@ -418,14 +418,14 @@ Ghana-mode institutions must submit data in the Bank of Ghana (BoG) Institutiona
 
 ### 11.2 IFF File Types
 
-| File Type | Code | Description |
-|-----------|------|-------------|
-| Consumer Credit | `CONSUMER_CREDIT` | Individual borrower credit facility data |
-| Consumer Dishonoured Cheque | `CONSUMER_DISHONOURED_CHEQUE` | Individual bounced cheque records |
-| Consumer Judgment | `CONSUMER_JUDGEMENT` | Court judgments against individuals |
-| Business Credit | `BUSINESS_CREDIT` | Corporate borrower credit facility data |
-| Business Dishonoured Cheques | `BUSINESS_DISHONOURED_CHEQUES` | Corporate bounced cheque records |
-| Business Judgment | `BUSINESS_JUDGEMENT` | Court judgments against businesses |
+| BoG Code | System Code | File Type | Description |
+|----------|-------------|-----------|-------------|
+| `CONC` | `CONSUMER_CREDIT` | Consumer Credit | Individual borrower credit facility data |
+| `COND` | `CONSUMER_DISHONOURED_CHEQUE` | Consumer Dishonoured Cheque | Individual bounced cheque records |
+| `CONJ` | `CONSUMER_JUDGEMENT` | Consumer Judgment | Court judgments against individuals |
+| `BUSC` | `BUSINESS_CREDIT` | Business Credit | Corporate borrower credit facility data |
+| `BUSD` | `BUSINESS_DISHONOURED_CHEQUES` | Business Dishonoured Cheques | Corporate bounced cheque records |
+| `BUSJ` | `BUSINESS_JUDGEMENT` | Business Judgment | Court judgments against businesses |
 
 ### 11.3 IFF File Format
 

@@ -43,10 +43,13 @@
 29. [ID Photos & Document Upload](#29-id-photos--document-upload)
 30. [Demo Environment](#30-demo-environment)
 31. [AI-Powered Features](#31-ai-powered-features)
-32. [Appendix A: Seed Credentials](#appendix-a-seed-credentials)
-33. [Appendix B: Role Access Matrix](#appendix-b-role-access-matrix)
-34. [Appendix C: Supported Currencies](#appendix-c-supported-currencies)
-35. [Appendix D: Glossary of Terms](#appendix-d-glossary-of-terms)
+32. [Multi-Country & Country Switching](#32-multi-country--country-switching)
+33. [Telco Scoring & Lending](#33-telco-scoring--lending)
+34. [Platform Command Center](#34-platform-command-center-super-admin)
+35. [Appendix A: Seed Credentials](#appendix-a-seed-credentials)
+36. [Appendix B: Role Access Matrix](#appendix-b-role-access-matrix)
+37. [Appendix C: Supported Currencies](#appendix-c-supported-currencies)
+38. [Appendix D: Glossary of Terms](#appendix-d-glossary-of-terms)
 
 ---
 
@@ -1977,6 +1980,162 @@ The system supports **42+ African currencies** plus USD, EUR, and GBP (45+ total
 | **Written Off** | An account that has been classified as uncollectible and removed from active portfolios |
 
 ---
+
+---
+
+## 32. Multi-Country & Country Switching
+
+The CDH operates across all 54 African Union member states simultaneously. The system provides multi-country data management with built-in data sovereignty controls.
+
+### 32.1 Country Context for Super Admins
+
+Super Admin users have global access and can switch between country views:
+
+1. After logging in as Super Admin, the **Platform Command Center** is displayed, showing all active jurisdictions.
+2. Click any **country card** to enter that country's dashboard view.
+3. Once inside a country view, all data (borrowers, accounts, disputes, etc.) is filtered to that jurisdiction.
+4. To return to the global view, click the **"Command Center"** button in the application header.
+5. The country context is maintained throughout your session until you explicitly switch.
+
+### 32.2 Country Context for Other Roles
+
+Admin, Regulator, Lender, and Viewer users are automatically scoped to their organization's country:
+
+- Your country is determined by your organization's registration country.
+- All data views are automatically filtered to your jurisdiction.
+- You cannot access data from other countries unless a **Data Sharing Agreement** grants cross-border access.
+- Cross-border search is available when an active agreement exists (see Section 28 — Global Search).
+
+### 32.3 Country-Specific Features
+
+Some features are enabled per-country:
+
+- **BoG Export** — Available only when operating in Ghana mode.
+- **BSL Export** — Available only when operating in Sierra Leone mode.
+- **Country Settings** — Super Admins can configure per-country settings including regulatory body, default currency, reporting frequency, and data protection law references.
+- **Retention Policies** — Data retention periods can be configured per jurisdiction to comply with local regulations.
+
+### 32.4 Data Sovereignty
+
+The system enforces data sovereignty through multiple layers:
+
+- **API-level filtering**: All data queries are automatically filtered by the user's country context.
+- **Cross-border middleware**: Cross-border data access requires an active Data Sharing Agreement.
+- **Audit logging**: All cross-border data access attempts are recorded in the audit trail.
+- **Organization-level isolation**: Each institution sees only data relevant to their jurisdiction and submitted by their institution (for Lender role).
+
+---
+
+## 33. Telco Scoring & Lending
+
+The Telco Scoring & Lending module enables financial institutions to assess creditworthiness of unbanked and underbanked populations using mobile money and telecom transaction data.
+
+### 33.1 Accessing Telco Scoring
+
+1. Navigate to **Telco Scoring** from the sidebar (Admin, Lender, Regulator, or Super Admin access required).
+2. The Telco Scoring dashboard displays:
+   - **Total Profiles** — Number of registered telco subscriber profiles.
+   - **Average Score** — Mean credit score across all scored profiles.
+   - **Score Distribution** — Breakdown of profiles by score range (Excellent, Good, Fair, Poor, Very Poor).
+
+### 33.2 Managing Telco Profiles
+
+A telco profile represents a mobile money subscriber:
+
+1. Click **Add Profile** to create a new telco profile.
+2. Enter the subscriber's details:
+   - **MSISDN** — Mobile phone number (required)
+   - **Provider** — Mobile money operator (e.g., MTN, Vodafone, Airtel)
+   - **Full Name** — Subscriber name
+   - **National ID** — Identity document number
+   - **KYC Level** — Know Your Customer verification level
+3. Once created, the profile can receive imported transaction data.
+
+### 33.3 Importing Transaction Data
+
+Mobile money transaction data is the foundation for telco credit scoring:
+
+1. Navigate to a telco profile's detail page.
+2. Click **Import Transactions**.
+3. Upload transaction records including:
+   - Transaction type (top-up, P2P transfer, bill payment, merchant payment, withdrawal)
+   - Amount and currency
+   - Date and time
+   - Counterparty information
+4. The system processes and stores the transactions for scoring analysis.
+
+### 33.4 Generating a Telco Credit Score
+
+1. Navigate to a telco profile with imported transaction data.
+2. Click the **Generate Score** button.
+3. The AI-powered scoring engine analyzes the subscriber's transaction patterns and generates a credit score (300–850).
+4. The score card displays:
+   - **Credit Score** — Numerical score with risk category
+   - **Factor Breakdown** — Contribution of each scoring factor:
+     - Transaction frequency and consistency
+     - Volume and growth trends
+     - P2P network size and diversity
+     - Bill payment regularity
+     - Balance stability
+   - **Recommendations** — AI-generated lending recommendations
+
+### 33.5 Decision Engine
+
+The Decision Engine automates loan approval decisions based on telco scores:
+
+1. Navigate to **Telco Lending** from the sidebar.
+2. The **Decision Rules** tab allows admins to configure:
+   - Minimum score threshold for auto-approval
+   - Maximum loan amount per score range
+   - Risk-based interest rate tiers
+   - Conditions for manual review
+3. To run a decision:
+   - Select a telco profile
+   - Click **Run Decision Engine**
+   - The engine evaluates the profile against configured rules
+   - Result: **Approved**, **Declined**, or **Manual Review**
+4. **Bulk Decisioning** — Process multiple profiles at once for portfolio-level decisions.
+
+### 33.6 Telco Loan Management
+
+Once a decision is approved:
+
+1. Create a **Telco Loan** record with terms (amount, interest rate, tenure, repayment schedule).
+2. Click **Disburse** to mark the loan as disbursed.
+3. Track repayments as they are received.
+4. The **Portfolio** tab shows loan portfolio analytics:
+   - Total loans disbursed
+   - Outstanding balance
+   - Default rate
+   - Collection rate
+
+### 33.7 Telco Consent Management
+
+Before scoring a subscriber:
+
+1. Navigate to the profile's **Consent** tab.
+2. Record consent for data usage in credit scoring.
+3. Consent records track:
+   - Consent type and purpose
+   - Grant date and expiry date
+   - Revocation status
+4. The **Consent Summary** dashboard shows overall consent statistics.
+
+### 33.8 Consumer Self-Service Portal
+
+The Consumer Portal at `/my-credit` allows borrowers to access their own credit information:
+
+1. **Registration** — Consumers register with their email address and receive a verification OTP.
+2. **Login** — Consumers log in using email + OTP or Google OAuth.
+3. **Credit Lookup** — After authentication, consumers enter their national ID to look up their credit record.
+4. **Credit Report** — The portal displays the consumer's credit report including:
+   - Credit score and score factors
+   - Active credit accounts and balances
+   - Payment history
+   - Credit inquiries
+   - Court judgments (if any)
+5. **Dispute Filing** — Consumers can file disputes directly from their credit report (see Section 8 — Dispute Management).
+6. **Consumer Statement** — Consumers can add a personal statement to their credit file.
 
 ---
 
