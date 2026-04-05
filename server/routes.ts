@@ -6883,14 +6883,37 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
           const history = reportData.paymentHistory?.[acct.id] || [];
           if (history.length > 0) {
-            ensureSpace(20);
-            doc.fontSize(7).font("Helvetica-Bold").fill(GRAY).text(L("paymentHistory"), 48, doc.y);
-            doc.moveDown(0.2);
-            const statusLine = history.slice(0, 24).map((ph: any) => {
-              const label = ph.status === "on_time" ? "OK" : ph.status === "late" ? "30" : ph.status === "missed" ? "X" : ph.status === "partial" ? "P" : "ND";
-              return `${ph.period}: ${label}`;
-            }).join(" | ");
-            doc.fontSize(6.5).font("Helvetica").fill(DARK).text(statusLine, 48, doc.y, { width: W - 16 });
+            const phSlice = history.slice(0, 24);
+            const phCount = phSlice.length;
+            const phGridHeight = 36;
+            ensureSpace(phGridHeight + 16);
+            doc.fontSize(7).font("Helvetica-Bold").fill(GRAY).text("Payment History (Last 24 Months)", 48, doc.y);
+            doc.moveDown(0.25);
+            const phX0 = 48;
+            const phLabelW = 42;
+            const phCellW = (W - 16 - phLabelW) / phCount;
+            const phRowH = 12;
+            const phStartY = doc.y;
+
+            doc.fontSize(5).font("Helvetica-Bold").fill(GRAY).text("Month", phX0, phStartY + 2, { width: phLabelW });
+            phSlice.forEach((ph: { period: string }, i: number) => {
+              doc.fontSize(5).font("Helvetica").fill(GRAY)
+                .text(ph.period || "", phX0 + phLabelW + i * phCellW, phStartY + 2, { width: phCellW, align: "center" });
+            });
+
+            doc.fontSize(5).font("Helvetica-Bold").fill(GRAY).text("Status", phX0, phStartY + phRowH + 2, { width: phLabelW });
+            phSlice.forEach((ph: { status: string; daysLate?: number }, i: number) => {
+              let code = "ND";
+              let color = GRAY;
+              if (ph.status === "on_time") { code = "OK"; color = "#16a34a"; }
+              else if (ph.status === "late") { code = String(ph.daysLate || 30); color = "#ca8a04"; }
+              else if (ph.status === "missed") { code = "X"; color = "#dc2626"; }
+              else if (ph.status === "partial") { code = "P"; color = "#ea580c"; }
+              doc.fontSize(5.5).font("Helvetica-Bold").fill(color)
+                .text(code, phX0 + phLabelW + i * phCellW, phStartY + phRowH + 2, { width: phCellW, align: "center" });
+            });
+
+            doc.y = phStartY + phRowH * 2 + 6;
             doc.moveDown(0.3);
           }
 
