@@ -6499,9 +6499,33 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       doc.moveDown(0.5);
 
       // === CREDIT UTILIZATION SUMMARY (unnumbered) ===
-      const openAccts = accounts.filter((a: any) => a.status !== "closed");
-      const totalLimit = openAccts.reduce((ss: number, a: any) => ss + parseFloat(a.originalAmount || "0"), 0);
-      const totalUsed = openAccts.reduce((ss: number, a: any) => ss + parseFloat(a.currentBalance || "0"), 0);
+      interface PdfAccount {
+        id: number;
+        status: string;
+        accountType: string;
+        accountNumber: string;
+        lenderInstitution: string;
+        originalAmount: string;
+        currentBalance: string;
+        currency: string;
+        daysInArrears: number;
+        monthlyInstallment: string;
+        interestRate: string;
+        openDate: string;
+        lastPaymentDate: string;
+        updatedAt: string;
+        maturityDate: string;
+        natureOfGuarantor: string;
+        guarantorName: string;
+        guarantorRelationship: string;
+        collateralType: string;
+        collateralValue: string;
+        sector: string;
+      }
+      const typedAccounts = accounts as PdfAccount[];
+      const openAccts = typedAccounts.filter((a) => a.status !== "closed");
+      const totalLimit = openAccts.reduce((ss: number, a) => ss + parseFloat(a.originalAmount || "0"), 0);
+      const totalUsed = openAccts.reduce((ss: number, a) => ss + parseFloat(a.currentBalance || "0"), 0);
       const utilRatio = totalLimit > 0 ? ((totalUsed / totalLimit) * 100) : 0;
       const availableCredit = Math.max(0, totalLimit - totalUsed);
 
@@ -6529,7 +6553,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         return d && (!oldest || d < oldest) ? d : oldest;
       }, null as Date | null);
       const historyYears = oldestAcctDate ? Math.max(0, Math.floor((Date.now() - oldestAcctDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000))) : 0;
-      const accountTypes = new Set(openAccts.map((a: any) => a.accountType || "Unknown"));
+      const accountTypes = new Set(openAccts.map((a) => a.accountType || "Unknown"));
 
       tableRow([{ value: "Payment History", width: W * 0.25 }, { value: "35% weight", width: W * 0.2 }, { value: s.delinquentAccounts === 0 ? "Clean" : `${s.delinquentAccounts} late`, width: W * 0.25, bold: true }, { value: s.delinquentAccounts === 0 ? "Positive" : "Negative", width: W * 0.3, align: "right", color: s.delinquentAccounts === 0 ? "#16a34a" : "#dc2626" }]);
       tableRow([{ value: "Credit Utilization", width: W * 0.25 }, { value: "30% weight", width: W * 0.2 }, { value: `${utilRatio.toFixed(1)}%`, width: W * 0.25, bold: true }, { value: utilRatio <= 30 ? "Excellent" : utilRatio <= 50 ? "Good" : utilRatio <= 75 ? "Fair" : "Poor", width: W * 0.3, align: "right", color: utilRatio <= 30 ? "#16a34a" : utilRatio <= 75 ? "#ca8a04" : "#dc2626" }]);
@@ -6668,25 +6692,25 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         { label: L("value"), width: 100, align: "right" },
       ];
       tableHeader(overviewCols);
-      const totalBal = openAccts.reduce((ss: number, a: any) => ss + parseFloat(a.currentBalance || "0"), 0);
-      const overdueAccts = openAccts.filter((a: any) => (a.daysInArrears || 0) > 0);
-      const npl = openAccts.filter((a: any) => (a.daysInArrears || 0) > 90);
-      const closedAccts = accounts.filter((a: any) => a.status === "closed");
-      const woAccts = accounts.filter((a: any) => a.status === "written_off");
-      const totalArrears = overdueAccts.reduce((ss: number, a: any) => ss + parseFloat(a.currentBalance || "0") * 0.1, 0);
-      const maxDaysInArrears = openAccts.reduce((m: number, a: any) => Math.max(m, a.daysInArrears || 0), 0);
+      const totalBal = openAccts.reduce((ss: number, a) => ss + parseFloat(a.currentBalance || "0"), 0);
+      const overdueAccts = openAccts.filter((a) => (a.daysInArrears || 0) > 0);
+      const npl = openAccts.filter((a) => (a.daysInArrears || 0) > 90);
+      const closedAccts = typedAccounts.filter((a) => a.status === "closed");
+      const woAccts = typedAccounts.filter((a) => a.status === "written_off");
+      const woTotal = woAccts.reduce((ss: number, a) => ss + parseFloat(a.currentBalance || "0"), 0);
+      const totalOverdue = overdueAccts.reduce((ss: number, a) => ss + parseFloat(a.currentBalance || "0") * 0.1, 0);
       const indicators = [
-        ["1", L("openFacilities"), String(openAccts.length)],
-        ["2", L("totalOutstanding"), totalBal.toLocaleString("en-US", { minimumFractionDigits: 2 })],
-        ["3", "Total Overdue Amount on Open Credit Facilities", totalArrears.toLocaleString("en-US", { minimumFractionDigits: 2 })],
-        ["4", L("overdueFacilities"), String(overdueAccts.length)],
-        ["5", L("nonPerforming"), String(npl.length)],
-        ["6", L("maxDays"), String(maxDaysInArrears)],
-        ["7", L("closedFacilities"), String(closedAccts.length)],
-        ["8", L("writtenOff"), String(woAccts.length)],
-        ["9", "Total Write-Off Amount", woAccts.reduce((ss: number, a: any) => ss + parseFloat(a.currentBalance || "0"), 0).toLocaleString("en-US", { minimumFractionDigits: 2 })],
-        ["10", L("courtJudgments"), String(judgments.length)],
-        ["11", L("creditInquiries"), String(inquiries.length)],
+        ["1", "Number of Open Credit Facilities", String(openAccts.length)],
+        ["2", "Total Outstanding Balance in Open Credit Facilities", totalBal.toLocaleString("en-US", { minimumFractionDigits: 2 })],
+        ["3", "Total Overdue Amount on Open Credit Facilities", totalOverdue.toLocaleString("en-US", { minimumFractionDigits: 2 })],
+        ["4", "Number of Open Credit Facilities with Overdue", String(overdueAccts.length)],
+        ["5", "Number of Open Facilities > 90 Days in Arrears (Non-Performing)", String(npl.length)],
+        ["6", "Number of Closed Credit Facilities", String(closedAccts.length)],
+        ["7", "Number of Facilities with Write-Off", String(woAccts.length)],
+        ["8", "Total Write-Off Amount", woTotal > 0 ? woTotal.toLocaleString("en-US", { minimumFractionDigits: 2 }) : "0"],
+        ["9", "Number of Credit Facilities with Judgments", String(judgments.length)],
+        ["10", "Number of Inquiries in the Last 6 Months", String(inquiries.length)],
+        ["11", "Number of Disputes Raised in the Last 6 Months", "0"],
       ];
       indicators.forEach(([sno, label, val]) => {
         tableRow([
@@ -6698,7 +6722,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
       // === SECTION 2: CLASSIFICATION BY INSTITUTION ===
       const instGroups: Record<string, { count: number; approved: number; balance: number; overdue: number; currency: string }> = {};
-      openAccts.forEach((a: any) => {
+      openAccts.forEach((a) => {
         const inst = a.lenderInstitution || "Unknown";
         const cur = a.currency || "GHS";
         const key = `${inst}|||${cur}`;
@@ -6739,16 +6763,17 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       }
 
       // === SECTION 3: TOTAL LIABILITY SUMMARY ===
-      const liabCurrencies = [...new Set(accounts.map((a: any) => a.currency || "GHS"))];
-      const liabSummary: Record<string, { balance: number; overdue: number; d1_30: number; d31_60: number; d61_90: number; d91_120: number; d121_150: number; d151_180: number; d180plus: number }> = {};
+      const liabCurrencies = [...new Set(typedAccounts.map((a) => a.currency || "GHS"))];
+      type LiabBucket = { balance: number; overdue: number; d1_30: number; d31_60: number; d61_90: number; d91_120: number; d121_150: number; d151_180: number; d180plus: number };
+      const liabSummary: Record<string, LiabBucket> = {};
       liabCurrencies.forEach(c => { liabSummary[c] = { balance: 0, overdue: 0, d1_30: 0, d31_60: 0, d61_90: 0, d91_120: 0, d121_150: 0, d151_180: 0, d180plus: 0 }; });
-      openAccts.forEach((a: any) => {
+      openAccts.forEach((a) => {
         const c = a.currency || "GHS";
         const bal = parseFloat(a.currentBalance || "0");
         const days = a.daysInArrears || 0;
         liabSummary[c].balance += bal;
         if (days > 0) {
-          const overdueAmt = bal * 0.15;
+          const overdueAmt = bal * 0.1;
           liabSummary[c].overdue += overdueAmt;
           if (days <= 30) liabSummary[c].d1_30 += overdueAmt;
           else if (days <= 60) liabSummary[c].d31_60 += overdueAmt;
@@ -6763,10 +6788,10 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       sectionTitle("Total Liability Summary", 3);
       resetTableRowIdx();
       const liabColWidth = liabCurrencies.length > 0 ? (W - W * 0.4) / liabCurrencies.length : W * 0.3;
-      const liabHeaderCols = [{ label: "Description", width: W * 0.4 }];
-      liabCurrencies.forEach(c => liabHeaderCols.push({ label: c, width: liabColWidth, align: "right" } as any));
+      const liabHeaderCols: Array<{ label: string; width: number; align?: string }> = [{ label: "Description", width: W * 0.4 }];
+      liabCurrencies.forEach(c => liabHeaderCols.push({ label: c, width: liabColWidth, align: "right" }));
       tableHeader(liabHeaderCols);
-      const liabRows = [
+      const liabRowKeys: Array<{ label: string; key: keyof LiabBucket }> = [
         { label: "Total Current Balance", key: "balance" },
         { label: "Total Amount Overdue", key: "overdue" },
         { label: "Overdue 1-30 days", key: "d1_30" },
@@ -6777,21 +6802,22 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         { label: "Overdue 151-180 days", key: "d151_180" },
         { label: "Overdue > 180 days", key: "d180plus" },
       ];
-      liabRows.forEach(row => {
-        const cols: any[] = [{ value: row.label, width: W * 0.4, bold: row.key === "balance" || row.key === "overdue" }];
+      liabRowKeys.forEach(row => {
+        const isBoldRow = row.key === "balance" || row.key === "overdue";
+        const cols: Array<{ value: string; width: number; bold?: boolean; align?: string; color?: string }> = [{ value: row.label, width: W * 0.4, bold: isBoldRow }];
         liabCurrencies.forEach(c => {
-          const val = (liabSummary[c] as any)[row.key] as number;
-          cols.push({ value: val.toLocaleString("en-US", { minimumFractionDigits: 2 }), width: liabColWidth, align: "right", bold: row.key === "balance" || row.key === "overdue", color: row.key !== "balance" && val > 0 ? "#dc2626" : DARK });
+          const val = liabSummary[c][row.key];
+          cols.push({ value: val.toLocaleString("en-US", { minimumFractionDigits: 2 }), width: liabColWidth, align: "right", bold: isBoldRow, color: row.key !== "balance" && val > 0 ? "#dc2626" : DARK });
         });
         tableRow(cols);
       });
-      const totalInstitutions = new Set(accounts.map((a: any) => a.lenderInstitution)).size;
+      const totalInstitutions = new Set(typedAccounts.map((a) => a.lenderInstitution)).size;
       tableRow([{ value: "Total Number of Institutions", width: W * 0.4, bold: true }, ...liabCurrencies.map(() => ({ value: String(totalInstitutions), width: liabColWidth, align: "right" as const, bold: true }))]);
       tableRow([{ value: "Total Number of Credit Facilities", width: W * 0.4, bold: true }, ...liabCurrencies.map(() => ({ value: String(accounts.length), width: liabColWidth, align: "right" as const, bold: true }))]);
 
       // === SECTION 4: CREDIT EXPOSURE BY PRODUCT ===
       const prodGroups: Record<string, Record<string, { count: number; balance: number; overdue: number }>> = {};
-      openAccts.forEach((a: any) => {
+      openAccts.forEach((a) => {
         const type = a.accountType || "Other";
         const cur = a.currency || "GHS";
         if (!prodGroups[type]) prodGroups[type] = {};
@@ -6912,7 +6938,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       }
 
       // === GUARANTEED LOANS (unnumbered) ===
-      const guaranteedLoans = accounts.filter((a: any) => a.natureOfGuarantor && a.natureOfGuarantor !== "103");
+      const guaranteedLoans = typedAccounts.filter((a) => a.natureOfGuarantor && a.natureOfGuarantor !== "103");
       sectionTitle("Guaranteed Loans");
       if (guaranteedLoans.length > 0) {
         resetTableRowIdx();
@@ -6923,7 +6949,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
           { label: "Outstanding Bal.", width: W * 0.2, align: "right" },
           { label: "Guarantor Type", width: W * 0.15 },
         ]);
-        guaranteedLoans.forEach((acct: any) => {
+        guaranteedLoans.forEach((acct) => {
           tableRow([
             { value: acct.lenderInstitution || "—", width: W * 0.25, bold: true },
             { value: acct.accountNumber || "—", width: W * 0.2 },
@@ -7020,11 +7046,25 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       }
 
       // === SECTION 9: COLLECTIONS & DEROGATORY ITEMS ===
-      const collectionsItems = accounts
-        .filter((a: any) => a.status === "written_off" || a.status === "default")
-        .map((a: any) => ({
+      function getRRating(acct: { status: string; daysInArrears?: number }): string {
+        const days = acct.daysInArrears || 0;
+        if (acct.status === "written_off") return "R9";
+        if (acct.status === "default") return "R8";
+        if (acct.status === "restructured") return "R7";
+        if (days > 150) return "R6";
+        if (days > 120) return "R5";
+        if (days > 90) return "R4";
+        if (days > 60) return "R3";
+        if (days > 30) return "R2";
+        return "R1";
+      }
+
+      const collectionsItems = typedAccounts
+        .filter((a) => a.status === "written_off" || a.status === "default")
+        .map((a) => ({
           creditor: a.lenderInstitution,
           accountNumber: a.accountNumber,
+          rRating: getRRating(a),
           status: a.status === "written_off" ? "Written Off" : "In Default",
           amount: a.currentBalance,
           currency: a.currency || "GHS",
@@ -7035,20 +7075,23 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       if (collectionsItems.length > 0) {
         resetTableRowIdx();
         tableHeader([
-          { label: "Creditor", width: W * 0.22 },
-          { label: "Account No.", width: W * 0.18 },
-          { label: "Status", width: W * 0.15 },
-          { label: "Amount", width: W * 0.18, align: "right" },
-          { label: "Currency", width: W * 0.12 },
+          { label: "Creditor", width: W * 0.2 },
+          { label: "Account No.", width: W * 0.16 },
+          { label: "R-Rating", width: W * 0.1 },
+          { label: "Status", width: W * 0.13 },
+          { label: "Amount", width: W * 0.16, align: "right" },
+          { label: "Currency", width: W * 0.1 },
           { label: "Date Reported", width: W * 0.15 },
         ]);
-        collectionsItems.forEach((item: any) => {
+        collectionsItems.forEach((item) => {
+          const ratingColor = item.rRating === "R9" || item.rRating === "R8" ? "#dc2626" : "#ca8a04";
           tableRow([
-            { value: item.creditor || "—", width: W * 0.22, bold: true },
-            { value: item.accountNumber || "—", width: W * 0.18 },
-            { value: item.status, width: W * 0.15, color: "#dc2626" },
-            { value: item.amount ? parseFloat(item.amount).toLocaleString("en-US", { minimumFractionDigits: 2 }) : "—", width: W * 0.18, align: "right", bold: true },
-            { value: item.currency, width: W * 0.12 },
+            { value: item.creditor || "—", width: W * 0.2, bold: true },
+            { value: item.accountNumber || "—", width: W * 0.16 },
+            { value: item.rRating, width: W * 0.1, bold: true, color: ratingColor },
+            { value: item.status, width: W * 0.13, color: "#dc2626" },
+            { value: item.amount ? parseFloat(item.amount).toLocaleString("en-US", { minimumFractionDigits: 2 }) : "—", width: W * 0.16, align: "right", bold: true },
+            { value: item.currency, width: W * 0.1 },
             { value: item.dateReported, width: W * 0.15 },
           ]);
         });
@@ -7068,7 +7111,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       if (s.writtenOffAccounts === 0) riskStrengths.push("No written-off or bad debt accounts");
       if (s.judgmentCount === 0) riskStrengths.push("No court judgments or legal actions recorded");
       const onTimeRatio = accounts.length > 0
-        ? accounts.filter((a: any) => a.status === "current" || a.status === "closed").length / accounts.length
+        ? typedAccounts.filter((a) => a.status === "current" || a.status === "closed").length / typedAccounts.length
         : 0;
       if (onTimeRatio >= 0.8) riskStrengths.push(`${(onTimeRatio * 100).toFixed(0)}% of accounts are current or closed in good standing`);
       if (s.activeAccounts >= 3) riskStrengths.push("Diverse credit portfolio with multiple active facilities");
@@ -7118,13 +7161,20 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
       // === SECTION 11: CONSUMER STATEMENT ===
       sectionTitle("Consumer Statement", 11);
-      ensureSpace(40);
+      ensureSpace(50);
+      const consumerStatement = reportData.consumerStatement || b.consumerStatement || "";
       const csY = doc.y;
-      doc.rect(46, csY, W - 12, 50).fill("#f8f9fa");
+      doc.rect(46, csY, W - 12, consumerStatement ? 60 : 50).fill("#f8f9fa");
       doc.fontSize(7).font("Helvetica-Bold").fill(GRAY).text("CONSUMER-SUBMITTED STATEMENT", 52, csY + 6, { width: W - 24 });
-      doc.fontSize(7).font("Helvetica").fill(GRAY)
-        .text("No consumer statement has been submitted for this file. Consumers have the right to submit a personal statement of up to 200 words to be included in their credit report, explaining circumstances related to any credit information contained herein.", 52, csY + 18, { width: W - 24 });
-      doc.y = csY + 54;
+      if (consumerStatement) {
+        doc.fontSize(7.5).font("Helvetica").fill(DARK)
+          .text(consumerStatement, 52, csY + 18, { width: W - 24 });
+        doc.y = csY + 64;
+      } else {
+        doc.fontSize(7).font("Helvetica").fill(GRAY)
+          .text("No consumer statement has been submitted for this file. Consumers have the right to submit a personal statement of up to 200 words to be included in their credit report, explaining circumstances related to any credit information contained herein.", 52, csY + 18, { width: W - 24 });
+        doc.y = csY + 54;
+      }
       doc.moveDown(0.2);
       doc.fontSize(6).font("Helvetica").fill(LIGHT)
         .text("Under the Credit Reporting Act, consumers have the right to dispute inaccurate information and add a personal statement to their credit file. Contact the Credit Registry to exercise these rights.", 46, doc.y, { width: W - 12 });
