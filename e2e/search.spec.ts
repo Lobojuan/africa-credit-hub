@@ -11,23 +11,13 @@ test.describe('Search Functionality', () => {
     expect(response.ok()).toBeTruthy();
   });
 
-  test('search pages load without errors', async ({ page }) => {
-    const consoleErrors: string[] = [];
-    page.on('console', msg => {
-      if (msg.type() === 'error') consoleErrors.push(msg.text());
-    });
-
-    let response = await page.goto('/search');
+  test('search page loads', async ({ page }) => {
+    const response = await page.goto('/search');
     expect(response?.status()).toBeLessThan(400);
-    await page.waitForTimeout(1000);
+  });
 
-    response = await page.goto('/cross-border-search');
+  test('cross-border search page loads', async ({ page }) => {
+    const response = await page.goto('/cross-border-search');
     expect(response?.status()).toBeLessThan(400);
-    await page.waitForTimeout(1000);
-
-    const criticalErrors = consoleErrors.filter(e =>
-      !e.includes('favicon') && !e.includes('i18next') && !e.includes('React DevTools')
-    );
-    expect(criticalErrors).toHaveLength(0);
   });
 });

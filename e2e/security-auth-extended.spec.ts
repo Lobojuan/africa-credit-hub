@@ -1,28 +1,38 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Security & Authentication Extended [NFR-SEC, ENT-01]', () => {
+interface UserRecord {
+  id: number;
+  username: string;
+  fullName: string;
+  role: string;
+  email: string;
+}
 
-  test('NFR-SEC-04: account lockout after failed login attempts', async ({ request }) => {
-    const res1 = await request.post('/api/auth/login', {
-      data: { username: 'lockout_test_user', password: 'wrong1' }
-    });
-    expect(res1.status()).toBeGreaterThanOrEqual(400);
+interface AuditLogEntry {
+  id: number;
+  action: string;
+  userId: number | null;
+  ipAddress: string;
+  timestamp: string;
+}
 
-    const res2 = await request.post('/api/auth/login', {
-      data: { username: 'lockout_test_user', password: 'wrong2' }
-    });
-    expect(res2.status()).toBeGreaterThanOrEqual(400);
+interface AuditVerification {
+  verified: boolean;
+  totalLogs: number;
+}
 
-    const res3 = await request.post('/api/auth/login', {
-      data: { username: 'lockout_test_user', password: 'wrong3' }
-    });
-    expect(res3.status()).toBeGreaterThanOrEqual(400);
-    const body = await res3.json();
-    const showsAttemptWarning = res3.status() >= 400;
-    expect(showsAttemptWarning).toBeTruthy();
+test.describe('Security & Authentication [NFR-SEC]', () => {
+
+  test('NFR-SEC-04: repeated failed logins return 401', async ({ request }) => {
+    for (let i = 0; i < 3; i++) {
+      const res = await request.post('/api/auth/login', {
+        data: { username: 'lockout_test_user', password: `wrong${i}` }
+      });
+      expect(res.status()).toBe(401);
+    }
   });
 
-  test('NFR-SEC-03: password complexity enforcement', async ({ request }) => {
+  test('NFR-SEC-03: weak passwords are rejected', async ({ request }) => {
     const loginRes = await request.post('/api/auth/login', {
       data: { username: 'admin', password: 'admin0987' }
     });
@@ -38,14 +48,11 @@ test.describe('Security & Authentication Extended [NFR-SEC, ENT-01]', () => {
     }
   });
 
-  test('NFR-SEC-01: RBAC - lender cannot access admin endpoints', async ({ request }) => {
+  test('NFR-SEC-01: non-admin role cannot access admin endpoints', async ({ request }) => {
     const loginRes = await request.post('/api/auth/login', {
       data: { username: 'dashen_user', password: 'dashen123' }
     });
-    if (!loginRes.ok() || loginRes.status() === 429) {
-      test.skip();
-      return;
-    }
+    if (!loginRes.ok()) { test.skip(); return; }
 
     const adminEndpoints = ['/api/users', '/api/organizations'];
     for (const endpoint of adminEndpoints) {
@@ -54,7 +61,7 @@ test.describe('Security & Authentication Extended [NFR-SEC, ENT-01]', () => {
     }
   });
 
-  test('NFR-SEC-02: passwords are hashed (not returned in API)', async ({ request }) => {
+  test('NFR-SEC-02: user API never exposes password fields', async ({ request }) => {
     const loginRes = await request.post('/api/auth/login', {
       data: { username: 'admin', password: 'admin0987' }
     });
@@ -63,14 +70,14 @@ test.describe('Security & Authentication Extended [NFR-SEC, ENT-01]', () => {
 
     const usersRes = await request.get('/api/users');
     expect(usersRes.ok()).toBeTruthy();
-    const users = await usersRes.json();
+    const users = await usersRes.json() as UserRecord[];
     for (const user of users.slice(0, 5)) {
       expect(user).not.toHaveProperty('password');
       expect(user).not.toHaveProperty('passwordHash');
     }
   });
 
-  test('NFR-SEC-05: audit log records login events', async ({ request }) => {
+  test('NFR-SEC-05: audit log captures LOGIN action', async ({ request }) => {
     const loginRes = await request.post('/api/auth/login', {
       data: { username: 'admin', password: 'admin0987' }
     });
@@ -79,13 +86,13 @@ test.describe('Security & Authentication Extended [NFR-SEC, ENT-01]', () => {
 
     const auditRes = await request.get('/api/audit-logs');
     expect(auditRes.ok()).toBeTruthy();
-    const logs = await auditRes.json();
+    const logs = await auditRes.json() as AuditLogEntry[];
     expect(logs.length).toBeGreaterThan(0);
-    const loginLog = logs.find((l: any) => l.action === 'LOGIN');
+    const loginLog = logs.find((entry) => entry.action === 'LOGIN');
     expect(loginLog).toBeTruthy();
   });
 
-  test('NFR-SEC-06: audit logs include IP address', async ({ request }) => {
+  test('NFR-SEC-06: audit logs contain IP address', async ({ request }) => {
     const loginRes = await request.post('/api/auth/login', {
       data: { username: 'admin', password: 'admin0987' }
     });
@@ -93,24 +100,25 @@ test.describe('Security & Authentication Extended [NFR-SEC, ENT-01]', () => {
     expect(loginRes.ok()).toBeTruthy();
 
     const auditRes = await request.get('/api/audit-logs');
-    const logs = await auditRes.json();
-    const recentLog = logs[0];
-    expect(recentLog).toHaveProperty('ipAddress');
+    const logs = await auditRes.json() as AuditLogEntry[];
+    expect(logs[0]).toHaveProperty('ipAddress');
+    expect(typeof logs[0].ipAddress).toBe('string');
   });
 
-  test('NFR-SEC-09: session timeout configuration exists', async ({ request }) => {
+  test('NFR-SEC-09: session endpoint returns session data', async ({ request }) => {
     const loginRes = await request.post('/api/auth/login', {
       data: { username: 'admin', password: 'admin0987' }
     });
-    expect([200, 429]).toContain(loginRes.status());
+    if (loginRes.status() === 429) { test.skip(); return; }
+    expect(loginRes.ok()).toBeTruthy();
 
-    if (loginRes.ok()) {
-      const sessionRes = await request.get('/api/auth/session');
-      expect(sessionRes.ok()).toBeTruthy();
-    }
+    const sessionRes = await request.get('/api/auth/session');
+    expect(sessionRes.ok()).toBeTruthy();
+    const session = await sessionRes.json() as Record<string, unknown>;
+    expect(session).toHaveProperty('user');
   });
 
-  test('ENT-07: audit log integrity verification endpoint', async ({ request }) => {
+  test('ENT-07: audit log integrity verification', async ({ request }) => {
     const loginRes = await request.post('/api/auth/login', {
       data: { username: 'admin', password: 'admin0987' }
     });
@@ -119,7 +127,8 @@ test.describe('Security & Authentication Extended [NFR-SEC, ENT-01]', () => {
 
     const verifyRes = await request.get('/api/audit/verify-integrity');
     expect(verifyRes.ok()).toBeTruthy();
-    const data = await verifyRes.json();
+    const data = await verifyRes.json() as AuditVerification;
     expect(data).toHaveProperty('verified');
+    expect(data.verified).toBe(true);
   });
 });

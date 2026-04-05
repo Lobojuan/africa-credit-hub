@@ -1,119 +1,164 @@
 import { test, expect } from '@playwright/test';
 import { postWithCSRF } from './helpers/csrf';
 
+interface DisputeRecord {
+  id: string;
+  borrowerId: string;
+  creditAccountId: string;
+  status: string;
+  correctionType: string | null;
+  slaDeadline: string | null;
+  createdAt: string;
+}
+
+interface ConsentRecord {
+  id: string;
+  borrowerId: string;
+  receiptNumber: string;
+  status: string;
+  grantedAt: string;
+}
+
+interface ApprovalItem {
+  entityType: string;
+  action: string;
+  status: string;
+}
+
+interface BorrowerListResponse {
+  data: Array<{ id: string }>;
+}
+
+interface AccountListResponse {
+  data: Array<{ id: string; borrowerId: string }>;
+}
+
 test.describe('Operations: Disputes, Consent, Helpdesk [FR-CON, DQ-04, DQ-05]', () => {
 
-  test('FR-CON-04: disputes list API returns data with correct shape', async ({ page }) => {
+  test('FR-CON-04: disputes list has correct record shape', async ({ page }) => {
     const response = await page.request.get('/api/disputes');
     expect(response.ok()).toBeTruthy();
-    const data = await response.json();
-    expect(Array.isArray(data)).toBeTruthy();
-    if (data.length > 0) {
-      expect(data[0]).toHaveProperty('id');
-      expect(data[0]).toHaveProperty('status');
+    const disputes = await response.json() as DisputeRecord[];
+    expect(Array.isArray(disputes)).toBeTruthy();
+    if (disputes.length > 0) {
+      expect(disputes[0]).toHaveProperty('id');
+      expect(disputes[0]).toHaveProperty('status');
+      expect(disputes[0]).toHaveProperty('borrowerId');
+      expect(disputes[0]).toHaveProperty('creditAccountId');
     }
   });
 
-  test('FR-CON-05: dispute has correction type and SLA fields', async ({ page }) => {
+  test('FR-CON-05: dispute with SLA deadline validates date', async ({ page }) => {
     const response = await page.request.get('/api/disputes');
-    const data = await response.json();
-    if (data.length === 0) { test.skip(); return; }
-    const disputeWithSla = data.find((d: any) => d.slaDeadline);
+    const disputes = await response.json() as DisputeRecord[];
+    if (disputes.length === 0) { test.skip(); return; }
+    const disputeWithSla = disputes.find((d) => d.slaDeadline !== null);
     if (disputeWithSla) {
-      expect(new Date(disputeWithSla.slaDeadline).getTime()).toBeGreaterThan(0);
+      const slaDate = new Date(disputeWithSla.slaDeadline!);
+      expect(slaDate.getTime()).toBeGreaterThan(0);
     }
   });
 
-  test('DQ-04/DQ-05: dispute creation works', async ({ page }) => {
+  test('DQ-04/DQ-05: dispute creation returns record with SLA deadline', async ({ page }) => {
     const borrowersRes = await page.request.get('/api/borrowers');
-    const borrowersData = await borrowersRes.json();
-    const borrowers = Array.isArray(borrowersData) ? borrowersData : borrowersData.data || [];
-    if (borrowers.length === 0) { test.skip(); return; }
-    const borrowerId = borrowers[0].id;
+    const borrowersBody = await borrowersRes.json() as BorrowerListResponse;
+    if (borrowersBody.data.length === 0) { test.skip(); return; }
+    const borrowerId = borrowersBody.data[0].id;
 
     const accountsRes = await page.request.get('/api/credit-accounts');
-    const accountsData = await accountsRes.json();
-    const accounts = Array.isArray(accountsData) ? accountsData : accountsData.data || [];
-    const borrowerAccount = accounts.find((a: any) => a.borrowerId === borrowerId);
-    const accountId = borrowerAccount?.id || (accounts.length > 0 ? accounts[0].id : null);
-    if (!accountId) { test.skip(); return; }
+    const accountsRaw = await accountsRes.json() as Array<{ id: string; borrowerId: string }>;
+    const accounts = Array.isArray(accountsRaw) ? accountsRaw : [];
+    const account = accounts.find((a) => a.borrowerId === borrowerId) || accounts[0];
+    if (!account) { test.skip(); return; }
 
     const disputeRes = await postWithCSRF(page, '/api/disputes', {
       borrowerId,
-      creditAccountId: accountId,
+      creditAccountId: account.id,
       correctionType: 'data_correction',
       description: 'E2E test dispute ' + Date.now(),
       disputeType: 'incorrect_data',
       status: 'open'
     });
-    expect([200, 201, 400, 403]).toContain(disputeRes.status());
-    if (disputeRes.ok()) {
-      const dispute = await disputeRes.json();
-      expect(dispute).toHaveProperty('id');
+    expect(disputeRes.status()).toBe(201);
+    const dispute = await disputeRes.json() as DisputeRecord;
+    expect(dispute).toHaveProperty('id');
+    expect(dispute.status).toBe('open');
+    expect(dispute).toHaveProperty('slaDeadline');
+    if (dispute.slaDeadline) {
+      const sla = new Date(dispute.slaDeadline);
+      const created = new Date(dispute.createdAt);
+      const daysDiff = (sla.getTime() - created.getTime()) / (1000 * 60 * 60 * 24);
+      expect(daysDiff).toBeGreaterThanOrEqual(2);
+      expect(daysDiff).toBeLessThanOrEqual(10);
     }
   });
 
-  test('FR-CON-01: consent records API returns data', async ({ page }) => {
+  test('FR-CON-01: consent records returns array with receipt numbers', async ({ page }) => {
     const response = await page.request.get('/api/consent-records');
     expect(response.ok()).toBeTruthy();
-    const data = await response.json();
-    expect(Array.isArray(data)).toBeTruthy();
+    const records = await response.json() as ConsentRecord[];
+    expect(Array.isArray(records)).toBeTruthy();
+    if (records.length > 0) {
+      expect(records[0]).toHaveProperty('receiptNumber');
+      expect(records[0]).toHaveProperty('borrowerId');
+      expect(records[0]).toHaveProperty('status');
+    }
   });
 
-  test('FR-CON-06: consent records have receipt numbers', async ({ page }) => {
+  test('FR-CON-06: consent records have non-empty receipt numbers', async ({ page }) => {
     const response = await page.request.get('/api/consent-records');
     expect(response.ok()).toBeTruthy();
-    const data = await response.json();
-    if (data.length > 0) {
-      expect(data[0]).toHaveProperty('receiptNumber');
-      if (data[0].receiptNumber) {
-        expect(typeof data[0].receiptNumber).toBe('string');
-        expect(data[0].receiptNumber.length).toBeGreaterThan(0);
+    const records = await response.json() as ConsentRecord[];
+    if (records.length > 0) {
+      const withReceipt = records.find((r) => r.receiptNumber);
+      if (withReceipt) {
+        expect(typeof withReceipt.receiptNumber).toBe('string');
+        expect(withReceipt.receiptNumber.length).toBeGreaterThan(0);
       }
     }
   });
 
-  test('FR-CON-02: helpdesk API returns data', async ({ page }) => {
+  test('FR-CON-02: helpdesk API endpoint exists', async ({ page }) => {
     const response = await page.request.get('/api/helpdesk/tickets');
     expect([200, 404]).toContain(response.status());
   });
 
-  test('FR-REG-03: approvals API returns pending items', async ({ page }) => {
+  test('FR-REG-03: pending approvals returns maker-checker items', async ({ page }) => {
     const response = await page.request.get('/api/pending-approvals');
     expect(response.ok()).toBeTruthy();
-    const data = await response.json();
-    expect(Array.isArray(data)).toBeTruthy();
-    if (data.length > 0) {
-      expect(data[0]).toHaveProperty('entityType');
-      expect(data[0]).toHaveProperty('action');
-      expect(data[0]).toHaveProperty('status');
+    const approvals = await response.json() as ApprovalItem[];
+    expect(Array.isArray(approvals)).toBeTruthy();
+    if (approvals.length > 0) {
+      expect(approvals[0]).toHaveProperty('entityType');
+      expect(approvals[0]).toHaveProperty('action');
+      expect(approvals[0].status).toBe('pending');
     }
   });
 
-  test('disputes page loads in browser', async ({ page }) => {
+  test('disputes page renders dispute table', async ({ page }) => {
     await page.goto('/disputes');
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('domcontentloaded');
     const pageContent = await page.textContent('body');
     expect(pageContent).toMatch(/dispute|correction|status/i);
   });
 
-  test('consent page loads in browser', async ({ page }) => {
+  test('consent page renders consent records', async ({ page }) => {
     await page.goto('/consent');
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('domcontentloaded');
     const pageContent = await page.textContent('body');
     expect(pageContent).toMatch(/consent|authorization|grant/i);
   });
 
-  test('approvals page loads in browser', async ({ page }) => {
+  test('approvals page renders pending approvals', async ({ page }) => {
     await page.goto('/approvals');
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('domcontentloaded');
     const pageContent = await page.textContent('body');
     expect(pageContent).toMatch(/approval|pending|review/i);
   });
 
-  test('helpdesk page loads in browser', async ({ page }) => {
+  test('helpdesk page renders', async ({ page }) => {
     await page.goto('/helpdesk');
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('domcontentloaded');
     const pageContent = await page.textContent('body');
     expect(pageContent).toMatch(/helpdesk|inquiry|service|ticket|dispute/i);
   });

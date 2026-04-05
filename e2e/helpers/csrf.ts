@@ -5,12 +5,12 @@ let cachedToken: string | null = null;
 export async function getCSRFToken(page: Page): Promise<string> {
   if (cachedToken) return cachedToken;
   const response = await page.request.get('/api/auth/csrf-token');
-  const data = await response.json();
+  const data: Record<string, string> = await response.json();
   cachedToken = data.token;
   return cachedToken!;
 }
 
-export async function postWithCSRF(page: Page, url: string, body: any) {
+export async function postWithCSRF(page: Page, url: string, body: Record<string, unknown>) {
   const token = await getCSRFToken(page);
   return page.request.post(url, {
     data: body,
@@ -18,7 +18,7 @@ export async function postWithCSRF(page: Page, url: string, body: any) {
   });
 }
 
-export async function putWithCSRF(page: Page, url: string, body: any) {
+export async function putWithCSRF(page: Page, url: string, body: Record<string, unknown>) {
   const token = await getCSRFToken(page);
   return page.request.put(url, {
     data: body,

@@ -9,7 +9,7 @@ test.describe('Error Handling', () => {
     await usernameInput.fill('admin');
     await passwordInput.fill('admin0987');
     await page.locator('button[type="submit"]').first().click();
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('domcontentloaded');
 
     const response = await page.goto('/nonexistent-page-xyz');
     expect(response?.status()).toBeLessThan(500);

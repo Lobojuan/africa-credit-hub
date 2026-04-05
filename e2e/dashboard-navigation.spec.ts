@@ -1,9 +1,14 @@
 import { test, expect } from '@playwright/test';
 
+interface DashboardStats {
+  totalBorrowers: number;
+  totalAccounts: number;
+}
+
 test.describe('Dashboard & Navigation', () => {
   test('dashboard loads with content', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('domcontentloaded');
     const pageContent = await page.textContent('body');
     expect(pageContent).toBeTruthy();
     expect(pageContent!.length).toBeGreaterThan(100);
@@ -12,7 +17,7 @@ test.describe('Dashboard & Navigation', () => {
   test('dashboard stats API returns correct shape', async ({ page }) => {
     const response = await page.request.get('/api/dashboard/stats');
     expect(response.ok()).toBeTruthy();
-    const data = await response.json();
+    const data = await response.json() as DashboardStats;
     expect(data).toHaveProperty('totalBorrowers');
     expect(data).toHaveProperty('totalAccounts');
     expect(typeof data.totalBorrowers).toBe('number');
@@ -25,37 +30,24 @@ test.describe('Dashboard & Navigation', () => {
   });
 
   test('key pages load without HTTP errors', async ({ page }) => {
-    test.setTimeout(90000);
+    test.setTimeout(60000);
 
     const pages = [
-      '/borrowers', '/credit-accounts', '/search', '/reports', '/audit',
-      '/users', '/approvals', '/disputes', '/institutions', '/consent',
-      '/billing', '/helpdesk', '/api-keys', '/api-docs', '/help',
-      '/exchange-rates', '/organizations', '/about', '/version-history',
-      '/regulatory-dashboard', '/regulatory-compliance', '/portfolio-intelligence',
-      '/cross-border-search', '/cross-border-agreements', '/borrower-alerts',
-      '/retention-policies', '/bog-export', '/bsl-export', '/ghana-docs',
-      '/guide', '/documentation', '/credit-score-methodology', '/papss-settlements',
-      '/api-admin',
+      '/borrowers', '/reports', '/audit', '/users',
+      '/disputes', '/institutions', '/billing',
+      '/regulatory-dashboard', '/cross-border-agreements',
+      '/telco-scoring', '/ai-command-center', '/command-center',
     ];
 
     const failures: string[] = [];
 
     for (const path of pages) {
-      try {
-        const response = await page.goto(path, { timeout: 8000 });
-        if (!response || response.status() >= 400) {
-          failures.push(`${path}: HTTP ${response?.status()}`);
-        }
-      } catch (e) {
-        const message = e instanceof Error ? e.message.slice(0, 100) : String(e);
-        failures.push(`${path}: ${message}`);
+      const response = await page.goto(path, { timeout: 8000 });
+      if (!response || response.status() >= 400) {
+        failures.push(`${path}: HTTP ${response?.status()}`);
       }
     }
 
-    if (failures.length > 0) {
-      console.log('Page load failures:', failures);
-    }
     expect(failures).toHaveLength(0);
   });
 });

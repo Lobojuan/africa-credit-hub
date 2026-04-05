@@ -1,17 +1,24 @@
 import { test, expect } from '@playwright/test';
 import { postWithCSRF } from './helpers/csrf';
 
+interface TelcoProfile {
+  id: string;
+  msisdn: string;
+  provider: string;
+  country: string;
+}
+
 test.describe('Telco Scoring & Lending Module', () => {
 
-  test('telco profiles API returns data', async ({ page }) => {
+  test('FR-TEL-01: telco profiles API returns array', async ({ page }) => {
     const response = await page.request.get('/api/telco/profiles');
     expect(response.ok()).toBeTruthy();
-    const data = await response.json();
-    const profiles = Array.isArray(data) ? data : data.data || [];
+    const data = await response.json() as { data: TelcoProfile[] } | TelcoProfile[];
+    const profiles = Array.isArray(data) ? data : (data as { data: TelcoProfile[] }).data || [];
     expect(profiles.length).toBeGreaterThanOrEqual(0);
   });
 
-  test('telco profile creation works', async ({ page }) => {
+  test('FR-TEL-01: telco profile creation succeeds', async ({ page }) => {
     const response = await postWithCSRF(page, '/api/telco/profiles', {
       msisdn: '+233' + Date.now().toString().slice(-9),
       provider: 'mtn',
@@ -20,41 +27,40 @@ test.describe('Telco Scoring & Lending Module', () => {
       kycLevel: 'full',
       country: 'Ghana'
     });
-    expect([200, 201, 403]).toContain(response.status());
-    if (response.ok()) {
-      const data = await response.json();
-      expect(data).toHaveProperty('id');
-    }
+    expect([200, 201]).toContain(response.status());
+    const data = await response.json() as TelcoProfile;
+    expect(data).toHaveProperty('id');
+    expect(data).toHaveProperty('msisdn');
   });
 
-  test('telco scores API returns data', async ({ page }) => {
+  test('FR-TEL-02: telco scores API returns data', async ({ page }) => {
     const response = await page.request.get('/api/telco/scores');
     expect(response.ok()).toBeTruthy();
   });
 
-  test('telco decision rules API returns data', async ({ page }) => {
+  test('FR-TEL-03: telco decision rules API returns array', async ({ page }) => {
     const response = await page.request.get('/api/telco/decision-rules');
     expect(response.ok()).toBeTruthy();
-    const data = await response.json();
+    const data = await response.json() as unknown[];
     expect(Array.isArray(data)).toBeTruthy();
   });
 
-  test('telco decision logs API returns data', async ({ page }) => {
+  test('FR-TEL-03: telco decision logs API returns data', async ({ page }) => {
     const response = await page.request.get('/api/telco/decision-logs');
     expect(response.ok()).toBeTruthy();
   });
 
-  test('telco loans API returns data', async ({ page }) => {
+  test('FR-TEL-04: telco loans API returns data', async ({ page }) => {
     const response = await page.request.get('/api/telco/loans');
     expect(response.ok()).toBeTruthy();
   });
 
-  test('telco loans portfolio API returns data', async ({ page }) => {
+  test('FR-TEL-04: telco loans portfolio API returns data', async ({ page }) => {
     const response = await page.request.get('/api/telco/loans/portfolio');
     expect(response.ok()).toBeTruthy();
   });
 
-  test('telco analytics API returns data', async ({ page }) => {
+  test('ENT-13: telco analytics API returns data', async ({ page }) => {
     const response = await page.request.get('/api/telco/analytics');
     expect(response.ok()).toBeTruthy();
   });
@@ -74,21 +80,21 @@ test.describe('Telco Scoring & Lending Module', () => {
     expect(response.ok()).toBeTruthy();
   });
 
-  test('telco scoring page loads in browser', async ({ page }) => {
+  test('telco scoring page renders scoring dashboard', async ({ page }) => {
     await page.goto('/telco-scoring');
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('domcontentloaded');
     const pageContent = await page.textContent('body');
     expect(pageContent).toMatch(/telco|scoring|mobile|profile/i);
   });
 
-  test('telco lending page loads in browser', async ({ page }) => {
+  test('telco lending page renders lending dashboard', async ({ page }) => {
     await page.goto('/telco-lending');
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('domcontentloaded');
     const pageContent = await page.textContent('body');
     expect(pageContent).toMatch(/lending|loan|telco|disburs/i);
   });
 
-  test('telco decision rule creation works', async ({ page }) => {
+  test('FR-TEL-03: telco decision rule creation succeeds', async ({ page }) => {
     const response = await postWithCSRF(page, '/api/telco/decision-rules', {
       name: 'E2E Test Rule ' + Date.now(),
       description: 'Automated test rule',
@@ -100,6 +106,6 @@ test.describe('Telco Scoring & Lending Module', () => {
       tenureDays: 30,
       isActive: false
     });
-    expect([200, 201, 403]).toContain(response.status());
+    expect([200, 201]).toContain(response.status());
   });
 });

@@ -14,7 +14,7 @@ test.describe('Credit Accounts', () => {
 
   test('credit accounts page loads in browser', async ({ page }) => {
     await page.goto('/credit-accounts');
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('domcontentloaded');
     const pageContent = await page.textContent('body');
     expect(pageContent).toMatch(/account|credit|loan|type/i);
   });
