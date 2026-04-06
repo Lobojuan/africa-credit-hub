@@ -111,12 +111,13 @@ test.describe('Consumer Portal & Documentation [FR-CP, DOC]', () => {
     }
   });
 
-  test('DOC-02: every doc has retrievable content', async ({ page }) => {
+  test('DOC-02: all 18 docs have retrievable content', async ({ page }) => {
     const listRes = await page.request.get('/api/docs');
     expect(listRes.ok()).toBeTruthy();
     const docs = await listRes.json() as DocItem[];
+    expect(docs.length).toBe(18);
 
-    for (const doc of docs.slice(0, 5)) {
+    for (const doc of docs) {
       const docRes = await page.request.get(`/api/docs/${doc.id}`);
       expect(docRes.ok()).toBeTruthy();
       const detail = await docRes.json() as DocDetail;
@@ -125,12 +126,13 @@ test.describe('Consumer Portal & Documentation [FR-CP, DOC]', () => {
     }
   });
 
-  test('DOC-03: all docs have downloadable PDFs', async ({ page }) => {
+  test('DOC-03: all 18 docs have downloadable PDFs', async ({ page }) => {
     const listRes = await page.request.get('/api/docs');
     expect(listRes.ok()).toBeTruthy();
     const docs = await listRes.json() as DocItem[];
+    expect(docs.length).toBe(18);
 
-    for (const doc of docs.slice(0, 5)) {
+    for (const doc of docs) {
       const pdfRes = await page.request.get(`/api/docs/${doc.id}/pdf`);
       expect(pdfRes.ok()).toBeTruthy();
       const contentType = pdfRes.headers()['content-type'] || '';
