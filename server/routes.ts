@@ -3087,9 +3087,9 @@ export async function registerRoutes(
   app.get("/api/global-search", async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const country = getCountryFilter(req);
+      const country = (req.query.country as string) || getCountryFilter(req);
       const query = (req.query.q as string) || "";
-      if (!query) {
+      if (!query && !country) {
         return res.json({ borrowers: [], institutions: [], creditAccounts: [], telcoProfiles: [] });
       }
       const results = await storage.globalSearch(query, orgId, country);
