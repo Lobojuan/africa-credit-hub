@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { formatCurrency } from "@/lib/currency";
+import { formatCurrency, getCurrencyForCountry } from "@/lib/currency";
 import { getBorrowerAvatarUrl } from "@/lib/avatar";
 import { isGhanaMode, isSierraLeoneMode, getDefaultCurrency } from "@/lib/country-mode";
 import { CurrencyReference } from "@/components/currency-reference";
@@ -206,6 +206,7 @@ export default function BorrowerDetailPage() {
   const { borrower, accounts, inquiries, summary } = report;
   const isIndividual = borrower.type === "individual";
   const displayName = isIndividual ? `${borrower.firstName} ${borrower.lastName}` : (borrower.companyName || "");
+  const borrowerCurrency = accounts?.[0]?.currency || getCurrencyForCountry(borrower.country || "") || getDefaultCurrency() || "USD";
   const avatarUrl = (borrower as any).photoUrl || getBorrowerAvatarUrl(borrower.id, displayName, borrower.type as "individual" | "corporate");
 
   return (
@@ -384,7 +385,7 @@ export default function BorrowerDetailPage() {
         </Card>
         <Card className="card-shine border-border/40">
           <CardContent className="p-4 text-center flex flex-col justify-center h-full">
-            <div className="text-2xl font-extrabold tracking-tight">{formatCurrency(summary.totalDebt, getDefaultCurrency())}</div>
+            <div className="text-2xl font-extrabold tracking-tight">{formatCurrency(summary.totalDebt, borrowerCurrency)}</div>
             <p className="text-xs text-muted-foreground mt-1.5">{t("borrowerDetail.totalOutstanding")}</p>
           </CardContent>
         </Card>
@@ -711,7 +712,7 @@ export default function BorrowerDetailPage() {
                     <TableCell className="text-sm font-medium">{j.caseNumber}</TableCell>
                     <TableCell className="text-sm">{j.court}</TableCell>
                     <TableCell><Badge variant="outline" className="text-[10px] capitalize">{j.judgmentType.replace(/_/g, " ")}</Badge></TableCell>
-                    <TableCell className="text-sm">{j.amount ? formatCurrency(j.amount, getDefaultCurrency()) : "—"}</TableCell>
+                    <TableCell className="text-sm">{j.amount ? formatCurrency(j.amount, borrowerCurrency) : "—"}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{j.judgmentDate || "—"}</TableCell>
                     <TableCell>
                       <Badge variant={j.status === "active" ? "destructive" : j.status === "resolved" ? "default" : "secondary"} className="text-[10px] capitalize">
