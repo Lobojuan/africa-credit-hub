@@ -427,7 +427,7 @@ export default function CreditReportPage() {
 
   const aiSummaryMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", `/api/ai/report-summary/${report?.borrower?.id}`);
+      const res = await apiRequest("POST", `/api/ai/report-summary/${report?.borrower?.id}`, { language: reportLanguage });
       return res.json();
     },
     onSuccess: (data) => {

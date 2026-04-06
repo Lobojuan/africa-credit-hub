@@ -221,7 +221,7 @@ ${accounts.map(a => `  - ${a.accountType}: ${a.currency || defaultCurrency} ${pa
   });
 }
 
-export async function generateReportSummary(borrowerId: string | number, provider?: AIProvider) {
+export async function generateReportSummary(borrowerId: string | number, provider?: AIProvider, language?: string) {
   const borrower = await storage.getBorrower(borrowerId);
   if (!borrower) throw new Error("Borrower not found");
 
@@ -243,8 +243,12 @@ Total Outstanding: ${defaultCurrency} ${totalBalance.toLocaleString()}
 Disputes: ${disputes.length} total, ${disputes.filter(d => d.status === "open").length} open
   `.trim();
 
-  const systemPrompt = `You are a credit report summarizer for the Pan-African Credit Registry. All monetary amounts are in ${defaultCurrency} (${defaultCurrency === "GHS" ? "Ghana Cedis" : defaultCurrency}). Generate clear, professional, plain-language summaries of credit reports suitable for non-technical readers such as bank officers and regulators. Include key highlights, concerns, and an overall assessment. Keep it concise but comprehensive (3-5 paragraphs). Use professional financial language. Always reference amounts in ${defaultCurrency}.`;
-  const userPrompt = `Generate a plain-language credit report summary:\n\n${reportData}`;
+  const langNames: Record<string, string> = { en: "English", fr: "French", ar: "Arabic", sw: "Swahili", pt: "Portuguese" };
+  const targetLang = langNames[language || "en"] || "English";
+  const langInstruction = targetLang !== "English" ? ` You MUST write the entire summary in ${targetLang}. Every word, heading, and sentence must be in ${targetLang} — do not use English at all.` : "";
+
+  const systemPrompt = `You are a credit report summarizer for the Pan-African Credit Registry. All monetary amounts are in ${defaultCurrency} (${defaultCurrency === "GHS" ? "Ghana Cedis" : defaultCurrency}). Generate clear, professional, plain-language summaries of credit reports suitable for non-technical readers such as bank officers and regulators. Include key highlights, concerns, and an overall assessment. Keep it concise but comprehensive (3-5 paragraphs). Use professional financial language. Always reference amounts in ${defaultCurrency}.${langInstruction}`;
+  const userPrompt = `Generate a plain-language credit report summary${targetLang !== "English" ? ` in ${targetLang}` : ""}:\n\n${reportData}`;
 
   const result = await generateAIResponse(systemPrompt, userPrompt, "narrative", {
     maxTokens: 1000,
@@ -1092,7 +1096,7 @@ export function parseJSON(raw: string, fallback: Record<string, unknown> = {}) {
   try { return JSON.parse(content); } catch { return { ...fallback, rawText: raw }; }
 }
 
-export async function generateCreditNarrative(borrowerId: string | number, provider?: AIProvider) {
+export async function generateCreditNarrative(borrowerId: string | number, provider?: AIProvider, language?: string) {
   const borrower = await storage.getBorrower(borrowerId);
   if (!borrower) throw new Error("Borrower not found");
   const accounts = await storage.getCreditAccountsByBorrower(borrowerId);
@@ -1117,7 +1121,11 @@ Dispute History:
 ${disputes.length > 0 ? disputes.map(d => `  - ${d.disputeType}: ${d.status} — ${d.description || "No details"}`).join("\n") : "  No disputes on record"}
   `.trim();
 
-  const systemPrompt = `You are a senior credit analyst writing a narrative credit report for a loan committee at an African bank. Write a professional, readable narrative (not bullet points) that a bank executive would present to their board. Cover: overall credit standing, repayment behavior, risk factors, any red flags, and a final recommendation. Use ${defaultCurrency} for all amounts. Write 4-6 paragraphs. Be specific — reference actual account types, amounts, and status. End with a clear creditworthiness assessment: Excellent, Good, Fair, Below Average, or Poor. Respond in JSON:
+  const langNames: Record<string, string> = { en: "English", fr: "French", ar: "Arabic", sw: "Swahili", pt: "Portuguese" };
+  const targetLang = langNames[language || "en"] || "English";
+  const langInstruction = targetLang !== "English" ? ` You MUST write the entire narrative, strengths, risks, and recommendations in ${targetLang}. Every word must be in ${targetLang} — do not use English at all.` : "";
+
+  const systemPrompt = `You are a senior credit analyst writing a narrative credit report for a loan committee at an African bank. Write a professional, readable narrative (not bullet points) that a bank executive would present to their board. Cover: overall credit standing, repayment behavior, risk factors, any red flags, and a final recommendation. Use ${defaultCurrency} for all amounts. Write 4-6 paragraphs. Be specific — reference actual account types, amounts, and status. End with a clear creditworthiness assessment: Excellent, Good, Fair, Below Average, or Poor.${langInstruction} Respond in JSON:
 {
   "narrative": "<the full narrative text>",
   "creditworthiness": "Excellent" | "Good" | "Fair" | "Below Average" | "Poor",
@@ -1126,7 +1134,7 @@ ${disputes.length > 0 ? disputes.map(d => `  - ${d.disputeType}: ${d.status} —
   "recommendedActions": ["<action>"]
 }`;
 
-  const raw = await callAI(systemPrompt, `Write a credit narrative for this borrower:\n\n${profile}`, provider, 2500, 0.3, "narrative");
+  const raw = await callAI(systemPrompt, `Write a credit narrative for this borrower${targetLang !== "English" ? ` in ${targetLang}` : ""}:\n\n${profile}`, provider, 2500, 0.3, "narrative");
   return { ...parseJSON(raw, { creditworthiness: "Fair" }), borrowerName: name, generatedAt: new Date().toISOString() };
 }
 

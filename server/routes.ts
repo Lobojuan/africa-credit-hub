@@ -10034,7 +10034,8 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
   app.post("/api/ai/report-summary/:borrowerId", aiLimiter, requireAuth, async (req, res) => {
     try {
       const provider = parseOptionalProvider(req.body?.provider);
-      const result = await generateReportSummary(req.params.borrowerId, provider);
+      const language = (req.body?.language || req.query.lang || "en") as string;
+      const result = await generateReportSummary(req.params.borrowerId, provider, language);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -10807,7 +10808,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   app.post("/api/ai/credit-narrative/:borrowerId", aiLimiter, requireAuth, async (req, res) => {
     try {
       const provider = parseOptionalProvider(req.body?.provider);
-      const result = await generateCreditNarrative(req.params.borrowerId, provider);
+      const language = (req.body?.language || req.query.lang || "en") as string;
+      const result = await generateCreditNarrative(req.params.borrowerId, provider, language);
       res.json(result);
     } catch (e: any) {
       if (e.message === "Borrower not found") return res.status(404).json({ message: e.message });
