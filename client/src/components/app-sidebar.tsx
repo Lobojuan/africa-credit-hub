@@ -98,7 +98,7 @@ const borrowersLendersItems: NavItem[] = [
   { label: "Businesses", tKey: "sidebar.businesses", url: "/businesses", icon: Building2, testId: "nav-businesses" },
   { label: "Borrowers (All)", tKey: "sidebar.borrowers", url: "/borrowers", icon: Users, testId: "nav-borrowers", roles: ["super_admin"] },
   { label: "Credit Accounts", tKey: "sidebar.creditAccounts", url: "/credit-accounts", icon: CreditCard, testId: "nav-credit-accounts" },
-  { label: "Credit Search", tKey: "sidebar.creditSearch", url: "/search", icon: Search, testId: "nav-credit-search" },
+  { label: "Generate Credit Report", tKey: "sidebar.creditSearch", url: "/search", icon: FileText, testId: "nav-credit-search" },
   { label: "Credit Reports", tKey: "sidebar.creditReports", url: "/reports", icon: FileText, testId: "nav-credit-reports" },
   { label: "Score Methodology", tKey: "sidebar.creditScoreMethodology", url: "/credit-score-methodology", icon: Brain, testId: "nav-credit-score-methodology", roles: ["admin", "lender", "super_admin"] },
   { label: "My Credit", tKey: "sidebar.myCredit", url: "/my-credit", icon: UserCheck, testId: "nav-consumer-portal" },

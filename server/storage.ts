@@ -746,9 +746,14 @@ export class DatabaseStorage implements IStorage {
     if (country) conditions.push(eq(borrowers.country, country));
 
     if (params.ghanaCardNumber) {
-      conditions.push(ilike(borrowers.ghanaCardNumber, `%${params.ghanaCardNumber}%`));
+      conditions.push(
+        or(
+          ilike(borrowers.ghanaCardNumber, `%${params.ghanaCardNumber}%`),
+          ilike(borrowers.nationalId, `%${params.ghanaCardNumber}%`)
+        )
+      );
     }
-    if (params.nationalId) {
+    if (params.nationalId && !params.ghanaCardNumber) {
       conditions.push(ilike(borrowers.nationalId, `%${params.nationalId}%`));
     }
     if (params.firstName) {
@@ -762,10 +767,17 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(borrowers.dateOfBirth, params.dateOfBirth));
     }
     if (params.mobileNumber) {
-      conditions.push(ilike(borrowers.phone, `%${params.mobileNumber}%`));
+      const cleanMobile = params.mobileNumber.replace(/[\s\-\(\)]/g, '');
+      const digits = cleanMobile.replace(/^\+/, '');
+      conditions.push(
+        or(
+          ilike(borrowers.phone, `%${cleanMobile}%`),
+          ilike(borrowers.phone, `%${digits}%`)
+        )
+      );
     }
     if (params.gender) {
-      conditions.push(eq(borrowers.gender, params.gender));
+      conditions.push(ilike(borrowers.gender, params.gender));
     }
     if (params.email) {
       conditions.push(ilike(borrowers.email, `%${params.email}%`));

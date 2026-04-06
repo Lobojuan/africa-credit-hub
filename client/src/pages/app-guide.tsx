@@ -630,7 +630,7 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
     case "search":
       return (
         <div className={`${base} bg-card border border-border/50 p-6 space-y-4`}>
-          <div className="flex items-center gap-2"><Search className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">Global Search</span></div>
+          <div className="flex items-center gap-2"><Search className="w-4 h-4 text-primary" /><span className="text-sm font-semibold">Generate Credit Report</span></div>
           <div className="h-12 border-2 border-primary/30 rounded-xl bg-muted/10 flex items-center px-4 shadow-inner"><Search className="w-5 h-5 text-muted-foreground mr-3" /><span className="text-sm">Amara</span><span className="text-sm text-muted-foreground animate-pulse">|</span></div>
           <div className="space-y-2">
             <p className="text-[9px] text-muted-foreground font-semibold uppercase tracking-[0.15em]">Borrowers</p>

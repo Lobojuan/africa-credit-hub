@@ -8,7 +8,7 @@ const pt = {
     aiCommandCenter: "Centro de Comando IA",
     borrowers: "Mutuários",
     creditAccounts: "Contas de Crédito",
-    creditSearch: "Pesquisa Global",
+    creditSearch: "Gerar Relatório de Crédito",
     batchUpload: "Carregamento em Lote",
     creditReports: "Relatórios de Crédito",
     pendingApprovals: "Aprovações Pendentes",

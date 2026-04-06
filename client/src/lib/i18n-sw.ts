@@ -11,7 +11,7 @@ const sw: Record<string, any> = {
     businesses: "Biashara",
     telcoScoring: "Alama za Simu",
     creditAccounts: "Akaunti za Mikopo",
-    creditSearch: "Utafutaji wa Jumla",
+    creditSearch: "Tengeneza Ripoti ya Mkopo",
     batchUpload: "Upakiaji wa Wingi",
     creditReports: "Ripoti za Mikopo",
     pendingApprovals: "Idhini Zinazosubiri",

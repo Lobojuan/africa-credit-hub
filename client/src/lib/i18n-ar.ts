@@ -8,7 +8,7 @@ const ar: Record<string, any> = {
     aiCommandCenter: "مركز قيادة الذكاء الاصطناعي",
     borrowers: "المقترضون",
     creditAccounts: "حسابات الائتمان",
-    creditSearch: "البحث الشامل",
+    creditSearch: "إنشاء تقرير ائتماني",
     batchUpload: "التحميل المجمّع",
     creditReports: "تقارير الائتمان",
     pendingApprovals: "الموافقات المعلّقة",

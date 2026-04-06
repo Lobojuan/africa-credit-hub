@@ -6618,8 +6618,12 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
           const label = reasonLabels[code] || code.replace(/_/g, " ").toLowerCase().replace(/^\w/, (c: string) => c.toUpperCase());
           const bullet = isPositive ? "+" : "−";
           const color = isPositive ? "#16a34a" : "#dc2626";
-          doc.fontSize(7.5).font("Helvetica-Bold").fill(color).text(bullet, 48, doc.y, { continued: true, width: 10 });
-          doc.fontSize(7.5).font("Helvetica").fill(DARK).text(` ${code}: ${label}`, { continued: false });
+          const bulletWidth = 14;
+          const textX = 48 + bulletWidth;
+          const textWidth = W - (textX - 40) - 12;
+          doc.fontSize(7.5).font("Helvetica-Bold").fill(color).text(bullet, 48, doc.y, { width: bulletWidth });
+          const savedY = doc.y - 10;
+          doc.fontSize(7.5).font("Helvetica").fill(DARK).text(`${code}: ${label}`, textX, savedY, { width: textWidth });
           doc.moveDown(0.15);
         });
       }
@@ -7225,8 +7229,12 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       doc.moveDown(0.2);
       riskStrengths.forEach((str) => {
         ensureSpace(14);
-        doc.fontSize(7).font("Helvetica-Bold").fill("#16a34a").text("✓ ", 48, doc.y, { continued: true, width: 12 });
-        doc.fontSize(7).font("Helvetica").fill(DARK).text(str, { continued: false });
+        const bulletW = 14;
+        const strTextX = 48 + bulletW;
+        const strTextW = W - (strTextX - 40) - 12;
+        doc.fontSize(7).font("Helvetica-Bold").fill("#16a34a").text("✓", 48, doc.y, { width: bulletW });
+        const strSavedY = doc.y - 10;
+        doc.fontSize(7).font("Helvetica").fill(DARK).text(str, strTextX, strSavedY, { width: strTextW });
         doc.moveDown(0.15);
       });
 
@@ -7236,8 +7244,12 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       doc.moveDown(0.2);
       riskConcerns.forEach((concern) => {
         ensureSpace(14);
-        doc.fontSize(7).font("Helvetica-Bold").fill("#dc2626").text("▲ ", 48, doc.y, { continued: true, width: 12 });
-        doc.fontSize(7).font("Helvetica").fill(DARK).text(concern, { continued: false });
+        const cBulletW = 14;
+        const cTextX = 48 + cBulletW;
+        const cTextW = W - (cTextX - 40) - 12;
+        doc.fontSize(7).font("Helvetica-Bold").fill("#dc2626").text("▲", 48, doc.y, { width: cBulletW });
+        const cSavedY = doc.y - 10;
+        doc.fontSize(7).font("Helvetica").fill(DARK).text(concern, cTextX, cSavedY, { width: cTextW });
         doc.moveDown(0.15);
       });
 
