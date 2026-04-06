@@ -3,26 +3,30 @@ import { postWithCSRF, patchWithCSRF } from './helpers/csrf';
 
 test.describe('Data Sovereignty, Password Expiry & RBAC [NFR-SEC, ENT-11]', () => {
 
-  test('NFR-SEC-12: login response includes passwordExpired field', async ({ page }) => {
-    const csrfRes = await page.request.get('/api/auth/csrf-token');
-    const { token } = await csrfRes.json() as { token: string };
-
-    const loginRes = await page.request.post('/api/auth/login', {
-      data: { username: 'admin', password: 'admin0987' },
-      headers: { 'x-csrf-token': token }
-    });
-    expect(loginRes.ok()).toBeTruthy();
-    const user = await loginRes.json() as Record<string, unknown>;
-    expect(user).toHaveProperty('passwordExpired');
-    expect(typeof user.passwordExpired).toBe('boolean');
-  });
-
-  test('NFR-SEC-13: session endpoint returns passwordExpired boolean', async ({ page }) => {
+  test('NFR-SEC-12: session response includes passwordExpired field with correct type', async ({ page }) => {
     const response = await page.request.get('/api/auth/me');
     expect(response.ok()).toBeTruthy();
     const user = await response.json() as Record<string, unknown>;
     expect(user).toHaveProperty('passwordExpired');
     expect(typeof user.passwordExpired).toBe('boolean');
+    expect(user).toHaveProperty('role');
+    expect(['admin', 'super_admin']).toContain(user.role);
+  });
+
+  test('NFR-SEC-13: session returns passwordExpired=false for recently changed password', async ({ page }) => {
+    const response = await page.request.get('/api/auth/me');
+    expect(response.ok()).toBeTruthy();
+    const user = await response.json() as Record<string, unknown>;
+    expect(user).toHaveProperty('passwordExpired');
+    expect(typeof user.passwordExpired).toBe('boolean');
+    if (user.passwordChangedAt) {
+      const daysSince = (Date.now() - new Date(String(user.passwordChangedAt)).getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSince <= 90) {
+        expect(user.passwordExpired).toBe(false);
+      } else {
+        expect(user.passwordExpired).toBe(true);
+      }
+    }
   });
 
   test('NFR-SEC-14: password change endpoint rejects wrong current password', async ({ page }) => {

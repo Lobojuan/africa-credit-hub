@@ -15,7 +15,7 @@ test.describe('Telco Scoring & Lending Module', () => {
     expect(response.ok()).toBeTruthy();
     const data = await response.json() as { data: TelcoProfile[] } | TelcoProfile[];
     const profiles = Array.isArray(data) ? data : (data as { data: TelcoProfile[] }).data || [];
-    expect(profiles.length).toBeGreaterThanOrEqual(0);
+    expect(Array.isArray(profiles)).toBeTruthy();
   });
 
   test('FR-TEL-01: telco profile creation succeeds', async ({ page }) => {
