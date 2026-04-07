@@ -5,13 +5,14 @@ export async function distributeCreatedAtTimestamps() {
   const check = await db.execute(sql`
     SELECT EXISTS(
       SELECT 1 FROM credit_accounts 
-      WHERE created_at >= NOW() - INTERVAL '23 hours'
+      WHERE created_at >= NOW() - INTERVAL '2 days'
+        AND created_at <= NOW() - INTERVAL '1 day'
       LIMIT 1
-    ) as has_recent
+    ) as has_distributed
   `);
   
-  const hasRecent = (check as any).rows?.[0]?.has_recent ?? (check as any)[0]?.has_recent;
-  if (hasRecent === true || hasRecent === 't' || hasRecent === 'true') {
+  const hasDistributed = (check as any).rows?.[0]?.has_distributed ?? (check as any)[0]?.has_distributed;
+  if (hasDistributed === true || hasDistributed === 't' || hasDistributed === 'true') {
     return;
   }
 
@@ -39,13 +40,11 @@ export async function distributeCreatedAtTimestamps() {
           FROM ${table}
         )
         UPDATE ${table} SET created_at = CASE
-          WHEN numbered.rn <= numbered.total * 0.08 
-            THEN NOW() - (random() * INTERVAL '20 hours')
-          WHEN numbered.rn <= numbered.total * 0.20 
-            THEN NOW() - (INTERVAL '1 day' + random() * INTERVAL '5 days')
-          WHEN numbered.rn <= numbered.total * 0.50 
+          WHEN numbered.rn <= numbered.total * 0.15 
+            THEN NOW() - (INTERVAL '2 days' + random() * INTERVAL '5 days')
+          WHEN numbered.rn <= numbered.total * 0.45 
             THEN NOW() - (INTERVAL '7 days' + random() * INTERVAL '23 days')
-          WHEN numbered.rn <= numbered.total * 0.80 
+          WHEN numbered.rn <= numbered.total * 0.75 
             THEN NOW() - (INTERVAL '30 days' + random() * INTERVAL '60 days')
           ELSE 
             NOW() - (INTERVAL '90 days' + random() * INTERVAL '180 days')
