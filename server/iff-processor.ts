@@ -102,6 +102,7 @@ function mapBusinessBorrowerFields(row: Record<string, any>): any {
     officeFaxNumber: toStr(row.OfficeFaxNum),
     branchCode: toStr(row.BranchCode),
     customerId: toStr(row.CustomerID),
+    country: "Ghana",
   };
 }
 
@@ -159,6 +160,7 @@ function mapConsumerBorrowerFields(row: Record<string, any>): any {
     monthlyIncome: toNum(row.Income),
     branchCode: toStr(row.BranchCode),
     customerId: toStr(row.CustomerID),
+    country: toStr(row.Nationality) || "Ghana",
   };
 }
 

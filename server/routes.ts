@@ -5274,7 +5274,8 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     try {
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
-      const ExcelJS = await import("exceljs");
+      const ExcelJSModule = await import("exceljs");
+      const ExcelJS = ExcelJSModule.default || ExcelJSModule;
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.load(req.file.buffer);
       const worksheet = workbook.worksheets[0];
