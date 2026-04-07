@@ -187,6 +187,8 @@ export default function CountrySelectionPage() {
 
   const platform = commandData?.platform;
   const countryDetails = commandData?.countries || [];
+  const activeCountryCodes = new Set(countryDetails.map((d) => d.code));
+  const activeCountries = countries.filter((c) => activeCountryCodes.has(c.code));
 
   const { data: systemStats } = useQuery<{ srs: { total: number; passed: number } }>({
     queryKey: ["/api/platform/system-stats"],
@@ -333,7 +335,7 @@ export default function CountrySelectionPage() {
 
             <TabsContent value="overview" className="space-y-3 mt-0">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {countries.map((c) => {
+                {activeCountries.map((c) => {
                   const detail = countryDetails.find((d) => d.code === c.code);
                   const dpStatus = detail?.dataProtectionStatus;
                   const sataLevel = detail?.sataReadiness;
@@ -394,7 +396,7 @@ export default function CountrySelectionPage() {
                     <h3 className="text-sm font-semibold text-foreground">Data Protection Law Status</h3>
                   </div>
                   <div className="space-y-2">
-                    {countries.map((c) => {
+                    {activeCountries.map((c) => {
                       const detail = countryDetails.find((d) => d.code === c.code);
                       const dpStatus = detail?.dataProtectionStatus || "none";
                       return (
@@ -420,7 +422,7 @@ export default function CountrySelectionPage() {
                   </div>
                   <p className="text-[10px] text-muted-foreground mb-3">Smart Africa Trust Alliance compliance for cross-border data sharing</p>
                   <div className="space-y-2">
-                    {countries.map((c) => {
+                    {activeCountries.map((c) => {
                       const detail = countryDetails.find((d) => d.code === c.code);
                       const bureau = CREDIT_BUREAU_FRAMEWORK[c.code] || "N/A";
                       return (
@@ -499,7 +501,7 @@ export default function CountrySelectionPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {countries.map((c) => {
+                      {activeCountries.map((c) => {
                         const detail = countryDetails.find((d) => d.code === c.code);
                         const features = detail?.features || [];
                         const hasScoring = features.includes("Credit Scoring");

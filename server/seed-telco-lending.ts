@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { telcoLoans, telcoLoanRepayments, telcoConsentEvents, telcoProfiles } from "@shared/schema";
-import { count } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
 const LOAN_STATUSES = ["pending_disbursement", "disbursed", "active", "repaying", "paid_off", "defaulted", "written_off", "restructured"] as const;
@@ -40,7 +40,7 @@ export async function seedTelcoLending() {
     country: telcoProfiles.country,
     msisdn: telcoProfiles.msisdn,
     provider: telcoProfiles.provider,
-  }).from(telcoProfiles);
+  }).from(telcoProfiles).where(eq(telcoProfiles.country, "Ghana"));
 
   if (profiles.length === 0) {
     console.log("[TelcoLending] No telco profiles found, skipping loan seed.");

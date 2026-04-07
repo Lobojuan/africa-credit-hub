@@ -9016,7 +9016,8 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         };
       });
 
-      const activeCountries = countryDetails.filter((c) => c.hasData).length;
+      const countriesWithData = countryDetails.filter((c) => c.hasData);
+      const activeCountries = countriesWithData.length;
 
       res.json({
         platform: {
@@ -9028,7 +9029,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
           systemVersion: "CDH v2.5",
           systemStatus: "operational",
         },
-        countries: countryDetails,
+        countries: countriesWithData,
       });
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -12167,38 +12168,16 @@ async function seedCountrySettings() {
     const existing = await db.select().from(countrySettings);
     if (existing.length > 0) return;
 
-    const supported = getSupportedCountries();
-    const dpStatusMap: Record<string, string> = {
-      GH: "enacted", NG: "enacted", KE: "enacted", RW: "enacted", TZ: "enacted",
-      UG: "enacted", ZA: "enacted", ET: "enacted", SL: "draft", LR: "draft",
-    };
-    const sataMap: Record<string, string> = {
-      GH: "ready", NG: "ready", KE: "ready", RW: "ready", ZA: "ready",
-      TZ: "partial", UG: "partial", ET: "partial", SL: "planned", LR: "planned",
-    };
-    const defaultFeatures = ["credit_scoring", "dispute_management", "consent_tracking"];
-    const countryFeatures: Record<string, string[]> = {
-      GH: [...defaultFeatures, "regulatory_export", "batch_upload", "api_access", "kyc_verification"],
-      SL: [...defaultFeatures, "regulatory_export", "batch_upload"],
-      NG: [...defaultFeatures, "cross_border_sharing", "batch_upload", "api_access", "kyc_verification"],
-      KE: [...defaultFeatures, "cross_border_sharing", "batch_upload", "api_access", "kyc_verification"],
-      RW: [...defaultFeatures, "cross_border_sharing", "api_access"],
-      TZ: [...defaultFeatures, "batch_upload", "api_access"],
-      UG: [...defaultFeatures, "batch_upload"],
-      ZA: [...defaultFeatures, "cross_border_sharing", "batch_upload", "api_access", "kyc_verification"],
-      ET: [...defaultFeatures, "batch_upload"],
-      LR: [...defaultFeatures],
-    };
-
-    for (const sc of supported) {
+    const ghConfig = getSupportedCountries().find(c => c.code === "GH");
+    if (ghConfig) {
       await db.insert(countrySettings).values({
-        countryCode: sc.code,
-        countryName: sc.name,
-        regulatoryBody: sc.regulatoryBody,
-        dataProtectionLaw: sc.dataProtectionLaw,
-        dataProtectionStatus: dpStatusMap[sc.code] || "none",
-        sataReadiness: sataMap[sc.code] || "planned",
-        enabledFeatures: countryFeatures[sc.code] || defaultFeatures,
+        countryCode: ghConfig.code,
+        countryName: ghConfig.name,
+        regulatoryBody: ghConfig.regulatoryBody,
+        dataProtectionLaw: ghConfig.dataProtectionLaw,
+        dataProtectionStatus: "enacted",
+        sataReadiness: "ready",
+        enabledFeatures: ["credit_scoring", "dispute_management", "consent_tracking", "regulatory_export", "batch_upload", "api_access", "kyc_verification"],
       }).onConflictDoNothing();
     }
     console.log("[Seed] Country settings initialized");
