@@ -9,3 +9,4 @@ e2e/test-results-artifacts/
 e2e/report/
 backups/
 *.sql.gz
+attached_assets/
