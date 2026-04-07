@@ -623,8 +623,8 @@ export default function BatchUploadPage() {
               <p className="text-xs text-muted-foreground">{t('batchUpload.submitted')}</p>
             </div>
             <div className="text-center p-3 bg-green-500/10 rounded-md">
-              <p className="text-lg font-bold text-green-600 dark:text-green-400" data-testid={`text-success-count${testIdPrefix}`}>{result.successCount}</p>
-              <p className="text-xs text-muted-foreground">{t('batchUpload.succeeded')}</p>
+              <p className="text-lg font-bold text-green-600 dark:text-green-400" data-testid={`text-success-count${testIdPrefix}`}>{(result.updatedCount && result.updatedCount > 0) ? result.successCount - result.updatedCount : result.successCount}</p>
+              <p className="text-xs text-muted-foreground">{(result.updatedCount && result.updatedCount > 0) ? 'Created' : t('batchUpload.succeeded')}</p>
             </div>
             {(result.updatedCount !== undefined && result.updatedCount > 0) && (
               <div className="text-center p-3 bg-blue-500/10 rounded-md">
