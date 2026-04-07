@@ -17,6 +17,7 @@ import { isGhanaMode } from "@/lib/country-mode";
 interface BatchResult {
   totalSubmitted: number;
   successCount: number;
+  updatedCount?: number;
   errorCount: number;
   errors: Array<{ index: number; message: string }>;
 }
@@ -616,7 +617,7 @@ export default function BatchUploadPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className={`grid ${(result.updatedCount && result.updatedCount > 0) ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'} gap-3 mb-4`}>
             <div className="text-center p-3 bg-muted rounded-md">
               <p className="text-lg font-bold" data-testid={`text-total-submitted${testIdPrefix}`}>{result.totalSubmitted}</p>
               <p className="text-xs text-muted-foreground">{t('batchUpload.submitted')}</p>
@@ -625,6 +626,12 @@ export default function BatchUploadPage() {
               <p className="text-lg font-bold text-green-600 dark:text-green-400" data-testid={`text-success-count${testIdPrefix}`}>{result.successCount}</p>
               <p className="text-xs text-muted-foreground">{t('batchUpload.succeeded')}</p>
             </div>
+            {(result.updatedCount !== undefined && result.updatedCount > 0) && (
+              <div className="text-center p-3 bg-blue-500/10 rounded-md">
+                <p className="text-lg font-bold text-blue-600 dark:text-blue-400" data-testid={`text-updated-count${testIdPrefix}`}>{result.updatedCount}</p>
+                <p className="text-xs text-muted-foreground">Updated</p>
+              </div>
+            )}
             <div className="text-center p-3 bg-red-500/10 rounded-md">
               <p className="text-lg font-bold text-red-600 dark:text-red-400" data-testid={`text-error-count${testIdPrefix}`}>{result.errorCount}</p>
               <p className="text-xs text-muted-foreground">{t('batchUpload.failed')}</p>

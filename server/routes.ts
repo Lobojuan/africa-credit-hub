@@ -5148,7 +5148,13 @@ export async function registerRoutes(
               totalSubmitted = parseInt(numMatch[3], 10);
             }
             const updMatch = detailStr.match(/(\d+)\s+updated/);
-            if (updMatch) accountsUpdated = parseInt(updMatch[1], 10);
+            if (updMatch) {
+              const updCount = parseInt(updMatch[1], 10);
+              const entity = log.entity || "";
+              if (entity === "dishonoured_cheque") chequesUpdated = updCount;
+              else if (entity === "court_judgment") judgmentsUpdated = updCount;
+              else accountsUpdated = updCount;
+            }
           }
           return {
             id: log.id,
