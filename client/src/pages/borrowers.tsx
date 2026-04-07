@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { Plus, Search, Building2, User, Users, ChevronRight, ChevronLeft, Flag, AlertTriangle, Camera, Clock, ArrowRight } from "lucide-react";
+import { Plus, Search, Building2, User, Users, ChevronRight, ChevronLeft, Flag, AlertTriangle, Camera, Clock, ArrowRight, CalendarDays } from "lucide-react";
 import { SUPPORTED_COUNTRIES } from "@/lib/currency";
 import { isGhanaMode, isSierraLeoneMode, getDefaultCountry, getCountryConfig, BOG_MARITAL_STATUSES, BOG_PROOF_OF_ADDRESS, BOG_BUSINESS_TYPES, BOG_INDUSTRY_CODES, BOG_EMPLOYMENT_TYPES } from "@/lib/country-mode";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -26,14 +26,22 @@ export default function BorrowersPage() {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [recentDays, setRecentDays] = useState<number | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [, navigate] = useLocation();
   const { toast } = useToast();
 
+  const buildQueryKey = () => {
+    if (search) return `/api/borrowers?search=${encodeURIComponent(search)}`;
+    const params = new URLSearchParams();
+    params.set("page", String(page));
+    params.set("limit", String(PAGE_SIZE));
+    if (recentDays) params.set("recentDays", String(recentDays));
+    return `/api/borrowers?${params.toString()}`;
+  };
+
   const { data: paginatedResult, isLoading } = useQuery<{ data: Borrower[]; total: number } | Borrower[]>({
-    queryKey: search
-      ? [`/api/borrowers?search=${encodeURIComponent(search)}`]
-      : [`/api/borrowers?page=${page}&limit=${PAGE_SIZE}`],
+    queryKey: [buildQueryKey()],
   });
 
   const borrowers = Array.isArray(paginatedResult) ? paginatedResult : paginatedResult?.data;
@@ -405,15 +413,41 @@ export default function BorrowersPage() {
         </Dialog>
       </div>
 
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          data-testid="input-search-borrowers"
-          placeholder={t("borrowers.searchPlaceholder")}
-          className="pl-9"
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-        />
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div className="relative max-w-sm flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            data-testid="input-search-borrowers"
+            placeholder={t("borrowers.searchPlaceholder")}
+            className="pl-9"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); setRecentDays(null); }}
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <CalendarDays className="w-4 h-4 text-muted-foreground" />
+          <Select
+            value={recentDays ? String(recentDays) : "all"}
+            onValueChange={(v) => { setRecentDays(v === "all" ? null : parseInt(v)); setPage(1); setSearch(""); }}
+          >
+            <SelectTrigger className="w-[160px] h-9 text-xs" data-testid="select-recent-filter">
+              <SelectValue placeholder="Filter by date" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Borrowers</SelectItem>
+              <SelectItem value="1">Last 24 Hours</SelectItem>
+              <SelectItem value="7">Last 7 Days</SelectItem>
+              <SelectItem value="30">Last 30 Days</SelectItem>
+              <SelectItem value="90">Last 90 Days</SelectItem>
+            </SelectContent>
+          </Select>
+          {recentDays && (
+            <Badge variant="secondary" className="text-[10px] gap-1">
+              <Clock className="w-3 h-3" />
+              Last {recentDays}d
+            </Badge>
+          )}
+        </div>
       </div>
 
       {isLoading ? (

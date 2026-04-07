@@ -1766,13 +1766,14 @@ export async function registerRoutes(
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
       const search = req.query.search as string;
+      const recentDays = parseInt(req.query.recentDays as string) || 0;
       if (search) {
         const data = await storage.searchBorrowers(search, orgId, country);
         res.json(data);
       } else {
         const page = Math.max(1, parseInt(req.query.page as string) || 1);
         const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50));
-        const result = await storage.getBorrowers(page, limit, orgId, country);
+        const result = await storage.getBorrowers(page, limit, orgId, country, recentDays > 0 ? recentDays : undefined);
         res.json(result);
       }
     } catch (e: any) {

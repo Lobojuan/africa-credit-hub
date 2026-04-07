@@ -1,4 +1,4 @@
-import { eq, desc, like, or, and, sql, count, ilike, inArray } from "drizzle-orm";
+import { eq, desc, like, or, and, sql, count, ilike, inArray, gte } from "drizzle-orm";
 import crypto from "crypto";
 import { db } from "./db";
 import { encryptBorrowerPII, decryptBorrowerPII, decryptBorrowerArray } from "./encryption";
@@ -61,7 +61,7 @@ export interface IStorage {
   updateLastLogin(userId: string): Promise<void>;
 
   getBorrower(id: string): Promise<Borrower | undefined>;
-  getBorrowers(page?: number, limit?: number, organizationId?: string, country?: string): Promise<{ data: Borrower[]; total: number }>;
+  getBorrowers(page?: number, limit?: number, organizationId?: string, country?: string, recentDays?: number): Promise<{ data: Borrower[]; total: number }>;
   getBorrowersByType(type: "individual" | "corporate", page?: number, limit?: number, organizationId?: string, country?: string): Promise<{ data: Borrower[]; total: number }>;
   searchBorrowersByType(type: "individual" | "corporate", query: string, organizationId?: string, country?: string): Promise<Borrower[]>;
   searchBorrowers(query: string, organizationId?: string, country?: string): Promise<Borrower[]>;
@@ -357,12 +357,16 @@ export class DatabaseStorage implements IStorage {
     return borrower ? decryptBorrowerPII(borrower as Record<string, any>) as Borrower : undefined;
   }
 
-  async getBorrowers(page: number = 1, limit: number = 50, organizationId?: string, country?: string): Promise<{ data: Borrower[]; total: number }> {
+  async getBorrowers(page: number = 1, limit: number = 50, organizationId?: string, country?: string, recentDays?: number): Promise<{ data: Borrower[]; total: number }> {
     const safeLimit = Math.min(limit, 200);
     const offset = (page - 1) * safeLimit;
     const filters: any[] = [];
     if (organizationId) filters.push(eq(borrowers.organizationId, organizationId));
     if (country) filters.push(eq(borrowers.country, country));
+    if (recentDays && recentDays > 0) {
+      const cutoff = new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000);
+      filters.push(gte(borrowers.createdAt, cutoff));
+    }
     const where = filters.length > 1 ? and(...filters) : filters[0];
     const [totalResult] = await db.select({ value: count() }).from(borrowers).where(where);
     const data = await db.select().from(borrowers).where(where).orderBy(desc(borrowers.createdAt)).limit(safeLimit).offset(offset);
