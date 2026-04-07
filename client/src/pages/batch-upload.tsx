@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, fetchCSRFToken } from "@/lib/queryClient";
 import { isGhanaMode } from "@/lib/country-mode";
 
 interface BatchResult {
@@ -328,6 +328,7 @@ export default function BatchUploadPage() {
 
   const iffUploadMutation = useMutation({
     mutationFn: async ({ file, iffType: type }: { file: File; iffType: string }) => {
+      const csrfToken = await fetchCSRFToken();
       const formData = new FormData();
       formData.append("file", file);
       if (type) formData.append("iffType", type);
@@ -335,6 +336,9 @@ export default function BatchUploadPage() {
         method: "POST",
         body: formData,
         credentials: "include",
+        headers: {
+          "x-csrf-token": csrfToken,
+        },
       });
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({ message: "Upload failed" }));
