@@ -28,6 +28,44 @@ function toInt(val: any): number | null {
   return isNaN(n) ? null : n;
 }
 
+function enrichError(err: any, row: Record<string, any>, rowIndex: number): { row: number; message: string; field?: string; value?: string; rowData?: Record<string, string> } {
+  const msg = err.message || "Unknown error";
+  let field: string | undefined;
+  let value: string | undefined;
+  let friendlyMsg = msg;
+
+  const uniqueMatch = msg.match(/unique constraint "(\w+)"/i);
+  if (uniqueMatch) {
+    const constraint = uniqueMatch[1];
+    if (constraint.includes("national_id")) { field = "NationalID/GhanaCardNo"; value = String(row.GhanaCardNo || row.NationalID || row.nationalId || ""); friendlyMsg = `Duplicate National ID "${value}" — a borrower with this ID already exists`; }
+    else if (constraint.includes("account_number")) { field = "AccountNumber"; value = String(row.AccountNumber || row.AccountNo || ""); friendlyMsg = `Duplicate Account Number "${value}" — this account already exists`; }
+    else if (constraint.includes("tin_number")) { field = "TIN"; value = String(row.TIN || row.TINNo || ""); friendlyMsg = `Duplicate TIN "${value}" — a business with this TIN already exists`; }
+    else if (constraint.includes("business_reg")) { field = "BusinessRegNo"; value = String(row.RegNo || row.BusinessRegNo || ""); friendlyMsg = `Duplicate Business Registration "${value}" — already exists`; }
+    else { friendlyMsg = `Duplicate value violates constraint "${constraint}"`; }
+  }
+
+  const notNullMatch = msg.match(/null value in column "(\w+)"/i) || msg.match(/violates not-null constraint.*"(\w+)"/i);
+  if (notNullMatch) {
+    field = notNullMatch[1];
+    friendlyMsg = `Missing required field "${field}" — this column cannot be empty`;
+  }
+
+  const typeMatch = msg.match(/invalid input syntax for type (\w+): "(.+?)"/i);
+  if (typeMatch) {
+    field = typeMatch[1];
+    value = typeMatch[2];
+    friendlyMsg = `Invalid ${typeMatch[1]} value "${typeMatch[2]}" — check the format`;
+  }
+
+  const keyFields = ["SRN", "BorrowerName", "GhanaCardNo", "NationalID", "AccountNumber", "AccountNo", "CompanyName", "RegNo", "TIN"];
+  const rowSummary: Record<string, string> = {};
+  for (const k of keyFields) {
+    if (row[k] !== undefined && row[k] !== null && row[k] !== "") rowSummary[k] = String(row[k]);
+  }
+
+  return { row: rowIndex, message: friendlyMsg, field, value, rowData: Object.keys(rowSummary).length > 0 ? rowSummary : undefined };
+}
+
 interface ProcessingResult {
   totalRecords: number;
   borrowersCreated: number;
@@ -36,7 +74,7 @@ interface ProcessingResult {
   chequesCreated: number;
   judgmentsCreated: number;
   guarantorsCreated: number;
-  errors: Array<{ row: number; message: string }>;
+  errors: Array<{ row: number; message: string; field?: string; value?: string; rowData?: Record<string, string> }>;
 }
 
 async function findOrCreateBorrower(
@@ -333,7 +371,7 @@ export async function processBusinessCreditIFF(
         result.guarantorsCreated++;
       }
     } catch (err: any) {
-      result.errors.push({ row: i + 1, message: err.message || "Unknown error" });
+      result.errors.push(enrichError(err, rows[i], i + 1));
     }
   }
   return result;
@@ -392,7 +430,7 @@ export async function processConsumerCreditIFF(
         result.guarantorsCreated++;
       }
     } catch (err: any) {
-      result.errors.push({ row: i + 1, message: err.message || "Unknown error" });
+      result.errors.push(enrichError(err, rows[i], i + 1));
     }
   }
   return result;
@@ -436,7 +474,7 @@ export async function processBusinessDishonouredChequesIFF(
       });
       result.chequesCreated++;
     } catch (err: any) {
-      result.errors.push({ row: i + 1, message: err.message || "Unknown error" });
+      result.errors.push(enrichError(err, rows[i], i + 1));
     }
   }
   return result;
@@ -480,7 +518,7 @@ export async function processConsumerDishonouredChequesIFF(
       });
       result.chequesCreated++;
     } catch (err: any) {
-      result.errors.push({ row: i + 1, message: err.message || "Unknown error" });
+      result.errors.push(enrichError(err, rows[i], i + 1));
     }
   }
   return result;
@@ -532,7 +570,7 @@ export async function processBusinessJudgmentIFF(
       });
       result.judgmentsCreated++;
     } catch (err: any) {
-      result.errors.push({ row: i + 1, message: err.message || "Unknown error" });
+      result.errors.push(enrichError(err, rows[i], i + 1));
     }
   }
   return result;
@@ -584,7 +622,7 @@ export async function processConsumerJudgmentIFF(
       });
       result.judgmentsCreated++;
     } catch (err: any) {
-      result.errors.push({ row: i + 1, message: err.message || "Unknown error" });
+      result.errors.push(enrichError(err, rows[i], i + 1));
     }
   }
   return result;

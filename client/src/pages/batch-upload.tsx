@@ -1041,12 +1041,27 @@ export default function BatchUploadPage() {
                       </div>
                     </div>
                     {iffResult.errors?.length > 0 && (
-                      <div className="max-h-32 overflow-auto">
-                        {iffResult.errors.slice(0, 10).map((err: any, i: number) => (
-                          <p key={i} className="text-xs text-red-600 dark:text-red-400">Row {err.row}: {err.message}</p>
+                      <div className="space-y-2 max-h-64 overflow-auto">
+                        {iffResult.errors.slice(0, 20).map((err: any, i: number) => (
+                          <div key={i} className="border border-red-200 dark:border-red-800 rounded-md p-3 bg-red-50 dark:bg-red-950/30" data-testid={`error-detail-${i}`}>
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge variant="destructive" className="text-[10px] px-1.5 py-0">Row {err.row}</Badge>
+                              {err.field && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{err.field}</Badge>}
+                            </div>
+                            <p className="text-xs text-red-700 dark:text-red-300 font-medium">{err.message}</p>
+                            {err.rowData && (
+                              <div className="mt-1.5 flex flex-wrap gap-1">
+                                {Object.entries(err.rowData).map(([k, v]) => (
+                                  <span key={k} className="text-[10px] bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-200 px-1.5 py-0.5 rounded">
+                                    {k}: {String(v)}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         ))}
-                        {iffResult.errors.length > 10 && (
-                          <p className="text-xs text-muted-foreground">...and {iffResult.errors.length - 10} more errors</p>
+                        {iffResult.errors.length > 20 && (
+                          <p className="text-xs text-muted-foreground text-center py-1">...and {iffResult.errors.length - 20} more errors</p>
                         )}
                       </div>
                     )}
