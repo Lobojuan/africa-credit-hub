@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Plus, CreditCard } from "lucide-react";
+import { Plus, CreditCard, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,10 +34,18 @@ export default function CreditAccountsPage() {
   const { t, i18n } = useTranslation();
   const [, navigate] = useLocation();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [recentDays, setRecentDays] = useState(0);
   const { toast } = useToast();
 
   const { data: accounts, isLoading } = useQuery<CreditAccount[]>({
-    queryKey: ["/api/credit-accounts"],
+    queryKey: ["/api/credit-accounts", recentDays],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (recentDays > 0) params.set("recentDays", String(recentDays));
+      const res = await fetch(`/api/credit-accounts${params.toString() ? `?${params}` : ""}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch credit accounts");
+      return res.json();
+    },
   });
 
   const { data: borrowersResult } = useQuery<{ data: Borrower[]; total: number }>({
@@ -97,6 +105,21 @@ export default function CreditAccountsPage() {
       <CreditAccountKPIBanner />
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-4">
+        <div className="flex items-center gap-2">
+          <Clock className="w-4 h-4 text-muted-foreground" />
+          <Select value={String(recentDays)} onValueChange={(v) => setRecentDays(Number(v))}>
+            <SelectTrigger className="w-[160px]" data-testid="select-recent-days">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0">{t("common.allTime", "All Time")}</SelectItem>
+              <SelectItem value="1">{t("common.last24h", "Last 24 Hours")}</SelectItem>
+              <SelectItem value="7">{t("common.last7d", "Last 7 Days")}</SelectItem>
+              <SelectItem value="30">{t("common.last30d", "Last 30 Days")}</SelectItem>
+              <SelectItem value="90">{t("common.last90d", "Last 90 Days")}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-add-account">

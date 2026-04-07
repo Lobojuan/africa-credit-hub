@@ -72,7 +72,7 @@ export interface IStorage {
 
   getCreditAccount(id: string): Promise<CreditAccount | undefined>;
   getCreditAccountsByBorrower(borrowerId: string): Promise<CreditAccount[]>;
-  getAllCreditAccounts(organizationId?: string, country?: string, limit?: number, offset?: number): Promise<CreditAccount[]>;
+  getAllCreditAccounts(organizationId?: string, country?: string, limit?: number, offset?: number, recentDays?: number): Promise<CreditAccount[]>;
   createCreditAccount(account: InsertCreditAccount): Promise<CreditAccount>;
   updateCreditAccount(id: string, data: Partial<InsertCreditAccount>): Promise<CreditAccount | undefined>;
 
@@ -124,7 +124,7 @@ export interface IStorage {
   getUsersByRole(...roles: string[]): Promise<User[]>;
 
   getCourtJudgmentsByBorrower(borrowerId: string): Promise<CourtJudgment[]>;
-  getAllCourtJudgments(organizationId?: string, country?: string): Promise<CourtJudgment[]>;
+  getAllCourtJudgments(organizationId?: string, country?: string, recentDays?: number): Promise<CourtJudgment[]>;
   createCourtJudgment(judgment: InsertCourtJudgment): Promise<CourtJudgment>;
 
   getConsentRecordsByBorrower(borrowerId: string): Promise<ConsentRecord[]>;
@@ -190,7 +190,7 @@ export interface IStorage {
   deleteApiConfiguration(id: string): Promise<boolean>;
 
   getDishonouredChequesByBorrower(borrowerId: string): Promise<DishonouredCheque[]>;
-  getAllDishonouredCheques(organizationId?: string): Promise<DishonouredCheque[]>;
+  getAllDishonouredCheques(organizationId?: string, recentDays?: number): Promise<DishonouredCheque[]>;
   createDishonouredCheque(cheque: InsertDishonouredCheque): Promise<DishonouredCheque>;
 
   getGuarantorsByAccount(creditAccountId: string): Promise<Guarantor[]>;
@@ -570,10 +570,14 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(creditAccounts).where(eq(creditAccounts.borrowerId, borrowerId)).orderBy(desc(creditAccounts.createdAt));
   }
 
-  async getAllCreditAccounts(organizationId?: string, country?: string, limit = 100, offset = 0): Promise<CreditAccount[]> {
+  async getAllCreditAccounts(organizationId?: string, country?: string, limit = 100, offset = 0, recentDays?: number): Promise<CreditAccount[]> {
     const filters: any[] = [];
     if (organizationId) filters.push(eq(creditAccounts.organizationId, organizationId));
     if (country) filters.push(this.countryOrgFilter(creditAccounts, country));
+    if (recentDays && recentDays > 0) {
+      const cutoff = new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000);
+      filters.push(gte(creditAccounts.createdAt, cutoff));
+    }
     const where = filters.length > 1 ? and(...filters) : filters[0];
     return db.select().from(creditAccounts).where(where).orderBy(desc(creditAccounts.createdAt)).limit(limit).offset(offset);
   }
@@ -929,10 +933,14 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(courtJudgments).where(eq(courtJudgments.borrowerId, borrowerId)).orderBy(desc(courtJudgments.createdAt));
   }
 
-  async getAllCourtJudgments(organizationId?: string, country?: string): Promise<CourtJudgment[]> {
+  async getAllCourtJudgments(organizationId?: string, country?: string, recentDays?: number): Promise<CourtJudgment[]> {
     const filters: any[] = [];
     if (organizationId) filters.push(eq(courtJudgments.organizationId, organizationId));
     if (country) filters.push(this.countryOrgFilter(courtJudgments, country));
+    if (recentDays && recentDays > 0) {
+      const cutoff = new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000);
+      filters.push(gte(courtJudgments.createdAt, cutoff));
+    }
     const where = filters.length > 1 ? and(...filters) : filters[0];
     return db.select().from(courtJudgments).where(where).orderBy(desc(courtJudgments.createdAt)).limit(200);
   }
@@ -1377,9 +1385,15 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(dishonouredCheques).where(eq(dishonouredCheques.borrowerId, borrowerId)).orderBy(desc(dishonouredCheques.createdAt));
   }
 
-  async getAllDishonouredCheques(organizationId?: string): Promise<DishonouredCheque[]> {
-    const filter = organizationId ? eq(dishonouredCheques.organizationId, organizationId) : undefined;
-    return db.select().from(dishonouredCheques).where(filter).orderBy(desc(dishonouredCheques.createdAt)).limit(200);
+  async getAllDishonouredCheques(organizationId?: string, recentDays?: number): Promise<DishonouredCheque[]> {
+    const filters: any[] = [];
+    if (organizationId) filters.push(eq(dishonouredCheques.organizationId, organizationId));
+    if (recentDays && recentDays > 0) {
+      const cutoff = new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000);
+      filters.push(gte(dishonouredCheques.createdAt, cutoff));
+    }
+    const where = filters.length > 1 ? and(...filters) : filters[0];
+    return db.select().from(dishonouredCheques).where(where).orderBy(desc(dishonouredCheques.createdAt)).limit(200);
   }
 
   async createDishonouredCheque(cheque: InsertDishonouredCheque): Promise<DishonouredCheque> {

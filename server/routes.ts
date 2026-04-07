@@ -3358,7 +3358,8 @@ export async function registerRoutes(
         const result = await storage.getCreditAccountsByBorrower(borrowerId);
         return res.json(result);
       }
-      const result = await storage.getAllCreditAccounts(orgId, country);
+      const recentDays = parseInt(req.query.recentDays as string) || 0;
+      const result = await storage.getAllCreditAccounts(orgId, country, 100, 0, recentDays > 0 ? recentDays : undefined);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -5534,7 +5535,8 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         }
         return res.json(await storage.getCourtJudgmentsByBorrower(borrowerId));
       }
-      const result = await storage.getAllCourtJudgments(orgId, country);
+      const recentDays = parseInt(req.query.recentDays as string) || 0;
+      const result = await storage.getAllCourtJudgments(orgId, country, recentDays > 0 ? recentDays : undefined);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
