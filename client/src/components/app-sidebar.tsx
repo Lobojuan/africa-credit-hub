@@ -83,39 +83,43 @@ type NavItem = {
   roles?: string[];
 };
 
-const globalViewItems: NavItem[] = [
+const overviewItems: NavItem[] = [
   { label: "Dashboard", tKey: "sidebar.dashboard", url: "/dashboard", icon: LayoutDashboard, testId: "nav-dashboard" },
-  { label: "Portfolio Intelligence", tKey: "sidebar.portfolioIntelligence", url: "/portfolio-intelligence", icon: Brain, testId: "nav-portfolio-intelligence", roles: ["admin", "super_admin", "regulator"] },
-  { label: "AI Command Center", tKey: "sidebar.aiCommandCenter", url: "/ai-command-center", icon: Sparkles, testId: "nav-ai-command-center", roles: ["admin", "super_admin", "regulator"] },
   { label: "Platform Metrics", tKey: "sidebar.platformMetrics", url: "/platform-metrics", icon: Gauge, testId: "nav-platform-metrics", roles: ["admin", "super_admin"] },
 ];
 
-const telcoItems: NavItem[] = [
-  { label: "Telco Scoring", tKey: "sidebar.telcoScoring", url: "/telco-scoring", icon: Smartphone, testId: "nav-telco-scoring", roles: ["admin", "lender", "regulator", "super_admin"] },
-  { label: "Telco Lending", tKey: "sidebar.telcoLending", url: "/telco-lending", icon: Banknote, testId: "nav-telco-lending", roles: ["admin", "lender", "regulator", "super_admin"] },
-];
-
-const borrowersLendersItems: NavItem[] = [
+const creditDataItems: NavItem[] = [
   { label: "Consumers", tKey: "sidebar.consumers", url: "/consumers", icon: User, testId: "nav-consumers" },
   { label: "Businesses", tKey: "sidebar.businesses", url: "/businesses", icon: Building2, testId: "nav-businesses" },
   { label: "Borrowers (All)", tKey: "sidebar.borrowers", url: "/borrowers", icon: Users, testId: "nav-borrowers", roles: ["super_admin"] },
   { label: "Credit Accounts", tKey: "sidebar.creditAccounts", url: "/credit-accounts", icon: CreditCard, testId: "nav-credit-accounts" },
   { label: "Dishonoured Cheques", tKey: "sidebar.dishonouredCheques", url: "/dishonoured-cheques", icon: Ban, testId: "nav-dishonoured-cheques" },
   { label: "Court Judgments", tKey: "sidebar.courtJudgments", url: "/court-judgments", icon: Gavel, testId: "nav-court-judgments" },
-  { label: "Generate Credit Report", tKey: "sidebar.creditSearch", url: "/search", icon: FileText, testId: "nav-credit-search" },
-  { label: "Credit Reports", tKey: "sidebar.creditReports", url: "/reports", icon: FileText, testId: "nav-credit-reports" },
-  { label: "Score Methodology", tKey: "sidebar.creditScoreMethodology", url: "/credit-score-methodology", icon: Brain, testId: "nav-credit-score-methodology", roles: ["admin", "lender", "super_admin"] },
-  { label: "My Credit", tKey: "sidebar.myCredit", url: "/my-credit", icon: UserCheck, testId: "nav-consumer-portal" },
-  { label: "Institutions", tKey: "sidebar.institutions", url: "/institutions", icon: Building2, testId: "nav-institutions", roles: ["admin", "super_admin"] },
 ];
 
-const operationsItems: NavItem[] = [
+const reportsScoringItems: NavItem[] = [
+  { label: "Generate Credit Report", tKey: "sidebar.creditSearch", url: "/search", icon: Search, testId: "nav-credit-search" },
+  { label: "Credit Reports", tKey: "sidebar.creditReports", url: "/reports", icon: FileText, testId: "nav-credit-reports" },
+  { label: "Score Methodology", tKey: "sidebar.creditScoreMethodology", url: "/credit-score-methodology", icon: Brain, testId: "nav-credit-score-methodology", roles: ["admin", "lender", "super_admin"] },
+];
+
+const dataManagementItems: NavItem[] = [
   { label: "Batch Upload", tKey: "sidebar.batchUpload", url: "/batch-upload", icon: Upload, testId: "nav-batch-upload", roles: ["admin", "lender", "super_admin"] },
+  { label: "Borrower Alerts", tKey: "sidebar.borrowerAlerts", url: "/borrower-alerts", icon: Bell, testId: "nav-borrower-alerts", roles: ["admin", "regulator", "super_admin"] },
+  { label: "Consent", tKey: "sidebar.consentManagement", url: "/consent", icon: FileCheck, testId: "nav-consent", roles: ["admin", "lender", "regulator", "super_admin"] },
+];
+
+const workflowItems: NavItem[] = [
   { label: "Disputes", tKey: "sidebar.disputes", url: "/disputes", icon: AlertCircle, testId: "nav-disputes", roles: ["admin", "lender", "regulator", "super_admin"] },
   { label: "Approvals", tKey: "sidebar.pendingApprovals", url: "/approvals", icon: CheckSquare, testId: "nav-pending-approvals", roles: ["admin", "regulator", "super_admin"] },
-  { label: "Consent", tKey: "sidebar.consentManagement", url: "/consent", icon: FileCheck, testId: "nav-consent", roles: ["admin", "lender", "regulator", "super_admin"] },
   { label: "Helpdesk", tKey: "sidebar.helpdesk", url: "/helpdesk", icon: Headset, testId: "nav-helpdesk" },
-  { label: "Borrower Alerts", tKey: "sidebar.borrowerAlerts", url: "/borrower-alerts", icon: Bell, testId: "nav-borrower-alerts", roles: ["admin", "regulator", "super_admin"] },
+];
+
+const intelligenceItems: NavItem[] = [
+  { label: "Portfolio Intelligence", tKey: "sidebar.portfolioIntelligence", url: "/portfolio-intelligence", icon: Brain, testId: "nav-portfolio-intelligence", roles: ["admin", "super_admin", "regulator"] },
+  { label: "AI Command Center", tKey: "sidebar.aiCommandCenter", url: "/ai-command-center", icon: Sparkles, testId: "nav-ai-command-center", roles: ["admin", "super_admin", "regulator"] },
+  { label: "Telco Scoring", tKey: "sidebar.telcoScoring", url: "/telco-scoring", icon: Smartphone, testId: "nav-telco-scoring", roles: ["admin", "lender", "regulator", "super_admin"] },
+  { label: "Telco Lending", tKey: "sidebar.telcoLending", url: "/telco-lending", icon: Banknote, testId: "nav-telco-lending", roles: ["admin", "lender", "regulator", "super_admin"] },
 ];
 
 const baseOversightItems: NavItem[] = [
@@ -145,18 +149,27 @@ const adminItems: NavItem[] = [
   { label: "Command Center", tKey: "sidebar.systemConfig", url: "/command-center", icon: Monitor, testId: "nav-command-center", roles: ["super_admin"] },
   { label: "Organizations", tKey: "sidebar.organizations", url: "/organizations", icon: Building2, testId: "nav-organizations", roles: ["super_admin"] },
   { label: "User Management", tKey: "sidebar.userManagement", url: "/users", icon: Settings, testId: "nav-user-management", roles: ["admin", "super_admin"] },
+  { label: "Institutions", tKey: "sidebar.institutions", url: "/institutions", icon: Building2, testId: "nav-institutions", roles: ["admin", "super_admin"] },
   { label: "Billing", tKey: "sidebar.billing", url: "/billing", icon: Receipt, testId: "nav-billing", roles: ["admin", "regulator", "super_admin"] },
-  { label: "Retention Policies", tKey: "sidebar.retentionPolicies", url: "/retention-policies", icon: Archive, testId: "nav-retention-policies", roles: ["admin", "regulator", "super_admin"] },
-  { label: "Exchange Rates", tKey: "sidebar.exchangeRates", url: "/exchange-rates", icon: DollarSign, testId: "nav-exchange-rates", roles: ["admin", "super_admin"] },
-  { label: "API Admin", tKey: "sidebar.apiAdmin", url: "/api-admin", icon: Plug, testId: "nav-api-admin", roles: ["admin", "super_admin"] },
-  { label: "API Keys", tKey: "sidebar.apiKeys", url: "/api-keys", icon: Key, testId: "nav-api-keys", roles: ["admin", "super_admin"] },
-  { label: "System Status", tKey: "sidebar.systemStatus", url: "/system-status", icon: Activity, testId: "nav-system-status", roles: ["admin", "super_admin"] },
-  { label: "Backup & Recovery", tKey: "sidebar.backupRecovery", url: "/backup", icon: HardDrive, testId: "nav-backup", roles: ["super_admin"] },
-  { label: "Webhooks", tKey: "sidebar.webhookManagement", url: "/webhook-management", icon: Webhook, testId: "nav-webhook-management", roles: ["admin", "super_admin"] },
 ];
 
-function getDocumentItems(): NavItem[] {
-  const items: NavItem[] = [];
+const apiIntegrationItems: NavItem[] = [
+  { label: "API Admin", tKey: "sidebar.apiAdmin", url: "/api-admin", icon: Plug, testId: "nav-api-admin", roles: ["admin", "super_admin"] },
+  { label: "API Keys", tKey: "sidebar.apiKeys", url: "/api-keys", icon: Key, testId: "nav-api-keys", roles: ["admin", "super_admin"] },
+  { label: "Webhooks", tKey: "sidebar.webhookManagement", url: "/webhook-management", icon: Webhook, testId: "nav-webhook-management", roles: ["admin", "super_admin"] },
+  { label: "Exchange Rates", tKey: "sidebar.exchangeRates", url: "/exchange-rates", icon: DollarSign, testId: "nav-exchange-rates", roles: ["admin", "super_admin"] },
+];
+
+const infrastructureItems: NavItem[] = [
+  { label: "System Status", tKey: "sidebar.systemStatus", url: "/system-status", icon: Activity, testId: "nav-system-status", roles: ["admin", "super_admin"] },
+  { label: "Backup & Recovery", tKey: "sidebar.backupRecovery", url: "/backup", icon: HardDrive, testId: "nav-backup", roles: ["super_admin"] },
+  { label: "Retention Policies", tKey: "sidebar.retentionPolicies", url: "/retention-policies", icon: Archive, testId: "nav-retention-policies", roles: ["admin", "regulator", "super_admin"] },
+];
+
+function getHelpItems(): NavItem[] {
+  const items: NavItem[] = [
+    { label: "My Credit", tKey: "sidebar.myCredit", url: "/my-credit", icon: UserCheck, testId: "nav-consumer-portal" },
+  ];
   if (isGhanaMode()) {
     items.push({ label: "Ghana Docs", tKey: "sidebar.ghanaDocs", url: "/ghana-docs", icon: BookOpen, testId: "nav-ghana-docs" });
   }
@@ -271,10 +284,12 @@ export function AppSidebar() {
   const dynamicBrandTitle = dynamicCountryConfig?.brandTitle || (isGhanaMode() ? getBrandTitle() : t('sidebar.brandTitle'));
   const dynamicTheme = countryTheme?.activeTheme;
 
-  const visibleGlobal = filterByRole(globalViewItems, role);
-  const visibleTelco = filterByRole(telcoItems, role);
-  const visibleBorrowersLenders = filterByRole(borrowersLendersItems, role);
-  const visibleOperations = filterByRole(operationsItems, role);
+  const visibleOverview = filterByRole(overviewItems, role);
+  const visibleCreditData = filterByRole(creditDataItems, role);
+  const visibleReportsScoring = filterByRole(reportsScoringItems, role);
+  const visibleDataMgmt = filterByRole(dataManagementItems, role);
+  const visibleWorkflows = filterByRole(workflowItems, role);
+  const visibleIntelligence = filterByRole(intelligenceItems, role);
   const oversightItems = getOversightItems(dynamicCountryConfig?.name);
   const visibleOversight = filterByRole(oversightItems, role);
   const { data: crossBorderAccess } = useQuery<{ hasAccess: boolean; reason: string }>({
@@ -284,7 +299,9 @@ export function AppSidebar() {
   const hasCrossBorderAccess = crossBorderAccess?.hasAccess ?? false;
   const visibleCrossBorder = hasCrossBorderAccess ? filterByRole(crossBorderItems, role) : [];
   const visibleAdmin = filterByRole(adminItems, role);
-  const visibleDocs = filterByRole(getDocumentItems(), role);
+  const visibleApiIntegration = filterByRole(apiIntegrationItems, role);
+  const visibleInfrastructure = filterByRole(infrastructureItems, role);
+  const visibleHelp = filterByRole(getHelpItems(), role);
   const isSuperAdmin = role === "super_admin";
   const orgName = (user as any)?.organization?.name;
 
@@ -333,36 +350,54 @@ export function AppSidebar() {
       </div>
       <SidebarContent className="gap-0">
         <CollapsibleSection
-          label="Global View"
-          tKey="sidebar.main"
-          items={visibleGlobal}
+          label="Overview"
+          tKey="sidebar.overview"
+          items={visibleOverview}
           location={location}
           icon={LayoutDashboard}
         />
 
         <CollapsibleSection
-          label="Telco"
-          tKey="sidebar.telco"
-          items={visibleTelco}
-          location={location}
-          icon={Smartphone}
-        />
-
-        <CollapsibleSection
-          label="Borrowers & Lenders"
-          tKey="sidebar.borrowersLenders"
-          items={visibleBorrowersLenders}
+          label="Credit Data"
+          tKey="sidebar.creditData"
+          items={visibleCreditData}
           location={location}
           icon={Users}
         />
 
         <CollapsibleSection
-          label="Operations"
-          tKey="sidebar.operations"
-          items={visibleOperations}
+          label="Reports & Scoring"
+          tKey="sidebar.reportsScoring"
+          items={visibleReportsScoring}
           location={location}
-          icon={CreditCard}
+          icon={FileText}
         />
+
+        <CollapsibleSection
+          label="Data Management"
+          tKey="sidebar.dataManagement"
+          items={visibleDataMgmt}
+          location={location}
+          icon={Upload}
+        />
+
+        <CollapsibleSection
+          label="Workflows"
+          tKey="sidebar.workflows"
+          items={visibleWorkflows}
+          location={location}
+          icon={CheckSquare}
+        />
+
+        {visibleIntelligence.length > 0 && (
+          <CollapsibleSection
+            label="Intelligence"
+            tKey="sidebar.intelligence"
+            items={visibleIntelligence}
+            location={location}
+            icon={Sparkles}
+          />
+        )}
 
         {visibleOversight.length > 0 && (
           <CollapsibleSection
@@ -384,6 +419,10 @@ export function AppSidebar() {
           />
         )}
 
+        <div className="mx-3 my-1">
+          <div className="h-px bg-sidebar-foreground/10" />
+        </div>
+
         {visibleAdmin.length > 0 && (
           <CollapsibleSection
             label="Administration"
@@ -394,16 +433,36 @@ export function AppSidebar() {
           />
         )}
 
+        {visibleApiIntegration.length > 0 && (
+          <CollapsibleSection
+            label="API & Integrations"
+            tKey="sidebar.apiIntegrations"
+            items={visibleApiIntegration}
+            location={location}
+            icon={Plug}
+          />
+        )}
+
+        {visibleInfrastructure.length > 0 && (
+          <CollapsibleSection
+            label="Infrastructure"
+            tKey="sidebar.infrastructure"
+            items={visibleInfrastructure}
+            location={location}
+            icon={Activity}
+          />
+        )}
+
         <div className="mx-3 my-1">
           <div className="h-px bg-sidebar-foreground/10" />
         </div>
 
         <CollapsibleSection
-          label="Documents"
-          tKey="sidebar.documentation"
-          items={visibleDocs}
+          label="Help & Resources"
+          tKey="sidebar.helpResources"
+          items={visibleHelp}
           location={location}
-          icon={BookOpen}
+          icon={HelpCircle}
         />
       </SidebarContent>
       <SidebarFooter className="p-3 pt-0 space-y-1.5">
