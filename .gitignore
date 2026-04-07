@@ -7,3 +7,5 @@ vite.config.ts.*
 e2e/.auth/
 e2e/test-results-artifacts/
 e2e/report/
+backups/
+*.sql.gz
