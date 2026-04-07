@@ -479,7 +479,13 @@ Total portfolio delinquency rate: ${data.totalAccounts > 0 ? ((data.stats.delinq
   return parseJSON(result.text, { overallRiskRating: "moderate", portfolioHealthScore: 50, executiveSummary: "Report generation completed. Please try again if content is incomplete." });
 }
 
+let _cachedLiveContext: { text: string; timestamp: number } | null = null;
+const LIVE_CONTEXT_TTL = 60_000;
+
 async function buildLiveContext(): Promise<string> {
+  if (_cachedLiveContext && (Date.now() - _cachedLiveContext.timestamp) < LIVE_CONTEXT_TTL) {
+    return _cachedLiveContext.text;
+  }
   try {
     const [stats, institutions, orgs, retentionPolicies, exchangeRates, borrowersResult, allAccounts, disputes, allInquiries, auditLogs, courtJudgments, consentRecords, users, pendingApprovals, billingRecords, creditReportLogs, telcoProfiles, telcoScores, telcoStats] = await Promise.all([
       storage.getDashboardStats().catch(e => { console.warn("[AI Context] getDashboardStats failed:", e.message); return null; }),
@@ -681,7 +687,7 @@ async function buildLiveContext(): Promise<string> {
       consentSummary[(c as any).consentType || "inquiry"] = (consentSummary[(c as any).consentType || "inquiry"] || 0) + 1;
     }
 
-    return `
+    const context = `
 === LIVE SYSTEM DATA (real-time from database) ===
 
 --- DASHBOARD KPIs ---
@@ -762,6 +768,8 @@ ${recentAudit || "  No audit entries"}
 === BORROWER PORTFOLIO (${borrowersResult.total} borrowers, sorted by risk — worst first) ===
 ${borrowerList || "  No borrowers"}
 === END LIVE DATA ===`.trim();
+    _cachedLiveContext = { text: context, timestamp: Date.now() };
+    return context;
   } catch (err) {
     return "=== LIVE DATA UNAVAILABLE ===";
   }

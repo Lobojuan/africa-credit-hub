@@ -335,6 +335,7 @@ export function DisputeChatbot({ open, onOpenChange }: ChatbotProps) {
       ]);
     } finally {
       setAiStreaming(false);
+      setAiMessages((prev) => prev.filter((m) => !(m.role === "assistant" && !m.content)));
     }
   };
 
@@ -571,23 +572,43 @@ export function DisputeChatbot({ open, onOpenChange }: ChatbotProps) {
             </div>
           )}
 
-          {mode === "ai" && aiMessages.map((msg, i) => (
-            <div key={i} className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`} data-testid={`ai-message-${i}`}>
-              {msg.role === "assistant" && (
-                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <Sparkles className="w-4 h-4 text-primary" />
+          {mode === "ai" && aiMessages.map((msg, i) => {
+            const isStreamingEmpty = aiStreaming && i === aiMessages.length - 1 && !msg.content;
+            if (isStreamingEmpty) return null;
+            return (
+              <div key={i} className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`} data-testid={`ai-message-${i}`}>
+                {msg.role === "assistant" && (
+                  <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                  </div>
+                )}
+                <div className={`max-w-[85%] ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"} rounded-lg p-2.5`}>
+                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                 </div>
-              )}
-              <div className={`max-w-[85%] ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"} rounded-lg p-2.5`}>
-                <p className="text-sm whitespace-pre-wrap">{msg.content || (aiStreaming && i === aiMessages.length - 1 ? "..." : "")}</p>
+                {msg.role === "user" && (
+                  <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0">
+                    <User className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                )}
               </div>
-              {msg.role === "user" && (
-                <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0">
-                  <User className="w-4 h-4 text-muted-foreground" />
-                </div>
-              )}
+            );
+          })}
+
+          {mode === "ai" && aiStreaming && (
+            <div className="flex gap-2 justify-start" data-testid="ai-thinking-indicator">
+              <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <Sparkles className="w-4 h-4 text-primary animate-pulse" />
+              </div>
+              <div className="bg-muted rounded-lg p-2.5 flex items-center gap-1.5">
+                <span className="flex gap-1">
+                  <span className="w-1.5 h-1.5 bg-muted-foreground/40 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-1.5 h-1.5 bg-muted-foreground/40 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-1.5 h-1.5 bg-muted-foreground/40 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                </span>
+                <span className="text-xs text-muted-foreground ml-1">Thinking...</span>
+              </div>
             </div>
-          ))}
+          )}
 
           {mode !== "ai" && messages.map((msg, i) => (
             <div key={i} className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
