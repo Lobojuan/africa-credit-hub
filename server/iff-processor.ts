@@ -37,11 +37,11 @@ function enrichError(err: any, row: Record<string, any>, rowIndex: number): { ro
   const uniqueMatch = msg.match(/unique constraint "(\w+)"/i);
   if (uniqueMatch) {
     const constraint = uniqueMatch[1];
-    if (constraint.includes("national_id")) { field = "NationalID/GhanaCardNo"; value = String(row.GhanaCardNo || row.NationalID || row.nationalId || ""); friendlyMsg = `Duplicate National ID "${value}" — a borrower with this ID already exists`; }
-    else if (constraint.includes("account_number")) { field = "AccountNumber"; value = String(row.AccountNumber || row.AccountNo || ""); friendlyMsg = `Duplicate Account Number "${value}" — this account already exists`; }
-    else if (constraint.includes("tin_number")) { field = "TIN"; value = String(row.TIN || row.TINNo || ""); friendlyMsg = `Duplicate TIN "${value}" — a business with this TIN already exists`; }
-    else if (constraint.includes("business_reg")) { field = "BusinessRegNo"; value = String(row.RegNo || row.BusinessRegNo || ""); friendlyMsg = `Duplicate Business Registration "${value}" — already exists`; }
-    else { friendlyMsg = `Duplicate value violates constraint "${constraint}"`; }
+    if (constraint.includes("national_id")) { field = "NationalID/GhanaCardNo/NatIDNum"; value = String(row.GhanaCardNo || row.NatIDNum || row.NationalID || row.nationalId || ""); friendlyMsg = `Duplicate National ID "${value}" — a borrower with this ID already exists. Remove this row or update the existing borrower instead.`; }
+    else if (constraint.includes("account_number")) { field = "AccountNumber/AccountNum"; value = String(row.AccountNumber || row.AccountNum || row.AccountNo || ""); friendlyMsg = `Duplicate Account Number "${value}" — this account already exists. Use CorrectionIndicator=1 to update existing accounts.`; }
+    else if (constraint.includes("tin_number")) { field = "TIN/TINum"; value = String(row.TIN || row.TINum || row.TINNo || ""); friendlyMsg = `Duplicate TIN "${value}" — a business with this TIN already exists.`; }
+    else if (constraint.includes("business_reg")) { field = "BusinessRegNo/BusRegNum"; value = String(row.RegNo || row.BusRegNum || row.BusinessRegNo || ""); friendlyMsg = `Duplicate Business Registration "${value}" — already exists.`; }
+    else { friendlyMsg = `Duplicate value violates constraint "${constraint}". Check for repeated data in this row.`; }
   }
 
   const notNullMatch = msg.match(/null value in column "(\w+)"/i) || msg.match(/violates not-null constraint.*"(\w+)"/i);
@@ -57,7 +57,16 @@ function enrichError(err: any, row: Record<string, any>, rowIndex: number): { ro
     friendlyMsg = `Invalid ${typeMatch[1]} value "${typeMatch[2]}" — check the format`;
   }
 
-  const keyFields = ["SRN", "BorrowerName", "GhanaCardNo", "NationalID", "AccountNumber", "AccountNo", "CompanyName", "RegNo", "TIN"];
+  const keyFields = [
+    "SRN", "BorrowerName", "GhanaCardNo", "NationalID", "AccountNumber", "AccountNo",
+    "CompanyName", "RegNo", "TIN",
+    "BusinessName", "TradingName", "BusRegNum", "TINum", "CustomerID",
+    "FirstName", "Surname", "MiddleNames", "NatIDNum", "AccountNum",
+    "FacilityType", "SanctionedAmount", "OutstandingBalance", "DaysInArrears",
+    "ChequeNum", "ChequeAmount", "DrawerName",
+    "CaseNumber", "Plaintiff", "Defendant",
+    "Data",
+  ];
   const rowSummary: Record<string, string> = {};
   for (const k of keyFields) {
     if (row[k] !== undefined && row[k] !== null && row[k] !== "") rowSummary[k] = String(row[k]);
