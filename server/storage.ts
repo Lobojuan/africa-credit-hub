@@ -62,7 +62,7 @@ export interface IStorage {
 
   getBorrower(id: string): Promise<Borrower | undefined>;
   getBorrowers(page?: number, limit?: number, organizationId?: string, country?: string, recentDays?: number): Promise<{ data: Borrower[]; total: number }>;
-  getBorrowersByType(type: "individual" | "corporate", page?: number, limit?: number, organizationId?: string, country?: string): Promise<{ data: Borrower[]; total: number }>;
+  getBorrowersByType(type: "individual" | "corporate", page?: number, limit?: number, organizationId?: string, country?: string, recentDays?: number): Promise<{ data: Borrower[]; total: number }>;
   searchBorrowersByType(type: "individual" | "corporate", query: string, organizationId?: string, country?: string): Promise<Borrower[]>;
   searchBorrowers(query: string, organizationId?: string, country?: string): Promise<Borrower[]>;
   countBorrowersByNationalId(nationalId: string | null): Promise<number>;
@@ -373,12 +373,16 @@ export class DatabaseStorage implements IStorage {
     return { data: decryptBorrowerArray(data as Record<string, any>[]) as Borrower[], total: totalResult.value };
   }
 
-  async getBorrowersByType(type: "individual" | "corporate", page: number = 1, limit: number = 50, organizationId?: string, country?: string): Promise<{ data: Borrower[]; total: number }> {
+  async getBorrowersByType(type: "individual" | "corporate", page: number = 1, limit: number = 50, organizationId?: string, country?: string, recentDays?: number): Promise<{ data: Borrower[]; total: number }> {
     const safeLimit = Math.min(limit, 200);
     const offset = (page - 1) * safeLimit;
     const filters: any[] = [eq(borrowers.type, type)];
     if (organizationId) filters.push(eq(borrowers.organizationId, organizationId));
     if (country) filters.push(eq(borrowers.country, country));
+    if (recentDays && recentDays > 0) {
+      const cutoff = new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000);
+      filters.push(gte(borrowers.createdAt, cutoff));
+    }
     const where = and(...filters);
     const [totalResult] = await db.select({ value: count() }).from(borrowers).where(where);
     const data = await db.select().from(borrowers).where(where).orderBy(desc(borrowers.createdAt)).limit(safeLimit).offset(offset);

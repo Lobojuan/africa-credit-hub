@@ -2,12 +2,13 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { Search, User, ChevronRight, ChevronLeft, Flag, Briefcase } from "lucide-react";
+import { Search, User, ChevronRight, ChevronLeft, Flag, Briefcase, Calendar } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Borrower } from "@shared/schema";
 import { getBorrowerAvatarUrl } from "@/lib/avatar";
 import { ConsumerKPIBanner } from "@/components/platform-kpi-banner";
@@ -18,12 +19,20 @@ export default function ConsumersPage() {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [recentDays, setRecentDays] = useState(0);
   const [, navigate] = useLocation();
 
+  const buildQueryKey = () => {
+    if (search) return `/api/consumers?search=${encodeURIComponent(search)}`;
+    const params = new URLSearchParams();
+    params.set("page", String(page));
+    params.set("limit", String(PAGE_SIZE));
+    if (recentDays > 0) params.set("recentDays", String(recentDays));
+    return `/api/consumers?${params.toString()}`;
+  };
+
   const { data: paginatedResult, isLoading } = useQuery<{ data: Borrower[]; total: number } | Borrower[]>({
-    queryKey: search
-      ? [`/api/consumers?search=${encodeURIComponent(search)}`]
-      : [`/api/consumers?page=${page}&limit=${PAGE_SIZE}`],
+    queryKey: [buildQueryKey()],
   });
 
   const consumers = Array.isArray(paginatedResult) ? paginatedResult : paginatedResult?.data;
@@ -44,15 +53,30 @@ export default function ConsumersPage() {
 
       <ConsumerKPIBanner />
 
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          data-testid="input-search-consumers"
-          placeholder="Search by name, ID, employer..."
-          className="pl-9"
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-        />
+      <div className="flex flex-col sm:flex-row items-center gap-3">
+        <div className="relative flex-1 max-w-sm w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            data-testid="input-search-consumers"
+            placeholder="Search by name, ID, employer..."
+            className="pl-9"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          />
+        </div>
+        <Select value={String(recentDays)} onValueChange={(v) => { setRecentDays(Number(v)); setPage(1); }}>
+          <SelectTrigger className="w-[180px]" data-testid="select-recent-filter">
+            <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="0">{t("common.allTime", "All Time")}</SelectItem>
+            <SelectItem value="1">{t("common.last24h", "Last 24 Hours")}</SelectItem>
+            <SelectItem value="7">{t("common.last7d", "Last 7 Days")}</SelectItem>
+            <SelectItem value="30">{t("common.last30d", "Last 30 Days")}</SelectItem>
+            <SelectItem value="90">{t("common.last90d", "Last 90 Days")}</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {isLoading ? (
