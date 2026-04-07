@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, Fragment } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Upload, FileText, CheckCircle, AlertTriangle, Download, FileCode, Database, Clock, FileSpreadsheet, X, Eye } from "lucide-react";
@@ -233,6 +233,7 @@ export default function BatchUploadPage() {
   const [iffFile, setIffFile] = useState<File | null>(null);
   const [iffType, setIffType] = useState("");
   const [iffResult, setIffResult] = useState<any>(null);
+  const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
 
   const csvFileRef = useRef<HTMLInputElement>(null);
   const jsonFileRef = useRef<HTMLInputElement>(null);
@@ -1180,14 +1181,23 @@ export default function BatchUploadPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {historyQuery.data.map((item) => {
+                      {historyQuery.data.map((item: any) => {
                         const rate = item.totalSubmitted > 0
                           ? Math.round((item.successCount / item.totalSubmitted) * 100)
                           : 0;
+                        const isExpanded = selectedHistoryId === item.id;
                         return (
-                          <TableRow key={item.id} data-testid={`row-history-${item.id}`}>
+                          <Fragment key={item.id}>
+                          <TableRow
+                            data-testid={`row-history-${item.id}`}
+                            className="cursor-pointer hover:bg-accent/50 transition-colors"
+                            onClick={() => setSelectedHistoryId(isExpanded ? null : item.id)}
+                          >
                             <TableCell className="text-xs">
-                              {item.createdAt ? new Date(item.createdAt).toLocaleString() : "-"}
+                              <div className="flex items-center gap-1.5">
+                                <Eye className="w-3.5 h-3.5 text-muted-foreground" />
+                                {item.createdAt ? new Date(item.createdAt).toLocaleString() : "-"}
+                              </div>
                             </TableCell>
                             <TableCell>
                               <Badge variant="secondary" className="text-[10px]">
@@ -1206,6 +1216,89 @@ export default function BatchUploadPage() {
                               </Badge>
                             </TableCell>
                           </TableRow>
+                          {isExpanded && (
+                            <TableRow key={`${item.id}-detail`}>
+                              <TableCell colSpan={6} className="p-0">
+                                <div className="bg-accent/30 border-t border-b p-4 space-y-3" data-testid={`detail-panel-${item.id}`}>
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <FileText className="w-4 h-4 text-primary" />
+                                    <h4 className="font-semibold text-sm">Upload Details</h4>
+                                    {item.iffType && (
+                                      <Badge variant="outline" className="text-[10px]">{item.iffType}</Badge>
+                                    )}
+                                  </div>
+
+                                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                    <div className="bg-background rounded-md p-2.5 border">
+                                      <p className="text-[10px] text-muted-foreground uppercase">Total Records</p>
+                                      <p className="text-lg font-bold">{item.totalSubmitted}</p>
+                                    </div>
+                                    <div className="bg-background rounded-md p-2.5 border">
+                                      <p className="text-[10px] text-muted-foreground uppercase">Succeeded</p>
+                                      <p className="text-lg font-bold text-green-600 dark:text-green-400">{item.successCount}</p>
+                                    </div>
+                                    <div className="bg-background rounded-md p-2.5 border">
+                                      <p className="text-[10px] text-muted-foreground uppercase">Errors</p>
+                                      <p className="text-lg font-bold text-red-600 dark:text-red-400">{item.errorCount}</p>
+                                    </div>
+                                    <div className="bg-background rounded-md p-2.5 border">
+                                      <p className="text-[10px] text-muted-foreground uppercase">Success Rate</p>
+                                      <p className={`text-lg font-bold ${rate === 100 ? "text-green-600 dark:text-green-400" : rate >= 80 ? "text-yellow-600 dark:text-yellow-400" : "text-red-600 dark:text-red-400"}`}>{rate}%</p>
+                                    </div>
+                                  </div>
+
+                                  {(item.borrowersCreated > 0 || item.borrowersUpdated > 0 || item.accountsCreated > 0 || item.chequesCreated > 0 || item.judgmentsCreated > 0 || item.guarantorsCreated > 0) && (
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                      {item.borrowersCreated > 0 && (
+                                        <div className="flex items-center gap-2 bg-background rounded-md p-2 border text-xs">
+                                          <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                                          <span><strong>{item.borrowersCreated}</strong> borrowers created</span>
+                                        </div>
+                                      )}
+                                      {item.borrowersUpdated > 0 && (
+                                        <div className="flex items-center gap-2 bg-background rounded-md p-2 border text-xs">
+                                          <CheckCircle className="w-3.5 h-3.5 text-blue-500" />
+                                          <span><strong>{item.borrowersUpdated}</strong> borrowers updated</span>
+                                        </div>
+                                      )}
+                                      {item.accountsCreated > 0 && (
+                                        <div className="flex items-center gap-2 bg-background rounded-md p-2 border text-xs">
+                                          <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                                          <span><strong>{item.accountsCreated}</strong> credit accounts</span>
+                                        </div>
+                                      )}
+                                      {item.chequesCreated > 0 && (
+                                        <div className="flex items-center gap-2 bg-background rounded-md p-2 border text-xs">
+                                          <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                                          <span><strong>{item.chequesCreated}</strong> dishonoured cheques</span>
+                                        </div>
+                                      )}
+                                      {item.judgmentsCreated > 0 && (
+                                        <div className="flex items-center gap-2 bg-background rounded-md p-2 border text-xs">
+                                          <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                                          <span><strong>{item.judgmentsCreated}</strong> court judgments</span>
+                                        </div>
+                                      )}
+                                      {item.guarantorsCreated > 0 && (
+                                        <div className="flex items-center gap-2 bg-background rounded-md p-2 border text-xs">
+                                          <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                                          <span><strong>{item.guarantorsCreated}</strong> guarantors</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {item.details && (
+                                    <div className="bg-background rounded-md p-2.5 border">
+                                      <p className="text-[10px] text-muted-foreground uppercase mb-1">Raw Log</p>
+                                      <p className="text-xs text-muted-foreground font-mono break-all">{item.details}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                          </Fragment>
                         );
                       })}
                     </TableBody>

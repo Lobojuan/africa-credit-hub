@@ -5102,13 +5102,37 @@ export async function registerRoutes(
           const detailStr = log.details || "";
           const formatMatch = log.action === "IFF_UPLOAD" ? "IFF" : (log.action.replace("BATCH_UPLOAD", "").replace("_", "") || "JSON");
           let totalSubmitted = 0, successCount = 0, errorCount = 0;
-          const iffMatch = log.action === "IFF_UPLOAD" && detailStr.match(/(\d+)\s+records/);
-          if (iffMatch) { totalSubmitted = parseInt(iffMatch[1], 10); }
-          const numMatch = detailStr.match(/(\d+)\s+succeeded.*?(\d+)\s+failed.*?(\d+)/);
-          if (numMatch) {
-            successCount = parseInt(numMatch[1], 10);
-            errorCount = parseInt(numMatch[2], 10);
-            totalSubmitted = parseInt(numMatch[3], 10);
+          let borrowersCreated = 0, borrowersUpdated = 0, accountsCreated = 0;
+          let chequesCreated = 0, judgmentsCreated = 0, guarantorsCreated = 0;
+          let iffType = "";
+
+          if (log.action === "IFF_UPLOAD") {
+            const recMatch = detailStr.match(/(\d+)\s+records/);
+            if (recMatch) totalSubmitted = parseInt(recMatch[1], 10);
+            const bcMatch = detailStr.match(/(\d+)\s+borrowers created/);
+            if (bcMatch) borrowersCreated = parseInt(bcMatch[1], 10);
+            const buMatch = detailStr.match(/(\d+)\s+updated/);
+            if (buMatch) borrowersUpdated = parseInt(buMatch[1], 10);
+            const acMatch = detailStr.match(/(\d+)\s+accounts/);
+            if (acMatch) accountsCreated = parseInt(acMatch[1], 10);
+            const chMatch = detailStr.match(/(\d+)\s+cheques/);
+            if (chMatch) chequesCreated = parseInt(chMatch[1], 10);
+            const jgMatch = detailStr.match(/(\d+)\s+judgments/);
+            if (jgMatch) judgmentsCreated = parseInt(jgMatch[1], 10);
+            const grMatch = detailStr.match(/(\d+)\s+guarantors/);
+            if (grMatch) guarantorsCreated = parseInt(grMatch[1], 10);
+            const errMatch = detailStr.match(/(\d+)\s+errors/);
+            if (errMatch) errorCount = parseInt(errMatch[1], 10);
+            successCount = totalSubmitted - errorCount;
+            const typeMatch = detailStr.match(/\(([A-Z_]+)\)/);
+            if (typeMatch) iffType = typeMatch[1];
+          } else {
+            const numMatch = detailStr.match(/(\d+)\s+succeeded.*?(\d+)\s+failed.*?(\d+)/);
+            if (numMatch) {
+              successCount = parseInt(numMatch[1], 10);
+              errorCount = parseInt(numMatch[2], 10);
+              totalSubmitted = parseInt(numMatch[3], 10);
+            }
           }
           return {
             id: log.id,
@@ -5116,6 +5140,13 @@ export async function registerRoutes(
             totalSubmitted,
             successCount,
             errorCount,
+            borrowersCreated,
+            borrowersUpdated,
+            accountsCreated,
+            chequesCreated,
+            judgmentsCreated,
+            guarantorsCreated,
+            iffType,
             userId: log.userId,
             createdAt: log.createdAt,
             details: log.details,
