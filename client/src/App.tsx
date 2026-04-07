@@ -112,6 +112,7 @@ const MarketValidationPage = lazy(() => import("@/pages/market-validation"));
 const StartTrialPage = lazy(() => import("@/pages/start-trial"));
 const SignUpPage = lazy(() => import("@/pages/signup"));
 const UpgradePage = lazy(() => import("@/pages/upgrade"));
+const PresentationPage = lazy(() => import("@/pages/presentation"));
 
 function LazyFallback() {
   return (
@@ -208,6 +209,7 @@ function Router() {
         <Route path="/backup" component={BackupPage} />
         <Route path="/platform-metrics" component={PlatformMetricsPage} />
         <Route path="/webhook-management" component={WebhookManagementPage} />
+        <Route path="/presentation" component={PresentationPage} />
         <Route path="/upgrade">
           {() => (
             <Suspense fallback={<LazyFallback />}>
