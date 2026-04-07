@@ -231,9 +231,10 @@ export default function BatchUploadPage() {
   const [uploadedFileName, setUploadedFileName] = useState<Record<string, string>>({});
   const { toast } = useToast();
 
-  const [iffFile, setIffFile] = useState<File | null>(null);
+  const [iffFiles, setIffFiles] = useState<File[]>([]);
   const [iffType, setIffType] = useState("");
   const [iffResult, setIffResult] = useState<any>(null);
+  const [iffProgress, setIffProgress] = useState<{ current: number; total: number } | null>(null);
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
 
   const csvFileRef = useRef<HTMLInputElement>(null);
@@ -329,49 +330,83 @@ export default function BatchUploadPage() {
   });
 
   const iffUploadMutation = useMutation({
-    mutationFn: async ({ file, iffType: type }: { file: File; iffType: string }) => {
+    mutationFn: async ({ files, iffType: type }: { files: File[]; iffType: string }) => {
       const csrfToken = await fetchCSRFToken();
-      const formData = new FormData();
-      formData.append("file", file);
-      if (type) formData.append("iffType", type);
-      const res = await fetch("/api/batch-upload/iff", {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-        headers: {
-          "x-csrf-token": csrfToken,
-        },
-      });
-      if (!res.ok) {
-        const errBody = await res.json().catch(() => ({ message: "Upload failed" }));
-        throw new Error(errBody.message || "IFF upload failed");
+      const combined: any = {
+        totalRecords: 0, borrowersCreated: 0, borrowersUpdated: 0,
+        accountsCreated: 0, accountsUpdated: 0, chequesCreated: 0, chequesUpdated: 0,
+        judgmentsCreated: 0, judgmentsUpdated: 0, guarantorsCreated: 0, guarantorsUpdated: 0,
+        errors: [] as any[],
+        fileResults: [] as any[],
+      };
+
+      for (let i = 0; i < files.length; i++) {
+        setIffProgress({ current: i + 1, total: files.length });
+        const formData = new FormData();
+        formData.append("file", files[i]);
+        if (type) formData.append("iffType", type);
+        const res = await fetch("/api/batch-upload/iff", {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+          headers: { "x-csrf-token": csrfToken },
+        });
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({ message: "Upload failed" }));
+          combined.errors.push({ row: 0, message: `File "${files[i].name}": ${errBody.message || "Upload failed"}` });
+          combined.fileResults.push({ name: files[i].name, error: errBody.message || "Upload failed" });
+          continue;
+        }
+        const data = await res.json();
+        combined.totalRecords += data.totalRecords || 0;
+        combined.borrowersCreated += data.borrowersCreated || 0;
+        combined.borrowersUpdated += data.borrowersUpdated || 0;
+        combined.accountsCreated += data.accountsCreated || 0;
+        combined.accountsUpdated += data.accountsUpdated || 0;
+        combined.chequesCreated += data.chequesCreated || 0;
+        combined.chequesUpdated += data.chequesUpdated || 0;
+        combined.judgmentsCreated += data.judgmentsCreated || 0;
+        combined.judgmentsUpdated += data.judgmentsUpdated || 0;
+        combined.guarantorsCreated += data.guarantorsCreated || 0;
+        combined.guarantorsUpdated += data.guarantorsUpdated || 0;
+        if (data.errors?.length > 0) {
+          combined.errors.push(...data.errors.map((e: any) => ({ ...e, message: `[${files[i].name}] ${e.message}` })));
+        }
+        combined.fileResults.push({ name: files[i].name, ...data });
+        if (!combined.iffType && data.iffType) combined.iffType = data.iffType;
       }
-      return res.json();
+      setIffProgress(null);
+      return combined;
     },
     onSuccess: (data) => {
       setIffResult(data);
       queryClient.invalidateQueries({ queryKey: ["/api/credit-accounts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/batch-upload/history"] });
+      const fileCount = data.fileResults?.length || 1;
       toast({
-        title: "IFF Upload Complete",
-        description: `${data.totalRecords} records processed: ${data.borrowersCreated || 0} created, ${data.borrowersUpdated || 0} updated, ${data.accountsCreated || 0} accounts created, ${data.accountsUpdated || 0} updated, ${data.errors?.length || 0} errors`,
+        title: `IFF Upload Complete — ${fileCount} file${fileCount > 1 ? 's' : ''} processed`,
+        description: `${data.totalRecords} records: ${data.borrowersCreated || 0} borrowers created, ${data.borrowersUpdated || 0} updated, ${data.accountsCreated || 0} accounts created, ${data.accountsUpdated || 0} updated, ${data.errors?.length || 0} errors`,
       });
     },
     onError: (e: Error) => {
+      setIffProgress(null);
       toast({ title: "IFF Upload Failed", description: e.message, variant: "destructive" });
     },
   });
 
   const handleIffSubmit = () => {
-    if (!iffFile) return;
+    if (iffFiles.length === 0) return;
     setIffResult(null);
-    iffUploadMutation.mutate({ file: iffFile, iffType });
+    iffUploadMutation.mutate({ files: iffFiles, iffType });
   };
 
   const handleIffFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) setIffFile(file);
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      setIffFiles(prev => [...prev, ...Array.from(files)]);
+    }
+    if (e.target) e.target.value = "";
   };
 
   const handleCsvValidate = useCallback(() => {
@@ -925,36 +960,46 @@ export default function BatchUploadPage() {
                   onDrop={(e) => {
                     e.preventDefault();
                     setDragOver(null);
-                    const file = e.dataTransfer.files?.[0];
-                    if (file) setIffFile(file);
+                    const files = e.dataTransfer.files;
+                    if (files && files.length > 0) {
+                      setIffFiles(prev => [...prev, ...Array.from(files)]);
+                    }
                   }}
                   onClick={() => iffFileRef.current?.click()}
                   data-testid="dropzone-iff"
                 >
-                  {iffFile ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <FileSpreadsheet className="w-5 h-5 text-green-600 dark:text-green-400" />
-                      <span className="text-sm font-medium">{iffFile.name}</span>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={(e) => { e.stopPropagation(); setIffFile(null); setIffResult(null); }}
-                        data-testid="button-clear-iff-file"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </Button>
+                  {iffFiles.length > 0 ? (
+                    <div className="space-y-2">
+                      {iffFiles.map((file, idx) => (
+                        <div key={idx} className="flex items-center justify-center gap-2">
+                          <FileSpreadsheet className="w-4 h-4 text-green-600 dark:text-green-400" />
+                          <span className="text-sm font-medium">{file.name}</span>
+                          <span className="text-[10px] text-muted-foreground">({(file.size / 1024).toFixed(0)} KB)</span>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-5 w-5"
+                            onClick={(e) => { e.stopPropagation(); setIffFiles(prev => prev.filter((_, i) => i !== idx)); }}
+                            data-testid={`button-clear-iff-file-${idx}`}
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      ))}
+                      <p className="text-xs text-muted-foreground mt-1">Click or drag to add more files</p>
                     </div>
                   ) : (
                     <>
                       <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-sm font-medium">Upload IFF Spreadsheet</p>
-                      <p className="text-xs text-muted-foreground mt-1">.xlsx, .xls, or .csv files accepted (max 50MB)</p>
+                      <p className="text-sm font-medium">Upload IFF Spreadsheets</p>
+                      <p className="text-xs text-muted-foreground mt-1">Select one or more .xlsx, .xls, or .csv files (max 50MB each)</p>
                     </>
                   )}
                   <input
                     ref={iffFileRef}
                     type="file"
                     accept=".xlsx,.xls,.csv"
+                    multiple
                     className="hidden"
                     onChange={handleIffFileSelect}
                     data-testid="input-file-iff"
@@ -982,10 +1027,14 @@ export default function BatchUploadPage() {
                 <Button
                   className="w-full"
                   onClick={handleIffSubmit}
-                  disabled={iffUploadMutation.isPending || !iffFile}
+                  disabled={iffUploadMutation.isPending || iffFiles.length === 0}
                   data-testid="button-submit-iff"
                 >
-                  {iffUploadMutation.isPending ? "Processing IFF..." : "Upload IFF File"}
+                  {iffUploadMutation.isPending
+                    ? (iffProgress ? `Processing file ${iffProgress.current} of ${iffProgress.total}...` : "Processing IFF...")
+                    : iffFiles.length > 1
+                      ? `Upload ${iffFiles.length} IFF Files`
+                      : "Upload IFF File"}
                 </Button>
               </CardContent>
             </Card>
@@ -1100,6 +1149,21 @@ export default function BatchUploadPage() {
                         <p className="font-bold text-red-600 dark:text-red-400">{iffResult.errors?.length || 0}</p>
                       </div>
                     </div>
+                    {iffResult.fileResults?.length > 1 && (
+                      <div className="space-y-1.5 border-t pt-3">
+                        <p className="text-[10px] text-muted-foreground uppercase font-semibold">Per-File Breakdown</p>
+                        {iffResult.fileResults.map((fr: any, idx: number) => (
+                          <div key={idx} className={`flex items-center justify-between text-xs rounded px-2.5 py-1.5 ${fr.error ? "bg-red-50 dark:bg-red-950/30" : "bg-muted/50"}`} data-testid={`file-result-${idx}`}>
+                            <span className="font-medium truncate max-w-[200px]">{fr.name}</span>
+                            {fr.error ? (
+                              <Badge variant="destructive" className="text-[10px]">Failed</Badge>
+                            ) : (
+                              <span className="text-muted-foreground">{fr.totalRecords || 0} records, {fr.errors?.length || 0} errors</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     {iffResult.errors?.length > 0 && (
                       <div className="space-y-2 max-h-64 overflow-auto">
                         {iffResult.errors.slice(0, 20).map((err: any, i: number) => (
