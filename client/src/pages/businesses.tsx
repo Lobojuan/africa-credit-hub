@@ -51,7 +51,7 @@ export default function BusinessesPage() {
         </div>
       </div>
 
-      <BusinessKPIBanner />
+      <BusinessKPIBanner filteredCount={totalBusinesses} recentDays={recentDays} />
 
       <div className="flex flex-col sm:flex-row items-center gap-3">
         <div className="relative flex-1 max-w-sm w-full">

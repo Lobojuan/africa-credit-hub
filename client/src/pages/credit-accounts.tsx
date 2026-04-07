@@ -102,7 +102,7 @@ export default function CreditAccountsPage() {
         </div>
       </div>
 
-      <CreditAccountKPIBanner />
+      <CreditAccountKPIBanner filteredCount={accounts?.length} recentDays={recentDays} />
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-4">
         <div className="flex items-center gap-2">

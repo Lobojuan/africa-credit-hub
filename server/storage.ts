@@ -365,7 +365,7 @@ export class DatabaseStorage implements IStorage {
     if (country) filters.push(eq(borrowers.country, country));
     if (recentDays && recentDays > 0) {
       const cutoff = new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000);
-      filters.push(gte(borrowers.createdAt, cutoff));
+      filters.push(or(gte(borrowers.createdAt, cutoff), gte(borrowers.updatedAt, cutoff)));
     }
     const where = filters.length > 1 ? and(...filters) : filters[0];
     const [totalResult] = await db.select({ value: count() }).from(borrowers).where(where);
@@ -381,7 +381,7 @@ export class DatabaseStorage implements IStorage {
     if (country) filters.push(eq(borrowers.country, country));
     if (recentDays && recentDays > 0) {
       const cutoff = new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000);
-      filters.push(gte(borrowers.createdAt, cutoff));
+      filters.push(or(gte(borrowers.createdAt, cutoff), gte(borrowers.updatedAt, cutoff)));
     }
     const where = and(...filters);
     const [totalResult] = await db.select({ value: count() }).from(borrowers).where(where);
@@ -580,7 +580,7 @@ export class DatabaseStorage implements IStorage {
     if (country) filters.push(this.countryOrgFilter(creditAccounts, country));
     if (recentDays && recentDays > 0) {
       const cutoff = new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000);
-      filters.push(gte(creditAccounts.createdAt, cutoff));
+      filters.push(or(gte(creditAccounts.createdAt, cutoff), gte(creditAccounts.updatedAt, cutoff)));
     }
     const where = filters.length > 1 ? and(...filters) : filters[0];
     return db.select().from(creditAccounts).where(where).orderBy(desc(creditAccounts.createdAt)).limit(limit).offset(offset);
@@ -849,7 +849,7 @@ export class DatabaseStorage implements IStorage {
     if (country) filters.push(this.countryOrgFilter(disputes, country));
     if (recentDays && recentDays > 0) {
       const cutoff = new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000);
-      filters.push(gte(disputes.createdAt, cutoff));
+      filters.push(or(gte(disputes.createdAt, cutoff), gte(disputes.updatedAt, cutoff)));
     }
     const where = filters.length > 1 ? and(...filters) : filters[0];
     return db.select().from(disputes).where(where).orderBy(desc(disputes.createdAt)).limit(200);

@@ -109,17 +109,19 @@ export function DashboardKPISection() {
   );
 }
 
-export function ConsumerKPIBanner() {
+export function ConsumerKPIBanner({ filteredCount, recentDays }: { filteredCount?: number; recentDays?: number }) {
   const { data: kpis, isLoading } = usePlatformKPIs();
 
   if (isLoading) return <div className="grid grid-cols-2 sm:grid-cols-4 gap-3"><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /></div>;
   if (!kpis) return null;
 
   const scoreBand = kpis.borrowers.avgCreditScore >= 700 ? "Good" : kpis.borrowers.avgCreditScore >= 580 ? "Fair" : "Below Avg";
+  const displayCount = (recentDays && recentDays > 0 && filteredCount !== undefined) ? filteredCount : kpis.borrowers.individuals;
+  const sub = (recentDays && recentDays > 0) ? `of ${kpis.borrowers.individuals.toLocaleString()} total` : `of ${kpis.borrowers.total.toLocaleString()} total borrowers`;
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3" data-testid="consumer-kpi-banner">
-      <KpiTile label="Individual Borrowers" value={kpis.borrowers.individuals.toLocaleString()} icon={Users} sub={`of ${kpis.borrowers.total.toLocaleString()} total borrowers`} />
+      <KpiTile label="Individual Borrowers" value={displayCount.toLocaleString()} icon={Users} sub={sub} />
       <KpiTile label="Platform Avg Score" value={kpis.borrowers.avgCreditScore} icon={Target} sub={`Band: ${scoreBand}`} color={kpis.borrowers.avgCreditScore >= 700 ? "bg-green-500/10" : "bg-yellow-500/10"} />
       <KpiTile label="Platform Delinquency" value={`${kpis.portfolio.delinquencyRate}%`} icon={AlertTriangle} sub={`${kpis.portfolio.delinquentAccounts} accounts across portfolio`} color={kpis.portfolio.delinquencyRate > 10 ? "bg-red-500/10" : "bg-green-500/10"} />
       <KpiTile label="Portfolio Quality" value={`${(100 - kpis.portfolio.nplRatio).toFixed(1)}%`} icon={ShieldCheck} sub={`NPL: ${kpis.portfolio.nplRatio}%`} color="bg-green-500/10" trend={kpis.roi.nplReductionPercent > 0 ? `${kpis.roi.nplReductionPercent}% below industry` : undefined} />
@@ -127,15 +129,18 @@ export function ConsumerKPIBanner() {
   );
 }
 
-export function BusinessKPIBanner() {
+export function BusinessKPIBanner({ filteredCount, recentDays }: { filteredCount?: number; recentDays?: number }) {
   const { data: kpis, isLoading } = usePlatformKPIs();
 
   if (isLoading) return <div className="grid grid-cols-2 sm:grid-cols-4 gap-3"><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /></div>;
   if (!kpis) return null;
 
+  const displayCount = (recentDays && recentDays > 0 && filteredCount !== undefined) ? filteredCount : kpis.borrowers.corporates;
+  const sub = (recentDays && recentDays > 0) ? `of ${kpis.borrowers.corporates.toLocaleString()} total` : `across ${kpis.borrowers.countriesServed} countries`;
+
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3" data-testid="business-kpi-banner">
-      <KpiTile label="Corporate Borrowers" value={kpis.borrowers.corporates.toLocaleString()} icon={Building2} sub={`across ${kpis.borrowers.countriesServed} countries`} />
+      <KpiTile label="Corporate Borrowers" value={displayCount.toLocaleString()} icon={Building2} sub={sub} />
       <KpiTile label="Platform Avg Facility" value={`$${(kpis.portfolio.avgLoanSize / 1000).toFixed(0)}K`} icon={Banknote} sub={`${kpis.portfolio.avgInterestRate.toFixed(1)}% avg rate`} />
       <KpiTile label="Platform Default Rate" value={`${kpis.portfolio.defaultRate}%`} icon={Shield} sub={`${kpis.portfolio.defaultedAccounts} defaulted across portfolio`} color={kpis.portfolio.defaultRate > 5 ? "bg-red-500/10" : "bg-green-500/10"} />
       <KpiTile label="Collection Rate" value={`${kpis.portfolio.collectionRate.toFixed(1)}%`} icon={DollarSign} sub="Platform repayment efficiency" color="bg-blue-500/10" />
@@ -143,15 +148,18 @@ export function BusinessKPIBanner() {
   );
 }
 
-export function CreditAccountKPIBanner() {
+export function CreditAccountKPIBanner({ filteredCount, recentDays }: { filteredCount?: number; recentDays?: number }) {
   const { data: kpis, isLoading } = usePlatformKPIs();
 
   if (isLoading) return <div className="grid grid-cols-2 sm:grid-cols-5 gap-3"><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /></div>;
   if (!kpis) return null;
 
+  const displayCount = (recentDays && recentDays > 0 && filteredCount !== undefined) ? filteredCount : kpis.portfolio.totalAccounts;
+  const portfolioSub = (recentDays && recentDays > 0) ? `${displayCount.toLocaleString()} accounts (of ${kpis.portfolio.totalAccounts.toLocaleString()} total)` : `${kpis.portfolio.totalAccounts.toLocaleString()} accounts`;
+
   return (
     <div className="grid grid-cols-2 sm:grid-cols-5 gap-3" data-testid="credit-account-kpi-banner">
-      <KpiTile label="Total Portfolio" value={`$${(kpis.portfolio.totalValue / 1000000).toFixed(1)}M`} icon={Banknote} sub={`${kpis.portfolio.totalAccounts.toLocaleString()} accounts`} />
+      <KpiTile label="Total Portfolio" value={`$${(kpis.portfolio.totalValue / 1000000).toFixed(1)}M`} icon={Banknote} sub={portfolioSub} />
       <KpiTile label="Current" value={kpis.portfolio.currentAccounts.toLocaleString()} icon={CheckCircle} sub={`${(kpis.portfolio.currentAccounts / Math.max(kpis.portfolio.totalAccounts, 1) * 100).toFixed(1)}% of total`} color="bg-green-500/10" />
       <KpiTile label="NPL Ratio" value={`${kpis.portfolio.nplRatio}%`} icon={Shield} sub={`Industry: ${kpis.roi.traditionalNPLPercent}%`} color={kpis.portfolio.nplRatio < kpis.roi.traditionalNPLPercent ? "bg-green-500/10" : "bg-red-500/10"} trend={kpis.roi.nplReductionPercent > 0 ? `${kpis.roi.nplReductionPercent}% better` : undefined} />
       <KpiTile label="Avg Interest Rate" value={`${kpis.portfolio.avgInterestRate.toFixed(1)}%`} icon={Percent} sub={`Avg size: $${(kpis.portfolio.avgLoanSize / 1000).toFixed(0)}K`} />

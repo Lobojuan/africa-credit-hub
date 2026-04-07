@@ -51,7 +51,7 @@ export default function ConsumersPage() {
         </div>
       </div>
 
-      <ConsumerKPIBanner />
+      <ConsumerKPIBanner filteredCount={totalConsumers} recentDays={recentDays} />
 
       <div className="flex flex-col sm:flex-row items-center gap-3">
         <div className="relative flex-1 max-w-sm w-full">

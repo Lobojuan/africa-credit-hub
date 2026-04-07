@@ -53,6 +53,14 @@ export async function distributeCreatedAtTimestamps() {
         WHERE ${table}.id = numbered.id
       `));
 
+      const hasUpdatedAt = await db.execute(sql.raw(
+        `SELECT 1 FROM information_schema.columns WHERE table_name='${table}' AND column_name='updated_at' LIMIT 1`
+      ));
+      const updRows = (hasUpdatedAt as any).rows ?? hasUpdatedAt;
+      if (updRows.length > 0) {
+        await db.execute(sql.raw(`UPDATE ${table} SET updated_at = created_at`));
+      }
+
       console.log(`[Timestamps] Distributed ${total} records in ${table}`);
     } catch (e: any) {
       console.log(`[Timestamps] Skipped ${table}: ${e.message?.substring(0, 80)}`);
