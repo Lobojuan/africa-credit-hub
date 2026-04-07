@@ -669,6 +669,13 @@ process.stderr.write = function (...args: any[]) {
   }
 
   try {
+    const { distributeCreatedAtTimestamps } = await import("./distribute-timestamps");
+    await distributeCreatedAtTimestamps();
+  } catch (e) {
+    console.error("Timestamp distribution error (non-fatal):", e);
+  }
+
+  try {
     const { runMigrations } = await import('stripe-replit-sync');
     const databaseUrl = process.env.DATABASE_URL;
     if (databaseUrl) {
