@@ -60,9 +60,17 @@ export default function BorrowerAlertsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [recentDays, setRecentDays] = useState(0);
 
   const { data: alerts, isLoading } = useQuery<BorrowerAlert[]>({
-    queryKey: ["/api/borrower-alerts"],
+    queryKey: ["/api/borrower-alerts", recentDays],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (recentDays > 0) params.set("recentDays", String(recentDays));
+      const res = await fetch(`/api/borrower-alerts?${params.toString()}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch borrower alerts");
+      return res.json();
+    },
   });
 
   const filteredAlerts = (alerts || []).filter((alert) => {
@@ -101,13 +109,30 @@ export default function BorrowerAlertsPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold" data-testid="text-alerts-title">
-          {t("borrowerAlerts.title", "Borrower Alerts")}
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1" data-testid="text-alerts-subtitle">
-          {t("borrowerAlerts.subtitle", "Monitor credit file access notifications and alert history")}
-        </p>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold" data-testid="text-alerts-title">
+            {t("borrowerAlerts.title", "Borrower Alerts")}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1" data-testid="text-alerts-subtitle">
+            {t("borrowerAlerts.subtitle", "Monitor credit file access notifications and alert history")}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Clock className="w-4 h-4 text-muted-foreground" />
+          <Select value={String(recentDays)} onValueChange={(v) => setRecentDays(Number(v))}>
+            <SelectTrigger className="w-[160px]" data-testid="select-recent-days">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0">{t("common.allTime", "All Time")}</SelectItem>
+              <SelectItem value="1">{t("common.last24h", "Last 24 Hours")}</SelectItem>
+              <SelectItem value="7">{t("common.last7d", "Last 7 Days")}</SelectItem>
+              <SelectItem value="30">{t("common.last30d", "Last 30 Days")}</SelectItem>
+              <SelectItem value="90">{t("common.last90d", "Last 90 Days")}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -29,9 +30,17 @@ export default function PendingApprovalsPage() {
   const { user } = useAuth();
   const [selectedApproval, setSelectedApproval] = useState<PendingApproval | null>(null);
   const [reviewNotes, setReviewNotes] = useState("");
+  const [recentDays, setRecentDays] = useState(0);
 
   const { data: approvals, isLoading } = useQuery<PendingApproval[]>({
-    queryKey: ["/api/pending-approvals"],
+    queryKey: ["/api/pending-approvals", recentDays],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (recentDays > 0) params.set("recentDays", String(recentDays));
+      const res = await fetch(`/api/pending-approvals?${params.toString()}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch pending approvals");
+      return res.json();
+    },
   });
 
   const reviewMutation = useMutation({
@@ -58,12 +67,29 @@ export default function PendingApprovalsPage() {
 
   return (
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-[1400px] mx-auto">
-      <div>
-        <div className="flex items-center gap-2 mb-1">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
             <div className="page-header-bar" />
             <h1 className="text-2xl font-extrabold tracking-tight" data-testid="text-approvals-title">{t('approvals.title')}</h1>
           </div>
           <p className="text-sm text-muted-foreground ml-4">{t('approvals.subtitle')}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Clock className="w-4 h-4 text-muted-foreground" />
+          <Select value={String(recentDays)} onValueChange={(v) => setRecentDays(Number(v))}>
+            <SelectTrigger className="w-[160px]" data-testid="select-recent-days">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0">{t("common.allTime", "All Time")}</SelectItem>
+              <SelectItem value="1">{t("common.last24h", "Last 24 Hours")}</SelectItem>
+              <SelectItem value="7">{t("common.last7d", "Last 7 Days")}</SelectItem>
+              <SelectItem value="30">{t("common.last30d", "Last 30 Days")}</SelectItem>
+              <SelectItem value="90">{t("common.last90d", "Last 90 Days")}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <Card>

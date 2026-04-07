@@ -55,12 +55,20 @@ export default function BillingPage() {
   const { user } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [recentDays, setRecentDays] = useState(0);
 
   const canManage = user?.role === "admin" || user?.role === "regulator" || user?.role === "super_admin";
   const [selectedRecord, setSelectedRecord] = useState<BillingRecord | null>(null);
 
   const { data: billingRecords, isLoading } = useQuery<BillingRecord[]>({
-    queryKey: ["/api/billing"],
+    queryKey: ["/api/billing", recentDays],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (recentDays > 0) params.set("recentDays", String(recentDays));
+      const res = await fetch(`/api/billing?${params.toString()}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch billing records");
+      return res.json();
+    },
   });
 
   const ghanaMode = isGhanaMode();
@@ -168,6 +176,21 @@ export default function BillingPage() {
           <p className="text-sm text-muted-foreground ml-4">{t("billing.subtitle")}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-muted-foreground" />
+            <Select value={String(recentDays)} onValueChange={(v) => setRecentDays(Number(v))}>
+              <SelectTrigger className="w-[160px]" data-testid="select-recent-days">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">{t("common.allTime", "All Time")}</SelectItem>
+                <SelectItem value="1">{t("common.last24h", "Last 24 Hours")}</SelectItem>
+                <SelectItem value="7">{t("common.last7d", "Last 7 Days")}</SelectItem>
+                <SelectItem value="30">{t("common.last30d", "Last 30 Days")}</SelectItem>
+                <SelectItem value="90">{t("common.last90d", "Last 90 Days")}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           {canManage && (overdueCount > 0 || pendingCount > 0) && (
             <Button
               variant="outline"

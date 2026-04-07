@@ -103,12 +103,12 @@ export interface IStorage {
     accountStatus?: string;
   }, organizationId?: string, country?: string): Promise<Borrower[] | TelcoProfile[]>;
 
-  getPendingApprovals(organizationId?: string, country?: string): Promise<PendingApproval[]>;
+  getPendingApprovals(organizationId?: string, country?: string, recentDays?: number): Promise<PendingApproval[]>;
   getPendingApproval(id: string): Promise<PendingApproval | undefined>;
   createPendingApproval(approval: InsertPendingApproval): Promise<PendingApproval>;
   updateApprovalStatus(id: string, status: string, reviewedBy: string, reviewNotes?: string): Promise<PendingApproval | undefined>;
 
-  getDisputes(organizationId?: string, country?: string): Promise<Dispute[]>;
+  getDisputes(organizationId?: string, country?: string, recentDays?: number): Promise<Dispute[]>;
   getDisputesByBorrower(borrowerId: string): Promise<Dispute[]>;
   getDispute(id: string): Promise<Dispute | undefined>;
   createDispute(dispute: InsertDispute): Promise<Dispute>;
@@ -141,7 +141,7 @@ export interface IStorage {
   updateInstitution(id: string, data: Partial<InsertInstitution>): Promise<Institution | undefined>;
   approveInstitution(id: string, approvedBy: string): Promise<Institution | undefined>;
 
-  getBillingRecords(organizationId?: string, country?: string): Promise<BillingRecord[]>;
+  getBillingRecords(organizationId?: string, country?: string, recentDays?: number): Promise<BillingRecord[]>;
   getBillingRecord(id: string): Promise<BillingRecord | undefined>;
   getBillingRecordsByInstitution(institutionName: string): Promise<BillingRecord[]>;
   createBillingRecord(record: InsertBillingRecord): Promise<BillingRecord>;
@@ -197,7 +197,7 @@ export interface IStorage {
   createGuarantor(guarantor: InsertGuarantor): Promise<Guarantor>;
   getGuarantorsByBorrower(borrowerId: string): Promise<Guarantor[]>;
 
-  getBorrowerAlerts(organizationId?: string, country?: string): Promise<BorrowerAlert[]>;
+  getBorrowerAlerts(organizationId?: string, country?: string, recentDays?: number): Promise<BorrowerAlert[]>;
   getBorrowerAlertsByBorrower(borrowerId: string): Promise<BorrowerAlert[]>;
   createBorrowerAlert(alert: InsertBorrowerAlert): Promise<BorrowerAlert>;
 
@@ -811,10 +811,14 @@ export class DatabaseStorage implements IStorage {
     return results;
   }
 
-  async getPendingApprovals(organizationId?: string, country?: string): Promise<PendingApproval[]> {
+  async getPendingApprovals(organizationId?: string, country?: string, recentDays?: number): Promise<PendingApproval[]> {
     const filters: any[] = [];
     if (organizationId) filters.push(eq(pendingApprovals.organizationId, organizationId));
     if (country) filters.push(this.countryOrgFilter(pendingApprovals, country));
+    if (recentDays && recentDays > 0) {
+      const cutoff = new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000);
+      filters.push(gte(pendingApprovals.createdAt, cutoff));
+    }
     const where = filters.length > 1 ? and(...filters) : filters[0];
     return db.select().from(pendingApprovals).where(where).orderBy(desc(pendingApprovals.createdAt));
   }
@@ -839,10 +843,14 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
-  async getDisputes(organizationId?: string, country?: string): Promise<Dispute[]> {
+  async getDisputes(organizationId?: string, country?: string, recentDays?: number): Promise<Dispute[]> {
     const filters: any[] = [];
     if (organizationId) filters.push(eq(disputes.organizationId, organizationId));
     if (country) filters.push(this.countryOrgFilter(disputes, country));
+    if (recentDays && recentDays > 0) {
+      const cutoff = new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000);
+      filters.push(gte(disputes.createdAt, cutoff));
+    }
     const where = filters.length > 1 ? and(...filters) : filters[0];
     return db.select().from(disputes).where(where).orderBy(desc(disputes.createdAt)).limit(200);
   }
@@ -1027,10 +1035,14 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
-  async getBillingRecords(organizationId?: string, country?: string): Promise<BillingRecord[]> {
+  async getBillingRecords(organizationId?: string, country?: string, recentDays?: number): Promise<BillingRecord[]> {
     const filters: any[] = [];
     if (organizationId) filters.push(eq(billingRecords.organizationId, organizationId));
     if (country) filters.push(this.countryOrgFilter(billingRecords, country));
+    if (recentDays && recentDays > 0) {
+      const cutoff = new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000);
+      filters.push(gte(billingRecords.createdAt, cutoff));
+    }
     const where = filters.length > 1 ? and(...filters) : filters[0];
     return db.select().from(billingRecords).where(where).orderBy(desc(billingRecords.createdAt));
   }
@@ -1421,10 +1433,14 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(guarantors).where(inArray(guarantors.creditAccountId, accountIds)).orderBy(guarantors.guarantorNumber);
   }
 
-  async getBorrowerAlerts(organizationId?: string, country?: string): Promise<BorrowerAlert[]> {
+  async getBorrowerAlerts(organizationId?: string, country?: string, recentDays?: number): Promise<BorrowerAlert[]> {
     const filters: any[] = [];
     if (organizationId) filters.push(eq(borrowerAlerts.organizationId, organizationId));
     if (country) filters.push(this.countryOrgFilter(borrowerAlerts, country));
+    if (recentDays && recentDays > 0) {
+      const cutoff = new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000);
+      filters.push(gte(borrowerAlerts.createdAt, cutoff));
+    }
     const where = filters.length > 1 ? and(...filters) : filters[0];
     return db.select().from(borrowerAlerts).where(where).orderBy(desc(borrowerAlerts.createdAt)).limit(500);
   }

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { AlertCircle, Plus } from "lucide-react";
+import { AlertCircle, Plus, Clock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,10 +39,18 @@ export default function DisputesPage() {
   const [resolveDialogId, setResolveDialogId] = useState<string | null>(null);
   const [resolution, setResolution] = useState("");
   const [resolveStatus, setResolveStatus] = useState("resolved");
+  const [recentDays, setRecentDays] = useState(0);
   const { toast } = useToast();
 
   const { data: disputeList, isLoading } = useQuery<Dispute[]>({
-    queryKey: ["/api/disputes"],
+    queryKey: ["/api/disputes", recentDays],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (recentDays > 0) params.set("recentDays", String(recentDays));
+      const res = await fetch(`/api/disputes?${params.toString()}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch disputes");
+      return res.json();
+    },
   });
 
   const { data: borrowersResult } = useQuery<{ data: Borrower[]; total: number }>({
@@ -114,6 +122,22 @@ export default function DisputesPage() {
           </div>
           <p className="text-sm text-muted-foreground ml-4">{t('disputes.subtitle')}</p>
         </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-muted-foreground" />
+            <Select value={String(recentDays)} onValueChange={(v) => setRecentDays(Number(v))}>
+              <SelectTrigger className="w-[160px]" data-testid="select-recent-days">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">{t("common.allTime", "All Time")}</SelectItem>
+                <SelectItem value="1">{t("common.last24h", "Last 24 Hours")}</SelectItem>
+                <SelectItem value="7">{t("common.last7d", "Last 7 Days")}</SelectItem>
+                <SelectItem value="30">{t("common.last30d", "Last 30 Days")}</SelectItem>
+                <SelectItem value="90">{t("common.last90d", "Last 90 Days")}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-file-dispute">
@@ -191,6 +215,7 @@ export default function DisputesPage() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <Card>

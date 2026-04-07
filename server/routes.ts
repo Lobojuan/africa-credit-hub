@@ -4532,7 +4532,8 @@ export async function registerRoutes(
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
-      const approvals = await storage.getPendingApprovals(orgId, country);
+      const recentDays = parseInt(req.query.recentDays as string) || 0;
+      const approvals = await storage.getPendingApprovals(orgId, country, recentDays > 0 ? recentDays : undefined);
       res.json(approvals);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -4632,7 +4633,8 @@ export async function registerRoutes(
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
-      const disputeList = await storage.getDisputes(orgId, country);
+      const recentDays = parseInt(req.query.recentDays as string) || 0;
+      const disputeList = await storage.getDisputes(orgId, country, recentDays > 0 ? recentDays : undefined);
       res.json(disputeList);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -5718,7 +5720,8 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
-      const records = await storage.getBillingRecords(orgId, country);
+      const recentDays = parseInt(req.query.recentDays as string) || 0;
+      const records = await storage.getBillingRecords(orgId, country, recentDays > 0 ? recentDays : undefined);
       res.json(records);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -10903,7 +10906,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     try {
       const orgScope = getOrgScope(req);
       const country = getCountryFilter(req);
-      const alerts = await storage.getBorrowerAlerts(orgScope, country);
+      const recentDays = parseInt(req.query.recentDays as string) || 0;
+      const alerts = await storage.getBorrowerAlerts(orgScope, country, recentDays > 0 ? recentDays : undefined);
       res.json(alerts);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
