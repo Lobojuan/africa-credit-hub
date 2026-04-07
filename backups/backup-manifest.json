@@ -37,5 +37,18 @@
     "rows": 0,
     "durationMs": 8291,
     "notes": "Initial startup backup"
+  },
+  {
+    "id": "bk_1775514556879_hmblsy",
+    "filename": "cdh_full_2026-04-06T22-29-16.sql.gz",
+    "type": "full",
+    "sizeMB": 47.23,
+    "status": "completed",
+    "createdAt": "2026-04-06T22:29:16.879Z",
+    "createdBy": "system",
+    "tables": 43,
+    "rows": 102,
+    "durationMs": 8786,
+    "notes": "Initial startup backup"
   }
 ]
