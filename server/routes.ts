@@ -5097,11 +5097,13 @@ export async function registerRoutes(
     try {
       const allLogs = await storage.getAuditLogs(getOrgScope(req), getCountryFilter(req));
       const batchLogs = allLogs
-        .filter((log: any) => log.action && log.action.startsWith("BATCH_UPLOAD"))
+        .filter((log: any) => log.action && (log.action.startsWith("BATCH_UPLOAD") || log.action === "IFF_UPLOAD"))
         .map((log: any) => {
           const detailStr = log.details || "";
-          const formatMatch = log.action.replace("BATCH_UPLOAD", "").replace("_", "") || "JSON";
+          const formatMatch = log.action === "IFF_UPLOAD" ? "IFF" : (log.action.replace("BATCH_UPLOAD", "").replace("_", "") || "JSON");
           let totalSubmitted = 0, successCount = 0, errorCount = 0;
+          const iffMatch = log.action === "IFF_UPLOAD" && detailStr.match(/(\d+)\s+records/);
+          if (iffMatch) { totalSubmitted = parseInt(iffMatch[1], 10); }
           const numMatch = detailStr.match(/(\d+)\s+succeeded.*?(\d+)\s+failed.*?(\d+)/);
           if (numMatch) {
             successCount = parseInt(numMatch[1], 10);
