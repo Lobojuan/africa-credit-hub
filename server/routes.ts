@@ -5362,6 +5362,21 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     }
   });
 
+  app.get("/api/dishonoured-cheques", async (req, res) => {
+    try {
+      const borrowerId = req.query.borrowerId as string;
+      const orgId = getOrgScope(req);
+      if (borrowerId) {
+        return res.json(await storage.getDishonouredChequesByBorrower(borrowerId));
+      }
+      const recentDays = parseInt(req.query.recentDays as string) || 0;
+      const result = await storage.getAllDishonouredCheques(orgId, recentDays > 0 ? recentDays : undefined);
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
   app.post("/api/batch-upload/dishonoured-cheques", batchLimiter, requireRole("admin", "lender"), async (req, res) => {
     try {
       const { records } = req.body;

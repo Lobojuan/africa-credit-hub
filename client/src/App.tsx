@@ -56,6 +56,8 @@ const BusinessDetailPage = lazy(() => import("@/pages/business-detail"));
 const TelcoScoringPage = lazy(() => import("@/pages/telco-scoring"));
 const TelcoLendingPage = lazy(() => import("@/pages/telco-lending"));
 const CreditAccountsPage = lazy(() => import("@/pages/credit-accounts"));
+const DishonouredChequesPage = lazy(() => import("@/pages/dishonoured-cheques"));
+const CourtJudgmentsPage = lazy(() => import("@/pages/court-judgments"));
 const CreditSearchPage = lazy(() => import("@/pages/credit-search"));
 const reportsImport = () => import("@/pages/reports");
 const ReportsPage = lazy(reportsImport);
@@ -165,6 +167,8 @@ function Router() {
         <Route path="/telco-scoring" component={TelcoScoringPage} />
         <Route path="/telco-lending" component={TelcoLendingPage} />
         <Route path="/credit-accounts" component={CreditAccountsPage} />
+        <Route path="/dishonoured-cheques" component={DishonouredChequesPage} />
+        <Route path="/court-judgments" component={CourtJudgmentsPage} />
         <Route path="/search" component={CreditSearchPage} />
         <Route path="/reports" component={ReportsPage} />
         <Route path="/audit" component={AuditTrailPage} />

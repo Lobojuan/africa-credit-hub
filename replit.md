@@ -41,7 +41,7 @@ The system employs a modern full-stack architecture built for scalability and co
 -   **Authentication**: Session-based with MFA (TOTP), strong password policies, biometric (WebAuthn) support, role-based idle session timeouts, Google OAuth, Microsoft/Azure AD OAuth, and SAML 2.0 SSO for enterprise identity providers.
 -   **Data Model**: Supports credit, compliance, usage metering, pricing, and alternative data.
 -   **Core Capabilities**:
-    -   **Credit Management**: Comprehensive borrower and credit account management with multi-currency support and 20 standardized credit types.
+    -   **Credit Management**: Comprehensive borrower and credit account management with multi-currency support and 20 standardized credit types. Standalone list pages for Credit Accounts, Dishonoured Cheques (`/dishonoured-cheques`), and Court Judgments (`/court-judgments`) with "Recently Added" date filters (All Time / 24h / 7d / 30d / 90d) and KPI summary cards.
     -   **Consumer/Business Segmentation**: Separate API endpoints, navigation, and RBAC rules.
     -   **Credit Scoring**: Algorithmic scoring (300-850) with explainable AI, utilizing a gradient boosting-inspired model, integrating NDIA and Amount in Arrears.
     -   **Workflow**: Maker-checker workflow and dispute management.
