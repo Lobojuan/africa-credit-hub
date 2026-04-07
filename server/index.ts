@@ -644,19 +644,20 @@ process.stderr.write = function (...args: any[]) {
       console.error("Test data seed error:", e);
     }
 
-    try {
-      const { seedSierraLeoneData } = await import("./seed-sierra-leone");
-      await seedSierraLeoneData();
-    } catch (e) {
-      console.error("Sierra Leone seed error (non-fatal):", e);
-    }
+    // Non-Ghana seeders disabled for Ghana-focused testing
+    // try {
+    //   const { seedSierraLeoneData } = await import("./seed-sierra-leone");
+    //   await seedSierraLeoneData();
+    // } catch (e) {
+    //   console.error("Sierra Leone seed error (non-fatal):", e);
+    // }
 
-    try {
-      const { seedPanAfrican } = await import("./seed-pan-african");
-      await seedPanAfrican();
-    } catch (e) {
-      console.error("Pan-African seed error (non-fatal):", e);
-    }
+    // try {
+    //   const { seedPanAfrican } = await import("./seed-pan-african");
+    //   await seedPanAfrican();
+    // } catch (e) {
+    //   console.error("Pan-African seed error (non-fatal):", e);
+    // }
   } else {
     console.log("[Production] Skipping demo/test data seeding");
   }
