@@ -4722,24 +4722,29 @@ export async function registerRoutes(
 
   async function batchInsertCreditAccounts(
     validated: Array<{ index: number; data: any }>,
-    results: { successCount: number; errorCount: number; errors: Array<{ index: number; message: string }> }
+    results: { successCount: number; errorCount: number; updatedCount?: number; errors: Array<{ index: number; message: string }> }
   ) {
-    const CHUNK = 250;
-    for (let c = 0; c < validated.length; c += CHUNK) {
-      const chunk = validated.slice(c, c + CHUNK);
+    if (!results.updatedCount) results.updatedCount = 0;
+    for (const item of validated) {
       try {
-        await db.insert(creditAccounts).values(chunk.map(item => item.data));
-        results.successCount += chunk.length;
-      } catch (err: any) {
-        for (const item of chunk) {
-          try {
-            await db.insert(creditAccounts).values(item.data);
+        const acctNum = item.data.accountNumber;
+        const borrowerId = item.data.borrowerId;
+        if (acctNum && borrowerId) {
+          const existing = await db.select().from(creditAccounts)
+            .where(and(eq(creditAccounts.accountNumber, acctNum), eq(creditAccounts.borrowerId, borrowerId)))
+            .limit(1);
+          if (existing.length > 0) {
+            await db.update(creditAccounts).set({ ...item.data, updatedAt: new Date() }).where(eq(creditAccounts.id, existing[0].id));
+            results.updatedCount!++;
             results.successCount++;
-          } catch (innerErr: any) {
-            results.errorCount++;
-            results.errors.push({ index: item.index, message: innerErr.message || "Insert failed" });
+            continue;
           }
         }
+        await db.insert(creditAccounts).values(item.data);
+        results.successCount++;
+      } catch (innerErr: any) {
+        results.errorCount++;
+        results.errors.push({ index: item.index, message: innerErr.message || "Insert failed" });
       }
     }
   }
@@ -4792,7 +4797,7 @@ export async function registerRoutes(
 
       await storage.createAuditLog({
         action: "BATCH_UPLOAD", entity: "credit_account", userId: req.session?.userId,
-        details: `Batch upload: ${results.successCount} succeeded, ${results.errorCount} failed out of ${results.totalSubmitted}`,
+        details: `Batch upload: ${results.successCount} succeeded (${results.updatedCount || 0} updated), ${results.errorCount} failed out of ${results.totalSubmitted}`,
         ipAddress: req.ip || null,
       });
 
@@ -4875,7 +4880,7 @@ export async function registerRoutes(
 
       await storage.createAuditLog({
         action: "BATCH_UPLOAD_XBRL", entity: "credit_account", userId: req.session?.userId,
-        details: `XBRL upload: ${results.successCount} succeeded, ${results.errorCount} failed out of ${results.totalSubmitted}`,
+        details: `XBRL upload: ${results.successCount} succeeded (${results.updatedCount || 0} updated), ${results.errorCount} failed out of ${results.totalSubmitted}`,
         ipAddress: req.ip || null,
       });
 
@@ -4996,7 +5001,7 @@ export async function registerRoutes(
 
       await storage.createAuditLog({
         action: "BATCH_UPLOAD_BOG", entity: "credit_account", userId: req.session?.userId,
-        details: `BoG pipe-delimited upload: ${results.successCount} succeeded, ${results.errorCount} failed out of ${results.totalSubmitted}`,
+        details: `BoG pipe-delimited upload: ${results.successCount} succeeded (${results.updatedCount || 0} updated), ${results.errorCount} failed out of ${results.totalSubmitted}`,
         ipAddress: req.ip || null,
       });
 
@@ -5083,7 +5088,7 @@ export async function registerRoutes(
 
       await storage.createAuditLog({
         action: "BATCH_UPLOAD_CSV", entity: "credit_account", userId: req.session?.userId,
-        details: `CSV upload: ${results.successCount} succeeded, ${results.errorCount} failed out of ${results.totalSubmitted}`,
+        details: `CSV upload: ${results.successCount} succeeded (${results.updatedCount || 0} updated), ${results.errorCount} failed out of ${results.totalSubmitted}`,
         ipAddress: req.ip || null,
       });
 
@@ -5097,30 +5102,39 @@ export async function registerRoutes(
     try {
       const allLogs = await storage.getAuditLogs(getOrgScope(req), getCountryFilter(req));
       const batchLogs = allLogs
-        .filter((log: any) => log.action && (log.action.startsWith("BATCH_UPLOAD") || log.action === "IFF_UPLOAD"))
+        .filter((log: any) => log.action && (log.action.startsWith("BATCH_UPLOAD") || log.action === "IFF_UPLOAD" || log.action === "IFF_UPLOAD_JSON"))
         .map((log: any) => {
           const detailStr = log.details || "";
-          const formatMatch = log.action === "IFF_UPLOAD" ? "IFF" : (log.action.replace("BATCH_UPLOAD", "").replace("_", "") || "JSON");
+          const formatMatch = (log.action === "IFF_UPLOAD" || log.action === "IFF_UPLOAD_JSON") ? "IFF" : (log.action.replace("BATCH_UPLOAD", "").replace("_", "") || "JSON");
           let totalSubmitted = 0, successCount = 0, errorCount = 0;
-          let borrowersCreated = 0, borrowersUpdated = 0, accountsCreated = 0;
-          let chequesCreated = 0, judgmentsCreated = 0, guarantorsCreated = 0;
+          let borrowersCreated = 0, borrowersUpdated = 0, accountsCreated = 0, accountsUpdated = 0;
+          let chequesCreated = 0, chequesUpdated = 0, judgmentsCreated = 0, judgmentsUpdated = 0;
+          let guarantorsCreated = 0, guarantorsUpdated = 0;
           let iffType = "";
 
-          if (log.action === "IFF_UPLOAD") {
+          if (log.action === "IFF_UPLOAD" || log.action === "IFF_UPLOAD_JSON") {
             const recMatch = detailStr.match(/(\d+)\s+records/);
             if (recMatch) totalSubmitted = parseInt(recMatch[1], 10);
             const bcMatch = detailStr.match(/(\d+)\s+borrowers created/);
             if (bcMatch) borrowersCreated = parseInt(bcMatch[1], 10);
-            const buMatch = detailStr.match(/(\d+)\s+updated/);
+            const buMatch = detailStr.match(/(\d+)\s+borrowers updated/);
             if (buMatch) borrowersUpdated = parseInt(buMatch[1], 10);
-            const acMatch = detailStr.match(/(\d+)\s+accounts/);
+            const acMatch = detailStr.match(/(\d+)\s+accounts created/);
             if (acMatch) accountsCreated = parseInt(acMatch[1], 10);
-            const chMatch = detailStr.match(/(\d+)\s+cheques/);
+            const auMatch = detailStr.match(/(\d+)\s+accounts updated/);
+            if (auMatch) accountsUpdated = parseInt(auMatch[1], 10);
+            const chMatch = detailStr.match(/(\d+)\s+cheques created/);
             if (chMatch) chequesCreated = parseInt(chMatch[1], 10);
-            const jgMatch = detailStr.match(/(\d+)\s+judgments/);
+            const cuMatch = detailStr.match(/(\d+)\s+cheques updated/);
+            if (cuMatch) chequesUpdated = parseInt(cuMatch[1], 10);
+            const jgMatch = detailStr.match(/(\d+)\s+judgments created/);
             if (jgMatch) judgmentsCreated = parseInt(jgMatch[1], 10);
-            const grMatch = detailStr.match(/(\d+)\s+guarantors/);
+            const juMatch = detailStr.match(/(\d+)\s+judgments updated/);
+            if (juMatch) judgmentsUpdated = parseInt(juMatch[1], 10);
+            const grMatch = detailStr.match(/(\d+)\s+guarantors created/);
             if (grMatch) guarantorsCreated = parseInt(grMatch[1], 10);
+            const guMatch = detailStr.match(/(\d+)\s+guarantors updated/);
+            if (guMatch) guarantorsUpdated = parseInt(guMatch[1], 10);
             const errMatch = detailStr.match(/(\d+)\s+errors/);
             if (errMatch) errorCount = parseInt(errMatch[1], 10);
             successCount = totalSubmitted - errorCount;
@@ -5133,6 +5147,8 @@ export async function registerRoutes(
               errorCount = parseInt(numMatch[2], 10);
               totalSubmitted = parseInt(numMatch[3], 10);
             }
+            const updMatch = detailStr.match(/(\d+)\s+updated/);
+            if (updMatch) accountsUpdated = parseInt(updMatch[1], 10);
           }
           return {
             id: log.id,
@@ -5143,9 +5159,13 @@ export async function registerRoutes(
             borrowersCreated,
             borrowersUpdated,
             accountsCreated,
+            accountsUpdated,
             chequesCreated,
+            chequesUpdated,
             judgmentsCreated,
+            judgmentsUpdated,
             guarantorsCreated,
+            guarantorsUpdated,
             iffType,
             userId: log.userId,
             createdAt: log.createdAt,
@@ -5350,7 +5370,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
       await storage.createAuditLog({
         action: "IFF_UPLOAD", entity: "iff_batch", userId: req.session?.userId,
-        details: `IFF upload (${iffType}): ${result.totalRecords} records, ${result.borrowersCreated} borrowers created, ${result.borrowersUpdated} updated, ${result.accountsCreated} accounts, ${result.chequesCreated} cheques, ${result.judgmentsCreated} judgments, ${result.guarantorsCreated} guarantors, ${result.errors.length} errors`,
+        details: `IFF upload (${iffType}): ${result.totalRecords} records, ${result.borrowersCreated} borrowers created, ${result.borrowersUpdated} borrowers updated, ${result.accountsCreated} accounts created, ${result.accountsUpdated} accounts updated, ${result.chequesCreated} cheques created, ${result.chequesUpdated} cheques updated, ${result.judgmentsCreated} judgments created, ${result.judgmentsUpdated} judgments updated, ${result.guarantorsCreated} guarantors created, ${result.guarantorsUpdated} guarantors updated, ${result.errors.length} errors`,
         ipAddress: req.ip || null,
       });
 
@@ -5389,7 +5409,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
       await storage.createAuditLog({
         action: "IFF_UPLOAD_JSON", entity: "iff_batch", userId: req.session?.userId,
-        details: `IFF JSON upload (${iffType}): ${result.totalRecords} records processed`,
+        details: `IFF upload (${iffType}): ${result.totalRecords} records, ${result.borrowersCreated} borrowers created, ${result.borrowersUpdated} borrowers updated, ${result.accountsCreated} accounts created, ${result.accountsUpdated} accounts updated, ${result.chequesCreated} cheques created, ${result.chequesUpdated} cheques updated, ${result.judgmentsCreated} judgments created, ${result.judgmentsUpdated} judgments updated, ${result.guarantorsCreated} guarantors created, ${result.guarantorsUpdated} guarantors updated, ${result.errors.length} errors`,
         ipAddress: req.ip || null,
       });
 
@@ -5419,12 +5439,26 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const { records } = req.body;
       if (!Array.isArray(records)) return res.status(400).json({ message: "Request body must contain a 'records' array" });
 
-      const results = { totalSubmitted: records.length, successCount: 0, errorCount: 0, errors: [] as Array<{ index: number; message: string }> };
+      const results = { totalSubmitted: records.length, successCount: 0, updatedCount: 0, errorCount: 0, errors: [] as Array<{ index: number; message: string }> };
 
       for (let i = 0; i < records.length; i++) {
         try {
           const parsed = insertDishonouredChequeSchema.parse(records[i]);
           if (req.session?.organizationId) parsed.organizationId = req.session.organizationId;
+          const chequeNumber = parsed.chequeNumber;
+          const borrowerId = parsed.borrowerId;
+          if (chequeNumber && borrowerId) {
+            const existing = await db.select().from(dishonouredCheques)
+              .where(and(eq(dishonouredCheques.chequeNumber, chequeNumber), eq(dishonouredCheques.borrowerId, borrowerId)))
+              .limit(1);
+            if (existing.length > 0) {
+              const { id: _id, ...updateData } = parsed;
+              await db.update(dishonouredCheques).set(updateData).where(eq(dishonouredCheques.id, existing[0].id));
+              results.updatedCount++;
+              results.successCount++;
+              continue;
+            }
+          }
           await storage.createDishonouredCheque(parsed);
           results.successCount++;
         } catch (err: any) {
@@ -5435,7 +5469,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
       await storage.createAuditLog({
         action: "BATCH_UPLOAD", entity: "dishonoured_cheque", userId: req.session?.userId,
-        details: `Batch cheque upload: ${results.successCount} succeeded, ${results.errorCount} failed`,
+        details: `Batch cheque upload: ${results.successCount} succeeded (${results.updatedCount} updated), ${results.errorCount} failed`,
         ipAddress: req.ip || null,
       });
 
@@ -5450,12 +5484,26 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const { records } = req.body;
       if (!Array.isArray(records)) return res.status(400).json({ message: "Request body must contain a 'records' array" });
 
-      const results = { totalSubmitted: records.length, successCount: 0, errorCount: 0, errors: [] as Array<{ index: number; message: string }> };
+      const results = { totalSubmitted: records.length, successCount: 0, updatedCount: 0, errorCount: 0, errors: [] as Array<{ index: number; message: string }> };
 
       for (let i = 0; i < records.length; i++) {
         try {
           const parsed = insertCourtJudgmentSchema.parse(records[i]);
           if (req.session?.organizationId) parsed.organizationId = req.session.organizationId;
+          const caseNumber = parsed.caseNumber;
+          const borrowerId = parsed.borrowerId;
+          if (caseNumber && borrowerId) {
+            const existing = await db.select().from(courtJudgments)
+              .where(and(eq(courtJudgments.caseNumber, caseNumber), eq(courtJudgments.borrowerId, borrowerId)))
+              .limit(1);
+            if (existing.length > 0) {
+              const { id: _id, ...updateData } = parsed;
+              await db.update(courtJudgments).set(updateData).where(eq(courtJudgments.id, existing[0].id));
+              results.updatedCount++;
+              results.successCount++;
+              continue;
+            }
+          }
           await storage.createCourtJudgment(parsed);
           results.successCount++;
         } catch (err: any) {
@@ -5466,7 +5514,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
       await storage.createAuditLog({
         action: "BATCH_UPLOAD", entity: "court_judgment", userId: req.session?.userId,
-        details: `Batch judgment upload: ${results.successCount} succeeded, ${results.errorCount} failed`,
+        details: `Batch judgment upload: ${results.successCount} succeeded (${results.updatedCount} updated), ${results.errorCount} failed`,
         ipAddress: req.ip || null,
       });
 

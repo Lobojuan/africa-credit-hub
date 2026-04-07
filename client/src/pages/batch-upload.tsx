@@ -354,7 +354,7 @@ export default function BatchUploadPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/batch-upload/history"] });
       toast({
         title: "IFF Upload Complete",
-        description: `${data.totalRecords} records processed: ${data.borrowersCreated} borrowers, ${data.accountsCreated} accounts, ${data.errors?.length || 0} errors`,
+        description: `${data.totalRecords} records processed: ${data.borrowersCreated || 0} created, ${data.borrowersUpdated || 0} updated, ${data.accountsCreated || 0} accounts created, ${data.accountsUpdated || 0} updated, ${data.errors?.length || 0} errors`,
       });
     },
     onError: (e: Error) => {
@@ -1023,19 +1023,71 @@ export default function BatchUploadPage() {
                       )}
                       <h3 className="font-semibold text-sm">IFF Upload Results</h3>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 text-sm" data-testid="iff-result-summary">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm" data-testid="iff-result-summary">
                       <div className="bg-muted/50 rounded p-2">
                         <p className="text-[10px] text-muted-foreground uppercase">Records</p>
                         <p className="font-bold">{iffResult.totalRecords}</p>
                       </div>
-                      <div className="bg-muted/50 rounded p-2">
-                        <p className="text-[10px] text-muted-foreground uppercase">Borrowers Created</p>
-                        <p className="font-bold text-green-600 dark:text-green-400">{iffResult.borrowersCreated}</p>
-                      </div>
-                      <div className="bg-muted/50 rounded p-2">
-                        <p className="text-[10px] text-muted-foreground uppercase">Accounts Created</p>
-                        <p className="font-bold text-blue-600 dark:text-blue-400">{iffResult.accountsCreated}</p>
-                      </div>
+                      {(iffResult.borrowersCreated > 0) && (
+                        <div className="bg-muted/50 rounded p-2">
+                          <p className="text-[10px] text-muted-foreground uppercase">Borrowers Created</p>
+                          <p className="font-bold text-green-600 dark:text-green-400">{iffResult.borrowersCreated}</p>
+                        </div>
+                      )}
+                      {(iffResult.borrowersUpdated > 0) && (
+                        <div className="bg-muted/50 rounded p-2">
+                          <p className="text-[10px] text-muted-foreground uppercase">Borrowers Updated</p>
+                          <p className="font-bold text-blue-600 dark:text-blue-400">{iffResult.borrowersUpdated}</p>
+                        </div>
+                      )}
+                      {(iffResult.accountsCreated > 0) && (
+                        <div className="bg-muted/50 rounded p-2">
+                          <p className="text-[10px] text-muted-foreground uppercase">Accounts Created</p>
+                          <p className="font-bold text-green-600 dark:text-green-400">{iffResult.accountsCreated}</p>
+                        </div>
+                      )}
+                      {(iffResult.accountsUpdated > 0) && (
+                        <div className="bg-muted/50 rounded p-2">
+                          <p className="text-[10px] text-muted-foreground uppercase">Accounts Updated</p>
+                          <p className="font-bold text-blue-600 dark:text-blue-400">{iffResult.accountsUpdated}</p>
+                        </div>
+                      )}
+                      {(iffResult.chequesCreated > 0) && (
+                        <div className="bg-muted/50 rounded p-2">
+                          <p className="text-[10px] text-muted-foreground uppercase">Cheques Created</p>
+                          <p className="font-bold text-green-600 dark:text-green-400">{iffResult.chequesCreated}</p>
+                        </div>
+                      )}
+                      {(iffResult.chequesUpdated > 0) && (
+                        <div className="bg-muted/50 rounded p-2">
+                          <p className="text-[10px] text-muted-foreground uppercase">Cheques Updated</p>
+                          <p className="font-bold text-blue-600 dark:text-blue-400">{iffResult.chequesUpdated}</p>
+                        </div>
+                      )}
+                      {(iffResult.judgmentsCreated > 0) && (
+                        <div className="bg-muted/50 rounded p-2">
+                          <p className="text-[10px] text-muted-foreground uppercase">Judgments Created</p>
+                          <p className="font-bold text-green-600 dark:text-green-400">{iffResult.judgmentsCreated}</p>
+                        </div>
+                      )}
+                      {(iffResult.judgmentsUpdated > 0) && (
+                        <div className="bg-muted/50 rounded p-2">
+                          <p className="text-[10px] text-muted-foreground uppercase">Judgments Updated</p>
+                          <p className="font-bold text-blue-600 dark:text-blue-400">{iffResult.judgmentsUpdated}</p>
+                        </div>
+                      )}
+                      {(iffResult.guarantorsCreated > 0) && (
+                        <div className="bg-muted/50 rounded p-2">
+                          <p className="text-[10px] text-muted-foreground uppercase">Guarantors Created</p>
+                          <p className="font-bold text-green-600 dark:text-green-400">{iffResult.guarantorsCreated}</p>
+                        </div>
+                      )}
+                      {(iffResult.guarantorsUpdated > 0) && (
+                        <div className="bg-muted/50 rounded p-2">
+                          <p className="text-[10px] text-muted-foreground uppercase">Guarantors Updated</p>
+                          <p className="font-bold text-blue-600 dark:text-blue-400">{iffResult.guarantorsUpdated}</p>
+                        </div>
+                      )}
                       <div className="bg-muted/50 rounded p-2">
                         <p className="text-[10px] text-muted-foreground uppercase">Errors</p>
                         <p className="font-bold text-red-600 dark:text-red-400">{iffResult.errors?.length || 0}</p>
@@ -1247,7 +1299,7 @@ export default function BatchUploadPage() {
                                     </div>
                                   </div>
 
-                                  {(item.borrowersCreated > 0 || item.borrowersUpdated > 0 || item.accountsCreated > 0 || item.chequesCreated > 0 || item.judgmentsCreated > 0 || item.guarantorsCreated > 0) && (
+                                  {(item.borrowersCreated > 0 || item.borrowersUpdated > 0 || item.accountsCreated > 0 || item.accountsUpdated > 0 || item.chequesCreated > 0 || item.chequesUpdated > 0 || item.judgmentsCreated > 0 || item.judgmentsUpdated > 0 || item.guarantorsCreated > 0 || item.guarantorsUpdated > 0) && (
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                       {item.borrowersCreated > 0 && (
                                         <div className="flex items-center gap-2 bg-background rounded-md p-2 border text-xs">
@@ -1264,25 +1316,49 @@ export default function BatchUploadPage() {
                                       {item.accountsCreated > 0 && (
                                         <div className="flex items-center gap-2 bg-background rounded-md p-2 border text-xs">
                                           <CheckCircle className="w-3.5 h-3.5 text-green-500" />
-                                          <span><strong>{item.accountsCreated}</strong> credit accounts</span>
+                                          <span><strong>{item.accountsCreated}</strong> accounts created</span>
+                                        </div>
+                                      )}
+                                      {item.accountsUpdated > 0 && (
+                                        <div className="flex items-center gap-2 bg-background rounded-md p-2 border text-xs">
+                                          <CheckCircle className="w-3.5 h-3.5 text-blue-500" />
+                                          <span><strong>{item.accountsUpdated}</strong> accounts updated</span>
                                         </div>
                                       )}
                                       {item.chequesCreated > 0 && (
                                         <div className="flex items-center gap-2 bg-background rounded-md p-2 border text-xs">
                                           <CheckCircle className="w-3.5 h-3.5 text-green-500" />
-                                          <span><strong>{item.chequesCreated}</strong> dishonoured cheques</span>
+                                          <span><strong>{item.chequesCreated}</strong> cheques created</span>
+                                        </div>
+                                      )}
+                                      {item.chequesUpdated > 0 && (
+                                        <div className="flex items-center gap-2 bg-background rounded-md p-2 border text-xs">
+                                          <CheckCircle className="w-3.5 h-3.5 text-blue-500" />
+                                          <span><strong>{item.chequesUpdated}</strong> cheques updated</span>
                                         </div>
                                       )}
                                       {item.judgmentsCreated > 0 && (
                                         <div className="flex items-center gap-2 bg-background rounded-md p-2 border text-xs">
                                           <CheckCircle className="w-3.5 h-3.5 text-green-500" />
-                                          <span><strong>{item.judgmentsCreated}</strong> court judgments</span>
+                                          <span><strong>{item.judgmentsCreated}</strong> judgments created</span>
+                                        </div>
+                                      )}
+                                      {item.judgmentsUpdated > 0 && (
+                                        <div className="flex items-center gap-2 bg-background rounded-md p-2 border text-xs">
+                                          <CheckCircle className="w-3.5 h-3.5 text-blue-500" />
+                                          <span><strong>{item.judgmentsUpdated}</strong> judgments updated</span>
                                         </div>
                                       )}
                                       {item.guarantorsCreated > 0 && (
                                         <div className="flex items-center gap-2 bg-background rounded-md p-2 border text-xs">
                                           <CheckCircle className="w-3.5 h-3.5 text-green-500" />
-                                          <span><strong>{item.guarantorsCreated}</strong> guarantors</span>
+                                          <span><strong>{item.guarantorsCreated}</strong> guarantors created</span>
+                                        </div>
+                                      )}
+                                      {item.guarantorsUpdated > 0 && (
+                                        <div className="flex items-center gap-2 bg-background rounded-md p-2 border text-xs">
+                                          <CheckCircle className="w-3.5 h-3.5 text-blue-500" />
+                                          <span><strong>{item.guarantorsUpdated}</strong> guarantors updated</span>
                                         </div>
                                       )}
                                     </div>

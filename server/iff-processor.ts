@@ -37,10 +37,10 @@ function enrichError(err: any, row: Record<string, any>, rowIndex: number): { ro
   const uniqueMatch = msg.match(/unique constraint "(\w+)"/i);
   if (uniqueMatch) {
     const constraint = uniqueMatch[1];
-    if (constraint.includes("national_id")) { field = "NationalID/GhanaCardNo/NatIDNum"; value = String(row.GhanaCardNo || row.NatIDNum || row.NationalID || row.nationalId || ""); friendlyMsg = `Duplicate National ID "${value}" — a borrower with this ID already exists. Remove this row or update the existing borrower instead.`; }
-    else if (constraint.includes("account_number")) { field = "AccountNumber/AccountNum"; value = String(row.AccountNumber || row.AccountNum || row.AccountNo || ""); friendlyMsg = `Duplicate Account Number "${value}" — this account already exists. Use CorrectionIndicator=1 to update existing accounts.`; }
-    else if (constraint.includes("tin_number")) { field = "TIN/TINum"; value = String(row.TIN || row.TINum || row.TINNo || ""); friendlyMsg = `Duplicate TIN "${value}" — a business with this TIN already exists.`; }
-    else if (constraint.includes("business_reg")) { field = "BusinessRegNo/BusRegNum"; value = String(row.RegNo || row.BusRegNum || row.BusinessRegNo || ""); friendlyMsg = `Duplicate Business Registration "${value}" — already exists.`; }
+    if (constraint.includes("national_id")) { field = "NationalID/GhanaCardNo/NatIDNum"; value = String(row.GhanaCardNo || row.NatIDNum || row.NationalID || row.nationalId || ""); friendlyMsg = `Duplicate National ID "${value}" — record was matched and updated automatically.`; }
+    else if (constraint.includes("account_number")) { field = "AccountNumber/AccountNum"; value = String(row.AccountNumber || row.AccountNum || row.AccountNo || ""); friendlyMsg = `Duplicate Account Number "${value}" — record was matched and updated automatically.`; }
+    else if (constraint.includes("tin_number")) { field = "TIN/TINum"; value = String(row.TIN || row.TINum || row.TINNo || ""); friendlyMsg = `Duplicate TIN "${value}" — record was matched and updated automatically.`; }
+    else if (constraint.includes("business_reg")) { field = "BusinessRegNo/BusRegNum"; value = String(row.RegNo || row.BusRegNum || row.BusinessRegNo || ""); friendlyMsg = `Duplicate Business Registration "${value}" — record was matched and updated automatically.`; }
     else { friendlyMsg = `Duplicate value violates constraint "${constraint}". Check for repeated data in this row.`; }
   }
 
@@ -80,9 +80,13 @@ interface ProcessingResult {
   borrowersCreated: number;
   borrowersUpdated: number;
   accountsCreated: number;
+  accountsUpdated: number;
   chequesCreated: number;
+  chequesUpdated: number;
   judgmentsCreated: number;
+  judgmentsUpdated: number;
   guarantorsCreated: number;
+  guarantorsUpdated: number;
   errors: Array<{ row: number; message: string; field?: string; value?: string; rowData?: Record<string, string> }>;
 }
 
@@ -117,6 +121,77 @@ async function findOrCreateBorrower(
     organizationId: organizationId || null,
   }).returning();
   return { id: created.id, created: true };
+}
+
+async function upsertCreditAccount(
+  accountData: any,
+  borrowerId: string
+): Promise<{ id: string; created: boolean }> {
+  const accountNumber = accountData.accountNumber;
+  if (accountNumber) {
+    const existing = await db.select().from(creditAccounts)
+      .where(and(eq(creditAccounts.accountNumber, accountNumber), eq(creditAccounts.borrowerId, borrowerId)))
+      .limit(1);
+    if (existing.length > 0) {
+      await db.update(creditAccounts).set({ ...accountData, updatedAt: new Date() }).where(eq(creditAccounts.id, existing[0].id));
+      return { id: existing[0].id, created: false };
+    }
+  }
+  const [created] = await db.insert(creditAccounts).values(accountData).returning();
+  return { id: created.id, created: true };
+}
+
+async function upsertDishonouredCheque(
+  chequeData: any,
+  borrowerId: string
+): Promise<boolean> {
+  const chequeNumber = chequeData.chequeNumber;
+  if (chequeNumber) {
+    const existing = await db.select().from(dishonouredCheques)
+      .where(and(eq(dishonouredCheques.chequeNumber, chequeNumber), eq(dishonouredCheques.borrowerId, borrowerId)))
+      .limit(1);
+    if (existing.length > 0) {
+      const { id: _id, ...updateData } = chequeData;
+      await db.update(dishonouredCheques).set(updateData).where(eq(dishonouredCheques.id, existing[0].id));
+      return false;
+    }
+  }
+  await db.insert(dishonouredCheques).values(chequeData);
+  return true;
+}
+
+async function upsertCourtJudgment(
+  judgmentData: any,
+  borrowerId: string
+): Promise<boolean> {
+  const caseNumber = judgmentData.caseNumber;
+  if (caseNumber) {
+    const existing = await db.select().from(courtJudgments)
+      .where(and(eq(courtJudgments.caseNumber, caseNumber), eq(courtJudgments.borrowerId, borrowerId)))
+      .limit(1);
+    if (existing.length > 0) {
+      const { id: _id, ...updateData } = judgmentData;
+      await db.update(courtJudgments).set(updateData).where(eq(courtJudgments.id, existing[0].id));
+      return false;
+    }
+  }
+  await db.insert(courtJudgments).values(judgmentData);
+  return true;
+}
+
+async function upsertGuarantor(gData: any): Promise<boolean> {
+  const existing = await db.select().from(guarantors)
+    .where(and(
+      eq(guarantors.creditAccountId, gData.creditAccountId),
+      eq(guarantors.guarantorNumber, gData.guarantorNumber)
+    ))
+    .limit(1);
+  if (existing.length > 0) {
+    await db.update(guarantors).set({ ...gData }).where(eq(guarantors.id, existing[0].id));
+    return false;
+  }
+  await db.insert(guarantors).values(gData);
+  return true;
 }
 
 function mapBusinessBorrowerFields(row: Record<string, any>): any {
@@ -334,7 +409,8 @@ export async function processBusinessCreditIFF(
 ): Promise<ProcessingResult> {
   const result: ProcessingResult = {
     totalRecords: rows.length, borrowersCreated: 0, borrowersUpdated: 0,
-    accountsCreated: 0, chequesCreated: 0, judgmentsCreated: 0, guarantorsCreated: 0, errors: [],
+    accountsCreated: 0, accountsUpdated: 0, chequesCreated: 0, chequesUpdated: 0,
+    judgmentsCreated: 0, judgmentsUpdated: 0, guarantorsCreated: 0, guarantorsUpdated: 0, errors: [],
   };
 
   for (let i = 0; i < rows.length; i++) {
@@ -351,33 +427,16 @@ export async function processBusinessCreditIFF(
       );
       if (created) result.borrowersCreated++; else result.borrowersUpdated++;
 
-      const correctionIndicator = toInt(row.CorrectionIndicator) || 0;
       const accountData = mapCreditAccountFields(row, borrowerId, lenderInstitution);
       accountData.organizationId = organizationId || null;
 
-      if (correctionIndicator === 1) {
-        const existing = await db.select().from(creditAccounts)
-          .where(and(eq(creditAccounts.accountNumber, accountData.accountNumber), eq(creditAccounts.borrowerId, borrowerId)))
-          .limit(1);
-        if (existing.length > 0) {
-          await db.update(creditAccounts).set({ ...accountData, updatedAt: new Date() }).where(eq(creditAccounts.id, existing[0].id));
-          result.accountsCreated++;
-          const gList = extractGuarantors(row, existing[0].id, organizationId);
-          for (const g of gList) {
-            await db.insert(guarantors).values(g);
-            result.guarantorsCreated++;
-          }
-          continue;
-        }
-      }
+      const acctResult = await upsertCreditAccount(accountData, borrowerId);
+      if (acctResult.created) result.accountsCreated++; else result.accountsUpdated++;
 
-      const [account] = await db.insert(creditAccounts).values(accountData).returning();
-      result.accountsCreated++;
-
-      const gList = extractGuarantors(row, account.id, organizationId);
+      const gList = extractGuarantors(row, acctResult.id, organizationId);
       for (const g of gList) {
-        await db.insert(guarantors).values(g);
-        result.guarantorsCreated++;
+        const gCreated = await upsertGuarantor(g);
+        if (gCreated) result.guarantorsCreated++; else result.guarantorsUpdated++;
       }
     } catch (err: any) {
       result.errors.push(enrichError(err, rows[i], i + 1));
@@ -393,7 +452,8 @@ export async function processConsumerCreditIFF(
 ): Promise<ProcessingResult> {
   const result: ProcessingResult = {
     totalRecords: rows.length, borrowersCreated: 0, borrowersUpdated: 0,
-    accountsCreated: 0, chequesCreated: 0, judgmentsCreated: 0, guarantorsCreated: 0, errors: [],
+    accountsCreated: 0, accountsUpdated: 0, chequesCreated: 0, chequesUpdated: 0,
+    judgmentsCreated: 0, judgmentsUpdated: 0, guarantorsCreated: 0, guarantorsUpdated: 0, errors: [],
   };
 
   for (let i = 0; i < rows.length; i++) {
@@ -410,33 +470,16 @@ export async function processConsumerCreditIFF(
       );
       if (created) result.borrowersCreated++; else result.borrowersUpdated++;
 
-      const correctionIndicator = toInt(row.CorrectionIndicator) || 0;
       const accountData = mapCreditAccountFields(row, borrowerId, lenderInstitution);
       accountData.organizationId = organizationId || null;
 
-      if (correctionIndicator === 1) {
-        const existing = await db.select().from(creditAccounts)
-          .where(and(eq(creditAccounts.accountNumber, accountData.accountNumber), eq(creditAccounts.borrowerId, borrowerId)))
-          .limit(1);
-        if (existing.length > 0) {
-          await db.update(creditAccounts).set({ ...accountData, updatedAt: new Date() }).where(eq(creditAccounts.id, existing[0].id));
-          result.accountsCreated++;
-          const gList = extractGuarantors(row, existing[0].id, organizationId);
-          for (const g of gList) {
-            await db.insert(guarantors).values(g);
-            result.guarantorsCreated++;
-          }
-          continue;
-        }
-      }
+      const acctResult = await upsertCreditAccount(accountData, borrowerId);
+      if (acctResult.created) result.accountsCreated++; else result.accountsUpdated++;
 
-      const [account] = await db.insert(creditAccounts).values(accountData).returning();
-      result.accountsCreated++;
-
-      const gList = extractGuarantors(row, account.id, organizationId);
+      const gList = extractGuarantors(row, acctResult.id, organizationId);
       for (const g of gList) {
-        await db.insert(guarantors).values(g);
-        result.guarantorsCreated++;
+        const gCreated = await upsertGuarantor(g);
+        if (gCreated) result.guarantorsCreated++; else result.guarantorsUpdated++;
       }
     } catch (err: any) {
       result.errors.push(enrichError(err, rows[i], i + 1));
@@ -452,7 +495,8 @@ export async function processBusinessDishonouredChequesIFF(
 ): Promise<ProcessingResult> {
   const result: ProcessingResult = {
     totalRecords: rows.length, borrowersCreated: 0, borrowersUpdated: 0,
-    accountsCreated: 0, chequesCreated: 0, judgmentsCreated: 0, guarantorsCreated: 0, errors: [],
+    accountsCreated: 0, accountsUpdated: 0, chequesCreated: 0, chequesUpdated: 0,
+    judgmentsCreated: 0, judgmentsUpdated: 0, guarantorsCreated: 0, guarantorsUpdated: 0, errors: [],
   };
 
   for (let i = 0; i < rows.length; i++) {
@@ -469,7 +513,7 @@ export async function processBusinessDishonouredChequesIFF(
       );
       if (created) result.borrowersCreated++; else result.borrowersUpdated++;
 
-      await db.insert(dishonouredCheques).values({
+      const chequeData = {
         borrowerId,
         accountNumber: toStr(row.FacilityAccNum) || "",
         chequeNumber: toStr(row.ChequeNumber) || "",
@@ -480,8 +524,9 @@ export async function processBusinessDishonouredChequesIFF(
         currency: toStr(row.Currency) || "GHS",
         chequeAmount: toNum(row.ChequeAmount) || "0",
         organizationId: organizationId || null,
-      });
-      result.chequesCreated++;
+      };
+      const chequeCreated = await upsertDishonouredCheque(chequeData, borrowerId);
+      if (chequeCreated) result.chequesCreated++; else result.chequesUpdated++;
     } catch (err: any) {
       result.errors.push(enrichError(err, rows[i], i + 1));
     }
@@ -496,7 +541,8 @@ export async function processConsumerDishonouredChequesIFF(
 ): Promise<ProcessingResult> {
   const result: ProcessingResult = {
     totalRecords: rows.length, borrowersCreated: 0, borrowersUpdated: 0,
-    accountsCreated: 0, chequesCreated: 0, judgmentsCreated: 0, guarantorsCreated: 0, errors: [],
+    accountsCreated: 0, accountsUpdated: 0, chequesCreated: 0, chequesUpdated: 0,
+    judgmentsCreated: 0, judgmentsUpdated: 0, guarantorsCreated: 0, guarantorsUpdated: 0, errors: [],
   };
 
   for (let i = 0; i < rows.length; i++) {
@@ -513,7 +559,7 @@ export async function processConsumerDishonouredChequesIFF(
       );
       if (created) result.borrowersCreated++; else result.borrowersUpdated++;
 
-      await db.insert(dishonouredCheques).values({
+      const chequeData = {
         borrowerId,
         accountNumber: toStr(row.FacilityAccNum) || "",
         chequeNumber: toStr(row.ChequeNumber) || "",
@@ -524,8 +570,9 @@ export async function processConsumerDishonouredChequesIFF(
         currency: toStr(row.Currency) || "GHS",
         chequeAmount: toNum(row.ChequeAmount) || "0",
         organizationId: organizationId || null,
-      });
-      result.chequesCreated++;
+      };
+      const chequeCreated = await upsertDishonouredCheque(chequeData, borrowerId);
+      if (chequeCreated) result.chequesCreated++; else result.chequesUpdated++;
     } catch (err: any) {
       result.errors.push(enrichError(err, rows[i], i + 1));
     }
@@ -540,7 +587,8 @@ export async function processBusinessJudgmentIFF(
 ): Promise<ProcessingResult> {
   const result: ProcessingResult = {
     totalRecords: rows.length, borrowersCreated: 0, borrowersUpdated: 0,
-    accountsCreated: 0, chequesCreated: 0, judgmentsCreated: 0, guarantorsCreated: 0, errors: [],
+    accountsCreated: 0, accountsUpdated: 0, chequesCreated: 0, chequesUpdated: 0,
+    judgmentsCreated: 0, judgmentsUpdated: 0, guarantorsCreated: 0, guarantorsUpdated: 0, errors: [],
   };
 
   for (let i = 0; i < rows.length; i++) {
@@ -560,7 +608,7 @@ export async function processBusinessJudgmentIFF(
       const caseTypeMap: Record<string, string> = { "M": "civil_judgment", "S": "lawsuit", "A": "lien", "B": "bankruptcy" };
       const caseType = toStr(row.CaseType);
 
-      await db.insert(courtJudgments).values({
+      const judgmentData = {
         borrowerId,
         caseNumber: toStr(row.CaseNumber) || "",
         court: toStr(row.CourtName) || "",
@@ -576,8 +624,9 @@ export async function processBusinessJudgmentIFF(
         caseReason: toStr(row.CaseReason),
         judgmentCurrency: toStr(row.Currency),
         organizationId: organizationId || null,
-      });
-      result.judgmentsCreated++;
+      };
+      const judgmentCreated = await upsertCourtJudgment(judgmentData, borrowerId);
+      if (judgmentCreated) result.judgmentsCreated++; else result.judgmentsUpdated++;
     } catch (err: any) {
       result.errors.push(enrichError(err, rows[i], i + 1));
     }
@@ -592,7 +641,8 @@ export async function processConsumerJudgmentIFF(
 ): Promise<ProcessingResult> {
   const result: ProcessingResult = {
     totalRecords: rows.length, borrowersCreated: 0, borrowersUpdated: 0,
-    accountsCreated: 0, chequesCreated: 0, judgmentsCreated: 0, guarantorsCreated: 0, errors: [],
+    accountsCreated: 0, accountsUpdated: 0, chequesCreated: 0, chequesUpdated: 0,
+    judgmentsCreated: 0, judgmentsUpdated: 0, guarantorsCreated: 0, guarantorsUpdated: 0, errors: [],
   };
 
   for (let i = 0; i < rows.length; i++) {
@@ -612,7 +662,7 @@ export async function processConsumerJudgmentIFF(
       const caseTypeMap: Record<string, string> = { "M": "civil_judgment", "S": "lawsuit", "A": "lien", "B": "bankruptcy" };
       const caseType = toStr(row.CaseType);
 
-      await db.insert(courtJudgments).values({
+      const judgmentData = {
         borrowerId,
         caseNumber: toStr(row.CaseNumber) || "",
         court: toStr(row.CourtName) || "",
@@ -628,8 +678,9 @@ export async function processConsumerJudgmentIFF(
         caseReason: toStr(row.CaseReason),
         judgmentCurrency: toStr(row.Currency),
         organizationId: organizationId || null,
-      });
-      result.judgmentsCreated++;
+      };
+      const judgmentCreated = await upsertCourtJudgment(judgmentData, borrowerId);
+      if (judgmentCreated) result.judgmentsCreated++; else result.judgmentsUpdated++;
     } catch (err: any) {
       result.errors.push(enrichError(err, rows[i], i + 1));
     }
