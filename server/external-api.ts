@@ -18,8 +18,11 @@ export function validateExternalApiConfig(): void {
   }
 }
 
+// MIGRATION NOTE: Switching from SHA-256 to HMAC-SHA256 invalidates all
+// existing API key hashes. Existing keys must be reissued after this change.
 function hashApiKey(key: string): string {
-  return crypto.createHash("sha256").update(key).digest("hex");
+  const secret = process.env.API_KEY_HMAC_SECRET || process.env.SESSION_SECRET!;
+  return crypto.createHmac("sha256", secret).update(key).digest("hex");
 }
 
 export function generateApiKey(): { fullKey: string; prefix: string; hash: string } {
