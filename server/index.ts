@@ -3,6 +3,7 @@ import session from "express-session";
 import pgSession from "connect-pg-simple";
 import compression from "compression";
 import helmet from "helmet";
+import crypto from "crypto";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
@@ -86,11 +87,21 @@ app.get("/health", async (_req, res) => {
   });
 });
 
+app.use((_req, res, next) => {
+  const nonce = crypto.randomBytes(16).toString("base64");
+  res.locals.cspNonce = nonce;
+  next();
+});
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      // 'unsafe-inline' is required while Vite dev server injects inline HMR scripts.
+      // TODO: Replace with nonce-based CSP once a Vite plugin injects nonces into
+      // all <script> tags (both dev HMR and production build output).
+      // res.locals.cspNonce is already generated per-request for future use.
+      scriptSrc: ["'self'", "'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
       imgSrc: ["'self'", "data:", "blob:", "https:"],
