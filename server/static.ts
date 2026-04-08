@@ -16,7 +16,12 @@ export function serveStatic(app: Express) {
 
   app.use(express.static(distPath));
 
+  const indexPath = path.resolve(distPath, "index.html");
+  const rawHtml = fs.readFileSync(indexPath, "utf-8");
+
   app.use("/{*path}", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+    const nonce = res.locals.cspNonce || "";
+    const html = rawHtml.replace(/<script/g, `<script nonce="${nonce}"`);
+    res.set("Content-Type", "text/html").send(html);
   });
 }

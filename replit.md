@@ -66,6 +66,15 @@ The system employs a modern full-stack architecture built for scalability and co
     -   **Batch Job Persistence**: `batchJobs` DB table for durable batch processing with status tracking.
     -   **Performance Optimizations**: Database queries parallelized with `Promise.all` across dashboard, KPI, chart, regulatory report, and audit endpoints. Audit stats use SQL-based aggregation instead of JS iteration. Integrity verification has 60-second cache. Request timeout middleware (15s API / 30s exports) prevents runaway requests. Audit logs excluded from timestamp redistribution to prevent hash chain corruption.
 
+## Route Architecture
+The API routes are modularized into feature-scoped files under `server/routes/`:
+-   **`middleware.ts`**: Shared rate limiters (login, API, write, batch, AI, creditReport), auth middleware (requireAuth, requireRole, requireSuperAdmin, enforceDataSovereignty, idempotencyMiddleware), country-scoping helpers (getOrgScope, getCountryFilter, logCrossCountryAccess, enforceCountryScopeForNonSuperAdmin, requireWriteCountry, resolveUserCountry, validateBorrowerCountry), and safeErrorMessage.
+-   **`auth.ts`**: Login, logout, MFA (setup/verify/disable/login), change-password, /auth/me.
+-   **`users.ts`**: User CRUD (GET/POST/PATCH/DELETE /api/users).
+-   **`dashboard.ts`**: Dashboard stats, trends, chart-data, platform KPIs, score-band performance, concentration alerts.
+-   **`telco.ts`**: All 29 telco routes (profiles, transactions, scoring, decision engine, loans, repayments, consent, analytics, operations dashboard).
+-   **`server/routes.ts`** (orchestrator): Registers all sub-routers, plus remaining routes (borrowers, credit accounts, billing, AI, consumer portal, admin, compliance, etc.).
+
 ## External Dependencies
 -   **Database**: PostgreSQL (Neon)
 -   **Frontend Libraries**: React, TypeScript, Vite, Tailwind CSS, shadcn/ui, wouter, react-i18next, Recharts

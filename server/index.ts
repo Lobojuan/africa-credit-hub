@@ -63,11 +63,9 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      // 'unsafe-inline' is required while Vite dev server injects inline HMR scripts.
-      // TODO: Replace with nonce-based CSP once a Vite plugin injects nonces into
-      // all <script> tags (both dev HMR and production build output).
-      // res.locals.cspNonce is already generated per-request for future use.
-      scriptSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: process.env.NODE_ENV === "production"
+        ? ["'self'", (_req: any, res: any) => `'nonce-${res.locals.cspNonce}'`]
+        : ["'self'", "'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
       imgSrc: ["'self'", "data:", "blob:", "https:"],

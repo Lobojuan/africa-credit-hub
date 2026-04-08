@@ -3,20 +3,21 @@ import express from "express";
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { getBaseUrl } from "./base-url";
-
-function safeErrorMessage(e: any, statusCode: number = 500): string {
-  const msg = e?.message || "An error occurred";
-  if (statusCode >= 500 && (process.env.NODE_ENV === "production" || process.env.PRODUCTION_MODE === "true")) {
-    const ref = crypto.randomBytes(4).toString("hex");
-    console.error(`[Error ${ref}]`, e?.stack || msg);
-    return `An internal error occurred. Reference: ${ref}`;
-  }
-  return msg
-    .replace(/at\s+\S+\s+\(.*?\)/g, "")
-    .replace(/\/[\w/.-]+\.(?:ts|js):\d+:\d+/g, "")
-    .replace(/Error:\s*/g, "")
-    .trim() || "An error occurred";
-}
+import { createLogger } from "./logger";
+const routeLogger = createLogger("routes");
+import {
+  loginLimiter, apiLimiter, writeLimiter, registrationLimiter, batchLimiter,
+  aiLimiter, creditReportLimiter, rateLimitKeyGenerator,
+  stripPassword, requireAuth, requireRole, requireSuperAdmin,
+  enforceDataSovereignty, idempotencyMiddleware,
+  getOrgScope, getCountryFilter, logCrossCountryAccess,
+  enforceCountryScopeForNonSuperAdmin, requireWriteCountry,
+  resolveUserCountry, validateBorrowerCountry, safeErrorMessage,
+} from "./routes/middleware";
+import authRouter from "./routes/auth";
+import usersRouter from "./routes/users";
+import dashboardRouter from "./routes/dashboard";
+import telcoRouter from "./routes/telco";
 import { storage, requireCountryScope } from "./storage";
 import { db, pool } from "./db";
 import { sql, eq, and, or, desc, inArray, ilike, count } from "drizzle-orm";
@@ -63,233 +64,7 @@ import { BUSINESS_CREDIT_TYPES, inferCreditCategory, normalizeAccountType } from
 import { BSL_EXPORT_GENERATORS } from "./bsl-export";
 import type { BslFileType } from "@shared/bsl-codes";
 
-const rateLimitKeyGenerator = (req: Request) => req.ip ?? req.socket.remoteAddress ?? "unknown";
 
-const loginLimiter = rateLimit({
-  keyGenerator: rateLimitKeyGenerator,
-  windowMs: 60 * 1000,
-  max: 10,
-  message: { message: "Too many login attempts. Please try again later." },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-const apiLimiter = rateLimit({
-  keyGenerator: rateLimitKeyGenerator,
-  skip: (req) => req.path === "/health" || req.path === "/api/health",
-  windowMs: 60 * 1000,
-  max: 200,
-  message: { message: "Too many requests. Please slow down." },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-const writeLimiter = rateLimit({
-  keyGenerator: rateLimitKeyGenerator,
-  windowMs: 60 * 1000,
-  max: 60,
-  message: { message: "Too many write requests. Please slow down." },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-const registrationLimiter = rateLimit({
-  keyGenerator: rateLimitKeyGenerator,
-  windowMs: 15 * 60 * 1000,
-  max: 5,
-  message: { message: "Too many registration attempts. Please try again in 15 minutes." },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-const batchLimiter = rateLimit({
-  keyGenerator: rateLimitKeyGenerator,
-  windowMs: 60 * 1000,
-  max: 10,
-  message: { message: "Too many batch operations. Please wait before submitting more." },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-const aiLimiter = rateLimit({
-  keyGenerator: rateLimitKeyGenerator,
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  message: { message: "AI request limit reached. Please try again in 15 minutes." },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-const idempotencyCache = new Map<string, { response: any; status: number; timestamp: number }>();
-const idempotencyInFlight = new Set<string>();
-const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
-
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, val] of idempotencyCache) {
-    if (now - val.timestamp > IDEMPOTENCY_TTL_MS) idempotencyCache.delete(key);
-  }
-}, 60 * 60 * 1000);
-
-function idempotencyMiddleware(req: Request, res: Response, next: NextFunction) {
-  const key = req.headers["idempotency-key"] as string;
-  if (!key) return next();
-
-  const cacheKey = `${req.method}:${req.path}:${key}`;
-  const cached = idempotencyCache.get(cacheKey);
-  if (cached) {
-    res.setHeader("X-Idempotent-Replayed", "true");
-    return res.status(cached.status).json(cached.response);
-  }
-
-  if (idempotencyInFlight.has(cacheKey)) {
-    return res.status(409).json({ message: "A request with this idempotency key is already being processed" });
-  }
-
-  idempotencyInFlight.add(cacheKey);
-  const origJson = res.json.bind(res);
-  res.json = function (body: any) {
-    idempotencyCache.set(cacheKey, { response: body, status: res.statusCode, timestamp: Date.now() });
-    idempotencyInFlight.delete(cacheKey);
-    return origJson(body);
-  };
-  res.on("close", () => idempotencyInFlight.delete(cacheKey));
-  next();
-}
-
-const creditReportLimiter = rateLimit({
-  keyGenerator: rateLimitKeyGenerator,
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-  message: { message: "Credit report request limit reached. Please try again later." },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-function stripPassword(user: any) {
-  const { password, ...safe } = user;
-  return safe;
-}
-
-async function requireAuth(req: Request, res: Response, next: NextFunction) {
-  if (!req.session?.userId) {
-    return res.status(401).json({ message: "Authentication required" });
-  }
-  if (req.session.userRole !== "super_admin" && req.session.organizationId) {
-    const org = await storage.getOrganization(req.session.organizationId);
-    if (org && org.status === "suspended") {
-      return res.status(403).json({ message: "ACCOUNT_SUSPENDED", reason: "Your organization's account has been suspended due to unpaid billing. Please contact your administrator or make a payment to restore access." });
-    }
-    if (!req.session.userCountry && org?.country) {
-      req.session.userCountry = org.country;
-    }
-  }
-  next();
-}
-
-function requireRole(...roles: string[]) {
-  return (req: Request, res: Response, next: NextFunction) => {
-    if (!req.session?.userRole || (!roles.includes(req.session.userRole) && req.session.userRole !== "super_admin")) {
-      return res.status(403).json({ message: "Insufficient permissions" });
-    }
-    next();
-  };
-}
-
-function requireSuperAdmin(req: Request, res: Response, next: NextFunction) {
-  if (req.session?.userRole !== "super_admin") {
-    return res.status(403).json({ message: "Super admin access required" });
-  }
-  next();
-}
-
-
-function getOrgScope(req: Request): string | undefined {
-  if (req.session?.userRole === "super_admin") {
-    return (req.query.orgId as string) || undefined;
-  }
-  return req.session?.organizationId || undefined;
-}
-
-function getCountryFilter(req?: Request): string | undefined {
-  const explicitCountry = req?.query?.country as string | undefined;
-  const hasExplicit = explicitCountry && explicitCountry !== "all" && explicitCountry !== "";
-
-  if (req?.session?.userRole === "super_admin") {
-    if (hasExplicit) return explicitCountry;
-    if (!req.session.viewingCountry) return undefined;
-    if (req.session.viewingCountry === "global") return undefined;
-    return req.session.viewingCountry;
-  }
-  if (req?.session?.userCountry) {
-    return req.session.userCountry;
-  }
-  const country = getActiveCountryName();
-  return country || undefined;
-}
-
-async function logCrossCountryAccess(req: Request, targetCountry: string | undefined, endpoint: string): Promise<void> {
-  if (req.session?.userRole !== "super_admin" || !targetCountry) return;
-  const homeCountry = req.session?.userCountry || req.session?.viewingCountry;
-  if (homeCountry && homeCountry !== "global" && homeCountry !== targetCountry) {
-    try {
-      await storage.createAuditLog({
-        userId: (req as any).user?.id || req.session?.userId || "system",
-        action: "CROSS_COUNTRY_ACCESS",
-        entity: "country_isolation",
-        entityId: targetCountry,
-        details: `Super admin accessed ${endpoint} for country "${targetCountry}" (home: "${homeCountry}")`,
-        ipAddress: req.ip,
-      });
-    } catch (_e) {}
-  }
-}
-
-function enforceCountryScopeForNonSuperAdmin(req: Request, country: string | undefined, endpoint: string): void {
-  if (req.session?.userRole !== "super_admin") {
-    if (!country) {
-      throw new Error(`Country scope required for ${endpoint}. Pass a country parameter to ensure data isolation.`);
-    }
-    const userCountry = req.session?.userCountry;
-    if (userCountry && country !== userCountry) {
-      throw new Error(`Access denied: user country "${userCountry}" does not match requested country "${country}" for ${endpoint}`);
-    }
-  }
-}
-
-function requireWriteCountry(country: string | undefined, context: string): string {
-  if (!country) throw new Error(`Country scope required for write operation: ${context}`);
-  return country;
-}
-
-async function resolveUserCountry(req: Request): Promise<string | undefined> {
-  if (req.session?.userCountry) return req.session.userCountry;
-  if (req.session?.organizationId) {
-    const org = await storage.getOrganization(req.session.organizationId);
-    if (org?.country) {
-      req.session.userCountry = org.country;
-      return org.country;
-    }
-  }
-  return undefined;
-}
-
-async function validateBorrowerCountry(borrowerId: string, req: Request): Promise<boolean> {
-  const country = getCountryFilter(req);
-  if (!country) return true;
-  const borrower = await storage.getBorrower(borrowerId);
-  if (!borrower) return true;
-  return borrower.country === country;
-}
-
-function enforceDataSovereignty(req: Request, res: Response, next: NextFunction) {
-  if (!req.session?.userId) return res.status(401).json({ message: "Authentication required" });
-  if (req.session.userRole === "super_admin") return next();
-  const userCountry = req.session.userCountry;
-  if (!userCountry) return next();
-  (req as any)._sovereignCountry = userCountry;
-  next();
-}
 
 async function requireCrossBorderAccess(req: Request, res: Response, next: NextFunction) {
   try {
@@ -957,7 +732,7 @@ export async function registerRoutes(
         const { seedTrialData } = await import("./trial-sandbox");
         await seedTrialData(org.id, newUser.id, organization.country);
       } catch (seedErr: any) {
-        console.error("[Trial] Sample data seeding failed (non-blocking):", seedErr.message);
+        routeLogger.error(`[Trial] Sample data seeding failed (non-blocking): ${seedErr.message}`);
       }
 
       sendNewRegistrationAlert(
@@ -971,361 +746,12 @@ export async function registerRoutes(
         organization: { id: org.id, name: org.name, country: org.country },
       });
     } catch (e: any) {
-      console.error("Trial registration error:", e);
+      routeLogger.error("Trial registration error:", { detail: e });
       res.status(500).json({ message: "Registration failed. Please try again." });
     }
   });
 
-  app.post("/api/auth/login", loginLimiter, async (req, res) => {
-    try {
-      const { username, password } = req.body;
-      if (!username || !password) {
-        return res.status(400).json({ message: "Username and password required" });
-      }
-
-      const user = await storage.getUserByUsername(username);
-      if (!user) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-
-      if (user.status !== "active") {
-        return res.status(403).json({ message: "Account is " + user.status });
-      }
-
-      if (user.lockedUntil && new Date(user.lockedUntil) > new Date()) {
-        const remaining = Math.ceil((new Date(user.lockedUntil).getTime() - Date.now()) / 60000);
-        return res.status(423).json({ message: `Account locked. Try again in ${remaining} minute(s).` });
-      }
-
-      const valid = await bcrypt.compare(password, user.password);
-      if (!valid) {
-        await storage.incrementFailedAttempts(user.id);
-        const updatedUser = await storage.getUser(user.id);
-        const attempts = (updatedUser?.failedLoginAttempts || 0);
-
-        await storage.createAuditLog({
-          action: "LOGIN_FAILED", entity: "user", entityId: user.id,
-          details: `Failed login attempt ${attempts} for user ${user.username}`,
-          ipAddress: req.ip || null,
-        });
-
-        if (attempts >= 3) {
-          const lockUntil = new Date(Date.now() + 15 * 60 * 1000);
-          await storage.lockUser(user.id, lockUntil);
-          await storage.createAuditLog({
-            action: "ACCOUNT_LOCKED", entity: "user", entityId: user.id,
-            details: `Account locked after ${attempts} failed attempts`,
-            ipAddress: req.ip || null,
-          });
-          return res.status(423).json({ message: "Account locked for 15 minutes after 3 failed attempts." });
-        }
-
-        return res.status(401).json({ message: `Invalid credentials. ${3 - attempts} attempt(s) remaining.` });
-      }
-
-      await storage.resetFailedAttempts(user.id);
-      await storage.updateLastLogin(user.id);
-
-      const { detectLoginAnomaly } = await import("./security-hardening");
-      const loginIp = req.ip || req.socket.remoteAddress || "unknown";
-      const anomalyResult = await detectLoginAnomaly(user.id, loginIp);
-
-      if (user.mfaEnabled && user.mfaSecret) {
-        req.session.mfaPendingUserId = user.id;
-        return res.json({ requireMfa: true, userId: user.id });
-      }
-
-      req.session.userId = user.id;
-      req.session.userRole = user.role;
-      req.session.userDivision = (user as any).division || undefined;
-      req.session.organizationId = user.organizationId || undefined;
-      req.session.lastActivity = Date.now();
-
-
-      if (user.role === "super_admin") {
-        delete req.session.viewingCountry;
-      }
-
-      let organization = null;
-      if (user.organizationId) {
-        organization = await storage.getOrganization(user.organizationId);
-      }
-
-      if (user.role !== "super_admin" && organization?.country) {
-        req.session.userCountry = organization.country;
-      }
-
-      await storage.createAuditLog({
-        action: "LOGIN", entity: "system", userId: user.id,
-        details: `${user.fullName} logged in from IP ${loginIp}${anomalyResult.anomaly ? " [NEW IP - ANOMALY DETECTED]" : ""}`,
-        ipAddress: loginIp,
-        organizationId: user.organizationId || undefined,
-      });
-
-      let passwordExpired = false;
-      if (user.mustChangePassword) {
-        passwordExpired = true;
-      } else if (user.passwordChangedAt) {
-        const daysSinceChange = (Date.now() - new Date(user.passwordChangedAt).getTime()) / (1000 * 60 * 60 * 24);
-        passwordExpired = daysSinceChange > 90;
-      }
-
-      let viewingCountry: string | null = null;
-      if (user.role === "super_admin") {
-        viewingCountry = null;
-      } else {
-        viewingCountry = organization?.country || getActiveCountryName() || null;
-      }
-      res.json({
-        ...stripPassword(user),
-        passwordExpired,
-        organization,
-        viewingCountry,
-        ...(anomalyResult.anomaly ? { loginAnomaly: anomalyResult.reason } : {})
-      });
-    } catch (e: any) {
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
-
-  app.post("/api/auth/change-password", async (req, res) => {
-    try {
-      if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
-      const { currentPassword, newPassword } = req.body;
-      if (!currentPassword || !newPassword) {
-        return res.status(400).json({ message: "Current and new passwords are required" });
-      }
-
-      const passwordRules = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
-      if (!passwordRules.test(newPassword)) {
-        return res.status(400).json({
-          message: "Password must be at least 8 characters with uppercase, lowercase, digit, and special character"
-        });
-      }
-
-      const user = await storage.getUser(req.session.userId);
-      if (!user) return res.status(404).json({ message: "User not found" });
-
-      const valid = await bcrypt.compare(currentPassword, user.password);
-      if (!valid) return res.status(401).json({ message: "Current password is incorrect" });
-
-      const { checkPasswordHistory, pushPasswordHistory } = await import("./security-hardening");
-      const historyCheck = await checkPasswordHistory(user.id, newPassword);
-      if (historyCheck.reused) {
-        return res.status(400).json({ message: historyCheck.message });
-      }
-
-      const oldHash = user.password;
-      const hashed = await bcrypt.hash(newPassword, 10);
-      await storage.updateUser(user.id, { password: hashed } as any);
-      await storage.updatePasswordChangedAt(user.id);
-      await pushPasswordHistory(user.id, oldHash);
-
-      await storage.createAuditLog({
-        action: "PASSWORD_CHANGE", entity: "user", entityId: user.id, userId: user.id,
-        details: "Password changed successfully (history check passed)",
-        ipAddress: req.ip || null,
-      });
-
-      res.json({ message: "Password changed successfully" });
-    } catch (e: any) {
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
-
-  app.post("/api/auth/logout", (req, res) => {
-    const userId = req.session?.userId;
-    req.session.destroy((err) => {
-      if (err) return res.status(500).json({ message: "Logout failed" });
-      if (userId) {
-        storage.createAuditLog({
-          action: "LOGOUT", entity: "system", userId,
-          details: "User logged out",
-          ipAddress: req.ip || null,
-        });
-      }
-      res.json({ message: "Logged out" });
-    });
-  });
-
-  app.post("/api/auth/mfa/login", async (req, res) => {
-    try {
-      const { code } = req.body;
-      const pendingUserId = req.session?.mfaPendingUserId;
-      if (!pendingUserId) {
-        return res.status(401).json({ message: "No MFA session pending" });
-      }
-      const user = await storage.getUser(pendingUserId);
-      if (!user || !user.mfaSecret) {
-        return res.status(401).json({ message: "Invalid MFA session" });
-      }
-      const totp = new OTPAuth.TOTP({
-        issuer: "CDH Credit Registry",
-        label: user.username,
-        algorithm: "SHA1",
-        digits: 6,
-        period: 30,
-        secret: OTPAuth.Secret.fromBase32(user.mfaSecret),
-      });
-      const delta = totp.validate({ token: code, window: 1 });
-      if (delta === null) {
-        return res.status(401).json({ message: "Invalid MFA code" });
-      }
-      delete req.session.mfaPendingUserId;
-      req.session.userId = user.id;
-      req.session.userRole = user.role;
-      req.session.userDivision = (user as any).division || undefined;
-      req.session.organizationId = user.organizationId || undefined;
-      req.session.lastActivity = Date.now();
-      if (user.role === "super_admin") {
-        delete req.session.viewingCountry;
-      }
-      if (user.role !== "super_admin" && user.organizationId) {
-        const org = await storage.getOrganization(user.organizationId);
-        if (org?.country) {
-          req.session.userCountry = org.country;
-        }
-      }
-      await storage.createAuditLog({
-        action: "LOGIN", entity: "system", userId: user.id,
-        details: `${user.fullName} logged in (MFA verified)`,
-        ipAddress: req.ip || null,
-        organizationId: user.organizationId || undefined,
-      });
-      let passwordExpired = false;
-      if (user.mustChangePassword) {
-        passwordExpired = true;
-      } else if (user.passwordChangedAt) {
-        const daysSinceChange = (Date.now() - new Date(user.passwordChangedAt).getTime()) / (1000 * 60 * 60 * 24);
-        passwordExpired = daysSinceChange > 90;
-      }
-      let organization = null;
-      if (user.organizationId) {
-        organization = await storage.getOrganization(user.organizationId);
-      }
-      let viewingCountry: string | null = null;
-      if (user.role === "super_admin") {
-        viewingCountry = null;
-      } else {
-        viewingCountry = organization?.country || getActiveCountryName() || null;
-      }
-      res.json({ ...stripPassword(user), passwordExpired, organization, viewingCountry });
-    } catch (e: any) {
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
-
-  app.post("/api/auth/mfa/setup", async (req, res) => {
-    try {
-      if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
-      const user = await storage.getUser(req.session.userId);
-      if (!user) return res.status(404).json({ message: "User not found" });
-      const secret = new OTPAuth.Secret({ size: 20 });
-      const totp = new OTPAuth.TOTP({
-        issuer: "CDH Credit Registry",
-        label: user.username,
-        algorithm: "SHA1",
-        digits: 6,
-        period: 30,
-        secret,
-      });
-      await storage.updateUser(user.id, { mfaSecret: secret.base32 } as any);
-      res.json({ secret: secret.base32, uri: totp.toString() });
-    } catch (e: any) {
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
-
-  app.post("/api/auth/mfa/verify", async (req, res) => {
-    try {
-      if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
-      const { code } = req.body;
-      const user = await storage.getUser(req.session.userId);
-      if (!user || !user.mfaSecret) return res.status(400).json({ message: "MFA not set up" });
-      const totp = new OTPAuth.TOTP({
-        issuer: "CDH Credit Registry",
-        label: user.username,
-        algorithm: "SHA1",
-        digits: 6,
-        period: 30,
-        secret: OTPAuth.Secret.fromBase32(user.mfaSecret),
-      });
-      const delta = totp.validate({ token: code, window: 1 });
-      if (delta === null) {
-        return res.status(400).json({ message: "Invalid code. Please try again." });
-      }
-      await storage.updateUser(user.id, { mfaEnabled: true } as any);
-      await storage.createAuditLog({
-        action: "MFA_ENABLED", entity: "user", entityId: user.id, userId: user.id,
-        details: `MFA enabled for ${user.fullName}`,
-        ipAddress: req.ip || null,
-      });
-      res.json({ message: "MFA enabled successfully" });
-    } catch (e: any) {
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
-
-  app.post("/api/auth/mfa/disable", async (req, res) => {
-    try {
-      if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
-      const user = await storage.getUser(req.session.userId);
-      if (!user) return res.status(404).json({ message: "User not found" });
-      await storage.updateUser(user.id, { mfaEnabled: false, mfaSecret: null } as any);
-      await storage.createAuditLog({
-        action: "MFA_DISABLED", entity: "user", entityId: user.id, userId: user.id,
-        details: `MFA disabled for ${user.fullName}`,
-        ipAddress: req.ip || null,
-      });
-      res.json({ message: "MFA disabled" });
-    } catch (e: any) {
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
-
-
-  app.get("/api/auth/review-access/:token", (_req, res) => {
-    res.status(404).json({ message: "Not found" });
-  });
-
-  app.get("/api/auth/me", async (req, res) => {
-    if (!req.session?.userId) {
-      return res.status(401).json({ message: "Not authenticated" });
-    }
-    const user = await storage.getUser(req.session.userId);
-    if (!user) return res.status(401).json({ message: "User not found" });
-
-    if (req.session.userRole !== user.role) {
-      req.session.userRole = user.role;
-      if (user.role === "super_admin") {
-        delete req.session.viewingCountry;
-      }
-    }
-
-    const userData = stripPassword(user);
-
-    const PASSWORD_EXPIRY_DAYS = 90;
-    let passwordExpired = false;
-    if (user.mustChangePassword) {
-      passwordExpired = true;
-    } else if (user.passwordChangedAt) {
-      const daysSinceChange = (Date.now() - new Date(user.passwordChangedAt).getTime()) / (1000 * 60 * 60 * 24);
-      passwordExpired = daysSinceChange > PASSWORD_EXPIRY_DAYS;
-    }
-
-    let organization = null;
-    if (user.organizationId) {
-      organization = await storage.getOrganization(user.organizationId);
-    }
-
-    let viewingCountry: string | null = null;
-    if (user.role === "super_admin") {
-      viewingCountry = req.session.viewingCountry && req.session.viewingCountry !== "undefined" ? req.session.viewingCountry : null;
-    } else {
-      viewingCountry = req.session.userCountry || organization?.country || getActiveCountryName() || null;
-    }
-    res.json({ ...userData, passwordExpired, organization, viewingCountry });
-  });
+  app.use(authRouter);
 
   app.get("/api/docs/api-integration-guide", (_req, res) => {
     const _dir = typeof __dirname !== "undefined" ? __dirname : process.cwd();
@@ -1351,433 +777,9 @@ export async function registerRoutes(
     requireAuth(req, res, next);
   });
 
-  app.get("/api/dashboard/stats", async (req, res) => {
-    try {
-      const orgId = getOrgScope(req);
-      const country = getCountryFilter(req);
-      const stats = await storage.getDashboardStats(orgId, country);
-      res.json(stats);
-    } catch (e: any) {
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
+  app.use(dashboardRouter);
 
-  app.get("/api/dashboard/trends", requireAuth, async (req, res) => {
-    try {
-      const orgId = getOrgScope(req);
-      const country = getCountryFilter(req);
-      const stats = await storage.getDashboardStats(orgId, country);
-
-      function generateTrend(currentValue: number): number[] {
-        const points: number[] = [];
-        const base = Math.max(1, Math.round(currentValue * (0.7 + Math.random() * 0.15)));
-        for (let i = 0; i < 7; i++) {
-          const progress = i / 6;
-          const target = currentValue;
-          const value = Math.round(base + (target - base) * progress + (Math.random() - 0.5) * currentValue * 0.08);
-          points.push(Math.max(0, value));
-        }
-        points[6] = currentValue;
-        return points;
-      }
-
-      res.json({
-        borrowers: generateTrend(stats.totalBorrowers),
-        accounts: generateTrend(stats.totalAccounts),
-        disputes: generateTrend(stats.openDisputeCount),
-        inquiries: generateTrend(stats.totalInquiries),
-        delinquent: generateTrend(stats.delinquentAccounts),
-        defaults: generateTrend(stats.defaultAccounts),
-        approvals: generateTrend(stats.pendingApprovalCount),
-      });
-    } catch (e: any) {
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
-
-  app.get("/api/dashboard/details/:type", async (req, res) => {
-    try {
-      const orgId = getOrgScope(req);
-      const country = getCountryFilter(req);
-      const details = await storage.getDashboardDetails(req.params.type, orgId, country);
-      res.json(details);
-    } catch (e: any) {
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
-
-  app.get("/api/dashboard/chart-data", requireAuth, async (req, res) => {
-    try {
-      const orgId = getOrgScope(req);
-      const country = getCountryFilter(req);
-      const [stats, portfolio, borrowerAgg] = await Promise.all([
-        storage.getDashboardStats(orgId, country),
-        storage.getPortfolioAggregates(orgId, country),
-        storage.getBorrowerAggregates(orgId, country),
-      ]);
-
-      const countryBreakdown = [{
-        country: country || "Ghana",
-        borrowers: borrowerAgg.total,
-        accounts: portfolio.totalAccounts,
-      }];
-
-      const totalB = stats.totalBorrowers;
-      const totalA = stats.totalAccounts;
-      const monthlyTrend = [];
-      const now = new Date();
-      for (let i = 11; i >= 0; i--) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const month = d.toLocaleString("en", { month: "short", year: "2-digit" });
-        const factor = (12 - i) / 12;
-        const growth = 0.6 + 0.4 * factor;
-        const jitter = 0.97 + Math.random() * 0.06;
-        monthlyTrend.push({
-          month,
-          borrowers: Math.round(totalB * growth * jitter),
-          accounts: Math.round(totalA * growth * jitter),
-        });
-      }
-
-      res.json({
-        monthlyTrend,
-        statusBreakdown: portfolio.statusBreakdown,
-        typeBreakdown: portfolio.typeBreakdown.slice(0, 8),
-        countryBreakdown,
-      });
-    } catch (e: any) {
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
-
-  app.get("/api/platform-kpis", requireAuth, async (req, res) => {
-    try {
-      const orgId = getOrgScope(req);
-      const country = getCountryFilter(req);
-      const [stats, portfolio, borrowerAgg] = await Promise.all([
-        storage.getDashboardStats(orgId, country),
-        storage.getPortfolioAggregates(orgId, country),
-        storage.getBorrowerAggregates(orgId, country),
-      ]);
-
-      const totalPortfolio = portfolio.totalValue;
-      const totalOriginal = portfolio.totalOriginal;
-      const nplRatio = totalPortfolio > 0 ? ((portfolio.delinquentValue + portfolio.defaultedValue) / totalPortfolio) * 100 : 0;
-      const delinquencyRate = portfolio.totalAccounts > 0 ? (portfolio.delinquentCount / portfolio.totalAccounts) * 100 : 0;
-      const defaultRate = portfolio.totalAccounts > 0 ? (portfolio.defaultedCount / portfolio.totalAccounts) * 100 : 0;
-      const collectionRate = totalOriginal > 0 ? Math.max(0, Math.min(100, ((totalOriginal - totalPortfolio) / totalOriginal) * 100)) : 0;
-
-      const avgAccountsPerBorrower = borrowerAgg.total > 0 ? portfolio.totalAccounts / borrowerAgg.total : 0;
-      const avgLoanSize = portfolio.totalAccounts > 0 ? totalOriginal / portfolio.totalAccounts : 0;
-      const accountTypes: Record<string, number> = {};
-      for (const t of portfolio.typeBreakdown) { accountTypes[t.name] = t.value; }
-
-      const traditionalNPL = 12.5;
-      const platformNPL = Math.round(nplRatio * 10) / 10;
-      const nplReduction = Math.max(0, traditionalNPL - platformNPL);
-
-      const costPerReport = 2.50;
-      const revenuePerReport = 8.75;
-      const reportsGenerated = stats.totalInquiries || borrowerAgg.total;
-      const reportingRevenue = Math.round(reportsGenerated * revenuePerReport);
-      const reportingCost = Math.round(reportsGenerated * costPerReport);
-
-      const earlyWarningBenefit = Math.round(totalPortfolio * 0.005);
-      const portfolioSavings = nplReduction > 0
-        ? Math.round(totalPortfolio * Math.min(nplReduction * 0.1, 1.5) / 100)
-        : earlyWarningBenefit;
-
-      const platformOperatingCost = Math.max(reportingCost, Math.round(portfolio.totalAccounts * 50 + 75000));
-      const reportingMargin = reportingRevenue > 0 ? Math.round(((reportingRevenue - reportingCost) / reportingRevenue) * 100) : 0;
-      const totalBenefit = portfolioSavings + reportingRevenue;
-      const annualizedROI = platformOperatingCost > 0 ? Math.max(0, Math.round(((totalBenefit - platformOperatingCost) / platformOperatingCost) * 100)) : 0;
-
-      const totalDisputeEstimate = Math.max(stats.openDisputeCount + Math.round(borrowerAgg.total * 0.05), 1);
-      const resolvedDisputes = totalDisputeEstimate - stats.openDisputeCount;
-      const disputeResolutionRate = Math.round(Math.max(0, Math.min(100, (resolvedDisputes / totalDisputeEstimate) * 100)));
-
-      const slaCompliance = portfolio.totalAccounts > 0
-        ? Math.round(((portfolio.withBalance + portfolio.withOpenDate) / (portfolio.totalAccounts * 2)) * 1000) / 10
-        : 0;
-
-      res.json({
-        portfolio: {
-          totalValue: Math.round(totalPortfolio),
-          totalOriginal: Math.round(totalOriginal),
-          totalAccounts: portfolio.totalAccounts,
-          currentAccounts: portfolio.currentCount,
-          delinquentAccounts: portfolio.delinquentCount,
-          defaultedAccounts: portfolio.defaultedCount,
-          closedAccounts: portfolio.closedCount,
-          nplRatio: Math.round(nplRatio * 10) / 10,
-          delinquencyRate: Math.round(delinquencyRate * 10) / 10,
-          defaultRate: Math.round(defaultRate * 10) / 10,
-          collectionRate: Math.round(collectionRate * 10) / 10,
-          avgInterestRate: Math.round(portfolio.avgInterestRate * 100) / 100,
-          avgLoanSize: Math.round(avgLoanSize),
-          accountTypes,
-        },
-        borrowers: {
-          total: borrowerAgg.total,
-          individuals: borrowerAgg.individuals,
-          corporates: borrowerAgg.corporates,
-          avgAccountsPerBorrower: Math.round(avgAccountsPerBorrower * 10) / 10,
-          avgCreditScore: borrowerAgg.avgCreditScore,
-          medianCreditScore: borrowerAgg.avgCreditScore,
-          countriesServed: borrowerAgg.countriesServed,
-        },
-        operations: {
-          institutionsServed: portfolio.institutionCount,
-          reportsGenerated,
-          pendingApprovals: stats.pendingApprovalCount,
-          openDisputes: stats.openDisputeCount,
-          disputeResolutionRate,
-          approvalTurnaroundDays: 1.8,
-          dataAccuracyPercent: borrowerAgg.dataAccuracy,
-          slaCompliancePercent: slaCompliance,
-        },
-        roi: {
-          traditionalNPLPercent: traditionalNPL,
-          platformNPLPercent: platformNPL,
-          nplReductionPercent: Math.round(nplReduction * 10) / 10,
-          portfolioSavingsUsd: portfolioSavings,
-          costPerReport,
-          revenuePerReport,
-          reportingRevenueUsd: reportingRevenue,
-          reportingCostUsd: reportingCost,
-          reportingMarginPercent: reportingMargin,
-          annualizedROI,
-        },
-      });
-    } catch (e: any) {
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
-
-  app.get("/api/score-band-performance", requireAuth, requireRole("admin", "lender", "super_admin"), async (req, res) => {
-    try {
-      const orgId = getOrgScope(req);
-      const country = getCountryFilter(req);
-      const allAccounts = await storage.getAllCreditAccounts(orgId, country, 100000);
-      const borrowerResult = await storage.getBorrowers(1, 100000, orgId, country);
-      const allBorrowers = borrowerResult.data;
-
-      const bands = [
-        { label: "Excellent", min: 750, max: 850 },
-        { label: "Good", min: 670, max: 749 },
-        { label: "Fair", min: 580, max: 669 },
-        { label: "Poor", min: 450, max: 579 },
-        { label: "Very Poor", min: 300, max: 449 },
-      ];
-
-      const borrowerIds = allBorrowers.map(b => b.id);
-      const allInquiries = borrowerIds.length > 0
-        ? await db.select().from(creditInquiries).where(inArray(creditInquiries.borrowerId, borrowerIds))
-        : [];
-      const allJudgments = borrowerIds.length > 0
-        ? await db.select().from(courtJudgments).where(inArray(courtJudgments.borrowerId, borrowerIds))
-        : [];
-
-      const borrowerScores = new Map<string, number>();
-      for (const b of allBorrowers) {
-        const bAccounts = allAccounts.filter(a => a.borrowerId === b.id);
-        const bInquiries = allInquiries.filter(i => i.borrowerId === b.id);
-        const bJudgments = allJudgments.filter(j => j.borrowerId === b.id);
-        const scoreResult = calculateCreditScore(bAccounts, bInquiries.length, bJudgments, b.isPep ?? false);
-        borrowerScores.set(b.id, scoreResult.score);
-      }
-
-      const result = bands.map(band => {
-        const borrowerIds = Array.from(borrowerScores.entries())
-          .filter(([_, score]) => score >= band.min && score <= band.max)
-          .map(([id]) => id);
-
-        const sampleSize = borrowerIds.length;
-        const badBorrowers = borrowerIds.filter(id => {
-          const bAccounts = allAccounts.filter(a => a.borrowerId === id);
-          return bAccounts.some(a => a.status === "default" || a.status === "written_off");
-        }).length;
-
-        const defaultRate = sampleSize > 0 ? Number(((badBorrowers / sampleSize) * 100).toFixed(1)) : 0;
-        const goodCount = sampleSize - badBorrowers;
-        const oddsRatio = badBorrowers > 0 ? Number((goodCount / badBorrowers).toFixed(1)) : goodCount > 0 ? 999.0 : 0;
-
-        return {
-          band: band.label,
-          range: `${band.min}-${band.max}`,
-          sampleSize,
-          defaultRate,
-          goodCount,
-          badCount: badBorrowers,
-          oddsRatio,
-        };
-      });
-
-      res.json(result);
-    } catch (e: any) {
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
-
-  app.get("/api/concentration-alerts", requireAuth, async (req, res) => {
-    try {
-      const orgId = getOrgScope(req);
-      const country = getCountryFilter(req);
-      const concentration = await storage.getConcentrationData(orgId, country);
-
-      const SINGLE_BORROWER_THRESHOLD = 0.15;
-      const SINGLE_LENDER_THRESHOLD = 0.25;
-      const SECTOR_THRESHOLD = 0.35;
-      const totalExposure = concentration.totalExposure;
-
-      if (totalExposure === 0) {
-        return res.json({ alerts: [], totalExposure: 0, thresholds: { singleBorrower: SINGLE_BORROWER_THRESHOLD, singleLender: SINGLE_LENDER_THRESHOLD, sector: SECTOR_THRESHOLD } });
-      }
-
-      const alerts: Array<{ type: string; severity: "low" | "medium" | "high" | "critical"; entity: string; exposure: number; percentage: number; threshold: number; message: string }> = [];
-
-      const topBorrowerIds = concentration.borrowerExposure.map(b => b.borrowerId).filter(Boolean);
-      let borrowerNameMap: Record<string, string> = {};
-      if (topBorrowerIds.length > 0) {
-        const topBorrowers = await db.select({ id: borrowers.id, type: borrowers.type, firstName: borrowers.firstName, lastName: borrowers.lastName, companyName: borrowers.companyName }).from(borrowers).where(inArray(borrowers.id, topBorrowerIds));
-        for (const b of topBorrowers) {
-          borrowerNameMap[b.id] = b.type === "corporate" ? (b.companyName || b.id) : `${b.firstName || ""} ${b.lastName || ""}`.trim() || b.id;
-        }
-      }
-
-      for (const { borrowerId, total } of concentration.borrowerExposure) {
-        const pct = total / totalExposure;
-        if (pct >= SINGLE_BORROWER_THRESHOLD) {
-          const name = borrowerNameMap[borrowerId] || borrowerId;
-          alerts.push({
-            type: "single_borrower",
-            severity: pct >= 0.30 ? "critical" : pct >= 0.20 ? "high" : "medium",
-            entity: name,
-            exposure: Math.round(total * 100) / 100,
-            percentage: Math.round(pct * 10000) / 100,
-            threshold: SINGLE_BORROWER_THRESHOLD * 100,
-            message: `${name} represents ${(pct * 100).toFixed(1)}% of total portfolio exposure (threshold: ${SINGLE_BORROWER_THRESHOLD * 100}%)`,
-          });
-        }
-      }
-
-      for (const { lender, total } of concentration.lenderExposure) {
-        const pct = total / totalExposure;
-        if (pct >= SINGLE_LENDER_THRESHOLD) {
-          alerts.push({
-            type: "single_lender",
-            severity: pct >= 0.40 ? "critical" : pct >= 0.30 ? "high" : "medium",
-            entity: lender,
-            exposure: Math.round(total * 100) / 100,
-            percentage: Math.round(pct * 10000) / 100,
-            threshold: SINGLE_LENDER_THRESHOLD * 100,
-            message: `${lender} holds ${(pct * 100).toFixed(1)}% of total portfolio exposure (threshold: ${SINGLE_LENDER_THRESHOLD * 100}%)`,
-          });
-        }
-      }
-
-      for (const { sector, total } of concentration.sectorExposure) {
-        const pct = total / totalExposure;
-        if (pct >= SECTOR_THRESHOLD) {
-          alerts.push({
-            type: "sector",
-            severity: pct >= 0.50 ? "critical" : pct >= 0.40 ? "high" : "medium",
-            entity: sector,
-            exposure: Math.round(total * 100) / 100,
-            percentage: Math.round(pct * 10000) / 100,
-            threshold: SECTOR_THRESHOLD * 100,
-            message: `${sector} sector accounts for ${(pct * 100).toFixed(1)}% of portfolio (threshold: ${SECTOR_THRESHOLD * 100}%)`,
-          });
-        }
-      }
-
-      alerts.sort((a, b) => {
-        const sev = { critical: 0, high: 1, medium: 2, low: 3 };
-        return (sev[a.severity] - sev[b.severity]) || (b.percentage - a.percentage);
-      });
-
-      res.json({ alerts, totalExposure: Math.round(totalExposure * 100) / 100, thresholds: { singleBorrower: SINGLE_BORROWER_THRESHOLD * 100, singleLender: SINGLE_LENDER_THRESHOLD * 100, sector: SECTOR_THRESHOLD * 100 } });
-    } catch (e: any) {
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
-
-  app.get("/api/users", requireRole("admin", "super_admin"), async (req, res) => {
-    try {
-      const orgId = getOrgScope(req);
-      const country = getCountryFilter(req);
-      enforceCountryScopeForNonSuperAdmin(req, country, "/api/users");
-      await logCrossCountryAccess(req, country, "/api/users");
-      const users = await storage.getUsers(orgId, country);
-      res.json(users.map(stripPassword));
-    } catch (e: any) {
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
-
-  app.post("/api/users", requireRole("admin", "super_admin"), async (req, res) => {
-    try {
-      const orgId = req.session?.userRole === "super_admin" ? (req.body.organizationId || getOrgScope(req)) : getOrgScope(req);
-      const parsed = insertUserSchema.parse({ ...req.body, organizationId: orgId });
-      const hashedPassword = await bcrypt.hash(parsed.password, 10);
-      const user = await storage.createUser({ ...parsed, password: hashedPassword });
-      await storage.createAuditLog({
-        action: "CREATE", entity: "user", entityId: user.id, userId: req.session?.userId,
-        details: `Created user: ${user.fullName}`,
-        ipAddress: req.ip || null,
-      });
-      res.status(201).json(stripPassword(user));
-    } catch (e: any) {
-      res.status(400).json({ message: e.message });
-    }
-  });
-
-  app.patch("/api/users/:id", requireRole("admin"), async (req, res) => {
-    try {
-      const data = { ...req.body };
-      if (data.password) {
-        const { checkPasswordHistory, pushPasswordHistory } = await import("./security-hardening");
-        const historyCheck = await checkPasswordHistory(req.params.id, data.password);
-        if (historyCheck.reused) {
-          return res.status(400).json({ message: historyCheck.message });
-        }
-        const existingUser = await storage.getUser(req.params.id);
-        const oldHash = existingUser?.password;
-        data.password = await bcrypt.hash(data.password, 10);
-        if (oldHash) {
-          await pushPasswordHistory(req.params.id, oldHash);
-        }
-      }
-      const user = await storage.updateUser(req.params.id, data);
-      if (!user) return res.status(404).json({ message: "User not found" });
-      await storage.createAuditLog({
-        action: "UPDATE", entity: "user", entityId: user.id, userId: req.session?.userId,
-        details: `Updated user: ${user.fullName}${data.password ? " (password changed by admin, history check passed)" : ""}`,
-        ipAddress: req.ip || null,
-      });
-      res.json(stripPassword(user));
-    } catch (e: any) {
-      res.status(400).json({ message: e.message });
-    }
-  });
-
-  app.delete("/api/users/:id", requireRole("admin"), async (req, res) => {
-    try {
-      if (req.params.id === req.session?.userId) {
-        return res.status(400).json({ message: "Cannot delete your own account" });
-      }
-      const deleted = await storage.deleteUser(req.params.id);
-      if (!deleted) return res.status(404).json({ message: "User not found" });
-      await storage.createAuditLog({
-        action: "DELETE", entity: "user", entityId: req.params.id, userId: req.session?.userId,
-        details: `Deleted user ID: ${req.params.id}`,
-        ipAddress: req.ip || null,
-      });
-      res.json({ message: "User deleted" });
-    } catch (e: any) {
-      res.status(400).json({ message: e.message });
-    }
-  });
+  app.use(usersRouter);
 
   app.get("/api/borrowers", requireRole("super_admin"), enforceDataSovereignty, async (req, res) => {
     try {
@@ -1847,1273 +849,8 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/telco/profiles", requireRole("admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
-    try {
-      const orgId = getOrgScope(req);
-      const country = getCountryFilter(req) || (req.query.country as string);
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 50;
-      const search = req.query.search as string;
-      const provider = req.query.provider as string;
-      const kycLevel = req.query.kycLevel as string;
-      const accountStatus = req.query.accountStatus as string;
-      const result = await storage.getTelcoProfiles(orgId, country, { page, limit, search, provider, kycLevel, accountStatus });
-      res.json(result);
-    } catch (e: any) {
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
+  app.use(telcoRouter);
 
-  app.get("/api/telco/profiles/:id", requireRole("admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
-    try {
-      const profile = await storage.getTelcoProfile(req.params.id);
-      if (!profile) return res.status(404).json({ message: "Profile not found" });
-      const orgId = getOrgScope(req);
-      if (orgId && profile.organizationId && profile.organizationId !== orgId) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      res.json(profile);
-    } catch (e: any) {
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
-
-  app.post("/api/telco/profiles", requireRole("admin", "lender"), async (req, res) => {
-    try {
-      const orgId = getOrgScope(req);
-      const data = { ...req.body, organizationId: orgId || req.body.organizationId };
-      if (data.consentDate && typeof data.consentDate === "string") data.consentDate = new Date(data.consentDate);
-      const profile = await storage.createTelcoProfile(data);
-      await storage.createAuditLog({
-        action: "CREATE", entity: "telco_profile", entityId: profile.id,
-        userId: req.session.userId, details: `Created telco profile for MSISDN ${profile.msisdn}`,
-        organizationId: orgId,
-      });
-      res.json(profile);
-    } catch (e: any) {
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
-
-  app.get("/api/telco/transactions/:profileId", requireRole("admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
-    try {
-      const profile = await storage.getTelcoProfile(req.params.profileId);
-      if (!profile) return res.status(404).json({ message: "Profile not found" });
-      const orgId = getOrgScope(req);
-      if (orgId && profile.organizationId && profile.organizationId !== orgId) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      const txns = await storage.getMomoTransactions(req.params.profileId);
-      res.json(txns);
-    } catch (e: any) {
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
-
-  app.post("/api/telco/transactions/import", requireRole("admin", "lender"), async (req, res) => {
-    try {
-      const { profileId, transactions } = req.body;
-      if (!profileId || !Array.isArray(transactions)) {
-        return res.status(400).json({ message: "profileId and transactions array required" });
-      }
-      const profile = await storage.getTelcoProfile(profileId);
-      if (!profile) return res.status(404).json({ message: "Profile not found" });
-      const orgId = getOrgScope(req);
-      if (orgId && profile.organizationId && profile.organizationId !== orgId) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      const formatted = transactions.map((t: any) => ({
-        ...t,
-        profileId,
-        transactionDate: new Date(t.transactionDate),
-      }));
-      const created = await storage.createMomoTransactions(formatted);
-      res.json({ imported: created.length });
-    } catch (e: any) {
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
-
-  app.post("/api/telco/score/:profileId", requireRole("admin", "lender"), async (req, res) => {
-    try {
-      const { computeTelcoKPIs, generateTelcoCreditScore } = await import("./telco-scoring");
-      const profile = await storage.getTelcoProfile(req.params.profileId);
-      if (!profile) return res.status(404).json({ message: "Profile not found" });
-      const orgId = getOrgScope(req);
-      if (orgId && profile.organizationId && profile.organizationId !== orgId) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      const transactions = await storage.getMomoTransactions(profile.id);
-      if (transactions.length === 0) {
-        return res.status(400).json({ message: "No MoMo transactions found for this profile. Import transactions first." });
-      }
-      const periodDays = parseInt(req.body.periodDays as string) || 90;
-      const kpis = computeTelcoKPIs(profile, transactions, periodDays);
-      const aiResult = await generateTelcoCreditScore(profile, kpis);
-
-      const validTiers = ["very_low", "low", "medium", "high", "very_high"] as const;
-      const normalizedTier = validTiers.includes(aiResult.riskTier) ? aiResult.riskTier : "medium";
-      const normalizedScore = Math.max(1, Math.min(5, Math.round(aiResult.riskScore)));
-
-      const score = await storage.createTelcoCreditScore({
-        profileId: profile.id,
-        borrowerId: profile.borrowerId || undefined,
-        riskTier: normalizedTier as any,
-        riskScore: normalizedScore,
-        creditLimit: aiResult.suggestedCreditLimitUsd?.toString(),
-        currency: "USD",
-        approvalRecommendation: aiResult.approvalRecommendation,
-        reasonCode: aiResult.reasonCode,
-        detailedRationale: aiResult.detailedRationale,
-        evaluationPeriodDays: periodDays,
-        kpiSnapshot: JSON.stringify(kpis),
-        aiProvider: aiResult.aiProvider,
-        aiModel: aiResult.aiModel,
-        organizationId: orgId || profile.organizationId || undefined,
-        country: profile.country,
-      });
-
-      await storage.createAuditLog({
-        action: "AI_TELCO_SCORE", entity: "telco_credit_score", entityId: score.id,
-        userId: req.session.userId,
-        details: `AI telco credit score generated for ${profile.msisdn}: Risk ${aiResult.riskTier} (${aiResult.riskScore}/5), ${aiResult.approvalRecommendation ? "APPROVED" : "DECLINED"}`,
-        organizationId: orgId,
-      });
-
-      res.json({ score, kpis, aiResult });
-    } catch (e: any) {
-      console.error("[TelcoScoring] Error:", e.message);
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
-
-  app.get("/api/telco/scores", requireRole("admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
-    try {
-      const orgId = getOrgScope(req);
-      const country = getCountryFilter(req) || (req.query.country as string);
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 50;
-      const riskTier = req.query.riskTier as string;
-      const approved = req.query.approved as string;
-      const search = req.query.search as string;
-      const provider = req.query.provider as string;
-      const result = await storage.getTelcoCreditScores(orgId, country, { page, limit, riskTier, approved, search, provider });
-      res.json(result);
-    } catch (e: any) {
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
-
-  app.get("/api/telco/scores/:profileId", requireRole("admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
-    try {
-      const scores = await storage.getTelcoCreditScoresByProfile(req.params.profileId);
-      res.json(scores);
-    } catch (e: any) {
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
-
-  app.post("/api/telco/seed-demo", requireRole("admin", "super_admin"), async (req, res) => {
-    try {
-      const demoProfiles = [
-        { msisdn: "+233241234567", provider: "mtn", country: "Ghana", kycLevel: "full", deviceType: "Smartphone", simRegistrationDate: "2021-03-15", consentGranted: true, consentDate: new Date() },
-        { msisdn: "+233201112233", provider: "vodafone", country: "Ghana", kycLevel: "basic", deviceType: "Feature Phone", simRegistrationDate: "2023-06-01", consentGranted: true, consentDate: new Date() },
-        { msisdn: "+254712345678", provider: "safaricom", country: "Kenya", kycLevel: "standard", deviceType: "Smartphone", simRegistrationDate: "2020-01-10", consentGranted: true, consentDate: new Date() },
-        { msisdn: "+256781234567", provider: "mtn", country: "Uganda", kycLevel: "basic", deviceType: "Feature Phone", simRegistrationDate: "2022-09-20", consentGranted: true, consentDate: new Date() },
-        { msisdn: "+233551234567", provider: "airtel", country: "Ghana", kycLevel: "none", deviceType: "Basic Phone", simRegistrationDate: "2024-11-01", consentGranted: true, consentDate: new Date() },
-        { msisdn: "+254798765432", provider: "safaricom", country: "Kenya", kycLevel: "full", deviceType: "Smartphone", simRegistrationDate: "2019-05-22", consentGranted: true, consentDate: new Date() },
-        { msisdn: "+232761234567", provider: "africell", country: "Sierra Leone", kycLevel: "standard", deviceType: "Smartphone", simRegistrationDate: "2022-02-14", consentGranted: true, consentDate: new Date() },
-        { msisdn: "+255762345678", provider: "vodafone", country: "Tanzania", kycLevel: "full", deviceType: "Smartphone", simRegistrationDate: "2020-08-12", consentGranted: true, consentDate: new Date() },
-        { msisdn: "+250781234567", provider: "mtn", country: "Rwanda", kycLevel: "standard", deviceType: "Smartphone", simRegistrationDate: "2021-11-03", consentGranted: true, consentDate: new Date() },
-        { msisdn: "+233271234567", provider: "mtn", country: "Ghana", kycLevel: "full", deviceType: "Smartphone", simRegistrationDate: "2020-02-28", consentGranted: true, consentDate: new Date() },
-        { msisdn: "+254723456789", provider: "safaricom", country: "Kenya", kycLevel: "full", deviceType: "Smartphone", simRegistrationDate: "2019-01-15", consentGranted: true, consentDate: new Date() },
-        { msisdn: "+256701234567", provider: "airtel", country: "Uganda", kycLevel: "standard", deviceType: "Feature Phone", simRegistrationDate: "2022-04-10", consentGranted: true, consentDate: new Date() },
-        { msisdn: "+255713456789", provider: "airtel", country: "Tanzania", kycLevel: "basic", deviceType: "Feature Phone", simRegistrationDate: "2023-01-25", consentGranted: true, consentDate: new Date() },
-        { msisdn: "+250722345678", provider: "airtel", country: "Rwanda", kycLevel: "full", deviceType: "Smartphone", simRegistrationDate: "2020-06-18", consentGranted: true, consentDate: new Date() },
-        { msisdn: "+232781234567", provider: "orange", country: "Sierra Leone", kycLevel: "basic", deviceType: "Basic Phone", simRegistrationDate: "2023-09-05", consentGranted: true, consentDate: new Date() },
-        { msisdn: "+2349012345678", provider: "glo", country: "Nigeria", kycLevel: "full", deviceType: "Smartphone", simRegistrationDate: "2020-04-15", consentGranted: true, consentDate: new Date() },
-        { msisdn: "+233541234567", provider: "tigo", country: "Ghana", kycLevel: "standard", deviceType: "Smartphone", simRegistrationDate: "2021-07-20", consentGranted: true, consentDate: new Date() },
-        { msisdn: "+254734567890", provider: "safaricom", country: "Kenya", kycLevel: "basic", deviceType: "Feature Phone", simRegistrationDate: "2023-03-10", consentGranted: true, consentDate: new Date() },
-        { msisdn: "+256712345670", provider: "mtn", country: "Uganda", kycLevel: "full", deviceType: "Smartphone", simRegistrationDate: "2019-12-01", consentGranted: true, consentDate: new Date() },
-      ];
-
-      const scoreConfigs = [
-        { risk: 1, tier: "very_low" as const, approved: true, limit: 2500, reason: "Excellent cash flow stability with consistent salary credits and high wallet retention", rationale: "Strong financial profile: Regular MTN MoMo salary credits of GHS 1,800/month, utility payments paid on time for 18 consecutive months, 42 unique merchant relationships, wallet retention ratio of 0.78. Full KYC verified with SIM age over 1,400 days indicates long-term stability. Diversified spending across food, transport, and merchant categories with minimal cash-out-after-cash-in patterns." },
-        { risk: 3, tier: "medium" as const, approved: true, limit: 500, reason: "Moderate activity with inconsistent income patterns but steady utility payments", rationale: "Mixed indicators: Vodafone Cash transactions show irregular inflows averaging GHS 450/month with high variance (CV: 0.62). However, bill payments to ECG and Ghana Water are consistent at 0.83 consistency score. Feature phone limits transaction visibility. Basic KYC only — upgrading would strengthen profile. 18 P2P counterparties show moderate network diversity." },
-        { risk: 2, tier: "low" as const, approved: true, limit: 3800, reason: "Strong M-Pesa usage with regular income detection and excellent merchant engagement", rationale: "Very strong Safaricom M-Pesa profile: Consistent salary deposits from 'Nairobi Manufacturing Ltd' averaging KES 45,000/month. 67 unique P2P counterparties indicating strong social/business network. 38% of transactions are merchant payments. Lipa Na M-Pesa usage across 23 merchants. Utility consistency score of 0.92 — KPLC and Nairobi Water paid regularly. SIM registered since 2020 with zero device changes." },
-        { risk: 4, tier: "high" as const, approved: false, limit: 150, reason: "Limited transaction history with high cash-out-after-cash-in pattern indicating pass-through behavior", rationale: "Concerning patterns: MTN Mobile Money account shows 73% of cash-in amounts are withdrawn within 2 hours (pass-through indicator). Low wallet retention ratio of 0.12. Only 8 unique counterparties in 90 days. No utility or bill payment history detected. Basic KYC with relatively new SIM (2.3 years). Airtime advance frequency of 4/quarter suggests liquidity stress. Recommend monitoring for 6 months before reassessment." },
-        { risk: 5, tier: "very_high" as const, approved: false, limit: 0, reason: "Minimal activity, no KYC, high-risk transaction patterns", rationale: "High risk indicators: No KYC verification completed. Account shows predominantly round-amount transactions (78%) concentrated in late-night hours (23% between 11PM-5AM). Only 5 transactions in 90-day period with 34-day dormant gap. No utility payments, no merchant engagement, no salary credits detected. SIM registered only 5 months ago. Device type (Basic Phone) limits transaction capability assessment. Strong recommendation: Decline until full KYC and 6-month history established." },
-        { risk: 1, tier: "very_low" as const, approved: true, limit: 5200, reason: "Premium M-Pesa power user with exceptional transaction diversity and financial discipline", rationale: "Outstanding profile: Top-tier Safaricom customer since 2019. Monthly M-Pesa inflows averaging KES 128,000 with low variance (CV: 0.18). 89 unique counterparties, 45% merchant payments across Jumia, Glovo, Java House, and 31 other merchants. KPLC, Nairobi Water, DSTV, and Safaricom postpaid paid consistently for 36+ months. Three active M-Shwari savings goals. Zero airtime advances. Wallet retention ratio 0.82. Full KYC with M-Pesa business account linkage." },
-        { risk: 2, tier: "low" as const, approved: true, limit: 1800, reason: "Reliable Africell user with growing merchant engagement and consistent utility payments", rationale: "Solid Sierra Leone profile: Regular Orange Money transfers averaging SLL 2,500,000/month. 28 unique counterparties with growing merchant payment percentage (now 31%). EDSA electricity and GVWC water payments consistent at 0.87 score. Standard KYC verified. SIM age 1,380 days shows long-term commitment. Minor concern: 2 airtime advances in quarter, but both repaid within 3 days. Steady upward trend in financial activity over past 6 months." },
-        { risk: 2, tier: "low" as const, approved: true, limit: 4200, reason: "Strong Vodafone M-Pesa user with salaried income and excellent payment discipline", rationale: "Excellent Tanzania profile: Consistent Vodafone M-Pesa salary deposits from 'Dar Textiles Co.' averaging TZS 850,000/month. 54 unique counterparties. TANESCO electricity, DAWASA water, and DSTV paid every month for 24+ months. Full KYC with smartphone usage enabling comprehensive transaction monitoring. Wallet retention ratio of 0.71. Zero airtime advances and zero late-night transactions. 41% merchant payment ratio across local and national retailers." },
-        { risk: 1, tier: "very_low" as const, approved: true, limit: 3500, reason: "MTN Rwanda power user with exceptional mobile money discipline and diversified income", rationale: "Premium Rwanda profile: MTN MoMo Plus account holder with regular income from 'Kigali Tech Hub' averaging RWF 450,000/month plus freelance platform payments. 61 unique counterparties. REG electricity, WASAC water, and Canal+ paid consistently. Full KYC with Irembo digital ID verification. SIM age 1,600+ days. Wallet retention ratio 0.75. Active agent banking and savings group participation. Zero risk indicators flagged." },
-        { risk: 2, tier: "low" as const, approved: true, limit: 2800, reason: "Reliable MTN Ghana user with consistent trading income and strong merchant relationships", rationale: "Strong Ghana profile: MTN MoMo transactions show regular trading income averaging GHS 2,200/month from market sales. 38 unique P2P counterparties including regular supplier payments. ECG electricity and Ghana Water paid every billing cycle. Full KYC verified with Ghana Card. SIM registered since 2020 with zero device changes. 35% merchant payment ratio. Active MoMo savings with monthly deposits. Minor income variance (CV: 0.28) attributed to seasonal trading patterns." },
-        { risk: 1, tier: "very_low" as const, approved: true, limit: 6500, reason: "Top-tier M-Pesa user with highest transaction volume and premium financial behavior", rationale: "Exceptional Kenya profile: Safaricom M-Pesa transactions averaging KES 185,000/month with very low variance (CV: 0.14). Salary from 'Standard Chartered Bank Kenya' plus rental income. 94 unique counterparties — highest in cohort. 51% merchant payment ratio. All utilities on autopay. Active M-Shwari, KCB M-Pesa, and Fuliza accounts in good standing. Full KYC with business M-Pesa till number. Zero airtime advances or risk flags. SIM age 2,500+ days." },
-        { risk: 3, tier: "medium" as const, approved: true, limit: 800, reason: "Growing Airtel Money user with improving financial patterns but short history", rationale: "Emerging Uganda profile: Airtel Money transactions increasing month-over-month, now averaging UGX 580,000/month. 22 unique counterparties with growing merchant engagement (25%). UMEME electricity payments detected but inconsistent (0.67 consistency). Standard KYC completed. SIM age 2.8 years. Some round-amount transaction concentration (32%) but decreasing. Two airtime advances in period, both repaid promptly. Recommend approval with monitoring — positive trajectory." },
-        { risk: 3, tier: "medium" as const, approved: true, limit: 600, reason: "Basic profile with improving engagement and consistent small-value transactions", rationale: "Developing Tanzania profile: Airtel Money transactions averaging TZS 320,000/month with moderate variance. 16 unique counterparties. TANESCO electricity paid 2 of 3 months. Basic KYC only — upgrade recommended. Feature phone limits some transaction types. 15% merchant payment ratio showing early-stage digital commerce adoption. No major risk flags but limited history (14 months SIM age). Three airtime advances in quarter suggest occasional liquidity pressure." },
-        { risk: 1, tier: "very_low" as const, approved: true, limit: 4800, reason: "Premium Airtel Rwanda user with diversified income streams and exceptional financial discipline", rationale: "Outstanding Rwanda profile: Multiple income streams via Airtel Money — salaried income (RWF 520,000/month) plus Irembo agent commissions. 72 unique counterparties. REG electricity, WASAC water, DSTV, MTN postpaid all paid consistently for 24+ months. Full KYC with national ID verification. SIM age 2,100+ days. Wallet retention ratio 0.81. Active Tigo Pesa savings (cross-network) showing financial sophistication. Zero risk indicators." },
-        { risk: 4, tier: "high" as const, approved: false, limit: 200, reason: "New subscriber with limited activity and incomplete KYC verification", rationale: "Limited Sierra Leone profile: Orange Money account with only 11 transactions in 90-day window. Predominantly peer-to-peer transfers with no merchant engagement. No utility or bill payment history. Basic KYC only — missing address verification. SIM registered only 7 months ago. 45% round-amount transactions. One airtime advance outstanding beyond 14 days. Low counterparty diversity (6 unique). Recommend: Complete full KYC, establish 6-month transaction history before reassessment." },
-        { risk: 2, tier: "low" as const, approved: true, limit: 3200, reason: "Strong Glo Mobile Money user with diverse income and excellent merchant engagement in Lagos", rationale: "Strong Nigeria profile: Glo Mobile Money with regular deposits from 'Lagos Tech Solutions' averaging NGN 380,000/month. 48 unique counterparties across Ikeja, Lekki, and Victoria Island merchants. PHCN electricity, Lagos State Water Corporation, and DSTV paid every month for 20+ months. Full KYC with NIN verification and BVN linkage. SIM age 2,100+ days. Wallet retention ratio of 0.72. 36% merchant payment ratio across POS terminals and online merchants. Zero airtime advances. Active cooperative savings contributing NGN 25,000/month." },
-        { risk: 2, tier: "low" as const, approved: true, limit: 1500, reason: "Solid Tigo Cash user with regular market trading income and growing digital payments", rationale: "Good Ghana profile: Tigo Cash showing regular market trading activity averaging GHS 1,600/month. 31 unique counterparties including 8 regular supplier relationships. ECG and Ghana Water payments consistent (0.85 score). Standard KYC with Ghana Card. SIM age 1,700+ days. Growing merchant payment adoption (28%). Active savings contributions to susu group. Minor concern: moderate income variance (CV: 0.35) typical of trading businesses." },
-        { risk: 3, tier: "medium" as const, approved: true, limit: 450, reason: "Emerging user with basic activity and improving patterns", rationale: "Developing Kenya profile: Safaricom M-Pesa account with moderate usage — averaging KES 22,000/month. 14 unique counterparties. KPLC electricity detected but paid only 2 of 3 months. Basic KYC — upgrading to full would improve assessment. Feature phone limits Lipa Na M-Pesa adoption. 12% merchant payment ratio. Two airtime advances in quarter but both repaid within 5 days. Positive: transaction volume increasing 15% month-over-month. SIM age 2 years." },
-        { risk: 1, tier: "very_low" as const, approved: true, limit: 4000, reason: "Exceptional MTN Uganda user with salary income, savings discipline, and premium financial behavior", rationale: "Premium Uganda profile: MTN Mobile Money with consistent salary from 'Kampala International Hotel' averaging UGX 1,800,000/month. 58 unique counterparties. UMEME electricity, NWSC water, and DSTV on schedule for 30+ months. Full KYC with national ID. SIM age 2,200+ days. Wallet retention ratio 0.77. Active MTN MoKash savings with 6 monthly deposits. Zero airtime advances. 43% merchant payment ratio across restaurants, supermarkets, and fuel stations." },
-      ];
-
-      const seedOrgId = getOrgScope(req);
-      const createdProfiles = [];
-      for (const p of demoProfiles) {
-        const profile = await storage.createTelcoProfile({ ...p, organizationId: seedOrgId } as any);
-        createdProfiles.push(profile);
-      }
-
-      const txnTypes = ["cash_in", "cash_out", "p2p_send", "p2p_receive", "merchant_payment", "bill_payment", "airtime_purchase", "salary_credit", "loan_disbursement", "loan_repayment", "savings_deposit"];
-      const categories = ["food", "transport", "utilities", "salary", "remittance", "savings", "airtime", "merchant", "loan", "other"];
-      const counterparties = ["Market Vendor A", "Electric Company", "Water Board", "MTN Airtime", "Landlord", "Savings Group", "M-Pesa Agent", "Shopkeeper B", "Transport Union", "Salary Corp", "ECG Ghana", "KPLC Kenya", "UMEME Uganda", "TANESCO Tanzania", "Jumia Marketplace", "Glovo Delivery", "Bolt Transport", "FarmFresh Produce", "MicroLoan Ltd", "Cooperative Savings"];
-
-      const now = new Date();
-      for (let idx = 0; idx < createdProfiles.length; idx++) {
-        const profile = createdProfiles[idx];
-        const config = scoreConfigs[idx];
-        const txns: any[] = [];
-        const baseCount = config.risk <= 2 ? 80 : config.risk === 3 ? 50 : 20;
-        const txnCount = baseCount + Math.floor(Math.random() * 30);
-        const currencyMap: Record<string, string> = { Ghana: "GHS", Kenya: "KES", Uganda: "UGX", Tanzania: "TZS", Rwanda: "RWF", "Sierra Leone": "SLL", Nigeria: "NGN" };
-        const currency = currencyMap[profile.country] || "USD";
-
-        for (let i = 0; i < txnCount; i++) {
-          const daysAgo = Math.floor(Math.random() * 90);
-          const date = new Date(now.getTime() - daysAgo * 86400000);
-          const type = txnTypes[Math.floor(Math.random() * txnTypes.length)];
-          const isInflow = ["cash_in", "salary_credit", "loan_disbursement", "p2p_receive"].includes(type);
-          const baseAmount = config.risk <= 2 ? 50 + Math.random() * 350 : config.risk === 3 ? 20 + Math.random() * 150 : 5 + Math.random() * 50;
-          const amount = baseAmount.toFixed(2);
-          txns.push({
-            profileId: profile.id,
-            transactionType: type,
-            amount,
-            currency,
-            counterpartyMsisdn: `+${Math.floor(Math.random() * 900000000 + 100000000)}`,
-            counterpartyName: counterparties[Math.floor(Math.random() * counterparties.length)],
-            category: categories[Math.floor(Math.random() * categories.length)],
-            transactionDate: date,
-            isMerchant: type === "merchant_payment",
-          });
-        }
-        await storage.createMomoTransactions(txns);
-
-        const kpiSnapshot = JSON.stringify({
-          evaluationPeriodDays: 90,
-          financialMetrics: {
-            totalInflowsUsd: config.risk <= 2 ? 2400 + Math.random() * 3000 : config.risk === 3 ? 800 + Math.random() * 1200 : 100 + Math.random() * 300,
-            totalOutflowsUsd: config.risk <= 2 ? 1800 + Math.random() * 2500 : config.risk === 3 ? 600 + Math.random() * 900 : 80 + Math.random() * 250,
-            inflowVarianceCoefficient: config.risk <= 2 ? 0.12 + Math.random() * 0.18 : config.risk === 3 ? 0.35 + Math.random() * 0.3 : 0.7 + Math.random() * 0.3,
-            averageDailyWalletBalance: config.risk <= 2 ? 150 + Math.random() * 400 : config.risk === 3 ? 40 + Math.random() * 100 : 5 + Math.random() * 30,
-            walletRetentionRatio: config.risk <= 2 ? 0.65 + Math.random() * 0.2 : config.risk === 3 ? 0.3 + Math.random() * 0.3 : 0.05 + Math.random() * 0.15,
-            utilityPaymentsCount: config.risk <= 2 ? 6 + Math.floor(Math.random() * 6) : config.risk === 3 ? 2 + Math.floor(Math.random() * 4) : Math.floor(Math.random() * 2),
-            utilityPaymentConsistencyScore: config.risk <= 2 ? 0.85 + Math.random() * 0.15 : config.risk === 3 ? 0.5 + Math.random() * 0.3 : Math.random() * 0.3,
-            merchantPaymentsCount: config.risk <= 2 ? 15 + Math.floor(Math.random() * 25) : config.risk === 3 ? 5 + Math.floor(Math.random() * 10) : Math.floor(Math.random() * 3),
-            merchantPaymentsVolume: config.risk <= 2 ? 600 + Math.random() * 1500 : config.risk === 3 ? 150 + Math.random() * 400 : Math.random() * 50,
-          },
-          telemetricMetrics: {
-            airtimeAdvanceFrequency: config.risk <= 2 ? 0 : config.risk === 3 ? 1 + Math.floor(Math.random() * 2) : 3 + Math.floor(Math.random() * 3),
-            airtimeAdvanceRepaymentDaysAvg: config.risk <= 2 ? 0 : config.risk === 3 ? 3 + Math.random() * 4 : 8 + Math.random() * 10,
-            simAgeDays: config.risk <= 2 ? 1200 + Math.floor(Math.random() * 800) : config.risk === 3 ? 400 + Math.floor(Math.random() * 600) : 60 + Math.floor(Math.random() * 300),
-            deviceChangesLast90Days: config.risk <= 2 ? 0 : config.risk === 3 ? Math.floor(Math.random() * 2) : Math.floor(Math.random() * 3),
-            kycLevel: profile.kycLevel,
-          },
-          networkMetrics: {
-            uniqueP2pCounterparties: config.risk <= 2 ? 35 + Math.floor(Math.random() * 60) : config.risk === 3 ? 12 + Math.floor(Math.random() * 15) : 3 + Math.floor(Math.random() * 8),
-            percentageTransfersToMerchants: config.risk <= 2 ? 30 + Math.random() * 25 : config.risk === 3 ? 12 + Math.random() * 18 : Math.random() * 10,
-            incomingVsOutgoingRatio: config.risk <= 2 ? 1.1 + Math.random() * 0.4 : config.risk === 3 ? 0.7 + Math.random() * 0.5 : 0.3 + Math.random() * 0.4,
-            regularIncomeDetected: config.risk <= 2,
-            salaryCreditsCount: config.risk <= 2 ? 3 : config.risk === 3 ? 1 : 0,
-          },
-          riskIndicators: {
-            cashOutImmediatelyAfterCashIn: config.risk <= 2 ? 0 : config.risk === 3 ? 1 + Math.floor(Math.random() * 2) : 3 + Math.floor(Math.random() * 5),
-            lateNightTransactionsPercent: config.risk <= 2 ? Math.random() * 3 : config.risk === 3 ? 5 + Math.random() * 10 : 15 + Math.random() * 15,
-            roundAmountTransactionsPercent: config.risk <= 2 ? 10 + Math.random() * 10 : config.risk === 3 ? 25 + Math.random() * 15 : 45 + Math.random() * 30,
-            dormantPeriodDays: config.risk <= 2 ? Math.floor(Math.random() * 3) : config.risk === 3 ? 5 + Math.floor(Math.random() * 10) : 15 + Math.floor(Math.random() * 25),
-          },
-        });
-
-        const daysAgoScored = Math.floor(Math.random() * 14);
-        await storage.createTelcoCreditScore({
-          profileId: profile.id,
-          riskTier: config.tier,
-          riskScore: config.risk,
-          creditLimit: config.limit.toString(),
-          currency,
-          approvalRecommendation: config.approved,
-          reasonCode: config.reason,
-          detailedRationale: config.rationale,
-          evaluationPeriodDays: 90,
-          kpiSnapshot,
-          aiProvider: "ensemble",
-          aiModel: "gpt-4o + claude-sonnet",
-          organizationId: seedOrgId,
-          country: profile.country,
-        } as any);
-      }
-
-      res.json({ seeded: createdProfiles.length, message: `Seeded ${createdProfiles.length} telco profiles with MoMo transactions and pre-computed AI credit scores` });
-    } catch (e: any) {
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
-
-  app.get("/api/telco/analytics", requireRole("admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
-    try {
-      const orgId = getOrgScope(req);
-      const country = getCountryFilter(req);
-      const stats = await storage.getTelcoDashboardStats(orgId, country);
-      const agg = await storage.getTelcoAnalyticsAggregates(orgId, country);
-
-      const { totalScored, totalApproved, totalCreditExtended, countryBreakdown, monthlyVolume, providerBreakdown } = agg;
-
-      const countryBreakdownWithAvg: Record<string, any> = {};
-      for (const [c, v] of Object.entries(countryBreakdown)) {
-        countryBreakdownWithAvg[c] = {
-          ...v,
-          avgLimit: v.approved > 0 ? Math.round(v.totalVolume / v.approved) : 0,
-        };
-      }
-
-      const previouslyUnbanked = Math.round(totalScored * 0.72);
-      const firstTimeBorrowers = Math.round(totalScored * 0.58);
-      const avgScoringTime = 2.3;
-      const costPerScore = 0.45;
-      const revenuePerScore = 3.20;
-      const traditionalNPL = 12.8;
-      const aiDrivenNPL = 4.2;
-      const nplReduction = traditionalNPL - aiDrivenNPL;
-      const conservativeSavingsRate = Math.min(nplReduction * 0.15, 1.5);
-      const avgCreditLimit = totalApproved > 0 ? Math.round(totalCreditExtended / totalApproved) : 0;
-      const projectedPortfolio = totalCreditExtended;
-      const defaultSavings = Math.round(projectedPortfolio * (conservativeSavingsRate / 100));
-      const scoringRevenue = Math.round(totalScored * revenuePerScore);
-      const scoringCost = Math.round(totalScored * costPerScore);
-      const platformCost = Math.max(scoringCost, Math.round(totalScored * 2 + 25000));
-      const grossMargin = scoringRevenue > 0 ? Math.round(((scoringRevenue - scoringCost) / scoringRevenue) * 100) : 0;
-
-      const kycBreakdown: Record<string, number> = { none: 0, basic: 0, standard: 0, full: 0 };
-
-      res.json({
-        overview: {
-          totalProfilesScored: totalScored,
-          totalApproved,
-          totalDeclined: totalScored - totalApproved,
-          approvalRate: stats.approvalRate,
-          avgRiskScore: stats.avgRiskScore,
-          totalCreditExtended: Math.round(totalCreditExtended),
-          avgCreditLimit,
-        },
-        financialInclusion: {
-          previouslyUnbanked,
-          firstTimeBorrowers,
-          unbankedPercentage: 72,
-          countriesServed: Object.keys(countryBreakdown).length,
-          womenBorrowers: Math.round(totalApproved * 0.43),
-          ruralBorrowers: Math.round(totalApproved * 0.38),
-        },
-        performance: {
-          avgScoringTimeSeconds: avgScoringTime,
-          modelAccuracy: 94.7,
-          falsePositiveRate: 3.2,
-          falseNegativeRate: 2.1,
-          giniCoefficient: 0.68,
-          ksStatistic: 42.3,
-        },
-        roi: {
-          costPerScore,
-          revenuePerScore,
-          grossMarginPercent: grossMargin,
-          traditionalNPLPercent: traditionalNPL,
-          aiDrivenNPLPercent: aiDrivenNPL,
-          nplReductionPercent: nplReduction,
-          projectedPortfolioUsd: projectedPortfolio,
-          defaultSavingsUsd: defaultSavings,
-          scoringRevenueUsd: scoringRevenue,
-          annualizedROI: platformCost > 0 ? Math.round(((defaultSavings + scoringRevenue - platformCost) / platformCost) * 100) : 0,
-        },
-        countryBreakdown: countryBreakdownWithAvg,
-        monthlyVolume,
-        tierBreakdown: stats.tierBreakdown,
-        kycBreakdown,
-        providerBreakdown,
-      });
-    } catch (e: any) {
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
-
-  app.get("/api/telco/dashboard", requireRole("admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
-    try {
-      const orgId = getOrgScope(req);
-      const country = getCountryFilter(req);
-      const stats = await storage.getTelcoDashboardStats(orgId, country);
-      res.json(stats);
-    } catch (e: any) {
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
-
-  app.get("/api/telco/decision-rules", requireRole("admin", "lender", "super_admin"), async (req, res) => {
-    try {
-      const orgId = getOrgScope(req);
-      const country = getCountryFilter(req);
-      enforceCountryScopeForNonSuperAdmin(req, country, "/api/telco/decision-rules");
-      await logCrossCountryAccess(req, country, "/api/telco/decision-rules");
-      const rules = await storage.getDecisionRules(orgId, country);
-      res.json(rules);
-    } catch (e: any) {
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
-
-  app.post("/api/telco/decision-rules", requireRole("admin", "super_admin"), async (req, res) => {
-    try {
-      const orgId = getOrgScope(req);
-      const rule = await storage.createDecisionRule({
-        ...req.body,
-        organizationId: orgId || req.body.organizationId,
-        createdBy: req.session.userId,
-      });
-      await storage.createAuditLog({
-        action: "CREATE", entity: "telco_decision_rule", entityId: rule.id,
-        userId: req.session.userId,
-        details: `Created decision rule "${rule.name}": maxRiskTier=${rule.maxAllowableRiskTier}, minUtility=${rule.minUtilityPayments}, autoDisbursement=${rule.autoDisburseApproved}`,
-        organizationId: orgId,
-      });
-      res.json(rule);
-    } catch (e: any) {
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
-
-  app.put("/api/telco/decision-rules/:id", requireRole("admin", "super_admin"), async (req, res) => {
-    try {
-      const existing = await storage.getDecisionRule(req.params.id);
-      if (!existing) return res.status(404).json({ message: "Rule not found" });
-      const orgId = getOrgScope(req);
-      if (orgId && existing.organizationId && existing.organizationId !== orgId) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      const updated = await storage.updateDecisionRule(req.params.id, req.body);
-      await storage.createAuditLog({
-        action: "UPDATE", entity: "telco_decision_rule", entityId: updated.id,
-        userId: req.session.userId,
-        details: `Updated decision rule "${updated.name}": maxRiskTier=${updated.maxAllowableRiskTier}, minUtility=${updated.minUtilityPayments}, autoDisbursement=${updated.autoDisburseApproved}`,
-        organizationId: orgId,
-      });
-      res.json(updated);
-    } catch (e: any) {
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
-
-  app.get("/api/telco/decision-logs", requireRole("admin", "lender", "super_admin"), async (req, res) => {
-    try {
-      const orgId = getOrgScope(req);
-      const country = getCountryFilter(req);
-      enforceCountryScopeForNonSuperAdmin(req, country, "/api/telco/decision-logs");
-      await logCrossCountryAccess(req, country, "/api/telco/decision-logs");
-      const logs = await storage.getDecisionLogs(orgId, country);
-      res.json(logs);
-    } catch (e: any) {
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
-
-  app.post("/api/telco/decision-engine/:profileId", requireRole("admin", "lender", "super_admin"), idempotencyMiddleware, async (req, res) => {
-    try {
-      const { computeTelcoKPIs, generateTelcoCreditScore } = await import("./telco-scoring");
-      const profile = await storage.getTelcoProfile(req.params.profileId);
-      if (!profile) return res.status(404).json({ message: "Profile not found" });
-      const orgId = getOrgScope(req);
-      if (orgId && profile.organizationId && profile.organizationId !== orgId) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-
-      const rule = await storage.getActiveDecisionRule(orgId, profile.country);
-      if (!rule) {
-        return res.status(400).json({ message: "No active decision rule found. Create a rule in the Decision Engine tab first." });
-      }
-
-      const transactions = await storage.getMomoTransactions(profile.id);
-      if (transactions.length === 0) {
-        return res.status(400).json({ message: "No MoMo transactions found for this profile." });
-      }
-
-      const periodDays = parseInt(req.body.periodDays as string) || 90;
-      const kpis = computeTelcoKPIs(profile, transactions, periodDays);
-      const aiResult = await generateTelcoCreditScore(profile, kpis);
-
-      const validTiers = ["very_low", "low", "medium", "high", "very_high"] as const;
-      const normalizedTier = validTiers.includes(aiResult.riskTier) ? aiResult.riskTier : "medium";
-      const normalizedScore = Math.max(1, Math.min(5, Math.round(aiResult.riskScore)));
-
-      const score = await storage.createTelcoCreditScore({
-        profileId: profile.id,
-        borrowerId: profile.borrowerId || undefined,
-        riskTier: normalizedTier as any,
-        riskScore: normalizedScore,
-        creditLimit: aiResult.suggestedCreditLimitUsd?.toString(),
-        currency: "USD",
-        approvalRecommendation: aiResult.approvalRecommendation,
-        reasonCode: aiResult.reasonCode,
-        detailedRationale: aiResult.detailedRationale,
-        evaluationPeriodDays: periodDays,
-        kpiSnapshot: JSON.stringify(kpis),
-        aiProvider: aiResult.aiProvider,
-        aiModel: aiResult.aiModel,
-        organizationId: orgId || profile.organizationId || undefined,
-        country: profile.country,
-      });
-
-      const rejectionReasons: string[] = [];
-      const kycLevels = ["none", "basic", "standard", "full"];
-      const minKycIndex = kycLevels.indexOf(rule.minKycLevel);
-
-      if (normalizedScore > rule.maxAllowableRiskTier) {
-        rejectionReasons.push(`Risk tier ${normalizedScore} exceeds maximum allowed tier ${rule.maxAllowableRiskTier}`);
-      }
-      if ((kpis.financialMetrics?.utilityPaymentsCount || 0) < rule.minUtilityPayments) {
-        rejectionReasons.push(`Utility payments (${kpis.financialMetrics?.utilityPaymentsCount || 0}) below required minimum (${rule.minUtilityPayments})`);
-      }
-      const walletRetention = Math.round((kpis.financialMetrics?.walletRetentionRatio || 0) * 100);
-      if (walletRetention < rule.minWalletRetentionPct) {
-        rejectionReasons.push(`Wallet retention (${walletRetention}%) below required minimum (${rule.minWalletRetentionPct}%)`);
-      }
-      if ((kpis.telemetricMetrics?.simAgeDays || 0) < rule.minSimAgeDays) {
-        rejectionReasons.push(`SIM age (${kpis.telemetricMetrics?.simAgeDays || 0} days) below required minimum (${rule.minSimAgeDays} days)`);
-      }
-      if ((kpis.riskIndicators?.dormantPeriodDays || 0) > rule.maxDormantDays) {
-        rejectionReasons.push(`Dormant period (${kpis.riskIndicators?.dormantPeriodDays || 0} days) exceeds maximum allowed (${rule.maxDormantDays} days)`);
-      }
-      const profileKycIndex = kycLevels.indexOf(profile.kycLevel);
-      if (profileKycIndex < minKycIndex) {
-        rejectionReasons.push(`KYC level "${profile.kycLevel}" below required minimum "${rule.minKycLevel}"`);
-      }
-
-      const isApproved = rejectionReasons.length === 0;
-      const creditLimit = Math.min(
-        aiResult.suggestedCreditLimitUsd || 0,
-        Number(rule.maxCreditLimitUsd) || 500
-      );
-
-      let status: "approved_disbursed" | "approved_pending" | "rejected" = "rejected";
-      let disbursementRef: string | undefined;
-
-      if (isApproved) {
-        if (rule.autoDisburseApproved) {
-          disbursementRef = `MOMO-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-          status = "approved_disbursed";
-        } else {
-          status = "approved_pending";
-        }
-      }
-
-      const decisionLog = await storage.createDecisionLog({
-        ruleId: rule.id,
-        profileId: profile.id,
-        scoreId: score.id,
-        status,
-        riskScore: normalizedScore,
-        riskTier: normalizedTier,
-        creditLimitUsd: creditLimit.toString(),
-        reasonCode: isApproved ? aiResult.reasonCode : rejectionReasons.join("; "),
-        rejectionReasons: isApproved ? undefined : JSON.stringify(rejectionReasons),
-        disbursementRef,
-        smsNotificationSent: false,
-        applicantMsisdn: profile.msisdn,
-        country: profile.country,
-        organizationId: orgId || profile.organizationId || undefined,
-      });
-
-      await storage.createAuditLog({
-        action: "DECISION_ENGINE", entity: "telco_decision_log", entityId: decisionLog.id,
-        userId: req.session.userId,
-        details: `Decision engine ${status.toUpperCase()} for ${profile.msisdn}: Risk ${normalizedScore}/5, Limit $${creditLimit}${disbursementRef ? `, Ref: ${disbursementRef}` : ""}${rejectionReasons.length > 0 ? `, Reasons: ${rejectionReasons.join("; ")}` : ""}`,
-        organizationId: orgId,
-      });
-
-      let loan = null;
-      if (isApproved) {
-        const interestRate = "5";
-        const totalRepayable = creditLimit * 1.05;
-        const loanData: any = {
-          profileId: profile.id,
-          decisionLogId: decisionLog.id,
-          scoreId: score.id,
-          loanAmount: creditLimit.toString(),
-          currency: score.currency || "USD",
-          interestRate,
-          fees: "0",
-          totalRepayable: totalRepayable.toFixed(2),
-          outstandingBalance: totalRepayable.toFixed(2),
-          status: status === "approved_disbursed" ? "disbursed" : "pending_disbursement",
-          disbursementStatus: status === "approved_disbursed" ? "confirmed" : "pending",
-          disbursementRef: disbursementRef || undefined,
-          disbursedAt: status === "approved_disbursed" ? new Date() : undefined,
-          tenorDays: 30,
-          country: profile.country,
-          organizationId: orgId || profile.organizationId || undefined,
-        };
-        if (status === "approved_disbursed") {
-          const dueDate = new Date();
-          dueDate.setDate(dueDate.getDate() + 30);
-          loanData.dueDate = dueDate;
-          loanData.nextPaymentDate = dueDate;
-        }
-        loan = await storage.createTelcoLoan(loanData);
-      }
-
-      res.json({
-        decision: decisionLog,
-        score,
-        kpis,
-        aiResult,
-        loan,
-        ruleApplied: {
-          id: rule.id,
-          name: rule.name,
-          maxRiskTier: rule.maxAllowableRiskTier,
-          minUtilityPayments: rule.minUtilityPayments,
-          autoDisburse: rule.autoDisburseApproved,
-        },
-      });
-    } catch (e: any) {
-      console.error("[DecisionEngine] Error:", e.message);
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
-
-  app.post("/api/telco/decision-engine/bulk/run", requireRole("admin", "lender", "super_admin"), idempotencyMiddleware, async (req, res) => {
-    try {
-      const { computeTelcoKPIs, generateTelcoCreditScore } = await import("./telco-scoring");
-      const orgId = getOrgScope(req);
-      const { profileIds, periodDays: rawPeriod, kycLevel: filterKyc, skipAlreadyDecided, sendSmsNotification } = req.body;
-      const periodDays = parseInt(rawPeriod as string) || 90;
-      const country = getCountryFilter(req);
-      enforceCountryScopeForNonSuperAdmin(req, country);
-
-      const rule = await storage.getActiveDecisionRule(orgId, country);
-      if (!rule) {
-        return res.status(400).json({ message: "No active decision rule found. Create a rule in the Decision Engine tab first." });
-      }
-
-      let allProfileIds = await storage.getAllTelcoProfileIds(orgId, country, filterKyc || undefined);
-      if (profileIds && Array.isArray(profileIds) && profileIds.length > 0) {
-        const requestedSet = new Set(profileIds as string[]);
-        allProfileIds = allProfileIds.filter(id => requestedSet.has(id));
-      }
-
-      if (skipAlreadyDecided) {
-        const existingLogs = await storage.getDecisionLogs(orgId, country);
-        const decidedSet = new Set(existingLogs.map(l => l.profileId));
-        allProfileIds = allProfileIds.filter(id => !decidedSet.has(id));
-      }
-
-      const maxBulk = 200;
-      const processingIds = allProfileIds.slice(0, maxBulk);
-
-      const results: { approved: number; rejected: number; skipped: number; errors: number; decisions: any[]; totalEligible: number } = {
-        approved: 0, rejected: 0, skipped: 0, errors: 0, decisions: [], totalEligible: allProfileIds.length
-      };
-
-      for (const profileId of processingIds) {
-        try {
-          const profile = await storage.getTelcoProfile(profileId);
-          if (!profile) { results.skipped++; continue; }
-          const transactions = await storage.getMomoTransactions(profile.id);
-          if (transactions.length === 0) {
-            results.skipped++;
-            results.decisions.push({ profileId: profile.id, msisdn: profile.msisdn, status: "skipped", reason: "No transactions" });
-            continue;
-          }
-
-          const kpis = computeTelcoKPIs(profile, transactions, periodDays);
-          const aiResult = await generateTelcoCreditScore(profile, kpis);
-
-          const validTiers = ["very_low", "low", "medium", "high", "very_high"] as const;
-          const normalizedTier = validTiers.includes(aiResult.riskTier) ? aiResult.riskTier : "medium";
-          const normalizedScore = Math.max(1, Math.min(5, Math.round(aiResult.riskScore)));
-
-          const score = await storage.createTelcoCreditScore({
-            profileId: profile.id,
-            borrowerId: profile.borrowerId || undefined,
-            riskTier: normalizedTier as any,
-            riskScore: normalizedScore,
-            creditLimit: aiResult.suggestedCreditLimitUsd?.toString(),
-            currency: "USD",
-            approvalRecommendation: aiResult.approvalRecommendation,
-            reasonCode: aiResult.reasonCode,
-            detailedRationale: aiResult.detailedRationale,
-            evaluationPeriodDays: periodDays,
-            kpiSnapshot: JSON.stringify(kpis),
-            aiProvider: aiResult.aiProvider,
-            aiModel: aiResult.aiModel,
-            organizationId: orgId || profile.organizationId || undefined,
-            country: profile.country,
-          });
-
-          const rejectionReasons: string[] = [];
-          const kycLevels = ["none", "basic", "standard", "full"];
-          const minKycIndex = kycLevels.indexOf(rule.minKycLevel);
-
-          if (normalizedScore > rule.maxAllowableRiskTier) {
-            rejectionReasons.push(`Risk tier ${normalizedScore} exceeds max ${rule.maxAllowableRiskTier}`);
-          }
-          if ((kpis.financialMetrics?.utilityPaymentsCount || 0) < rule.minUtilityPayments) {
-            rejectionReasons.push(`Utility payments below minimum (${rule.minUtilityPayments})`);
-          }
-          const walletRetention = Math.round((kpis.financialMetrics?.walletRetentionRatio || 0) * 100);
-          if (walletRetention < rule.minWalletRetentionPct) {
-            rejectionReasons.push(`Wallet retention ${walletRetention}% below ${rule.minWalletRetentionPct}%`);
-          }
-          if ((kpis.telemetricMetrics?.simAgeDays || 0) < rule.minSimAgeDays) {
-            rejectionReasons.push(`SIM age below ${rule.minSimAgeDays} days`);
-          }
-          if ((kpis.riskIndicators?.dormantPeriodDays || 0) > rule.maxDormantDays) {
-            rejectionReasons.push(`Dormant period exceeds ${rule.maxDormantDays} days`);
-          }
-          const profileKycIndex = kycLevels.indexOf(profile.kycLevel);
-          if (profileKycIndex < minKycIndex) {
-            rejectionReasons.push(`KYC "${profile.kycLevel}" below required "${rule.minKycLevel}"`);
-          }
-
-          const isApproved = rejectionReasons.length === 0;
-          const creditLimit = Math.min(aiResult.suggestedCreditLimitUsd || 0, Number(rule.maxCreditLimitUsd) || 500);
-          let status: "approved_disbursed" | "approved_pending" | "rejected" = "rejected";
-          let disbursementRef: string | undefined;
-
-          if (isApproved) {
-            if (rule.autoDisburseApproved) {
-              disbursementRef = `MOMO-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-              status = "approved_disbursed";
-            } else {
-              status = "approved_pending";
-            }
-          }
-
-          const smsWasSent = sendSmsNotification && isApproved;
-
-          const decisionLog = await storage.createDecisionLog({
-            ruleId: rule.id,
-            profileId: profile.id,
-            scoreId: score.id,
-            status,
-            riskScore: normalizedScore,
-            riskTier: normalizedTier,
-            creditLimitUsd: creditLimit.toString(),
-            reasonCode: isApproved ? aiResult.reasonCode : rejectionReasons.join("; "),
-            rejectionReasons: isApproved ? undefined : JSON.stringify(rejectionReasons),
-            disbursementRef,
-            smsNotificationSent: !!smsWasSent,
-            applicantMsisdn: profile.msisdn,
-            country: profile.country,
-            organizationId: orgId || profile.organizationId || undefined,
-          });
-
-          if (isApproved) {
-            results.approved++;
-            const interestRate = "5";
-            const totalRepayable = creditLimit * 1.05;
-            const loanData: any = {
-              profileId: profile.id,
-              decisionLogId: decisionLog.id,
-              scoreId: score.id,
-              loanAmount: creditLimit.toString(),
-              currency: score.currency || "USD",
-              interestRate,
-              fees: "0",
-              totalRepayable: totalRepayable.toFixed(2),
-              outstandingBalance: totalRepayable.toFixed(2),
-              status: status === "approved_disbursed" ? "disbursed" : "pending_disbursement",
-              disbursementStatus: status === "approved_disbursed" ? "confirmed" : "pending",
-              disbursementRef: disbursementRef || undefined,
-              disbursedAt: status === "approved_disbursed" ? new Date() : undefined,
-              tenorDays: 30,
-              country: profile.country,
-              organizationId: orgId || profile.organizationId || undefined,
-            };
-            if (status === "approved_disbursed") {
-              const dueDate = new Date();
-              dueDate.setDate(dueDate.getDate() + 30);
-              loanData.dueDate = dueDate;
-              loanData.nextPaymentDate = dueDate;
-            }
-            await storage.createTelcoLoan(loanData);
-          } else {
-            results.rejected++;
-          }
-
-          results.decisions.push({
-            profileId: profile.id,
-            msisdn: profile.msisdn,
-            status,
-            riskScore: normalizedScore,
-            riskTier: normalizedTier,
-            creditLimit,
-            reasonCode: decisionLog.reasonCode,
-          });
-        } catch (err: any) {
-          results.errors++;
-          results.decisions.push({ profileId: profile.id, msisdn: profile.msisdn, status: "error", reason: err.message });
-        }
-      }
-
-      await storage.createAuditLog({
-        action: "BULK_DECISION_ENGINE",
-        entity: "telco_decision_log",
-        entityId: rule.id,
-        userId: req.session.userId,
-        details: `Bulk decision: ${results.approved} approved, ${results.rejected} rejected, ${results.skipped} skipped, ${results.errors} errors out of ${results.totalEligible} profiles`,
-        organizationId: orgId,
-      });
-
-      res.json({
-        summary: {
-          total: results.totalEligible,
-          approved: results.approved,
-          rejected: results.rejected,
-          skipped: results.skipped,
-          errors: results.errors,
-        },
-        decisions: results.decisions,
-        ruleApplied: { id: rule.id, name: rule.name },
-      });
-    } catch (e: any) {
-      console.error("[BulkDecisionEngine] Error:", e.message);
-      res.status(500).json({ message: safeErrorMessage(e) });
-    }
-  });
-
-  // ── Telco Loans ──────────────────────────────────────────
-  app.get("/api/telco/loans", requireRole("admin", "lender", "super_admin"), async (req, res) => {
-    try {
-      const orgId = getOrgScope(req);
-      const country = getCountryFilter(req) || (req.query.country as string);
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 50;
-      const status = req.query.status as string;
-      const profileId = req.query.profileId as string;
-      const search = req.query.search as string;
-      if (search && search.length >= 3) {
-        const profiles = await db.select({ id: telcoProfiles.id }).from(telcoProfiles)
-          .where(ilike(telcoProfiles.msisdn, `%${search}%`)).limit(200);
-        const matchedProfileIds = profiles.map(p => p.id);
-        if (matchedProfileIds.length === 0) {
-          return res.json({ data: [], total: 0, page: 1, totalPages: 0 });
-        }
-        const result = await storage.getTelcoLoans(orgId, country, { page, limit, status, profileId, profileIds: matchedProfileIds });
-        return res.json(result);
-      }
-      const result = await storage.getTelcoLoans(orgId, country, { page, limit, status, profileId });
-      const profileIds = [...new Set(result.data.map(l => l.profileId))];
-      const profileMap = new Map<string, { msisdn: string; provider: string }>();
-      if (profileIds.length > 0) {
-        const profiles = await db.select({ id: telcoProfiles.id, msisdn: telcoProfiles.msisdn, provider: telcoProfiles.provider }).from(telcoProfiles).where(inArray(telcoProfiles.id, profileIds));
-        profiles.forEach(p => profileMap.set(p.id, { msisdn: p.msisdn, provider: p.provider }));
-      }
-      const enriched = result.data.map(l => ({
-        ...l,
-        msisdn: profileMap.get(l.profileId)?.msisdn || null,
-        provider: profileMap.get(l.profileId)?.provider || null,
-      }));
-      res.json({ ...result, data: enriched });
-    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
-  });
-
-  app.get("/api/telco/loans/portfolio", requireRole("admin", "lender", "super_admin"), async (req, res) => {
-    try {
-      const orgId = getOrgScope(req);
-      const country = getCountryFilter(req) || (req.query.country as string);
-      const stats = await storage.getTelcoLoanPortfolioStats(orgId, country);
-      res.json(stats);
-    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
-  });
-
-  app.get("/api/telco/operations-dashboard", requireRole("admin", "lender", "regulator", "super_admin"), async (req, res) => {
-    try {
-      const orgId = getOrgScope(req);
-      const country = getCountryFilter(req) || (req.query.country as string);
-
-      const where = [];
-      if (orgId) where.push(eq(telcoLoans.organizationId, orgId));
-      if (country) where.push(eq(telcoLoans.country, country));
-      const whereClause = where.length > 0 ? and(...where) : undefined;
-
-      const allLoans = await db.select({
-        id: telcoLoans.id,
-        profileId: telcoLoans.profileId,
-        loanAmount: telcoLoans.loanAmount,
-        outstandingBalance: telcoLoans.outstandingBalance,
-        amountRepaid: telcoLoans.amountRepaid,
-        totalRepayable: telcoLoans.totalRepayable,
-        status: telcoLoans.status,
-        disbursementStatus: telcoLoans.disbursementStatus,
-        daysInArrears: telcoLoans.daysInArrears,
-        dueDate: telcoLoans.dueDate,
-        disbursedAt: telcoLoans.disbursedAt,
-        nextPaymentDate: telcoLoans.nextPaymentDate,
-        currency: telcoLoans.currency,
-        country: telcoLoans.country,
-        createdAt: telcoLoans.createdAt,
-      }).from(telcoLoans).where(whereClause);
-
-      let collectionsOverdue = 0, collectionsOverdueAmount = 0;
-      let bucket1_30 = { count: 0, amount: 0 };
-      let bucket31_60 = { count: 0, amount: 0 };
-      let bucket61_90 = { count: 0, amount: 0 };
-      let bucket90plus = { count: 0, amount: 0 };
-      let pendingDisbursements = 0, pendingDisbursementAmount = 0;
-      let todayDisbursed = 0, todayDisbursedAmount = 0;
-      let activeLoans = 0, totalOutstanding = 0, totalPortfolio = 0;
-      let defaultedLoans = 0, healthyLoans = 0;
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const weekAhead = new Date(today.getTime() + 7 * 86400000);
-      let collectionsDueThisWeek = 0, collectionsDueThisWeekAmount = 0;
-
-      for (const loan of allLoans) {
-        const outstanding = Number(loan.outstandingBalance || 0);
-        const loanAmt = Number(loan.loanAmount || 0);
-        totalPortfolio += loanAmt;
-
-        if (loan.status === "pending_disbursement") {
-          pendingDisbursements++;
-          pendingDisbursementAmount += loanAmt;
-        }
-
-        if (loan.disbursedAt) {
-          const disbDate = new Date(loan.disbursedAt);
-          if (disbDate >= today) {
-            todayDisbursed++;
-            todayDisbursedAmount += loanAmt;
-          }
-        }
-
-        if (["active", "repaying", "disbursed"].includes(loan.status || "")) {
-          activeLoans++;
-          totalOutstanding += outstanding;
-          const arrears = loan.daysInArrears || 0;
-
-          if (arrears > 0) {
-            collectionsOverdue++;
-            collectionsOverdueAmount += outstanding;
-            if (arrears <= 30) { bucket1_30.count++; bucket1_30.amount += outstanding; }
-            else if (arrears <= 60) { bucket31_60.count++; bucket31_60.amount += outstanding; }
-            else if (arrears <= 90) { bucket61_90.count++; bucket61_90.amount += outstanding; }
-            else { bucket90plus.count++; bucket90plus.amount += outstanding; }
-          } else {
-            healthyLoans++;
-          }
-
-          if (loan.nextPaymentDate) {
-            const nextPay = new Date(loan.nextPaymentDate);
-            if (nextPay >= today && nextPay <= weekAhead) {
-              collectionsDueThisWeek++;
-              const installmentEst = outstanding > 0 ? Math.min(outstanding, loanAmt * 0.1) : 0;
-              collectionsDueThisWeekAmount += installmentEst;
-            }
-          }
-        }
-
-        if (loan.status === "defaulted" || loan.status === "written_off") {
-          defaultedLoans++;
-        }
-      }
-
-      const repWhere = [];
-      if (orgId) repWhere.push(eq(telcoLoanRepayments.organizationId, orgId));
-      if (country) repWhere.push(eq(telcoLoanRepayments.country, country));
-      const recentRepayments = await db.select({
-        id: telcoLoanRepayments.id,
-        loanId: telcoLoanRepayments.loanId,
-        profileId: telcoLoanRepayments.profileId,
-        amountPaid: telcoLoanRepayments.amountPaid,
-        amountDue: telcoLoanRepayments.amountDue,
-        status: telcoLoanRepayments.status,
-        paidAt: telcoLoanRepayments.paidAt,
-        dueDate: telcoLoanRepayments.dueDate,
-        daysLate: telcoLoanRepayments.daysLate,
-        currency: telcoLoanRepayments.currency,
-        country: telcoLoanRepayments.country,
-      }).from(telcoLoanRepayments)
-        .where(repWhere.length > 0 ? and(...repWhere) : undefined)
-        .orderBy(desc(telcoLoanRepayments.paidAt))
-        .limit(20);
-
-      const profileIds = [...new Set(recentRepayments.map(r => r.profileId))];
-      const profileMap = new Map<string, string>();
-      if (profileIds.length > 0) {
-        const profiles = await db.select({ id: telcoProfiles.id, msisdn: telcoProfiles.msisdn }).from(telcoProfiles).where(inArray(telcoProfiles.id, profileIds));
-        profiles.forEach(p => profileMap.set(p.id, p.msisdn));
-      }
-
-      const loanIds = [...new Set(recentRepayments.map(r => r.loanId))];
-      const loanMap = new Map<string, { loanAmount: string; interestRate: string; tenorDays: number; totalRepayable: string; outstandingBalance: string; loanStatus: string; disbursedAt: Date | null; lenderName: string; lenderType: string }>();
-      if (loanIds.length > 0) {
-        const loansWithOrg = await db.select({
-          id: telcoLoans.id,
-          loanAmount: telcoLoans.loanAmount,
-          interestRate: telcoLoans.interestRate,
-          tenorDays: telcoLoans.tenorDays,
-          totalRepayable: telcoLoans.totalRepayable,
-          outstandingBalance: telcoLoans.outstandingBalance,
-          loanStatus: telcoLoans.status,
-          disbursedAt: telcoLoans.disbursedAt,
-          lenderName: organizations.name,
-          lenderType: organizations.type,
-        }).from(telcoLoans)
-          .leftJoin(organizations, eq(telcoLoans.organizationId, organizations.id))
-          .where(inArray(telcoLoans.id, loanIds));
-        loansWithOrg.forEach(l => loanMap.set(l.id, {
-          loanAmount: l.loanAmount,
-          interestRate: l.interestRate,
-          tenorDays: l.tenorDays,
-          totalRepayable: l.totalRepayable,
-          outstandingBalance: l.outstandingBalance,
-          loanStatus: l.loanStatus,
-          disbursedAt: l.disbursedAt,
-          lenderName: l.lenderName || "Unknown Lender",
-          lenderType: l.lenderType || "other",
-        }));
-      }
-
-      const enrichedRepayments = recentRepayments.map(r => ({
-        ...r,
-        msisdn: profileMap.get(r.profileId) || null,
-        lender: loanMap.get(r.loanId) || null,
-      }));
-
-      const portfolioHealthScore = activeLoans > 0
-        ? Math.round(Math.max(0, Math.min(100, 100 - (collectionsOverdue / activeLoans) * 100 - (defaultedLoans / Math.max(1, allLoans.length)) * 50)))
-        : 100;
-
-      res.json({
-        collections: {
-          totalOverdue: collectionsOverdue,
-          totalOverdueAmount: collectionsOverdueAmount,
-          aging: {
-            "1-30": bucket1_30,
-            "31-60": bucket31_60,
-            "61-90": bucket61_90,
-            "90+": bucket90plus,
-          },
-          dueThisWeek: collectionsDueThisWeek,
-          dueThisWeekAmount: collectionsDueThisWeekAmount,
-        },
-        disbursements: {
-          pending: pendingDisbursements,
-          pendingAmount: pendingDisbursementAmount,
-          todayDisbursed: todayDisbursed,
-          todayAmount: todayDisbursedAmount,
-        },
-        recentRepayments: enrichedRepayments,
-        portfolioHealth: {
-          score: portfolioHealthScore,
-          activeLoans,
-          healthyLoans,
-          overdueLoans: collectionsOverdue,
-          defaultedLoans,
-          totalOutstanding,
-          totalPortfolio,
-        },
-      });
-    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
-  });
-
-  app.get("/api/telco/loans/:id", requireRole("admin", "lender", "super_admin"), async (req, res) => {
-    try {
-      const loan = await storage.getTelcoLoan(req.params.id);
-      if (!loan) return res.status(404).json({ message: "Loan not found" });
-      const orgId = getOrgScope(req);
-      if (orgId && loan.organizationId && loan.organizationId !== orgId) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      res.json(loan);
-    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
-  });
-
-  app.post("/api/telco/loans", requireRole("admin", "super_admin"), async (req, res) => {
-    try {
-      const orgId = getOrgScope(req);
-      const data = { ...req.body, organizationId: orgId || req.body.organizationId };
-      const loan = await storage.createTelcoLoan(data);
-      await storage.createAuditLog({
-        action: "TELCO_LOAN_CREATED",
-        entity: "telco_loans",
-        entityId: loan.id,
-        userId: req.session.userId,
-        details: `Loan created: ${loan.currency} ${loan.loanAmount} for profile ${loan.profileId}`,
-        organizationId: orgId,
-      });
-      res.json(loan);
-    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
-  });
-
-  app.patch("/api/telco/loans/:id", requireRole("admin", "super_admin"), async (req, res) => {
-    try {
-      const orgId = getOrgScope(req);
-      const existing = await storage.getTelcoLoan(req.params.id);
-      if (!existing) return res.status(404).json({ message: "Loan not found" });
-      if (orgId && existing.organizationId && existing.organizationId !== orgId) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      const loan = await storage.updateTelcoLoan(req.params.id, req.body);
-      await storage.createAuditLog({
-        action: "TELCO_LOAN_UPDATED",
-        entity: "telco_loans",
-        entityId: loan.id,
-        userId: req.session.userId,
-        details: `Loan updated: status=${loan.status}, disbursement=${loan.disbursementStatus}`,
-        organizationId: orgId,
-      });
-      res.json(loan);
-    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
-  });
-
-  app.post("/api/telco/loans/:id/disburse", requireRole("admin", "super_admin"), idempotencyMiddleware, async (req, res) => {
-    try {
-      const loan = await storage.getTelcoLoan(req.params.id);
-      if (!loan) return res.status(404).json({ message: "Loan not found" });
-      const orgId = getOrgScope(req);
-      if (orgId && loan.organizationId && loan.organizationId !== orgId) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      if (loan.status !== "pending_disbursement") {
-        return res.status(400).json({ message: `Loan already in status: ${loan.status}` });
-      }
-      const ref = `DISB-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-      const dueDate = new Date();
-      dueDate.setDate(dueDate.getDate() + (loan.tenorDays || 30));
-      const updated = await storage.updateTelcoLoan(loan.id, {
-        status: "disbursed" as any,
-        disbursementStatus: "confirmed" as any,
-        disbursementRef: ref,
-        disbursedAt: new Date(),
-        dueDate,
-        nextPaymentDate: dueDate,
-      });
-      await storage.createAuditLog({
-        action: "TELCO_LOAN_DISBURSED",
-        entity: "telco_loans",
-        entityId: loan.id,
-        userId: req.session.userId,
-        details: `Loan disbursed: ${loan.currency} ${loan.loanAmount}, ref=${ref}`,
-        organizationId: orgId,
-      });
-      res.json(updated);
-    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
-  });
-
-  // ── Telco Loan Repayments ──────────────────────────────
-  app.get("/api/telco/loans/:loanId/repayments", requireRole("admin", "lender", "super_admin"), async (req, res) => {
-    try {
-      const loan = await storage.getTelcoLoan(req.params.loanId);
-      if (!loan) return res.status(404).json({ message: "Loan not found" });
-      const orgId = getOrgScope(req);
-      if (orgId && loan.organizationId && loan.organizationId !== orgId) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      const repayments = await storage.getTelcoLoanRepayments(req.params.loanId);
-      res.json(repayments);
-    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
-  });
-
-  app.post("/api/telco/loans/:loanId/repayments", requireRole("admin", "super_admin"), async (req, res) => {
-    try {
-      const loan = await storage.getTelcoLoan(req.params.loanId);
-      if (!loan) return res.status(404).json({ message: "Loan not found" });
-      const orgId = getOrgScope(req);
-      if (orgId && loan.organizationId && loan.organizationId !== orgId) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      const repayment = await storage.createTelcoLoanRepayment({
-        ...req.body,
-        loanId: loan.id,
-        profileId: loan.profileId,
-        currency: loan.currency,
-        country: loan.country,
-        organizationId: loan.organizationId,
-      });
-      const newRepaid = Number(loan.amountRepaid || 0) + Number(repayment.amountPaid || 0);
-      const newOutstanding = Number(loan.totalRepayable) - newRepaid;
-      const loanUpdates: any = {
-        amountRepaid: String(newRepaid),
-        outstandingBalance: String(Math.max(0, newOutstanding)),
-        lastPaymentDate: new Date(),
-      };
-      if (newOutstanding <= 0) {
-        loanUpdates.status = "paid_off";
-        loanUpdates.closedAt = new Date();
-        loanUpdates.closureReason = "fully_repaid";
-        loanUpdates.outstandingBalance = "0";
-      } else {
-        loanUpdates.status = "repaying";
-      }
-      await storage.updateTelcoLoan(loan.id, loanUpdates);
-      await storage.createAuditLog({
-        action: "TELCO_REPAYMENT_RECEIVED",
-        entity: "telco_loan_repayments",
-        entityId: repayment.id,
-        userId: req.session.userId,
-        details: `Repayment: ${loan.currency} ${repayment.amountPaid} on loan ${loan.id}`,
-        organizationId: orgId,
-      });
-      res.json(repayment);
-    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
-  });
-
-  // ── Telco Consent Management ───────────────────────────
-  app.get("/api/telco/consent/:profileId", requireRole("admin", "lender", "super_admin"), async (req, res) => {
-    try {
-      const events = await storage.getTelcoConsentEvents(req.params.profileId);
-      res.json(events);
-    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
-  });
-
-  app.post("/api/telco/consent", requireRole("admin", "super_admin"), async (req, res) => {
-    try {
-      const orgId = getOrgScope(req);
-      const receiptId = `CR-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-      const event = await storage.createTelcoConsentEvent({
-        ...req.body,
-        consentReceiptId: receiptId,
-        ipAddress: req.ip || req.headers["x-forwarded-for"] as string,
-        userAgent: req.headers["user-agent"],
-        organizationId: orgId || req.body.organizationId,
-      });
-      if (req.body.action === "grant") {
-        const profile = await storage.getTelcoProfile(req.body.profileId);
-        if (profile) {
-          await db.update(telcoProfiles).set({ consentGranted: true, consentDate: new Date() }).where(eq(telcoProfiles.id, profile.id));
-        }
-      } else if (req.body.action === "revoke") {
-        await db.update(telcoProfiles).set({ consentGranted: false }).where(eq(telcoProfiles.id, req.body.profileId));
-      }
-      await storage.createAuditLog({
-        action: `TELCO_CONSENT_${req.body.action?.toUpperCase() || "EVENT"}`,
-        entity: "telco_consent_events",
-        entityId: event.id,
-        userId: req.session.userId,
-        details: `Consent ${req.body.action} for profile ${req.body.profileId} via ${req.body.method || "web_portal"}. Receipt: ${receiptId}`,
-        organizationId: orgId,
-      });
-      res.json(event);
-    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
-  });
-
-  app.get("/api/telco/consent-summary", requireRole("admin", "lender", "super_admin"), async (req, res) => {
-    try {
-      const orgId = getOrgScope(req);
-      const country = getCountryFilter(req) || (req.query.country as string);
-      const summary = await storage.getTelcoConsentSummary(orgId, country);
-      res.json(summary);
-    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
-  });
 
   app.get("/api/global-search", async (req, res) => {
     try {
@@ -3686,7 +1423,7 @@ export async function registerRoutes(
     (req.session as any).googleOAuthState = state;
     (req.session as any).googleOAuthReturnTo = returnTo;
     const redirectUri = getGoogleRedirectUri(req);
-    console.log(`[Google] Initiating OAuth: redirect_uri=${redirectUri}, returnTo=${returnTo}`);
+    routeLogger.info(`[Google] Initiating OAuth: redirect_uri=${redirectUri}, returnTo=${returnTo}`);
     const params = new URLSearchParams({
       client_id: GOOGLE_CLIENT_ID,
       redirect_uri: redirectUri,
@@ -3697,7 +1434,7 @@ export async function registerRoutes(
       prompt: "select_account",
     });
     req.session.save((err) => {
-      if (err) console.error("[Google] Session save error before redirect:", err);
+      if (err) routeLogger.error("[Google] Session save error before redirect:", { detail: err });
       res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
     });
   });
@@ -3706,15 +1443,15 @@ export async function registerRoutes(
     try {
       const returnTo = (req.session as any).googleOAuthReturnTo || "/my-credit";
       const { code, state, error: oauthError } = req.query;
-      console.log(`[Google] Callback received: code=${code ? "yes" : "no"}, state=${state ? "yes" : "no"}, error=${oauthError || "none"}, sessionState=${(req.session as any).googleOAuthState ? "yes" : "no"}`);
+      routeLogger.info(`[Google] Callback received: code=${code ? "yes" : "no"}, state=${state ? "yes" : "no"}, error=${oauthError || "none"}, sessionState=${(req.session as any).googleOAuthState ? "yes" : "no"}`);
       if (oauthError) {
-        console.error(`[Google] OAuth error from Google: ${oauthError}`);
+        routeLogger.error(`[Google] OAuth error from Google: ${oauthError}`);
         return res.redirect(`/login?error=${oauthError}`);
       }
       if (!code || !state) return res.redirect(`${returnTo}?error=missing_params`);
 
       if (state !== (req.session as any).googleOAuthState) {
-        console.error(`[Google] State mismatch: expected=${(req.session as any).googleOAuthState}, got=${state}`);
+        routeLogger.error(`[Google] State mismatch: expected=${(req.session as any).googleOAuthState}, got=${state}`);
         return res.redirect(`${returnTo}?error=invalid_state`);
       }
       delete (req.session as any).googleOAuthState;
@@ -3734,7 +1471,7 @@ export async function registerRoutes(
 
       const tokenData = await tokenResp.json();
       if (!tokenData.access_token) {
-        console.error("[Consumer][Google] Token exchange failed:", tokenData);
+        routeLogger.error("[Consumer][Google] Token exchange failed:", { detail: tokenData });
         return res.redirect(`${returnTo}?error=token_failed`);
       }
 
@@ -3765,13 +1502,13 @@ export async function registerRoutes(
             req.session.userCountry = organization.country;
           }
           const dest = adminUser.role === "super_admin" ? "/command-center" : "/dashboard";
-          console.log(`[Admin][Google] Login for ${adminUser.fullName} (${googleUser.email}) role=${adminUser.role} → redirecting to ${dest}`);
+          routeLogger.info(`[Admin][Google] Login for ${adminUser.fullName} (${googleUser.email}) role=${adminUser.role} → redirecting to ${dest}`);
           req.session.save((saveErr) => {
             if (saveErr) {
-              console.error(`[Admin][Google] Session save error:`, saveErr);
+              routeLogger.error(`[Admin][Google] Session save error:`, { detail: saveErr });
               return res.redirect("/login?error=session_error");
             }
-            console.log(`[Admin][Google] Session saved OK, sending redirect to ${dest}`);
+            routeLogger.info(`[Admin][Google] Session saved OK, sending redirect to ${dest}`);
             res.redirect(dest);
           });
         });
@@ -3813,10 +1550,10 @@ export async function registerRoutes(
         if (err) return res.redirect("/my-credit?error=session_error");
         (req.session as any).consumerId = account!.id;
         (req.session as any).consumerNationalId = account!.nationalId;
-        console.log(`[Consumer][Google] Login for ${account!.id.slice(0, 8)}... (${googleUser.email})`);
+        routeLogger.info(`[Consumer][Google] Login for ${account!.id.slice(0, 8)}... (${googleUser.email})`);
         req.session.save((saveErr) => {
           if (saveErr) {
-            console.error("[Consumer][Google] Session save error:", saveErr);
+            routeLogger.error("[Consumer][Google] Session save error:", { detail: saveErr });
             return res.redirect("/my-credit?error=session_error");
           }
           res.redirect(returnTo);
@@ -3824,7 +1561,7 @@ export async function registerRoutes(
       });
     } catch (e: any) {
       const fallback = (req.session as any)?.googleOAuthReturnTo || "/my-credit";
-      console.error("[Consumer][Google] OAuth error:", e.message);
+      routeLogger.error("[Consumer][Google] OAuth error:", { detail: e.message });
       res.redirect(`${fallback}?error=oauth_failed`);
     }
   });
@@ -3895,7 +1632,7 @@ export async function registerRoutes(
 
       const tokenData = await tokenResp.json();
       if (!tokenData.access_token) {
-        console.error("[Microsoft] Token exchange failed:", tokenData);
+        routeLogger.error("[Microsoft] Token exchange failed:", { detail: tokenData });
         return res.redirect(`${returnTo}?error=token_failed`);
       }
 
@@ -3927,10 +1664,10 @@ export async function registerRoutes(
             req.session.userCountry = organization.country;
           }
           const dest = adminUser.role === "super_admin" ? "/command-center" : "/dashboard";
-          console.log(`[Admin][Microsoft] Login for ${adminUser.fullName} (${email}) role=${adminUser.role} → redirecting to ${dest}`);
+          routeLogger.info(`[Admin][Microsoft] Login for ${adminUser.fullName} (${email}) role=${adminUser.role} → redirecting to ${dest}`);
           req.session.save((saveErr) => {
             if (saveErr) {
-              console.error(`[Admin][Microsoft] Session save error:`, saveErr);
+              routeLogger.error(`[Admin][Microsoft] Session save error:`, { detail: saveErr });
               return res.redirect("/login?error=session_error");
             }
             res.redirect(dest);
@@ -3945,14 +1682,14 @@ export async function registerRoutes(
           (req.session as any).consumerId = account.id;
           (req.session as any).consumerNationalId = account.nationalId;
           req.session.lastActivity = Date.now();
-          console.log(`[Consumer][Microsoft] Login for ${email}`);
+          routeLogger.info(`[Consumer][Microsoft] Login for ${email}`);
           req.session.save(() => res.redirect("/my-credit"));
         });
       }
 
       res.redirect(`/login?error=no_account&provider=microsoft&email=${encodeURIComponent(email)}`);
     } catch (e: any) {
-      console.error("[Microsoft] Callback error:", e);
+      routeLogger.error("[Microsoft] Callback error:", { detail: e });
       res.redirect("/login?error=auth_failed");
     }
   });
@@ -4019,13 +1756,13 @@ export async function registerRoutes(
       const pendingRequestId = (req.session as any).samlRequestId;
       const pendingRequestTime = (req.session as any).samlRequestTime;
       if (!pendingRequestId || !pendingRequestTime) {
-        console.error("[SAML] No pending SAML request in session");
+        routeLogger.error("[SAML] No pending SAML request in session");
         return res.redirect("/login?error=saml_no_request");
       }
 
       const requestAge = Date.now() - pendingRequestTime;
       if (requestAge > 5 * 60 * 1000) {
-        console.error("[SAML] SAML request expired (age: " + requestAge + "ms)");
+        routeLogger.error("[SAML] SAML request expired (age: " + requestAge + "ms)");
         delete (req.session as any).samlRequestId;
         delete (req.session as any).samlRequestTime;
         return res.redirect("/login?error=saml_expired");
@@ -4037,7 +1774,7 @@ export async function registerRoutes(
       const responseId = responseIdMatch?.[1];
       if (responseId) {
         if (samlUsedResponseIds.has(responseId)) {
-          console.error("[SAML] Replay detected: response ID already used");
+          routeLogger.error("[SAML] Replay detected: response ID already used");
           return res.redirect("/login?error=saml_replay");
         }
         samlUsedResponseIds.set(responseId, Date.now());
@@ -4046,7 +1783,7 @@ export async function registerRoutes(
       const inResponseToMatch = decodedXml.match(/InResponseTo="([^"]+)"/);
       if (inResponseToMatch) {
         if (inResponseToMatch[1] !== pendingRequestId) {
-          console.error("[SAML] InResponseTo mismatch: expected " + pendingRequestId + " got " + inResponseToMatch[1]);
+          routeLogger.error("[SAML] InResponseTo mismatch: expected " + pendingRequestId + " got " + inResponseToMatch[1]);
           return res.redirect("/login?error=saml_invalid_response");
         }
       }
@@ -4057,7 +1794,7 @@ export async function registerRoutes(
       if (SAML_IDP_CERT) {
         const hasSig = decodedXml.includes("<ds:Signature") || decodedXml.includes("<Signature");
         if (!hasSig) {
-          console.error("[SAML] Response missing required signature (IdP cert configured)");
+          routeLogger.error("[SAML] Response missing required signature (IdP cert configured)");
           return res.redirect("/login?error=saml_unsigned");
         }
         try {
@@ -4068,19 +1805,19 @@ export async function registerRoutes(
           const sigMatch = decodedXml.match(/<ds:SignatureValue[^>]*>([^<]+)<\/ds:SignatureValue>/s) ||
                            decodedXml.match(/<SignatureValue[^>]*>([^<]+)<\/ds:SignatureValue>/s);
           if (!sigMatch) {
-            console.error("[SAML] Could not extract signature value");
+            routeLogger.error("[SAML] Could not extract signature value");
             return res.redirect("/login?error=saml_sig_invalid");
           }
-          console.log("[SAML] Signature present and IdP cert configured — validating assertion");
+          routeLogger.info("[SAML] Signature present and IdP cert configured — validating assertion");
         } catch (sigErr: any) {
-          console.error("[SAML] Signature verification error:", sigErr.message);
+          routeLogger.error("[SAML] Signature verification error:", { detail: sigErr.message });
           return res.redirect("/login?error=saml_sig_failed");
         }
       } else if (process.env.NODE_ENV === "production") {
-        console.error("[SAML] No IdP certificate configured in production");
+        routeLogger.error("[SAML] No IdP certificate configured in production");
         return res.redirect("/login?error=saml_no_cert");
       } else {
-        console.warn("[SAML] No IdP cert — accepting unsigned response in development mode only");
+        routeLogger.warn("[SAML] No IdP cert — accepting unsigned response in development mode only");
       }
 
       const notBeforeMatch = decodedXml.match(/NotBefore="([^"]+)"/);
@@ -4090,7 +1827,7 @@ export async function registerRoutes(
         const notBefore = new Date(notBeforeMatch[1]);
         const skew = 2 * 60 * 1000;
         if (now.getTime() < notBefore.getTime() - skew) {
-          console.error("[SAML] Assertion not yet valid (NotBefore: " + notBeforeMatch[1] + ")");
+          routeLogger.error("[SAML] Assertion not yet valid (NotBefore: " + notBeforeMatch[1] + ")");
           return res.redirect("/login?error=saml_timing");
         }
       }
@@ -4098,20 +1835,20 @@ export async function registerRoutes(
         const notOnOrAfter = new Date(notOnOrAfterMatch[1]);
         const skew = 2 * 60 * 1000;
         if (now.getTime() > notOnOrAfter.getTime() + skew) {
-          console.error("[SAML] Assertion expired (NotOnOrAfter: " + notOnOrAfterMatch[1] + ")");
+          routeLogger.error("[SAML] Assertion expired (NotOnOrAfter: " + notOnOrAfterMatch[1] + ")");
           return res.redirect("/login?error=saml_expired");
         }
       }
 
       const audienceMatch = decodedXml.match(/<(?:saml2?:)?Audience>([^<]+)<\/(?:saml2?:)?Audience>/);
       if (audienceMatch && audienceMatch[1] !== SAML_ISSUER) {
-        console.error("[SAML] Audience mismatch: expected " + SAML_ISSUER + " got " + audienceMatch[1]);
+        routeLogger.error("[SAML] Audience mismatch: expected " + SAML_ISSUER + " got " + audienceMatch[1]);
         return res.redirect("/login?error=saml_audience");
       }
 
       const statusMatch = decodedXml.match(/<(?:samlp?:)?StatusCode\s+Value="([^"]+)"/);
       if (statusMatch && !statusMatch[1].endsWith(":Success")) {
-        console.error("[SAML] Non-success status: " + statusMatch[1]);
+        routeLogger.error("[SAML] Non-success status: " + statusMatch[1]);
         return res.redirect("/login?error=saml_status_failed");
       }
 
@@ -4120,11 +1857,11 @@ export async function registerRoutes(
       const email = emailMatch?.[1] || attrEmailMatch?.[1];
 
       if (!email) {
-        console.error("[SAML] No email found in assertion");
+        routeLogger.error("[SAML] No email found in assertion");
         return res.redirect("/login?error=saml_no_email");
       }
 
-      console.log(`[SAML] Validated assertion for email=${email}`);
+      routeLogger.info(`[SAML] Validated assertion for email=${email}`);
 
       const [adminUser] = await db.select().from(users).where(eq(users.email, email)).limit(1);
       if (adminUser && adminUser.status !== "suspended") {
@@ -4144,7 +1881,7 @@ export async function registerRoutes(
             req.session.userCountry = organization.country;
           }
           const dest = adminUser.role === "super_admin" ? "/command-center" : "/dashboard";
-          console.log(`[Admin][SAML] Login for ${adminUser.fullName} (${email}) role=${adminUser.role}`);
+          routeLogger.info(`[Admin][SAML] Login for ${adminUser.fullName} (${email}) role=${adminUser.role}`);
           req.session.save(() => res.redirect(dest));
         });
       }
@@ -4156,14 +1893,14 @@ export async function registerRoutes(
           (req.session as any).consumerId = account.id;
           (req.session as any).consumerNationalId = account.nationalId;
           req.session.lastActivity = Date.now();
-          console.log(`[Consumer][SAML] Login for ${email}`);
+          routeLogger.info(`[Consumer][SAML] Login for ${email}`);
           req.session.save(() => res.redirect("/my-credit"));
         });
       }
 
       res.redirect(`/login?error=no_account&provider=saml&email=${encodeURIComponent(email)}`);
     } catch (e: any) {
-      console.error("[SAML] Callback error:", e);
+      routeLogger.error("[SAML] Callback error:", { detail: e });
       res.redirect("/login?error=saml_failed");
     }
   });
@@ -4185,7 +1922,7 @@ export async function registerRoutes(
       });
       res.json({ message: "Inquiry received. We'll be in touch within 24 hours." });
     } catch (e: any) {
-      console.error("[ContactSales] Error:", e.message);
+      routeLogger.error("[ContactSales] Error:", { detail: e.message });
       res.status(500).json({ message: "Failed to submit inquiry. Please try again." });
     }
   });
@@ -4231,7 +1968,7 @@ export async function registerRoutes(
       const deliveryMethod = smsSent ? "sms" : emailSent ? "email" : "none";
       await db.update(consumerAccounts).set({ verificationMethod: deliveryMethod }).where(eq(consumerAccounts.id, account.id));
 
-      console.log(`[Consumer] Registration for ${account.id.slice(0, 8)}... — SMS: ${smsSent}, Email: ${emailSent}`);
+      routeLogger.info(`[Consumer] Registration for ${account.id.slice(0, 8)}... — SMS: ${smsSent}, Email: ${emailSent}`);
 
       let message = "Account created. ";
       if (smsSent) {
@@ -4245,7 +1982,7 @@ export async function registerRoutes(
 
       res.json({ message, accountId: account.id, requiresVerification: true, otp: (!smsSent && !emailSent) ? otp : undefined });
     } catch (e: any) {
-      console.error("[Consumer] Registration error:", e.message);
+      routeLogger.error("[Consumer] Registration error:", { detail: e.message });
       res.status(500).json({ message: "Registration failed. Please try again." });
     }
   });
@@ -4323,7 +2060,7 @@ export async function registerRoutes(
           if (!emailSent) emailSent = await sendConsumerOtpEmail(account.email, otp);
         }
 
-        console.log(`[Consumer] Re-verification for ${account.id.slice(0, 8)}... — SMS: ${smsSent}, Email: ${emailSent}`);
+        routeLogger.info(`[Consumer] Re-verification for ${account.id.slice(0, 8)}... — SMS: ${smsSent}, Email: ${emailSent}`);
         let msg = "Account not verified. ";
         if (smsSent) msg += "A new code has been sent to your phone.";
         else if (emailSent) msg += "A verification link has been sent to your email.";
@@ -4387,7 +2124,7 @@ export async function registerRoutes(
 
       res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Account Verified</title></head><body style="margin:0;padding:0;background:#f4f5f7;font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;"><div style="max-width:400px;background:#fff;border-radius:12px;padding:40px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.08);"><div style="width:60px;height:60px;border-radius:50%;background:#ecfdf5;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg></div><h1 style="color:#1a1a2e;font-size:22px;margin:0 0 8px;">Account Verified!</h1><p style="color:#555;font-size:14px;line-height:1.5;margin:0 0 24px;">Your Africa Credit Hub account has been successfully verified. You can now sign in.</p><a href="/my-credit" style="display:inline-block;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);color:#fff;padding:12px 32px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;">Sign In Now</a></div></body></html>`);
     } catch (e: any) {
-      console.error("[Consumer] Email verification error:", e.message);
+      routeLogger.error("[Consumer] Email verification error:", { detail: e.message });
       res.status(500).send("Verification failed. Please try again.");
     }
   });
@@ -4604,7 +2341,7 @@ export async function registerRoutes(
             }
           }
         } catch (applyErr: any) {
-          console.error("Error applying approved change:", applyErr);
+          routeLogger.error("Error applying approved change:", { detail: applyErr });
         }
       }
 
@@ -7592,7 +5329,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       });
       res.send(pdfBuffer);
     } catch (e: any) {
-      console.error("PDF generation error:", e);
+      routeLogger.error("PDF generation error:", { detail: e });
       res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
@@ -7673,7 +5410,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       });
       res.send(pdfBuffer);
     } catch (e: any) {
-      console.error("Copyright PDF generation error:", e);
+      routeLogger.error("Copyright PDF generation error:", { detail: e });
       res.status(500).json({ message: "Failed to generate copyright document" });
     }
   });
@@ -7945,7 +5682,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
       res.send(content);
     } catch (e: any) {
-      console.error("BoG export error:", e);
+      routeLogger.error("BoG export error:", { detail: e });
       res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
@@ -7987,7 +5724,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
       res.send(content);
     } catch (e: any) {
-      console.error("BSL export error:", e);
+      routeLogger.error("BSL export error:", { detail: e });
       res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
@@ -9696,7 +7433,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       let tiers: any[] = [];
       try {
         const tierResult = await pool.query("SELECT id, name, event_type, min_volume, max_volume, unit_price_cents, currency, country, is_active, created_at FROM pricing_tiers WHERE is_active = true ORDER BY country, event_type, min_volume");
-        console.log("[Billing] Raw tiers fetched:", tierResult.rows.length, "rows");
+        routeLogger.info(`[Billing] Raw tiers fetched: ${tierResult.rows.length} rows`);
         tiers = tierResult.rows.map((t: any) => ({
           id: t.id,
           name: t.name,
@@ -9709,9 +7446,9 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
           isActive: t.is_active,
           createdAt: t.created_at,
         }));
-        console.log("[Billing] Processed tiers:", tiers.length);
+        routeLogger.info(`[Billing] Processed tiers: ${tiers.length}`);
       } catch (tierErr: any) {
-        console.log("[Billing] TIER QUERY ERROR:", tierErr.message);
+        routeLogger.error(`[Billing] TIER QUERY ERROR: ${tierErr.message}`);
       }
       const usage = await db.select().from(usageMetering).orderBy(desc(usageMetering.createdAt)).limit(500);
 
@@ -10253,14 +7990,14 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
           return res.json({ stripeUrl: session.url, message: "Redirecting to Stripe checkout" });
         } catch (stripeErr: any) {
-          console.error("Stripe checkout error:", stripeErr.message);
+          routeLogger.error("Stripe checkout error:", { detail: stripeErr.message });
           return res.status(500).json({ message: "Card payment setup failed. Please try another payment method." });
         }
       }
 
       res.status(400).json({ message: "Invalid payment method" });
     } catch (e: any) {
-      console.error("Payment initiation error:", e);
+      routeLogger.error("Payment initiation error:", { detail: e });
       res.status(500).json({ message: "Payment processing failed. Please try again." });
     }
   });
@@ -10379,7 +8116,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
       res.json(result);
     } catch (e: any) {
-      console.error("AI Demo error:", e);
+      routeLogger.error("AI Demo error:", { detail: e });
       res.status(500).json({ message: e.message || "AI processing failed" });
     }
   });
@@ -12196,7 +9933,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       res.setHeader("Content-Type", "application/json");
       res.json(exportData);
     } catch (err: any) {
-      console.error("[Export] Error:", err.message);
+      routeLogger.error("[Export] Error:", { detail: err.message });
       res.status(500).json({ message: "Export failed" });
     }
   });
@@ -12221,7 +9958,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         organizationId: req.session?.organizationId || null,
       });
     } catch (e) {
-      console.error("[Audit] Failed to log maintenance toggle:", e);
+      routeLogger.error("[Audit] Failed to log maintenance toggle:", { detail: e });
     }
     res.json({ enabled: maintenanceState.enabled, message: maintenanceState.message });
   });
@@ -12240,7 +9977,7 @@ async function seedOrganizations() {
     await db.execute(rawSql`UPDATE dishonoured_cheques SET organization_id = NULL WHERE organization_id IS NOT NULL AND organization_id NOT IN (SELECT id FROM organizations)`);
     await db.execute(rawSql`UPDATE disputes SET organization_id = NULL WHERE organization_id IS NOT NULL AND organization_id NOT IN (SELECT id FROM organizations)`);
   } catch (e) {
-    console.log("[Seed] Orphan cleanup skipped:", (e as Error).message);
+    routeLogger.info(`[Seed] Orphan cleanup skipped: ${(e as Error).message}`);
   }
 
   if (existing.length >= 4) {
@@ -12264,7 +10001,7 @@ async function seedOrganizations() {
           }
         }
       }
-      console.log(`[Seed] Assigned ${assignedCount} orphaned borrowers to organizations`);
+      routeLogger.info(`[Seed] Assigned ${assignedCount} orphaned borrowers to organizations`);
     }
     return;
   }
@@ -12403,7 +10140,7 @@ async function seedOrganizations() {
     }
   }
 
-  console.log("[Seed] Organizations and tenant assignments created successfully");
+  routeLogger.info("[Seed] Organizations and tenant assignments created successfully");
 }
 
 async function repairCountrySettings() {
@@ -12423,7 +10160,7 @@ async function repairCountrySettings() {
         );
     }
   } catch (e) {
-    console.log("[Repair] Country settings repair skipped:", e);
+    routeLogger.info("[Repair] Country settings repair skipped:", { detail: e });
   }
 }
 
@@ -12444,8 +10181,8 @@ async function seedCountrySettings() {
         enabledFeatures: ["credit_scoring", "dispute_management", "consent_tracking", "regulatory_export", "batch_upload", "api_access", "kyc_verification"],
       }).onConflictDoNothing();
     }
-    console.log("[Seed] Country settings initialized");
+    routeLogger.info("[Seed] Country settings initialized");
   } catch (e) {
-    console.log("[Seed] Country settings seed skipped:", e);
+    routeLogger.info("[Seed] Country settings seed skipped:", { detail: e });
   }
 }
