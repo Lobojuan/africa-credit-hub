@@ -7,7 +7,7 @@ import crypto from "crypto";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
-import { readFileSync, readdirSync, readlinkSync, writeFileSync, appendFileSync } from "fs";
+import { writeFileSync, appendFileSync } from "fs";
 import { pool, startPoolHealthCheck } from "./db";
 import { createLogger } from "./logger";
 
@@ -22,40 +22,6 @@ function crashLog(msg: string) {
   } catch {}
 }
 crashLog("SERVER_START");
-
-function killPortHolder(targetPort: number) {
-  try {
-    const hexPort = targetPort.toString(16).toUpperCase().padStart(4, "0");
-    const tcpData = readFileSync("/proc/net/tcp", "utf-8");
-    for (const line of tcpData.split("\n")) {
-      const parts = line.trim().split(/\s+/);
-      if (parts.length < 10) continue;
-      const portHex = parts[1]?.split(":")[1];
-      if (portHex?.toUpperCase() !== hexPort) continue;
-      const inode = parts[9];
-      if (!inode || inode === "0") continue;
-      for (const pid of readdirSync("/proc").filter((f: string) => /^\d+$/.test(f))) {
-        try {
-          for (const fd of readdirSync(`/proc/${pid}/fd`)) {
-            try {
-              if (readlinkSync(`/proc/${pid}/fd/${fd}`) === `socket:[${inode}]`) {
-                const pidNum = parseInt(pid);
-                if (pidNum !== process.pid) {
-                  process.kill(pidNum, 9);
-                  console.log(`Killed stale process ${pidNum} on port ${targetPort}`);
-                }
-                return;
-              }
-            } catch {}
-          }
-        } catch {}
-      }
-      return;
-    }
-  } catch {}
-}
-
-killPortHolder(port);
 
 const app = express();
 app.set("etag", false);
@@ -435,60 +401,48 @@ process.stderr.write = function (...args: any[]) {
 } as any;
 
 (async () => {
-  try {
-    const { cleanupNonGhanaData } = await import("./ghana-cleanup");
-    await cleanupNonGhanaData();
-  } catch (e) {
-    console.error("[Ghana Cleanup] Error (non-fatal):", e);
-  }
-
-  const isProduction = process.env.PRODUCTION_MODE === "true";
-
-  const { seedDatabase } = await import("./seed");
-  try {
-    await seedDatabase();
-  } catch (e) {
-    console.error("Seed error (may be expected on first run):", e);
-  }
-
-  if (!isProduction) {
+  if (process.env.RUN_SEED === "true") {
     try {
-      const { seedTestData } = await import("./seed-test-data");
-      await seedTestData();
+      const { cleanupNonGhanaData } = await import("./ghana-cleanup");
+      await cleanupNonGhanaData();
     } catch (e) {
-      console.error("Test data seed error:", e);
+      console.error("[Ghana Cleanup] Error (non-fatal):", e);
     }
 
-    // Non-Ghana seeders disabled for Ghana-focused testing
-    // try {
-    //   const { seedSierraLeoneData } = await import("./seed-sierra-leone");
-    //   await seedSierraLeoneData();
-    // } catch (e) {
-    //   console.error("Sierra Leone seed error (non-fatal):", e);
-    // }
+    const { seedDatabase } = await import("./seed");
+    try {
+      await seedDatabase();
+    } catch (e) {
+      console.error("Seed error (may be expected on first run):", e);
+    }
 
-    // try {
-    //   const { seedPanAfrican } = await import("./seed-pan-african");
-    //   await seedPanAfrican();
-    // } catch (e) {
-    //   console.error("Pan-African seed error (non-fatal):", e);
-    // }
+    const isProduction = process.env.PRODUCTION_MODE === "true";
+    if (!isProduction) {
+      try {
+        const { seedTestData } = await import("./seed-test-data");
+        await seedTestData();
+      } catch (e) {
+        console.error("Test data seed error:", e);
+      }
+    } else {
+      console.log("[Production] Skipping demo/test data seeding");
+    }
+
+    try {
+      const { seedTelcoLending } = await import("./seed-telco-lending");
+      await seedTelcoLending();
+    } catch (e) {
+      console.error("Telco lending seed error (non-fatal):", e);
+    }
+
+    try {
+      const { distributeCreatedAtTimestamps } = await import("./distribute-timestamps");
+      await distributeCreatedAtTimestamps();
+    } catch (e) {
+      console.error("Timestamp distribution error (non-fatal):", e);
+    }
   } else {
-    console.log("[Production] Skipping demo/test data seeding");
-  }
-
-  try {
-    const { seedTelcoLending } = await import("./seed-telco-lending");
-    await seedTelcoLending();
-  } catch (e) {
-    console.error("Telco lending seed error (non-fatal):", e);
-  }
-
-  try {
-    const { distributeCreatedAtTimestamps } = await import("./distribute-timestamps");
-    await distributeCreatedAtTimestamps();
-  } catch (e) {
-    console.error("Timestamp distribution error (non-fatal):", e);
+    console.log("[Startup] Skipping seed — set RUN_SEED=true to seed");
   }
 
   try {
