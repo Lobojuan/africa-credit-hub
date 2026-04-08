@@ -13,8 +13,8 @@ export async function seedDatabase() {
   const ghanaMode = isGhanaMode();
 
   const [admin] = await db.insert(users).values([
-    { username: "admin", password: hash("admin0987"), fullName: "Uffe Jon Carlson", email: "uffe.carlson@gmail.com", role: "super_admin", status: "active", institution: "Carlson Capital & Systems In Motion Limited" },
-    { username: "platform_admin", password: hash("admin0987"), fullName: "Thomas Baafi", email: "Thomas.baafi@prischell.com", role: "super_admin", status: "active", institution: "Carlson Capital & Systems In Motion Limited" },
+    { username: "admin", password: hash("admin0987"), fullName: process.env.PLATFORM_ADMIN_NAME || "Platform Admin", email: process.env.PLATFORM_SUPPORT_EMAIL || "support@africacredithub.com", role: "super_admin", status: "active", institution: process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub" },
+    { username: "platform_admin", password: hash("admin0987"), fullName: process.env.PLATFORM_CTO_NAME || "Platform CTO", email: process.env.PLATFORM_CTO_EMAIL || "cto@africacredithub.com", role: "super_admin", status: "active", institution: process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub" },
   ]).returning();
 
   const coreBorrowers = ghanaMode ? [
@@ -194,7 +194,7 @@ export async function seedDatabase() {
   await db.insert(creditInquiries).values([
     { borrowerId: createdBorrowers[0].id, inquiredBy: admin.id, purpose: "new_credit", institution: coreInstitution, consentProvided: true },
     { borrowerId: createdBorrowers[1].id, inquiredBy: admin.id, purpose: "review", institution: coreInstitution2, consentProvided: true },
-    { borrowerId: createdBorrowers[2].id, inquiredBy: admin.id, purpose: "regulatory", institution: "Carlson Capital & Systems In Motion Limited", consentProvided: true },
+    { borrowerId: createdBorrowers[2].id, inquiredBy: admin.id, purpose: "regulatory", institution: process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub", consentProvided: true },
     { borrowerId: createdBorrowers[3].id, inquiredBy: admin.id, purpose: "portfolio_monitoring", institution: coreInstitution3, consentProvided: true },
   ]);
 

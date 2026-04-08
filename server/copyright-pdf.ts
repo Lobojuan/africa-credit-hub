@@ -1,5 +1,9 @@
 import PDFDocument from "pdfkit";
 
+function getCompanyName(): string {
+  return process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub";
+}
+
 const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
   en: {
     softwareCopyright: "SOFTWARE COPYRIGHT",
@@ -184,7 +188,8 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
 };
 
 function getCopyrightLabel(lang: string, key: string): string {
-  return COPYRIGHT_PDF_LABELS[lang]?.[key] || COPYRIGHT_PDF_LABELS.en[key] || key;
+  const val = COPYRIGHT_PDF_LABELS[lang]?.[key] || COPYRIGHT_PDF_LABELS.en[key] || key;
+  return val.replace(/Carlson Capital & Systems In Motion Limited/g, getCompanyName());
 }
 
 const NORDIC_BLUE = "#0466C8";

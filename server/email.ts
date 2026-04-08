@@ -5,7 +5,7 @@ let transporter: nodemailer.Transporter | null = null;
 let emailConfigured = false;
 let emailProvider: "smtp" | "sendgrid" | "stub" = "stub";
 
-const FROM_EMAIL = process.env.SMTP_FROM || "uffe.carlson@gmail.com";
+const FROM_EMAIL = process.env.SMTP_FROM || process.env.PLATFORM_SUPPORT_EMAIL || "support@africacredithub.com";
 const FROM_NAME = isGhanaMode() ? "Ghana Credit Registry" : "Pan-African Credit Registry";
 
 async function sendViaSendGrid(to: string, subject: string, htmlBody: string): Promise<boolean> {
@@ -88,7 +88,7 @@ function createEmailHtml(title: string, bodyHtml: string): string {
     <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
       <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);padding:28px 32px;">
         <h1 style="color:#fff;margin:0;font-size:20px;font-weight:600;">Pan-African Credit Registry</h1>
-        <p style="color:rgba(255,255,255,.7);margin:4px 0 0;font-size:13px;">Carlson Capital & Systems In Motion Limited</p>
+        <p style="color:rgba(255,255,255,.7);margin:4px 0 0;font-size:13px;">${process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub"}</p>
       </div>
       <div style="padding:32px;">
         <h2 style="color:#1a1a2e;margin:0 0 16px;font-size:18px;">${title}</h2>
@@ -211,7 +211,7 @@ export async function sendSubscriptionChangeEmail(orgName: string, email: string
 }
 
 export async function sendNewRegistrationAlert(orgName: string, orgType: string, country: string, contactEmail: string, adminName: string): Promise<boolean> {
-  const NOTIFY_EMAIL = process.env.REGISTRATION_NOTIFY_EMAIL || "uffe.carlson@gmail.com";
+  const NOTIFY_EMAIL = process.env.REGISTRATION_NOTIFY_EMAIL || process.env.PLATFORM_SUPPORT_EMAIL || "support@africacredithub.com";
   const body = `
     <p style="color:#333;font-size:14px;line-height:1.6;">A new organization has registered on the Pan-African Credit Registry.</p>
     <div style="background:#f0f7ff;border-radius:8px;padding:16px 20px;margin:16px 0;border-left:4px solid #3b82f6;">
@@ -254,7 +254,7 @@ export async function sendConsumerVerificationLink(email: string, token: string,
 }
 
 export async function sendContactSalesEmail(data: { name: string; email: string; phone?: string; organization: string; title?: string; country?: string; tier?: string; message?: string }): Promise<boolean> {
-  const adminEmail = process.env.ADMIN_EMAIL || "uffe.carlson@gmail.com";
+  const adminEmail = process.env.ADMIN_EMAIL || process.env.PLATFORM_SUPPORT_EMAIL || "support@africacredithub.com";
   const tierLabel = data.tier === "commercial" ? "Commercial" : data.tier === "sovereign" ? "Sovereign" : data.tier || "Not specified";
   const body = `
     <h2 style="color:#0d9488;">New Enterprise Inquiry</h2>

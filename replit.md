@@ -56,6 +56,7 @@ The system employs a modern full-stack architecture built for scalability and co
     -   **Fraud Detection Layer**: Real-time fraud risk scoring with efficient duplicate national ID detection.
     -   **Enhanced API Developer Portal**: Interactive sandbox, webhook event documentation.
     -   **Security Hardening**: Helmet security headers, DOMPurify sanitization, CSRF token protection, AES-256-GCM PII encryption at rest, data subject erasure request API, password history enforcement, and login anomaly detection.
+    -   **Configurable Platform Identity**: Company name, support email, and contact phone are driven by env vars (`PLATFORM_COMPANY_NAME`, `PLATFORM_SUPPORT_EMAIL`, `PLATFORM_CONTACT_PHONE`, `PLATFORM_ADMIN_NAME`, `PLATFORM_CTO_NAME`, `PLATFORM_CTO_EMAIL`) with safe defaults — no hardcoded personal contact info in source code.
     -   **Real-time WebSocket Notifications**: Authenticated WebSocket server for event broadcasting.
     -   **Progressive Web App (PWA)**: Installable with service worker and offline capabilities.
     -   **System Status & Health Monitoring**: Public and authenticated endpoints for health and diagnostics.
