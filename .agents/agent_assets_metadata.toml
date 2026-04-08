@@ -60,3 +60,9 @@ id = "BaTiu1omZaMahLtYMO7kH"
 uri = "file://africa-credit-hub.tar.gz"
 type = "unspecified"
 title = "Africa Credit Hub — Full Source Code"
+
+[[outputs]]
+id = "YqdTkTpbKncqI5ADSZ4rE"
+uri = "file://codebase.tar.gz"
+type = "unspecified"
+title = "CDH v2.5 Codebase Archive"
