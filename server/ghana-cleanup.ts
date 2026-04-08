@@ -1,7 +1,12 @@
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 
-async function rowCount(query: ReturnType<typeof sql>) {
+async function execSql(query: ReturnType<typeof sql>): Promise<number> {
+  const result = await db.execute(query);
+  return (result as any).rowCount ?? 0;
+}
+
+async function rowCount(query: ReturnType<typeof sql>): Promise<number> {
   const result = await db.execute(query);
   const rows = Array.isArray(result) ? result : (result as any).rows || [];
   return Number(rows[0]?.cnt ?? 0);
@@ -12,92 +17,78 @@ export async function cleanupNonGhanaData() {
   const nonGhanaOrgs = await rowCount(sql`SELECT COUNT(*) as cnt FROM organizations WHERE country != 'Ghana'`);
 
   if (nonGhanaBorrowers === 0 && nonGhanaOrgs === 0) {
+    const nonGhanaCS = await rowCount(sql`SELECT COUNT(*) as cnt FROM country_settings WHERE country_code != 'GH'`);
+    if (nonGhanaCS > 0) {
+      await execSql(sql`DELETE FROM country_settings WHERE country_code != 'GH'`);
+      console.log(`[Ghana Cleanup] Removed ${nonGhanaCS} non-Ghana country settings`);
+    }
     return;
   }
 
   console.log(`[Ghana Cleanup] Found non-Ghana data: ${nonGhanaBorrowers} borrowers, ${nonGhanaOrgs} orgs — purging...`);
 
-  await db.execute(sql`
-    DO $$
-    DECLARE
-      ngb_ids text[];
-      nga_ids text[];
-      ngo_ids text[];
-      ngu_ids text[];
-      ngi_ids text[];
-    BEGIN
-      SELECT array_agg(id) INTO ngb_ids FROM borrowers WHERE country != 'Ghana';
-      IF ngb_ids IS NULL THEN ngb_ids := '{}'; END IF;
+  const ghOrgResult = await db.execute(sql`SELECT id FROM organizations WHERE country = 'Ghana' ORDER BY created_at ASC LIMIT 1`);
+  const ghOrgRows = Array.isArray(ghOrgResult) ? ghOrgResult : (ghOrgResult as any).rows || [];
+  const ghOrgId = ghOrgRows[0]?.id as string | undefined;
 
-      SELECT array_agg(id) INTO nga_ids FROM credit_accounts WHERE borrower_id = ANY(ngb_ids);
-      IF nga_ids IS NULL THEN nga_ids := '{}'; END IF;
+  if (ghOrgId) {
+    const reassigned = await execSql(sql`UPDATE borrowers SET organization_id = ${ghOrgId} WHERE country = 'Ghana' AND organization_id IN (SELECT id FROM organizations WHERE country != 'Ghana')`);
+    if (reassigned > 0) console.log(`[Ghana Cleanup] Reassigned ${reassigned} Ghana borrowers from non-Ghana orgs`);
 
-      SELECT array_agg(id) INTO ngo_ids FROM organizations WHERE country != 'Ghana';
-      IF ngo_ids IS NULL THEN ngo_ids := '{}'; END IF;
+    await execSql(sql`UPDATE credit_accounts SET organization_id = ${ghOrgId} WHERE organization_id IN (SELECT id FROM organizations WHERE country != 'Ghana')`);
+    await execSql(sql`UPDATE users SET organization_id = ${ghOrgId} WHERE organization_id IN (SELECT id FROM organizations WHERE country != 'Ghana') AND username = 'admin'`);
+  }
 
-      SELECT array_agg(id) INTO ngu_ids FROM users WHERE organization_id = ANY(ngo_ids) AND username != 'admin';
-      IF ngu_ids IS NULL THEN ngu_ids := '{}'; END IF;
+  await execSql(sql`DELETE FROM guarantors WHERE credit_account_id IN (SELECT id FROM credit_accounts WHERE borrower_id IN (SELECT id FROM borrowers WHERE country != 'Ghana'))`);
+  await execSql(sql`DELETE FROM payment_history WHERE credit_account_id IN (SELECT id FROM credit_accounts WHERE borrower_id IN (SELECT id FROM borrowers WHERE country != 'Ghana'))`);
+  await execSql(sql`DELETE FROM borrower_alerts WHERE borrower_id IN (SELECT id FROM borrowers WHERE country != 'Ghana')`);
+  await execSql(sql`DELETE FROM consent_records WHERE borrower_id IN (SELECT id FROM borrowers WHERE country != 'Ghana')`);
+  await execSql(sql`DELETE FROM credit_inquiries WHERE borrower_id IN (SELECT id FROM borrowers WHERE country != 'Ghana')`);
+  await execSql(sql`DELETE FROM disputes WHERE borrower_id IN (SELECT id FROM borrowers WHERE country != 'Ghana')`);
+  await execSql(sql`DELETE FROM court_judgments WHERE borrower_id IN (SELECT id FROM borrowers WHERE country != 'Ghana')`);
+  await execSql(sql`DELETE FROM dishonoured_cheques WHERE borrower_id IN (SELECT id FROM borrowers WHERE country != 'Ghana')`);
+  await execSql(sql`DELETE FROM credit_report_logs WHERE borrower_id IN (SELECT id FROM borrowers WHERE country != 'Ghana')`);
+  await execSql(sql`DELETE FROM credit_accounts WHERE borrower_id IN (SELECT id FROM borrowers WHERE country != 'Ghana')`);
+  await execSql(sql`DELETE FROM borrowers WHERE country != 'Ghana'`);
 
-      SELECT array_agg(id) INTO ngi_ids FROM institutions WHERE organization_id = ANY(ngo_ids);
-      IF ngi_ids IS NULL THEN ngi_ids := '{}'; END IF;
+  const ngoUserIds = await db.execute(sql`SELECT id FROM users WHERE organization_id IN (SELECT id FROM organizations WHERE country != 'Ghana') AND username != 'admin'`);
+  const nuRows = Array.isArray(ngoUserIds) ? ngoUserIds : (ngoUserIds as any).rows || [];
+  const nuIds = nuRows.map((r: any) => r.id as string);
 
-      DELETE FROM guarantors WHERE credit_account_id = ANY(nga_ids);
-      DELETE FROM payment_history WHERE credit_account_id = ANY(nga_ids);
+  if (nuIds.length > 0) {
+    await execSql(sql`DELETE FROM credit_inquiries WHERE inquired_by IN (SELECT id FROM users WHERE organization_id IN (SELECT id FROM organizations WHERE country != 'Ghana') AND username != 'admin')`);
+    await execSql(sql`DELETE FROM credit_report_logs WHERE requested_by IN (SELECT id FROM users WHERE organization_id IN (SELECT id FROM organizations WHERE country != 'Ghana') AND username != 'admin')`);
+    await execSql(sql`DELETE FROM audit_logs WHERE user_id IN (SELECT id FROM users WHERE organization_id IN (SELECT id FROM organizations WHERE country != 'Ghana') AND username != 'admin')`);
+    await execSql(sql`DELETE FROM notifications WHERE user_id IN (SELECT id FROM users WHERE organization_id IN (SELECT id FROM organizations WHERE country != 'Ghana') AND username != 'admin')`);
+    await execSql(sql`DELETE FROM users WHERE organization_id IN (SELECT id FROM organizations WHERE country != 'Ghana') AND username != 'admin'`);
+  }
 
-      DELETE FROM borrower_alerts WHERE borrower_id = ANY(ngb_ids);
-      DELETE FROM consent_records WHERE borrower_id = ANY(ngb_ids);
-      DELETE FROM credit_inquiries WHERE borrower_id = ANY(ngb_ids);
-      DELETE FROM disputes WHERE borrower_id = ANY(ngb_ids);
-      DELETE FROM court_judgments WHERE borrower_id = ANY(ngb_ids);
-      DELETE FROM dishonoured_cheques WHERE borrower_id = ANY(ngb_ids);
-      DELETE FROM credit_report_logs WHERE borrower_id = ANY(ngb_ids);
-      DELETE FROM credit_accounts WHERE id = ANY(nga_ids);
-      DELETE FROM borrowers WHERE id = ANY(ngb_ids);
+  await execSql(sql`DELETE FROM credit_report_logs WHERE organization_id IN (SELECT id FROM organizations WHERE country != 'Ghana')`);
+  await execSql(sql`DELETE FROM api_keys WHERE institution_id IN (SELECT id FROM institutions WHERE organization_id IN (SELECT id FROM organizations WHERE country != 'Ghana'))`);
+  await execSql(sql`DELETE FROM institutions WHERE organization_id IN (SELECT id FROM organizations WHERE country != 'Ghana')`);
+  await execSql(sql`DELETE FROM usage_metering WHERE organization_id IN (SELECT id FROM organizations WHERE country != 'Ghana')`);
+  await execSql(sql`DELETE FROM audit_logs WHERE organization_id IN (SELECT id FROM organizations WHERE country != 'Ghana')`);
+  await execSql(sql`DELETE FROM billing_records WHERE organization_id IN (SELECT id FROM organizations WHERE country != 'Ghana')`);
+  await execSql(sql`DELETE FROM pending_approvals WHERE organization_id IN (SELECT id FROM organizations WHERE country != 'Ghana')`);
+  await execSql(sql`DELETE FROM guarantors WHERE organization_id IN (SELECT id FROM organizations WHERE country != 'Ghana')`);
+  await execSql(sql`DELETE FROM court_judgments WHERE organization_id IN (SELECT id FROM organizations WHERE country != 'Ghana')`);
+  await execSql(sql`DELETE FROM dishonoured_cheques WHERE organization_id IN (SELECT id FROM organizations WHERE country != 'Ghana')`);
+  await execSql(sql`DELETE FROM disputes WHERE organization_id IN (SELECT id FROM organizations WHERE country != 'Ghana')`);
+  await execSql(sql`DELETE FROM borrower_alerts WHERE organization_id IN (SELECT id FROM organizations WHERE country != 'Ghana')`);
+  await execSql(sql`DELETE FROM organizations WHERE country != 'Ghana'`);
 
-      DELETE FROM credit_inquiries WHERE inquired_by = ANY(ngu_ids);
-      DELETE FROM credit_report_logs WHERE requested_by = ANY(ngu_ids);
-      DELETE FROM credit_report_logs WHERE organization_id = ANY(ngo_ids);
-
-      DELETE FROM api_keys WHERE institution_id = ANY(ngi_ids);
-      DELETE FROM institutions WHERE id = ANY(ngi_ids);
-      DELETE FROM usage_metering WHERE organization_id = ANY(ngo_ids);
-      DELETE FROM audit_logs WHERE user_id = ANY(ngu_ids);
-      DELETE FROM audit_logs WHERE organization_id = ANY(ngo_ids);
-      DELETE FROM notifications WHERE user_id = ANY(ngu_ids);
-      DELETE FROM billing_records WHERE organization_id = ANY(ngo_ids);
-      DELETE FROM pending_approvals WHERE organization_id = ANY(ngo_ids);
-      DELETE FROM guarantors WHERE organization_id = ANY(ngo_ids);
-      DELETE FROM court_judgments WHERE organization_id = ANY(ngo_ids);
-      DELETE FROM dishonoured_cheques WHERE organization_id = ANY(ngo_ids);
-      DELETE FROM disputes WHERE organization_id = ANY(ngo_ids);
-      DELETE FROM borrower_alerts WHERE organization_id = ANY(ngo_ids);
-
-      DELETE FROM users WHERE id = ANY(ngu_ids);
-      DELETE FROM organizations WHERE id = ANY(ngo_ids);
-
-      DELETE FROM country_settings WHERE country_code != 'GH';
-
-      RAISE NOTICE '[Ghana Cleanup] Non-Ghana data removed';
-    END $$;
-  `);
+  await execSql(sql`DELETE FROM country_settings WHERE country_code != 'GH'`);
 
   try {
-    await db.execute(sql`
-      DO $$
-      BEGIN
-        DELETE FROM telco_decision_logs WHERE profile_id IN (SELECT id FROM telco_profiles WHERE country != 'Ghana');
-        DELETE FROM momo_transactions WHERE profile_id IN (SELECT id FROM telco_profiles WHERE country != 'Ghana');
-        DELETE FROM telco_loan_repayments WHERE profile_id IN (SELECT id FROM telco_profiles WHERE country != 'Ghana');
-        DELETE FROM telco_consent_events WHERE profile_id IN (SELECT id FROM telco_profiles WHERE country != 'Ghana');
-        DELETE FROM telco_loans WHERE profile_id IN (SELECT id FROM telco_profiles WHERE country != 'Ghana');
-        DELETE FROM telco_credit_scores WHERE profile_id IN (SELECT id FROM telco_profiles WHERE country != 'Ghana');
-        DELETE FROM telco_profiles WHERE country != 'Ghana';
-      EXCEPTION WHEN OTHERS THEN
-        RAISE NOTICE 'Telco cleanup partial: %', SQLERRM;
-      END $$;
-    `);
+    await execSql(sql`DELETE FROM telco_decision_logs WHERE profile_id IN (SELECT id FROM telco_profiles WHERE country != 'Ghana')`);
+    await execSql(sql`DELETE FROM momo_transactions WHERE profile_id IN (SELECT id FROM telco_profiles WHERE country != 'Ghana')`);
+    await execSql(sql`DELETE FROM telco_loan_repayments WHERE profile_id IN (SELECT id FROM telco_profiles WHERE country != 'Ghana')`);
+    await execSql(sql`DELETE FROM telco_consent_events WHERE profile_id IN (SELECT id FROM telco_profiles WHERE country != 'Ghana')`);
+    await execSql(sql`DELETE FROM telco_loans WHERE profile_id IN (SELECT id FROM telco_profiles WHERE country != 'Ghana')`);
+    await execSql(sql`DELETE FROM telco_credit_scores WHERE profile_id IN (SELECT id FROM telco_profiles WHERE country != 'Ghana')`);
+    await execSql(sql`DELETE FROM telco_profiles WHERE country != 'Ghana'`);
   } catch (e) {
-    console.log("[Ghana Cleanup] Telco cleanup skipped (tables may not exist):", (e as Error).message?.substring(0, 100));
+    console.log("[Ghana Cleanup] Telco cleanup partial:", (e as Error).message?.substring(0, 120));
   }
 
   const remaining = await rowCount(sql`SELECT COUNT(*) as cnt FROM borrowers`);
