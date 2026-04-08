@@ -12,9 +12,14 @@ export async function seedDatabase() {
 
   const ghanaMode = isGhanaMode();
 
+  const seedPassword = process.env.SEED_ADMIN_PASSWORD || "admin0987";
+  if (!process.env.SEED_ADMIN_PASSWORD) {
+    console.warn("[Seed] WARNING: SEED_ADMIN_PASSWORD not set — using insecure default. Set SEED_ADMIN_PASSWORD for production.");
+  }
+
   const [admin] = await db.insert(users).values([
-    { username: "admin", password: hash("admin0987"), fullName: process.env.PLATFORM_ADMIN_NAME || "Platform Admin", email: process.env.PLATFORM_SUPPORT_EMAIL || "support@africacredithub.com", role: "super_admin", status: "active", institution: process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub" },
-    { username: "platform_admin", password: hash("admin0987"), fullName: process.env.PLATFORM_CTO_NAME || "Platform CTO", email: process.env.PLATFORM_CTO_EMAIL || "cto@africacredithub.com", role: "super_admin", status: "active", institution: process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub" },
+    { username: "admin", password: hash(seedPassword), fullName: process.env.PLATFORM_ADMIN_NAME || "Platform Admin", email: process.env.PLATFORM_SUPPORT_EMAIL || "support@africacredithub.com", role: "super_admin", status: "active", institution: process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub" },
+    { username: "platform_admin", password: hash(seedPassword), fullName: process.env.PLATFORM_CTO_NAME || "Platform CTO", email: process.env.PLATFORM_CTO_EMAIL || "cto@africacredithub.com", role: "super_admin", status: "active", institution: process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub" },
   ]).returning();
 
   const coreBorrowers = ghanaMode ? [
