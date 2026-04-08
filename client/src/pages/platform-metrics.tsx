@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useBrandColors } from "@/hooks/use-brand-colors";
+import { detectLocalCurrency, getCurrencySymbol } from "@/lib/currency";
 import {
   DollarSign, TrendingUp, Users, Building2, Activity,
   Server, Clock, Zap, BarChart3, PieChart, RefreshCw, Target, ArrowUpRight,
@@ -55,6 +56,7 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function PlatformMetricsPage() {
   const brandColors = useBrandColors();
+  const cs = getCurrencySymbol(detectLocalCurrency());
   const COLORS = [brandColors.accent, brandColors.accentLight, brandColors.chartSecondary, brandColors.chartAccent];
   const { data: metrics, isLoading, isError, refetch } = useQuery<any>({
     queryKey: ["/api/admin/platform-metrics"],
@@ -100,8 +102,8 @@ export default function PlatformMetricsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           title="Monthly Revenue"
-          value={`$${(revenue.mrr || 0).toLocaleString()}`}
-          subtitle={`ARR: $${(revenue.arr || 0).toLocaleString()}`}
+          value={`${cs}${(revenue.mrr || 0).toLocaleString()}`}
+          subtitle={`ARR: ${cs}${(revenue.arr || 0).toLocaleString()}`}
           icon={DollarSign}
           trend="Recurring"
         />
@@ -190,17 +192,17 @@ export default function PlatformMetricsPage() {
             </div>
             <div className="text-center p-3 rounded-lg bg-muted/50">
               <p className="text-xs text-muted-foreground">LTV</p>
-              <p className="text-lg font-bold">${(revenue.ltv || 0).toLocaleString()}</p>
+              <p className="text-lg font-bold">{cs}{(revenue.ltv || 0).toLocaleString()}</p>
               <p className="text-[10px] text-muted-foreground">{revenue.avgMonthsRetained || 0}mo avg retention</p>
             </div>
             <div className="text-center p-3 rounded-lg bg-muted/50">
               <p className="text-xs text-muted-foreground">CAC</p>
-              <p className="text-lg font-bold">${(revenue.cac || 0).toLocaleString()}</p>
+              <p className="text-lg font-bold">{cs}{(revenue.cac || 0).toLocaleString()}</p>
               <p className="text-[10px] text-muted-foreground">{revenue.paybackMonths || 0}mo payback</p>
             </div>
             <div className="text-center p-3 rounded-lg bg-muted/50">
               <p className="text-xs text-muted-foreground">ARPU</p>
-              <p className="text-lg font-bold">${revenue.arpu || 0}</p>
+              <p className="text-lg font-bold">{cs}{revenue.arpu || 0}</p>
               <p className="text-[10px] text-muted-foreground">per org/month</p>
             </div>
             <div className="text-center p-3 rounded-lg bg-muted/50">
@@ -233,7 +235,7 @@ export default function PlatformMetricsPage() {
             </div>
             <div className="text-center p-3 rounded-lg bg-muted/50">
               <p className="text-xs text-muted-foreground">Rev / Employee</p>
-              <p className="text-lg font-bold">${(revenue.revenuePerEmployee || 0).toLocaleString()}</p>
+              <p className="text-lg font-bold">{cs}{(revenue.revenuePerEmployee || 0).toLocaleString()}</p>
               <p className="text-[10px] text-muted-foreground">ARR per admin</p>
             </div>
           </div>
@@ -251,21 +253,21 @@ export default function PlatformMetricsPage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
             <div>
               <p className="text-xs text-muted-foreground mb-1">Estimated Enterprise Value</p>
-              <p className="text-3xl font-bold text-primary">${(revenue.estimatedValuation || 0).toLocaleString()}</p>
+              <p className="text-3xl font-bold text-primary">{cs}{(revenue.estimatedValuation || 0).toLocaleString()}</p>
               <p className="text-xs text-muted-foreground mt-1">{revenue.valuationMultiple || 0}x ARR multiple</p>
             </div>
             <div className="flex-1 grid grid-cols-3 gap-4">
               <div className="p-3 rounded-lg bg-muted/50 text-center">
                 <p className="text-xs text-muted-foreground">ARR</p>
-                <p className="font-bold">${(revenue.arr || 0).toLocaleString()}</p>
+                <p className="font-bold">{cs}{(revenue.arr || 0).toLocaleString()}</p>
               </div>
               <div className="p-3 rounded-lg bg-muted/50 text-center">
                 <p className="text-xs text-muted-foreground">Expansion MRR</p>
-                <p className="font-bold">${(revenue.expansionRevenue || 0).toLocaleString()}</p>
+                <p className="font-bold">{cs}{(revenue.expansionRevenue || 0).toLocaleString()}</p>
               </div>
               <div className="p-3 rounded-lg bg-muted/50 text-center">
                 <p className="text-xs text-muted-foreground">Contraction</p>
-                <p className="font-bold text-red-600">-${(revenue.contractionRevenue || 0).toLocaleString()}</p>
+                <p className="font-bold text-red-600">-{cs}{(revenue.contractionRevenue || 0).toLocaleString()}</p>
               </div>
             </div>
           </div>
@@ -291,8 +293,8 @@ export default function PlatformMetricsPage() {
               <ResponsiveContainer width="100%" height={280}>
                 <AreaChart data={projections}>
                   <XAxis dataKey="month" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                  <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip formatter={(v: number) => [`$${v.toLocaleString()}`, ""]} contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", color: "hsl(var(--foreground))", borderRadius: 8 }} />
+                  <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v: number) => `${cs}${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip formatter={(v: number) => [`${cs}${v.toLocaleString()}`, ""]} contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", color: "hsl(var(--foreground))", borderRadius: 8 }} />
                   <Area type="monotone" dataKey="mrr" stroke={brandColors.accent} fill={brandColors.accent} fillOpacity={0.15} name="Projected MRR" />
                 </AreaChart>
               </ResponsiveContainer>
@@ -350,7 +352,7 @@ export default function PlatformMetricsPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <MetricCard
           title="ARPU"
-          value={`$${revenue.arpu || 0}`}
+          value={`${cs}${revenue.arpu || 0}`}
           subtitle="Average revenue per org"
           icon={TrendingUp}
         />

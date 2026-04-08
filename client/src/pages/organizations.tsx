@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { SUPPORTED_COUNTRIES, SUPPORTED_CURRENCIES, getCurrencyForCountry, getCurrencySymbol, getModeCurrencies } from "@/lib/currency";
+import { SUPPORTED_COUNTRIES, SUPPORTED_CURRENCIES, getCurrencyForCountry, getCurrencySymbol, getModeCurrencies, detectLocalCurrency } from "@/lib/currency";
 import { isGhanaMode, getDefaultCountry } from "@/lib/country-mode";
 import {
   Building2, Plus, Users, BarChart3, Globe, Edit, Trash2, Loader2,
@@ -1086,10 +1086,10 @@ function RevenueAnalytics() {
                         <BarChart data={analytics.monthlyRevenue || []} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                           <XAxis dataKey="month" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} stroke="hsl(var(--muted-foreground))" />
-                          <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                          <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `${getCurrencySymbol(detectLocalCurrency())}${(v / 1000).toFixed(0)}k`} />
                           <Tooltip
                             contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
-                            formatter={(value: number) => [`$${value.toLocaleString()}`, undefined]}
+                            formatter={(value: number) => [`${getCurrencySymbol(detectLocalCurrency())}${value.toLocaleString()}`, undefined]}
                           />
                           <Bar dataKey="revenue" name="Billed" fill="#6366f1" radius={[4, 4, 0, 0]} />
                           <Bar dataKey="collected" name="Collected" fill="#10b981" radius={[4, 4, 0, 0]} />

@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { detectLocalCurrency, getCurrencySymbol } from "@/lib/currency";
 
 const EVENT_LABELS: Record<string, string> = {
   credit_report_pull: "Credit Report",
@@ -42,6 +43,7 @@ function formatPrice(cents: number, currency: string) {
 }
 
 export function CommandCenterBillingTab() {
+  const cs = getCurrencySymbol(detectLocalCurrency());
   const { toast } = useToast();
   const [editingTier, setEditingTier] = useState<string | null>(null);
   const [editPrice, setEditPrice] = useState("");
@@ -98,19 +100,19 @@ export function CommandCenterBillingTab() {
     <div className="space-y-4" data-testid="panel-billing">
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div className="rounded-xl border border-border bg-muted p-3 text-center">
-          <p className="text-2xl font-bold text-foreground" data-testid="text-total-revenue">${(s?.totalRevenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+          <p className="text-2xl font-bold text-foreground" data-testid="text-total-revenue">{cs}{(s?.totalRevenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
           <p className="text-[10px] text-muted-foreground">Total Revenue</p>
         </div>
         <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-center">
-          <p className="text-2xl font-bold text-emerald-400">${(s?.paidRevenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+          <p className="text-2xl font-bold text-emerald-400">{cs}{(s?.paidRevenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
           <p className="text-[10px] text-muted-foreground">Collected</p>
         </div>
         <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-center">
-          <p className="text-2xl font-bold text-amber-400">${(s?.pendingRevenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+          <p className="text-2xl font-bold text-amber-400">{cs}{(s?.pendingRevenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
           <p className="text-[10px] text-muted-foreground">Pending</p>
         </div>
         <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-center">
-          <p className="text-2xl font-bold text-red-400">${(s?.overdueRevenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+          <p className="text-2xl font-bold text-red-400">{cs}{(s?.overdueRevenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
           <p className="text-[10px] text-muted-foreground">Overdue</p>
         </div>
         <div className="rounded-xl border border-border bg-muted p-3 text-center">
@@ -258,12 +260,12 @@ export function CommandCenterBillingTab() {
                     <div key={u.eventType} className="p-2 rounded-lg border border-border/30 bg-muted/50">
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-foreground">{EVENT_LABELS[u.eventType] || u.eventType}</span>
-                        <span className="text-xs font-mono text-emerald-400">${(u.totalCents / 100).toFixed(2)}</span>
+                        <span className="text-xs font-mono text-emerald-400">{cs}{(u.totalCents / 100).toFixed(2)}</span>
                       </div>
                       <div className="flex items-center justify-between mt-1">
                         <span className="text-[10px] text-muted-foreground">{u.totalEvents.toLocaleString()} events</span>
                         {u.unbilledCents > 0 && (
-                          <span className="text-[10px] text-amber-400">${(u.unbilledCents / 100).toFixed(2)} unbilled</span>
+                          <span className="text-[10px] text-amber-400">{cs}{(u.unbilledCents / 100).toFixed(2)} unbilled</span>
                         )}
                       </div>
                     </div>
@@ -289,7 +291,7 @@ export function CommandCenterBillingTab() {
                         <div className="flex-1 bg-muted-foreground/30 rounded-full h-2 overflow-hidden">
                           <div className="h-full bg-violet-500/60 rounded-full transition-all" style={{ width: `${(o.total / maxTotal) * 100}%` }} />
                         </div>
-                        <span className="text-[10px] text-emerald-400 font-mono w-[60px] text-right">${o.total.toLocaleString()}</span>
+                        <span className="text-[10px] text-emerald-400 font-mono w-[60px] text-right">{cs}{o.total.toLocaleString()}</span>
                         <span className="text-[9px] text-muted-foreground w-[30px] text-right">{o.invoiceCount}</span>
                       </div>
                     );
@@ -337,7 +339,7 @@ export function CommandCenterBillingTab() {
                             <td className="py-1.5 px-2"><span className="text-[10px] text-cyan-400 font-mono">{inv.invoiceNumber}</span></td>
                             <td className="py-1.5 px-2"><span className="text-[10px] text-foreground truncate block max-w-[180px]">{inv.institutionName}</span></td>
                             <td className="py-1.5 px-2"><span className="text-[10px] text-muted-foreground">{inv.serviceType}</span></td>
-                            <td className="py-1.5 px-2 text-right"><span className="text-[10px] text-emerald-400 font-mono">${parseFloat(inv.amount).toLocaleString()}</span></td>
+                            <td className="py-1.5 px-2 text-right"><span className="text-[10px] text-emerald-400 font-mono">{cs}{parseFloat(inv.amount).toLocaleString()}</span></td>
                             <td className="py-1.5 px-2">
                               <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${STATUS_COLORS[inv.status] || STATUS_COLORS.pending}`}>
                                 {inv.status}

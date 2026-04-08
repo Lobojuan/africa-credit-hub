@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useCountryTheme } from "@/components/country-theme-provider";
 import { getCountryConfigByName } from "@/lib/country-mode";
+import { detectLocalCurrency, getCurrencySymbol } from "@/lib/currency";
 import {
   LineChart, Line, BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
   ResponsiveContainer, Legend, Cell
@@ -134,6 +135,7 @@ function KpiCard({ title, value, subtitle, icon: Icon, trend, color }: {
 }
 
 function AnalyticsDashboard({ analytics }: { analytics: TelcoAnalytics }) {
+  const cs = getCurrencySymbol(detectLocalCurrency());
   const { overview, financialInclusion, performance, roi, countryBreakdown, tierBreakdown, kycBreakdown } = analytics;
 
   const countryFlags: Record<string, string> = {
@@ -146,10 +148,10 @@ function AnalyticsDashboard({ analytics }: { analytics: TelcoAnalytics }) {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <KpiCard title="Profiles Scored" value={overview.totalProfilesScored.toLocaleString()} icon={Users} subtitle="Total AI assessments" />
         <KpiCard title="Approved" value={overview.totalApproved.toLocaleString()} icon={CheckCircle} subtitle={`${overview.approvalRate.toFixed(1)}% approval rate`} color="text-green-600 dark:text-green-400" />
-        <KpiCard title="Credit Extended" value={`$${overview.totalCreditExtended.toLocaleString()}`} icon={Banknote} subtitle={`Avg $${overview.avgCreditLimit.toLocaleString()}/borrower`} />
+        <KpiCard title="Credit Extended" value={`${cs}${overview.totalCreditExtended.toLocaleString()}`} icon={Banknote} subtitle={`Avg ${cs}${overview.avgCreditLimit.toLocaleString()}/borrower`} />
         <KpiCard title="Countries" value={financialInclusion.countriesServed} icon={Globe} subtitle="Markets active" />
         <KpiCard title="Model Accuracy" value={`${performance.modelAccuracy}%`} icon={Target} subtitle={`Gini: ${performance.giniCoefficient}`} color="text-blue-600 dark:text-blue-400" />
-        <KpiCard title="NPL Reduction" value={`${roi.nplReductionPercent.toFixed(1)}%`} icon={ShieldCheck} subtitle={`${roi.traditionalNPLPercent}% → ${roi.aiDrivenNPLPercent}%`} color="text-green-600 dark:text-green-400" trend={`$${roi.defaultSavingsUsd.toLocaleString()} saved`} />
+        <KpiCard title="NPL Reduction" value={`${roi.nplReductionPercent.toFixed(1)}%`} icon={ShieldCheck} subtitle={`${roi.traditionalNPLPercent}% → ${roi.aiDrivenNPLPercent}%`} color="text-green-600 dark:text-green-400" trend={`${cs}${roi.defaultSavingsUsd.toLocaleString()} saved`} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -194,11 +196,11 @@ function AnalyticsDashboard({ analytics }: { analytics: TelcoAnalytics }) {
           <CardContent className="space-y-3">
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Cost per Score</span>
-              <span className="text-sm font-bold" data-testid="text-cost-per-score">${roi.costPerScore.toFixed(2)}</span>
+              <span className="text-sm font-bold" data-testid="text-cost-per-score">{cs}{roi.costPerScore.toFixed(2)}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Revenue per Score</span>
-              <span className="text-sm font-bold text-green-600 dark:text-green-400">${roi.revenuePerScore.toFixed(2)}</span>
+              <span className="text-sm font-bold text-green-600 dark:text-green-400">{cs}{roi.revenuePerScore.toFixed(2)}</span>
             </div>
             <Separator />
             <div className="flex justify-between items-center">
@@ -207,11 +209,11 @@ function AnalyticsDashboard({ analytics }: { analytics: TelcoAnalytics }) {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Scoring Revenue</span>
-              <span className="text-sm font-bold">${roi.scoringRevenueUsd.toLocaleString()}</span>
+              <span className="text-sm font-bold">{cs}{roi.scoringRevenueUsd.toLocaleString()}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Default Savings</span>
-              <span className="text-sm font-bold text-green-600 dark:text-green-400">${roi.defaultSavingsUsd.toLocaleString()}</span>
+              <span className="text-sm font-bold text-green-600 dark:text-green-400">{cs}{roi.defaultSavingsUsd.toLocaleString()}</span>
             </div>
             <Separator />
             <div className="flex justify-between items-center">
@@ -381,7 +383,7 @@ function AnalyticsDashboard({ analytics }: { analytics: TelcoAnalytics }) {
                   >
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                     <XAxis dataKey="month" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} />
+                    <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(value) => `${cs}${value}`} />
                     <RechartsTooltip
                       contentStyle={{ borderRadius: "8px", border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }}
                     />
@@ -424,8 +426,8 @@ function AnalyticsDashboard({ analytics }: { analytics: TelcoAnalytics }) {
                     <TableCell className="text-sm text-right">
                       <Badge variant="outline" className="text-[10px]">{data.scored > 0 ? Math.round((data.approved / data.scored) * 100) : 0}%</Badge>
                     </TableCell>
-                    <TableCell className="text-sm text-right">${data.avgLimit.toLocaleString()}</TableCell>
-                    <TableCell className="text-sm text-right font-medium">${data.totalVolume.toLocaleString()}</TableCell>
+                    <TableCell className="text-sm text-right">{cs}{data.avgLimit.toLocaleString()}</TableCell>
+                    <TableCell className="text-sm text-right font-medium">{cs}{data.totalVolume.toLocaleString()}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

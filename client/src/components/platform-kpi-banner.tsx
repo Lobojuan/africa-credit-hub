@@ -9,6 +9,12 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
+import { detectLocalCurrency, getCurrencySymbol } from "@/lib/currency";
+
+function useCurrencySymbol(): string {
+  const code = detectLocalCurrency();
+  return getCurrencySymbol(code);
+}
 
 interface PlatformKPIs {
   portfolio: {
@@ -87,6 +93,7 @@ export function usePlatformKPIs() {
 
 export function DashboardKPISection() {
   const { data: kpis, isLoading } = usePlatformKPIs();
+  const cs = useCurrencySymbol();
 
   if (isLoading) return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -98,12 +105,12 @@ export function DashboardKPISection() {
   return (
     <div className="space-y-4" data-testid="section-platform-kpis">
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <KpiTile label="Portfolio Value" value={`$${(kpis.portfolio.totalValue / 1000000).toFixed(1)}M`} icon={Banknote} sub={`${kpis.portfolio.totalAccounts.toLocaleString()} accounts`} />
+        <KpiTile label="Portfolio Value" value={`${cs}${(kpis.portfolio.totalValue / 1000000).toFixed(1)}M`} icon={Banknote} sub={`${kpis.portfolio.totalAccounts.toLocaleString()} accounts`} />
         <KpiTile label="NPL Ratio" value={`${kpis.portfolio.nplRatio}%`} icon={Shield} sub={`Industry avg: ${kpis.roi.traditionalNPLPercent}%`} color="bg-green-500/10" trend={kpis.roi.nplReductionPercent > 0 ? `${kpis.roi.nplReductionPercent}% below avg` : undefined} />
         <KpiTile label="Countries" value={kpis.borrowers.countriesServed} icon={Globe} sub={`${kpis.operations.institutionsServed} institutions`} />
         <KpiTile label="Avg Credit Score" value={kpis.borrowers.avgCreditScore} icon={Target} sub={`Median: ${kpis.borrowers.medianCreditScore}`} />
         <KpiTile label="Data Accuracy" value={`${kpis.operations.dataAccuracyPercent}%`} icon={CheckCircle} sub={`SLA: ${kpis.operations.slaCompliancePercent}%`} color="bg-blue-500/10" />
-        <KpiTile label="Default Savings" value={`$${(kpis.roi.portfolioSavingsUsd / 1000).toFixed(0)}K`} icon={ShieldCheck} sub={`ROI: ${kpis.roi.annualizedROI}%`} color="bg-green-500/10" trend={`$${kpis.roi.revenuePerReport}/report revenue`} />
+        <KpiTile label="Default Savings" value={`${cs}${(kpis.roi.portfolioSavingsUsd / 1000).toFixed(0)}K`} icon={ShieldCheck} sub={`ROI: ${kpis.roi.annualizedROI}%`} color="bg-green-500/10" trend={`${cs}${kpis.roi.revenuePerReport}/report revenue`} />
       </div>
     </div>
   );
@@ -131,6 +138,7 @@ export function ConsumerKPIBanner({ filteredCount, recentDays }: { filteredCount
 
 export function BusinessKPIBanner({ filteredCount, recentDays }: { filteredCount?: number; recentDays?: number }) {
   const { data: kpis, isLoading } = usePlatformKPIs();
+  const cs = useCurrencySymbol();
 
   if (isLoading) return <div className="grid grid-cols-2 sm:grid-cols-4 gap-3"><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /></div>;
   if (!kpis) return null;
@@ -141,7 +149,7 @@ export function BusinessKPIBanner({ filteredCount, recentDays }: { filteredCount
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3" data-testid="business-kpi-banner">
       <KpiTile label="Corporate Borrowers" value={displayCount.toLocaleString()} icon={Building2} sub={sub} />
-      <KpiTile label="Platform Avg Facility" value={`$${(kpis.portfolio.avgLoanSize / 1000).toFixed(0)}K`} icon={Banknote} sub={`${kpis.portfolio.avgInterestRate.toFixed(1)}% avg rate`} />
+      <KpiTile label="Platform Avg Facility" value={`${cs}${(kpis.portfolio.avgLoanSize / 1000).toFixed(0)}K`} icon={Banknote} sub={`${kpis.portfolio.avgInterestRate.toFixed(1)}% avg rate`} />
       <KpiTile label="Platform Default Rate" value={`${kpis.portfolio.defaultRate}%`} icon={Shield} sub={`${kpis.portfolio.defaultedAccounts} defaulted across portfolio`} color={kpis.portfolio.defaultRate > 5 ? "bg-red-500/10" : "bg-green-500/10"} />
       <KpiTile label="Collection Rate" value={`${kpis.portfolio.collectionRate.toFixed(1)}%`} icon={DollarSign} sub="Platform repayment efficiency" color="bg-blue-500/10" />
     </div>
@@ -150,6 +158,7 @@ export function BusinessKPIBanner({ filteredCount, recentDays }: { filteredCount
 
 export function CreditAccountKPIBanner({ filteredCount, recentDays }: { filteredCount?: number; recentDays?: number }) {
   const { data: kpis, isLoading } = usePlatformKPIs();
+  const cs = useCurrencySymbol();
 
   if (isLoading) return <div className="grid grid-cols-2 sm:grid-cols-5 gap-3"><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /></div>;
   if (!kpis) return null;
@@ -159,10 +168,10 @@ export function CreditAccountKPIBanner({ filteredCount, recentDays }: { filtered
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-5 gap-3" data-testid="credit-account-kpi-banner">
-      <KpiTile label="Total Portfolio" value={`$${(kpis.portfolio.totalValue / 1000000).toFixed(1)}M`} icon={Banknote} sub={portfolioSub} />
+      <KpiTile label="Total Portfolio" value={`${cs}${(kpis.portfolio.totalValue / 1000000).toFixed(1)}M`} icon={Banknote} sub={portfolioSub} />
       <KpiTile label="Current" value={kpis.portfolio.currentAccounts.toLocaleString()} icon={CheckCircle} sub={`${(kpis.portfolio.currentAccounts / Math.max(kpis.portfolio.totalAccounts, 1) * 100).toFixed(1)}% of total`} color="bg-green-500/10" />
       <KpiTile label="NPL Ratio" value={`${kpis.portfolio.nplRatio}%`} icon={Shield} sub={`Industry: ${kpis.roi.traditionalNPLPercent}%`} color={kpis.portfolio.nplRatio < kpis.roi.traditionalNPLPercent ? "bg-green-500/10" : "bg-red-500/10"} trend={kpis.roi.nplReductionPercent > 0 ? `${kpis.roi.nplReductionPercent}% better` : undefined} />
-      <KpiTile label="Avg Interest Rate" value={`${kpis.portfolio.avgInterestRate.toFixed(1)}%`} icon={Percent} sub={`Avg size: $${(kpis.portfolio.avgLoanSize / 1000).toFixed(0)}K`} />
+      <KpiTile label="Avg Interest Rate" value={`${kpis.portfolio.avgInterestRate.toFixed(1)}%`} icon={Percent} sub={`Avg size: ${cs}${(kpis.portfolio.avgLoanSize / 1000).toFixed(0)}K`} />
       <KpiTile label="Collection Rate" value={`${kpis.portfolio.collectionRate.toFixed(1)}%`} icon={DollarSign} sub="Repayment performance" color="bg-blue-500/10" />
     </div>
   );
@@ -170,22 +179,24 @@ export function CreditAccountKPIBanner({ filteredCount, recentDays }: { filtered
 
 export function ReportsKPIBanner() {
   const { data: kpis, isLoading } = usePlatformKPIs();
+  const cs = useCurrencySymbol();
 
   if (isLoading) return <div className="grid grid-cols-2 sm:grid-cols-4 gap-3"><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /></div>;
   if (!kpis) return null;
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3" data-testid="reports-kpi-banner">
-      <KpiTile label="Reports Generated" value={kpis.operations.reportsGenerated.toLocaleString()} icon={FileText} sub={`$${kpis.roi.costPerReport}/report cost`} />
-      <KpiTile label="Revenue per Report" value={`$${kpis.roi.revenuePerReport.toFixed(2)}`} icon={DollarSign} sub={`Margin: ${kpis.roi.reportingMarginPercent}%`} color="bg-green-500/10" />
-      <KpiTile label="Reporting Revenue" value={`$${kpis.roi.reportingRevenueUsd.toLocaleString()}`} icon={TrendingUp} sub={`Cost: $${kpis.roi.reportingCostUsd.toLocaleString()}`} trend={`${kpis.roi.reportingMarginPercent}% gross margin`} />
-      <KpiTile label="Platform ROI" value={`${kpis.roi.annualizedROI}%`} icon={ShieldCheck} sub={`$${(kpis.roi.portfolioSavingsUsd / 1000).toFixed(0)}K default savings`} color="bg-green-500/10" />
+      <KpiTile label="Reports Generated" value={kpis.operations.reportsGenerated.toLocaleString()} icon={FileText} sub={`${cs}${kpis.roi.costPerReport}/report cost`} />
+      <KpiTile label="Revenue per Report" value={`${cs}${kpis.roi.revenuePerReport.toFixed(2)}`} icon={DollarSign} sub={`Margin: ${kpis.roi.reportingMarginPercent}%`} color="bg-green-500/10" />
+      <KpiTile label="Reporting Revenue" value={`${cs}${kpis.roi.reportingRevenueUsd.toLocaleString()}`} icon={TrendingUp} sub={`Cost: ${cs}${kpis.roi.reportingCostUsd.toLocaleString()}`} trend={`${kpis.roi.reportingMarginPercent}% gross margin`} />
+      <KpiTile label="Platform ROI" value={`${kpis.roi.annualizedROI}%`} icon={ShieldCheck} sub={`${cs}${(kpis.roi.portfolioSavingsUsd / 1000).toFixed(0)}K default savings`} color="bg-green-500/10" />
     </div>
   );
 }
 
 export function FullROICard() {
   const { data: kpis, isLoading } = usePlatformKPIs();
+  const cs = useCurrencySymbol();
 
   if (isLoading || !kpis) return null;
 
@@ -209,18 +220,18 @@ export function FullROICard() {
           </div>
           <div>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Default Savings</p>
-            <p className="text-lg font-bold text-green-600">${kpis.roi.portfolioSavingsUsd.toLocaleString()}</p>
+            <p className="text-lg font-bold text-green-600">{cs}{kpis.roi.portfolioSavingsUsd.toLocaleString()}</p>
             <p className="text-[10px] text-muted-foreground">Prevented losses</p>
           </div>
         </div>
         <Separator />
         <div className="grid grid-cols-3 gap-3 text-center">
           <div>
-            <p className="text-lg font-bold">${kpis.roi.costPerReport}</p>
+            <p className="text-lg font-bold">{cs}{kpis.roi.costPerReport}</p>
             <p className="text-[10px] text-muted-foreground">Cost/Report</p>
           </div>
           <div>
-            <p className="text-lg font-bold text-green-600">${kpis.roi.revenuePerReport}</p>
+            <p className="text-lg font-bold text-green-600">{cs}{kpis.roi.revenuePerReport}</p>
             <p className="text-[10px] text-muted-foreground">Revenue/Report</p>
           </div>
           <div>
