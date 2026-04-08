@@ -2,6 +2,7 @@ import crypto from "crypto";
 import express from "express";
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
+import { getBaseUrl } from "./base-url";
 
 function safeErrorMessage(e: any, statusCode: number = 500): string {
   const msg = e?.message || "An error occurred";
@@ -63,7 +64,7 @@ import { BSL_EXPORT_GENERATORS } from "./bsl-export";
 import type { BslFileType } from "@shared/bsl-codes";
 
 const loginLimiter = rateLimit({
-  validate: { trustProxy: false },
+
   windowMs: 60 * 1000,
   max: 10,
   message: { message: "Too many login attempts. Please try again later." },
@@ -72,7 +73,7 @@ const loginLimiter = rateLimit({
 });
 
 const apiLimiter = rateLimit({
-  validate: { trustProxy: false },
+
   windowMs: 60 * 1000,
   max: 200,
   message: { message: "Too many requests. Please slow down." },
@@ -81,7 +82,7 @@ const apiLimiter = rateLimit({
 });
 
 const writeLimiter = rateLimit({
-  validate: { trustProxy: false },
+
   windowMs: 60 * 1000,
   max: 60,
   message: { message: "Too many write requests. Please slow down." },
@@ -90,7 +91,7 @@ const writeLimiter = rateLimit({
 });
 
 const registrationLimiter = rateLimit({
-  validate: { trustProxy: false },
+
   windowMs: 15 * 60 * 1000,
   max: 5,
   message: { message: "Too many registration attempts. Please try again in 15 minutes." },
@@ -99,7 +100,7 @@ const registrationLimiter = rateLimit({
 });
 
 const batchLimiter = rateLimit({
-  validate: { trustProxy: false },
+
   windowMs: 60 * 1000,
   max: 10,
   message: { message: "Too many batch operations. Please wait before submitting more." },
@@ -108,7 +109,7 @@ const batchLimiter = rateLimit({
 });
 
 const aiLimiter = rateLimit({
-  validate: { trustProxy: false },
+
   windowMs: 15 * 60 * 1000,
   max: 10,
   message: { message: "AI request limit reached. Please try again in 15 minutes." },
@@ -154,7 +155,7 @@ function idempotencyMiddleware(req: Request, res: Response, next: NextFunction) 
 }
 
 const creditReportLimiter = rateLimit({
-  validate: { trustProxy: false },
+
   windowMs: 15 * 60 * 1000,
   max: 20,
   message: { message: "Credit report request limit reached. Please try again later." },
@@ -10059,7 +10060,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         customerId = customer.id;
       }
 
-      const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000'}`;
+      const baseUrl = getBaseUrl();
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
         payment_method_types: ['card'],
@@ -10127,7 +10128,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       }
 
       if (method === "flutterwave") {
-        const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0] || "localhost:5000"}`;
+        const baseUrl = getBaseUrl();
         const flutterwavePayload = {
           tx_ref: `CDH-${orgId}-${Date.now()}`,
           amount: priceMap[plan],
@@ -10236,7 +10237,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
             customerId = customer.id;
           }
 
-          const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0] || "localhost:5000"}`;
+          const baseUrl = getBaseUrl();
           const session = await stripe.checkout.sessions.create({
             customer: customerId,
             payment_method_types: ["card"],
@@ -10272,7 +10273,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const customers = await stripe.customers.search({ query: `metadata['orgId']:'${orgId}'` });
       if (!customers.data.length) return res.status(404).json({ message: "No Stripe customer found for this organization" });
 
-      const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0] || 'localhost:5000'}`;
+      const baseUrl = getBaseUrl();
       const session = await stripe.billingPortal.sessions.create({
         customer: customers.data[0].id,
         return_url: `${baseUrl}/organizations`,

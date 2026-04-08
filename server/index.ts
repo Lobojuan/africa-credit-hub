@@ -311,7 +311,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.set("trust proxy", true);
+app.set("trust proxy", 1);
 
 const httpLogger = createLogger("http");
 
@@ -456,7 +456,8 @@ process.stderr.write = function (...args: any[]) {
       const { getStripeSync } = await import('./stripeClient');
       const stripeSync = await getStripeSync();
 
-      const webhookBaseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
+      const { getBaseUrl } = await import('./base-url');
+      const webhookBaseUrl = getBaseUrl();
       const webhookResult = await stripeSync.findOrCreateManagedWebhook(
         `${webhookBaseUrl}/api/stripe/webhook`
       );
