@@ -625,7 +625,12 @@ process.stderr.write = function (...args: any[]) {
 } as any;
 
 (async () => {
-  // Ghana cleanup disabled — platform is now pan-African with data across all 54 countries
+  try {
+    const { cleanupNonGhanaData } = await import("./ghana-cleanup");
+    await cleanupNonGhanaData();
+  } catch (e) {
+    console.error("[Ghana Cleanup] Error (non-fatal):", e);
+  }
 
   const isProduction = process.env.PRODUCTION_MODE === "true";
 
