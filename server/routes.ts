@@ -1487,14 +1487,22 @@ export async function registerRoutes(
       const traditionalNPL = 12.5;
       const platformNPL = Math.round(nplRatio * 10) / 10;
       const nplReduction = Math.max(0, traditionalNPL - platformNPL);
-      const portfolioSavings = Math.round(totalPortfolio * (nplReduction / 100));
+
       const costPerReport = 2.50;
       const revenuePerReport = 8.75;
       const reportsGenerated = stats.totalInquiries || allBorrowers.length;
       const reportingRevenue = Math.round(reportsGenerated * revenuePerReport);
       const reportingCost = Math.round(reportsGenerated * costPerReport);
+
+      const earlyWarningBenefit = Math.round(totalPortfolio * 0.005);
+      const portfolioSavings = nplReduction > 0
+        ? Math.round(totalPortfolio * Math.min(nplReduction * 0.1, 1.5) / 100)
+        : earlyWarningBenefit;
+
+      const platformOperatingCost = Math.max(reportingCost, Math.round(allAccounts.length * 50 + 75000));
       const reportingMargin = reportingRevenue > 0 ? Math.round(((reportingRevenue - reportingCost) / reportingRevenue) * 100) : 0;
-      const annualizedROI = reportingCost > 0 ? Math.round(((portfolioSavings + reportingRevenue - reportingCost) / reportingCost) * 100) : 0;
+      const totalBenefit = portfolioSavings + reportingRevenue;
+      const annualizedROI = platformOperatingCost > 0 ? Math.max(0, Math.round(((totalBenefit - platformOperatingCost) / platformOperatingCost) * 100)) : 0;
 
       const totalDisputeEstimate = Math.max(stats.openDisputeCount + Math.round(allBorrowers.length * 0.05), 1);
       const resolvedDisputes = totalDisputeEstimate - stats.openDisputeCount;
@@ -2203,11 +2211,13 @@ export async function registerRoutes(
       const traditionalNPL = 12.8;
       const aiDrivenNPL = 4.2;
       const nplReduction = traditionalNPL - aiDrivenNPL;
+      const conservativeSavingsRate = Math.min(nplReduction * 0.15, 1.5);
       const avgCreditLimit = totalApproved > 0 ? Math.round(totalCreditExtended / totalApproved) : 0;
       const projectedPortfolio = totalCreditExtended;
-      const defaultSavings = Math.round(projectedPortfolio * (nplReduction / 100));
+      const defaultSavings = Math.round(projectedPortfolio * (conservativeSavingsRate / 100));
       const scoringRevenue = Math.round(totalScored * revenuePerScore);
       const scoringCost = Math.round(totalScored * costPerScore);
+      const platformCost = Math.max(scoringCost, Math.round(totalScored * 2 + 25000));
       const grossMargin = scoringRevenue > 0 ? Math.round(((scoringRevenue - scoringCost) / scoringRevenue) * 100) : 0;
 
       const kycBreakdown: Record<string, number> = { none: 0, basic: 0, standard: 0, full: 0 };
@@ -2248,7 +2258,7 @@ export async function registerRoutes(
           projectedPortfolioUsd: projectedPortfolio,
           defaultSavingsUsd: defaultSavings,
           scoringRevenueUsd: scoringRevenue,
-          annualizedROI: grossMargin > 0 ? Math.round((defaultSavings + scoringRevenue - scoringCost) / Math.max(scoringCost, 1) * 100) : 0,
+          annualizedROI: platformCost > 0 ? Math.round(((defaultSavings + scoringRevenue - platformCost) / platformCost) * 100) : 0,
         },
         countryBreakdown: countryBreakdownWithAvg,
         monthlyVolume,
