@@ -63,8 +63,10 @@ import { BUSINESS_CREDIT_TYPES, inferCreditCategory, normalizeAccountType } from
 import { BSL_EXPORT_GENERATORS } from "./bsl-export";
 import type { BslFileType } from "@shared/bsl-codes";
 
-const loginLimiter = rateLimit({
+const rateLimitKeyGenerator = (req: Request) => req.ip ?? req.socket.remoteAddress ?? "unknown";
 
+const loginLimiter = rateLimit({
+  keyGenerator: rateLimitKeyGenerator,
   windowMs: 60 * 1000,
   max: 10,
   message: { message: "Too many login attempts. Please try again later." },
@@ -73,7 +75,8 @@ const loginLimiter = rateLimit({
 });
 
 const apiLimiter = rateLimit({
-
+  keyGenerator: rateLimitKeyGenerator,
+  skip: (req) => req.path === "/health" || req.path === "/api/health",
   windowMs: 60 * 1000,
   max: 200,
   message: { message: "Too many requests. Please slow down." },
@@ -82,7 +85,7 @@ const apiLimiter = rateLimit({
 });
 
 const writeLimiter = rateLimit({
-
+  keyGenerator: rateLimitKeyGenerator,
   windowMs: 60 * 1000,
   max: 60,
   message: { message: "Too many write requests. Please slow down." },
@@ -91,7 +94,7 @@ const writeLimiter = rateLimit({
 });
 
 const registrationLimiter = rateLimit({
-
+  keyGenerator: rateLimitKeyGenerator,
   windowMs: 15 * 60 * 1000,
   max: 5,
   message: { message: "Too many registration attempts. Please try again in 15 minutes." },
@@ -100,7 +103,7 @@ const registrationLimiter = rateLimit({
 });
 
 const batchLimiter = rateLimit({
-
+  keyGenerator: rateLimitKeyGenerator,
   windowMs: 60 * 1000,
   max: 10,
   message: { message: "Too many batch operations. Please wait before submitting more." },
@@ -109,7 +112,7 @@ const batchLimiter = rateLimit({
 });
 
 const aiLimiter = rateLimit({
-
+  keyGenerator: rateLimitKeyGenerator,
   windowMs: 15 * 60 * 1000,
   max: 10,
   message: { message: "AI request limit reached. Please try again in 15 minutes." },
@@ -155,7 +158,7 @@ function idempotencyMiddleware(req: Request, res: Response, next: NextFunction) 
 }
 
 const creditReportLimiter = rateLimit({
-
+  keyGenerator: rateLimitKeyGenerator,
   windowMs: 15 * 60 * 1000,
   max: 20,
   message: { message: "Credit report request limit reached. Please try again later." },
