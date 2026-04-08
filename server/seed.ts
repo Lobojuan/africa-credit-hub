@@ -12,6 +12,10 @@ export async function seedDatabase() {
 
   const ghanaMode = isGhanaMode();
 
+  const isProduction = process.env.NODE_ENV === "production" || process.env.PRODUCTION_MODE === "true";
+  if (!process.env.SEED_ADMIN_PASSWORD && isProduction) {
+    throw new Error("SEED_ADMIN_PASSWORD must be set in production before seeding");
+  }
   const seedPassword = process.env.SEED_ADMIN_PASSWORD || "admin0987";
   if (!process.env.SEED_ADMIN_PASSWORD) {
     console.warn("[Seed] WARNING: SEED_ADMIN_PASSWORD not set — using insecure default. Set SEED_ADMIN_PASSWORD for production.");
