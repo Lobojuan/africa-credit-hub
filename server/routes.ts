@@ -11673,17 +11673,6 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (e: any) { res.status(400).json({ message: e.message }); }
   });
 
-  try {
-    const { sql: unlockSql } = await import("drizzle-orm");
-    const bcrypt = await import("bcryptjs");
-    const adminPassword = await bcrypt.hash("admin0987", 10);
-    await db.execute(unlockSql`UPDATE users SET failed_login_attempts = 0, locked_until = NULL, password = ${adminPassword}, full_name = 'Uffe J Carlson', role = 'super_admin', email = 'uffe.carlson@gmail.com' WHERE username = 'admin'`);
-    await db.execute(unlockSql`UPDATE users SET failed_login_attempts = 0, locked_until = NULL, password = ${adminPassword}, full_name = 'Platform Administrator', role = 'super_admin' WHERE username = 'platform_admin'`);
-    console.log("Reset admin credentials and cleared lockouts on startup");
-  } catch (e) {
-    console.log("Admin reset skipped:", e);
-  }
-
   await seedCountrySettings();
   await repairCountrySettings();
   await seedOrganizations();
