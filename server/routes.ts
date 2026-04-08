@@ -243,9 +243,11 @@ async function logCrossCountryAccess(req: Request, targetCountry: string | undef
 
 function enforceCountryScopeForNonSuperAdmin(req: Request, country: string | undefined, endpoint: string): void {
   if (req.session?.userRole !== "super_admin") {
-    requireCountryScope(country, endpoint);
+    if (!country) {
+      throw new Error(`Country scope required for ${endpoint}. Pass a country parameter to ensure data isolation.`);
+    }
     const userCountry = req.session?.userCountry;
-    if (userCountry && country && country !== userCountry) {
+    if (userCountry && country !== userCountry) {
       throw new Error(`Access denied: user country "${userCountry}" does not match requested country "${country}" for ${endpoint}`);
     }
   }
