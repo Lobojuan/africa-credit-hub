@@ -1396,7 +1396,7 @@ export async function registerRoutes(
       const country = getCountryFilter(req);
       const stats = await storage.getDashboardStats(orgId, country);
 
-      const allAccounts = await storage.getAllCreditAccounts(orgId, country);
+      const allAccounts = await storage.getAllCreditAccounts(orgId, country, 100000);
       const statusMap: Record<string, number> = {};
       const typeMap: Record<string, number> = {};
       for (const a of allAccounts) {
@@ -1448,7 +1448,7 @@ export async function registerRoutes(
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
       const stats = await storage.getDashboardStats(orgId, country);
-      const allAccounts = await storage.getAllCreditAccounts(orgId, country);
+      const allAccounts = await storage.getAllCreditAccounts(orgId, country, 100000);
       const borrowerResult = await storage.getBorrowers(1, 100000, orgId, country);
       const allBorrowers = borrowerResult.data;
 
@@ -1508,8 +1508,25 @@ export async function registerRoutes(
       const resolvedDisputes = totalDisputeEstimate - stats.openDisputeCount;
       const disputeResolutionRate = Math.round(Math.max(0, Math.min(100, (resolvedDisputes / totalDisputeEstimate) * 100)));
       const approvalTurnaround = 1.8;
-      const dataAccuracy = 97.3;
-      const slaCompliance = 94.5;
+
+      const totalFields = allBorrowers.length * 6;
+      const filledFields = allBorrowers.reduce((s, b) => {
+        let filled = 0;
+        if (b.fullName) filled++;
+        if (b.nationalId) filled++;
+        if (b.dateOfBirth) filled++;
+        if (b.gender) filled++;
+        if (b.city || b.region) filled++;
+        if (b.mobilePhone || b.email) filled++;
+        return s + filled;
+      }, 0);
+      const dataAccuracy = totalFields > 0 ? Math.round((filledFields / totalFields) * 1000) / 10 : 0;
+
+      const accountsWithBalance = allAccounts.filter(a => a.currentBalance && parseFloat(a.currentBalance) >= 0);
+      const accountsWithDates = allAccounts.filter(a => a.openDate);
+      const slaCompliance = allAccounts.length > 0
+        ? Math.round(((accountsWithBalance.length + accountsWithDates.length) / (allAccounts.length * 2)) * 1000) / 10
+        : 0;
 
       res.json({
         portfolio: {
@@ -1569,7 +1586,7 @@ export async function registerRoutes(
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
-      const allAccounts = await storage.getAllCreditAccounts(orgId, country);
+      const allAccounts = await storage.getAllCreditAccounts(orgId, country, 100000);
       const borrowerResult = await storage.getBorrowers(1, 100000, orgId, country);
       const allBorrowers = borrowerResult.data;
 
@@ -1634,7 +1651,7 @@ export async function registerRoutes(
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
-      const allAccounts = await storage.getAllCreditAccounts(orgId, country);
+      const allAccounts = await storage.getAllCreditAccounts(orgId, country, 100000);
 
       const SINGLE_BORROWER_THRESHOLD = 0.15;
       const SINGLE_LENDER_THRESHOLD = 0.25;
@@ -7630,7 +7647,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const type = (req.query.type as string) || "portfolio";
 
       const country = getCountryFilter(req);
-      const accounts = await storage.getAllCreditAccounts(orgId, country);
+      const accounts = await storage.getAllCreditAccounts(orgId, country, 100000);
       const borrowersList = (await storage.getBorrowers(1, 200, orgId, country)).data;
 
       recordUsageEvent({
@@ -7743,7 +7760,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
-      const accounts = await storage.getAllCreditAccounts(orgId, country);
+      const accounts = await storage.getAllCreditAccounts(orgId, country, 100000);
       const borrowersList = (await storage.getBorrowers(1, 200, orgId, country)).data;
       const totalBorrowers = borrowersList.length;
       const disputeList = await storage.getDisputes(orgId, country);
