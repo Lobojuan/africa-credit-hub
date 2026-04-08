@@ -4473,9 +4473,25 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/audit/verify-integrity", requireRole("admin", "regulator"), async (_req, res) => {
+  app.get("/api/audit/verify-integrity", requireRole("admin", "regulator", "super_admin"), async (_req, res) => {
     try {
       const result = await storage.verifyAuditIntegrity();
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.post("/api/audit/repair-chain", requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const result = await storage.repairAuditChain();
+      await storage.createAuditLog({
+        action: "CHAIN_REPAIR",
+        entity: "audit_chain",
+        userId: req.session?.userId,
+        details: `Audit hash chain repaired: ${result.repairedCount} of ${result.totalLogs} entries re-hashed`,
+        ipAddress: req.ip || null,
+      });
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });

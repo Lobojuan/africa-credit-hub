@@ -1,7 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Shield, Search, ShieldCheck, ShieldAlert, RefreshCw, Hash, List, Clock, Download, FileSpreadsheet, Calendar, Activity, Users, Eye, BarChart3, Filter } from "lucide-react";
+import { Shield, Search, ShieldCheck, ShieldAlert, RefreshCw, Hash, List, Clock, Download, FileSpreadsheet, Calendar, Activity, Users, Eye, BarChart3, Filter, Wrench, Info, Loader2 } from "lucide-react";
 import { useState, useMemo } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -112,9 +114,26 @@ export default function AuditTrailPage() {
     queryKey: ["/api/audit-logs"],
   });
 
-  const { data: integrity, isLoading: integrityLoading, refetch: refetchIntegrity } = useQuery<{ valid: boolean; totalChecked: number; brokenAt?: string }>({
+  const { data: integrity, isLoading: integrityLoading, refetch: refetchIntegrity, isFetching: integrityFetching } = useQuery<{ valid: boolean; totalChecked: number; brokenAt?: string; brokenAtIndex?: number; reason?: string }>({
     queryKey: ["/api/audit/verify-integrity"],
   });
+
+  const { toast } = useToast();
+  const [repairing, setRepairing] = useState(false);
+  const handleRepairChain = async () => {
+    setRepairing(true);
+    try {
+      const res = await apiRequest("POST", "/api/audit/repair-chain");
+      const result = await res.json();
+      toast({ title: "Chain repaired", description: `${result.repairedCount} of ${result.totalLogs} entries re-hashed successfully.` });
+      queryClient.invalidateQueries({ queryKey: ["/api/audit/verify-integrity"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/audit-logs"] });
+    } catch (e: any) {
+      toast({ title: "Repair failed", description: e.message, variant: "destructive" });
+    } finally {
+      setRepairing(false);
+    }
+  };
 
   const { data: stats, isLoading: statsLoading } = useQuery<AuditStats>({
     queryKey: ["/api/audit/stats"],
@@ -219,13 +238,42 @@ export default function AuditTrailPage() {
             variant="outline"
             size="sm"
             onClick={() => refetchIntegrity()}
+            disabled={integrityFetching}
             data-testid="button-verify-integrity"
           >
-            <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-            {t("audit.verify")}
+            {integrityFetching ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5 mr-1.5" />}
+            {integrityFetching ? "Verifying..." : t("audit.verify")}
           </Button>
+          {integrity && !integrity.valid && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRepairChain}
+              disabled={repairing}
+              className="border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-900/30"
+              data-testid="button-repair-chain"
+            >
+              {repairing ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Wrench className="w-3.5 h-3.5 mr-1.5" />}
+              {repairing ? "Repairing..." : "Repair Chain"}
+            </Button>
+          )}
         </div>
       </div>
+
+      {integrity && !integrity.valid && (
+        <div className="flex items-start gap-3 p-4 rounded-lg border border-amber-200 bg-amber-50/60 dark:border-amber-800/50 dark:bg-amber-900/20" data-testid="banner-integrity-explanation">
+          <Info className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Why is the chain integrity warning showing?</p>
+            <p className="text-sm text-amber-700 dark:text-amber-400/80">
+              {integrity.reason || "The audit log hash chain has a break. This usually happens during system updates, data migrations, or when log entries are enriched with additional metadata after they were first recorded."}
+            </p>
+            <p className="text-sm text-amber-700 dark:text-amber-400/80">
+              This does <span className="font-semibold">not</span> mean your data was tampered with. It means the cryptographic chain needs to be re-sealed. Click <span className="font-semibold">"Repair Chain"</span> above to rebuild the hashes — all original log data (timestamps, actions, users) is preserved.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card>

@@ -31,7 +31,6 @@ export async function distributeCreatedAtTimestamps() {
     "court_judgments",
     "dishonoured_cheques",
     "credit_inquiries",
-    "audit_logs",
   ];
 
   for (const table of tables) {

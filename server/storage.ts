@@ -94,7 +94,8 @@ export interface IStorage {
 
   getAuditLogs(organizationId?: string, country?: string, limit?: number, offset?: number): Promise<AuditLog[]>;
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
-  verifyAuditIntegrity(): Promise<{ valid: boolean; totalChecked: number; brokenAt?: string }>;
+  verifyAuditIntegrity(): Promise<{ valid: boolean; totalChecked: number; brokenAt?: string; brokenAtIndex?: number; reason?: string }>;
+  repairAuditChain(): Promise<{ repairedCount: number; totalLogs: number }>;
   fuzzyMatchBorrowers(params: { firstName?: string; lastName?: string; nationalId?: string; companyName?: string; passportNumber?: string; tinNumber?: string }): Promise<Array<any>>;
   structuredSearch(params: {
     searchType: "consumer" | "business" | "telco";
@@ -647,19 +648,21 @@ export class DatabaseStorage implements IStorage {
     const [lastLog] = await db.select({ currentHash: auditLogs.currentHash })
       .from(auditLogs).orderBy(desc(auditLogs.createdAt)).limit(1);
     const previousHash = lastLog?.currentHash || "GENESIS";
-    const timestamp = new Date().toISOString();
+    const now = new Date();
+    const timestamp = now.toISOString();
     const payload = `${previousHash}|${timestamp}|${log.action}|${log.userId || "SYSTEM"}|${log.entityId || "NONE"}|${log.entity}|${log.details || ""}`;
     const currentHash = crypto.createHash("sha256").update(payload).digest("hex");
     const [created] = await db.insert(auditLogs).values({
       ...log,
       previousHash,
       currentHash,
+      createdAt: now,
     }).returning();
     return created;
   }
 
-  async verifyAuditIntegrity(): Promise<{ valid: boolean; totalChecked: number; brokenAt?: string }> {
-    const allLogs = await db.select().from(auditLogs).orderBy(auditLogs.createdAt);
+  async verifyAuditIntegrity(): Promise<{ valid: boolean; totalChecked: number; brokenAt?: string; brokenAtIndex?: number; reason?: string }> {
+    const allLogs = await db.select().from(auditLogs).orderBy(auditLogs.createdAt, auditLogs.id);
     const hashedLogs = allLogs.filter(l => l.currentHash && l.previousHash);
     let totalChecked = 0;
     for (let i = 0; i < hashedLogs.length; i++) {
@@ -667,16 +670,33 @@ export class DatabaseStorage implements IStorage {
       totalChecked++;
       const expectedPrev = i === 0 ? (log.previousHash === "GENESIS" ? "GENESIS" : (hashedLogs[i - 1]?.currentHash || "GENESIS")) : (hashedLogs[i - 1].currentHash || "GENESIS");
       if (log.previousHash !== expectedPrev && log.previousHash !== "GENESIS") {
-        return { valid: false, totalChecked, brokenAt: log.id };
+        return { valid: false, totalChecked, brokenAt: log.id, brokenAtIndex: i, reason: "Chain link mismatch — a log entry's previous-hash doesn't match the prior entry. This typically happens after system maintenance, data migrations, or timestamp redistribution." };
       }
       const timestamp = log.createdAt ? log.createdAt.toISOString() : "";
       const expectedPayload = `${log.previousHash}|${timestamp}|${log.action}|${log.userId || "SYSTEM"}|${log.entityId || "NONE"}|${log.entity}|${log.details || ""}`;
       const expectedHash = crypto.createHash("sha256").update(expectedPayload).digest("hex");
       if (log.currentHash !== expectedHash) {
-        return { valid: false, totalChecked, brokenAt: log.id };
+        return { valid: false, totalChecked, brokenAt: log.id, brokenAtIndex: i, reason: "Hash mismatch — a log entry's content was modified after it was originally recorded. This typically happens after system updates that enriched log data (e.g. adding upload metadata) or timestamp redistribution during development." };
       }
     }
     return { valid: true, totalChecked };
+  }
+
+  async repairAuditChain(): Promise<{ repairedCount: number; totalLogs: number }> {
+    const allLogs = await db.select().from(auditLogs).orderBy(auditLogs.createdAt, auditLogs.id);
+    let previousHash = "GENESIS";
+    let repairedCount = 0;
+    for (const log of allLogs) {
+      const timestamp = log.createdAt ? log.createdAt.toISOString() : "";
+      const payload = `${previousHash}|${timestamp}|${log.action}|${log.userId || "SYSTEM"}|${log.entityId || "NONE"}|${log.entity}|${log.details || ""}`;
+      const newHash = crypto.createHash("sha256").update(payload).digest("hex");
+      if (log.previousHash !== previousHash || log.currentHash !== newHash) {
+        await db.update(auditLogs).set({ previousHash, currentHash: newHash }).where(eq(auditLogs.id, log.id));
+        repairedCount++;
+      }
+      previousHash = newHash;
+    }
+    return { repairedCount, totalLogs: allLogs.length };
   }
 
   async fuzzyMatchBorrowers(params: { firstName?: string; lastName?: string; nationalId?: string; companyName?: string; passportNumber?: string; tinNumber?: string }): Promise<Array<any>> {
