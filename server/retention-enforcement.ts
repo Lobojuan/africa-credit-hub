@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { storage } from "./storage";
+import { retentionPolicies } from "@shared/schema";
 
 const VALID_TABLES: Record<string, string> = {
   borrower: "borrowers",
@@ -80,7 +81,8 @@ async function expungeExpired(tableName: string, resolver: Resolver, country: st
 }
 
 export async function enforceRetentionPolicies(): Promise<RetentionResult[]> {
-  const policies = await storage.getRetentionPolicies();
+  /* GLOBAL: retention enforcement processes ALL countries' policies as a system job */
+  const policies = await db.select().from(retentionPolicies).orderBy(retentionPolicies.country);
   const activePolicies = policies.filter((p) => p.isActive);
   const results: RetentionResult[] = [];
 

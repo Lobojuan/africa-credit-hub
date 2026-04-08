@@ -22,6 +22,20 @@
       "when": 1774358828109,
       "tag": "0002_flippant_aqueduct",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1775779200000,
+      "tag": "0003_country_isolation",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1775779201000,
+      "tag": "0004_country_isolation_enforce",
+      "breakpoints": true
     }
   ]
 }

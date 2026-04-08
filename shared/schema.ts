@@ -285,6 +285,7 @@ export const pendingApprovals = pgTable("pending_approvals", {
   status: approvalStatusEnum("status").notNull().default("pending"),
   reviewNotes: text("review_notes"),
   organizationId: varchar("organization_id").references(() => organizations.id),
+  country: text("country").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   reviewedAt: timestamp("reviewed_at"),
 });
@@ -301,6 +302,7 @@ export const disputes = pgTable("disputes", {
   correctionType: text("correction_type"),
   slaDeadline: timestamp("sla_deadline"),
   organizationId: varchar("organization_id").references(() => organizations.id),
+  country: text("country").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   resolvedAt: timestamp("resolved_at"),
@@ -314,6 +316,8 @@ export const notifications = pgTable("notifications", {
   message: text("message").notNull(),
   isRead: boolean("is_read").default(false),
   link: text("link"),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  country: text("country").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -884,7 +888,7 @@ export const telcoDecisionLogs = pgTable("telco_decision_logs", {
   disbursementRef: text("disbursement_ref"),
   smsNotificationSent: boolean("sms_notification_sent").default(false),
   applicantMsisdn: text("applicant_msisdn"),
-  country: text("country"),
+  country: text("country").notNull(),
   organizationId: varchar("organization_id").references(() => organizations.id),
   decidedAt: timestamp("decided_at").defaultNow(),
 });

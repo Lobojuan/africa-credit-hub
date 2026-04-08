@@ -16,7 +16,7 @@ function safeErrorMessage(e: any, statusCode: number = 500): string {
     .replace(/Error:\s*/g, "")
     .trim() || "An error occurred";
 }
-import { storage } from "./storage";
+import { storage, requireCountryScope } from "./storage";
 import { db, pool } from "./db";
 import { sql, eq, and, or, desc, inArray, ilike } from "drizzle-orm";
 import { enqueueBatchAccountCreate, enqueueBatchBorrowerUpdate, enqueueBatchAccountUpdate, getJobStatus, getQueueStats } from "./batch-queue";
@@ -211,19 +211,49 @@ function getCountryFilter(req?: Request): string | undefined {
   const explicitCountry = req?.query?.country as string | undefined;
   const hasExplicit = explicitCountry && explicitCountry !== "all" && explicitCountry !== "";
 
-  if (req?.session?.userRole === "super_admin" || req?.session?.userRole === "admin") {
+  if (req?.session?.userRole === "super_admin") {
     if (hasExplicit) return explicitCountry;
-    if (req?.session?.userRole === "super_admin") {
-      if (!req.session.viewingCountry) return undefined;
-      if (req.session.viewingCountry === "global") return undefined;
-      return req.session.viewingCountry;
-    }
+    if (!req.session.viewingCountry) return undefined;
+    if (req.session.viewingCountry === "global") return undefined;
+    return req.session.viewingCountry;
   }
   if (req?.session?.userCountry) {
     return req.session.userCountry;
   }
   const country = getActiveCountryName();
   return country || undefined;
+}
+
+async function logCrossCountryAccess(req: Request, targetCountry: string | undefined, endpoint: string): Promise<void> {
+  if (req.session?.userRole !== "super_admin" || !targetCountry) return;
+  const homeCountry = req.session?.userCountry || req.session?.viewingCountry;
+  if (homeCountry && homeCountry !== "global" && homeCountry !== targetCountry) {
+    try {
+      await storage.createAuditLog({
+        userId: (req as any).user?.id || req.session?.userId || "system",
+        action: "CROSS_COUNTRY_ACCESS",
+        entity: "country_isolation",
+        entityId: targetCountry,
+        details: `Super admin accessed ${endpoint} for country "${targetCountry}" (home: "${homeCountry}")`,
+        ipAddress: req.ip,
+      });
+    } catch (_e) {}
+  }
+}
+
+function enforceCountryScopeForNonSuperAdmin(req: Request, country: string | undefined, endpoint: string): void {
+  if (req.session?.userRole !== "super_admin") {
+    requireCountryScope(country, endpoint);
+    const userCountry = req.session?.userCountry;
+    if (userCountry && country && country !== userCountry) {
+      throw new Error(`Access denied: user country "${userCountry}" does not match requested country "${country}" for ${endpoint}`);
+    }
+  }
+}
+
+function requireWriteCountry(country: string | undefined, context: string): string {
+  if (!country) throw new Error(`Country scope required for write operation: ${context}`);
+  return country;
 }
 
 async function resolveUserCountry(req: Request): Promise<string | undefined> {
@@ -685,7 +715,7 @@ export async function registerRoutes(
       const apiStats = getApiUsageStats();
       const country = getCountryFilter(req);
       const orgs = await storage.getOrganizations(country);
-      const users = await storage.getUsers();
+      const users = await storage.getUsers(undefined, country);
       const tierPrices: Record<string, number> = { standard: 299, professional: 799, enterprise: 1999 };
       const activeOrgs = orgs.filter(o => o.status === "active");
       const mrr = activeOrgs.reduce((s, o) => s + (tierPrices[o.subscriptionTier || "standard"] || 0), 0);
@@ -850,9 +880,9 @@ export async function registerRoutes(
         return res.status(409).json({ field: "username", message: "Username already taken. Please choose a different one." });
       }
 
-      const allUsers = await storage.getUsers();
-      const emailTaken = allUsers.find((u: any) => u.email?.toLowerCase() === user.email.toLowerCase());
-      if (emailTaken) {
+      /* GLOBAL: email uniqueness must check all users across countries to prevent duplicates */
+      const [emailCheck] = await db.select({ id: users.id }).from(users).where(sql`LOWER(${users.email}) = LOWER(${user.email})`).limit(1);
+      if (emailCheck) {
         return res.status(409).json({ field: "email", message: "An account with this email already exists." });
       }
 
@@ -1690,7 +1720,10 @@ export async function registerRoutes(
   app.get("/api/users", requireRole("admin", "super_admin"), async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const users = await storage.getUsers(orgId);
+      const country = getCountryFilter(req);
+      enforceCountryScopeForNonSuperAdmin(req, country, "/api/users");
+      await logCrossCountryAccess(req, country, "/api/users");
+      const users = await storage.getUsers(orgId, country);
       res.json(users.map(stripPassword));
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -2240,7 +2273,10 @@ export async function registerRoutes(
   app.get("/api/telco/decision-rules", requireRole("admin", "lender", "super_admin"), async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const rules = await storage.getDecisionRules(orgId);
+      const country = getCountryFilter(req);
+      enforceCountryScopeForNonSuperAdmin(req, country, "/api/telco/decision-rules");
+      await logCrossCountryAccess(req, country, "/api/telco/decision-rules");
+      const rules = await storage.getDecisionRules(orgId, country);
       res.json(rules);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -2291,7 +2327,10 @@ export async function registerRoutes(
   app.get("/api/telco/decision-logs", requireRole("admin", "lender", "super_admin"), async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const logs = await storage.getDecisionLogs(orgId);
+      const country = getCountryFilter(req);
+      enforceCountryScopeForNonSuperAdmin(req, country, "/api/telco/decision-logs");
+      await logCrossCountryAccess(req, country, "/api/telco/decision-logs");
+      const logs = await storage.getDecisionLogs(orgId, country);
       res.json(logs);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -2466,22 +2505,24 @@ export async function registerRoutes(
     try {
       const { computeTelcoKPIs, generateTelcoCreditScore } = await import("./telco-scoring");
       const orgId = getOrgScope(req);
-      const { profileIds, periodDays: rawPeriod, country: filterCountry, kycLevel: filterKyc, skipAlreadyDecided, sendSmsNotification } = req.body;
+      const { profileIds, periodDays: rawPeriod, kycLevel: filterKyc, skipAlreadyDecided, sendSmsNotification } = req.body;
       const periodDays = parseInt(rawPeriod as string) || 90;
+      const country = getCountryFilter(req);
+      enforceCountryScopeForNonSuperAdmin(req, country);
 
-      const rule = await storage.getActiveDecisionRule(orgId, filterCountry || undefined);
+      const rule = await storage.getActiveDecisionRule(orgId, country);
       if (!rule) {
         return res.status(400).json({ message: "No active decision rule found. Create a rule in the Decision Engine tab first." });
       }
 
-      let allProfileIds = await storage.getAllTelcoProfileIds(orgId, filterCountry || undefined, filterKyc || undefined);
+      let allProfileIds = await storage.getAllTelcoProfileIds(orgId, country, filterKyc || undefined);
       if (profileIds && Array.isArray(profileIds) && profileIds.length > 0) {
         const requestedSet = new Set(profileIds as string[]);
         allProfileIds = allProfileIds.filter(id => requestedSet.has(id));
       }
 
       if (skipAlreadyDecided) {
-        const existingLogs = await storage.getDecisionLogs(orgId);
+        const existingLogs = await storage.getDecisionLogs(orgId, country);
         const decidedSet = new Set(existingLogs.map(l => l.profileId));
         allProfileIds = allProfileIds.filter(id => !decidedSet.has(id));
       }
@@ -3237,6 +3278,7 @@ export async function registerRoutes(
         payload: JSON.stringify(parsed),
         requestedBy: req.session?.userId!,
         organizationId: orgId,
+        country: requireWriteCountry(userCountry, "createPendingApproval:borrower"),
       });
       await storage.createAuditLog({
         action: "SUBMIT_APPROVAL", entity: "borrower", entityId: approval.id, userId: req.session?.userId,
@@ -3254,6 +3296,7 @@ export async function registerRoutes(
               title: "New approval pending",
               message: `New borrower registration requires your review: ${parsed.firstName || parsed.companyName}`,
               link: "/approvals",
+              country: requireWriteCountry(userCountry, "createNotification:approval_pending"),
             });
           }
         }
@@ -3289,6 +3332,7 @@ export async function registerRoutes(
         action: "UPDATE",
         payload: JSON.stringify(req.body),
         requestedBy: req.session?.userId!,
+        country: requireWriteCountry(userCountry || existing.country, "createPendingApproval:borrower_update"),
       });
       await storage.createAuditLog({
         action: "SUBMIT_APPROVAL", entity: "borrower", entityId: req.params.id, userId: req.session?.userId,
@@ -3407,6 +3451,7 @@ export async function registerRoutes(
         payload: JSON.stringify(parsed),
         requestedBy: req.session?.userId!,
         organizationId: orgId,
+        country: requireWriteCountry(getCountryFilter(req), "createPendingApproval:credit_account"),
       });
       await storage.createAuditLog({
         action: "SUBMIT_APPROVAL", entity: "credit_account", entityId: approval.id, userId: req.session?.userId,
@@ -3439,6 +3484,7 @@ export async function registerRoutes(
         action: "UPDATE",
         payload: JSON.stringify(normalizedBody),
         requestedBy: req.session?.userId!,
+        country: requireWriteCountry(getCountryFilter(req), "createPendingApproval:credit_account_update"),
       });
       await storage.createAuditLog({
         action: "SUBMIT_APPROVAL", entity: "credit_account", entityId: req.params.id, userId: req.session?.userId,
@@ -4620,6 +4666,7 @@ export async function registerRoutes(
           title: `Request ${status}`,
           message: `Your ${approval.action} request for ${approval.entityType} has been ${status}.${reviewNotes ? ` Notes: ${reviewNotes}` : ""}`,
           link: "/approvals",
+          country: requireWriteCountry(approval.country || getCountryFilter(req), "createNotification:approval_result"),
         });
       } catch {}
 
@@ -4659,6 +4706,7 @@ export async function registerRoutes(
       const data = {
         ...req.body,
         filedBy: req.session?.userId,
+        country: requireWriteCountry(req.body.country || getCountryFilter(req), "createDispute"),
       };
       const parsed = insertDisputeSchema.parse(data);
       const dispute = await storage.createDispute(parsed);
@@ -4677,6 +4725,7 @@ export async function registerRoutes(
             title: "New dispute filed",
             message: `A ${dispute.disputeType} dispute has been filed for borrower ${dispute.borrowerId}`,
             link: "/disputes",
+            country: requireWriteCountry(dispute.country || getCountryFilter(req), "createNotification:dispute_filed"),
           });
         }
       } catch {}
@@ -5430,10 +5479,18 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const borrowerId = req.query.borrowerId as string;
       const orgId = getOrgScope(req);
       if (borrowerId) {
+        const borrower = await storage.getBorrower(borrowerId);
+        const country = getCountryFilter(req);
+        if (borrower && country && borrower.country !== country && req.session?.userRole !== "super_admin") {
+          return res.status(403).json({ message: "Borrower not accessible in current country mode" });
+        }
         return res.json(await storage.getDishonouredChequesByBorrower(borrowerId));
       }
       const recentDays = parseInt(req.query.recentDays as string) || 0;
-      const result = await storage.getAllDishonouredCheques(orgId, recentDays > 0 ? recentDays : undefined);
+      const country = getCountryFilter(req);
+      enforceCountryScopeForNonSuperAdmin(req, country, "/api/dishonoured-cheques");
+      await logCrossCountryAccess(req, country, "/api/dishonoured-cheques");
+      const result = await storage.getAllDishonouredCheques(orgId, country, recentDays > 0 ? recentDays : undefined);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -5556,7 +5613,10 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
   app.get("/api/borrowers/:id/guarantors", requireRole("admin", "lender", "regulator"), async (req, res) => {
     try {
-      const list = await storage.getGuarantorsByBorrower(req.params.id);
+      const country = getCountryFilter(req);
+      enforceCountryScopeForNonSuperAdmin(req, country, "/api/borrowers/:id/guarantors");
+      await logCrossCountryAccess(req, country, "/api/borrowers/:id/guarantors");
+      const list = await storage.getGuarantorsByBorrower(req.params.id, country);
       res.json(list);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -5581,7 +5641,10 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
   app.get("/api/notifications", async (req, res) => {
     try {
       if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
-      const items = await storage.getNotifications(req.session.userId);
+      const country = getCountryFilter(req);
+      enforceCountryScopeForNonSuperAdmin(req, country, "/api/notifications");
+      await logCrossCountryAccess(req, country, "/api/notifications");
+      const items = await storage.getNotifications(req.session.userId, country);
       res.json(items);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -5591,7 +5654,9 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
   app.get("/api/notifications/unread-count", async (req, res) => {
     try {
       if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
-      const count = await storage.getUnreadNotificationCount(req.session.userId);
+      const country = getCountryFilter(req);
+      enforceCountryScopeForNonSuperAdmin(req, country, "/api/notifications/unread-count");
+      const count = await storage.getUnreadNotificationCount(req.session.userId, country);
       res.json({ count });
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -7604,7 +7669,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
             sheet.addRow({ ...b, name, isPep: b.isPep ? "Yes" : "No" });
           });
         } else if (type === "audit") {
-          const auditLogsList = await storage.getAuditLogs(orgId);
+          const auditLogsList = await storage.getAuditLogs(orgId, country);
           const sheet = workbook.addWorksheet("Audit Trail");
           sheet.columns = [
             { header: "Timestamp", key: "createdAt", width: 22 },
@@ -7643,7 +7708,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
             csv += `"${name}","${b.type}","${b.nationalId}","${b.tinNumber || ''}","${b.gender || ''}","${b.city || ''}","${b.region || ''}","${b.isPep}","${b.educationLevel || ''}","${b.sector || ''}"\n`;
           }
         } else if (type === "audit") {
-          const auditLogsList = await storage.getAuditLogs(orgId);
+          const auditLogsList = await storage.getAuditLogs(orgId, country);
           csv = "Timestamp,Action,Entity,Entity ID,Details,User ID,IP Address\n";
           for (const log of auditLogsList) {
             const ts = log.createdAt ? new Date(log.createdAt).toISOString() : "";
@@ -8329,9 +8394,12 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     }
   });
 
-  app.get("/api/retention-policies", requireRole("admin", "regulator"), async (_req, res) => {
+  app.get("/api/retention-policies", requireRole("admin", "regulator"), async (req, res) => {
     try {
-      const policies = await storage.getRetentionPolicies();
+      const country = getCountryFilter(req);
+      enforceCountryScopeForNonSuperAdmin(req, country, "/api/retention-policies");
+      await logCrossCountryAccess(req, country, "/api/retention-policies");
+      const policies = await storage.getRetentionPolicies(country);
       res.json(policies);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -8393,11 +8461,12 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       });
 
       const pendingApproval = await storage.createPendingApproval({
-        type: "data_erasure",
         entityType: "borrower",
+        action: "DELETE",
         entityId: borrowerId,
-        submittedBy: userId || "system",
-        data: { borrowerId, borrowerName: `${borrower.firstName} ${borrower.lastName}`, reason: reason || "Data subject request" },
+        requestedBy: userId ?? "system",
+        payload: JSON.stringify({ borrowerId, borrowerName: `${borrower.firstName} ${borrower.lastName}`, reason: reason || "Data subject request", type: "data_erasure" }),
+        country: requireWriteCountry(borrower.country || getCountryFilter(req), "createPendingApproval:data_erasure"),
       });
 
       res.json({
@@ -8456,9 +8525,12 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
   });
 
   // API Configurations
-  app.get("/api/api-configurations", requireRole("admin"), async (_req, res) => {
+  app.get("/api/api-configurations", requireRole("admin"), async (req, res) => {
     try {
-      const configs = await storage.getApiConfigurations();
+      const country = getCountryFilter(req);
+      enforceCountryScopeForNonSuperAdmin(req, country, "/api/api-configurations");
+      await logCrossCountryAccess(req, country, "/api/api-configurations");
+      const configs = await storage.getApiConfigurations(country);
       res.json(configs);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -8548,9 +8620,10 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const country = getCountryFilter(req);
       const orgs = await storage.getOrganizations(country);
       const orgsWithStats = await Promise.all(orgs.map(async (org) => {
-        const users = await storage.getUsers(org.id);
-        const stats = await storage.getDashboardStats(org.id);
-        const billing = await storage.getBillingRecords(org.id);
+        const orgCountry = org.country || country;
+        const users = await storage.getUsers(org.id, orgCountry);
+        const stats = await storage.getDashboardStats(org.id, orgCountry);
+        const billing = await storage.getBillingRecords(org.id, orgCountry);
         const totalBilled = billing.reduce((s, b) => s + parseFloat(b.amount || "0"), 0);
         const totalPaid = billing.filter(b => b.status === "paid").reduce((s, b) => s + parseFloat(b.amount || "0"), 0);
         const totalPending = billing.filter(b => b.status === "pending").reduce((s, b) => s + parseFloat(b.amount || "0"), 0);
@@ -8580,10 +8653,11 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       if (!(await validateOrgCountry(req.params.id, req))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
       const org = await storage.getOrganization(req.params.id);
       if (!org) return res.status(404).json({ message: "Organization not found" });
-      const users = await storage.getUsers(org.id);
-      const stats = await storage.getDashboardStats(org.id);
-      const billing = await storage.getBillingRecords(org.id);
-      const disputes = await storage.getDisputes(org.id);
+      const orgCountry = org.country || getCountryFilter(req);
+      const users = await storage.getUsers(org.id, orgCountry);
+      const stats = await storage.getDashboardStats(org.id, orgCountry);
+      const billing = await storage.getBillingRecords(org.id, orgCountry);
+      const disputes = await storage.getDisputes(org.id, orgCountry);
       const totalBilled = billing.reduce((s, b) => s + parseFloat(b.amount || "0"), 0);
       const totalPaid = billing.filter(b => b.status === "paid").reduce((s, b) => s + parseFloat(b.amount || "0"), 0);
       const totalPending = billing.filter(b => b.status === "pending").reduce((s, b) => s + parseFloat(b.amount || "0"), 0);
@@ -8649,7 +8723,9 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
   app.delete("/api/admin/organizations/:id", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
       if (!(await validateOrgCountry(req.params.id, req))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
-      const users = await storage.getUsers(req.params.id);
+      const delOrg = await storage.getOrganization(req.params.id);
+      const delOrgCountry = delOrg?.country || getCountryFilter(req);
+      const users = await storage.getUsers(req.params.id, delOrgCountry);
       if (users.length > 0) {
         for (const u of users) {
           await storage.deleteUser(u.id);
@@ -8676,7 +8752,8 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
   app.get("/api/admin/organizations/:id/users", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
       if (!(await validateOrgCountry(req.params.id, req))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
-      const users = await storage.getUsers(req.params.id);
+      const listOrg = await storage.getOrganization(req.params.id);
+      const users = await storage.getUsers(req.params.id, listOrg?.country || getCountryFilter(req));
       res.json(users.map(stripPassword));
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -8686,7 +8763,9 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
   app.get("/api/admin/organizations/:id/stats", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
       if (!(await validateOrgCountry(req.params.id, req))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
-      const stats = await storage.getDashboardStats(req.params.id);
+      const org = await storage.getOrganization(req.params.id);
+      const orgCountry = org?.country || getCountryFilter(req);
+      const stats = await storage.getDashboardStats(req.params.id, orgCountry);
       res.json(stats);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -8708,7 +8787,8 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const orgs = await storage.getOrganizations(country);
       const allBilling: any[] = [];
       for (const org of orgs) {
-        const billing = await storage.getBillingRecords(org.id);
+        const orgCountry = org.country || country;
+        const billing = await storage.getBillingRecords(org.id, orgCountry);
         for (const b of billing) {
           allBilling.push({ ...b, orgName: org.name, orgTier: org.subscriptionTier, orgCountry: org.country });
         }
@@ -8794,8 +8874,8 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     try {
       const country = getCountryFilter(req);
       const orgs = await storage.getOrganizations(country);
-      const allUsers = await storage.getUsers();
-      const globalStats = await storage.getDashboardStats();
+      const allUsers = await storage.getUsers(undefined, country);
+      const globalStats = await storage.getDashboardStats(undefined, country);
       res.json({
         totalOrganizations: orgs.length,
         activeOrganizations: orgs.filter(o => o.status === "active").length,
@@ -8830,8 +8910,17 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
   app.post("/api/platform/set-country", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
       const { country } = req.body;
+      const previousCountry = req.session.viewingCountry || "command_center";
       if (country === "command_center") {
         delete req.session.viewingCountry;
+        await storage.createAuditLog({
+          userId: req.session?.userId || "system",
+          action: "COUNTRY_CONTEXT_SWITCH",
+          entity: "country_isolation",
+          entityId: "command_center",
+          details: `Super admin switched country context from "${previousCountry}" to "command_center"`,
+          ipAddress: req.ip,
+        });
         return req.session.save((err) => {
           if (err) return res.status(500).json({ message: "Failed to save session" });
           res.json({ viewingCountry: null, message: "Returned to command center" });
@@ -8839,6 +8928,14 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       }
       if (country === "global" || country === null) {
         req.session.viewingCountry = "global";
+        await storage.createAuditLog({
+          userId: req.session?.userId || "system",
+          action: "COUNTRY_CONTEXT_SWITCH",
+          entity: "country_isolation",
+          entityId: "global",
+          details: `Super admin switched country context from "${previousCountry}" to "global"`,
+          ipAddress: req.ip,
+        });
         return req.session.save((err) => {
           if (err) return res.status(500).json({ message: "Failed to save session" });
           res.json({ viewingCountry: "global", message: "Switched to global view" });
@@ -8850,6 +8947,14 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         return res.status(400).json({ message: "Invalid country" });
       }
       req.session.viewingCountry = config.name;
+      await storage.createAuditLog({
+        userId: req.session?.userId || "system",
+        action: "COUNTRY_CONTEXT_SWITCH",
+        entity: "country_isolation",
+        entityId: config.name,
+        details: `Super admin switched country context from "${previousCountry}" to "${config.name}"`,
+        ipAddress: req.ip,
+      });
       req.session.save((err) => {
         if (err) return res.status(500).json({ message: "Failed to save session" });
         res.json({ viewingCountry: config.name, message: `Switched to ${config.name}` });
@@ -11166,7 +11271,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   app.post("/api/ai/portfolio-intelligence", aiLimiter, requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
     try {
       const provider = parseOptionalProvider(req.body?.provider);
-      const result = await generatePortfolioIntelligence(provider);
+      const result = await generatePortfolioIntelligence(provider, getOrgScope(req), getCountryFilter(req));
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -11920,8 +12025,9 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
       const org = await storage.getOrganization(orgId);
       if (!org) return res.status(404).json({ message: "Organization not found" });
+      const exportCountry = org.country || getCountryFilter(req);
 
-      const { data: borrowers } = await storage.getBorrowers(1, 10000, orgId);
+      const { data: borrowers } = await storage.getBorrowers(1, 10000, orgId, exportCountry);
 
       const exportData = {
         exportDate: new Date().toISOString(),
@@ -11983,7 +12089,8 @@ async function seedOrganizations() {
 
   if (existing.length >= 4) {
     const orgIds = existing.map(o => o.id);
-    const { data: allBorrowers } = await storage.getBorrowers(1, 10000);
+    const seedCountry = existing[0]?.country || "Ghana";
+    const { data: allBorrowers } = await storage.getBorrowers(1, 10000, undefined, seedCountry);
     let assignedCount = 0;
     for (let i = 0; i < allBorrowers.length; i++) {
       if (!allBorrowers[i].organizationId) {
@@ -11992,7 +12099,7 @@ async function seedOrganizations() {
       }
     }
     if (assignedCount > 0) {
-      const allAccounts = await storage.getAllCreditAccounts();
+      const allAccounts = await storage.getAllCreditAccounts(undefined, seedCountry);
       for (const acc of allAccounts) {
         if (!acc.organizationId) {
           const borrower = await storage.getBorrower(acc.borrowerId);
@@ -12119,7 +12226,8 @@ async function seedOrganizations() {
     await storage.updateUser(awashUser.id, { organizationId: insureOrg.id } as any);
   }
 
-  const { data: allBorrowers } = await storage.getBorrowers(1, 10000);
+  const seedCountry2 = simOrg.country || "Ghana";
+  const { data: allBorrowers } = await storage.getBorrowers(1, 10000, undefined, seedCountry2);
   const orgIds = [simOrg.id, nbeOrg.id, mpesaOrg.id, insureOrg.id];
   for (let i = 0; i < allBorrowers.length; i++) {
     const b = allBorrowers[i];
@@ -12129,7 +12237,7 @@ async function seedOrganizations() {
     }
   }
 
-  const allAccounts = await storage.getAllCreditAccounts();
+  const allAccounts = await storage.getAllCreditAccounts(undefined, seedCountry2);
   for (const acc of allAccounts) {
     if (!acc.organizationId) {
       const borrower = await storage.getBorrower(acc.borrowerId);

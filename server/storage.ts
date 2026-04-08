@@ -41,6 +41,18 @@ import {
   type Guarantor, type InsertGuarantor,
 } from "@shared/schema";
 
+export function requireCountryScope(country: string | undefined, methodName: string): void {
+  if (!country) {
+    throw new Error(`Country scope required for ${methodName}. Pass a country parameter to ensure data isolation.`);
+  }
+}
+
+export function requireDataScope(organizationId: string | undefined, country: string | undefined, methodName: string): void {
+  if (!organizationId && !country) {
+    throw new Error(`Data scope required for ${methodName}. Pass organizationId or country to ensure data isolation.`);
+  }
+}
+
 export interface IStorage {
   getOrganizations(country?: string): Promise<Organization[]>;
   getOrganization(id: string): Promise<Organization | undefined>;
@@ -52,7 +64,7 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  getUsers(organizationId?: string): Promise<User[]>;
+  getUsers(organizationId: string | undefined, country: string): Promise<User[]>;
   updateUser(id: string, data: Partial<InsertUser>): Promise<User | undefined>;
   deleteUser(id: string): Promise<boolean>;
   incrementFailedAttempts(userId: string): Promise<void>;
@@ -103,19 +115,19 @@ export interface IStorage {
     accountStatus?: string;
   }, organizationId?: string, country?: string): Promise<Borrower[] | TelcoProfile[]>;
 
-  getPendingApprovals(organizationId?: string, country?: string, recentDays?: number): Promise<PendingApproval[]>;
+  getPendingApprovals(organizationId: string | undefined, country: string, recentDays?: number): Promise<PendingApproval[]>;
   getPendingApproval(id: string): Promise<PendingApproval | undefined>;
   createPendingApproval(approval: InsertPendingApproval): Promise<PendingApproval>;
   updateApprovalStatus(id: string, status: string, reviewedBy: string, reviewNotes?: string): Promise<PendingApproval | undefined>;
 
-  getDisputes(organizationId?: string, country?: string, recentDays?: number): Promise<Dispute[]>;
+  getDisputes(organizationId: string | undefined, country: string, recentDays?: number): Promise<Dispute[]>;
   getDisputesByBorrower(borrowerId: string): Promise<Dispute[]>;
   getDispute(id: string): Promise<Dispute | undefined>;
   createDispute(dispute: InsertDispute): Promise<Dispute>;
   updateDispute(id: string, data: Partial<{ status: string; resolution: string }>): Promise<Dispute | undefined>;
 
-  getNotifications(userId: string): Promise<Notification[]>;
-  getUnreadNotificationCount(userId: string): Promise<number>;
+  getNotifications(userId: string, country: string): Promise<Notification[]>;
+  getUnreadNotificationCount(userId: string, country: string): Promise<number>;
   createNotification(notification: InsertNotification): Promise<Notification>;
   markNotificationRead(id: string): Promise<void>;
   markAllNotificationsRead(userId: string): Promise<void>;
@@ -124,34 +136,34 @@ export interface IStorage {
   getUsersByRole(...roles: string[]): Promise<User[]>;
 
   getCourtJudgmentsByBorrower(borrowerId: string): Promise<CourtJudgment[]>;
-  getAllCourtJudgments(organizationId?: string, country?: string, recentDays?: number): Promise<CourtJudgment[]>;
+  getAllCourtJudgments(organizationId: string | undefined, country: string, recentDays?: number): Promise<CourtJudgment[]>;
   createCourtJudgment(judgment: InsertCourtJudgment): Promise<CourtJudgment>;
 
   getConsentRecordsByBorrower(borrowerId: string): Promise<ConsentRecord[]>;
-  getAllConsentRecords(organizationId?: string, country?: string): Promise<ConsentRecord[]>;
+  getAllConsentRecords(organizationId: string | undefined, country: string): Promise<ConsentRecord[]>;
   createConsentRecord(record: InsertConsentRecord): Promise<ConsentRecord>;
   revokeConsent(id: string): Promise<ConsentRecord | undefined>;
 
   getPaymentHistoryByAccount(creditAccountId: string): Promise<PaymentHistory[]>;
   createPaymentHistory(entry: InsertPaymentHistory): Promise<PaymentHistory>;
 
-  getInstitutions(page?: number, limit?: number, organizationId?: string, country?: string): Promise<{ data: Institution[]; total: number }>;
+  getInstitutions(page?: number, limit?: number, organizationId?: string, country?: string): Promise<{ data: Institution[]; total: number }>; /* COUNTRY_SCOPED: country enforced at runtime via requireCountryScope */
   getInstitution(id: string): Promise<Institution | undefined>;
   createInstitution(inst: InsertInstitution): Promise<Institution>;
   updateInstitution(id: string, data: Partial<InsertInstitution>): Promise<Institution | undefined>;
   approveInstitution(id: string, approvedBy: string): Promise<Institution | undefined>;
 
-  getBillingRecords(organizationId?: string, country?: string, recentDays?: number): Promise<BillingRecord[]>;
+  getBillingRecords(organizationId: string | undefined, country: string, recentDays?: number): Promise<BillingRecord[]>;
   getBillingRecord(id: string): Promise<BillingRecord | undefined>;
-  getBillingRecordsByInstitution(institutionName: string): Promise<BillingRecord[]>;
+  getBillingRecordsByInstitution(institutionName: string, country: string): Promise<BillingRecord[]>;
   createBillingRecord(record: InsertBillingRecord): Promise<BillingRecord>;
   updateBillingRecordStatus(id: string, status: "pending" | "paid" | "overdue"): Promise<BillingRecord | undefined>;
 
-  getCreditReportLogs(organizationId?: string, country?: string): Promise<CreditReportLog[]>;
+  getCreditReportLogs(organizationId: string | undefined, country: string): Promise<CreditReportLog[]>;
   getCreditReportLogsByBorrower(borrowerId: string): Promise<CreditReportLog[]>;
   createCreditReportLog(log: InsertCreditReportLog): Promise<CreditReportLog>;
 
-  getDashboardStats(organizationId?: string, country?: string): Promise<{
+  getDashboardStats(organizationId: string | undefined, country: string): Promise<{
     totalBorrowers: number;
     totalAccounts: number;
     totalInquiries: number;
@@ -172,30 +184,31 @@ export interface IStorage {
   updateApiKeyLastUsed(id: string): Promise<void>;
   getInstitutionByName(name: string): Promise<Institution | undefined>;
 
+  /* GLOBAL: no country filter by design — exchange rates are system-wide */
   getExchangeRates(): Promise<ExchangeRate[]>;
   createExchangeRate(data: InsertExchangeRate): Promise<ExchangeRate>;
   updateExchangeRate(id: string, data: Partial<InsertExchangeRate>): Promise<ExchangeRate | undefined>;
   deleteExchangeRate(id: string): Promise<boolean>;
   convertCurrency(amount: number, fromCurrency: string, toCurrency: string): Promise<{ convertedAmount: number; rate: number } | null>;
 
-  getRetentionPolicies(): Promise<RetentionPolicy[]>;
+  getRetentionPolicies(country: string): Promise<RetentionPolicy[]>;
   createRetentionPolicy(data: InsertRetentionPolicy): Promise<RetentionPolicy>;
   updateRetentionPolicy(id: string, data: Partial<InsertRetentionPolicy>): Promise<RetentionPolicy | undefined>;
   deleteRetentionPolicy(id: string): Promise<boolean>;
 
-  getApiConfigurations(): Promise<ApiConfiguration[]>;
+  getApiConfigurations(country: string): Promise<ApiConfiguration[]>;
   getApiConfiguration(id: string): Promise<ApiConfiguration | undefined>;
   createApiConfiguration(data: InsertApiConfiguration): Promise<ApiConfiguration>;
   updateApiConfiguration(id: string, data: Partial<InsertApiConfiguration>): Promise<ApiConfiguration | undefined>;
   deleteApiConfiguration(id: string): Promise<boolean>;
 
   getDishonouredChequesByBorrower(borrowerId: string): Promise<DishonouredCheque[]>;
-  getAllDishonouredCheques(organizationId?: string, recentDays?: number): Promise<DishonouredCheque[]>;
+  getAllDishonouredCheques(organizationId: string | undefined, country: string, recentDays?: number): Promise<DishonouredCheque[]>;
   createDishonouredCheque(cheque: InsertDishonouredCheque): Promise<DishonouredCheque>;
 
   getGuarantorsByAccount(creditAccountId: string): Promise<Guarantor[]>;
   createGuarantor(guarantor: InsertGuarantor): Promise<Guarantor>;
-  getGuarantorsByBorrower(borrowerId: string): Promise<Guarantor[]>;
+  getGuarantorsByBorrower(borrowerId: string, country: string): Promise<Guarantor[]>;
 
   getBorrowerAlerts(organizationId?: string, country?: string, recentDays?: number): Promise<BorrowerAlert[]>;
   getBorrowerAlertsByBorrower(borrowerId: string): Promise<BorrowerAlert[]>;
@@ -218,12 +231,12 @@ export interface IStorage {
     totalScored: number; totalApproved: number; totalCreditExtended: number;
   }>;
   getAllTelcoProfileIds(organizationId?: string, country?: string, kycLevel?: string): Promise<string[]>;
-  getDecisionRules(organizationId?: string): Promise<TelcoDecisionRule[]>;
+  getDecisionRules(organizationId: string | undefined, country: string): Promise<TelcoDecisionRule[]>;
   getDecisionRule(id: string): Promise<TelcoDecisionRule | undefined>;
   getActiveDecisionRule(organizationId?: string, country?: string): Promise<TelcoDecisionRule | undefined>;
   createDecisionRule(rule: InsertTelcoDecisionRule): Promise<TelcoDecisionRule>;
   updateDecisionRule(id: string, updates: Partial<InsertTelcoDecisionRule>): Promise<TelcoDecisionRule>;
-  getDecisionLogs(organizationId?: string, limit?: number): Promise<TelcoDecisionLog[]>;
+  getDecisionLogs(organizationId: string | undefined, country: string, limit?: number): Promise<TelcoDecisionLog[]>;
   createDecisionLog(log: InsertTelcoDecisionLog): Promise<TelcoDecisionLog>;
 
   getTelcoLoans(organizationId?: string, country?: string, options?: { page?: number; limit?: number; status?: string; profileId?: string; profileIds?: string[] }): Promise<{ data: TelcoLoan[]; total: number; page: number; totalPages: number }>;
@@ -306,11 +319,12 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async getUsers(organizationId?: string): Promise<User[]> {
-    if (organizationId) {
-      return db.select().from(users).where(eq(users.organizationId, organizationId)).orderBy(desc(users.createdAt));
-    }
-    return db.select().from(users).orderBy(desc(users.createdAt));
+  async getUsers(organizationId?: string, country?: string): Promise<User[]> {
+    requireCountryScope(country, "getUsers");
+    const filters: any[] = [this.countryOrgFilter(users, country!)];
+    if (organizationId) filters.push(eq(users.organizationId, organizationId));
+    const where = and(...filters);
+    return db.select().from(users).where(where).orderBy(desc(users.createdAt));
   }
 
   async updateUser(id: string, data: Partial<InsertUser>): Promise<User | undefined> {
@@ -358,6 +372,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getBorrowers(page: number = 1, limit: number = 50, organizationId?: string, country?: string, recentDays?: number): Promise<{ data: Borrower[]; total: number }> {
+    requireCountryScope(country, "getBorrowers");
     const safeLimit = Math.min(limit, 200);
     const offset = (page - 1) * safeLimit;
     const filters: any[] = [];
@@ -374,6 +389,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getBorrowersByType(type: "individual" | "corporate", page: number = 1, limit: number = 50, organizationId?: string, country?: string, recentDays?: number): Promise<{ data: Borrower[]; total: number }> {
+    requireCountryScope(country, "getBorrowersByType");
     const safeLimit = Math.min(limit, 200);
     const offset = (page - 1) * safeLimit;
     const filters: any[] = [eq(borrowers.type, type)];
@@ -390,6 +406,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchBorrowersByType(type: "individual" | "corporate", query: string, organizationId?: string, country?: string): Promise<Borrower[]> {
+    requireCountryScope(country, "searchBorrowersByType");
     const baseFilters: any[] = [eq(borrowers.type, type)];
     if (organizationId) baseFilters.push(eq(borrowers.organizationId, organizationId));
     if (country) baseFilters.push(eq(borrowers.country, country));
@@ -424,6 +441,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchBorrowers(query: string, organizationId?: string, country?: string): Promise<Borrower[]> {
+    requireCountryScope(country, "searchBorrowers");
     const baseFilters: any[] = [];
     if (organizationId) baseFilters.push(eq(borrowers.organizationId, organizationId));
     if (country) baseFilters.push(eq(borrowers.country, country));
@@ -473,6 +491,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async globalSearch(query: string, organizationId?: string, country?: string): Promise<{ borrowers: Borrower[]; institutions: Institution[]; creditAccounts: CreditAccount[]; telcoProfiles: TelcoProfile[] }> {
+    requireCountryScope(country, "globalSearch");
     const orgBorrowerFilter = organizationId ? eq(borrowers.organizationId, organizationId) : undefined;
     const orgInstFilter = organizationId ? eq(institutions.organizationId, organizationId) : undefined;
     const orgAccFilter = organizationId ? eq(creditAccounts.organizationId, organizationId) : undefined;
@@ -575,6 +594,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllCreditAccounts(organizationId?: string, country?: string, limit = 100, offset = 0, recentDays?: number): Promise<CreditAccount[]> {
+    requireCountryScope(country, "getAllCreditAccounts");
     const filters: any[] = [];
     if (organizationId) filters.push(eq(creditAccounts.organizationId, organizationId));
     if (country) filters.push(this.countryOrgFilter(creditAccounts, country));
@@ -601,6 +621,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllCreditInquiries(organizationId?: string, country?: string, limit = 100, offset = 0): Promise<CreditInquiry[]> {
+    requireCountryScope(country, "getAllCreditInquiries");
     const filters: any[] = [];
     if (organizationId) filters.push(sql`${creditInquiries.borrowerId} IN (SELECT id FROM borrowers WHERE organization_id = ${organizationId})`);
     if (country) filters.push(sql`${creditInquiries.borrowerId} IN (SELECT id FROM borrowers WHERE country = ${country})`);
@@ -614,6 +635,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAuditLogs(organizationId?: string, country?: string, limit = 100, offset = 0): Promise<AuditLog[]> {
+    requireCountryScope(country, "getAuditLogs");
     const filters: any[] = [];
     if (organizationId) filters.push(eq(auditLogs.organizationId, organizationId));
     if (country) filters.push(this.countryOrgFilter(auditLogs, country));
@@ -733,6 +755,7 @@ export class DatabaseStorage implements IStorage {
     provider?: string;
     accountStatus?: string;
   }, organizationId?: string, country?: string): Promise<Borrower[] | TelcoProfile[]> {
+    requireCountryScope(country, "structuredSearch");
     if (params.searchType === "telco") {
       const conditions: any[] = [];
       if (organizationId) conditions.push(eq(telcoProfiles.organizationId, organizationId));
@@ -812,9 +835,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPendingApprovals(organizationId?: string, country?: string, recentDays?: number): Promise<PendingApproval[]> {
+    requireCountryScope(country, "getPendingApprovals");
     const filters: any[] = [];
     if (organizationId) filters.push(eq(pendingApprovals.organizationId, organizationId));
-    if (country) filters.push(this.countryOrgFilter(pendingApprovals, country));
+    if (country) filters.push(eq(pendingApprovals.country, country));
     if (recentDays && recentDays > 0) {
       const cutoff = new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000);
       filters.push(gte(pendingApprovals.createdAt, cutoff));
@@ -844,9 +868,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getDisputes(organizationId?: string, country?: string, recentDays?: number): Promise<Dispute[]> {
+    requireCountryScope(country, "getDisputes");
     const filters: any[] = [];
     if (organizationId) filters.push(eq(disputes.organizationId, organizationId));
-    if (country) filters.push(this.countryOrgFilter(disputes, country));
+    if (country) filters.push(eq(disputes.country, country));
     if (recentDays && recentDays > 0) {
       const cutoff = new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000);
       filters.push(or(gte(disputes.createdAt, cutoff), gte(disputes.updatedAt, cutoff)));
@@ -886,18 +911,24 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
-  async getNotifications(userId: string): Promise<Notification[]> {
+  async getNotifications(userId: string, country?: string): Promise<Notification[]> {
+    requireCountryScope(country, "getNotifications");
     return db.select().from(notifications)
-      .where(or(eq(notifications.userId, userId), sql`${notifications.userId} IS NULL`))
+      .where(and(
+        or(eq(notifications.userId, userId), sql`${notifications.userId} IS NULL`),
+        eq(notifications.country, country!)
+      ))
       .orderBy(desc(notifications.createdAt))
       .limit(50);
   }
 
-  async getUnreadNotificationCount(userId: string): Promise<number> {
+  async getUnreadNotificationCount(userId: string, country?: string): Promise<number> {
+    requireCountryScope(country, "getUnreadNotificationCount");
     const [result] = await db.select({ value: count() }).from(notifications)
-      .where(
-        sql`(${notifications.userId} = ${userId} OR ${notifications.userId} IS NULL) AND ${notifications.isRead} = false`
-      );
+      .where(and(
+        sql`(${notifications.userId} = ${userId} OR ${notifications.userId} IS NULL) AND ${notifications.isRead} = false`,
+        eq(notifications.country, country!)
+      ));
     return result.value;
   }
 
@@ -946,6 +977,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllCourtJudgments(organizationId?: string, country?: string, recentDays?: number): Promise<CourtJudgment[]> {
+    requireCountryScope(country, "getAllCourtJudgments");
     const filters: any[] = [];
     if (organizationId) filters.push(eq(courtJudgments.organizationId, organizationId));
     if (country) filters.push(this.countryOrgFilter(courtJudgments, country));
@@ -967,6 +999,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllConsentRecords(organizationId?: string, country?: string): Promise<ConsentRecord[]> {
+    requireCountryScope(country, "getAllConsentRecords");
     const filters: any[] = [];
     if (organizationId) filters.push(sql`${consentRecords.borrowerId} IN (SELECT id FROM borrowers WHERE organization_id = ${organizationId})`);
     if (country) filters.push(sql`${consentRecords.borrowerId} IN (SELECT id FROM borrowers WHERE country = ${country})`);
@@ -1000,6 +1033,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getInstitutions(page: number = 1, limit: number = 50, organizationId?: string, country?: string): Promise<{ data: Institution[]; total: number }> {
+    requireCountryScope(country, "getInstitutions");
     const safeLimit = Math.min(limit, 200);
     const offset = (page - 1) * safeLimit;
     const filters: any[] = [];
@@ -1036,6 +1070,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getBillingRecords(organizationId?: string, country?: string, recentDays?: number): Promise<BillingRecord[]> {
+    requireCountryScope(country, "getBillingRecords");
     const filters: any[] = [];
     if (organizationId) filters.push(eq(billingRecords.organizationId, organizationId));
     if (country) filters.push(this.countryOrgFilter(billingRecords, country));
@@ -1052,8 +1087,12 @@ export class DatabaseStorage implements IStorage {
     return record;
   }
 
-  async getBillingRecordsByInstitution(institutionName: string): Promise<BillingRecord[]> {
-    return db.select().from(billingRecords).where(eq(billingRecords.institutionName, institutionName)).orderBy(desc(billingRecords.createdAt));
+  async getBillingRecordsByInstitution(institutionName: string, country?: string): Promise<BillingRecord[]> {
+    requireCountryScope(country, "getBillingRecordsByInstitution");
+    const filters: any[] = [eq(billingRecords.institutionName, institutionName)];
+    filters.push(this.countryOrgFilter(billingRecords, country!));
+    const where = and(...filters);
+    return db.select().from(billingRecords).where(where).orderBy(desc(billingRecords.createdAt));
   }
 
   async createBillingRecord(record: InsertBillingRecord): Promise<BillingRecord> {
@@ -1067,6 +1106,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCreditReportLogs(organizationId?: string, country?: string): Promise<CreditReportLog[]> {
+    requireCountryScope(country, "getCreditReportLogs");
     const filters: any[] = [];
     if (organizationId) filters.push(eq(creditReportLogs.organizationId, organizationId));
     if (country) filters.push(this.countryOrgFilter(creditReportLogs, country));
@@ -1084,6 +1124,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getDashboardDetails(type: string, organizationId?: string, country?: string) {
+    requireCountryScope(country, "getDashboardDetails");
     const borrowerFilters: any[] = [];
     if (organizationId) borrowerFilters.push(eq(borrowers.organizationId, organizationId));
     if (country) borrowerFilters.push(eq(borrowers.country, country));
@@ -1096,12 +1137,12 @@ export class DatabaseStorage implements IStorage {
 
     const approvalFilters: any[] = [];
     if (organizationId) approvalFilters.push(eq(pendingApprovals.organizationId, organizationId));
-    if (country) approvalFilters.push(this.countryOrgFilter(pendingApprovals, country));
+    if (country) approvalFilters.push(eq(pendingApprovals.country, country));
     const orgApprovalFilter = approvalFilters.length > 1 ? and(...approvalFilters) : approvalFilters[0];
 
     const dispFilters: any[] = [];
     if (organizationId) dispFilters.push(eq(disputes.organizationId, organizationId));
-    if (country) dispFilters.push(this.countryOrgFilter(disputes, country));
+    if (country) dispFilters.push(eq(disputes.country, country));
     const dispFilter = dispFilters.length > 1 ? and(...dispFilters) : dispFilters[0];
 
     const inqFilters: any[] = [];
@@ -1215,6 +1256,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getDashboardStats(organizationId?: string, country?: string) {
+    requireCountryScope(country, "getDashboardStats");
     const borrowerFilters: any[] = [];
     if (organizationId) borrowerFilters.push(eq(borrowers.organizationId, organizationId));
     if (country) borrowerFilters.push(eq(borrowers.country, country));
@@ -1227,12 +1269,12 @@ export class DatabaseStorage implements IStorage {
 
     const approvalFilters: any[] = [];
     if (organizationId) approvalFilters.push(eq(pendingApprovals.organizationId, organizationId));
-    if (country) approvalFilters.push(this.countryOrgFilter(pendingApprovals, country));
+    if (country) approvalFilters.push(eq(pendingApprovals.country, country));
     const orgApprovalFilter = approvalFilters.length > 1 ? and(...approvalFilters) : approvalFilters[0];
 
     const dispFilters: any[] = [];
     if (organizationId) dispFilters.push(eq(disputes.organizationId, organizationId));
-    if (country) dispFilters.push(this.countryOrgFilter(disputes, country));
+    if (country) dispFilters.push(eq(disputes.country, country));
     const orgDisputeFilter = dispFilters.length > 1 ? and(...dispFilters) : dispFilters[0];
 
     const [borrowerCount] = await db.select({ value: count() }).from(borrowers).where(borrowerFilter);
@@ -1313,6 +1355,7 @@ export class DatabaseStorage implements IStorage {
     return inst;
   }
 
+  /* GLOBAL: no country filter by design — exchange rates are system-wide */
   async getExchangeRates(): Promise<ExchangeRate[]> {
     return db.select().from(exchangeRates).orderBy(desc(exchangeRates.createdAt));
   }
@@ -1354,8 +1397,9 @@ export class DatabaseStorage implements IStorage {
     return null;
   }
 
-  async getRetentionPolicies(): Promise<RetentionPolicy[]> {
-    return db.select().from(retentionPolicies).orderBy(retentionPolicies.country);
+  async getRetentionPolicies(country?: string): Promise<RetentionPolicy[]> {
+    requireCountryScope(country, "getRetentionPolicies");
+    return db.select().from(retentionPolicies).where(eq(retentionPolicies.country, country!)).orderBy(retentionPolicies.country);
   }
 
   async createRetentionPolicy(data: InsertRetentionPolicy): Promise<RetentionPolicy> {
@@ -1373,8 +1417,11 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0;
   }
 
-  async getApiConfigurations(): Promise<ApiConfiguration[]> {
-    return db.select().from(apiConfigurations).orderBy(apiConfigurations.category, apiConfigurations.name);
+  async getApiConfigurations(country?: string): Promise<ApiConfiguration[]> {
+    requireCountryScope(country, "getApiConfigurations");
+    return db.select().from(apiConfigurations).where(
+      eq(apiConfigurations.country, country!)
+    ).orderBy(apiConfigurations.category, apiConfigurations.name);
   }
 
   async getApiConfiguration(id: string): Promise<ApiConfiguration | undefined> {
@@ -1401,8 +1448,9 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(dishonouredCheques).where(eq(dishonouredCheques.borrowerId, borrowerId)).orderBy(desc(dishonouredCheques.createdAt));
   }
 
-  async getAllDishonouredCheques(organizationId?: string, recentDays?: number): Promise<DishonouredCheque[]> {
-    const filters: any[] = [];
+  async getAllDishonouredCheques(organizationId?: string, country?: string, recentDays?: number): Promise<DishonouredCheque[]> {
+    requireCountryScope(country, "getAllDishonouredCheques");
+    const filters: any[] = [this.countryOrgFilter(dishonouredCheques, country!)];
     if (organizationId) filters.push(eq(dishonouredCheques.organizationId, organizationId));
     if (recentDays && recentDays > 0) {
       const cutoff = new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000);
@@ -1426,14 +1474,19 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async getGuarantorsByBorrower(borrowerId: string): Promise<Guarantor[]> {
-    const accounts = await db.select({ id: creditAccounts.id }).from(creditAccounts).where(eq(creditAccounts.borrowerId, borrowerId));
+  async getGuarantorsByBorrower(borrowerId: string, country?: string): Promise<Guarantor[]> {
+    requireCountryScope(country, "getGuarantorsByBorrower");
+    const accFilters: any[] = [eq(creditAccounts.borrowerId, borrowerId)];
+    accFilters.push(this.countryOrgFilter(creditAccounts, country!));
+    const accWhere = accFilters.length > 1 ? and(...accFilters) : accFilters[0];
+    const accounts = await db.select({ id: creditAccounts.id }).from(creditAccounts).where(accWhere);
     if (accounts.length === 0) return [];
     const accountIds = accounts.map(a => a.id);
     return db.select().from(guarantors).where(inArray(guarantors.creditAccountId, accountIds)).orderBy(guarantors.guarantorNumber);
   }
 
   async getBorrowerAlerts(organizationId?: string, country?: string, recentDays?: number): Promise<BorrowerAlert[]> {
+    requireCountryScope(country, "getBorrowerAlerts");
     const filters: any[] = [];
     if (organizationId) filters.push(eq(borrowerAlerts.organizationId, organizationId));
     if (country) filters.push(this.countryOrgFilter(borrowerAlerts, country));
@@ -1455,6 +1508,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTelcoProfiles(organizationId?: string, country?: string, options?: { page?: number; limit?: number; search?: string; provider?: string; kycLevel?: string; accountStatus?: string }): Promise<{ data: TelcoProfile[]; total: number; page: number; totalPages: number }> {
+    requireCountryScope(country, "getTelcoProfiles");
     const page = options?.page || 1;
     const limit = Math.min(options?.limit || 50, 200);
     const offset = (page - 1) * limit;
@@ -1497,6 +1551,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTelcoCreditScores(organizationId?: string, country?: string, options?: { page?: number; limit?: number; riskTier?: string; approved?: string; search?: string; provider?: string }): Promise<{ data: TelcoCreditScore[]; total: number; page: number; totalPages: number }> {
+    requireCountryScope(country, "getTelcoCreditScores");
     const page = options?.page || 1;
     const limit = Math.min(options?.limit || 50, 200);
     const offset = (page - 1) * limit;
@@ -1533,6 +1588,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTelcoDashboardStats(organizationId?: string, country?: string): Promise<{ totalProfiles: number; totalScores: number; avgRiskScore: number; approvalRate: number; tierBreakdown: Record<string, number> }> {
+    requireCountryScope(country, "getTelcoDashboardStats");
     const profileFilters: any[] = [];
     if (organizationId) profileFilters.push(eq(telcoProfiles.organizationId, organizationId));
     if (country) profileFilters.push(eq(telcoProfiles.country, country));
@@ -1573,6 +1629,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTelcoAnalyticsAggregates(organizationId?: string, country?: string) {
+    requireCountryScope(country, "getTelcoAnalyticsAggregates");
     const profileFilters: any[] = [];
     if (organizationId) profileFilters.push(eq(telcoProfiles.organizationId, organizationId));
     if (country) profileFilters.push(eq(telcoProfiles.country, country));
@@ -1640,6 +1697,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllTelcoProfileIds(organizationId?: string, country?: string, kycLevel?: string): Promise<string[]> {
+    requireCountryScope(country, "getAllTelcoProfileIds");
     const filters: any[] = [];
     if (organizationId) filters.push(eq(telcoProfiles.organizationId, organizationId));
     if (country) filters.push(eq(telcoProfiles.country, country));
@@ -1649,11 +1707,12 @@ export class DatabaseStorage implements IStorage {
     return rows.map(r => r.id);
   }
 
-  async getDecisionRules(organizationId?: string): Promise<TelcoDecisionRule[]> {
-    if (organizationId) {
-      return db.select().from(telcoDecisionRules).where(eq(telcoDecisionRules.organizationId, organizationId)).orderBy(desc(telcoDecisionRules.createdAt));
-    }
-    return db.select().from(telcoDecisionRules).orderBy(desc(telcoDecisionRules.createdAt));
+  async getDecisionRules(organizationId?: string, country?: string): Promise<TelcoDecisionRule[]> {
+    requireCountryScope(country, "getDecisionRules");
+    const filters: any[] = [eq(telcoDecisionRules.country, country!)];
+    if (organizationId) filters.push(eq(telcoDecisionRules.organizationId, organizationId));
+    const where = and(...filters);
+    return db.select().from(telcoDecisionRules).where(where).orderBy(desc(telcoDecisionRules.createdAt));
   }
 
   async getDecisionRule(id: string): Promise<TelcoDecisionRule | undefined> {
@@ -1662,6 +1721,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getActiveDecisionRule(organizationId?: string, country?: string): Promise<TelcoDecisionRule | undefined> {
+    requireCountryScope(country, "getActiveDecisionRule");
     const filters: any[] = [eq(telcoDecisionRules.isActive, true)];
     if (organizationId) {
       filters.push(or(eq(telcoDecisionRules.organizationId, organizationId), sql`${telcoDecisionRules.organizationId} IS NULL`));
@@ -1683,11 +1743,12 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
-  async getDecisionLogs(organizationId?: string, limit = 100): Promise<TelcoDecisionLog[]> {
-    if (organizationId) {
-      return db.select().from(telcoDecisionLogs).where(eq(telcoDecisionLogs.organizationId, organizationId)).orderBy(desc(telcoDecisionLogs.decidedAt)).limit(limit);
-    }
-    return db.select().from(telcoDecisionLogs).orderBy(desc(telcoDecisionLogs.decidedAt)).limit(limit);
+  async getDecisionLogs(organizationId?: string, country?: string, limit = 100): Promise<TelcoDecisionLog[]> {
+    requireCountryScope(country, "getDecisionLogs");
+    const filters: any[] = [eq(telcoDecisionLogs.country, country!)];
+    if (organizationId) filters.push(eq(telcoDecisionLogs.organizationId, organizationId));
+    const where = and(...filters);
+    return db.select().from(telcoDecisionLogs).where(where).orderBy(desc(telcoDecisionLogs.decidedAt)).limit(limit);
   }
 
   async createDecisionLog(log: InsertTelcoDecisionLog): Promise<TelcoDecisionLog> {
@@ -1696,6 +1757,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTelcoLoans(organizationId?: string, country?: string, options?: { page?: number; limit?: number; status?: string; profileId?: string; profileIds?: string[] }): Promise<{ data: TelcoLoan[]; total: number; page: number; totalPages: number }> {
+    requireCountryScope(country, "getTelcoLoans");
     const page = options?.page || 1;
     const limit = Math.min(options?.limit || 50, 200);
     const offset = (page - 1) * limit;
@@ -1738,6 +1800,7 @@ export class DatabaseStorage implements IStorage {
     par30: number; par60: number; par90: number;
     avgLoanSize: number; totalLoans: number;
   }> {
+    requireCountryScope(country, "getTelcoLoanPortfolioStats");
     const filters: any[] = [];
     if (organizationId) filters.push(eq(telcoLoans.organizationId, organizationId));
     if (country) filters.push(eq(telcoLoans.country, country));
@@ -1814,6 +1877,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTelcoConsentSummary(organizationId?: string, country?: string): Promise<{ total: number; active: number; revoked: number; byMethod: Record<string, number> }> {
+    requireCountryScope(country, "getTelcoConsentSummary");
     const filters: any[] = [];
     if (organizationId) filters.push(eq(telcoConsentEvents.organizationId, organizationId));
     if (country) filters.push(eq(telcoConsentEvents.country, country));

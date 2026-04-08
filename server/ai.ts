@@ -1,7 +1,8 @@
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
-import { storage } from "./storage";
+import { storage, requireCountryScope } from "./storage";
 import { getDefaultCurrencyCode } from "./credit-score";
+import { getActiveCountryName } from "./country-mode";
 
 export type AIProvider = "openai" | "claude";
 
@@ -271,13 +272,14 @@ function sanitizeForPrompt(text: string | null | undefined): string {
   return text.replace(/[<>{}[\]]/g, "").replace(/\n/g, " ").slice(0, 100);
 }
 
-async function buildPortfolioData() {
+async function buildPortfolioData(country: string) {
+  requireCountryScope(country, "buildPortfolioData");
   const [stats, borrowersResult, allAccounts, disputes, institutions] = await Promise.all([
-    storage.getDashboardStats(),
-    storage.getBorrowers(1, 200),
-    storage.getAllCreditAccounts(),
-    storage.getDisputes(),
-    storage.getInstitutions(1, 100),
+    storage.getDashboardStats(undefined, country),
+    storage.getBorrowers(1, 200, undefined, country),
+    storage.getAllCreditAccounts(undefined, country),
+    storage.getDisputes(undefined, country),
+    storage.getInstitutions(1, 100, undefined, country),
   ]);
 
   const accountsByBorrower: Record<string, typeof allAccounts> = {};
@@ -345,8 +347,9 @@ async function buildPortfolioData() {
   return { stats, borrowerProfiles, accountsByType, accountsByLender, totalAccounts: allAccounts.length, totalDisputes: disputes.length, institutions: institutions.data };
 }
 
-export async function generatePortfolioIntelligence(provider?: AIProvider) {
-  const data = await buildPortfolioData();
+export async function generatePortfolioIntelligence(provider?: AIProvider, orgId?: string, country?: string) {
+  requireCountryScope(country, "generatePortfolioIntelligence");
+  const data = await buildPortfolioData(country!);
   const defaultCurrency = getDefaultCurrencyCode();
 
   const riskBorrowers = data.borrowerProfiles
@@ -487,26 +490,27 @@ async function buildLiveContext(): Promise<string> {
     return _cachedLiveContext.text;
   }
   try {
+    const aiCountry = getActiveCountryName() || "Ghana";
     const [stats, institutions, orgs, retentionPolicies, exchangeRates, borrowersResult, allAccounts, disputes, allInquiries, auditLogs, courtJudgments, consentRecords, users, pendingApprovals, billingRecords, creditReportLogs, telcoProfiles, telcoScores, telcoStats] = await Promise.all([
-      storage.getDashboardStats().catch(e => { console.warn("[AI Context] getDashboardStats failed:", e.message); return null; }),
-      storage.getInstitutions(1, 100).catch(e => { console.warn("[AI Context] getInstitutions failed:", e.message); return { data: [], total: 0 }; }),
-      storage.getOrganizations().catch(e => { console.warn("[AI Context] getOrganizations failed:", e.message); return []; }),
-      storage.getRetentionPolicies().catch(e => { console.warn("[AI Context] getRetentionPolicies failed:", e.message); return []; }),
+      storage.getDashboardStats(undefined, aiCountry).catch(e => { console.warn("[AI Context] getDashboardStats failed:", e.message); return null; }),
+      storage.getInstitutions(1, 100, undefined, aiCountry).catch(e => { console.warn("[AI Context] getInstitutions failed:", e.message); return { data: [], total: 0 }; }),
+      storage.getOrganizations(aiCountry).catch(e => { console.warn("[AI Context] getOrganizations failed:", e.message); return []; }),
+      storage.getRetentionPolicies(aiCountry).catch(e => { console.warn("[AI Context] getRetentionPolicies failed:", e.message); return []; }),
       storage.getExchangeRates().catch(e => { console.warn("[AI Context] getExchangeRates failed:", e.message); return []; }),
-      storage.getBorrowers(1, 200).catch(e => { console.warn("[AI Context] getBorrowers failed:", e.message); return { data: [], total: 0 }; }),
-      storage.getAllCreditAccounts().catch(e => { console.warn("[AI Context] getAllCreditAccounts failed:", e.message); return []; }),
-      storage.getDisputes().catch(e => { console.warn("[AI Context] getDisputes failed:", e.message); return []; }),
-      storage.getAllCreditInquiries().catch(e => { console.warn("[AI Context] getAllCreditInquiries failed:", e.message); return []; }),
-      storage.getAuditLogs().catch(e => { console.warn("[AI Context] getAuditLogs failed:", e.message); return []; }),
-      storage.getAllCourtJudgments().catch(e => { console.warn("[AI Context] getAllCourtJudgments failed:", e.message); return []; }),
-      storage.getAllConsentRecords().catch(e => { console.warn("[AI Context] getAllConsentRecords failed:", e.message); return []; }),
-      storage.getUsers().catch(e => { console.warn("[AI Context] getUsers failed:", e.message); return []; }),
-      storage.getPendingApprovals().catch(e => { console.warn("[AI Context] getPendingApprovals failed:", e.message); return []; }),
-      storage.getBillingRecords().catch(e => { console.warn("[AI Context] getBillingRecords failed:", e.message); return []; }),
-      storage.getCreditReportLogs().catch(e => { console.warn("[AI Context] getCreditReportLogs failed:", e.message); return []; }),
-      storage.getTelcoProfiles().catch(e => { console.warn("[AI Context] getTelcoProfiles failed:", e.message); return []; }),
-      storage.getTelcoCreditScores().catch(e => { console.warn("[AI Context] getTelcoCreditScores failed:", e.message); return []; }),
-      storage.getTelcoDashboardStats().catch(e => { console.warn("[AI Context] getTelcoDashboardStats failed:", e.message); return { totalProfiles: 0, totalScores: 0, avgRiskScore: 0, approvalRate: 0, tierBreakdown: {} }; }),
+      storage.getBorrowers(1, 200, undefined, aiCountry).catch(e => { console.warn("[AI Context] getBorrowers failed:", e.message); return { data: [], total: 0 }; }),
+      storage.getAllCreditAccounts(undefined, aiCountry).catch(e => { console.warn("[AI Context] getAllCreditAccounts failed:", e.message); return []; }),
+      storage.getDisputes(undefined, aiCountry).catch(e => { console.warn("[AI Context] getDisputes failed:", e.message); return []; }),
+      storage.getAllCreditInquiries(undefined, aiCountry).catch(e => { console.warn("[AI Context] getAllCreditInquiries failed:", e.message); return []; }),
+      storage.getAuditLogs(undefined, aiCountry).catch(e => { console.warn("[AI Context] getAuditLogs failed:", e.message); return []; }),
+      storage.getAllCourtJudgments(undefined, aiCountry).catch(e => { console.warn("[AI Context] getAllCourtJudgments failed:", e.message); return []; }),
+      storage.getAllConsentRecords(undefined, aiCountry).catch(e => { console.warn("[AI Context] getAllConsentRecords failed:", e.message); return []; }),
+      storage.getUsers(undefined, aiCountry).catch(e => { console.warn("[AI Context] getUsers failed:", e.message); return []; }),
+      storage.getPendingApprovals(undefined, aiCountry).catch(e => { console.warn("[AI Context] getPendingApprovals failed:", e.message); return []; }),
+      storage.getBillingRecords(undefined, aiCountry).catch(e => { console.warn("[AI Context] getBillingRecords failed:", e.message); return []; }),
+      storage.getCreditReportLogs(undefined, aiCountry).catch(e => { console.warn("[AI Context] getCreditReportLogs failed:", e.message); return []; }),
+      storage.getTelcoProfiles(undefined, aiCountry).catch(e => { console.warn("[AI Context] getTelcoProfiles failed:", e.message); return []; }),
+      storage.getTelcoCreditScores(undefined, aiCountry).catch(e => { console.warn("[AI Context] getTelcoCreditScores failed:", e.message); return []; }),
+      storage.getTelcoDashboardStats(undefined, aiCountry).catch(e => { console.warn("[AI Context] getTelcoDashboardStats failed:", e.message); return { totalProfiles: 0, totalScores: 0, avgRiskScore: 0, approvalRate: 0, tierBreakdown: {} }; }),
     ]);
 
     const institutionList = institutions.data.map(i => {
@@ -1203,7 +1207,8 @@ ${disputes.length > 0 ? disputes.map(d => `  - ${d.disputeType}: ${d.status} —
 }
 
 export async function detectAnomalies(provider?: AIProvider, orgId?: string, country?: string) {
-  const data = await buildPortfolioData();
+  requireCountryScope(country, "detectAnomalies");
+  const data = await buildPortfolioData(country!);
   const defaultCurrency = getDefaultCurrencyCode();
 
   const portfolioSummary = `
@@ -1250,7 +1255,8 @@ Respond in JSON:
 }
 
 export async function generateRegulatoryReport(country: string, provider?: AIProvider, orgId?: string) {
-  const data = await buildPortfolioData();
+  requireCountryScope(country, "generateRegulatoryReport");
+  const data = await buildPortfolioData(country);
   const defaultCurrency = getDefaultCurrencyCode();
 
   const countryBorrowers = data.borrowerProfiles;
@@ -1302,7 +1308,8 @@ Registry Data for ${country}:
 }
 
 export async function naturalLanguageQuery(query: string, provider?: AIProvider, orgId?: string, country?: string) {
-  const data = await buildPortfolioData();
+  requireCountryScope(country, "naturalLanguageQuery");
+  const data = await buildPortfolioData(country!);
   const defaultCurrency = getDefaultCurrencyCode();
 
   const dataContext = `
