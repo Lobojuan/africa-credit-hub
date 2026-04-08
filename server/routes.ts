@@ -544,6 +544,18 @@ export async function registerRoutes(
   });
 
   app.use("/api", (req, res, next) => {
+    const isExport = req.path.includes("/export");
+    const timeout = isExport ? 30000 : 15000;
+    req.setTimeout(timeout);
+    res.setTimeout(timeout, () => {
+      if (!res.headersSent) {
+        res.status(504).json({ message: "Request timed out" });
+      }
+    });
+    next();
+  });
+
+  app.use("/api", (req, res, next) => {
     if (["POST", "PATCH", "PUT", "DELETE"].includes(req.method)) {
       return writeLimiter(req, res, next);
     }
@@ -1394,9 +1406,11 @@ export async function registerRoutes(
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
-      const stats = await storage.getDashboardStats(orgId, country);
-      const portfolio = await storage.getPortfolioAggregates(orgId, country);
-      const borrowerAgg = await storage.getBorrowerAggregates(orgId, country);
+      const [stats, portfolio, borrowerAgg] = await Promise.all([
+        storage.getDashboardStats(orgId, country),
+        storage.getPortfolioAggregates(orgId, country),
+        storage.getBorrowerAggregates(orgId, country),
+      ]);
 
       const countryBreakdown = [{
         country: country || "Ghana",
@@ -1436,9 +1450,11 @@ export async function registerRoutes(
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
-      const stats = await storage.getDashboardStats(orgId, country);
-      const portfolio = await storage.getPortfolioAggregates(orgId, country);
-      const borrowerAgg = await storage.getBorrowerAggregates(orgId, country);
+      const [stats, portfolio, borrowerAgg] = await Promise.all([
+        storage.getDashboardStats(orgId, country),
+        storage.getPortfolioAggregates(orgId, country),
+        storage.getBorrowerAggregates(orgId, country),
+      ]);
 
       const totalPortfolio = portfolio.totalValue;
       const totalOriginal = portfolio.totalOriginal;
@@ -4502,56 +4518,8 @@ export async function registerRoutes(
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
-      const allLogs = await storage.getAuditLogs(orgId, country);
-
-      const now = new Date();
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-      let actionsToday = 0;
-      const uniqueUsersToday = new Set<string>();
-      const actionCounts: Record<string, number> = {};
-      const entityCounts: Record<string, number> = {};
-      const userIds = new Set<string>();
-
-      for (const log of allLogs) {
-        if (log.action) {
-          actionCounts[log.action] = (actionCounts[log.action] || 0) + 1;
-        }
-        if (log.entity) {
-          entityCounts[log.entity] = (entityCounts[log.entity] || 0) + 1;
-        }
-        if (log.userId) {
-          userIds.add(log.userId);
-        }
-        if (log.createdAt && new Date(log.createdAt) >= todayStart) {
-          actionsToday++;
-          if (log.userId) uniqueUsersToday.add(log.userId);
-        }
-      }
-
-      const topActions = Object.entries(actionCounts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5)
-        .map(([action, count]) => ({ action, count }));
-
-      const topEntities = Object.entries(entityCounts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5)
-        .map(([entity, count]) => ({ entity, count }));
-
-      const uniqueActions = Object.keys(actionCounts);
-      const uniqueEntities = Object.keys(entityCounts);
-
-      res.json({
-        totalLogs: allLogs.length,
-        actionsToday,
-        uniqueUsersToday: uniqueUsersToday.size,
-        totalUniqueUsers: userIds.size,
-        topActions,
-        topEntities,
-        uniqueActions,
-        uniqueEntities,
-      });
+      const stats = await storage.getAuditStats(orgId, country);
+      res.json(stats);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
     }
@@ -7803,7 +7771,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
             sheet.addRow({ ...b, name, isPep: b.isPep ? "Yes" : "No" });
           });
         } else if (type === "audit") {
-          const auditLogsList = await storage.getAuditLogs(orgId, country);
+          const auditLogsList = await storage.getAuditLogs(orgId, country, exportLimit);
           const sheet = workbook.addWorksheet("Audit Trail");
           sheet.columns = [
             { header: "Timestamp", key: "createdAt", width: 22 },
@@ -7842,7 +7810,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
             csv += `"${name}","${b.type}","${b.nationalId}","${b.tinNumber || ''}","${b.gender || ''}","${b.city || ''}","${b.region || ''}","${b.isPep}","${b.educationLevel || ''}","${b.sector || ''}"\n`;
           }
         } else if (type === "audit") {
-          const auditLogsList = await storage.getAuditLogs(orgId, country);
+          const auditLogsList = await storage.getAuditLogs(orgId, country, exportLimit);
           csv = "Timestamp,Action,Entity,Entity ID,Details,User ID,IP Address\n";
           for (const log of auditLogsList) {
             const ts = log.createdAt ? new Date(log.createdAt).toISOString() : "";
@@ -7865,12 +7833,14 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
-      const portfolio = await storage.getPortfolioAggregates(orgId, country);
-      const borrowerAgg = await storage.getBorrowerAggregates(orgId, country);
-      const stats = await storage.getDashboardStats(orgId, country);
-      const disputeList = await storage.getDisputes(orgId, country);
-      const approvals = await storage.getPendingApprovals(orgId, country);
-      const { data: instList } = await storage.getInstitutions(1, 200, orgId, country);
+      const [portfolio, borrowerAgg, stats, disputeList, approvals, { data: instList }] = await Promise.all([
+        storage.getPortfolioAggregates(orgId, country),
+        storage.getBorrowerAggregates(orgId, country),
+        storage.getDashboardStats(orgId, country),
+        storage.getDisputes(orgId, country),
+        storage.getPendingApprovals(orgId, country),
+        storage.getInstitutions(1, 200, orgId, country),
+      ]);
 
       const nplCount = portfolio.delinquentCount + portfolio.defaultedCount;
       const nplRatio = portfolio.totalAccounts > 0 ? (nplCount / portfolio.totalAccounts * 100).toFixed(2) : "0";

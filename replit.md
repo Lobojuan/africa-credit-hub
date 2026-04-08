@@ -63,6 +63,7 @@ The system employs a modern full-stack architecture built for scalability and co
     -   **Platform Metrics Dashboard**: Admin-only page displaying MRR/ARR, subscription breakdown, and KPIs.
     -   **Webhook Delivery System**: HMAC-SHA256 signed webhooks with retry logic.
     -   **Batch Job Persistence**: `batchJobs` DB table for durable batch processing with status tracking.
+    -   **Performance Optimizations**: Database queries parallelized with `Promise.all` across dashboard, KPI, chart, regulatory report, and audit endpoints. Audit stats use SQL-based aggregation instead of JS iteration. Integrity verification has 60-second cache. Request timeout middleware (15s API / 30s exports) prevents runaway requests. Audit logs excluded from timestamp redistribution to prevent hash chain corruption.
 
 ## External Dependencies
 -   **Database**: PostgreSQL (Neon)

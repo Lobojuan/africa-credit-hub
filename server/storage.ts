@@ -94,6 +94,13 @@ export interface IStorage {
 
   getAuditLogs(organizationId?: string, country?: string, limit?: number, offset?: number): Promise<AuditLog[]>;
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
+  getAuditStats(organizationId?: string, country?: string): Promise<{
+    totalLogs: number; actionsToday: number; uniqueUsersToday: number; totalUniqueUsers: number;
+    topActions: { action: string; count: number }[];
+    topEntities: { entity: string; count: number }[];
+    uniqueActions: string[];
+    uniqueEntities: string[];
+  }>;
   verifyAuditIntegrity(): Promise<{ valid: boolean; totalChecked: number; brokenAt?: string; brokenAtIndex?: number; reason?: string }>;
   repairAuditChain(): Promise<{ repairedCount: number; totalLogs: number }>;
   fuzzyMatchBorrowers(params: { firstName?: string; lastName?: string; nationalId?: string; companyName?: string; passportNumber?: string; tinNumber?: string }): Promise<Array<any>>;
@@ -661,8 +668,68 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
+  async getAuditStats(organizationId?: string, country?: string) {
+    const filters: any[] = [];
+    if (organizationId) filters.push(eq(auditLogs.organizationId, organizationId));
+    if (country) filters.push(this.countryOrgFilter(auditLogs, country));
+    const where = filters.length > 1 ? and(...filters) : filters[0];
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const [totalsResult, todayResult, topActionsResult, topEntitiesResult, uniqueActionsResult, uniqueEntitiesResult, uniqueUsersResult] = await Promise.all([
+      db.select({ totalLogs: count() }).from(auditLogs).where(where),
+      db.select({
+        actionsToday: count(),
+        uniqueUsersToday: sql<number>`COUNT(DISTINCT "user_id")`,
+      }).from(auditLogs).where(where ? and(where, gte(auditLogs.createdAt, todayStart)) : gte(auditLogs.createdAt, todayStart)),
+      db.select({
+        action: auditLogs.action,
+        count: count(),
+      }).from(auditLogs).where(where).groupBy(auditLogs.action).orderBy(desc(count())).limit(5),
+      db.select({
+        entity: auditLogs.entity,
+        count: count(),
+      }).from(auditLogs).where(where).groupBy(auditLogs.entity).orderBy(desc(count())).limit(5),
+      db.selectDistinct({ action: auditLogs.action }).from(auditLogs).where(where),
+      db.selectDistinct({ entity: auditLogs.entity }).from(auditLogs).where(where),
+      db.select({ count: sql<number>`COUNT(DISTINCT "user_id")` }).from(auditLogs).where(where),
+    ]);
+
+    return {
+      totalLogs: Number(totalsResult[0]?.totalLogs ?? 0),
+      actionsToday: Number(todayResult[0]?.actionsToday ?? 0),
+      uniqueUsersToday: Number(todayResult[0]?.uniqueUsersToday ?? 0),
+      totalUniqueUsers: Number(uniqueUsersResult[0]?.count ?? 0),
+      topActions: topActionsResult.map(r => ({ action: r.action, count: Number(r.count) })),
+      topEntities: topEntitiesResult.map(r => ({ entity: r.entity, count: Number(r.count) })),
+      uniqueActions: uniqueActionsResult.map(r => r.action),
+      uniqueEntities: uniqueEntitiesResult.map(r => r.entity),
+    };
+  }
+
+  private _integrityCache: { result: any; timestamp: number } | null = null;
+  private static INTEGRITY_CACHE_TTL = 60_000;
+
+  invalidateIntegrityCache() {
+    this._integrityCache = null;
+  }
+
   async verifyAuditIntegrity(): Promise<{ valid: boolean; totalChecked: number; brokenAt?: string; brokenAtIndex?: number; reason?: string }> {
-    const allLogs = await db.select().from(auditLogs).orderBy(auditLogs.createdAt, auditLogs.id);
+    if (this._integrityCache && (Date.now() - this._integrityCache.timestamp) < DatabaseStorage.INTEGRITY_CACHE_TTL) {
+      return this._integrityCache.result;
+    }
+    const allLogs = await db.select({
+      id: auditLogs.id,
+      createdAt: auditLogs.createdAt,
+      action: auditLogs.action,
+      userId: auditLogs.userId,
+      entityId: auditLogs.entityId,
+      entity: auditLogs.entity,
+      details: auditLogs.details,
+      previousHash: auditLogs.previousHash,
+      currentHash: auditLogs.currentHash,
+    }).from(auditLogs).orderBy(auditLogs.createdAt, auditLogs.id);
     const hashedLogs = allLogs.filter(l => l.currentHash && l.previousHash);
     let totalChecked = 0;
     for (let i = 0; i < hashedLogs.length; i++) {
@@ -676,10 +743,14 @@ export class DatabaseStorage implements IStorage {
       const expectedPayload = `${log.previousHash}|${timestamp}|${log.action}|${log.userId || "SYSTEM"}|${log.entityId || "NONE"}|${log.entity}|${log.details || ""}`;
       const expectedHash = crypto.createHash("sha256").update(expectedPayload).digest("hex");
       if (log.currentHash !== expectedHash) {
-        return { valid: false, totalChecked, brokenAt: log.id, brokenAtIndex: i, reason: "Hash mismatch — a log entry's content was modified after it was originally recorded. This typically happens after system updates that enriched log data (e.g. adding upload metadata) or timestamp redistribution during development." };
+        const broken = { valid: false, totalChecked, brokenAt: log.id, brokenAtIndex: i, reason: "Hash mismatch — a log entry's content was modified after it was originally recorded. This typically happens after system updates that enriched log data (e.g. adding upload metadata) or timestamp redistribution during development." };
+        this._integrityCache = { result: broken, timestamp: Date.now() };
+        return broken;
       }
     }
-    return { valid: true, totalChecked };
+    const valid = { valid: true, totalChecked };
+    this._integrityCache = { result: valid, timestamp: Date.now() };
+    return valid;
   }
 
   async repairAuditChain(): Promise<{ repairedCount: number; totalLogs: number }> {
@@ -696,6 +767,7 @@ export class DatabaseStorage implements IStorage {
       }
       previousHash = newHash;
     }
+    this.invalidateIntegrityCache();
     return { repairedCount, totalLogs: allLogs.length };
   }
 
@@ -1297,38 +1369,40 @@ export class DatabaseStorage implements IStorage {
     if (country) dispFilters.push(eq(disputes.country, country));
     const orgDisputeFilter = dispFilters.length > 1 ? and(...dispFilters) : dispFilters[0];
 
-    const [borrowerCount] = await db.select({ value: count() }).from(borrowers).where(borrowerFilter);
-    const [accountCount] = await db.select({ value: count() }).from(creditAccounts).where(accFilter);
-
     const inqFilters: any[] = [];
     if (organizationId) inqFilters.push(sql`${creditInquiries.borrowerId} IN (SELECT id FROM borrowers WHERE organization_id = ${organizationId})`);
     if (country) inqFilters.push(sql`${creditInquiries.borrowerId} IN (SELECT id FROM borrowers WHERE country = ${country})`);
     const inqFilter = inqFilters.length > 1 ? and(...inqFilters) : inqFilters[0];
-    const [inquiryCount] = await db.select({ value: count() }).from(creditInquiries).where(inqFilter);
 
     const outstandingStatusFilter = or(eq(creditAccounts.status, "current"), eq(creditAccounts.status, "delinquent"), eq(creditAccounts.status, "restructured"));
     const outstandingFilter = accFilter ? and(outstandingStatusFilter, accFilter) : outstandingStatusFilter;
-
-    const [outstanding] = await db.select({
-      value: sql<string>`COALESCE(SUM(${creditAccounts.currentBalance}::numeric), 0)::text`
-    }).from(creditAccounts).where(outstandingFilter);
-    const outstandingByCurrency = await db.select({
-      currency: creditAccounts.currency,
-      total: sql<string>`COALESCE(SUM(${creditAccounts.currentBalance}::numeric), 0)::text`,
-    }).from(creditAccounts).where(outstandingFilter).groupBy(creditAccounts.currency);
-
     const delFilter = accFilter ? and(eq(creditAccounts.status, "delinquent"), accFilter) : eq(creditAccounts.status, "delinquent");
-    const [delinquent] = await db.select({ value: count() }).from(creditAccounts).where(delFilter);
-
     const defFilter = accFilter ? and(eq(creditAccounts.status, "default"), accFilter) : eq(creditAccounts.status, "default");
-    const [defaulted] = await db.select({ value: count() }).from(creditAccounts).where(defFilter);
-
     const pendFilter = orgApprovalFilter ? and(eq(pendingApprovals.status, "pending"), orgApprovalFilter) : eq(pendingApprovals.status, "pending");
-    const [pendingCount] = await db.select({ value: count() }).from(pendingApprovals).where(pendFilter);
-
     const openDisputeStatus = or(eq(disputes.status, "open"), eq(disputes.status, "under_review"));
     const disputeFilter = orgDisputeFilter ? and(openDisputeStatus, orgDisputeFilter) : openDisputeStatus;
-    const [disputeCount] = await db.select({ value: count() }).from(disputes).where(disputeFilter);
+
+    const [
+      [borrowerCount],
+      [accountCount],
+      [inquiryCount],
+      [outstanding],
+      outstandingByCurrency,
+      [delinquent],
+      [defaulted],
+      [pendingCount],
+      [disputeCount],
+    ] = await Promise.all([
+      db.select({ value: count() }).from(borrowers).where(borrowerFilter),
+      db.select({ value: count() }).from(creditAccounts).where(accFilter),
+      db.select({ value: count() }).from(creditInquiries).where(inqFilter),
+      db.select({ value: sql<string>`COALESCE(SUM(${creditAccounts.currentBalance}::numeric), 0)::text` }).from(creditAccounts).where(outstandingFilter),
+      db.select({ currency: creditAccounts.currency, total: sql<string>`COALESCE(SUM(${creditAccounts.currentBalance}::numeric), 0)::text` }).from(creditAccounts).where(outstandingFilter).groupBy(creditAccounts.currency),
+      db.select({ value: count() }).from(creditAccounts).where(delFilter),
+      db.select({ value: count() }).from(creditAccounts).where(defFilter),
+      db.select({ value: count() }).from(pendingApprovals).where(pendFilter),
+      db.select({ value: count() }).from(disputes).where(disputeFilter),
+    ]);
 
     return {
       totalBorrowers: borrowerCount.value,
@@ -1349,34 +1423,25 @@ export class DatabaseStorage implements IStorage {
     if (country) filters.push(this.countryOrgFilter(creditAccounts, country));
     const where = filters.length > 1 ? and(...filters) : filters[0];
 
-    const [totals] = await db.select({
-      totalAccounts: count(),
-      totalValue: sql<string>`COALESCE(SUM("current_balance"::numeric), 0)::text`,
-      totalOriginal: sql<string>`COALESCE(SUM("original_amount"::numeric), 0)::text`,
-      avgInterestRate: sql<string>`COALESCE(AVG("interest_rate"::numeric), 0)::text`,
-      currentCount: sql<number>`COUNT(*) FILTER (WHERE "status" = 'current')`,
-      delinquentCount: sql<number>`COUNT(*) FILTER (WHERE "status" = 'delinquent')`,
-      defaultedCount: sql<number>`COUNT(*) FILTER (WHERE "status" = 'default')`,
-      closedCount: sql<number>`COUNT(*) FILTER (WHERE "status" = 'closed')`,
-      delinquentValue: sql<string>`COALESCE(SUM(CASE WHEN "status" = 'delinquent' THEN "current_balance"::numeric ELSE 0 END), 0)::text`,
-      defaultedValue: sql<string>`COALESCE(SUM(CASE WHEN "status" = 'default' THEN "current_balance"::numeric ELSE 0 END), 0)::text`,
-      withBalance: sql<number>`COUNT(*) FILTER (WHERE "current_balance" IS NOT NULL AND "current_balance"::numeric >= 0)`,
-      withOpenDate: sql<number>`COUNT(*) FILTER (WHERE "disbursement_date" IS NOT NULL)`,
-    }).from(creditAccounts).where(where);
-
-    const statusBreakdown = await db.select({
-      status: creditAccounts.status,
-      count: count(),
-    }).from(creditAccounts).where(where).groupBy(creditAccounts.status);
-
-    const typeBreakdown = await db.select({
-      accountType: creditAccounts.accountType,
-      count: count(),
-    }).from(creditAccounts).where(where).groupBy(creditAccounts.accountType).orderBy(desc(count())).limit(20);
-
-    const institutionCount = await db.select({
-      count: sql<number>`COUNT(DISTINCT "lender_institution")`,
-    }).from(creditAccounts).where(where);
+    const [[totals], statusBreakdown, typeBreakdown, institutionCount] = await Promise.all([
+      db.select({
+        totalAccounts: count(),
+        totalValue: sql<string>`COALESCE(SUM("current_balance"::numeric), 0)::text`,
+        totalOriginal: sql<string>`COALESCE(SUM("original_amount"::numeric), 0)::text`,
+        avgInterestRate: sql<string>`COALESCE(AVG("interest_rate"::numeric), 0)::text`,
+        currentCount: sql<number>`COUNT(*) FILTER (WHERE "status" = 'current')`,
+        delinquentCount: sql<number>`COUNT(*) FILTER (WHERE "status" = 'delinquent')`,
+        defaultedCount: sql<number>`COUNT(*) FILTER (WHERE "status" = 'default')`,
+        closedCount: sql<number>`COUNT(*) FILTER (WHERE "status" = 'closed')`,
+        delinquentValue: sql<string>`COALESCE(SUM(CASE WHEN "status" = 'delinquent' THEN "current_balance"::numeric ELSE 0 END), 0)::text`,
+        defaultedValue: sql<string>`COALESCE(SUM(CASE WHEN "status" = 'default' THEN "current_balance"::numeric ELSE 0 END), 0)::text`,
+        withBalance: sql<number>`COUNT(*) FILTER (WHERE "current_balance" IS NOT NULL AND "current_balance"::numeric >= 0)`,
+        withOpenDate: sql<number>`COUNT(*) FILTER (WHERE "disbursement_date" IS NOT NULL)`,
+      }).from(creditAccounts).where(where),
+      db.select({ status: creditAccounts.status, count: count() }).from(creditAccounts).where(where).groupBy(creditAccounts.status),
+      db.select({ accountType: creditAccounts.accountType, count: count() }).from(creditAccounts).where(where).groupBy(creditAccounts.accountType).orderBy(desc(count())).limit(20),
+      db.select({ count: sql<number>`COUNT(DISTINCT "lender_institution")` }).from(creditAccounts).where(where),
+    ]);
 
     return {
       totalAccounts: Number(totals.totalAccounts),
