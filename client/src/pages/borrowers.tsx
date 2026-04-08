@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Borrower } from "@shared/schema";
 import { getBorrowerAvatarUrl } from "@/lib/avatar";
+import { BorrowerKPIBanner } from "@/components/platform-kpi-banner";
 
 const PAGE_SIZE = 50;
 
@@ -162,6 +163,7 @@ export default function BorrowersPage() {
               {t("borrowers.registerBorrower")}
             </Button>
           </DialogTrigger>
+
           <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{t("borrowers.registerNew")}</DialogTitle>
@@ -412,6 +414,8 @@ export default function BorrowersPage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <BorrowerKPIBanner filteredCount={totalBorrowers} recentDays={recentDays ?? 0} />
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
         <div className="relative max-w-sm flex-1">

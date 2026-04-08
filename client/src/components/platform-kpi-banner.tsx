@@ -116,6 +116,26 @@ export function DashboardKPISection() {
   );
 }
 
+export function BorrowerKPIBanner({ filteredCount, recentDays }: { filteredCount?: number; recentDays?: number }) {
+  const { data: kpis, isLoading } = usePlatformKPIs();
+  const cs = useCurrencySymbol();
+
+  if (isLoading) return <div className="grid grid-cols-2 sm:grid-cols-4 gap-3"><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /><Skeleton className="h-20" /></div>;
+  if (!kpis) return null;
+
+  const displayCount = (recentDays && recentDays > 0 && filteredCount !== undefined) ? filteredCount : kpis.borrowers.total;
+  const sub = (recentDays && recentDays > 0) ? `of ${kpis.borrowers.total.toLocaleString()} total` : `${kpis.borrowers.individuals.toLocaleString()} individuals, ${kpis.borrowers.corporates.toLocaleString()} corporate`;
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3" data-testid="borrower-kpi-banner">
+      <KpiTile label="Total Borrowers" value={displayCount.toLocaleString()} icon={Users} sub={sub} />
+      <KpiTile label="Platform Avg Facility" value={`${cs}${(kpis.portfolio.avgLoanSize / 1000).toFixed(0)}K`} icon={Banknote} sub={`${kpis.portfolio.avgInterestRate.toFixed(1)}% avg rate`} />
+      <KpiTile label="Platform Default Rate" value={`${kpis.portfolio.defaultRate}%`} icon={Shield} sub={`${kpis.portfolio.defaultedAccounts} defaulted across portfolio`} color={kpis.portfolio.defaultRate > 5 ? "bg-red-500/10" : "bg-green-500/10"} />
+      <KpiTile label="Collection Rate" value={`${kpis.portfolio.collectionRate.toFixed(1)}%`} icon={DollarSign} sub="Platform repayment efficiency" color="bg-blue-500/10" />
+    </div>
+  );
+}
+
 export function ConsumerKPIBanner({ filteredCount, recentDays }: { filteredCount?: number; recentDays?: number }) {
   const { data: kpis, isLoading } = usePlatformKPIs();
 
