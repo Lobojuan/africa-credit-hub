@@ -12198,6 +12198,31 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     }
   });
 
+  app.post("/api/maintenance/toggle", async (req, res) => {
+    if (req.session?.userRole !== "super_admin") {
+      return res.status(403).json({ message: "Super admin access required" });
+    }
+    const { maintenanceState } = await import("./index");
+    maintenanceState.enabled = !maintenanceState.enabled;
+    if (req.body?.message) {
+      maintenanceState.message = req.body.message;
+    }
+    try {
+      await storage.createAuditLog({
+        action: "MAINTENANCE_TOGGLE",
+        entity: "system",
+        entityId: "maintenance",
+        userId: req.session?.userId || null,
+        ipAddress: req.ip || req.socket.remoteAddress || "unknown",
+        details: JSON.stringify({ enabled: maintenanceState.enabled, message: maintenanceState.message }),
+        organizationId: req.session?.organizationId || null,
+      });
+    } catch (e) {
+      console.error("[Audit] Failed to log maintenance toggle:", e);
+    }
+    res.json({ enabled: maintenanceState.enabled, message: maintenanceState.message });
+  });
+
   return httpServer;
 }
 

@@ -212,33 +212,24 @@ app.use((req, res, next) => {
   next();
 });
 
-let maintenanceMode = false;
-let maintenanceMessage = "We are working hard to improve your experience. The platform will be back shortly.";
+export const maintenanceState = {
+  enabled: false,
+  message: "We are working hard to improve your experience. The platform will be back shortly.",
+};
 
 app.get("/api/health", (_req, res) => {
-  if (maintenanceMode) {
-    return res.status(503).json({ status: "maintenance", version: "2.5.0", message: maintenanceMessage });
+  if (maintenanceState.enabled) {
+    return res.status(503).json({ status: "maintenance", version: "2.5.0", message: maintenanceState.message });
   }
   res.json({ status: "ok", version: "2.5.0", uptime: Math.round(process.uptime()) });
 });
 
 app.get("/api/maintenance/status", (req, res) => {
-  res.json({ enabled: maintenanceMode, message: maintenanceMessage });
-});
-
-app.post("/api/maintenance/toggle", (req, res) => {
-  if (req.session?.userRole !== "super_admin") {
-    return res.status(403).json({ message: "Super admin access required" });
-  }
-  maintenanceMode = !maintenanceMode;
-  if (req.body?.message) {
-    maintenanceMessage = req.body.message;
-  }
-  res.json({ enabled: maintenanceMode, message: maintenanceMessage });
+  res.json({ enabled: maintenanceState.enabled, message: maintenanceState.message });
 });
 
 app.use((req, res, next) => {
-  if (!maintenanceMode) return next();
+  if (!maintenanceState.enabled) return next();
 
   if (req.path === "/api/health") return next();
   if (req.path.startsWith("/api/auth/")) return next();
@@ -249,7 +240,7 @@ app.use((req, res, next) => {
   if (req.session?.userRole === "super_admin") return next();
 
   if (req.path.startsWith("/api/")) {
-    return res.status(503).json({ status: "maintenance", message: maintenanceMessage });
+    return res.status(503).json({ status: "maintenance", message: maintenanceState.message });
   }
 
   return res.redirect("/maintenance.html");
