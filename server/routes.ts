@@ -45,7 +45,7 @@ import { recordUsageEvent } from "./usage-metering";
 import { broadcastEvent } from "./websocket";
 import { createAnchor, verifyAuditAgainstAnchor, getAnchors } from "./blockchain-anchor";
 import { deliverWebhook, getWebhookSubscriptions, getWebhookDeliveryHistory, WEBHOOK_EVENTS } from "./webhook-delivery";
-import { webauthnCredentials, blockchainAnchors, webhookSubscriptions, webhookDeliveryLogs, consumerAccounts, telcoProfiles, telcoLoans, telcoLoanRepayments } from "@shared/schema";
+import { webauthnCredentials, blockchainAnchors, webhookSubscriptions, webhookDeliveryLogs, consumerAccounts, telcoProfiles, telcoLoans, telcoLoanRepayments, auditLogs } from "@shared/schema";
 import fs from "fs";
 import path from "path";
 import * as OTPAuth from "otpauth";
@@ -5153,9 +5153,20 @@ export async function registerRoutes(
 
   app.get("/api/batch-upload/history", requireRole("admin", "lender"), async (req, res) => {
     try {
-      const allLogs = await storage.getAuditLogs(getOrgScope(req), getCountryFilter(req));
+      const batchActions = ["BATCH_UPLOAD", "BATCH_UPLOAD_CSV", "BATCH_UPLOAD_JSON", "BATCH_UPLOAD_XBRL", "BATCH_QUEUE_ACCOUNTS", "IFF_UPLOAD", "IFF_UPLOAD_JSON"];
+      const conditions = [
+        or(
+          ...batchActions.map(a => eq(auditLogs.action, a)),
+          sql`${auditLogs.action} LIKE 'BATCH_UPLOAD%'`
+        )
+      ];
+      const orgScope = getOrgScope(req);
+      if (orgScope) conditions.push(eq(auditLogs.organizationId, orgScope));
+      const allLogs = await db.select().from(auditLogs)
+        .where(and(...conditions))
+        .orderBy(desc(auditLogs.createdAt))
+        .limit(200);
       const batchLogs = allLogs
-        .filter((log: any) => log.action && (log.action.startsWith("BATCH_UPLOAD") || log.action === "IFF_UPLOAD" || log.action === "IFF_UPLOAD_JSON"))
         .map((log: any) => {
           const detailStr = log.details || "";
           const formatMatch = (log.action === "IFF_UPLOAD" || log.action === "IFF_UPLOAD_JSON") ? "IFF" : (log.action.replace("BATCH_UPLOAD", "").replace("_", "") || "JSON");
