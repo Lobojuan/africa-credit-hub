@@ -1323,6 +1323,130 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
+  async getPortfolioAggregates(organizationId?: string, country?: string) {
+    const filters: any[] = [];
+    if (organizationId) filters.push(eq(creditAccounts.organizationId, organizationId));
+    if (country) filters.push(this.countryOrgFilter(creditAccounts, country));
+    const where = filters.length > 1 ? and(...filters) : filters[0];
+
+    const [totals] = await db.select({
+      totalAccounts: count(),
+      totalValue: sql<string>`COALESCE(SUM("current_balance"::numeric), 0)::text`,
+      totalOriginal: sql<string>`COALESCE(SUM("original_amount"::numeric), 0)::text`,
+      avgInterestRate: sql<string>`COALESCE(AVG("interest_rate"::numeric), 0)::text`,
+      currentCount: sql<number>`COUNT(*) FILTER (WHERE "status" = 'current')`,
+      delinquentCount: sql<number>`COUNT(*) FILTER (WHERE "status" = 'delinquent')`,
+      defaultedCount: sql<number>`COUNT(*) FILTER (WHERE "status" = 'default')`,
+      closedCount: sql<number>`COUNT(*) FILTER (WHERE "status" = 'closed')`,
+      delinquentValue: sql<string>`COALESCE(SUM(CASE WHEN "status" = 'delinquent' THEN "current_balance"::numeric ELSE 0 END), 0)::text`,
+      defaultedValue: sql<string>`COALESCE(SUM(CASE WHEN "status" = 'default' THEN "current_balance"::numeric ELSE 0 END), 0)::text`,
+      withBalance: sql<number>`COUNT(*) FILTER (WHERE "current_balance" IS NOT NULL AND "current_balance"::numeric >= 0)`,
+      withOpenDate: sql<number>`COUNT(*) FILTER (WHERE "disbursement_date" IS NOT NULL)`,
+    }).from(creditAccounts).where(where);
+
+    const statusBreakdown = await db.select({
+      status: creditAccounts.status,
+      count: count(),
+    }).from(creditAccounts).where(where).groupBy(creditAccounts.status);
+
+    const typeBreakdown = await db.select({
+      accountType: creditAccounts.accountType,
+      count: count(),
+    }).from(creditAccounts).where(where).groupBy(creditAccounts.accountType).orderBy(desc(count())).limit(20);
+
+    const institutionCount = await db.select({
+      count: sql<number>`COUNT(DISTINCT "lender_institution")`,
+    }).from(creditAccounts).where(where);
+
+    return {
+      totalAccounts: Number(totals.totalAccounts),
+      totalValue: parseFloat(totals.totalValue),
+      totalOriginal: parseFloat(totals.totalOriginal),
+      avgInterestRate: parseFloat(totals.avgInterestRate),
+      currentCount: Number(totals.currentCount),
+      delinquentCount: Number(totals.delinquentCount),
+      defaultedCount: Number(totals.defaultedCount),
+      closedCount: Number(totals.closedCount),
+      delinquentValue: parseFloat(totals.delinquentValue),
+      defaultedValue: parseFloat(totals.defaultedValue),
+      withBalance: Number(totals.withBalance),
+      withOpenDate: Number(totals.withOpenDate),
+      institutionCount: Number(institutionCount[0]?.count ?? 0),
+      statusBreakdown: statusBreakdown.map(r => ({ name: r.status, value: Number(r.count) })),
+      typeBreakdown: typeBreakdown.map(r => ({ name: r.accountType, value: Number(r.count) })),
+    };
+  }
+
+  async getBorrowerAggregates(organizationId?: string, country?: string) {
+    const filters: any[] = [];
+    if (organizationId) filters.push(eq(borrowers.organizationId, organizationId));
+    if (country) filters.push(eq(borrowers.country, country));
+    const where = filters.length > 1 ? and(...filters) : filters[0];
+
+    const [totals] = await db.select({
+      total: count(),
+      individuals: sql<number>`COUNT(*) FILTER (WHERE "type" = 'individual')`,
+      corporates: sql<number>`COUNT(*) FILTER (WHERE "type" = 'corporate')`,
+      countriesServed: sql<number>`COUNT(DISTINCT "country")`,
+      withName: sql<number>`COUNT(*) FILTER (WHERE ("first_name" IS NOT NULL AND "first_name" != '') OR ("company_name" IS NOT NULL AND "company_name" != ''))`,
+      withNationalId: sql<number>`COUNT(*) FILTER (WHERE "national_id" IS NOT NULL AND "national_id" != '')`,
+      withDob: sql<number>`COUNT(*) FILTER (WHERE "date_of_birth" IS NOT NULL AND "date_of_birth" != '')`,
+      withGender: sql<number>`COUNT(*) FILTER (WHERE "gender" IS NOT NULL AND "gender" != '')`,
+      withLocation: sql<number>`COUNT(*) FILTER (WHERE ("city" IS NOT NULL AND "city" != '') OR ("region" IS NOT NULL AND "region" != ''))`,
+      withContact: sql<number>`COUNT(*) FILTER (WHERE ("phone" IS NOT NULL AND "phone" != '') OR ("email" IS NOT NULL AND "email" != ''))`,
+      avgCreditScore: sql<string>`COALESCE(0)::text`,
+    }).from(borrowers).where(where);
+
+    const totalCount = Number(totals.total);
+    const filledFields = Number(totals.withName) + Number(totals.withNationalId) + Number(totals.withDob) +
+      Number(totals.withGender) + Number(totals.withLocation) + Number(totals.withContact);
+    const totalFields = totalCount * 6;
+    const dataAccuracy = totalFields > 0 ? Math.round((filledFields / totalFields) * 1000) / 10 : 0;
+
+    return {
+      total: totalCount,
+      individuals: Number(totals.individuals),
+      corporates: Number(totals.corporates),
+      countriesServed: Number(totals.countriesServed),
+      avgCreditScore: Math.round(parseFloat(totals.avgCreditScore)),
+      dataAccuracy,
+    };
+  }
+
+  async getConcentrationData(organizationId?: string, country?: string) {
+    const filters: any[] = [];
+    if (organizationId) filters.push(eq(creditAccounts.organizationId, organizationId));
+    if (country) filters.push(this.countryOrgFilter(creditAccounts, country));
+    const where = filters.length > 1 ? and(...filters) : filters[0];
+
+    const [totalRow] = await db.select({
+      total: sql<string>`COALESCE(SUM(${creditAccounts.currentBalance}::numeric), 0)::text`,
+    }).from(creditAccounts).where(where);
+    const totalExposure = parseFloat(totalRow.total);
+
+    const borrowerExposure = await db.select({
+      borrowerId: creditAccounts.borrowerId,
+      total: sql<string>`SUM(${creditAccounts.currentBalance}::numeric)::text`,
+    }).from(creditAccounts).where(where).groupBy(creditAccounts.borrowerId).orderBy(desc(sql`SUM(${creditAccounts.currentBalance}::numeric)`)).limit(20);
+
+    const lenderExposure = await db.select({
+      lender: creditAccounts.lenderInstitution,
+      total: sql<string>`SUM(${creditAccounts.currentBalance}::numeric)::text`,
+    }).from(creditAccounts).where(where).groupBy(creditAccounts.lenderInstitution).orderBy(desc(sql`SUM(${creditAccounts.currentBalance}::numeric)`)).limit(20);
+
+    const sectorExposure = await db.select({
+      sector: creditAccounts.accountType,
+      total: sql<string>`SUM(${creditAccounts.currentBalance}::numeric)::text`,
+    }).from(creditAccounts).where(where).groupBy(creditAccounts.accountType).orderBy(desc(sql`SUM(${creditAccounts.currentBalance}::numeric)`)).limit(20);
+
+    return {
+      totalExposure,
+      borrowerExposure: borrowerExposure.map(r => ({ borrowerId: r.borrowerId, total: parseFloat(r.total) })),
+      lenderExposure: lenderExposure.map(r => ({ lender: r.lender, total: parseFloat(r.total) })),
+      sectorExposure: sectorExposure.map(r => ({ sector: r.sector, total: parseFloat(r.total) })),
+    };
+  }
+
   async getApiKeysByInstitution(institutionId: string): Promise<ApiKey[]> {
     return db.select().from(apiKeys).where(eq(apiKeys.institutionId, institutionId)).orderBy(desc(apiKeys.createdAt));
   }

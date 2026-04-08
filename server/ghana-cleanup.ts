@@ -13,15 +13,18 @@ async function rowCount(query: ReturnType<typeof sql>): Promise<number> {
 }
 
 export async function cleanupNonGhanaData() {
-  const nonGhanaBorrowers = await rowCount(sql`SELECT COUNT(*) as cnt FROM borrowers WHERE country != 'Ghana'`);
-  const nonGhanaOrgs = await rowCount(sql`SELECT COUNT(*) as cnt FROM organizations WHERE country != 'Ghana'`);
+  const hasNonGhanaBorrowers = await db.execute(sql`SELECT EXISTS(SELECT 1 FROM borrowers WHERE country != 'Ghana' LIMIT 1) as has_any`);
+  const hasNonGhanaOrgs = await db.execute(sql`SELECT EXISTS(SELECT 1 FROM organizations WHERE country != 'Ghana' LIMIT 1) as has_any`);
+  const nonGhanaBorrowers = ((hasNonGhanaBorrowers as any).rows?.[0]?.has_any === true || (hasNonGhanaBorrowers as any).rows?.[0]?.has_any === 't') ? 1 : 0;
+  const nonGhanaOrgs = ((hasNonGhanaOrgs as any).rows?.[0]?.has_any === true || (hasNonGhanaOrgs as any).rows?.[0]?.has_any === 't') ? 1 : 0;
 
   if (nonGhanaBorrowers === 0 && nonGhanaOrgs === 0) {
-    const nonGhanaCS = await rowCount(sql`SELECT COUNT(*) as cnt FROM country_settings WHERE country_code != 'GH'`);
+    const nonGhanaCS = await rowCount(sql`SELECT COUNT(*) as cnt FROM country_settings WHERE country_code != 'GH' LIMIT 1`);
     if (nonGhanaCS > 0) {
       await execSql(sql`DELETE FROM country_settings WHERE country_code != 'GH'`);
       console.log(`[Ghana Cleanup] Removed ${nonGhanaCS} non-Ghana country settings`);
     }
+    console.log("[Ghana Cleanup] Already clean — skipping");
     return;
   }
 

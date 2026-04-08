@@ -16,6 +16,13 @@ export async function distributeCreatedAtTimestamps() {
     return;
   }
 
+  const totalCheck = await db.execute(sql`SELECT COUNT(*) as c FROM credit_accounts`);
+  const totalRecords = parseInt((totalCheck as any).rows?.[0]?.c ?? (totalCheck as any)[0]?.c ?? "0");
+  if (totalRecords > 10000) {
+    console.log(`[Timestamps] Skipping distribution — ${totalRecords} records too large for startup redistribution`);
+    return;
+  }
+
   console.log("[Timestamps] Distributing created_at across date filter ranges...");
 
   const tables = [

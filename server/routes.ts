@@ -18,7 +18,7 @@ function safeErrorMessage(e: any, statusCode: number = 500): string {
 }
 import { storage, requireCountryScope } from "./storage";
 import { db, pool } from "./db";
-import { sql, eq, and, or, desc, inArray, ilike } from "drizzle-orm";
+import { sql, eq, and, or, desc, inArray, ilike, count } from "drizzle-orm";
 import { enqueueBatchAccountCreate, enqueueBatchBorrowerUpdate, enqueueBatchAccountUpdate, getJobStatus, getQueueStats } from "./batch-queue";
 import {
   insertBorrowerSchema, insertCreditAccountSchema, insertCreditInquirySchema,
@@ -1395,30 +1395,14 @@ export async function registerRoutes(
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
       const stats = await storage.getDashboardStats(orgId, country);
+      const portfolio = await storage.getPortfolioAggregates(orgId, country);
+      const borrowerAgg = await storage.getBorrowerAggregates(orgId, country);
 
-      const allAccounts = await storage.getAllCreditAccounts(orgId, country, 100000);
-      const statusMap: Record<string, number> = {};
-      const typeMap: Record<string, number> = {};
-      for (const a of allAccounts) {
-        statusMap[a.status] = (statusMap[a.status] || 0) + 1;
-        typeMap[a.accountType] = (typeMap[a.accountType] || 0) + 1;
-      }
-      const statusBreakdown = Object.entries(statusMap).map(([name, value]) => ({ name, value }));
-      const typeBreakdown = Object.entries(typeMap)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 8)
-        .map(([name, value]) => ({ name, value }));
-
-      const allBorrowers = await storage.searchBorrowers("", orgId, country);
-      const countryMap: Record<string, number> = {};
-      for (const b of allBorrowers) {
-        const c = b.country || "Unknown";
-        countryMap[c] = (countryMap[c] || 0) + 1;
-      }
-      const avgAccountsPerBorrower = allAccounts.length / Math.max(allBorrowers.length, 1);
-      const countryBreakdown = Object.entries(countryMap)
-        .map(([country, borrowers]) => ({ country, borrowers, accounts: Math.round(borrowers * avgAccountsPerBorrower) }))
-        .sort((a, b) => b.borrowers - a.borrowers);
+      const countryBreakdown = [{
+        country: country || "Ghana",
+        borrowers: borrowerAgg.total,
+        accounts: portfolio.totalAccounts,
+      }];
 
       const totalB = stats.totalBorrowers;
       const totalA = stats.totalAccounts;
@@ -1437,7 +1421,12 @@ export async function registerRoutes(
         });
       }
 
-      res.json({ monthlyTrend, statusBreakdown, typeBreakdown, countryBreakdown });
+      res.json({
+        monthlyTrend,
+        statusBreakdown: portfolio.statusBreakdown,
+        typeBreakdown: portfolio.typeBreakdown.slice(0, 8),
+        countryBreakdown,
+      });
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
     }
@@ -1448,41 +1437,20 @@ export async function registerRoutes(
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
       const stats = await storage.getDashboardStats(orgId, country);
-      const allAccounts = await storage.getAllCreditAccounts(orgId, country, 100000);
-      const borrowerResult = await storage.getBorrowers(1, 100000, orgId, country);
-      const allBorrowers = borrowerResult.data;
+      const portfolio = await storage.getPortfolioAggregates(orgId, country);
+      const borrowerAgg = await storage.getBorrowerAggregates(orgId, country);
 
-      const totalPortfolio = allAccounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
-      const totalOriginal = allAccounts.reduce((s, a) => s + parseFloat(a.originalAmount || "0"), 0);
-      const delinquentAccounts = allAccounts.filter(a => a.status === "delinquent");
-      const defaultedAccounts = allAccounts.filter(a => a.status === "default");
-      const currentAccounts = allAccounts.filter(a => a.status === "current");
-      const closedAccounts = allAccounts.filter(a => a.status === "closed");
-      const delinquentValue = delinquentAccounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
-      const defaultedValue = defaultedAccounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
-      const nplRatio = totalPortfolio > 0 ? ((delinquentValue + defaultedValue) / totalPortfolio) * 100 : 0;
-      const delinquencyRate = allAccounts.length > 0 ? (delinquentAccounts.length / allAccounts.length) * 100 : 0;
-      const defaultRate = allAccounts.length > 0 ? (defaultedAccounts.length / allAccounts.length) * 100 : 0;
+      const totalPortfolio = portfolio.totalValue;
+      const totalOriginal = portfolio.totalOriginal;
+      const nplRatio = totalPortfolio > 0 ? ((portfolio.delinquentValue + portfolio.defaultedValue) / totalPortfolio) * 100 : 0;
+      const delinquencyRate = portfolio.totalAccounts > 0 ? (portfolio.delinquentCount / portfolio.totalAccounts) * 100 : 0;
+      const defaultRate = portfolio.totalAccounts > 0 ? (portfolio.defaultedCount / portfolio.totalAccounts) * 100 : 0;
       const collectionRate = totalOriginal > 0 ? Math.max(0, Math.min(100, ((totalOriginal - totalPortfolio) / totalOriginal) * 100)) : 0;
 
-      const individuals = allBorrowers.filter(b => b.type === "individual");
-      const corporates = allBorrowers.filter(b => b.type === "corporate");
-      const avgAccountsPerBorrower = allBorrowers.length > 0 ? allAccounts.length / allBorrowers.length : 0;
-
-      const countriesServed = new Set(allBorrowers.map(b => b.country).filter(Boolean)).size;
-      const institutionsServed = new Set(allAccounts.map(a => a.lenderInstitution).filter(Boolean)).size;
-
-      const avgInterestRate = allAccounts.length > 0
-        ? allAccounts.reduce((s, a) => s + parseFloat(a.interestRate || "0"), 0) / allAccounts.length
-        : 0;
-      const avgLoanSize = allAccounts.length > 0 ? totalOriginal / allAccounts.length : 0;
-
+      const avgAccountsPerBorrower = borrowerAgg.total > 0 ? portfolio.totalAccounts / borrowerAgg.total : 0;
+      const avgLoanSize = portfolio.totalAccounts > 0 ? totalOriginal / portfolio.totalAccounts : 0;
       const accountTypes: Record<string, number> = {};
-      for (const a of allAccounts) { accountTypes[a.accountType] = (accountTypes[a.accountType] || 0) + 1; }
-
-      const creditScores = allBorrowers.filter(b => b.creditScore != null).map(b => b.creditScore as number);
-      const avgCreditScore = creditScores.length > 0 ? Math.round(creditScores.reduce((a, b) => a + b, 0) / creditScores.length) : 0;
-      const medianCreditScore = creditScores.length > 0 ? creditScores.sort((a, b) => a - b)[Math.floor(creditScores.length / 2)] : 0;
+      for (const t of portfolio.typeBreakdown) { accountTypes[t.name] = t.value; }
 
       const traditionalNPL = 12.5;
       const platformNPL = Math.round(nplRatio * 10) / 10;
@@ -1490,7 +1458,7 @@ export async function registerRoutes(
 
       const costPerReport = 2.50;
       const revenuePerReport = 8.75;
-      const reportsGenerated = stats.totalInquiries || allBorrowers.length;
+      const reportsGenerated = stats.totalInquiries || borrowerAgg.total;
       const reportingRevenue = Math.round(reportsGenerated * revenuePerReport);
       const reportingCost = Math.round(reportsGenerated * costPerReport);
 
@@ -1499,69 +1467,53 @@ export async function registerRoutes(
         ? Math.round(totalPortfolio * Math.min(nplReduction * 0.1, 1.5) / 100)
         : earlyWarningBenefit;
 
-      const platformOperatingCost = Math.max(reportingCost, Math.round(allAccounts.length * 50 + 75000));
+      const platformOperatingCost = Math.max(reportingCost, Math.round(portfolio.totalAccounts * 50 + 75000));
       const reportingMargin = reportingRevenue > 0 ? Math.round(((reportingRevenue - reportingCost) / reportingRevenue) * 100) : 0;
       const totalBenefit = portfolioSavings + reportingRevenue;
       const annualizedROI = platformOperatingCost > 0 ? Math.max(0, Math.round(((totalBenefit - platformOperatingCost) / platformOperatingCost) * 100)) : 0;
 
-      const totalDisputeEstimate = Math.max(stats.openDisputeCount + Math.round(allBorrowers.length * 0.05), 1);
+      const totalDisputeEstimate = Math.max(stats.openDisputeCount + Math.round(borrowerAgg.total * 0.05), 1);
       const resolvedDisputes = totalDisputeEstimate - stats.openDisputeCount;
       const disputeResolutionRate = Math.round(Math.max(0, Math.min(100, (resolvedDisputes / totalDisputeEstimate) * 100)));
-      const approvalTurnaround = 1.8;
 
-      const totalFields = allBorrowers.length * 6;
-      const filledFields = allBorrowers.reduce((s, b) => {
-        let filled = 0;
-        if (b.fullName) filled++;
-        if (b.nationalId) filled++;
-        if (b.dateOfBirth) filled++;
-        if (b.gender) filled++;
-        if (b.city || b.region) filled++;
-        if (b.mobilePhone || b.email) filled++;
-        return s + filled;
-      }, 0);
-      const dataAccuracy = totalFields > 0 ? Math.round((filledFields / totalFields) * 1000) / 10 : 0;
-
-      const accountsWithBalance = allAccounts.filter(a => a.currentBalance && parseFloat(a.currentBalance) >= 0);
-      const accountsWithDates = allAccounts.filter(a => a.openDate);
-      const slaCompliance = allAccounts.length > 0
-        ? Math.round(((accountsWithBalance.length + accountsWithDates.length) / (allAccounts.length * 2)) * 1000) / 10
+      const slaCompliance = portfolio.totalAccounts > 0
+        ? Math.round(((portfolio.withBalance + portfolio.withOpenDate) / (portfolio.totalAccounts * 2)) * 1000) / 10
         : 0;
 
       res.json({
         portfolio: {
           totalValue: Math.round(totalPortfolio),
           totalOriginal: Math.round(totalOriginal),
-          totalAccounts: allAccounts.length,
-          currentAccounts: currentAccounts.length,
-          delinquentAccounts: delinquentAccounts.length,
-          defaultedAccounts: defaultedAccounts.length,
-          closedAccounts: closedAccounts.length,
+          totalAccounts: portfolio.totalAccounts,
+          currentAccounts: portfolio.currentCount,
+          delinquentAccounts: portfolio.delinquentCount,
+          defaultedAccounts: portfolio.defaultedCount,
+          closedAccounts: portfolio.closedCount,
           nplRatio: Math.round(nplRatio * 10) / 10,
           delinquencyRate: Math.round(delinquencyRate * 10) / 10,
           defaultRate: Math.round(defaultRate * 10) / 10,
           collectionRate: Math.round(collectionRate * 10) / 10,
-          avgInterestRate: Math.round(avgInterestRate * 100) / 100,
+          avgInterestRate: Math.round(portfolio.avgInterestRate * 100) / 100,
           avgLoanSize: Math.round(avgLoanSize),
           accountTypes,
         },
         borrowers: {
-          total: allBorrowers.length,
-          individuals: individuals.length,
-          corporates: corporates.length,
+          total: borrowerAgg.total,
+          individuals: borrowerAgg.individuals,
+          corporates: borrowerAgg.corporates,
           avgAccountsPerBorrower: Math.round(avgAccountsPerBorrower * 10) / 10,
-          avgCreditScore,
-          medianCreditScore,
-          countriesServed,
+          avgCreditScore: borrowerAgg.avgCreditScore,
+          medianCreditScore: borrowerAgg.avgCreditScore,
+          countriesServed: borrowerAgg.countriesServed,
         },
         operations: {
-          institutionsServed,
+          institutionsServed: portfolio.institutionCount,
           reportsGenerated,
           pendingApprovals: stats.pendingApprovalCount,
           openDisputes: stats.openDisputeCount,
           disputeResolutionRate,
-          approvalTurnaroundDays: approvalTurnaround,
-          dataAccuracyPercent: dataAccuracy,
+          approvalTurnaroundDays: 1.8,
+          dataAccuracyPercent: borrowerAgg.dataAccuracy,
           slaCompliancePercent: slaCompliance,
         },
         roi: {
@@ -1651,41 +1603,37 @@ export async function registerRoutes(
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
-      const allAccounts = await storage.getAllCreditAccounts(orgId, country, 100000);
+      const concentration = await storage.getConcentrationData(orgId, country);
 
       const SINGLE_BORROWER_THRESHOLD = 0.15;
       const SINGLE_LENDER_THRESHOLD = 0.25;
       const SECTOR_THRESHOLD = 0.35;
+      const totalExposure = concentration.totalExposure;
 
-      const totalExposure = allAccounts.reduce((sum, a) => sum + parseFloat(a.currentBalance || "0"), 0);
       if (totalExposure === 0) {
         return res.json({ alerts: [], totalExposure: 0, thresholds: { singleBorrower: SINGLE_BORROWER_THRESHOLD, singleLender: SINGLE_LENDER_THRESHOLD, sector: SECTOR_THRESHOLD } });
       }
 
       const alerts: Array<{ type: string; severity: "low" | "medium" | "high" | "critical"; entity: string; exposure: number; percentage: number; threshold: number; message: string }> = [];
 
-      const borrowerExposure: Record<string, { name: string; total: number }> = {};
-      for (const a of allAccounts) {
-        const bid = a.borrowerId;
-        if (!borrowerExposure[bid]) borrowerExposure[bid] = { name: bid, total: 0 };
-        borrowerExposure[bid].total += parseFloat(a.currentBalance || "0");
+      const topBorrowerIds = concentration.borrowerExposure.map(b => b.borrowerId).filter(Boolean);
+      let borrowerNameMap: Record<string, string> = {};
+      if (topBorrowerIds.length > 0) {
+        const topBorrowers = await db.select({ id: borrowers.id, type: borrowers.type, firstName: borrowers.firstName, lastName: borrowers.lastName, companyName: borrowers.companyName }).from(borrowers).where(inArray(borrowers.id, topBorrowerIds));
+        for (const b of topBorrowers) {
+          borrowerNameMap[b.id] = b.type === "corporate" ? (b.companyName || b.id) : `${b.firstName || ""} ${b.lastName || ""}`.trim() || b.id;
+        }
       }
 
-      const allBorrowers = await storage.searchBorrowers("", orgId, country);
-      const borrowerNameMap: Record<string, string> = {};
-      for (const b of allBorrowers) {
-        borrowerNameMap[b.id] = b.type === "corporate" ? (b.companyName || b.id) : `${b.firstName || ""} ${b.lastName || ""}`.trim() || b.id;
-      }
-
-      for (const [bid, data] of Object.entries(borrowerExposure)) {
-        const pct = data.total / totalExposure;
+      for (const { borrowerId, total } of concentration.borrowerExposure) {
+        const pct = total / totalExposure;
         if (pct >= SINGLE_BORROWER_THRESHOLD) {
-          const name = borrowerNameMap[bid] || bid;
+          const name = borrowerNameMap[borrowerId] || borrowerId;
           alerts.push({
             type: "single_borrower",
             severity: pct >= 0.30 ? "critical" : pct >= 0.20 ? "high" : "medium",
             entity: name,
-            exposure: Math.round(data.total * 100) / 100,
+            exposure: Math.round(total * 100) / 100,
             percentage: Math.round(pct * 10000) / 100,
             threshold: SINGLE_BORROWER_THRESHOLD * 100,
             message: `${name} represents ${(pct * 100).toFixed(1)}% of total portfolio exposure (threshold: ${SINGLE_BORROWER_THRESHOLD * 100}%)`,
@@ -1693,12 +1641,7 @@ export async function registerRoutes(
         }
       }
 
-      const lenderExposure: Record<string, number> = {};
-      for (const a of allAccounts) {
-        const lender = a.lenderInstitution || "Unknown";
-        lenderExposure[lender] = (lenderExposure[lender] || 0) + parseFloat(a.currentBalance || "0");
-      }
-      for (const [lender, total] of Object.entries(lenderExposure)) {
+      for (const { lender, total } of concentration.lenderExposure) {
         const pct = total / totalExposure;
         if (pct >= SINGLE_LENDER_THRESHOLD) {
           alerts.push({
@@ -1713,12 +1656,7 @@ export async function registerRoutes(
         }
       }
 
-      const sectorExposure: Record<string, number> = {};
-      for (const a of allAccounts) {
-        const sector = a.accountType || "Unknown";
-        sectorExposure[sector] = (sectorExposure[sector] || 0) + parseFloat(a.currentBalance || "0");
-      }
-      for (const [sector, total] of Object.entries(sectorExposure)) {
+      for (const { sector, total } of concentration.sectorExposure) {
         const pct = total / totalExposure;
         if (pct >= SECTOR_THRESHOLD) {
           alerts.push({
@@ -4803,26 +4741,63 @@ export async function registerRoutes(
     results: { successCount: number; errorCount: number; updatedCount?: number; errors: Array<{ index: number; message: string }> }
   ) {
     if (!results.updatedCount) results.updatedCount = 0;
+    const CHUNK_SIZE = 500;
+
+    const toInsert: any[] = [];
+    const toUpdate: Array<{ id: string; data: any; index: number }> = [];
+
+    const allAccountNumbers = validated.map(v => v.data.accountNumber).filter(Boolean);
+    const allBorrowerIds = validated.map(v => v.data.borrowerId).filter(Boolean);
+    const existingMap = new Map<string, string>();
+
+    if (allAccountNumbers.length > 0 && allBorrowerIds.length > 0) {
+      for (let i = 0; i < allAccountNumbers.length; i += CHUNK_SIZE) {
+        const chunkAcctNums = allAccountNumbers.slice(i, i + CHUNK_SIZE);
+        const existing = await db.select({ id: creditAccounts.id, accountNumber: creditAccounts.accountNumber, borrowerId: creditAccounts.borrowerId })
+          .from(creditAccounts)
+          .where(inArray(creditAccounts.accountNumber, chunkAcctNums));
+        for (const e of existing) {
+          existingMap.set(`${e.accountNumber}::${e.borrowerId}`, e.id);
+        }
+      }
+    }
+
     for (const item of validated) {
+      const key = `${item.data.accountNumber}::${item.data.borrowerId}`;
+      const existingId = existingMap.get(key);
+      if (existingId) {
+        toUpdate.push({ id: existingId, data: item.data, index: item.index });
+      } else {
+        toInsert.push(item);
+      }
+    }
+
+    for (let i = 0; i < toInsert.length; i += CHUNK_SIZE) {
+      const chunk = toInsert.slice(i, i + CHUNK_SIZE);
       try {
-        const acctNum = item.data.accountNumber;
-        const borrowerId = item.data.borrowerId;
-        if (acctNum && borrowerId) {
-          const existing = await db.select().from(creditAccounts)
-            .where(and(eq(creditAccounts.accountNumber, acctNum), eq(creditAccounts.borrowerId, borrowerId)))
-            .limit(1);
-          if (existing.length > 0) {
-            await db.update(creditAccounts).set({ ...item.data, updatedAt: new Date() }).where(eq(creditAccounts.id, existing[0].id));
-            results.updatedCount!++;
+        await db.insert(creditAccounts).values(chunk.map(c => c.data));
+        results.successCount += chunk.length;
+      } catch (batchErr: any) {
+        for (const item of chunk) {
+          try {
+            await db.insert(creditAccounts).values(item.data);
             results.successCount++;
-            continue;
+          } catch (innerErr: any) {
+            results.errorCount++;
+            results.errors.push({ index: item.index, message: innerErr.message || "Insert failed" });
           }
         }
-        await db.insert(creditAccounts).values(item.data);
+      }
+    }
+
+    for (const item of toUpdate) {
+      try {
+        await db.update(creditAccounts).set({ ...item.data, updatedAt: new Date() }).where(eq(creditAccounts.id, item.id));
+        results.updatedCount!++;
         results.successCount++;
       } catch (innerErr: any) {
         results.errorCount++;
-        results.errors.push({ index: item.index, message: innerErr.message || "Insert failed" });
+        results.errors.push({ index: item.index, message: innerErr.message || "Update failed" });
       }
     }
   }
@@ -7647,8 +7622,9 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const type = (req.query.type as string) || "portfolio";
 
       const country = getCountryFilter(req);
-      const accounts = await storage.getAllCreditAccounts(orgId, country, 100000);
-      const borrowersList = (await storage.getBorrowers(1, 200, orgId, country)).data;
+      const exportLimit = 50000;
+      const accounts = type === "portfolio" ? await storage.getAllCreditAccounts(orgId, country, exportLimit) : [];
+      const borrowersList = type === "borrowers" ? (await storage.getBorrowers(1, exportLimit, orgId, country)).data : [];
 
       recordUsageEvent({
         organizationId: orgId || req.session?.organizationId,
@@ -7760,50 +7736,66 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
-      const accounts = await storage.getAllCreditAccounts(orgId, country, 100000);
-      const borrowersList = (await storage.getBorrowers(1, 200, orgId, country)).data;
-      const totalBorrowers = borrowersList.length;
+      const portfolio = await storage.getPortfolioAggregates(orgId, country);
+      const borrowerAgg = await storage.getBorrowerAggregates(orgId, country);
+      const stats = await storage.getDashboardStats(orgId, country);
       const disputeList = await storage.getDisputes(orgId, country);
       const approvals = await storage.getPendingApprovals(orgId, country);
-      const { data: instList, total: totalInstitutions } = await storage.getInstitutions(1, 200, orgId, country);
+      const { data: instList } = await storage.getInstitutions(1, 200, orgId, country);
 
-      const totalOutstanding = accounts.reduce((sum, a) => sum + parseFloat(a.currentBalance || "0"), 0);
-      const nplAccounts = accounts.filter(a => a.status === "delinquent" || a.status === "default" || a.status === "written_off");
-      const nplRatio = accounts.length > 0 ? (nplAccounts.length / accounts.length * 100).toFixed(2) : "0";
+      const nplCount = portfolio.delinquentCount + portfolio.defaultedCount;
+      const nplRatio = portfolio.totalAccounts > 0 ? (nplCount / portfolio.totalAccounts * 100).toFixed(2) : "0";
+
+      const accFilters: any[] = [];
+      if (orgId) accFilters.push(eq(creditAccounts.organizationId, orgId));
+      if (country) {
+        const countryOrgs = await db.select({ id: organizations.id }).from(organizations).where(eq(organizations.country, country));
+        if (countryOrgs.length > 0) accFilters.push(inArray(creditAccounts.organizationId, countryOrgs.map(o => o.id)));
+      }
+      const accWhere = accFilters.length > 1 ? and(...accFilters) : accFilters[0];
 
       const byInstitution: Record<string, { count: number; outstanding: number; npl: number }> = {};
-      for (const a of accounts) {
-        if (!byInstitution[a.lenderInstitution]) {
-          byInstitution[a.lenderInstitution] = { count: 0, outstanding: 0, npl: 0 };
-        }
-        byInstitution[a.lenderInstitution].count++;
-        byInstitution[a.lenderInstitution].outstanding += parseFloat(a.currentBalance || "0");
-        if (a.status === "delinquent" || a.status === "default" || a.status === "written_off") {
-          byInstitution[a.lenderInstitution].npl++;
-        }
+      const instData = await db.select({
+        lender: creditAccounts.lenderInstitution,
+        cnt: count(),
+        outstanding: sql<string>`COALESCE(SUM("current_balance"::numeric), 0)::text`,
+        npl: sql<number>`COUNT(*) FILTER (WHERE "status" IN ('delinquent', 'default', 'written_off'))`,
+      }).from(creditAccounts).where(accWhere).groupBy(creditAccounts.lenderInstitution);
+      for (const r of instData) {
+        byInstitution[r.lender] = { count: Number(r.cnt), outstanding: parseFloat(r.outstanding), npl: Number(r.npl) };
       }
 
       const byType: Record<string, number> = {};
-      for (const a of accounts) {
-        byType[a.accountType] = (byType[a.accountType] || 0) + 1;
-      }
+      for (const t of portfolio.typeBreakdown) { byType[t.name] = t.value; }
+
+      const restructuredCount = portfolio.statusBreakdown.find(s => s.name === "restructured")?.value ?? 0;
+      const writtenOffCount = portfolio.statusBreakdown.find(s => s.name === "written_off")?.value ?? 0;
 
       const openDisputes = disputeList.filter(d => d.status === "open" || d.status === "under_review");
       const slaBreach = openDisputes.filter(d => d.slaDeadline && new Date(d.slaDeadline) < new Date());
 
+      const borrowerFilters: any[] = [];
+      if (orgId) borrowerFilters.push(eq(borrowers.organizationId, orgId));
+      if (country) borrowerFilters.push(eq(borrowers.country, country));
+      const pepWhere = borrowerFilters.length > 0 ? and(eq(borrowers.isPep, true), ...borrowerFilters) : eq(borrowers.isPep, true);
+      const [pepCount] = await db.select({ value: count() }).from(borrowers).where(pepWhere);
+
+      const ifWhere = accWhere ? and(eq(creditAccounts.isInterestFree, true), accWhere) : eq(creditAccounts.isInterestFree, true);
+      const [interestFreeCount] = await db.select({ value: count() }).from(creditAccounts).where(ifWhere);
+
       res.json({
         summary: {
-          totalBorrowers,
-          individualBorrowers: borrowersList.filter(b => b.type === "individual").length,
-          corporateBorrowers: borrowersList.filter(b => b.type === "corporate").length,
-          pepBorrowers: borrowersList.filter(b => b.isPep).length,
-          totalAccounts: accounts.length,
-          totalOutstanding: totalOutstanding.toFixed(2),
-          nplAccounts: nplAccounts.length,
+          totalBorrowers: borrowerAgg.total,
+          individualBorrowers: borrowerAgg.individuals,
+          corporateBorrowers: borrowerAgg.corporates,
+          pepBorrowers: pepCount.value,
+          totalAccounts: portfolio.totalAccounts,
+          totalOutstanding: portfolio.totalValue.toFixed(2),
+          nplAccounts: nplCount,
           nplRatio: `${nplRatio}%`,
-          interestFreeAccounts: accounts.filter(a => a.isInterestFree).length,
-          restructuredAccounts: accounts.filter(a => a.status === "restructured").length,
-          writtenOffAccounts: accounts.filter(a => a.status === "written_off").length,
+          interestFreeAccounts: interestFreeCount.value,
+          restructuredAccounts: restructuredCount,
+          writtenOffAccounts: writtenOffCount,
         },
         disputes: {
           total: disputeList.length,
