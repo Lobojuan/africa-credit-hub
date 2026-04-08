@@ -30,9 +30,17 @@ function getEncryptionKey(): Buffer {
 }
 
 export function validateEncryptionConfig(): void {
-  if (process.env.NODE_ENV === "production") {
+  const isProduction = process.env.NODE_ENV === "production" || process.env.PRODUCTION_MODE === "true";
+  if (isProduction) {
     if (!process.env.PII_ENCRYPTION_KEY) {
-      console.warn("[SECURITY] WARNING: PII_ENCRYPTION_KEY not set in production — falling back to SESSION_SECRET-derived key. Set a dedicated PII_ENCRYPTION_KEY for stronger security.");
+      throw new Error("CRITICAL: PII_ENCRYPTION_KEY must be set in production. Cannot start without a dedicated encryption key for PII data.");
+    }
+    if (!process.env.PII_ENCRYPTION_SALT) {
+      throw new Error("CRITICAL: PII_ENCRYPTION_SALT must be set in production. Cannot start without a dedicated salt for PII key derivation.");
+    }
+  } else {
+    if (!process.env.PII_ENCRYPTION_KEY) {
+      console.warn("[SECURITY] WARNING: PII_ENCRYPTION_KEY not set — falling back to SESSION_SECRET-derived key. Set a dedicated PII_ENCRYPTION_KEY for production.");
     }
     if (!process.env.PII_ENCRYPTION_SALT) {
       console.warn("[SECURITY] PII_ENCRYPTION_SALT not set — using default salt. Set a unique salt for production.");

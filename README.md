@@ -163,8 +163,11 @@ Create a `.env` file or configure the following secrets:
 # Install dependencies
 npm install
 
-# Push database schema
+# Push database schema (development only — applies changes directly)
 npm run db:push
+
+# Generate and apply migrations (required for production CI/CD)
+npm run db:migrate
 
 # Seed demo data (optional — creates admin user and sample data for 54 countries)
 npx tsx server/seed.ts
