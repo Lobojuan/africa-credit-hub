@@ -130,6 +130,8 @@ export async function createBackup(
 
     await logBackupAudit(createdBy, "BACKUP_CREATED", `${type} backup: ${filename} (${record.sizeMB}MB, ${record.tables} tables, ${record.rows} rows)`);
 
+    await uploadToS3IfConfigured(filepath, filename);
+
     pruneOldBackups();
 
     return record;
@@ -230,6 +232,35 @@ function pruneOldBackups() {
       if (idx >= 0) manifest.splice(idx, 1);
     }
     saveManifest(manifest);
+  }
+}
+
+async function uploadToS3IfConfigured(filepath: string, filename: string): Promise<void> {
+  const bucket = process.env.BACKUP_S3_BUCKET;
+  const accessKey = process.env.AWS_ACCESS_KEY_ID;
+  const secretKey = process.env.AWS_SECRET_ACCESS_KEY;
+
+  if (!bucket || !accessKey || !secretKey) {
+    console.log(`[Backup] S3 not configured — backup saved locally only`);
+    return;
+  }
+
+  try {
+    const { S3Client, PutObjectCommand } = await import("@aws-sdk/client-s3");
+    const client = new S3Client({
+      region: process.env.BACKUP_S3_REGION || "us-east-1",
+      credentials: { accessKeyId: accessKey, secretAccessKey: secretKey },
+    });
+    const body = fs.readFileSync(filepath);
+    await client.send(new PutObjectCommand({
+      Bucket: bucket,
+      Key: `backups/${filename}`,
+      Body: body,
+      ContentType: "application/gzip",
+    }));
+    console.log(`[Backup] Uploaded to S3: s3://${bucket}/backups/${filename}`);
+  } catch (err: any) {
+    console.error(`[Backup] S3 upload failed (local copy preserved): ${err.message}`);
   }
 }
 
