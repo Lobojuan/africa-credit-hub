@@ -1,4 +1,4 @@
-import { db } from "./db";
+import { db, pool } from "./db";
 import { users, borrowers, creditAccounts, creditInquiries, auditLogs } from "@shared/schema";
 import { count } from "drizzle-orm";
 import bcrypt from "bcryptjs";
@@ -205,6 +205,8 @@ export async function seedDatabase() {
     { userId: admin.id, action: "CREATE", entity: "borrower", entityId: createdBorrowers[3].id, details: `Registered corporate borrower: ${coreBorrowers[3].companyName}`, ipAddress: "127.0.0.1" },
   ]);
 
+  await seedPricingTiers();
+
   console.log("Database seeded successfully");
 
   try {
@@ -214,6 +216,58 @@ export async function seedDatabase() {
     console.error("Test data seed error:", e);
   }
 
+}
+
+async function seedPricingTiers() {
+  const { rows } = await pool.query("SELECT count(*)::int AS c FROM pricing_tiers");
+  if (rows[0].c > 0) return;
+
+  const tiers: { name: string; eventType: string; minVolume: number; maxVolume: number | null; unitPriceCents: number; currency: string; country: string }[] = [
+    { name: "Credit Report - Standard", eventType: "credit_report_pull", minVolume: 0, maxVolume: 100, unitPriceCents: 250, currency: "USD", country: "Global" },
+    { name: "Credit Report - Volume", eventType: "credit_report_pull", minVolume: 101, maxVolume: 1000, unitPriceCents: 200, currency: "USD", country: "Global" },
+    { name: "Credit Report - Enterprise", eventType: "credit_report_pull", minVolume: 1001, maxVolume: null, unitPriceCents: 150, currency: "USD", country: "Global" },
+    { name: "API Call - Standard", eventType: "api_call", minVolume: 0, maxVolume: null, unitPriceCents: 100, currency: "USD", country: "Global" },
+    { name: "Batch Upload - Standard", eventType: "batch_upload", minVolume: 0, maxVolume: 500, unitPriceCents: 50, currency: "USD", country: "Global" },
+    { name: "Batch Upload - Volume", eventType: "batch_upload", minVolume: 501, maxVolume: 5000, unitPriceCents: 35, currency: "USD", country: "Global" },
+    { name: "Batch Upload - Enterprise", eventType: "batch_upload", minVolume: 5001, maxVolume: null, unitPriceCents: 25, currency: "USD", country: "Global" },
+    { name: "Dispute Filing - Standard", eventType: "dispute_filing", minVolume: 0, maxVolume: null, unitPriceCents: 500, currency: "USD", country: "Global" },
+    { name: "Data Export - Standard", eventType: "data_export", minVolume: 0, maxVolume: null, unitPriceCents: 100, currency: "USD", country: "Global" },
+    { name: "Cross Border Query - Standard", eventType: "cross_border_query", minVolume: 0, maxVolume: null, unitPriceCents: 150, currency: "USD", country: "Global" },
+
+    { name: "Credit Report - Standard", eventType: "credit_report_pull", minVolume: 0, maxVolume: 100, unitPriceCents: 3294, currency: "GHS", country: "Ghana" },
+    { name: "Credit Report - Volume", eventType: "credit_report_pull", minVolume: 101, maxVolume: 1000, unitPriceCents: 2635, currency: "GHS", country: "Ghana" },
+    { name: "Credit Report - Enterprise", eventType: "credit_report_pull", minVolume: 1001, maxVolume: null, unitPriceCents: 1976, currency: "GHS", country: "Ghana" },
+    { name: "API Call - Standard", eventType: "api_call", minVolume: 0, maxVolume: null, unitPriceCents: 1318, currency: "GHS", country: "Ghana" },
+    { name: "Batch Upload - Standard", eventType: "batch_upload", minVolume: 0, maxVolume: 500, unitPriceCents: 659, currency: "GHS", country: "Ghana" },
+    { name: "Batch Upload - Volume", eventType: "batch_upload", minVolume: 501, maxVolume: 5000, unitPriceCents: 461, currency: "GHS", country: "Ghana" },
+    { name: "Batch Upload - Enterprise", eventType: "batch_upload", minVolume: 5001, maxVolume: null, unitPriceCents: 329, currency: "GHS", country: "Ghana" },
+    { name: "Dispute Filing - Standard", eventType: "dispute_filing", minVolume: 0, maxVolume: null, unitPriceCents: 6588, currency: "GHS", country: "Ghana" },
+    { name: "Data Export - Standard", eventType: "data_export", minVolume: 0, maxVolume: null, unitPriceCents: 1318, currency: "GHS", country: "Ghana" },
+    { name: "Cross Border Query - Standard", eventType: "cross_border_query", minVolume: 0, maxVolume: null, unitPriceCents: 1976, currency: "GHS", country: "Ghana" },
+
+    { name: "Telco Credit Score - Standard", eventType: "telco_credit_score", minVolume: 0, maxVolume: 5000, unitPriceCents: 50, currency: "USD", country: "Global" },
+    { name: "Telco Credit Score - Volume", eventType: "telco_credit_score", minVolume: 5001, maxVolume: 50000, unitPriceCents: 25, currency: "USD", country: "Global" },
+    { name: "Telco Credit Score - Enterprise", eventType: "telco_credit_score", minVolume: 50001, maxVolume: null, unitPriceCents: 12, currency: "USD", country: "Global" },
+    { name: "Telco Decision Engine - Standard", eventType: "telco_decision", minVolume: 0, maxVolume: 5000, unitPriceCents: 30, currency: "USD", country: "Global" },
+    { name: "Telco Decision Engine - Volume", eventType: "telco_decision", minVolume: 5001, maxVolume: 50000, unitPriceCents: 15, currency: "USD", country: "Global" },
+    { name: "Telco Decision Engine - Enterprise", eventType: "telco_decision", minVolume: 50001, maxVolume: null, unitPriceCents: 8, currency: "USD", country: "Global" },
+    { name: "MoMo Data Import - Standard", eventType: "telco_data_import", minVolume: 0, maxVolume: 10000, unitPriceCents: 5, currency: "USD", country: "Global" },
+    { name: "MoMo Data Import - Volume", eventType: "telco_data_import", minVolume: 10001, maxVolume: 100000, unitPriceCents: 3, currency: "USD", country: "Global" },
+    { name: "MoMo Data Import - Enterprise", eventType: "telco_data_import", minVolume: 100001, maxVolume: null, unitPriceCents: 1, currency: "USD", country: "Global" },
+    { name: "Consent Management - Standard", eventType: "telco_consent", minVolume: 0, maxVolume: 10000, unitPriceCents: 2, currency: "USD", country: "Global" },
+    { name: "Consent Management - Volume", eventType: "telco_consent", minVolume: 10001, maxVolume: null, unitPriceCents: 1, currency: "USD", country: "Global" },
+    { name: "Loan Disbursement - Standard", eventType: "telco_loan_disbursement", minVolume: 0, maxVolume: 5000, unitPriceCents: 25, currency: "USD", country: "Global" },
+    { name: "Loan Disbursement - Volume", eventType: "telco_loan_disbursement", minVolume: 5001, maxVolume: 50000, unitPriceCents: 15, currency: "USD", country: "Global" },
+    { name: "Loan Disbursement - Enterprise", eventType: "telco_loan_disbursement", minVolume: 50001, maxVolume: null, unitPriceCents: 8, currency: "USD", country: "Global" },
+  ];
+
+  for (const t of tiers) {
+    await pool.query(
+      "INSERT INTO pricing_tiers (name, event_type, min_volume, max_volume, unit_price_cents, currency, country, is_active) VALUES ($1,$2,$3,$4,$5,$6,$7,true)",
+      [t.name, t.eventType, t.minVolume, t.maxVolume, t.unitPriceCents, t.currency, t.country]
+    );
+  }
+  console.log(`[Seed] Inserted ${tiers.length} default pricing tiers`);
 }
 
 if (process.argv[1] && (process.argv[1].endsWith("seed.ts") || process.argv[1].endsWith("seed.js"))) {

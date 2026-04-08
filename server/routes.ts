@@ -9753,6 +9753,27 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
+  app.get("/api/platform/pricing-tiers", requireAuth, requireSuperAdmin, async (_req, res) => {
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    res.set("Pragma", "no-cache");
+    try {
+      const tierResult = await pool.query("SELECT id, name, event_type, min_volume, max_volume, unit_price_cents, currency, country, is_active, created_at FROM pricing_tiers WHERE is_active = true ORDER BY country, event_type, min_volume");
+      const tiers = tierResult.rows.map((t: any) => ({
+        id: t.id,
+        name: t.name,
+        eventType: t.event_type,
+        minVolume: Number(t.min_volume) || 0,
+        maxVolume: t.max_volume != null ? Number(t.max_volume) : null,
+        unitPriceCents: Number(t.unit_price_cents) || 0,
+        currency: String(t.currency || "USD"),
+        country: String(t.country || "Global"),
+        isActive: t.is_active,
+        createdAt: t.created_at,
+      }));
+      res.json({ pricingTiers: tiers, count: tiers.length, _ts: Date.now() });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
   app.put("/api/platform/pricing-tiers/:id", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
       const { unitPriceCents, isActive } = req.body;

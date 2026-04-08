@@ -65,16 +65,16 @@ export function CommandCenterBillingTab() {
     pricingTiers: any[];
     count: number;
   }>({
-    queryKey: ["/api/platform/pricing-tiers-standalone"],
+    queryKey: ["/api/platform/pricing-tiers"],
     refetchOnMount: "always",
   });
 
   const updateTierMutation = useMutation({
     mutationFn: async ({ id, unitPriceCents }: { id: string; unitPriceCents: number }) => {
-      await apiRequest("PUT", `/api/platform/pricing-tiers-standalone/${id}`, { unitPriceCents });
+      await apiRequest("PUT", `/api/platform/pricing-tiers/${id}`, { unitPriceCents });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/platform/pricing-tiers-standalone"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/platform/pricing-tiers"] });
       toast({ title: "Pricing tier updated" });
       setEditingTier(null);
     },
