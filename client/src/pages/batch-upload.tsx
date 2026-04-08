@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, Fragment } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Upload, FileText, CheckCircle, AlertTriangle, Download, FileCode, Database, Clock, FileSpreadsheet, X, Eye } from "lucide-react";
+import { Upload, FileText, CheckCircle, AlertTriangle, Download, FileCode, Database, Clock, FileSpreadsheet, X, Eye, User, Globe, ChevronDown, ChevronUp, Hash } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,13 +29,39 @@ interface ValidationRow {
   errors: string[];
 }
 
+interface UploadError {
+  row?: number;
+  index?: number;
+  message: string;
+  field?: string;
+  value?: string;
+  rowData?: Record<string, string>;
+}
+
 interface UploadHistoryItem {
   id: string;
   format: string;
   totalSubmitted: number;
   successCount: number;
   errorCount: number;
+  borrowersCreated?: number;
+  borrowersUpdated?: number;
+  accountsCreated?: number;
+  accountsUpdated?: number;
+  chequesCreated?: number;
+  chequesUpdated?: number;
+  judgmentsCreated?: number;
+  judgmentsUpdated?: number;
+  guarantorsCreated?: number;
+  guarantorsUpdated?: number;
+  iffType?: string;
+  lenderInstitution?: string;
+  fileName?: string;
+  uploadErrors?: UploadError[];
+  uploadedBy?: string | null;
   userId: string | null;
+  ipAddress?: string | null;
+  entity?: string;
   createdAt: string;
   details: string;
 }
@@ -1342,12 +1368,40 @@ export default function BatchUploadPage() {
                           {isExpanded && (
                             <TableRow key={`${item.id}-detail`}>
                               <TableCell colSpan={6} className="p-0">
-                                <div className="bg-accent/30 border-t border-b p-4 space-y-3" data-testid={`detail-panel-${item.id}`}>
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <FileText className="w-4 h-4 text-primary" />
-                                    <h4 className="font-semibold text-sm">Upload Details</h4>
-                                    {item.iffType && (
-                                      <Badge variant="outline" className="text-[10px]">{item.iffType}</Badge>
+                                <div className="bg-accent/30 border-t border-b p-4 space-y-4" data-testid={`detail-panel-${item.id}`}>
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <FileText className="w-4 h-4 text-primary" />
+                                      <h4 className="font-semibold text-sm">Upload Details</h4>
+                                      {item.iffType && (
+                                        <Badge variant="outline" className="text-[10px]">{item.iffType}</Badge>
+                                      )}
+                                      {item.entity && item.entity !== "iff_batch" && (
+                                        <Badge variant="outline" className="text-[10px]">{item.entity.replace(/_/g, " ")}</Badge>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground">
+                                    {item.uploadedBy && (
+                                      <span className="flex items-center gap-1" data-testid="uploaded-by">
+                                        <User className="w-3 h-3" /> {item.uploadedBy}
+                                      </span>
+                                    )}
+                                    {item.lenderInstitution && (
+                                      <span className="flex items-center gap-1" data-testid="lender-institution">
+                                        <Globe className="w-3 h-3" /> {item.lenderInstitution}
+                                      </span>
+                                    )}
+                                    {item.fileName && (
+                                      <span className="flex items-center gap-1" data-testid="file-name">
+                                        <FileSpreadsheet className="w-3 h-3" /> {item.fileName}
+                                      </span>
+                                    )}
+                                    {item.ipAddress && (
+                                      <span className="flex items-center gap-1" data-testid="ip-address">
+                                        <Hash className="w-3 h-3" /> {item.ipAddress}
+                                      </span>
                                     )}
                                   </div>
 
@@ -1370,74 +1424,118 @@ export default function BatchUploadPage() {
                                     </div>
                                   </div>
 
-                                  {(item.borrowersCreated > 0 || item.borrowersUpdated > 0 || item.accountsCreated > 0 || item.accountsUpdated > 0 || item.chequesCreated > 0 || item.chequesUpdated > 0 || item.judgmentsCreated > 0 || item.judgmentsUpdated > 0 || item.guarantorsCreated > 0 || item.guarantorsUpdated > 0) && (
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                      {item.borrowersCreated > 0 && (
-                                        <div className="flex items-center gap-2 bg-background rounded-md p-2 border text-xs">
-                                          <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                                  {((item.borrowersCreated || 0) > 0 || (item.borrowersUpdated || 0) > 0 || (item.accountsCreated || 0) > 0 || (item.accountsUpdated || 0) > 0 || (item.chequesCreated || 0) > 0 || (item.chequesUpdated || 0) > 0 || (item.judgmentsCreated || 0) > 0 || (item.judgmentsUpdated || 0) > 0 || (item.guarantorsCreated || 0) > 0 || (item.guarantorsUpdated || 0) > 0) && (
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                                      {(item.borrowersCreated || 0) > 0 && (
+                                        <div className="flex items-center gap-2 bg-green-50 dark:bg-green-950/30 rounded-md p-2 border border-green-200 dark:border-green-900 text-xs">
+                                          <CheckCircle className="w-3.5 h-3.5 text-green-500 shrink-0" />
                                           <span><strong>{item.borrowersCreated}</strong> borrowers created</span>
                                         </div>
                                       )}
-                                      {item.borrowersUpdated > 0 && (
-                                        <div className="flex items-center gap-2 bg-background rounded-md p-2 border text-xs">
-                                          <CheckCircle className="w-3.5 h-3.5 text-blue-500" />
+                                      {(item.borrowersUpdated || 0) > 0 && (
+                                        <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-950/30 rounded-md p-2 border border-blue-200 dark:border-blue-900 text-xs">
+                                          <CheckCircle className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                                           <span><strong>{item.borrowersUpdated}</strong> borrowers updated</span>
                                         </div>
                                       )}
-                                      {item.accountsCreated > 0 && (
-                                        <div className="flex items-center gap-2 bg-background rounded-md p-2 border text-xs">
-                                          <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                                      {(item.accountsCreated || 0) > 0 && (
+                                        <div className="flex items-center gap-2 bg-green-50 dark:bg-green-950/30 rounded-md p-2 border border-green-200 dark:border-green-900 text-xs">
+                                          <CheckCircle className="w-3.5 h-3.5 text-green-500 shrink-0" />
                                           <span><strong>{item.accountsCreated}</strong> accounts created</span>
                                         </div>
                                       )}
-                                      {item.accountsUpdated > 0 && (
-                                        <div className="flex items-center gap-2 bg-background rounded-md p-2 border text-xs">
-                                          <CheckCircle className="w-3.5 h-3.5 text-blue-500" />
+                                      {(item.accountsUpdated || 0) > 0 && (
+                                        <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-950/30 rounded-md p-2 border border-blue-200 dark:border-blue-900 text-xs">
+                                          <CheckCircle className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                                           <span><strong>{item.accountsUpdated}</strong> accounts updated</span>
                                         </div>
                                       )}
-                                      {item.chequesCreated > 0 && (
-                                        <div className="flex items-center gap-2 bg-background rounded-md p-2 border text-xs">
-                                          <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                                      {(item.chequesCreated || 0) > 0 && (
+                                        <div className="flex items-center gap-2 bg-green-50 dark:bg-green-950/30 rounded-md p-2 border border-green-200 dark:border-green-900 text-xs">
+                                          <CheckCircle className="w-3.5 h-3.5 text-green-500 shrink-0" />
                                           <span><strong>{item.chequesCreated}</strong> cheques created</span>
                                         </div>
                                       )}
-                                      {item.chequesUpdated > 0 && (
-                                        <div className="flex items-center gap-2 bg-background rounded-md p-2 border text-xs">
-                                          <CheckCircle className="w-3.5 h-3.5 text-blue-500" />
+                                      {(item.chequesUpdated || 0) > 0 && (
+                                        <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-950/30 rounded-md p-2 border border-blue-200 dark:border-blue-900 text-xs">
+                                          <CheckCircle className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                                           <span><strong>{item.chequesUpdated}</strong> cheques updated</span>
                                         </div>
                                       )}
-                                      {item.judgmentsCreated > 0 && (
-                                        <div className="flex items-center gap-2 bg-background rounded-md p-2 border text-xs">
-                                          <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                                      {(item.judgmentsCreated || 0) > 0 && (
+                                        <div className="flex items-center gap-2 bg-green-50 dark:bg-green-950/30 rounded-md p-2 border border-green-200 dark:border-green-900 text-xs">
+                                          <CheckCircle className="w-3.5 h-3.5 text-green-500 shrink-0" />
                                           <span><strong>{item.judgmentsCreated}</strong> judgments created</span>
                                         </div>
                                       )}
-                                      {item.judgmentsUpdated > 0 && (
-                                        <div className="flex items-center gap-2 bg-background rounded-md p-2 border text-xs">
-                                          <CheckCircle className="w-3.5 h-3.5 text-blue-500" />
+                                      {(item.judgmentsUpdated || 0) > 0 && (
+                                        <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-950/30 rounded-md p-2 border border-blue-200 dark:border-blue-900 text-xs">
+                                          <CheckCircle className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                                           <span><strong>{item.judgmentsUpdated}</strong> judgments updated</span>
                                         </div>
                                       )}
-                                      {item.guarantorsCreated > 0 && (
-                                        <div className="flex items-center gap-2 bg-background rounded-md p-2 border text-xs">
-                                          <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                                      {(item.guarantorsCreated || 0) > 0 && (
+                                        <div className="flex items-center gap-2 bg-green-50 dark:bg-green-950/30 rounded-md p-2 border border-green-200 dark:border-green-900 text-xs">
+                                          <CheckCircle className="w-3.5 h-3.5 text-green-500 shrink-0" />
                                           <span><strong>{item.guarantorsCreated}</strong> guarantors created</span>
                                         </div>
                                       )}
-                                      {item.guarantorsUpdated > 0 && (
-                                        <div className="flex items-center gap-2 bg-background rounded-md p-2 border text-xs">
-                                          <CheckCircle className="w-3.5 h-3.5 text-blue-500" />
+                                      {(item.guarantorsUpdated || 0) > 0 && (
+                                        <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-950/30 rounded-md p-2 border border-blue-200 dark:border-blue-900 text-xs">
+                                          <CheckCircle className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                                           <span><strong>{item.guarantorsUpdated}</strong> guarantors updated</span>
                                         </div>
                                       )}
                                     </div>
                                   )}
 
+                                  {item.uploadErrors && item.uploadErrors.length > 0 && (
+                                    <div className="space-y-2" data-testid="upload-errors-section">
+                                      <div className="flex items-center gap-2">
+                                        <AlertTriangle className="w-4 h-4 text-red-500" />
+                                        <h5 className="font-semibold text-sm text-red-600 dark:text-red-400">
+                                          Error Details ({item.uploadErrors.length}{item.errorCount > item.uploadErrors.length ? ` of ${item.errorCount}` : ""})
+                                        </h5>
+                                      </div>
+                                      <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+                                        {item.uploadErrors.map((err, ei) => (
+                                          <div key={ei} className="border border-red-200 dark:border-red-800 rounded-md p-3 bg-red-50 dark:bg-red-950/30" data-testid={`history-error-${ei}`}>
+                                            <div className="flex items-start gap-2">
+                                              <span className="shrink-0 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 text-[10px] font-mono px-1.5 py-0.5 rounded">
+                                                Row {err.row ?? (err.index !== undefined ? err.index + 1 : "?")}
+                                              </span>
+                                              <p className="text-xs text-red-700 dark:text-red-300 flex-1">{err.message}</p>
+                                            </div>
+                                            {err.field && (
+                                              <div className="mt-1.5 flex items-center gap-1.5">
+                                                <span className="text-[10px] text-muted-foreground">Field:</span>
+                                                <Badge variant="outline" className="text-[10px] font-mono">{err.field}</Badge>
+                                                {err.value && (
+                                                  <>
+                                                    <span className="text-[10px] text-muted-foreground">Value:</span>
+                                                    <Badge variant="secondary" className="text-[10px] font-mono">{err.value}</Badge>
+                                                  </>
+                                                )}
+                                              </div>
+                                            )}
+                                            {err.rowData && Object.keys(err.rowData).length > 0 && (
+                                              <div className="mt-2 flex flex-wrap gap-1">
+                                                {Object.entries(err.rowData).map(([key, val]) => (
+                                                  <Badge key={key} variant="secondary" className="text-[9px] font-mono py-0">
+                                                    {key}: {String(val).substring(0, 30)}
+                                                  </Badge>
+                                                ))}
+                                              </div>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+
                                   {item.details && (
                                     <div className="bg-background rounded-md p-2.5 border">
-                                      <p className="text-[10px] text-muted-foreground uppercase mb-1">Raw Log</p>
+                                      <p className="text-[10px] text-muted-foreground uppercase mb-1">Summary</p>
                                       <p className="text-xs text-muted-foreground font-mono break-all">{item.details}</p>
                                     </div>
                                   )}

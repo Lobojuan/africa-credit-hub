@@ -4848,9 +4848,17 @@ export async function registerRoutes(
 
       await batchInsertCreditAccounts(validated, results);
 
+      const batchMeta = JSON.stringify({
+        totalRecords: results.totalSubmitted,
+        successCount: results.successCount,
+        updatedCount: results.updatedCount || 0,
+        errorCount: results.errorCount,
+        errors: results.errors.slice(0, 50),
+      });
+      const batchSummary = `Batch upload: ${results.successCount} succeeded (${results.updatedCount || 0} updated), ${results.errorCount} failed out of ${results.totalSubmitted}`;
       await storage.createAuditLog({
         action: "BATCH_UPLOAD", entity: "credit_account", userId: req.session?.userId,
-        details: `Batch upload: ${results.successCount} succeeded (${results.updatedCount || 0} updated), ${results.errorCount} failed out of ${results.totalSubmitted}`,
+        details: `${batchSummary}\n---JSON---\n${batchMeta}`,
         ipAddress: req.ip || null,
       });
 
@@ -4931,9 +4939,10 @@ export async function registerRoutes(
       }
       await batchInsertCreditAccounts(validated, results);
 
+      const xbrlMeta = JSON.stringify({ totalRecords: results.totalSubmitted, successCount: results.successCount, updatedCount: results.updatedCount || 0, errorCount: results.errorCount, errors: results.errors.slice(0, 50) });
       await storage.createAuditLog({
         action: "BATCH_UPLOAD_XBRL", entity: "credit_account", userId: req.session?.userId,
-        details: `XBRL upload: ${results.successCount} succeeded (${results.updatedCount || 0} updated), ${results.errorCount} failed out of ${results.totalSubmitted}`,
+        details: `XBRL upload: ${results.successCount} succeeded (${results.updatedCount || 0} updated), ${results.errorCount} failed out of ${results.totalSubmitted}\n---JSON---\n${xbrlMeta}`,
         ipAddress: req.ip || null,
       });
 
@@ -5052,9 +5061,10 @@ export async function registerRoutes(
       }
       await batchInsertCreditAccounts(validated, results);
 
+      const bogMeta = JSON.stringify({ totalRecords: results.totalSubmitted, successCount: results.successCount, updatedCount: results.updatedCount || 0, errorCount: results.errorCount, errors: results.errors.slice(0, 50) });
       await storage.createAuditLog({
         action: "BATCH_UPLOAD_BOG", entity: "credit_account", userId: req.session?.userId,
-        details: `BoG pipe-delimited upload: ${results.successCount} succeeded (${results.updatedCount || 0} updated), ${results.errorCount} failed out of ${results.totalSubmitted}`,
+        details: `BoG pipe-delimited upload: ${results.successCount} succeeded (${results.updatedCount || 0} updated), ${results.errorCount} failed out of ${results.totalSubmitted}\n---JSON---\n${bogMeta}`,
         ipAddress: req.ip || null,
       });
 
@@ -5139,9 +5149,10 @@ export async function registerRoutes(
       }
       await batchInsertCreditAccounts(validated, results);
 
+      const csvMeta = JSON.stringify({ totalRecords: results.totalSubmitted, successCount: results.successCount, updatedCount: results.updatedCount || 0, errorCount: results.errorCount, errors: results.errors.slice(0, 50) });
       await storage.createAuditLog({
         action: "BATCH_UPLOAD_CSV", entity: "credit_account", userId: req.session?.userId,
-        details: `CSV upload: ${results.successCount} succeeded (${results.updatedCount || 0} updated), ${results.errorCount} failed out of ${results.totalSubmitted}`,
+        details: `CSV upload: ${results.successCount} succeeded (${results.updatedCount || 0} updated), ${results.errorCount} failed out of ${results.totalSubmitted}\n---JSON---\n${csvMeta}`,
         ipAddress: req.ip || null,
       });
 
@@ -5162,21 +5173,67 @@ export async function registerRoutes(
       ];
       const orgScope = getOrgScope(req);
       if (orgScope) conditions.push(eq(auditLogs.organizationId, orgScope));
-      const allLogs = await db.select().from(auditLogs)
+      const allLogs = await db.select({
+        id: auditLogs.id,
+        action: auditLogs.action,
+        entity: auditLogs.entity,
+        details: auditLogs.details,
+        userId: auditLogs.userId,
+        createdAt: auditLogs.createdAt,
+        ipAddress: auditLogs.ipAddress,
+        userName: users.username,
+        userFullName: users.fullName,
+      }).from(auditLogs)
+        .leftJoin(users, eq(auditLogs.userId, users.id))
         .where(and(...conditions))
         .orderBy(desc(auditLogs.createdAt))
         .limit(200);
       const batchLogs = allLogs
         .map((log: any) => {
-          const detailStr = log.details || "";
+          const rawDetails = log.details || "";
+          const jsonMarker = "\n---JSON---\n";
+          const jsonSep = rawDetails.indexOf(jsonMarker);
+          const detailStr = jsonSep >= 0 ? rawDetails.substring(0, jsonSep) : rawDetails;
+          let meta: any = null;
+          if (jsonSep >= 0) {
+            try { meta = JSON.parse(rawDetails.substring(jsonSep + jsonMarker.length)); } catch {}
+          }
+
           const formatMatch = (log.action === "IFF_UPLOAD" || log.action === "IFF_UPLOAD_JSON") ? "IFF" : (log.action.replace("BATCH_UPLOAD", "").replace("_", "") || "JSON");
           let totalSubmitted = 0, successCount = 0, errorCount = 0;
           let borrowersCreated = 0, borrowersUpdated = 0, accountsCreated = 0, accountsUpdated = 0;
           let chequesCreated = 0, chequesUpdated = 0, judgmentsCreated = 0, judgmentsUpdated = 0;
           let guarantorsCreated = 0, guarantorsUpdated = 0;
           let iffType = "";
+          let lenderInstitution = "";
+          let fileName = "";
+          let uploadErrors: any[] = [];
 
-          if (log.action === "IFF_UPLOAD" || log.action === "IFF_UPLOAD_JSON") {
+          if (meta) {
+            totalSubmitted = meta.totalRecords || 0;
+            successCount = meta.successCount || (totalSubmitted - (meta.errorCount || 0));
+            errorCount = meta.errorCount || 0;
+            borrowersCreated = meta.borrowersCreated || 0;
+            borrowersUpdated = meta.borrowersUpdated || 0;
+            accountsCreated = meta.accountsCreated || 0;
+            accountsUpdated = meta.accountsUpdated || 0;
+            chequesCreated = meta.chequesCreated || 0;
+            chequesUpdated = meta.chequesUpdated || 0;
+            judgmentsCreated = meta.judgmentsCreated || 0;
+            judgmentsUpdated = meta.judgmentsUpdated || 0;
+            guarantorsCreated = meta.guarantorsCreated || 0;
+            guarantorsUpdated = meta.guarantorsUpdated || 0;
+            iffType = meta.iffType || "";
+            lenderInstitution = meta.lenderInstitution || "";
+            fileName = meta.fileName || "";
+            uploadErrors = meta.errors || [];
+            if (meta.updatedCount !== undefined) {
+              const entity = log.entity || "";
+              if (entity === "dishonoured_cheque") chequesUpdated = meta.updatedCount;
+              else if (entity === "court_judgment") judgmentsUpdated = meta.updatedCount;
+              else accountsUpdated = meta.updatedCount;
+            }
+          } else if (log.action === "IFF_UPLOAD" || log.action === "IFF_UPLOAD_JSON") {
             const recMatch = detailStr.match(/(\d+)\s+records/);
             if (recMatch) totalSubmitted = parseInt(recMatch[1], 10);
             const bcMatch = detailStr.match(/(\d+)\s+borrowers created/);
@@ -5237,9 +5294,15 @@ export async function registerRoutes(
             guarantorsCreated,
             guarantorsUpdated,
             iffType,
+            lenderInstitution,
+            fileName,
+            uploadErrors,
+            uploadedBy: log.userFullName || log.userName || null,
             userId: log.userId,
+            ipAddress: log.ipAddress,
+            entity: log.entity,
             createdAt: log.createdAt,
-            details: log.details,
+            details: detailStr,
           };
         });
       res.json(batchLogs);
@@ -5438,9 +5501,28 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
       const result = await processIFFData(iffType, rows, lenderInstitution, orgId);
 
+      const iffMeta = JSON.stringify({
+        iffType,
+        lenderInstitution,
+        fileName: req.file?.originalname || null,
+        totalRecords: result.totalRecords,
+        borrowersCreated: result.borrowersCreated,
+        borrowersUpdated: result.borrowersUpdated,
+        accountsCreated: result.accountsCreated,
+        accountsUpdated: result.accountsUpdated,
+        chequesCreated: result.chequesCreated,
+        chequesUpdated: result.chequesUpdated,
+        judgmentsCreated: result.judgmentsCreated,
+        judgmentsUpdated: result.judgmentsUpdated,
+        guarantorsCreated: result.guarantorsCreated,
+        guarantorsUpdated: result.guarantorsUpdated,
+        errorCount: result.errors.length,
+        errors: result.errors.slice(0, 50),
+      });
+      const summaryText = `IFF upload (${iffType}): ${result.totalRecords} records, ${result.borrowersCreated} borrowers created, ${result.borrowersUpdated} borrowers updated, ${result.accountsCreated} accounts created, ${result.accountsUpdated} accounts updated, ${result.chequesCreated} cheques created, ${result.chequesUpdated} cheques updated, ${result.judgmentsCreated} judgments created, ${result.judgmentsUpdated} judgments updated, ${result.guarantorsCreated} guarantors created, ${result.guarantorsUpdated} guarantors updated, ${result.errors.length} errors`;
       await storage.createAuditLog({
         action: "IFF_UPLOAD", entity: "iff_batch", userId: req.session?.userId,
-        details: `IFF upload (${iffType}): ${result.totalRecords} records, ${result.borrowersCreated} borrowers created, ${result.borrowersUpdated} borrowers updated, ${result.accountsCreated} accounts created, ${result.accountsUpdated} accounts updated, ${result.chequesCreated} cheques created, ${result.chequesUpdated} cheques updated, ${result.judgmentsCreated} judgments created, ${result.judgmentsUpdated} judgments updated, ${result.guarantorsCreated} guarantors created, ${result.guarantorsUpdated} guarantors updated, ${result.errors.length} errors`,
+        details: `${summaryText}\n---JSON---\n${iffMeta}`,
         ipAddress: req.ip || null,
       });
 
@@ -5477,9 +5559,27 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
       const result = await processIFFData(iffType, records, lenderInstitution, orgId);
 
+      const iffJsonMeta = JSON.stringify({
+        iffType,
+        lenderInstitution,
+        totalRecords: result.totalRecords,
+        borrowersCreated: result.borrowersCreated,
+        borrowersUpdated: result.borrowersUpdated,
+        accountsCreated: result.accountsCreated,
+        accountsUpdated: result.accountsUpdated,
+        chequesCreated: result.chequesCreated,
+        chequesUpdated: result.chequesUpdated,
+        judgmentsCreated: result.judgmentsCreated,
+        judgmentsUpdated: result.judgmentsUpdated,
+        guarantorsCreated: result.guarantorsCreated,
+        guarantorsUpdated: result.guarantorsUpdated,
+        errorCount: result.errors.length,
+        errors: result.errors.slice(0, 50),
+      });
+      const iffJsonSummary = `IFF upload (${iffType}): ${result.totalRecords} records, ${result.borrowersCreated} borrowers created, ${result.borrowersUpdated} borrowers updated, ${result.accountsCreated} accounts created, ${result.accountsUpdated} accounts updated, ${result.chequesCreated} cheques created, ${result.chequesUpdated} cheques updated, ${result.judgmentsCreated} judgments created, ${result.judgmentsUpdated} judgments updated, ${result.guarantorsCreated} guarantors created, ${result.guarantorsUpdated} guarantors updated, ${result.errors.length} errors`;
       await storage.createAuditLog({
         action: "IFF_UPLOAD_JSON", entity: "iff_batch", userId: req.session?.userId,
-        details: `IFF upload (${iffType}): ${result.totalRecords} records, ${result.borrowersCreated} borrowers created, ${result.borrowersUpdated} borrowers updated, ${result.accountsCreated} accounts created, ${result.accountsUpdated} accounts updated, ${result.chequesCreated} cheques created, ${result.chequesUpdated} cheques updated, ${result.judgmentsCreated} judgments created, ${result.judgmentsUpdated} judgments updated, ${result.guarantorsCreated} guarantors created, ${result.guarantorsUpdated} guarantors updated, ${result.errors.length} errors`,
+        details: `${iffJsonSummary}\n---JSON---\n${iffJsonMeta}`,
         ipAddress: req.ip || null,
       });
 
@@ -5545,9 +5645,10 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         }
       }
 
+      const chequeMeta = JSON.stringify({ totalRecords: results.totalSubmitted, successCount: results.successCount, updatedCount: results.updatedCount, errorCount: results.errorCount, errors: results.errors.slice(0, 50) });
       await storage.createAuditLog({
         action: "BATCH_UPLOAD", entity: "dishonoured_cheque", userId: req.session?.userId,
-        details: `Batch cheque upload: ${results.successCount} succeeded (${results.updatedCount} updated), ${results.errorCount} failed`,
+        details: `Batch cheque upload: ${results.successCount} succeeded (${results.updatedCount} updated), ${results.errorCount} failed\n---JSON---\n${chequeMeta}`,
         ipAddress: req.ip || null,
       });
 
@@ -5590,9 +5691,10 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         }
       }
 
+      const judgMeta = JSON.stringify({ totalRecords: results.totalSubmitted, successCount: results.successCount, updatedCount: results.updatedCount, errorCount: results.errorCount, errors: results.errors.slice(0, 50) });
       await storage.createAuditLog({
         action: "BATCH_UPLOAD", entity: "court_judgment", userId: req.session?.userId,
-        details: `Batch judgment upload: ${results.successCount} succeeded (${results.updatedCount} updated), ${results.errorCount} failed`,
+        details: `Batch judgment upload: ${results.successCount} succeeded (${results.updatedCount} updated), ${results.errorCount} failed\n---JSON---\n${judgMeta}`,
         ipAddress: req.ip || null,
       });
 
