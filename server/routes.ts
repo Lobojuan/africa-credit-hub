@@ -2481,6 +2481,19 @@ export async function registerRoutes(
     return borrower;
   }
 
+  async function resolveBusinessBorrower(req: any): Promise<{ borrower: any; bizAccount: any } | null> {
+    const businessId = (req.session as any).businessId;
+    if (!businessId) return null;
+    const [bizAccount] = await db.select().from(businessAccounts).where(eq(businessAccounts.id, businessId)).limit(1);
+    if (!bizAccount) return null;
+    const businessTin = (req.session as any).businessTin;
+    const borrowerResult = await db.select().from(borrowers).where(
+      or(ilike(borrowers.nationalId, businessTin), ilike(borrowers.tinNumber, businessTin))
+    ).limit(1);
+    if (borrowerResult.length === 0) return null;
+    return { borrower: borrowerResult[0], bizAccount };
+  }
+
   app.post("/api/consumer/dispute", consumerAuthLimiter, async (req, res) => {
     const consumerId = (req.session as any).consumerId;
     if (!consumerId) return res.status(401).json({ message: "Please log in to file a dispute" });
@@ -2488,7 +2501,7 @@ export async function registerRoutes(
       const { reason, details } = req.body;
       if (!reason) return res.status(400).json({ message: "Dispute reason is required" });
       if (!details || details.length < 10) return res.status(400).json({ message: "Please provide at least 10 characters of detail" });
-      const validTypes = ["incorrect_balance", "identity_error", "account_not_mine", "payment_not_recorded", "duplicate_entry", "other"];
+      const validTypes = ["incorrect_balance", "identity_error", "account_not_mine", "payment_not_recorded", "duplicate_entry", "wrong_account", "incorrect_status", "identity_theft", "incorrect_personal", "other"];
       if (!validTypes.includes(reason)) return res.status(400).json({ message: "Invalid dispute type" });
       const borrower = await resolveConsumerBorrower(req);
       if (!borrower) return res.status(404).json({ message: "No credit file found matching your identity" });
@@ -2510,6 +2523,48 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/consumer/disputes", async (req, res) => {
+    const consumerId = (req.session as any).consumerId;
+    if (!consumerId) return res.status(401).json({ message: "Please log in" });
+    try {
+      const borrower = await resolveConsumerBorrower(req);
+      if (!borrower) return res.json([]);
+      const result = await db.select().from(disputes).where(eq(disputes.borrowerId, borrower.id)).orderBy(desc(disputes.createdAt)).limit(20);
+      res.json(result.map((d: any) => ({
+        id: d.id,
+        disputeType: d.disputeType,
+        description: d.description?.replace(/\[Consumer Portal[^\]]*\]\s*/, ""),
+        status: d.status,
+        createdAt: d.createdAt,
+        resolution: d.resolution,
+        resolvedAt: d.resolvedAt,
+      })));
+    } catch {
+      res.json([]);
+    }
+  });
+
+  app.get("/api/business/disputes", async (req, res) => {
+    const businessId = (req.session as any).businessId;
+    if (!businessId) return res.status(401).json({ message: "Please log in" });
+    try {
+      const resolved = await resolveBusinessBorrower(req);
+      if (!resolved) return res.json([]);
+      const result = await db.select().from(disputes).where(eq(disputes.borrowerId, resolved.borrower.id)).orderBy(desc(disputes.createdAt)).limit(20);
+      res.json(result.map((d: any) => ({
+        id: d.id,
+        disputeType: d.disputeType,
+        description: d.description?.replace(/\[Business Portal[^\]]*\]\s*/, ""),
+        status: d.status,
+        createdAt: d.createdAt,
+        resolution: d.resolution,
+        resolvedAt: d.resolvedAt,
+      })));
+    } catch {
+      res.json([]);
+    }
+  });
+
   app.post("/api/business/dispute", businessAuthLimiter, async (req, res) => {
     const businessId = (req.session as any).businessId;
     if (!businessId) return res.status(401).json({ message: "Please log in to file a dispute" });
@@ -2517,7 +2572,7 @@ export async function registerRoutes(
       const { reason, details } = req.body;
       if (!reason) return res.status(400).json({ message: "Dispute reason is required" });
       if (!details || details.length < 10) return res.status(400).json({ message: "Please provide at least 10 characters of detail" });
-      const validTypes = ["incorrect_balance", "identity_error", "account_not_mine", "payment_not_recorded", "duplicate_entry", "other"];
+      const validTypes = ["incorrect_balance", "identity_error", "account_not_mine", "payment_not_recorded", "duplicate_entry", "wrong_account", "incorrect_status", "identity_theft", "incorrect_personal", "other"];
       if (!validTypes.includes(reason)) return res.status(400).json({ message: "Invalid dispute type" });
       const [bizAccount] = await db.select().from(businessAccounts).where(eq(businessAccounts.id, businessId)).limit(1);
       if (!bizAccount) return res.status(401).json({ message: "Session expired" });
@@ -2693,19 +2748,6 @@ export async function registerRoutes(
       if (!res.headersSent) res.status(500).json({ message: "Failed to generate report" });
     }
   });
-
-  async function resolveBusinessBorrower(req: any): Promise<{ borrower: any; bizAccount: any } | null> {
-    const businessId = (req.session as any).businessId;
-    if (!businessId) return null;
-    const [bizAccount] = await db.select().from(businessAccounts).where(eq(businessAccounts.id, businessId)).limit(1);
-    if (!bizAccount) return null;
-    const businessTin = (req.session as any).businessTin;
-    const borrowerResult = await db.select().from(borrowers).where(
-      or(ilike(borrowers.nationalId, businessTin), ilike(borrowers.tinNumber, businessTin))
-    ).limit(1);
-    if (borrowerResult.length === 0) return null;
-    return { borrower: borrowerResult[0], bizAccount };
-  }
 
   app.get("/api/business/report/pdf", async (req, res) => {
     const businessId = (req.session as any).businessId;

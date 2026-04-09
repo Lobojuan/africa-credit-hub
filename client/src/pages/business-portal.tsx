@@ -48,6 +48,63 @@ function getScoreLabel(score: number): { label: string; color: string; descripti
 type View = "login" | "register" | "verify" | "dashboard";
 type DashboardTab = "overview" | "disputes" | "consent";
 
+function BusinessDisputeTracker() {
+  const { data: disputeList, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/business/disputes"],
+  });
+
+  const statusColor = (s: string) =>
+    s === "resolved" ? "bg-emerald-500/10 text-emerald-700" :
+    s === "under_review" ? "bg-blue-500/10 text-blue-700" :
+    s === "rejected" ? "bg-red-500/10 text-red-700" :
+    "bg-amber-500/10 text-amber-700";
+
+  const typeLabel = (t: string) => t.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+
+  return (
+    <Card className="shadow-sm">
+      <CardContent className="p-4 sm:p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <Clock className="w-4 h-4 text-primary" />
+          <h3 className="text-sm font-bold" data-testid="text-biz-dispute-tracker-title">Track Your Disputes</h3>
+        </div>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-6">
+            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : !disputeList || disputeList.length === 0 ? (
+          <p className="text-xs text-muted-foreground py-4 text-center" data-testid="text-biz-no-disputes">
+            No disputes filed yet. Use the form above to file a dispute.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {disputeList.map((d: any) => (
+              <div key={d.id} className="p-3 rounded-xl border bg-background space-y-1" data-testid={`biz-dispute-item-${d.id}`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold">{typeLabel(d.disputeType)}</span>
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusColor(d.status)}`}>
+                    {d.status === "under_review" ? "Under Review" : d.status.charAt(0).toUpperCase() + d.status.slice(1)}
+                  </span>
+                </div>
+                <p className="text-[11px] text-muted-foreground line-clamp-2">{d.description}</p>
+                <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                  <span>Filed: {d.createdAt ? new Date(d.createdAt).toLocaleDateString() : "N/A"}</span>
+                  {d.resolvedAt && <span>Resolved: {new Date(d.resolvedAt).toLocaleDateString()}</span>}
+                </div>
+                {d.resolution && (
+                  <p className="text-[11px] text-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-2 mt-1">
+                    Resolution: {d.resolution}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function BusinessPortalPage() {
   const queryClient = useQueryClient();
   const [view, setView] = useState<View | "loading">("loading");
@@ -768,6 +825,7 @@ export default function BusinessPortalPage() {
                                   });
                                   if (resp.ok) {
                                     setDisputeSubmitted(true);
+                                    queryClient.invalidateQueries({ queryKey: ["/api/business/disputes"] });
                                   } else {
                                     const err = await resp.json();
                                     setError(err.message || "Failed to submit dispute");
@@ -788,6 +846,8 @@ export default function BusinessPortalPage() {
                         )}
                       </CardContent>
                     </Card>
+
+                    <BusinessDisputeTracker />
 
                     <Card className="shadow-sm bg-muted/20">
                       <CardContent className="p-4">

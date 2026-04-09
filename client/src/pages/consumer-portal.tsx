@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search, Shield, AlertTriangle, CheckCircle2, TrendingUp, User, Loader2, Scale, Phone, CalendarDays, Lock, LogOut, UserPlus, KeyRound, ArrowLeft, ArrowRight, Eye, EyeOff, Mail, MessageSquare, RefreshCw, Globe, Download, ClipboardCheck, BarChart3 } from "lucide-react";
+import { Search, Shield, AlertTriangle, CheckCircle2, TrendingUp, User, Loader2, Scale, Phone, CalendarDays, Lock, LogOut, UserPlus, KeyRound, ArrowLeft, ArrowRight, Eye, EyeOff, Mail, MessageSquare, RefreshCw, Globe, Download, ClipboardCheck, BarChart3, HelpCircle, Clock, FileText } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CreditScoreGauge } from "@/components/credit-score-gauge";
 import { PortalLayout } from "@/components/portal-layout";
 
-type ConsumerDashboardTab = "overview" | "disputes" | "consent";
+type ConsumerDashboardTab = "overview" | "disputes" | "consent" | "guide";
 
 interface ConsumerData {
   borrower: {
@@ -28,6 +28,63 @@ function getScoreLabel(score: number): { label: string; color: string; descripti
 }
 
 type View = "login" | "register" | "verify" | "dashboard";
+
+function DisputeTracker({ portalType }: { portalType: "consumer" | "business" }) {
+  const { data: disputeList, isLoading } = useQuery<any[]>({
+    queryKey: [`/api/${portalType}/disputes`],
+  });
+
+  const statusColor = (s: string) =>
+    s === "resolved" ? "bg-emerald-500/10 text-emerald-700" :
+    s === "under_review" ? "bg-blue-500/10 text-blue-700" :
+    s === "rejected" ? "bg-red-500/10 text-red-700" :
+    "bg-amber-500/10 text-amber-700";
+
+  const typeLabel = (t: string) => t.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+
+  return (
+    <Card className="shadow-sm">
+      <CardContent className="p-4 sm:p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <Clock className="w-4 h-4 text-primary" />
+          <h3 className="text-sm font-bold" data-testid="text-dispute-tracker-title">Track Your Disputes</h3>
+        </div>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-6">
+            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : !disputeList || disputeList.length === 0 ? (
+          <p className="text-xs text-muted-foreground py-4 text-center" data-testid="text-no-disputes">
+            No disputes filed yet. Use the form above to file a dispute.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {disputeList.map((d: any) => (
+              <div key={d.id} className="p-3 rounded-xl border bg-background space-y-1" data-testid={`dispute-item-${d.id}`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold">{typeLabel(d.disputeType)}</span>
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusColor(d.status)}`} data-testid={`dispute-status-${d.id}`}>
+                    {d.status === "under_review" ? "Under Review" : d.status.charAt(0).toUpperCase() + d.status.slice(1)}
+                  </span>
+                </div>
+                <p className="text-[11px] text-muted-foreground line-clamp-2">{d.description}</p>
+                <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                  <span>Filed: {d.createdAt ? new Date(d.createdAt).toLocaleDateString() : "N/A"}</span>
+                  {d.resolvedAt && <span>Resolved: {new Date(d.resolvedAt).toLocaleDateString()}</span>}
+                </div>
+                {d.resolution && (
+                  <p className="text-[11px] text-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-2 mt-1">
+                    Resolution: {d.resolution}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function ConsumerPortalPage() {
   const queryClient = useQueryClient();
@@ -695,6 +752,7 @@ export default function ConsumerPortalPage() {
                     { key: "overview" as ConsumerDashboardTab, label: "Credit Score", icon: BarChart3 },
                     { key: "disputes" as ConsumerDashboardTab, label: "Disputes", icon: MessageSquare },
                     { key: "consent" as ConsumerDashboardTab, label: "Consent", icon: ClipboardCheck },
+                    { key: "guide" as ConsumerDashboardTab, label: "Guide & FAQ", icon: HelpCircle },
                   ]).map(tab => (
                     <button
                       key={tab.key}
@@ -841,6 +899,7 @@ export default function ConsumerPortalPage() {
                                   });
                                   if (resp.ok) {
                                     setDisputeSubmitted(true);
+                                    queryClient.invalidateQueries({ queryKey: ["/api/consumer/disputes"] });
                                   } else {
                                     const err = await resp.json();
                                     setError(err.message || "Failed to submit dispute");
@@ -861,6 +920,8 @@ export default function ConsumerPortalPage() {
                         )}
                       </CardContent>
                     </Card>
+
+                    <DisputeTracker portalType="consumer" />
 
                     <Card className="shadow-sm bg-muted/20">
                       <CardContent className="p-4">
@@ -969,6 +1030,73 @@ export default function ConsumerPortalPage() {
                         <p className="text-[11px] text-muted-foreground">
                           Your data is protected under the Ghana Data Protection Act, 2012 (Act 843). You have the right to withdraw consent at any time. Changes may take up to 48 hours to take effect.
                         </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
+                {dashboardTab === "guide" && (
+                  <div className="space-y-4" data-testid="consumer-guide-section">
+                    <Card className="shadow-sm">
+                      <CardContent className="p-4 sm:p-5">
+                        <div className="flex items-center gap-2 mb-4">
+                          <HelpCircle className="w-4 h-4 text-primary" />
+                          <h3 className="text-sm font-bold">Consumer Guide</h3>
+                        </div>
+                        <div className="space-y-3">
+                          <div className="p-3 rounded-xl border bg-background">
+                            <div className="flex items-center gap-2 mb-1">
+                              <BarChart3 className="w-3.5 h-3.5 text-primary" />
+                              <p className="text-xs font-semibold">Understanding Your Credit Score</p>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground">Your credit score ranges from 300 to 850. A higher score means better creditworthiness. Scores above 670 are considered good, while scores below 450 may make it difficult to obtain credit.</p>
+                          </div>
+                          <div className="p-3 rounded-xl border bg-background">
+                            <div className="flex items-center gap-2 mb-1">
+                              <TrendingUp className="w-3.5 h-3.5 text-primary" />
+                              <p className="text-xs font-semibold">How to Improve Your Score</p>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground">Pay bills on time, keep credit utilisation below 30%, maintain long-standing accounts, limit new credit applications, and regularly check your report for errors.</p>
+                          </div>
+                          <div className="p-3 rounded-xl border bg-background">
+                            <div className="flex items-center gap-2 mb-1">
+                              <FileText className="w-3.5 h-3.5 text-primary" />
+                              <p className="text-xs font-semibold">Your Credit Report</p>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground">Your credit report contains your borrowing history, payment patterns, outstanding balances, and public records. Lenders use it to decide whether to extend credit to you.</p>
+                          </div>
+                          <div className="p-3 rounded-xl border bg-background">
+                            <div className="flex items-center gap-2 mb-1">
+                              <MessageSquare className="w-3.5 h-3.5 text-primary" />
+                              <p className="text-xs font-semibold">Filing Disputes</p>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground">If you find inaccurate information, file a dispute through the Disputes tab. The bureau must investigate within 30 days. You can track the status of your dispute in real-time.</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="shadow-sm">
+                      <CardContent className="p-4 sm:p-5">
+                        <div className="flex items-center gap-2 mb-4">
+                          <Scale className="w-4 h-4 text-primary" />
+                          <h3 className="text-sm font-bold">Frequently Asked Questions</h3>
+                        </div>
+                        <div className="space-y-3">
+                          {[
+                            { q: "How often is my credit score updated?", a: "Your score is recalculated each time a lender reports new information, typically monthly." },
+                            { q: "Who can see my credit report?", a: "Only authorised lenders with your explicit consent can access your report, as required under the Data Protection Act." },
+                            { q: "Will checking my own score lower it?", a: "No. Checking your own score is a 'soft inquiry' and does not affect your credit rating." },
+                            { q: "How long do negative items stay on my report?", a: "Most negative items remain for 5-7 years. Court judgments may stay longer depending on the type." },
+                            { q: "What should I do if I'm a victim of identity theft?", a: "File a dispute immediately through the Disputes tab, select 'Identity Theft / Fraud', and contact your local police." },
+                            { q: "Can I get credit with a low score?", a: "Some lenders specialise in lending to individuals with lower scores, though interest rates may be higher." },
+                          ].map((faq, i) => (
+                            <div key={i} className="p-3 rounded-xl border bg-background" data-testid={`faq-item-${i}`}>
+                              <p className="text-xs font-semibold mb-1">{faq.q}</p>
+                              <p className="text-[11px] text-muted-foreground">{faq.a}</p>
+                            </div>
+                          ))}
+                        </div>
                       </CardContent>
                     </Card>
                   </div>
