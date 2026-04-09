@@ -663,19 +663,12 @@ export default function BusinessPortalPage() {
                       variant="outline"
                       className="w-full rounded-xl gap-2"
                       onClick={() => {
-                        const reportContent = `BUSINESS CREDIT REPORT\n========================\nCompany: ${data.borrower.companyName}\nTIN: ${data.borrower.nationalId}\nCredit Score: ${data.creditScore} (${scoreInfo.label})\nRisk Level: ${data.riskLevel || (data.creditScore >= 670 ? "Low" : data.creditScore >= 450 ? "Medium" : "High")}\nGenerated: ${new Date().toISOString()}\n\n${scoreInfo.description}\n\nThis report was generated from the Ghana Credit Registry.\nProtected under the Ghana Data Protection Act, 2012.`;
-                        const blob = new Blob([reportContent], { type: "text/plain" });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement("a");
-                        a.href = url;
-                        a.download = `business-credit-report-${new Date().toISOString().slice(0, 10)}.txt`;
-                        a.click();
-                        URL.revokeObjectURL(url);
+                        window.open("/api/business/report/pdf", "_blank");
                       }}
                       data-testid="button-download-report"
                     >
                       <Download className="w-4 h-4" />
-                      Download Credit Report
+                      Download Credit Report (PDF)
                     </Button>
 
                     <Card className="shadow-sm bg-muted/20">
@@ -765,7 +758,24 @@ export default function BusinessPortalPage() {
                               />
                             </div>
                             <Button
-                              onClick={() => setDisputeSubmitted(true)}
+                              onClick={async () => {
+                                try {
+                                  const resp = await fetch("/api/business/dispute", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    credentials: "include",
+                                    body: JSON.stringify({ reason: disputeReason, details: disputeDetails }),
+                                  });
+                                  if (resp.ok) {
+                                    setDisputeSubmitted(true);
+                                  } else {
+                                    const err = await resp.json();
+                                    setError(err.message || "Failed to submit dispute");
+                                  }
+                                } catch {
+                                  setError("Failed to submit dispute. Please try again.");
+                                }
+                              }}
                               disabled={!disputeReason || disputeDetails.length < 10}
                               size="lg"
                               className="w-full rounded-xl"
@@ -818,7 +828,18 @@ export default function BusinessPortalPage() {
                               </div>
                             </div>
                             <button
-                              onClick={() => setConsentAction(consentAction === "revoke-sharing" ? null : "revoke-sharing")}
+                              onClick={async () => {
+                                const newAction = consentAction === "revoke-sharing" ? null : "revoke-sharing";
+                                try {
+                                  await fetch("/api/business/consent", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    credentials: "include",
+                                    body: JSON.stringify({ consentType: "credit_sharing", action: newAction ? "revoke" : "grant" }),
+                                  });
+                                  setConsentAction(newAction);
+                                } catch {}
+                              }}
                               className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-colors ${
                                 consentAction === "revoke-sharing"
                                   ? "bg-red-500/10 text-red-600"
@@ -841,7 +862,18 @@ export default function BusinessPortalPage() {
                               </div>
                             </div>
                             <button
-                              onClick={() => setConsentAction(consentAction === "revoke-marketing" ? null : "revoke-marketing")}
+                              onClick={async () => {
+                                const newAction = consentAction === "revoke-marketing" ? null : "revoke-marketing";
+                                try {
+                                  await fetch("/api/business/consent", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    credentials: "include",
+                                    body: JSON.stringify({ consentType: "marketing", action: newAction ? "revoke" : "grant" }),
+                                  });
+                                  setConsentAction(newAction);
+                                } catch {}
+                              }}
                               className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-colors ${
                                 consentAction === "revoke-marketing"
                                   ? "bg-red-500/10 text-red-600"
@@ -864,7 +896,18 @@ export default function BusinessPortalPage() {
                               </div>
                             </div>
                             <button
-                              onClick={() => setConsentAction(consentAction === "revoke-crossborder" ? null : "revoke-crossborder")}
+                              onClick={async () => {
+                                const newAction = consentAction === "revoke-crossborder" ? null : "revoke-crossborder";
+                                try {
+                                  await fetch("/api/business/consent", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    credentials: "include",
+                                    body: JSON.stringify({ consentType: "cross_border", action: newAction ? "revoke" : "grant" }),
+                                  });
+                                  setConsentAction(newAction);
+                                } catch {}
+                              }}
                               className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-colors ${
                                 consentAction === "revoke-crossborder"
                                   ? "bg-red-500/10 text-red-600"

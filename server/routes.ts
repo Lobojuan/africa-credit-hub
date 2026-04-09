@@ -47,7 +47,7 @@ import { recordUsageEvent } from "./usage-metering";
 import { broadcastEvent } from "./websocket";
 import { createAnchor, verifyAuditAgainstAnchor, getAnchors } from "./blockchain-anchor";
 import { deliverWebhook, getWebhookSubscriptions, getWebhookDeliveryHistory, WEBHOOK_EVENTS } from "./webhook-delivery";
-import { webauthnCredentials, blockchainAnchors, webhookSubscriptions, webhookDeliveryLogs, consumerAccounts, businessAccounts, telcoProfiles, telcoLoans, telcoLoanRepayments, auditLogs } from "@shared/schema";
+import { webauthnCredentials, blockchainAnchors, webhookSubscriptions, webhookDeliveryLogs, consumerAccounts, businessAccounts, telcoProfiles, telcoLoans, telcoLoanRepayments, auditLogs, consentRecords } from "@shared/schema";
 import fs from "fs";
 import path from "path";
 import * as OTPAuth from "otpauth";
@@ -1980,7 +1980,8 @@ export async function registerRoutes(
         message += "Please enter the verification code shown below to continue.";
       }
 
-      res.json({ message, accountId: account.id, requiresVerification: true, otp: (!smsSent && !emailSent) ? otp : undefined });
+      const devOtp = process.env.NODE_ENV !== "production" && !smsSent && !emailSent ? otp : undefined;
+      res.json({ message, accountId: account.id, requiresVerification: true, otp: devOtp });
     } catch (e: any) {
       routeLogger.error("[Consumer] Registration error:", { detail: e.message });
       res.status(500).json({ message: "Registration failed. Please try again." });
@@ -2066,7 +2067,8 @@ export async function registerRoutes(
         else if (emailSent) msg += "A verification link has been sent to your email.";
         else msg += "Please enter the verification code to continue.";
 
-        return res.status(403).json({ message: msg, requiresVerification: true, otp: (!smsSent && !emailSent) ? otp : undefined });
+        const devOtp = process.env.NODE_ENV !== "production" && !smsSent && !emailSent ? otp : undefined;
+        return res.status(403).json({ message: msg, requiresVerification: true, otp: devOtp });
       }
 
       await db.update(consumerAccounts).set({ failedAttempts: 0, lockedUntil: null, lastLogin: new Date() }).where(eq(consumerAccounts.id, account.id));
@@ -2159,7 +2161,8 @@ export async function registerRoutes(
       else if (emailSent) message = "A verification link has been sent to your email.";
       else message = "Unable to send verification. Please try again.";
 
-      res.json({ message, otp: (!smsSent && !emailSent) ? otp : undefined });
+      const devOtp = process.env.NODE_ENV !== "production" && !smsSent && !emailSent ? otp : undefined;
+      res.json({ message, otp: devOtp });
     } catch (e: any) {
       res.status(500).json({ message: "Failed to resend code" });
     }
@@ -2272,7 +2275,8 @@ export async function registerRoutes(
         message += "Please enter the verification code shown below to continue.";
       }
 
-      res.json({ message, requiresVerification: true, otp: !smsSent ? otp : undefined });
+      const devOtp = process.env.NODE_ENV !== "production" && !smsSent ? otp : undefined;
+      res.json({ message, requiresVerification: true, otp: devOtp });
     } catch (e: any) {
       routeLogger.error("[Business] Registration error:", { detail: e.message });
       res.status(500).json({ message: "Registration failed. Please try again." });
@@ -2349,7 +2353,8 @@ export async function registerRoutes(
         if (smsSent) msg += "A new code has been sent to your phone.";
         else msg += "Please enter the verification code to continue.";
 
-        return res.status(403).json({ message: msg, requiresVerification: true, otp: !smsSent ? otp : undefined });
+        const devOtp2 = process.env.NODE_ENV !== "production" && !smsSent ? otp : undefined;
+        return res.status(403).json({ message: msg, requiresVerification: true, otp: devOtp2 });
       }
 
       await db.update(businessAccounts).set({ failedAttempts: 0, lockedUntil: null, lastLogin: new Date() }).where(eq(businessAccounts.id, account.id));
@@ -2459,6 +2464,322 @@ export async function registerRoutes(
       });
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  async function resolveConsumerBorrower(req: any): Promise<any | null> {
+    const consumerId = (req.session as any).consumerId;
+    if (!consumerId) return null;
+    const [consumerAccount] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.id, consumerId)).limit(1);
+    if (!consumerAccount) return null;
+    const nationalId = (req.session as any).consumerNationalId;
+    const borrowerResult = await db.select().from(borrowers).where(
+      or(ilike(borrowers.nationalId, nationalId), ilike(borrowers.ghanaCardNumber, nationalId), ilike(borrowers.passportNumber, nationalId))
+    ).limit(1);
+    const borrower = borrowerResult[0];
+    if (!borrower || !borrower.dateOfBirth || borrower.dateOfBirth !== consumerAccount.dateOfBirth) return null;
+    return borrower;
+  }
+
+  app.post("/api/consumer/dispute", consumerAuthLimiter, async (req, res) => {
+    const consumerId = (req.session as any).consumerId;
+    if (!consumerId) return res.status(401).json({ message: "Please log in to file a dispute" });
+    try {
+      const { reason, details } = req.body;
+      if (!reason) return res.status(400).json({ message: "Dispute reason is required" });
+      if (!details || details.length < 10) return res.status(400).json({ message: "Please provide at least 10 characters of detail" });
+      const validTypes = ["incorrect_balance", "identity_error", "account_not_mine", "payment_not_recorded", "duplicate_entry", "other"];
+      if (!validTypes.includes(reason)) return res.status(400).json({ message: "Invalid dispute type" });
+      const borrower = await resolveConsumerBorrower(req);
+      if (!borrower) return res.status(404).json({ message: "No credit file found matching your identity" });
+      const [systemUser] = await db.select().from(users).where(eq(users.role, "admin")).limit(1);
+      const filedBy = systemUser ? systemUser.id : null;
+      if (!filedBy) return res.status(500).json({ message: "System configuration error" });
+      const dispute = await storage.createDispute({
+        borrowerId: borrower.id,
+        filedBy,
+        disputeType: reason,
+        description: `[Consumer Portal – ${consumerId}] ${details}`,
+        status: "open",
+        country: borrower.country || "GH",
+      });
+      routeLogger.info(`[Consumer] Dispute filed by consumer ${consumerId} for borrower ${borrower.id.slice(0, 8)}..., type: ${reason}`);
+      res.json({ message: "Dispute submitted successfully", disputeId: dispute.id });
+    } catch (e: any) {
+      res.status(500).json({ message: "Failed to submit dispute" });
+    }
+  });
+
+  app.post("/api/business/dispute", businessAuthLimiter, async (req, res) => {
+    const businessId = (req.session as any).businessId;
+    if (!businessId) return res.status(401).json({ message: "Please log in to file a dispute" });
+    try {
+      const { reason, details } = req.body;
+      if (!reason) return res.status(400).json({ message: "Dispute reason is required" });
+      if (!details || details.length < 10) return res.status(400).json({ message: "Please provide at least 10 characters of detail" });
+      const validTypes = ["incorrect_balance", "identity_error", "account_not_mine", "payment_not_recorded", "duplicate_entry", "other"];
+      if (!validTypes.includes(reason)) return res.status(400).json({ message: "Invalid dispute type" });
+      const [bizAccount] = await db.select().from(businessAccounts).where(eq(businessAccounts.id, businessId)).limit(1);
+      if (!bizAccount) return res.status(401).json({ message: "Session expired" });
+      const businessTin = (req.session as any).businessTin;
+      const borrowerResult = await db.select().from(borrowers).where(
+        or(ilike(borrowers.nationalId, businessTin), ilike(borrowers.tinNumber, businessTin))
+      ).limit(1);
+      if (borrowerResult.length === 0) return res.status(404).json({ message: "Borrower record not found" });
+      const borrower = borrowerResult[0];
+      const [systemUser] = await db.select().from(users).where(eq(users.role, "admin")).limit(1);
+      const filedBy = systemUser ? systemUser.id : null;
+      if (!filedBy) return res.status(500).json({ message: "System configuration error" });
+      const dispute = await storage.createDispute({
+        borrowerId: borrower.id,
+        filedBy,
+        disputeType: reason,
+        description: `[Business Portal – ${businessId}] ${details}`,
+        status: "open",
+        country: borrower.country || "GH",
+      });
+      routeLogger.info(`[Business] Dispute filed by business ${businessId} for borrower ${borrower.id.slice(0, 8)}..., type: ${reason}`);
+      res.json({ message: "Dispute submitted successfully", disputeId: dispute.id });
+    } catch (e: any) {
+      res.status(500).json({ message: "Failed to submit dispute" });
+    }
+  });
+
+  app.post("/api/consumer/consent", consumerAuthLimiter, async (req, res) => {
+    const consumerId = (req.session as any).consumerId;
+    if (!consumerId) return res.status(401).json({ message: "Please log in to manage consent" });
+    try {
+      const { consentType, action } = req.body;
+      if (!consentType || !action) return res.status(400).json({ message: "Consent type and action are required" });
+      const validConsentTypes = ["credit_sharing", "marketing", "cross_border"];
+      const validActions = ["grant", "revoke"];
+      if (!validConsentTypes.includes(consentType)) return res.status(400).json({ message: "Invalid consent type" });
+      if (!validActions.includes(action)) return res.status(400).json({ message: "Invalid action" });
+      const borrower = await resolveConsumerBorrower(req);
+      if (!borrower) return res.status(404).json({ message: "No credit file found matching your identity" });
+      if (action === "revoke") {
+        const existing = await db.select().from(consentRecords).where(
+          and(eq(consentRecords.borrowerId, borrower.id), eq(consentRecords.consentType, consentType), eq(consentRecords.status, "active"))
+        );
+        for (const record of existing) {
+          await db.update(consentRecords).set({ status: "revoked", revokedAt: new Date() }).where(eq(consentRecords.id, record.id));
+        }
+        routeLogger.info(`[Consumer] Consent revoked: ${consentType} for borrower ${borrower.id.slice(0, 8)}...`);
+        res.json({ message: "Consent revoked successfully" });
+      } else {
+        const receiptNumber = `CR-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+        await db.insert(consentRecords).values({
+          borrowerId: borrower.id,
+          grantedTo: "Ghana Credit Registry",
+          purpose: consentType === "credit_sharing" ? "Credit Report Access" : consentType === "marketing" ? "Marketing Communications" : consentType,
+          consentType,
+          status: "active",
+          receiptNumber,
+        });
+        routeLogger.info(`[Consumer] Consent granted: ${consentType} for borrower ${borrower.id.slice(0, 8)}...`);
+        res.json({ message: "Consent granted successfully", receiptNumber });
+      }
+    } catch (e: any) {
+      res.status(500).json({ message: "Failed to update consent" });
+    }
+  });
+
+  app.post("/api/business/consent", businessAuthLimiter, async (req, res) => {
+    const businessId = (req.session as any).businessId;
+    if (!businessId) return res.status(401).json({ message: "Please log in to manage consent" });
+    try {
+      const { consentType, action } = req.body;
+      if (!consentType || !action) return res.status(400).json({ message: "Consent type and action are required" });
+      const validConsentTypes = ["credit_sharing", "marketing", "cross_border"];
+      const validActions = ["grant", "revoke"];
+      if (!validConsentTypes.includes(consentType)) return res.status(400).json({ message: "Invalid consent type" });
+      if (!validActions.includes(action)) return res.status(400).json({ message: "Invalid action" });
+      const [bizAccount] = await db.select().from(businessAccounts).where(eq(businessAccounts.id, businessId)).limit(1);
+      if (!bizAccount) return res.status(401).json({ message: "Session expired" });
+      const businessTin = (req.session as any).businessTin;
+      const borrowerResult = await db.select().from(borrowers).where(
+        or(ilike(borrowers.nationalId, businessTin), ilike(borrowers.tinNumber, businessTin))
+      ).limit(1);
+      if (borrowerResult.length === 0) return res.status(404).json({ message: "Borrower record not found" });
+      const borrower = borrowerResult[0];
+      if (action === "revoke") {
+        const existing = await db.select().from(consentRecords).where(
+          and(eq(consentRecords.borrowerId, borrower.id), eq(consentRecords.consentType, consentType), eq(consentRecords.status, "active"))
+        );
+        for (const record of existing) {
+          await db.update(consentRecords).set({ status: "revoked", revokedAt: new Date() }).where(eq(consentRecords.id, record.id));
+        }
+        res.json({ message: "Consent revoked successfully" });
+      } else {
+        const receiptNumber = `CR-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+        await db.insert(consentRecords).values({
+          borrowerId: borrower.id,
+          grantedTo: "Ghana Credit Registry",
+          purpose: consentType === "credit_sharing" ? "Credit Report Access" : consentType === "marketing" ? "Marketing Communications" : consentType === "cross_border" ? "Cross-Border Data Sharing" : consentType,
+          consentType,
+          status: "active",
+          receiptNumber,
+        });
+        res.json({ message: "Consent granted successfully", receiptNumber });
+      }
+    } catch (e: any) {
+      res.status(500).json({ message: "Failed to update consent" });
+    }
+  });
+
+  app.get("/api/consumer/report/pdf", async (req, res) => {
+    const consumerId = (req.session as any).consumerId;
+    if (!consumerId) return res.status(401).json({ message: "Please log in" });
+    try {
+      const borrower = await resolveConsumerBorrower(req);
+      if (!borrower) return res.status(404).json({ message: "No credit file found matching your identity" });
+      const accounts = await storage.getCreditAccountsByBorrower(borrower.id);
+      const inquiries = await storage.getCreditInquiriesByBorrower(borrower.id);
+      const judgments = await storage.getCourtJudgmentsByBorrower(borrower.id);
+      let altData: any[] = [];
+      try { altData = await db.select().from(alternativeData).where(sql`borrower_id::text = ${borrower.id}`); } catch {}
+      const { score: creditScore } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep, altData);
+
+      const PDFDocument = (await import("pdfkit")).default;
+      const doc = new PDFDocument({ size: "A4", margin: 50 });
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="credit-report-${new Date().toISOString().slice(0, 10)}.pdf"`);
+      doc.pipe(res);
+
+      doc.fontSize(18).font("Helvetica-Bold").text("Personal Credit Report", { align: "center" });
+      doc.moveDown(0.5);
+      doc.fontSize(10).font("Helvetica").fillColor("#666666").text("Ghana Credit Registry", { align: "center" });
+      doc.text(`Generated: ${new Date().toLocaleDateString("en-GH")}`, { align: "center" });
+      doc.moveDown(1);
+
+      doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor("#cccccc").stroke();
+      doc.moveDown(0.5);
+
+      doc.fontSize(12).font("Helvetica-Bold").fillColor("#000000").text("Personal Information");
+      doc.moveDown(0.3);
+      doc.fontSize(10).font("Helvetica");
+      doc.text(`Name: ${borrower.firstName || ""} ${borrower.lastName || ""}`);
+      doc.text(`National ID: ${borrower.nationalId?.replace(/(.{3}).+(.{3})/, "$1****$2") || "N/A"}`);
+      doc.text(`Type: ${borrower.type || "Individual"}`);
+      doc.moveDown(1);
+
+      doc.fontSize(12).font("Helvetica-Bold").text("Credit Score");
+      doc.moveDown(0.3);
+      doc.fontSize(24).font("Helvetica-Bold").fillColor(creditScore >= 670 ? "#16a34a" : creditScore >= 450 ? "#ea580c" : "#dc2626").text(`${creditScore}`, { align: "center" });
+      doc.fontSize(10).font("Helvetica").fillColor("#000000");
+      const label = creditScore >= 750 ? "Excellent" : creditScore >= 670 ? "Good" : creditScore >= 530 ? "Fair" : creditScore >= 450 ? "Poor" : "Very Poor";
+      doc.text(`Rating: ${label}`, { align: "center" });
+      doc.text("Score range: 300 – 850", { align: "center" });
+      doc.moveDown(1);
+
+      if (accounts.length > 0) {
+        doc.fontSize(12).font("Helvetica-Bold").fillColor("#000000").text(`Credit Accounts (${accounts.length})`);
+        doc.moveDown(0.3);
+        doc.fontSize(9).font("Helvetica");
+        for (const acct of accounts.slice(0, 15) as any[]) {
+          doc.text(`• ${acct.accountType || "Loan"} — Balance: GHS ${Number(acct.currentBalance || 0).toLocaleString()} — Status: ${acct.status || acct.accountStatus || "N/A"}`);
+        }
+        doc.moveDown(0.5);
+      }
+
+      doc.moveDown(1);
+      doc.fontSize(8).font("Helvetica").fillColor("#888888");
+      doc.text("This report was generated from the Ghana Credit Registry.");
+      doc.text("Protected under the Ghana Data Protection Act, 2012 (Act 843).");
+      doc.text("For disputes, contact the credit bureau or use the Consumer Portal.");
+
+      doc.end();
+    } catch (e: any) {
+      if (!res.headersSent) res.status(500).json({ message: "Failed to generate report" });
+    }
+  });
+
+  async function resolveBusinessBorrower(req: any): Promise<{ borrower: any; bizAccount: any } | null> {
+    const businessId = (req.session as any).businessId;
+    if (!businessId) return null;
+    const [bizAccount] = await db.select().from(businessAccounts).where(eq(businessAccounts.id, businessId)).limit(1);
+    if (!bizAccount) return null;
+    const businessTin = (req.session as any).businessTin;
+    const borrowerResult = await db.select().from(borrowers).where(
+      or(ilike(borrowers.nationalId, businessTin), ilike(borrowers.tinNumber, businessTin))
+    ).limit(1);
+    if (borrowerResult.length === 0) return null;
+    return { borrower: borrowerResult[0], bizAccount };
+  }
+
+  app.get("/api/business/report/pdf", async (req, res) => {
+    const businessId = (req.session as any).businessId;
+    if (!businessId) return res.status(401).json({ message: "Please log in" });
+    try {
+      const resolved = await resolveBusinessBorrower(req);
+      if (!resolved) return res.status(404).json({ message: "No credit file found" });
+      const { borrower, bizAccount } = resolved;
+      const accounts = await storage.getCreditAccountsByBorrower(borrower.id);
+      const inquiries = await storage.getCreditInquiriesByBorrower(borrower.id);
+      const judgments = await storage.getCourtJudgmentsByBorrower(borrower.id);
+      let altData: any[] = [];
+      try { altData = await db.select().from(alternativeData).where(sql`borrower_id::text = ${borrower.id}`); } catch {}
+      const { score: creditScore } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep, altData);
+
+      const PDFDocument = (await import("pdfkit")).default;
+      const doc = new PDFDocument({ size: "A4", margin: 50 });
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="business-credit-report-${new Date().toISOString().slice(0, 10)}.pdf"`);
+      doc.pipe(res);
+
+      doc.fontSize(18).font("Helvetica-Bold").text("Business Credit Report", { align: "center" });
+      doc.moveDown(0.5);
+      doc.fontSize(10).font("Helvetica").fillColor("#666666").text("Ghana Credit Registry", { align: "center" });
+      doc.text(`Generated: ${new Date().toLocaleDateString("en-GH")}`, { align: "center" });
+      doc.moveDown(1);
+      doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor("#cccccc").stroke();
+      doc.moveDown(0.5);
+
+      doc.fontSize(12).font("Helvetica-Bold").fillColor("#000000").text("Business Information");
+      doc.moveDown(0.3);
+      doc.fontSize(10).font("Helvetica");
+      doc.text(`Company: ${borrower.companyName || bizAccount.companyName}`);
+      doc.text(`TIN: ${borrower.nationalId?.replace(/(.{3}).+(.{3})/, "$1****$2") || "N/A"}`);
+      doc.text(`Type: ${borrower.type || "Business"}`);
+      doc.moveDown(1);
+
+      doc.fontSize(12).font("Helvetica-Bold").text("Credit Score");
+      doc.moveDown(0.3);
+      doc.fontSize(24).font("Helvetica-Bold").fillColor(creditScore >= 670 ? "#16a34a" : creditScore >= 450 ? "#ea580c" : "#dc2626").text(`${creditScore}`, { align: "center" });
+      doc.fontSize(10).font("Helvetica").fillColor("#000000");
+      const bizLabel = creditScore >= 750 ? "Excellent" : creditScore >= 670 ? "Good" : creditScore >= 530 ? "Fair" : creditScore >= 450 ? "Poor" : "Very Poor";
+      doc.text(`Rating: ${bizLabel}`, { align: "center" });
+      doc.text("Score range: 300 – 850", { align: "center" });
+      doc.moveDown(1);
+
+      const riskLevel = creditScore >= 670 ? "Low" : creditScore >= 530 ? "Medium" : creditScore >= 450 ? "High" : "Very High";
+      doc.fontSize(12).font("Helvetica-Bold").fillColor("#000000").text("Risk Assessment");
+      doc.moveDown(0.3);
+      doc.fontSize(10).font("Helvetica");
+      doc.text(`Risk Level: ${riskLevel}`);
+      doc.text(`Total Facilities: ${accounts.length}`);
+      const totalOutstanding = accounts.reduce((sum: number, a: any) => sum + (Number(a.currentBalance) || 0), 0);
+      doc.text(`Total Outstanding: GHS ${totalOutstanding.toLocaleString()}`);
+      doc.moveDown(1);
+
+      if (accounts.length > 0) {
+        doc.fontSize(12).font("Helvetica-Bold").fillColor("#000000").text(`Credit Facilities (${accounts.length})`);
+        doc.moveDown(0.3);
+        doc.fontSize(9).font("Helvetica");
+        for (const acct of accounts.slice(0, 15) as any[]) {
+          doc.text(`• ${acct.accountType || "Loan"} — Balance: GHS ${Number(acct.currentBalance || 0).toLocaleString()} — Status: ${acct.status || acct.accountStatus || "N/A"}`);
+        }
+        doc.moveDown(0.5);
+      }
+
+      doc.moveDown(1);
+      doc.fontSize(8).font("Helvetica").fillColor("#888888");
+      doc.text("This report was generated from the Ghana Credit Registry.");
+      doc.text("Protected under the Ghana Data Protection Act, 2012 (Act 843).");
+
+      doc.end();
+    } catch (e: any) {
+      if (!res.headersSent) res.status(500).json({ message: "Failed to generate report" });
     }
   });
 

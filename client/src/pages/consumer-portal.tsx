@@ -735,19 +735,12 @@ export default function ConsumerPortalPage() {
                       variant="outline"
                       className="w-full rounded-xl gap-2"
                       onClick={() => {
-                        const reportContent = `PERSONAL CREDIT REPORT\n========================\nName: ${borrowerName}\nCredit Score: ${data.creditScore} (${scoreInfo.label})\nGenerated: ${new Date().toISOString()}\n\n${scoreInfo.description}\n\nThis report was generated from the Ghana Credit Registry.\nProtected under the Ghana Data Protection Act, 2012.`;
-                        const blob = new Blob([reportContent], { type: "text/plain" });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement("a");
-                        a.href = url;
-                        a.download = `credit-report-${new Date().toISOString().slice(0, 10)}.txt`;
-                        a.click();
-                        URL.revokeObjectURL(url);
+                        window.open("/api/consumer/report/pdf", "_blank");
                       }}
                       data-testid="button-download-consumer-report"
                     >
                       <Download className="w-4 h-4" />
-                      Download Credit Report
+                      Download Credit Report (PDF)
                     </Button>
 
                     <Card className="shadow-sm bg-muted/20">
@@ -838,7 +831,24 @@ export default function ConsumerPortalPage() {
                               />
                             </div>
                             <Button
-                              onClick={() => setDisputeSubmitted(true)}
+                              onClick={async () => {
+                                try {
+                                  const resp = await fetch("/api/consumer/dispute", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    credentials: "include",
+                                    body: JSON.stringify({ reason: disputeReason, details: disputeDetails }),
+                                  });
+                                  if (resp.ok) {
+                                    setDisputeSubmitted(true);
+                                  } else {
+                                    const err = await resp.json();
+                                    setError(err.message || "Failed to submit dispute");
+                                  }
+                                } catch {
+                                  setError("Failed to submit dispute. Please try again.");
+                                }
+                              }}
                               disabled={!disputeReason || disputeDetails.length < 10}
                               size="lg"
                               className="w-full rounded-xl"
@@ -890,7 +900,18 @@ export default function ConsumerPortalPage() {
                               </div>
                             </div>
                             <button
-                              onClick={() => setConsentAction(consentAction === "revoke-sharing" ? null : "revoke-sharing")}
+                              onClick={async () => {
+                                const newAction = consentAction === "revoke-sharing" ? null : "revoke-sharing";
+                                try {
+                                  await fetch("/api/consumer/consent", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    credentials: "include",
+                                    body: JSON.stringify({ consentType: "credit_sharing", action: newAction ? "revoke" : "grant" }),
+                                  });
+                                  setConsentAction(newAction);
+                                } catch {}
+                              }}
                               className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-colors ${
                                 consentAction === "revoke-sharing"
                                   ? "bg-red-500/10 text-red-600"
@@ -913,7 +934,18 @@ export default function ConsumerPortalPage() {
                               </div>
                             </div>
                             <button
-                              onClick={() => setConsentAction(consentAction === "revoke-marketing" ? null : "revoke-marketing")}
+                              onClick={async () => {
+                                const newAction = consentAction === "revoke-marketing" ? null : "revoke-marketing";
+                                try {
+                                  await fetch("/api/consumer/consent", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    credentials: "include",
+                                    body: JSON.stringify({ consentType: "marketing", action: newAction ? "revoke" : "grant" }),
+                                  });
+                                  setConsentAction(newAction);
+                                } catch {}
+                              }}
                               className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-colors ${
                                 consentAction === "revoke-marketing"
                                   ? "bg-red-500/10 text-red-600"
