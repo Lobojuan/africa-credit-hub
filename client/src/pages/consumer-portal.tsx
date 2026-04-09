@@ -4,6 +4,7 @@ import { Search, Shield, AlertTriangle, CheckCircle2, TrendingUp, User, Loader2,
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CreditScoreGauge } from "@/components/credit-score-gauge";
+import { PortalLayout } from "@/components/portal-layout";
 
 interface ConsumerData {
   borrower: {
@@ -209,7 +210,12 @@ export default function ConsumerPortalPage() {
   const isPending = registerMutation.isPending || loginMutation.isPending || verifyMutation.isPending;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+    <PortalLayout
+      type="consumer"
+      isAuthenticated={view === "dashboard"}
+      userName={sessionQuery.data?.fullName || sessionQuery.data?.nationalId?.replace(/(.{3}).+(.{3})/, "$1****$2")}
+      onLogout={() => logoutMutation.mutate()}
+    >
       <div className="max-w-lg mx-auto px-4 py-6 sm:px-6 sm:py-8 space-y-5">
 
         <div className="text-center space-y-2 pt-2 pb-1">
@@ -531,18 +537,6 @@ export default function ConsumerPortalPage() {
 
         {view === "dashboard" && (
           <div className="space-y-4">
-            <div className="flex justify-end">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => logoutMutation.mutate()}
-                className="rounded-xl"
-                data-testid="button-consumer-logout"
-              >
-                <LogOut className="w-3.5 h-3.5 mr-1.5" />
-                Sign Out
-              </Button>
-            </div>
 
             {!data && !lookupMutation.isPending && (
               <>
@@ -774,6 +768,6 @@ export default function ConsumerPortalPage() {
           </div>
         )}
       </div>
-    </div>
+    </PortalLayout>
   );
 }

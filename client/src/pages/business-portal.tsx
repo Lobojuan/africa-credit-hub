@@ -1,10 +1,19 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Building2, Shield, AlertTriangle, CheckCircle2, TrendingUp, Loader2, Lock, LogOut, UserPlus, ArrowLeft, Eye, EyeOff, Search, Phone, Mail, FileText, Scale, ArrowRight } from "lucide-react";
+import { Building2, Shield, AlertTriangle, CheckCircle2, TrendingUp, Loader2, Lock, LogOut, UserPlus, ArrowLeft, Eye, EyeOff, Search, Phone, Mail, FileText, Scale, ArrowRight, Download, MessageSquare, ClipboardCheck, CreditCard, BarChart3, Clock, RefreshCw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PortalLayout } from "@/components/portal-layout";
 import { CreditScoreGauge } from "@/components/credit-score-gauge";
+
+interface CreditFacility {
+  accountType: string;
+  lenderName: string;
+  currentBalance: number;
+  creditLimit: number;
+  status: string;
+  currency: string;
+}
 
 interface BusinessData {
   borrower: {
@@ -13,6 +22,19 @@ interface BusinessData {
     nationalId: string;
   };
   creditScore: number;
+  riskLevel?: string;
+  delinquencyScore?: number;
+  failureProbability?: number;
+  totalFacilities?: number;
+  totalOutstanding?: number;
+  totalCreditLimit?: number;
+  facilities?: CreditFacility[];
+  tradePaymentSummary?: {
+    onTime: number;
+    late30: number;
+    late60: number;
+    late90Plus: number;
+  };
 }
 
 function getScoreLabel(score: number): { label: string; color: string; description: string } {
@@ -24,13 +46,19 @@ function getScoreLabel(score: number): { label: string; color: string; descripti
 }
 
 type View = "login" | "register" | "verify" | "dashboard";
+type DashboardTab = "overview" | "disputes" | "consent";
 
 export default function BusinessPortalPage() {
   const queryClient = useQueryClient();
   const [view, setView] = useState<View | "loading">("loading");
+  const [dashboardTab, setDashboardTab] = useState<DashboardTab>("overview");
   const [tin, setTin] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [contactName, setContactName] = useState("");
+  const [disputeReason, setDisputeReason] = useState("");
+  const [disputeDetails, setDisputeDetails] = useState("");
+  const [disputeSubmitted, setDisputeSubmitted] = useState(false);
+  const [consentAction, setConsentAction] = useState<string | null>(null);
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -509,45 +537,361 @@ export default function BusinessPortalPage() {
 
             {data && scoreInfo && (
               <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500" data-testid="business-results">
-                <Card className="shadow-sm overflow-hidden">
-                  <div className="bg-gradient-to-br from-primary/5 via-transparent to-primary/3 p-6 sm:p-8">
-                    <div className="flex items-center justify-center gap-2 mb-5">
-                      <Building2 className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm font-semibold" data-testid="text-business-name">{data.borrower.companyName}</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-2">
-                      <CreditScoreGauge score={data.creditScore} size={200} testId="business-score-gauge" />
-                      <p className={`text-xl font-bold ${scoreInfo.color}`} data-testid="text-business-score-label">{scoreInfo.label}</p>
-                      <p className="text-xs text-muted-foreground">Score range: 300 – 850</p>
-                    </div>
-                    <div className="mt-5 p-3 rounded-xl bg-muted/40 text-center">
-                      <p className="text-sm text-muted-foreground leading-relaxed" data-testid="text-business-score-description">{scoreInfo.description}</p>
-                    </div>
-                  </div>
-                </Card>
+                <div className="flex gap-1 p-1 rounded-xl bg-muted/50 border">
+                  {([
+                    { key: "overview" as DashboardTab, label: "Credit Profile", icon: BarChart3 },
+                    { key: "disputes" as DashboardTab, label: "Disputes", icon: MessageSquare },
+                    { key: "consent" as DashboardTab, label: "Consent", icon: ClipboardCheck },
+                  ]).map(tab => (
+                    <button
+                      key={tab.key}
+                      onClick={() => setDashboardTab(tab.key)}
+                      className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+                        dashboardTab === tab.key
+                          ? "bg-background shadow-sm text-foreground"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                      data-testid={`tab-business-${tab.key}`}
+                    >
+                      <tab.icon className="w-3.5 h-3.5" />
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
 
-                <Card className="shadow-sm bg-muted/20">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Scale className="w-4 h-4 text-primary" />
-                      <h3 className="text-sm font-bold">Business Rights</h3>
+                {dashboardTab === "overview" && (
+                  <div className="space-y-4">
+                    <Card className="shadow-sm overflow-hidden">
+                      <div className="bg-gradient-to-br from-primary/5 via-transparent to-primary/3 p-6 sm:p-8">
+                        <div className="flex items-center justify-center gap-2 mb-5">
+                          <Building2 className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm font-semibold" data-testid="text-business-name">{data.borrower.companyName}</span>
+                        </div>
+                        <div className="flex flex-col items-center gap-2">
+                          <CreditScoreGauge score={data.creditScore} size={200} testId="business-score-gauge" />
+                          <p className={`text-xl font-bold ${scoreInfo.color}`} data-testid="text-business-score-label">{scoreInfo.label}</p>
+                          <p className="text-xs text-muted-foreground">Score range: 300 – 850</p>
+                        </div>
+                        <div className="mt-5 p-3 rounded-xl bg-muted/40 text-center">
+                          <p className="text-sm text-muted-foreground leading-relaxed" data-testid="text-business-score-description">{scoreInfo.description}</p>
+                        </div>
+                      </div>
+                    </Card>
+
+                    <div className="grid grid-cols-3 gap-3">
+                      <Card className="shadow-sm">
+                        <CardContent className="p-3 text-center">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Risk Level</p>
+                          <p className="text-sm font-bold mt-1" data-testid="text-risk-level">
+                            {data.riskLevel || (data.creditScore >= 670 ? "Low" : data.creditScore >= 450 ? "Medium" : "High")}
+                          </p>
+                        </CardContent>
+                      </Card>
+                      <Card className="shadow-sm">
+                        <CardContent className="p-3 text-center">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Delinquency</p>
+                          <p className="text-sm font-bold mt-1" data-testid="text-delinquency">
+                            {data.delinquencyScore != null ? `${data.delinquencyScore}%` : "N/A"}
+                          </p>
+                        </CardContent>
+                      </Card>
+                      <Card className="shadow-sm">
+                        <CardContent className="p-3 text-center">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Failure Prob.</p>
+                          <p className="text-sm font-bold mt-1" data-testid="text-failure-prob">
+                            {data.failureProbability != null ? `${data.failureProbability}%` : "N/A"}
+                          </p>
+                        </CardContent>
+                      </Card>
                     </div>
-                    <div className="space-y-2.5 text-xs text-muted-foreground">
-                      <div className="flex items-start gap-2">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                        <span>Access your business credit report at any time.</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                        <span>Dispute any inaccurate information on your business credit file.</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                        <span>Lenders must obtain business consent before accessing your commercial data.</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+
+                    {data.tradePaymentSummary && (
+                      <Card className="shadow-sm">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Clock className="w-4 h-4 text-primary" />
+                            <h3 className="text-sm font-bold">Trade Payment Summary</h3>
+                          </div>
+                          <div className="grid grid-cols-4 gap-2 text-center">
+                            <div className="p-2 rounded-lg bg-emerald-500/10">
+                              <p className="text-lg font-bold text-emerald-600" data-testid="text-ontime">{data.tradePaymentSummary.onTime}</p>
+                              <p className="text-[10px] text-muted-foreground">On Time</p>
+                            </div>
+                            <div className="p-2 rounded-lg bg-yellow-500/10">
+                              <p className="text-lg font-bold text-yellow-600" data-testid="text-late30">{data.tradePaymentSummary.late30}</p>
+                              <p className="text-[10px] text-muted-foreground">30 Days</p>
+                            </div>
+                            <div className="p-2 rounded-lg bg-orange-500/10">
+                              <p className="text-lg font-bold text-orange-600" data-testid="text-late60">{data.tradePaymentSummary.late60}</p>
+                              <p className="text-[10px] text-muted-foreground">60 Days</p>
+                            </div>
+                            <div className="p-2 rounded-lg bg-red-500/10">
+                              <p className="text-lg font-bold text-red-600" data-testid="text-late90">{data.tradePaymentSummary.late90Plus}</p>
+                              <p className="text-[10px] text-muted-foreground">90+ Days</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {data.facilities && data.facilities.length > 0 && (
+                      <Card className="shadow-sm">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <CreditCard className="w-4 h-4 text-primary" />
+                            <h3 className="text-sm font-bold">Credit Facilities ({data.facilities.length})</h3>
+                          </div>
+                          <div className="space-y-2">
+                            {data.facilities.map((f, i) => (
+                              <div key={i} className="flex items-center justify-between p-2.5 rounded-lg border text-xs" data-testid={`facility-row-${i}`}>
+                                <div>
+                                  <p className="font-semibold">{f.accountType}</p>
+                                  <p className="text-muted-foreground">{f.lenderName}</p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="font-semibold">{f.currency} {f.currentBalance.toLocaleString()}</p>
+                                  <p className={`${f.status === "active" ? "text-emerald-600" : f.status === "closed" ? "text-muted-foreground" : "text-red-600"}`}>{f.status}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    <Button
+                      variant="outline"
+                      className="w-full rounded-xl gap-2"
+                      onClick={() => {
+                        const reportContent = `BUSINESS CREDIT REPORT\n========================\nCompany: ${data.borrower.companyName}\nTIN: ${data.borrower.nationalId}\nCredit Score: ${data.creditScore} (${scoreInfo.label})\nRisk Level: ${data.riskLevel || (data.creditScore >= 670 ? "Low" : data.creditScore >= 450 ? "Medium" : "High")}\nGenerated: ${new Date().toISOString()}\n\n${scoreInfo.description}\n\nThis report was generated from the Ghana Credit Registry.\nProtected under the Ghana Data Protection Act, 2012.`;
+                        const blob = new Blob([reportContent], { type: "text/plain" });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = `business-credit-report-${new Date().toISOString().slice(0, 10)}.txt`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                      data-testid="button-download-report"
+                    >
+                      <Download className="w-4 h-4" />
+                      Download Credit Report
+                    </Button>
+
+                    <Card className="shadow-sm bg-muted/20">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Scale className="w-4 h-4 text-primary" />
+                          <h3 className="text-sm font-bold">Business Rights</h3>
+                        </div>
+                        <div className="space-y-2.5 text-xs text-muted-foreground">
+                          <div className="flex items-start gap-2">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                            <span>Access your business credit report at any time.</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                            <span>Dispute any inaccurate information on your business credit file.</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                            <span>Lenders must obtain business consent before accessing your commercial data.</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
+                {dashboardTab === "disputes" && (
+                  <div className="space-y-4">
+                    <Card className="shadow-sm">
+                      <CardContent className="p-4 sm:p-5">
+                        <div className="flex items-center gap-2 mb-4">
+                          <MessageSquare className="w-4 h-4 text-primary" />
+                          <h3 className="text-sm font-bold">File a Dispute</h3>
+                        </div>
+                        {disputeSubmitted ? (
+                          <div className="text-center space-y-3 py-4">
+                            <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto">
+                              <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-sm">Dispute Submitted</p>
+                              <p className="text-xs text-muted-foreground mt-1">Your dispute has been filed and will be reviewed within 30 days as per regulatory requirements.</p>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => { setDisputeSubmitted(false); setDisputeReason(""); setDisputeDetails(""); }}
+                              className="rounded-xl"
+                              data-testid="button-file-another-dispute"
+                            >
+                              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                              File Another Dispute
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <p className="text-xs text-muted-foreground">
+                              If you believe any information on your business credit report is inaccurate, you have the right to dispute it.
+                            </p>
+                            <div>
+                              <label className="text-xs font-medium mb-1 block">Reason for Dispute</label>
+                              <select
+                                value={disputeReason}
+                                onChange={(e) => setDisputeReason(e.target.value)}
+                                className="w-full px-3 py-2 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                data-testid="select-dispute-reason"
+                              >
+                                <option value="">Select a reason...</option>
+                                <option value="incorrect_balance">Incorrect Balance</option>
+                                <option value="wrong_account">Account Not Belonging to Business</option>
+                                <option value="duplicate_entry">Duplicate Entry</option>
+                                <option value="incorrect_status">Incorrect Account Status</option>
+                                <option value="identity_error">Company Identity Error</option>
+                                <option value="other">Other</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium mb-1 block">Details</label>
+                              <textarea
+                                value={disputeDetails}
+                                onChange={(e) => setDisputeDetails(e.target.value)}
+                                placeholder="Describe the inaccuracy in detail..."
+                                rows={4}
+                                className="w-full px-3 py-2 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+                                data-testid="textarea-dispute-details"
+                              />
+                            </div>
+                            <Button
+                              onClick={() => setDisputeSubmitted(true)}
+                              disabled={!disputeReason || disputeDetails.length < 10}
+                              size="lg"
+                              className="w-full rounded-xl"
+                              data-testid="button-submit-dispute"
+                            >
+                              <MessageSquare className="w-4 h-4 mr-2" />
+                              Submit Dispute
+                            </Button>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    <Card className="shadow-sm bg-muted/20">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Shield className="w-4 h-4 text-primary" />
+                          <h3 className="text-xs font-bold">Dispute Rights</h3>
+                        </div>
+                        <div className="space-y-1.5 text-[11px] text-muted-foreground">
+                          <p>Under the Credit Reporting Act, you have the right to dispute any inaccurate data on your credit report. The credit bureau must investigate and respond within 30 days.</p>
+                          <p>If the dispute is valid, the record will be corrected or removed from your credit file.</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
+                {dashboardTab === "consent" && (
+                  <div className="space-y-4">
+                    <Card className="shadow-sm">
+                      <CardContent className="p-4 sm:p-5">
+                        <div className="flex items-center gap-2 mb-4">
+                          <ClipboardCheck className="w-4 h-4 text-primary" />
+                          <h3 className="text-sm font-bold">Data Consent Management</h3>
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-4">
+                          Manage who can access your business credit data. Lenders must have your explicit consent before pulling your business credit report.
+                        </p>
+
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between p-3 rounded-xl border" data-testid="consent-credit-sharing">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                              </div>
+                              <div>
+                                <p className="text-xs font-semibold">Credit Report Sharing</p>
+                                <p className="text-[10px] text-muted-foreground">Allow authorised lenders to access your credit report</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => setConsentAction(consentAction === "revoke-sharing" ? null : "revoke-sharing")}
+                              className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-colors ${
+                                consentAction === "revoke-sharing"
+                                  ? "bg-red-500/10 text-red-600"
+                                  : "bg-emerald-500/10 text-emerald-600"
+                              }`}
+                              data-testid="button-toggle-sharing"
+                            >
+                              {consentAction === "revoke-sharing" ? "Revoked" : "Active"}
+                            </button>
+                          </div>
+
+                          <div className="flex items-center justify-between p-3 rounded-xl border" data-testid="consent-marketing">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                                <Mail className="w-4 h-4 text-blue-600" />
+                              </div>
+                              <div>
+                                <p className="text-xs font-semibold">Marketing Communications</p>
+                                <p className="text-[10px] text-muted-foreground">Receive credit offers and financial product information</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => setConsentAction(consentAction === "revoke-marketing" ? null : "revoke-marketing")}
+                              className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-colors ${
+                                consentAction === "revoke-marketing"
+                                  ? "bg-red-500/10 text-red-600"
+                                  : "bg-muted text-muted-foreground"
+                              }`}
+                              data-testid="button-toggle-marketing"
+                            >
+                              {consentAction === "revoke-marketing" ? "Revoked" : "Opt Out"}
+                            </button>
+                          </div>
+
+                          <div className="flex items-center justify-between p-3 rounded-xl border" data-testid="consent-cross-border">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                                <Building2 className="w-4 h-4 text-violet-600" />
+                              </div>
+                              <div>
+                                <p className="text-xs font-semibold">Cross-Border Data Sharing</p>
+                                <p className="text-[10px] text-muted-foreground">Allow data sharing with international credit bureaus</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => setConsentAction(consentAction === "revoke-crossborder" ? null : "revoke-crossborder")}
+                              className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-colors ${
+                                consentAction === "revoke-crossborder"
+                                  ? "bg-red-500/10 text-red-600"
+                                  : "bg-muted text-muted-foreground"
+                              }`}
+                              data-testid="button-toggle-crossborder"
+                            >
+                              {consentAction === "revoke-crossborder" ? "Revoked" : "Opt Out"}
+                            </button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="shadow-sm bg-muted/20">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Shield className="w-4 h-4 text-primary" />
+                          <h3 className="text-xs font-bold">Data Protection</h3>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          Your data is protected under the Ghana Data Protection Act, 2012 (Act 843). You have the right to withdraw consent at any time. Changes may take up to 48 hours to take effect across all systems.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
               </div>
             )}
           </div>

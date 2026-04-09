@@ -2402,6 +2402,29 @@ export async function registerRoutes(
       } catch {}
       const { score: creditScore } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep, altData);
 
+      const riskLevel = creditScore >= 670 ? "Low" : creditScore >= 530 ? "Medium" : creditScore >= 450 ? "High" : "Very High";
+      const activeAccounts = accounts.filter((a: any) => a.status === "active" || a.accountStatus === "active");
+      const totalOutstanding = activeAccounts.reduce((sum: number, a: any) => sum + (Number(a.currentBalance) || 0), 0);
+      const totalCreditLimit = activeAccounts.reduce((sum: number, a: any) => sum + (Number(a.creditLimit) || Number(a.originalAmount) || 0), 0);
+
+      let onTime = 0, late30 = 0, late60 = 0, late90Plus = 0;
+      for (const acct of accounts as any[]) {
+        const dpd = Number(acct.daysPastDue) || 0;
+        if (dpd === 0) onTime++;
+        else if (dpd <= 30) late30++;
+        else if (dpd <= 60) late60++;
+        else late90Plus++;
+      }
+
+      const facilities = accounts.slice(0, 10).map((a: any) => ({
+        accountType: a.accountType || a.type || "Loan",
+        lenderName: a.lenderName || a.institutionName || "Financial Institution",
+        currentBalance: Number(a.currentBalance) || 0,
+        creditLimit: Number(a.creditLimit) || Number(a.originalAmount) || 0,
+        status: a.status || a.accountStatus || "active",
+        currency: "GHS",
+      }));
+
       res.json({
         borrower: {
           companyName: borrower.companyName || bizAccount.companyName,
@@ -2409,6 +2432,14 @@ export async function registerRoutes(
           nationalId: borrower.nationalId?.replace(/(.{3}).+(.{3})/, "$1****$2"),
         },
         creditScore,
+        riskLevel,
+        delinquencyScore: accounts.length > 0 ? Math.round((late30 + late60 + late90Plus) / accounts.length * 100) : 0,
+        failureProbability: creditScore >= 670 ? Math.round((850 - creditScore) / 850 * 15) : creditScore >= 450 ? Math.round((850 - creditScore) / 850 * 40) : Math.round((850 - creditScore) / 850 * 70),
+        totalFacilities: accounts.length,
+        totalOutstanding,
+        totalCreditLimit,
+        facilities,
+        tradePaymentSummary: { onTime, late30, late60, late90Plus },
       });
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });

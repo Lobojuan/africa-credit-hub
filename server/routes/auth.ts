@@ -69,6 +69,11 @@ router.post("/api/auth/login", loginLimiter, async (req, res) => {
       return res.json({ requireMfa: true, userId: user.id });
     }
 
+    delete (req.session as any).consumerId;
+    delete (req.session as any).consumerNationalId;
+    delete (req.session as any).businessId;
+    delete (req.session as any).businessTin;
+
     req.session.userId = user.id;
     req.session.userRole = user.role;
     req.session.userDivision = (user as any).division || undefined;
@@ -207,6 +212,10 @@ router.post("/api/auth/mfa/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid MFA code" });
     }
     delete req.session.mfaPendingUserId;
+    delete (req.session as any).consumerId;
+    delete (req.session as any).consumerNationalId;
+    delete (req.session as any).businessId;
+    delete (req.session as any).businessTin;
     req.session.userId = user.id;
     req.session.userRole = user.role;
     req.session.userDivision = (user as any).division || undefined;

@@ -52,7 +52,8 @@ The system employs a modern full-stack architecture built for scalability and co
     -   **Telco Lending Lifecycle**: Full loan lifecycle management including operations dashboard and consent management.
     -   **Idempotency Support**: Critical telco endpoints support `Idempotency-Key` header with 24-hour TTL cache.
     -   **Reporting & Explainability**: Dedicated pages for Business Credit Report Template, Credit Score Methodology (with interactive simulator), and a public Score Guide.
-    -   **Consumer Self-Service Portal**: Authenticated portal for consumers with registration, login, dual-channel verification, and rate-limited credit score lookups.
+    -   **Consumer Self-Service Portal**: Authenticated portal (`/my-credit`) for consumers with registration, login (National ID + OTP), Google/Microsoft/SAML OAuth, credit score lookups, and PortalLayout wrapper.
+    -   **Business Self-Service Portal**: Authenticated portal (`/business-portal`) for businesses with TIN-based registration/login, OTP verification, credit profile dashboard with tabbed views (Credit Profile, Disputes, Consent), credit report download, dispute filing, and consent management. Uses `business_accounts` DB table and `/api/business/*` endpoints.
     -   **Fraud Detection Layer**: Real-time fraud risk scoring with efficient duplicate national ID detection.
     -   **Enhanced API Developer Portal**: Interactive sandbox, webhook event documentation.
     -   **Security Hardening**: Helmet security headers, DOMPurify sanitization, CSRF token protection, AES-256-GCM PII encryption at rest, data subject erasure request API, password history enforcement, and login anomaly detection.
