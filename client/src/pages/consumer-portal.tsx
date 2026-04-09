@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search, Shield, AlertTriangle, CheckCircle2, TrendingUp, User, Loader2, Scale, Phone, CalendarDays, Lock, LogOut, UserPlus, KeyRound, ArrowLeft, ArrowRight, Eye, EyeOff, Mail, MessageSquare, RefreshCw, Globe } from "lucide-react";
+import { Search, Shield, AlertTriangle, CheckCircle2, TrendingUp, User, Loader2, Scale, Phone, CalendarDays, Lock, LogOut, UserPlus, KeyRound, ArrowLeft, ArrowRight, Eye, EyeOff, Mail, MessageSquare, RefreshCw, Globe, Download, ClipboardCheck, BarChart3 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CreditScoreGauge } from "@/components/credit-score-gauge";
 import { PortalLayout } from "@/components/portal-layout";
+
+type ConsumerDashboardTab = "overview" | "disputes" | "consent";
 
 interface ConsumerData {
   borrower: {
@@ -30,6 +32,11 @@ type View = "login" | "register" | "verify" | "dashboard";
 export default function ConsumerPortalPage() {
   const queryClient = useQueryClient();
   const [view, setView] = useState<View | "loading">("loading");
+  const [dashboardTab, setDashboardTab] = useState<ConsumerDashboardTab>("overview");
+  const [disputeReason, setDisputeReason] = useState("");
+  const [disputeDetails, setDisputeDetails] = useState("");
+  const [disputeSubmitted, setDisputeSubmitted] = useState(false);
+  const [consentAction, setConsentAction] = useState<string | null>(null);
   const [nationalId, setNationalId] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -683,45 +690,257 @@ export default function ConsumerPortalPage() {
 
             {data && scoreInfo && (
               <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500" data-testid="consumer-results">
-                <Card className="shadow-sm overflow-hidden">
-                  <div className="bg-gradient-to-br from-primary/5 via-transparent to-primary/3 p-6 sm:p-8">
-                    <div className="flex items-center justify-center gap-2 mb-5">
-                      <User className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm font-semibold" data-testid="text-consumer-name">{borrowerName}</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-2">
-                      <CreditScoreGauge score={data.creditScore} size={200} testId="consumer-score-gauge" />
-                      <p className={`text-xl font-bold ${scoreInfo.color}`} data-testid="text-score-label">{scoreInfo.label}</p>
-                      <p className="text-xs text-muted-foreground">Score range: 300 – 850</p>
-                    </div>
-                    <div className="mt-5 p-3 rounded-xl bg-muted/40 text-center">
-                      <p className="text-sm text-muted-foreground leading-relaxed" data-testid="text-score-description">{scoreInfo.description}</p>
-                    </div>
-                  </div>
-                </Card>
+                <div className="flex gap-1 p-1 rounded-xl bg-muted/50 border">
+                  {([
+                    { key: "overview" as ConsumerDashboardTab, label: "Credit Score", icon: BarChart3 },
+                    { key: "disputes" as ConsumerDashboardTab, label: "Disputes", icon: MessageSquare },
+                    { key: "consent" as ConsumerDashboardTab, label: "Consent", icon: ClipboardCheck },
+                  ]).map(tab => (
+                    <button
+                      key={tab.key}
+                      onClick={() => setDashboardTab(tab.key)}
+                      className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+                        dashboardTab === tab.key
+                          ? "bg-background shadow-sm text-foreground"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                      data-testid={`tab-consumer-${tab.key}`}
+                    >
+                      <tab.icon className="w-3.5 h-3.5" />
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
 
-                <Card className="shadow-sm bg-muted/20">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Scale className="w-4 h-4 text-primary" />
-                      <h3 className="text-sm font-bold">Your Rights</h3>
-                    </div>
-                    <div className="space-y-2.5 text-xs text-muted-foreground">
-                      <div className="flex items-start gap-2">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                        <span>Access your credit report once per year at no cost.</span>
+                {dashboardTab === "overview" && (
+                  <div className="space-y-4">
+                    <Card className="shadow-sm overflow-hidden">
+                      <div className="bg-gradient-to-br from-primary/5 via-transparent to-primary/3 p-6 sm:p-8">
+                        <div className="flex items-center justify-center gap-2 mb-5">
+                          <User className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm font-semibold" data-testid="text-consumer-name">{borrowerName}</span>
+                        </div>
+                        <div className="flex flex-col items-center gap-2">
+                          <CreditScoreGauge score={data.creditScore} size={200} testId="consumer-score-gauge" />
+                          <p className={`text-xl font-bold ${scoreInfo.color}`} data-testid="text-score-label">{scoreInfo.label}</p>
+                          <p className="text-xs text-muted-foreground">Score range: 300 – 850</p>
+                        </div>
+                        <div className="mt-5 p-3 rounded-xl bg-muted/40 text-center">
+                          <p className="text-sm text-muted-foreground leading-relaxed" data-testid="text-score-description">{scoreInfo.description}</p>
+                        </div>
                       </div>
-                      <div className="flex items-start gap-2">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                        <span>Dispute any inaccurate information on your credit file.</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                        <span>Lenders must get your consent before accessing your data.</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </Card>
+
+                    <Button
+                      variant="outline"
+                      className="w-full rounded-xl gap-2"
+                      onClick={() => {
+                        const reportContent = `PERSONAL CREDIT REPORT\n========================\nName: ${borrowerName}\nCredit Score: ${data.creditScore} (${scoreInfo.label})\nGenerated: ${new Date().toISOString()}\n\n${scoreInfo.description}\n\nThis report was generated from the Ghana Credit Registry.\nProtected under the Ghana Data Protection Act, 2012.`;
+                        const blob = new Blob([reportContent], { type: "text/plain" });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = `credit-report-${new Date().toISOString().slice(0, 10)}.txt`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                      data-testid="button-download-consumer-report"
+                    >
+                      <Download className="w-4 h-4" />
+                      Download Credit Report
+                    </Button>
+
+                    <Card className="shadow-sm bg-muted/20">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Scale className="w-4 h-4 text-primary" />
+                          <h3 className="text-sm font-bold">Your Rights</h3>
+                        </div>
+                        <div className="space-y-2.5 text-xs text-muted-foreground">
+                          <div className="flex items-start gap-2">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                            <span>Access your credit report once per year at no cost.</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                            <span>Dispute any inaccurate information on your credit file.</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                            <span>Lenders must get your consent before accessing your data.</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
+                {dashboardTab === "disputes" && (
+                  <div className="space-y-4">
+                    <Card className="shadow-sm">
+                      <CardContent className="p-4 sm:p-5">
+                        <div className="flex items-center gap-2 mb-4">
+                          <MessageSquare className="w-4 h-4 text-primary" />
+                          <h3 className="text-sm font-bold">File a Dispute</h3>
+                        </div>
+                        {disputeSubmitted ? (
+                          <div className="text-center space-y-3 py-4">
+                            <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto">
+                              <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-sm">Dispute Submitted</p>
+                              <p className="text-xs text-muted-foreground mt-1">Your dispute has been filed and will be reviewed within 30 days as per regulatory requirements.</p>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => { setDisputeSubmitted(false); setDisputeReason(""); setDisputeDetails(""); }}
+                              className="rounded-xl"
+                              data-testid="button-file-another-consumer-dispute"
+                            >
+                              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                              File Another Dispute
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <p className="text-xs text-muted-foreground">
+                              If you believe any information on your credit report is inaccurate, you have the right to dispute it under the Credit Reporting Act.
+                            </p>
+                            <div>
+                              <label className="text-xs font-medium mb-1 block">Reason for Dispute</label>
+                              <select
+                                value={disputeReason}
+                                onChange={(e) => setDisputeReason(e.target.value)}
+                                className="w-full px-3 py-2 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                data-testid="select-consumer-dispute-reason"
+                              >
+                                <option value="">Select a reason...</option>
+                                <option value="incorrect_balance">Incorrect Balance</option>
+                                <option value="wrong_account">Account Does Not Belong to Me</option>
+                                <option value="duplicate_entry">Duplicate Entry</option>
+                                <option value="incorrect_status">Incorrect Account Status</option>
+                                <option value="identity_theft">Identity Theft / Fraud</option>
+                                <option value="incorrect_personal">Incorrect Personal Information</option>
+                                <option value="other">Other</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium mb-1 block">Details</label>
+                              <textarea
+                                value={disputeDetails}
+                                onChange={(e) => setDisputeDetails(e.target.value)}
+                                placeholder="Describe the inaccuracy in detail..."
+                                rows={4}
+                                className="w-full px-3 py-2 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+                                data-testid="textarea-consumer-dispute-details"
+                              />
+                            </div>
+                            <Button
+                              onClick={() => setDisputeSubmitted(true)}
+                              disabled={!disputeReason || disputeDetails.length < 10}
+                              size="lg"
+                              className="w-full rounded-xl"
+                              data-testid="button-submit-consumer-dispute"
+                            >
+                              <MessageSquare className="w-4 h-4 mr-2" />
+                              Submit Dispute
+                            </Button>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    <Card className="shadow-sm bg-muted/20">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Shield className="w-4 h-4 text-primary" />
+                          <h3 className="text-xs font-bold">Dispute Rights</h3>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          Under the Credit Reporting Act, you have the right to dispute any inaccurate data. The credit bureau must investigate and respond within 30 days. If validated, your credit record will be corrected.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+
+                {dashboardTab === "consent" && (
+                  <div className="space-y-4">
+                    <Card className="shadow-sm">
+                      <CardContent className="p-4 sm:p-5">
+                        <div className="flex items-center gap-2 mb-4">
+                          <ClipboardCheck className="w-4 h-4 text-primary" />
+                          <h3 className="text-sm font-bold">Data Consent Management</h3>
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-4">
+                          Manage who can access your personal credit data. Lenders must have your explicit consent before pulling your credit report.
+                        </p>
+
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between p-3 rounded-xl border" data-testid="consent-consumer-sharing">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                              </div>
+                              <div>
+                                <p className="text-xs font-semibold">Credit Report Sharing</p>
+                                <p className="text-[10px] text-muted-foreground">Allow authorised lenders to access your credit report</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => setConsentAction(consentAction === "revoke-sharing" ? null : "revoke-sharing")}
+                              className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-colors ${
+                                consentAction === "revoke-sharing"
+                                  ? "bg-red-500/10 text-red-600"
+                                  : "bg-emerald-500/10 text-emerald-600"
+                              }`}
+                              data-testid="button-consumer-toggle-sharing"
+                            >
+                              {consentAction === "revoke-sharing" ? "Revoked" : "Active"}
+                            </button>
+                          </div>
+
+                          <div className="flex items-center justify-between p-3 rounded-xl border" data-testid="consent-consumer-marketing">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                                <Mail className="w-4 h-4 text-blue-600" />
+                              </div>
+                              <div>
+                                <p className="text-xs font-semibold">Marketing Communications</p>
+                                <p className="text-[10px] text-muted-foreground">Receive credit offers and financial tips</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => setConsentAction(consentAction === "revoke-marketing" ? null : "revoke-marketing")}
+                              className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-colors ${
+                                consentAction === "revoke-marketing"
+                                  ? "bg-red-500/10 text-red-600"
+                                  : "bg-muted text-muted-foreground"
+                              }`}
+                              data-testid="button-consumer-toggle-marketing"
+                            >
+                              {consentAction === "revoke-marketing" ? "Revoked" : "Opt Out"}
+                            </button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="shadow-sm bg-muted/20">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Shield className="w-4 h-4 text-primary" />
+                          <h3 className="text-xs font-bold">Data Protection</h3>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          Your data is protected under the Ghana Data Protection Act, 2012 (Act 843). You have the right to withdraw consent at any time. Changes may take up to 48 hours to take effect.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
 
                 <div className="text-center pb-4">
                   <p className="text-[10px] text-muted-foreground">

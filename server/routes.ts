@@ -2281,8 +2281,9 @@ export async function registerRoutes(
 
   app.post("/api/business/verify-otp", businessAuthLimiter, async (req, res) => {
     try {
-      const { tin, otp } = req.body;
-      if (!tin || !otp) return res.status(400).json({ message: "TIN and OTP are required" });
+      const { tin: rawTin, otp } = req.body;
+      if (!rawTin || !otp) return res.status(400).json({ message: "TIN and OTP are required" });
+      const tin = rawTin.toUpperCase().trim();
 
       const [account] = await db.select().from(businessAccounts).where(eq(businessAccounts.tin, tin)).limit(1);
       if (!account) return res.status(404).json({ message: "Account not found" });
@@ -2311,8 +2312,9 @@ export async function registerRoutes(
 
   app.post("/api/business/login", businessAuthLimiter, async (req, res) => {
     try {
-      const { tin, password } = req.body;
-      if (!tin || !password) return res.status(400).json({ message: "TIN and password are required" });
+      const { tin: rawTin, password } = req.body;
+      if (!rawTin || !password) return res.status(400).json({ message: "TIN and password are required" });
+      const tin = rawTin.toUpperCase().trim();
 
       const [account] = await db.select().from(businessAccounts).where(eq(businessAccounts.tin, tin)).limit(1);
       if (!account) return res.status(401).json({ message: "Invalid credentials" });
