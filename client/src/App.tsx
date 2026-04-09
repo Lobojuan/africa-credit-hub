@@ -266,6 +266,7 @@ function AuthenticatedApp() {
   const { user, isLoading, logout, passwordExpired, accountSuspended } = useAuth();
   const [chatbotOpen, setChatbotOpen] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
+  const [portalRedirect, setPortalRedirect] = useState<string | null>(null);
   const { t, i18n } = useTranslation();
   const countryTheme = useCountryTheme();
   const [rawPath, navigate] = useLocation();
@@ -290,6 +291,21 @@ function AuthenticatedApp() {
       return () => clearTimeout(timer);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (!user && !isLoading) {
+      Promise.all([
+        fetch("/api/consumer/session", { credentials: "include" }).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch("/api/business/session", { credentials: "include" }).then(r => r.ok ? r.json() : null).catch(() => null),
+      ]).then(([consumer, business]) => {
+        if (consumer?.nationalId) {
+          setPortalRedirect("/my-credit");
+        } else if (business?.tin) {
+          setPortalRedirect("/business-portal");
+        }
+      });
+    }
+  }, [user, isLoading]);
 
   const isMobile = useIsMobile();
 
@@ -339,6 +355,9 @@ function AuthenticatedApp() {
     }
     if (publicPaths.includes(currentPath)) {
       return doRedirect(currentPath);
+    }
+    if (portalRedirect) {
+      return doRedirect(portalRedirect);
     }
     return doRedirect("/login");
   }

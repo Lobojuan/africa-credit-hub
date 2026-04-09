@@ -2226,11 +2226,25 @@ export async function registerRoutes(
     try {
       const { tin, companyName, contactName, phone, email, password } = req.body;
       if (!tin || tin.length < 6) return res.status(400).json({ message: "TIN must be at least 6 characters" });
+      if (!/^[A-Z0-9\-]{6,20}$/i.test(tin)) return res.status(400).json({ message: "TIN format is invalid. Only alphanumeric characters and hyphens are accepted." });
       if (!companyName || companyName.length < 2) return res.status(400).json({ message: "Company name is required" });
       if (!phone || phone.length < 8) return res.status(400).json({ message: "Valid phone number is required" });
+      if (!/^\+?\d{8,15}$/.test(phone.replace(/[\s\-()]/g, ""))) return res.status(400).json({ message: "Phone number must be a valid format (8-15 digits)" });
       if (!password || password.length < 8) return res.status(400).json({ message: "Password must be at least 8 characters" });
+      if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) return res.status(400).json({ message: "Password must contain uppercase, lowercase, and a digit" });
 
-      const existing = await db.select().from(businessAccounts).where(eq(businessAccounts.tin, tin)).limit(1);
+      const tinNormalized = tin.toUpperCase().trim();
+      const matchingBorrower = await db.select({ id: borrowers.id }).from(borrowers).where(
+        or(
+          ilike(borrowers.nationalId, tinNormalized),
+          ilike(borrowers.tinNumber, tinNormalized)
+        )
+      ).limit(1);
+      if (matchingBorrower.length === 0) {
+        return res.status(404).json({ message: "This TIN is not found in the Ghana Credit Registry. Only businesses with existing credit records can register." });
+      }
+
+      const existing = await db.select().from(businessAccounts).where(eq(businessAccounts.tin, tinNormalized)).limit(1);
       if (existing.length > 0) return res.status(409).json({ message: "An account with this TIN already exists. Please log in instead." });
 
       const passwordHash = await bcrypt.hash(password, 12);
@@ -2238,7 +2252,7 @@ export async function registerRoutes(
       const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
 
       await db.insert(businessAccounts).values({
-        tin,
+        tin: tinNormalized,
         companyName,
         contactName: contactName || null,
         phone,
