@@ -115,6 +115,8 @@ const StartTrialPage = lazy(() => import("@/pages/start-trial"));
 const SignUpPage = lazy(() => import("@/pages/signup"));
 const UpgradePage = lazy(() => import("@/pages/upgrade"));
 const PresentationPage = lazy(() => import("@/pages/presentation"));
+const PortalPage = lazy(() => import("@/pages/portal"));
+const DecisionEnginePage = lazy(() => import("@/pages/decision-engine"));
 
 function LazyFallback() {
   return (
@@ -214,6 +216,8 @@ function Router() {
         <Route path="/platform-metrics" component={PlatformMetricsPage} />
         <Route path="/webhook-management" component={WebhookManagementPage} />
         <Route path="/presentation" component={PresentationPage} />
+        <Route path="/portal" component={PortalPage} />
+        <Route path="/decision-engine" component={DecisionEnginePage} />
         <Route path="/upgrade">
           {() => (
             <Suspense fallback={<LazyFallback />}>
@@ -331,7 +335,7 @@ function AuthenticatedApp() {
     );
   }
 
-  const publicPaths = ["/", "/investor", "/solutions", "/ai-demo", "/pricing", "/security", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/score-guide", "/my-credit", "/api-docs", "/consumer/register", "/contact-sales"];
+  const publicPaths = ["/", "/investor", "/solutions", "/ai-demo", "/pricing", "/security", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/score-guide", "/my-credit", "/api-docs", "/consumer/register", "/contact-sales", "/portal"];
   if (!user) {
     if (currentPath === "/login") {
       return <LoginPage />;
@@ -540,7 +544,7 @@ function AuthenticatedApp() {
 
 function PublicChatbotWrapper() {
   const [location] = useLocation();
-  const publicPaths = ["/", "/solutions", "/investor", "/ai-demo", "/pricing", "/security", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/my-credit", "/api-docs", "/consumer/register", "/contact-sales"];
+  const publicPaths = ["/", "/solutions", "/investor", "/ai-demo", "/pricing", "/security", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/my-credit", "/api-docs", "/consumer/register", "/contact-sales", "/portal"];
   if (!publicPaths.includes(location)) return null;
   return <PublicChatbot />;
 }
@@ -566,6 +570,7 @@ function App() {
             <Route path="/signup" component={() => <Suspense fallback={<LazyFallback />}><SignUpPage /></Suspense>} />
             <Route path="/score-guide" component={() => <Suspense fallback={<LazyFallback />}><ScoreGuidePage /></Suspense>} />
             <Route path="/api-docs" component={() => <Suspense fallback={<LazyFallback />}><ApiDocsPage /></Suspense>} />
+            <Route path="/portal" component={() => <Suspense fallback={<LazyFallback />}><PortalPage /></Suspense>} />
             <Route path="/consumer/register">
               <Suspense fallback={<LazyFallback />}>
                 <ConsumerPortalPage />

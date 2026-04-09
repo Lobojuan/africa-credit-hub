@@ -16,6 +16,7 @@ import { CreditScoreGauge } from "@/components/credit-score-gauge";
 import { FraudRiskIndicator, FraudRiskBadge } from "@/components/fraud-risk-indicator";
 import { ScoreFactors } from "@/components/score-factors";
 import { AlternativeDataCard } from "@/components/alternative-data-card";
+import { OpenBankingCard } from "@/components/open-banking-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Gavel, FileCheck } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
@@ -326,6 +327,8 @@ export default function ConsumerDetailPage() {
           )}
 
           {alternativeData && <AlternativeDataCard alternativeData={alternativeData} />}
+
+          <OpenBankingCard borrowerId={borrowerId!} borrowerType="individual" />
 
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => navigate(`/credit-report/${borrowerId}`)} data-testid="button-full-report">

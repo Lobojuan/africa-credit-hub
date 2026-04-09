@@ -46,6 +46,11 @@ The system employs a modern full-stack architecture built for scalability and co
     -   **Chatbot**: Credit Registry Assistant with dispute filing, FAQ, keyword search, and AI-powered Smart Assistant mode, utilizing a Multi-Model AI Ensemble (GPT-4o and Claude) for intelligent responses.
     -   **AI Portfolio Intelligence**: Analytics page for AI-powered portfolio reports, including risk ratings and default predictions.
     -   **AI Command Center**: Unified hub for 6 AI tools including Credit Narratives, Anomaly Detection, and Regulatory Reports.
+    -   **Open Banking**: Open Banking profile management for individual and corporate borrowers, displayed on consumer and business detail pages.
+    -   **Decision Rules Engine**: Configurable decision rules for credit evaluation with rule creation, editing, deletion, and borrower evaluation. Accessible via sidebar for admin/super_admin/lender roles.
+    -   **ESG Scoring**: Environmental, Social, and Governance scoring for corporate borrowers, displayed on business detail pages.
+    -   **Multi-Step Signup**: Institution type picker (Step 1) with 6 categories feeding into the existing registration form (Step 2) with a type badge and "Change" link.
+    -   **Consumer Portal Registration**: Enhanced with Full Name, Country selection, and consent checkbox fields.
     -   **Transaction-Based Monetization**: Per-transaction billing with per-country pricing and volume tier discounts.
     -   **Cross-Border Frameworks**: Implements Smart Africa Telecommunications Alliance (SATA) data sharing and tracks Pan-African Payment and Settlement System (PAPSS) settlements.
     -   **Alternative Data Integration**: Integrates mobile money, utility, and telco data for AI-driven credit scoring for unbanked populations.

@@ -18,6 +18,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Gavel, FileCheck } from "lucide-react";
 import { queryClient, apiRequest, apiFormRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { OpenBankingCard } from "@/components/open-banking-card";
+import { EsgScoreCard } from "@/components/esg-score-card";
 import type { Borrower, CreditAccount, CreditInquiry, CourtJudgment, ConsentRecord, BorrowerAlert } from "@shared/schema";
 
 function getStatusColor(status: string) {
@@ -295,6 +297,9 @@ export default function BusinessDetailPage() {
               </CardContent>
             </Card>
           )}
+
+          <OpenBankingCard borrowerId={borrowerId!} borrowerType="corporate" />
+          <EsgScoreCard borrowerId={borrowerId!} />
 
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => navigate(`/business-credit-report/${borrowerId}`)} data-testid="button-full-report">

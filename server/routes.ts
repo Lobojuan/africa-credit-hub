@@ -47,7 +47,7 @@ import { recordUsageEvent } from "./usage-metering";
 import { broadcastEvent } from "./websocket";
 import { createAnchor, verifyAuditAgainstAnchor, getAnchors } from "./blockchain-anchor";
 import { deliverWebhook, getWebhookSubscriptions, getWebhookDeliveryHistory, WEBHOOK_EVENTS } from "./webhook-delivery";
-import { webauthnCredentials, blockchainAnchors, webhookSubscriptions, webhookDeliveryLogs, consumerAccounts, telcoProfiles, telcoLoans, telcoLoanRepayments, auditLogs } from "@shared/schema";
+import { webauthnCredentials, blockchainAnchors, webhookSubscriptions, webhookDeliveryLogs, consumerAccounts, telcoProfiles, telcoLoans, telcoLoanRepayments, auditLogs, openBankingProfiles, insertOpenBankingProfileSchema, decisionRules, insertDecisionRuleSchema, esgScores, insertEsgScoreSchema } from "@shared/schema";
 import fs from "fs";
 import path from "path";
 import * as OTPAuth from "otpauth";
@@ -1929,7 +1929,7 @@ export async function registerRoutes(
 
   app.post("/api/consumer/register", consumerAuthLimiter, async (req, res) => {
     try {
-      const { nationalId, phone, email, password, dateOfBirth } = req.body;
+      const { nationalId, phone, email, password, dateOfBirth, fullName, country, consentGiven } = req.body;
       if (!nationalId || nationalId.length < 6) return res.status(400).json({ message: "National ID must be at least 6 characters" });
       if (!phone || phone.length < 8) return res.status(400).json({ message: "Valid phone number is required" });
       if (!password || password.length < 8) return res.status(400).json({ message: "Password must be at least 8 characters" });
@@ -1950,6 +1950,9 @@ export async function registerRoutes(
         email: email || null,
         passwordHash,
         dateOfBirth,
+        fullName: fullName || null,
+        country: country || null,
+        consentGiven: consentGiven || false,
         otpCode: otp,
         otpExpiresAt: otpExpires,
         emailToken: email ? emailToken : null,
@@ -9961,6 +9964,145 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       routeLogger.error("[Audit] Failed to log maintenance toggle:", { detail: e });
     }
     res.json({ enabled: maintenanceState.enabled, message: maintenanceState.message });
+  });
+
+  // ── Open Banking ─────────────────────────────────────────────────
+  app.get("/api/open-banking/:borrowerId", requireAuth, async (req, res) => {
+    try {
+      const profiles = await db.select().from(openBankingProfiles)
+        .where(eq(openBankingProfiles.borrowerId, req.params.borrowerId))
+        .orderBy(desc(openBankingProfiles.createdAt));
+      res.json(profiles);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+  app.post("/api/open-banking", requireAuth, async (req, res) => {
+    try {
+      const parsed = insertOpenBankingProfileSchema.parse(req.body);
+      const { calculateOpenBankingScore } = await import("./open-banking");
+      const score = calculateOpenBankingScore({
+        avgMonthlyInflow: Number(parsed.avgMonthlyInflow) || 0,
+        avgMonthlyOutflow: Number(parsed.avgMonthlyOutflow) || 0,
+        monthsOfData: parsed.monthsOfData || 0,
+        regularIncomeStreams: parsed.regularIncomeStreams || 0,
+        gamblingTransactions: parsed.gamblingTransactions || 0,
+        salaryCreditsDetected: parsed.salaryCreditsDetected || false,
+        rentPaymentsDetected: parsed.rentPaymentsDetected || false,
+        utilityPaymentsDetected: parsed.utilityPaymentsDetected || false,
+        nsfEvents: parsed.nsfEvents || 0,
+      });
+      const [created] = await db.insert(openBankingProfiles).values({ ...parsed, openBankingScore: score }).returning();
+      res.json(created);
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ── Decision Rules Engine ─────────────────────────────────────────
+  app.get("/api/decision-rules", requireAuth, async (req, res) => {
+    try {
+      const orgId = (req as any).user?.organizationId;
+      const rules = await db.select().from(decisionRules)
+        .where(orgId ? eq(decisionRules.organizationId, orgId) : undefined)
+        .orderBy(decisionRules.priority);
+      res.json(rules);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+  app.post("/api/decision-rules", requireAuth, async (req, res) => {
+    try {
+      const parsed = insertDecisionRuleSchema.parse(req.body);
+      const [created] = await db.insert(decisionRules).values(parsed).returning();
+      res.json(created);
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e) }); }
+  });
+  app.patch("/api/decision-rules/:id", requireAuth, async (req, res) => {
+    try {
+      const [updated] = await db.update(decisionRules)
+        .set({ ...req.body, updatedAt: new Date() })
+        .where(eq(decisionRules.id, req.params.id)).returning();
+      res.json(updated);
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e) }); }
+  });
+  app.delete("/api/decision-rules/:id", requireAuth, async (req, res) => {
+    try {
+      await db.delete(decisionRules).where(eq(decisionRules.id, req.params.id));
+      res.json({ success: true });
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e) }); }
+  });
+  app.post("/api/decision-rules/evaluate", requireAuth, async (req, res) => {
+    try {
+      const { borrowerId } = req.body;
+      const orgId = (req as any).user?.organizationId;
+      const [borrower] = await db.select().from(borrowers).where(eq(borrowers.id, borrowerId));
+      if (!borrower) return res.status(404).json({ message: "Borrower not found" });
+      const accounts = await db.select().from(creditAccounts).where(eq(creditAccounts.borrowerId, borrowerId));
+      const judgmentsList = await db.select().from(courtJudgments).where(eq(courtJudgments.borrowerId, borrowerId));
+      const cheques = await db.select().from(dishonouredCheques).where(eq(dishonouredCheques.borrowerId, borrowerId));
+      const scoreResult = calculateCreditScore(accounts, 0, judgmentsList, borrower.isPep || false, []);
+      const score = scoreResult.score;
+      const maxArrears = accounts.length > 0 ? Math.max(0, ...accounts.map(a => a.daysInArrears || 0)) : 0;
+      const activeAccounts = accounts.filter(a => ["current","delinquent"].includes(a.status)).length;
+      const hasActiveJudgment = judgmentsList.some(j => j.status === "active");
+      const hasDishonouredCheque = cheques.length > 0;
+      const monthlyIncome = Number(borrower.monthlyIncome) || 0;
+      const totalDebt = accounts.reduce((s, a) => s + Number(a.currentBalance || 0), 0);
+      const dti = monthlyIncome > 0 ? totalDebt / (monthlyIncome * 12) : 999;
+      const rules = await db.select().from(decisionRules)
+        .where(and(orgId ? eq(decisionRules.organizationId, orgId) : undefined, eq(decisionRules.isActive, true)))
+        .orderBy(decisionRules.priority);
+      let outcome = "refer"; let matchedRule: any = null;
+      for (const rule of rules) {
+        let ok = true;
+        if (rule.minCreditScore && score < rule.minCreditScore) ok = false;
+        if (rule.maxCreditScore && score > rule.maxCreditScore) ok = false;
+        if (rule.maxDaysInArrears != null && maxArrears > rule.maxDaysInArrears) ok = false;
+        if (rule.maxActiveAccounts != null && activeAccounts > rule.maxActiveAccounts) ok = false;
+        if (rule.minMonthlyIncome && monthlyIncome < Number(rule.minMonthlyIncome)) ok = false;
+        if (rule.maxDebtToIncomeRatio && dti > Number(rule.maxDebtToIncomeRatio)) ok = false;
+        if (rule.excludePep && borrower.isPep) ok = false;
+        if (rule.excludeActiveJudgments && hasActiveJudgment) ok = false;
+        if (rule.excludeDishonouredCheques && hasDishonouredCheque) ok = false;
+        if (ok) { outcome = rule.outcome; matchedRule = rule; break; }
+      }
+      res.json({
+        outcome, matchedRule: matchedRule?.ruleName || "Default (no matching rule)",
+        creditScore: score, maxDaysInArrears: maxArrears, activeAccounts,
+        hasActiveJudgment, hasDishonouredCheque,
+        debtToIncomeRatio: dti.toFixed(2), monthlyIncome,
+        borrowerName: borrower.type === "individual"
+          ? `${borrower.firstName || ""} ${borrower.lastName || ""}`.trim()
+          : borrower.companyName || "Unknown",
+      });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ── ESG Scoring ───────────────────────────────────────────────────
+  app.get("/api/esg/:borrowerId", requireAuth, async (req, res) => {
+    try {
+      const [latest] = await db.select().from(esgScores)
+        .where(eq(esgScores.borrowerId, req.params.borrowerId))
+        .orderBy(desc(esgScores.assessedAt)).limit(1);
+      res.json(latest || null);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+  app.post("/api/esg", requireAuth, async (req, res) => {
+    try {
+      const parsed = insertEsgScoreSchema.parse(req.body);
+      const { calculateEsgScores } = await import("./esg-scoring");
+      const computed = calculateEsgScores({
+        hasEnvironmentalPolicy: parsed.hasEnvironmentalPolicy || false,
+        wasteManagementScore: parsed.wasteManagementScore || 0,
+        energyEfficiencyScore: parsed.energyEfficiencyScore || 0,
+        carbonFootprintReported: parsed.carbonFootprintReported || false,
+        employeeWelfareScore: parsed.employeeWelfareScore || 0,
+        communityEngagementScore: parsed.communityEngagementScore || 0,
+        genderDiversityScore: parsed.genderDiversityScore || 0,
+        healthSafetyCompliance: parsed.healthSafetyCompliance || false,
+        boardIndependenceScore: parsed.boardIndependenceScore || 0,
+        antiCorruptionPolicy: parsed.antiCorruptionPolicy || false,
+        auditedFinancials: parsed.auditedFinancials || false,
+        taxComplianceScore: parsed.taxComplianceScore || 0,
+      });
+      const [created] = await db.insert(esgScores).values({ ...parsed, ...computed }).returning();
+      res.json(created);
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e) }); }
   });
 
   return httpServer;

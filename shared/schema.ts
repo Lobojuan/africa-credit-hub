@@ -1015,8 +1015,92 @@ export const consumerAccounts = pgTable("consumer_accounts", {
   failedAttempts: integer("failed_attempts").default(0),
   lockedUntil: timestamp("locked_until"),
   lastLogin: timestamp("last_login"),
+  country: text("country"),
+  consentGiven: boolean("consent_given").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 export const insertConsumerAccountSchema = createInsertSchema(consumerAccounts).omit({ id: true, createdAt: true, lastLogin: true, failedAttempts: true, lockedUntil: true, otpCode: true, otpExpiresAt: true, verified: true, emailToken: true, emailTokenExpiresAt: true, verificationMethod: true });
 export type InsertConsumerAccount = z.infer<typeof insertConsumerAccountSchema>;
 export type ConsumerAccount = typeof consumerAccounts.$inferSelect;
+
+export const openBankingProfiles = pgTable("open_banking_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  dataSource: text("data_source").notNull(),
+  accountNumber: text("account_number"),
+  currency: text("currency").default("GHS"),
+  avgMonthlyInflow: decimal("avg_monthly_inflow", { precision: 15, scale: 2 }),
+  avgMonthlyOutflow: decimal("avg_monthly_outflow", { precision: 15, scale: 2 }),
+  monthsOfData: integer("months_of_data"),
+  regularIncomeStreams: integer("regular_income_streams").default(0),
+  gamblingTransactions: integer("gambling_transactions").default(0),
+  salaryCreditsDetected: boolean("salary_credits_detected").default(false),
+  rentPaymentsDetected: boolean("rent_payments_detected").default(false),
+  utilityPaymentsDetected: boolean("utility_payments_detected").default(false),
+  nsfEvents: integer("nsf_events").default(0),
+  openBankingScore: integer("open_banking_score"),
+  rawSummary: jsonb("raw_summary"),
+  consentReference: text("consent_reference"),
+  dataAsOf: timestamp("data_as_of"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+export const insertOpenBankingProfileSchema = createInsertSchema(openBankingProfiles).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertOpenBankingProfile = z.infer<typeof insertOpenBankingProfileSchema>;
+export type OpenBankingProfile = typeof openBankingProfiles.$inferSelect;
+
+export const decisionRules = pgTable("decision_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  ruleName: text("rule_name").notNull(),
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  minCreditScore: integer("min_credit_score"),
+  maxCreditScore: integer("max_credit_score"),
+  maxDaysInArrears: integer("max_days_in_arrears"),
+  maxActiveAccounts: integer("max_active_accounts"),
+  minMonthlyIncome: decimal("min_monthly_income", { precision: 15, scale: 2 }),
+  maxDebtToIncomeRatio: decimal("max_debt_to_income_ratio", { precision: 5, scale: 2 }),
+  excludePep: boolean("exclude_pep").default(true),
+  excludeActiveJudgments: boolean("exclude_active_judgments").default(true),
+  excludeDishonouredCheques: boolean("exclude_dishonoured_cheques").default(false),
+  outcome: text("outcome").notNull().default("refer"),
+  priority: integer("priority").default(1),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+export const insertDecisionRuleSchema = createInsertSchema(decisionRules).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertDecisionRule = z.infer<typeof insertDecisionRuleSchema>;
+export type DecisionRule = typeof decisionRules.$inferSelect;
+
+export const esgScores = pgTable("esg_scores", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  hasEnvironmentalPolicy: boolean("has_environmental_policy").default(false),
+  wasteManagementScore: integer("waste_management_score").default(0),
+  energyEfficiencyScore: integer("energy_efficiency_score").default(0),
+  carbonFootprintReported: boolean("carbon_footprint_reported").default(false),
+  employeeWelfareScore: integer("employee_welfare_score").default(0),
+  communityEngagementScore: integer("community_engagement_score").default(0),
+  genderDiversityScore: integer("gender_diversity_score").default(0),
+  healthSafetyCompliance: boolean("health_safety_compliance").default(false),
+  boardIndependenceScore: integer("board_independence_score").default(0),
+  antiCorruptionPolicy: boolean("anti_corruption_policy").default(false),
+  auditedFinancials: boolean("audited_financials").default(false),
+  taxComplianceScore: integer("tax_compliance_score").default(0),
+  environmentalScore: integer("environmental_score"),
+  socialScore: integer("social_score"),
+  governanceScore: integer("governance_score"),
+  totalEsgScore: integer("total_esg_score"),
+  esgRating: text("esg_rating"),
+  assessedBy: varchar("assessed_by").references(() => users.id),
+  assessedAt: timestamp("assessed_at").defaultNow(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export const insertEsgScoreSchema = createInsertSchema(esgScores).omit({ id: true, createdAt: true });
+export type InsertEsgScore = z.infer<typeof insertEsgScoreSchema>;
+export type EsgScore = typeof esgScores.$inferSelect;

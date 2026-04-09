@@ -48,6 +48,7 @@ import {
   HardDrive,
   Ban,
   Gavel,
+  Cpu,
 } from "lucide-react";
 import {
   Sidebar,
@@ -151,6 +152,7 @@ const adminItems: NavItem[] = [
   { label: "User Management", tKey: "sidebar.userManagement", url: "/users", icon: Settings, testId: "nav-user-management", roles: ["admin", "super_admin"] },
   { label: "Institutions", tKey: "sidebar.institutions", url: "/institutions", icon: Building2, testId: "nav-institutions", roles: ["admin", "super_admin"] },
   { label: "Billing", tKey: "sidebar.billing", url: "/billing", icon: Receipt, testId: "nav-billing", roles: ["admin", "regulator", "super_admin"] },
+  { label: "Decision Engine", url: "/decision-engine", icon: Cpu, testId: "nav-decision-engine", roles: ["admin", "super_admin", "lender"] },
 ];
 
 const apiIntegrationItems: NavItem[] = [

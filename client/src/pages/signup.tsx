@@ -1,14 +1,26 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff, Landmark, Coins, Shield, Smartphone, Zap, Building2, ArrowLeft, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useBrandColors } from "@/hooks/use-brand-colors";
+
+const INSTITUTION_TYPES = [
+  { type: "bank", icon: Landmark, label: "Commercial Bank", description: "Licensed deposit-taking institution", division: "retail" },
+  { type: "microfinance", icon: Coins, label: "Microfinance Institution", description: "Serving underbanked communities", division: "retail" },
+  { type: "insurance", icon: Shield, label: "Insurance Company", description: "Risk assessment and underwriting", division: "retail" },
+  { type: "telecom", icon: Smartphone, label: "Telecom / MNO", description: "Mobile network operator or MVNO", division: "telco" },
+  { type: "fintech", icon: Zap, label: "Fintech / Startup", description: "Digital financial services provider", division: "retail" },
+  { type: "other", icon: Building2, label: "Other Institution", description: "Investment firm, utility, government", division: "corporate" },
+] as const;
 
 export default function SignUpPage() {
   const { toast } = useToast();
   const brandColors = useBrandColors();
 
+  const [step, setStep] = useState<1 | 2>(1);
+  const [institutionType, setInstitutionType] = useState("");
+  const [selectedDivision, setSelectedDivision] = useState("");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -67,7 +79,7 @@ export default function SignUpPage() {
       const res = await apiRequest("POST", "/api/trial/register", {
         organization: {
           name: `${fullName.trim().split(" ")[0]}'s Organization`,
-          type: "other",
+          type: institutionType || "other",
           country: "Ghana",
           contactEmail: email.trim(),
         },
@@ -75,10 +87,12 @@ export default function SignUpPage() {
           fullName: fullName.trim(),
           email: email.trim(),
           username,
+          division: selectedDivision || null,
           ...(googlePrefilled ? {} : { password }),
         },
       });
       await res.json();
+      if (selectedDivision) sessionStorage.setItem("userDivision", selectedDivision);
       toast({ title: "Account created!", description: "Logging you in..." });
       setTimeout(() => { window.location.href = "/dashboard"; }, 800);
     } catch (err: any) {
@@ -95,6 +109,55 @@ export default function SignUpPage() {
       setLoading(false);
     }
   }
+
+  if (step === 1) {
+    const selectedInfo = INSTITUTION_TYPES.find(i => i.type === institutionType);
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4" data-testid="page-signup-step1" style={{
+        background: "linear-gradient(160deg, #0a0e1a 0%, #0d1524 30%, #0f1a2e 60%, #0a1220 100%)",
+      }}>
+        <div className="w-full max-w-[600px]" style={{
+          opacity: mounted ? 1 : 0,
+          transform: mounted ? "translateY(0)" : "translateY(20px)",
+          transition: "opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1)",
+        }}>
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold text-white tracking-tight" data-testid="text-signup-step1-title">
+              Register Your Institution
+            </h1>
+            <p className="text-sm mt-2" style={{ color: "rgba(255,255,255,0.5)" }}>
+              What best describes your organization?
+            </p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {INSTITUTION_TYPES.map(({ type, icon: Icon, label, description, division }) => (
+              <button
+                key={type}
+                onClick={() => { setInstitutionType(type); setSelectedDivision(division); setStep(2); }}
+                className="p-4 rounded-xl text-left transition-all hover:scale-[1.02]"
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                }}
+                data-testid={`button-institution-${type}`}
+              >
+                <Icon className="w-7 h-7 mb-3" style={{ color: "rgba(168,130,255,0.8)" }} />
+                <p className="text-sm font-semibold text-white">{label}</p>
+                <p className="text-[11px] mt-1" style={{ color: "rgba(255,255,255,0.45)" }}>{description}</p>
+              </button>
+            ))}
+          </div>
+          <div className="text-center mt-6">
+            <a href="/portal" className="text-sm hover:underline" style={{ color: "rgba(255,255,255,0.4)" }} data-testid="link-back-portal">
+              <ArrowLeft className="w-3.5 h-3.5 inline mr-1" /> Back to Portal
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const selectedTypeInfo = INSTITUTION_TYPES.find(i => i.type === institutionType);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4" data-testid="page-signup" style={{
@@ -222,6 +285,18 @@ export default function SignUpPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3.5">
+          {selectedTypeInfo && (
+            <div className="flex items-center justify-between rounded-xl px-4 py-2.5" style={{
+              background: "rgba(168,130,255,0.08)",
+              border: "1px solid rgba(168,130,255,0.2)",
+            }}>
+              <div className="flex items-center gap-2">
+                <Check className="w-4 h-4" style={{ color: "#a78bfa" }} />
+                <span className="text-sm text-white/80">{selectedTypeInfo.label}</span>
+              </div>
+              <button type="button" onClick={() => setStep(1)} className="text-xs hover:underline" style={{ color: "#a78bfa" }} data-testid="link-change-type">Change</button>
+            </div>
+          )}
           {error && (
             <div className="rounded-xl px-4 py-3 text-sm" style={{
               background: "rgba(239,68,68,0.1)",

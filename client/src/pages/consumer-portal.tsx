@@ -41,6 +41,9 @@ export default function ConsumerPortalPage() {
   const [fallbackOtp, setFallbackOtp] = useState<string | null>(null);
   const [data, setData] = useState<ConsumerData | null>(null);
   const [noCreditFile, setNoCreditFile] = useState(false);
+  const [regFullName, setRegFullName] = useState("");
+  const [regCountry, setRegCountry] = useState("");
+  const [consentGiven, setConsentGiven] = useState(false);
 
   const sessionQuery = useQuery({
     queryKey: ["/api/consumer/session"],
@@ -84,7 +87,7 @@ export default function ConsumerPortalPage() {
       const res = await fetch("/api/consumer/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nationalId, phone, email, password, dateOfBirth }),
+        body: JSON.stringify({ nationalId, phone, email, password, dateOfBirth, fullName: regFullName, country: regCountry, consentGiven }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.message);
@@ -342,6 +345,40 @@ export default function ConsumerPortalPage() {
           <Card className="shadow-sm">
             <CardContent className="p-4 sm:p-5 space-y-4">
               <div>
+                <label className="text-sm font-medium mb-1.5 block">Full Name</label>
+                <input
+                  type="text"
+                  value={regFullName}
+                  onChange={(e) => setRegFullName(e.target.value)}
+                  placeholder="As it appears on your ID"
+                  className="w-full px-3 py-2.5 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow"
+                  data-testid="input-register-fullname"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Country</label>
+                <select
+                  value={regCountry}
+                  onChange={(e) => setRegCountry(e.target.value)}
+                  className="w-full px-3 py-2.5 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow"
+                  data-testid="select-register-country"
+                >
+                  <option value="">Select your country</option>
+                  <option value="Ghana">Ghana</option>
+                  <option value="Nigeria">Nigeria</option>
+                  <option value="Kenya">Kenya</option>
+                  <option value="South Africa">South Africa</option>
+                  <option value="Ethiopia">Ethiopia</option>
+                  <option value="Tanzania">Tanzania</option>
+                  <option value="Uganda">Uganda</option>
+                  <option value="Rwanda">Rwanda</option>
+                  <option value="Senegal">Senegal</option>
+                  <option value="Côte d'Ivoire">Côte d'Ivoire</option>
+                  <option value="Other">Other African Country</option>
+                </select>
+              </div>
+              <div>
                 <label className="text-sm font-medium mb-1.5 block">National ID / Passport / Tax ID</label>
                 <input
                   type="text"
@@ -404,9 +441,29 @@ export default function ConsumerPortalPage() {
                   </button>
                 </div>
               </div>
+              <div className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  id="consent-checkbox"
+                  checked={consentGiven}
+                  onChange={(e) => setConsentGiven(e.target.checked)}
+                  className="mt-1 rounded"
+                  data-testid="checkbox-consent"
+                />
+                <label htmlFor="consent-checkbox" className="text-xs text-muted-foreground leading-relaxed">
+                  I consent to Africa Credit Hub accessing and displaying my credit information. 
+                  I understand I can revoke this consent at any time.
+                </label>
+              </div>
               <Button
-                onClick={() => registerMutation.mutate()}
-                disabled={registerMutation.isPending || nationalId.length < 6 || phone.length < 8 || password.length < 8 || !dateOfBirth}
+                onClick={() => {
+                  if (!regFullName.trim()) { setError("Full name is required"); return; }
+                  if (!regCountry) { setError("Please select your country"); return; }
+                  if (!consentGiven) { setError("You must consent to proceed"); return; }
+                  setError(null);
+                  registerMutation.mutate();
+                }}
+                disabled={registerMutation.isPending || nationalId.length < 6 || phone.length < 8 || password.length < 8 || !dateOfBirth || !regFullName.trim() || !regCountry || !consentGiven}
                 size="lg"
                 className="w-full rounded-xl"
                 data-testid="button-consumer-register"

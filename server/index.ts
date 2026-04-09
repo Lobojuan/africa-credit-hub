@@ -470,6 +470,13 @@ process.stderr.write = function (...args: any[]) {
     console.error("Index migration error (non-fatal):", e);
   }
 
+  try {
+    const { migrateCrifFeatures } = await import("./migrate-crif-features");
+    await migrateCrifFeatures();
+  } catch (e) {
+    console.error("CRIF features migration error (non-fatal):", e);
+  }
+
   const { initWebSocket } = await import("./websocket");
   initWebSocket(httpServer);
 
