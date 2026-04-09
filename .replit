@@ -53,6 +53,8 @@ SMTP_FROM = "uffe.carlson@gmail.com"
 
 [userenv.production]
 CANONICAL_URL = "https://africacredithub.com"
+PII_ENCRYPTION_KEY = "c5df17643e5c98e16cc9db0143f888fd3896368573b81ff3c7a4f2cf57176fda"
+PII_ENCRYPTION_SALT = "78be51edb14d23779ea0c8618452e17d"
 
 [postMerge]
 path = "scripts/post-merge.sh"
