@@ -1020,24 +1020,3 @@ export const consumerAccounts = pgTable("consumer_accounts", {
 export const insertConsumerAccountSchema = createInsertSchema(consumerAccounts).omit({ id: true, createdAt: true, lastLogin: true, failedAttempts: true, lockedUntil: true, otpCode: true, otpExpiresAt: true, verified: true, emailToken: true, emailTokenExpiresAt: true, verificationMethod: true });
 export type InsertConsumerAccount = z.infer<typeof insertConsumerAccountSchema>;
 export type ConsumerAccount = typeof consumerAccounts.$inferSelect;
-
-export const businessAccounts = pgTable("business_accounts", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tin: text("tin").notNull().unique(),
-  companyName: text("company_name").notNull(),
-  contactName: text("contact_name"),
-  phone: text("phone"),
-  email: text("email"),
-  passwordHash: text("password_hash"),
-  authProvider: text("auth_provider").default("local"),
-  verified: boolean("verified").default(false),
-  otpCode: text("otp_code"),
-  otpExpiresAt: timestamp("otp_expires_at"),
-  failedAttempts: integer("failed_attempts").default(0),
-  lockedUntil: timestamp("locked_until"),
-  lastLogin: timestamp("last_login"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-export const insertBusinessAccountSchema = createInsertSchema(businessAccounts).omit({ id: true, createdAt: true, lastLogin: true, failedAttempts: true, lockedUntil: true, otpCode: true, otpExpiresAt: true, verified: true });
-export type InsertBusinessAccount = z.infer<typeof insertBusinessAccountSchema>;
-export type BusinessAccount = typeof businessAccounts.$inferSelect;

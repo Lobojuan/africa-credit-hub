@@ -101,7 +101,6 @@ const CrossBorderAgreementsPage = lazy(() => import("@/pages/cross-border-agreem
 const CrossBorderSearchPage = lazy(() => import("@/pages/cross-border-search"));
 const PapssSettlementsPage = lazy(() => import("@/pages/papss-settlements"));
 const ConsumerPortalPage = lazy(() => import("@/pages/consumer-portal"));
-const BusinessPortalPage = lazy(() => import("@/pages/business-portal"));
 const SystemStatusPage = lazy(() => import("@/pages/system-status"));
 const BackupPage = lazy(() => import("@/pages/backup"));
 const PlatformMetricsPage = lazy(() => import("@/pages/platform-metrics"));
@@ -266,8 +265,6 @@ function AuthenticatedApp() {
   const { user, isLoading, logout, passwordExpired, accountSuspended } = useAuth();
   const [chatbotOpen, setChatbotOpen] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
-  const [portalRedirect, setPortalRedirect] = useState<string | null>(null);
-  const [portalChecked, setPortalChecked] = useState(false);
   const { t, i18n } = useTranslation();
   const countryTheme = useCountryTheme();
   const [rawPath, navigate] = useLocation();
@@ -292,22 +289,6 @@ function AuthenticatedApp() {
       return () => clearTimeout(timer);
     }
   }, [user]);
-
-  useEffect(() => {
-    if (!user && !isLoading && !portalChecked) {
-      Promise.all([
-        fetch("/api/consumer/session", { credentials: "include" }).then(r => r.ok ? r.json() : null).catch(() => null),
-        fetch("/api/business/session", { credentials: "include" }).then(r => r.ok ? r.json() : null).catch(() => null),
-      ]).then(([consumer, business]) => {
-        if (consumer?.nationalId) {
-          setPortalRedirect("/my-credit");
-        } else if (business?.tin) {
-          setPortalRedirect("/business-portal");
-        }
-        setPortalChecked(true);
-      });
-    }
-  }, [user, isLoading, portalChecked]);
 
   const isMobile = useIsMobile();
 
@@ -350,26 +331,13 @@ function AuthenticatedApp() {
     );
   }
 
-  const publicPaths = ["/", "/investor", "/solutions", "/ai-demo", "/pricing", "/security", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/score-guide", "/my-credit", "/business-portal", "/api-docs", "/consumer/register", "/contact-sales"];
+  const publicPaths = ["/", "/investor", "/solutions", "/ai-demo", "/pricing", "/security", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/score-guide", "/my-credit", "/api-docs", "/consumer/register", "/contact-sales"];
   if (!user) {
     if (currentPath === "/login") {
       return <LoginPage />;
     }
     if (publicPaths.includes(currentPath)) {
       return doRedirect(currentPath);
-    }
-    if (portalRedirect) {
-      return doRedirect(portalRedirect);
-    }
-    if (!portalChecked) {
-      return (
-        <div className="flex items-center justify-center h-screen bg-background">
-          <div className="flex flex-col items-center gap-3">
-            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">Loading...</p>
-          </div>
-        </div>
-      );
     }
     return doRedirect("/login");
   }
@@ -572,7 +540,7 @@ function AuthenticatedApp() {
 
 function PublicChatbotWrapper() {
   const [location] = useLocation();
-  const publicPaths = ["/", "/solutions", "/investor", "/ai-demo", "/pricing", "/security", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/my-credit", "/business-portal", "/api-docs", "/consumer/register", "/contact-sales"];
+  const publicPaths = ["/", "/solutions", "/investor", "/ai-demo", "/pricing", "/security", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/my-credit", "/api-docs", "/consumer/register", "/contact-sales"];
   if (!publicPaths.includes(location)) return null;
   return <PublicChatbot />;
 }
@@ -615,11 +583,6 @@ function App() {
             <Route path="/my-credit">
               <Suspense fallback={<LazyFallback />}>
                 <ConsumerPortalPage />
-              </Suspense>
-            </Route>
-            <Route path="/business-portal">
-              <Suspense fallback={<LazyFallback />}>
-                <BusinessPortalPage />
               </Suspense>
             </Route>
             <Route path="/mobile">

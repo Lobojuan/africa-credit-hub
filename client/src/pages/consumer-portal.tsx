@@ -1,12 +1,9 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search, Shield, AlertTriangle, CheckCircle2, TrendingUp, User, Loader2, Scale, Phone, CalendarDays, Lock, LogOut, UserPlus, KeyRound, ArrowLeft, ArrowRight, Eye, EyeOff, Mail, MessageSquare, RefreshCw, Globe, Download, ClipboardCheck, BarChart3, HelpCircle, Clock, FileText } from "lucide-react";
+import { Search, Shield, AlertTriangle, CheckCircle2, TrendingUp, User, Loader2, Scale, Phone, CalendarDays, Lock, LogOut, UserPlus, KeyRound, ArrowLeft, ArrowRight, Eye, EyeOff, Mail, MessageSquare, RefreshCw, Globe } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CreditScoreGauge } from "@/components/credit-score-gauge";
-import { PortalLayout } from "@/components/portal-layout";
-
-type ConsumerDashboardTab = "overview" | "disputes" | "consent" | "guide";
 
 interface ConsumerData {
   borrower: {
@@ -29,71 +26,9 @@ function getScoreLabel(score: number): { label: string; color: string; descripti
 
 type View = "login" | "register" | "verify" | "dashboard";
 
-function DisputeTracker({ portalType }: { portalType: "consumer" | "business" }) {
-  const { data: disputeList, isLoading } = useQuery<any[]>({
-    queryKey: [`/api/${portalType}/disputes`],
-  });
-
-  const statusColor = (s: string) =>
-    s === "resolved" ? "bg-emerald-500/10 text-emerald-700" :
-    s === "under_review" ? "bg-blue-500/10 text-blue-700" :
-    s === "rejected" ? "bg-red-500/10 text-red-700" :
-    "bg-amber-500/10 text-amber-700";
-
-  const typeLabel = (t: string) => t.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-
-  return (
-    <Card className="shadow-sm">
-      <CardContent className="p-4 sm:p-5">
-        <div className="flex items-center gap-2 mb-3">
-          <Clock className="w-4 h-4 text-primary" />
-          <h3 className="text-sm font-bold" data-testid="text-dispute-tracker-title">Track Your Disputes</h3>
-        </div>
-        {isLoading ? (
-          <div className="flex items-center justify-center py-6">
-            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-          </div>
-        ) : !disputeList || disputeList.length === 0 ? (
-          <p className="text-xs text-muted-foreground py-4 text-center" data-testid="text-no-disputes">
-            No disputes filed yet. Use the form above to file a dispute.
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {disputeList.map((d: any) => (
-              <div key={d.id} className="p-3 rounded-xl border bg-background space-y-1" data-testid={`dispute-item-${d.id}`}>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold">{typeLabel(d.disputeType)}</span>
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusColor(d.status)}`} data-testid={`dispute-status-${d.id}`}>
-                    {d.status === "under_review" ? "Under Review" : d.status.charAt(0).toUpperCase() + d.status.slice(1)}
-                  </span>
-                </div>
-                <p className="text-[11px] text-muted-foreground line-clamp-2">{d.description}</p>
-                <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-                  <span>Filed: {d.createdAt ? new Date(d.createdAt).toLocaleDateString() : "N/A"}</span>
-                  {d.resolvedAt && <span>Resolved: {new Date(d.resolvedAt).toLocaleDateString()}</span>}
-                </div>
-                {d.resolution && (
-                  <p className="text-[11px] text-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-2 mt-1">
-                    Resolution: {d.resolution}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
 export default function ConsumerPortalPage() {
   const queryClient = useQueryClient();
   const [view, setView] = useState<View | "loading">("loading");
-  const [dashboardTab, setDashboardTab] = useState<ConsumerDashboardTab>("overview");
-  const [disputeReason, setDisputeReason] = useState("");
-  const [disputeDetails, setDisputeDetails] = useState("");
-  const [disputeSubmitted, setDisputeSubmitted] = useState(false);
-  const [consentAction, setConsentAction] = useState<string | null>(null);
   const [nationalId, setNationalId] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -274,12 +209,7 @@ export default function ConsumerPortalPage() {
   const isPending = registerMutation.isPending || loginMutation.isPending || verifyMutation.isPending;
 
   return (
-    <PortalLayout
-      type="consumer"
-      isAuthenticated={view === "dashboard"}
-      userName={sessionQuery.data?.fullName || sessionQuery.data?.nationalId?.replace(/(.{3}).+(.{3})/, "$1****$2")}
-      onLogout={() => logoutMutation.mutate()}
-    >
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
       <div className="max-w-lg mx-auto px-4 py-6 sm:px-6 sm:py-8 space-y-5">
 
         <div className="text-center space-y-2 pt-2 pb-1">
@@ -601,6 +531,18 @@ export default function ConsumerPortalPage() {
 
         {view === "dashboard" && (
           <div className="space-y-4">
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => logoutMutation.mutate()}
+                className="rounded-xl"
+                data-testid="button-consumer-logout"
+              >
+                <LogOut className="w-3.5 h-3.5 mr-1.5" />
+                Sign Out
+              </Button>
+            </div>
 
             {!data && !lookupMutation.isPending && (
               <>
@@ -747,360 +689,45 @@ export default function ConsumerPortalPage() {
 
             {data && scoreInfo && (
               <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500" data-testid="consumer-results">
-                <div className="flex gap-1 p-1 rounded-xl bg-muted/50 border">
-                  {([
-                    { key: "overview" as ConsumerDashboardTab, label: "Credit Score", icon: BarChart3 },
-                    { key: "disputes" as ConsumerDashboardTab, label: "Disputes", icon: MessageSquare },
-                    { key: "consent" as ConsumerDashboardTab, label: "Consent", icon: ClipboardCheck },
-                    { key: "guide" as ConsumerDashboardTab, label: "Guide & FAQ", icon: HelpCircle },
-                  ]).map(tab => (
-                    <button
-                      key={tab.key}
-                      onClick={() => setDashboardTab(tab.key)}
-                      className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
-                        dashboardTab === tab.key
-                          ? "bg-background shadow-sm text-foreground"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                      data-testid={`tab-consumer-${tab.key}`}
-                    >
-                      <tab.icon className="w-3.5 h-3.5" />
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
+                <Card className="shadow-sm overflow-hidden">
+                  <div className="bg-gradient-to-br from-primary/5 via-transparent to-primary/3 p-6 sm:p-8">
+                    <div className="flex items-center justify-center gap-2 mb-5">
+                      <User className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm font-semibold" data-testid="text-consumer-name">{borrowerName}</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-2">
+                      <CreditScoreGauge score={data.creditScore} size={200} testId="consumer-score-gauge" />
+                      <p className={`text-xl font-bold ${scoreInfo.color}`} data-testid="text-score-label">{scoreInfo.label}</p>
+                      <p className="text-xs text-muted-foreground">Score range: 300 – 850</p>
+                    </div>
+                    <div className="mt-5 p-3 rounded-xl bg-muted/40 text-center">
+                      <p className="text-sm text-muted-foreground leading-relaxed" data-testid="text-score-description">{scoreInfo.description}</p>
+                    </div>
+                  </div>
+                </Card>
 
-                {dashboardTab === "overview" && (
-                  <div className="space-y-4">
-                    <Card className="shadow-sm overflow-hidden">
-                      <div className="bg-gradient-to-br from-primary/5 via-transparent to-primary/3 p-6 sm:p-8">
-                        <div className="flex items-center justify-center gap-2 mb-5">
-                          <User className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-sm font-semibold" data-testid="text-consumer-name">{borrowerName}</span>
-                        </div>
-                        <div className="flex flex-col items-center gap-2">
-                          <CreditScoreGauge score={data.creditScore} size={200} testId="consumer-score-gauge" />
-                          <p className={`text-xl font-bold ${scoreInfo.color}`} data-testid="text-score-label">{scoreInfo.label}</p>
-                          <p className="text-xs text-muted-foreground">Score range: 300 – 850</p>
-                        </div>
-                        <div className="mt-5 p-3 rounded-xl bg-muted/40 text-center">
-                          <p className="text-sm text-muted-foreground leading-relaxed" data-testid="text-score-description">{scoreInfo.description}</p>
-                        </div>
+                <Card className="shadow-sm bg-muted/20">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Scale className="w-4 h-4 text-primary" />
+                      <h3 className="text-sm font-bold">Your Rights</h3>
+                    </div>
+                    <div className="space-y-2.5 text-xs text-muted-foreground">
+                      <div className="flex items-start gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                        <span>Access your credit report once per year at no cost.</span>
                       </div>
-                    </Card>
-
-                    <Button
-                      variant="outline"
-                      className="w-full rounded-xl gap-2"
-                      onClick={() => {
-                        window.open("/api/consumer/report/pdf", "_blank");
-                      }}
-                      data-testid="button-download-consumer-report"
-                    >
-                      <Download className="w-4 h-4" />
-                      Download Credit Report (PDF)
-                    </Button>
-
-                    <Card className="shadow-sm bg-muted/20">
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Scale className="w-4 h-4 text-primary" />
-                          <h3 className="text-sm font-bold">Your Rights</h3>
-                        </div>
-                        <div className="space-y-2.5 text-xs text-muted-foreground">
-                          <div className="flex items-start gap-2">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                            <span>Access your credit report once per year at no cost.</span>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                            <span>Dispute any inaccurate information on your credit file.</span>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                            <span>Lenders must get your consent before accessing your data.</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                )}
-
-                {dashboardTab === "disputes" && (
-                  <div className="space-y-4">
-                    <Card className="shadow-sm">
-                      <CardContent className="p-4 sm:p-5">
-                        <div className="flex items-center gap-2 mb-4">
-                          <MessageSquare className="w-4 h-4 text-primary" />
-                          <h3 className="text-sm font-bold">File a Dispute</h3>
-                        </div>
-                        {disputeSubmitted ? (
-                          <div className="text-center space-y-3 py-4">
-                            <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto">
-                              <CheckCircle2 className="w-6 h-6 text-emerald-600" />
-                            </div>
-                            <div>
-                              <p className="font-semibold text-sm">Dispute Submitted</p>
-                              <p className="text-xs text-muted-foreground mt-1">Your dispute has been filed and will be reviewed within 30 days as per regulatory requirements.</p>
-                            </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => { setDisputeSubmitted(false); setDisputeReason(""); setDisputeDetails(""); }}
-                              className="rounded-xl"
-                              data-testid="button-file-another-consumer-dispute"
-                            >
-                              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-                              File Another Dispute
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="space-y-3">
-                            <p className="text-xs text-muted-foreground">
-                              If you believe any information on your credit report is inaccurate, you have the right to dispute it under the Credit Reporting Act.
-                            </p>
-                            <div>
-                              <label className="text-xs font-medium mb-1 block">Reason for Dispute</label>
-                              <select
-                                value={disputeReason}
-                                onChange={(e) => setDisputeReason(e.target.value)}
-                                className="w-full px-3 py-2 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
-                                data-testid="select-consumer-dispute-reason"
-                              >
-                                <option value="">Select a reason...</option>
-                                <option value="incorrect_balance">Incorrect Balance</option>
-                                <option value="wrong_account">Account Does Not Belong to Me</option>
-                                <option value="duplicate_entry">Duplicate Entry</option>
-                                <option value="incorrect_status">Incorrect Account Status</option>
-                                <option value="identity_theft">Identity Theft / Fraud</option>
-                                <option value="incorrect_personal">Incorrect Personal Information</option>
-                                <option value="other">Other</option>
-                              </select>
-                            </div>
-                            <div>
-                              <label className="text-xs font-medium mb-1 block">Details</label>
-                              <textarea
-                                value={disputeDetails}
-                                onChange={(e) => setDisputeDetails(e.target.value)}
-                                placeholder="Describe the inaccuracy in detail..."
-                                rows={4}
-                                className="w-full px-3 py-2 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
-                                data-testid="textarea-consumer-dispute-details"
-                              />
-                            </div>
-                            <Button
-                              onClick={async () => {
-                                try {
-                                  const resp = await fetch("/api/consumer/dispute", {
-                                    method: "POST",
-                                    headers: { "Content-Type": "application/json" },
-                                    credentials: "include",
-                                    body: JSON.stringify({ reason: disputeReason, details: disputeDetails }),
-                                  });
-                                  if (resp.ok) {
-                                    setDisputeSubmitted(true);
-                                    queryClient.invalidateQueries({ queryKey: ["/api/consumer/disputes"] });
-                                  } else {
-                                    const err = await resp.json();
-                                    setError(err.message || "Failed to submit dispute");
-                                  }
-                                } catch {
-                                  setError("Failed to submit dispute. Please try again.");
-                                }
-                              }}
-                              disabled={!disputeReason || disputeDetails.length < 10}
-                              size="lg"
-                              className="w-full rounded-xl"
-                              data-testid="button-submit-consumer-dispute"
-                            >
-                              <MessageSquare className="w-4 h-4 mr-2" />
-                              Submit Dispute
-                            </Button>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-
-                    <DisputeTracker portalType="consumer" />
-
-                    <Card className="shadow-sm bg-muted/20">
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Shield className="w-4 h-4 text-primary" />
-                          <h3 className="text-xs font-bold">Dispute Rights</h3>
-                        </div>
-                        <p className="text-[11px] text-muted-foreground">
-                          Under the Credit Reporting Act, you have the right to dispute any inaccurate data. The credit bureau must investigate and respond within 30 days. If validated, your credit record will be corrected.
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </div>
-                )}
-
-                {dashboardTab === "consent" && (
-                  <div className="space-y-4">
-                    <Card className="shadow-sm">
-                      <CardContent className="p-4 sm:p-5">
-                        <div className="flex items-center gap-2 mb-4">
-                          <ClipboardCheck className="w-4 h-4 text-primary" />
-                          <h3 className="text-sm font-bold">Data Consent Management</h3>
-                        </div>
-                        <p className="text-xs text-muted-foreground mb-4">
-                          Manage who can access your personal credit data. Lenders must have your explicit consent before pulling your credit report.
-                        </p>
-
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between p-3 rounded-xl border" data-testid="consent-consumer-sharing">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                              </div>
-                              <div>
-                                <p className="text-xs font-semibold">Credit Report Sharing</p>
-                                <p className="text-[10px] text-muted-foreground">Allow authorised lenders to access your credit report</p>
-                              </div>
-                            </div>
-                            <button
-                              onClick={async () => {
-                                const newAction = consentAction === "revoke-sharing" ? null : "revoke-sharing";
-                                try {
-                                  await fetch("/api/consumer/consent", {
-                                    method: "POST",
-                                    headers: { "Content-Type": "application/json" },
-                                    credentials: "include",
-                                    body: JSON.stringify({ consentType: "credit_sharing", action: newAction ? "revoke" : "grant" }),
-                                  });
-                                  setConsentAction(newAction);
-                                } catch {}
-                              }}
-                              className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-colors ${
-                                consentAction === "revoke-sharing"
-                                  ? "bg-red-500/10 text-red-600"
-                                  : "bg-emerald-500/10 text-emerald-600"
-                              }`}
-                              data-testid="button-consumer-toggle-sharing"
-                            >
-                              {consentAction === "revoke-sharing" ? "Revoked" : "Active"}
-                            </button>
-                          </div>
-
-                          <div className="flex items-center justify-between p-3 rounded-xl border" data-testid="consent-consumer-marketing">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                                <Mail className="w-4 h-4 text-blue-600" />
-                              </div>
-                              <div>
-                                <p className="text-xs font-semibold">Marketing Communications</p>
-                                <p className="text-[10px] text-muted-foreground">Receive credit offers and financial tips</p>
-                              </div>
-                            </div>
-                            <button
-                              onClick={async () => {
-                                const newAction = consentAction === "revoke-marketing" ? null : "revoke-marketing";
-                                try {
-                                  await fetch("/api/consumer/consent", {
-                                    method: "POST",
-                                    headers: { "Content-Type": "application/json" },
-                                    credentials: "include",
-                                    body: JSON.stringify({ consentType: "marketing", action: newAction ? "revoke" : "grant" }),
-                                  });
-                                  setConsentAction(newAction);
-                                } catch {}
-                              }}
-                              className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-colors ${
-                                consentAction === "revoke-marketing"
-                                  ? "bg-red-500/10 text-red-600"
-                                  : "bg-muted text-muted-foreground"
-                              }`}
-                              data-testid="button-consumer-toggle-marketing"
-                            >
-                              {consentAction === "revoke-marketing" ? "Revoked" : "Opt Out"}
-                            </button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="shadow-sm bg-muted/20">
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Shield className="w-4 h-4 text-primary" />
-                          <h3 className="text-xs font-bold">Data Protection</h3>
-                        </div>
-                        <p className="text-[11px] text-muted-foreground">
-                          Your data is protected under the Ghana Data Protection Act, 2012 (Act 843). You have the right to withdraw consent at any time. Changes may take up to 48 hours to take effect.
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </div>
-                )}
-
-                {dashboardTab === "guide" && (
-                  <div className="space-y-4" data-testid="consumer-guide-section">
-                    <Card className="shadow-sm">
-                      <CardContent className="p-4 sm:p-5">
-                        <div className="flex items-center gap-2 mb-4">
-                          <HelpCircle className="w-4 h-4 text-primary" />
-                          <h3 className="text-sm font-bold">Consumer Guide</h3>
-                        </div>
-                        <div className="space-y-3">
-                          <div className="p-3 rounded-xl border bg-background">
-                            <div className="flex items-center gap-2 mb-1">
-                              <BarChart3 className="w-3.5 h-3.5 text-primary" />
-                              <p className="text-xs font-semibold">Understanding Your Credit Score</p>
-                            </div>
-                            <p className="text-[11px] text-muted-foreground">Your credit score ranges from 300 to 850. A higher score means better creditworthiness. Scores above 670 are considered good, while scores below 450 may make it difficult to obtain credit.</p>
-                          </div>
-                          <div className="p-3 rounded-xl border bg-background">
-                            <div className="flex items-center gap-2 mb-1">
-                              <TrendingUp className="w-3.5 h-3.5 text-primary" />
-                              <p className="text-xs font-semibold">How to Improve Your Score</p>
-                            </div>
-                            <p className="text-[11px] text-muted-foreground">Pay bills on time, keep credit utilisation below 30%, maintain long-standing accounts, limit new credit applications, and regularly check your report for errors.</p>
-                          </div>
-                          <div className="p-3 rounded-xl border bg-background">
-                            <div className="flex items-center gap-2 mb-1">
-                              <FileText className="w-3.5 h-3.5 text-primary" />
-                              <p className="text-xs font-semibold">Your Credit Report</p>
-                            </div>
-                            <p className="text-[11px] text-muted-foreground">Your credit report contains your borrowing history, payment patterns, outstanding balances, and public records. Lenders use it to decide whether to extend credit to you.</p>
-                          </div>
-                          <div className="p-3 rounded-xl border bg-background">
-                            <div className="flex items-center gap-2 mb-1">
-                              <MessageSquare className="w-3.5 h-3.5 text-primary" />
-                              <p className="text-xs font-semibold">Filing Disputes</p>
-                            </div>
-                            <p className="text-[11px] text-muted-foreground">If you find inaccurate information, file a dispute through the Disputes tab. The bureau must investigate within 30 days. You can track the status of your dispute in real-time.</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="shadow-sm">
-                      <CardContent className="p-4 sm:p-5">
-                        <div className="flex items-center gap-2 mb-4">
-                          <Scale className="w-4 h-4 text-primary" />
-                          <h3 className="text-sm font-bold">Frequently Asked Questions</h3>
-                        </div>
-                        <div className="space-y-3">
-                          {[
-                            { q: "How often is my credit score updated?", a: "Your score is recalculated each time a lender reports new information, typically monthly." },
-                            { q: "Who can see my credit report?", a: "Only authorised lenders with your explicit consent can access your report, as required under the Data Protection Act." },
-                            { q: "Will checking my own score lower it?", a: "No. Checking your own score is a 'soft inquiry' and does not affect your credit rating." },
-                            { q: "How long do negative items stay on my report?", a: "Most negative items remain for 5-7 years. Court judgments may stay longer depending on the type." },
-                            { q: "What should I do if I'm a victim of identity theft?", a: "File a dispute immediately through the Disputes tab, select 'Identity Theft / Fraud', and contact your local police." },
-                            { q: "Can I get credit with a low score?", a: "Some lenders specialise in lending to individuals with lower scores, though interest rates may be higher." },
-                          ].map((faq, i) => (
-                            <div key={i} className="p-3 rounded-xl border bg-background" data-testid={`faq-item-${i}`}>
-                              <p className="text-xs font-semibold mb-1">{faq.q}</p>
-                              <p className="text-[11px] text-muted-foreground">{faq.a}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                )}
+                      <div className="flex items-start gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                        <span>Dispute any inaccurate information on your credit file.</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                        <span>Lenders must get your consent before accessing your data.</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
                 <div className="text-center pb-4">
                   <p className="text-[10px] text-muted-foreground">
@@ -1147,6 +774,6 @@ export default function ConsumerPortalPage() {
           </div>
         )}
       </div>
-    </PortalLayout>
+    </div>
   );
 }
