@@ -267,6 +267,7 @@ function AuthenticatedApp() {
   const [chatbotOpen, setChatbotOpen] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
   const [portalRedirect, setPortalRedirect] = useState<string | null>(null);
+  const [portalChecked, setPortalChecked] = useState(false);
   const { t, i18n } = useTranslation();
   const countryTheme = useCountryTheme();
   const [rawPath, navigate] = useLocation();
@@ -293,7 +294,7 @@ function AuthenticatedApp() {
   }, [user]);
 
   useEffect(() => {
-    if (!user && !isLoading) {
+    if (!user && !isLoading && !portalChecked) {
       Promise.all([
         fetch("/api/consumer/session", { credentials: "include" }).then(r => r.ok ? r.json() : null).catch(() => null),
         fetch("/api/business/session", { credentials: "include" }).then(r => r.ok ? r.json() : null).catch(() => null),
@@ -303,9 +304,10 @@ function AuthenticatedApp() {
         } else if (business?.tin) {
           setPortalRedirect("/business-portal");
         }
+        setPortalChecked(true);
       });
     }
-  }, [user, isLoading]);
+  }, [user, isLoading, portalChecked]);
 
   const isMobile = useIsMobile();
 
@@ -358,6 +360,16 @@ function AuthenticatedApp() {
     }
     if (portalRedirect) {
       return doRedirect(portalRedirect);
+    }
+    if (!portalChecked) {
+      return (
+        <div className="flex items-center justify-center h-screen bg-background">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">Loading...</p>
+          </div>
+        </div>
+      );
     }
     return doRedirect("/login");
   }
