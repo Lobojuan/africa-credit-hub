@@ -101,6 +101,7 @@ const CrossBorderAgreementsPage = lazy(() => import("@/pages/cross-border-agreem
 const CrossBorderSearchPage = lazy(() => import("@/pages/cross-border-search"));
 const PapssSettlementsPage = lazy(() => import("@/pages/papss-settlements"));
 const ConsumerPortalPage = lazy(() => import("@/pages/consumer-portal"));
+const BusinessPortalPage = lazy(() => import("@/pages/business-portal"));
 const SystemStatusPage = lazy(() => import("@/pages/system-status"));
 const BackupPage = lazy(() => import("@/pages/backup"));
 const PlatformMetricsPage = lazy(() => import("@/pages/platform-metrics"));
@@ -331,7 +332,7 @@ function AuthenticatedApp() {
     );
   }
 
-  const publicPaths = ["/", "/investor", "/solutions", "/ai-demo", "/pricing", "/security", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/score-guide", "/my-credit", "/api-docs", "/consumer/register", "/contact-sales"];
+  const publicPaths = ["/", "/investor", "/solutions", "/ai-demo", "/pricing", "/security", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/score-guide", "/my-credit", "/business-portal", "/api-docs", "/consumer/register", "/contact-sales"];
   if (!user) {
     if (currentPath === "/login") {
       return <LoginPage />;
@@ -540,7 +541,7 @@ function AuthenticatedApp() {
 
 function PublicChatbotWrapper() {
   const [location] = useLocation();
-  const publicPaths = ["/", "/solutions", "/investor", "/ai-demo", "/pricing", "/security", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/my-credit", "/api-docs", "/consumer/register", "/contact-sales"];
+  const publicPaths = ["/", "/solutions", "/investor", "/ai-demo", "/pricing", "/security", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/my-credit", "/business-portal", "/api-docs", "/consumer/register", "/contact-sales"];
   if (!publicPaths.includes(location)) return null;
   return <PublicChatbot />;
 }
@@ -583,6 +584,11 @@ function App() {
             <Route path="/my-credit">
               <Suspense fallback={<LazyFallback />}>
                 <ConsumerPortalPage />
+              </Suspense>
+            </Route>
+            <Route path="/business-portal">
+              <Suspense fallback={<LazyFallback />}>
+                <BusinessPortalPage />
               </Suspense>
             </Route>
             <Route path="/mobile">

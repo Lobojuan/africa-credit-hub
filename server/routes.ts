@@ -47,7 +47,7 @@ import { recordUsageEvent } from "./usage-metering";
 import { broadcastEvent } from "./websocket";
 import { createAnchor, verifyAuditAgainstAnchor, getAnchors } from "./blockchain-anchor";
 import { deliverWebhook, getWebhookSubscriptions, getWebhookDeliveryHistory, WEBHOOK_EVENTS } from "./webhook-delivery";
-import { webauthnCredentials, blockchainAnchors, webhookSubscriptions, webhookDeliveryLogs, consumerAccounts, telcoProfiles, telcoLoans, telcoLoanRepayments, auditLogs } from "@shared/schema";
+import { webauthnCredentials, blockchainAnchors, webhookSubscriptions, webhookDeliveryLogs, consumerAccounts, businessAccounts, telcoProfiles, telcoLoans, telcoLoanRepayments, auditLogs } from "@shared/schema";
 import fs from "fs";
 import path from "path";
 import * as OTPAuth from "otpauth";
@@ -773,7 +773,7 @@ export async function registerRoutes(
   });
 
   app.use("/api", apiLimiter, (req, res, next) => {
-    if (req.path.startsWith("/auth") || req.path.startsWith("/external") || req.path.startsWith("/docs") || req.path.startsWith("/consumer") || req.path.startsWith("/ai-demo") || req.path.startsWith("/public") || req.path.startsWith("/contact-sales")) return next();
+    if (req.path.startsWith("/auth") || req.path.startsWith("/external") || req.path.startsWith("/docs") || req.path.startsWith("/consumer") || req.path.startsWith("/business") || req.path.startsWith("/ai-demo") || req.path.startsWith("/public") || req.path.startsWith("/contact-sales")) return next();
     requireAuth(req, res, next);
   });
 
@@ -2209,6 +2209,202 @@ export async function registerRoutes(
           firstName: borrower.firstName,
           lastName: borrower.lastName,
           companyName: borrower.companyName,
+          type: borrower.type,
+          nationalId: borrower.nationalId?.replace(/(.{3}).+(.{3})/, "$1****$2"),
+        },
+        creditScore,
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  const businessAuthLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 15, message: { message: "Too many attempts. Please try again later." }, standardHeaders: true, legacyHeaders: false });
+  const businessLookupLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { message: "Too many lookup requests. Please try again later." }, standardHeaders: true, legacyHeaders: false });
+
+  app.post("/api/business/register", businessAuthLimiter, async (req, res) => {
+    try {
+      const { tin, companyName, contactName, phone, email, password } = req.body;
+      if (!tin || tin.length < 6) return res.status(400).json({ message: "TIN must be at least 6 characters" });
+      if (!companyName || companyName.length < 2) return res.status(400).json({ message: "Company name is required" });
+      if (!phone || phone.length < 8) return res.status(400).json({ message: "Valid phone number is required" });
+      if (!password || password.length < 8) return res.status(400).json({ message: "Password must be at least 8 characters" });
+
+      const existing = await db.select().from(businessAccounts).where(eq(businessAccounts.tin, tin)).limit(1);
+      if (existing.length > 0) return res.status(409).json({ message: "An account with this TIN already exists. Please log in instead." });
+
+      const passwordHash = await bcrypt.hash(password, 12);
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+
+      await db.insert(businessAccounts).values({
+        tin,
+        companyName,
+        contactName: contactName || null,
+        phone,
+        email: email || null,
+        passwordHash,
+        otpCode: otp,
+        otpExpiresAt: otpExpires,
+      });
+
+      const smsSent = await sendOtpSms(phone, otp);
+      routeLogger.info(`[Business] Registration for TIN ${tin.slice(0, 4)}... — SMS: ${smsSent}`);
+
+      let message = "Business account created. ";
+      if (smsSent) {
+        message += "A verification code has been sent to your phone via SMS.";
+      } else {
+        message += "Please enter the verification code shown below to continue.";
+      }
+
+      res.json({ message, requiresVerification: true, otp: !smsSent ? otp : undefined });
+    } catch (e: any) {
+      routeLogger.error("[Business] Registration error:", { detail: e.message });
+      res.status(500).json({ message: "Registration failed. Please try again." });
+    }
+  });
+
+  app.post("/api/business/verify-otp", businessAuthLimiter, async (req, res) => {
+    try {
+      const { tin, otp } = req.body;
+      if (!tin || !otp) return res.status(400).json({ message: "TIN and OTP are required" });
+
+      const [account] = await db.select().from(businessAccounts).where(eq(businessAccounts.tin, tin)).limit(1);
+      if (!account) return res.status(404).json({ message: "Account not found" });
+
+      if (account.otpCode !== otp) {
+        await db.update(businessAccounts).set({ failedAttempts: (account.failedAttempts || 0) + 1 }).where(eq(businessAccounts.id, account.id));
+        return res.status(401).json({ message: "Invalid verification code" });
+      }
+
+      if (account.otpExpiresAt && new Date() > account.otpExpiresAt) {
+        return res.status(401).json({ message: "Verification code expired. Please request a new one." });
+      }
+
+      await db.update(businessAccounts).set({ verified: true, otpCode: null, otpExpiresAt: null, failedAttempts: 0 }).where(eq(businessAccounts.id, account.id));
+
+      req.session.regenerate((err) => {
+        if (err) return res.status(500).json({ message: "Session error" });
+        (req.session as any).businessId = account.id;
+        (req.session as any).businessTin = account.tin;
+        res.json({ message: "Business account verified successfully", verified: true });
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: "Verification failed" });
+    }
+  });
+
+  app.post("/api/business/login", businessAuthLimiter, async (req, res) => {
+    try {
+      const { tin, password } = req.body;
+      if (!tin || !password) return res.status(400).json({ message: "TIN and password are required" });
+
+      const [account] = await db.select().from(businessAccounts).where(eq(businessAccounts.tin, tin)).limit(1);
+      if (!account) return res.status(401).json({ message: "Invalid credentials" });
+
+      if (account.lockedUntil && new Date() < account.lockedUntil) {
+        const mins = Math.ceil((account.lockedUntil.getTime() - Date.now()) / 60000);
+        return res.status(423).json({ message: `Account locked. Try again in ${mins} minutes.` });
+      }
+
+      if (!account.passwordHash) {
+        return res.status(400).json({ message: "This account has no password set. Please contact support." });
+      }
+      const valid = await bcrypt.compare(password, account.passwordHash);
+      if (!valid) {
+        const attempts = (account.failedAttempts || 0) + 1;
+        const updates: any = { failedAttempts: attempts };
+        if (attempts >= 5) updates.lockedUntil = new Date(Date.now() + 30 * 60 * 1000);
+        await db.update(businessAccounts).set(updates).where(eq(businessAccounts.id, account.id));
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      if (!account.verified) {
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        await db.update(businessAccounts).set({
+          otpCode: otp,
+          otpExpiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        }).where(eq(businessAccounts.id, account.id));
+
+        const smsSent = await sendOtpSms(account.phone, otp);
+        routeLogger.info(`[Business] Re-verification for ${account.id.slice(0, 8)}... — SMS: ${smsSent}`);
+        let msg = "Account not verified. ";
+        if (smsSent) msg += "A new code has been sent to your phone.";
+        else msg += "Please enter the verification code to continue.";
+
+        return res.status(403).json({ message: msg, requiresVerification: true, otp: !smsSent ? otp : undefined });
+      }
+
+      await db.update(businessAccounts).set({ failedAttempts: 0, lockedUntil: null, lastLogin: new Date() }).where(eq(businessAccounts.id, account.id));
+
+      req.session.regenerate((err) => {
+        if (err) return res.status(500).json({ message: "Session error" });
+        (req.session as any).businessId = account.id;
+        (req.session as any).businessTin = account.tin;
+        req.session.save((saveErr) => {
+          if (saveErr) return res.status(500).json({ message: "Session error" });
+          res.json({ message: "Login successful", authenticated: true });
+        });
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  app.get("/api/business/session", async (req, res) => {
+    if (!(req.session as any).businessId) {
+      return res.status(401).json({ authenticated: false });
+    }
+    const [account] = await db.select().from(businessAccounts).where(eq(businessAccounts.id, (req.session as any).businessId)).limit(1);
+    if (!account) return res.status(401).json({ authenticated: false });
+    res.json({
+      authenticated: true,
+      tin: (req.session as any).businessTin,
+      companyName: account.companyName || null,
+      contactName: account.contactName || null,
+      email: account.email || null,
+    });
+  });
+
+  app.post("/api/business/logout", async (req, res) => {
+    req.session.destroy((err) => {
+      res.clearCookie("connect.sid");
+      res.json({ message: "Logged out" });
+    });
+  });
+
+  app.post("/api/business/lookup", businessLookupLimiter, async (req, res) => {
+    if (!(req.session as any).businessId) {
+      return res.status(401).json({ message: "Please log in to view your business credit profile" });
+    }
+    try {
+      const businessTin = (req.session as any).businessTin;
+      const [bizAccount] = await db.select().from(businessAccounts).where(eq(businessAccounts.id, (req.session as any).businessId)).limit(1);
+      if (!bizAccount) return res.status(401).json({ message: "Session expired. Please log in again." });
+
+      const borrowerResult = await db.select().from(borrowers).where(
+        or(
+          ilike(borrowers.nationalId, businessTin),
+          ilike(borrowers.tinNumber, businessTin)
+        )
+      ).limit(1);
+      const borrower = borrowerResult[0];
+      if (!borrower) {
+        return res.status(404).json({ message: "No business credit file found matching your TIN." });
+      }
+      const accounts = await storage.getCreditAccountsByBorrower(borrower.id);
+      const inquiries = await storage.getCreditInquiriesByBorrower(borrower.id);
+      const judgments = await storage.getCourtJudgmentsByBorrower(borrower.id);
+      let altData: any[] = [];
+      try {
+        altData = await db.select().from(alternativeData).where(sql`borrower_id::text = ${borrower.id}`);
+      } catch {}
+      const { score: creditScore } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep, altData);
+
+      res.json({
+        borrower: {
+          companyName: borrower.companyName || bizAccount.companyName,
           type: borrower.type,
           nationalId: borrower.nationalId?.replace(/(.{3}).+(.{3})/, "$1****$2"),
         },

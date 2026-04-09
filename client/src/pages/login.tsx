@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, AlertTriangle, ArrowRight, Globe, ArrowLeft, User, Lock, KeyRound } from "lucide-react";
+import { Shield, AlertTriangle, ArrowRight, Globe, ArrowLeft, User, Lock, KeyRound, Building2, CreditCard } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { LanguageSwitcher } from "@/components/language-switcher";
@@ -502,6 +502,41 @@ export default function LoginPage() {
             <p className="text-[11px]">
               {t('login.lockoutWarning')}
             </p>
+          </div>
+
+          <div className="relative flex items-center gap-3 my-1">
+            <div className="flex-1 border-t border-border" />
+            <span className="text-xs text-muted-foreground whitespace-nowrap">not a staff member?</span>
+            <div className="flex-1 border-t border-border" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <a
+              href="/my-credit"
+              className="group flex flex-col items-center gap-2 p-4 rounded-xl border border-border hover:border-primary/40 hover:bg-primary/5 transition-all duration-200 text-center"
+              data-testid="link-consumer-portal"
+            >
+              <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <CreditCard className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold">Check My Credit</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Individual credit score</p>
+              </div>
+            </a>
+            <a
+              href="/business-portal"
+              className="group flex flex-col items-center gap-2 p-4 rounded-xl border border-border hover:border-primary/40 hover:bg-primary/5 transition-all duration-200 text-center"
+              data-testid="link-business-portal"
+            >
+              <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold">Business Credit</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Commercial credit profile</p>
+              </div>
+            </a>
           </div>
 
           <div className="flex items-center justify-center gap-4 text-sm">
