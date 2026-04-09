@@ -2228,8 +2228,8 @@ export async function registerRoutes(
   app.post("/api/business/register", businessAuthLimiter, async (req, res) => {
     try {
       const { tin, companyName, contactName, phone, email, password } = req.body;
-      if (!tin || tin.length < 6) return res.status(400).json({ message: "TIN must be at least 6 characters" });
-      if (!/^[A-Z0-9\-]{6,20}$/i.test(tin)) return res.status(400).json({ message: "TIN format is invalid. Only alphanumeric characters and hyphens are accepted." });
+      if (!tin || tin.length < 6) return res.status(400).json({ message: "TIN or registration number must be at least 6 characters" });
+      if (!/^[A-Z0-9\-]{6,20}$/i.test(tin)) return res.status(400).json({ message: "TIN or registration number format is invalid. Only alphanumeric characters and hyphens are accepted (6-20 characters)." });
       if (!companyName || companyName.length < 2) return res.status(400).json({ message: "Company name is required" });
       if (!phone || phone.length < 8) return res.status(400).json({ message: "Valid phone number is required" });
       if (!/^\+?\d{8,15}$/.test(phone.replace(/[\s\-()]/g, ""))) return res.status(400).json({ message: "Phone number must be a valid format (8-15 digits)" });
@@ -2244,7 +2244,7 @@ export async function registerRoutes(
         )
       ).limit(1);
       if (matchingBorrower.length === 0) {
-        return res.status(404).json({ message: "This TIN is not found in the Ghana Credit Registry. Only businesses with existing credit records can register." });
+        return res.status(404).json({ message: "This TIN or registration number is not found in the Ghana Credit Registry. Only businesses with existing credit records can register." });
       }
 
       const existing = await db.select().from(businessAccounts).where(eq(businessAccounts.tin, tinNormalized)).limit(1);
@@ -2412,7 +2412,7 @@ export async function registerRoutes(
       ).limit(1);
       const borrower = borrowerResult[0];
       if (!borrower) {
-        return res.status(404).json({ message: "No business credit file found matching your TIN." });
+        return res.status(404).json({ message: "No business credit file found matching your TIN or registration number." });
       }
       const accounts = await storage.getCreditAccountsByBorrower(borrower.id);
       const inquiries = await storage.getCreditInquiriesByBorrower(borrower.id);

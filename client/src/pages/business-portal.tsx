@@ -303,12 +303,12 @@ export default function BusinessPortalPage() {
           <Card className="shadow-sm">
             <CardContent className="p-4 sm:p-5 space-y-4">
               <div>
-                <label className="text-sm font-medium mb-1.5 block">Tax Identification Number (TIN)</label>
+                <label className="text-sm font-medium mb-1.5 block">TIN or Business Registration Number</label>
                 <input
                   type="text"
                   value={tin}
                   onChange={(e) => setTin(e.target.value)}
-                  placeholder="e.g. C0012345678"
+                  placeholder="e.g. C0012345678 or BN-1234567"
                   className="w-full px-3 py-2.5 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow"
                   data-testid="input-business-tin"
                   onKeyDown={(e) => e.key === "Enter" && loginMutation.mutate()}
@@ -365,12 +365,12 @@ export default function BusinessPortalPage() {
           <Card className="shadow-sm">
             <CardContent className="p-4 sm:p-5 space-y-4">
               <div>
-                <label className="text-sm font-medium mb-1.5 block">Tax Identification Number (TIN)</label>
+                <label className="text-sm font-medium mb-1.5 block">TIN or Business Registration Number</label>
                 <input
                   type="text"
                   value={tin}
                   onChange={(e) => setTin(e.target.value)}
-                  placeholder="e.g. C0012345678"
+                  placeholder="e.g. C0012345678 or BN-1234567"
                   className="w-full px-3 py-2.5 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow"
                   data-testid="input-register-tin"
                 />
