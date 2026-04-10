@@ -7,6 +7,12 @@ const BACKUP_DIR = path.resolve(process.cwd(), "backups");
 const MAX_BACKUPS = 30;
 const BACKUP_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
+function safeBackupPath(filename: string): string {
+  const resolved = path.resolve(BACKUP_DIR, filename);
+  if (!resolved.startsWith(BACKUP_DIR + path.sep)) throw new Error("Invalid backup path");
+  return resolved;
+}
+
 export interface BackupRecord {
   id: string;
   filename: string;
@@ -78,7 +84,7 @@ export async function createBackup(
   const id = generateId();
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
   const filename = `cdh_${type}_${timestamp}.sql.gz`;
-  const filepath = path.join(BACKUP_DIR, filename);
+  const filepath = safeBackupPath(filename);
   const startTime = Date.now();
 
   const record: BackupRecord = {
@@ -159,7 +165,7 @@ export async function restoreBackup(backupId: string, restoredBy: string): Promi
   if (record.status !== "completed") throw new Error("Cannot restore from incomplete backup");
   if (record.type === "schema") throw new Error("Cannot restore from schema-only backup — use a full or data backup");
 
-  const filepath = path.join(BACKUP_DIR, record.filename);
+  const filepath = safeBackupPath(record.filename);
   if (!fs.existsSync(filepath)) throw new Error("Backup file missing from disk");
 
   const databaseUrl = process.env.DATABASE_URL;
@@ -185,8 +191,10 @@ export function listBackups(): BackupRecord[] {
   return manifest
     .filter((r) => {
       if (r.status === "completed") {
-        const filepath = path.join(BACKUP_DIR, r.filename);
-        return fs.existsSync(filepath);
+        try {
+          const filepath = safeBackupPath(r.filename);
+          return fs.existsSync(filepath);
+        } catch { return false; }
       }
       return true;
     })
@@ -197,7 +205,7 @@ export function getBackupFilePath(backupId: string): string | null {
   const manifest = loadManifest();
   const record = manifest.find((r) => r.id === backupId);
   if (!record || record.status !== "completed") return null;
-  const filepath = path.join(BACKUP_DIR, record.filename);
+  const filepath = safeBackupPath(record.filename);
   return fs.existsSync(filepath) ? filepath : null;
 }
 
@@ -207,7 +215,7 @@ export function deleteBackup(backupId: string): boolean {
   if (idx < 0) return false;
 
   const record = manifest[idx];
-  const filepath = path.join(BACKUP_DIR, record.filename);
+  const filepath = safeBackupPath(record.filename);
   if (fs.existsSync(filepath)) {
     fs.unlinkSync(filepath);
   }
@@ -226,8 +234,10 @@ function pruneOldBackups() {
   if (completed.length > MAX_BACKUPS) {
     const toRemove = completed.slice(MAX_BACKUPS);
     for (const record of toRemove) {
-      const filepath = path.join(BACKUP_DIR, record.filename);
-      if (fs.existsSync(filepath)) fs.unlinkSync(filepath);
+      try {
+        const filepath = safeBackupPath(record.filename);
+        if (fs.existsSync(filepath)) fs.unlinkSync(filepath);
+      } catch {}
       const idx = manifest.findIndex((r) => r.id === record.id);
       if (idx >= 0) manifest.splice(idx, 1);
     }
