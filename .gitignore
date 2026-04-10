@@ -12,3 +12,4 @@ backups/
 attached_assets/
 cookies.txt
 sed*
+**/.*.~*

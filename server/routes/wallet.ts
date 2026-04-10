@@ -93,9 +93,19 @@ router.patch("/api/platform/wallets/:id/settings", requireAuth, requireSuperAdmi
     const { id } = req.params;
     const { lowBalanceThresholdCents, autoTopupEnabled, autoTopupAmountCents } = req.body;
     const updates: any = { updatedAt: new Date() };
-    if (lowBalanceThresholdCents !== undefined) updates.lowBalanceThresholdCents = lowBalanceThresholdCents;
+    if (lowBalanceThresholdCents !== undefined) {
+      if (!Number.isInteger(lowBalanceThresholdCents) || lowBalanceThresholdCents < 0 || lowBalanceThresholdCents > 1_000_000_000_00) {
+        return res.status(400).json({ message: "lowBalanceThresholdCents must be a non-negative integer (max 100,000,000,000)" });
+      }
+      updates.lowBalanceThresholdCents = lowBalanceThresholdCents;
+    }
     if (autoTopupEnabled !== undefined) updates.autoTopupEnabled = autoTopupEnabled;
-    if (autoTopupAmountCents !== undefined) updates.autoTopupAmountCents = autoTopupAmountCents;
+    if (autoTopupAmountCents !== undefined) {
+      if (!Number.isInteger(autoTopupAmountCents) || autoTopupAmountCents < 0 || autoTopupAmountCents > 1_000_000_000_00) {
+        return res.status(400).json({ message: "autoTopupAmountCents must be a non-negative integer (max 100,000,000,000)" });
+      }
+      updates.autoTopupAmountCents = autoTopupAmountCents;
+    }
     const [updated] = await db.update(wallets).set(updates).where(eq(wallets.id, id)).returning();
     if (!updated) return res.status(404).json({ message: "Wallet not found" });
     res.json(updated);
