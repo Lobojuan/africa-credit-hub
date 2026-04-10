@@ -8,7 +8,7 @@ const routeLogger = createLogger("routes");
 import {
   loginLimiter, apiLimiter, writeLimiter, registrationLimiter, batchLimiter,
   aiLimiter, creditReportLimiter, rateLimitKeyGenerator,
-  stripPassword, requireAuth, requireRole, requireSuperAdmin,
+  stripPassword, requireAuth, requireRole, requireSuperAdmin, requireConsumer,
   enforceDataSovereignty, idempotencyMiddleware,
   getOrgScope, getCountryFilter, logCrossCountryAccess,
   enforceCountryScopeForNonSuperAdmin, requireWriteCountry,
@@ -2089,6 +2089,9 @@ export async function registerRoutes(
   });
 
   app.get("/api/consumer/session", async (req, res) => {
+    if (req.session?.userId && !(req.session as any).consumerId) {
+      return res.status(403).json({ authenticated: false, message: "Institution sessions cannot access consumer portal" });
+    }
     if (!(req.session as any).consumerId) {
       return res.status(401).json({ authenticated: false });
     }
@@ -2175,10 +2178,7 @@ export async function registerRoutes(
     });
   });
 
-  app.post("/api/consumer/lookup", consumerLookupLimiter, async (req, res) => {
-    if (!(req.session as any).consumerId) {
-      return res.status(401).json({ message: "Please log in to view your credit score" });
-    }
+  app.post("/api/consumer/lookup", requireConsumer, consumerLookupLimiter, async (req, res) => {
     try {
       const consumerNationalId = (req.session as any).consumerNationalId;
       const [consumerAccount] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.id, (req.session as any).consumerId)).limit(1);

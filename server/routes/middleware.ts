@@ -75,6 +75,9 @@ export function stripPassword(user: any) {
 }
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
+  if ((req.session as any)?.consumerId && !req.session?.userId) {
+    return res.status(403).json({ message: "Access denied: consumer accounts cannot access institution endpoints" });
+  }
   if (!req.session?.userId) {
     return res.status(401).json({ message: "Authentication required" });
   }
@@ -102,6 +105,17 @@ export function requireRole(...roles: string[]) {
 export function requireSuperAdmin(req: Request, res: Response, next: NextFunction) {
   if (req.session?.userRole !== "super_admin") {
     return res.status(403).json({ message: "Super admin access required" });
+  }
+  next();
+}
+
+export function requireConsumer(req: Request, res: Response, next: NextFunction) {
+  const consumerId = (req.session as any)?.consumerId;
+  if (!consumerId) {
+    return res.status(401).json({ message: "Consumer authentication required" });
+  }
+  if (req.session?.userId) {
+    return res.status(403).json({ message: "Access denied: institution sessions cannot access consumer endpoints" });
   }
   next();
 }
