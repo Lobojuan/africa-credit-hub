@@ -2115,8 +2115,12 @@ export async function registerRoutes(
       const { nationalId, password } = req.body;
       if (!nationalId || !password) return res.status(400).json({ message: "National ID and password are required" });
 
+      const DUMMY_HASH = "$2b$12$invalidhashfortimingprotectiononly000000000000000000000";
       const [account] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.nationalId, nationalId)).limit(1);
-      if (!account) return res.status(401).json({ message: "Invalid credentials" });
+      if (!account) {
+        await bcrypt.compare(password, DUMMY_HASH);
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
 
       if (account.lockedUntil && new Date() < account.lockedUntil) {
         const mins = Math.ceil((account.lockedUntil.getTime() - Date.now()) / 60000);

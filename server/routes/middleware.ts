@@ -157,15 +157,22 @@ export function enforceDataSovereignty(req: Request, res: Response, next: NextFu
   next();
 }
 
-pool.query(`
-  CREATE TABLE IF NOT EXISTS idempotency_keys (
-    key TEXT PRIMARY KEY,
-    response JSONB,
-    status_code INT,
-    processing BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-  )
-`).catch(() => {});
+export async function ensureIdempotencyTable() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS idempotency_keys (
+        key TEXT PRIMARY KEY,
+        response JSONB,
+        status_code INT,
+        processing BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    console.log("[Idempotency] Table ready");
+  } catch (e) {
+    console.error("[Idempotency] Failed to create table:", e);
+  }
+}
 
 setInterval(() => {
   pool.query(`DELETE FROM idempotency_keys WHERE created_at < NOW() - INTERVAL '24 hours'`).catch(() => {});

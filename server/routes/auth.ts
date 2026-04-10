@@ -54,8 +54,8 @@ router.post("/api/auth/login", loginLimiter, async (req, res) => {
         ipAddress: req.ip || null,
       });
 
-      if (attempts >= 5) {
-        const lockMinutes = Math.min(15 * Math.pow(2, Math.floor((attempts - 5) / 3)), 1440);
+      if (attempts >= 3) {
+        const lockMinutes = Math.min(15 * Math.pow(2, Math.floor((attempts - 3) / 3)), 1440);
         const lockUntil = new Date(Date.now() + lockMinutes * 60 * 1000);
         await storage.lockUser(user.id, lockUntil);
         await storage.createAuditLog({

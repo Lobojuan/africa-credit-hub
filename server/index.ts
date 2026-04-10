@@ -488,6 +488,13 @@ process.stderr.write = function (...args: any[]) {
     console.error("CRIF features migration error (non-fatal):", e);
   }
 
+  try {
+    const { ensureIdempotencyTable } = await import("./routes/middleware");
+    await ensureIdempotencyTable();
+  } catch (e) {
+    console.error("[Idempotency] Table creation error (non-fatal):", e);
+  }
+
   const { initWebSocket } = await import("./websocket");
   initWebSocket(httpServer);
 
