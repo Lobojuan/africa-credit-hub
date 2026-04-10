@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { usageMetering, pricingTiers } from "@shared/schema";
+import { usageMetering, pricingTiers, organizations } from "@shared/schema";
 import { eq, and, gte, lte, sql, isNull } from "drizzle-orm";
 
 type MeterableEvent = "credit_report_pull" | "api_call" | "batch_upload" | "cross_border_query" | "dispute_filing" | "data_export";
@@ -10,6 +10,11 @@ interface MeterEventOptions {
   quantity?: number;
   country?: string | null;
   metadata?: string;
+}
+
+async function getOrgPlatformFeePercent(organizationId: string): Promise<number> {
+  const [org] = await db.select({ platformFeePercent: organizations.platformFeePercent }).from(organizations).where(eq(organizations.id, organizationId)).limit(1);
+  return org?.platformFeePercent ?? 20;
 }
 
 async function getUnitPrice(eventType: MeterableEvent, country: string | null, orgCurrentVolume: number): Promise<{ unitPriceCents: number; currency: string }> {
@@ -96,12 +101,22 @@ export async function recordUsageEvent(options: MeterEventOptions): Promise<void
     const { unitPriceCents, currency } = await getUnitPrice(eventType, country || null, currentVolume);
     const totalCents = unitPriceCents * quantity;
 
+    let platformFeeCents = 0;
+    let bureauRevenueCents = totalCents;
+    if (organizationId) {
+      const feePercent = await getOrgPlatformFeePercent(organizationId);
+      platformFeeCents = Math.round(totalCents * feePercent / 100);
+      bureauRevenueCents = totalCents - platformFeeCents;
+    }
+
     await db.insert(usageMetering).values({
       organizationId: organizationId || null,
       eventType,
       quantity,
       unitPriceCents,
       totalCents,
+      platformFeeCents,
+      bureauRevenueCents,
       currency,
       country: country || null,
       metadata: metadata || null,

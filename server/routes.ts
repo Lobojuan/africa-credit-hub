@@ -21,7 +21,7 @@ import dashboardRouter from "./routes/dashboard";
 import telcoRouter from "./routes/telco";
 import { storage, requireCountryScope } from "./storage";
 import { db, pool } from "./db";
-import { sql, eq, and, or, desc, inArray, ilike, count } from "drizzle-orm";
+import { sql, eq, and, or, desc, inArray, ilike, count, gte } from "drizzle-orm";
 import { enqueueBatchAccountCreate, enqueueBatchBorrowerUpdate, enqueueBatchAccountUpdate, getJobStatus, getQueueStats } from "./batch-queue";
 import {
   insertBorrowerSchema, insertCreditAccountSchema, insertCreditInquirySchema,
@@ -7593,6 +7593,119 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         revenueByOrg: orgBilling.map(o => ({ orgId: o.orgId, name: o.name, total: Number(o.total), invoiceCount: Number(o.count) })),
         _ts: Date.now(),
       });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.get("/api/platform/revenue-split", requireAuth, requireSuperAdmin, async (_req, res) => {
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    try {
+      const orgs = await db.select({
+        id: organizations.id,
+        name: organizations.name,
+        type: organizations.type,
+        platformFeePercent: organizations.platformFeePercent,
+        monthlyLicenseFeeCents: organizations.monthlyLicenseFeeCents,
+        licenseCurrency: organizations.licenseCurrency,
+        subscriptionTier: organizations.subscriptionTier,
+        status: organizations.status,
+      }).from(organizations).orderBy(organizations.name);
+
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const allTimeSplit = await db.select({
+        orgId: usageMetering.organizationId,
+        totalCents: sql<number>`COALESCE(sum(${usageMetering.totalCents}), 0)`,
+        platformFeeCents: sql<number>`COALESCE(sum(${usageMetering.platformFeeCents}), 0)`,
+        bureauRevenueCents: sql<number>`COALESCE(sum(${usageMetering.bureauRevenueCents}), 0)`,
+        eventCount: sql<number>`count(*)`,
+      }).from(usageMetering).groupBy(usageMetering.organizationId);
+
+      const currentMonthSplit = await db.select({
+        orgId: usageMetering.organizationId,
+        totalCents: sql<number>`COALESCE(sum(${usageMetering.totalCents}), 0)`,
+        platformFeeCents: sql<number>`COALESCE(sum(${usageMetering.platformFeeCents}), 0)`,
+        bureauRevenueCents: sql<number>`COALESCE(sum(${usageMetering.bureauRevenueCents}), 0)`,
+        eventCount: sql<number>`count(*)`,
+      }).from(usageMetering).where(gte(usageMetering.createdAt, startOfMonth)).groupBy(usageMetering.organizationId);
+
+      const monthlySplit = await db.select({
+        month: sql<string>`to_char(${usageMetering.createdAt}, 'YYYY-MM')`,
+        totalCents: sql<number>`COALESCE(sum(${usageMetering.totalCents}), 0)`,
+        platformFeeCents: sql<number>`COALESCE(sum(${usageMetering.platformFeeCents}), 0)`,
+        bureauRevenueCents: sql<number>`COALESCE(sum(${usageMetering.bureauRevenueCents}), 0)`,
+        eventCount: sql<number>`count(*)`,
+      }).from(usageMetering).groupBy(sql`to_char(${usageMetering.createdAt}, 'YYYY-MM')`).orderBy(sql`to_char(${usageMetering.createdAt}, 'YYYY-MM')`);
+
+      const allTimeMap = Object.fromEntries(allTimeSplit.map(r => [r.orgId, r]));
+      const currentMonthMap = Object.fromEntries(currentMonthSplit.map(r => [r.orgId, r]));
+
+      const bureauBreakdown = orgs.map(org => ({
+        ...org,
+        allTime: allTimeMap[org.id] ? {
+          totalCents: Number(allTimeMap[org.id].totalCents),
+          platformFeeCents: Number(allTimeMap[org.id].platformFeeCents),
+          bureauRevenueCents: Number(allTimeMap[org.id].bureauRevenueCents),
+          eventCount: Number(allTimeMap[org.id].eventCount),
+        } : { totalCents: 0, platformFeeCents: 0, bureauRevenueCents: 0, eventCount: 0 },
+        currentMonth: currentMonthMap[org.id] ? {
+          totalCents: Number(currentMonthMap[org.id].totalCents),
+          platformFeeCents: Number(currentMonthMap[org.id].platformFeeCents),
+          bureauRevenueCents: Number(currentMonthMap[org.id].bureauRevenueCents),
+          eventCount: Number(currentMonthMap[org.id].eventCount),
+        } : { totalCents: 0, platformFeeCents: 0, bureauRevenueCents: 0, eventCount: 0 },
+      }));
+
+      const totals = {
+        allTimeTotalCents: allTimeSplit.reduce((s, r) => s + Number(r.totalCents), 0),
+        allTimePlatformCents: allTimeSplit.reduce((s, r) => s + Number(r.platformFeeCents), 0),
+        allTimeBureauCents: allTimeSplit.reduce((s, r) => s + Number(r.bureauRevenueCents), 0),
+        monthTotalCents: currentMonthSplit.reduce((s, r) => s + Number(r.totalCents), 0),
+        monthPlatformCents: currentMonthSplit.reduce((s, r) => s + Number(r.platformFeeCents), 0),
+        monthBureauCents: currentMonthSplit.reduce((s, r) => s + Number(r.bureauRevenueCents), 0),
+        totalLicenseFeeCents: orgs.filter(o => o.status === "active").reduce((s, o) => s + o.monthlyLicenseFeeCents, 0),
+      };
+
+      res.json({
+        bureaus: bureauBreakdown,
+        totals,
+        monthlyTrend: monthlySplit.map(m => ({
+          month: m.month,
+          totalCents: Number(m.totalCents),
+          platformFeeCents: Number(m.platformFeeCents),
+          bureauRevenueCents: Number(m.bureauRevenueCents),
+          eventCount: Number(m.eventCount),
+        })),
+        _ts: Date.now(),
+      });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.patch("/api/platform/organizations/:id/license", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { platformFeePercent, monthlyLicenseFeeCents, licenseCurrency } = req.body;
+      const updates: any = {};
+      if (platformFeePercent !== undefined) {
+        if (typeof platformFeePercent !== "number" || platformFeePercent < 0 || platformFeePercent > 100) {
+          return res.status(400).json({ message: "platformFeePercent must be between 0 and 100" });
+        }
+        updates.platformFeePercent = platformFeePercent;
+      }
+      if (monthlyLicenseFeeCents !== undefined) {
+        if (typeof monthlyLicenseFeeCents !== "number" || monthlyLicenseFeeCents < 0) {
+          return res.status(400).json({ message: "monthlyLicenseFeeCents must be non-negative" });
+        }
+        updates.monthlyLicenseFeeCents = monthlyLicenseFeeCents;
+      }
+      if (licenseCurrency !== undefined) {
+        updates.licenseCurrency = licenseCurrency;
+      }
+      const [updated] = await db.update(organizations).set(updates).where(eq(organizations.id, id)).returning();
+      if (!updated) return res.status(404).json({ message: "Organization not found" });
+      await storage.createAuditLog({ userId: req.session.userId!, action: "UPDATE", entity: "organization", entityId: id, details: `Updated license terms: ${JSON.stringify(updates)}`, ipAddress: req.ip, organizationId: id });
+      res.json(updated);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 

@@ -8,7 +8,7 @@ import {
   Globe, Loader2, LogOut, Shield, ArrowRight, Building2, Users, Layers,
   CreditCard, CheckCircle2, AlertTriangle, Activity, Database,
   TrendingUp, Lock, FileText, Scale, Settings, Key, BarChart3,
-  DollarSign, Archive, ScrollText,
+  DollarSign, Archive, ScrollText, ArrowRightLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
@@ -23,6 +23,7 @@ import { CommandCenterAuditTab } from "./command-center-audit";
 import { CommandCenterApiKeysTab } from "./command-center-apikeys";
 import { CommandCenterDataQualityTab } from "./command-center-dataquality";
 import { CommandCenterBillingTab } from "./command-center-billing";
+import { CommandCenterRevenueSplitTab } from "./command-center-revenue-split";
 import { CommandCenterRetentionTab } from "./command-center-retention";
 import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
 
@@ -329,6 +330,9 @@ export default function CountrySelectionPage() {
               <TabsTrigger value="billing" className="text-xs text-muted-foreground hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-billing">
                 <DollarSign className="w-3 h-3 mr-1" /> Billing
               </TabsTrigger>
+              <TabsTrigger value="revenue-split" className="text-xs text-muted-foreground hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-revenue-split">
+                <ArrowRightLeft className="w-3 h-3 mr-1" /> Revenue Split
+              </TabsTrigger>
               <TabsTrigger value="retention" className="text-xs text-muted-foreground hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-retention">
                 <Archive className="w-3 h-3 mr-1" /> Retention
               </TabsTrigger>
@@ -573,6 +577,10 @@ export default function CountrySelectionPage() {
 
             <TabsContent value="billing" className="mt-0">
               <CommandCenterBillingTab />
+            </TabsContent>
+
+            <TabsContent value="revenue-split" className="mt-0">
+              <CommandCenterRevenueSplitTab />
             </TabsContent>
 
             <TabsContent value="retention" className="mt-0">
