@@ -84,3 +84,9 @@ id = "yk4skRYUYyBbUy9zbApof"
 uri = "file://project-review.tar.gz"
 type = "unspecified"
 title = "CDH v2.5 Project Source Code (tar.gz)"
+
+[[outputs]]
+id = "GMgzyjwh7gz3NaFKdNc2c"
+uri = "file://code-review.txt"
+type = "text"
+title = "CDH v2.5 Code Review File (227 KB — paste-friendly for Claude)"
