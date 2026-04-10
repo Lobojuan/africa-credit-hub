@@ -1,6 +1,12 @@
 import nodemailer from "nodemailer";
 import { isGhanaMode } from "./country-mode";
 
+function redactEmail(email: string): string {
+  const [local, domain] = email.split('@');
+  if (!domain) return '[invalid]';
+  return `${local.slice(0, 2)}***@${domain}`;
+}
+
 function esc(str: string | undefined | null): string {
   if (!str) return '';
   return String(str)
@@ -33,10 +39,10 @@ async function sendViaSendGrid(to: string, subject: string, htmlBody: string): P
       }),
     });
     if (resp.ok || resp.status === 202) {
-      console.log(`[Email][SendGrid] Sent to ${to}: "${subject}"`);
+      console.log(`[Email][SendGrid] Sent to ${redactEmail(to)}`);
       return true;
     }
-    console.error(`[Email][SendGrid] Failed ${resp.status}: ${await resp.text()}`);
+    console.error(`[Email][SendGrid] Failed ${resp.status}`);
     return false;
   } catch (err: any) {
     console.error(`[Email][SendGrid] Error:`, err.message);
@@ -122,17 +128,17 @@ async function sendViaSmtp(to: string, subject: string, htmlBody: string): Promi
       subject,
       html: htmlBody,
     });
-    console.log(`[Email][SMTP] Sent to ${to}: "${subject}"`);
+    console.log(`[Email][SMTP] Sent to ${redactEmail(to)}`);
     return true;
   } catch (err: any) {
-    console.error(`[Email][SMTP] Failed to send to ${to}:`, err.message);
+    console.error(`[Email][SMTP] Send failed:`, err.message);
     return false;
   }
 }
 
 async function sendEmail(to: string, subject: string, htmlBody: string): Promise<boolean> {
   if (!emailConfigured) {
-    console.log(`[Email][Stub] Would send to ${to}: "${subject}"`);
+    console.log(`[Email][Stub] Would send to ${redactEmail(to)}`);
     return false;
   }
 

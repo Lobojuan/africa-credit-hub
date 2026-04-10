@@ -1,3 +1,6 @@
+import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
+const CO = PLATFORM_COMPANY_NAME;
+
 const pt = {
   sidebar: {
     main: "Principal",
@@ -67,7 +70,7 @@ const pt = {
     legal: "Jurídico & Direitos Autorais",
     backupRecovery: "Backup & Recuperação",
     brandTitle: "Registo de Crédito",
-    brandSubtitle: "Carlson Capital & Systems In Motion Limited™",
+    brandSubtitle: `${CO}™`,
     version: "v2.5 — Registo de Crédito",
   },
   dishonouredCheques: {
@@ -102,7 +105,7 @@ const pt = {
   },
   login: {
     title: "Sistema de Registo de Crédito",
-    subtitle: "Carlson Capital & Systems In Motion Limited™",
+    subtitle: `${CO}™`,
     signIn: "Entrar",
     signingIn: "A entrar...",
     username: "Nome de utilizador",
@@ -1081,8 +1084,8 @@ const pt = {
     downloadFull: "Descarregar Documento Completo",
     generatingPdf: "A gerar PDF...",
     copyrightNotice: "Aviso de Direitos Autorais",
-    copyrightHolder: "© 2024–2026 Carlson Capital & Systems In Motion Limited. Todos os Direitos Reservados.",
-    copyrightDesc: "O Hub de Dados de Crédito Pan-Africano (CDH) v2.5, incluindo todo o código fonte, código objeto, algoritmos, interfaces de utilizador, esquemas de base de dados, documentação e materiais relacionados, é propriedade intelectual exclusiva da Carlson Capital & Systems In Motion Limited. Nenhuma parte deste software pode ser reproduzida, distribuída, modificada, engenharia reversa ou transmitida sem consentimento prévio por escrito.",
+    copyrightHolder: `© 2024–2026 ${CO}. Todos os Direitos Reservados.`,
+    copyrightDesc: `O Hub de Dados de Crédito Pan-Africano (CDH) v2.5, incluindo todo o código fonte, código objeto, algoritmos, interfaces de utilizador, esquemas de base de dados, documentação e materiais relacionados, é propriedade intelectual exclusiva da ${CO}. Nenhuma parte deste software pode ser reproduzida, distribuída, modificada, engenharia reversa ou transmitida sem consentimento prévio por escrito.`,
     confidential: "Confidencial",
     proprietary: "Proprietário",
     scopeTitle: "Âmbito da Proteção",
@@ -1095,7 +1098,7 @@ const pt = {
     scope6: "Especificações de API e protocolos de integração",
     scope7: "Toda a documentação e materiais de formação",
     ownershipTitle: "Propriedade",
-    ownershipP1: "Todos os direitos, títulos e interesses na Plataforma são <strong>propriedade exclusiva da Carlson Capital & Systems In Motion Limited</strong>, constituída na República do Gana.",
+    ownershipP1: `Todos os direitos, títulos e interesses na Plataforma são <strong>propriedade exclusiva da ${CO}</strong>, constituída na República do Gana.`,
     ownershipP2: "Nenhuma transferência de propriedade será implícita de qualquer acordo de licença, contrato de serviço ou acordo de implementação, salvo indicação expressa em acordo escrito separado.",
     ownershipP3: "Obras criadas por funcionários, contratados ou consultores no âmbito do desenvolvimento da Plataforma são \"obras feitas por encomenda\" com direitos autorais atribuídos à Empresa.",
     jurisdictionTitle: "Cobertura Jurisdicional",
@@ -1161,7 +1164,7 @@ const pt = {
     termP1: "Ao abrigo da Lei de Direitos Autorais do Gana de 2005, os direitos autorais de uma obra feita por uma pessoa coletiva duram <strong>setenta (70) anos</strong> a partir da data de primeira publicação. Data de primeira publicação: <strong>janeiro de 2024</strong>.",
     termP2: "A proteção de segredo comercial continua indefinidamente enquanto a informação permanecer confidencial e derivar valor económico do seu sigilo.",
     contactTitle: "Contacto — Departamento de Propriedade Intelectual",
-    contactCompany: "Carlson Capital & Systems In Motion Limited",
+    contactCompany: `${CO}`,
     contactLocation: "Acra, República do Gana",
     contactDesc: "Para consultas de licenciamento, questões de direitos autorais ou denúncias de infração, contacte a Empresa através dos canais oficiais.",
     downloadComplete: "Descarregar Documento Completo de Direitos Autorais (PDF)",
@@ -1444,7 +1447,7 @@ const pt = {
     heroTitle1: "Modernize a Sua",
     heroTitle2: "Infraestrutura de Crédito",
     heroDesc: "A única plataforma de registo de crédito compatível com SRS cobrindo todos os <strong>54 países africanos</strong>. Gira o risco de crédito, assegure conformidade regulatória e expanda a inclusão financeira — tudo a partir de uma plataforma unificada.",
-    heroSubDesc: "Construída especificamente para bancos centrais, bancos comerciais, IMFs e fintechs. Concebida em <strong>Acra, Gana</strong> pela <strong>Carlson Capital & Systems In Motion Limited</strong> — para a África, por pessoas que vivem e trabalham aqui.",
+    heroSubDesc: `Construída especificamente para bancos centrais, bancos comerciais, IMFs e fintechs. Concebida em <strong>Acra, Gana</strong> pela <strong>${CO}</strong> — para a África, por pessoas que vivem e trabalham aqui.`,
     startTrial: "Iniciar Teste Gratuito",
     viewPlans: "Ver Planos e Preços",
     logIn: "Iniciar Sessão",
@@ -1513,7 +1516,7 @@ const pt = {
     ctaPhone: "Ligue-nos",
     ctaEmail: "Email",
     footerBuilt: "Construído em Acra para Toda a África",
-    footerDesc: "O CDH é concebido e desenvolvido pela Carlson Capital & Systems In Motion Limited — uma equipa que compreende os mercados financeiros africanos porque opera neles todos os dias.",
+    footerDesc: `O CDH é concebido e desenvolvido pela ${CO} — uma equipa que compreende os mercados financeiros africanos porque opera neles todos os dias.`,
     footerRights: "Todos os direitos reservados.",
     footerProduct: "Produto",
     footerLegal: "Legal",

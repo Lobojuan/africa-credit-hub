@@ -15,6 +15,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useBrandColors } from "@/hooks/use-brand-colors";
+import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
 
 const PLANS = [
   {
@@ -117,7 +118,7 @@ const PAYMENT_METHODS = [
 
 const BANK_DETAILS = {
   bankName: "Stanbic Bank Ghana",
-  accountName: "Carlson Capital & Systems In Motion Limited",
+  accountName: `${PLATFORM_COMPANY_NAME}`,
   accountNumber: "9040012345678",
   branchCode: "020100",
   swiftCode: "SBICGHAC",

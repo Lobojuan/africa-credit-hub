@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
 
 export default function TermsOfServicePage() {
   return (
@@ -25,7 +26,7 @@ export default function TermsOfServicePage() {
           <section>
             <h2 className="text-xl font-semibold text-foreground mb-3">1. Acceptance of Terms</h2>
             <p className="text-muted-foreground leading-relaxed">
-              By accessing or using the Africa Credit Hub platform ("Platform"), operated by Carlson Capital & Systems in Motion Limited, you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, you may not access or use the Platform. These Terms apply to all users, including financial institutions, regulators, credit bureaus, and individual consumers.
+              By accessing or using the Africa Credit Hub platform (&quot;Platform&quot;), operated by {PLATFORM_COMPANY_NAME}, you agree to be bound by these Terms of Service (&quot;Terms&quot;). If you do not agree to these Terms, you may not access or use the Platform. These Terms apply to all users, including financial institutions, regulators, credit bureaus, and individual consumers.
             </p>
           </section>
 
@@ -67,7 +68,7 @@ export default function TermsOfServicePage() {
           <section>
             <h2 className="text-xl font-semibold text-foreground mb-3">7. Intellectual Property</h2>
             <p className="text-muted-foreground leading-relaxed">
-              All content, features, and functionality of the Platform — including but not limited to software, algorithms, scoring models, documentation, and design — are owned by Carlson Capital & Systems in Motion Limited and are protected by international intellectual property laws. You may not copy, modify, distribute, or create derivative works without prior written consent.
+              All content, features, and functionality of the Platform — including but not limited to software, algorithms, scoring models, documentation, and design — are owned by {PLATFORM_COMPANY_NAME} and are protected by international intellectual property laws. You may not copy, modify, distribute, or create derivative works without prior written consent.
             </p>
           </section>
 
@@ -81,7 +82,7 @@ export default function TermsOfServicePage() {
           <section>
             <h2 className="text-xl font-semibold text-foreground mb-3">9. Limitation of Liability</h2>
             <p className="text-muted-foreground leading-relaxed">
-              To the maximum extent permitted by law, Carlson Capital & Systems in Motion Limited shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including loss of profits, data, or business opportunities, arising from your use of the Platform. Our total liability shall not exceed the fees paid by you in the twelve months preceding the claim.
+              To the maximum extent permitted by law, {PLATFORM_COMPANY_NAME} shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including loss of profits, data, or business opportunities, arising from your use of the Platform. Our total liability shall not exceed the fees paid by you in the twelve months preceding the claim.
             </p>
           </section>
 

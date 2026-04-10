@@ -1,3 +1,6 @@
+import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
+const CO = PLATFORM_COMPANY_NAME;
+
 const ar: Record<string, any> = {
   sidebar: {
     main: "الرئيسية",
@@ -67,7 +70,7 @@ const ar: Record<string, any> = {
     legal: "القانونية وحقوق النشر",
     backupRecovery: "النسخ الاحتياطي والاستعادة",
     brandTitle: "سجل الائتمان",
-    brandSubtitle: "Carlson Capital & Systems In Motion Limited™",
+    brandSubtitle: `${CO}™`,
     version: "v2.5 — سجل الائتمان",
   },
   dishonouredCheques: {
@@ -102,7 +105,7 @@ const ar: Record<string, any> = {
   },
   login: {
     title: "نظام سجل الائتمان",
-    subtitle: "Carlson Capital & Systems In Motion Limited™",
+    subtitle: `${CO}™`,
     signIn: "تسجيل الدخول",
     signingIn: "جارٍ تسجيل الدخول...",
     username: "اسم المستخدم",
@@ -1027,8 +1030,8 @@ const ar: Record<string, any> = {
     downloadFull: "تحميل المستند الكامل",
     generatingPdf: "جارٍ إنشاء PDF...",
     copyrightNotice: "إشعار حقوق النشر",
-    copyrightHolder: "© 2024–2026 Carlson Capital & Systems In Motion Limited. جميع الحقوق محفوظة.",
-    copyrightDesc: "مركز بيانات الائتمان الأفريقي (CDH) الإصدار 2.5، بما في ذلك جميع الشفرات المصدرية والشفرات الموضوعية والخوارزميات وواجهات المستخدم ومخططات قواعد البيانات والوثائق والمواد ذات الصلة، هي ملكية فكرية حصرية لشركة Carlson Capital & Systems In Motion Limited. لا يجوز إعادة إنتاج أو توزيع أو تعديل أو هندسة عكسية أو نقل أي جزء من هذا البرنامج دون موافقة خطية مسبقة.",
+    copyrightHolder: `© 2024–2026 ${CO}. جميع الحقوق محفوظة.`,
+    copyrightDesc: `مركز بيانات الائتمان الأفريقي (CDH) الإصدار 2.5، بما في ذلك جميع الشفرات المصدرية والشفرات الموضوعية والخوارزميات وواجهات المستخدم ومخططات قواعد البيانات والوثائق والمواد ذات الصلة، هي ملكية فكرية حصرية لشركة ${CO}. لا يجوز إعادة إنتاج أو توزيع أو تعديل أو هندسة عكسية أو نقل أي جزء من هذا البرنامج دون موافقة خطية مسبقة.`,
     confidential: "سري",
     proprietary: "ملكية خاصة",
     scopeTitle: "نطاق الحماية",
@@ -1041,7 +1044,7 @@ const ar: Record<string, any> = {
     scope6: "مواصفات API وبروتوكولات التكامل",
     scope7: "جميع الوثائق والمواد التدريبية",
     ownershipTitle: "الملكية",
-    ownershipP1: "جميع الحقوق والملكية والمصلحة في المنصة هي <strong>ملكية حصرية لشركة Carlson Capital & Systems In Motion Limited</strong>، المؤسسة في جمهورية غانا.",
+    ownershipP1: `جميع الحقوق والملكية والمصلحة في المنصة هي <strong>ملكية حصرية لشركة ${CO}</strong>، المؤسسة في جمهورية غانا.`,
     ownershipP2: "لن يُضمن أي نقل للملكية من أي اتفاقية ترخيص أو عقد خدمة أو ترتيب نشر ما لم يُنص على ذلك صراحةً في اتفاقية مكتوبة منفصلة.",
     ownershipP3: "الأعمال التي يُنشئها الموظفون أو المتعاقدون أو المستشارون في سياق تطوير المنصة هي \"أعمال مُعدّة للتأجير\" مع حقوق النشر التي تؤول للشركة.",
     jurisdictionTitle: "التغطية القضائية",
@@ -1107,7 +1110,7 @@ const ar: Record<string, any> = {
     termP1: "بموجب قانون حقوق النشر في غانا لعام 2005، تستمر حقوق النشر لعمل من قبل شخصية اعتبارية لمدة <strong>سبعين (70) سنة</strong> من تاريخ النشر الأول. تاريخ النشر الأول: <strong>يناير 2024</strong>.",
     termP2: "تستمر حماية الأسرار التجارية إلى أجل غير مسمى طالما بقيت المعلومات سرية وتستمد قيمة اقتصادية من سريتها.",
     contactTitle: "التواصل — قسم الملكية الفكرية",
-    contactCompany: "Carlson Capital & Systems In Motion Limited",
+    contactCompany: `${CO}`,
     contactLocation: "أكرا، جمهورية غانا",
     contactDesc: "لاستفسارات الترخيص أو مسائل حقوق النشر أو الإبلاغ عن التعدي، يُرجى التواصل مع الشركة عبر القنوات الرسمية.",
     downloadComplete: "تحميل مستند حقوق النشر الكامل (PDF)",
@@ -1336,7 +1339,7 @@ const ar: Record<string, any> = {
     heroTitle1: "حدّث بنيتك",
     heroTitle2: "الائتمانية التحتية",
     heroDesc: "منصة السجل الائتماني الوحيدة المتوافقة مع SRS والتي تغطي جميع <strong>54 دولة أفريقية</strong>. إدارة مخاطر الائتمان وضمان الامتثال التنظيمي وتوسيع الشمول المالي — كل ذلك من منصة موحدة واحدة.",
-    heroSubDesc: "مصممة خصيصاً للبنوك المركزية والبنوك التجارية ومؤسسات التمويل الأصغر وشركات التكنولوجيا المالية. صُممت في <strong>أكرا، غانا</strong> بواسطة <strong>Carlson Capital & Systems In Motion Limited</strong> — لأفريقيا، من أشخاص يعيشون ويعملون هنا.",
+    heroSubDesc: `مصممة خصيصاً للبنوك المركزية والبنوك التجارية ومؤسسات التمويل الأصغر وشركات التكنولوجيا المالية. صُممت في <strong>أكرا، غانا</strong> بواسطة <strong>${CO}</strong> — لأفريقيا، من أشخاص يعيشون ويعملون هنا.`,
     startTrial: "ابدأ تجربة مجانية",
     viewPlans: "عرض الخطط والأسعار",
     logIn: "تسجيل الدخول",
@@ -1405,7 +1408,7 @@ const ar: Record<string, any> = {
     ctaPhone: "اتصل بنا",
     ctaEmail: "البريد الإلكتروني",
     footerBuilt: "صُنع في أكرا لكل أفريقيا",
-    footerDesc: "CDH مصمم ومطور بواسطة Carlson Capital & Systems In Motion Limited — فريق يفهم الأسواق المالية الأفريقية لأننا نعمل فيها كل يوم.",
+    footerDesc: `CDH مصمم ومطور بواسطة ${CO} — فريق يفهم الأسواق المالية الأفريقية لأننا نعمل فيها كل يوم.`,
     footerRights: "جميع الحقوق محفوظة.",
     footerProduct: "المنتج",
     footerLegal: "قانوني",

@@ -25,6 +25,7 @@ import {
   Network,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
 
 function StatBlock({ value, label }: { value: string; label: string }) {
   const brandColors = useBrandColors();
@@ -219,7 +220,7 @@ export default function AboutPage() {
             <CardContent className="p-0">
               <div className="p-6 sm:p-8" style={{ background: brandColors.iconGradientSubtle }}>
                 <h3 className="font-bold mb-1">Cross-Jurisdictional Central Data Hub (CDH) v2.5</h3>
-                <p className="text-xs text-muted-foreground">Credit Registry System | Carlson Capital & Systems In Motion Limited</p>
+                <p className="text-xs text-muted-foreground">Credit Registry System | {PLATFORM_COMPANY_NAME}</p>
               </div>
               <div className="p-6 sm:p-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {[
@@ -333,7 +334,7 @@ export default function AboutPage() {
               <a href="tel:+233244339985" className="flex items-center gap-1.5 hover:text-primary transition-colors"><Phone className="w-3 h-3" />+233 24 433 9985</a>
             </div>
           </div>
-          <p className="text-center text-[10px] text-muted-foreground/60 mt-6 pb-2">&copy; {new Date().getFullYear()} Carlson Capital & Systems In Motion Limited. All rights reserved.</p>
+          <p className="text-center text-[10px] text-muted-foreground/60 mt-6 pb-2">&copy; {new Date().getFullYear()} {PLATFORM_COMPANY_NAME}. All rights reserved.</p>
         </div>
       </div>
     </div>

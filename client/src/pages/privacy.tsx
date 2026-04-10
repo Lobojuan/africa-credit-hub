@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
 
 export default function PrivacyPolicyPage() {
   return (
@@ -95,7 +96,7 @@ export default function PrivacyPolicyPage() {
           <section>
             <h2 className="text-xl font-semibold text-foreground mb-3">11. Contact Us</h2>
             <p className="text-muted-foreground leading-relaxed">
-              For privacy-related inquiries, contact our Data Protection Officer at privacy@africacredithub.com or through the Platform's support channels. Carlson Capital & Systems in Motion Limited, Accra, Ghana.
+              For privacy-related inquiries, contact our Data Protection Officer at privacy@africacredithub.com or through the Platform's support channels. {PLATFORM_COMPANY_NAME}, Accra, Ghana.
             </p>
           </section>
         </div>

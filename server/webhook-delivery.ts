@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { db } from "./db";
 import { webhookSubscriptions, webhookDeliveryLogs } from "@shared/schema";
 import { eq, and, lte, isNull, or } from "drizzle-orm";
+import { isSafeWebhookUrl } from "./lib/url-safety";
 
 export const WEBHOOK_EVENTS = [
   "borrower.created",
@@ -20,25 +21,6 @@ export type WebhookEvent = typeof WEBHOOK_EVENTS[number];
 
 const MAX_RETRIES = 3;
 const RETRY_DELAYS_MS = [60_000, 300_000, 1_800_000];
-
-function isSafeWebhookUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url);
-    if (!['https:', 'http:'].includes(parsed.protocol)) return false;
-    const hostname = parsed.hostname.toLowerCase();
-    const blocked = [
-      'localhost', '127.0.0.1', '0.0.0.0', '::1',
-      '169.254.169.254', 'metadata.google.internal',
-    ];
-    const blockedPrefixes = ['10.', '172.16.', '172.17.', '172.18.', '172.19.',
-      '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.',
-      '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.',
-      '192.168.', 'fd', 'fe80:'];
-    if (blocked.includes(hostname)) return false;
-    if (blockedPrefixes.some(b => hostname.startsWith(b))) return false;
-    return true;
-  } catch { return false; }
-}
 
 function signPayload(payload: string, secret: string): string {
   return crypto.createHmac("sha256", secret).update(payload).digest("hex");

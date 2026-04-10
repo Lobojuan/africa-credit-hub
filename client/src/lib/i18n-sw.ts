@@ -1,3 +1,6 @@
+import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
+const CO = PLATFORM_COMPANY_NAME;
+
 const sw: Record<string, any> = {
   sidebar: {
     main: "Kuu",
@@ -67,7 +70,7 @@ const sw: Record<string, any> = {
     legal: "Kisheria na Hakimiliki",
     backupRecovery: "Hifadhi na Urejeshaji",
     brandTitle: "Sajili ya Mikopo",
-    brandSubtitle: "Carlson Capital & Systems In Motion Limited™",
+    brandSubtitle: `${CO}™`,
     version: "v2.5 — Sajili ya Mikopo",
   },
   dishonouredCheques: {
@@ -102,7 +105,7 @@ const sw: Record<string, any> = {
   },
   login: {
     title: "Mfumo wa Sajili ya Mikopo",
-    subtitle: "Carlson Capital & Systems In Motion Limited™",
+    subtitle: `${CO}™`,
     signIn: "Ingia",
     signingIn: "Inaingia...",
     username: "Jina la mtumiaji",
@@ -1094,8 +1097,8 @@ const sw: Record<string, any> = {
     downloadFull: "Pakua Hati Kamili",
     generatingPdf: "Inaunda PDF...",
     copyrightNotice: "Taarifa ya Hakimiliki",
-    copyrightHolder: "© 2024–2026 Carlson Capital & Systems In Motion Limited. Haki Zote Zimehifadhiwa.",
-    copyrightDesc: "Kituo cha Data ya Mikopo cha Afrika (CDH) v2.5, ikiwa ni pamoja na msimbo wote wa chanzo, msimbo wa kitu, kanuni, violesura vya mtumiaji, miundo ya hifadhidata, nyaraka na vifaa vinavyohusiana, ni mali ya akili ya kipekee ya Carlson Capital & Systems In Motion Limited. Sehemu yoyote ya programu hii haiwezi kurudufiwa, kusambazwa, kubadilishwa, kufanyiwa uhandisi wa nyuma au kupitishwa bila idhini ya awali kwa maandishi.",
+    copyrightHolder: `© 2024–2026 ${CO}. Haki Zote Zimehifadhiwa.`,
+    copyrightDesc: `Kituo cha Data ya Mikopo cha Afrika (CDH) v2.5, ikiwa ni pamoja na msimbo wote wa chanzo, msimbo wa kitu, kanuni, violesura vya mtumiaji, miundo ya hifadhidata, nyaraka na vifaa vinavyohusiana, ni mali ya akili ya kipekee ya ${CO}. Sehemu yoyote ya programu hii haiwezi kurudufiwa, kusambazwa, kubadilishwa, kufanyiwa uhandisi wa nyuma au kupitishwa bila idhini ya awali kwa maandishi.`,
     confidential: "Siri",
     proprietary: "Mali Binafsi",
     scopeTitle: "Upeo wa Ulinzi",
@@ -1108,7 +1111,7 @@ const sw: Record<string, any> = {
     scope6: "Vipimo vya API na itifaki za muunganisho",
     scope7: "Nyaraka zote na vifaa vya mafunzo",
     ownershipTitle: "Umiliki",
-    ownershipP1: "Haki zote, umiliki na maslahi katika Jukwaa ni <strong>mali ya kipekee ya Carlson Capital & Systems In Motion Limited</strong>, iliyoandikishwa katika Jamhuri ya Ghana.",
+    ownershipP1: `Haki zote, umiliki na maslahi katika Jukwaa ni <strong>mali ya kipekee ya ${CO}</strong>, iliyoandikishwa katika Jamhuri ya Ghana.`,
     ownershipP2: "Hakuna uhamisho wa umiliki utakaokuwa wa kudhaniwa kutoka kwa makubaliano yoyote ya leseni, mkataba wa huduma au mpango wa usambazaji isipokuwa ikielezwa wazi katika makubaliano tofauti ya maandishi.",
     ownershipP3: "Kazi zilizoundwa na wafanyakazi, wakandarasi au washauri katika mchakato wa kuendeleza Jukwaa ni \"kazi zilizofanywa kwa ajili ya kuajiriwa\" ambapo hakimiliki inamilikiwa na Kampuni.",
     jurisdictionTitle: "Wigo wa Mamlaka ya Kisheria",
@@ -1174,7 +1177,7 @@ const sw: Record<string, any> = {
     termP1: "Chini ya Sheria ya Hakimiliki ya Ghana ya 2005, hakimiliki ya kazi iliyofanywa na shirika la kisheria inadumu kwa <strong>miaka sabini (70)</strong> kutoka tarehe ya uchapishaji wa kwanza. Tarehe ya uchapishaji wa kwanza: <strong>Januari 2024</strong>.",
     termP2: "Ulinzi wa siri za biashara unaendelea bila kikomo mradi habari inabaki kuwa siri na inapata thamani ya kiuchumi kutokana na usiri wake.",
     contactTitle: "Mawasiliano — Idara ya Mali ya Akili",
-    contactCompany: "Carlson Capital & Systems In Motion Limited",
+    contactCompany: `${CO}`,
     contactLocation: "Accra, Jamhuri ya Ghana",
     contactDesc: "Kwa maswali ya leseni, masuala ya hakimiliki au ripoti za ukiukaji, tafadhali wasiliana na Kampuni kupitia njia rasmi.",
     downloadComplete: "Pakua Hati Kamili ya Hakimiliki (PDF)",
@@ -1457,7 +1460,7 @@ const sw: Record<string, any> = {
     heroTitle1: "Sasisha",
     heroTitle2: "Miundombinu Yako ya Mikopo",
     heroDesc: "Jukwaa pekee la sajili ya mikopo linalozingatia SRS linalofunika <strong>nchi zote 54 za Afrika</strong>. Simamia hatari ya mikopo, hakikisha uzingatiaji wa kanuni, na panua ujumuishaji wa kifedha — yote kutoka jukwaa moja lililounganishwa.",
-    heroSubDesc: "Limeundwa kwa makusudi kwa benki kuu, benki za biashara, MFI, na fintek. Limebuniwa huko <strong>Accra, Ghana</strong> na <strong>Carlson Capital & Systems In Motion Limited</strong> — kwa Afrika, na watu wanaoishi na kufanya kazi hapa.",
+    heroSubDesc: `Limeundwa kwa makusudi kwa benki kuu, benki za biashara, MFI, na fintek. Limebuniwa huko <strong>Accra, Ghana</strong> na <strong>${CO}</strong> — kwa Afrika, na watu wanaoishi na kufanya kazi hapa.`,
     startTrial: "Anza Jaribio la Bure",
     viewPlans: "Tazama Mipango na Bei",
     logIn: "Ingia",
@@ -1526,7 +1529,7 @@ const sw: Record<string, any> = {
     ctaPhone: "Tupigie",
     ctaEmail: "Barua pepe",
     footerBuilt: "Imejengwa Accra kwa Afrika Yote",
-    footerDesc: "CDH imebuniwa na kutengenezwa na Carlson Capital & Systems In Motion Limited — timu inayoelewa masoko ya kifedha ya Afrika kwa sababu tunafanya kazi ndani yake kila siku.",
+    footerDesc: `CDH imebuniwa na kutengenezwa na ${CO} — timu inayoelewa masoko ya kifedha ya Afrika kwa sababu tunafanya kazi ndani yake kila siku.`,
     footerRights: "Haki zote zimehifadhiwa.",
     footerProduct: "Bidhaa",
     footerLegal: "Kisheria",

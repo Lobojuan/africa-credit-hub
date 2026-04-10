@@ -24,6 +24,7 @@ import { CommandCenterApiKeysTab } from "./command-center-apikeys";
 import { CommandCenterDataQualityTab } from "./command-center-dataquality";
 import { CommandCenterBillingTab } from "./command-center-billing";
 import { CommandCenterRetentionTab } from "./command-center-retention";
+import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
 
 interface PlatformStats {
   totalBorrowers: number;
@@ -583,7 +584,7 @@ export default function CountrySelectionPage() {
 
       <footer className="px-4 py-3 border-t border-border flex items-center justify-between">
         <p className="text-[10px] text-muted-foreground">
-          CDH v2.5 | Secured by Carlson Capital & Systems In Motion Limited
+          CDH v2.5 | Secured by {PLATFORM_COMPANY_NAME}
         </p>
         <div className="flex items-center gap-1.5">
           <Lock className="w-3 h-3 text-muted-foreground" />

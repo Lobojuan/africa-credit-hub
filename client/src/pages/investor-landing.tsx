@@ -32,6 +32,7 @@ import auditImage from "@assets/app-audit.png";
 import reportsImage from "@assets/app-reports.png";
 import aiPortfolioImage from "@assets/app-ai-portfolio.png";
 import platformDemoVideo from "@assets/39a45e79-6d03-456d-8d41-f5c491f40a66_1774472320799.mp4";
+import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
 
 function AnimatedCounter({ end, duration = 2000, suffix = "", prefix = "" }: { end: number; duration?: number; suffix?: string; prefix?: string }) {
   const [count, setCount] = useState(0);
@@ -1610,7 +1611,7 @@ export default function InvestorLandingPage() {
         </div>
         <div className="border-t border-border/30 py-4">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2 text-[10px] text-muted-foreground/60">
-            <p>&copy; {new Date().getFullYear()} Carlson Capital & Systems In Motion Limited. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} {PLATFORM_COMPANY_NAME}. All rights reserved.</p>
             <p>africacredithub.com</p>
           </div>
         </div>

@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { db } from "../db";
 import { storage } from "../storage";
-import { creditInquiries, courtJudgments, borrowers } from "@shared/schema";
-import { inArray } from "drizzle-orm";
+import { creditInquiries, courtJudgments, borrowers, creditAccounts, disputes } from "@shared/schema";
+import { inArray, sql, and, eq, gte, lte } from "drizzle-orm";
 import { calculateCreditScore } from "../credit-score";
 import {
   requireAuth, requireRole, getOrgScope, getCountryFilter, safeErrorMessage,
@@ -25,18 +25,68 @@ router.get("/api/dashboard/trends", requireAuth, async (req, res) => {
   try {
     const orgId = getOrgScope(req);
     const country = getCountryFilter(req);
-    const stats = await storage.getDashboardStats(orgId, country);
 
-    const currentSnapshot = (v: number) => Array(7).fill(v);
+    const now = new Date();
+    const labels: string[] = [];
+    const monthStarts: Date[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      labels.push(d.toLocaleString("en", { month: "short" }));
+      monthStarts.push(d);
+    }
+    const windowStart = monthStarts[0];
+
+    const countryCondB = country ? sql` AND b.country = ${country}` : sql``;
+    const orgCondA = orgId ? sql` AND a.organization_id = ${orgId}` : sql``;
+    const orgCondD = orgId ? sql` AND d.organization_id = ${orgId}` : sql``;
+    const countryCondD = country ? sql` AND d.country = ${country}` : sql``;
+    const orgCondCI = orgId ? sql` AND u.organization_id = ${orgId}` : sql``;
+    const countryCondCI = country ? sql` AND br.country = ${country}` : sql``;
+
+    const [borrowerRows, accountRows, disputeRows, inquiryRows] = await Promise.all([
+      db.execute(sql`
+        SELECT to_char(date_trunc('month', b.created_at), 'YYYY-MM') AS m, count(*)::int AS c
+        FROM borrowers b
+        WHERE b.created_at >= ${windowStart}${countryCondB}
+        GROUP BY m ORDER BY m
+      `),
+      db.execute(sql`
+        SELECT to_char(date_trunc('month', a.created_at), 'YYYY-MM') AS m, count(*)::int AS c
+        FROM credit_accounts a
+        WHERE a.created_at >= ${windowStart}${orgCondA}
+        GROUP BY m ORDER BY m
+      `),
+      db.execute(sql`
+        SELECT to_char(date_trunc('month', d.created_at), 'YYYY-MM') AS m, count(*)::int AS c
+        FROM disputes d
+        WHERE d.created_at >= ${windowStart}${orgCondD}${countryCondD}
+        GROUP BY m ORDER BY m
+      `),
+      db.execute(sql`
+        SELECT to_char(date_trunc('month', ci.created_at), 'YYYY-MM') AS m, count(*)::int AS c
+        FROM credit_inquiries ci
+        LEFT JOIN users u ON ci.inquired_by = u.id
+        LEFT JOIN borrowers br ON ci.borrower_id = br.id
+        WHERE ci.created_at >= ${windowStart}${orgCondCI}${countryCondCI}
+        GROUP BY m ORDER BY m
+      `),
+    ]);
+
+    function toArray(rows: any[]): number[] {
+      const map = new Map<string, number>();
+      for (const r of rows) map.set(r.m, Number(r.c) || 0);
+      return monthStarts.map(d => {
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        return map.get(key) || 0;
+      });
+    }
 
     res.json({
-      borrowers: currentSnapshot(stats.totalBorrowers),
-      accounts: currentSnapshot(stats.totalAccounts),
-      disputes: currentSnapshot(stats.openDisputeCount),
-      inquiries: currentSnapshot(stats.totalInquiries),
-      delinquent: currentSnapshot(stats.delinquentAccounts),
-      defaults: currentSnapshot(stats.defaultAccounts),
-      approvals: currentSnapshot(stats.pendingApprovalCount),
+      labels,
+      borrowers: toArray(borrowerRows.rows ?? borrowerRows),
+      accounts: toArray(accountRows.rows ?? accountRows),
+      disputes: toArray(disputeRows.rows ?? disputeRows),
+      inquiries: toArray(inquiryRows.rows ?? inquiryRows),
     });
   } catch (e: any) {
     res.status(500).json({ message: safeErrorMessage(e) });
@@ -70,19 +120,40 @@ router.get("/api/dashboard/chart-data", requireAuth, async (req, res) => {
       accounts: portfolio.totalAccounts,
     }];
 
-    const totalB = stats.totalBorrowers;
-    const totalA = stats.totalAccounts;
-    const monthlyTrend = [];
     const now = new Date();
+    const windowStart12 = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+    const countryCondB = country ? sql` AND b.country = ${country}` : sql``;
+    const orgCondA = orgId ? sql` AND a.organization_id = ${orgId}` : sql``;
+
+    const [bTrend, aTrend] = await Promise.all([
+      db.execute(sql`
+        SELECT to_char(date_trunc('month', b.created_at), 'YYYY-MM') AS m, count(*)::int AS c
+        FROM borrowers b WHERE b.created_at >= ${windowStart12}${countryCondB}
+        GROUP BY m ORDER BY m
+      `),
+      db.execute(sql`
+        SELECT to_char(date_trunc('month', a.created_at), 'YYYY-MM') AS m, count(*)::int AS c
+        FROM credit_accounts a WHERE a.created_at >= ${windowStart12}${orgCondA}
+        GROUP BY m ORDER BY m
+      `),
+    ]);
+
+    function toTrendMap(rows: any[]): Map<string, number> {
+      const map = new Map<string, number>();
+      for (const r of (rows as any).rows ?? rows) map.set(r.m, Number(r.c) || 0);
+      return map;
+    }
+    const bMap = toTrendMap(bTrend);
+    const aMap = toTrendMap(aTrend);
+    const monthlyTrend = [];
     for (let i = 11; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const month = d.toLocaleString("en", { month: "short", year: "2-digit" });
-      const factor = (12 - i) / 12;
-      const growth = 0.6 + 0.4 * factor;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       monthlyTrend.push({
         month,
-        borrowers: Math.round(totalB * growth),
-        accounts: Math.round(totalA * growth),
+        borrowers: bMap.get(key) || 0,
+        accounts: aMap.get(key) || 0,
       });
     }
 

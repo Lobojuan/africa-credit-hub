@@ -171,7 +171,7 @@ const COUNTRY_REGISTRY: Record<string, CountryConfig> = {
     regulatoryBody: "Central Bank of Kenya",
     dataProtectionLaw: "Data Protection Act, 2019",
     brandTitle: "Kenya Credit Registry",
-    brandSubtitle: "Carlson Capital & Systems In Motion Limited\u2122",
+    brandSubtitle: `${PLATFORM_COMPANY_NAME}\u2122`,
     regions: [
       "Nairobi", "Mombasa", "Kisumu", "Nakuru", "Eldoret",
       "Nyeri", "Machakos", "Kiambu", "Uasin Gishu", "Kilifi",
@@ -201,7 +201,7 @@ const COUNTRY_REGISTRY: Record<string, CountryConfig> = {
     regulatoryBody: "National Bank of Rwanda",
     dataProtectionLaw: "Law Relating to the Protection of Personal Data",
     brandTitle: "Rwanda Credit Registry",
-    brandSubtitle: "Carlson Capital & Systems In Motion Limited\u2122",
+    brandSubtitle: `${PLATFORM_COMPANY_NAME}\u2122`,
     regions: ["Kigali", "Eastern", "Northern", "Southern", "Western"],
     theme: {
       primary: "210 70% 38%",
@@ -228,7 +228,7 @@ const COUNTRY_REGISTRY: Record<string, CountryConfig> = {
     regulatoryBody: "Bank of Tanzania",
     dataProtectionLaw: "Personal Data Protection Act, 2022",
     brandTitle: "Tanzania Credit Registry",
-    brandSubtitle: "Carlson Capital & Systems In Motion Limited\u2122",
+    brandSubtitle: `${PLATFORM_COMPANY_NAME}\u2122`,
     regions: [
       "Dar es Salaam", "Dodoma", "Arusha", "Mwanza", "Zanzibar",
       "Mbeya", "Morogoro", "Tanga", "Kilimanjaro", "Iringa",
@@ -258,7 +258,7 @@ const COUNTRY_REGISTRY: Record<string, CountryConfig> = {
     regulatoryBody: "Bank of Uganda",
     dataProtectionLaw: "Data Protection and Privacy Act, 2019",
     brandTitle: "Uganda Credit Registry",
-    brandSubtitle: "Carlson Capital & Systems In Motion Limited\u2122",
+    brandSubtitle: `${PLATFORM_COMPANY_NAME}\u2122`,
     regions: [
       "Kampala", "Wakiso", "Mukono", "Jinja", "Gulu",
       "Mbarara", "Lira", "Masaka", "Mbale", "Fort Portal",
@@ -288,7 +288,7 @@ const COUNTRY_REGISTRY: Record<string, CountryConfig> = {
     regulatoryBody: "National Bank of Ethiopia",
     dataProtectionLaw: "Computer Crime Proclamation No. 958/2016",
     brandTitle: "Ethiopia Credit Registry",
-    brandSubtitle: "Carlson Capital & Systems In Motion Limited\u2122",
+    brandSubtitle: `${PLATFORM_COMPANY_NAME}\u2122`,
     regions: [
       "Addis Ababa", "Oromia", "Amhara", "SNNPR", "Tigray",
       "Somali", "Afar", "Benishangul-Gumuz", "Gambela", "Harari",
@@ -318,7 +318,7 @@ const COUNTRY_REGISTRY: Record<string, CountryConfig> = {
     regulatoryBody: "South African Reserve Bank",
     dataProtectionLaw: "Protection of Personal Information Act (POPIA)",
     brandTitle: "South Africa Credit Registry",
-    brandSubtitle: "Carlson Capital & Systems In Motion Limited\u2122",
+    brandSubtitle: `${PLATFORM_COMPANY_NAME}\u2122`,
     regions: [
       "Gauteng", "Western Cape", "KwaZulu-Natal", "Eastern Cape",
       "Free State", "Limpopo", "Mpumalanga", "North West", "Northern Cape",
@@ -576,7 +576,7 @@ export function getBrandTitle(): string {
 
 export function getBrandSubtitle(): string {
   const config = getCountryConfig();
-  return config ? config.brandSubtitle : "Carlson Capital & Systems In Motion Limited\u2122";
+  return config ? config.brandSubtitle : `${PLATFORM_COMPANY_NAME}\u2122`;
 }
 
 export function getDefaultFallbackCurrency(): string {

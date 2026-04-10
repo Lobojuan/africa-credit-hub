@@ -1,5 +1,6 @@
 import { Globe, Mail, Phone, MapPin } from "lucide-react";
 import { useBrandColors } from "@/hooks/use-brand-colors";
+import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
 
 export function AppFooter() {
   const brandColors = useBrandColors();
@@ -13,7 +14,7 @@ export function AppFooter() {
                 <Globe className="w-4 h-4 text-white" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-foreground" data-testid="footer-brand">Carlson Capital & Systems In Motion Limited</h3>
+                <h3 className="text-sm font-bold text-foreground" data-testid="footer-brand">{PLATFORM_COMPANY_NAME}</h3>
                 <p className="text-[11px] text-muted-foreground">Pan-African Credit Registry Platform</p>
               </div>
             </div>
@@ -53,7 +54,7 @@ export function AppFooter() {
 
         <div className="mt-6 pt-4 border-t border-border/30 flex flex-col sm:flex-row items-center justify-between gap-2">
           <p className="text-[11px] text-muted-foreground/60" data-testid="footer-copyright">
-            &copy; 2024–2026 Carlson Capital & Systems In Motion Limited. All rights reserved.
+            &copy; 2024–2026 {PLATFORM_COMPANY_NAME}. All rights reserved.
           </p>
           <p className="text-[11px] text-muted-foreground/40">
             Cross-Jurisdictional Central Data Hub v2.5

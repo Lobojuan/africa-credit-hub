@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useBrandColors } from "@/hooks/use-brand-colors";
 import {
+import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
   Shield, Globe, ArrowRight, TrendingUp, CheckCircle2,
   Users, Building2, AlertTriangle, Target, MapPin,
   BarChart3, Landmark, Scale, DollarSign, LineChart,
@@ -501,7 +502,7 @@ export default function MarketValidationPage() {
           </div>
         </div>
         <div className="border-t border-border/30 py-3 px-4">
-          <p className="max-w-7xl mx-auto text-center text-[10px] text-muted-foreground/60">&copy; {new Date().getFullYear()} Carlson Capital & Systems In Motion Limited. All rights reserved.</p>
+          <p className="max-w-7xl mx-auto text-center text-[10px] text-muted-foreground/60">&copy; {new Date().getFullYear()} {PLATFORM_COMPANY_NAME}. All rights reserved.</p>
         </div>
       </footer>
     </div>
