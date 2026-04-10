@@ -114,3 +114,9 @@ id = "VrA6u9utymEyxhyuwyOzV"
 uri = "file://codebase-export.zip"
 type = "unspecified"
 title = "CDH v2.5 — Codebase Export (compressed)"
+
+[[outputs]]
+id = "WGo8h2vD8VFYv8IAdMPN6"
+uri = "file://codebase-dump.txt"
+type = "text"
+title = "CDH v2.5 — Full Server Codebase Dump (50 files, 1.3MB)"
