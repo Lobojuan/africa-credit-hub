@@ -39,17 +39,35 @@ router.post("/api/users", requireRole("admin", "super_admin"), async (req, res) 
   }
 });
 
-router.patch("/api/users/:id", requireRole("admin"), async (req, res) => {
+router.patch("/api/users/:id", requireRole("admin", "super_admin"), async (req, res) => {
   try {
+    if (req.params.id === req.session?.userId && req.body.role) {
+      return res.status(400).json({ message: "Cannot change your own role" });
+    }
+
+    const targetUser = await storage.getUser(req.params.id);
+    if (!targetUser) return res.status(404).json({ message: "User not found" });
+
+    if (req.session?.userRole !== "super_admin") {
+      if (targetUser.organizationId !== req.session?.organizationId) {
+        return res.status(403).json({ message: "Cannot modify users outside your organization" });
+      }
+    }
+
     const data = { ...req.body };
+    if (req.session?.userRole !== "super_admin") {
+      delete data.role;
+      delete data.organizationId;
+      delete data.status;
+    }
+
     if (data.password) {
       const { checkPasswordHistory, pushPasswordHistory } = await import("../security-hardening");
       const historyCheck = await checkPasswordHistory(req.params.id, data.password);
       if (historyCheck.reused) {
         return res.status(400).json({ message: historyCheck.message });
       }
-      const existingUser = await storage.getUser(req.params.id);
-      const oldHash = existingUser?.password;
+      const oldHash = targetUser.password;
       data.password = await bcrypt.hash(data.password, 10);
       if (oldHash) {
         await pushPasswordHistory(req.params.id, oldHash);
@@ -59,7 +77,7 @@ router.patch("/api/users/:id", requireRole("admin"), async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
     await storage.createAuditLog({
       action: "UPDATE", entity: "user", entityId: user.id, userId: req.session?.userId,
-      details: `Updated user: ${user.fullName}${data.password ? " (password changed by admin, history check passed)" : ""}`,
+      details: `Updated user ${user.id.toString().slice(0,8)}...${data.password ? " (password changed by admin, history check passed)" : ""}`,
       ipAddress: req.ip || null,
     });
     res.json(stripPassword(user));

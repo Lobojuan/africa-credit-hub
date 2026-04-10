@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Loader2, Eye, EyeOff, Landmark, Coins, Shield, Smartphone, Zap, Building2, ArrowLeft, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { PLATFORM_COMPANY_NAME, PLATFORM_COPYRIGHT_YEAR } from "@/lib/platform-config";
 import { useBrandColors } from "@/hooks/use-brand-colors";
 
 const INSTITUTION_TYPES = [
@@ -428,7 +429,7 @@ export default function SignUpPage() {
 
         <div className="text-center mt-6">
           <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.2)" }}>
-            &copy; 2026 Carlson Capital & Systems In Motion Limited. All rights reserved.
+            &copy; {PLATFORM_COPYRIGHT_YEAR} {PLATFORM_COMPANY_NAME}. All rights reserved.
           </p>
         </div>
       </div>

@@ -66,6 +66,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@radix-ui/react-collapsible";
 import type { LucideIcon } from "lucide-react";
 import { isGhanaMode, isSierraLeoneMode, isSingleCountryMode, getBrandTitle, getCountryConfig, type CountryConfig } from "@/lib/country-mode";
+import { PLATFORM_COMPANY_NAME, PLATFORM_COPYRIGHT_YEAR } from "@/lib/platform-config";
 import { useCountryTheme } from "@/components/country-theme-provider";
 import { useTheme } from "@/components/theme-provider";
 
@@ -523,10 +524,10 @@ export function AppSidebar() {
         </div>
         <div className="px-1 pt-0.5">
           <p className="text-[10px] text-sidebar-foreground/45 leading-relaxed" data-testid="text-provider-credit">
-            <span className="text-sidebar-foreground/65 font-semibold">Carlson Capital & Systems In Motion Limited</span>
+            <span className="text-sidebar-foreground/65 font-semibold">{PLATFORM_COMPANY_NAME}</span>
           </p>
           <p className="text-[9px] text-sidebar-foreground/35 font-medium" data-testid="text-copyright">
-            2026 All rights reserved.
+            {PLATFORM_COPYRIGHT_YEAR} All rights reserved.
           </p>
         </div>
       </SidebarFooter>

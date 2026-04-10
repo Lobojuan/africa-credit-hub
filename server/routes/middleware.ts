@@ -3,7 +3,13 @@ import rateLimit from "express-rate-limit";
 import { storage } from "../storage";
 import { getActiveCountryName } from "../country-mode";
 
-export const rateLimitKeyGenerator = (req: Request) => req.ip ?? req.socket.remoteAddress ?? "unknown";
+export const rateLimitKeyGenerator = (req: Request) => {
+  const ip = req.ip ?? req.socket.remoteAddress ?? "unknown";
+  if (ip.startsWith("::ffff:")) return ip.slice(7);
+  return ip;
+};
+
+const validate = { keyGeneratorIpFallback: false } as const;
 
 export const loginLimiter = rateLimit({
   keyGenerator: rateLimitKeyGenerator,
@@ -12,6 +18,7 @@ export const loginLimiter = rateLimit({
   message: { message: "Too many login attempts. Please try again later." },
   standardHeaders: true,
   legacyHeaders: false,
+  validate,
 });
 
 export const apiLimiter = rateLimit({
@@ -22,6 +29,7 @@ export const apiLimiter = rateLimit({
   message: { message: "Too many requests. Please slow down." },
   standardHeaders: true,
   legacyHeaders: false,
+  validate,
 });
 
 export const writeLimiter = rateLimit({
@@ -31,6 +39,7 @@ export const writeLimiter = rateLimit({
   message: { message: "Too many write requests. Please slow down." },
   standardHeaders: true,
   legacyHeaders: false,
+  validate,
 });
 
 export const registrationLimiter = rateLimit({
@@ -40,6 +49,7 @@ export const registrationLimiter = rateLimit({
   message: { message: "Too many registration attempts. Please try again in 15 minutes." },
   standardHeaders: true,
   legacyHeaders: false,
+  validate,
 });
 
 export const batchLimiter = rateLimit({
@@ -49,6 +59,7 @@ export const batchLimiter = rateLimit({
   message: { message: "Too many batch operations. Please wait before submitting more." },
   standardHeaders: true,
   legacyHeaders: false,
+  validate,
 });
 
 export const aiLimiter = rateLimit({
@@ -58,6 +69,7 @@ export const aiLimiter = rateLimit({
   message: { message: "AI request limit reached. Please try again in 15 minutes." },
   standardHeaders: true,
   legacyHeaders: false,
+  validate,
 });
 
 export const creditReportLimiter = rateLimit({
@@ -67,6 +79,7 @@ export const creditReportLimiter = rateLimit({
   message: { message: "Credit report request limit reached. Please try again later." },
   standardHeaders: true,
   legacyHeaders: false,
+  validate,
 });
 
 export function stripPassword(user: any) {

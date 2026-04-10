@@ -155,9 +155,20 @@ router.post("/api/auth/change-password", async (req, res) => {
     await storage.updatePasswordChangedAt(user.id);
     await pushPasswordHistory(user.id, oldHash);
 
+    try {
+      const { pool } = await import("../db");
+      const currentSid = (req as any).sessionID;
+      if (currentSid) {
+        await pool.query(
+          `DELETE FROM user_sessions WHERE sess->>'userId' = $1 AND sid != $2`,
+          [String(user.id), currentSid]
+        );
+      }
+    } catch {}
+
     await storage.createAuditLog({
       action: "PASSWORD_CHANGE", entity: "user", entityId: user.id, userId: user.id,
-      details: "Password changed successfully (history check passed)",
+      details: "Password changed successfully (history check passed, other sessions invalidated)",
       ipAddress: req.ip || null,
     });
 
@@ -307,12 +318,20 @@ router.post("/api/auth/mfa/verify", async (req, res) => {
 router.post("/api/auth/mfa/disable", async (req, res) => {
   try {
     if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
+    const { password } = req.body;
+    if (!password) {
+      return res.status(400).json({ message: "Current password is required to disable MFA" });
+    }
     const user = await storage.getUser(req.session.userId);
     if (!user) return res.status(404).json({ message: "User not found" });
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) {
+      return res.status(401).json({ message: "Incorrect password" });
+    }
     await storage.updateUser(user.id, { mfaEnabled: false, mfaSecret: null } as any);
     await storage.createAuditLog({
       action: "MFA_DISABLED", entity: "user", entityId: user.id, userId: user.id,
-      details: `MFA disabled for ${user.fullName}`,
+      details: `MFA disabled for user ${user.id.toString().slice(0,8)}...`,
       ipAddress: req.ip || null,
     });
     res.json({ message: "MFA disabled" });
@@ -322,9 +341,6 @@ router.post("/api/auth/mfa/disable", async (req, res) => {
   }
 });
 
-router.get("/api/auth/review-access/:token", (_req, res) => {
-  res.status(404).json({ message: "Not found" });
-});
 
 router.get("/api/auth/me", async (req, res) => {
   if (!req.session?.userId) {

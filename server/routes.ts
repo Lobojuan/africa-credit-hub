@@ -9676,6 +9676,12 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         if (!["https:", "http:"].includes(parsed.protocol)) {
           return res.status(400).json({ message: "URL must use HTTPS or HTTP protocol" });
         }
+        const hostname = parsed.hostname.toLowerCase();
+        const blockedHosts = ['localhost', '127.0.0.1', '0.0.0.0', '::1', '169.254.169.254', 'metadata.google.internal'];
+        const blockedPrefixes = ['10.', '172.16.', '172.17.', '172.18.', '172.19.', '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.', '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.', '192.168.', 'fd', 'fe80:'];
+        if (blockedHosts.includes(hostname) || blockedPrefixes.some(b => hostname.startsWith(b))) {
+          return res.status(400).json({ message: "Webhook URL must not point to internal or private network addresses" });
+        }
       } catch {
         return res.status(400).json({ message: "Invalid URL format" });
       }

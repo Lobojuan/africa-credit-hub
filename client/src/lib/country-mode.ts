@@ -1,3 +1,5 @@
+import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
+
 export interface CountryTheme {
   primary: string;
   primaryForeground: string;
@@ -48,7 +50,7 @@ const COUNTRY_REGISTRY: Record<string, CountryConfig> = {
     regulatoryBody: "Bank of Ghana",
     dataProtectionLaw: "Data Protection Act, 2012 (Act 843)",
     brandTitle: "Ghana Credit Registry",
-    brandSubtitle: "Carlson Capital & Systems In Motion Limited\u2122",
+    brandSubtitle: `${PLATFORM_COMPANY_NAME}\u2122`,
     regions: [
       "Greater Accra", "Ashanti", "Western", "Central", "Eastern",
       "Northern", "Volta", "Upper East", "Upper West", "Bono",
@@ -79,7 +81,7 @@ const COUNTRY_REGISTRY: Record<string, CountryConfig> = {
     regulatoryBody: "Central Bank of Liberia",
     dataProtectionLaw: "Data Protection Act of Liberia",
     brandTitle: "Liberia Credit Registry",
-    brandSubtitle: "Carlson Capital & Systems In Motion Limited\u2122",
+    brandSubtitle: `${PLATFORM_COMPANY_NAME}\u2122`,
     regions: [
       "Montserrado", "Nimba", "Bong", "Grand Bassa", "Lofa",
       "Margibi", "Maryland", "Grand Gedeh", "Sinoe", "Gbarpolu",
@@ -110,7 +112,7 @@ const COUNTRY_REGISTRY: Record<string, CountryConfig> = {
     regulatoryBody: "Bank of Sierra Leone",
     dataProtectionLaw: "Data Protection Act of Sierra Leone",
     brandTitle: "Sierra Leone Credit Registry",
-    brandSubtitle: "Carlson Capital & Systems In Motion Limited\u2122",
+    brandSubtitle: `${PLATFORM_COMPANY_NAME}\u2122`,
     regions: [
       "Western Area Urban", "Western Area Rural", "Northern", "Southern", "Eastern", "North West",
     ],
@@ -139,7 +141,7 @@ const COUNTRY_REGISTRY: Record<string, CountryConfig> = {
     regulatoryBody: "Central Bank of Nigeria",
     dataProtectionLaw: "Nigeria Data Protection Regulation (NDPR)",
     brandTitle: "Nigeria Credit Registry",
-    brandSubtitle: "Carlson Capital & Systems In Motion Limited\u2122",
+    brandSubtitle: `${PLATFORM_COMPANY_NAME}\u2122`,
     regions: [
       "Lagos", "Abuja FCT", "Kano", "Rivers", "Oyo", "Kaduna",
       "Ogun", "Anambra", "Delta", "Enugu", "Edo", "Imo",

@@ -1,6 +1,16 @@
 import nodemailer from "nodemailer";
 import { isGhanaMode } from "./country-mode";
 
+function esc(str: string | undefined | null): string {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
 let transporter: nodemailer.Transporter | null = null;
 let emailConfigured = false;
 let emailProvider: "smtp" | "sendgrid" | "stub" = "stub";
@@ -154,7 +164,7 @@ export async function sendWelcomeEmail(orgName: string, adminEmail: string, tier
   const plan = tierInfo[tier] || tierInfo.standard;
 
   const body = `
-    <p style="color:#333;font-size:14px;line-height:1.6;">Welcome to the Pan-African Credit Registry! Your organization <strong>${orgName}</strong> has been successfully registered.</p>
+    <p style="color:#333;font-size:14px;line-height:1.6;">Welcome to the Pan-African Credit Registry! Your organization <strong>${esc(orgName)}</strong> has been successfully registered.</p>
     <div style="background:#f0f7ff;border-radius:8px;padding:16px 20px;margin:16px 0;">
       <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Subscription Plan:</strong> ${plan.name} (${plan.price})</p>
       <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Max Users:</strong> ${plan.users}</p>
@@ -174,9 +184,9 @@ export async function sendBillingNotification(orgName: string, email: string, am
     cancelled: "#94a3b8",
   };
   const body = `
-    <p style="color:#333;font-size:14px;line-height:1.6;">A billing event has occurred for <strong>${orgName}</strong>.</p>
+    <p style="color:#333;font-size:14px;line-height:1.6;">A billing event has occurred for <strong>${esc(orgName)}</strong>.</p>
     <div style="background:#f8f9fa;border-radius:8px;padding:16px 20px;margin:16px 0;border-left:4px solid ${statusColors[status] || "#64748b"};">
-      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Service:</strong> ${serviceType}</p>
+      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Service:</strong> ${esc(serviceType)}</p>
       <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Amount:</strong> ${currency} ${amount.toLocaleString()}</p>
       <p style="margin:0;font-size:13px;color:#555;"><strong>Status:</strong> <span style="color:${statusColors[status] || "#64748b"};font-weight:600;">${status.toUpperCase()}</span></p>
     </div>
@@ -186,11 +196,11 @@ export async function sendBillingNotification(orgName: string, email: string, am
 
 export async function sendDisputeNotification(orgName: string, email: string, disputeId: number, borrowerName: string, disputeType: string): Promise<boolean> {
   const body = `
-    <p style="color:#333;font-size:14px;line-height:1.6;">A new credit dispute has been filed for <strong>${orgName}</strong>.</p>
+    <p style="color:#333;font-size:14px;line-height:1.6;">A new credit dispute has been filed for <strong>${esc(orgName)}</strong>.</p>
     <div style="background:#fef3cd;border-radius:8px;padding:16px 20px;margin:16px 0;border-left:4px solid #f59e0b;">
       <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Dispute ID:</strong> #${disputeId}</p>
-      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Borrower:</strong> ${borrowerName}</p>
-      <p style="margin:0;font-size:13px;color:#555;"><strong>Type:</strong> ${disputeType}</p>
+      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Borrower:</strong> ${esc(borrowerName)}</p>
+      <p style="margin:0;font-size:13px;color:#555;"><strong>Type:</strong> ${esc(disputeType)}</p>
     </div>
     <p style="color:#333;font-size:14px;">Please review and respond to this dispute within 30 days as per regulatory requirements.</p>
     <a href="https://africacredithub.com" style="display:inline-block;background:#1a1a2e;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:14px;margin-top:8px;">Review Dispute</a>
@@ -200,10 +210,10 @@ export async function sendDisputeNotification(orgName: string, email: string, di
 
 export async function sendSubscriptionChangeEmail(orgName: string, email: string, oldTier: string, newTier: string): Promise<boolean> {
   const body = `
-    <p style="color:#333;font-size:14px;line-height:1.6;">The subscription for <strong>${orgName}</strong> has been updated.</p>
+    <p style="color:#333;font-size:14px;line-height:1.6;">The subscription for <strong>${esc(orgName)}</strong> has been updated.</p>
     <div style="background:#f0fdf4;border-radius:8px;padding:16px 20px;margin:16px 0;border-left:4px solid #22c55e;">
-      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Previous Plan:</strong> ${oldTier}</p>
-      <p style="margin:0;font-size:13px;color:#555;"><strong>New Plan:</strong> ${newTier}</p>
+      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Previous Plan:</strong> ${esc(oldTier)}</p>
+      <p style="margin:0;font-size:13px;color:#555;"><strong>New Plan:</strong> ${esc(newTier)}</p>
     </div>
     <p style="color:#333;font-size:14px;">Your updated features and limits are now active.</p>
   `;
@@ -215,14 +225,14 @@ export async function sendNewRegistrationAlert(orgName: string, orgType: string,
   const body = `
     <p style="color:#333;font-size:14px;line-height:1.6;">A new organization has registered on the Pan-African Credit Registry.</p>
     <div style="background:#f0f7ff;border-radius:8px;padding:16px 20px;margin:16px 0;border-left:4px solid #3b82f6;">
-      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Organization:</strong> ${orgName}</p>
-      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Type:</strong> ${orgType}</p>
-      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Country:</strong> ${country}</p>
-      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Contact Email:</strong> ${contactEmail}</p>
-      <p style="margin:0;font-size:13px;color:#555;"><strong>Admin Name:</strong> ${adminName}</p>
+      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Organization:</strong> ${esc(orgName)}</p>
+      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Type:</strong> ${esc(orgType)}</p>
+      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Country:</strong> ${esc(country)}</p>
+      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Contact Email:</strong> ${esc(contactEmail)}</p>
+      <p style="margin:0;font-size:13px;color:#555;"><strong>Admin Name:</strong> ${esc(adminName)}</p>
     </div>
     <p style="color:#333;font-size:14px;">Registered at: ${new Date().toLocaleString("en-US", { timeZone: "Africa/Accra", dateStyle: "full", timeStyle: "short" })}</p>
-    <a href="https://africacredithub.com/api/auth/review-access/sim-gemini-review-2026-q8w3r" style="display:inline-block;background:#1a1a2e;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:14px;margin-top:8px;">View Admin Dashboard</a>
+    <a href="${process.env.CANONICAL_URL || 'https://africacredithub.com'}/command-center" style="display:inline-block;background:#1a1a2e;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:14px;margin-top:8px;">Open Command Center</a>
   `;
   return sendEmail(NOTIFY_EMAIL, `New Registration: ${orgName} (${country})`, createEmailHtml("New Trial Registration", body));
 }
@@ -259,15 +269,15 @@ export async function sendContactSalesEmail(data: { name: string; email: string;
   const body = `
     <h2 style="color:#0d9488;">New Enterprise Inquiry</h2>
     <table style="width:100%;border-collapse:collapse;margin:16px 0;">
-      <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600;width:140px;">Name</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">${data.name}</td></tr>
-      <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600;">Email</td><td style="padding:8px 12px;border-bottom:1px solid #eee;"><a href="mailto:${data.email}">${data.email}</a></td></tr>
-      ${data.phone ? `<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600;">Phone</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">${data.phone}</td></tr>` : ""}
-      <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600;">Organization</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">${data.organization}</td></tr>
-      ${data.title ? `<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600;">Job Title</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">${data.title}</td></tr>` : ""}
-      ${data.country ? `<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600;">Country</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">${data.country}</td></tr>` : ""}
-      <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600;">Interested In</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">${tierLabel}</td></tr>
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600;width:140px;">Name</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">${esc(data.name)}</td></tr>
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600;">Email</td><td style="padding:8px 12px;border-bottom:1px solid #eee;"><a href="mailto:${esc(data.email)}">${esc(data.email)}</a></td></tr>
+      ${data.phone ? `<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600;">Phone</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">${esc(data.phone)}</td></tr>` : ""}
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600;">Organization</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">${esc(data.organization)}</td></tr>
+      ${data.title ? `<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600;">Job Title</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">${esc(data.title)}</td></tr>` : ""}
+      ${data.country ? `<tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600;">Country</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">${esc(data.country)}</td></tr>` : ""}
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600;">Interested In</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">${esc(tierLabel)}</td></tr>
     </table>
-    ${data.message ? `<h3 style="margin-top:20px;">Message</h3><p style="background:#f8f9fa;padding:16px;border-radius:8px;white-space:pre-wrap;">${data.message}</p>` : ""}
+    ${data.message ? `<h3 style="margin-top:20px;">Message</h3><p style="background:#f8f9fa;padding:16px;border-radius:8px;white-space:pre-wrap;">${esc(data.message)}</p>` : ""}
     <p style="color:#888;font-size:12px;margin-top:24px;">This inquiry was submitted via the CDH Contact Sales page.</p>
   `;
   return sendEmail(adminEmail, `[CDH Sales Inquiry] ${data.organization} — ${tierLabel}`, createEmailHtml("New Sales Inquiry", body));

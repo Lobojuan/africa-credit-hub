@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { isGhanaMode } from "@/lib/country-mode";
+import { PLATFORM_COMPANY_NAME, PLATFORM_COPYRIGHT_YEAR } from "@/lib/platform-config";
 
 type LoginMode = "chooser" | "institution" | "consumer";
 
@@ -778,10 +779,10 @@ export default function LoginPage() {
         transitionDelay: "0.6s",
       }}>
         <p className="text-xs" style={{ color: "hsl(215 10% 58%)" }}>
-          Carlson Capital & Systems In Motion Limited&trade; &middot; {isGhanaMode() ? "Ghana Credit Registry v2.5" : "Cross-Jurisdictional CDH v2.5"}
+          {PLATFORM_COMPANY_NAME}&trade; &middot; {isGhanaMode() ? "Ghana Credit Registry v2.5" : "Cross-Jurisdictional CDH v2.5"}
         </p>
         <p className="text-[10px] mt-1" style={{ color: "hsl(215 10% 68%)" }}>
-          &copy; 2026 Carlson Capital & Systems In Motion Limited. All rights reserved.
+          &copy; {PLATFORM_COPYRIGHT_YEAR} {PLATFORM_COMPANY_NAME}. All rights reserved.
         </p>
       </footer>
     </div>

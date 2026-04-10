@@ -27,27 +27,16 @@ router.get("/api/dashboard/trends", requireAuth, async (req, res) => {
     const country = getCountryFilter(req);
     const stats = await storage.getDashboardStats(orgId, country);
 
-    function generateTrend(currentValue: number): number[] {
-      const points: number[] = [];
-      const base = Math.max(1, Math.round(currentValue * (0.7 + Math.random() * 0.15)));
-      for (let i = 0; i < 7; i++) {
-        const progress = i / 6;
-        const target = currentValue;
-        const value = Math.round(base + (target - base) * progress + (Math.random() - 0.5) * currentValue * 0.08);
-        points.push(Math.max(0, value));
-      }
-      points[6] = currentValue;
-      return points;
-    }
+    const currentSnapshot = (v: number) => Array(7).fill(v);
 
     res.json({
-      borrowers: generateTrend(stats.totalBorrowers),
-      accounts: generateTrend(stats.totalAccounts),
-      disputes: generateTrend(stats.openDisputeCount),
-      inquiries: generateTrend(stats.totalInquiries),
-      delinquent: generateTrend(stats.delinquentAccounts),
-      defaults: generateTrend(stats.defaultAccounts),
-      approvals: generateTrend(stats.pendingApprovalCount),
+      borrowers: currentSnapshot(stats.totalBorrowers),
+      accounts: currentSnapshot(stats.totalAccounts),
+      disputes: currentSnapshot(stats.openDisputeCount),
+      inquiries: currentSnapshot(stats.totalInquiries),
+      delinquent: currentSnapshot(stats.delinquentAccounts),
+      defaults: currentSnapshot(stats.defaultAccounts),
+      approvals: currentSnapshot(stats.pendingApprovalCount),
     });
   } catch (e: any) {
     res.status(500).json({ message: safeErrorMessage(e) });
@@ -90,11 +79,10 @@ router.get("/api/dashboard/chart-data", requireAuth, async (req, res) => {
       const month = d.toLocaleString("en", { month: "short", year: "2-digit" });
       const factor = (12 - i) / 12;
       const growth = 0.6 + 0.4 * factor;
-      const jitter = 0.97 + Math.random() * 0.06;
       monthlyTrend.push({
         month,
-        borrowers: Math.round(totalB * growth * jitter),
-        accounts: Math.round(totalA * growth * jitter),
+        borrowers: Math.round(totalB * growth),
+        accounts: Math.round(totalA * growth),
       });
     }
 
@@ -131,12 +119,13 @@ router.get("/api/platform-kpis", requireAuth, async (req, res) => {
     const accountTypes: Record<string, number> = {};
     for (const t of portfolio.typeBreakdown) { accountTypes[t.name] = t.value; }
 
-    const traditionalNPL = 12.5;
+    const safeFloat = (v: string | undefined, fallback: number) => { const n = parseFloat(v || ""); return Number.isFinite(n) ? n : fallback; };
+    const traditionalNPL = safeFloat(process.env.PLATFORM_TRADITIONAL_NPL, 12.5);
     const platformNPL = Math.round(nplRatio * 10) / 10;
     const nplReduction = Math.max(0, traditionalNPL - platformNPL);
 
-    const costPerReport = 2.50;
-    const revenuePerReport = 8.75;
+    const costPerReport = safeFloat(process.env.PLATFORM_COST_PER_REPORT, 2.50);
+    const revenuePerReport = safeFloat(process.env.PLATFORM_REVENUE_PER_REPORT, 8.75);
     const reportsGenerated = stats.totalInquiries || borrowerAgg.total;
     const reportingRevenue = Math.round(reportsGenerated * revenuePerReport);
     const reportingCost = Math.round(reportsGenerated * costPerReport);
