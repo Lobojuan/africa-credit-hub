@@ -529,6 +529,9 @@ export function AppSidebar() {
           <p className="text-[9px] text-sidebar-foreground/35 font-medium" data-testid="text-copyright">
             {PLATFORM_COPYRIGHT_YEAR} All rights reserved.
           </p>
+          <p className="text-[9px] text-sidebar-foreground/25 font-mono mt-0.5" data-testid="text-build-version">
+            v2.5 · {__BUILD_HASH__} · {__BUILD_DATE__}
+          </p>
         </div>
       </SidebarFooter>
     </Sidebar>
