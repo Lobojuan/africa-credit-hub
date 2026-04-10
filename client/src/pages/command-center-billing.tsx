@@ -181,7 +181,7 @@ export function CommandCenterBillingTab() {
                     const minVol = Number(tier.minVolume) || 0;
                     const maxVol = tier.maxVolume != null ? Number(tier.maxVolume) : null;
                     const priceCents = Number(tier.unitPriceCents) || 0;
-                    const tierCurrency = String(tier.currency || "USD");
+                    const tierCurrency = String(tier.currency || "GHS");
                     const tierCountry = String(tier.country || "Global");
                     return (
                       <tr key={tier.id} className="border-b border-border/50 hover:bg-muted transition-colors" data-testid={`pricing-tier-${tier.id}`}>
@@ -385,7 +385,7 @@ export function CommandCenterBillingTab() {
                                         <CreditCard className="w-3 h-3 text-muted-foreground" />
                                         <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Currency</p>
                                       </div>
-                                      <p className="text-xs font-medium">{inv.currency || "USD"}</p>
+                                      <p className="text-xs font-medium">{inv.currency || "GHS"}</p>
                                     </div>
                                     <div className="rounded-lg border p-2.5 bg-background">
                                       <div className="flex items-center gap-1.5 mb-1">

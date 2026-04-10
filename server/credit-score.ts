@@ -295,5 +295,5 @@ export function calculateCreditScore(
 
 export function getDefaultCurrencyCode(): string {
   const config = getServerCountryConfig();
-  return config?.currency || "USD";
+  return config?.currency || "GHS";
 }

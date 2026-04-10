@@ -55,7 +55,7 @@ export async function seedTelcoLending() {
   const consentBatch: any[] = [];
 
   for (const profile of profiles) {
-    const cc = COUNTRY_CURRENCIES[profile.country] || { code: "USD", avg: 500, max: 5000 };
+    const cc = COUNTRY_CURRENCIES[profile.country] || { code: "GHS", avg: 500, max: 5000 };
     const loanCount = rand(Math.max(1, LOANS_PER_PROFILE - 5), LOANS_PER_PROFILE + 5);
 
     for (let i = 0; i < loanCount; i++) {

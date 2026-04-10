@@ -194,7 +194,7 @@ function CreateOrgDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
   const [form, setForm] = useState({
     name: "", slug: "", type: "bank", status: "active", country: "",
     contactEmail: "", contactPhone: "", address: "", website: "",
-    subscriptionTier: "standard", maxUsers: 10, currency: "USD",
+    subscriptionTier: "standard", maxUsers: 10, currency: "GHS",
   });
 
   const createMutation = useMutation({
@@ -209,7 +209,7 @@ function CreateOrgDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
       toast({ title: "Client onboarded successfully" });
       onOpenChange(false);
       setStep(1);
-      setForm({ name: "", slug: "", type: "bank", status: "active", country: "", contactEmail: "", contactPhone: "", address: "", website: "", subscriptionTier: "standard", maxUsers: 10, currency: "USD" });
+      setForm({ name: "", slug: "", type: "bank", status: "active", country: "", contactEmail: "", contactPhone: "", address: "", website: "", subscriptionTier: "standard", maxUsers: 10, currency: "GHS" });
     },
     onError: (e: any) => {
       toast({ title: "Error", description: e.message, variant: "destructive" });

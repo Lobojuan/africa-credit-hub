@@ -136,7 +136,7 @@ export function formatCurrency(
   currencyCode?: string | null,
   options?: { compact?: boolean }
 ): string {
-  const code = currencyCode?.trim() || "USD";
+  const code = currencyCode?.trim() || _getModeCurrency() || "GHS";
   const num = typeof value === "string" ? parseFloat(value) : value;
   if (isNaN(num)) return `${code} 0.00`;
 
@@ -244,8 +244,8 @@ const COUNTRY_TO_CURRENCY: Record<string, string> = {
 export function getCurrencyForCountry(country: string): string {
   const modeCurrency = _getModeCurrency();
   if (modeCurrency) return modeCurrency;
-  if (!country) return "USD";
-  return COUNTRY_TO_CURRENCY[country.toLowerCase()] || "USD";
+  if (!country) return "GHS";
+  return COUNTRY_TO_CURRENCY[country.toLowerCase()] || "GHS";
 }
 
 export function getCurrencySymbol(currencyCode: string): string {
@@ -260,7 +260,7 @@ export function detectLocalCurrency(): string {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     if (tz && TIMEZONE_TO_CURRENCY[tz]) return TIMEZONE_TO_CURRENCY[tz];
   } catch {}
-  return "USD";
+  return "GHS";
 }
 
 const GHANA_CURRENCIES = ["GHS", "USD", "EUR"];
@@ -274,7 +274,7 @@ export function getModeCurrencies(): CurrencyInfo[] {
 
 export function formatCurrencyValue(
   value: string | number,
-  currencyCode = "USD"
+  currencyCode = "GHS"
 ): string {
   const num = typeof value === "string" ? parseFloat(value) : value;
   if (isNaN(num)) return "0.00";

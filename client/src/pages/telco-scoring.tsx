@@ -509,8 +509,8 @@ const COUNTRY_CURRENCIES: Record<string, { code: string; symbol: string }> = {
 };
 
 function getCountryCurrency(country?: string) {
-  if (!country) return { code: "USD", symbol: "$" };
-  return COUNTRY_CURRENCIES[country.toLowerCase()] || { code: "USD", symbol: "$" };
+  if (!country) return { code: "GHS", symbol: "₵" };
+  return COUNTRY_CURRENCIES[country.toLowerCase()] || { code: "GHS", symbol: "₵" };
 }
 
 interface DecisionRule {

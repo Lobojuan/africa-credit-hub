@@ -137,7 +137,7 @@ export default function ReportsPage() {
   const [, navigate] = useLocation();
   const [selectedBorrower, setSelectedBorrower] = useState<Borrower | null>(null);
   const [purpose, setPurpose] = useState("new_credit");
-  const [reportCurrency, setReportCurrency] = useState("USD");
+  const [reportCurrency, setReportCurrency] = useState("GHS");
   const [isGenerating, setIsGenerating] = useState(false);
 
   const { data: stats, isLoading: statsLoading } = useQuery<{

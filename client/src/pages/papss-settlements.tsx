@@ -97,8 +97,8 @@ export default function PapssSettlementsPage() {
       toast({ title: "Validation Error", description: "All required fields must be filled", variant: "destructive" });
       return;
     }
-    const currency1 = form.senderCurrency || CURRENCIES[form.senderCountry] || "USD";
-    const currency2 = form.receiverCurrency || CURRENCIES[form.receiverCountry] || "USD";
+    const currency1 = form.senderCurrency || CURRENCIES[form.senderCountry] || "GHS";
+    const currency2 = form.receiverCurrency || CURRENCIES[form.receiverCountry] || "GHS";
     createMutation.mutate({ ...form, senderCurrency: currency1, receiverCurrency: currency2 });
   };
 

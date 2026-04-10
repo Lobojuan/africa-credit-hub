@@ -36,7 +36,7 @@ const COUNTRY_CURRENCIES: Record<string, { symbol: string; code: string }> = {
 };
 
 function getCur(country?: string | null) {
-  return COUNTRY_CURRENCIES[country || ""] || { symbol: "$", code: "USD" };
+  return COUNTRY_CURRENCIES[country || ""] || { symbol: "₵", code: "GHS" };
 }
 
 function getStatusColor(status: string) {

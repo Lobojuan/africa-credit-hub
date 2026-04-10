@@ -109,7 +109,7 @@ export default function ConsumerDetailPage() {
   }
 
   const { borrower, accounts, inquiries, judgments, creditScore, scoreFactors, alternativeData, fraudRisk } = reportData;
-  const currency = getDefaultCurrency() || "USD";
+  const currency = getDefaultCurrency() || "GHS";
   const totalDebt = accounts.filter(a => a.status !== "closed").reduce((sum, a) => sum + Number(a.currentBalance || 0), 0);
   const personalLoans = accounts.filter(a => ["personal_loan", "consumer_loan", "salary_loan"].includes(a.accountType || ""));
   const mortgages = accounts.filter(a => ["mortgage", "home_loan"].includes(a.accountType || ""));

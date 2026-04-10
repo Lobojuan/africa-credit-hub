@@ -206,7 +206,7 @@ export default function BorrowerDetailPage() {
   const { borrower, accounts, inquiries, summary } = report;
   const isIndividual = borrower.type === "individual";
   const displayName = isIndividual ? `${borrower.firstName} ${borrower.lastName}` : (borrower.companyName || "");
-  const borrowerCurrency = accounts?.[0]?.currency || getCurrencyForCountry(borrower.country || "") || getDefaultCurrency() || "USD";
+  const borrowerCurrency = accounts?.[0]?.currency || getCurrencyForCountry(borrower.country || "") || getDefaultCurrency() || "GHS";
   const avatarUrl = (borrower as any).photoUrl || getBorrowerAvatarUrl(borrower.id, displayName, borrower.type as "individual" | "corporate");
 
   return (

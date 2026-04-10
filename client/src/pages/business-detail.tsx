@@ -102,7 +102,7 @@ export default function BusinessDetailPage() {
   }
 
   const { borrower, accounts, inquiries, judgments, creditScore, scoreFactors, fraudRisk } = reportData;
-  const currency = getDefaultCurrency() || "USD";
+  const currency = getDefaultCurrency() || "GHS";
   const totalExposure = accounts.filter(a => a.status !== "closed").reduce((sum, a) => sum + Number(a.currentBalance || 0), 0);
   const commercialFacilities = accounts.filter(a => ["commercial_loan", "business_loan", "trade_finance", "overdraft", "line_of_credit", "working_capital"].includes(a.accountType || ""));
   const otherAccounts = accounts.filter(a => !commercialFacilities.includes(a));

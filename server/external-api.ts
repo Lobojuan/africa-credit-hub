@@ -404,7 +404,7 @@ export function registerExternalApi(app: Express) {
         profileId: profile.id,
         transactionType: tx.transactionType,
         amount: String(tx.amount),
-        currency: tx.currency || "USD",
+        currency: tx.currency || "GHS",
         counterpartyMsisdn: tx.counterpartyMsisdn,
         counterpartyName: tx.counterpartyName,
         description: tx.description,

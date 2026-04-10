@@ -140,7 +140,7 @@ export async function seedDatabase() {
     {
       borrowerId: createdBorrowers[4].id, lenderInstitution: "Stanbic Bank Ghana",
       accountNumber: "STB-LN-2021-078", accountType: "Fleet Financing",
-      originalAmount: "500000.00", currentBalance: "120000.00", currency: "USD",
+      originalAmount: "500000.00", currentBalance: "120000.00", currency: "GHS",
       interestRate: "9.50", disbursementDate: "2021-04-01", maturityDate: "2026-04-01",
       status: "current" as const, daysInArrears: 0, collateralType: "Vehicles",
       collateralValue: "700000.00", lastPaymentDate: "2026-02-12", lastPaymentAmount: "15000.00",
@@ -187,7 +187,7 @@ export async function seedDatabase() {
     {
       borrowerId: createdBorrowers[4].id, lenderInstitution: "Awash International Bank",
       accountNumber: "AIB-LN-2021-078", accountType: "Fleet Financing",
-      originalAmount: "15000000.00", currentBalance: "3200000.00", currency: "USD",
+      originalAmount: "15000000.00", currentBalance: "3200000.00", currency: "GHS",
       interestRate: "11.50", disbursementDate: "2021-04-01", maturityDate: "2026-04-01",
       status: "current" as const, daysInArrears: 0, collateralType: "Vehicles",
       collateralValue: "20000000.00", lastPaymentDate: "2026-02-12", lastPaymentAmount: "380000.00",
@@ -232,16 +232,16 @@ async function seedPricingTiers() {
   if (rows[0].c > 0) return;
 
   const tiers: { name: string; eventType: string; minVolume: number; maxVolume: number | null; unitPriceCents: number; currency: string; country: string }[] = [
-    { name: "Credit Report - Standard", eventType: "credit_report_pull", minVolume: 0, maxVolume: 100, unitPriceCents: 250, currency: "USD", country: "Global" },
-    { name: "Credit Report - Volume", eventType: "credit_report_pull", minVolume: 101, maxVolume: 1000, unitPriceCents: 200, currency: "USD", country: "Global" },
-    { name: "Credit Report - Enterprise", eventType: "credit_report_pull", minVolume: 1001, maxVolume: null, unitPriceCents: 150, currency: "USD", country: "Global" },
-    { name: "API Call - Standard", eventType: "api_call", minVolume: 0, maxVolume: null, unitPriceCents: 100, currency: "USD", country: "Global" },
-    { name: "Batch Upload - Standard", eventType: "batch_upload", minVolume: 0, maxVolume: 500, unitPriceCents: 50, currency: "USD", country: "Global" },
-    { name: "Batch Upload - Volume", eventType: "batch_upload", minVolume: 501, maxVolume: 5000, unitPriceCents: 35, currency: "USD", country: "Global" },
-    { name: "Batch Upload - Enterprise", eventType: "batch_upload", minVolume: 5001, maxVolume: null, unitPriceCents: 25, currency: "USD", country: "Global" },
-    { name: "Dispute Filing - Standard", eventType: "dispute_filing", minVolume: 0, maxVolume: null, unitPriceCents: 500, currency: "USD", country: "Global" },
-    { name: "Data Export - Standard", eventType: "data_export", minVolume: 0, maxVolume: null, unitPriceCents: 100, currency: "USD", country: "Global" },
-    { name: "Cross Border Query - Standard", eventType: "cross_border_query", minVolume: 0, maxVolume: null, unitPriceCents: 150, currency: "USD", country: "Global" },
+    { name: "Credit Report - Standard", eventType: "credit_report_pull", minVolume: 0, maxVolume: 100, unitPriceCents: 250, currency: "GHS", country: "Ghana" },
+    { name: "Credit Report - Volume", eventType: "credit_report_pull", minVolume: 101, maxVolume: 1000, unitPriceCents: 200, currency: "GHS", country: "Ghana" },
+    { name: "Credit Report - Enterprise", eventType: "credit_report_pull", minVolume: 1001, maxVolume: null, unitPriceCents: 150, currency: "GHS", country: "Ghana" },
+    { name: "API Call - Standard", eventType: "api_call", minVolume: 0, maxVolume: null, unitPriceCents: 100, currency: "GHS", country: "Ghana" },
+    { name: "Batch Upload - Standard", eventType: "batch_upload", minVolume: 0, maxVolume: 500, unitPriceCents: 50, currency: "GHS", country: "Ghana" },
+    { name: "Batch Upload - Volume", eventType: "batch_upload", minVolume: 501, maxVolume: 5000, unitPriceCents: 35, currency: "GHS", country: "Ghana" },
+    { name: "Batch Upload - Enterprise", eventType: "batch_upload", minVolume: 5001, maxVolume: null, unitPriceCents: 25, currency: "GHS", country: "Ghana" },
+    { name: "Dispute Filing - Standard", eventType: "dispute_filing", minVolume: 0, maxVolume: null, unitPriceCents: 500, currency: "GHS", country: "Ghana" },
+    { name: "Data Export - Standard", eventType: "data_export", minVolume: 0, maxVolume: null, unitPriceCents: 100, currency: "GHS", country: "Ghana" },
+    { name: "Cross Border Query - Standard", eventType: "cross_border_query", minVolume: 0, maxVolume: null, unitPriceCents: 150, currency: "GHS", country: "Ghana" },
 
     { name: "Credit Report - Standard", eventType: "credit_report_pull", minVolume: 0, maxVolume: 100, unitPriceCents: 3294, currency: "GHS", country: "Ghana" },
     { name: "Credit Report - Volume", eventType: "credit_report_pull", minVolume: 101, maxVolume: 1000, unitPriceCents: 2635, currency: "GHS", country: "Ghana" },
