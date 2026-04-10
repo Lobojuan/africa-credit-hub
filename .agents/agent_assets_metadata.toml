@@ -102,3 +102,9 @@ id = "B_tng2-OpQomH6K3cXKsV"
 uri = "file://prod-review-part2.txt"
 type = "text"
 title = "Part 2: API & Features (228 KB) — Routes, dashboard, scoring, infra"
+
+[[outputs]]
+id = "bpwtkPLew5wHuHO8O4XFv"
+uri = "file://prod-review-latest.txt"
+type = "text"
+title = "CDH v2.5 Production Readiness Review — For Claude"
