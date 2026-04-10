@@ -3,8 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useBrandColors } from "@/hooks/use-brand-colors";
-import {
 import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
+import {
   Shield, Lock, Eye, Key, Fingerprint, Database, Globe,
   CheckCircle2, FileText, Server, AlertTriangle, ArrowRight,
   ShieldCheck, UserCheck, Layers, Hash, Activity, Scale, Mail, Phone, MapPin,
