@@ -15,7 +15,7 @@ import { NotificationBell } from "@/components/notification-bell";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { PasswordChangeDialog } from "@/components/password-change-dialog";
 import { Button } from "@/components/ui/button";
-import { LogOut, Loader2, MessageCircle, Building2, LayoutGrid, User } from "lucide-react";
+import { LogOut, Loader2, MessageCircle, Building2, LayoutGrid, User, Clock, XCircle } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import {
@@ -266,7 +266,7 @@ function SuspendedScreen({ orgName, onLogout }: { orgName?: string; onLogout: ()
 }
 
 function AuthenticatedApp() {
-  const { user, isLoading, logout, passwordExpired, accountSuspended } = useAuth();
+  const { user, isLoading, logout, passwordExpired, accountSuspended, accountPendingReview } = useAuth();
   const [chatbotOpen, setChatbotOpen] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
   const { t, i18n } = useTranslation();
@@ -357,6 +357,51 @@ function AuthenticatedApp() {
 
   if (accountSuspended) {
     return <SuspendedScreen orgName={(user as any)?.organization?.name} onLogout={logout} />;
+  }
+
+  const orgStatus = (user as any)?.organization?.status;
+  const isPendingOrg = accountPendingReview || orgStatus === "pending";
+  const isDeactivatedOrg = orgStatus === "deactivated";
+
+  if (isDeactivatedOrg) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="max-w-md w-full text-center space-y-4 p-8 rounded-xl border border-red-500/30 bg-red-500/5">
+          <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto">
+            <XCircle className="w-8 h-8 text-red-400" />
+          </div>
+          <h1 className="text-xl font-bold text-foreground" data-testid="text-rejected-title">Registration Not Approved</h1>
+          <p className="text-sm text-muted-foreground">
+            Your institution registration was not approved by the registry administrator. If you believe this is an error, please contact support.
+          </p>
+          <Button variant="outline" onClick={logout} data-testid="button-rejected-logout">
+            <LogOut className="w-4 h-4 mr-2" />
+            Sign Out
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isPendingOrg) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="max-w-md w-full text-center space-y-4 p-8 rounded-xl border border-amber-500/30 bg-amber-500/5">
+          <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto">
+            <Clock className="w-8 h-8 text-amber-400" />
+          </div>
+          <h1 className="text-xl font-bold text-foreground" data-testid="text-pending-title">Registration Under Review</h1>
+          <p className="text-sm text-muted-foreground">
+            Your institution registration for <span className="font-medium text-foreground">{(user as any)?.organization?.name || "your organization"}</span> is currently being reviewed by the registry administrator.
+          </p>
+          <p className="text-xs text-muted-foreground">You will receive an email notification once your application has been approved.</p>
+          <Button variant="outline" onClick={logout} data-testid="button-pending-logout">
+            <LogOut className="w-4 h-4 mr-2" />
+            Sign Out
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   const viewingCountry = (user as any)?.viewingCountry;

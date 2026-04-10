@@ -11,6 +11,7 @@ interface AuthContextType {
   isLoading: boolean;
   passwordExpired: boolean;
   accountSuspended: boolean;
+  accountPendingReview: boolean;
   login: (username: string, password: string) => Promise<AuthUser>;
   logout: () => Promise<void>;
 }
@@ -20,6 +21,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const [accountSuspended, setAccountSuspended] = useState(false);
+  const [accountPendingReview, setAccountPendingReview] = useState(false);
   const sessionExpiredRef = useRef(false);
 
   const { data: user, isLoading } = useQuery<AuthUser | null>({
@@ -56,6 +58,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           if (error?.message?.includes("ACCOUNT_SUSPENDED")) {
             setAccountSuspended(true);
+          }
+          if (error?.message?.includes("ACCOUNT_PENDING_REVIEW")) {
+            setAccountPendingReview(true);
           }
         },
       },
@@ -100,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const passwordExpired = !!(user && (user as AuthUser).passwordExpired);
 
   return (
-    <AuthContext.Provider value={{ user: user ?? null, isLoading, passwordExpired, accountSuspended, login, logout }}>
+    <AuthContext.Provider value={{ user: user ?? null, isLoading, passwordExpired, accountSuspended, accountPendingReview, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

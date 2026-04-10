@@ -86,6 +86,20 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     if (org && org.status === "suspended") {
       return res.status(403).json({ message: "ACCOUNT_SUSPENDED", reason: "Your organization's account has been suspended due to unpaid billing. Please contact your administrator or make a payment to restore access." });
     }
+    if (org && org.status === "pending") {
+      const allowedPaths = ["/api/auth/me", "/api/auth/logout", "/api/auth/mfa", "/api/organization/status"];
+      const isAllowed = allowedPaths.some(p => req.path.startsWith(p));
+      if (!isAllowed) {
+        return res.status(403).json({ message: "ACCOUNT_PENDING_REVIEW", reason: "Your institution registration is under review. You will receive an email once approved by the registry administrator." });
+      }
+    }
+    if (org && org.status === "deactivated") {
+      const allowedPaths = ["/api/auth/me", "/api/auth/logout"];
+      const isAllowed = allowedPaths.some(p => req.path.startsWith(p));
+      if (!isAllowed) {
+        return res.status(403).json({ message: "ACCOUNT_DEACTIVATED", reason: "Your institution registration was not approved. Please contact the registry administrator for more information." });
+      }
+    }
     if (!req.session.userCountry && org?.country) {
       req.session.userCountry = org.country;
     }

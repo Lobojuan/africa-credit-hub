@@ -49,7 +49,7 @@ The system employs a modern full-stack architecture built for scalability and co
     -   **Open Banking**: Open Banking profile management for individual and corporate borrowers, displayed on consumer and business detail pages.
     -   **Decision Rules Engine**: Configurable decision rules for credit evaluation with rule creation, editing, deletion, and borrower evaluation. Accessible via sidebar for admin/super_admin/lender roles.
     -   **ESG Scoring**: Environmental, Social, and Governance scoring for corporate borrowers, displayed on business detail pages.
-    -   **Multi-Step Signup**: Institution type picker (Step 1) with 6 categories feeding into the existing registration form (Step 2) with a type badge and "Change" link.
+    -   **Multi-Step Signup with Fraud Prevention**: Institution type picker (Step 1) with 6 categories, then registration form (Step 2) requiring institution name, business registration number (from Ghana Registrar General's Department), and admin details. New registrations are set to "pending" status and require super_admin approval before access is granted. Registration numbers are validated for uniqueness. Pending/deactivated org users see dedicated status screens on login.
     -   **Consumer Portal Registration**: Enhanced with Full Name, Country selection, and consent checkbox fields.
     -   **Transaction-Based Monetization**: Per-transaction billing with per-country pricing and volume tier discounts.
     -   **Cross-Border Frameworks**: Implements Smart Africa Telecommunications Alliance (SATA) data sharing and tracks Pan-African Payment and Settlement System (PAPSS) settlements.

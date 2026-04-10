@@ -25,6 +25,8 @@ export default function SignUpPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [organizationName, setOrganizationName] = useState("");
+  const [registrationNumber, setRegistrationNumber] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -56,6 +58,9 @@ export default function SignUpPage() {
 
   function validate() {
     const e: Record<string, string> = {};
+    if (!organizationName.trim()) e.organizationName = "Institution name is required";
+    if (!registrationNumber.trim()) e.registrationNumber = "Business registration number is required";
+    else if (registrationNumber.trim().length < 4) e.registrationNumber = "Enter a valid registration number";
     if (!fullName.trim()) e.fullName = "Name is required";
     if (!email.trim()) e.email = "Email is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "Invalid email address";
@@ -78,10 +83,11 @@ export default function SignUpPage() {
       const username = email.split("@")[0].replace(/[^a-zA-Z0-9_.-]/g, "") + "-" + Date.now().toString(36).slice(-4);
       const res = await apiRequest("POST", "/api/trial/register", {
         organization: {
-          name: `${fullName.trim().split(" ")[0]}'s Organization`,
+          name: organizationName.trim(),
           type: institutionType || "other",
           country: "Ghana",
           contactEmail: email.trim(),
+          registrationNumber: registrationNumber.trim(),
         },
         user: {
           fullName: fullName.trim(),
@@ -93,8 +99,8 @@ export default function SignUpPage() {
       });
       await res.json();
       if (selectedDivision) sessionStorage.setItem("userDivision", selectedDivision);
-      toast({ title: "Account created!", description: "Logging you in..." });
-      setTimeout(() => { window.location.href = "/dashboard"; }, 800);
+      toast({ title: "Registration submitted!", description: "Your application is under review." });
+      setTimeout(() => { window.location.href = "/login"; }, 1500);
     } catch (err: any) {
       const msg = err.message || "Registration failed";
       const cleaned = msg.replace(/^\d+:\s*/, "").replace(/^"?|"?$/g, "");
@@ -308,9 +314,38 @@ export default function SignUpPage() {
           )}
 
           <div>
+            <label className="block text-xs font-medium mb-1.5 ml-1" style={{ color: "rgba(255,255,255,0.5)" }}>Institution Name</label>
+            <input
+              className={`signup-input ${fieldErrors.organizationName ? "signup-input-error" : ""}`}
+              placeholder="e.g. ABC Microfinance Ltd"
+              value={organizationName}
+              onChange={(e) => { setOrganizationName(e.target.value); setFieldErrors(p => ({ ...p, organizationName: "" })); }}
+              data-testid="input-signup-org-name"
+            />
+            {fieldErrors.organizationName && <p className="text-xs mt-1 ml-4" style={{ color: "#f87171" }}>{fieldErrors.organizationName}</p>}
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium mb-1.5 ml-1" style={{ color: "rgba(255,255,255,0.5)" }}>Business Registration Number</label>
+            <input
+              className={`signup-input ${fieldErrors.registrationNumber ? "signup-input-error" : ""}`}
+              placeholder="e.g. CS123456789"
+              value={registrationNumber}
+              onChange={(e) => { setRegistrationNumber(e.target.value); setFieldErrors(p => ({ ...p, registrationNumber: "" })); }}
+              data-testid="input-signup-reg-number"
+            />
+            {fieldErrors.registrationNumber && <p className="text-xs mt-1 ml-4" style={{ color: "#f87171" }}>{fieldErrors.registrationNumber}</p>}
+            <p className="text-[10px] mt-1 ml-1" style={{ color: "rgba(255,255,255,0.3)" }}>From Ghana Registrar General's Department</p>
+          </div>
+
+          <div className="pt-1" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+            <label className="block text-xs font-medium mb-1.5 ml-1" style={{ color: "rgba(255,255,255,0.5)" }}>Administrator Details</label>
+          </div>
+
+          <div>
             <input
               className={`signup-input ${fieldErrors.fullName ? "signup-input-error" : ""}`}
-              placeholder="Name"
+              placeholder="Full Name"
               value={fullName}
               onChange={(e) => { setFullName(e.target.value); setFieldErrors(p => ({ ...p, fullName: "" })); }}
               data-testid="input-signup-name"
@@ -321,7 +356,7 @@ export default function SignUpPage() {
           <div>
             <input
               className={`signup-input ${fieldErrors.email ? "signup-input-error" : ""}`}
-              placeholder="Email"
+              placeholder="Official Email"
               type="email"
               value={email}
               onChange={(e) => { setEmail(e.target.value); setFieldErrors(p => ({ ...p, email: "" })); }}
@@ -361,9 +396,9 @@ export default function SignUpPage() {
             data-testid="button-signup-submit"
           >
             {loading ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> Creating account...</>
+              <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</>
             ) : (
-              "Sign Up"
+              "Submit for Review"
             )}
           </button>
         </form>

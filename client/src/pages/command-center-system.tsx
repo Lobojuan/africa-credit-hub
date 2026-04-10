@@ -164,6 +164,119 @@ interface BackupStatus {
   totalSizeMB: number;
 }
 
+function PendingRegistrations() {
+  const { toast } = useToast();
+  const [rejectReason, setRejectReason] = useState<Record<string, string>>({});
+  const [showReject, setShowReject] = useState<string | null>(null);
+
+  const { data: pending, isLoading, refetch } = useQuery<any[]>({
+    queryKey: ["/api/admin/pending-registrations"],
+    staleTime: 15000,
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: async (orgId: string) => {
+      await apiRequest("POST", `/api/admin/approve-registration/${orgId}`);
+    },
+    onSuccess: () => {
+      toast({ title: "Registration approved" });
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ["/api/platform/system-stats"] });
+    },
+    onError: () => toast({ title: "Failed to approve", variant: "destructive" }),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: async ({ orgId, reason }: { orgId: string; reason: string }) => {
+      await apiRequest("POST", `/api/admin/reject-registration/${orgId}`, { reason });
+    },
+    onSuccess: () => {
+      toast({ title: "Registration rejected" });
+      setShowReject(null);
+      refetch();
+    },
+    onError: () => toast({ title: "Failed to reject", variant: "destructive" }),
+  });
+
+  if (isLoading) return null;
+  if (!pending || pending.length === 0) return null;
+
+  return (
+    <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4" data-testid="section-pending-registrations">
+      <SectionHeader icon={Building2} title="Pending Institution Registrations" color="text-amber-400" badge={`${pending.length} awaiting review`} />
+      <div className="space-y-3">
+        {pending.map((org: any) => (
+          <div key={org.id} className="rounded-lg border border-border bg-muted p-3" data-testid={`pending-org-${org.id}`}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-sm font-semibold text-foreground">{org.name}</span>
+                  <Badge variant="outline" className="text-[8px] h-4">{org.type}</Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-[10px] text-muted-foreground">
+                  <span>Reg #: <span className="text-foreground font-medium">{org.registrationNumber || "N/A"}</span></span>
+                  <span>Contact: <span className="text-foreground font-medium">{org.contactEmail}</span></span>
+                  {org.adminUser && (
+                    <>
+                      <span>Admin: <span className="text-foreground font-medium">{org.adminUser.fullName}</span></span>
+                      <span>Email: <span className="text-foreground font-medium">{org.adminUser.email}</span></span>
+                    </>
+                  )}
+                  <span>Applied: <span className="text-foreground font-medium">{org.createdAt ? new Date(org.createdAt).toLocaleDateString() : "N/A"}</span></span>
+                  <span>Country: <span className="text-foreground font-medium">{org.country || "Ghana"}</span></span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Button
+                  size="sm"
+                  className="h-7 text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
+                  onClick={() => approveMutation.mutate(org.id)}
+                  disabled={approveMutation.isPending}
+                  data-testid={`button-approve-${org.id}`}
+                >
+                  <CheckCircle2 className="w-3 h-3" />
+                  Approve
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-[10px] border-red-500/30 text-red-400 hover:bg-red-500/10 gap-1"
+                  onClick={() => setShowReject(showReject === org.id ? null : org.id)}
+                  disabled={rejectMutation.isPending}
+                  data-testid={`button-reject-${org.id}`}
+                >
+                  <XCircle className="w-3 h-3" />
+                  Reject
+                </Button>
+              </div>
+            </div>
+            {showReject === org.id && (
+              <div className="mt-2 flex items-center gap-2">
+                <Input
+                  className="h-7 text-xs flex-1"
+                  placeholder="Reason for rejection (optional)"
+                  value={rejectReason[org.id] || ""}
+                  onChange={(e) => setRejectReason(p => ({ ...p, [org.id]: e.target.value }))}
+                  data-testid={`input-reject-reason-${org.id}`}
+                />
+                <Button
+                  size="sm"
+                  className="h-7 text-[10px] bg-red-600 hover:bg-red-700 text-white"
+                  onClick={() => rejectMutation.mutate({ orgId: org.id, reason: rejectReason[org.id] || "" })}
+                  disabled={rejectMutation.isPending}
+                  data-testid={`button-confirm-reject-${org.id}`}
+                >
+                  Confirm
+                </Button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function BackupManagement() {
   const { toast } = useToast();
   const [backupType, setBackupType] = useState<"full" | "schema" | "data">("full");
@@ -696,6 +809,8 @@ export function CommandCenterSystemTab() {
       </div>
 
       <MaintenanceToggle />
+
+      <PendingRegistrations />
 
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
         <StatCard icon={Zap} label="Requests Today" value={stats.traffic.totalToday.toLocaleString()} sub={`${stats.traffic.requestsPerSecond} req/s`} color="bg-cyan-500/20" />

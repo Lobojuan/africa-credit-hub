@@ -21,6 +21,7 @@ export const organizations = pgTable("organizations", {
   address: text("address"),
   logoUrl: text("logo_url"),
   website: text("website"),
+  registrationNumber: text("registration_number"),
   subscriptionTier: text("subscription_tier").notNull().default("standard"),
   maxUsers: integer("max_users").default(10),
   createdAt: timestamp("created_at").defaultNow(),

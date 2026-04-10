@@ -682,6 +682,26 @@ export async function registerRoutes(
       const slugBase = organization.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
       const slug = `${slugBase}-trial-${Date.now().toString(36)}`;
 
+      const freeEmailDomains = [
+        "gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "aol.com",
+        "icloud.com", "mail.com", "protonmail.com", "zoho.com", "yandex.com",
+        "live.com", "msn.com", "gmx.com", "fastmail.com", "tutanota.com",
+      ];
+      const emailDomain = user.email.split("@")[1]?.toLowerCase();
+      const isPersonalEmail = freeEmailDomains.includes(emailDomain);
+
+      if (!organization.registrationNumber || organization.registrationNumber.trim().length < 4) {
+        return res.status(400).json({ field: "registrationNumber", message: "A valid business registration number is required to verify your institution" });
+      }
+
+      const normalizedRegNum = organization.registrationNumber.trim().toUpperCase().replace(/[\s-]/g, "");
+      const [existingReg] = await db.select({ id: organizations.id }).from(organizations)
+        .where(sql`UPPER(REPLACE(REPLACE(${organizations.registrationNumber}, ' ', ''), '-', '')) = ${normalizedRegNum}`)
+        .limit(1);
+      if (existingReg) {
+        return res.status(409).json({ field: "registrationNumber", message: "An institution with this registration number already exists" });
+      }
+
       const org = await storage.createOrganization({
         name: organization.name,
         slug,
@@ -689,7 +709,8 @@ export async function registerRoutes(
         country: organization.country,
         contactEmail: organization.contactEmail,
         contactPhone: organization.contactPhone || null,
-        status: "active",
+        registrationNumber: organization.registrationNumber,
+        status: "pending",
         subscriptionTier: "trial",
         maxUsers: 5,
       });
@@ -713,27 +734,16 @@ export async function registerRoutes(
         throw userErr;
       }
 
-      req.session.userId = newUser.id;
-      req.session.userRole = newUser.role;
-      req.session.organizationId = org.id;
-      req.session.lastActivity = Date.now();
-      req.session.userCountry = organization.country;
-
       await storage.createAuditLog({
         action: "TRIAL_REGISTRATION",
         entity: "system",
         userId: newUser.id,
-        details: `Trial registration: ${organization.name} (${organization.type}) - ${organization.country}. Admin: ${user.fullName}`,
+        details: `Trial registration (pending review): ${organization.name} (${organization.type}) - ${organization.country}. Reg#: ${organization.registrationNumber}.${isPersonalEmail ? " WARNING: Personal email domain used." : ""} Admin: [REDACTED]`,
         ipAddress: req.ip || null,
         organizationId: org.id,
       });
 
-      try {
-        const { seedTrialData } = await import("./trial-sandbox");
-        await seedTrialData(org.id, newUser.id, organization.country);
-      } catch (seedErr: any) {
-        routeLogger.error(`[Trial] Sample data seeding failed (non-blocking): ${seedErr.message}`);
-      }
+      
 
       sendNewRegistrationAlert(
         organization.name, organization.type, organization.country,
@@ -741,9 +751,9 @@ export async function registerRoutes(
       ).catch(() => {});
 
       res.json({
-        message: "Trial account created successfully",
-        user: { id: newUser.id, username: newUser.username, fullName: newUser.fullName, role: newUser.role },
-        organization: { id: org.id, name: org.name, country: org.country },
+        message: "Registration submitted for review. You will be notified once your application is approved.",
+        status: "pending_review",
+        organization: { id: org.id, name: org.name },
       });
     } catch (e: any) {
       routeLogger.error("Trial registration error:", { detail: e });
@@ -752,6 +762,83 @@ export async function registerRoutes(
   });
 
   app.use(authRouter);
+
+  app.get("/api/admin/pending-registrations", requireAuth, requireSuperAdmin, async (_req, res) => {
+    try {
+      const pendingOrgs = await db.select().from(organizations).where(sql`${organizations.status} = 'pending'`).orderBy(sql`${organizations.createdAt} DESC`);
+      const result = [];
+      for (const org of pendingOrgs) {
+        const adminUser = await db.select({ id: users.id, fullName: users.fullName, email: users.email, username: users.username })
+          .from(users).where(sql`${users.organizationId} = ${org.id} AND ${users.role} = 'admin'`).limit(1);
+        result.push({
+          ...org,
+          adminUser: adminUser[0] || null,
+        });
+      }
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ message: "Failed to fetch pending registrations" });
+    }
+  });
+
+  app.post("/api/admin/approve-registration/:orgId", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const { orgId } = req.params;
+      const org = await storage.getOrganization(orgId);
+      if (!org) return res.status(404).json({ message: "Organization not found" });
+      if (org.status !== "pending") return res.status(400).json({ message: "Organization is not pending review" });
+
+      await db.update(organizations).set({ status: "active", updatedAt: new Date() }).where(sql`${organizations.id} = ${orgId}`);
+
+      try {
+        const { seedTrialData } = await import("./trial-sandbox");
+        const adminUser = await db.select({ id: users.id }).from(users).where(sql`${users.organizationId} = ${orgId} AND ${users.role} = 'admin'`).limit(1);
+        if (adminUser[0]) {
+          await seedTrialData(orgId, adminUser[0].id, org.country || "Ghana");
+        }
+      } catch (seedErr: any) {
+        routeLogger.error(`[Approval] Trial data seeding failed for org ${orgId}: ${seedErr.message}`);
+      }
+
+      await storage.createAuditLog({
+        action: "REGISTRATION_APPROVED",
+        entity: "organization",
+        userId: req.session.userId!,
+        details: `Approved registration for: ${org.name} (Reg#: ${org.registrationNumber || "N/A"})`,
+        ipAddress: req.ip || null,
+        organizationId: orgId,
+      });
+
+      res.json({ message: "Registration approved", organizationId: orgId });
+    } catch (e: any) {
+      res.status(500).json({ message: "Failed to approve registration" });
+    }
+  });
+
+  app.post("/api/admin/reject-registration/:orgId", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const { orgId } = req.params;
+      const { reason } = req.body;
+      const org = await storage.getOrganization(orgId);
+      if (!org) return res.status(404).json({ message: "Organization not found" });
+      if (org.status !== "pending") return res.status(400).json({ message: "Organization is not pending review" });
+
+      await db.update(organizations).set({ status: "deactivated", updatedAt: new Date() }).where(sql`${organizations.id} = ${orgId}`);
+
+      await storage.createAuditLog({
+        action: "REGISTRATION_REJECTED",
+        entity: "organization",
+        userId: req.session.userId!,
+        details: `Rejected registration for: ${org.name}. Reason: ${reason || "Not provided"}`,
+        ipAddress: req.ip || null,
+        organizationId: orgId,
+      });
+
+      res.json({ message: "Registration rejected", organizationId: orgId });
+    } catch (e: any) {
+      res.status(500).json({ message: "Failed to reject registration" });
+    }
+  });
 
   app.get("/api/docs/api-integration-guide", (_req, res) => {
     const _dir = typeof __dirname !== "undefined" ? __dirname : process.cwd();
