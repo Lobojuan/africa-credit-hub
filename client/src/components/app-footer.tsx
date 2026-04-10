@@ -56,8 +56,8 @@ export function AppFooter() {
           <p className="text-[11px] text-muted-foreground/60" data-testid="footer-copyright">
             &copy; 2024–2026 {PLATFORM_COMPANY_NAME}. All rights reserved.
           </p>
-          <p className="text-[11px] text-muted-foreground/40">
-            Cross-Jurisdictional Central Data Hub v2.5
+          <p className="text-[11px] text-muted-foreground/40" data-testid="footer-version" title="CDH v2.5 · Build 2.5.4 · Iteration 14 · Published 2026-04-10">
+            CDH v2.5 · Build 2.5.4-i14 · 2026-04-10
           </p>
         </div>
       </div>
