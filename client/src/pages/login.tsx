@@ -1,17 +1,14 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, AlertTriangle, ArrowRight, Globe, ArrowLeft, User, Lock, KeyRound, Building2, UserCircle, CreditCard, Eye, EyeOff, Phone, Mail } from "lucide-react";
+import { Shield, AlertTriangle, ArrowRight, Globe, ArrowLeft, User, Lock, KeyRound, Building2, UserCircle, CreditCard, Eye, EyeOff, FileText, BarChart3, ScrollText, Search, MessageSquare, Star } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { isGhanaMode, getCountryConfig } from "@/lib/country-mode";
-import { useBrandColors } from "@/hooks/use-brand-colors";
-import { useTheme } from "@/components/theme-provider";
+import { isGhanaMode } from "@/lib/country-mode";
 
 type LoginMode = "chooser" | "institution" | "consumer";
 
@@ -31,55 +28,12 @@ export default function LoginPage() {
   const [consumerNationalId, setConsumerNationalId] = useState("");
   const [consumerPassword, setConsumerPassword] = useState("");
   const [showConsumerPassword, setShowConsumerPassword] = useState(false);
-  const [consumerOtp, setConsumerOtp] = useState("");
-  const [consumerOtpSent, setConsumerOtpSent] = useState(false);
   const [consumerLoading, setConsumerLoading] = useState(false);
   const [consumerError, setConsumerError] = useState("");
 
   const { login } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
-  const brandColors = useBrandColors();
-  const { theme, visualStyle } = useTheme();
-  const isLightScandi = theme === "light" && visualStyle === "scandinavian";
-
-  const colors = isLightScandi ? {
-    panelBg: "linear-gradient(135deg, hsl(210 30% 95%) 0%, hsl(215 25% 90%) 40%, hsl(210 20% 86%) 100%)",
-    accent: "hsl(210 45% 48%)",
-    accentLight: "hsl(210 50% 42%)",
-    accentGlow: "rgba(66, 135, 245, 0.2)",
-    accentGlowFaint: "rgba(66, 135, 245, 0.08)",
-    orb1: "hsl(210 40% 78%)",
-    orb2: "hsl(215 35% 82%)",
-    orb3: "hsl(210 30% 75%)",
-    textPrimary: "hsl(215 25% 20%)",
-    textSecondary: "hsl(215 15% 40%)",
-    textMuted: "hsl(215 10% 55%)",
-    cardBg: "rgba(255,255,255,0.65)",
-    cardBorder: "rgba(255,255,255,0.8)",
-    iconBg: "linear-gradient(135deg, hsl(210 45% 48%), hsl(215 40% 38%))",
-    patternFill: "%23334155",
-    consumerBg: "linear-gradient(135deg, hsl(160 30% 94%) 0%, hsl(165 25% 88%) 100%)",
-    consumerAccent: "hsl(160 45% 40%)",
-  } : {
-    panelBg: brandColors.panelGradient,
-    accent: brandColors.secondary,
-    accentLight: brandColors.secondaryLight,
-    accentGlow: brandColors.accentGlow,
-    accentGlowFaint: brandColors.accentGlowFaint,
-    orb1: brandColors.glowB,
-    orb2: brandColors.glowA,
-    orb3: brandColors.chartAccent,
-    textPrimary: "white",
-    textSecondary: "rgba(255,255,255,0.6)",
-    textMuted: "rgba(255,255,255,0.5)",
-    cardBg: "rgba(255,255,255,0.06)",
-    cardBorder: "rgba(255,255,255,0.06)",
-    iconBg: brandColors.iconGradient,
-    patternFill: "%23ffffff",
-    consumerBg: "linear-gradient(135deg, #0a1a14 0%, #0d2419 50%, #0a1a14 100%)",
-    consumerAccent: "#34d399",
-  };
 
   useEffect(() => {
     if (mounted) return;
@@ -182,624 +136,654 @@ export default function LoginPage() {
     }
   };
 
+  const registryName = isGhanaMode() ? "Ghana Credit Registry" : "CDH Registry";
+
+  const Pill = ({ children }: { children: string }) => (
+    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
+      style={{
+        background: "hsl(215 30% 94%)",
+        color: "hsl(215 25% 40%)",
+        border: "1px solid hsl(215 25% 88%)",
+      }}>
+      {children}
+    </span>
+  );
+
+  const ConsumerPill = ({ children }: { children: string }) => (
+    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
+      style={{
+        background: "hsl(265 30% 95%)",
+        color: "hsl(265 40% 45%)",
+        border: "1px solid hsl(265 25% 88%)",
+      }}>
+      {children}
+    </span>
+  );
+
   return (
-    <div className="min-h-screen flex" data-testid="page-login">
+    <div className="min-h-screen flex flex-col" data-testid="page-login"
+      style={{ background: "linear-gradient(180deg, hsl(210 40% 98%) 0%, hsl(215 30% 95%) 50%, hsl(220 25% 93%) 100%)" }}>
+
       <style>{`
-        @keyframes loginFloat1 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          33% { transform: translate(30px, -25px) scale(1.05); }
-          66% { transform: translate(-20px, 15px) scale(0.95); }
-        }
-        @keyframes loginFloat2 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          33% { transform: translate(-25px, 20px) scale(0.97); }
-          66% { transform: translate(15px, -30px) scale(1.03); }
-        }
-        @keyframes loginFloat3 {
-          0%, 100% { transform: translate(0, 0) rotate(0deg); }
-          50% { transform: translate(20px, -15px) rotate(3deg); }
-        }
-        @keyframes loginPulse {
-          0%, 100% { box-shadow: 0 0 0 0 ${colors.accentGlow}; }
-          50% { box-shadow: 0 0 20px 6px ${colors.accentGlowFaint}; }
-        }
         @keyframes loginSlideUp {
-          from { opacity: 0; transform: translateY(24px); }
+          from { opacity: 0; transform: translateY(28px); }
           to { opacity: 1; transform: translateY(0); }
         }
         @keyframes loginFadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
         }
-        .login-animate-in {
-          animation: loginSlideUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        @keyframes subtleFloat {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-6px); }
         }
-        .login-fade-in {
-          animation: loginFadeIn 0.6s ease-out forwards;
+        .login-card-hover {
+          transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+        }
+        .login-card-hover:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 20px 60px -12px rgba(0, 0, 0, 0.08), 0 8px 24px -8px rgba(0, 0, 0, 0.04) !important;
         }
       `}</style>
 
-      <div className="hidden lg:flex lg:w-[55%] relative overflow-hidden" style={{
-        background: colors.panelBg,
+      <header className="flex items-center justify-between px-6 sm:px-10 py-5" style={{
+        opacity: mounted ? 1 : 0,
+        transition: "opacity 0.5s ease-out",
       }}>
-        <div className="absolute inset-0" style={{
-          opacity: isLightScandi ? 0.03 : 0.04,
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='${colors.patternFill}' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        }} />
-
-        <div
-          className="absolute rounded-full"
-          style={{
-            width: "400px",
-            height: "400px",
-            top: "-80px",
-            right: "-60px",
-            opacity: isLightScandi ? 0.25 : 0.07,
-            background: `radial-gradient(circle, ${colors.orb1} 0%, transparent 70%)`,
-            animation: "loginFloat1 20s ease-in-out infinite",
-          }}
-        />
-        <div
-          className="absolute rounded-full"
-          style={{
-            width: "300px",
-            height: "300px",
-            bottom: "10%",
-            left: "-40px",
-            opacity: isLightScandi ? 0.2 : 0.05,
-            background: `radial-gradient(circle, ${colors.orb2} 0%, transparent 70%)`,
-            animation: "loginFloat2 25s ease-in-out infinite",
-          }}
-        />
-        <div
-          className="absolute rounded-full"
-          style={{
-            width: "200px",
-            height: "200px",
-            top: "40%",
-            right: "20%",
-            opacity: isLightScandi ? 0.15 : 0.04,
-            background: `radial-gradient(circle, ${colors.orb3} 0%, transparent 70%)`,
-            animation: "loginFloat3 18s ease-in-out infinite",
-          }}
-        />
-
-        <div className="relative z-10 flex flex-col justify-between p-12 w-full">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{
-              background: colors.iconBg,
-              animation: "loginPulse 3s ease-in-out infinite",
-            }}>
-              <Globe className="w-5 h-5 text-white" />
-            </div>
-            <span className="font-semibold text-lg tracking-tight" style={{ color: colors.textPrimary }}>{isGhanaMode() ? "Ghana Credit Registry" : "CDH Registry"}</span>
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+            style={{ background: "linear-gradient(135deg, hsl(215 50% 48%), hsl(215 45% 38%))" }}>
+            <Globe className="w-4.5 h-4.5 text-white" />
           </div>
-
-          <div className="max-w-lg" style={{
-            opacity: mounted ? 1 : 0,
-            transform: mounted ? "translateY(0)" : "translateY(20px)",
-            transition: "opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
-            transitionDelay: "0.2s",
-          }}>
-            <h2 className="text-4xl font-extrabold leading-tight tracking-tight" style={{ color: colors.textPrimary }}>
-              {isGhanaMode() ? (
-                <>Ghana<br /><span style={{ color: colors.accentLight }}>Credit Registry</span></>
-              ) : (
-                <>Unified Pan-African<br /><span style={{ color: colors.accent }}>Credit Infrastructure</span></>
-              )}
-            </h2>
-            <p className="mt-4 text-base leading-relaxed" style={{ color: colors.textSecondary }}>
-              {isGhanaMode() 
-                ? "Ghana's unified credit registry system. Empowering financial inclusion and responsible lending across the nation."
-                : "Securely access Consumer, Corporate, and AI-driven Telco credit profiles across 54 African jurisdictions."}
-            </p>
-
-            <div className="mt-10 grid grid-cols-2 gap-4">
-              {(isGhanaMode() ? [
-                { label: "Jurisdiction", val: "Ghana" },
-                { label: "Currency", val: "GHS (\u20B5)" },
-                { label: "Compliance", val: "SRS v2.0" },
-                { label: "Regulator", val: "Bank of Ghana" },
-              ] : [
-                { label: t('login.jurisdictions'), val: t('login.fourCountries') },
-                { label: t('login.currencies'), val: t('login.eighteenSupported') },
-                { label: t('login.compliance'), val: "SRS v2.0" },
-                { label: t('login.languages'), val: "EN / FR / PT / AR / SW" },
-              ]).map((item, i) => (
-                <div key={item.label} className="rounded-xl p-4" style={{
-                  background: colors.cardBg,
-                  backdropFilter: "blur(8px)",
-                  border: `1px solid ${colors.cardBorder}`,
-                  boxShadow: isLightScandi ? "0 1px 3px rgba(0,0,0,0.04)" : "none",
-                  opacity: mounted ? 1 : 0,
-                  transform: mounted ? "translateY(0)" : "translateY(16px)",
-                  transition: "opacity 0.6s ease-out, transform 0.6s ease-out, background 0.3s ease",
-                  transitionDelay: `${0.4 + i * 0.1}s`,
-                }}>
-                  <p className="text-xs font-medium uppercase tracking-wider" style={{ color: colors.textMuted }}>{item.label}</p>
-                  <p className="font-semibold mt-1" style={{ color: colors.textPrimary }}>{item.val}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="text-xs space-y-1" style={{
-            opacity: mounted ? 1 : 0,
-            transition: "opacity 0.6s ease-out",
-            transitionDelay: "0.9s",
-          }}>
-            <p style={{ color: colors.textMuted }}>
-              Carlson Capital & Systems In Motion Limited&trade; &middot; {isGhanaMode() ? "Ghana Credit Registry v2.5" : "Cross-Jurisdictional CDH v2.5"}
-            </p>
-            <p className="text-[10px]" style={{ color: isLightScandi ? "hsl(215 10% 65%)" : "rgba(255,255,255,0.3)" }}>
-              &copy; 2026 Carlson Capital & Systems In Motion Limited. All rights reserved.
-            </p>
-          </div>
+          <span className="font-semibold text-base tracking-tight" style={{ color: "hsl(215 30% 22%)" }}>
+            {registryName}
+          </span>
         </div>
-      </div>
-
-      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 bg-background relative">
-        <div className="absolute top-4" style={{ right: "1rem" }} data-testid="login-language-switcher">
+        <div data-testid="login-language-switcher">
           <LanguageSwitcher />
         </div>
-        <div className="w-full max-w-[440px] space-y-5" style={{
-          opacity: mounted ? 1 : 0,
-          transform: mounted ? "translateY(0)" : "translateY(20px)",
-          transition: "opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1)",
-          transitionDelay: "0.15s",
-        }}>
-          <div className="lg:hidden flex items-center justify-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary" style={{
-              animation: "loginPulse 3s ease-in-out infinite",
-            }}>
-              <Globe className="w-5 h-5 text-primary-foreground" />
+      </header>
+
+      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 pb-10">
+        {mode === "chooser" && (
+          <div style={{
+            opacity: mounted ? 1 : 0,
+            transform: mounted ? "translateY(0)" : "translateY(20px)",
+            transition: "opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1)",
+          }}>
+            <div className="text-center mb-10">
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight" style={{ color: "hsl(215 30% 18%)" }}
+                data-testid="text-login-title">
+                Welcome to {registryName}
+              </h1>
+              <p className="mt-3 text-base" style={{ color: "hsl(215 15% 50%)" }}>
+                Choose your portal to get started
+              </p>
             </div>
-            <span className="font-semibold text-lg tracking-tight">{isGhanaMode() ? "Ghana Credit Registry" : "CDH Registry"}</span>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-[820px] w-full mx-auto">
+              <button
+                type="button"
+                aria-label="Sign in as institution — access credit bureau data, portfolio intelligence, and regulatory reports"
+                className="login-card-hover rounded-2xl p-7 cursor-pointer relative overflow-hidden text-left"
+                style={{
+                  background: "linear-gradient(145deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.8) 100%)",
+                  border: "1px solid hsl(215 30% 90%)",
+                  boxShadow: "0 8px 32px -8px rgba(0, 0, 0, 0.06), 0 2px 8px -2px rgba(0, 0, 0, 0.03)",
+                  backdropFilter: "blur(20px)",
+                }}
+                onClick={() => { setMode("institution"); setError(""); setConsumerError(""); }}
+                data-testid="button-login-institution"
+              >
+                <div className="absolute top-0 right-0 w-48 h-48 opacity-[0.04]"
+                  style={{ background: "radial-gradient(circle at top right, hsl(215 60% 50%), transparent 70%)" }} />
+
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-6"
+                  style={{
+                    background: "linear-gradient(135deg, hsl(215 55% 50%) 0%, hsl(215 50% 42%) 100%)",
+                    boxShadow: "0 4px 12px -2px hsla(215, 55%, 50%, 0.3)",
+                  }}>
+                  <Building2 className="w-6 h-6 text-white" />
+                </div>
+
+                <h2 className="text-xl font-bold tracking-tight mb-2" style={{ color: "hsl(215 30% 18%)" }}>
+                  Business & Lender Portal
+                </h2>
+                <p className="text-sm leading-relaxed mb-5" style={{ color: "hsl(215 15% 48%)" }}>
+                  Access credit bureau data, run searches, manage portfolios and generate reports
+                </p>
+
+                <div className="flex flex-wrap gap-2 mb-6">
+                  <Pill>Credit Bureau Access</Pill>
+                  <Pill>Portfolio Intelligence</Pill>
+                  <Pill>Regulatory Reports</Pill>
+                </div>
+
+                <button
+                  className="w-full h-12 rounded-xl font-semibold text-sm text-white flex items-center justify-center gap-2 transition-all"
+                  style={{
+                    background: "linear-gradient(135deg, hsl(215 55% 50%) 0%, hsl(215 50% 40%) 100%)",
+                    boxShadow: "0 4px 16px -4px hsla(215, 55%, 45%, 0.35)",
+                  }}
+                  data-testid="button-sign-in-institution"
+                >
+                  Sign In as Institution
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+
+                <div className="mt-4 text-center">
+                  <a href="/signup" className="text-sm font-medium flex items-center justify-center gap-1 transition-colors"
+                    style={{ color: "hsl(215 45% 50%)" }}
+                    data-testid="link-register-institution"
+                    onClick={(e) => e.stopPropagation()}>
+                    Register your institution <ArrowRight className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                aria-label="Check your personal credit — free credit report, dispute management, and score tracking"
+                className="login-card-hover rounded-2xl p-7 cursor-pointer relative overflow-hidden text-left"
+                style={{
+                  background: "linear-gradient(145deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.8) 100%)",
+                  border: "1px solid hsl(260 25% 90%)",
+                  boxShadow: "0 8px 32px -8px rgba(0, 0, 0, 0.06), 0 2px 8px -2px rgba(0, 0, 0, 0.03)",
+                  backdropFilter: "blur(20px)",
+                }}
+                onClick={() => { setMode("consumer"); setError(""); setConsumerError(""); }}
+                data-testid="button-login-consumer"
+              >
+                <div className="absolute top-0 right-0 w-48 h-48 opacity-[0.04]"
+                  style={{ background: "radial-gradient(circle at top right, hsl(265 50% 55%), transparent 70%)" }} />
+
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-6"
+                  style={{
+                    background: "linear-gradient(135deg, hsl(265 50% 55%) 0%, hsl(265 45% 45%) 100%)",
+                    boxShadow: "0 4px 12px -2px hsla(265, 50%, 50%, 0.3)",
+                  }}>
+                  <UserCircle className="w-6 h-6 text-white" />
+                </div>
+
+                <h2 className="text-xl font-bold tracking-tight mb-2" style={{ color: "hsl(215 30% 18%)" }}>
+                  Personal Credit Portal
+                </h2>
+                <p className="text-sm leading-relaxed mb-5" style={{ color: "hsl(215 15% 48%)" }}>
+                  Check your own credit score, view your full report, and raise disputes — free of charge
+                </p>
+
+                <div className="flex flex-wrap gap-2 mb-6">
+                  <ConsumerPill>Free Credit Report</ConsumerPill>
+                  <ConsumerPill>Dispute Management</ConsumerPill>
+                  <ConsumerPill>Score Tracking</ConsumerPill>
+                </div>
+
+                <button
+                  className="w-full h-12 rounded-xl font-semibold text-sm text-white flex items-center justify-center gap-2 transition-all"
+                  style={{
+                    background: "linear-gradient(135deg, hsl(265 50% 55%) 0%, hsl(265 45% 42%) 100%)",
+                    boxShadow: "0 4px 16px -4px hsla(265, 50%, 45%, 0.35)",
+                  }}
+                  data-testid="button-check-my-credit"
+                >
+                  Check My Credit
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+
+                <div className="mt-4 text-center">
+                  <a href="/consumer/register" className="text-sm font-medium flex items-center justify-center gap-1 transition-colors"
+                    style={{ color: "hsl(265 40% 50%)" }}
+                    data-testid="link-consumer-register"
+                    onClick={(e) => e.stopPropagation()}>
+                    Create free account <ArrowRight className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+              </button>
+            </div>
           </div>
+        )}
 
-          {mode === "chooser" && (
-            <>
+        {mode === "consumer" && (
+          <div className="w-full max-w-[440px]" style={{
+            opacity: mounted ? 1 : 0,
+            transform: mounted ? "translateY(0)" : "translateY(20px)",
+            transition: "opacity 0.5s ease-out, transform 0.5s ease-out",
+          }}>
+            <button
+              onClick={() => { setMode("chooser"); setConsumerError(""); }}
+              className="flex items-center gap-1.5 text-sm mb-5 transition-colors"
+              style={{ color: "hsl(215 15% 50%)" }}
+              data-testid="button-back-to-chooser-consumer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Back to portals
+            </button>
+
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{
+                  background: "linear-gradient(135deg, hsl(265 50% 55%), hsl(265 45% 45%))",
+                  boxShadow: "0 4px 12px -2px hsla(265, 50%, 50%, 0.25)",
+                }}>
+                <UserCircle className="w-5 h-5 text-white" />
+              </div>
               <div>
-                <h1 className="text-2xl font-bold tracking-tight" data-testid="text-login-title">
-                  Welcome to {isGhanaMode() ? "Ghana Credit Registry" : "CDH Registry"}
-                </h1>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Choose how you'd like to sign in
-                </p>
+                <h1 className="text-xl font-bold tracking-tight" style={{ color: "hsl(215 30% 18%)" }}
+                  data-testid="text-consumer-login-title">Personal Credit Portal</h1>
+                <p className="text-xs" style={{ color: "hsl(215 15% 50%)" }}>Access your personal credit profile</p>
               </div>
+            </div>
 
-              <div className="grid grid-cols-1 gap-3">
-                <button
-                  onClick={() => { setMode("consumer"); setError(""); setConsumerError(""); }}
-                  className="group relative flex items-start gap-4 p-5 rounded-2xl border-2 text-left transition-all hover:scale-[1.01]"
-                  style={{
-                    borderColor: "hsl(var(--border))",
-                    background: "hsl(var(--card))",
-                  }}
-                  data-testid="button-login-consumer"
-                >
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{
-                    background: "linear-gradient(135deg, #059669, #34d399)",
-                  }}>
-                    <UserCircle className="w-6 h-6 text-white" />
+            <div className="rounded-2xl p-6" style={{
+              background: "rgba(255,255,255,0.9)",
+              border: "1px solid hsl(215 30% 90%)",
+              boxShadow: "0 8px 32px -8px rgba(0, 0, 0, 0.06)",
+              backdropFilter: "blur(20px)",
+            }}>
+              <form onSubmit={handleConsumerLogin} className="space-y-4" data-testid="form-consumer-login">
+                {consumerError && (
+                  <div className="flex items-start gap-2.5 p-3 rounded-lg text-sm"
+                    style={{ background: "hsl(0 80% 97%)", border: "1px solid hsl(0 60% 90%)", color: "hsl(0 70% 40%)" }}
+                    data-testid="text-consumer-login-error">
+                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>{consumerError}</span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-base">Consumer Login</h3>
-                      <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-0.5">
-                      Check your credit score, view reports, and manage disputes
-                    </p>
-                    <div className="flex items-center gap-3 mt-2">
-                      <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full" style={{
-                        background: "rgba(5, 150, 105, 0.1)",
-                        color: "#059669",
-                      }}>Individual</span>
-                      <span className="text-[10px] text-muted-foreground">National ID + Password</span>
-                    </div>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => { setMode("institution"); setError(""); setConsumerError(""); }}
-                  className="group relative flex items-start gap-4 p-5 rounded-2xl border-2 text-left transition-all hover:scale-[1.01]"
-                  style={{
-                    borderColor: "hsl(var(--border))",
-                    background: "hsl(var(--card))",
-                  }}
-                  data-testid="button-login-institution"
-                >
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{
-                    background: "linear-gradient(135deg, #2563eb, #60a5fa)",
-                  }}>
-                    <Building2 className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-base">Institution Login</h3>
-                      <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-0.5">
-                      Access credit reports, manage borrowers, and run analytics
-                    </p>
-                    <div className="flex items-center gap-3 mt-2">
-                      <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full" style={{
-                        background: "rgba(37, 99, 235, 0.1)",
-                        color: "#2563eb",
-                      }}>Business</span>
-                      <span className="text-[10px] text-muted-foreground">Username + Password + SSO</span>
-                    </div>
-                  </div>
-                </button>
-              </div>
-
-              <div className="flex items-center justify-center gap-4 text-sm pt-2">
-                <a href="/solutions" className="text-primary hover:underline flex items-center gap-1" data-testid="link-back-home">
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                  Back to home
-                </a>
-                <span className="text-muted-foreground">&middot;</span>
-                <a href="/signup" className="text-primary hover:underline" data-testid="link-signup">
-                  Create an account
-                </a>
-              </div>
-            </>
-          )}
-
-          {mode === "consumer" && (
-            <>
-              <div>
-                <button
-                  onClick={() => { setMode("chooser"); setConsumerError(""); }}
-                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-3"
-                  data-testid="button-back-to-chooser-consumer"
-                >
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                  Back
-                </button>
-                <div className="flex items-center gap-3 mb-1">
-                  <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{
-                    background: "linear-gradient(135deg, #059669, #34d399)",
-                  }}>
-                    <UserCircle className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h1 className="text-xl font-bold tracking-tight" data-testid="text-consumer-login-title">Consumer Login</h1>
-                    <p className="text-xs text-muted-foreground">Access your personal credit profile</p>
+                )}
+                <div className="space-y-2">
+                  <Label htmlFor="consumer-national-id" className="text-sm font-medium" style={{ color: "hsl(215 25% 30%)" }}>
+                    National ID / Passport
+                  </Label>
+                  <div className="relative">
+                    <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: "hsl(215 15% 65%)" }} />
+                    <Input
+                      id="consumer-national-id"
+                      data-testid="input-consumer-national-id"
+                      value={consumerNationalId}
+                      onChange={(e) => setConsumerNationalId(e.target.value)}
+                      placeholder="Enter your National ID"
+                      required
+                      autoFocus
+                      className="h-11 pl-10 rounded-xl border-slate-200 focus:border-purple-400 focus:ring-purple-200"
+                    />
                   </div>
                 </div>
-              </div>
-
-              <Card className="border-0 shadow-lg">
-                <CardContent className="p-5">
-                  <form onSubmit={handleConsumerLogin} className="space-y-4" data-testid="form-consumer-login">
-                    {consumerError && (
-                      <div className="flex items-start gap-2.5 p-3 rounded-lg bg-destructive/8 border border-destructive/20 text-destructive text-sm" data-testid="text-consumer-login-error">
-                        <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                        <span>{consumerError}</span>
-                      </div>
-                    )}
-                    <div className="space-y-2">
-                      <Label htmlFor="consumer-national-id" className="text-sm font-medium">National ID / Passport</Label>
-                      <div className="relative">
-                        <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                        <Input
-                          id="consumer-national-id"
-                          data-testid="input-consumer-national-id"
-                          value={consumerNationalId}
-                          onChange={(e) => setConsumerNationalId(e.target.value)}
-                          placeholder="Enter your National ID"
-                          required
-                          autoFocus
-                          className="h-11 pl-10"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="consumer-password" className="text-sm font-medium">Password</Label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                        <Input
-                          id="consumer-password"
-                          data-testid="input-consumer-password"
-                          type={showConsumerPassword ? "text" : "password"}
-                          value={consumerPassword}
-                          onChange={(e) => setConsumerPassword(e.target.value)}
-                          placeholder="Enter your password"
-                          required
-                          className="h-11 pl-10 pr-10"
-                        />
-                        <button
-                          type="button"
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                          onClick={() => setShowConsumerPassword(!showConsumerPassword)}
-                          data-testid="button-toggle-consumer-password"
-                        >
-                          {showConsumerPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </div>
-                    <Button
-                      type="submit"
-                      className="w-full h-11 font-semibold gap-2"
-                      disabled={consumerLoading || !consumerNationalId || !consumerPassword}
-                      style={{ background: "linear-gradient(135deg, #059669, #34d399)" }}
-                      data-testid="button-consumer-login-submit"
+                <div className="space-y-2">
+                  <Label htmlFor="consumer-password" className="text-sm font-medium" style={{ color: "hsl(215 25% 30%)" }}>
+                    Password
+                  </Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: "hsl(215 15% 65%)" }} />
+                    <Input
+                      id="consumer-password"
+                      data-testid="input-consumer-password"
+                      type={showConsumerPassword ? "text" : "password"}
+                      value={consumerPassword}
+                      onChange={(e) => setConsumerPassword(e.target.value)}
+                      placeholder="Enter your password"
+                      required
+                      className="h-11 pl-10 pr-10 rounded-xl border-slate-200 focus:border-purple-400 focus:ring-purple-200"
+                    />
+                    <button
+                      type="button"
+                      aria-label={showConsumerPassword ? "Hide password" : "Show password"}
+                      className="absolute right-3 top-1/2 -translate-y-1/2"
+                      style={{ color: "hsl(215 15% 60%)" }}
+                      onClick={() => setShowConsumerPassword(!showConsumerPassword)}
+                      data-testid="button-toggle-consumer-password"
                     >
-                      {consumerLoading ? (
-                        <span className="flex items-center gap-2">
-                          <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          Signing in...
-                        </span>
-                      ) : (
-                        <>
-                          Sign In
-                          <ArrowRight className="w-4 h-4" />
-                        </>
-                      )}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-
-              <div className="relative flex items-center gap-3 my-1">
-                <div className="flex-1 border-t border-border" />
-                <span className="text-xs text-muted-foreground whitespace-nowrap">or continue with</span>
-                <div className="flex-1 border-t border-border" />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  variant="outline"
-                  className="h-11 gap-2 font-medium"
-                  onClick={() => window.location.href = "/api/consumer/auth/google?from=/my-credit"}
-                  data-testid="button-google-login-consumer"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24">
-                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z" fill="#4285F4"/>
-                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                  </svg>
-                  Google
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-11 gap-2 font-medium"
-                  onClick={() => window.location.href = "/api/consumer/auth/apple?from=/my-credit"}
-                  data-testid="button-apple-login-consumer"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
-                  </svg>
-                  Apple
-                </Button>
-              </div>
-
-              <div className="flex items-center justify-center gap-4 text-sm">
-                <a href="/consumer/register" className="text-emerald-600 hover:underline" data-testid="link-consumer-register">
-                  Register as consumer
-                </a>
-                <span className="text-muted-foreground">&middot;</span>
-                <a href="/my-credit" className="text-muted-foreground hover:text-foreground hover:underline" data-testid="link-my-credit">
-                  My Credit
-                </a>
-              </div>
-            </>
-          )}
-
-          {mode === "institution" && (
-            <>
-              <div>
-                <button
-                  onClick={() => { setMode("chooser"); setError(""); }}
-                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-3"
-                  data-testid="button-back-to-chooser-institution"
-                >
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                  Back
-                </button>
-                <div className="flex items-center gap-3 mb-1">
-                  <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{
-                    background: "linear-gradient(135deg, #2563eb, #60a5fa)",
-                  }}>
-                    <Building2 className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h1 className="text-xl font-bold tracking-tight" data-testid="text-institution-login-title">Institution Login</h1>
-                    <p className="text-xs text-muted-foreground">{t('login.subtitle')}</p>
+                      {showConsumerPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
-              </div>
-
-              <Card className="border-0 shadow-lg">
-                <CardContent className="p-5">
-                  {mfaRequired ? (
-                    <form onSubmit={handleMfaSubmit} className="space-y-4" data-testid="form-mfa-login">
-                      {error && (
-                        <div className="flex items-start gap-2.5 p-3 rounded-lg bg-destructive/8 border border-destructive/20 text-destructive text-sm" data-testid="text-mfa-error">
-                          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                          <span>{error}</span>
-                        </div>
-                      )}
-                      <div className="space-y-2">
-                        <Label htmlFor="mfa-code" className="text-sm font-medium">{t('mfa.code')}</Label>
-                        <div className="relative">
-                          <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                          <Input
-                            id="mfa-code"
-                            data-testid="input-mfa-code"
-                            value={mfaCode}
-                            onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                            placeholder="000000"
-                            className="text-center text-lg tracking-[0.5em] font-mono h-12 pl-10"
-                            maxLength={6}
-                            autoFocus
-                            required
-                          />
-                        </div>
-                      </div>
-                      <Button type="submit" className="w-full h-11 font-semibold gap-2" disabled={loading || mfaCode.length !== 6} data-testid="button-mfa-submit">
-                        {loading ? (
-                          <span className="flex items-center gap-2">
-                            <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                            {t('mfa.verifying')}
-                          </span>
-                        ) : (
-                          <>
-                            {t('mfa.verifyAndLogin')}
-                            <ArrowRight className="w-4 h-4" />
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="w-full text-sm"
-                        onClick={() => { setMfaRequired(false); setMfaCode(""); setError(""); }}
-                        data-testid="button-back-to-login"
-                      >
-                        <ArrowLeft className="w-4 h-4 mr-2" />
-                        {t('mfa.backToLogin')}
-                      </Button>
-                    </form>
+                <button
+                  type="submit"
+                  disabled={consumerLoading || !consumerNationalId || !consumerPassword}
+                  className="w-full h-12 rounded-xl font-semibold text-sm text-white flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                  style={{
+                    background: "linear-gradient(135deg, hsl(265 50% 55%) 0%, hsl(265 45% 42%) 100%)",
+                    boxShadow: "0 4px 16px -4px hsla(265, 50%, 45%, 0.35)",
+                  }}
+                  data-testid="button-consumer-login-submit"
+                >
+                  {consumerLoading ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Signing in...
+                    </span>
                   ) : (
-                    <form onSubmit={handleInstitutionSubmit} className="space-y-4" data-testid="form-login">
-                      {error && (
-                        <div className="flex items-start gap-2.5 p-3 rounded-lg bg-destructive/8 border border-destructive/20 text-destructive text-sm" data-testid="text-login-error">
-                          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                          <span>{error}</span>
-                        </div>
-                      )}
-                      <div className="space-y-2">
-                        <Label htmlFor="username" className="text-sm font-medium">{t('login.username')}</Label>
-                        <div className="relative">
-                          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                          <Input
-                            id="username"
-                            data-testid="input-username"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            placeholder={t('login.enterUsername')}
-                            required
-                            autoFocus
-                            className="h-11 pl-10"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="password" className="text-sm font-medium">{t('login.password')}</Label>
-                        <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-                          <Input
-                            id="password"
-                            data-testid="input-password"
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder={t('login.enterPassword')}
-                            required
-                            className="h-11 pl-10"
-                          />
-                        </div>
-                      </div>
-                      <Button type="submit" className="w-full h-11 font-semibold gap-2" disabled={loading} data-testid="button-login">
-                        {loading ? (
-                          <span className="flex items-center gap-2">
-                            <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                            {t('login.signingIn')}
-                          </span>
-                        ) : (
-                          <>
-                            {t('login.signIn')}
-                            <ArrowRight className="w-4 h-4" />
-                          </>
-                        )}
-                      </Button>
-                    </form>
+                    <>
+                      Check My Credit
+                      <ArrowRight className="w-4 h-4" />
+                    </>
                   )}
-                </CardContent>
-              </Card>
+                </button>
+              </form>
+            </div>
 
-              <div className="relative flex items-center gap-3 my-1">
-                <div className="flex-1 border-t border-border" />
-                <span className="text-xs text-muted-foreground whitespace-nowrap">or continue with</span>
-                <div className="flex-1 border-t border-border" />
-              </div>
+            <div className="relative flex items-center gap-3 my-4">
+              <div className="flex-1 h-px" style={{ background: "hsl(215 25% 88%)" }} />
+              <span className="text-xs whitespace-nowrap" style={{ color: "hsl(215 15% 60%)" }}>or continue with</span>
+              <div className="flex-1 h-px" style={{ background: "hsl(215 25% 88%)" }} />
+            </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  variant="outline"
-                  className="h-11 gap-2 font-medium"
-                  onClick={() => window.location.href = "/api/consumer/auth/google?from=/dashboard"}
-                  data-testid="button-google-login-institutional"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24">
-                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z" fill="#4285F4"/>
-                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                  </svg>
-                  Google
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-11 gap-2 font-medium"
-                  onClick={() => window.location.href = "/api/auth/microsoft?from=/dashboard"}
-                  data-testid="button-microsoft-login"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24">
-                    <rect x="1" y="1" width="10" height="10" fill="#F25022"/>
-                    <rect x="13" y="1" width="10" height="10" fill="#7FBA00"/>
-                    <rect x="1" y="13" width="10" height="10" fill="#00A4EF"/>
-                    <rect x="13" y="13" width="10" height="10" fill="#FFB900"/>
-                  </svg>
-                  Microsoft
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-11 gap-2 font-medium"
-                  onClick={() => window.location.href = "/api/consumer/auth/apple?from=/dashboard"}
-                  data-testid="button-apple-login-institutional"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
-                  </svg>
-                  Apple
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-11 gap-2 font-medium"
-                  onClick={() => window.location.href = "/api/auth/saml/login"}
-                  data-testid="button-sso-login"
-                >
-                  <Shield className="w-4 h-4" />
-                  Enterprise SSO
-                </Button>
-              </div>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                className="h-11 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all"
+                style={{
+                  background: "rgba(255,255,255,0.9)",
+                  border: "1px solid hsl(215 25% 88%)",
+                  color: "hsl(215 25% 30%)",
+                }}
+                onClick={() => window.location.href = "/api/consumer/auth/google?from=/my-credit"}
+                data-testid="button-google-login-consumer"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z" fill="#4285F4"/>
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                </svg>
+                Google
+              </button>
+              <button
+                className="h-11 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all"
+                style={{
+                  background: "rgba(255,255,255,0.9)",
+                  border: "1px solid hsl(215 25% 88%)",
+                  color: "hsl(215 25% 30%)",
+                }}
+                onClick={() => window.location.href = "/api/consumer/auth/apple?from=/my-credit"}
+                data-testid="button-apple-login-consumer"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+                </svg>
+                Apple
+              </button>
+            </div>
 
-              <div className="flex items-center gap-2 justify-center text-muted-foreground">
-                <Shield className="w-3.5 h-3.5" />
-                <p className="text-[11px]">
-                  {t('login.lockoutWarning')}
-                </p>
-              </div>
+            <div className="flex items-center justify-center gap-4 text-sm mt-5">
+              <a href="/consumer/register" className="font-medium flex items-center gap-1" style={{ color: "hsl(265 40% 50%)" }}
+                data-testid="link-consumer-register-form">
+                Create free account <ArrowRight className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          </div>
+        )}
 
-              <div className="flex items-center justify-center gap-4 text-sm">
-                <a href="/solutions" className="text-primary hover:underline flex items-center gap-1" data-testid="link-back-home">
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                  Back to home
-                </a>
-                <span className="text-muted-foreground">&middot;</span>
-                <a href="/signup" className="text-primary hover:underline" data-testid="link-signup">
-                  Create an account
-                </a>
+        {mode === "institution" && (
+          <div className="w-full max-w-[440px]" style={{
+            opacity: mounted ? 1 : 0,
+            transform: mounted ? "translateY(0)" : "translateY(20px)",
+            transition: "opacity 0.5s ease-out, transform 0.5s ease-out",
+          }}>
+            <button
+              onClick={() => { setMode("chooser"); setError(""); }}
+              className="flex items-center gap-1.5 text-sm mb-5 transition-colors"
+              style={{ color: "hsl(215 15% 50%)" }}
+              data-testid="button-back-to-chooser-institution"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Back to portals
+            </button>
+
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{
+                  background: "linear-gradient(135deg, hsl(215 55% 50%), hsl(215 50% 40%))",
+                  boxShadow: "0 4px 12px -2px hsla(215, 55%, 50%, 0.25)",
+                }}>
+                <Building2 className="w-5 h-5 text-white" />
               </div>
-            </>
-          )}
-        </div>
-      </div>
+              <div>
+                <h1 className="text-xl font-bold tracking-tight" style={{ color: "hsl(215 30% 18%)" }}
+                  data-testid="text-institution-login-title">Business & Lender Portal</h1>
+                <p className="text-xs" style={{ color: "hsl(215 15% 50%)" }}>{t('login.subtitle')}</p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl p-6" style={{
+              background: "rgba(255,255,255,0.9)",
+              border: "1px solid hsl(215 30% 90%)",
+              boxShadow: "0 8px 32px -8px rgba(0, 0, 0, 0.06)",
+              backdropFilter: "blur(20px)",
+            }}>
+              {mfaRequired ? (
+                <form onSubmit={handleMfaSubmit} className="space-y-4" data-testid="form-mfa-login">
+                  {error && (
+                    <div className="flex items-start gap-2.5 p-3 rounded-lg text-sm"
+                      style={{ background: "hsl(0 80% 97%)", border: "1px solid hsl(0 60% 90%)", color: "hsl(0 70% 40%)" }}
+                      data-testid="text-mfa-error">
+                      <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span>{error}</span>
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <Label htmlFor="mfa-code" className="text-sm font-medium" style={{ color: "hsl(215 25% 30%)" }}>
+                      {t('mfa.code')}
+                    </Label>
+                    <div className="relative">
+                      <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: "hsl(215 15% 65%)" }} />
+                      <Input
+                        id="mfa-code"
+                        data-testid="input-mfa-code"
+                        value={mfaCode}
+                        onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                        placeholder="000000"
+                        className="text-center text-lg tracking-[0.5em] font-mono h-12 pl-10 rounded-xl border-slate-200 focus:border-blue-400 focus:ring-blue-200"
+                        maxLength={6}
+                        autoFocus
+                        required
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={loading || mfaCode.length !== 6}
+                    className="w-full h-12 rounded-xl font-semibold text-sm text-white flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                    style={{
+                      background: "linear-gradient(135deg, hsl(215 55% 50%) 0%, hsl(215 50% 40%) 100%)",
+                      boxShadow: "0 4px 16px -4px hsla(215, 55%, 45%, 0.35)",
+                    }}
+                    data-testid="button-mfa-submit"
+                  >
+                    {loading ? (
+                      <span className="flex items-center gap-2">
+                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        {t('mfa.verifying')}
+                      </span>
+                    ) : (
+                      <>
+                        {t('mfa.verifyAndLogin')}
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    className="w-full text-sm py-2 flex items-center justify-center gap-2"
+                    style={{ color: "hsl(215 15% 50%)" }}
+                    onClick={() => { setMfaRequired(false); setMfaCode(""); setError(""); }}
+                    data-testid="button-back-to-login"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    {t('mfa.backToLogin')}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleInstitutionSubmit} className="space-y-4" data-testid="form-login">
+                  {error && (
+                    <div className="flex items-start gap-2.5 p-3 rounded-lg text-sm"
+                      style={{ background: "hsl(0 80% 97%)", border: "1px solid hsl(0 60% 90%)", color: "hsl(0 70% 40%)" }}
+                      data-testid="text-login-error">
+                      <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span>{error}</span>
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <Label htmlFor="username" className="text-sm font-medium" style={{ color: "hsl(215 25% 30%)" }}>
+                      {t('login.username')}
+                    </Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: "hsl(215 15% 65%)" }} />
+                      <Input
+                        id="username"
+                        data-testid="input-username"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder={t('login.enterUsername')}
+                        required
+                        autoFocus
+                        className="h-11 pl-10 rounded-xl border-slate-200 focus:border-blue-400 focus:ring-blue-200"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password" className="text-sm font-medium" style={{ color: "hsl(215 25% 30%)" }}>
+                      {t('login.password')}
+                    </Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: "hsl(215 15% 65%)" }} />
+                      <Input
+                        id="password"
+                        data-testid="input-password"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder={t('login.enterPassword')}
+                        required
+                        className="h-11 pl-10 rounded-xl border-slate-200 focus:border-blue-400 focus:ring-blue-200"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full h-12 rounded-xl font-semibold text-sm text-white flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                    style={{
+                      background: "linear-gradient(135deg, hsl(215 55% 50%) 0%, hsl(215 50% 40%) 100%)",
+                      boxShadow: "0 4px 16px -4px hsla(215, 55%, 45%, 0.35)",
+                    }}
+                    data-testid="button-login"
+                  >
+                    {loading ? (
+                      <span className="flex items-center gap-2">
+                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        {t('login.signingIn')}
+                      </span>
+                    ) : (
+                      <>
+                        {t('login.signIn')}
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                </form>
+              )}
+            </div>
+
+            <div className="relative flex items-center gap-3 my-4">
+              <div className="flex-1 h-px" style={{ background: "hsl(215 25% 88%)" }} />
+              <span className="text-xs whitespace-nowrap" style={{ color: "hsl(215 15% 60%)" }}>or continue with</span>
+              <div className="flex-1 h-px" style={{ background: "hsl(215 25% 88%)" }} />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                className="h-11 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all"
+                style={{
+                  background: "rgba(255,255,255,0.9)",
+                  border: "1px solid hsl(215 25% 88%)",
+                  color: "hsl(215 25% 30%)",
+                }}
+                onClick={() => window.location.href = "/api/consumer/auth/google?from=/dashboard"}
+                data-testid="button-google-login-institutional"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z" fill="#4285F4"/>
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                </svg>
+                Google
+              </button>
+              <button
+                className="h-11 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all"
+                style={{
+                  background: "rgba(255,255,255,0.9)",
+                  border: "1px solid hsl(215 25% 88%)",
+                  color: "hsl(215 25% 30%)",
+                }}
+                onClick={() => window.location.href = "/api/auth/microsoft?from=/dashboard"}
+                data-testid="button-microsoft-login"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                  <rect x="1" y="1" width="10" height="10" fill="#F25022"/>
+                  <rect x="13" y="1" width="10" height="10" fill="#7FBA00"/>
+                  <rect x="1" y="13" width="10" height="10" fill="#00A4EF"/>
+                  <rect x="13" y="13" width="10" height="10" fill="#FFB900"/>
+                </svg>
+                Microsoft
+              </button>
+              <button
+                className="h-11 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all"
+                style={{
+                  background: "rgba(255,255,255,0.9)",
+                  border: "1px solid hsl(215 25% 88%)",
+                  color: "hsl(215 25% 30%)",
+                }}
+                onClick={() => window.location.href = "/api/consumer/auth/apple?from=/dashboard"}
+                data-testid="button-apple-login-institutional"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+                </svg>
+                Apple
+              </button>
+              <button
+                className="h-11 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all"
+                style={{
+                  background: "rgba(255,255,255,0.9)",
+                  border: "1px solid hsl(215 25% 88%)",
+                  color: "hsl(215 25% 30%)",
+                }}
+                onClick={() => window.location.href = "/api/auth/saml/login"}
+                data-testid="button-sso-login"
+              >
+                <Shield className="w-4 h-4" />
+                Enterprise SSO
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 justify-center mt-4" style={{ color: "hsl(215 15% 55%)" }}>
+              <Shield className="w-3.5 h-3.5" />
+              <p className="text-[11px]">
+                {t('login.lockoutWarning')}
+              </p>
+            </div>
+
+            <div className="flex items-center justify-center gap-4 text-sm mt-3">
+              <a href="/signup" className="font-medium flex items-center gap-1" style={{ color: "hsl(215 45% 50%)" }}
+                data-testid="link-signup">
+                Register your institution <ArrowRight className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          </div>
+        )}
+      </main>
+
+      <footer className="py-4 text-center" style={{
+        opacity: mounted ? 1 : 0,
+        transition: "opacity 0.6s ease-out",
+        transitionDelay: "0.6s",
+      }}>
+        <p className="text-xs" style={{ color: "hsl(215 10% 58%)" }}>
+          Carlson Capital & Systems In Motion Limited&trade; &middot; {isGhanaMode() ? "Ghana Credit Registry v2.5" : "Cross-Jurisdictional CDH v2.5"}
+        </p>
+        <p className="text-[10px] mt-1" style={{ color: "hsl(215 10% 68%)" }}>
+          &copy; 2026 Carlson Capital & Systems In Motion Limited. All rights reserved.
+        </p>
+      </footer>
     </div>
   );
 }
