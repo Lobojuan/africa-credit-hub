@@ -1,8 +1,15 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import { execSync } from "child_process";
 
 const isReplit = process.env.REPL_ID !== undefined;
+
+let gitHash = "dev";
+try {
+  gitHash = execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim();
+} catch {}
+const buildDate = new Date().toISOString().slice(0, 10);
 
 export default defineConfig({
   plugins: [
@@ -33,6 +40,10 @@ export default defineConfig({
     },
   },
   root: path.resolve(import.meta.dirname, "client"),
+  define: {
+    __BUILD_HASH__: JSON.stringify(gitHash),
+    __BUILD_DATE__: JSON.stringify(buildDate),
+  },
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
