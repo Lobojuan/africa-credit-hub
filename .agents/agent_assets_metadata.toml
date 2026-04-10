@@ -72,3 +72,9 @@ id = "qiL6qetQv_ZocGqd2b11m"
 uri = "file://codebase-dump.tar.gz"
 type = "unspecified"
 title = "Ghana Credit Registry - Source Code Dump"
+
+[[outputs]]
+id = "uRwlDzG-D-SLZcoOBhBV4"
+uri = "file://clean-export.tar.gz"
+type = "unspecified"
+title = "Ghana Credit Registry - Clean Source Export (519MB)"
