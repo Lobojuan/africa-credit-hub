@@ -82,6 +82,15 @@ export async function processTransactionFee(
   referenceId?: string,
   referenceType?: string,
 ): Promise<WalletDeductionResult> {
+  // Validate totalCents: must be a positive integer within safe bounds to prevent overflow/abuse
+  if (!Number.isInteger(totalCents) || totalCents <= 0 || totalCents > 1_000_000_000_00) {
+    throw new Error("Invalid totalCents value");
+  }
+  // Prevent ledger imbalance: platform fee must be a non-negative integer not exceeding total
+  if (!Number.isInteger(platformFeeCents) || platformFeeCents < 0 || platformFeeCents > totalCents) {
+    throw new Error(`Invalid platformFeeCents ${platformFeeCents}: must be between 0 and totalCents ${totalCents}`);
+  }
+
   const client = await pool.connect();
   try {
     await client.query("BEGIN");

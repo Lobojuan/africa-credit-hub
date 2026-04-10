@@ -1508,7 +1508,8 @@ export async function registerRoutes(
     }
   });
 
-  const consumerAuthLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 15, message: { message: "Too many attempts. Please try again later." }, standardHeaders: true, legacyHeaders: false });
+  // Aligned with institution loginLimiter: 5 attempts / 15 min to prevent brute-force on consumer auth
+  const consumerAuthLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5, message: { message: "Too many login attempts. Please try again in 15 minutes." }, standardHeaders: true, legacyHeaders: false });
   const consumerLookupLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { message: "Too many lookup requests. Please try again later." }, standardHeaders: true, legacyHeaders: false });
 
   const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
@@ -8034,8 +8035,9 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
   app.post("/api/platform/wallets/topup", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
       const { walletId, amountCents, method, providerRef, description } = req.body;
-      if (!walletId || typeof amountCents !== "number" || amountCents <= 0) {
-        return res.status(400).json({ message: "walletId and positive amountCents required" });
+      // Integer check + upper bound (1B GHS in pesewas) to prevent floating-point abuse and overflow
+      if (!walletId || typeof amountCents !== "number" || !Number.isInteger(amountCents) || amountCents <= 0 || amountCents > 1_000_000_000_00) {
+        return res.status(400).json({ message: "walletId and positive integer amountCents required (max 100,000,000,000)" });
       }
       const validMethods = ["mobile_money", "bank_transfer", "stripe", "manual"];
       if (!validMethods.includes(method)) {
@@ -8055,8 +8057,9 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
   app.post("/api/platform/wallets/withdraw", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
       const { walletId, amountCents, description } = req.body;
-      if (!walletId || typeof amountCents !== "number" || amountCents <= 0) {
-        return res.status(400).json({ message: "walletId and positive amountCents required" });
+      // Integer check + upper bound to prevent floating-point abuse and overflow
+      if (!walletId || typeof amountCents !== "number" || !Number.isInteger(amountCents) || amountCents <= 0 || amountCents > 1_000_000_000_00) {
+        return res.status(400).json({ message: "walletId and positive integer amountCents required (max 100,000,000,000)" });
       }
 
       const { withdrawFromWallet } = await import("./wallet-engine");
@@ -10270,7 +10273,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     }
   });
 
-  app.post("/api/auth/webauthn/register-options", async (req, res) => {
+  // Rate-limit WebAuthn routes to prevent brute-force credential attacks
+  app.post("/api/auth/webauthn/register-options", loginLimiter, async (req, res) => {
     try {
       if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
       const user = await storage.getUser(req.session.userId);
@@ -10305,7 +10309,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     }
   });
 
-  app.post("/api/auth/webauthn/register-verify", async (req, res) => {
+  app.post("/api/auth/webauthn/register-verify", loginLimiter, async (req, res) => {
     try {
       if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
       const challenge = req.session.webauthnChallenge;
@@ -10354,16 +10358,17 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     }
   });
 
-  app.post("/api/auth/webauthn/login-options", async (req, res) => {
+  app.post("/api/auth/webauthn/login-options", loginLimiter, async (req, res) => {
     try {
       const { username } = req.body;
       if (!username) return res.status(400).json({ message: "Username required" });
 
       const user = await storage.getUserByUsername(username);
-      if (!user) return res.status(404).json({ message: "User not found" });
-
-      const creds = await db.select().from(webauthnCredentials).where(eq(webauthnCredentials.userId, user.id));
-      if (creds.length === 0) return res.status(400).json({ message: "No biometric credentials registered" });
+      const creds = user ? await db.select().from(webauthnCredentials).where(eq(webauthnCredentials.userId, user.id)) : [];
+      // Return generic error to prevent username enumeration via distinct 404 vs 400 responses
+      if (!user || creds.length === 0) {
+        return res.status(400).json({ message: "Biometric login not available" });
+      }
 
       const { generateAuthenticationOptions } = await import("@simplewebauthn/server");
       const rpID = req.hostname || "localhost";
@@ -10386,7 +10391,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     }
   });
 
-  app.post("/api/auth/webauthn/login-verify", async (req, res) => {
+  app.post("/api/auth/webauthn/login-verify", loginLimiter, async (req, res) => {
     try {
       const challenge = req.session?.webauthnChallenge;
       const userId = req.session?.webauthnUserId;

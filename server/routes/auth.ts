@@ -8,6 +8,15 @@ import { getActiveCountryName } from "../country-mode";
 
 const authLogger = createLogger("auth");
 
+// TOTP replay prevention: track used codes to block reuse within the same 30s window
+const usedTotpTokens = new Map<string, number>(); // key: userId:code, value: expiry timestamp
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, exp] of usedTotpTokens) {
+    if (now > exp) usedTotpTokens.delete(k);
+  }
+}, 60_000);
+
 const PASSWORD_EXPIRY_DAYS = 90;
 const DUMMY_HASH = "$2b$12$invalidhashfortimingprotectiononly000000000000000000000";
 
@@ -232,6 +241,12 @@ router.post("/api/auth/mfa/login", async (req, res) => {
     if (delta === null) {
       return res.status(401).json({ message: "Invalid MFA code" });
     }
+    // Prevent TOTP replay: reject codes already used within the validity window
+    const tokenKey = `${user.id}:${code}`;
+    if (usedTotpTokens.has(tokenKey)) {
+      return res.status(401).json({ message: "MFA code already used. Please wait for the next code." });
+    }
+    usedTotpTokens.set(tokenKey, Date.now() + 90_000); // 3 windows to be safe
     req.session.regenerate(async (err) => {
       if (err) return res.status(500).json({ message: "Session error" });
       req.session.userId = user.id;
@@ -315,6 +330,12 @@ router.post("/api/auth/mfa/verify", async (req, res) => {
     if (delta === null) {
       return res.status(400).json({ message: "Invalid code. Please try again." });
     }
+    // Prevent TOTP replay: reject codes already used within the validity window
+    const tokenKey = `${user.id}:${code}`;
+    if (usedTotpTokens.has(tokenKey)) {
+      return res.status(401).json({ message: "MFA code already used. Please wait for the next code." });
+    }
+    usedTotpTokens.set(tokenKey, Date.now() + 90_000);
     await storage.updateUser(user.id, { mfaEnabled: true } as any);
     await storage.createAuditLog({
       action: "MFA_ENABLED", entity: "user", entityId: user.id, userId: user.id,
