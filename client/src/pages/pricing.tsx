@@ -108,6 +108,17 @@ export default function PricingPage() {
           </Card>
 
         </div>
+
+        <div className="mt-12 text-center">
+          <p className="text-muted-foreground mb-4">
+            Looking for detailed transaction pricing, wallet funding, and technical integration details?
+          </p>
+          <Button asChild variant="outline" data-testid="link-partner-docs">
+            <Link href="/partner-docs">
+              View Full Partner Documentation →
+            </Link>
+          </Button>
+        </div>
       </div>
     </div>
   );
