@@ -101,12 +101,24 @@ async function sendViaAT(to: string, message: string): Promise<boolean> {
   }
 }
 
-export async function sendSms(to: string, message: string): Promise<boolean> {
-  if (!smsConfigured) {
-    console.log(`[SMS][Stub] Would send to ${to.replace(/(.{4}).+(.{4})/, "$1****$2")}: "${message.substring(0, 50)}..."`);
-    return false;
-  }
+const SMS_RETRY_DELAYS = [0, 1500, 6000];
+const MAX_SMS_PER_MINUTE = 20;
+let smsSentThisMinute = 0;
+let smsMinuteTimer: ReturnType<typeof setInterval> | null = null;
 
+if (!smsMinuteTimer) {
+  smsMinuteTimer = setInterval(() => { smsSentThisMinute = 0; }, 60000);
+}
+
+function redactPhone(phone: string): string {
+  return phone.replace(/(.{4}).+(.{4})/, "$1****$2");
+}
+
+async function smsSleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function attemptSmsSend(to: string, message: string): Promise<boolean> {
   if (smsProvider === "twilio") {
     const ok = await sendViaTwilio(to, message);
     if (ok) return true;
@@ -127,6 +139,37 @@ export async function sendSms(to: string, message: string): Promise<boolean> {
     return false;
   }
 
+  return false;
+}
+
+export async function sendSms(to: string, message: string): Promise<boolean> {
+  if (!smsConfigured) {
+    console.log(`[SMS][Stub] Would send to ${redactPhone(to)}: "${message.substring(0, 50)}..."`);
+    return false;
+  }
+
+  if (smsSentThisMinute >= MAX_SMS_PER_MINUTE) {
+    console.warn(`[SMS] Rate limit reached (${MAX_SMS_PER_MINUTE}/min) — deferring send to ${redactPhone(to)}`);
+    return false;
+  }
+
+  for (let attempt = 0; attempt < SMS_RETRY_DELAYS.length; attempt++) {
+    if (attempt > 0) {
+      console.log(`[SMS] Retry ${attempt}/${SMS_RETRY_DELAYS.length - 1} for ${redactPhone(to)} (waiting ${SMS_RETRY_DELAYS[attempt]}ms)...`);
+      await smsSleep(SMS_RETRY_DELAYS[attempt]);
+    }
+    try {
+      const ok = await attemptSmsSend(to, message);
+      if (ok) {
+        smsSentThisMinute++;
+        return true;
+      }
+    } catch (err: any) {
+      console.error(`[SMS] Attempt ${attempt + 1} error:`, err.message);
+    }
+  }
+
+  console.error(`[SMS] All ${SMS_RETRY_DELAYS.length} attempts failed for ${redactPhone(to)}`);
   return false;
 }
 

@@ -311,6 +311,60 @@ export function getBackupStatus(): {
   };
 }
 
+export async function verifyBackupIntegrity(backupId?: string): Promise<{ valid: boolean; message: string; details?: Record<string, any> }> {
+  const manifest = loadManifest();
+  const record = backupId
+    ? manifest.find(r => r.id === backupId)
+    : manifest.filter(r => r.status === "completed" && r.type === "full").sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+
+  if (!record) {
+    return { valid: false, message: "No completed backup found to verify" };
+  }
+
+  try {
+    const filepath = safeBackupPath(record.filename);
+    if (!fs.existsSync(filepath)) {
+      return { valid: false, message: `Backup file missing: ${record.filename}` };
+    }
+
+    const stats = fs.statSync(filepath);
+    if (stats.size < 100) {
+      return { valid: false, message: `Backup file suspiciously small (${stats.size} bytes): ${record.filename}` };
+    }
+
+    const output = execSync(
+      `gunzip -c "${filepath}" | head -100`,
+      { timeout: 30000, maxBuffer: 10 * 1024 * 1024 }
+    ).toString();
+
+    const hasSqlContent = output.includes("PostgreSQL") || output.includes("CREATE") || output.includes("INSERT") || output.includes("SET") || output.includes("SELECT");
+    if (!hasSqlContent) {
+      return { valid: false, message: `Backup does not appear to contain valid SQL: ${record.filename}` };
+    }
+
+    const lineCount = execSync(
+      `gunzip -c "${filepath}" | wc -l`,
+      { timeout: 60000, maxBuffer: 10 * 1024 * 1024 }
+    ).toString().trim();
+
+    const details = {
+      filename: record.filename,
+      sizeMB: record.sizeMB,
+      tables: record.tables,
+      rows: record.rows,
+      sqlLines: parseInt(lineCount) || 0,
+      createdAt: record.createdAt,
+      ageHours: Math.round((Date.now() - new Date(record.createdAt).getTime()) / 3600000),
+    };
+
+    await logBackupAudit("system", "BACKUP_VERIFIED", `Integrity check passed: ${record.filename} (${details.sqlLines} SQL lines, ${record.sizeMB}MB)`);
+
+    return { valid: true, message: `Backup verified: ${record.filename}`, details };
+  } catch (err: any) {
+    return { valid: false, message: `Backup verification failed: ${err.message}` };
+  }
+}
+
 export function startBackupScheduler() {
   if (schedulerTimer) return;
 
@@ -322,6 +376,13 @@ export function startBackupScheduler() {
       const result = await createBackup("full", "system", "Scheduled daily backup");
       lastAutoBackup = new Date();
       console.log(`[Backup] Scheduled backup completed: ${result.filename} (${result.sizeMB}MB)`);
+
+      const integrity = await verifyBackupIntegrity(result.id);
+      if (!integrity.valid) {
+        console.error(`[Backup] INTEGRITY CHECK FAILED: ${integrity.message}`);
+      } else {
+        console.log(`[Backup] Integrity verified: ${integrity.details?.sqlLines} SQL lines`);
+      }
     } catch (err: any) {
       console.error(`[Backup] Scheduled backup failed: ${err.message}`);
     }

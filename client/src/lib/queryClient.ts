@@ -51,14 +51,38 @@ function appendGlobalParams(url: string): string {
   return result;
 }
 
+function sanitizeErrorText(text: string): string {
+  if (!text) return text;
+  return text
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/javascript:/gi, "")
+    .replace(/on\w+\s*=/gi, "")
+    .substring(0, 500);
+}
+
 async function throwIfResNotOk(res: Response) {
   if (res.status === 440) {
     window.location.href = "/login";
     throw new Error("Session expired");
   }
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    const contentType = res.headers.get("content-type") || "";
+    let errorMessage: string;
+
+    if (contentType.includes("application/json")) {
+      try {
+        const data = await res.json();
+        errorMessage = typeof data.message === "string" ? data.message : (typeof data.error === "string" ? data.error : res.statusText);
+      } catch {
+        errorMessage = res.statusText;
+      }
+    } else {
+      const text = await res.text();
+      errorMessage = text || res.statusText;
+    }
+
+    throw new Error(`${res.status}: ${sanitizeErrorText(errorMessage)}`);
   }
 }
 

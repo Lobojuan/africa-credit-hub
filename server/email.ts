@@ -136,12 +136,20 @@ async function sendViaSmtp(to: string, subject: string, htmlBody: string): Promi
   }
 }
 
-async function sendEmail(to: string, subject: string, htmlBody: string): Promise<boolean> {
-  if (!emailConfigured) {
-    console.log(`[Email][Stub] Would send to ${redactEmail(to)}`);
-    return false;
-  }
+const RETRY_DELAYS = [0, 2000, 8000];
+const MAX_EMAILS_PER_MINUTE = 30;
+let emailsSentThisMinute = 0;
+let minuteResetTimer: ReturnType<typeof setInterval> | null = null;
 
+if (!minuteResetTimer) {
+  minuteResetTimer = setInterval(() => { emailsSentThisMinute = 0; }, 60000);
+}
+
+async function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function attemptSend(to: string, subject: string, htmlBody: string): Promise<boolean> {
   if (emailProvider === "sendgrid") {
     const ok = await sendViaSendGrid(to, subject, htmlBody);
     if (ok) return true;
@@ -158,6 +166,37 @@ async function sendEmail(to: string, subject: string, htmlBody: string): Promise
     console.log(`[Email] SMTP failed, falling back to SendGrid...`);
     return sendViaSendGrid(to, subject, htmlBody);
   }
+  return false;
+}
+
+async function sendEmail(to: string, subject: string, htmlBody: string): Promise<boolean> {
+  if (!emailConfigured) {
+    console.log(`[Email][Stub] Would send to ${redactEmail(to)}`);
+    return false;
+  }
+
+  if (emailsSentThisMinute >= MAX_EMAILS_PER_MINUTE) {
+    console.warn(`[Email] Rate limit reached (${MAX_EMAILS_PER_MINUTE}/min) — deferring send to ${redactEmail(to)}`);
+    return false;
+  }
+
+  for (let attempt = 0; attempt < RETRY_DELAYS.length; attempt++) {
+    if (attempt > 0) {
+      console.log(`[Email] Retry ${attempt}/${RETRY_DELAYS.length - 1} for ${redactEmail(to)} (waiting ${RETRY_DELAYS[attempt]}ms)...`);
+      await sleep(RETRY_DELAYS[attempt]);
+    }
+    try {
+      const ok = await attemptSend(to, subject, htmlBody);
+      if (ok) {
+        emailsSentThisMinute++;
+        return true;
+      }
+    } catch (err: any) {
+      console.error(`[Email] Attempt ${attempt + 1} error:`, err.message);
+    }
+  }
+
+  console.error(`[Email] All ${RETRY_DELAYS.length} attempts failed for ${redactEmail(to)} — subject: "${subject.substring(0, 60)}"`);
   return false;
 }
 

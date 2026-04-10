@@ -27,6 +27,54 @@ if (!process.env.SESSION_SECRET) {
   throw new Error("SESSION_SECRET environment variable must be set");
 }
 
+const isProductionBoot = process.env.NODE_ENV === "production" || process.env.PRODUCTION_MODE === "true";
+
+function validateProductionConfig() {
+  const errors: string[] = [];
+
+  if (process.env.SESSION_SECRET && process.env.SESSION_SECRET.length < 32) {
+    errors.push("SESSION_SECRET must be at least 32 characters for production security");
+  }
+
+  if (isProductionBoot) {
+    if (!process.env.DATABASE_URL) {
+      errors.push("DATABASE_URL is required in production");
+    }
+    if (!process.env.PII_ENCRYPTION_KEY) {
+      errors.push("PII_ENCRYPTION_KEY is required in production");
+    }
+    if (!process.env.PII_ENCRYPTION_SALT) {
+      errors.push("PII_ENCRYPTION_SALT is required in production");
+    }
+    if (process.env.PII_ENCRYPTION_SALT === "cdh-pii-salt-v1") {
+      errors.push("PII_ENCRYPTION_SALT must be changed from the default value in production");
+    }
+    if (process.env.SEED_ADMIN_PASSWORD === "admin0987") {
+      errors.push("SEED_ADMIN_PASSWORD cannot be the default 'admin0987' in production");
+    }
+    if (process.env.SESSION_SECRET && process.env.SESSION_SECRET.length < 64) {
+      errors.push("SESSION_SECRET should be at least 64 characters in production");
+    }
+    if (!process.env.SENDGRID_API_KEY && !process.env.SMTP_HOST) {
+      console.warn("[Production] WARNING: No email provider configured — transactional emails will not be delivered");
+    }
+    if (!process.env.TWILIO_ACCOUNT_SID && !process.env.AT_USERNAME) {
+      console.warn("[Production] WARNING: No SMS provider configured — OTP and notifications via SMS will not be delivered");
+    }
+  }
+
+  if (errors.length > 0) {
+    console.error("\n╔══════════════════════════════════════════════════╗");
+    console.error("║  FATAL: Production configuration errors          ║");
+    console.error("╠══════════════════════════════════════════════════╣");
+    errors.forEach(e => console.error(`║  ✗ ${e}`));
+    console.error("╚══════════════════════════════════════════════════╝\n");
+    throw new Error(`Production startup blocked: ${errors.length} configuration error(s). See above.`);
+  }
+}
+
+validateProductionConfig();
+
 const app = express();
 app.set("etag", false);
 
@@ -67,7 +115,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: process.env.NODE_ENV === "production"
+      scriptSrc: isProductionBoot
         ? ["'self'", (_req: any, res: any) => `'nonce-${res.locals.cspNonce}'`]
         : ["'self'", "'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
@@ -175,9 +223,9 @@ app.use(
     secret: process.env.SESSION_SECRET!,
     resave: false,
     saveUninitialized: false,
-    proxy: process.env.NODE_ENV === "production",
+    proxy: isProductionBoot,
     cookie: {
-      secure: process.env.NODE_ENV === "production",
+      secure: isProductionBoot,
       httpOnly: true,
       maxAge: 8 * 60 * 60 * 1000,
       sameSite: "lax",
@@ -493,6 +541,30 @@ process.stderr.write = function (...args: any[]) {
     await ensureIdempotencyTable();
   } catch (e) {
     console.error("[Idempotency] Table creation error (non-fatal):", e);
+  }
+
+  try {
+    const constraints = [
+      `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_org_platform_fee_pct') THEN ALTER TABLE organizations ADD CONSTRAINT chk_org_platform_fee_pct CHECK (platform_fee_percent >= 0 AND platform_fee_percent <= 100); END IF; END $$`,
+      `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_org_license_fee') THEN ALTER TABLE organizations ADD CONSTRAINT chk_org_license_fee CHECK (monthly_license_fee_cents >= 0); END IF; END $$`,
+      `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_usage_unit_price') THEN ALTER TABLE usage_metering ADD CONSTRAINT chk_usage_unit_price CHECK (unit_price_cents >= 0); END IF; END $$`,
+      `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_usage_total') THEN ALTER TABLE usage_metering ADD CONSTRAINT chk_usage_total CHECK (total_cents >= 0); END IF; END $$`,
+      `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_usage_platform_fee') THEN ALTER TABLE usage_metering ADD CONSTRAINT chk_usage_platform_fee CHECK (platform_fee_cents >= 0); END IF; END $$`,
+      `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_usage_bureau_rev') THEN ALTER TABLE usage_metering ADD CONSTRAINT chk_usage_bureau_rev CHECK (bureau_revenue_cents >= 0); END IF; END $$`,
+      `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_wallet_balance') THEN ALTER TABLE wallets ADD CONSTRAINT chk_wallet_balance CHECK (balance_cents >= 0); END IF; END $$`,
+      `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_wallet_threshold') THEN ALTER TABLE wallets ADD CONSTRAINT chk_wallet_threshold CHECK (low_balance_threshold_cents >= 0); END IF; END $$`,
+      `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_payout_amount') THEN ALTER TABLE payout_items ADD CONSTRAINT chk_payout_amount CHECK (amount_cents >= 0); END IF; END $$`,
+      `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_settlement_min_payout') THEN ALTER TABLE settlement_schedules ADD CONSTRAINT chk_settlement_min_payout CHECK (minimum_payout_cents >= 0); END IF; END $$`,
+    ];
+    for (const sql of constraints) {
+      await pool.query(sql);
+    }
+    console.log("[Schema] Financial integrity constraints verified");
+  } catch (e: any) {
+    if (isProductionBoot) {
+      throw new Error(`[Schema] FATAL: Financial constraint migration failed in production: ${e.message}`);
+    }
+    console.error("[Schema] Constraint migration error (non-fatal):", e.message);
   }
 
   const { initWebSocket } = await import("./websocket");

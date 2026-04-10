@@ -5534,6 +5534,87 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     }
   });
 
+  app.post("/api/backups/:id/verify", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const { verifyBackupIntegrity } = await import("./backup-service");
+      const result = await verifyBackupIntegrity(req.params.id);
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.get("/api/health/production", requireAuth, requireSuperAdmin, async (_req, res) => {
+    try {
+      const checks: Record<string, { status: "pass" | "fail" | "warn"; message: string }> = {};
+      const isProduction = process.env.PRODUCTION_MODE === "true" || process.env.NODE_ENV === "production";
+
+      let dbOk = false;
+      try {
+        await pool.query("SELECT 1");
+        dbOk = true;
+        checks.database = { status: "pass", message: "Connected and responding" };
+      } catch {
+        checks.database = { status: "fail", message: "Database connection failed" };
+      }
+
+      checks.productionMode = isProduction
+        ? { status: "pass", message: "PRODUCTION_MODE=true" }
+        : { status: "warn", message: "PRODUCTION_MODE not set — security behaviors are relaxed" };
+
+      checks.piiEncryption = process.env.PII_ENCRYPTION_KEY
+        ? (process.env.PII_ENCRYPTION_SALT && process.env.PII_ENCRYPTION_SALT !== "cdh-pii-salt-v1"
+          ? { status: "pass", message: "Key and salt configured" }
+          : { status: "warn", message: "Key set but salt is default — change PII_ENCRYPTION_SALT" })
+        : { status: "fail", message: "PII_ENCRYPTION_KEY not set — PII data is not properly encrypted" };
+
+      checks.sessionSecret = process.env.SESSION_SECRET
+        ? (process.env.SESSION_SECRET.length >= 64
+          ? { status: "pass", message: `Secret is ${process.env.SESSION_SECRET.length} chars` }
+          : { status: "warn", message: `Secret is ${process.env.SESSION_SECRET.length} chars — recommend 64+` })
+        : { status: "fail", message: "SESSION_SECRET not set" };
+
+      const { isEmailConfigured } = await import("./email");
+      const { isSmsConfigured } = await import("./sms");
+      checks.email = isEmailConfigured()
+        ? { status: "pass", message: "Email provider configured" }
+        : { status: "warn", message: "No email provider — transactional emails disabled" };
+      checks.sms = isSmsConfigured()
+        ? { status: "pass", message: "SMS provider configured" }
+        : { status: "warn", message: "No SMS provider — OTP via SMS disabled" };
+
+      const { getBackupStatus, verifyBackupIntegrity } = await import("./backup-service");
+      const backupStatus = getBackupStatus();
+      if (backupStatus.schedulerRunning && backupStatus.totalBackups > 0) {
+        const integrity = await verifyBackupIntegrity();
+        checks.backups = integrity.valid
+          ? { status: "pass", message: `${backupStatus.totalBackups} backups, latest verified (${integrity.details?.ageHours}h old)` }
+          : { status: "warn", message: `${backupStatus.totalBackups} backups but integrity check failed: ${integrity.message}` };
+      } else if (backupStatus.schedulerRunning) {
+        checks.backups = { status: "warn", message: "Scheduler running but no backups created yet" };
+      } else {
+        checks.backups = { status: "fail", message: "Backup scheduler not running" };
+      }
+
+      checks.seedPassword = process.env.SEED_ADMIN_PASSWORD === "admin0987"
+        ? { status: "fail", message: "SEED_ADMIN_PASSWORD is the insecure default — change immediately" }
+        : { status: "pass", message: "Seed password is not the default" };
+
+      const failCount = Object.values(checks).filter(c => c.status === "fail").length;
+      const warnCount = Object.values(checks).filter(c => c.status === "warn").length;
+      const overall = failCount > 0 ? "not_ready" : (warnCount > 0 ? "ready_with_warnings" : "production_ready");
+
+      res.json({
+        overall,
+        summary: `${Object.keys(checks).length} checks: ${failCount} failed, ${warnCount} warnings`,
+        checks,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
   app.get("/api/copyright/download-pdf", async (_req, res) => {
     try {
       const copyrightLang = ((_req.query.lang as string) || "en").substring(0, 2);
