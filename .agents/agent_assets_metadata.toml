@@ -108,3 +108,9 @@ id = "bpwtkPLew5wHuHO8O4XFv"
 uri = "file://prod-review-latest.txt"
 type = "text"
 title = "CDH v2.5 Production Readiness Review — For Claude"
+
+[[outputs]]
+id = "VrA6u9utymEyxhyuwyOzV"
+uri = "file://codebase-export.zip"
+type = "unspecified"
+title = "CDH v2.5 — Codebase Export (compressed)"
