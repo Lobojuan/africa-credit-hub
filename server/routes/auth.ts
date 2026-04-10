@@ -54,18 +54,19 @@ router.post("/api/auth/login", loginLimiter, async (req, res) => {
         ipAddress: req.ip || null,
       });
 
-      if (attempts >= 3) {
-        const lockUntil = new Date(Date.now() + 15 * 60 * 1000);
+      if (attempts >= 5) {
+        const lockMinutes = Math.min(15 * Math.pow(2, Math.floor((attempts - 5) / 3)), 1440);
+        const lockUntil = new Date(Date.now() + lockMinutes * 60 * 1000);
         await storage.lockUser(user.id, lockUntil);
         await storage.createAuditLog({
           action: "ACCOUNT_LOCKED", entity: "user", entityId: user.id,
-          details: `Account locked after ${attempts} failed attempts`,
+          details: `Account locked for ${lockMinutes} minutes after ${attempts} failed attempts`,
           ipAddress: req.ip || null,
         });
-        return res.status(423).json({ message: "Account locked for 15 minutes after 3 failed attempts." });
+        return res.status(423).json({ message: `Account locked for ${lockMinutes} minute(s) after ${attempts} failed attempts.` });
       }
 
-      return res.status(401).json({ message: `Invalid credentials. ${3 - attempts} attempt(s) remaining.` });
+      return res.status(401).json({ message: "Invalid credentials" });
     }
 
     await storage.resetFailedAttempts(user.id);

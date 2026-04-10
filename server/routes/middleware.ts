@@ -14,9 +14,9 @@ const validate = { keyGeneratorIpFallback: false } as const;
 
 export const loginLimiter = rateLimit({
   keyGenerator: rateLimitKeyGenerator,
-  windowMs: 60 * 1000,
-  max: 10,
-  message: { message: "Too many login attempts. Please try again later." },
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { message: "Too many login attempts. Please try again in 15 minutes." },
   standardHeaders: true,
   legacyHeaders: false,
   validate,
