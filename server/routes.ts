@@ -1138,11 +1138,12 @@ export async function registerRoutes(
       if (userCountry && existing.country && existing.country !== userCountry) {
         return res.status(403).json({ message: "Data sovereignty violation: cannot modify borrower from a different country" });
       }
+      const validatedBody = insertBorrowerSchema.partial().parse(req.body);
       const approval = await storage.createPendingApproval({
         entityType: "borrower",
         entityId: req.params.id,
         action: "UPDATE",
-        payload: JSON.stringify(req.body),
+        payload: JSON.stringify(validatedBody),
         requestedBy: req.session?.userId!,
         country: requireWriteCountry(userCountry || existing.country, "createPendingApproval:borrower_update"),
       });
@@ -1290,11 +1291,12 @@ export async function registerRoutes(
           normalizedBody.creditCategory = inferCreditCategory(normalizedBody.accountType);
         }
       }
+      const validatedBody = insertCreditAccountSchema.partial().parse(normalizedBody);
       const approval = await storage.createPendingApproval({
         entityType: "credit_account",
         entityId: req.params.id,
         action: "UPDATE",
-        payload: JSON.stringify(normalizedBody),
+        payload: JSON.stringify(validatedBody),
         requestedBy: req.session?.userId!,
         country: requireWriteCountry(getCountryFilter(req), "createPendingApproval:credit_account_update"),
       });
@@ -2390,7 +2392,11 @@ export async function registerRoutes(
 
   app.patch("/api/pending-approvals/:id", requireRole("admin", "regulator"), async (req, res) => {
     try {
-      const { status, reviewNotes } = req.body;
+      const approvalUpdateSchema = z.object({
+        status: z.enum(["approved", "rejected"]),
+        reviewNotes: z.string().max(2000).optional(),
+      });
+      const { status, reviewNotes } = approvalUpdateSchema.parse(req.body);
       const currentUserId = req.session?.userId;
       if (!currentUserId) return res.status(401).json({ message: "Not authenticated" });
 
@@ -2539,7 +2545,8 @@ export async function registerRoutes(
 
   app.patch("/api/disputes/:id", requireRole("admin", "regulator"), async (req, res) => {
     try {
-      const dispute = await storage.updateDispute(req.params.id, req.body);
+      const validatedBody = insertDisputeSchema.partial().parse(req.body);
+      const dispute = await storage.updateDispute(req.params.id, validatedBody);
       if (!dispute) return res.status(404).json({ message: "Dispute not found" });
       await storage.createAuditLog({
         action: "UPDATE_DISPUTE", entity: "dispute", entityId: dispute.id, userId: req.session?.userId,
@@ -9906,32 +9913,33 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         .set({ counter: verification.authenticationInfo.newCounter })
         .where(eq(webauthnCredentials.id, matchingCred.id));
 
-      req.session.userId = user.id;
-      req.session.userRole = user.role;
-      req.session.organizationId = user.organizationId || undefined;
-      req.session.lastActivity = Date.now();
-      delete req.session.webauthnChallenge;
-      delete req.session.webauthnUserId;
+      req.session.regenerate(async (err) => {
+        if (err) return res.status(500).json({ message: "Session error" });
+        req.session.userId = user.id;
+        req.session.userRole = user.role;
+        req.session.organizationId = user.organizationId || undefined;
+        req.session.lastActivity = Date.now();
 
-      await storage.createAuditLog({
-        action: "LOGIN_BIOMETRIC",
-        entity: "user",
-        entityId: user.id,
-        userId: user.id,
-        details: `Biometric login successful for user ${user.username}`,
-        ipAddress: req.ip || null,
+        await storage.createAuditLog({
+          action: "LOGIN_BIOMETRIC",
+          entity: "user",
+          entityId: user.id,
+          userId: user.id,
+          details: `Biometric login successful for user ${user.username}`,
+          ipAddress: req.ip || null,
+        });
+
+        broadcastEvent({
+          type: "login_event",
+          title: "Biometric Login",
+          message: `${user.username} logged in via biometric authentication`,
+          severity: "info",
+          timestamp: new Date().toISOString(),
+        }, { roles: ["super_admin", "admin"] });
+
+        const { password: _, ...safeUser } = user;
+        req.session.save(() => res.json({ user: safeUser }));
       });
-
-      broadcastEvent({
-        type: "login_event",
-        title: "Biometric Login",
-        message: `${user.username} logged in via biometric authentication`,
-        severity: "info",
-        timestamp: new Date().toISOString(),
-      }, { roles: ["super_admin", "admin"] });
-
-      const { password: _, ...safeUser } = user;
-      res.json({ user: safeUser });
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
     }

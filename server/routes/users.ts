@@ -26,7 +26,7 @@ router.post("/api/users", requireRole("admin", "super_admin"), async (req, res) 
   try {
     const orgId = req.session?.userRole === "super_admin" ? (req.body.organizationId || getOrgScope(req)) : getOrgScope(req);
     const parsed = insertUserSchema.parse({ ...req.body, organizationId: orgId });
-    const hashedPassword = await bcrypt.hash(parsed.password, 10);
+    const hashedPassword = await bcrypt.hash(parsed.password, 12);
     const user = await storage.createUser({ ...parsed, password: hashedPassword });
     await storage.createAuditLog({
       action: "CREATE", entity: "user", entityId: user.id, userId: req.session?.userId,
@@ -68,7 +68,7 @@ router.patch("/api/users/:id", requireRole("admin", "super_admin"), async (req, 
         return res.status(400).json({ message: historyCheck.message });
       }
       const oldHash = targetUser.password;
-      data.password = await bcrypt.hash(data.password, 10);
+      data.password = await bcrypt.hash(data.password, 12);
       if (oldHash) {
         await pushPasswordHistory(req.params.id, oldHash);
       }

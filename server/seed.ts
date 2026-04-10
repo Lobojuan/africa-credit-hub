@@ -8,7 +8,7 @@ export async function seedDatabase() {
   const [existing] = await db.select({ value: count() }).from(users);
   if (existing.value > 0) return;
 
-  const hash = (pw: string) => bcrypt.hashSync(pw, 8);
+  const hash = (pw: string) => bcrypt.hashSync(pw, 12);
 
   const ghanaMode = isGhanaMode();
 

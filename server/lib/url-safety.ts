@@ -18,7 +18,7 @@ function isPrivateIPv4(ip: string): boolean {
 export function isSafeWebhookUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
-    if (!['https:', 'http:'].includes(parsed.protocol)) return false;
+    if (parsed.protocol !== 'https:') return false;
     let hostname = parsed.hostname.toLowerCase();
 
     const directBlocked = ['localhost', 'metadata.google.internal'];

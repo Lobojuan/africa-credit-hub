@@ -8,6 +8,16 @@ import { getActiveCountryName } from "../country-mode";
 
 const authLogger = createLogger("auth");
 
+const PASSWORD_EXPIRY_DAYS = 90;
+const DUMMY_HASH = "$2b$12$invalidhashfortimingprotectiononly000000000000000000000";
+
+function isPasswordExpired(user: any): boolean {
+  if (user.mustChangePassword) return true;
+  if (!user.passwordChangedAt) return false;
+  const days = (Date.now() - new Date(user.passwordChangedAt).getTime()) / 86400000;
+  return days > PASSWORD_EXPIRY_DAYS;
+}
+
 const router = Router();
 
 router.post("/api/auth/login", loginLimiter, async (req, res) => {
@@ -19,6 +29,7 @@ router.post("/api/auth/login", loginLimiter, async (req, res) => {
 
     const user = await storage.getUserByUsername(username);
     if (!user) {
+      await bcrypt.compare(password, DUMMY_HASH);
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
@@ -65,56 +76,59 @@ router.post("/api/auth/login", loginLimiter, async (req, res) => {
     const anomalyResult = await detectLoginAnomaly(user.id, loginIp);
 
     if (user.mfaEnabled && user.mfaSecret) {
-      req.session.mfaPendingUserId = user.id;
-      return res.json({ requireMfa: true, userId: user.id });
+      req.session.regenerate((err) => {
+        if (err) return res.status(500).json({ message: "Session error" });
+        req.session.mfaPendingUserId = user.id;
+        req.session.save(() => res.json({ requireMfa: true, userId: user.id }));
+      });
+      return;
     }
 
-    req.session.userId = user.id;
-    req.session.userRole = user.role;
-    req.session.userDivision = (user as any).division || undefined;
-    req.session.organizationId = user.organizationId || undefined;
-    req.session.lastActivity = Date.now();
+    req.session.regenerate(async (err) => {
+      if (err) return res.status(500).json({ message: "Session error" });
+      req.session.userId = user.id;
+      req.session.userRole = user.role;
+      req.session.userDivision = (user as any).division || undefined;
+      req.session.organizationId = user.organizationId || undefined;
+      req.session.lastActivity = Date.now();
 
-    if (user.role === "super_admin") {
-      delete req.session.viewingCountry;
-    }
+      if (user.role === "super_admin") {
+        delete req.session.viewingCountry;
+      }
 
-    let organization = null;
-    if (user.organizationId) {
-      organization = await storage.getOrganization(user.organizationId);
-    }
+      let organization = null;
+      if (user.organizationId) {
+        organization = await storage.getOrganization(user.organizationId);
+      }
 
-    if (user.role !== "super_admin" && organization?.country) {
-      req.session.userCountry = organization.country;
-    }
+      if (user.role !== "super_admin" && organization?.country) {
+        req.session.userCountry = organization.country;
+      }
 
-    await storage.createAuditLog({
-      action: "LOGIN", entity: "system", userId: user.id,
-      details: `${user.fullName} logged in from IP ${loginIp}${anomalyResult.anomaly ? " [NEW IP - ANOMALY DETECTED]" : ""}`,
-      ipAddress: loginIp,
-      organizationId: user.organizationId || undefined,
-    });
+      await storage.createAuditLog({
+        action: "LOGIN", entity: "system", userId: user.id,
+        details: `${user.fullName} logged in from IP ${loginIp}${anomalyResult.anomaly ? " [NEW IP - ANOMALY DETECTED]" : ""}`,
+        ipAddress: loginIp,
+        organizationId: user.organizationId || undefined,
+      });
 
-    let passwordExpired = false;
-    if (user.mustChangePassword) {
-      passwordExpired = true;
-    } else if (user.passwordChangedAt) {
-      const daysSinceChange = (Date.now() - new Date(user.passwordChangedAt).getTime()) / (1000 * 60 * 60 * 24);
-      passwordExpired = daysSinceChange > 90;
-    }
+      const passwordExpired = isPasswordExpired(user);
 
-    let viewingCountry: string | null = null;
-    if (user.role === "super_admin") {
-      viewingCountry = null;
-    } else {
-      viewingCountry = organization?.country || getActiveCountryName() || null;
-    }
-    res.json({
-      ...stripPassword(user),
-      passwordExpired,
-      organization,
-      viewingCountry,
-      ...(anomalyResult.anomaly ? { loginAnomaly: anomalyResult.reason } : {})
+      let viewingCountry: string | null = null;
+      if (user.role === "super_admin") {
+        viewingCountry = null;
+      } else {
+        viewingCountry = organization?.country || getActiveCountryName() || null;
+      }
+      req.session.save(() => {
+        res.json({
+          ...stripPassword(user),
+          passwordExpired,
+          organization,
+          viewingCountry,
+          ...(anomalyResult.anomaly ? { loginAnomaly: anomalyResult.reason } : {})
+        });
+      });
     });
   } catch (e: any) {
     authLogger.error("Login error", e);
@@ -150,7 +164,7 @@ router.post("/api/auth/change-password", async (req, res) => {
     }
 
     const oldHash = user.password;
-    const hashed = await bcrypt.hash(newPassword, 10);
+    const hashed = await bcrypt.hash(newPassword, 12);
     await storage.updateUser(user.id, { password: hashed } as any);
     await storage.updatePasswordChangedAt(user.id);
     await pushPasswordHistory(user.id, oldHash);
@@ -217,45 +231,43 @@ router.post("/api/auth/mfa/login", async (req, res) => {
     if (delta === null) {
       return res.status(401).json({ message: "Invalid MFA code" });
     }
-    delete req.session.mfaPendingUserId;
-    req.session.userId = user.id;
-    req.session.userRole = user.role;
-    req.session.userDivision = (user as any).division || undefined;
-    req.session.organizationId = user.organizationId || undefined;
-    req.session.lastActivity = Date.now();
-    if (user.role === "super_admin") {
-      delete req.session.viewingCountry;
-    }
-    if (user.role !== "super_admin" && user.organizationId) {
-      const org = await storage.getOrganization(user.organizationId);
-      if (org?.country) {
-        req.session.userCountry = org.country;
+    req.session.regenerate(async (err) => {
+      if (err) return res.status(500).json({ message: "Session error" });
+      req.session.userId = user.id;
+      req.session.userRole = user.role;
+      req.session.userDivision = (user as any).division || undefined;
+      req.session.organizationId = user.organizationId || undefined;
+      req.session.lastActivity = Date.now();
+      if (user.role === "super_admin") {
+        delete req.session.viewingCountry;
       }
-    }
-    await storage.createAuditLog({
-      action: "LOGIN", entity: "system", userId: user.id,
-      details: `${user.fullName} logged in (MFA verified)`,
-      ipAddress: req.ip || null,
-      organizationId: user.organizationId || undefined,
+      if (user.role !== "super_admin" && user.organizationId) {
+        const org = await storage.getOrganization(user.organizationId);
+        if (org?.country) {
+          req.session.userCountry = org.country;
+        }
+      }
+      await storage.createAuditLog({
+        action: "LOGIN", entity: "system", userId: user.id,
+        details: `${user.fullName} logged in (MFA verified)`,
+        ipAddress: req.ip || null,
+        organizationId: user.organizationId || undefined,
+      });
+      const passwordExpired = isPasswordExpired(user);
+      let organization = null;
+      if (user.organizationId) {
+        organization = await storage.getOrganization(user.organizationId);
+      }
+      let viewingCountry: string | null = null;
+      if (user.role === "super_admin") {
+        viewingCountry = null;
+      } else {
+        viewingCountry = organization?.country || getActiveCountryName() || null;
+      }
+      req.session.save(() => {
+        res.json({ ...stripPassword(user), passwordExpired, organization, viewingCountry });
+      });
     });
-    let passwordExpired = false;
-    if (user.mustChangePassword) {
-      passwordExpired = true;
-    } else if (user.passwordChangedAt) {
-      const daysSinceChange = (Date.now() - new Date(user.passwordChangedAt).getTime()) / (1000 * 60 * 60 * 24);
-      passwordExpired = daysSinceChange > 90;
-    }
-    let organization = null;
-    if (user.organizationId) {
-      organization = await storage.getOrganization(user.organizationId);
-    }
-    let viewingCountry: string | null = null;
-    if (user.role === "super_admin") {
-      viewingCountry = null;
-    } else {
-      viewingCountry = organization?.country || getActiveCountryName() || null;
-    }
-    res.json({ ...stripPassword(user), passwordExpired, organization, viewingCountry });
   } catch (e: any) {
     authLogger.error("MFA login error", e);
     res.status(500).json({ message: safeErrorMessage(e) });
@@ -358,14 +370,7 @@ router.get("/api/auth/me", async (req, res) => {
 
   const userData = stripPassword(user);
 
-  const PASSWORD_EXPIRY_DAYS = 90;
-  let passwordExpired = false;
-  if (user.mustChangePassword) {
-    passwordExpired = true;
-  } else if (user.passwordChangedAt) {
-    const daysSinceChange = (Date.now() - new Date(user.passwordChangedAt).getTime()) / (1000 * 60 * 60 * 24);
-    passwordExpired = daysSinceChange > PASSWORD_EXPIRY_DAYS;
-  }
+  const passwordExpired = isPasswordExpired(user);
 
   let organization = null;
   if (user.organizationId) {

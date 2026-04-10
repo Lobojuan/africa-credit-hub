@@ -60,7 +60,7 @@ export async function ensureDemoSandbox(): Promise<{ userId: string; organizatio
   let demoUser = await db.select().from(users).where(eq(users.username, DEMO_USERNAME)).then(r => r[0]);
 
   if (!demoUser) {
-    const hashedPw = await bcrypt.hash("demo-readonly-2026", 10);
+    const hashedPw = await bcrypt.hash("demo-readonly-2026", 12);
     [demoUser] = await db.insert(users).values({
       username: DEMO_USERNAME,
       password: hashedPw,

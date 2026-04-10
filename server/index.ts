@@ -23,6 +23,10 @@ function crashLog(msg: string) {
 }
 crashLog("SERVER_START");
 
+if (!process.env.SESSION_SECRET) {
+  throw new Error("SESSION_SECRET environment variable must be set");
+}
+
 const app = express();
 app.set("etag", false);
 
@@ -203,7 +207,14 @@ app.use((req, res, next) => {
     if (!req.session.csrfToken) {
       req.session.csrfToken = generateCSRFToken();
     }
-    if (!csrfToken || csrfToken !== req.session.csrfToken) {
+    if (!csrfToken) {
+      return res.status(403).json({ message: "Invalid or missing CSRF token" });
+    }
+    try {
+      if (!crypto.timingSafeEqual(Buffer.from(csrfToken), Buffer.from(req.session.csrfToken))) {
+        return res.status(403).json({ message: "Invalid or missing CSRF token" });
+      }
+    } catch {
       return res.status(403).json({ message: "Invalid or missing CSRF token" });
     }
   }

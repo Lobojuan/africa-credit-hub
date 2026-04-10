@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import rateLimit from "express-rate-limit";
 import { storage } from "../storage";
 import { getActiveCountryName } from "../country-mode";
+import { pool } from "../db";
 
 export const rateLimitKeyGenerator = (req: Request) => {
   const ip = req.ip ?? req.socket.remoteAddress ?? "unknown";
@@ -156,46 +157,61 @@ export function enforceDataSovereignty(req: Request, res: Response, next: NextFu
   next();
 }
 
-const idempotencyCache = new Map<string, { response: any; status: number; timestamp: number }>();
-const idempotencyInFlight = new Set<string>();
-const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
-const IDEMPOTENCY_MAX_SIZE = 10_000;
+pool.query(`
+  CREATE TABLE IF NOT EXISTS idempotency_keys (
+    key TEXT PRIMARY KEY,
+    response JSONB,
+    status_code INT,
+    processing BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )
+`).catch(() => {});
 
 setInterval(() => {
-  const now = Date.now();
-  for (const [key, val] of idempotencyCache) {
-    if (now - val.timestamp > IDEMPOTENCY_TTL_MS) idempotencyCache.delete(key);
-  }
-  if (idempotencyCache.size > IDEMPOTENCY_MAX_SIZE) {
-    const overflow = idempotencyCache.size - IDEMPOTENCY_MAX_SIZE;
-    const keys = idempotencyCache.keys();
-    for (let i = 0; i < overflow; i++) idempotencyCache.delete(keys.next().value!);
-  }
+  pool.query(`DELETE FROM idempotency_keys WHERE created_at < NOW() - INTERVAL '24 hours'`).catch(() => {});
 }, 5 * 60 * 1000);
 
-export function idempotencyMiddleware(req: Request, res: Response, next: NextFunction) {
+export async function idempotencyMiddleware(req: Request, res: Response, next: NextFunction) {
   const key = req.headers["idempotency-key"] as string;
   if (!key) return next();
 
   const cacheKey = `${req.method}:${req.path}:${key}`;
-  const cached = idempotencyCache.get(cacheKey);
-  if (cached) {
-    res.setHeader("X-Idempotent-Replayed", "true");
-    return res.status(cached.status).json(cached.response);
+
+  try {
+    const existing = await pool.query(
+      `SELECT response, status_code, processing FROM idempotency_keys WHERE key = $1 AND created_at > NOW() - INTERVAL '24 hours'`,
+      [cacheKey]
+    );
+    if (existing.rows.length > 0) {
+      if (existing.rows[0].processing) {
+        return res.status(409).json({ message: "A request with this idempotency key is already being processed" });
+      }
+      res.setHeader("X-Idempotent-Replayed", "true");
+      return res.status(existing.rows[0].status_code).json(existing.rows[0].response);
+    }
+
+    const claimed = await pool.query(
+      `INSERT INTO idempotency_keys (key, processing) VALUES ($1, TRUE) ON CONFLICT (key) DO NOTHING RETURNING key`,
+      [cacheKey]
+    );
+    if (claimed.rows.length === 0) {
+      return res.status(409).json({ message: "A request with this idempotency key is already being processed" });
+    }
+  } catch {
+    return next();
   }
 
-  if (idempotencyInFlight.has(cacheKey)) {
-    return res.status(409).json({ message: "A request with this idempotency key is already being processed" });
-  }
-
-  idempotencyInFlight.add(cacheKey);
   const origJson = res.json.bind(res);
   res.json = function (body: any) {
-    idempotencyCache.set(cacheKey, { response: body, status: res.statusCode, timestamp: Date.now() });
-    idempotencyInFlight.delete(cacheKey);
+    pool.query(
+      `UPDATE idempotency_keys SET response = $2, status_code = $3, processing = FALSE WHERE key = $1`,
+      [cacheKey, JSON.stringify(body), res.statusCode]
+    ).catch(() => {});
     return origJson(body);
   };
-  res.on("close", () => idempotencyInFlight.delete(cacheKey));
+  res.on("close", () => {
+    pool.query(`DELETE FROM idempotency_keys WHERE key = $1 AND processing = TRUE`, [cacheKey]).catch(() => {});
+  });
   next();
 }
 
