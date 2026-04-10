@@ -120,3 +120,9 @@ id = "WGo8h2vD8VFYv8IAdMPN6"
 uri = "file://codebase-dump.txt"
 type = "text"
 title = "CDH v2.5 — Full Server Codebase Dump (50 files, 1.3MB)"
+
+[[outputs]]
+id = "6imkiyVytLwKCnWhCVB41"
+uri = "file://cdh-v2.5-source.tar.gz"
+type = "unspecified"
+title = "CDH v2.5 Source Code (for Claude review)"
