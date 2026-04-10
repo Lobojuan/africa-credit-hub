@@ -3,8 +3,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useBrandColors } from "@/hooks/use-brand-colors";
-import {
 import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
+import {
   Shield, Globe, ArrowRight, TrendingUp, CheckCircle2,
   Users, Building2, AlertTriangle, Target, MapPin,
   BarChart3, Landmark, Scale, DollarSign, LineChart,
