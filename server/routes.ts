@@ -5351,7 +5351,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
   app.post("/api/backups", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
       const { createBackup } = await import("./backup-service");
-      const type = req.body.type || "full";
+      const type = ["full", "schema", "data"].includes(req.body.type) ? req.body.type : "full";
       const notes = req.body.notes || "";
       const userId = req.session?.userId || "unknown";
       const record = await createBackup(type, String(userId), notes);
