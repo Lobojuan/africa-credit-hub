@@ -1508,8 +1508,8 @@ export async function registerRoutes(
     }
   });
 
-  // Aligned with institution loginLimiter: 5 attempts / 15 min to prevent brute-force on consumer auth
-  const consumerAuthLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5, message: { message: "Too many login attempts. Please try again in 15 minutes." }, standardHeaders: true, legacyHeaders: false });
+  // Stricter consumer auth rate limit: 3 attempts / 15 min to prevent brute-force on consumer accounts
+  const consumerAuthLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 3, message: { message: "Too many login attempts. Please try again in 15 minutes." }, standardHeaders: true, legacyHeaders: false });
   const consumerLookupLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { message: "Too many lookup requests. Please try again later." }, standardHeaders: true, legacyHeaders: false });
 
   const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
