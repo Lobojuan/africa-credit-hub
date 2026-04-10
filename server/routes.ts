@@ -1502,7 +1502,7 @@ export async function registerRoutes(
             req.session.userCountry = organization.country;
           }
           const dest = adminUser.role === "super_admin" ? "/command-center" : "/dashboard";
-          routeLogger.info(`[Admin][Google] Login for ${adminUser.fullName} (${googleUser.email}) role=${adminUser.role} → redirecting to ${dest}`);
+          routeLogger.info(`[Admin][Google] Login for user ${String(adminUser.id).slice(0,8)}... role=${adminUser.role} → redirecting to ${dest}`);
           req.session.save((saveErr) => {
             if (saveErr) {
               routeLogger.error(`[Admin][Google] Session save error:`, { detail: saveErr });
@@ -1550,7 +1550,7 @@ export async function registerRoutes(
         if (err) return res.redirect("/my-credit?error=session_error");
         (req.session as any).consumerId = account!.id;
         (req.session as any).consumerNationalId = account!.nationalId;
-        routeLogger.info(`[Consumer][Google] Login for ${account!.id.slice(0, 8)}... (${googleUser.email})`);
+        routeLogger.info(`[Consumer][Google] Login for consumer ${account!.id.slice(0, 8)}...`);
         req.session.save((saveErr) => {
           if (saveErr) {
             routeLogger.error("[Consumer][Google] Session save error:", { detail: saveErr });
@@ -1664,7 +1664,7 @@ export async function registerRoutes(
             req.session.userCountry = organization.country;
           }
           const dest = adminUser.role === "super_admin" ? "/command-center" : "/dashboard";
-          routeLogger.info(`[Admin][Microsoft] Login for ${adminUser.fullName} (${email}) role=${adminUser.role} → redirecting to ${dest}`);
+          routeLogger.info(`[Admin][Microsoft] Login for user ${String(adminUser.id).slice(0,8)}... role=${adminUser.role} → redirecting to ${dest}`);
           req.session.save((saveErr) => {
             if (saveErr) {
               routeLogger.error(`[Admin][Microsoft] Session save error:`, { detail: saveErr });
@@ -1682,7 +1682,7 @@ export async function registerRoutes(
           (req.session as any).consumerId = account.id;
           (req.session as any).consumerNationalId = account.nationalId;
           req.session.lastActivity = Date.now();
-          routeLogger.info(`[Consumer][Microsoft] Login for ${email}`);
+          routeLogger.info(`[Consumer][Microsoft] Login for consumer ${account.id.slice(0,8)}...`);
           req.session.save(() => res.redirect("/my-credit"));
         });
       }
@@ -1861,7 +1861,7 @@ export async function registerRoutes(
         return res.redirect("/login?error=saml_no_email");
       }
 
-      routeLogger.info(`[SAML] Validated assertion for email=${email}`);
+      routeLogger.info(`[SAML] Validated assertion successfully`);
 
       const [adminUser] = await db.select().from(users).where(eq(users.email, email)).limit(1);
       if (adminUser && adminUser.status !== "suspended") {
@@ -1881,7 +1881,7 @@ export async function registerRoutes(
             req.session.userCountry = organization.country;
           }
           const dest = adminUser.role === "super_admin" ? "/command-center" : "/dashboard";
-          routeLogger.info(`[Admin][SAML] Login for ${adminUser.fullName} (${email}) role=${adminUser.role}`);
+          routeLogger.info(`[Admin][SAML] Login for user ${String(adminUser.id).slice(0,8)}... role=${adminUser.role}`);
           req.session.save(() => res.redirect(dest));
         });
       }
@@ -1893,7 +1893,7 @@ export async function registerRoutes(
           (req.session as any).consumerId = account.id;
           (req.session as any).consumerNationalId = account.nationalId;
           req.session.lastActivity = Date.now();
-          routeLogger.info(`[Consumer][SAML] Login for ${email}`);
+          routeLogger.info(`[Consumer][SAML] Login for consumer ${account.id.slice(0,8)}...`);
           req.session.save(() => res.redirect("/my-credit"));
         });
       }
