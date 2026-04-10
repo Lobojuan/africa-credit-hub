@@ -36,6 +36,10 @@ import {
   usageMetering, pricingTiers, users, organizations, borrowers, guarantors,
   creditInquiries, disputes, consentRecords, paymentHistory, courtJudgments,
   dishonouredCheques, creditReportLogs, alternativeData, insertAlternativeDataSchema,
+  settlementAccounts, insertSettlementAccountSchema,
+  settlementSchedules, insertSettlementScheduleSchema,
+  payoutBatches, insertPayoutBatchSchema,
+  payoutItems, insertPayoutItemSchema,
 } from "@shared/schema";
 import { processIFFData, detectIFFType, type IFFType } from "./iff-processor";
 import bcrypt from "bcryptjs";
@@ -304,6 +308,30 @@ function getApiUsageStats() {
     capacityTarget,
     capacityUsedPct: Number(capacityUsedPct),
   };
+}
+
+function calculateNextRun(frequency: string, dayOfWeek: number, dayOfMonth: number): Date {
+  const now = new Date();
+  const next = new Date(now);
+  if (frequency === "daily") {
+    next.setDate(next.getDate() + 1);
+    next.setHours(6, 0, 0, 0);
+  } else if (frequency === "weekly") {
+    const currentDay = now.getDay();
+    const daysUntil = ((dayOfWeek - currentDay) + 7) % 7 || 7;
+    next.setDate(next.getDate() + daysUntil);
+    next.setHours(6, 0, 0, 0);
+  } else if (frequency === "biweekly") {
+    const currentDay = now.getDay();
+    const daysUntil = ((dayOfWeek - currentDay) + 7) % 7 || 7;
+    next.setDate(next.getDate() + daysUntil + 7);
+    next.setHours(6, 0, 0, 0);
+  } else if (frequency === "monthly") {
+    next.setMonth(next.getMonth() + 1);
+    next.setDate(Math.min(dayOfMonth, new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate()));
+    next.setHours(6, 0, 0, 0);
+  }
+  return next;
 }
 
 export async function registerRoutes(
@@ -7706,6 +7734,279 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       if (!updated) return res.status(404).json({ message: "Organization not found" });
       await storage.createAuditLog({ userId: req.session.userId!, action: "UPDATE", entity: "organization", entityId: id, details: `Updated license terms: ${JSON.stringify(updates)}`, ipAddress: req.ip, organizationId: id });
       res.json(updated);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ── Settlement & Payout System ──
+  app.get("/api/platform/settlement-accounts", requireAuth, requireSuperAdmin, async (_req, res) => {
+    try {
+      const accounts = await db.select().from(settlementAccounts).where(eq(settlementAccounts.isActive, true)).orderBy(desc(settlementAccounts.createdAt));
+      res.json(accounts);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/platform/settlement-accounts", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const parsed = insertSettlementAccountSchema.parse(req.body);
+      const [account] = await db.insert(settlementAccounts).values(parsed).returning();
+      await storage.createAuditLog({ userId: req.session.userId!, action: "CREATE", entity: "settlement_account", entityId: account.id, details: `Created settlement account "${parsed.accountLabel}" (${parsed.method})`, ipAddress: req.ip, organizationId: parsed.organizationId || null });
+      res.json(account);
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.patch("/api/platform/settlement-accounts/:id", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const allowed = ["accountLabel", "method", "bankName", "bankBranch", "accountNumber", "accountName", "swiftCode", "momoProvider", "momoNumber", "momoName", "currency", "isDefault", "isActive"];
+      const updates: any = {};
+      for (const key of allowed) {
+        if (req.body[key] !== undefined) updates[key] = req.body[key];
+      }
+      updates.updatedAt = new Date();
+      const [updated] = await db.update(settlementAccounts).set(updates).where(eq(settlementAccounts.id, id)).returning();
+      if (!updated) return res.status(404).json({ message: "Account not found" });
+      res.json(updated);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.delete("/api/platform/settlement-accounts/:id", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const [deactivated] = await db.update(settlementAccounts).set({ isActive: false, updatedAt: new Date() }).where(eq(settlementAccounts.id, req.params.id)).returning();
+      if (!deactivated) return res.status(404).json({ message: "Account not found" });
+      res.json({ success: true });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.get("/api/platform/settlement-schedules", requireAuth, requireSuperAdmin, async (_req, res) => {
+    try {
+      const schedules = await db.select().from(settlementSchedules).orderBy(desc(settlementSchedules.createdAt));
+      res.json(schedules);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/platform/settlement-schedules", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const parsed = insertSettlementScheduleSchema.parse(req.body);
+      const nextRun = calculateNextRun(parsed.frequency, parsed.dayOfWeek ?? 5, parsed.dayOfMonth ?? 1);
+      const [schedule] = await db.insert(settlementSchedules).values({ ...parsed, nextRunAt: nextRun }).returning();
+      res.json(schedule);
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.patch("/api/platform/settlement-schedules/:id", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const allowed = ["frequency", "dayOfWeek", "dayOfMonth", "minimumPayoutCents", "isActive"];
+      const updates: any = {};
+      for (const key of allowed) {
+        if (req.body[key] !== undefined) updates[key] = req.body[key];
+      }
+      if (updates.frequency || updates.dayOfWeek !== undefined || updates.dayOfMonth !== undefined) {
+        const existing = await db.select().from(settlementSchedules).where(eq(settlementSchedules.id, id)).limit(1);
+        if (existing.length > 0) {
+          const freq = updates.frequency || existing[0].frequency;
+          const dow = updates.dayOfWeek ?? existing[0].dayOfWeek ?? 5;
+          const dom = updates.dayOfMonth ?? existing[0].dayOfMonth ?? 1;
+          updates.nextRunAt = calculateNextRun(freq, dow, dom);
+        }
+      }
+      const [updated] = await db.update(settlementSchedules).set(updates).where(eq(settlementSchedules.id, id)).returning();
+      if (!updated) return res.status(404).json({ message: "Schedule not found" });
+      res.json(updated);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.get("/api/platform/payout-batches", requireAuth, requireSuperAdmin, async (_req, res) => {
+    try {
+      const batches = await db.select().from(payoutBatches).orderBy(desc(payoutBatches.createdAt)).limit(50);
+      res.json(batches);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.get("/api/platform/payout-batches/:id", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const [batch] = await db.select().from(payoutBatches).where(eq(payoutBatches.id, req.params.id));
+      if (!batch) return res.status(404).json({ message: "Batch not found" });
+      const items = await db.select({
+        item: payoutItems,
+        orgName: organizations.name,
+        accountLabel: settlementAccounts.accountLabel,
+        accountMethod: settlementAccounts.method,
+      }).from(payoutItems)
+        .leftJoin(organizations, eq(payoutItems.organizationId, organizations.id))
+        .leftJoin(settlementAccounts, eq(payoutItems.settlementAccountId, settlementAccounts.id))
+        .where(eq(payoutItems.batchId, batch.id));
+      res.json({ batch, items: items.map(i => ({ ...i.item, orgName: i.orgName, accountLabel: i.accountLabel, accountMethod: i.accountMethod })) });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/platform/payout-batches/generate", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const now = new Date();
+      const periodEnd = new Date(now);
+      periodEnd.setHours(23, 59, 59, 999);
+
+      const lastBatch = await db.select().from(payoutBatches).orderBy(desc(payoutBatches.periodEnd)).limit(1);
+      const periodStart = lastBatch.length > 0 ? new Date(lastBatch[0].periodEnd.getTime() + 1) : new Date(now.getFullYear(), now.getMonth(), 1);
+
+      const unbilledUsage = await db.select({
+        orgId: usageMetering.organizationId,
+        totalCents: sql<number>`COALESCE(sum(${usageMetering.totalCents}), 0)`,
+        platformFeeCents: sql<number>`COALESCE(sum(${usageMetering.platformFeeCents}), 0)`,
+        bureauRevenueCents: sql<number>`COALESCE(sum(${usageMetering.bureauRevenueCents}), 0)`,
+        eventsCount: sql<number>`count(*)`,
+      }).from(usageMetering).where(
+        and(
+          eq(usageMetering.billed, false),
+          gte(usageMetering.createdAt, periodStart)
+        )
+      ).groupBy(usageMetering.organizationId);
+
+      if (unbilledUsage.length === 0) {
+        return res.status(400).json({ message: "No unbilled usage events found for this period" });
+      }
+
+      const batchRef = `PAY-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}-${Date.now().toString(36).toUpperCase()}`;
+
+      const totalTx = unbilledUsage.reduce((s, u) => s + Number(u.totalCents), 0);
+      const totalPlatform = unbilledUsage.reduce((s, u) => s + Number(u.platformFeeCents), 0);
+      const totalBureau = unbilledUsage.reduce((s, u) => s + Number(u.bureauRevenueCents), 0);
+      const totalEvents = unbilledUsage.reduce((s, u) => s + Number(u.eventsCount), 0);
+
+      const activeOrgs = await db.select({ id: organizations.id, monthlyLicenseFeeCents: organizations.monthlyLicenseFeeCents }).from(organizations).where(eq(organizations.status, "active"));
+      const totalLicense = activeOrgs.reduce((s, o) => s + o.monthlyLicenseFeeCents, 0);
+
+      const [batch] = await db.insert(payoutBatches).values({
+        batchReference: batchRef,
+        periodStart,
+        periodEnd,
+        totalTransactionsCents: totalTx,
+        platformShareCents: totalPlatform + totalLicense,
+        bureauShareCents: totalBureau,
+        totalLicenseFeesCents: totalLicense,
+        eventsCount: totalEvents,
+        status: "pending",
+        createdBy: req.session.userId!,
+      }).returning();
+
+      const defaultAccounts = await db.select().from(settlementAccounts).where(and(eq(settlementAccounts.isDefault, true), eq(settlementAccounts.isActive, true)));
+      const accountMap = Object.fromEntries(defaultAccounts.filter(a => a.organizationId).map(a => [a.organizationId, a.id]));
+      const platformAccount = defaultAccounts.find(a => a.isPlatformAccount);
+
+      const items: any[] = [];
+      for (const usage of unbilledUsage) {
+        if (!usage.orgId) continue;
+        const orgLicense = activeOrgs.find(o => o.id === usage.orgId);
+        items.push({
+          batchId: batch.id,
+          organizationId: usage.orgId,
+          recipient: "bureau" as const,
+          settlementAccountId: accountMap[usage.orgId] || null,
+          amountCents: Number(usage.bureauRevenueCents),
+          licenseFeeAmountCents: 0,
+          totalPayoutCents: Number(usage.bureauRevenueCents),
+          currency: "GHS",
+          eventsCount: Number(usage.eventsCount),
+          status: "pending" as const,
+        });
+      }
+
+      if (totalPlatform + totalLicense > 0) {
+        items.push({
+          batchId: batch.id,
+          organizationId: null,
+          recipient: "platform" as const,
+          settlementAccountId: platformAccount?.id || null,
+          amountCents: totalPlatform,
+          licenseFeeAmountCents: totalLicense,
+          totalPayoutCents: totalPlatform + totalLicense,
+          currency: "GHS",
+          eventsCount: totalEvents,
+          status: "pending" as const,
+        });
+      }
+
+      if (items.length > 0) {
+        await db.insert(payoutItems).values(items);
+      }
+
+      await storage.createAuditLog({ userId: req.session.userId!, action: "CREATE", entity: "payout_batch", entityId: batch.id, details: `Generated payout batch ${batchRef}: ${totalEvents} events, platform ${totalPlatform + totalLicense} pesewas`, ipAddress: req.ip, organizationId: null });
+
+      res.json(batch);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/platform/payout-batches/:id/approve", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [batch] = await db.select().from(payoutBatches).where(eq(payoutBatches.id, id));
+      if (!batch) return res.status(404).json({ message: "Batch not found" });
+      if (batch.status !== "pending") return res.status(400).json({ message: "Batch is not in pending status" });
+
+      const [updated] = await db.update(payoutBatches).set({ status: "processing", approvedBy: req.session.userId!, approvedAt: new Date() }).where(eq(payoutBatches.id, id)).returning();
+
+      await db.update(usageMetering).set({ billed: true }).where(
+        and(
+          eq(usageMetering.billed, false),
+          gte(usageMetering.createdAt, batch.periodStart)
+        )
+      );
+
+      await storage.createAuditLog({ userId: req.session.userId!, action: "UPDATE", entity: "payout_batch", entityId: id, details: `Approved payout batch ${batch.batchReference}`, ipAddress: req.ip, organizationId: null });
+      res.json(updated);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/platform/payout-batches/:id/complete", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const [batch] = await db.select().from(payoutBatches).where(eq(payoutBatches.id, id));
+      if (!batch) return res.status(404).json({ message: "Batch not found" });
+      if (batch.status !== "processing") return res.status(400).json({ message: "Batch must be in processing status" });
+
+      await db.update(payoutBatches).set({ status: "completed", processedAt: new Date() }).where(eq(payoutBatches.id, id));
+      await db.update(payoutItems).set({ status: "completed", processedAt: new Date() }).where(eq(payoutItems.batchId, id));
+
+      await storage.createAuditLog({ userId: req.session.userId!, action: "UPDATE", entity: "payout_batch", entityId: id, details: `Completed payout batch ${batch.batchReference}`, ipAddress: req.ip, organizationId: null });
+      res.json({ success: true });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.get("/api/platform/settlement-summary", requireAuth, requireSuperAdmin, async (_req, res) => {
+    try {
+      const accounts = await db.select().from(settlementAccounts).where(eq(settlementAccounts.isActive, true));
+      const schedules = await db.select().from(settlementSchedules).where(eq(settlementSchedules.isActive, true));
+      const recentBatches = await db.select().from(payoutBatches).orderBy(desc(payoutBatches.createdAt)).limit(10);
+      const unbilledResult = await db.select({
+        totalCents: sql<number>`COALESCE(sum(${usageMetering.totalCents}), 0)`,
+        platformCents: sql<number>`COALESCE(sum(${usageMetering.platformFeeCents}), 0)`,
+        bureauCents: sql<number>`COALESCE(sum(${usageMetering.bureauRevenueCents}), 0)`,
+        count: sql<number>`count(*)`,
+      }).from(usageMetering).where(eq(usageMetering.billed, false));
+
+      const completedBatches = await db.select({
+        totalPaid: sql<number>`COALESCE(sum(${payoutBatches.platformShareCents}), 0)`,
+        totalBureauPaid: sql<number>`COALESCE(sum(${payoutBatches.bureauShareCents}), 0)`,
+        count: sql<number>`count(*)`,
+      }).from(payoutBatches).where(eq(payoutBatches.status, "completed"));
+
+      res.json({
+        accounts,
+        schedules,
+        recentBatches,
+        unbilled: {
+          totalCents: Number(unbilledResult[0]?.totalCents || 0),
+          platformCents: Number(unbilledResult[0]?.platformCents || 0),
+          bureauCents: Number(unbilledResult[0]?.bureauCents || 0),
+          eventsCount: Number(unbilledResult[0]?.count || 0),
+        },
+        settled: {
+          totalPlatformPaid: Number(completedBatches[0]?.totalPaid || 0),
+          totalBureauPaid: Number(completedBatches[0]?.totalBureauPaid || 0),
+          batchCount: Number(completedBatches[0]?.count || 0),
+        },
+        _ts: Date.now(),
+      });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 

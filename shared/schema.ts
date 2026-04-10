@@ -1110,3 +1110,97 @@ export const esgScores = pgTable("esg_scores", {
 export const insertEsgScoreSchema = createInsertSchema(esgScores).omit({ id: true, createdAt: true });
 export type InsertEsgScore = z.infer<typeof insertEsgScoreSchema>;
 export type EsgScore = typeof esgScores.$inferSelect;
+
+export const settlementMethodEnum = pgEnum("payout_method", ["bank_transfer", "mobile_money"]);
+export const settlementFrequencyEnum = pgEnum("payout_frequency", ["daily", "weekly", "biweekly", "monthly"]);
+export const payoutStatusEnum = pgEnum("payout_status", ["pending", "processing", "completed", "failed"]);
+export const payoutRecipientEnum = pgEnum("payout_recipient", ["platform", "bureau"]);
+
+export const settlementAccounts = pgTable("settlement_accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  isPlatformAccount: boolean("is_platform_account").default(false),
+  accountLabel: text("account_label").notNull(),
+  method: settlementMethodEnum("method").notNull(),
+  bankName: text("bank_name"),
+  bankBranch: text("bank_branch"),
+  accountNumber: text("account_number"),
+  accountName: text("account_name"),
+  swiftCode: text("swift_code"),
+  momoProvider: text("momo_provider"),
+  momoNumber: text("momo_number"),
+  momoName: text("momo_name"),
+  currency: text("currency").notNull().default("GHS"),
+  isDefault: boolean("is_default").default(true),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const settlementSchedules = pgTable("settlement_schedules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  isPlatformSchedule: boolean("is_platform_schedule").default(false),
+  frequency: settlementFrequencyEnum("frequency").notNull().default("weekly"),
+  dayOfWeek: integer("day_of_week").default(5),
+  dayOfMonth: integer("day_of_month").default(1),
+  minimumPayoutCents: integer("minimum_payout_cents").notNull().default(1000),
+  currency: text("currency").notNull().default("GHS"),
+  isActive: boolean("is_active").default(true),
+  lastRunAt: timestamp("last_run_at"),
+  nextRunAt: timestamp("next_run_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const payoutBatches = pgTable("payout_batches", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  batchReference: text("batch_reference").notNull().unique(),
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  totalTransactionsCents: integer("total_transactions_cents").notNull().default(0),
+  platformShareCents: integer("platform_share_cents").notNull().default(0),
+  bureauShareCents: integer("bureau_share_cents").notNull().default(0),
+  totalLicenseFeesCents: integer("total_license_fees_cents").notNull().default(0),
+  eventsCount: integer("events_count").notNull().default(0),
+  status: payoutStatusEnum("status").notNull().default("pending"),
+  createdBy: varchar("created_by").references(() => users.id),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  processedAt: timestamp("processed_at"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const payoutItems = pgTable("payout_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  batchId: varchar("batch_id").notNull().references(() => payoutBatches.id),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  recipient: payoutRecipientEnum("recipient").notNull(),
+  settlementAccountId: varchar("settlement_account_id").references(() => settlementAccounts.id),
+  amountCents: integer("amount_cents").notNull(),
+  licenseFeeAmountCents: integer("license_fee_amount_cents").notNull().default(0),
+  totalPayoutCents: integer("total_payout_cents").notNull(),
+  currency: text("currency").notNull().default("GHS"),
+  eventsCount: integer("events_count").notNull().default(0),
+  status: payoutStatusEnum("status").notNull().default("pending"),
+  transactionRef: text("transaction_ref"),
+  failureReason: text("failure_reason"),
+  processedAt: timestamp("processed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSettlementAccountSchema = createInsertSchema(settlementAccounts).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertSettlementAccount = z.infer<typeof insertSettlementAccountSchema>;
+export type SettlementAccount = typeof settlementAccounts.$inferSelect;
+
+export const insertSettlementScheduleSchema = createInsertSchema(settlementSchedules).omit({ id: true, createdAt: true, lastRunAt: true, nextRunAt: true });
+export type InsertSettlementSchedule = z.infer<typeof insertSettlementScheduleSchema>;
+export type SettlementSchedule = typeof settlementSchedules.$inferSelect;
+
+export const insertPayoutBatchSchema = createInsertSchema(payoutBatches).omit({ id: true, createdAt: true, approvedBy: true, approvedAt: true, processedAt: true });
+export type InsertPayoutBatch = z.infer<typeof insertPayoutBatchSchema>;
+export type PayoutBatch = typeof payoutBatches.$inferSelect;
+
+export const insertPayoutItemSchema = createInsertSchema(payoutItems).omit({ id: true, createdAt: true, processedAt: true });
+export type InsertPayoutItem = z.infer<typeof insertPayoutItemSchema>;
+export type PayoutItem = typeof payoutItems.$inferSelect;
