@@ -90,3 +90,15 @@ id = "GMgzyjwh7gz3NaFKdNc2c"
 uri = "file://code-review.txt"
 type = "text"
 title = "CDH v2.5 Code Review File (227 KB — paste-friendly for Claude)"
+
+[[outputs]]
+id = "Lqk4YSApWYfrGS8r4DrPe"
+uri = "file://prod-review-part1.txt"
+type = "text"
+title = "Part 1: Security & Core (344 KB) — Auth, encryption, schema, registration"
+
+[[outputs]]
+id = "B_tng2-OpQomH6K3cXKsV"
+uri = "file://prod-review-part2.txt"
+type = "text"
+title = "Part 2: API & Features (228 KB) — Routes, dashboard, scoring, infra"
