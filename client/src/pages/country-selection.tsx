@@ -25,6 +25,7 @@ import { CommandCenterDataQualityTab } from "./command-center-dataquality";
 import { CommandCenterBillingTab } from "./command-center-billing";
 import { CommandCenterRevenueSplitTab } from "./command-center-revenue-split";
 import { CommandCenterSettlementsTab } from "./command-center-settlements";
+import { CommandCenterWalletsTab } from "./command-center-wallets";
 import { CommandCenterRetentionTab } from "./command-center-retention";
 import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
 
@@ -337,6 +338,9 @@ export default function CountrySelectionPage() {
               <TabsTrigger value="settlements" className="text-xs text-muted-foreground hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-settlements">
                 <Wallet className="w-3 h-3 mr-1" /> Settlements
               </TabsTrigger>
+              <TabsTrigger value="wallets" className="text-xs text-muted-foreground hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-wallets">
+                <Wallet className="w-3 h-3 mr-1" /> Wallets
+              </TabsTrigger>
               <TabsTrigger value="retention" className="text-xs text-muted-foreground hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-retention">
                 <Archive className="w-3 h-3 mr-1" /> Retention
               </TabsTrigger>
@@ -589,6 +593,10 @@ export default function CountrySelectionPage() {
 
             <TabsContent value="settlements" className="mt-0">
               <CommandCenterSettlementsTab />
+            </TabsContent>
+
+            <TabsContent value="wallets" className="mt-0">
+              <CommandCenterWalletsTab />
             </TabsContent>
 
             <TabsContent value="retention" className="mt-0">

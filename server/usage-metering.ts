@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { usageMetering, pricingTiers, organizations } from "@shared/schema";
 import { eq, and, gte, lte, sql, isNull } from "drizzle-orm";
+import { processTransactionFee } from "./wallet-engine";
 
 type MeterableEvent = "credit_report_pull" | "api_call" | "batch_upload" | "cross_border_query" | "dispute_filing" | "data_export";
 
@@ -109,6 +110,26 @@ export async function recordUsageEvent(options: MeterEventOptions): Promise<void
       bureauRevenueCents = totalCents - platformFeeCents;
     }
 
+    let walletDeducted = false;
+    if (organizationId && totalCents > 0) {
+      try {
+        const result = await processTransactionFee(
+          organizationId,
+          totalCents,
+          platformFeeCents,
+          `${eventType} x${quantity}`,
+          undefined,
+          eventType,
+        );
+        walletDeducted = result.success;
+        if (!result.success && result.insufficientFunds) {
+          console.warn(`[UsageMetering] Insufficient wallet balance for org ${organizationId}, event ${eventType}. Recording as unbilled.`);
+        }
+      } catch (walletErr: any) {
+        console.warn(`[UsageMetering] Wallet deduction skipped: ${walletErr.message}`);
+      }
+    }
+
     await db.insert(usageMetering).values({
       organizationId: organizationId || null,
       eventType,
@@ -120,7 +141,7 @@ export async function recordUsageEvent(options: MeterEventOptions): Promise<void
       currency,
       country: country || null,
       metadata: metadata || null,
-      billed: false,
+      billed: walletDeducted,
     });
   } catch (err: any) {
     console.error("[UsageMetering] Failed to record event:", err.message);

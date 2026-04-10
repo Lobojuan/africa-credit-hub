@@ -1204,3 +1204,49 @@ export type PayoutBatch = typeof payoutBatches.$inferSelect;
 export const insertPayoutItemSchema = createInsertSchema(payoutItems).omit({ id: true, createdAt: true, processedAt: true });
 export type InsertPayoutItem = z.infer<typeof insertPayoutItemSchema>;
 export type PayoutItem = typeof payoutItems.$inferSelect;
+
+export const walletTypeEnum = pgEnum("wallet_type", ["platform", "bureau"]);
+export const walletTxTypeEnum = pgEnum("wallet_tx_type", ["topup", "transaction_fee", "platform_fee", "license_fee", "withdrawal", "refund", "adjustment"]);
+export const walletTxStatusEnum = pgEnum("wallet_tx_status", ["pending", "completed", "failed", "reversed"]);
+export const topupMethodEnum = pgEnum("topup_method", ["mobile_money", "bank_transfer", "stripe", "manual"]);
+
+export const wallets = pgTable("wallets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").references(() => organizations.id).unique(),
+  walletType: walletTypeEnum("wallet_type").notNull(),
+  balanceCents: integer("balance_cents").notNull().default(0),
+  currency: text("currency").notNull().default("GHS"),
+  isActive: boolean("is_active").default(true),
+  lowBalanceThresholdCents: integer("low_balance_threshold_cents").notNull().default(50000),
+  autoTopupEnabled: boolean("auto_topup_enabled").default(false),
+  autoTopupAmountCents: integer("auto_topup_amount_cents").default(0),
+  lastTopupAt: timestamp("last_topup_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const walletTransactions = pgTable("wallet_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  walletId: varchar("wallet_id").notNull().references(() => wallets.id),
+  txType: walletTxTypeEnum("tx_type").notNull(),
+  amountCents: integer("amount_cents").notNull(),
+  balanceAfterCents: integer("balance_after_cents").notNull(),
+  currency: text("currency").notNull().default("GHS"),
+  status: walletTxStatusEnum("status").notNull().default("completed"),
+  description: text("description"),
+  referenceId: text("reference_id"),
+  referenceType: text("reference_type"),
+  topupMethod: topupMethodEnum("topup_method"),
+  topupProviderRef: text("topup_provider_ref"),
+  counterpartyWalletId: varchar("counterparty_wallet_id").references(() => wallets.id),
+  metadata: text("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertWalletSchema = createInsertSchema(wallets).omit({ id: true, createdAt: true, updatedAt: true, lastTopupAt: true });
+export type InsertWallet = z.infer<typeof insertWalletSchema>;
+export type Wallet = typeof wallets.$inferSelect;
+
+export const insertWalletTransactionSchema = createInsertSchema(walletTransactions).omit({ id: true, createdAt: true });
+export type InsertWalletTransaction = z.infer<typeof insertWalletTransactionSchema>;
+export type WalletTransaction = typeof walletTransactions.$inferSelect;
