@@ -49,8 +49,8 @@ function validateProductionConfig() {
     if (process.env.PII_ENCRYPTION_SALT === "cdh-pii-salt-v1") {
       errors.push("PII_ENCRYPTION_SALT must be changed from the default value in production");
     }
-    if (process.env.SEED_ADMIN_PASSWORD === "admin0987") {
-      errors.push("SEED_ADMIN_PASSWORD cannot be the default 'admin0987' in production");
+    if (!process.env.SEED_ADMIN_PASSWORD) {
+      errors.push("SEED_ADMIN_PASSWORD must be set in production");
     }
     if (process.env.SESSION_SECRET && process.env.SESSION_SECRET.length < 64) {
       errors.push("SESSION_SECRET should be at least 64 characters in production");

@@ -16,10 +16,11 @@ export async function seedDatabase() {
   if (!process.env.SEED_ADMIN_PASSWORD && isProduction) {
     throw new Error("SEED_ADMIN_PASSWORD must be set in production before seeding");
   }
-  const seedPassword = process.env.SEED_ADMIN_PASSWORD || "admin0987";
-  if (!process.env.SEED_ADMIN_PASSWORD) {
-    console.warn("[Seed] WARNING: SEED_ADMIN_PASSWORD not set — using insecure default. Set SEED_ADMIN_PASSWORD for production.");
-  }
+  const seedPassword = process.env.SEED_ADMIN_PASSWORD || (() => {
+    const generated = require("crypto").randomBytes(12).toString("hex");
+    console.warn(`[Seed] SEED_ADMIN_PASSWORD not set. Generated one-time password: ${generated} — set SEED_ADMIN_PASSWORD env var to fix.`);
+    return generated;
+  })();
 
   const [admin] = await db.insert(users).values([
     { username: "admin", password: hash(seedPassword), fullName: process.env.PLATFORM_ADMIN_NAME || "Platform Admin", email: process.env.PLATFORM_SUPPORT_EMAIL || "support@africacredithub.com", role: "super_admin", status: "active", institution: process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub" },
