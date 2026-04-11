@@ -126,3 +126,9 @@ id = "6imkiyVytLwKCnWhCVB41"
 uri = "file://cdh-v2.5-source.tar.gz"
 type = "unspecified"
 title = "CDH v2.5 Source Code (for Claude review)"
+
+[[outputs]]
+id = "IpPWXu0nNCjbft61cxwJX"
+uri = "file://code-review-dump.zip"
+type = "unspecified"
+title = "Africa Credit Hub - Full Source Code Dump (3.2 MB)"
