@@ -4,14 +4,14 @@ export async function seedStripeProducts() {
   try {
     const stripe = await getUncachableStripeClient();
 
-    const existing = await stripe.products.search({ query: "name:'CDH Standard'" });
+    const existing = await stripe.products.search({ query: "name:'Africa Credit Hub Standard'" });
     if (existing.data.length > 0) {
       console.log('Stripe products already exist, skipping seed');
       return;
     }
 
     const standardProduct = await stripe.products.create({
-      name: 'CDH Standard',
+      name: 'Africa Credit Hub Standard',
       description: 'Credit Registry Standard Plan - Up to 10 users, basic reports',
       metadata: { tier: 'standard', maxUsers: '10' },
     });
@@ -24,7 +24,7 @@ export async function seedStripeProducts() {
     });
 
     const proProduct = await stripe.products.create({
-      name: 'CDH Professional',
+      name: 'Africa Credit Hub Professional',
       description: 'Credit Registry Professional Plan - Up to 50 users, advanced analytics',
       metadata: { tier: 'professional', maxUsers: '50' },
     });
@@ -37,7 +37,7 @@ export async function seedStripeProducts() {
     });
 
     const entProduct = await stripe.products.create({
-      name: 'CDH Enterprise',
+      name: 'Africa Credit Hub Enterprise',
       description: 'Credit Registry Enterprise Plan - Unlimited users, full API access',
       metadata: { tier: 'enterprise', maxUsers: '100' },
     });

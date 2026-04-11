@@ -9,7 +9,7 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     softwareCopyright: "SOFTWARE COPYRIGHT",
     intellectualProperty: "& INTELLECTUAL PROPERTY",
     protectionDocument: "PROTECTION DOCUMENT",
-    platformSubtitle: "Pan-African Credit Data Hub (CDH) v2.5",
+    platformSubtitle: "Africa Credit Hub v2.5",
     docReference: "DOCUMENT REFERENCE",
     docId: "Document ID:",
     version: "Version:",
@@ -39,13 +39,13 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     s14: "Notices & Contact Information",
     s15: "Schedules & Annexures",
     confidentialFooter: "CONFIDENTIAL",
-    footerCenter: "CDH v2.5 — Pan-African Credit Registry",
+    footerCenter: "Africa Credit Hub v2.5 — Pan-African Credit Registry",
   },
   fr: {
     softwareCopyright: "DROIT D'AUTEUR LOGICIEL",
     intellectualProperty: "& PROPRIÉTÉ INTELLECTUELLE",
     protectionDocument: "DOCUMENT DE PROTECTION",
-    platformSubtitle: "Hub de Données de Crédit Panafricain (CDH) v2.5",
+    platformSubtitle: "Africa Credit Hub v2.5",
     docReference: "RÉFÉRENCE DU DOCUMENT",
     docId: "ID du Document :",
     version: "Version :",
@@ -75,13 +75,13 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     s14: "Avis et Coordonnées",
     s15: "Annexes et Pièces Jointes",
     confidentialFooter: "CONFIDENTIEL",
-    footerCenter: "CDH v2.5 — Registre de Crédit Panafricain",
+    footerCenter: "Africa Credit Hub v2.5 — Registre de Crédit Panafricain",
   },
   pt: {
     softwareCopyright: "DIREITOS AUTORAIS DE SOFTWARE",
     intellectualProperty: "& PROPRIEDADE INTELECTUAL",
     protectionDocument: "DOCUMENTO DE PROTEÇÃO",
-    platformSubtitle: "Hub de Dados de Crédito Pan-Africano (CDH) v2.5",
+    platformSubtitle: "Africa Credit Hub v2.5",
     docReference: "REFERÊNCIA DO DOCUMENTO",
     docId: "ID do Documento:",
     version: "Versão:",
@@ -111,13 +111,13 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     s14: "Avisos e Informações de Contacto",
     s15: "Anexos e Apêndices",
     confidentialFooter: "CONFIDENCIAL",
-    footerCenter: "CDH v2.5 — Registo de Crédito Pan-Africano",
+    footerCenter: "Africa Credit Hub v2.5 — Registo de Crédito Pan-Africano",
   },
   ar: {
     softwareCopyright: "حقوق نشر البرمجيات",
     intellectualProperty: "والملكية الفكرية",
     protectionDocument: "وثيقة الحماية",
-    platformSubtitle: "مركز بيانات الائتمان الأفريقي (CDH) الإصدار 2.5",
+    platformSubtitle: "Africa Credit Hub الإصدار 2.5",
     docReference: "مرجع الوثيقة",
     docId: "معرّف الوثيقة:",
     version: "الإصدار:",
@@ -147,13 +147,13 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     s14: "الإشعارات ومعلومات الاتصال",
     s15: "الملاحق والمرفقات",
     confidentialFooter: "سري",
-    footerCenter: "CDH v2.5 — سجل الائتمان الأفريقي",
+    footerCenter: "Africa Credit Hub v2.5 — سجل الائتمان الأفريقي",
   },
   sw: {
     softwareCopyright: "HAKIMILIKI YA PROGRAMU",
     intellectualProperty: "NA MALI YA AKILI",
     protectionDocument: "HATI YA ULINZI",
-    platformSubtitle: "Kituo cha Data ya Mikopo cha Afrika (CDH) v2.5",
+    platformSubtitle: "Africa Credit Hub v2.5",
     docReference: "REJEA YA HATI",
     docId: "Kitambulisho cha Hati:",
     version: "Toleo:",
@@ -183,7 +183,7 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     s14: "Taarifa na Maelezo ya Mawasiliano",
     s15: "Ratiba na Viambatisho",
     confidentialFooter: "SIRI",
-    footerCenter: "CDH v2.5 — Sajili ya Mikopo ya Afrika",
+    footerCenter: "Africa Credit Hub v2.5 — Sajili ya Mikopo ya Afrika",
   },
 };
 
@@ -247,7 +247,7 @@ function addHeader(doc: PDFKit.PDFDocument) {
   doc.y += 15;
 }
 
-function addFooter(doc: PDFKit.PDFDocument, pageNum: number, totalPages: number, confidentialLabel: string = "CONFIDENTIAL", footerCenterLabel: string = "CDH v2.5 — Pan-African Credit Registry") {
+function addFooter(doc: PDFKit.PDFDocument, pageNum: number, totalPages: number, confidentialLabel: string = "CONFIDENTIAL", footerCenterLabel: string = "Africa Credit Hub v2.5 — Pan-African Credit Registry") {
   const pw = doc.page.width;
   const ml = doc.page.margins.left;
   const mr = doc.page.margins.right;
@@ -354,8 +354,8 @@ export function generateCopyrightPdf(lang: string = "en"): Promise<Buffer> {
         Title: "Pan-African Credit Data Hub — Software Copyright & Intellectual Property Protection",
         Author: "Carlson Capital & Systems In Motion Limited",
         Subject: "Copyright and IP Protection Document",
-        Keywords: "copyright, intellectual property, software, credit registry, pan-african, CDH",
-        Creator: "CDH v2.5 Platform",
+        Keywords: "copyright, intellectual property, software, credit registry, pan-african, Africa Credit Hub",
+        Creator: "Africa Credit Hub v2.5 Platform",
       },
     });
 

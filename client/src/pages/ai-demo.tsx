@@ -309,7 +309,7 @@ function AIDemoPage() {
               <Brain className="w-5 h-5 text-white" />
             </div>
             <div>
-              <span className="font-bold text-sm tracking-tight">CDH Credit Registry</span>
+              <span className="font-bold text-sm tracking-tight">Africa Credit Hub</span>
               <span className="text-[10px] text-muted-foreground ml-1.5">AI Demo</span>
             </div>
           </div>

@@ -1325,7 +1325,7 @@ export default function AppGuidePage() {
               </div>
               <div className="hidden sm:block">
                 <p className="text-xs font-bold tracking-tight leading-none">App Guide</p>
-                <p className="text-[10px] text-muted-foreground leading-none mt-0.5">CDH v2.5</p>
+                <p className="text-[10px] text-muted-foreground leading-none mt-0.5">Africa Credit Hub v2.5</p>
               </div>
             </div>
 

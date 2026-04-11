@@ -137,7 +137,7 @@ export default function LoginPage() {
     }
   };
 
-  const registryName = isGhanaMode() ? "Ghana Credit Registry" : "CDH Registry";
+  const registryName = isGhanaMode() ? "Ghana Credit Registry" : "Africa Credit Hub";
 
   const Pill = ({ children }: { children: string }) => (
     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
@@ -779,7 +779,7 @@ export default function LoginPage() {
         transitionDelay: "0.6s",
       }}>
         <p className="text-xs" style={{ color: "hsl(215 10% 58%)" }}>
-          {PLATFORM_COMPANY_NAME}&trade; &middot; {isGhanaMode() ? "Ghana Credit Registry v2.5" : "Cross-Jurisdictional CDH v2.5"}
+          {PLATFORM_COMPANY_NAME}&trade; &middot; {isGhanaMode() ? "Ghana Credit Registry v2.5" : "Africa Credit Hub v2.5"}
         </p>
         <p className="text-[10px] mt-1" style={{ color: "hsl(215 10% 68%)" }}>
           &copy; {PLATFORM_COPYRIGHT_YEAR} {PLATFORM_COMPANY_NAME}. All rights reserved.

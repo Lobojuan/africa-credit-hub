@@ -222,7 +222,7 @@ export default function UpgradePage() {
               <Shield className="w-5 h-5 text-white" />
             </div>
             <div>
-              <span className="font-bold text-sm tracking-tight">CDH Credit Registry</span>
+              <span className="font-bold text-sm tracking-tight">Africa Credit Hub</span>
             </div>
           </div>
           <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate("/")} data-testid="link-back-dashboard">

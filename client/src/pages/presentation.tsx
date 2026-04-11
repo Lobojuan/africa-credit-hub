@@ -22,7 +22,7 @@ const SLIDES = [
   { id: "dashboard-analytics", type: "dashboard-analytics" },
   { id: "security", type: "security" },
   { id: "compliance", type: "compliance" },
-  { id: "why-cdh", type: "why-cdh" },
+  { id: "why-ach", type: "why-ach" },
   { id: "who-its-for", type: "who-its-for" },
   { id: "facility-types", type: "facility-types" },
   { id: "pricing", type: "pricing" },
@@ -136,7 +136,7 @@ function SlideContent({ type }: { type: string }) {
               </div>
               <div className="bg-white/5 border border-white/10 rounded-xl p-5 text-center">
                 <div className="text-2xl font-bold text-white/80">35%</div>
-                <div className="text-xs text-white/60 mt-1">NPL Reduction with CDH Analytics</div>
+                <div className="text-xs text-white/60 mt-1">NPL Reduction with Africa Credit Hub</div>
               </div>
               <div className="bg-white/5 border border-white/10 rounded-xl p-5 text-center">
                 <div className="text-2xl font-bold text-emerald-400">$2.4M</div>
@@ -399,7 +399,7 @@ function SlideContent({ type }: { type: string }) {
               <StatCard value="99.9%" label="Uptime SLA" />
             </div>
             <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-              <p className="text-sm text-white/60 text-center">Banks using CDH analytics have reduced NPL ratios by up to 35% through proactive portfolio management</p>
+              <p className="text-sm text-white/60 text-center">Banks using Africa Credit Hub analytics have reduced NPL ratios by up to 35% through proactive portfolio management</p>
             </div>
           </div>
         </SlideWrapper>
@@ -494,7 +494,7 @@ function SlideContent({ type }: { type: string }) {
         </SlideWrapper>
       );
 
-    case "why-cdh":
+    case "why-ach":
       return (
         <SlideWrapper bg="accent">
           <div className="max-w-4xl w-full space-y-8">

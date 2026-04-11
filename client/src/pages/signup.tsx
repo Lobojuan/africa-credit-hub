@@ -235,10 +235,10 @@ export default function SignUpPage() {
                 <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
               </svg>
             </div>
-            <span className="text-white/90 font-semibold text-lg tracking-tight">CDH Registry</span>
+            <span className="text-white/90 font-semibold text-lg tracking-tight">Africa Credit Hub</span>
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight" data-testid="text-signup-title">
-            Sign up to CDH Registry
+            Sign up to Africa Credit Hub
           </h1>
         </div>
 

@@ -151,7 +151,7 @@ export default function PartnerDocsPage() {
           <Section id="overview" title="Platform Overview" icon={Globe} defaultOpen={true}>
             <div className="mt-4 space-y-3 text-sm text-muted-foreground">
               <p>
-                <strong className="text-foreground">{PLATFORM_COMPANY_NAME}</strong> is a centralized credit data hub (CDH v2.5) that serves the entire financial ecosystem — from individual consumers managing their own credit profiles, to small fintechs building credit products, to tier-1 commercial banks, to central banks overseeing national credit infrastructure.
+                <strong className="text-foreground">{PLATFORM_COMPANY_NAME}</strong> is a centralized credit data hub (Africa Credit Hub v2.5) that serves the entire financial ecosystem — from individual consumers managing their own credit profiles, to small fintechs building credit products, to tier-1 commercial banks, to central banks overseeing national credit infrastructure.
               </p>
               <p>
                 The platform operates on a flexible multi-tier model that adapts to the size and needs of each participant:

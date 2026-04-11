@@ -323,9 +323,9 @@ export async function sendContactSalesEmail(data: { name: string; email: string;
       <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600;">Interested In</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">${esc(tierLabel)}</td></tr>
     </table>
     ${data.message ? `<h3 style="margin-top:20px;">Message</h3><p style="background:#f8f9fa;padding:16px;border-radius:8px;white-space:pre-wrap;">${esc(data.message)}</p>` : ""}
-    <p style="color:#888;font-size:12px;margin-top:24px;">This inquiry was submitted via the CDH Contact Sales page.</p>
+    <p style="color:#888;font-size:12px;margin-top:24px;">This inquiry was submitted via the Africa Credit Hub Contact Sales page.</p>
   `;
-  return sendEmail(adminEmail, `[CDH Sales Inquiry] ${data.organization} — ${tierLabel}`, createEmailHtml("New Sales Inquiry", body));
+  return sendEmail(adminEmail, `[Africa Credit Hub Sales Inquiry] ${data.organization} — ${tierLabel}`, createEmailHtml("New Sales Inquiry", body));
 }
 
 export function isEmailConfigured(): boolean {

@@ -495,7 +495,7 @@ export default function SystemStatusPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
               <span className="text-muted-foreground">Platform</span>
-              <p className="font-medium">{status?.platform || "CDH"}</p>
+              <p className="font-medium">{status?.platform || "Africa Credit Hub"}</p>
             </div>
             <div>
               <span className="text-muted-foreground">Version</span>

@@ -21,7 +21,7 @@ export default function PricingPage() {
             Infrastructure scaled for your institution.
           </h1>
           <p className="mt-4 text-xl text-muted-foreground" data-testid="text-pricing-subtitle">
-            From local microfinance to national central banks, CDH provides the secure foundation for pan-African credit evaluation.
+            From local microfinance to national central banks, Africa Credit Hub provides the secure foundation for pan-African credit evaluation.
           </p>
         </div>
 

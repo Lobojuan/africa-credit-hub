@@ -203,7 +203,7 @@ export default function StartTrialPage() {
               <Shield className="w-5 h-5 text-white" />
             </div>
             <div>
-              <span className="font-bold text-sm tracking-tight">CDH Credit Registry</span>
+              <span className="font-bold text-sm tracking-tight">Africa Credit Hub</span>
               <span className="text-[10px] text-muted-foreground ml-1.5">Free Trial</span>
             </div>
           </div>
@@ -549,7 +549,7 @@ export default function StartTrialPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-[11px] text-muted-foreground/80">
             <div className="space-y-1.5">
               <p className="text-xs font-semibold text-foreground">Africa Credit Hub</p>
-              <p>Pan-African Credit Registry — CDH v2.5</p>
+              <p>Pan-African Credit Registry — Africa Credit Hub v2.5</p>
               <div className="flex items-center gap-1.5"><MapPin className="w-3 h-3" /><span>Accra, Ghana</span></div>
             </div>
             <div className="space-y-1.5">

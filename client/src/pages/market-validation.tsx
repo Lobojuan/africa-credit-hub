@@ -51,7 +51,7 @@ const DEMAND_SIGNALS = [
   {
     icon: Activity,
     title: "$47B African Fintech Revenue by 2028",
-    evidence: "Fintech infrastructure (KYC, credit scoring APIs, data rails) is the highest-value vertical in the African fintech ecosystem. CDH sits at the infrastructure layer — enabling other businesses to operate.",
+    evidence: "Fintech infrastructure (KYC, credit scoring APIs, data rails) is the highest-value vertical in the African fintech ecosystem. Africa Credit Hub sits at the infrastructure layer — enabling other businesses to operate.",
     source: "McKinsey Africa Fintech Report",
     strength: "Strong",
   },
@@ -129,7 +129,7 @@ const PRICING_VALIDATION = [
 ];
 
 const TRACTION_MILESTONES = [
-  { status: "complete", label: "Production-ready platform (CDH v2.5) with 16 integrated modules" },
+  { status: "complete", label: "Production-ready platform (Africa Credit Hub v2.5) with 16 integrated modules" },
   { status: "complete", label: "Live platform with 102K+ borrower records and 172K+ credit accounts across 2 countries" },
   { status: "complete", label: "Full regulatory compliance engine covering 54 African jurisdictions" },
   { status: "complete", label: "ML credit scoring with alternative data (mobile money, utility payments)" },
@@ -156,7 +156,7 @@ export default function MarketValidationPage() {
               <Shield className="w-5 h-5 text-white" />
             </div>
             <div>
-              <span className="font-bold text-sm tracking-tight">CDH Credit Registry</span>
+              <span className="font-bold text-sm tracking-tight">Africa Credit Hub</span>
               <span className="text-[10px] text-muted-foreground ml-1.5">Market Validation</span>
             </div>
           </div>
@@ -175,7 +175,7 @@ export default function MarketValidationPage() {
         <div className="max-w-7xl mx-auto text-center">
           <Badge variant="outline" className="mb-4">Market Validation</Badge>
           <h1 className="text-3xl md:text-4xl font-bold mb-4" data-testid="text-mv-title">
-            Why Africa Needs CDH — And Why Now
+            Why Africa Needs Africa Credit Hub — And Why Now
           </h1>
           <p className="text-muted-foreground max-w-2xl mx-auto mb-4">
             Data-backed market validation for pan-African credit infrastructure.
@@ -298,7 +298,7 @@ export default function MarketValidationPage() {
         <div className="max-w-7xl mx-auto">
           <h2 className="text-2xl font-bold text-center mb-2">Competitive Landscape Analysis</h2>
           <p className="text-muted-foreground text-center mb-8 text-sm">
-            No existing player covers more than a single African region. CDH is the only pan-continental solution.
+            No existing player covers more than a single African region. Africa Credit Hub is the only pan-continental solution.
           </p>
           <div className="space-y-3">
             {COMPETITIVE_LANDSCAPE.map((comp) => (
@@ -339,7 +339,7 @@ export default function MarketValidationPage() {
                 <p className="text-sm font-medium">Key Takeaway</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Every existing competitor is confined to a single country or sub-region. None offer multi-currency support, 
-                  cross-border entity resolution, or alternative data scoring. CDH is the only platform designed from day one 
+                  cross-border entity resolution, or alternative data scoring. Africa Credit Hub is the only platform designed from day one 
                   for pan-African operation — creating a category of one.
                 </p>
               </div>

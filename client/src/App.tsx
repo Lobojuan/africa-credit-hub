@@ -422,7 +422,7 @@ function AuthenticatedApp() {
             <header className="flex items-center justify-between px-3 py-2 border-b shrink-0 ltr-header h-14">
               <div className="flex items-center gap-2">
                 <SidebarTrigger data-testid="button-sidebar-toggle" className="shrink-0" />
-                <span className="text-sm font-bold tracking-tight truncate max-w-[140px]" data-testid="text-mobile-brand">CDH Registry</span>
+                <span className="text-sm font-bold tracking-tight truncate max-w-[140px]" data-testid="text-mobile-brand">Africa Credit Hub</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <NotificationBell />

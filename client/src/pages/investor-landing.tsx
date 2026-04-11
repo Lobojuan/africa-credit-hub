@@ -486,8 +486,8 @@ export default function InvestorLandingPage() {
 
   useEffect(() => {
     document.title = isGhanaMode() 
-      ? "Ghana Credit Registry System | CDH v2.5 — Systems In Motion Limited"
-      : "Pan-African Credit Registry | CDH v2.5 — Modernize Your Credit Infrastructure";
+      ? "Ghana Credit Registry System | Africa Credit Hub v2.5 — Systems In Motion Limited"
+      : "Pan-African Credit Registry | Africa Credit Hub v2.5 — Modernize Your Credit Infrastructure";
     const meta = document.querySelector('meta[name="description"]');
     const content = "The only SRS-compliant credit registry platform covering all 54 African countries. Built for central banks, commercial banks, MFIs, and fintechs to manage credit risk, ensure compliance, and expand financial inclusion.";
     if (meta) {
@@ -510,7 +510,7 @@ export default function InvestorLandingPage() {
     { label: "Challenges", id: "problem" },
     { label: "Platform", id: "platform" },
     { label: "Solutions", id: "use-cases" },
-    { label: "Why CDH", id: "advantage" },
+    { label: "Why Us", id: "advantage" },
     { label: "Market", id: "market-proof" },
     { label: "Pricing", id: "pricing-link" },
     { label: "Security", id: "security-link" },
@@ -534,7 +534,7 @@ export default function InvestorLandingPage() {
               <Shield className="w-5 h-5 text-white" />
             </div>
             <div>
-              <span className="font-bold text-sm tracking-tight">CDH Credit Registry</span>
+              <span className="font-bold text-sm tracking-tight">Africa Credit Hub</span>
               <span className="text-[10px] text-muted-foreground ml-1.5">v2.5</span>
             </div>
           </div>
@@ -771,7 +771,7 @@ export default function InvestorLandingPage() {
               <div className="rounded-2xl overflow-hidden border border-border/50 shadow-2xl">
                 <img
                   src={dashboardImage}
-                  alt="CDH v2.5 dashboard showing borrowers, credit accounts, and portfolio analytics"
+                  alt="Africa Credit Hub v2.5 dashboard showing borrowers, credit accounts, and portfolio analytics"
                   className="w-full h-auto"
                   loading="lazy"
                 />
@@ -947,7 +947,7 @@ export default function InvestorLandingPage() {
           <div className="mt-10 text-center">
             <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-primary/30 bg-primary/5">
               <Target className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium">CDH v2.5 addresses all four challenges in a single, unified platform — backed by real data.</span>
+              <span className="text-sm font-medium">Africa Credit Hub v2.5 addresses all four challenges in a single, unified platform — backed by real data.</span>
             </div>
           </div>
         </div>
@@ -1035,7 +1035,7 @@ export default function InvestorLandingPage() {
                 Connected Across the Entire Continent
               </h2>
               <p className="text-muted-foreground text-sm sm:text-base leading-relaxed mb-6">
-                CDH v2.5 is the only credit registry platform engineered for all 54 African nations —
+                Africa Credit Hub v2.5 is the only credit registry platform engineered for all 54 African nations —
                 bridging Anglophone, Francophone, Lusophone, and Arabophone regions with
                 unified data standards and real-time cross-border intelligence.
               </p>
@@ -1392,11 +1392,11 @@ export default function InvestorLandingPage() {
           <div className="mb-10">
             <h3 className="font-bold text-sm mb-5 text-center flex items-center justify-center gap-2">
               <AlertTriangle className="w-4 h-4 text-primary" />
-              How CDH Compares to Alternatives
+              How Africa Credit Hub Compares to Alternatives
             </h3>
             <div className="space-y-3">
               {[
-                { name: "TransUnion / Experian Africa", gap: "Coverage limited to South Africa + a few countries. No pan-African reach. Legacy on-premise architecture.", solve: "CDH covers all 54 countries with cloud-native multi-tenant architecture and cross-border entity resolution." },
+                { name: "TransUnion / Experian Africa", gap: "Coverage limited to South Africa + a few countries. No pan-African reach. Legacy on-premise architecture.", solve: "Africa Credit Hub covers all 54 countries with cloud-native multi-tenant architecture and cross-border entity resolution." },
                 { name: "Country-Specific Bureaus (e.g. CRB Kenya)", gap: "Single-country systems with no cross-border capability. Separate systems per jurisdiction.", solve: "One platform across all jurisdictions. Your team learns one system, not dozens." },
                 { name: "Building In-House", gap: "Years of development per country. No data sharing across institutions. No regulatory compliance automation.", solve: "Production-ready today with 16 integrated modules, regulatory compliance engine, and automated data retention." },
               ].map((comp) => (
@@ -1419,7 +1419,7 @@ export default function InvestorLandingPage() {
                         <div className="flex items-start gap-2">
                           <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
                           <div>
-                            <p className="text-[10px] font-medium text-green-600 mb-0.5">CDH Advantage</p>
+                            <p className="text-[10px] font-medium text-green-600 mb-0.5">Our Advantage</p>
                             <p className="text-xs text-muted-foreground">{comp.solve}</p>
                           </div>
                         </div>
@@ -1436,7 +1436,7 @@ export default function InvestorLandingPage() {
               <CardContent className="pt-6">
                 <h3 className="font-bold text-sm mb-4 flex items-center gap-2">
                   <Shield className="w-4 h-4 text-primary" />
-                  What You Get With CDH
+                  What You Get With Africa Credit Hub
                 </h3>
                 <div className="space-y-3">
                   {[
@@ -1570,7 +1570,7 @@ export default function InvestorLandingPage() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-foreground leading-tight">Africa Credit Hub</p>
-                  <p className="text-[10px] text-muted-foreground leading-tight">Pan-African Credit Registry — CDH v2.5</p>
+                  <p className="text-[10px] text-muted-foreground leading-tight">Pan-African Credit Registry — Africa Credit Hub v2.5</p>
                 </div>
               </div>
               <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
