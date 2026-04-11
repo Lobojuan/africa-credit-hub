@@ -5597,7 +5597,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       }
 
       checks.seedPassword = !process.env.SEED_ADMIN_PASSWORD
-        ? { status: "fail", message: "SEED_ADMIN_PASSWORD is not set — must be configured in production" }
+        ? { status: "warn", message: "SEED_ADMIN_PASSWORD not set — seed generates a random password" }
         : { status: "pass", message: "Seed password is configured" };
 
       const failCount = Object.values(checks).filter(c => c.status === "fail").length;

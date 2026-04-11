@@ -50,7 +50,7 @@ function validateProductionConfig() {
       errors.push("PII_ENCRYPTION_SALT must be changed from the default value in production");
     }
     if (!process.env.SEED_ADMIN_PASSWORD) {
-      errors.push("SEED_ADMIN_PASSWORD must be set in production");
+      console.warn("[Production] WARNING: SEED_ADMIN_PASSWORD not set — seed will generate a random password if needed");
     }
     if (process.env.SESSION_SECRET && process.env.SESSION_SECRET.length < 64) {
       errors.push("SESSION_SECRET should be at least 64 characters in production");
