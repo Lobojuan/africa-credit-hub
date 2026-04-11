@@ -127,11 +127,11 @@ export default function LoginPage() {
         body: JSON.stringify({ nationalId: consumerNationalId, password: consumerPassword }),
       });
       const body = await res.json();
-      if (!res.ok) throw new Error(body.message || "Login failed");
-      toast({ title: "Welcome back!" });
+      if (!res.ok) throw new Error(body.message || t('login.loginFailed'));
+      toast({ title: t('login.welcomeBack') });
       window.location.replace("/my-credit");
     } catch (err: any) {
-      setConsumerError(err.message || "Login failed");
+      setConsumerError(err.message || t('login.loginFailed'));
     } finally {
       setConsumerLoading(false);
     }
@@ -215,17 +215,17 @@ export default function LoginPage() {
             <div className="text-center mb-10">
               <h1 className="text-3xl sm:text-4xl font-bold tracking-tight" style={{ color: "hsl(215 30% 18%)" }}
                 data-testid="text-login-title">
-                Welcome to {registryName}
+                {t('login.welcomeTo')} {registryName}
               </h1>
               <p className="mt-3 text-base" style={{ color: "hsl(215 15% 50%)" }}>
-                Choose your portal to get started
+                {t('login.choosePortal')}
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-[820px] w-full mx-auto">
               <button
                 type="button"
-                aria-label="Sign in as institution — access credit bureau data, portfolio intelligence, and regulatory reports"
+                aria-label={t('login.institutionAriaLabel')}
                 className="login-card-hover rounded-2xl p-7 cursor-pointer relative overflow-hidden text-left"
                 style={{
                   background: "linear-gradient(145deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.8) 100%)",
@@ -248,16 +248,16 @@ export default function LoginPage() {
                 </div>
 
                 <h2 className="text-xl font-bold tracking-tight mb-2" style={{ color: "hsl(215 30% 18%)" }}>
-                  Business & Lender Portal
+                  {t('login.businessPortalTitle')}
                 </h2>
                 <p className="text-sm leading-relaxed mb-5" style={{ color: "hsl(215 15% 48%)" }}>
-                  Access credit bureau data, run searches, manage portfolios and generate reports
+                  {t('login.businessPortalDesc')}
                 </p>
 
                 <div className="flex flex-wrap gap-2 mb-6">
-                  <Pill>Credit Bureau Access</Pill>
-                  <Pill>Portfolio Intelligence</Pill>
-                  <Pill>Regulatory Reports</Pill>
+                  <Pill>{t('login.pillCreditBureau')}</Pill>
+                  <Pill>{t('login.pillPortfolioIntel')}</Pill>
+                  <Pill>{t('login.pillRegReports')}</Pill>
                 </div>
 
                 <button
@@ -268,7 +268,7 @@ export default function LoginPage() {
                   }}
                   data-testid="button-sign-in-institution"
                 >
-                  Sign In as Institution
+                  {t('login.signInAsInstitution')}
                   <ArrowRight className="w-4 h-4" />
                 </button>
 
@@ -277,14 +277,14 @@ export default function LoginPage() {
                     style={{ color: "hsl(215 45% 50%)" }}
                     data-testid="link-register-institution"
                     onClick={(e) => e.stopPropagation()}>
-                    Register your institution <ArrowRight className="w-3.5 h-3.5" />
+                    {t('login.registerInstitution')} <ArrowRight className="w-3.5 h-3.5" />
                   </a>
                 </div>
               </button>
 
               <button
                 type="button"
-                aria-label="Check your personal credit — free credit report, dispute management, and score tracking"
+                aria-label={t('login.consumerAriaLabel')}
                 className="login-card-hover rounded-2xl p-7 cursor-pointer relative overflow-hidden text-left"
                 style={{
                   background: "linear-gradient(145deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.8) 100%)",
@@ -307,16 +307,16 @@ export default function LoginPage() {
                 </div>
 
                 <h2 className="text-xl font-bold tracking-tight mb-2" style={{ color: "hsl(215 30% 18%)" }}>
-                  Personal Credit Portal
+                  {t('login.personalPortalTitle')}
                 </h2>
                 <p className="text-sm leading-relaxed mb-5" style={{ color: "hsl(215 15% 48%)" }}>
-                  Check your own credit score, view your full report, and raise disputes — free of charge
+                  {t('login.personalPortalDesc')}
                 </p>
 
                 <div className="flex flex-wrap gap-2 mb-6">
-                  <ConsumerPill>Free Credit Report</ConsumerPill>
-                  <ConsumerPill>Dispute Management</ConsumerPill>
-                  <ConsumerPill>Score Tracking</ConsumerPill>
+                  <ConsumerPill>{t('login.pillFreeReport')}</ConsumerPill>
+                  <ConsumerPill>{t('login.pillDisputeMgmt')}</ConsumerPill>
+                  <ConsumerPill>{t('login.pillScoreTracking')}</ConsumerPill>
                 </div>
 
                 <button
@@ -327,7 +327,7 @@ export default function LoginPage() {
                   }}
                   data-testid="button-check-my-credit"
                 >
-                  Check My Credit
+                  {t('login.checkMyCredit')}
                   <ArrowRight className="w-4 h-4" />
                 </button>
 
@@ -336,7 +336,7 @@ export default function LoginPage() {
                     style={{ color: "hsl(265 40% 50%)" }}
                     data-testid="link-consumer-register"
                     onClick={(e) => e.stopPropagation()}>
-                    Create free account <ArrowRight className="w-3.5 h-3.5" />
+                    {t('login.createFreeAccount')} <ArrowRight className="w-3.5 h-3.5" />
                   </a>
                 </div>
               </button>
@@ -357,7 +357,7 @@ export default function LoginPage() {
               data-testid="button-back-to-chooser-consumer"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              Back to portals
+              {t('login.backToPortals')}
             </button>
 
             <div className="flex items-center gap-3 mb-6">
@@ -370,8 +370,8 @@ export default function LoginPage() {
               </div>
               <div>
                 <h1 className="text-xl font-bold tracking-tight" style={{ color: "hsl(215 30% 18%)" }}
-                  data-testid="text-consumer-login-title">Personal Credit Portal</h1>
-                <p className="text-xs" style={{ color: "hsl(215 15% 50%)" }}>Access your personal credit profile</p>
+                  data-testid="text-consumer-login-title">{t('login.personalPortalTitle')}</h1>
+                <p className="text-xs" style={{ color: "hsl(215 15% 50%)" }}>{t('login.accessPersonalProfile')}</p>
               </div>
             </div>
 
@@ -392,7 +392,7 @@ export default function LoginPage() {
                 )}
                 <div className="space-y-2">
                   <Label htmlFor="consumer-national-id" className="text-sm font-medium" style={{ color: "hsl(215 25% 30%)" }}>
-                    National ID / Passport
+                    {t('login.nationalIdLabel')}
                   </Label>
                   <div className="relative">
                     <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: "hsl(215 15% 65%)" }} />
@@ -401,7 +401,7 @@ export default function LoginPage() {
                       data-testid="input-consumer-national-id"
                       value={consumerNationalId}
                       onChange={(e) => setConsumerNationalId(e.target.value)}
-                      placeholder="Enter your National ID"
+                      placeholder={t('login.nationalIdPlaceholder')}
                       required
                       autoFocus
                       className="h-11 pl-10 rounded-xl border-slate-200 focus:border-purple-400 focus:ring-purple-200"
@@ -410,7 +410,7 @@ export default function LoginPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="consumer-password" className="text-sm font-medium" style={{ color: "hsl(215 25% 30%)" }}>
-                    Password
+                    {t('login.passwordLabel')}
                   </Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: "hsl(215 15% 65%)" }} />
@@ -420,13 +420,13 @@ export default function LoginPage() {
                       type={showConsumerPassword ? "text" : "password"}
                       value={consumerPassword}
                       onChange={(e) => setConsumerPassword(e.target.value)}
-                      placeholder="Enter your password"
+                      placeholder={t('login.passwordPlaceholder')}
                       required
                       className="h-11 pl-10 pr-10 rounded-xl border-slate-200 focus:border-purple-400 focus:ring-purple-200"
                     />
                     <button
                       type="button"
-                      aria-label={showConsumerPassword ? "Hide password" : "Show password"}
+                      aria-label={showConsumerPassword ? t('login.hidePassword') : t('login.showPassword')}
                       className="absolute right-3 top-1/2 -translate-y-1/2"
                       style={{ color: "hsl(215 15% 60%)" }}
                       onClick={() => setShowConsumerPassword(!showConsumerPassword)}
@@ -449,11 +449,11 @@ export default function LoginPage() {
                   {consumerLoading ? (
                     <span className="flex items-center gap-2">
                       <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Signing in...
+                      {t('login.signingIn')}
                     </span>
                   ) : (
                     <>
-                      Check My Credit
+                      {t('login.checkMyCredit')}
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
@@ -463,7 +463,7 @@ export default function LoginPage() {
 
             <div className="relative flex items-center gap-3 my-4">
               <div className="flex-1 h-px" style={{ background: "hsl(215 25% 88%)" }} />
-              <span className="text-xs whitespace-nowrap" style={{ color: "hsl(215 15% 60%)" }}>or continue with</span>
+              <span className="text-xs whitespace-nowrap" style={{ color: "hsl(215 15% 60%)" }}>{t('login.orContinueWith')}</span>
               <div className="flex-1 h-px" style={{ background: "hsl(215 25% 88%)" }} />
             </div>
 
@@ -506,7 +506,7 @@ export default function LoginPage() {
             <div className="flex items-center justify-center gap-4 text-sm mt-5">
               <a href="/consumer/register" className="font-medium flex items-center gap-1" style={{ color: "hsl(265 40% 50%)" }}
                 data-testid="link-consumer-register-form">
-                Create free account <ArrowRight className="w-3.5 h-3.5" />
+                {t('login.createFreeAccount')} <ArrowRight className="w-3.5 h-3.5" />
               </a>
             </div>
           </div>
@@ -525,7 +525,7 @@ export default function LoginPage() {
               data-testid="button-back-to-chooser-institution"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              Back to portals
+              {t('login.backToPortals')}
             </button>
 
             <div className="flex items-center gap-3 mb-6">
@@ -538,7 +538,7 @@ export default function LoginPage() {
               </div>
               <div>
                 <h1 className="text-xl font-bold tracking-tight" style={{ color: "hsl(215 30% 18%)" }}
-                  data-testid="text-institution-login-title">Business & Lender Portal</h1>
+                  data-testid="text-institution-login-title">{t('login.businessPortalTitle')}</h1>
                 <p className="text-xs" style={{ color: "hsl(215 15% 50%)" }}>{t('login.subtitle')}</p>
               </div>
             </div>
@@ -685,7 +685,7 @@ export default function LoginPage() {
 
             <div className="relative flex items-center gap-3 my-4">
               <div className="flex-1 h-px" style={{ background: "hsl(215 25% 88%)" }} />
-              <span className="text-xs whitespace-nowrap" style={{ color: "hsl(215 15% 60%)" }}>or continue with</span>
+              <span className="text-xs whitespace-nowrap" style={{ color: "hsl(215 15% 60%)" }}>{t('login.orContinueWith')}</span>
               <div className="flex-1 h-px" style={{ background: "hsl(215 25% 88%)" }} />
             </div>
 
@@ -752,7 +752,7 @@ export default function LoginPage() {
                 data-testid="button-sso-login"
               >
                 <Shield className="w-4 h-4" />
-                Enterprise SSO
+                {t('login.enterpriseSSO')}
               </button>
             </div>
 
@@ -766,7 +766,7 @@ export default function LoginPage() {
             <div className="flex items-center justify-center gap-4 text-sm mt-3">
               <a href="/signup" className="font-medium flex items-center gap-1" style={{ color: "hsl(215 45% 50%)" }}
                 data-testid="link-signup">
-                Register your institution <ArrowRight className="w-3.5 h-3.5" />
+                {t('login.registerInstitution')} <ArrowRight className="w-3.5 h-3.5" />
               </a>
             </div>
           </div>
@@ -782,7 +782,7 @@ export default function LoginPage() {
           {PLATFORM_COMPANY_NAME}&trade; &middot; {isGhanaMode() ? "Ghana Credit Registry v2.5" : "Africa Credit Hub v2.5"}
         </p>
         <p className="text-[10px] mt-1" style={{ color: "hsl(215 10% 68%)" }}>
-          &copy; {PLATFORM_COPYRIGHT_YEAR} {PLATFORM_COMPANY_NAME}. All rights reserved.
+          &copy; {PLATFORM_COPYRIGHT_YEAR} {PLATFORM_COMPANY_NAME}. {t('login.allRightsReserved')}
         </p>
       </footer>
     </div>
