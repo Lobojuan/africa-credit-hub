@@ -63,6 +63,7 @@ const updateDeploymentSchema = z.object({
   status: z.enum(["active", "suspended", "trial", "decommissioned"]).optional(),
   licenseTier: z.string().optional(),
   monthlyFeeCents: z.number().int().nullable().optional(),
+  platformFeePercent: z.number().int().min(0).max(100).nullable().optional(),
   currency: z.string().optional(),
   contactName: z.string().nullable().optional(),
   contactEmail: z.string().nullable().optional(),
@@ -177,16 +178,29 @@ export function registerPlatformControlRoutes(app: Express) {
   app.patch("/api/platform-control/deployments/:id", requireMasterAuth, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const parsed = updateDeploymentSchema.parse(req.body);
-      const updates = { ...parsed, updatedAt: new Date() };
+      const { updateNote, ...body } = req.body || {};
+      const parsed = updateDeploymentSchema.parse(body);
+      const now = new Date();
 
+      const [existing] = await db.select().from(platformDeployments).where(eq(platformDeployments.id, id));
+      if (!existing) return res.status(404).json({ message: "Deployment not found" });
+
+      const logEntry = {
+        timestamp: now.toISOString(),
+        changes: Object.keys(parsed),
+        note: updateNote || "",
+        previousStatus: existing.status,
+      };
+      const currentLog = Array.isArray(existing.updateLog) ? existing.updateLog : [];
+      const newLog = [logEntry, ...currentLog].slice(0, 100);
+
+      const updates = { ...parsed, updatedAt: now, updateLog: newLog };
       const [updated] = await db.update(platformDeployments)
         .set(updates)
         .where(eq(platformDeployments.id, id))
         .returning();
 
-      if (!updated) return res.status(404).json({ message: "Deployment not found" });
-      logger.info("Deployment updated", { id, changes: Object.keys(parsed) });
+      logger.info("Deployment updated", { id, changes: Object.keys(parsed), note: updateNote });
       return res.json(updated);
     } catch (e: any) {
       logger.error("Failed to update deployment", { error: e.message });

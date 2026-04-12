@@ -87,9 +87,11 @@ function PasswordGate({ onAuthenticated }: { onAuthenticated: () => void }) {
 
 type Deployment = {
   id: string; clientName: string; country: string; region?: string; deploymentUrl?: string;
-  status: string; licenseTier: string; monthlyFeeCents?: number; currency: string;
-  contactName?: string; contactEmail?: string; totalBorrowers?: number; totalInstitutions?: number;
-  lastSyncAt?: string; notes?: string; createdAt: string;
+  status: string; licenseTier: string; monthlyFeeCents?: number; platformFeePercent?: number;
+  currency: string; contactName?: string; contactEmail?: string;
+  totalBorrowers?: number; totalInstitutions?: number;
+  lastSyncAt?: string; configSnapshot?: any; updateLog?: any[];
+  notes?: string; createdAt: string;
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -147,11 +149,13 @@ function formatCurrency(cents: number | undefined | null, currency: string = "GH
 function DeploymentForm({ deployment, onClose }: { deployment?: Deployment; onClose: () => void }) {
   const qc = useQueryClient();
   const { toast } = useToast();
+  const [updateNote, setUpdateNote] = useState("");
   const [form, setForm] = useState({
     clientName: deployment?.clientName || "", country: deployment?.country || "",
     region: deployment?.region || "", deploymentUrl: deployment?.deploymentUrl || "",
     status: deployment?.status || "active", licenseTier: deployment?.licenseTier || "commercial",
-    monthlyFeeCents: deployment?.monthlyFeeCents?.toString() || "", currency: deployment?.currency || "GHS",
+    monthlyFeeCents: deployment?.monthlyFeeCents?.toString() || "", platformFeePercent: ((deployment as any)?.platformFeePercent ?? 15).toString(),
+    currency: deployment?.currency || "GHS",
     contactName: deployment?.contactName || "", contactEmail: deployment?.contactEmail || "",
     totalBorrowers: deployment?.totalBorrowers?.toString() || "0", totalInstitutions: deployment?.totalInstitutions?.toString() || "0",
     notes: deployment?.notes || "",
@@ -163,7 +167,9 @@ function DeploymentForm({ deployment, onClose }: { deployment?: Deployment; onCl
   });
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    mutation.mutate({ ...form, monthlyFeeCents: form.monthlyFeeCents ? parseInt(form.monthlyFeeCents) : null, totalBorrowers: parseInt(form.totalBorrowers) || 0, totalInstitutions: parseInt(form.totalInstitutions) || 0 });
+    const payload: any = { ...form, monthlyFeeCents: form.monthlyFeeCents ? parseInt(form.monthlyFeeCents) : null, platformFeePercent: form.platformFeePercent ? parseInt(form.platformFeePercent) : 15, totalBorrowers: parseInt(form.totalBorrowers) || 0, totalInstitutions: parseInt(form.totalInstitutions) || 0 };
+    if (deployment && updateNote) payload.updateNote = updateNote;
+    mutation.mutate(payload);
   };
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -199,6 +205,7 @@ function DeploymentForm({ deployment, onClose }: { deployment?: Deployment; onCl
         </div>
         {[
           { key: "monthlyFeeCents", label: "Monthly Fee (pesewas)", type: "number" },
+          { key: "platformFeePercent", label: "Platform Fee %", type: "number" },
           { key: "currency", label: "Currency" },
           { key: "contactName", label: "Contact Name" },
           { key: "contactEmail", label: "Contact Email" },
@@ -215,6 +222,12 @@ function DeploymentForm({ deployment, onClose }: { deployment?: Deployment; onCl
         <label className="text-xs font-medium">Notes</label>
         <textarea className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[60px]" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} data-testid="input-notes" />
       </div>
+      {deployment && (
+        <div className="space-y-1">
+          <label className="text-xs font-medium">Update Note (tracked in changelog)</label>
+          <Input placeholder="e.g. Upgraded tier, adjusted fee..." value={updateNote} onChange={e => setUpdateNote(e.target.value)} data-testid="input-update-note" />
+        </div>
+      )}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
         <Button type="submit" disabled={mutation.isPending} data-testid="button-save-deployment">
@@ -703,18 +716,227 @@ function DeploymentsPanel() {
 
 function QuickActionsPanel() {
   const { toast } = useToast();
-  const actions = [
-    { label: "Check Health", icon: Heart, action: async () => { const r = await fetch("/health"); const d = await r.json(); toast({ title: "Health Check", description: `Status: ${d.status}, Uptime: ${Math.round(d.uptime)}s` }); } },
-    { label: "Refresh All Data", icon: RefreshCw, action: () => window.location.reload() },
-    { label: "Copy Health URL", icon: Copy, action: () => { navigator.clipboard.writeText(`${window.location.origin}/health`); toast({ title: "Copied" }); } },
-    { label: "Open API Docs", icon: Globe, action: () => window.open("/api-docs", "_blank") },
-  ];
+  const qc = useQueryClient();
+  const [statusId, setStatusId] = useState("");
+  const [statusTo, setStatusTo] = useState("");
+  const statusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const res = await pcFetch(`/api/platform-control/deployments/${id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status, updateNote: `Status changed to ${status} via Quick Actions` }),
+      });
+      if (!res.ok) throw new Error("Failed");
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["/api/platform-control"] }); toast({ title: "Status updated" }); setStatusId(""); setStatusTo(""); },
+    onError: () => toast({ title: "Failed to update status", variant: "destructive" }),
+  });
+
+  const { data: deployments } = useQuery<Deployment[]>({
+    queryKey: ["/api/platform-control/deployments"],
+    queryFn: async () => { const r = await pcFetch("/api/platform-control/deployments"); return r.json(); },
+  });
+
+  const [showConfigGen, setShowConfigGen] = useState(false);
+
   return (
-    <div className="flex flex-wrap gap-2">
-      {actions.map(a => (
-        <Button key={a.label} variant="outline" size="sm" onClick={a.action} className="gap-1.5" data-testid={`action-${a.label.toLowerCase().replace(/\s+/g, "-")}`}>
-          <a.icon className="w-3.5 h-3.5" /> {a.label}
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2">
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={async () => { const r = await fetch("/health"); const d = await r.json(); toast({ title: "Health Check", description: `Status: ${d.status}, Uptime: ${Math.round(d.uptime)}s` }); }} data-testid="action-check-health">
+          <Heart className="w-3.5 h-3.5" /> Check Health
         </Button>
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => window.location.reload()} data-testid="action-refresh-all">
+          <RefreshCw className="w-3.5 h-3.5" /> Refresh All Data
+        </Button>
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setShowConfigGen(!showConfigGen)} data-testid="action-generate-config">
+          <Download className="w-3.5 h-3.5" /> Generate Deployment Config
+        </Button>
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => window.open("/api-docs", "_blank")} data-testid="action-api-docs">
+          <Globe className="w-3.5 h-3.5" /> API Docs
+        </Button>
+      </div>
+
+      {showConfigGen && <ConfigGeneratorInline />}
+
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Change Client Status</p>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Select value={statusId} onValueChange={setStatusId}>
+            <SelectTrigger className="w-[200px] h-8 text-xs" data-testid="select-quick-client"><SelectValue placeholder="Select client..." /></SelectTrigger>
+            <SelectContent>
+              {(deployments || []).map(d => <SelectItem key={d.id} value={d.id}>{d.clientName} ({d.status})</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={statusTo} onValueChange={setStatusTo}>
+            <SelectTrigger className="w-[160px] h-8 text-xs" data-testid="select-quick-status"><SelectValue placeholder="New status..." /></SelectTrigger>
+            <SelectContent>
+              {["active", "trial", "suspended", "decommissioned"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Button size="sm" className="h-8" disabled={!statusId || !statusTo || statusMutation.isPending} onClick={() => statusMutation.mutate({ id: statusId, status: statusTo })} data-testid="button-quick-status">
+            {statusMutation.isPending ? <RefreshCw className="w-3 h-3 animate-spin" /> : <ArrowRightLeft className="w-3 h-3 mr-1" />} Apply
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ConfigGeneratorInline() {
+  const [form, setForm] = useState({ clientName: "", country: "", currency: "GHS", regulatoryBody: "", brandTitle: "" });
+  const [config, setConfig] = useState<any>(null);
+  const { toast } = useToast();
+  const generate = async () => {
+    try {
+      const res = await pcFetch("/api/platform-control/generate-config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+      setConfig(await res.json());
+    } catch { toast({ title: "Failed", variant: "destructive" }); }
+  };
+  const copyConfig = () => {
+    if (!config) return;
+    navigator.clipboard.writeText(Object.entries(config.config).map(([k, v]) => `${k}=${v}`).join("\n"));
+    toast({ title: "Copied to clipboard" });
+  };
+  return (
+    <div className="rounded-lg border border-border p-4 space-y-3">
+      <p className="text-xs font-semibold">New Deployment Config Generator</p>
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          { key: "clientName", label: "Client Name *" }, { key: "country", label: "Country *" },
+          { key: "currency", label: "Currency" }, { key: "regulatoryBody", label: "Regulatory Body" },
+        ].map(f => (
+          <div key={f.key} className="space-y-1">
+            <label className="text-xs font-medium">{f.label}</label>
+            <Input value={(form as any)[f.key]} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))} data-testid={`input-gen-${f.key}`} />
+          </div>
+        ))}
+      </div>
+      <Button onClick={generate} disabled={!form.clientName || !form.country} size="sm" data-testid="button-generate-config-submit">
+        <Download className="w-4 h-4 mr-2" /> Generate
+      </Button>
+      {config && (
+        <div className="space-y-3">
+          <div className="rounded-lg bg-zinc-900 text-zinc-100 p-4 font-mono text-xs overflow-x-auto">
+            {Object.entries(config.config).map(([k, v]) => (
+              <div key={k}><span className="text-emerald-400">{k}</span>=<span className="text-amber-300">{String(v)}</span></div>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={copyConfig} variant="outline" size="sm" data-testid="button-copy-config"><Copy className="w-3 h-3 mr-1" /> Copy .env</Button>
+          </div>
+          {config.instructions && (
+            <div className="rounded-lg border border-border p-3 space-y-1">
+              <p className="text-xs font-semibold">Setup Instructions:</p>
+              {config.instructions.map((inst: string, i: number) => <p key={i} className="text-xs text-muted-foreground">{inst}</p>)}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ConfigurationMatrix() {
+  const { data: deployments, isLoading } = useQuery<Deployment[]>({
+    queryKey: ["/api/platform-control/deployments"],
+    queryFn: async () => { const r = await pcFetch("/api/platform-control/deployments"); return r.json(); },
+  });
+
+  if (isLoading || !deployments) return <div className="text-sm text-muted-foreground p-4">Loading...</div>;
+  if (deployments.length === 0) return <div className="text-sm text-muted-foreground p-4">No deployments to compare.</div>;
+
+  const configFields = [
+    { key: "status", label: "Status" },
+    { key: "licenseTier", label: "License Tier" },
+    { key: "country", label: "Country" },
+    { key: "region", label: "Region" },
+    { key: "currency", label: "Currency" },
+    { key: "monthlyFeeCents", label: "Monthly Fee", format: (v: any, d: any) => formatCurrency(v, d.currency) },
+    { key: "platformFeePercent", label: "Platform Fee %", format: (v: any) => v != null ? `${v}%` : "—" },
+    { key: "totalBorrowers", label: "Borrowers", format: (v: any) => (v || 0).toLocaleString() },
+    { key: "totalInstitutions", label: "Institutions", format: (v: any) => (v || 0).toLocaleString() },
+    { key: "deploymentUrl", label: "URL", format: (v: any) => v || "—" },
+    { key: "contactName", label: "Contact" },
+    { key: "contactEmail", label: "Email" },
+  ];
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-xs" data-testid="table-config-matrix">
+        <thead>
+          <tr className="bg-muted/50 border-b border-border">
+            <th className="p-2 text-left font-medium sticky left-0 bg-muted/80">Setting</th>
+            {deployments.map(d => (
+              <th key={d.id} className="p-2 text-center font-medium min-w-[140px]">
+                <div>{d.clientName}</div>
+                <StatusBadge status={d.status} />
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {configFields.map(f => (
+            <tr key={f.key} className="border-b border-border hover:bg-muted/30">
+              <td className="p-2 font-medium text-muted-foreground sticky left-0 bg-background">{f.label}</td>
+              {deployments.map(d => (
+                <td key={d.id} className="p-2 text-center">
+                  {f.format ? f.format((d as any)[f.key], d) : ((d as any)[f.key] || "—")}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function UpdateTracker() {
+  const { data: deployments, isLoading } = useQuery<Deployment[]>({
+    queryKey: ["/api/platform-control/deployments"],
+    queryFn: async () => { const r = await pcFetch("/api/platform-control/deployments"); return r.json(); },
+  });
+
+  if (isLoading || !deployments) return <div className="text-sm text-muted-foreground p-4">Loading...</div>;
+
+  type LogEntry = { timestamp: string; changes: string[]; note: string; previousStatus?: string };
+  const allEntries: { clientName: string; entry: LogEntry }[] = [];
+  for (const d of deployments) {
+    const log = Array.isArray((d as any).updateLog) ? (d as any).updateLog : [];
+    for (const entry of log) {
+      allEntries.push({ clientName: d.clientName, entry });
+    }
+  }
+  allEntries.sort((a, b) => new Date(b.entry.timestamp).getTime() - new Date(a.entry.timestamp).getTime());
+
+  if (allEntries.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-border p-8 text-center text-muted-foreground">
+        <Clock className="w-8 h-8 mx-auto mb-3 opacity-50" />
+        <p className="text-sm">No update history yet</p>
+        <p className="text-xs mt-1">Updates to deployments will be tracked here automatically</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2 max-h-[400px] overflow-y-auto">
+      {allEntries.slice(0, 50).map((item, i) => (
+        <div key={i} className="rounded-lg border border-border p-3 flex items-start gap-3">
+          <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 mt-0.5">
+            <Edit className="w-3.5 h-3.5 text-blue-500" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-semibold">{item.clientName}</span>
+              <span className="text-[10px] text-muted-foreground">{new Date(item.entry.timestamp).toLocaleString()}</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Changed: {item.entry.changes.join(", ")}
+              {item.entry.previousStatus && <span className="ml-1">(was: {item.entry.previousStatus})</span>}
+            </p>
+            {item.entry.note && <p className="text-xs mt-1 bg-muted/50 rounded px-2 py-1">{item.entry.note}</p>}
+          </div>
+        </div>
       ))}
     </div>
   );
@@ -786,7 +1008,13 @@ function ControlDashboard() {
             <DeploymentsPanel />
           </Panel>
 
-          <ConfigGenerator />
+          <Panel title="Configuration Matrix" icon={Layers} color="text-cyan-500" defaultOpen={false}>
+            <ConfigurationMatrix />
+          </Panel>
+
+          <Panel title="Update Tracker" icon={Clock} color="text-orange-500" defaultOpen={false}>
+            <UpdateTracker />
+          </Panel>
         </div>
       </div>
     </div>
