@@ -1,6 +1,6 @@
-import { Globe, Mail, Phone, MapPin } from "lucide-react";
+import { Globe, MapPin } from "lucide-react";
 import { useBrandColors } from "@/hooks/use-brand-colors";
-import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
+import { PLATFORM_COMPANY_NAME, PLATFORM_SUPPORT_EMAIL } from "@/lib/platform-config";
 
 export function AppFooter() {
   const brandColors = useBrandColors();
@@ -24,21 +24,16 @@ export function AppFooter() {
           </div>
 
           <div className="space-y-3">
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">Leadership</h4>
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">Contact</h4>
             <div className="space-y-2">
-              <div className="space-y-0.5">
-                <p className="text-sm font-medium text-foreground" data-testid="footer-ceo">Uffe Jon Carlson</p>
-                <p className="text-xs text-muted-foreground">Carlson Capital</p>
-              </div>
-              <div className="space-y-0.5">
-                <p className="text-sm font-medium text-foreground" data-testid="footer-cto">Thomas Baafi</p>
-                <p className="text-xs text-muted-foreground">Systems In Motion Limited (Bsystems)</p>
-              </div>
+              <a href={`mailto:${PLATFORM_SUPPORT_EMAIL}`} className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors" data-testid="footer-email">
+                {PLATFORM_SUPPORT_EMAIL}
+              </a>
             </div>
           </div>
 
           <div className="space-y-3">
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">Contact</h4>
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">Location</h4>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <MapPin className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0" />

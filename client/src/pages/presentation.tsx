@@ -1,5 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
+import { PLATFORM_COMPANY_NAME, PLATFORM_SUPPORT_EMAIL } from "@/lib/platform-config";
 import { useEffect, useState, useCallback } from "react";
 import {
   ChevronLeft, ChevronRight, Shield, BarChart3, Brain, Globe, AlertTriangle,
@@ -95,7 +96,7 @@ function SlideContent({ type }: { type: string }) {
               <span className="hidden md:inline">|</span>
               <span>dashboard.africacredithub.com/ghana</span>
             </div>
-            <p className="text-xs text-white/30 mt-8">Presented by Uffe Jon Carlson · Carlson Capital · 2026</p>
+            <p className="text-xs text-white/30 mt-8">Presented by {PLATFORM_COMPANY_NAME} · 2026</p>
           </div>
         </SlideWrapper>
       );
@@ -637,11 +638,11 @@ function SlideContent({ type }: { type: string }) {
             </p>
             <p className="text-sm text-white/40">Full access to consumer & corporate credit reports. No commitment required. Dedicated Ghana onboarding support.</p>
             <div className="space-y-3 mt-8">
-              <p className="text-sm text-white/50">uffe.carlson@gmail.com · +233 552 395 549</p>
-              <p className="text-sm text-white/50">Uffe Jon Carlson · Carlson Capital</p>
+              <p className="text-sm text-white/50">{PLATFORM_SUPPORT_EMAIL}</p>
+              <p className="text-sm text-white/50">{PLATFORM_COMPANY_NAME}</p>
               <p className="text-xs text-white/30 mt-4">africacredithub.com</p>
             </div>
-            <p className="text-xs text-white/20 mt-8">© 2026 Africa Credit Hub · Carlson Capital. Confidential & Proprietary.</p>
+            <p className="text-xs text-white/20 mt-8">© 2026 {PLATFORM_COMPANY_NAME}. Confidential & Proprietary.</p>
           </div>
         </SlideWrapper>
       );

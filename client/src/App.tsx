@@ -14,6 +14,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { NotificationBell } from "@/components/notification-bell";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { PasswordChangeDialog } from "@/components/password-change-dialog";
+import { PLATFORM_SUPPORT_EMAIL } from "@/lib/platform-config";
 import { Button } from "@/components/ui/button";
 import { LogOut, Loader2, MessageCircle, Building2, LayoutGrid, User, Clock, XCircle } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -257,7 +258,7 @@ function SuspendedScreen({ orgName, onLogout }: { orgName?: string; onLogout: ()
         </div>
         <div className="space-y-3">
           <p className="text-xs text-muted-foreground">
-            If you believe this is an error, please contact support at <span className="font-medium">uffe.carlson@gmail.com</span>
+            If you believe this is an error, please contact support at <span className="font-medium">{PLATFORM_SUPPORT_EMAIL}</span>
           </p>
           <Button variant="outline" onClick={onLogout} data-testid="button-suspended-logout">
             <LogOut className="w-4 h-4 mr-2" />

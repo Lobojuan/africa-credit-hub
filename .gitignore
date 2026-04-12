@@ -1,6 +1,8 @@
 node_modules
 dist
+build
 .DS_Store
+Thumbs.db
 server/public
 vite.config.ts.*
 *.tar.gz
@@ -12,4 +14,19 @@ backups/
 attached_assets/
 cookies.txt
 sed*
+
+# Editor swap/backup files
+*~
+*.swp
+*.swo
+.*.swp
 **/.*.~*
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Logs
+*.log
+npm-debug.log*

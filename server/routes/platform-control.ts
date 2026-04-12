@@ -17,6 +17,20 @@ const MASTER_PASSWORD = process.env.MASTER_CONTROL_PASSWORD || "";
 const SESSION_TOKEN_EXPIRY_MS = 4 * 60 * 60 * 1000;
 const activeSessions = new Map<string, { expiresAt: number }>();
 
+setInterval(() => {
+  const now = Date.now();
+  for (const [token, session] of activeSessions) {
+    if (session.expiresAt <= now) {
+      activeSessions.delete(token);
+    }
+  }
+  for (const [ip, attempt] of failedAttempts) {
+    if (attempt.lockedUntil <= now) {
+      failedAttempts.delete(ip);
+    }
+  }
+}, 60 * 60 * 1000);
+
 const failedAttempts = new Map<string, { count: number; lockedUntil: number }>();
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 15 * 60 * 1000;

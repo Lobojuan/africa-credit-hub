@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useBrandColors } from "@/hooks/use-brand-colors";
-import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
+import { PLATFORM_COMPANY_NAME, PLATFORM_SUPPORT_EMAIL } from "@/lib/platform-config";
 import {
   Shield, Globe, ArrowRight, TrendingUp, CheckCircle2,
   Users, Building2, AlertTriangle, Target, MapPin,
@@ -488,16 +488,10 @@ export default function MarketValidationPage() {
               <div className="flex items-center gap-1.5"><MapPin className="w-3 h-3" /><span>Accra, Ghana</span></div>
             </div>
             <div className="space-y-1.5">
-              <p className="text-[10px] font-semibold text-foreground/80 uppercase tracking-wider">Carlson Capital</p>
-              <p className="font-medium text-foreground/70">Uffe Jon Carlson</p>
-              <a href="mailto:uffe.carlson@gmail.com" className="flex items-center gap-1.5 hover:text-primary transition-colors"><Mail className="w-3 h-3" />uffe.carlson@gmail.com</a>
-              <a href="tel:+233552395548" className="flex items-center gap-1.5 hover:text-primary transition-colors"><Phone className="w-3 h-3" />+233 552 395 548</a>
+              <p className="text-[10px] font-semibold text-foreground/80 uppercase tracking-wider">Contact</p>
+              <a href={`mailto:${PLATFORM_SUPPORT_EMAIL}`} className="flex items-center gap-1.5 hover:text-primary transition-colors"><Mail className="w-3 h-3" />{PLATFORM_SUPPORT_EMAIL}</a>
             </div>
             <div className="space-y-1.5">
-              <p className="text-[10px] font-semibold text-foreground/80 uppercase tracking-wider">Systems In Motion</p>
-              <p className="font-medium text-foreground/70">Thomas Baafi</p>
-              <a href="mailto:Thomas.baafi@prischell.com" className="flex items-center gap-1.5 hover:text-primary transition-colors"><Mail className="w-3 h-3" />Thomas.baafi@prischell.com</a>
-              <a href="tel:+233244339985" className="flex items-center gap-1.5 hover:text-primary transition-colors"><Phone className="w-3 h-3" />+233 24 433 9985</a>
             </div>
           </div>
         </div>

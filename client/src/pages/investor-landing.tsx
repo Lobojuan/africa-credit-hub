@@ -32,7 +32,7 @@ import auditImage from "@assets/app-audit.png";
 import reportsImage from "@assets/app-reports.png";
 import aiPortfolioImage from "@assets/app-ai-portfolio.png";
 import platformDemoVideo from "@assets/39a45e79-6d03-456d-8d41-f5c491f40a66_1774472320799.mp4";
-import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
+import { PLATFORM_COMPANY_NAME, PLATFORM_SUPPORT_EMAIL } from "@/lib/platform-config";
 
 function AnimatedCounter({ end, duration = 2000, suffix = "", prefix = "" }: { end: number; duration?: number; suffix?: string; prefix?: string }) {
   const [count, setCount] = useState(0);
@@ -486,7 +486,7 @@ export default function InvestorLandingPage() {
 
   useEffect(() => {
     document.title = isGhanaMode() 
-      ? "Ghana Credit Registry System | Africa Credit Hub v2.5 — Systems In Motion Limited"
+      ? `Ghana Credit Registry System | Africa Credit Hub v2.5 — ${PLATFORM_COMPANY_NAME}`
       : "Pan-African Credit Registry | Africa Credit Hub v2.5 — Modernize Your Credit Infrastructure";
     const meta = document.querySelector('meta[name="description"]');
     const content = "The only SRS-compliant credit registry platform covering all 54 African countries. Built for central banks, commercial banks, MFIs, and fintechs to manage credit risk, ensure compliance, and expand financial inclusion.";
@@ -1320,7 +1320,7 @@ export default function InvestorLandingPage() {
             {[
               { step: "1", title: t('landing.onboardStep1Title'), desc: t('landing.onboardStep1Desc'), cta: t('landing.onboardStep1Cta'), action: () => navigate("/start-trial"), testId: "step-trial" },
               { step: "2", title: t('landing.onboardStep2Title'), desc: t('landing.onboardStep2Desc'), cta: t('landing.onboardStep2Cta'), action: () => navigate("/pricing"), testId: "step-pricing" },
-              { step: "3", title: t('landing.onboardStep3Title'), desc: t('landing.onboardStep3Desc'), cta: t('landing.onboardStep3Cta'), action: () => window.location.href = "mailto:uffe.carlson@gmail.com", testId: "step-deploy" },
+              { step: "3", title: t('landing.onboardStep3Title'), desc: t('landing.onboardStep3Desc'), cta: t('landing.onboardStep3Cta'), action: () => window.location.href = `mailto:${PLATFORM_SUPPORT_EMAIL}`, testId: "step-deploy" },
             ].map((item) => (
               <Card key={item.step} className="border border-border/60" data-testid={item.testId}>
                 <CardContent className="p-5 sm:p-6 text-center">
@@ -1583,27 +1583,10 @@ export default function InvestorLandingPage() {
             </div>
 
             <div className="space-y-3">
-              <p className="text-xs font-semibold text-foreground uppercase tracking-wider">Carlson Capital</p>
+              <p className="text-xs font-semibold text-foreground uppercase tracking-wider">Contact</p>
               <div className="space-y-2 text-[11px] text-muted-foreground/80">
-                <p className="font-medium text-foreground/80">Uffe Jon Carlson</p>
-                <a href="mailto:uffe.carlson@gmail.com" className="flex items-center gap-1.5 hover:text-primary transition-colors">
-                  <Mail className="w-3 h-3" />uffe.carlson@gmail.com
-                </a>
-                <a href="tel:+233552395548" className="flex items-center gap-1.5 hover:text-primary transition-colors">
-                  <Phone className="w-3 h-3" />+233 552 395 548
-                </a>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <p className="text-xs font-semibold text-foreground uppercase tracking-wider">Systems In Motion</p>
-              <div className="space-y-2 text-[11px] text-muted-foreground/80">
-                <p className="font-medium text-foreground/80">Thomas Baafi</p>
-                <a href="mailto:Thomas.baafi@prischell.com" className="flex items-center gap-1.5 hover:text-primary transition-colors">
-                  <Mail className="w-3 h-3" />Thomas.baafi@prischell.com
-                </a>
-                <a href="tel:+233244339985" className="flex items-center gap-1.5 hover:text-primary transition-colors">
-                  <Phone className="w-3 h-3" />+233 24 433 9985
+                <a href={`mailto:${PLATFORM_SUPPORT_EMAIL}`} className="flex items-center gap-1.5 hover:text-primary transition-colors">
+                  <Mail className="w-3 h-3" />{PLATFORM_SUPPORT_EMAIL}
                 </a>
               </div>
             </div>

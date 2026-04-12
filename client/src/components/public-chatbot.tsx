@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { MessageCircle, X, Send, Bot, User, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBrandColors } from "@/hooks/use-brand-colors";
+import { PLATFORM_SUPPORT_EMAIL } from "@/lib/platform-config";
 
 interface Message {
   role: "user" | "assistant";
@@ -75,7 +76,7 @@ export function PublicChatbot() {
         const updated = [...prev];
         updated[updated.length - 1] = {
           role: "assistant",
-          content: "I'm having trouble connecting right now. Please try again or contact us at uffe.carlson@gmail.com",
+          content: `I'm having trouble connecting right now. Please try again or contact us at ${PLATFORM_SUPPORT_EMAIL}`,
         };
         return updated;
       });

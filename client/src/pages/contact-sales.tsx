@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { Building2, Mail, Phone, MapPin, ArrowLeft, Send, Shield, Globe, Loader2 } from "lucide-react";
+import { PLATFORM_CONTACT_PHONE } from "@/lib/platform-config";
 
 export default function ContactSalesPage() {
   const { toast } = useToast();
@@ -111,8 +112,8 @@ export default function ContactSalesPage() {
                 <Phone className="w-5 h-5 text-teal-600 dark:text-teal-400 mt-0.5 shrink-0" />
                 <div>
                   <p className="text-sm font-medium">Phone</p>
-                  <a href="tel:+233244339985" className="text-sm text-muted-foreground hover:text-foreground" data-testid="link-phone">
-                    +233 24 433 9985
+                  <a href={`tel:${PLATFORM_CONTACT_PHONE}`} className="text-sm text-muted-foreground hover:text-foreground" data-testid="link-phone">
+                    {PLATFORM_CONTACT_PHONE || "Contact us"}
                   </a>
                 </div>
               </div>
