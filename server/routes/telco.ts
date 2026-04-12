@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { storage } from "../storage";
 import { db } from "../db";
-import { sql, eq, and, desc } from "drizzle-orm";
+import { sql, eq, and, desc, inArray } from "drizzle-orm";
 import { telcoProfiles, telcoLoans, telcoLoanRepayments } from "@shared/schema";
 import { calculateMLCreditScore } from "../ml-credit-score";
 import { createLogger } from "../logger";
