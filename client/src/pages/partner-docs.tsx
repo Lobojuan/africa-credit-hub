@@ -136,6 +136,7 @@ export default function PartnerDocsPage() {
               { href: "#technical", label: "Technical Integration", icon: Server },
               { href: "#compliance", label: "Compliance & Security", icon: Shield },
               { href: "#sla", label: "SLA & Support", icon: Clock },
+              { href: "#partnership-mou", label: "Partnership Agreement (MOU)", icon: FileText },
               { href: "#faq", label: "Frequently Asked Questions", icon: HelpCircle },
               { href: "#contact", label: "Contact & Next Steps", icon: PhoneCall },
             ].map(item => (
@@ -819,6 +820,216 @@ export default function PartnerDocsPage() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </Section>
+
+          <Section id="partnership-mou" title="Technology Partnership Agreement (MOU)" icon={FileText}>
+            <div className="mt-4 space-y-4 text-sm text-muted-foreground">
+              <p>
+                The following outlines the standard terms of the <strong className="text-foreground">Technology Partnership Memorandum of Understanding (MOU)</strong> between {PLATFORM_COMPANY_NAME} ("Platform Provider") and the licensed credit bureau ("Partner"). This framework governs white-label deployments, revenue sharing, service levels, and data governance.
+              </p>
+
+              <div className="rounded-xl border border-teal-500/30 bg-teal-500/5 p-5 space-y-5">
+                <div className="text-center border-b border-teal-500/20 pb-4">
+                  <Scale className="w-8 h-8 text-teal-500 mx-auto mb-2" />
+                  <h3 className="text-lg font-bold text-foreground">Technology Partnership MOU</h3>
+                  <p className="text-xs">{PLATFORM_COMPANY_NAME} — Credit Bureau Infrastructure License</p>
+                  <p className="text-[10px] mt-1">Governed by the laws of the Republic of Ghana</p>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+                    <Building className="w-4 h-4 text-teal-500" /> Article 1 — Deployment Model
+                  </h4>
+                  <div className="space-y-2 text-xs">
+                    <div className="rounded-lg border border-border p-3">
+                      <p className="font-semibold text-foreground mb-1">1.1 White-Label Deployment</p>
+                      <p>The Partner receives a fully branded instance of the platform bearing the Partner's name, logo, colour scheme, and domain. End users (banks, MFIs, fintechs) interact exclusively with the Partner's brand. {PLATFORM_COMPANY_NAME} branding does not appear in the Partner-facing interface.</p>
+                    </div>
+                    <div className="rounded-lg border border-border p-3">
+                      <p className="font-semibold text-foreground mb-1">1.2 Co-Branded Deployment</p>
+                      <p>Alternatively, the Partner may elect a co-branded deployment where both the Partner's brand and "{PLATFORM_COMPANY_NAME} — Powered By" appear. This option is typically chosen when the Partner wishes to leverage the platform's established reputation.</p>
+                    </div>
+                    <div className="rounded-lg border border-border p-3">
+                      <p className="font-semibold text-foreground mb-1">1.3 Sovereign Deployment (Central Banks)</p>
+                      <p>For central bank or regulator partners, a fully isolated sovereign instance is deployed on dedicated infrastructure (cloud or on-premise). Data never leaves the partner's jurisdiction. This includes dedicated encryption keys, isolated databases, and separate compute resources.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+                    <Banknote className="w-4 h-4 text-teal-500" /> Article 2 — Revenue Sharing Model
+                  </h4>
+                  <div className="space-y-2 text-xs">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs border-collapse" data-testid="table-mou-revenue">
+                        <thead>
+                          <tr className="bg-muted/50">
+                            <th className="text-left p-2.5 border border-border font-semibold">Component</th>
+                            <th className="text-center p-2.5 border border-border font-semibold">Platform Provider</th>
+                            <th className="text-center p-2.5 border border-border font-semibold">Partner (Bureau)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td className="p-2.5 border border-border">Transaction Revenue (credit pulls, API calls)</td>
+                            <td className="p-2.5 border border-border text-center font-semibold text-teal-600">20%</td>
+                            <td className="p-2.5 border border-border text-center font-semibold text-blue-600">80%</td>
+                          </tr>
+                          <tr className="bg-muted/30">
+                            <td className="p-2.5 border border-border">Subscription Fees (monthly client tiers)</td>
+                            <td className="p-2.5 border border-border text-center font-semibold text-teal-600">15%</td>
+                            <td className="p-2.5 border border-border text-center font-semibold text-blue-600">85%</td>
+                          </tr>
+                          <tr>
+                            <td className="p-2.5 border border-border">Value-Added Services (AI scoring, analytics)</td>
+                            <td className="p-2.5 border border-border text-center font-semibold text-teal-600">30%</td>
+                            <td className="p-2.5 border border-border text-center font-semibold text-blue-600">70%</td>
+                          </tr>
+                          <tr className="bg-muted/30">
+                            <td className="p-2.5 border border-border">Sovereign License (annual flat fee)</td>
+                            <td className="p-2.5 border border-border text-center" colSpan={2}>Negotiated per contract</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="rounded-lg border border-border p-3">
+                      <p className="font-semibold text-foreground mb-1">2.1 Revenue Settlement</p>
+                      <p>Revenue is settled automatically through the platform's wallet engine. The Partner's share is credited to their wallet in real time with every transaction. Platform fees are deducted before settlement. Monthly reconciliation statements are provided.</p>
+                    </div>
+                    <div className="rounded-lg border border-border p-3">
+                      <p className="font-semibold text-foreground mb-1">2.2 Volume Incentives</p>
+                      <p>Partners processing more than 50,000 transactions/month qualify for reduced platform fees (minimum 12%). Annual volume commitments can further reduce rates. Tiers are reviewed quarterly.</p>
+                    </div>
+                    <div className="rounded-lg border border-border p-3">
+                      <p className="font-semibold text-foreground mb-1">2.3 Minimum Commitment</p>
+                      <p>Partner agrees to a minimum annual platform fee of {GHS_SYMBOL}60,000 (approximately {GHS_SYMBOL}5,000/month) for the first 24 months. This is credited against actual transaction revenue — not an additional charge.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-teal-500" /> Article 3 — SLA Commitments
+                  </h4>
+                  <div className="space-y-2 text-xs">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs border-collapse" data-testid="table-mou-sla">
+                        <thead>
+                          <tr className="bg-muted/50">
+                            <th className="text-left p-2.5 border border-border font-semibold">Service Level</th>
+                            <th className="text-center p-2.5 border border-border font-semibold">Commitment</th>
+                            <th className="text-center p-2.5 border border-border font-semibold">Penalty for Breach</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td className="p-2.5 border border-border">Platform Uptime</td>
+                            <td className="p-2.5 border border-border text-center">99.9% monthly</td>
+                            <td className="p-2.5 border border-border text-center">5% credit per 0.1% below target</td>
+                          </tr>
+                          <tr className="bg-muted/30">
+                            <td className="p-2.5 border border-border">API Response Time (p95)</td>
+                            <td className="p-2.5 border border-border text-center">&lt; 500ms</td>
+                            <td className="p-2.5 border border-border text-center">Review + remediation within 48h</td>
+                          </tr>
+                          <tr>
+                            <td className="p-2.5 border border-border">Critical Incident Response</td>
+                            <td className="p-2.5 border border-border text-center">1 hour</td>
+                            <td className="p-2.5 border border-border text-center">Escalation to CTO + incident report</td>
+                          </tr>
+                          <tr className="bg-muted/30">
+                            <td className="p-2.5 border border-border">Data Backup & Recovery</td>
+                            <td className="p-2.5 border border-border text-center">Daily backups, RPO &lt; 1 hour</td>
+                            <td className="p-2.5 border border-border text-center">Full audit + remediation plan</td>
+                          </tr>
+                          <tr>
+                            <td className="p-2.5 border border-border">Scheduled Maintenance Window</td>
+                            <td className="p-2.5 border border-border text-center">Sundays 02:00–06:00 GMT</td>
+                            <td className="p-2.5 border border-border text-center">72-hour advance notice required</td>
+                          </tr>
+                          <tr className="bg-muted/30">
+                            <td className="p-2.5 border border-border">Security Patch Deployment</td>
+                            <td className="p-2.5 border border-border text-center">Critical: 24h / High: 72h</td>
+                            <td className="p-2.5 border border-border text-center">Immediate escalation</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="rounded-lg border border-border p-3">
+                      <p className="font-semibold text-foreground mb-1">3.1 SLA Credits</p>
+                      <p>If monthly uptime falls below 99.9%, the Partner receives service credits applied to the next month's platform fees. Credits are capped at 30% of that month's fees. Uptime is measured excluding scheduled maintenance windows.</p>
+                    </div>
+                    <div className="rounded-lg border border-border p-3">
+                      <p className="font-semibold text-foreground mb-1">3.2 Dedicated Support</p>
+                      <p>Partner receives a dedicated account manager, priority support queue, and quarterly business reviews. Technical integration support is included during onboarding at no additional cost.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+                    <Database className="w-4 h-4 text-teal-500" /> Article 4 — Data Governance Framework
+                  </h4>
+                  <div className="space-y-2 text-xs">
+                    <div className="rounded-lg border border-border p-3">
+                      <p className="font-semibold text-foreground mb-1">4.1 Data Ownership</p>
+                      <p>All credit data submitted by the Partner's clients remains the property of the respective data subjects and reporting institutions. {PLATFORM_COMPANY_NAME} acts solely as a data processor. The Partner is the data controller for their jurisdiction.</p>
+                    </div>
+                    <div className="rounded-lg border border-border p-3">
+                      <p className="font-semibold text-foreground mb-1">4.2 Data Sovereignty</p>
+                      <p>All data for the Partner's jurisdiction is stored within the designated country boundary. Cross-border data access requires explicit bilateral data-sharing agreements compliant with the Ghana Data Protection Act 2012 (Act 843) and the Partner's local regulations.</p>
+                    </div>
+                    <div className="rounded-lg border border-border p-3">
+                      <p className="font-semibold text-foreground mb-1">4.3 Encryption & Security</p>
+                      <p>All PII is encrypted at rest using AES-256-GCM with unique initialization vectors. Data in transit uses TLS 1.3. Encryption keys are managed per-deployment and are never shared across Partners. The platform undergoes annual penetration testing and SOC 2 Type II audits.</p>
+                    </div>
+                    <div className="rounded-lg border border-border p-3">
+                      <p className="font-semibold text-foreground mb-1">4.4 Regulatory Compliance</p>
+                      <p>The platform maintains compliance with: Bank of Ghana Credit Reporting Act (Act 726), Ghana Data Protection Act (Act 843), BoG CRB Data Format Specification v1.1, and applicable AML/CFT regulations. Compliance updates are deployed automatically as regulations evolve.</p>
+                    </div>
+                    <div className="rounded-lg border border-border p-3">
+                      <p className="font-semibold text-foreground mb-1">4.5 Data Retention & Disposal</p>
+                      <p>Credit data is retained for 7 years per BoG requirements. Audit logs are retained for 10 years. Upon termination of the partnership, the Partner receives a full data export in standard formats (CSV, JSON, BoG CRB v1.1), and all data is securely purged within 90 days with a certificate of destruction provided.</p>
+                    </div>
+                    <div className="rounded-lg border border-border p-3">
+                      <p className="font-semibold text-foreground mb-1">4.6 Audit Rights</p>
+                      <p>The Partner and their regulators have the right to audit the platform's data handling practices with 30 days' written notice. {PLATFORM_COMPANY_NAME} will provide full cooperation, access to relevant logs, and supporting documentation.</p>
+                    </div>
+                    <div className="rounded-lg border border-border p-3">
+                      <p className="font-semibold text-foreground mb-1">4.7 Breach Notification</p>
+                      <p>In the event of a data breach, {PLATFORM_COMPANY_NAME} will notify the Partner within 24 hours, the Bank of Ghana and Data Protection Commission within 72 hours, and affected data subjects within 7 days — in compliance with Act 843.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+                    <KeyRound className="w-4 h-4 text-teal-500" /> Article 5 — Term & Termination
+                  </h4>
+                  <div className="space-y-2 text-xs">
+                    <div className="rounded-lg border border-border p-3">
+                      <p className="font-semibold text-foreground mb-1">5.1 Initial Term</p>
+                      <p>This MOU is effective for an initial term of 36 months from the date of execution. Thereafter, it automatically renews for successive 12-month periods unless either party provides 90 days' written notice of non-renewal.</p>
+                    </div>
+                    <div className="rounded-lg border border-border p-3">
+                      <p className="font-semibold text-foreground mb-1">5.2 Termination for Cause</p>
+                      <p>Either party may terminate immediately upon: (a) material breach not cured within 30 days of notice, (b) insolvency or bankruptcy, (c) loss of regulatory license, or (d) a data breach caused by gross negligence.</p>
+                    </div>
+                    <div className="rounded-lg border border-border p-3">
+                      <p className="font-semibold text-foreground mb-1">5.3 Transition Assistance</p>
+                      <p>Upon termination, {PLATFORM_COMPANY_NAME} provides 180 days of transition assistance including data export, API migration support, and parallel running of the replacement system. Transition fees are capped at 50% of the average monthly platform fees during the preceding 12 months.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-teal-500/20 pt-4 text-center text-xs">
+                  <p className="text-foreground font-semibold">To request a formal Partnership Agreement for execution:</p>
+                  <p className="mt-1">Contact <span className="text-teal-500">partnerships@africacredithub.com</span> with your organization name, BoG CRB license number, and preferred deployment model (white-label or co-branded).</p>
+                  <p className="mt-2 text-[10px] text-muted-foreground">This MOU outline is provided for informational purposes. The binding agreement will be customized to your specific requirements and reviewed by both parties' legal counsel.</p>
+                </div>
               </div>
             </div>
           </Section>
