@@ -260,8 +260,8 @@ export async function verifyPIIEncryptionIntegrity(): Promise<{
     "other_id_number", "date_of_birth", "mobile_money_number"
   ];
 
-  const result = await pool.query(`SELECT COUNT(*) as total FROM borrowers`);
-  const totalBorrowers = parseInt(result.rows[0].total);
+  const result = await db.execute(sql`SELECT COUNT(*) as total FROM borrowers`);
+  const totalBorrowers = parseInt(result.rows[0].total as string);
 
   if (totalBorrowers === 0) {
     return { totalBorrowers: 0, encryptedCount: 0, unencryptedCount: 0, integrityRate: "N/A", sampleIssues: [] };
@@ -273,16 +273,18 @@ export async function verifyPIIEncryptionIntegrity(): Promise<{
 
   for (const col of PII_COLUMNS) {
     try {
-      const colCheck = await pool.query(
-        `SELECT COUNT(*) as has_data FROM borrowers WHERE ${col} IS NOT NULL AND ${col} != ''`
+      const colId = sql.identifier(col);
+      const colCheck = await db.execute(
+        sql`SELECT COUNT(*) as has_data FROM borrowers WHERE ${colId} IS NOT NULL AND ${colId} != ''`
       );
-      const hasData = parseInt(colCheck.rows[0].has_data);
+      const hasData = parseInt(colCheck.rows[0].has_data as string);
       if (hasData === 0) continue;
 
-      const encCheck = await pool.query(
-        `SELECT COUNT(*) as encrypted FROM borrowers WHERE ${col} IS NOT NULL AND ${col} ~ '^enc:[0-9a-f]{32}:[0-9a-f]{32}:[0-9a-f]+'`
+      const encPattern = "^enc:[0-9a-f]{32}:[0-9a-f]{32}:[0-9a-f]+";
+      const encCheck = await db.execute(
+        sql`SELECT COUNT(*) as encrypted FROM borrowers WHERE ${colId} IS NOT NULL AND ${colId} ~ ${encPattern}`
       );
-      const encrypted = parseInt(encCheck.rows[0].encrypted);
+      const encrypted = parseInt(encCheck.rows[0].encrypted as string);
 
       const plainCount = hasData - encrypted;
       encryptedCount += encrypted;
