@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS platform_deployments (
   status deployment_status NOT NULL DEFAULT 'active',
   license_tier VARCHAR NOT NULL DEFAULT 'commercial',
   monthly_fee_cents INTEGER DEFAULT 0,
-  platform_fee_percent INTEGER NOT NULL DEFAULT 20,
+  platform_fee_percent INTEGER DEFAULT 15,
   currency VARCHAR NOT NULL DEFAULT 'GHS',
   contact_name VARCHAR,
   contact_email VARCHAR,
