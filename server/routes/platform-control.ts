@@ -65,6 +65,8 @@ const updateDeploymentSchema = z.object({
   monthlyFeeCents: z.number().int().nullable().optional(),
   platformFeePercent: z.number().int().min(0).max(100).nullable().optional(),
   currency: z.string().optional(),
+  branding: z.string().nullable().optional(),
+  deploymentDate: z.string().nullable().optional(),
   contactName: z.string().nullable().optional(),
   contactEmail: z.string().nullable().optional(),
   totalBorrowers: z.number().int().nullable().optional(),
