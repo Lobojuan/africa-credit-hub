@@ -636,6 +636,7 @@ export async function seedTestData() {
     disputeValues.push({
       borrowerId: b.id,
       organizationId: b.organizationId,
+      country: "GH",
       filedBy: adminUser.id,
       disputeType: pick(disputeTypes),
       description: pick([

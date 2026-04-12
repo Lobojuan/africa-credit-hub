@@ -85,6 +85,7 @@ export async function seedTrialData(organizationId: string, userId: string, coun
         status: "open",
         slaDeadline: new Date(Date.now() + 14 * 86400000),
         organizationId,
+        country: "GH",
       });
 
       await db.insert(disputes).values({
@@ -96,6 +97,7 @@ export async function seedTrialData(organizationId: string, userId: string, coun
         resolution: "Name corrected in the system after verification with original documentation.",
         correctionType: "data_correction",
         organizationId,
+        country: "GH",
         resolvedAt: new Date(Date.now() - 7 * 86400000),
       });
     }
