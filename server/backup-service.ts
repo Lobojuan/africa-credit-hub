@@ -1,7 +1,8 @@
 import { execSync, exec } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
-import { pool } from "./db";
+import { sql } from "drizzle-orm";
+import { db } from "./db";
 
 const BACKUP_DIR = path.resolve(process.cwd(), "backups");
 const MAX_BACKUPS = 30;
@@ -60,7 +61,7 @@ function generateId(): string {
 
 async function getTableStats(): Promise<{ tables: number; rows: number }> {
   try {
-    const result = await pool.query(`
+    const result = await db.execute(sql`
       SELECT schemaname, relname, n_live_tup
       FROM pg_stat_user_tables
       WHERE schemaname = 'public'
