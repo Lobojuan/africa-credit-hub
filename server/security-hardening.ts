@@ -2,6 +2,7 @@ import { pool, db } from "./db";
 import { sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import { encryptPII } from "./encryption";
 
 const PASSWORD_HISTORY_SIZE = 5;
 
@@ -194,6 +195,56 @@ export async function runSecurityHealthCheck(): Promise<{
   const overall = failCount > 0 ? "critical" : warnCount > 2 ? "degraded" : "healthy";
 
   return { overall, checks, timestamp: new Date().toISOString() };
+}
+
+export async function encryptAllUnencryptedPII(): Promise<{ totalEncrypted: number; errors: string[] }> {
+  const PII_COLUMNS = [
+    "national_id", "tin_number", "passport_number", "voters_id",
+    "ssnit_number", "drivers_license", "ghana_card_number", "ezwich_number",
+    "other_id_number", "date_of_birth", "mobile_money_number"
+  ];
+
+  let totalEncrypted = 0;
+  const errors: string[] = [];
+
+  for (const col of PII_COLUMNS) {
+    try {
+      const rows = await pool.query(
+        `SELECT id, ${col} FROM borrowers WHERE ${col} IS NOT NULL AND ${col} != '' AND ${col} NOT LIKE 'enc:%'`
+      );
+
+      if (rows.rows.length === 0) continue;
+
+      const BATCH_SIZE = 100;
+      for (let i = 0; i < rows.rows.length; i += BATCH_SIZE) {
+        const batch = rows.rows.slice(i, i + BATCH_SIZE);
+        const client = await pool.connect();
+        try {
+          await client.query("BEGIN");
+          for (const row of batch) {
+            const encrypted = encryptPII(row[col]);
+            await client.query(
+              `UPDATE borrowers SET ${col} = $1 WHERE id = $2 AND ${col} NOT LIKE 'enc:%'`,
+              [encrypted, row.id]
+            );
+            totalEncrypted++;
+          }
+          await client.query("COMMIT");
+        } catch (batchErr: any) {
+          await client.query("ROLLBACK");
+          errors.push(`${col} batch at offset ${i}: ${batchErr.message}`);
+        } finally {
+          client.release();
+        }
+      }
+
+      console.log(`[PII-Encrypt] Encrypted ${rows.rows.length} records in column '${col}'`);
+    } catch (err: any) {
+      errors.push(`${col}: ${err.message}`);
+    }
+  }
+
+  return { totalEncrypted, errors };
 }
 
 export async function verifyPIIEncryptionIntegrity(): Promise<{

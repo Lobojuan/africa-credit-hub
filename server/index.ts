@@ -619,7 +619,18 @@ process.stderr.write = function (...args: any[]) {
     const { startAnchorScheduler } = await import("./blockchain-anchor");
     startAnchorScheduler(6);
 
-    const { startIntegrityScheduler } = await import("./security-hardening");
+    const { startIntegrityScheduler, encryptAllUnencryptedPII } = await import("./security-hardening");
+    try {
+      const encResult = await encryptAllUnencryptedPII();
+      if (encResult.totalEncrypted > 0) {
+        console.log(`[PII-Encrypt] Encrypted ${encResult.totalEncrypted} previously unencrypted PII fields`);
+      }
+      if (encResult.errors.length > 0) {
+        console.warn(`[PII-Encrypt] Errors:`, encResult.errors);
+      }
+    } catch (err) {
+      console.error("[PII-Encrypt] Migration failed:", err);
+    }
     startIntegrityScheduler(24);
 
     const { startBackupScheduler } = await import("./backup-service");
