@@ -36,6 +36,13 @@
       "when": 1775779201000,
       "tag": "0004_country_isolation_enforce",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1775779202000,
+      "tag": "0005_platform_deployments",
+      "breakpoints": true
     }
   ]
 }

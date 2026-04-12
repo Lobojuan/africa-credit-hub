@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS platform_deployments (
   status deployment_status NOT NULL DEFAULT 'active',
   license_tier VARCHAR NOT NULL DEFAULT 'commercial',
   monthly_fee_cents INTEGER DEFAULT 0,
-  platform_fee_percent NUMERIC(5,2) DEFAULT 15,
+  platform_fee_percent INTEGER NOT NULL DEFAULT 20,
   currency VARCHAR NOT NULL DEFAULT 'GHS',
   contact_name VARCHAR,
   contact_email VARCHAR,
@@ -26,5 +26,6 @@ CREATE TABLE IF NOT EXISTS platform_deployments (
   config_snapshot JSONB,
   update_log JSONB DEFAULT '[]'::jsonb,
   notes TEXT,
-  created_at TIMESTAMP DEFAULT NOW() NOT NULL
+  created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMP DEFAULT NOW()
 );
