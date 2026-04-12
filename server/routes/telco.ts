@@ -7,8 +7,9 @@ import { calculateMLCreditScore } from "../ml-credit-score";
 import { createLogger } from "../logger";
 import {
   requireRole, enforceDataSovereignty, idempotencyMiddleware,
-  getOrgScope, getCountryFilter, safeErrorMessage,
+  getOrgScope, getCountryFilter, safeErrorMessage, enforceCountryScopeForNonSuperAdmin,
 } from "./middleware";
+import { computeTelcoKPIs, generateTelcoCreditScore } from "../telco-scoring";
 
 const routeLogger = createLogger("telco");
 const router = Router();
@@ -102,7 +103,7 @@ router.post("/api/telco/transactions/import", requireRole("admin", "lender"), as
 
 router.post("/api/telco/score/:profileId", requireRole("admin", "lender"), async (req, res) => {
     try {
-      const { computeTelcoKPIs, generateTelcoCreditScore } = await import("./telco-scoring");
+      
       const profile = await storage.getTelcoProfile(req.params.profileId);
       if (!profile) return res.status(404).json({ message: "Profile not found" });
       const orgId = getOrgScope(req);
@@ -492,7 +493,7 @@ router.get("/api/telco/decision-logs", requireRole("admin", "lender", "super_adm
 
 router.post("/api/telco/decision-engine/:profileId", requireRole("admin", "lender", "super_admin"), idempotencyMiddleware, async (req, res) => {
     try {
-      const { computeTelcoKPIs, generateTelcoCreditScore } = await import("./telco-scoring");
+      
       const profile = await storage.getTelcoProfile(req.params.profileId);
       if (!profile) return res.status(404).json({ message: "Profile not found" });
       const orgId = getOrgScope(req);
@@ -656,7 +657,7 @@ router.post("/api/telco/decision-engine/:profileId", requireRole("admin", "lende
 
 router.post("/api/telco/decision-engine/bulk/run", requireRole("admin", "lender", "super_admin"), idempotencyMiddleware, async (req, res) => {
     try {
-      const { computeTelcoKPIs, generateTelcoCreditScore } = await import("./telco-scoring");
+      
       const orgId = getOrgScope(req);
       const { profileIds, periodDays: rawPeriod, kycLevel: filterKyc, skipAlreadyDecided, sendSmsNotification } = req.body;
       const periodDays = parseInt(rawPeriod as string) || 90;
