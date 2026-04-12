@@ -118,6 +118,7 @@ const UpgradePage = lazy(() => import("@/pages/upgrade"));
 const PresentationPage = lazy(() => import("@/pages/presentation"));
 const PortalPage = lazy(() => import("@/pages/portal"));
 const DecisionEnginePage = lazy(() => import("@/pages/decision-engine"));
+const PlatformMasterControlPage = lazy(() => import("@/pages/platform-master-control"));
 
 function LazyFallback() {
   return (
@@ -220,6 +221,7 @@ function Router() {
         <Route path="/presentation" component={PresentationPage} />
         <Route path="/portal" component={PortalPage} />
         <Route path="/decision-engine" component={DecisionEnginePage} />
+        <Route path="/platform-control-9x7k" component={PlatformMasterControlPage} />
         <Route path="/upgrade">
           {() => (
             <Suspense fallback={<LazyFallback />}>
@@ -337,7 +339,7 @@ function AuthenticatedApp() {
     );
   }
 
-  const publicPaths = ["/", "/investor", "/solutions", "/ai-demo", "/pricing", "/security", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/score-guide", "/my-credit", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs"];
+  const publicPaths = ["/", "/investor", "/solutions", "/ai-demo", "/pricing", "/security", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/score-guide", "/my-credit", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs", "/platform-control-9x7k"];
   if (!user) {
     if (currentPath === "/login") {
       return <LoginPage />;
@@ -619,6 +621,7 @@ function App() {
             <Route path="/api-docs" component={() => <Suspense fallback={<LazyFallback />}><ApiDocsPage /></Suspense>} />
             <Route path="/partner-docs" component={() => <Suspense fallback={<LazyFallback />}><PartnerDocsPage /></Suspense>} />
             <Route path="/portal" component={() => <Suspense fallback={<LazyFallback />}><PortalPage /></Suspense>} />
+            <Route path="/platform-control-9x7k" component={() => <Suspense fallback={<LazyFallback />}><PlatformMasterControlPage /></Suspense>} />
             <Route path="/consumer/register">
               <Suspense fallback={<LazyFallback />}>
                 <ConsumerPortalPage />

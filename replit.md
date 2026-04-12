@@ -35,6 +35,7 @@ The system employs a modern full-stack architecture built for scalability and co
 -   **Alternative Data**: Integration of mobile money, utility, and telco data for credit scoring; full Telco Lending Lifecycle management with idempotency support.
 -   **Consumer Portal**: Authenticated self-service portal with dual-channel verification and rate-limited credit score lookups.
 -   **System Hardening**: Real-time fraud detection, enhanced API developer portal, security headers, PII encryption at rest (AES-256-GCM), data subject erasure, password history, login anomaly detection, configurable platform identity, real-time WebSocket notifications, PWA, system status/monitoring, maintenance mode, and platform metrics dashboard.
+-   **Platform Master Control**: Hidden multi-deployment management console at `/platform-control-9x7k` (not linked in UI/sidebar). Master password gate via `MASTER_CONTROL_PASSWORD` env var. Tracks client deployments, revenue, generates fork configs. DB table: `platform_deployments`. Routes: `/api/platform-control/*`.
 -   **Performance**: Database query parallelization, SQL-based aggregation, integrity verification caching, and request timeout middleware.
 -   **Reliability**: Email/SMS with 3-attempt retry, exponential backoff, provider failover, and outbound rate limiting.
 

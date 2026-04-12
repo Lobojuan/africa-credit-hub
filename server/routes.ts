@@ -21,6 +21,7 @@ import dashboardRouter from "./routes/dashboard";
 import telcoRouter from "./routes/telco";
 import walletRouter from "./routes/wallet";
 import webauthnRouter from "./routes/webauthn";
+import { registerPlatformControlRoutes } from "./routes/platform-control";
 import { storage, requireCountryScope } from "./storage";
 import { db, pool } from "./db";
 import { sql, eq, and, or, desc, inArray, ilike, count, gte } from "drizzle-orm";
@@ -892,7 +893,7 @@ export async function registerRoutes(
   });
 
   app.use("/api", apiLimiter, (req, res, next) => {
-    if (req.path.startsWith("/auth") || req.path.startsWith("/external") || req.path.startsWith("/docs") || req.path.startsWith("/consumer") || req.path.startsWith("/ai-demo") || req.path.startsWith("/public") || req.path.startsWith("/contact-sales")) return next();
+    if (req.path.startsWith("/auth") || req.path.startsWith("/external") || req.path.startsWith("/docs") || req.path.startsWith("/consumer") || req.path.startsWith("/ai-demo") || req.path.startsWith("/public") || req.path.startsWith("/contact-sales") || req.path.startsWith("/platform-control")) return next();
     requireAuth(req, res, next);
   });
 
@@ -971,6 +972,7 @@ export async function registerRoutes(
   app.use(telcoRouter);
   app.use(walletRouter);
   app.use(webauthnRouter);
+  registerPlatformControlRoutes(app);
 
 
   app.get("/api/global-search", async (req, res) => {

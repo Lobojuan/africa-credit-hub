@@ -1250,3 +1250,30 @@ export type Wallet = typeof wallets.$inferSelect;
 export const insertWalletTransactionSchema = createInsertSchema(walletTransactions).omit({ id: true, createdAt: true });
 export type InsertWalletTransaction = z.infer<typeof insertWalletTransactionSchema>;
 export type WalletTransaction = typeof walletTransactions.$inferSelect;
+
+export const deploymentStatusEnum = pgEnum("deployment_status", ["active", "suspended", "trial", "decommissioned"]);
+
+export const platformDeployments = pgTable("platform_deployments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientName: text("client_name").notNull(),
+  country: text("country").notNull(),
+  region: text("region"),
+  deploymentUrl: text("deployment_url"),
+  status: deploymentStatusEnum("status").notNull().default("active"),
+  licenseTier: text("license_tier").notNull().default("commercial"),
+  monthlyFeeCents: integer("monthly_fee_cents"),
+  currency: text("currency").notNull().default("GHS"),
+  contactName: text("contact_name"),
+  contactEmail: text("contact_email"),
+  totalBorrowers: integer("total_borrowers").default(0),
+  totalInstitutions: integer("total_institutions").default(0),
+  lastSyncAt: timestamp("last_sync_at"),
+  configSnapshot: jsonb("config_snapshot"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPlatformDeploymentSchema = createInsertSchema(platformDeployments).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertPlatformDeployment = z.infer<typeof insertPlatformDeploymentSchema>;
+export type PlatformDeployment = typeof platformDeployments.$inferSelect;
