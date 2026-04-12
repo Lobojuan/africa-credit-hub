@@ -696,6 +696,14 @@ function RevenuePanel() {
   );
 }
 
+type CurrentInstance = {
+  clientName: string; country: string; currency: string; region: string;
+  deploymentUrl: string; branding: string; status: string; licenseTier: string;
+  totalBorrowers: number; totalInstitutions: number; totalUsers: number;
+  organizations: Array<{ name: string; licenseTier: string; status: string }>;
+  alreadyRegistered: boolean; deploymentDate: string;
+};
+
 function DeploymentsPanel() {
   const qc = useQueryClient();
   const { toast } = useToast();
@@ -707,6 +715,35 @@ function DeploymentsPanel() {
     queryFn: async () => { const r = await pcFetch("/api/platform-control/deployments"); return r.json(); },
   });
 
+  const { data: currentInstance } = useQuery<CurrentInstance>({
+    queryKey: ["/api/platform-control/current-instance"],
+    queryFn: async () => { const r = await pcFetch("/api/platform-control/current-instance"); return r.json(); },
+  });
+
+  const autoAddMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentInstance) throw new Error("No instance data");
+      const payload = {
+        clientName: currentInstance.clientName,
+        country: currentInstance.country,
+        currency: currentInstance.currency,
+        region: currentInstance.region,
+        deploymentUrl: currentInstance.deploymentUrl,
+        branding: currentInstance.branding,
+        status: currentInstance.status,
+        licenseTier: currentInstance.licenseTier,
+        totalBorrowers: currentInstance.totalBorrowers,
+        totalInstitutions: currentInstance.totalInstitutions,
+        deploymentDate: currentInstance.deploymentDate,
+      };
+      const r = await pcFetch("/api/platform-control/deployments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      if (!r.ok) throw new Error("Failed to register");
+      return r.json();
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["/api/platform-control"] }); toast({ title: "Current instance registered successfully" }); },
+    onError: (e: Error) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => { const r = await pcFetch(`/api/platform-control/deployments/${id}`, { method: "DELETE" }); if (!r.ok) throw new Error("Delete failed"); },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["/api/platform-control"] }); toast({ title: "Deleted" }); },
@@ -714,11 +751,39 @@ function DeploymentsPanel() {
 
   return (
     <div className="space-y-4">
+      {currentInstance && !currentInstance.alreadyRegistered && (
+        <div className="rounded-lg border-2 border-dashed border-emerald-500/40 bg-emerald-500/5 p-4 space-y-3" data-testid="auto-add-banner">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm font-semibold flex items-center gap-2">
+                <Server className="w-4 h-4 text-emerald-500" />
+                Current Instance Detected: {currentInstance.clientName}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {currentInstance.country} &middot; {currentInstance.totalBorrowers.toLocaleString()} borrowers &middot; {currentInstance.totalInstitutions.toLocaleString()} institutions &middot; {currentInstance.totalUsers} users
+              </p>
+              {currentInstance.organizations.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {currentInstance.organizations.slice(0, 8).map((org, i) => (
+                    <Badge key={i} variant="outline" className="text-[10px]">{org.name}</Badge>
+                  ))}
+                  {currentInstance.organizations.length > 8 && <Badge variant="outline" className="text-[10px]">+{currentInstance.organizations.length - 8} more</Badge>}
+                </div>
+              )}
+            </div>
+            <Button size="sm" onClick={() => autoAddMutation.mutate()} disabled={autoAddMutation.isPending} className="bg-emerald-600 hover:bg-emerald-700" data-testid="button-auto-add">
+              {autoAddMutation.isPending ? <RefreshCw className="w-4 h-4 animate-spin mr-1" /> : <Plus className="w-4 h-4 mr-1" />}
+              Register This Instance
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <span className="text-xs text-muted-foreground">{deployments?.length || 0} deployment(s)</span>
         <Dialog open={showCreate} onOpenChange={setShowCreate}>
           <DialogTrigger asChild>
-            <Button size="sm" data-testid="button-add-deployment"><Plus className="w-4 h-4 mr-1" /> Add</Button>
+            <Button size="sm" variant="outline" data-testid="button-add-deployment"><Plus className="w-4 h-4 mr-1" /> Add Manual</Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
             <DialogHeader><DialogTitle>New Deployment</DialogTitle></DialogHeader>
@@ -729,7 +794,7 @@ function DeploymentsPanel() {
 
       {isLoading && <p className="text-sm text-muted-foreground">Loading...</p>}
 
-      {deployments && deployments.length === 0 && (
+      {deployments && deployments.length === 0 && !currentInstance && (
         <div className="rounded-xl border border-dashed border-border p-8 text-center text-muted-foreground">
           <Server className="w-8 h-8 mx-auto mb-3 opacity-50" />
           <p className="text-sm">No deployments registered</p>

@@ -512,6 +512,60 @@ export function registerPlatformControlRoutes(app: Express) {
     }
   });
 
+  app.get("/api/platform-control/current-instance", requireMasterAuth, async (_req: Request, res: Response) => {
+    try {
+      const platformName = process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub";
+      const country = process.env.COUNTRY_MODE || "Ghana";
+      const currency = process.env.DEFAULT_CURRENCY || "GHS";
+      const deploymentUrl = process.env.REPLIT_DEV_DOMAIN
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+        : process.env.REPL_SLUG
+          ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
+          : "";
+
+      let borrowerCount = 0, orgCount = 0, userCount = 0;
+      try {
+        const bc = await pool.query("SELECT COUNT(*) as count FROM borrowers");
+        borrowerCount = parseInt(bc.rows[0]?.count || "0");
+        const oc = await pool.query("SELECT COUNT(*) as count FROM organizations");
+        orgCount = parseInt(oc.rows[0]?.count || "0");
+        const uc = await pool.query("SELECT COUNT(*) as count FROM users");
+        userCount = parseInt(uc.rows[0]?.count || "0");
+      } catch {}
+
+      let orgList: Array<{ name: string; licenseTier: string; status: string }> = [];
+      try {
+        const orgs = await pool.query("SELECT name, license_tier, status FROM organizations ORDER BY created_at DESC LIMIT 50");
+        orgList = orgs.rows.map((r: Record<string, string>) => ({ name: r.name, licenseTier: r.license_tier, status: r.status }));
+      } catch {}
+
+      const existing = await db.select().from(platformDeployments);
+      const alreadyRegistered = existing.some(d =>
+        d.clientName.toLowerCase() === platformName.toLowerCase() && d.country.toLowerCase() === country.toLowerCase()
+      );
+
+      return res.json({
+        clientName: platformName,
+        country,
+        currency,
+        region: "West Africa",
+        deploymentUrl,
+        branding: platformName,
+        status: "active",
+        licenseTier: "commercial",
+        totalBorrowers: borrowerCount,
+        totalInstitutions: orgCount,
+        totalUsers: userCount,
+        organizations: orgList,
+        alreadyRegistered,
+        deploymentDate: new Date().toISOString().split("T")[0],
+      });
+    } catch (e: unknown) {
+      logger.error("Failed to get current instance", { error: (e as Error).message });
+      return res.status(500).json({ message: "Failed to read current instance data" });
+    }
+  });
+
   app.post("/api/platform-control/generate-config", requireMasterAuth, (req: Request, res: Response) => {
     const { clientName, country, currency, regulatoryBody, brandTitle } = req.body || {};
     if (!clientName || !country) {
