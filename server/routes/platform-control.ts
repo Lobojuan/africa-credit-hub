@@ -79,7 +79,7 @@ async function safeCount(table: string): Promise<number> {
   } catch { return -1; }
 }
 
-async function safeQuery(q: string): Promise<any[]> {
+async function safeQuery(q: string): Promise<Record<string, string>[]> {
   try {
     const r = await pool.query(q);
     return r.rows;
@@ -121,7 +121,6 @@ export function registerPlatformControlRoutes(app: Express) {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
-      maxAge: SESSION_TOKEN_EXPIRY_MS,
       path: "/api/platform-control",
     });
 
@@ -157,8 +156,8 @@ export function registerPlatformControlRoutes(app: Express) {
     try {
       const deployments = await db.select().from(platformDeployments).orderBy(desc(platformDeployments.createdAt));
       return res.json(deployments);
-    } catch (e: any) {
-      logger.error("Failed to fetch deployments", { error: e.message });
+    } catch (e: unknown) {
+      logger.error("Failed to fetch deployments", { error: (e as Error).message });
       return res.status(500).json({ message: "Failed to fetch deployments" });
     }
   });
@@ -169,9 +168,9 @@ export function registerPlatformControlRoutes(app: Express) {
       const [created] = await db.insert(platformDeployments).values(parsed).returning();
       logger.info("Deployment created", { id: created.id, client: created.clientName });
       return res.status(201).json(created);
-    } catch (e: any) {
-      logger.error("Failed to create deployment", { error: e.message });
-      return res.status(400).json({ message: e.message || "Invalid deployment data" });
+    } catch (e: unknown) {
+      logger.error("Failed to create deployment", { error: (e as Error).message });
+      return res.status(400).json({ message: (e as Error).message || "Invalid deployment data" });
     }
   });
 
@@ -202,9 +201,9 @@ export function registerPlatformControlRoutes(app: Express) {
 
       logger.info("Deployment updated", { id, changes: Object.keys(parsed), note: updateNote });
       return res.json(updated);
-    } catch (e: any) {
-      logger.error("Failed to update deployment", { error: e.message });
-      return res.status(400).json({ message: e.message || "Update failed" });
+    } catch (e: unknown) {
+      logger.error("Failed to update deployment", { error: (e as Error).message });
+      return res.status(400).json({ message: (e as Error).message || "Update failed" });
     }
   });
 
@@ -215,8 +214,8 @@ export function registerPlatformControlRoutes(app: Express) {
       if (!deleted) return res.status(404).json({ message: "Deployment not found" });
       logger.info("Deployment deleted", { id });
       return res.json({ deleted: true });
-    } catch (e: any) {
-      logger.error("Failed to delete deployment", { error: e.message });
+    } catch (e: unknown) {
+      logger.error("Failed to delete deployment", { error: (e as Error).message });
       return res.status(500).json({ message: "Delete failed" });
     }
   });
@@ -237,7 +236,7 @@ export function registerPlatformControlRoutes(app: Express) {
       const totalBorrowers = deployments.reduce((sum, d) => sum + (d.totalBorrowers || 0), 0);
       const totalInstitutions = deployments.reduce((sum, d) => sum + (d.totalInstitutions || 0), 0);
 
-      let localStats: any = {};
+      let localStats: Record<string, number> = {};
       try {
         const borrowerCount = await pool.query("SELECT COUNT(*) as count FROM borrowers");
         const orgCount = await pool.query("SELECT COUNT(*) as count FROM organizations");
@@ -254,8 +253,8 @@ export function registerPlatformControlRoutes(app: Express) {
         totalMRRCents: totalMRR, countriesServed, totalBorrowers, totalInstitutions,
         ...localStats,
       });
-    } catch (e: any) {
-      logger.error("Failed to get summary", { error: e.message });
+    } catch (e: unknown) {
+      logger.error("Failed to get summary", { error: (e as Error).message });
       return res.status(500).json({ message: "Failed to get summary" });
     }
   });
@@ -276,14 +275,15 @@ export function registerPlatformControlRoutes(app: Express) {
         dbVersion = vr.rows[0]?.version || "";
         const sr = await pool.query("SELECT pg_size_pretty(pg_database_size(current_database())) as size");
         dbSizeMB = sr.rows[0]?.size || "";
-      } catch (e: any) {
+      } catch {
         dbStatus = "error";
       }
 
+      const poolRef = pool as unknown as { totalCount: number; idleCount: number; waitingCount: number };
       const poolStats = {
-        totalCount: (pool as any).totalCount || 0,
-        idleCount: (pool as any).idleCount || 0,
-        waitingCount: (pool as any).waitingCount || 0,
+        totalCount: poolRef.totalCount || 0,
+        idleCount: poolRef.idleCount || 0,
+        waitingCount: poolRef.waitingCount || 0,
       };
 
       const mem = process.memoryUsage();
@@ -370,8 +370,8 @@ export function registerPlatformControlRoutes(app: Express) {
         envConfig,
         security,
       });
-    } catch (e: any) {
-      logger.error("Failed to get system health", { error: e.message });
+    } catch (e: unknown) {
+      logger.error("Failed to get system health", { error: (e as Error).message });
       return res.status(500).json({ message: "Failed to get system health" });
     }
   });
@@ -395,7 +395,7 @@ export function registerPlatformControlRoutes(app: Express) {
         counts[t] = await safeCount(t);
       }
 
-      let piiStats: any = {};
+      let piiStats: Record<string, number> = {};
       try {
         const piiCols = ["national_id", "tin_number", "passport_number", "voters_id", "ssnit_number",
           "drivers_license", "ghana_card_number", "ezwich_number", "date_of_birth", "mobile_money_number"];
@@ -411,7 +411,7 @@ export function registerPlatformControlRoutes(app: Express) {
         piiStats = { totalPiiFields: totalPii, encryptedPiiFields: encryptedPii, encryptionPercent: totalPii > 0 ? Math.round((encryptedPii / totalPii) * 1000) / 10 : 100 };
       } catch {}
 
-      let recentActivity: any = {};
+      let recentActivity: Record<string, number> = {};
       try {
         const last24h = await safeQuery(`SELECT COUNT(*) as c FROM audit_logs WHERE created_at > NOW() - INTERVAL '24 hours'`);
         const last7d = await safeQuery(`SELECT COUNT(*) as c FROM audit_logs WHERE created_at > NOW() - INTERVAL '7 days'`);
@@ -431,19 +431,19 @@ export function registerPlatformControlRoutes(app: Express) {
         };
       } catch {}
 
-      let orgBreakdown: any[] = [];
+      let orgBreakdown: Array<Record<string, string | null>> = [];
       try {
         const orgs = await safeQuery(`SELECT id, name, status, license_tier, country, created_at FROM organizations ORDER BY created_at DESC LIMIT 50`);
         orgBreakdown = orgs;
       } catch {}
 
-      let userBreakdown: any = {};
+      let userBreakdown: { byRole: Record<string, number>; mfaEnabled: number; totalActive: number } = { byRole: {}, mfaEnabled: 0, totalActive: 0 };
       try {
         const byRole = await safeQuery(`SELECT role, COUNT(*) as count FROM users GROUP BY role ORDER BY count DESC`);
         const mfaEnabled = await safeQuery(`SELECT COUNT(*) as c FROM users WHERE totp_secret IS NOT NULL`);
         const activeUsers = await safeQuery(`SELECT COUNT(*) as c FROM users WHERE is_active = true`);
         userBreakdown = {
-          byRole: byRole.reduce((acc: any, r: any) => { acc[r.role] = parseInt(r.count); return acc; }, {}),
+          byRole: byRole.reduce((acc: Record<string, number>, r: Record<string, string>) => { acc[r.role] = parseInt(r.count); return acc; }, {}),
           mfaEnabled: parseInt(mfaEnabled[0]?.c || "0"),
           totalActive: parseInt(activeUsers[0]?.c || "0"),
         };
@@ -456,8 +456,8 @@ export function registerPlatformControlRoutes(app: Express) {
         orgBreakdown,
         userBreakdown,
       });
-    } catch (e: any) {
-      logger.error("Failed to get database stats", { error: e.message });
+    } catch (e: unknown) {
+      logger.error("Failed to get database stats", { error: (e as Error).message });
       return res.status(500).json({ message: "Failed to get database stats" });
     }
   });
@@ -484,7 +484,7 @@ export function registerPlatformControlRoutes(app: Express) {
         if (d.status === "active" || d.status === "trial") totalARRCents += fee * 12;
       }
 
-      let localBilling: any = {};
+      let localBilling: Record<string, number> = {};
       try {
         const totalBilling = await safeQuery(`SELECT SUM(amount) as total FROM billing_records`);
         const monthBilling = await safeQuery(`SELECT SUM(amount) as total FROM billing_records WHERE created_at > NOW() - INTERVAL '30 days'`);
@@ -504,8 +504,8 @@ export function registerPlatformControlRoutes(app: Express) {
         localBilling,
         deploymentCount: deployments.filter(d => d.status !== "decommissioned").length,
       });
-    } catch (e: any) {
-      logger.error("Failed to get revenue overview", { error: e.message });
+    } catch (e: unknown) {
+      logger.error("Failed to get revenue overview", { error: (e as Error).message });
       return res.status(500).json({ message: "Failed to get revenue overview" });
     }
   });

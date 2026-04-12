@@ -4,6 +4,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import type { LucideIcon } from "lucide-react";
 import {
   Shield, Lock, Globe, Building2, Plus, Trash2, Edit, Copy,
   Activity, DollarSign, Users, Server, LogOut, ChevronDown,
@@ -22,6 +23,67 @@ import {
 import { useToast } from "@/hooks/use-toast";
 
 const GHS = "\u20B5";
+
+interface IntegrationItem {
+  connected: boolean;
+  label: string;
+  detail?: string;
+  icon?: LucideIcon;
+}
+
+interface SystemHealthData {
+  timestamp: string;
+  responseTimeMs: number;
+  server: {
+    version: string;
+    nodeVersion: string;
+    uptime: string;
+    uptimeSeconds: number;
+    memory: { rss: number; heapUsed: number; heapTotal: number; external: number };
+    system: { platform: string; arch: string; cpus: number; totalMemoryMB: number; freeMemoryMB: number; loadAvg: number[]; hostname: string };
+    pid: number;
+  };
+  database: {
+    status: string;
+    latencyMs: number;
+    version: string;
+    size: string;
+    pool: { totalCount: number; idleCount: number; waitingCount: number };
+  };
+  integrations: Record<string, IntegrationItem>;
+  envConfig: Record<string, string>;
+  security: Record<string, boolean>;
+}
+
+interface DatabaseStats {
+  tableCounts: Record<string, number>;
+  piiStats: { totalPiiFields: number; encryptedPiiFields: number; encryptionPercent: number };
+  recentActivity: {
+    auditLogs24h: number; auditLogs7d: number; logins24h: number;
+    failedLogins24h: number; creditReports24h: number; disputes7d: number; openDisputes: number;
+  };
+  orgBreakdown: Array<{ id: string; name: string; status: string; license_tier: string; country: string; created_at: string }>;
+  userBreakdown: { byRole: Record<string, number>; mfaEnabled: number; totalActive: number };
+}
+
+interface TierInfo { count: number; mrrCents: number }
+interface CountryInfo { count: number; mrrCents: number }
+interface RevenueData {
+  totalARRCents: number;
+  byTier: Record<string, TierInfo>;
+  byCountry: Record<string, CountryInfo>;
+  localBilling: { totalBilledAllTime: number; billedLast30Days: number; totalWalletBalance: number; activeWallets: number };
+  deploymentCount: number;
+}
+
+interface SummaryData {
+  totalDeployments: number; activeDeployments: number; trialDeployments: number;
+  suspendedDeployments: number; totalMRRCents: number; countriesServed: string[];
+  totalBorrowers: number; totalInstitutions: number;
+  localBorrowers: number; localOrganizations: number; localUsers: number;
+}
+
+interface UpdateLogEntry { timestamp: string; changes: string[]; note: string; previousStatus?: string }
 
 function pcFetch(url: string, opts?: RequestInit) {
   return fetch(url, { credentials: "include", ...opts });
@@ -90,7 +152,7 @@ type Deployment = {
   status: string; licenseTier: string; monthlyFeeCents?: number; platformFeePercent?: number;
   currency: string; contactName?: string; contactEmail?: string;
   totalBorrowers?: number; totalInstitutions?: number;
-  lastSyncAt?: string; configSnapshot?: any; updateLog?: any[];
+  lastSyncAt?: string; configSnapshot?: Record<string, string>; updateLog?: UpdateLogEntry[];
   notes?: string; createdAt: string;
 };
 
@@ -113,7 +175,7 @@ function IntegrationDot({ connected }: { connected: boolean }) {
     : <XCircle className="w-4 h-4 text-zinc-400 shrink-0" />;
 }
 
-function StatCard({ label, value, icon: Icon, sub, color }: { label: string; value: string | number; icon: any; sub?: string; color?: string }) {
+function StatCard({ label, value, icon: Icon, sub, color }: { label: string; value: string | number; icon: LucideIcon; sub?: string | React.ReactNode; color?: string }) {
   return (
     <div className="rounded-xl border border-border p-4 space-y-1">
       <div className="flex items-center justify-between">
@@ -126,7 +188,7 @@ function StatCard({ label, value, icon: Icon, sub, color }: { label: string; val
   );
 }
 
-function Panel({ title, icon: Icon, children, defaultOpen = true, color = "text-primary" }: { title: string; icon: any; children: React.ReactNode; defaultOpen?: boolean; color?: string }) {
+function Panel({ title, icon: Icon, children, defaultOpen = true, color = "text-primary" }: { title: string; icon: LucideIcon; children: React.ReactNode; defaultOpen?: boolean; color?: string }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div className="rounded-xl border border-border overflow-hidden">
@@ -150,24 +212,25 @@ function DeploymentForm({ deployment, onClose }: { deployment?: Deployment; onCl
   const qc = useQueryClient();
   const { toast } = useToast();
   const [updateNote, setUpdateNote] = useState("");
-  const [form, setForm] = useState({
+  type DeploymentFormState = Record<string, string>;
+  const [form, setForm] = useState<DeploymentFormState>({
     clientName: deployment?.clientName || "", country: deployment?.country || "",
     region: deployment?.region || "", deploymentUrl: deployment?.deploymentUrl || "",
     status: deployment?.status || "active", licenseTier: deployment?.licenseTier || "commercial",
-    monthlyFeeCents: deployment?.monthlyFeeCents?.toString() || "", platformFeePercent: ((deployment as any)?.platformFeePercent ?? 15).toString(),
+    monthlyFeeCents: deployment?.monthlyFeeCents?.toString() || "", platformFeePercent: (deployment?.platformFeePercent ?? 15).toString(),
     currency: deployment?.currency || "GHS",
     contactName: deployment?.contactName || "", contactEmail: deployment?.contactEmail || "",
     totalBorrowers: deployment?.totalBorrowers?.toString() || "0", totalInstitutions: deployment?.totalInstitutions?.toString() || "0",
     notes: deployment?.notes || "",
   });
   const mutation = useMutation({
-    mutationFn: async (data: any) => deployment ? apiRequest("PATCH", `/api/platform-control/deployments/${deployment.id}`, data) : apiRequest("POST", "/api/platform-control/deployments", data),
+    mutationFn: async (data: Record<string, unknown>) => deployment ? apiRequest("PATCH", `/api/platform-control/deployments/${deployment.id}`, data) : apiRequest("POST", "/api/platform-control/deployments", data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["/api/platform-control"] }); toast({ title: deployment ? "Updated" : "Created" }); onClose(); },
-    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const payload: any = { ...form, monthlyFeeCents: form.monthlyFeeCents ? parseInt(form.monthlyFeeCents) : null, platformFeePercent: form.platformFeePercent ? parseInt(form.platformFeePercent) : 15, totalBorrowers: parseInt(form.totalBorrowers) || 0, totalInstitutions: parseInt(form.totalInstitutions) || 0 };
+    const payload: Record<string, unknown> = { ...form, monthlyFeeCents: form.monthlyFeeCents ? parseInt(form.monthlyFeeCents) : null, platformFeePercent: form.platformFeePercent ? parseInt(form.platformFeePercent) : 15, totalBorrowers: parseInt(form.totalBorrowers) || 0, totalInstitutions: parseInt(form.totalInstitutions) || 0 };
     if (deployment && updateNote) payload.updateNote = updateNote;
     mutation.mutate(payload);
   };
@@ -182,7 +245,7 @@ function DeploymentForm({ deployment, onClose }: { deployment?: Deployment; onCl
         ].map(f => (
           <div key={f.key} className="space-y-1">
             <label className="text-xs font-medium">{f.label}</label>
-            <Input value={(form as any)[f.key]} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))} required={f.req} data-testid={`input-${f.key}`} />
+            <Input value={form[f.key]} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))} required={f.req} data-testid={`input-${f.key}`} />
           </div>
         ))}
         <div className="space-y-1">
@@ -214,7 +277,7 @@ function DeploymentForm({ deployment, onClose }: { deployment?: Deployment; onCl
         ].map(f => (
           <div key={f.key} className="space-y-1">
             <label className="text-xs font-medium">{f.label}</label>
-            <Input type={f.type || "text"} value={(form as any)[f.key]} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))} data-testid={`input-${f.key}`} />
+            <Input type={f.type || "text"} value={form[f.key]} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))} data-testid={`input-${f.key}`} />
           </div>
         ))}
       </div>
@@ -241,8 +304,8 @@ function DeploymentForm({ deployment, onClose }: { deployment?: Deployment; onCl
 
 function ConfigGenerator() {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ clientName: "", country: "", currency: "GHS", regulatoryBody: "", brandTitle: "" });
-  const [config, setConfig] = useState<any>(null);
+  const [form, setForm] = useState<Record<string, string>>({ clientName: "", country: "", currency: "GHS", regulatoryBody: "", brandTitle: "" });
+  const [config, setConfig] = useState<{ config: Record<string, string>; instructions: string[] } | null>(null);
   const { toast } = useToast();
   const generate = async () => {
     try {
@@ -265,7 +328,7 @@ function ConfigGenerator() {
           ].map(f => (
             <div key={f.key} className="space-y-1">
               <label className="text-xs font-medium">{f.label}</label>
-              <Input value={(form as any)[f.key]} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))} data-testid={`input-gen-${f.key}`} />
+              <Input value={form[f.key]} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))} data-testid={`input-gen-${f.key}`} />
             </div>
           ))}
         </div>
@@ -296,7 +359,7 @@ function ConfigGenerator() {
 }
 
 function SystemHealthPanel() {
-  const { data, isLoading, refetch } = useQuery<any>({
+  const { data, isLoading, refetch } = useQuery<SystemHealthData>({
     queryKey: ["/api/platform-control/system-health"],
     queryFn: async () => { const r = await pcFetch("/api/platform-control/system-health"); return r.json(); },
     refetchInterval: 30000,
@@ -320,7 +383,7 @@ function SystemHealthPanel() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Uptime" value={srv.uptime} icon={Clock} sub={`PID ${srv.pid}`} color="text-emerald-500" />
-        <StatCard label="DB Latency" value={`${dba.latencyMs}ms`} icon={Database} sub={<StatusBadge status={dba.status} /> as any} color="text-blue-500" />
+        <StatCard label="DB Latency" value={`${dba.latencyMs}ms`} icon={Database} sub={(<StatusBadge status={dba.status} />) as React.ReactNode} color="text-blue-500" />
         <StatCard label="Memory (Heap)" value={`${srv.memory.heapUsed}MB`} icon={HardDrive} sub={`/ ${srv.memory.heapTotal}MB total`} color="text-amber-500" />
         <StatCard label="Response Time" value={`${data.responseTimeMs}ms`} icon={Zap} sub="API response" color="text-violet-500" />
       </div>
@@ -396,7 +459,7 @@ function SystemHealthPanel() {
 }
 
 function IntegrationsPanel() {
-  const { data } = useQuery<any>({
+  const { data } = useQuery<SystemHealthData>({
     queryKey: ["/api/platform-control/system-health"],
     queryFn: async () => { const r = await pcFetch("/api/platform-control/system-health"); return r.json(); },
     staleTime: 15000,
@@ -413,7 +476,7 @@ function IntegrationsPanel() {
     { title: "Security", items: [{ ...data.integrations.piiEncryption, icon: Lock }] },
   ];
 
-  const totalConnected = Object.values(data.integrations).filter((i: any) => i.connected).length;
+  const totalConnected = Object.values(data.integrations).filter((i) => i.connected).length;
   const totalIntegrations = Object.values(data.integrations).length;
 
   return (
@@ -425,14 +488,17 @@ function IntegrationsPanel() {
         {groups.map(g => (
           <div key={g.title} className="rounded-lg border border-border p-3 space-y-2">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{g.title}</p>
-            {g.items.map((item: any) => (
-              <div key={item.label} className="flex items-center gap-2">
-                <IntegrationDot connected={item.connected} />
-                <item.icon className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="text-xs flex-1">{item.label}</span>
-                {item.detail && <span className="text-[10px] text-muted-foreground truncate max-w-[100px]">{item.detail}</span>}
-              </div>
-            ))}
+            {g.items.map((item) => {
+              const ItemIcon = item.icon || Wifi;
+              return (
+                <div key={item.label} className="flex items-center gap-2">
+                  <IntegrationDot connected={item.connected} />
+                  <ItemIcon className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="text-xs flex-1">{item.label}</span>
+                  {item.detail && <span className="text-[10px] text-muted-foreground truncate max-w-[100px]">{item.detail}</span>}
+                </div>
+              );
+            })}
           </div>
         ))}
       </div>
@@ -441,7 +507,7 @@ function IntegrationsPanel() {
 }
 
 function DatabaseStatsPanel() {
-  const { data, isLoading, refetch } = useQuery<any>({
+  const { data, isLoading, refetch } = useQuery<DatabaseStats>({
     queryKey: ["/api/platform-control/database-stats"],
     queryFn: async () => { const r = await pcFetch("/api/platform-control/database-stats"); return r.json(); },
   });
@@ -453,8 +519,8 @@ function DatabaseStatsPanel() {
   const activity = data.recentActivity || {};
   const users = data.userBreakdown || {};
 
-  const sortedTables = Object.entries(counts).sort((a: any, b: any) => b[1] - a[1]);
-  const totalRows = Object.values(counts).reduce((s: number, v: any) => s + Math.max(0, v), 0);
+  const sortedTables = Object.entries(counts).sort(([, a], [, b]) => b - a);
+  const totalRows = Object.values(counts).reduce((s, v) => s + Math.max(0, v), 0);
 
   return (
     <div className="space-y-4">
@@ -493,7 +559,7 @@ function DatabaseStatsPanel() {
         <div className="space-y-2">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Users</p>
           <div className="flex flex-wrap gap-2">
-            {Object.entries(users.byRole).map(([role, count]: [string, any]) => (
+            {Object.entries(users.byRole).map(([role, count]: [string, number]) => (
               <Badge key={role} variant="outline" className="text-xs">{role}: {count}</Badge>
             ))}
             <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30">MFA: {users.mfaEnabled || 0}</Badge>
@@ -511,7 +577,7 @@ function DatabaseStatsPanel() {
                 <tr><th className="text-left p-2 font-medium">Table</th><th className="text-right p-2 font-medium">Rows</th></tr>
               </thead>
               <tbody>
-                {sortedTables.map(([table, count]: any) => (
+                {sortedTables.map(([table, count]) => (
                   <tr key={table} className="border-t border-border hover:bg-muted/30">
                     <td className="p-2 font-mono">{table}</td>
                     <td className="p-2 text-right font-medium">{count >= 0 ? count.toLocaleString() : "N/A"}</td>
@@ -538,7 +604,7 @@ function DatabaseStatsPanel() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.orgBreakdown.map((org: any) => (
+                  {data.orgBreakdown.map((org) => (
                     <tr key={org.id} className="border-t border-border hover:bg-muted/30">
                       <td className="p-2 font-medium">{org.name}</td>
                       <td className="p-2 text-center"><StatusBadge status={org.status} /></td>
@@ -557,7 +623,7 @@ function DatabaseStatsPanel() {
 }
 
 function RevenuePanel() {
-  const { data, isLoading } = useQuery<any>({
+  const { data, isLoading } = useQuery<RevenueData>({
     queryKey: ["/api/platform-control/revenue-overview"],
     queryFn: async () => { const r = await pcFetch("/api/platform-control/revenue-overview"); return r.json(); },
   });
@@ -577,7 +643,7 @@ function RevenuePanel() {
         <div className="space-y-2">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Revenue by Tier</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            {Object.entries(data.byTier).map(([tier, info]: [string, any]) => (
+            {Object.entries(data.byTier).map(([tier, info]: [string, { mrrCents: number; count: number }]) => (
               <div key={tier} className="rounded-lg border border-border p-3 text-center">
                 <p className="text-xs text-muted-foreground capitalize">{tier}</p>
                 <p className="text-lg font-bold">{formatCurrency(info.mrrCents)}<span className="text-xs text-muted-foreground">/mo</span></p>
@@ -592,7 +658,7 @@ function RevenuePanel() {
         <div className="space-y-2">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Revenue by Country</p>
           <div className="rounded-lg border border-border divide-y divide-border text-xs">
-            {Object.entries(data.byCountry).map(([country, info]: [string, any]) => (
+            {Object.entries(data.byCountry).map(([country, info]: [string, { mrrCents: number; count: number }]) => (
               <div key={country} className="flex justify-between px-3 py-2">
                 <span className="font-medium">{country}</span>
                 <div className="flex items-center gap-3">
@@ -782,8 +848,8 @@ function QuickActionsPanel() {
 }
 
 function ConfigGeneratorInline() {
-  const [form, setForm] = useState({ clientName: "", country: "", currency: "GHS", regulatoryBody: "", brandTitle: "" });
-  const [config, setConfig] = useState<any>(null);
+  const [form, setForm] = useState<Record<string, string>>({ clientName: "", country: "", currency: "GHS", regulatoryBody: "", brandTitle: "" });
+  const [config, setConfig] = useState<{ config: Record<string, string>; instructions: string[] } | null>(null);
   const { toast } = useToast();
   const generate = async () => {
     try {
@@ -806,7 +872,7 @@ function ConfigGeneratorInline() {
         ].map(f => (
           <div key={f.key} className="space-y-1">
             <label className="text-xs font-medium">{f.label}</label>
-            <Input value={(form as any)[f.key]} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))} data-testid={`input-gen-${f.key}`} />
+            <Input value={form[f.key]} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))} data-testid={`input-gen-${f.key}`} />
           </div>
         ))}
       </div>
@@ -844,17 +910,18 @@ function ConfigurationMatrix() {
   if (isLoading || !deployments) return <div className="text-sm text-muted-foreground p-4">Loading...</div>;
   if (deployments.length === 0) return <div className="text-sm text-muted-foreground p-4">No deployments to compare.</div>;
 
-  const configFields = [
+  type FieldDef = { key: keyof Deployment; label: string; format?: (v: string | number | undefined | null, d: Deployment) => string };
+  const configFields: FieldDef[] = [
     { key: "status", label: "Status" },
     { key: "licenseTier", label: "License Tier" },
     { key: "country", label: "Country" },
     { key: "region", label: "Region" },
     { key: "currency", label: "Currency" },
-    { key: "monthlyFeeCents", label: "Monthly Fee", format: (v: any, d: any) => formatCurrency(v, d.currency) },
-    { key: "platformFeePercent", label: "Platform Fee %", format: (v: any) => v != null ? `${v}%` : "—" },
-    { key: "totalBorrowers", label: "Borrowers", format: (v: any) => (v || 0).toLocaleString() },
-    { key: "totalInstitutions", label: "Institutions", format: (v: any) => (v || 0).toLocaleString() },
-    { key: "deploymentUrl", label: "URL", format: (v: any) => v || "—" },
+    { key: "monthlyFeeCents", label: "Monthly Fee", format: (v, d) => formatCurrency(v as number | undefined, d.currency) },
+    { key: "platformFeePercent", label: "Platform Fee %", format: (v) => v != null ? `${v}%` : "—" },
+    { key: "totalBorrowers", label: "Borrowers", format: (v) => ((v as number) || 0).toLocaleString() },
+    { key: "totalInstitutions", label: "Institutions", format: (v) => ((v as number) || 0).toLocaleString() },
+    { key: "deploymentUrl", label: "URL", format: (v) => (v as string) || "—" },
     { key: "contactName", label: "Contact" },
     { key: "contactEmail", label: "Email" },
   ];
@@ -879,7 +946,7 @@ function ConfigurationMatrix() {
               <td className="p-2 font-medium text-muted-foreground sticky left-0 bg-background">{f.label}</td>
               {deployments.map(d => (
                 <td key={d.id} className="p-2 text-center">
-                  {f.format ? f.format((d as any)[f.key], d) : ((d as any)[f.key] || "—")}
+                  {f.format ? f.format(d[f.key] as string | number | undefined, d) : (String(d[f.key] || "—"))}
                 </td>
               ))}
             </tr>
@@ -901,7 +968,7 @@ function UpdateTracker() {
   type LogEntry = { timestamp: string; changes: string[]; note: string; previousStatus?: string };
   const allEntries: { clientName: string; entry: LogEntry }[] = [];
   for (const d of deployments) {
-    const log = Array.isArray((d as any).updateLog) ? (d as any).updateLog : [];
+    const log: UpdateLogEntry[] = Array.isArray(d.updateLog) ? d.updateLog : [];
     for (const entry of log) {
       allEntries.push({ clientName: d.clientName, entry });
     }
@@ -943,7 +1010,7 @@ function UpdateTracker() {
 }
 
 function ControlDashboard() {
-  const { data: summary } = useQuery<any>({
+  const { data: summary } = useQuery<SummaryData>({
     queryKey: ["/api/platform-control/summary"],
     queryFn: async () => { const r = await pcFetch("/api/platform-control/summary"); return r.json(); },
   });
