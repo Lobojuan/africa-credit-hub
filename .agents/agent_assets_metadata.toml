@@ -138,3 +138,9 @@ id = "aPWVbzB-SmSzfvvRclzeT"
 uri = "file://codebase-review.zip"
 type = "unspecified"
 title = "Africa Credit Hub v2.5 — Full Source Code"
+
+[[outputs]]
+id = "8aZFLaFfivhm_pUEzqSNj"
+uri = "file://africa-credit-hub-v2.5-codebase.zip"
+type = "unspecified"
+title = "Africa Credit Hub v2.5 — Full Codebase"
