@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, User, Building2, Mail, Phone, MapPin, Briefcase, CreditCard, AlertTriangle, TrendingUp, FileText, Flag, GraduationCap, Users, Link2, ClipboardList, Camera, Upload, IdCard, Brain, Loader2, ShieldCheck, ShieldAlert, ShieldX, ChevronDown, ChevronUp, Sparkles, Smartphone, Heart } from "lucide-react";
+import { ArrowLeft, User, Building2, Mail, Phone, MapPin, Briefcase, CreditCard, AlertTriangle, TrendingUp, FileText, Flag, GraduationCap, Users, Link2, ClipboardList, Camera, Upload, IdCard, Brain, Loader2, ShieldCheck, ShieldAlert, ShieldX, ChevronDown, ChevronUp, Sparkles, Smartphone, Heart, Calendar, Percent, Clock, Banknote, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +39,112 @@ function getCreditScoreColor(score: number) {
   return "text-red-600 dark:text-red-400";
 }
 
+function DetailField({ label, value, icon: Icon }: { label: string; value: string | number | null | undefined; icon?: any }) {
+  if (!value && value !== 0) return null;
+  return (
+    <div className="space-y-0.5">
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 flex items-center gap-1">
+        {Icon && <Icon className="w-3 h-3" />}
+        {label}
+      </p>
+      <p className="text-xs font-medium text-foreground" data-testid={`detail-${label.toLowerCase().replace(/\s+/g, "-")}`}>{value}</p>
+    </div>
+  );
+}
+
+function PaymentStatusDot({ status }: { status: string }) {
+  const color = status === "paid" || status === "on_time"
+    ? "bg-emerald-500" : status === "late"
+    ? "bg-amber-500" : status === "missed" || status === "default"
+    ? "bg-red-500" : "bg-gray-400";
+  return <span className={`inline-block w-2 h-2 rounded-full ${color}`} title={status} />;
+}
+
+function CreditAccountDetail({ account, currency }: { account: CreditAccount; currency: string }) {
+  const { t } = useTranslation();
+  const { data: payments, isLoading } = useQuery<any[]>({
+    queryKey: ['/api/payment-history', account.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/payment-history/${account.id}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch payment history");
+      return res.json();
+    },
+  });
+
+  const utilization = parseFloat(account.originalAmount || "0") > 0
+    ? ((parseFloat(account.currentBalance || "0") / parseFloat(account.originalAmount || "1")) * 100).toFixed(1)
+    : "0";
+
+  return (
+    <div className="bg-muted/30 border-t border-border/40 px-6 py-5 space-y-5 animate-in slide-in-from-top-2 duration-200" data-testid={`detail-panel-${account.id}`}>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+        <DetailField label="Account Number" value={account.accountNumber} icon={CreditCard} />
+        <DetailField label="Account Type" value={account.accountType} icon={Briefcase} />
+        <DetailField label="Lender" value={account.lenderInstitution} icon={Building2} />
+        <DetailField label="Status" value={account.status} icon={Flag} />
+        <DetailField label="Original Amount" value={formatCurrency(account.originalAmount, currency)} icon={Banknote} />
+        <DetailField label="Current Balance" value={formatCurrency(account.currentBalance, currency)} icon={Banknote} />
+        <DetailField label="Utilization" value={`${utilization}%`} icon={Percent} />
+        <DetailField label="Interest Rate" value={account.interestRate ? `${account.interestRate}%` : "—"} icon={Percent} />
+        <DetailField label="Disbursement Date" value={account.disbursementDate || "—"} icon={Calendar} />
+        <DetailField label="Maturity Date" value={account.maturityDate || "—"} icon={Calendar} />
+        <DetailField label="Days in Arrears" value={account.daysInArrears || 0} icon={Clock} />
+        <DetailField label="Last Payment" value={account.lastPaymentDate || "—"} icon={Calendar} />
+        <DetailField label="Last Payment Amount" value={account.lastPaymentAmount ? formatCurrency(account.lastPaymentAmount, currency) : "—"} icon={Banknote} />
+        {account.collateralType && <DetailField label="Collateral" value={`${account.collateralType} — ${formatCurrency(account.collateralValue || "0", currency)}`} icon={ShieldCheck} />}
+        {(account as any).facilityTypeCode && <DetailField label="Facility Type" value={(account as any).facilityTypeCode} />}
+        {(account as any).purposeOfFacility && <DetailField label="Purpose" value={(account as any).purposeOfFacility} />}
+        {(account as any).repaymentFrequency && <DetailField label="Repayment Frequency" value={(account as any).repaymentFrequency} />}
+        {(account as any).assetClassification && <DetailField label="Asset Classification" value={(account as any).assetClassification} />}
+        {(account as any).restructureCount > 0 && <DetailField label="Restructure Count" value={(account as any).restructureCount} />}
+        {(account as any).writtenOffDate && <DetailField label="Written Off Date" value={(account as any).writtenOffDate} icon={AlertTriangle} />}
+      </div>
+
+      <div>
+        <h4 className="text-xs font-semibold flex items-center gap-1.5 mb-3">
+          <TrendingUp className="w-3.5 h-3.5" />
+          Payment History
+        </h4>
+        {isLoading ? (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="w-3 h-3 animate-spin" /> Loading...</div>
+        ) : payments && payments.length > 0 ? (
+          <div className="rounded-lg border border-border/50 overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="text-[10px] py-2 h-auto">Period</TableHead>
+                  <TableHead className="text-[10px] py-2 h-auto text-right">Amount Due</TableHead>
+                  <TableHead className="text-[10px] py-2 h-auto text-right">Amount Paid</TableHead>
+                  <TableHead className="text-[10px] py-2 h-auto text-center">Status</TableHead>
+                  <TableHead className="text-[10px] py-2 h-auto text-right">Days Late</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {payments.slice(0, 12).map((p: any) => (
+                  <TableRow key={p.id} className="hover:bg-muted/30">
+                    <TableCell className="text-xs py-2">{p.period}</TableCell>
+                    <TableCell className="text-xs py-2 text-right">{p.amountDue ? formatCurrency(p.amountDue, currency) : "—"}</TableCell>
+                    <TableCell className="text-xs py-2 text-right">{p.amountPaid ? formatCurrency(p.amountPaid, currency) : "—"}</TableCell>
+                    <TableCell className="text-xs py-2 text-center">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <PaymentStatusDot status={p.status} />
+                        <span className="capitalize">{p.status?.replace(/_/g, " ")}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className={`text-xs py-2 text-right ${(p.daysLate || 0) > 0 ? "text-destructive font-medium" : ""}`}>{p.daysLate || 0}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">No payment history records available.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function BorrowerDetailPage() {
   const { t } = useTranslation();
   const [, params] = useRoute("/borrowers/:id");
@@ -49,6 +155,7 @@ export default function BorrowerDetailPage() {
   const { toast } = useToast();
   const [aiRisk, setAiRisk] = useState<any>(null);
   const [aiExpanded, setAiExpanded] = useState(false);
+  const [expandedAccountId, setExpandedAccountId] = useState<string | null>(null);
 
   const aiRiskMutation = useMutation({
     mutationFn: async () => {
@@ -557,35 +664,40 @@ export default function BorrowerDetailPage() {
               <div className="divide-y">
                 {accounts.map((account) => {
                   const currency = (account as any).currency || "GHS";
+                  const isExpanded = expandedAccountId === account.id;
                   return (
-                    <div key={account.id} className="px-5 py-4 space-y-2" data-testid={`row-credit-${account.id}`}>
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold">{account.accountNumber}</p>
-                          <p className="text-xs text-muted-foreground">{account.lenderInstitution} &middot; {account.accountType}</p>
+                    <div key={account.id} data-testid={`row-credit-${account.id}`}>
+                      <button
+                        type="button"
+                        className="w-full px-5 py-4 space-y-2 text-left hover:bg-muted/50 transition-colors cursor-pointer"
+                        onClick={() => setExpandedAccountId(isExpanded ? null : account.id)}
+                        data-testid={`btn-expand-credit-${account.id}`}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <ChevronRight className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`} />
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold">{account.accountNumber}</p>
+                              <p className="text-xs text-muted-foreground">{account.lenderInstitution} &middot; {account.accountType}</p>
+                            </div>
+                          </div>
+                          <Badge variant={getStatusColor(account.status)} className="text-[10px] capitalize shrink-0">{account.status}</Badge>
                         </div>
-                        <Badge variant={getStatusColor(account.status)} className="text-[10px] capitalize shrink-0">{account.status}</Badge>
-                      </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                        <div>
-                          <span className="text-muted-foreground">{t("borrowerDetail.original")}</span>{" "}
-                          <span className="font-medium">{formatCurrency(account.originalAmount, currency)}</span>
-                          {isGhanaMode() && currency === "GHS" && (
-                            <CurrencyReference amount={parseFloat(account.originalAmount || "0")} currency="GHS" />
-                          )}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs pl-6">
+                          <div>
+                            <span className="text-muted-foreground">{t("borrowerDetail.original")}</span>{" "}
+                            <span className="font-medium">{formatCurrency(account.originalAmount, currency)}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">{t("borrowerDetail.balance")}</span>{" "}
+                            <span className="font-medium">{formatCurrency(account.currentBalance, currency)}</span>
+                          </div>
+                          <div><span className="text-muted-foreground">{t("borrowerDetail.rate")}</span> <span className="font-medium">{account.interestRate || "—"}%</span></div>
+                          <div><span className="text-muted-foreground">{t("borrowerDetail.arrears")}</span> <span className={`font-medium ${(account.daysInArrears || 0) > 0 ? "text-destructive" : ""}`}>{account.daysInArrears || 0} {t("borrowerDetail.days")}</span></div>
                         </div>
-                        <div>
-                          <span className="text-muted-foreground">{t("borrowerDetail.balance")}</span>{" "}
-                          <span className="font-medium">{formatCurrency(account.currentBalance, currency)}</span>
-                          {isGhanaMode() && currency === "GHS" && (
-                            <CurrencyReference amount={parseFloat(account.currentBalance || "0")} currency="GHS" />
-                          )}
-                        </div>
-                        <div><span className="text-muted-foreground">{t("borrowerDetail.rate")}</span> <span className="font-medium">{account.interestRate || "—"}%</span></div>
-                        <div><span className="text-muted-foreground">{t("borrowerDetail.arrears")}</span> <span className={`font-medium ${(account.daysInArrears || 0) > 0 ? "text-destructive" : ""}`}>{account.daysInArrears || 0} {t("borrowerDetail.days")}</span></div>
-                      </div>
-                      {account.collateralType && (
-                        <p className="text-xs text-muted-foreground">{t("borrowerDetail.collateral")} {account.collateralType} — {formatCurrency(account.collateralValue || "0", currency)}</p>
+                      </button>
+                      {isExpanded && (
+                        <CreditAccountDetail account={account} currency={currency} />
                       )}
                     </div>
                   );
