@@ -126,12 +126,12 @@ export async function runSecurityHealthCheck(): Promise<{
   });
 
   try {
-    const chainResult = await pool.query(
-      `SELECT COUNT(*) as total,
-              SUM(CASE WHEN previous_hash IS NOT NULL THEN 1 ELSE 0 END) as chained
-       FROM audit_logs
-       WHERE created_at > NOW() - INTERVAL '7 days'`
-    );
+    const chainResult = await db.execute(sql`
+      SELECT COUNT(*) as total,
+             SUM(CASE WHEN previous_hash IS NOT NULL THEN 1 ELSE 0 END) as chained
+      FROM audit_logs
+      WHERE created_at > NOW() - INTERVAL '7 days'
+    `);
     const { total, chained } = chainResult.rows[0];
     const intTotal = parseInt(total);
     const intChained = parseInt(chained || "0");
@@ -164,9 +164,9 @@ export async function runSecurityHealthCheck(): Promise<{
   });
 
   try {
-    const mfaResult = await pool.query(
-      `SELECT COUNT(*) as total, SUM(CASE WHEN mfa_enabled THEN 1 ELSE 0 END) as mfa_on FROM users WHERE status = 'active'`
-    );
+    const mfaResult = await db.execute(sql`
+      SELECT COUNT(*) as total, SUM(CASE WHEN mfa_enabled THEN 1 ELSE 0 END) as mfa_on FROM users WHERE status = 'active'
+    `);
     const { total, mfa_on } = mfaResult.rows[0];
     const mfaRate = parseInt(total) > 0 ? (parseInt(mfa_on || "0") / parseInt(total) * 100).toFixed(0) : "0";
     checks.push({
