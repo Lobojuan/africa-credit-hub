@@ -556,7 +556,7 @@ export default function BorrowerDetailPage() {
             {accounts.length > 0 ? (
               <div className="divide-y">
                 {accounts.map((account) => {
-                  const currency = (account as any).currency || (isGhanaMode() ? "GHS" : "ETB");
+                  const currency = (account as any).currency || "GHS";
                   return (
                     <div key={account.id} className="px-5 py-4 space-y-2" data-testid={`row-credit-${account.id}`}>
                       <div className="flex items-center justify-between gap-3">

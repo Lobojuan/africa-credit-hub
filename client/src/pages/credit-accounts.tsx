@@ -58,7 +58,7 @@ export default function CreditAccountsPage() {
   const [formData, setFormData] = useState({
     borrowerId: "", lenderInstitution: "", accountNumber: "", accountType: "",
     creditCategory: "" as string,
-    originalAmount: "", currentBalance: "", currency: ghanaMode ? "GHS" : "ETB",
+    originalAmount: "", currentBalance: "", currency: "GHS",
     interestRate: "", disbursementDate: "", maturityDate: "",
     status: "current" as string, collateralType: "", collateralValue: "",
     isInterestFree: false, gracePeriodMonths: "", restructureCount: "0",

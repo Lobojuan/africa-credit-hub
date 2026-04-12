@@ -32,14 +32,14 @@ export default function ExchangeRatesPage() {
 
   const [formData, setFormData] = useState({
     baseCurrency: "USD",
-    targetCurrency: ghanaMode ? "GHS" : "ETB",
+    targetCurrency: "GHS",
     rate: "",
     effectiveDate: new Date().toISOString().split("T")[0],
   });
 
   const [convertAmount, setConvertAmount] = useState("");
   const [convertFrom, setConvertFrom] = useState("USD");
-  const [convertTo, setConvertTo] = useState(ghanaMode ? "GHS" : "ETB");
+  const [convertTo, setConvertTo] = useState("GHS");
   const [convertResult, setConvertResult] = useState<string | null>(null);
 
   const { data: exchangeRates, isLoading } = useQuery<ExchangeRate[]>({
@@ -138,7 +138,7 @@ export default function ExchangeRatesPage() {
   function resetForm() {
     setFormData({
       baseCurrency: "USD",
-      targetCurrency: ghanaMode ? "GHS" : "ETB",
+      targetCurrency: "GHS",
       rate: "",
       effectiveDate: new Date().toISOString().split("T")[0],
     });
