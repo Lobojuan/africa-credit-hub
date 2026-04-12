@@ -49,6 +49,9 @@ function validateProductionConfig() {
     if (process.env.PII_ENCRYPTION_SALT === "cdh-pii-salt-v1") {
       errors.push("PII_ENCRYPTION_SALT must be changed from the default value in production");
     }
+    if (!process.env.EXTERNAL_API_JWT_SECRET) {
+      errors.push("EXTERNAL_API_JWT_SECRET is required in production for API security");
+    }
     if (!process.env.SEED_ADMIN_PASSWORD) {
       console.warn("[Production] WARNING: SEED_ADMIN_PASSWORD not set — seed will generate a random password if needed");
     }
@@ -389,12 +392,21 @@ app.use((req, res, next) => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        const str = JSON.stringify(capturedJsonResponse);
-        logLine += ` :: ${str.length > 200 ? str.slice(0, 200) + "..." : str}`;
+      if (isProductionBoot) {
+        if (res.statusCode >= 400) {
+          if (capturedJsonResponse) {
+            const str = JSON.stringify(capturedJsonResponse);
+            logLine += ` :: ${str.length > 200 ? str.slice(0, 200) + "..." : str}`;
+          }
+          log(logLine);
+        }
+      } else {
+        if (capturedJsonResponse) {
+          const str = JSON.stringify(capturedJsonResponse);
+          logLine += ` :: ${str.length > 200 ? str.slice(0, 200) + "..." : str}`;
+        }
+        log(logLine);
       }
-
-      log(logLine);
     }
     capturedJsonResponse = undefined;
   });

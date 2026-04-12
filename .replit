@@ -48,6 +48,7 @@ integrations = ["stripe:1.0.0", "javascript_openai_ai_integrations:2.0.0", "java
 SMTP_HOST = "smtp.gmail.com"
 SMTP_USER = "uffe.carlson@gmail.com"
 SMTP_FROM = "uffe.carlson@gmail.com"
+EXTERNAL_API_JWT_SECRET = "0I9TkhZCn0Wz3VxapLJoLuFpJxcn9C_G0A5OL1JXdJ9zMycSn73Dy41BkbZpOmR4"
 
 [userenv.development]
 

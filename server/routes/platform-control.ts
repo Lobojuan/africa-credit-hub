@@ -28,6 +28,7 @@ const masterAuthLimiter = rateLimit({
   message: { message: "Too many authentication attempts. Please try again later." },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { keyGeneratorIpFallback: false },
 });
 
 function parseCookie(req: Request, name: string): string | undefined {
