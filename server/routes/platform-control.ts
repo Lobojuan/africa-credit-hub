@@ -95,7 +95,7 @@ const updateDeploymentSchema = z.object({
 
 async function safeCount(table: string): Promise<number> {
   try {
-    const r = await db.execute(sql`SELECT COUNT(*) as count FROM ${sql.raw('"' + table + '"')}`);
+    const r = await db.execute(sql`SELECT COUNT(*) as count FROM ${sql.identifier(table)}`);
     return parseInt((r.rows[0] as Record<string, string>)?.count || "0");
   } catch { return -1; }
 }
@@ -422,8 +422,8 @@ export function registerPlatformControlRoutes(app: Express) {
           "drivers_license", "ghana_card_number", "ezwich_number", "date_of_birth", "mobile_money_number"];
         let totalPii = 0, encryptedPii = 0;
         for (const col of piiCols) {
-          const total = await safeQuery(sql`SELECT COUNT(*) as c FROM borrowers WHERE ${sql.raw('"' + col + '"')} IS NOT NULL AND ${sql.raw('"' + col + '"')} != ''`);
-          const enc = await safeQuery(sql`SELECT COUNT(*) as c FROM borrowers WHERE ${sql.raw('"' + col + '"')} LIKE 'enc:%'`);
+          const total = await safeQuery(sql`SELECT COUNT(*) as c FROM borrowers WHERE ${sql.identifier(col)} IS NOT NULL AND ${sql.identifier(col)} != ''`);
+          const enc = await safeQuery(sql`SELECT COUNT(*) as c FROM borrowers WHERE ${sql.identifier(col)} LIKE 'enc:%'`);
           const t = parseInt(total[0]?.c || "0");
           const e = parseInt(enc[0]?.c || "0");
           totalPii += t;
