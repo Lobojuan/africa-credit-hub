@@ -3,6 +3,7 @@ import { pool } from "../db";
 import { platformDeployments, insertPlatformDeploymentSchema } from "@shared/schema";
 import { db } from "../db";
 import { eq, desc, sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import { createLogger } from "../logger";
 import { rateLimitKeyGenerator } from "./middleware";
 import rateLimit from "express-rate-limit";
@@ -94,15 +95,15 @@ const updateDeploymentSchema = z.object({
 
 async function safeCount(table: string): Promise<number> {
   try {
-    const r = await pool.query(`SELECT COUNT(*) as count FROM "${table}"`);
-    return parseInt(r.rows[0]?.count || "0");
+    const r = await db.execute(sql`SELECT COUNT(*) as count FROM ${sql.raw('"' + table + '"')}`);
+    return parseInt((r.rows[0] as Record<string, string>)?.count || "0");
   } catch { return -1; }
 }
 
-async function safeQuery(q: string): Promise<Record<string, string>[]> {
+async function safeQuery(q: SQL): Promise<Record<string, string>[]> {
   try {
-    const r = await pool.query(q);
-    return r.rows;
+    const r = await db.execute(q);
+    return r.rows as Record<string, string>[];
   } catch { return []; }
 }
 
@@ -421,8 +422,8 @@ export function registerPlatformControlRoutes(app: Express) {
           "drivers_license", "ghana_card_number", "ezwich_number", "date_of_birth", "mobile_money_number"];
         let totalPii = 0, encryptedPii = 0;
         for (const col of piiCols) {
-          const total = await safeQuery(`SELECT COUNT(*) as c FROM borrowers WHERE "${col}" IS NOT NULL AND "${col}" != ''`);
-          const enc = await safeQuery(`SELECT COUNT(*) as c FROM borrowers WHERE "${col}" LIKE 'enc:%'`);
+          const total = await safeQuery(sql`SELECT COUNT(*) as c FROM borrowers WHERE ${sql.raw('"' + col + '"')} IS NOT NULL AND ${sql.raw('"' + col + '"')} != ''`);
+          const enc = await safeQuery(sql`SELECT COUNT(*) as c FROM borrowers WHERE ${sql.raw('"' + col + '"')} LIKE 'enc:%'`);
           const t = parseInt(total[0]?.c || "0");
           const e = parseInt(enc[0]?.c || "0");
           totalPii += t;
@@ -433,13 +434,13 @@ export function registerPlatformControlRoutes(app: Express) {
 
       let recentActivity: Record<string, number> = {};
       try {
-        const last24h = await safeQuery(`SELECT COUNT(*) as c FROM audit_logs WHERE created_at > NOW() - INTERVAL '24 hours'`);
-        const last7d = await safeQuery(`SELECT COUNT(*) as c FROM audit_logs WHERE created_at > NOW() - INTERVAL '7 days'`);
-        const recentLogins = await safeQuery(`SELECT COUNT(*) as c FROM audit_logs WHERE action = 'LOGIN_SUCCESS' AND created_at > NOW() - INTERVAL '24 hours'`);
-        const failedLogins = await safeQuery(`SELECT COUNT(*) as c FROM audit_logs WHERE action = 'LOGIN_FAILED' AND created_at > NOW() - INTERVAL '24 hours'`);
-        const recentReports = await safeQuery(`SELECT COUNT(*) as c FROM credit_report_logs WHERE created_at > NOW() - INTERVAL '24 hours'`);
-        const recentDisputes = await safeQuery(`SELECT COUNT(*) as c FROM disputes WHERE created_at > NOW() - INTERVAL '7 days'`);
-        const openDisputes = await safeQuery(`SELECT COUNT(*) as c FROM disputes WHERE status = 'open' OR status = 'under_review'`);
+        const last24h = await safeQuery(sql`SELECT COUNT(*) as c FROM audit_logs WHERE created_at > NOW() - INTERVAL '24 hours'`);
+        const last7d = await safeQuery(sql`SELECT COUNT(*) as c FROM audit_logs WHERE created_at > NOW() - INTERVAL '7 days'`);
+        const recentLogins = await safeQuery(sql`SELECT COUNT(*) as c FROM audit_logs WHERE action = 'LOGIN_SUCCESS' AND created_at > NOW() - INTERVAL '24 hours'`);
+        const failedLogins = await safeQuery(sql`SELECT COUNT(*) as c FROM audit_logs WHERE action = 'LOGIN_FAILED' AND created_at > NOW() - INTERVAL '24 hours'`);
+        const recentReports = await safeQuery(sql`SELECT COUNT(*) as c FROM credit_report_logs WHERE created_at > NOW() - INTERVAL '24 hours'`);
+        const recentDisputes = await safeQuery(sql`SELECT COUNT(*) as c FROM disputes WHERE created_at > NOW() - INTERVAL '7 days'`);
+        const openDisputes = await safeQuery(sql`SELECT COUNT(*) as c FROM disputes WHERE status = 'open' OR status = 'under_review'`);
         recentActivity = {
           auditLogs24h: parseInt(last24h[0]?.c || "0"),
           auditLogs7d: parseInt(last7d[0]?.c || "0"),
@@ -453,15 +454,15 @@ export function registerPlatformControlRoutes(app: Express) {
 
       let orgBreakdown: Array<Record<string, string | null>> = [];
       try {
-        const orgs = await safeQuery(`SELECT id, name, status, license_tier, country, created_at FROM organizations ORDER BY created_at DESC LIMIT 50`);
+        const orgs = await safeQuery(sql`SELECT id, name, status, license_tier, country, created_at FROM organizations ORDER BY created_at DESC LIMIT 50`);
         orgBreakdown = orgs;
       } catch {}
 
       let userBreakdown: { byRole: Record<string, number>; mfaEnabled: number; totalActive: number } = { byRole: {}, mfaEnabled: 0, totalActive: 0 };
       try {
-        const byRole = await safeQuery(`SELECT role, COUNT(*) as count FROM users GROUP BY role ORDER BY count DESC`);
-        const mfaEnabled = await safeQuery(`SELECT COUNT(*) as c FROM users WHERE totp_secret IS NOT NULL`);
-        const activeUsers = await safeQuery(`SELECT COUNT(*) as c FROM users WHERE is_active = true`);
+        const byRole = await safeQuery(sql`SELECT role, COUNT(*) as count FROM users GROUP BY role ORDER BY count DESC`);
+        const mfaEnabled = await safeQuery(sql`SELECT COUNT(*) as c FROM users WHERE totp_secret IS NOT NULL`);
+        const activeUsers = await safeQuery(sql`SELECT COUNT(*) as c FROM users WHERE is_active = true`);
         userBreakdown = {
           byRole: byRole.reduce((acc: Record<string, number>, r: Record<string, string>) => { acc[r.role] = parseInt(r.count); return acc; }, {}),
           mfaEnabled: parseInt(mfaEnabled[0]?.c || "0"),
@@ -506,9 +507,9 @@ export function registerPlatformControlRoutes(app: Express) {
 
       let localBilling: Record<string, number> = {};
       try {
-        const totalBilling = await safeQuery(`SELECT SUM(amount) as total FROM billing_records`);
-        const monthBilling = await safeQuery(`SELECT SUM(amount) as total FROM billing_records WHERE created_at > NOW() - INTERVAL '30 days'`);
-        const walletBalances = await safeQuery(`SELECT SUM(balance_cents) as total, COUNT(*) as wallets FROM wallets`);
+        const totalBilling = await safeQuery(sql`SELECT SUM(amount) as total FROM billing_records`);
+        const monthBilling = await safeQuery(sql`SELECT SUM(amount) as total FROM billing_records WHERE created_at > NOW() - INTERVAL '30 days'`);
+        const walletBalances = await safeQuery(sql`SELECT SUM(balance_cents) as total, COUNT(*) as wallets FROM wallets`);
         localBilling = {
           totalBilledAllTime: parseFloat(totalBilling[0]?.total || "0"),
           billedLast30Days: parseFloat(monthBilling[0]?.total || "0"),
