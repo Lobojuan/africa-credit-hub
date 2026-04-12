@@ -7,7 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import {
   Shield, Lock, Globe, Building2, Plus, Trash2, Edit, Copy,
   Activity, DollarSign, Users, Server, LogOut, ChevronDown,
-  ChevronRight, Eye, EyeOff, RefreshCw, Download,
+  ChevronRight, RefreshCw, Download, Database, Cpu, HardDrive,
+  Wifi, WifiOff, CheckCircle2, XCircle, AlertTriangle, Clock,
+  BarChart3, Eye, Layers, Zap, Key, Mail, MessageSquare,
+  Smartphone, CreditCard, Fingerprint, ShieldCheck, Heart,
+  TrendingUp, ArrowRightLeft,
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
@@ -19,6 +23,10 @@ import { useToast } from "@/hooks/use-toast";
 
 const GHS = "\u20B5";
 
+function pcFetch(url: string, opts?: RequestInit) {
+  return fetch(url, { credentials: "include", ...opts });
+}
+
 function PasswordGate({ onAuthenticated }: { onAuthenticated: () => void }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -26,12 +34,9 @@ function PasswordGate({ onAuthenticated }: { onAuthenticated: () => void }) {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    fetch("/api/platform-control/check", { credentials: "include" })
+    pcFetch("/api/platform-control/check")
       .then(r => r.json())
-      .then(data => {
-        if (data.authenticated) onAuthenticated();
-        setChecking(false);
-      })
+      .then(data => { if (data.authenticated) onAuthenticated(); setChecking(false); })
       .catch(() => setChecking(false));
   }, []);
 
@@ -40,29 +45,21 @@ function PasswordGate({ onAuthenticated }: { onAuthenticated: () => void }) {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/platform-control/auth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+      const res = await pcFetch("/api/platform-control/auth", {
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
       });
-      if (res.ok) {
-        onAuthenticated();
-      } else {
-        setError("Invalid master password");
+      if (res.ok) onAuthenticated();
+      else {
+        const data = await res.json();
+        setError(data.message || "Invalid master password");
       }
-    } catch {
-      setError("Connection failed");
-    }
+    } catch { setError("Connection failed"); }
     setLoading(false);
   };
 
   if (checking) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <div className="flex items-center justify-center min-h-screen bg-background"><RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
   }
 
   return (
@@ -76,14 +73,7 @@ function PasswordGate({ onAuthenticated }: { onAuthenticated: () => void }) {
           <p className="text-sm text-muted-foreground">Authorized access only</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            type="password"
-            placeholder="Master password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            autoFocus
-            data-testid="input-master-password"
-          />
+          <Input type="password" placeholder="Master password" value={password} onChange={e => setPassword(e.target.value)} autoFocus data-testid="input-master-password" />
           {error && <p className="text-sm text-red-500" data-testid="text-auth-error">{error}</p>}
           <Button type="submit" className="w-full" disabled={loading || !password} data-testid="button-master-login">
             {loading ? <RefreshCw className="w-4 h-4 animate-spin mr-2" /> : <Shield className="w-4 h-4 mr-2" />}
@@ -96,54 +86,37 @@ function PasswordGate({ onAuthenticated }: { onAuthenticated: () => void }) {
 }
 
 type Deployment = {
-  id: string;
-  clientName: string;
-  country: string;
-  region?: string;
-  deploymentUrl?: string;
-  status: string;
-  licenseTier: string;
-  monthlyFeeCents?: number;
-  currency: string;
-  contactName?: string;
-  contactEmail?: string;
-  totalBorrowers?: number;
-  totalInstitutions?: number;
-  lastSyncAt?: string;
-  notes?: string;
-  createdAt: string;
-};
-
-type Summary = {
-  totalDeployments: number;
-  activeDeployments: number;
-  trialDeployments: number;
-  suspendedDeployments: number;
-  totalMRRCents: number;
-  countriesServed: string[];
-  totalBorrowers: number;
-  totalInstitutions: number;
-  localBorrowers?: number;
-  localOrganizations?: number;
-  localUsers?: number;
+  id: string; clientName: string; country: string; region?: string; deploymentUrl?: string;
+  status: string; licenseTier: string; monthlyFeeCents?: number; currency: string;
+  contactName?: string; contactEmail?: string; totalBorrowers?: number; totalInstitutions?: number;
+  lastSyncAt?: string; notes?: string; createdAt: string;
 };
 
 function StatusBadge({ status }: { status: string }) {
-  const variants: Record<string, string> = {
+  const v: Record<string, string> = {
     active: "bg-emerald-500/10 text-emerald-500 border-emerald-500/30",
     trial: "bg-amber-500/10 text-amber-500 border-amber-500/30",
     suspended: "bg-red-500/10 text-red-500 border-red-500/30",
     decommissioned: "bg-zinc-500/10 text-zinc-500 border-zinc-500/30",
+    healthy: "bg-emerald-500/10 text-emerald-500 border-emerald-500/30",
+    slow: "bg-amber-500/10 text-amber-500 border-amber-500/30",
+    error: "bg-red-500/10 text-red-500 border-red-500/30",
   };
-  return <Badge variant="outline" className={variants[status] || ""}>{status}</Badge>;
+  return <Badge variant="outline" className={v[status] || ""}>{status}</Badge>;
 }
 
-function StatCard({ label, value, icon: Icon, sub }: { label: string; value: string | number; icon: any; sub?: string }) {
+function IntegrationDot({ connected }: { connected: boolean }) {
+  return connected
+    ? <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+    : <XCircle className="w-4 h-4 text-zinc-400 shrink-0" />;
+}
+
+function StatCard({ label, value, icon: Icon, sub, color }: { label: string; value: string | number; icon: any; sub?: string; color?: string }) {
   return (
     <div className="rounded-xl border border-border p-4 space-y-1">
       <div className="flex items-center justify-between">
         <span className="text-xs text-muted-foreground font-medium">{label}</span>
-        <Icon className="w-4 h-4 text-muted-foreground" />
+        <Icon className={`w-4 h-4 ${color || "text-muted-foreground"}`} />
       </div>
       <p className="text-2xl font-bold" data-testid={`stat-${label.toLowerCase().replace(/\s+/g, "-")}`}>{value}</p>
       {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
@@ -151,79 +124,67 @@ function StatCard({ label, value, icon: Icon, sub }: { label: string; value: str
   );
 }
 
+function Panel({ title, icon: Icon, children, defaultOpen = true, color = "text-primary" }: { title: string; icon: any; children: React.ReactNode; defaultOpen?: boolean; color?: string }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="rounded-xl border border-border overflow-hidden">
+      <button onClick={() => setOpen(!open)} className="w-full flex items-center gap-2 p-4 text-left hover:bg-muted/50 transition-colors" data-testid={`panel-${title.toLowerCase().replace(/\s+/g, "-")}`}>
+        <Icon className={`w-4 h-4 ${color} shrink-0`} />
+        <span className="text-sm font-semibold flex-1">{title}</span>
+        {open ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+      </button>
+      {open && <div className="px-4 pb-4 border-t border-border pt-3">{children}</div>}
+    </div>
+  );
+}
+
+function formatCurrency(cents: number | undefined | null, currency: string = "GHS") {
+  if (!cents) return `${GHS}0`;
+  const symbol = currency === "GHS" ? GHS : currency === "USD" ? "$" : currency;
+  return `${symbol}${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+}
+
 function DeploymentForm({ deployment, onClose }: { deployment?: Deployment; onClose: () => void }) {
   const qc = useQueryClient();
   const { toast } = useToast();
   const [form, setForm] = useState({
-    clientName: deployment?.clientName || "",
-    country: deployment?.country || "",
-    region: deployment?.region || "",
-    deploymentUrl: deployment?.deploymentUrl || "",
-    status: deployment?.status || "active",
-    licenseTier: deployment?.licenseTier || "commercial",
-    monthlyFeeCents: deployment?.monthlyFeeCents?.toString() || "",
-    currency: deployment?.currency || "GHS",
-    contactName: deployment?.contactName || "",
-    contactEmail: deployment?.contactEmail || "",
-    totalBorrowers: deployment?.totalBorrowers?.toString() || "0",
-    totalInstitutions: deployment?.totalInstitutions?.toString() || "0",
+    clientName: deployment?.clientName || "", country: deployment?.country || "",
+    region: deployment?.region || "", deploymentUrl: deployment?.deploymentUrl || "",
+    status: deployment?.status || "active", licenseTier: deployment?.licenseTier || "commercial",
+    monthlyFeeCents: deployment?.monthlyFeeCents?.toString() || "", currency: deployment?.currency || "GHS",
+    contactName: deployment?.contactName || "", contactEmail: deployment?.contactEmail || "",
+    totalBorrowers: deployment?.totalBorrowers?.toString() || "0", totalInstitutions: deployment?.totalInstitutions?.toString() || "0",
     notes: deployment?.notes || "",
   });
-
   const mutation = useMutation({
-    mutationFn: async (data: any) => {
-      if (deployment) {
-        return apiRequest("PATCH", `/api/platform-control/deployments/${deployment.id}`, data);
-      }
-      return apiRequest("POST", "/api/platform-control/deployments", data);
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["/api/platform-control/deployments"] });
-      qc.invalidateQueries({ queryKey: ["/api/platform-control/summary"] });
-      toast({ title: deployment ? "Deployment updated" : "Deployment created" });
-      onClose();
-    },
+    mutationFn: async (data: any) => deployment ? apiRequest("PATCH", `/api/platform-control/deployments/${deployment.id}`, data) : apiRequest("POST", "/api/platform-control/deployments", data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["/api/platform-control"] }); toast({ title: deployment ? "Updated" : "Created" }); onClose(); },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    mutation.mutate({
-      ...form,
-      monthlyFeeCents: form.monthlyFeeCents ? parseInt(form.monthlyFeeCents) : null,
-      totalBorrowers: parseInt(form.totalBorrowers) || 0,
-      totalInstitutions: parseInt(form.totalInstitutions) || 0,
-    });
+    mutation.mutate({ ...form, monthlyFeeCents: form.monthlyFeeCents ? parseInt(form.monthlyFeeCents) : null, totalBorrowers: parseInt(form.totalBorrowers) || 0, totalInstitutions: parseInt(form.totalInstitutions) || 0 });
   };
-
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1">
-          <label className="text-xs font-medium">Client Name *</label>
-          <Input value={form.clientName} onChange={e => setForm(f => ({ ...f, clientName: e.target.value }))} required data-testid="input-client-name" />
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium">Country *</label>
-          <Input value={form.country} onChange={e => setForm(f => ({ ...f, country: e.target.value }))} required data-testid="input-country" />
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium">Region</label>
-          <Input value={form.region} onChange={e => setForm(f => ({ ...f, region: e.target.value }))} data-testid="input-region" />
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium">Deployment URL</label>
-          <Input value={form.deploymentUrl} onChange={e => setForm(f => ({ ...f, deploymentUrl: e.target.value }))} data-testid="input-deployment-url" />
-        </div>
+        {[
+          { key: "clientName", label: "Client Name *", req: true },
+          { key: "country", label: "Country *", req: true },
+          { key: "region", label: "Region" },
+          { key: "deploymentUrl", label: "Deployment URL" },
+        ].map(f => (
+          <div key={f.key} className="space-y-1">
+            <label className="text-xs font-medium">{f.label}</label>
+            <Input value={(form as any)[f.key]} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))} required={f.req} data-testid={`input-${f.key}`} />
+          </div>
+        ))}
         <div className="space-y-1">
           <label className="text-xs font-medium">Status</label>
           <Select value={form.status} onValueChange={v => setForm(f => ({ ...f, status: v }))}>
             <SelectTrigger data-testid="select-status"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="trial">Trial</SelectItem>
-              <SelectItem value="suspended">Suspended</SelectItem>
-              <SelectItem value="decommissioned">Decommissioned</SelectItem>
+              {["active", "trial", "suspended", "decommissioned"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -232,51 +193,33 @@ function DeploymentForm({ deployment, onClose }: { deployment?: Deployment; onCl
           <Select value={form.licenseTier} onValueChange={v => setForm(f => ({ ...f, licenseTier: v }))}>
             <SelectTrigger data-testid="select-license-tier"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="growth">Growth (MFI)</SelectItem>
-              <SelectItem value="commercial">Commercial (Bank)</SelectItem>
-              <SelectItem value="sovereign">Sovereign (Central Bank)</SelectItem>
+              {[{ v: "growth", l: "Growth (MFI)" }, { v: "commercial", l: "Commercial (Bank)" }, { v: "sovereign", l: "Sovereign" }].map(s => <SelectItem key={s.v} value={s.v}>{s.l}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium">Monthly Fee (cents)</label>
-          <Input type="number" value={form.monthlyFeeCents} onChange={e => setForm(f => ({ ...f, monthlyFeeCents: e.target.value }))} data-testid="input-monthly-fee" />
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium">Currency</label>
-          <Input value={form.currency} onChange={e => setForm(f => ({ ...f, currency: e.target.value }))} data-testid="input-currency" />
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium">Contact Name</label>
-          <Input value={form.contactName} onChange={e => setForm(f => ({ ...f, contactName: e.target.value }))} data-testid="input-contact-name" />
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium">Contact Email</label>
-          <Input value={form.contactEmail} onChange={e => setForm(f => ({ ...f, contactEmail: e.target.value }))} data-testid="input-contact-email" />
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium">Total Borrowers</label>
-          <Input type="number" value={form.totalBorrowers} onChange={e => setForm(f => ({ ...f, totalBorrowers: e.target.value }))} data-testid="input-total-borrowers" />
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium">Total Institutions</label>
-          <Input type="number" value={form.totalInstitutions} onChange={e => setForm(f => ({ ...f, totalInstitutions: e.target.value }))} data-testid="input-total-institutions" />
-        </div>
+        {[
+          { key: "monthlyFeeCents", label: "Monthly Fee (pesewas)", type: "number" },
+          { key: "currency", label: "Currency" },
+          { key: "contactName", label: "Contact Name" },
+          { key: "contactEmail", label: "Contact Email" },
+          { key: "totalBorrowers", label: "Total Borrowers", type: "number" },
+          { key: "totalInstitutions", label: "Total Institutions", type: "number" },
+        ].map(f => (
+          <div key={f.key} className="space-y-1">
+            <label className="text-xs font-medium">{f.label}</label>
+            <Input type={f.type || "text"} value={(form as any)[f.key]} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))} data-testid={`input-${f.key}`} />
+          </div>
+        ))}
       </div>
       <div className="space-y-1">
         <label className="text-xs font-medium">Notes</label>
-        <textarea
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[60px]"
-          value={form.notes}
-          onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-          data-testid="input-notes"
-        />
+        <textarea className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[60px]" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} data-testid="input-notes" />
       </div>
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onClose} data-testid="button-cancel">Cancel</Button>
+        <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
         <Button type="submit" disabled={mutation.isPending} data-testid="button-save-deployment">
-          {mutation.isPending ? <RefreshCw className="w-4 h-4 animate-spin mr-2" /> : null}
-          {deployment ? "Update" : "Create"} Deployment
+          {mutation.isPending && <RefreshCw className="w-4 h-4 animate-spin mr-2" />}
+          {deployment ? "Update" : "Create"}
         </Button>
       </div>
     </form>
@@ -288,133 +231,504 @@ function ConfigGenerator() {
   const [form, setForm] = useState({ clientName: "", country: "", currency: "GHS", regulatoryBody: "", brandTitle: "" });
   const [config, setConfig] = useState<any>(null);
   const { toast } = useToast();
-
   const generate = async () => {
     try {
-      const res = await fetch("/api/platform-control/generate-config", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
-      setConfig(data);
-    } catch {
-      toast({ title: "Failed to generate config", variant: "destructive" });
-    }
+      const res = await pcFetch("/api/platform-control/generate-config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+      setConfig(await res.json());
+    } catch { toast({ title: "Failed", variant: "destructive" }); }
   };
-
   const copyConfig = () => {
     if (!config) return;
-    const envText = Object.entries(config.config).map(([k, v]) => `${k}=${v}`).join("\n");
-    navigator.clipboard.writeText(envText);
-    toast({ title: "Config copied to clipboard" });
+    navigator.clipboard.writeText(Object.entries(config.config).map(([k, v]) => `${k}=${v}`).join("\n"));
+    toast({ title: "Copied to clipboard" });
   };
+  return (
+    <Panel title="Deployment Config Generator" icon={Server} defaultOpen={false} color="text-violet-500">
+      <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { key: "clientName", label: "Client Name *" }, { key: "country", label: "Country *" },
+            { key: "currency", label: "Currency" }, { key: "regulatoryBody", label: "Regulatory Body" },
+          ].map(f => (
+            <div key={f.key} className="space-y-1">
+              <label className="text-xs font-medium">{f.label}</label>
+              <Input value={(form as any)[f.key]} onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))} data-testid={`input-gen-${f.key}`} />
+            </div>
+          ))}
+        </div>
+        <Button onClick={generate} disabled={!form.clientName || !form.country} size="sm" data-testid="button-generate-config">
+          <Download className="w-4 h-4 mr-2" /> Generate
+        </Button>
+        {config && (
+          <div className="space-y-3">
+            <div className="rounded-lg bg-zinc-900 text-zinc-100 p-4 font-mono text-xs overflow-x-auto">
+              {Object.entries(config.config).map(([k, v]) => (
+                <div key={k}><span className="text-emerald-400">{k}</span>=<span className="text-amber-300">{String(v)}</span></div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={copyConfig} variant="outline" size="sm" data-testid="button-copy-config"><Copy className="w-3 h-3 mr-1" /> Copy .env</Button>
+            </div>
+            {config.instructions && (
+              <div className="rounded-lg border border-border p-3 space-y-1">
+                <p className="text-xs font-semibold">Setup Instructions:</p>
+                {config.instructions.map((inst: string, i: number) => <p key={i} className="text-xs text-muted-foreground">{inst}</p>)}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </Panel>
+  );
+}
+
+function SystemHealthPanel() {
+  const { data, isLoading, refetch } = useQuery<any>({
+    queryKey: ["/api/platform-control/system-health"],
+    queryFn: async () => { const r = await pcFetch("/api/platform-control/system-health"); return r.json(); },
+    refetchInterval: 30000,
+  });
+
+  if (isLoading || !data) return <div className="text-sm text-muted-foreground p-4">Loading system health...</div>;
+
+  const srv = data.server;
+  const dba = data.database;
+  const sec = data.security;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => setOpen(!open)} className="flex items-center gap-2 text-sm font-semibold" data-testid="button-toggle-config-gen">
-          {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-          <Server className="w-4 h-4 text-violet-500" />
-          Deployment Config Generator
-        </button>
+        <div className="flex items-center gap-2">
+          <Heart className={`w-4 h-4 ${dba.status === "healthy" ? "text-emerald-500" : dba.status === "slow" ? "text-amber-500" : "text-red-500"}`} />
+          <span className="text-sm font-medium">Overall: {dba.status === "healthy" ? "All Systems Operational" : dba.status === "slow" ? "Degraded Performance" : "Issues Detected"}</span>
+        </div>
+        <Button variant="ghost" size="sm" onClick={() => refetch()} data-testid="button-refresh-health"><RefreshCw className="w-3 h-3" /></Button>
       </div>
-      {open && (
-        <div className="rounded-xl border border-border p-4 space-y-4 bg-muted/30">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="text-xs font-medium">Client Name *</label>
-              <Input value={form.clientName} onChange={e => setForm(f => ({ ...f, clientName: e.target.value }))} data-testid="input-gen-client-name" />
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard label="Uptime" value={srv.uptime} icon={Clock} sub={`PID ${srv.pid}`} color="text-emerald-500" />
+        <StatCard label="DB Latency" value={`${dba.latencyMs}ms`} icon={Database} sub={<StatusBadge status={dba.status} /> as any} color="text-blue-500" />
+        <StatCard label="Memory (Heap)" value={`${srv.memory.heapUsed}MB`} icon={HardDrive} sub={`/ ${srv.memory.heapTotal}MB total`} color="text-amber-500" />
+        <StatCard label="Response Time" value={`${data.responseTimeMs}ms`} icon={Zap} sub="API response" color="text-violet-500" />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Server</p>
+          <div className="rounded-lg border border-border divide-y divide-border text-xs">
+            {[
+              ["Version", `v${srv.version}`], ["Node.js", srv.nodeVersion],
+              ["Platform", `${srv.system.platform} ${srv.system.arch}`],
+              ["CPUs", srv.system.cpus], ["System RAM", `${srv.system.freeMemoryMB}MB free / ${srv.system.totalMemoryMB}MB`],
+              ["Load Average", srv.system.loadAvg.join(", ")],
+              ["Process RSS", `${srv.memory.rss}MB`],
+            ].map(([k, v]) => (
+              <div key={k as string} className="flex justify-between px-3 py-1.5">
+                <span className="text-muted-foreground">{k}</span><span className="font-medium">{v}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Database</p>
+          <div className="rounded-lg border border-border divide-y divide-border text-xs">
+            {[
+              ["Status", dba.status], ["Latency", `${dba.latencyMs}ms`],
+              ["Size", dba.size], ["Pool Total", dba.pool.totalCount],
+              ["Pool Idle", dba.pool.idleCount], ["Pool Waiting", dba.pool.waitingCount],
+              ["Version", (dba.version || "").split(",")[0]],
+            ].map(([k, v]) => (
+              <div key={k as string} className="flex justify-between px-3 py-1.5">
+                <span className="text-muted-foreground">{k}</span><span className="font-medium">{String(v)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Security Posture</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          {[
+            { label: "PII Encryption", ok: sec.piiEncrypted, icon: Lock },
+            { label: "Session Secret", ok: sec.sessionSecretStrong, icon: Key },
+            { label: "Rate Limiting", ok: sec.rateLimiting, icon: Shield },
+            { label: "MFA Available", ok: sec.mfaAvailable, icon: Fingerprint },
+            { label: "WebAuthn", ok: sec.webauthnAvailable, icon: Fingerprint },
+            { label: "Blockchain Anchoring", ok: sec.blockchainAnchoring, icon: Layers },
+            { label: "HMAC Webhooks", ok: sec.hmacWebhooks, icon: ShieldCheck },
+            { label: "Production Mode", ok: sec.productionMode, icon: Server },
+          ].map(s => (
+            <div key={s.label} className="flex items-center gap-2 rounded-lg border border-border px-3 py-2">
+              <IntegrationDot connected={s.ok} />
+              <span className="text-xs">{s.label}</span>
             </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium">Country *</label>
-              <Input value={form.country} onChange={e => setForm(f => ({ ...f, country: e.target.value }))} data-testid="input-gen-country" />
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Environment Config</p>
+        <div className="rounded-lg border border-border divide-y divide-border text-xs">
+          {Object.entries(data.envConfig).map(([k, v]) => (
+            <div key={k} className="flex justify-between px-3 py-1.5">
+              <span className="text-muted-foreground font-mono">{k}</span>
+              <span className="font-medium">{String(v)}</span>
             </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium">Currency</label>
-              <Input value={form.currency} onChange={e => setForm(f => ({ ...f, currency: e.target.value }))} data-testid="input-gen-currency" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function IntegrationsPanel() {
+  const { data } = useQuery<any>({
+    queryKey: ["/api/platform-control/system-health"],
+    queryFn: async () => { const r = await pcFetch("/api/platform-control/system-health"); return r.json(); },
+    staleTime: 15000,
+  });
+
+  if (!data) return <div className="text-sm text-muted-foreground">Loading...</div>;
+
+  const groups = [
+    { title: "Payments", items: [{ ...data.integrations.stripe, icon: CreditCard }] },
+    { title: "Email", items: [{ ...data.integrations.sendgrid, icon: Mail }, { ...data.integrations.smtp, icon: Mail }] },
+    { title: "SMS", items: [{ ...data.integrations.twilio, icon: MessageSquare }, { ...data.integrations.africasTalking, icon: Smartphone }] },
+    { title: "Authentication", items: [{ ...data.integrations.googleOAuth, icon: Key }, { ...data.integrations.microsoftSSO, icon: Building2 }, { ...data.integrations.saml, icon: Shield }] },
+    { title: "AI / LLM", items: [{ ...data.integrations.openai, icon: Cpu }, { ...data.integrations.anthropic, icon: Cpu }] },
+    { title: "Security", items: [{ ...data.integrations.piiEncryption, icon: Lock }] },
+  ];
+
+  const totalConnected = Object.values(data.integrations).filter((i: any) => i.connected).length;
+  const totalIntegrations = Object.values(data.integrations).length;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30">{totalConnected}/{totalIntegrations} connected</Badge>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        {groups.map(g => (
+          <div key={g.title} className="rounded-lg border border-border p-3 space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{g.title}</p>
+            {g.items.map((item: any) => (
+              <div key={item.label} className="flex items-center gap-2">
+                <IntegrationDot connected={item.connected} />
+                <item.icon className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className="text-xs flex-1">{item.label}</span>
+                {item.detail && <span className="text-[10px] text-muted-foreground truncate max-w-[100px]">{item.detail}</span>}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DatabaseStatsPanel() {
+  const { data, isLoading, refetch } = useQuery<any>({
+    queryKey: ["/api/platform-control/database-stats"],
+    queryFn: async () => { const r = await pcFetch("/api/platform-control/database-stats"); return r.json(); },
+  });
+
+  if (isLoading || !data) return <div className="text-sm text-muted-foreground p-4">Loading database stats...</div>;
+
+  const counts = data.tableCounts || {};
+  const pii = data.piiStats || {};
+  const activity = data.recentActivity || {};
+  const users = data.userBreakdown || {};
+
+  const sortedTables = Object.entries(counts).sort((a: any, b: any) => b[1] - a[1]);
+  const totalRows = Object.values(counts).reduce((s: number, v: any) => s + Math.max(0, v), 0);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Badge variant="outline">{sortedTables.length} tables</Badge>
+          <Badge variant="outline">{totalRows.toLocaleString()} total rows</Badge>
+        </div>
+        <Button variant="ghost" size="sm" onClick={() => refetch()} data-testid="button-refresh-db"><RefreshCw className="w-3 h-3" /></Button>
+      </div>
+
+      {pii.totalPiiFields > 0 && (
+        <div className={`rounded-lg p-3 border ${pii.encryptionPercent >= 100 ? "border-emerald-500/30 bg-emerald-500/5" : "border-red-500/30 bg-red-500/5"}`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Lock className={`w-4 h-4 ${pii.encryptionPercent >= 100 ? "text-emerald-500" : "text-red-500"}`} />
+              <span className="text-sm font-semibold">PII Encryption</span>
             </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium">Regulatory Body</label>
-              <Input value={form.regulatoryBody} onChange={e => setForm(f => ({ ...f, regulatoryBody: e.target.value }))} data-testid="input-gen-regulatory" />
+            <span className="text-sm font-bold">{pii.encryptionPercent}%</span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">{pii.encryptedPiiFields}/{pii.totalPiiFields} fields encrypted (AES-256-GCM)</p>
+          <div className="w-full bg-muted rounded-full h-1.5 mt-2">
+            <div className={`h-1.5 rounded-full ${pii.encryptionPercent >= 100 ? "bg-emerald-500" : "bg-red-500"}`} style={{ width: `${Math.min(pii.encryptionPercent, 100)}%` }} />
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard label="Audit Logs (24h)" value={activity.auditLogs24h || 0} icon={Eye} sub={`${activity.auditLogs7d || 0} in 7 days`} />
+        <StatCard label="Logins (24h)" value={activity.logins24h || 0} icon={Users} sub={`${activity.failedLogins24h || 0} failed`} color={activity.failedLogins24h > 10 ? "text-red-500" : undefined} />
+        <StatCard label="Credit Reports (24h)" value={activity.creditReports24h || 0} icon={BarChart3} />
+        <StatCard label="Open Disputes" value={activity.openDisputes || 0} icon={AlertTriangle} sub={`${activity.disputes7d || 0} new this week`} />
+      </div>
+
+      {users.byRole && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Users</p>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(users.byRole).map(([role, count]: [string, any]) => (
+              <Badge key={role} variant="outline" className="text-xs">{role}: {count}</Badge>
+            ))}
+            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30">MFA: {users.mfaEnabled || 0}</Badge>
+            <Badge variant="outline">Active: {users.totalActive || 0}</Badge>
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Table Sizes</p>
+        <div className="rounded-lg border border-border overflow-hidden">
+          <div className="max-h-[300px] overflow-y-auto">
+            <table className="w-full text-xs">
+              <thead className="sticky top-0 bg-muted/80 backdrop-blur">
+                <tr><th className="text-left p-2 font-medium">Table</th><th className="text-right p-2 font-medium">Rows</th></tr>
+              </thead>
+              <tbody>
+                {sortedTables.map(([table, count]: any) => (
+                  <tr key={table} className="border-t border-border hover:bg-muted/30">
+                    <td className="p-2 font-mono">{table}</td>
+                    <td className="p-2 text-right font-medium">{count >= 0 ? count.toLocaleString() : "N/A"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {data.orgBreakdown && data.orgBreakdown.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Organizations</p>
+          <div className="rounded-lg border border-border overflow-hidden">
+            <div className="max-h-[200px] overflow-y-auto">
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 bg-muted/80 backdrop-blur">
+                  <tr>
+                    <th className="text-left p-2 font-medium">Name</th>
+                    <th className="text-center p-2 font-medium">Status</th>
+                    <th className="text-center p-2 font-medium">Tier</th>
+                    <th className="text-left p-2 font-medium">Country</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.orgBreakdown.map((org: any) => (
+                    <tr key={org.id} className="border-t border-border hover:bg-muted/30">
+                      <td className="p-2 font-medium">{org.name}</td>
+                      <td className="p-2 text-center"><StatusBadge status={org.status} /></td>
+                      <td className="p-2 text-center">{org.license_tier || "-"}</td>
+                      <td className="p-2">{org.country || "-"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
-          <Button onClick={generate} disabled={!form.clientName || !form.country} size="sm" data-testid="button-generate-config">
-            <Download className="w-4 h-4 mr-2" /> Generate Config
-          </Button>
-
-          {config && (
-            <div className="space-y-3">
-              <div className="rounded-lg bg-zinc-900 text-zinc-100 p-4 font-mono text-xs overflow-x-auto">
-                {Object.entries(config.config).map(([k, v]) => (
-                  <div key={k}><span className="text-emerald-400">{k}</span>=<span className="text-amber-300">{String(v)}</span></div>
-                ))}
-              </div>
-              <Button onClick={copyConfig} variant="outline" size="sm" data-testid="button-copy-config">
-                <Copy className="w-4 h-4 mr-2" /> Copy as .env
-              </Button>
-              {config.instructions && (
-                <div className="rounded-lg border border-border p-3 space-y-1">
-                  <p className="text-xs font-semibold">Setup Instructions:</p>
-                  {config.instructions.map((inst: string, i: number) => (
-                    <p key={i} className="text-xs text-muted-foreground">{inst}</p>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
         </div>
       )}
     </div>
   );
 }
 
-function ControlDashboard() {
+function RevenuePanel() {
+  const { data, isLoading } = useQuery<any>({
+    queryKey: ["/api/platform-control/revenue-overview"],
+    queryFn: async () => { const r = await pcFetch("/api/platform-control/revenue-overview"); return r.json(); },
+  });
+
+  if (isLoading || !data) return <div className="text-sm text-muted-foreground p-4">Loading revenue...</div>;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard label="Total MRR" value={formatCurrency(data.totalARRCents / 12)} icon={DollarSign} color="text-emerald-500" />
+        <StatCard label="Total ARR" value={formatCurrency(data.totalARRCents)} icon={TrendingUp} color="text-blue-500" />
+        <StatCard label="Active Clients" value={data.deploymentCount} icon={Building2} />
+        <StatCard label="Local Wallets" value={data.localBilling?.activeWallets || 0} icon={CreditCard} sub={`Balance: ${formatCurrency(data.localBilling?.totalWalletBalance)}`} />
+      </div>
+
+      {Object.keys(data.byTier || {}).length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Revenue by Tier</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {Object.entries(data.byTier).map(([tier, info]: [string, any]) => (
+              <div key={tier} className="rounded-lg border border-border p-3 text-center">
+                <p className="text-xs text-muted-foreground capitalize">{tier}</p>
+                <p className="text-lg font-bold">{formatCurrency(info.mrrCents)}<span className="text-xs text-muted-foreground">/mo</span></p>
+                <p className="text-xs text-muted-foreground">{info.count} client{info.count !== 1 ? "s" : ""}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {Object.keys(data.byCountry || {}).length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Revenue by Country</p>
+          <div className="rounded-lg border border-border divide-y divide-border text-xs">
+            {Object.entries(data.byCountry).map(([country, info]: [string, any]) => (
+              <div key={country} className="flex justify-between px-3 py-2">
+                <span className="font-medium">{country}</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-muted-foreground">{info.count} client{info.count !== 1 ? "s" : ""}</span>
+                  <span className="font-bold">{formatCurrency(info.mrrCents)}/mo</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {data.localBilling && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Local Instance Billing</p>
+          <div className="rounded-lg border border-border divide-y divide-border text-xs">
+            {[
+              ["Total Billed (All Time)", `${GHS}${data.localBilling.totalBilledAllTime?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || "0"}`],
+              ["Billed (Last 30 Days)", `${GHS}${data.localBilling.billedLast30Days?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || "0"}`],
+              ["Wallet Balance (All)", formatCurrency(data.localBilling.totalWalletBalance)],
+              ["Active Wallets", data.localBilling.activeWallets],
+            ].map(([k, v]) => (
+              <div key={k as string} className="flex justify-between px-3 py-1.5">
+                <span className="text-muted-foreground">{k}</span><span className="font-medium">{String(v)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DeploymentsPanel() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const [editDeploy, setEditDeploy] = useState<Deployment | null>(null);
   const [showCreate, setShowCreate] = useState(false);
 
-  const { data: summary, isLoading: summaryLoading } = useQuery<Summary>({
-    queryKey: ["/api/platform-control/summary"],
-    queryFn: async () => {
-      const res = await fetch("/api/platform-control/summary", { credentials: "include" });
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
-    },
-  });
-
-  const { data: deployments, isLoading: deploymentsLoading } = useQuery<Deployment[]>({
+  const { data: deployments, isLoading } = useQuery<Deployment[]>({
     queryKey: ["/api/platform-control/deployments"],
-    queryFn: async () => {
-      const res = await fetch("/api/platform-control/deployments", { credentials: "include" });
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
-    },
+    queryFn: async () => { const r = await pcFetch("/api/platform-control/deployments"); return r.json(); },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const res = await fetch(`/api/platform-control/deployments/${id}`, { method: "DELETE", credentials: "include" });
-      if (!res.ok) throw new Error("Delete failed");
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["/api/platform-control/deployments"] });
-      qc.invalidateQueries({ queryKey: ["/api/platform-control/summary"] });
-      toast({ title: "Deployment deleted" });
-    },
+    mutationFn: async (id: string) => { const r = await pcFetch(`/api/platform-control/deployments/${id}`, { method: "DELETE" }); if (!r.ok) throw new Error("Delete failed"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["/api/platform-control"] }); toast({ title: "Deleted" }); },
+  });
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">{deployments?.length || 0} deployment(s)</span>
+        <Dialog open={showCreate} onOpenChange={setShowCreate}>
+          <DialogTrigger asChild>
+            <Button size="sm" data-testid="button-add-deployment"><Plus className="w-4 h-4 mr-1" /> Add</Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>New Deployment</DialogTitle></DialogHeader>
+            <DeploymentForm onClose={() => setShowCreate(false)} />
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {isLoading && <p className="text-sm text-muted-foreground">Loading...</p>}
+
+      {deployments && deployments.length === 0 && (
+        <div className="rounded-xl border border-dashed border-border p-8 text-center text-muted-foreground">
+          <Server className="w-8 h-8 mx-auto mb-3 opacity-50" />
+          <p className="text-sm">No deployments registered</p>
+        </div>
+      )}
+
+      {deployments && deployments.length > 0 && (
+        <div className="overflow-x-auto rounded-lg border border-border">
+          <table className="w-full text-xs" data-testid="table-deployments">
+            <thead>
+              <tr className="bg-muted/50 border-b border-border">
+                {["Client", "Country", "Status", "Tier", "Monthly", "Records", ""].map(h => (
+                  <th key={h} className="p-2 font-medium text-left">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {deployments.map(d => (
+                <tr key={d.id} className="border-b border-border hover:bg-muted/30" data-testid={`row-deployment-${d.id}`}>
+                  <td className="p-2">
+                    <p className="font-medium">{d.clientName}</p>
+                    {d.deploymentUrl && <p className="text-[10px] text-muted-foreground truncate max-w-[180px]">{d.deploymentUrl}</p>}
+                  </td>
+                  <td className="p-2">{d.country}</td>
+                  <td className="p-2"><StatusBadge status={d.status} /></td>
+                  <td className="p-2"><Badge variant="outline" className="text-[10px]">{d.licenseTier}</Badge></td>
+                  <td className="p-2 font-medium">{formatCurrency(d.monthlyFeeCents, d.currency)}</td>
+                  <td className="p-2">{(d.totalBorrowers || 0).toLocaleString()}</td>
+                  <td className="p-2">
+                    <div className="flex gap-1">
+                      <Dialog open={editDeploy?.id === d.id} onOpenChange={open => !open && setEditDeploy(null)}>
+                        <DialogTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setEditDeploy(d)} data-testid={`button-edit-${d.id}`}><Edit className="w-3 h-3" /></Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                          <DialogHeader><DialogTitle>Edit</DialogTitle></DialogHeader>
+                          <DeploymentForm deployment={editDeploy || undefined} onClose={() => setEditDeploy(null)} />
+                        </DialogContent>
+                      </Dialog>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => { if (confirm(`Delete "${d.clientName}"?`)) deleteMutation.mutate(d.id); }} data-testid={`button-delete-${d.id}`}>
+                        <Trash2 className="w-3 h-3 text-red-500" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function QuickActionsPanel() {
+  const { toast } = useToast();
+  const actions = [
+    { label: "Check Health", icon: Heart, action: async () => { const r = await fetch("/health"); const d = await r.json(); toast({ title: "Health Check", description: `Status: ${d.status}, Uptime: ${Math.round(d.uptime)}s` }); } },
+    { label: "Refresh All Data", icon: RefreshCw, action: () => window.location.reload() },
+    { label: "Copy Health URL", icon: Copy, action: () => { navigator.clipboard.writeText(`${window.location.origin}/health`); toast({ title: "Copied" }); } },
+    { label: "Open API Docs", icon: Globe, action: () => window.open("/api-docs", "_blank") },
+  ];
+  return (
+    <div className="flex flex-wrap gap-2">
+      {actions.map(a => (
+        <Button key={a.label} variant="outline" size="sm" onClick={a.action} className="gap-1.5" data-testid={`action-${a.label.toLowerCase().replace(/\s+/g, "-")}`}>
+          <a.icon className="w-3.5 h-3.5" /> {a.label}
+        </Button>
+      ))}
+    </div>
+  );
+}
+
+function ControlDashboard() {
+  const { data: summary } = useQuery<any>({
+    queryKey: ["/api/platform-control/summary"],
+    queryFn: async () => { const r = await pcFetch("/api/platform-control/summary"); return r.json(); },
   });
 
   const handleLogout = async () => {
-    await fetch("/api/platform-control/logout", { method: "POST", credentials: "include" });
+    await pcFetch("/api/platform-control/logout", { method: "POST" });
     window.location.reload();
-  };
-
-  const formatCurrency = (cents: number | undefined, currency: string = "GHS") => {
-    if (!cents) return `${GHS}0`;
-    const symbol = currency === "GHS" ? GHS : currency === "USD" ? "$" : currency;
-    return `${symbol}${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
   };
 
   return (
@@ -436,108 +750,43 @@ function ControlDashboard() {
         </div>
 
         {summary && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-            <StatCard label="Total Deployments" value={summary.totalDeployments} icon={Server} sub={`${summary.activeDeployments} active, ${summary.trialDeployments} trial`} />
-            <StatCard label="Monthly Revenue" value={formatCurrency(summary.totalMRRCents)} icon={DollarSign} sub="All active deployments" />
-            <StatCard label="Countries" value={summary.countriesServed.length} icon={Globe} sub={summary.countriesServed.join(", ") || "None yet"} />
-            <StatCard label="Total Records" value={(summary.totalBorrowers || 0).toLocaleString()} icon={Users} sub={`${summary.totalInstitutions} institutions`} />
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+            <StatCard label="Deployments" value={summary.totalDeployments} icon={Server} sub={`${summary.activeDeployments} active`} color="text-blue-500" />
+            <StatCard label="Monthly Revenue" value={formatCurrency(summary.totalMRRCents)} icon={DollarSign} color="text-emerald-500" />
+            <StatCard label="Countries" value={summary.countriesServed?.length || 0} icon={Globe} sub={summary.countriesServed?.join(", ") || "None"} color="text-violet-500" />
+            <StatCard label="Total Records" value={(summary.totalBorrowers || 0).toLocaleString()} icon={Users} sub={`${summary.totalInstitutions || 0} institutions`} />
+            <StatCard label="This Instance" value={summary.localBorrowers?.toLocaleString() || "0"} icon={Database} sub={`${summary.localOrganizations || 0} orgs, ${summary.localUsers || 0} users`} color="text-amber-500" />
           </div>
         )}
 
-        {summary?.localBorrowers !== undefined && (
-          <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 mb-6">
-            <p className="text-xs font-semibold text-blue-500 mb-2">This Instance (Local)</p>
-            <div className="flex gap-6 text-sm">
-              <span><strong>{summary.localBorrowers?.toLocaleString()}</strong> borrowers</span>
-              <span><strong>{summary.localOrganizations?.toLocaleString()}</strong> organizations</span>
-              <span><strong>{summary.localUsers?.toLocaleString()}</strong> users</span>
-            </div>
-          </div>
-        )}
+        <div className="mb-4">
+          <Panel title="Quick Actions" icon={Zap} color="text-amber-500">
+            <QuickActionsPanel />
+          </Panel>
+        </div>
 
-        <ConfigGenerator />
+        <div className="space-y-3">
+          <Panel title="System Health & Server" icon={Activity} color="text-emerald-500">
+            <SystemHealthPanel />
+          </Panel>
 
-        <div className="mt-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold" data-testid="text-deployments-heading">Client Deployments</h2>
-            <Dialog open={showCreate} onOpenChange={setShowCreate}>
-              <DialogTrigger asChild>
-                <Button size="sm" data-testid="button-add-deployment"><Plus className="w-4 h-4 mr-1" /> Add Deployment</Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-                <DialogHeader><DialogTitle>New Deployment</DialogTitle></DialogHeader>
-                <DeploymentForm onClose={() => setShowCreate(false)} />
-              </DialogContent>
-            </Dialog>
-          </div>
+          <Panel title="Connected Integrations" icon={Wifi} color="text-blue-500">
+            <IntegrationsPanel />
+          </Panel>
 
-          {deploymentsLoading && <p className="text-sm text-muted-foreground">Loading deployments...</p>}
+          <Panel title="Database & Data Health" icon={Database} color="text-violet-500">
+            <DatabaseStatsPanel />
+          </Panel>
 
-          {deployments && deployments.length === 0 && (
-            <div className="rounded-xl border border-dashed border-border p-8 text-center text-muted-foreground">
-              <Server className="w-8 h-8 mx-auto mb-3 opacity-50" />
-              <p className="text-sm">No deployments registered yet</p>
-              <p className="text-xs mt-1">Add your first client deployment to start tracking</p>
-            </div>
-          )}
+          <Panel title="Revenue & Billing" icon={DollarSign} color="text-emerald-500" defaultOpen={false}>
+            <RevenuePanel />
+          </Panel>
 
-          {deployments && deployments.length > 0 && (
-            <div className="overflow-x-auto rounded-xl border border-border">
-              <table className="w-full text-sm" data-testid="table-deployments">
-                <thead>
-                  <tr className="bg-muted/50 border-b border-border">
-                    <th className="text-left p-3 font-medium">Client</th>
-                    <th className="text-left p-3 font-medium">Country</th>
-                    <th className="text-center p-3 font-medium">Status</th>
-                    <th className="text-center p-3 font-medium">Tier</th>
-                    <th className="text-right p-3 font-medium">Monthly Fee</th>
-                    <th className="text-right p-3 font-medium">Records</th>
-                    <th className="text-center p-3 font-medium">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {deployments.map(d => (
-                    <tr key={d.id} className="border-b border-border hover:bg-muted/30" data-testid={`row-deployment-${d.id}`}>
-                      <td className="p-3">
-                        <div>
-                          <p className="font-medium">{d.clientName}</p>
-                          {d.deploymentUrl && <p className="text-xs text-muted-foreground truncate max-w-[200px]">{d.deploymentUrl}</p>}
-                        </div>
-                      </td>
-                      <td className="p-3">{d.country}</td>
-                      <td className="p-3 text-center"><StatusBadge status={d.status} /></td>
-                      <td className="p-3 text-center"><Badge variant="outline">{d.licenseTier}</Badge></td>
-                      <td className="p-3 text-right">{formatCurrency(d.monthlyFeeCents, d.currency)}</td>
-                      <td className="p-3 text-right">{(d.totalBorrowers || 0).toLocaleString()}</td>
-                      <td className="p-3">
-                        <div className="flex items-center justify-center gap-1">
-                          <Dialog open={editDeploy?.id === d.id} onOpenChange={open => !open && setEditDeploy(null)}>
-                            <DialogTrigger asChild>
-                              <Button variant="ghost" size="sm" onClick={() => setEditDeploy(d)} data-testid={`button-edit-${d.id}`}>
-                                <Edit className="w-3.5 h-3.5" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-                              <DialogHeader><DialogTitle>Edit Deployment</DialogTitle></DialogHeader>
-                              <DeploymentForm deployment={editDeploy || undefined} onClose={() => setEditDeploy(null)} />
-                            </DialogContent>
-                          </Dialog>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => { if (confirm(`Delete "${d.clientName}"?`)) deleteMutation.mutate(d.id); }}
-                            data-testid={`button-delete-${d.id}`}
-                          >
-                            <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <Panel title="Client Deployments" icon={Building2} color="text-blue-500" defaultOpen={false}>
+            <DeploymentsPanel />
+          </Panel>
+
+          <ConfigGenerator />
         </div>
       </div>
     </div>
@@ -546,10 +795,6 @@ function ControlDashboard() {
 
 export default function PlatformMasterControlPage() {
   const [authenticated, setAuthenticated] = useState(false);
-
-  if (!authenticated) {
-    return <PasswordGate onAuthenticated={() => setAuthenticated(true)} />;
-  }
-
+  if (!authenticated) return <PasswordGate onAuthenticated={() => setAuthenticated(true)} />;
   return <ControlDashboard />;
 }

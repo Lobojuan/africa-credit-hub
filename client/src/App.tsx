@@ -339,7 +339,11 @@ function AuthenticatedApp() {
     );
   }
 
-  const publicPaths = ["/", "/investor", "/solutions", "/ai-demo", "/pricing", "/security", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/score-guide", "/my-credit", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs", "/platform-control-9x7k"];
+  if (currentPath === "/platform-control-9x7k") {
+    return <Suspense fallback={<LazyFallback />}><PlatformMasterControlPage /></Suspense>;
+  }
+
+  const publicPaths = ["/", "/investor", "/solutions", "/ai-demo", "/pricing", "/security", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/score-guide", "/my-credit", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs"];
   if (!user) {
     if (currentPath === "/login") {
       return <LoginPage />;
