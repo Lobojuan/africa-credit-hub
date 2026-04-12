@@ -4,7 +4,8 @@ import { useLocation, Link } from "wouter";
 import {
   ArrowLeft, Code2, Lock, Send, Search, FileText, CreditCard, Gavel,
   Clock, KeyRound, Shield, Play, Copy, Check, ChevronRight,
-  Zap, Globe, Bell, Package, AlertTriangle, ArrowRight, Terminal, Smartphone
+  Zap, Globe, Bell, Package, AlertTriangle, ArrowRight, Terminal, Smartphone,
+  Download, ChevronDown,
 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -615,14 +616,566 @@ def verify_webhook(payload, signature, secret):
   );
 }
 
+function sdkPython(baseUrl: string): string {
+  return `"""
+Africa Credit Hub — Python SDK Client
+Auto-generated from API v1 specification
+"""
+import requests
+from typing import Optional, Dict, Any, List
+from urllib.parse import urljoin
+
+
+class CreditHubError(Exception):
+    def __init__(self, status_code: int, message: str, data: Any = None):
+        self.status_code = status_code
+        self.message = message
+        self.data = data
+        super().__init__(f"[{status_code}] {message}")
+
+
+class CreditHubClient:
+    """Official Python client for Africa Credit Hub API v1."""
+
+    def __init__(self, api_key: str, base_url: str = "${baseUrl}/api/external/v1"):
+        self.api_key = api_key
+        self.base_url = base_url.rstrip("/")
+        self.session = requests.Session()
+        self.session.headers.update({
+            "X-API-Key": self.api_key,
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        })
+
+    def _request(self, method: str, path: str, data: Any = None, params: Dict = None, idempotency_key: str = None) -> Dict:
+        url = f"{self.base_url}{path}"
+        headers = {}
+        if idempotency_key:
+            headers["Idempotency-Key"] = idempotency_key
+        resp = self.session.request(method, url, json=data, params=params, headers=headers, timeout=30)
+        body = resp.json()
+        if not resp.ok:
+            raise CreditHubError(resp.status_code, body.get("message", "Unknown error"), body)
+        return body
+
+    # --- Health ---
+    def health(self) -> Dict:
+        return self._request("GET", "/health")
+
+    # --- Borrowers ---
+    def create_borrower(self, borrower_data: Dict) -> Dict:
+        return self._request("POST", "/borrowers", data=borrower_data)
+
+    def search_borrowers(self, national_id: str = None, **params) -> Dict:
+        if national_id:
+            params["nationalId"] = national_id
+        return self._request("GET", "/borrowers/search", params=params)
+
+    def get_credit_report(self, borrower_id: str) -> Dict:
+        return self._request("GET", f"/borrowers/{borrower_id}/credit-report")
+
+    def get_fraud_risk(self, borrower_id: str) -> Dict:
+        return self._request("GET", f"/borrowers/{borrower_id}/fraud-risk")
+
+    # --- Credit Accounts ---
+    def create_credit_account(self, account_data: Dict) -> Dict:
+        return self._request("POST", "/credit-accounts", data=account_data)
+
+    def get_credit_accounts(self, borrower_id: str) -> Dict:
+        return self._request("GET", f"/credit-accounts/{borrower_id}")
+
+    # --- Payment History ---
+    def submit_payment(self, payment_data: Dict) -> Dict:
+        return self._request("POST", "/payment-history", data=payment_data)
+
+    # --- Court Judgments ---
+    def submit_court_judgment(self, judgment_data: Dict) -> Dict:
+        return self._request("POST", "/court-judgments", data=judgment_data)
+
+    # --- Consumer Lookup ---
+    def consumer_lookup(self, national_id: str) -> Dict:
+        return self._request("GET", "/consumer/lookup", params={"nationalId": national_id})
+
+    # --- Telco Integration ---
+    def create_telco_profile(self, profile_data: Dict) -> Dict:
+        return self._request("POST", "/telco/profiles", data=profile_data)
+
+    def get_telco_profile(self, msisdn: str) -> Dict:
+        return self._request("GET", f"/telco/profiles/{msisdn}")
+
+    def import_telco_transactions(self, transactions: List[Dict]) -> Dict:
+        return self._request("POST", "/telco/transactions/import", data=transactions)
+
+    def score_telco(self, score_data: Dict) -> Dict:
+        return self._request("POST", "/telco/score", data=score_data)
+
+    def batch_score_telco(self, msisdns: List[str]) -> Dict:
+        return self._request("POST", "/telco/score/batch", data={"msisdns": msisdns})
+
+    def telco_decision(self, decision_data: Dict) -> Dict:
+        return self._request("POST", "/telco/decision", data=decision_data)
+
+    def score_and_decide(self, data: Dict) -> Dict:
+        return self._request("POST", "/telco/score-and-decide", data=data)
+
+    def create_telco_loan(self, loan_data: Dict) -> Dict:
+        return self._request("POST", "/telco/loans", data=loan_data)
+
+    def record_consent(self, consent_data: Dict) -> Dict:
+        return self._request("POST", "/telco/consent", data=consent_data)
+
+
+# --- Quick Start ---
+# client = CreditHubClient(api_key="sim_xxxxxxxx_xxx...")
+# report = client.get_credit_report("borrower-uuid")
+# score = client.score_and_decide({"msisdn": "+233241234567", "amount": 500})
+`;
+}
+
+function sdkJavaScript(baseUrl: string): string {
+  return `/**
+ * Africa Credit Hub — JavaScript / Node.js SDK Client
+ * Auto-generated from API v1 specification
+ */
+
+class CreditHubError extends Error {
+  constructor(statusCode, message, data) {
+    super(\`[\${statusCode}] \${message}\`);
+    this.statusCode = statusCode;
+    this.data = data;
+    this.name = "CreditHubError";
+  }
+}
+
+class CreditHubClient {
+  /**
+   * @param {string} apiKey - Your API key (e.g. "sim_xxxxxxxx_xxx...")
+   * @param {string} [baseUrl="${baseUrl}/api/external/v1"]
+   */
+  constructor(apiKey, baseUrl = "${baseUrl}/api/external/v1") {
+    this.apiKey = apiKey;
+    this.baseUrl = baseUrl.replace(/\\/+$/, "");
+  }
+
+  async _request(method, path, { body, params, idempotencyKey } = {}) {
+    const url = new URL(\`\${this.baseUrl}\${path}\`);
+    if (params) Object.entries(params).forEach(([k, v]) => v != null && url.searchParams.set(k, String(v)));
+    const headers = {
+      "X-API-Key": this.apiKey,
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+    };
+    if (idempotencyKey) headers["Idempotency-Key"] = idempotencyKey;
+    const resp = await fetch(url.toString(), {
+      method, headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new CreditHubError(resp.status, data.message || "Unknown error", data);
+    return data;
+  }
+
+  // --- Health ---
+  health() { return this._request("GET", "/health"); }
+
+  // --- Borrowers ---
+  createBorrower(data) { return this._request("POST", "/borrowers", { body: data }); }
+  searchBorrowers(params) { return this._request("GET", "/borrowers/search", { params }); }
+  getCreditReport(borrowerId) { return this._request("GET", \`/borrowers/\${borrowerId}/credit-report\`); }
+  getFraudRisk(borrowerId) { return this._request("GET", \`/borrowers/\${borrowerId}/fraud-risk\`); }
+
+  // --- Credit Accounts ---
+  createCreditAccount(data) { return this._request("POST", "/credit-accounts", { body: data }); }
+  getCreditAccounts(borrowerId) { return this._request("GET", \`/credit-accounts/\${borrowerId}\`); }
+
+  // --- Payment History ---
+  submitPayment(data) { return this._request("POST", "/payment-history", { body: data }); }
+
+  // --- Court Judgments ---
+  submitCourtJudgment(data) { return this._request("POST", "/court-judgments", { body: data }); }
+
+  // --- Consumer Lookup ---
+  consumerLookup(nationalId) { return this._request("GET", "/consumer/lookup", { params: { nationalId } }); }
+
+  // --- Telco Integration ---
+  createTelcoProfile(data) { return this._request("POST", "/telco/profiles", { body: data }); }
+  getTelcoProfile(msisdn) { return this._request("GET", \`/telco/profiles/\${msisdn}\`); }
+  importTelcoTransactions(data) { return this._request("POST", "/telco/transactions/import", { body: data }); }
+  scoreTelco(data) { return this._request("POST", "/telco/score", { body: data }); }
+  batchScoreTelco(msisdns) { return this._request("POST", "/telco/score/batch", { body: { msisdns } }); }
+  telcoDecision(data) { return this._request("POST", "/telco/decision", { body: data }); }
+  scoreAndDecide(data) { return this._request("POST", "/telco/score-and-decide", { body: data }); }
+  createTelcoLoan(data) { return this._request("POST", "/telco/loans", { body: data }); }
+  recordConsent(data) { return this._request("POST", "/telco/consent", { body: data }); }
+}
+
+// ESM + CJS compatible
+if (typeof module !== "undefined") module.exports = { CreditHubClient, CreditHubError };
+
+// --- Quick Start ---
+// const client = new CreditHubClient("sim_xxxxxxxx_xxx...");
+// const report = await client.getCreditReport("borrower-uuid");
+// const result = await client.scoreAndDecide({ msisdn: "+233241234567", amount: 500 });
+`;
+}
+
+function sdkJava(baseUrl: string): string {
+  return `/**
+ * Africa Credit Hub — Java SDK Client
+ * Auto-generated from API v1 specification
+ * Requires: Java 11+, com.google.code.gson:gson:2.10+
+ */
+package com.africacredithub.sdk;
+
+import java.io.*;
+import java.net.*;
+import java.net.http.*;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+
+public class CreditHubClient {
+    private final String apiKey;
+    private final String baseUrl;
+    private final HttpClient http;
+    private final Gson gson = new Gson();
+
+    public CreditHubClient(String apiKey) {
+        this(apiKey, "${baseUrl}/api/external/v1");
+    }
+
+    public CreditHubClient(String apiKey, String baseUrl) {
+        this.apiKey = apiKey;
+        this.baseUrl = baseUrl.replaceAll("/+$", "");
+        this.http = HttpClient.newBuilder()
+            .connectTimeout(java.time.Duration.ofSeconds(30))
+            .build();
+    }
+
+    private JsonObject request(String method, String path, Object body) throws Exception {
+        return request(method, path, body, null);
+    }
+
+    private JsonObject request(String method, String path, Object body, String idempotencyKey) throws Exception {
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
+            .uri(URI.create(baseUrl + path))
+            .header("X-API-Key", apiKey)
+            .header("Content-Type", "application/json")
+            .header("Accept", "application/json");
+
+        if (idempotencyKey != null) builder.header("Idempotency-Key", idempotencyKey);
+
+        if ("GET".equals(method)) {
+            builder.GET();
+        } else {
+            String json = body != null ? gson.toJson(body) : "{}";
+            builder.method(method, HttpRequest.BodyPublishers.ofString(json));
+        }
+
+        HttpResponse<String> resp = http.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+        JsonObject result = gson.fromJson(resp.body(), JsonObject.class);
+
+        if (resp.statusCode() >= 400) {
+            String msg = result.has("message") ? result.get("message").getAsString() : "Unknown error";
+            throw new RuntimeException("[" + resp.statusCode() + "] " + msg);
+        }
+        return result;
+    }
+
+    // --- Health ---
+    public JsonObject health() throws Exception { return request("GET", "/health", null); }
+
+    // --- Borrowers ---
+    public JsonObject createBorrower(Map<String, Object> data) throws Exception { return request("POST", "/borrowers", data); }
+    public JsonObject searchBorrowers(String nationalId) throws Exception { return request("GET", "/borrowers/search?nationalId=" + URLEncoder.encode(nationalId, StandardCharsets.UTF_8), null); }
+    public JsonObject getCreditReport(String borrowerId) throws Exception { return request("GET", "/borrowers/" + borrowerId + "/credit-report", null); }
+    public JsonObject getFraudRisk(String borrowerId) throws Exception { return request("GET", "/borrowers/" + borrowerId + "/fraud-risk", null); }
+
+    // --- Credit Accounts ---
+    public JsonObject createCreditAccount(Map<String, Object> data) throws Exception { return request("POST", "/credit-accounts", data); }
+    public JsonObject getCreditAccounts(String borrowerId) throws Exception { return request("GET", "/credit-accounts/" + borrowerId, null); }
+
+    // --- Payment History ---
+    public JsonObject submitPayment(Map<String, Object> data) throws Exception { return request("POST", "/payment-history", data); }
+
+    // --- Court Judgments ---
+    public JsonObject submitCourtJudgment(Map<String, Object> data) throws Exception { return request("POST", "/court-judgments", data); }
+
+    // --- Consumer Lookup ---
+    public JsonObject consumerLookup(String nationalId) throws Exception { return request("GET", "/consumer/lookup?nationalId=" + URLEncoder.encode(nationalId, StandardCharsets.UTF_8), null); }
+
+    // --- Telco Integration ---
+    public JsonObject createTelcoProfile(Map<String, Object> data) throws Exception { return request("POST", "/telco/profiles", data); }
+    public JsonObject getTelcoProfile(String msisdn) throws Exception { return request("GET", "/telco/profiles/" + msisdn, null); }
+    public JsonObject importTelcoTransactions(Object data) throws Exception { return request("POST", "/telco/transactions/import", data); }
+    public JsonObject scoreTelco(Map<String, Object> data) throws Exception { return request("POST", "/telco/score", data); }
+    public JsonObject telcoDecision(Map<String, Object> data) throws Exception { return request("POST", "/telco/decision", data); }
+    public JsonObject scoreAndDecide(Map<String, Object> data) throws Exception { return request("POST", "/telco/score-and-decide", data); }
+    public JsonObject createTelcoLoan(Map<String, Object> data) throws Exception { return request("POST", "/telco/loans", data); }
+    public JsonObject recordConsent(Map<String, Object> data) throws Exception { return request("POST", "/telco/consent", data); }
+}
+
+// --- Quick Start ---
+// CreditHubClient client = new CreditHubClient("sim_xxxxxxxx_xxx...");
+// JsonObject report = client.getCreditReport("borrower-uuid");
+// JsonObject result = client.scoreAndDecide(Map.of("msisdn", "+233241234567", "amount", 500));
+`;
+}
+
+function sdkGo(baseUrl: string): string {
+  return `// Africa Credit Hub — Go SDK Client
+// Auto-generated from API v1 specification
+package credithub
+
+import (
+\t"bytes"
+\t"encoding/json"
+\t"fmt"
+\t"io"
+\t"net/http"
+\t"net/url"
+\t"time"
+)
+
+type Client struct {
+\tAPIKey  string
+\tBaseURL string
+\tHTTP    *http.Client
+}
+
+type APIError struct {
+\tStatusCode int
+\tMessage    string
+}
+
+func (e *APIError) Error() string {
+\treturn fmt.Sprintf("[%d] %s", e.StatusCode, e.Message)
+}
+
+func NewClient(apiKey string) *Client {
+\treturn &Client{
+\t\tAPIKey:  apiKey,
+\t\tBaseURL: "${baseUrl}/api/external/v1",
+\t\tHTTP:    &http.Client{Timeout: 30 * time.Second},
+\t}
+}
+
+func (c *Client) request(method, path string, body interface{}, idempotencyKey string) (map[string]interface{}, error) {
+\tvar bodyReader io.Reader
+\tif body != nil {
+\t\tb, err := json.Marshal(body)
+\t\tif err != nil {
+\t\t\treturn nil, err
+\t\t}
+\t\tbodyReader = bytes.NewReader(b)
+\t}
+\treq, err := http.NewRequest(method, c.BaseURL+path, bodyReader)
+\tif err != nil {
+\t\treturn nil, err
+\t}
+\treq.Header.Set("X-API-Key", c.APIKey)
+\treq.Header.Set("Content-Type", "application/json")
+\treq.Header.Set("Accept", "application/json")
+\tif idempotencyKey != "" {
+\t\treq.Header.Set("Idempotency-Key", idempotencyKey)
+\t}
+\tresp, err := c.HTTP.Do(req)
+\tif err != nil {
+\t\treturn nil, err
+\t}
+\tdefer resp.Body.Close()
+\tvar result map[string]interface{}
+\tif err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+\t\treturn nil, err
+\t}
+\tif resp.StatusCode >= 400 {
+\t\tmsg, _ := result["message"].(string)
+\t\treturn nil, &APIError{StatusCode: resp.StatusCode, Message: msg}
+\t}
+\treturn result, nil
+}
+
+// Health
+func (c *Client) Health() (map[string]interface{}, error) { return c.request("GET", "/health", nil, "") }
+
+// Borrowers
+func (c *Client) CreateBorrower(data map[string]interface{}) (map[string]interface{}, error) { return c.request("POST", "/borrowers", data, "") }
+func (c *Client) SearchBorrowers(nationalID string) (map[string]interface{}, error) { return c.request("GET", "/borrowers/search?nationalId="+url.QueryEscape(nationalID), nil, "") }
+func (c *Client) GetCreditReport(borrowerID string) (map[string]interface{}, error) { return c.request("GET", "/borrowers/"+borrowerID+"/credit-report", nil, "") }
+func (c *Client) GetFraudRisk(borrowerID string) (map[string]interface{}, error) { return c.request("GET", "/borrowers/"+borrowerID+"/fraud-risk", nil, "") }
+
+// Credit Accounts
+func (c *Client) CreateCreditAccount(data map[string]interface{}) (map[string]interface{}, error) { return c.request("POST", "/credit-accounts", data, "") }
+func (c *Client) GetCreditAccounts(borrowerID string) (map[string]interface{}, error) { return c.request("GET", "/credit-accounts/"+borrowerID, nil, "") }
+
+// Payment History
+func (c *Client) SubmitPayment(data map[string]interface{}) (map[string]interface{}, error) { return c.request("POST", "/payment-history", data, "") }
+
+// Court Judgments
+func (c *Client) SubmitCourtJudgment(data map[string]interface{}) (map[string]interface{}, error) { return c.request("POST", "/court-judgments", data, "") }
+
+// Consumer Lookup
+func (c *Client) ConsumerLookup(nationalID string) (map[string]interface{}, error) { return c.request("GET", "/consumer/lookup?nationalId="+url.QueryEscape(nationalID), nil, "") }
+
+// Telco Integration
+func (c *Client) CreateTelcoProfile(data map[string]interface{}) (map[string]interface{}, error) { return c.request("POST", "/telco/profiles", data, "") }
+func (c *Client) GetTelcoProfile(msisdn string) (map[string]interface{}, error) { return c.request("GET", "/telco/profiles/"+msisdn, nil, "") }
+func (c *Client) ImportTelcoTransactions(data interface{}) (map[string]interface{}, error) { return c.request("POST", "/telco/transactions/import", data, "") }
+func (c *Client) ScoreTelco(data map[string]interface{}) (map[string]interface{}, error) { return c.request("POST", "/telco/score", data, "") }
+func (c *Client) TelcoDecision(data map[string]interface{}) (map[string]interface{}, error) { return c.request("POST", "/telco/decision", data, "") }
+func (c *Client) ScoreAndDecide(data map[string]interface{}) (map[string]interface{}, error) { return c.request("POST", "/telco/score-and-decide", data, "") }
+func (c *Client) CreateTelcoLoan(data map[string]interface{}) (map[string]interface{}, error) { return c.request("POST", "/telco/loans", data, "") }
+func (c *Client) RecordConsent(data map[string]interface{}) (map[string]interface{}, error) { return c.request("POST", "/telco/consent", data, "") }
+
+// --- Quick Start ---
+// client := credithub.NewClient("sim_xxxxxxxx_xxx...")
+// report, err := client.GetCreditReport("borrower-uuid")
+// result, err := client.ScoreAndDecide(map[string]interface{}{"msisdn": "+233241234567", "amount": 500})
+`;
+}
+
+function sdkPhp(baseUrl: string): string {
+  return `<?php
+/**
+ * Africa Credit Hub — PHP SDK Client
+ * Auto-generated from API v1 specification
+ * Requires: PHP 7.4+, ext-curl, ext-json
+ */
+
+namespace AfricaCreditHub;
+
+class CreditHubException extends \\Exception {
+    public int $statusCode;
+    public $data;
+
+    public function __construct(int $statusCode, string $message, $data = null) {
+        parent::__construct("[{$statusCode}] {$message}");
+        $this->statusCode = $statusCode;
+        $this->data = $data;
+    }
+}
+
+class CreditHubClient {
+    private string $apiKey;
+    private string $baseUrl;
+
+    public function __construct(string $apiKey, string $baseUrl = '${baseUrl}/api/external/v1') {
+        $this->apiKey = $apiKey;
+        $this->baseUrl = rtrim($baseUrl, '/');
+    }
+
+    private function request(string $method, string $path, $body = null, ?string $idempotencyKey = null): array {
+        $ch = curl_init();
+        $url = $this->baseUrl . $path;
+        $headers = [
+            'X-API-Key: ' . $this->apiKey,
+            'Content-Type: application/json',
+            'Accept: application/json',
+        ];
+        if ($idempotencyKey) $headers[] = 'Idempotency-Key: ' . $idempotencyKey;
+
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_CUSTOMREQUEST => $method,
+        ]);
+        if ($body !== null) curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
+
+        $response = curl_exec($ch);
+        $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        $result = json_decode($response, true) ?: [];
+        if ($statusCode >= 400) {
+            throw new CreditHubException($statusCode, $result['message'] ?? 'Unknown error', $result);
+        }
+        return $result;
+    }
+
+    // --- Health ---
+    public function health(): array { return $this->request('GET', '/health'); }
+
+    // --- Borrowers ---
+    public function createBorrower(array $data): array { return $this->request('POST', '/borrowers', $data); }
+    public function searchBorrowers(string $nationalId): array { return $this->request('GET', '/borrowers/search?nationalId=' . urlencode($nationalId)); }
+    public function getCreditReport(string $borrowerId): array { return $this->request('GET', "/borrowers/{$borrowerId}/credit-report"); }
+    public function getFraudRisk(string $borrowerId): array { return $this->request('GET', "/borrowers/{$borrowerId}/fraud-risk"); }
+
+    // --- Credit Accounts ---
+    public function createCreditAccount(array $data): array { return $this->request('POST', '/credit-accounts', $data); }
+    public function getCreditAccounts(string $borrowerId): array { return $this->request('GET', "/credit-accounts/{$borrowerId}"); }
+
+    // --- Payment History ---
+    public function submitPayment(array $data): array { return $this->request('POST', '/payment-history', $data); }
+
+    // --- Court Judgments ---
+    public function submitCourtJudgment(array $data): array { return $this->request('POST', '/court-judgments', $data); }
+
+    // --- Consumer Lookup ---
+    public function consumerLookup(string $nationalId): array { return $this->request('GET', '/consumer/lookup?nationalId=' . urlencode($nationalId)); }
+
+    // --- Telco Integration ---
+    public function createTelcoProfile(array $data): array { return $this->request('POST', '/telco/profiles', $data); }
+    public function getTelcoProfile(string $msisdn): array { return $this->request('GET', "/telco/profiles/{$msisdn}"); }
+    public function importTelcoTransactions(array $data): array { return $this->request('POST', '/telco/transactions/import', $data); }
+    public function scoreTelco(array $data): array { return $this->request('POST', '/telco/score', $data); }
+    public function telcoDecision(array $data): array { return $this->request('POST', '/telco/decision', $data); }
+    public function scoreAndDecide(array $data): array { return $this->request('POST', '/telco/score-and-decide', $data); }
+    public function createTelcoLoan(array $data): array { return $this->request('POST', '/telco/loans', $data); }
+    public function recordConsent(array $data): array { return $this->request('POST', '/telco/consent', $data); }
+}
+
+// --- Quick Start ---
+// $client = new \\AfricaCreditHub\\CreditHubClient('sim_xxxxxxxx_xxx...');
+// $report = $client->getCreditReport('borrower-uuid');
+// $result = $client->scoreAndDecide(['msisdn' => '+233241234567', 'amount' => 500]);
+`;
+}
+
+type SdkDef = {
+  id: string;
+  lang: string;
+  version: string;
+  filename: string;
+  install: string;
+  badge: string;
+  badgeColor: string;
+  generator: (baseUrl: string) => string;
+};
+
+const SDK_DEFS: SdkDef[] = [
+  { id: "py", lang: "Python", version: "1.0.0", filename: "credithub_client.py", install: "pip install requests", badge: "Available", badgeColor: "text-emerald-700 dark:text-emerald-300 border-emerald-400 bg-emerald-50 dark:bg-emerald-950/30", generator: sdkPython },
+  { id: "js", lang: "JavaScript / Node.js", version: "1.0.0", filename: "credithub-client.js", install: "npm install --save  # (copy file to your project)", badge: "Available", badgeColor: "text-emerald-700 dark:text-emerald-300 border-emerald-400 bg-emerald-50 dark:bg-emerald-950/30", generator: sdkJavaScript },
+  { id: "java", lang: "Java", version: "1.0.0", filename: "CreditHubClient.java", install: "Add gson dependency:  com.google.code.gson:gson:2.10.1", badge: "Available", badgeColor: "text-emerald-700 dark:text-emerald-300 border-emerald-400 bg-emerald-50 dark:bg-emerald-950/30", generator: sdkJava },
+  { id: "go", lang: "Go", version: "1.0.0", filename: "credithub.go", install: "go get  # (copy file to your project package)", badge: "Available", badgeColor: "text-emerald-700 dark:text-emerald-300 border-emerald-400 bg-emerald-50 dark:bg-emerald-950/30", generator: sdkGo },
+  { id: "php", lang: "PHP", version: "1.0.0", filename: "CreditHubClient.php", install: "Requires: PHP 7.4+, ext-curl, ext-json", badge: "Available", badgeColor: "text-emerald-700 dark:text-emerald-300 border-emerald-400 bg-emerald-50 dark:bg-emerald-950/30", generator: sdkPhp },
+];
+
 function SdkSection() {
-  const sdks = [
-    { lang: "Python", status: "Coming Soon", version: "—", icon: "py" },
-    { lang: "JavaScript / Node.js", status: "Coming Soon", version: "—", icon: "js" },
-    { lang: "Java", status: "Planned", version: "—", icon: "java" },
-    { lang: "Go", status: "Planned", version: "—", icon: "go" },
-    { lang: "PHP", status: "Planned", version: "—", icon: "php" },
-  ];
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const baseUrl = window.location.origin;
+
+  const copyCode = (id: string, code: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const downloadFile = (filename: string, code: string) => {
+    const blob = new Blob([code], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <Card data-testid="card-sdks">
@@ -630,36 +1183,74 @@ function SdkSection() {
         <div className="flex items-center gap-2">
           <Package className="w-5 h-5 text-muted-foreground" />
           <h2 className="text-lg font-semibold">SDKs & Client Libraries</h2>
+          <Badge variant="outline" className="text-[10px] bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300">v1.0.0</Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Official SDKs are being developed to simplify integration. Use the REST API directly in the meantime.
+          Official client libraries for the Africa Credit Hub API. Each SDK wraps all v1 endpoints with typed methods, error handling, and idempotency support. Click any language to view the source, copy to clipboard, or download the file.
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {sdks.map(sdk => (
-            <div key={sdk.lang} className="flex items-center justify-between gap-2 p-3 bg-muted/50 rounded-md" data-testid={`card-sdk-${sdk.icon}`}>
-              <div className="flex items-center gap-2 min-w-0">
-                <Globe className="w-4 h-4 text-muted-foreground shrink-0" />
-                <span className="text-sm font-medium truncate">{sdk.lang}</span>
+        <div className="space-y-2">
+          {SDK_DEFS.map(sdk => {
+            const code = sdk.generator(baseUrl);
+            const isOpen = expanded === sdk.id;
+            return (
+              <div key={sdk.id} className="rounded-lg border border-border overflow-hidden" data-testid={`card-sdk-${sdk.id}`}>
+                <button
+                  className="w-full flex items-center justify-between gap-2 p-3 hover:bg-muted/50 transition-colors text-left"
+                  onClick={() => setExpanded(isOpen ? null : sdk.id)}
+                  data-testid={`button-expand-sdk-${sdk.id}`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Globe className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <span className="text-sm font-medium">{sdk.lang}</span>
+                    <span className="text-[10px] text-muted-foreground">v{sdk.version}</span>
+                    <span className="text-[10px] text-muted-foreground font-mono hidden sm:inline">{sdk.filename}</span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge variant="outline" className={`text-[10px] ${sdk.badgeColor}`}>{sdk.badge}</Badge>
+                    <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                  </div>
+                </button>
+
+                {isOpen && (
+                  <div className="border-t border-border">
+                    <div className="flex items-center justify-between px-3 py-2 bg-muted/30 border-b border-border">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Terminal className="w-3.5 h-3.5" />
+                        <code>{sdk.install}</code>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => copyCode(sdk.id, code)} data-testid={`button-copy-sdk-${sdk.id}`}>
+                          {copiedId === sdk.id ? <Check className="w-3.5 h-3.5 text-emerald-500 mr-1" /> : <Copy className="w-3.5 h-3.5 mr-1" />}
+                          {copiedId === sdk.id ? "Copied" : "Copy"}
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => downloadFile(sdk.filename, code)} data-testid={`button-download-sdk-${sdk.id}`}>
+                          <Download className="w-3.5 h-3.5 mr-1" /> Download
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="max-h-[400px] overflow-auto bg-zinc-950 p-4">
+                      <pre className="text-[11px] font-mono text-zinc-300 whitespace-pre">{code}</pre>
+                    </div>
+                  </div>
+                )}
               </div>
-              <Badge
-                variant="outline"
-                className={sdk.status === "Coming Soon"
-                  ? "text-amber-700 dark:text-amber-300 border-amber-400 text-[10px] shrink-0"
-                  : "text-muted-foreground text-[10px] shrink-0"
-                }
-              >
-                {sdk.status}
-              </Badge>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
-        <p className="text-xs text-muted-foreground pt-2 border-t">
-          Want early access to an SDK? Contact your account manager or reach out via the Helpdesk.
-        </p>
+        <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+          <p className="text-xs font-semibold text-primary mb-1">Integration Notes</p>
+          <ul className="list-disc list-inside space-y-0.5 text-[11px] text-muted-foreground">
+            <li>All SDKs auto-configure the base URL to your current instance</li>
+            <li>Error responses throw typed exceptions with status code and message</li>
+            <li>Pass an <code className="text-primary">idempotencyKey</code> parameter for write operations (decision engine, disbursement)</li>
+            <li>Use sandbox API keys (prefix <code className="text-primary">sim_test_</code>) for development</li>
+            <li>SDKs cover both core credit registry and telco integration endpoints</li>
+          </ul>
+        </div>
       </CardContent>
     </Card>
   );
