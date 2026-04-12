@@ -48,3 +48,15 @@ The system employs a modern full-stack architecture built for scalability and co
 -   **AI / LLM Providers**: Anthropic (Claude Opus), OpenAI (GPT-4o)
 -   **Excel Export/Import**: `exceljs`, `xlsx` (SheetJS)
 -   **Third-Party APIs**: open.er-api.com (exchange rates), DiceBear (avatars)
+-   **GitHub**: @octokit/rest via Replit GitHub connector (repo management for client deployments)
+
+## Platform Master Control Center
+Hidden route at `/platform-control-9x7k` (not in sidebar/nav). Protected by `MASTER_CONTROL_PASSWORD` env secret. Session cookie `pc_session` (no maxAge, in-memory). Features:
+-   **Client Deployments**: Register/edit/delete deployment instances with full config (branding, fees, dates, GitHub repo, heartbeat URL)
+-   **Revenue & Billing**: Platform-wide revenue analytics across all deployments
+-   **Deployment Health Monitor**: Heartbeat polling of all registered client instances via public `/api/heartbeat` endpoint
+-   **GitHub Repository Management**: Create private repos, link repos to deployments, view repo status/commits/branches
+-   **Configuration Matrix**: Side-by-side comparison of all deployment configs
+-   **Config Generator**: Generate `.env` configs for new client deployments
+-   **Update Tracker**: Track deployment update history
+-   **Auto-detect Current Instance**: One-click self-registration with live DB stats

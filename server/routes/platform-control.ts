@@ -9,6 +9,7 @@ import rateLimit from "express-rate-limit";
 import crypto from "crypto";
 import { z } from "zod";
 import os from "os";
+import { ReplitConnectors } from "@replit/connectors-sdk";
 
 const logger = createLogger("platform-control");
 
@@ -71,6 +72,8 @@ const updateDeploymentSchema = z.object({
   contactEmail: z.string().nullable().optional(),
   totalBorrowers: z.number().int().nullable().optional(),
   totalInstitutions: z.number().int().nullable().optional(),
+  githubRepo: z.string().nullable().optional(),
+  heartbeatUrl: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
 }).strict();
 
@@ -591,6 +594,197 @@ export function registerPlatformControlRoutes(app: Express) {
       "4. Deploy and verify the /health endpoint",
       "5. Register the deployment in this control center",
     ]});
+  });
+
+  // --- Heartbeat: ping a client deployment's /api/heartbeat endpoint ---
+  app.post("/api/platform-control/heartbeat-check/:id", requireMasterAuth, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const [deployment] = await db.select().from(platformDeployments).where(eq(platformDeployments.id, id));
+      if (!deployment) return res.status(404).json({ message: "Deployment not found" });
+
+      const heartbeatUrl = deployment.heartbeatUrl || (deployment.deploymentUrl ? `${deployment.deploymentUrl}/api/heartbeat` : null);
+      if (!heartbeatUrl) return res.status(400).json({ message: "No heartbeat URL configured for this deployment" });
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+
+      try {
+        const startMs = Date.now();
+        const hbRes = await fetch(heartbeatUrl, { signal: controller.signal });
+        clearTimeout(timeout);
+        const latencyMs = Date.now() - startMs;
+        const data = hbRes.ok ? await hbRes.json() : { error: `HTTP ${hbRes.status}` };
+
+        const heartbeat = { status: hbRes.ok ? "healthy" : "unhealthy", latencyMs, data, checkedAt: new Date().toISOString() };
+        await db.update(platformDeployments)
+          .set({ lastHeartbeat: heartbeat, lastHeartbeatAt: new Date(), updatedAt: new Date() })
+          .where(eq(platformDeployments.id, id));
+
+        return res.json(heartbeat);
+      } catch (fetchErr: unknown) {
+        clearTimeout(timeout);
+        const heartbeat = { status: "unreachable", latencyMs: -1, data: { error: (fetchErr as Error).message }, checkedAt: new Date().toISOString() };
+        await db.update(platformDeployments)
+          .set({ lastHeartbeat: heartbeat, lastHeartbeatAt: new Date(), updatedAt: new Date() })
+          .where(eq(platformDeployments.id, id));
+        return res.json(heartbeat);
+      }
+    } catch (e: unknown) {
+      logger.error("Heartbeat check failed", { error: (e as Error).message });
+      return res.status(500).json({ message: "Heartbeat check failed" });
+    }
+  });
+
+  app.post("/api/platform-control/heartbeat-check-all", requireMasterAuth, async (_req: Request, res: Response) => {
+    try {
+      const deployments = await db.select().from(platformDeployments);
+      const active = deployments.filter(d => d.status !== "decommissioned");
+      const results: Array<{ id: string; clientName: string; status: string; latencyMs: number }> = [];
+
+      for (const d of active) {
+        const heartbeatUrl = d.heartbeatUrl || (d.deploymentUrl ? `${d.deploymentUrl}/api/heartbeat` : null);
+        if (!heartbeatUrl) {
+          results.push({ id: d.id, clientName: d.clientName, status: "no_url", latencyMs: -1 });
+          continue;
+        }
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+        try {
+          const startMs = Date.now();
+          const hbRes = await fetch(heartbeatUrl, { signal: controller.signal });
+          clearTimeout(timeout);
+          const latencyMs = Date.now() - startMs;
+          const data = hbRes.ok ? await hbRes.json() : { error: `HTTP ${hbRes.status}` };
+          const heartbeat = { status: hbRes.ok ? "healthy" : "unhealthy", latencyMs, data, checkedAt: new Date().toISOString() };
+          await db.update(platformDeployments)
+            .set({ lastHeartbeat: heartbeat, lastHeartbeatAt: new Date(), updatedAt: new Date() })
+            .where(eq(platformDeployments.id, d.id));
+          results.push({ id: d.id, clientName: d.clientName, status: heartbeat.status, latencyMs });
+        } catch {
+          clearTimeout(timeout);
+          const heartbeat = { status: "unreachable", latencyMs: -1, data: {}, checkedAt: new Date().toISOString() };
+          await db.update(platformDeployments)
+            .set({ lastHeartbeat: heartbeat, lastHeartbeatAt: new Date(), updatedAt: new Date() })
+            .where(eq(platformDeployments.id, d.id));
+          results.push({ id: d.id, clientName: d.clientName, status: "unreachable", latencyMs: -1 });
+        }
+      }
+      return res.json({ checked: results.length, results });
+    } catch (e: unknown) {
+      logger.error("Heartbeat check all failed", { error: (e as Error).message });
+      return res.status(500).json({ message: "Heartbeat check all failed" });
+    }
+  });
+
+  // --- GitHub Integration: manage client repos ---
+  const connectors = new ReplitConnectors();
+
+  app.get("/api/platform-control/github/repos", requireMasterAuth, async (_req: Request, res: Response) => {
+    try {
+      const ghRes = await connectors.proxy("github", "/user/repos?sort=updated&per_page=100&type=owner", { method: "GET" });
+      const repos = await ghRes.json();
+      if (!Array.isArray(repos)) return res.json({ repos: [], error: "Unexpected response" });
+      const mapped = repos.map((r: Record<string, unknown>) => ({
+        fullName: r.full_name, name: r.name, private: r.private,
+        description: r.description, htmlUrl: r.html_url,
+        defaultBranch: r.default_branch, updatedAt: r.updated_at,
+        language: r.language, forksCount: r.forks_count,
+      }));
+      return res.json({ repos: mapped });
+    } catch (e: unknown) {
+      logger.error("GitHub repos fetch failed", { error: (e as Error).message });
+      return res.status(500).json({ message: "Failed to fetch GitHub repos. Ensure GitHub is connected." });
+    }
+  });
+
+  app.post("/api/platform-control/github/create-repo", requireMasterAuth, async (req: Request, res: Response) => {
+    try {
+      const { name, description, isPrivate, deploymentId } = req.body;
+      if (!name) return res.status(400).json({ message: "Repository name required" });
+
+      const ghRes = await connectors.proxy("github", "/user/repos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          description: description || `Credit registry deployment: ${name}`,
+          private: isPrivate !== false,
+          auto_init: true,
+        }),
+      });
+      const repo = await ghRes.json();
+      if (repo.errors || repo.message === "Repository creation failed.") {
+        return res.status(400).json({ message: repo.message || "Failed to create repo", errors: repo.errors });
+      }
+
+      if (deploymentId) {
+        await db.update(platformDeployments)
+          .set({ githubRepo: repo.full_name as string, updatedAt: new Date() })
+          .where(eq(platformDeployments.id, deploymentId));
+      }
+
+      logger.info("GitHub repo created", { name: repo.full_name });
+      return res.json({ repo: { fullName: repo.full_name, htmlUrl: repo.html_url, private: repo.private } });
+    } catch (e: unknown) {
+      logger.error("GitHub repo creation failed", { error: (e as Error).message });
+      return res.status(500).json({ message: "Failed to create repo" });
+    }
+  });
+
+  app.post("/api/platform-control/github/link-repo", requireMasterAuth, async (req: Request, res: Response) => {
+    try {
+      const { deploymentId, repoFullName } = req.body;
+      if (!deploymentId || !repoFullName) return res.status(400).json({ message: "deploymentId and repoFullName required" });
+
+      const ghRes = await connectors.proxy("github", `/repos/${repoFullName}`, { method: "GET" });
+      const repo = await ghRes.json();
+      if (repo.message === "Not Found") return res.status(404).json({ message: "Repository not found" });
+
+      await db.update(platformDeployments)
+        .set({ githubRepo: repoFullName, updatedAt: new Date() })
+        .where(eq(platformDeployments.id, deploymentId));
+
+      logger.info("GitHub repo linked", { deploymentId, repo: repoFullName });
+      return res.json({ linked: true, repo: { fullName: repo.full_name, htmlUrl: repo.html_url } });
+    } catch (e: unknown) {
+      logger.error("GitHub repo link failed", { error: (e as Error).message });
+      return res.status(500).json({ message: "Failed to link repo" });
+    }
+  });
+
+  app.get("/api/platform-control/github/repo-status/:owner/:repo", requireMasterAuth, async (req: Request, res: Response) => {
+    try {
+      const { owner, repo } = req.params;
+      const [repoRes, commitsRes, branchesRes] = await Promise.all([
+        connectors.proxy("github", `/repos/${owner}/${repo}`, { method: "GET" }),
+        connectors.proxy("github", `/repos/${owner}/${repo}/commits?per_page=5`, { method: "GET" }),
+        connectors.proxy("github", `/repos/${owner}/${repo}/branches`, { method: "GET" }),
+      ]);
+      const repoData = await repoRes.json();
+      const commits = await commitsRes.json();
+      const branches = await branchesRes.json();
+
+      return res.json({
+        name: repoData.full_name,
+        description: repoData.description,
+        defaultBranch: repoData.default_branch,
+        private: repoData.private,
+        htmlUrl: repoData.html_url,
+        updatedAt: repoData.updated_at,
+        pushedAt: repoData.pushed_at,
+        size: repoData.size,
+        branches: Array.isArray(branches) ? branches.map((b: Record<string, unknown>) => b.name) : [],
+        recentCommits: Array.isArray(commits) ? commits.map((c: Record<string, unknown>) => {
+          const commit = c.commit as Record<string, unknown> | undefined;
+          const author = commit?.author as Record<string, unknown> | undefined;
+          return { sha: (c.sha as string)?.substring(0, 7), message: commit?.message, date: author?.date, author: author?.name };
+        }) : [],
+      });
+    } catch (e: unknown) {
+      logger.error("GitHub repo status failed", { error: (e as Error).message });
+      return res.status(500).json({ message: "Failed to get repo status" });
+    }
   });
 
   logger.info("Platform control center routes registered");

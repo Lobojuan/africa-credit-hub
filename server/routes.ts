@@ -412,6 +412,35 @@ export async function registerRoutes(
     });
   });
 
+  app.get("/api/heartbeat", async (_req, res) => {
+    const platformName = process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub";
+    const country = process.env.COUNTRY_MODE || "Ghana";
+    const currency = process.env.DEFAULT_CURRENCY || "GHS";
+    let dbOk = false, dbLatency = 0, borrowers = 0, orgs = 0, users = 0;
+    try {
+      const start = Date.now();
+      await pool.query("SELECT 1");
+      dbLatency = Date.now() - start;
+      dbOk = true;
+      const bc = await pool.query("SELECT COUNT(*) as c FROM borrowers");
+      borrowers = parseInt(bc.rows[0]?.c || "0");
+      const oc = await pool.query("SELECT COUNT(*) as c FROM organizations");
+      orgs = parseInt(oc.rows[0]?.c || "0");
+      const uc = await pool.query("SELECT COUNT(*) as c FROM users");
+      users = parseInt(uc.rows[0]?.c || "0");
+    } catch {}
+    const uptimeSec = Math.round(process.uptime());
+    res.json({
+      status: dbOk ? "healthy" : "degraded",
+      platformName, country, currency,
+      version: "2.5.0",
+      uptime: `${Math.floor(uptimeSec / 86400)}d ${Math.floor((uptimeSec % 86400) / 3600)}h ${Math.floor((uptimeSec % 3600) / 60)}m`,
+      dbLatencyMs: dbLatency,
+      counts: { borrowers, organizations: orgs, users },
+      timestamp: new Date().toISOString(),
+    });
+  });
+
   app.get("/api/admin/health-detail", requireAuth, requireRole("admin", "super_admin"), async (_req, res) => {
     const mem = process.memoryUsage();
     const queueStats = getQueueStats();

@@ -12,7 +12,8 @@ import {
   Wifi, WifiOff, CheckCircle2, XCircle, AlertTriangle, Clock,
   BarChart3, Eye, Layers, Zap, Key, Mail, MessageSquare,
   Smartphone, CreditCard, Fingerprint, ShieldCheck, Heart,
-  TrendingUp, ArrowRightLeft,
+  TrendingUp, ArrowRightLeft, GitBranch, Link2, Unlink, ExternalLink,
+  HeartPulse, Signal, SignalZero,
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
@@ -153,6 +154,8 @@ type Deployment = {
   currency: string; branding?: string; deploymentDate?: string;
   contactName?: string; contactEmail?: string;
   totalBorrowers?: number; totalInstitutions?: number;
+  githubRepo?: string; heartbeatUrl?: string;
+  lastHeartbeat?: Record<string, unknown>; lastHeartbeatAt?: string;
   lastSyncAt?: string; configSnapshot?: Record<string, string>; updateLog?: UpdateLogEntry[];
   notes?: string; createdAt: string;
 };
@@ -221,6 +224,7 @@ function DeploymentForm({ deployment, onClose }: { deployment?: Deployment; onCl
     monthlyFeeCents: deployment?.monthlyFeeCents?.toString() || "", platformFeePercent: (deployment?.platformFeePercent ?? 15).toString(),
     currency: deployment?.currency || "GHS", branding: deployment?.branding || "",
     deploymentDate: deployment?.deploymentDate ? deployment.deploymentDate.split("T")[0] : "",
+    githubRepo: deployment?.githubRepo || "", heartbeatUrl: deployment?.heartbeatUrl || "",
     contactName: deployment?.contactName || "", contactEmail: deployment?.contactEmail || "",
     totalBorrowers: deployment?.totalBorrowers?.toString() || "0", totalInstitutions: deployment?.totalInstitutions?.toString() || "0",
     notes: deployment?.notes || "",
@@ -274,6 +278,8 @@ function DeploymentForm({ deployment, onClose }: { deployment?: Deployment; onCl
           { key: "platformFeePercent", label: "Platform Fee %", type: "number" },
           { key: "currency", label: "Currency" },
           { key: "deploymentDate", label: "Deployment Date", type: "date" },
+          { key: "githubRepo", label: "GitHub Repo (owner/name)" },
+          { key: "heartbeatUrl", label: "Heartbeat URL" },
           { key: "contactName", label: "Contact Name" },
           { key: "contactEmail", label: "Contact Email" },
           { key: "totalBorrowers", label: "Total Borrowers", type: "number" },
@@ -1010,6 +1016,8 @@ function ConfigurationMatrix() {
     { key: "deploymentUrl", label: "URL", format: (v) => (v as string) || "—" },
     { key: "branding", label: "Branding" },
     { key: "deploymentDate", label: "Deploy Date", format: (v) => v ? new Date(v as string).toLocaleDateString() : "—" },
+    { key: "githubRepo", label: "GitHub Repo" },
+    { key: "heartbeatUrl", label: "Heartbeat URL" },
     { key: "contactName", label: "Contact" },
     { key: "contactEmail", label: "Email" },
   ];
@@ -1097,6 +1105,306 @@ function UpdateTracker() {
   );
 }
 
+type HeartbeatResult = { id: string; clientName: string; status: string; latencyMs: number };
+type HeartbeatDetail = { status: string; latencyMs: number; data: Record<string, unknown>; checkedAt: string };
+type GitHubRepo = { fullName: string; name: string; private: boolean; description: string | null; htmlUrl: string; defaultBranch: string; updatedAt: string; language: string | null; forksCount: number };
+type GitHubRepoStatus = { name: string; description: string; defaultBranch: string; private: boolean; htmlUrl: string; updatedAt: string; pushedAt: string; size: number; branches: string[]; recentCommits: Array<{ sha: string; message: string; date: string; author: string }> };
+
+function HeartbeatPanel() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const { data: deployments } = useQuery<Deployment[]>({
+    queryKey: ["/api/platform-control/deployments"],
+    queryFn: async () => { const r = await pcFetch("/api/platform-control/deployments"); return r.json(); },
+  });
+
+  const checkAllMutation = useMutation({
+    mutationFn: async () => {
+      const r = await pcFetch("/api/platform-control/heartbeat-check-all", { method: "POST" });
+      if (!r.ok) { const err = await r.json().catch(() => ({})); throw new Error((err as Record<string, string>).message || "Check failed"); }
+      return r.json() as Promise<{ checked: number; results: HeartbeatResult[] }>;
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["/api/platform-control/deployments"] });
+      toast({ title: `Checked ${data.checked} deployment(s)` });
+    },
+    onError: (e: Error) => toast({ title: "Heartbeat check failed", description: e.message, variant: "destructive" }),
+  });
+
+  const checkOneMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const r = await pcFetch(`/api/platform-control/heartbeat-check/${id}`, { method: "POST" });
+      if (!r.ok) { const err = await r.json().catch(() => ({})); throw new Error((err as Record<string, string>).message || "Check failed"); }
+      return r.json() as Promise<HeartbeatDetail>;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["/api/platform-control/deployments"] }); },
+    onError: (e: Error) => toast({ title: "Heartbeat check failed", description: e.message, variant: "destructive" }),
+  });
+
+  const active = deployments?.filter(d => d.status !== "decommissioned") || [];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">{active.length} deployment(s) to monitor</span>
+        <Button size="sm" onClick={() => checkAllMutation.mutate()} disabled={checkAllMutation.isPending || active.length === 0} data-testid="button-check-all-heartbeat">
+          {checkAllMutation.isPending ? <RefreshCw className="w-4 h-4 animate-spin mr-1" /> : <HeartPulse className="w-4 h-4 mr-1" />}
+          Check All
+        </Button>
+      </div>
+
+      {checkAllMutation.data && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+          {checkAllMutation.data.results.map(r => (
+            <div key={r.id} className={`rounded-lg border p-3 ${r.status === "healthy" ? "border-emerald-500/30 bg-emerald-500/5" : r.status === "unreachable" ? "border-red-500/30 bg-red-500/5" : "border-amber-500/30 bg-amber-500/5"}`} data-testid={`heartbeat-result-${r.id}`}>
+              <div className="flex items-center gap-2">
+                {r.status === "healthy" ? <Signal className="w-4 h-4 text-emerald-500" /> : r.status === "unreachable" ? <SignalZero className="w-4 h-4 text-red-500" /> : <AlertTriangle className="w-4 h-4 text-amber-500" />}
+                <span className="text-sm font-medium">{r.clientName}</span>
+              </div>
+              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                <span className={r.status === "healthy" ? "text-emerald-500" : r.status === "unreachable" ? "text-red-500" : "text-amber-500"}>{r.status}</span>
+                {r.latencyMs >= 0 && <span>{r.latencyMs}ms</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {active.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Individual Deployments</p>
+          {active.map(d => {
+            const hb = d.lastHeartbeat as HeartbeatDetail | null;
+            const hbData = hb?.data as Record<string, unknown> | undefined;
+            return (
+              <div key={d.id} className="rounded-lg border border-border p-3 flex items-center justify-between" data-testid={`heartbeat-row-${d.id}`}>
+                <div className="flex items-center gap-3">
+                  {hb?.status === "healthy" ? <Signal className="w-4 h-4 text-emerald-500" /> : hb?.status === "unreachable" ? <SignalZero className="w-4 h-4 text-red-500" /> : <Heart className="w-4 h-4 text-muted-foreground" />}
+                  <div>
+                    <p className="text-sm font-medium">{d.clientName}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {d.heartbeatUrl || d.deploymentUrl || "No URL"}{" "}
+                      {hb && <span>&middot; Last: {new Date(hb.checkedAt).toLocaleString()} &middot; {hb.latencyMs}ms</span>}
+                      {hbData?.version && <span> &middot; v{String(hbData.version)}</span>}
+                    </p>
+                  </div>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => checkOneMutation.mutate(d.id)} disabled={checkOneMutation.isPending} data-testid={`button-check-${d.id}`}>
+                  <HeartPulse className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {active.length === 0 && (
+        <div className="text-center text-sm text-muted-foreground p-6">
+          Register deployments first to monitor their health.
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GitHubPanel() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const [showCreate, setShowCreate] = useState(false);
+  const [newRepoName, setNewRepoName] = useState("");
+  const [newRepoDesc, setNewRepoDesc] = useState("");
+  const [linkDeploymentId, setLinkDeploymentId] = useState("");
+  const [viewRepoDetail, setViewRepoDetail] = useState<string | null>(null);
+
+  const { data: repos, isLoading: reposLoading, error: reposError } = useQuery<{ repos: GitHubRepo[] }>({
+    queryKey: ["/api/platform-control/github/repos"],
+    queryFn: async () => { const r = await pcFetch("/api/platform-control/github/repos"); if (!r.ok) throw new Error("Failed to load repos"); return r.json(); },
+  });
+
+  const { data: deployments } = useQuery<Deployment[]>({
+    queryKey: ["/api/platform-control/deployments"],
+    queryFn: async () => { const r = await pcFetch("/api/platform-control/deployments"); if (!r.ok) throw new Error("Failed"); return r.json(); },
+  });
+
+  const { data: repoDetail, error: repoDetailError } = useQuery<GitHubRepoStatus>({
+    queryKey: ["/api/platform-control/github/repo-status", viewRepoDetail],
+    queryFn: async () => { const r = await pcFetch(`/api/platform-control/github/repo-status/${viewRepoDetail}`); if (!r.ok) throw new Error("Failed to load repo details"); return r.json(); },
+    enabled: !!viewRepoDetail,
+  });
+
+  const createRepoMutation = useMutation({
+    mutationFn: async () => {
+      const r = await pcFetch("/api/platform-control/github/create-repo", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newRepoName, description: newRepoDesc, isPrivate: true, deploymentId: linkDeploymentId && linkDeploymentId !== "none" ? linkDeploymentId : undefined }),
+      });
+      if (!r.ok) { const err = await r.json(); throw new Error(err.message || "Failed"); }
+      return r.json();
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["/api/platform-control/github/repos"] }); qc.invalidateQueries({ queryKey: ["/api/platform-control/deployments"] }); toast({ title: "Repository created" }); setShowCreate(false); setNewRepoName(""); setNewRepoDesc(""); setLinkDeploymentId(""); },
+    onError: (e: Error) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
+  });
+
+  const linkRepoMutation = useMutation({
+    mutationFn: async ({ deploymentId, repoFullName }: { deploymentId: string; repoFullName: string }) => {
+      const r = await pcFetch("/api/platform-control/github/link-repo", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deploymentId, repoFullName }),
+      });
+      if (!r.ok) throw new Error("Link failed");
+      return r.json();
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["/api/platform-control/deployments"] }); toast({ title: "Repo linked" }); },
+    onError: (e: Error) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
+  });
+
+  if (reposError) {
+    return (
+      <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-center">
+        <AlertTriangle className="w-6 h-6 mx-auto mb-2 text-amber-500" />
+        <p className="text-sm font-medium">GitHub Not Connected</p>
+        <p className="text-xs text-muted-foreground mt-1">Connect your GitHub account through Replit integrations to manage client repositories.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">{repos?.repos?.length || 0} repositories</span>
+        <Button size="sm" onClick={() => setShowCreate(true)} data-testid="button-create-repo">
+          <Plus className="w-4 h-4 mr-1" /> New Client Repo
+        </Button>
+      </div>
+
+      {showCreate && (
+        <div className="rounded-lg border-2 border-dashed border-blue-500/30 bg-blue-500/5 p-4 space-y-3">
+          <p className="text-sm font-semibold">Create New Client Repository</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-medium">Repo Name *</label>
+              <Input value={newRepoName} onChange={e => setNewRepoName(e.target.value)} placeholder="credit-hub-nigeria" data-testid="input-repo-name" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium">Description</label>
+              <Input value={newRepoDesc} onChange={e => setNewRepoDesc(e.target.value)} placeholder="Credit registry for..." data-testid="input-repo-desc" />
+            </div>
+          </div>
+          {deployments && deployments.length > 0 && (
+            <div className="space-y-1">
+              <label className="text-xs font-medium">Link to Deployment (optional)</label>
+              <Select value={linkDeploymentId} onValueChange={setLinkDeploymentId}>
+                <SelectTrigger data-testid="select-link-deployment"><SelectValue placeholder="Select deployment..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {deployments.map(d => <SelectItem key={d.id} value={d.id}>{d.clientName}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          <div className="flex gap-2">
+            <Button size="sm" onClick={() => createRepoMutation.mutate()} disabled={!newRepoName || createRepoMutation.isPending} data-testid="button-submit-repo">
+              {createRepoMutation.isPending ? <RefreshCw className="w-4 h-4 animate-spin mr-1" /> : <GitBranch className="w-4 h-4 mr-1" />}
+              Create Private Repo
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setShowCreate(false)}>Cancel</Button>
+          </div>
+        </div>
+      )}
+
+      {deployments && deployments.filter(d => !d.githubRepo).length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Unlinked Deployments</p>
+          {deployments.filter(d => !d.githubRepo).map(d => (
+            <div key={d.id} className="rounded-lg border border-dashed border-amber-500/30 bg-amber-500/5 p-3 flex items-center justify-between" data-testid={`unlinked-${d.id}`}>
+              <div className="flex items-center gap-2">
+                <Unlink className="w-3.5 h-3.5 text-amber-500" />
+                <span className="text-sm">{d.clientName}</span>
+                <span className="text-xs text-muted-foreground">No GitHub repo linked</span>
+              </div>
+              {repos?.repos && repos.repos.length > 0 && (
+                <Select onValueChange={v => linkRepoMutation.mutate({ deploymentId: d.id, repoFullName: v })}>
+                  <SelectTrigger className="w-[200px] h-8 text-xs" data-testid={`select-repo-${d.id}`}><SelectValue placeholder="Link a repo..." /></SelectTrigger>
+                  <SelectContent>
+                    {repos.repos.map(r => <SelectItem key={r.fullName} value={r.fullName}>{r.fullName}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {deployments && deployments.filter(d => d.githubRepo).length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Linked Repositories</p>
+          {deployments.filter(d => d.githubRepo).map(d => (
+            <div key={d.id} className="rounded-lg border border-border p-3" data-testid={`linked-${d.id}`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Link2 className="w-3.5 h-3.5 text-emerald-500" />
+                  <span className="text-sm font-medium">{d.clientName}</span>
+                  <span className="text-xs text-muted-foreground">&rarr;</span>
+                  <span className="text-xs font-mono text-blue-500">{d.githubRepo}</span>
+                </div>
+                <div className="flex gap-1">
+                  <Button variant="ghost" size="sm" className="h-7" onClick={() => setViewRepoDetail(d.githubRepo || null)} data-testid={`button-view-repo-${d.id}`}>
+                    <Eye className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-7" onClick={() => window.open(`https://github.com/${d.githubRepo}`, "_blank")} data-testid={`button-open-repo-${d.id}`}>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {viewRepoDetail && repoDetailError && (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-3 flex items-center justify-between">
+          <span className="text-sm text-red-500">Failed to load repo details for {viewRepoDetail}</span>
+          <Button variant="ghost" size="sm" onClick={() => setViewRepoDetail(null)}>Close</Button>
+        </div>
+      )}
+
+      {viewRepoDetail && repoDetail && (
+        <div className="rounded-lg border border-blue-500/30 bg-blue-500/5 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold flex items-center gap-2"><GitBranch className="w-4 h-4 text-blue-500" /> {repoDetail.name}</p>
+            <Button variant="ghost" size="sm" onClick={() => setViewRepoDetail(null)}>Close</Button>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+            <div><span className="text-muted-foreground">Branch:</span> <span className="font-medium">{repoDetail.defaultBranch}</span></div>
+            <div><span className="text-muted-foreground">Visibility:</span> <span className="font-medium">{repoDetail.private ? "Private" : "Public"}</span></div>
+            <div><span className="text-muted-foreground">Size:</span> <span className="font-medium">{repoDetail.size} KB</span></div>
+            <div><span className="text-muted-foreground">Last Push:</span> <span className="font-medium">{new Date(repoDetail.pushedAt).toLocaleDateString()}</span></div>
+          </div>
+          {repoDetail.branches.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {repoDetail.branches.map(b => <Badge key={b} variant="outline" className="text-[10px]"><GitBranch className="w-2.5 h-2.5 mr-0.5" />{b}</Badge>)}
+            </div>
+          )}
+          {repoDetail.recentCommits.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs font-semibold text-muted-foreground">Recent Commits</p>
+              {repoDetail.recentCommits.map((c, i) => (
+                <div key={i} className="flex items-start gap-2 text-xs">
+                  <code className="text-blue-500 shrink-0">{c.sha}</code>
+                  <span className="truncate">{c.message}</span>
+                  <span className="text-muted-foreground shrink-0 ml-auto">{c.author} &middot; {new Date(c.date).toLocaleDateString()}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {reposLoading && <p className="text-sm text-muted-foreground p-4">Loading repositories...</p>}
+    </div>
+  );
+}
+
 function ControlDashboard() {
   const { data: summary } = useQuery<SummaryData>({
     queryKey: ["/api/platform-control/summary"],
@@ -1161,6 +1469,14 @@ function ControlDashboard() {
 
           <Panel title="Client Deployments" icon={Building2} color="text-blue-500" defaultOpen={false}>
             <DeploymentsPanel />
+          </Panel>
+
+          <Panel title="Deployment Health Monitor" icon={HeartPulse} color="text-rose-500" defaultOpen={false}>
+            <HeartbeatPanel />
+          </Panel>
+
+          <Panel title="GitHub Repository Management" icon={GitBranch} color="text-slate-500" defaultOpen={false}>
+            <GitHubPanel />
           </Panel>
 
           <Panel title="Configuration Matrix" icon={Layers} color="text-cyan-500" defaultOpen={false}>
