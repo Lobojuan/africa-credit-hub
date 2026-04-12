@@ -581,7 +581,7 @@ export function getBrandSubtitle(): string {
 
 export function getDefaultFallbackCurrency(): string {
   const config = getCountryConfig();
-  return config ? config.currency : "ETB";
+  return config ? config.currency : "GHS";
 }
 
 export function getSupportedCountries(): CountryConfig[] {
