@@ -2,7 +2,8 @@ import type { Request, Response, NextFunction } from "express";
 import rateLimit from "express-rate-limit";
 import { storage } from "../storage";
 import { getActiveCountryName } from "../country-mode";
-import { pool } from "../db";
+import { pool, db } from "../db";
+import { sql } from "drizzle-orm";
 
 export const rateLimitKeyGenerator = (req: Request) => {
   const ip = req.ip ?? req.socket.remoteAddress ?? "unknown";
@@ -159,7 +160,7 @@ export function enforceDataSovereignty(req: Request, res: Response, next: NextFu
 
 export async function ensureIdempotencyTable() {
   try {
-    await pool.query(`
+    await db.execute(sql`
       CREATE TABLE IF NOT EXISTS idempotency_keys (
         key TEXT PRIMARY KEY,
         response JSONB,
@@ -175,7 +176,7 @@ export async function ensureIdempotencyTable() {
 }
 
 setInterval(() => {
-  pool.query(`DELETE FROM idempotency_keys WHERE created_at < NOW() - INTERVAL '24 hours'`).catch(() => {});
+  db.execute(sql`DELETE FROM idempotency_keys WHERE created_at < NOW() - INTERVAL '24 hours'`).catch(() => {});
 }, 5 * 60 * 1000);
 
 export async function idempotencyMiddleware(req: Request, res: Response, next: NextFunction) {
