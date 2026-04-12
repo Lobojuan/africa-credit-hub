@@ -1264,6 +1264,8 @@ export const platformDeployments = pgTable("platform_deployments", {
   monthlyFeeCents: integer("monthly_fee_cents"),
   platformFeePercent: integer("platform_fee_percent").default(15),
   currency: text("currency").notNull().default("GHS"),
+  branding: text("branding"),
+  deploymentDate: timestamp("deployment_date"),
   contactName: text("contact_name"),
   contactEmail: text("contact_email"),
   totalBorrowers: integer("total_borrowers").default(0),

@@ -150,7 +150,8 @@ function PasswordGate({ onAuthenticated }: { onAuthenticated: () => void }) {
 type Deployment = {
   id: string; clientName: string; country: string; region?: string; deploymentUrl?: string;
   status: string; licenseTier: string; monthlyFeeCents?: number; platformFeePercent?: number;
-  currency: string; contactName?: string; contactEmail?: string;
+  currency: string; branding?: string; deploymentDate?: string;
+  contactName?: string; contactEmail?: string;
   totalBorrowers?: number; totalInstitutions?: number;
   lastSyncAt?: string; configSnapshot?: Record<string, string>; updateLog?: UpdateLogEntry[];
   notes?: string; createdAt: string;
@@ -218,7 +219,8 @@ function DeploymentForm({ deployment, onClose }: { deployment?: Deployment; onCl
     region: deployment?.region || "", deploymentUrl: deployment?.deploymentUrl || "",
     status: deployment?.status || "active", licenseTier: deployment?.licenseTier || "commercial",
     monthlyFeeCents: deployment?.monthlyFeeCents?.toString() || "", platformFeePercent: (deployment?.platformFeePercent ?? 15).toString(),
-    currency: deployment?.currency || "GHS",
+    currency: deployment?.currency || "GHS", branding: deployment?.branding || "",
+    deploymentDate: deployment?.deploymentDate ? deployment.deploymentDate.split("T")[0] : "",
     contactName: deployment?.contactName || "", contactEmail: deployment?.contactEmail || "",
     totalBorrowers: deployment?.totalBorrowers?.toString() || "0", totalInstitutions: deployment?.totalInstitutions?.toString() || "0",
     notes: deployment?.notes || "",
@@ -230,7 +232,7 @@ function DeploymentForm({ deployment, onClose }: { deployment?: Deployment; onCl
   });
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const payload: Record<string, unknown> = { ...form, monthlyFeeCents: form.monthlyFeeCents ? parseInt(form.monthlyFeeCents) : null, platformFeePercent: form.platformFeePercent ? parseInt(form.platformFeePercent) : 15, totalBorrowers: parseInt(form.totalBorrowers) || 0, totalInstitutions: parseInt(form.totalInstitutions) || 0 };
+    const payload: Record<string, unknown> = { ...form, monthlyFeeCents: form.monthlyFeeCents ? parseInt(form.monthlyFeeCents) : null, platformFeePercent: form.platformFeePercent ? parseInt(form.platformFeePercent) : 15, totalBorrowers: parseInt(form.totalBorrowers) || 0, totalInstitutions: parseInt(form.totalInstitutions) || 0, deploymentDate: form.deploymentDate || null };
     if (deployment && updateNote) payload.updateNote = updateNote;
     mutation.mutate(payload);
   };
@@ -242,6 +244,7 @@ function DeploymentForm({ deployment, onClose }: { deployment?: Deployment; onCl
           { key: "country", label: "Country *", req: true },
           { key: "region", label: "Region" },
           { key: "deploymentUrl", label: "Deployment URL" },
+          { key: "branding", label: "Branding / White Label" },
         ].map(f => (
           <div key={f.key} className="space-y-1">
             <label className="text-xs font-medium">{f.label}</label>
@@ -270,6 +273,7 @@ function DeploymentForm({ deployment, onClose }: { deployment?: Deployment; onCl
           { key: "monthlyFeeCents", label: "Monthly Fee (pesewas)", type: "number" },
           { key: "platformFeePercent", label: "Platform Fee %", type: "number" },
           { key: "currency", label: "Currency" },
+          { key: "deploymentDate", label: "Deployment Date", type: "date" },
           { key: "contactName", label: "Contact Name" },
           { key: "contactEmail", label: "Contact Email" },
           { key: "totalBorrowers", label: "Total Borrowers", type: "number" },
@@ -848,9 +852,14 @@ function QuickActionsPanel() {
 }
 
 function ConfigGeneratorInline() {
+  const { data: deployments } = useQuery<Deployment[]>({ queryKey: ["/api/platform-control", "deployments"], queryFn: () => pcFetch("/api/platform-control/deployments").then(r => r.json()) });
   const [form, setForm] = useState<Record<string, string>>({ clientName: "", country: "", currency: "GHS", regulatoryBody: "", brandTitle: "" });
   const [config, setConfig] = useState<{ config: Record<string, string>; instructions: string[] } | null>(null);
   const { toast } = useToast();
+  const prefillFromClient = (d: Deployment) => {
+    setForm({ clientName: d.clientName, country: d.country, currency: d.currency, regulatoryBody: "", brandTitle: d.branding || d.clientName });
+    setConfig(null);
+  };
   const generate = async () => {
     try {
       const res = await pcFetch("/api/platform-control/generate-config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
@@ -864,7 +873,19 @@ function ConfigGeneratorInline() {
   };
   return (
     <div className="rounded-lg border border-border p-4 space-y-3">
-      <p className="text-xs font-semibold">New Deployment Config Generator</p>
+      <p className="text-xs font-semibold">Deployment Config Generator</p>
+      {deployments && deployments.length > 0 && (
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">Prefill from existing client:</label>
+          <div className="flex flex-wrap gap-1">
+            {deployments.filter(d => d.status !== "decommissioned").map(d => (
+              <Button key={d.id} variant="outline" size="sm" className="text-xs h-7" onClick={() => prefillFromClient(d)} data-testid={`button-prefill-${d.id}`}>
+                {d.clientName}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-3">
         {[
           { key: "clientName", label: "Client Name *" }, { key: "country", label: "Country *" },
@@ -922,6 +943,8 @@ function ConfigurationMatrix() {
     { key: "totalBorrowers", label: "Borrowers", format: (v) => ((v as number) || 0).toLocaleString() },
     { key: "totalInstitutions", label: "Institutions", format: (v) => ((v as number) || 0).toLocaleString() },
     { key: "deploymentUrl", label: "URL", format: (v) => (v as string) || "—" },
+    { key: "branding", label: "Branding" },
+    { key: "deploymentDate", label: "Deploy Date", format: (v) => v ? new Date(v as string).toLocaleDateString() : "—" },
     { key: "contactName", label: "Contact" },
     { key: "contactEmail", label: "Email" },
   ];

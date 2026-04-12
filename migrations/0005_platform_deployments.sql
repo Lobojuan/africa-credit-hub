@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS platform_deployments (
   monthly_fee_cents INTEGER DEFAULT 0,
   platform_fee_percent INTEGER DEFAULT 15,
   currency VARCHAR NOT NULL DEFAULT 'GHS',
+  branding VARCHAR,
+  deployment_date TIMESTAMP,
   contact_name VARCHAR,
   contact_email VARCHAR,
   total_borrowers INTEGER DEFAULT 0,
