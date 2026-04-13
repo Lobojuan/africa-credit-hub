@@ -4261,7 +4261,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
   const PDF_LABELS: Record<string, Record<string, string>> = {
     en: {
       headerTitle: "Comprehensive Credit Information Report",
-      headerSub: "Cross-Jurisdictional Central Data Hub v2.5 | Carlson Capital & Systems In Motion Limited",
+      headerSub: "Cross-Jurisdictional Central Data Hub v2.5 | Africa Credit Hub",
       orderNumber: "ORDER NUMBER",
       cirNumber: "CIR NUMBER",
       reportOrderDate: "Report Order Date",
@@ -4330,12 +4330,12 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       contact: "Contact",
       account: "Account",
       endOfReport: "End of Credit Information Report",
-      disclaimer: "The information in this report has been compiled from data submitted by participating financial institutions. While Carlson Capital & Systems In Motion Limited endeavor to ensure accuracy, we do not accept responsibility for any loss or damage resulting from this report.",
-      footerLine: "Cross-Jurisdictional Central Data Hub & Credit Registry System v2.5 | Carlson Capital & Systems In Motion Limited | Confidential & Proprietary",
+      disclaimer: "The information in this report has been compiled from data submitted by participating financial institutions. While Africa Credit Hub endeavor to ensure accuracy, we do not accept responsibility for any loss or damage resulting from this report.",
+      footerLine: "Cross-Jurisdictional Central Data Hub & Credit Registry System v2.5 | Africa Credit Hub | Confidential & Proprietary",
     },
     fr: {
       headerTitle: "Rapport Complet d'Information de Crédit",
-      headerSub: "Hub Central de Données Inter-Juridictionnel v2.5 | Carlson Capital & Systems In Motion Limited",
+      headerSub: "Hub Central de Données Inter-Juridictionnel v2.5 | Africa Credit Hub",
       orderNumber: "NUMÉRO DE COMMANDE",
       cirNumber: "NUMÉRO CIR",
       reportOrderDate: "Date de Commande du Rapport",
@@ -4404,12 +4404,12 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       contact: "Contact",
       account: "Compte",
       endOfReport: "Fin du Rapport d'Information de Crédit",
-      disclaimer: "Les informations de ce rapport proviennent des données soumises par les institutions financières participantes. Bien que Carlson Capital & Systems In Motion Limited s'efforce d'assurer l'exactitude, nous déclinons toute responsabilité pour toute perte ou dommage résultant de ce rapport.",
-      footerLine: "Hub Central de Données Inter-Juridictionnel & Système de Registre de Crédit v2.5 | Carlson Capital & Systems In Motion Limited | Confidentiel & Propriétaire",
+      disclaimer: "Les informations de ce rapport proviennent des données soumises par les institutions financières participantes. Bien que Africa Credit Hub s'efforce d'assurer l'exactitude, nous déclinons toute responsabilité pour toute perte ou dommage résultant de ce rapport.",
+      footerLine: "Hub Central de Données Inter-Juridictionnel & Système de Registre de Crédit v2.5 | Africa Credit Hub | Confidentiel & Propriétaire",
     },
     pt: {
       headerTitle: "Relatório Abrangente de Informação de Crédito",
-      headerSub: "Hub Central de Dados Inter-Jurisdicional v2.5 | Carlson Capital & Systems In Motion Limited",
+      headerSub: "Hub Central de Dados Inter-Jurisdicional v2.5 | Africa Credit Hub",
       orderNumber: "NÚMERO DO PEDIDO",
       cirNumber: "NÚMERO CIR",
       reportOrderDate: "Data do Pedido do Relatório",
@@ -4478,12 +4478,12 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       contact: "Contacto",
       account: "Conta",
       endOfReport: "Fim do Relatório de Informação de Crédito",
-      disclaimer: "As informações neste relatório foram compiladas a partir de dados submetidos por instituições financeiras participantes. Embora a Carlson Capital & Systems In Motion Limited se esforce por garantir a precisão, não aceitamos responsabilidade por qualquer perda ou dano resultante deste relatório.",
-      footerLine: "Hub Central de Dados Inter-Jurisdicional & Sistema de Registo de Crédito v2.5 | Carlson Capital & Systems In Motion Limited | Confidencial & Proprietário",
+      disclaimer: "As informações neste relatório foram compiladas a partir de dados submetidos por instituições financeiras participantes. Embora a Africa Credit Hub se esforce por garantir a precisão, não aceitamos responsabilidade por qualquer perda ou dano resultante deste relatório.",
+      footerLine: "Hub Central de Dados Inter-Jurisdicional & Sistema de Registo de Crédito v2.5 | Africa Credit Hub | Confidencial & Proprietário",
     },
     ar: {
       headerTitle: "تقرير معلومات الائتمان الشامل",
-      headerSub: "مركز البيانات المركزي العابر للولايات القضائية الإصدار 2.5 | Carlson Capital & Systems In Motion Limited",
+      headerSub: "مركز البيانات المركزي العابر للولايات القضائية الإصدار 2.5 | Africa Credit Hub",
       orderNumber: "رقم الطلب",
       cirNumber: "رقم CIR",
       reportOrderDate: "تاريخ طلب التقرير",
@@ -4552,12 +4552,12 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       contact: "التواصل",
       account: "الحساب",
       endOfReport: "نهاية تقرير معلومات الائتمان",
-      disclaimer: "تم تجميع المعلومات في هذا التقرير من البيانات المقدمة من المؤسسات المالية المشاركة. بينما تسعى Carlson Capital & Systems In Motion Limited لضمان الدقة، فإننا لا نتحمل المسؤولية عن أي خسارة أو ضرر ناتج عن هذا التقرير.",
-      footerLine: "مركز البيانات المركزي العابر للولايات القضائية ونظام سجل الائتمان الإصدار 2.5 | Carlson Capital & Systems In Motion Limited | سري وملكية خاصة",
+      disclaimer: "تم تجميع المعلومات في هذا التقرير من البيانات المقدمة من المؤسسات المالية المشاركة. بينما تسعى Africa Credit Hub لضمان الدقة، فإننا لا نتحمل المسؤولية عن أي خسارة أو ضرر ناتج عن هذا التقرير.",
+      footerLine: "مركز البيانات المركزي العابر للولايات القضائية ونظام سجل الائتمان الإصدار 2.5 | Africa Credit Hub | سري وملكية خاصة",
     },
     sw: {
       headerTitle: "Ripoti Kamili ya Taarifa za Mikopo",
-      headerSub: "Kituo cha Data Kuu cha Mamlaka Mbalimbali v2.5 | Carlson Capital & Systems In Motion Limited",
+      headerSub: "Kituo cha Data Kuu cha Mamlaka Mbalimbali v2.5 | Africa Credit Hub",
       orderNumber: "NAMBARI YA AGIZO",
       cirNumber: "NAMBARI YA CIR",
       reportOrderDate: "Tarehe ya Agizo la Ripoti",
@@ -4626,14 +4626,14 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       contact: "Mawasiliano",
       account: "Akaunti",
       endOfReport: "Mwisho wa Ripoti ya Taarifa za Mikopo",
-      disclaimer: "Taarifa katika ripoti hii zimekusanywa kutoka kwa data zilizotolewa na taasisi za kifedha zinazoshiriki. Ingawa Carlson Capital & Systems In Motion Limited inajitahidi kuhakikisha usahihi, hatukubali wajibu kwa hasara au uharibifu wowote unaotokana na ripoti hii.",
-      footerLine: "Kituo cha Data Kuu cha Mamlaka Mbalimbali na Mfumo wa Sajili ya Mikopo v2.5 | Carlson Capital & Systems In Motion Limited | Siri na Mali",
+      disclaimer: "Taarifa katika ripoti hii zimekusanywa kutoka kwa data zilizotolewa na taasisi za kifedha zinazoshiriki. Ingawa Africa Credit Hub inajitahidi kuhakikisha usahihi, hatukubali wajibu kwa hasara au uharibifu wowote unaotokana na ripoti hii.",
+      footerLine: "Kituo cha Data Kuu cha Mamlaka Mbalimbali na Mfumo wa Sajili ya Mikopo v2.5 | Africa Credit Hub | Siri na Mali",
     },
   };
 
   function getPdfLabel(lang: string, key: string): string {
     const val = PDF_LABELS[lang]?.[key] || PDF_LABELS.en[key] || key;
-    return val.replace(/Carlson Capital & Systems In Motion Limited/g, process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub");
+    return val.replace(/Africa Credit Hub/g, process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub");
   }
 
   app.post("/api/credit-reports/download-pdf", creditReportLimiter, requireAuth, async (req, res) => {

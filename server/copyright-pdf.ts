@@ -20,7 +20,7 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     copyrightHolderValue: getCompanyName(),
     jurisdiction: "Jurisdiction:",
     jurisdictionValue: "Republic of Ghana & Pan-African Territories",
-    coverDisclaimer1: "This document and all its contents are the exclusive intellectual property of Carlson Capital & Systems In Motion Limited.",
+    coverDisclaimer1: "This document and all its contents are the exclusive intellectual property of Africa Credit Hub.",
     coverDisclaimer2: "Unauthorized reproduction, distribution, or use of this document or the software described herein is strictly prohibited.",
     tableOfContents: "Table of Contents",
     s1: "Preamble & Copyright Declaration",
@@ -56,7 +56,7 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     copyrightHolderValue: getCompanyName(),
     jurisdiction: "Juridiction :",
     jurisdictionValue: "République du Ghana et Territoires Panafricains",
-    coverDisclaimer1: "Ce document et tout son contenu sont la propriété intellectuelle exclusive de Carlson Capital & Systems In Motion Limited.",
+    coverDisclaimer1: "Ce document et tout son contenu sont la propriété intellectuelle exclusive de Africa Credit Hub.",
     coverDisclaimer2: "La reproduction, distribution ou utilisation non autorisée de ce document ou du logiciel décrit est strictement interdite.",
     tableOfContents: "Table des Matières",
     s1: "Préambule et Déclaration de Droit d'Auteur",
@@ -92,7 +92,7 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     copyrightHolderValue: getCompanyName(),
     jurisdiction: "Jurisdição:",
     jurisdictionValue: "República do Gana e Territórios Pan-Africanos",
-    coverDisclaimer1: "Este documento e todo o seu conteúdo são propriedade intelectual exclusiva da Carlson Capital & Systems In Motion Limited.",
+    coverDisclaimer1: "Este documento e todo o seu conteúdo são propriedade intelectual exclusiva da Africa Credit Hub.",
     coverDisclaimer2: "A reprodução, distribuição ou utilização não autorizada deste documento ou do software aqui descrito é estritamente proibida.",
     tableOfContents: "Índice",
     s1: "Preâmbulo e Declaração de Direitos Autorais",
@@ -128,7 +128,7 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     copyrightHolderValue: getCompanyName(),
     jurisdiction: "الاختصاص القضائي:",
     jurisdictionValue: "جمهورية غانا والأقاليم الأفريقية",
-    coverDisclaimer1: "هذه الوثيقة وجميع محتوياتها هي ملكية فكرية حصرية لشركة Carlson Capital & Systems In Motion Limited.",
+    coverDisclaimer1: "هذه الوثيقة وجميع محتوياتها هي ملكية فكرية حصرية لشركة Africa Credit Hub.",
     coverDisclaimer2: "يُحظر تمامًا أي نسخ أو توزيع أو استخدام غير مصرح به لهذه الوثيقة أو البرنامج الموصوف فيها.",
     tableOfContents: "جدول المحتويات",
     s1: "المقدمة وإعلان حقوق النشر",
@@ -164,7 +164,7 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     copyrightHolderValue: getCompanyName(),
     jurisdiction: "Mamlaka:",
     jurisdictionValue: "Jamhuri ya Ghana na Maeneo ya Afrika",
-    coverDisclaimer1: "Hati hii na yaliyomo yote ni mali ya akili ya kipekee ya Carlson Capital & Systems In Motion Limited.",
+    coverDisclaimer1: "Hati hii na yaliyomo yote ni mali ya akili ya kipekee ya Africa Credit Hub.",
     coverDisclaimer2: "Kurudufia, kusambaza au kutumia bila idhini hati hii au programu iliyoelezwa humu ni marufuku kabisa.",
     tableOfContents: "Yaliyomo",
     s1: "Utangulizi na Tamko la Hakimiliki",
@@ -189,7 +189,7 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
 
 function getCopyrightLabel(lang: string, key: string): string {
   const val = COPYRIGHT_PDF_LABELS[lang]?.[key] || COPYRIGHT_PDF_LABELS.en[key] || key;
-  return val.replace(/Carlson Capital & Systems In Motion Limited/g, getCompanyName());
+  return val.replace(/Africa Credit Hub/g, getCompanyName());
 }
 
 const NORDIC_BLUE = "#0466C8";
