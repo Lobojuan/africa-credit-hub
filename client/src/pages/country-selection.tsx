@@ -190,9 +190,29 @@ export default function CountrySelectionPage() {
   };
 
   const platform = commandData?.platform;
-  const countryDetails = commandData?.countries || [];
+  const allCountryDetails = commandData?.countries || [];
+
+  const countryDetails = isGlobalView
+    ? allCountryDetails
+    : allCountryDetails.filter((d) => d.code === activeConfig?.code);
+
+  const filteredPlatform = isGlobalView || !activeConfig
+    ? platform
+    : (() => {
+        const detail = allCountryDetails.find((d) => d.code === activeConfig.code);
+        return platform ? {
+          ...platform,
+          totalBorrowers: detail?.borrowers ?? 0,
+          totalAccounts: detail?.accounts ?? 0,
+          totalInstitutions: detail?.institutions ?? 0,
+          activeCountries: detail ? 1 : 0,
+        } : platform;
+      })();
+
   const activeCountryCodes = new Set(countryDetails.map((d) => d.code));
-  const activeCountries = countries.filter((c) => activeCountryCodes.has(c.code));
+  const activeCountries = isGlobalView
+    ? countries.filter((c) => activeCountryCodes.has(c.code))
+    : countries.filter((c) => c.code === activeConfig?.code);
 
   const { data: systemStats } = useQuery<{ srs: { total: number; passed: number } }>({
     queryKey: ["/api/platform/system-stats"],
@@ -291,10 +311,10 @@ export default function CountrySelectionPage() {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              <KPICard icon={Users} label="Total Borrowers" value={platform?.totalBorrowers ?? "..."} color="bg-blue-500/20" />
-              <KPICard icon={CreditCard} label="Credit Accounts" value={platform?.totalAccounts ?? "..."} color="bg-violet-500/20" />
-              <KPICard icon={Building2} label="Institutions" value={platform?.totalInstitutions ?? "..."} color="bg-amber-500/20" />
-              <KPICard icon={Globe} label="Active Countries" value={platform?.activeCountries ?? "..."} sub={`of ${platform?.supportedCountries ?? 10} supported`} color="bg-emerald-500/20" />
+              <KPICard icon={Users} label="Total Borrowers" value={filteredPlatform?.totalBorrowers ?? "..."} color="bg-blue-500/20" />
+              <KPICard icon={CreditCard} label="Credit Accounts" value={filteredPlatform?.totalAccounts ?? "..."} color="bg-violet-500/20" />
+              <KPICard icon={Building2} label="Institutions" value={filteredPlatform?.totalInstitutions ?? "..."} color="bg-amber-500/20" />
+              <KPICard icon={Globe} label="Active Countries" value={filteredPlatform?.activeCountries ?? "..."} sub={`of ${platform?.supportedCountries ?? 10} supported`} color="bg-emerald-500/20" />
               <KPICard icon={CheckCircle2} label="SRS Compliance" value={`${complianceScore}%`} sub={`${srsCompliant}/${srsTotal} requirements`} color="bg-teal-500/20" />
               <KPICard icon={Shield} label="System Version" value={platform?.systemVersion ?? "Africa Credit Hub v2.5"} sub="Pan-African Registry" color="bg-muted-foreground/20" />
             </div>
