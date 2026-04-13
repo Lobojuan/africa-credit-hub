@@ -27,6 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -552,7 +553,7 @@ interface BulkResult {
   ruleApplied: { id: string; name: string };
 }
 
-function DecisionEnginePanel({ profiles }: { profiles: TelcoProfile[] }) {
+function DecisionEnginePanel({ profiles, includeAI }: { profiles: TelcoProfile[]; includeAI: boolean }) {
   const { toast } = useToast();
   const [showCreateRule, setShowCreateRule] = useState(false);
   const [editingRule, setEditingRule] = useState<DecisionRule | null>(null);
@@ -647,6 +648,7 @@ function DecisionEnginePanel({ profiles }: { profiles: TelcoProfile[] }) {
         periodDays: config.periodDays,
         skipAlreadyDecided: config.skipAlreadyDecided,
         sendSmsNotification: config.sendSmsNotification,
+        includeAI,
       });
       return res.json();
     },
@@ -1001,7 +1003,7 @@ function DecisionEnginePanel({ profiles }: { profiles: TelcoProfile[] }) {
           <div className="space-y-4">
             <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/40">
               <p className="text-xs text-blue-700 dark:text-blue-300">
-                Run the decision engine across multiple profiles at once. Each profile will be scored by AI and evaluated against the active rule: <span className="font-bold">{activeRule?.name || "None"}</span>
+                Run the decision engine across multiple profiles at once. Each profile will be scored {includeAI ? "by AI (Dual-AI Ensemble)" : "using rule-based KPI engine"} and evaluated against the active rule: <span className="font-bold">{activeRule?.name || "None"}</span>
               </p>
             </div>
 
@@ -1254,6 +1256,7 @@ export default function TelcoScoringPage() {
   const [expandedProfileId, setExpandedProfileId] = useState<string | null>(null);
   const [scoreDetailId, setScoreDetailId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("analytics");
+  const [includeAI, setIncludeAI] = useState(true);
 
   const [profilesPage, setProfilesPage] = useState(1);
   const [scoresPage, setScoresPage] = useState(1);
@@ -1383,7 +1386,7 @@ export default function TelcoScoringPage() {
 
   const scoreMutation = useMutation({
     mutationFn: async (profileId: string) => {
-      const res = await apiRequest("POST", `/api/telco/score/${profileId}`, { periodDays: 90 });
+      const res = await apiRequest("POST", `/api/telco/score/${profileId}`, { periodDays: 90, includeAI });
       return res.json();
     },
     onSuccess: (data) => {
@@ -1636,7 +1639,7 @@ export default function TelcoScoringPage() {
           </TabsContent>
 
           <TabsContent value="decision-engine" className="space-y-4">
-            <DecisionEnginePanel profiles={profiles || []} />
+            <DecisionEnginePanel profiles={profiles || []} includeAI={includeAI} />
           </TabsContent>
 
           <TabsContent value="profiles" className="space-y-4">
@@ -1740,7 +1743,23 @@ export default function TelcoScoringPage() {
                     <X className="w-3 h-3" /> Clear filters
                   </Button>
                 )}
-                <span className="text-xs text-muted-foreground whitespace-nowrap ml-auto">
+                <div className="flex items-center gap-2 ml-auto border-l pl-3">
+                  <Switch
+                    id="telco-include-ai"
+                    checked={includeAI}
+                    onCheckedChange={setIncludeAI}
+                    className="data-[state=checked]:bg-purple-600"
+                    data-testid="switch-telco-include-ai"
+                  />
+                  <Label htmlFor="telco-include-ai" className="text-xs cursor-pointer whitespace-nowrap">
+                    {includeAI ? (
+                      <span className="flex items-center gap-1"><Brain className="w-3 h-3 text-purple-600" /> AI Scoring</span>
+                    ) : (
+                      <span className="flex items-center gap-1"><SlidersHorizontal className="w-3 h-3" /> Rule-Based</span>
+                    )}
+                  </Label>
+                </div>
+                <span className="text-xs text-muted-foreground whitespace-nowrap">
                   {profilesData?.total?.toLocaleString() || 0} profiles
                   {activeProfileFilterCount > 0 && <Badge variant="secondary" className="ml-2 text-[10px] h-5">{activeProfileFilterCount} filter{activeProfileFilterCount > 1 ? "s" : ""}</Badge>}
                 </span>
@@ -1779,10 +1798,11 @@ export default function TelcoScoringPage() {
                             size="sm"
                             onClick={(e) => { e.stopPropagation(); scoreMutation.mutate(profile.id); }}
                             disabled={scoreMutation.isPending}
+                            className={includeAI ? "border-purple-300 dark:border-purple-700" : ""}
                             data-testid={`button-score-${profile.id}`}
                           >
-                            {scoreMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Brain className="w-3 h-3 mr-1" />}
-                            Score
+                            {scoreMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : includeAI ? <Brain className="w-3 h-3 mr-1 text-purple-600" /> : <SlidersHorizontal className="w-3 h-3 mr-1" />}
+                            {includeAI ? "AI Score" : "Score"}
                           </Button>
                           <ChevronRight className={`w-4 h-4 text-muted-foreground transition-transform ${isExpanded ? "rotate-90" : ""}`} />
                         </div>

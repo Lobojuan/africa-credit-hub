@@ -9,7 +9,7 @@ import {
   requireRole, enforceDataSovereignty, idempotencyMiddleware,
   getOrgScope, getCountryFilter, safeErrorMessage, enforceCountryScopeForNonSuperAdmin,
 } from "./middleware";
-import { computeTelcoKPIs, generateTelcoCreditScore } from "../telco-scoring";
+import { computeTelcoKPIs, generateTelcoCreditScore, computeRuleBasedTelcoScore } from "../telco-scoring";
 
 const routeLogger = createLogger("telco");
 const router = Router();
@@ -115,8 +115,11 @@ router.post("/api/telco/score/:profileId", requireRole("admin", "lender"), async
         return res.status(400).json({ message: "No MoMo transactions found for this profile. Import transactions first." });
       }
       const periodDays = parseInt(req.body.periodDays as string) || 90;
+      const includeAI = req.body.includeAI !== false;
       const kpis = computeTelcoKPIs(profile, transactions, periodDays);
-      const aiResult = await generateTelcoCreditScore(profile, kpis);
+      const aiResult = includeAI
+        ? await generateTelcoCreditScore(profile, kpis)
+        : computeRuleBasedTelcoScore(profile, kpis);
 
       const validTiers = ["very_low", "low", "medium", "high", "very_high"] as const;
       const normalizedTier = validTiers.includes(aiResult.riskTier) ? aiResult.riskTier : "medium";
@@ -141,9 +144,9 @@ router.post("/api/telco/score/:profileId", requireRole("admin", "lender"), async
       });
 
       await storage.createAuditLog({
-        action: "AI_TELCO_SCORE", entity: "telco_credit_score", entityId: score.id,
+        action: includeAI ? "AI_TELCO_SCORE" : "RULE_TELCO_SCORE", entity: "telco_credit_score", entityId: score.id,
         userId: req.session.userId,
-        details: `AI telco credit score generated for ${profile.msisdn}: Risk ${aiResult.riskTier} (${aiResult.riskScore}/5), ${aiResult.approvalRecommendation ? "APPROVED" : "DECLINED"}`,
+        details: `${includeAI ? "AI" : "Rule-based"} telco credit score generated for ${profile.msisdn}: Risk ${aiResult.riskTier} (${aiResult.riskScore}/5), ${aiResult.approvalRecommendation ? "APPROVED" : "DECLINED"}`,
         organizationId: orgId,
       });
 
@@ -512,8 +515,11 @@ router.post("/api/telco/decision-engine/:profileId", requireRole("admin", "lende
       }
 
       const periodDays = parseInt(req.body.periodDays as string) || 90;
+      const includeAI = req.body.includeAI !== false;
       const kpis = computeTelcoKPIs(profile, transactions, periodDays);
-      const aiResult = await generateTelcoCreditScore(profile, kpis);
+      const aiResult = includeAI
+        ? await generateTelcoCreditScore(profile, kpis)
+        : computeRuleBasedTelcoScore(profile, kpis);
 
       const validTiers = ["very_low", "low", "medium", "high", "very_high"] as const;
       const normalizedTier = validTiers.includes(aiResult.riskTier) ? aiResult.riskTier : "medium";
@@ -659,8 +665,9 @@ router.post("/api/telco/decision-engine/bulk/run", requireRole("admin", "lender"
     try {
       
       const orgId = getOrgScope(req);
-      const { profileIds, periodDays: rawPeriod, kycLevel: filterKyc, skipAlreadyDecided, sendSmsNotification } = req.body;
+      const { profileIds, periodDays: rawPeriod, kycLevel: filterKyc, skipAlreadyDecided, sendSmsNotification, includeAI: rawIncludeAI } = req.body;
       const periodDays = parseInt(rawPeriod as string) || 90;
+      const includeAI = rawIncludeAI !== false;
       const country = getCountryFilter(req);
       enforceCountryScopeForNonSuperAdmin(req, country);
 
@@ -700,7 +707,9 @@ router.post("/api/telco/decision-engine/bulk/run", requireRole("admin", "lender"
           }
 
           const kpis = computeTelcoKPIs(profile, transactions, periodDays);
-          const aiResult = await generateTelcoCreditScore(profile, kpis);
+          const aiResult = includeAI
+            ? await generateTelcoCreditScore(profile, kpis)
+            : computeRuleBasedTelcoScore(profile, kpis);
 
           const validTiers = ["very_low", "low", "medium", "high", "very_high"] as const;
           const normalizedTier = validTiers.includes(aiResult.riskTier) ? aiResult.riskTier : "medium";

@@ -149,6 +149,143 @@ export function computeTelcoKPIs(
   };
 }
 
+export function computeRuleBasedTelcoScore(
+  profile: TelcoProfile,
+  kpis: TelcoKPIs
+): {
+  riskScore: number;
+  riskTier: string;
+  approvalRecommendation: boolean;
+  suggestedCreditLimitUsd: number;
+  reasonCode: string;
+  detailedRationale: string;
+  keyFactors: Array<{ factor: string; impact: string; detail: string }>;
+  regulatoryNote: string;
+  aiProvider: string;
+  aiModel: string;
+} {
+  const fm = kpis.financialMetrics;
+  const tm = kpis.telemetricMetrics;
+  const nm = kpis.networkMetrics;
+  const ri = kpis.riskIndicators;
+
+  let weightedScore = 0;
+  const factors: Array<{ factor: string; impact: string; detail: string }> = [];
+
+  // 1. Cash Flow Stability (30%)
+  let cashFlowScore = 3;
+  if (fm.inflowVarianceCoefficient < 0.3 && fm.totalInflowsUsd > 800) {
+    cashFlowScore = 1;
+    factors.push({ factor: "Cash Flow Stability", impact: "positive", detail: `Strong inflows ($${fm.totalInflowsUsd.toFixed(0)}) with low variance (${fm.inflowVarianceCoefficient.toFixed(2)})` });
+  } else if (fm.inflowVarianceCoefficient < 0.5 && fm.totalInflowsUsd > 300) {
+    cashFlowScore = 2;
+    factors.push({ factor: "Cash Flow Stability", impact: "positive", detail: `Moderate inflows ($${fm.totalInflowsUsd.toFixed(0)}) with acceptable variance` });
+  } else if (fm.inflowVarianceCoefficient > 0.8 || fm.totalInflowsUsd < 100) {
+    cashFlowScore = 5;
+    factors.push({ factor: "Cash Flow Stability", impact: "negative", detail: `Low inflows ($${fm.totalInflowsUsd.toFixed(0)}) or high variance (${fm.inflowVarianceCoefficient.toFixed(2)})` });
+  } else if (fm.inflowVarianceCoefficient > 0.5) {
+    cashFlowScore = 4;
+    factors.push({ factor: "Cash Flow Stability", impact: "negative", detail: `Moderate-to-high variance (${fm.inflowVarianceCoefficient.toFixed(2)})` });
+  } else {
+    factors.push({ factor: "Cash Flow Stability", impact: "neutral", detail: `Average cash flow pattern` });
+  }
+  weightedScore += cashFlowScore * 0.30;
+
+  // 2. Bill Payment Consistency (20%)
+  let billScore = 3;
+  if (fm.utilityPaymentConsistencyScore > 0.8 && fm.utilityPaymentsCount >= 6) {
+    billScore = 1;
+    factors.push({ factor: "Bill Payment Consistency", impact: "positive", detail: `Excellent consistency (${fm.utilityPaymentConsistencyScore.toFixed(2)}) with ${fm.utilityPaymentsCount} payments` });
+  } else if (fm.utilityPaymentConsistencyScore > 0.5) {
+    billScore = 2;
+    factors.push({ factor: "Bill Payment Consistency", impact: "positive", detail: `Good consistency (${fm.utilityPaymentConsistencyScore.toFixed(2)})` });
+  } else if (fm.utilityPaymentsCount < 3) {
+    billScore = 4;
+    factors.push({ factor: "Bill Payment Consistency", impact: "negative", detail: `Few utility payments (${fm.utilityPaymentsCount})` });
+  } else {
+    factors.push({ factor: "Bill Payment Consistency", impact: "neutral", detail: `Average bill payment pattern` });
+  }
+  weightedScore += billScore * 0.20;
+
+  // 3. Liquidity Stress (20%)
+  let liquidityScore = 3;
+  if (tm.airtimeAdvanceFrequency === 0 && ri.cashOutImmediatelyAfterCashIn === 0) {
+    liquidityScore = 1;
+    factors.push({ factor: "Liquidity Stress", impact: "positive", detail: "No airtime advances or immediate cash-out patterns" });
+  } else if (tm.airtimeAdvanceFrequency <= 2) {
+    liquidityScore = 2;
+    factors.push({ factor: "Liquidity Stress", impact: "neutral", detail: `Low airtime advance frequency (${tm.airtimeAdvanceFrequency})` });
+  } else if (tm.airtimeAdvanceFrequency > 3) {
+    liquidityScore = 5;
+    factors.push({ factor: "Liquidity Stress", impact: "negative", detail: `High airtime advance frequency (${tm.airtimeAdvanceFrequency}) indicates cash flow stress` });
+  }
+  weightedScore += liquidityScore * 0.20;
+
+  // 4. Network Quality (15%)
+  let networkScore = 3;
+  if (nm.uniqueP2pCounterparties > 20 && nm.percentageTransfersToMerchants > 30) {
+    networkScore = 1;
+    factors.push({ factor: "Network Quality", impact: "positive", detail: `Diverse network (${nm.uniqueP2pCounterparties} counterparties, ${nm.percentageTransfersToMerchants}% merchant)` });
+  } else if (nm.uniqueP2pCounterparties > 10) {
+    networkScore = 2;
+    factors.push({ factor: "Network Quality", impact: "positive", detail: `Good network diversity (${nm.uniqueP2pCounterparties} counterparties)` });
+  } else if (nm.uniqueP2pCounterparties < 5) {
+    networkScore = 5;
+    factors.push({ factor: "Network Quality", impact: "negative", detail: `Limited network (${nm.uniqueP2pCounterparties} counterparties)` });
+  } else {
+    factors.push({ factor: "Network Quality", impact: "neutral", detail: `Average network quality` });
+  }
+  weightedScore += networkScore * 0.15;
+
+  // 5. Identity & Stability (15%)
+  let stabilityScore = 3;
+  if (tm.simAgeDays > 1000 && profile.kycLevel === "full") {
+    stabilityScore = 1;
+    factors.push({ factor: "Identity & Stability", impact: "positive", detail: `Mature SIM (${tm.simAgeDays} days) with full KYC` });
+  } else if (tm.simAgeDays > 365) {
+    stabilityScore = 2;
+    factors.push({ factor: "Identity & Stability", impact: "positive", detail: `Established SIM (${tm.simAgeDays} days)` });
+  } else if (tm.simAgeDays < 180) {
+    stabilityScore = 4;
+    factors.push({ factor: "Identity & Stability", impact: "negative", detail: `New SIM (${tm.simAgeDays} days) — limited history` });
+  } else {
+    factors.push({ factor: "Identity & Stability", impact: "neutral", detail: `Moderate SIM age (${tm.simAgeDays} days)` });
+  }
+  weightedScore += stabilityScore * 0.15;
+
+  const riskScore = Math.max(1, Math.min(5, Math.round(weightedScore)));
+  const tiers = ["very_low", "low", "medium", "high", "very_high"];
+  const riskTier = tiers[riskScore - 1];
+  const approved = riskScore <= 3;
+  const creditLimit = approved ? Math.min(500, Math.round(fm.totalInflowsUsd * 0.2)) : 0;
+
+  const reasonCodes: Record<number, string> = {
+    1: "EXCELLENT_PROFILE", 2: "GOOD_PROFILE", 3: "MODERATE_RISK",
+    4: "ELEVATED_RISK", 5: "HIGH_RISK",
+  };
+
+  const rationale = `Rule-Based Assessment for ${profile.msisdn} (${profile.provider}, ${profile.country})\n\n` +
+    `This subscriber received a risk score of ${riskScore}/5 (${riskTier.replace("_", " ")}) based on deterministic KPI analysis over ${kpis.evaluationPeriodDays} days. ` +
+    `Total inflows: $${fm.totalInflowsUsd.toFixed(2)}, variance coefficient: ${fm.inflowVarianceCoefficient.toFixed(2)}, ` +
+    `wallet retention: ${(fm.walletRetentionRatio * 100).toFixed(0)}%. ` +
+    `The subscriber has ${nm.uniqueP2pCounterparties} unique counterparties and ${fm.utilityPaymentsCount} utility payments ` +
+    `with a consistency score of ${fm.utilityPaymentConsistencyScore.toFixed(2)}.\n\n` +
+    `Credit limit recommendation: $${creditLimit} USD. ${approved ? "Approval recommended." : "Decline recommended — risk exceeds threshold."}`;
+
+  return {
+    riskScore,
+    riskTier,
+    approvalRecommendation: approved,
+    suggestedCreditLimitUsd: creditLimit,
+    reasonCode: reasonCodes[riskScore] || "ASSESSMENT_COMPLETE",
+    detailedRationale: rationale,
+    keyFactors: factors,
+    regulatoryNote: `Scored using deterministic rule-based engine. No AI models were used. Data processed in compliance with ${profile.country} data protection regulations.`,
+    aiProvider: "rule-based",
+    aiModel: "KPI Rule Engine v1.0",
+  };
+}
+
 const TELCO_SCORING_SYSTEM_PROMPT = `You are an expert Credit Risk Analyst AI specializing in the African digital lending and mobile money market. You evaluate mobile money (MoMo) transaction profiles to determine creditworthiness for unbanked and underbanked populations.
 
 SCORING RULES:
