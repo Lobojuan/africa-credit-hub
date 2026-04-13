@@ -6045,7 +6045,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const type = (req.query.type as string) || "portfolio";
 
       const country = getCountryFilter(req);
-      const accounts = type === "portfolio" ? await storage.getAllCreditAccounts(orgId, country) : [];
+      const accounts = type === "portfolio" ? await storage.getAllCreditAccounts(orgId, country, 1000000) : [];
       const borrowersList = type === "borrowers" ? (await storage.getBorrowers(1, 1000000, orgId, country)).data : [];
 
       recordUsageEvent({
@@ -6138,8 +6138,9 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
           ipAddress: req.ip || "unknown",
         });
 
+        const xlsxFilename = `${type}_report_${Date.now()}.enc`;
         res.setHeader("Content-Type", "application/octet-stream");
-        res.setHeader("Content-Disposition", `attachment; filename=${type}_report_${Date.now()}.enc`);
+        res.setHeader("Content-Disposition", `attachment; filename=${xlsxFilename}`);
         res.setHeader("X-Export-SHA256", encResult.ciphertextHash);
         res.setHeader("X-Export-Plaintext-SHA256", xlsxHash);
         res.setHeader("X-Export-IV", encResult.iv);
@@ -6147,6 +6148,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         res.setHeader("X-Export-Original-Size", String(xlsxBuf.byteLength));
         res.setHeader("X-Export-Encrypted", "true");
         res.setHeader("X-Export-Record-Count", String(xlsxRecordCount));
+        res.setHeader("X-Export-SHA256-Companion", Buffer.from(generateSha256Companion(encResult.ciphertextHash, xlsxFilename)).toString("base64"));
         return res.send(encResult.encryptedData);
       } else if (format === "csv") {
         let csv = "";
@@ -6188,8 +6190,9 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
           ipAddress: req.ip || "unknown",
         });
 
+        const csvFilename = `${type}_report_${Date.now()}.enc`;
         res.setHeader("Content-Type", "application/octet-stream");
-        res.setHeader("Content-Disposition", `attachment; filename=${type}_report_${Date.now()}.enc`);
+        res.setHeader("Content-Disposition", `attachment; filename=${csvFilename}`);
         res.setHeader("X-Export-SHA256", encResult.ciphertextHash);
         res.setHeader("X-Export-Plaintext-SHA256", csvHash);
         res.setHeader("X-Export-IV", encResult.iv);
@@ -6197,6 +6200,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         res.setHeader("X-Export-Original-Size", String(csvSizeBytes));
         res.setHeader("X-Export-Encrypted", "true");
         res.setHeader("X-Export-Record-Count", String(csvRecordCount));
+        res.setHeader("X-Export-SHA256-Companion", Buffer.from(generateSha256Companion(encResult.ciphertextHash, csvFilename)).toString("base64"));
         return res.send(encResult.encryptedData);
       } else {
         res.status(400).json({ message: "Unsupported format. Use csv or xlsx." });
@@ -6327,8 +6331,9 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         ipAddress: req.ip || "unknown",
       });
 
+      const bogEncFilename = `${filename}.enc`;
       res.setHeader("Content-Type", "application/octet-stream");
-      res.setHeader("Content-Disposition", `attachment; filename="${filename}.enc"`);
+      res.setHeader("Content-Disposition", `attachment; filename="${bogEncFilename}"`);
       res.setHeader("X-Export-SHA256", encResult.ciphertextHash);
       res.setHeader("X-Export-Plaintext-SHA256", bogHash);
       res.setHeader("X-Export-IV", encResult.iv);
@@ -6336,6 +6341,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       res.setHeader("X-Export-Encrypted", "true");
       res.setHeader("X-Export-Size-Bytes", String(bogSizeBytes));
       res.setHeader("X-Export-Record-Count", String(bogRecordCount));
+      res.setHeader("X-Export-SHA256-Companion", Buffer.from(generateSha256Companion(encResult.ciphertextHash, bogEncFilename)).toString("base64"));
       res.send(encResult.encryptedData);
     } catch (e: any) {
       routeLogger.error("BoG export error:", { detail: e });
@@ -6390,8 +6396,9 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         ipAddress: req.ip || "unknown",
       });
 
+      const bslEncFilename = `${filename}.enc`;
       res.setHeader("Content-Type", "application/octet-stream");
-      res.setHeader("Content-Disposition", `attachment; filename="${filename}.enc"`);
+      res.setHeader("Content-Disposition", `attachment; filename="${bslEncFilename}"`);
       res.setHeader("X-Export-SHA256", encResult.ciphertextHash);
       res.setHeader("X-Export-Plaintext-SHA256", bslHash);
       res.setHeader("X-Export-IV", encResult.iv);
@@ -6399,6 +6406,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       res.setHeader("X-Export-Encrypted", "true");
       res.setHeader("X-Export-Size-Bytes", String(bslSizeBytes));
       res.setHeader("X-Export-Record-Count", String(bslRecordCount));
+      res.setHeader("X-Export-SHA256-Companion", Buffer.from(generateSha256Companion(encResult.ciphertextHash, bslEncFilename)).toString("base64"));
       res.send(encResult.encryptedData);
     } catch (e: any) {
       routeLogger.error("BSL export error:", { detail: e });
@@ -10742,6 +10750,10 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     res.json({ connectedClients: getConnectedClientsCount() });
   });
 
+  function generateSha256Companion(hash: string, filename: string): string {
+    return `${hash}  ${filename}\n`;
+  }
+
   const exportJobProgress = new Map<string, { total: number; processed: number; status: string; startedAt: number }>();
 
   app.get("/api/export/progress/:jobId", requireAuth, async (req, res) => {
@@ -10775,58 +10787,56 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         const hashStream = crypto.createHash("sha256");
         let totalRecords = 0;
 
-        await new Promise<void>(async (resolve, reject) => {
-          const allBorrowers = await db.select().from(borrowers).where(eq(borrowers.organizationId, orgId));
-          exportJobProgress.set(exportJobId, { total: allBorrowers.length, processed: 0, status: "processing", startedAt: Date.now() });
-          res.setHeader("X-Export-Job-Id", exportJobId);
-          const header = JSON.stringify({
-            exportDate: new Date().toISOString(), exportVersion: "3.0.0",
-            compliance: "POPIA/NDPA/Ghana DPA/GDPR Article 20 — Right to Data Portability",
-            organization: { id: orgId, name: org!.name, country: org!.country, tier: org!.subscriptionTier },
-          });
-          const headerChunk = header.slice(0, -1) + ',"borrowers":[';
-          writeStream.write(headerChunk);
-          hashStream.update(headerChunk);
-
-          const decryptedBorrowers = decryptBorrowerArray(allBorrowers as Record<string, any>[]);
-          for (let idx = 0; idx < decryptedBorrowers.length; idx++) {
-            const b = decryptedBorrowers[idx];
-            const [accts, inqs, disps, judgs, cheqs, audits] = await Promise.all([
-              db.select().from(creditAccounts).where(eq(creditAccounts.borrowerId, b.id)),
-              db.select().from(creditInquiries).where(eq(creditInquiries.borrowerId, b.id)),
-              db.select().from(disputes).where(eq(disputes.borrowerId, b.id)),
-              db.select().from(courtJudgments).where(eq(courtJudgments.borrowerId, b.id)),
-              db.select().from(dishonouredCheques).where(eq(dishonouredCheques.borrowerId, b.id)),
-              db.select().from(auditLogs).where(eq(auditLogs.entityId, b.id)),
-            ]);
-            const accountIds = accts.map(a => a.id);
-            let payments: any[] = [];
-            let guars: any[] = [];
-            if (accountIds.length > 0) {
-              [payments, guars] = await Promise.all([
-                db.select().from(paymentHistory).where(inArray(paymentHistory.creditAccountId, accountIds)),
-                db.select().from(guarantors).where(inArray(guarantors.creditAccountId, accountIds)),
-              ]);
-            }
-            const chunk = (idx > 0 ? "," : "") + JSON.stringify({
-              id: b.id, firstName: b.firstName, lastName: b.lastName, companyName: b.companyName,
-              type: b.type, nationalId: b.nationalId, country: b.country,
-              creditAccounts: accts, paymentHistory: payments, guarantors: guars,
-              inquiries: inqs, disputes: disps, courtJudgments: judgs, dishonouredCheques: cheqs,
-              auditTrail: audits.map(a => ({ action: a.action, entity: a.entity, details: a.details, createdAt: a.createdAt })),
-            });
-            writeStream.write(chunk);
-            hashStream.update(chunk);
-            totalRecords += 1 + accts.length + payments.length + guars.length + inqs.length + disps.length + judgs.length + cheqs.length;
-            const jobState = exportJobProgress.get(exportJobId);
-            if (jobState) { jobState.processed = idx + 1; }
-          }
-
-          const tail = "]}";
-          writeStream.write(tail);
-          hashStream.update(tail);
-          writeStream.end(() => resolve());
+        const allBorrowers = await db.select().from(borrowers).where(eq(borrowers.organizationId, orgId));
+        exportJobProgress.set(exportJobId, { total: allBorrowers.length, processed: 0, status: "processing", startedAt: Date.now() });
+        res.setHeader("X-Export-Job-Id", exportJobId);
+        const header = JSON.stringify({
+          exportDate: new Date().toISOString(), exportVersion: "3.0.0",
+          compliance: "POPIA/NDPA/Ghana DPA/GDPR Article 20 — Right to Data Portability",
+          organization: { id: orgId, name: org!.name, country: org!.country, tier: org!.subscriptionTier },
         });
+        const headerChunk = header.slice(0, -1) + ',"borrowers":[';
+        writeStream.write(headerChunk);
+        hashStream.update(headerChunk);
+
+        const decryptedBorrowers = decryptBorrowerArray(allBorrowers as Record<string, any>[]);
+        for (let idx = 0; idx < decryptedBorrowers.length; idx++) {
+          const b = decryptedBorrowers[idx];
+          const [accts, inqs, disps, judgs, cheqs, audits] = await Promise.all([
+            db.select().from(creditAccounts).where(eq(creditAccounts.borrowerId, b.id)),
+            db.select().from(creditInquiries).where(eq(creditInquiries.borrowerId, b.id)),
+            db.select().from(disputes).where(eq(disputes.borrowerId, b.id)),
+            db.select().from(courtJudgments).where(eq(courtJudgments.borrowerId, b.id)),
+            db.select().from(dishonouredCheques).where(eq(dishonouredCheques.borrowerId, b.id)),
+            db.select().from(auditLogs).where(eq(auditLogs.entityId, b.id)),
+          ]);
+          const accountIds = accts.map(a => a.id);
+          let payments: any[] = [];
+          let guars: any[] = [];
+          if (accountIds.length > 0) {
+            [payments, guars] = await Promise.all([
+              db.select().from(paymentHistory).where(inArray(paymentHistory.creditAccountId, accountIds)),
+              db.select().from(guarantors).where(inArray(guarantors.creditAccountId, accountIds)),
+            ]);
+          }
+          const chunk = (idx > 0 ? "," : "") + JSON.stringify({
+            id: b.id, firstName: b.firstName, lastName: b.lastName, companyName: b.companyName,
+            type: b.type, nationalId: b.nationalId, country: b.country,
+            creditAccounts: accts, paymentHistory: payments, guarantors: guars,
+            inquiries: inqs, disputes: disps, courtJudgments: judgs, dishonouredCheques: cheqs,
+            auditTrail: audits.map(a => ({ action: a.action, entity: a.entity, details: a.details, createdAt: a.createdAt })),
+          });
+          writeStream.write(chunk);
+          hashStream.update(chunk);
+          totalRecords += 1 + accts.length + payments.length + guars.length + inqs.length + disps.length + judgs.length + cheqs.length;
+          const jobState = exportJobProgress.get(exportJobId);
+          if (jobState) { jobState.processed = idx + 1; }
+        }
+
+        const tail = "]}";
+        writeStream.write(tail);
+        hashStream.update(tail);
+        await new Promise<void>((resolve) => writeStream.end(() => resolve()));
         const jobState = exportJobProgress.get(exportJobId);
         if (jobState) { jobState.status = "encrypting"; }
 
@@ -10862,7 +10872,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
           ipAddress: req.ip || "unknown",
         });
 
-        res.setHeader("Content-Disposition", `attachment; filename="ach_export_${safeName}_${dateStr}.enc"`);
+        const orgEncFilename = `ach_export_${safeName}_${dateStr}.enc`;
+        res.setHeader("Content-Disposition", `attachment; filename="${orgEncFilename}"`);
         res.setHeader("Content-Type", "application/octet-stream");
         res.setHeader("X-Export-SHA256", ciphertextHash);
         res.setHeader("X-Export-Plaintext-SHA256", sha256Hash);
@@ -10871,6 +10882,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         res.setHeader("X-Export-Original-Size", String(sizeBytes));
         res.setHeader("X-Export-Encrypted", "true");
         res.setHeader("X-Export-Record-Count", String(totalRecords));
+        res.setHeader("X-Export-SHA256-Companion", Buffer.from(generateSha256Companion(ciphertextHash, orgEncFilename)).toString("base64"));
 
         const encReadStream = fs.createReadStream(encTmpFile);
         encReadStream.pipe(res);
@@ -10998,7 +11010,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         ipAddress: req.ip || "unknown",
       });
 
-      res.setHeader("Content-Disposition", `attachment; filename="my_credit_data_${new Date().toISOString().split("T")[0]}.enc"`);
+      const consumerEncFilename = `my_credit_data_${new Date().toISOString().split("T")[0]}.enc`;
+      res.setHeader("Content-Disposition", `attachment; filename="${consumerEncFilename}"`);
       res.setHeader("Content-Type", "application/octet-stream");
       res.setHeader("X-Export-SHA256", encResult.ciphertextHash);
       res.setHeader("X-Export-Plaintext-SHA256", sha256Hash);
@@ -11007,6 +11020,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       res.setHeader("X-Export-Original-Size", String(encResult.originalSizeBytes));
       res.setHeader("X-Export-Encrypted", "true");
       res.setHeader("X-Export-Record-Count", String(recordCount));
+      res.setHeader("X-Export-SHA256-Companion", Buffer.from(generateSha256Companion(encResult.ciphertextHash, consumerEncFilename)).toString("base64"));
       res.send(encResult.encryptedData);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });

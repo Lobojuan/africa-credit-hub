@@ -140,6 +140,7 @@ async function downloadEncryptedExport(url: string, defaultFilename: string) {
   const oneTimeKey = res.headers.get("X-Export-Key");
   const iv = res.headers.get("X-Export-IV");
   const sha256 = res.headers.get("X-Export-SHA256");
+  const sha256Companion = res.headers.get("X-Export-SHA256-Companion");
   const blob = await res.blob();
   const disposition = res.headers.get("Content-Disposition") || "";
   const match = disposition.match(/filename="?([^"]+)"?/);
@@ -149,6 +150,14 @@ async function downloadEncryptedExport(url: string, defaultFilename: string) {
   a.download = filename;
   a.click();
   URL.revokeObjectURL(a.href);
+  if (sha256Companion) {
+    const companionBlob = new Blob([atob(sha256Companion)], { type: "text/plain" });
+    const ca = document.createElement("a");
+    ca.href = URL.createObjectURL(companionBlob);
+    ca.download = filename.replace(/\.enc$/, "") + ".sha256";
+    ca.click();
+    URL.revokeObjectURL(ca.href);
+  }
   if (oneTimeKey) {
     alert(`Encrypted export downloaded.\n\nDecryption Key: ${oneTimeKey}\nIV: ${iv}\nSHA-256: ${sha256}\n\nSave this key — it cannot be recovered.`);
   }
