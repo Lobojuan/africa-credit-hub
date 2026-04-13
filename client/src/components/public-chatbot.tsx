@@ -139,7 +139,7 @@ export function PublicChatbot() {
                   </div>
                   <div className="bg-muted/50 rounded-2xl rounded-tl-sm px-3.5 py-2.5 max-w-[85%]">
                     <p className="text-sm leading-relaxed">
-                      Welcome! I'm the Africa Credit Hub AI assistant. I can answer questions about our platform, pricing, features, and how we can help your institution. What would you like to know?
+                      Welcome! I'm the Africa Credit Hub AI assistant. I can answer questions about our platform, features, and how we can help your institution. What would you like to know?
                     </p>
                   </div>
                 </div>
@@ -184,7 +184,7 @@ export function PublicChatbot() {
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask about pricing, features, coverage..."
+                placeholder="Ask about features, coverage, integrations..."
                 className="flex-1 bg-muted/50 border border-border/50 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/50"
                 disabled={streaming}
                 data-testid="input-public-chat"

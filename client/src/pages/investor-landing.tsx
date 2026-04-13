@@ -357,7 +357,7 @@ const PLATFORM_MODULES = [
         title: "Usage-Based Billing Engine",
         details: [
           "Per-transaction metering wired to credit reports, disputes, batch uploads, and searches",
-          "Volume-based pricing tiers with automatic tier progression as usage grows",
+          "Volume-based billing tiers with automatic tier progression as usage grows",
           "Multi-currency revenue tracking with per-country and per-organization breakdowns",
           "Billing dashboard with real-time usage analytics and invoice generation",
         ],
@@ -512,7 +512,6 @@ export default function InvestorLandingPage() {
     { label: "Solutions", id: "use-cases" },
     { label: "Why Us", id: "advantage" },
     { label: "Market", id: "market-proof" },
-    { label: "Pricing", id: "pricing-link" },
     { label: "Security", id: "security-link" },
   ];
 
@@ -539,9 +538,6 @@ export default function InvestorLandingPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" className="text-xs hidden sm:inline-flex" onClick={() => navigate("/pricing")} data-testid="nav-pricing">
-              Pricing
-            </Button>
             <Button variant="ghost" size="sm" className="text-xs hidden sm:inline-flex" onClick={() => navigate("/security")} data-testid="nav-security-link">
               Security
             </Button>
@@ -633,10 +629,10 @@ export default function InvestorLandingPage() {
                   variant="outline"
                   size="lg"
                   className="text-sm px-8 gap-2"
-                  onClick={() => navigate("/pricing")}
+                  onClick={() => navigate("/contact-sales")}
                   data-testid="cta-explore"
                 >
-                  {t('landing.viewPlans')}
+                  {t('landing.contactSales')}
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </div>
@@ -1319,7 +1315,7 @@ export default function InvestorLandingPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             {[
               { step: "1", title: t('landing.onboardStep1Title'), desc: t('landing.onboardStep1Desc'), cta: t('landing.onboardStep1Cta'), action: () => navigate("/start-trial"), testId: "step-trial" },
-              { step: "2", title: t('landing.onboardStep2Title'), desc: t('landing.onboardStep2Desc'), cta: t('landing.onboardStep2Cta'), action: () => navigate("/pricing"), testId: "step-pricing" },
+              { step: "2", title: t('landing.onboardStep2Title'), desc: t('landing.onboardStep2Desc'), cta: t('landing.onboardStep2Cta'), action: () => navigate("/contact-sales"), testId: "step-pricing" },
               { step: "3", title: t('landing.onboardStep3Title'), desc: t('landing.onboardStep3Desc'), cta: t('landing.onboardStep3Cta'), action: () => window.location.href = `mailto:${PLATFORM_SUPPORT_EMAIL}`, testId: "step-deploy" },
             ].map((item) => (
               <Card key={item.step} className="border border-border/60" data-testid={item.testId}>
@@ -1537,11 +1533,11 @@ export default function InvestorLandingPage() {
               variant="outline"
               size="lg"
               className="text-sm px-8 gap-2"
-              onClick={() => navigate("/pricing")}
-              data-testid="cta-bottom-pricing"
+              onClick={() => navigate("/contact-sales")}
+              data-testid="cta-bottom-contact"
             >
               <CreditCard className="w-4 h-4" />
-              {t('landing.viewPlans')}
+              {t('landing.contactSales')}
             </Button>
             <Button
               variant="outline"
