@@ -437,6 +437,7 @@ export default function CreditReportPage() {
   const brandColors = useBrandColors();
   const borrowerId = params?.borrowerId;
   const [purpose, setPurpose] = useState("new_credit");
+  const [includeAI, setIncludeAI] = useState(true);
   const printRef = useRef<HTMLDivElement>(null);
 
   const generateMutation = useMutation({
@@ -444,6 +445,7 @@ export default function CreditReportPage() {
       const res = await apiRequest("POST", "/api/credit-reports/generate", {
         borrowerId,
         purpose,
+        includeAI,
       });
       return res.json();
     },
@@ -546,6 +548,26 @@ export default function CreditReportPage() {
                     <SelectItem value="portfolio_monitoring">Portfolio Monitoring</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-1.5 min-w-[200px]">
+                <label className="text-sm font-medium">Include AI Analysis</label>
+                <div className="flex items-center gap-3 mt-1">
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={includeAI}
+                    onClick={() => setIncludeAI(!includeAI)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${includeAI ? "bg-purple-600" : "bg-gray-300 dark:bg-gray-600"}`}
+                    data-testid="toggle-include-ai"
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${includeAI ? "translate-x-6" : "translate-x-1"}`} />
+                  </button>
+                  <span className="text-xs text-muted-foreground">
+                    {includeAI ? (
+                      <span className="flex items-center gap-1"><Brain className="w-3 h-3 text-purple-500" /> ML Score + AI Risk + Narrative</span>
+                    ) : "Bureau data only (faster)"}
+                  </span>
+                </div>
               </div>
               <Button
                 onClick={() => generateMutation.mutate()}

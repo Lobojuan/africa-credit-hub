@@ -4022,7 +4022,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
   app.post("/api/credit-reports/generate", creditReportLimiter, requireAuth, async (req, res) => {
     try {
-      const { borrowerId, purpose } = req.body;
+      const { borrowerId, purpose, includeAI = true } = req.body;
       if (!borrowerId || !purpose) {
         return res.status(400).json({ message: "borrowerId and purpose are required" });
       }
@@ -4064,22 +4064,26 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
       const { score: creditScore, reasonCodes, factors: scoreFactors } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep, altData);
 
-      const mlResult = calculateMLCreditScore(
-        accounts.map(a => ({ status: a.status || "current", currentBalance: a.currentBalance, currency: a.currency, openedDate: a.disbursementDate, lastPaymentDate: a.lastPaymentDate, creditLimit: a.originalAmount, monthlyPayment: a.monthlyInstallment })),
-        inquiries.length, judgments.length, borrower.isPep ?? false,
-        altData.map(d => ({ source: d.source || "", totalTransactions: d.totalTransactions, onTimePayments: d.onTimePayments, latePayments: d.latePayments, status: d.status || "active" }))
-      );
-
+      let mlResult: any = null;
       let aiAnalysis: any = null;
       let aiNarrative: any = null;
-      try {
-        const [riskResult, narrativeResult] = await Promise.allSettled([
-          analyzeCreditRisk(borrowerId),
-          generateCreditNarrative(borrowerId),
-        ]);
-        if (riskResult.status === "fulfilled") aiAnalysis = riskResult.value;
-        if (narrativeResult.status === "fulfilled") aiNarrative = narrativeResult.value;
-      } catch {}
+
+      if (includeAI) {
+        mlResult = calculateMLCreditScore(
+          accounts.map(a => ({ status: a.status || "current", currentBalance: a.currentBalance, currency: a.currency, openedDate: a.disbursementDate, lastPaymentDate: a.lastPaymentDate, creditLimit: a.originalAmount, monthlyPayment: a.monthlyInstallment })),
+          inquiries.length, judgments.length, borrower.isPep ?? false,
+          altData.map(d => ({ source: d.source || "", totalTransactions: d.totalTransactions, onTimePayments: d.onTimePayments, latePayments: d.latePayments, status: d.status || "active" }))
+        );
+
+        try {
+          const [riskResult, narrativeResult] = await Promise.allSettled([
+            analyzeCreditRisk(borrowerId),
+            generateCreditNarrative(borrowerId),
+          ]);
+          if (riskResult.status === "fulfilled") aiAnalysis = riskResult.value;
+          if (narrativeResult.status === "fulfilled") aiNarrative = narrativeResult.value;
+        } catch {}
+      }
 
       const log = await storage.createCreditReportLog({
         borrowerId,
@@ -4145,28 +4149,30 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
           judgmentCount: judgments.length,
           isPep: borrower.isPep,
         },
-        aiEnhanced: {
-          mlScore: mlResult,
-          riskAnalysis: aiAnalysis ? {
-            riskLevel: aiAnalysis.riskLevel || "medium",
-            riskScore: aiAnalysis.riskScore ?? 50,
-            summary: aiAnalysis.summary || "",
-            factors: Array.isArray(aiAnalysis.factors) ? aiAnalysis.factors : [],
-            recommendations: Array.isArray(aiAnalysis.recommendations) ? aiAnalysis.recommendations : [],
-            regulatoryFlags: Array.isArray(aiAnalysis.regulatoryFlags) ? aiAnalysis.regulatoryFlags : [],
-          } : null,
-          narrative: aiNarrative ? {
-            narrative: aiNarrative.narrative || "",
-            creditworthiness: aiNarrative.creditworthiness || "Fair",
-            keyStrengths: Array.isArray(aiNarrative.keyStrengths) ? aiNarrative.keyStrengths : [],
-            keyRisks: Array.isArray(aiNarrative.keyRisks) ? aiNarrative.keyRisks : [],
-            recommendedActions: Array.isArray(aiNarrative.recommendedActions) ? aiNarrative.recommendedActions : [],
-            borrowerName: aiNarrative.borrowerName || "",
-            generatedAt: aiNarrative.generatedAt || new Date().toISOString(),
-          } : null,
-          disclaimer: "AI-generated analysis is provided for decision support only. It does not replace professional judgment or verified bureau data. Model outputs may vary and should be independently validated.",
-          generatedAt: new Date().toISOString(),
-        },
+        ...(includeAI && mlResult ? {
+          aiEnhanced: {
+            mlScore: mlResult,
+            riskAnalysis: aiAnalysis ? {
+              riskLevel: aiAnalysis.riskLevel || "medium",
+              riskScore: aiAnalysis.riskScore ?? 50,
+              summary: aiAnalysis.summary || "",
+              factors: Array.isArray(aiAnalysis.factors) ? aiAnalysis.factors : [],
+              recommendations: Array.isArray(aiAnalysis.recommendations) ? aiAnalysis.recommendations : [],
+              regulatoryFlags: Array.isArray(aiAnalysis.regulatoryFlags) ? aiAnalysis.regulatoryFlags : [],
+            } : null,
+            narrative: aiNarrative ? {
+              narrative: aiNarrative.narrative || "",
+              creditworthiness: aiNarrative.creditworthiness || "Fair",
+              keyStrengths: Array.isArray(aiNarrative.keyStrengths) ? aiNarrative.keyStrengths : [],
+              keyRisks: Array.isArray(aiNarrative.keyRisks) ? aiNarrative.keyRisks : [],
+              recommendedActions: Array.isArray(aiNarrative.recommendedActions) ? aiNarrative.recommendedActions : [],
+              borrowerName: aiNarrative.borrowerName || "",
+              generatedAt: aiNarrative.generatedAt || new Date().toISOString(),
+            } : null,
+            disclaimer: "AI-generated analysis is provided for decision support only. It does not replace professional judgment or verified bureau data. Model outputs may vary and should be independently validated.",
+            generatedAt: new Date().toISOString(),
+          },
+        } : {}),
       });
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
