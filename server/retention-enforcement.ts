@@ -81,6 +81,32 @@ async function getExpiredEntityIds(tableName: string, resolver: Resolver, countr
   return ((result as any).rows || []).map((r: any) => r.id);
 }
 
+async function archiveExpired(tableName: string, resolver: Resolver, country: string, years: number, entityType: string, policyId: string): Promise<number> {
+  const whereClause = buildWhereClause(resolver, country, tableName);
+  const result = await db.execute(sql`
+    SELECT * FROM ${sql.identifier(tableName)}
+    WHERE ${whereClause}
+      AND created_at < NOW() - make_interval(years => ${years})
+    LIMIT 500
+  `);
+  const rows = (result as any).rows || [];
+  let archived = 0;
+  for (const row of rows) {
+    try {
+      await db.execute(sql`
+        INSERT INTO archived_records (entity_type, entity_id, country, policy_id, original_data)
+        VALUES (${entityType}, ${row.id}, ${country}, ${policyId}, ${JSON.stringify(row)}::jsonb)
+        ON CONFLICT (entity_type, entity_id) DO UPDATE SET original_data = ${JSON.stringify(row)}::jsonb, archived_at = now()
+      `);
+      await db.execute(sql`DELETE FROM ${sql.identifier(tableName)} WHERE id = ${row.id}`);
+      archived++;
+    } catch (e: any) {
+      console.warn(`[Retention] Failed to archive ${entityType}/${row.id}:`, e.message);
+    }
+  }
+  return archived;
+}
+
 async function expungeExpired(tableName: string, resolver: Resolver, country: string, years: number): Promise<number> {
   const whereClause = buildWhereClause(resolver, country, tableName);
   const result = await db.execute(sql`
@@ -130,14 +156,21 @@ export async function enforceRetentionPolicies(): Promise<RetentionResult[]> {
 
       if (policyAction === "delete") {
         result.expungedCount = await expungeExpired(tableName, resolver, policy.country, expungeYears);
-      } else if (policyAction === "flag" || policyAction === "archive") {
+      } else if (policyAction === "archive") {
+        try {
+          const archivedCount = await archiveExpired(tableName, resolver, policy.country, archiveYears, policy.entityType, policy.id);
+          result.expungedCount = archivedCount;
+        } catch (archErr: any) {
+          result.errors.push(`Archive failed: ${archErr.message}`);
+        }
+      } else if (policyAction === "flag") {
         try {
           const flaggedIds = await getExpiredEntityIds(tableName, resolver, policy.country, archiveYears);
           for (const entityId of flaggedIds) {
             await db.execute(sql`
               INSERT INTO retention_flags (entity_type, entity_id, policy_id, action, country)
-              VALUES (${policy.entityType}, ${entityId}, ${policy.id}, ${policyAction}, ${policy.country})
-              ON CONFLICT (entity_type, entity_id, policy_id) DO UPDATE SET action = ${policyAction}, flagged_at = now()
+              VALUES (${policy.entityType}, ${entityId}, ${policy.id}, ${"flag"}, ${policy.country})
+              ON CONFLICT (entity_type, entity_id, policy_id) DO UPDATE SET action = ${"flag"}, flagged_at = now()
             `);
           }
           result.expungedCount = flaggedIds.length;

@@ -30,6 +30,17 @@ export async function migrateNewTables() {
 
   await db.execute(sql`ALTER TABLE retention_policies ADD COLUMN IF NOT EXISTS action text DEFAULT 'flag'`);
 
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS archived_records (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    entity_type text NOT NULL,
+    entity_id varchar NOT NULL,
+    country text NOT NULL,
+    policy_id varchar,
+    original_data jsonb NOT NULL,
+    archived_at timestamp DEFAULT now(),
+    UNIQUE(entity_type, entity_id)
+  )`);
+
   await db.execute(sql`CREATE TABLE IF NOT EXISTS retention_flags (
     id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
     entity_type text NOT NULL,

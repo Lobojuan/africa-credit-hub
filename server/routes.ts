@@ -77,6 +77,7 @@ import {
   buildFullPortabilityExport, streamPortabilityExport, buildConsumerDataExport, cascadeDeleteBorrower,
   scanRetentionPolicies,
 } from "./export-service";
+import { decryptBorrowerPII, decryptBorrowerArray } from "./encryption";
 
 
 
@@ -6118,7 +6119,13 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
         const xlsxBuf = Buffer.from(await workbook.xlsx.writeBuffer() as ArrayBuffer);
         const xlsxHash = generateExportHashBuffer(xlsxBuf);
-        const xlsxRecordCount = type === "portfolio" ? accounts.length : borrowersList.length;
+        let xlsxRecordCount = 0;
+        if (type === "portfolio") xlsxRecordCount = accounts.length;
+        else if (type === "borrowers") xlsxRecordCount = borrowersList.length;
+        else if (type === "audit") {
+          const ws = workbook.getWorksheet("Audit Trail");
+          xlsxRecordCount = ws ? Math.max(0, ws.rowCount - 1) : 0;
+        }
 
         const encResult = encryptExportData(xlsxBuf.toString("base64"));
 
@@ -6165,7 +6172,10 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
         const csvHash = generateExportHash(csv);
         const csvSizeBytes = Buffer.byteLength(csv, "utf8");
-        const csvRecordCount = type === "portfolio" ? accounts.length : borrowersList.length;
+        let csvRecordCount = 0;
+        if (type === "portfolio") csvRecordCount = accounts.length;
+        else if (type === "borrowers") csvRecordCount = borrowersList.length;
+        else if (type === "audit") csvRecordCount = csv.split("\n").length - 2;
 
         const encResult = encryptExportData(csv);
 
@@ -10732,6 +10742,15 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     res.json({ connectedClients: getConnectedClientsCount() });
   });
 
+  const exportJobProgress = new Map<string, { total: number; processed: number; status: string; startedAt: number }>();
+
+  app.get("/api/export/progress/:jobId", requireAuth, async (req, res) => {
+    const job = exportJobProgress.get(req.params.jobId);
+    if (!job) return res.status(404).json({ message: "Export job not found" });
+    const pct = job.total > 0 ? Math.round((job.processed / job.total) * 100) : 0;
+    res.json({ jobId: req.params.jobId, total: job.total, processed: job.processed, percent: pct, status: job.status, elapsedMs: Date.now() - job.startedAt });
+  });
+
   app.get("/api/admin/export/:orgId", requireAuth, requireRole("admin", "super_admin"), exportLimiter, async (req, res) => {
     try {
       const orgId = req.params.orgId;
@@ -10749,6 +10768,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
       const os = await import("os");
       const tmpFile = path.join(os.tmpdir(), `export_${orgId}_${Date.now()}.json`);
+      const exportJobId = `export_${orgId}_${Date.now()}`;
 
       try {
         const writeStream = fs.createWriteStream(tmpFile);
@@ -10757,6 +10777,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
         await new Promise<void>(async (resolve, reject) => {
           const allBorrowers = await db.select().from(borrowers).where(eq(borrowers.organizationId, orgId));
+          exportJobProgress.set(exportJobId, { total: allBorrowers.length, processed: 0, status: "processing", startedAt: Date.now() });
+          res.setHeader("X-Export-Job-Id", exportJobId);
           const header = JSON.stringify({
             exportDate: new Date().toISOString(), exportVersion: "3.0.0",
             compliance: "POPIA/NDPA/Ghana DPA/GDPR Article 20 — Right to Data Portability",
@@ -10766,8 +10788,9 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
           writeStream.write(headerChunk);
           hashStream.update(headerChunk);
 
-          for (let idx = 0; idx < allBorrowers.length; idx++) {
-            const b = allBorrowers[idx];
+          const decryptedBorrowers = decryptBorrowerArray(allBorrowers as Record<string, any>[]);
+          for (let idx = 0; idx < decryptedBorrowers.length; idx++) {
+            const b = decryptedBorrowers[idx];
             const [accts, inqs, disps, judgs, cheqs, audits] = await Promise.all([
               db.select().from(creditAccounts).where(eq(creditAccounts.borrowerId, b.id)),
               db.select().from(creditInquiries).where(eq(creditInquiries.borrowerId, b.id)),
@@ -10795,6 +10818,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
             writeStream.write(chunk);
             hashStream.update(chunk);
             totalRecords += 1 + accts.length + payments.length + guars.length + inqs.length + disps.length + judgs.length + cheqs.length;
+            const jobState = exportJobProgress.get(exportJobId);
+            if (jobState) { jobState.processed = idx + 1; }
           }
 
           const tail = "]}";
@@ -10802,6 +10827,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
           hashStream.update(tail);
           writeStream.end(() => resolve());
         });
+        const jobState = exportJobProgress.get(exportJobId);
+        if (jobState) { jobState.status = "encrypting"; }
 
         const sha256Hash = hashStream.digest("hex");
         const stats = fs.statSync(tmpFile);
@@ -10849,6 +10876,9 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         encReadStream.pipe(res);
         encReadStream.on("end", () => {
           try { fs.unlinkSync(encTmpFile); } catch {}
+          const finalState = exportJobProgress.get(exportJobId);
+          if (finalState) { finalState.status = "completed"; }
+          setTimeout(() => exportJobProgress.delete(exportJobId), 300000);
         });
       } finally {
         try { fs.unlinkSync(tmpFile); } catch {}
@@ -10940,14 +10970,15 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const [consumerAccount] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.id, consumerId)).limit(1);
       if (!consumerAccount) return res.status(401).json({ message: "Consumer account not found" });
 
-      const borrowerResult = await db.select().from(borrowers).where(
-        or(
-          ilike(borrowers.nationalId, consumerNationalId),
-          ilike(borrowers.ghanaCardNumber, consumerNationalId),
-          ilike(borrowers.passportNumber, consumerNationalId)
-        )
-      ).limit(1);
-      const borrower = borrowerResult[0];
+      const allBorrowersForLookup = await db.select().from(borrowers);
+      const decryptedForLookup = decryptBorrowerArray(allBorrowersForLookup as Record<string, any>[]);
+      const borrower = decryptedForLookup.find((b: any) => {
+        const nid = (b.nationalId || "").toLowerCase();
+        const gc = (b.ghanaCardNumber || "").toLowerCase();
+        const pp = (b.passportNumber || "").toLowerCase();
+        const target = consumerNationalId.toLowerCase();
+        return nid === target || gc === target || pp === target;
+      });
       if (!borrower) return res.status(404).json({ message: "No credit file found" });
 
       const exportData = await buildConsumerDataExport(borrower.id);
