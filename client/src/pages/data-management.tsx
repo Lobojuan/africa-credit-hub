@@ -10,9 +10,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from "@/components/ui/dialog";
 import {
   Database, Download, Shield, FileText, Clock, Lock, Trash2,
-  CheckCircle, AlertTriangle, Search, RefreshCw, Eye,
+  CheckCircle, AlertTriangle, Search, RefreshCw, Eye, Plus, Pencil,
 } from "lucide-react";
 
 function ExportCenterTab() {
@@ -52,11 +58,23 @@ function ExportCenterTab() {
       a.click();
       URL.revokeObjectURL(a.href);
 
+      if (sha256) {
+        const sha256Res = await fetch(`/api/export/sha256/${sha256}`, { credentials: "include" });
+        if (sha256Res.ok) {
+          const sha256Blob = await sha256Res.blob();
+          const sha256Link = document.createElement("a");
+          sha256Link.href = URL.createObjectURL(sha256Blob);
+          sha256Link.download = `${sha256.substring(0, 16)}.sha256`;
+          sha256Link.click();
+          URL.revokeObjectURL(sha256Link.href);
+        }
+      }
+
       let desc = `SHA-256: ${sha256?.substring(0, 16)}...`;
       if (isEncrypted && oneTimeKey) {
         desc += `\nDecryption Key: ${oneTimeKey}\nIV: ${iv}\n\nSave this key — it cannot be recovered.`;
       }
-      toast({ title: isEncrypted ? "Encrypted export downloaded" : "Export downloaded", description: desc });
+      toast({ title: isEncrypted ? "Encrypted export downloaded" : "Export downloaded", description: desc + "\nCompanion .sha256 file also downloaded." });
     } catch (e: any) {
       toast({ title: "Export failed", description: e.message, variant: "destructive" });
     }
@@ -418,6 +436,302 @@ function RetentionScanTab() {
   );
 }
 
+const ENTITY_TYPES = [
+  { value: "borrower", label: "Borrower" },
+  { value: "credit_account", label: "Credit Account" },
+  { value: "audit_log", label: "Audit Log" },
+  { value: "dispute", label: "Dispute" },
+  { value: "consent_record", label: "Consent Record" },
+  { value: "court_judgment", label: "Court Judgment" },
+  { value: "payment_history", label: "Payment History" },
+];
+
+const AFRICAN_COUNTRIES = [
+  "All", "Algeria", "Angola", "Benin", "Botswana", "Burkina Faso", "Burundi",
+  "Cabo Verde", "Cameroon", "Central African Republic", "Chad", "Comoros",
+  "Congo", "DR Congo", "Côte d'Ivoire", "Djibouti", "Egypt",
+  "Equatorial Guinea", "Eritrea", "Eswatini", "Ethiopia", "Gabon", "Gambia",
+  "Ghana", "Guinea", "Guinea-Bissau", "Kenya", "Lesotho", "Liberia",
+  "Libya", "Madagascar", "Malawi", "Mali", "Mauritania", "Mauritius",
+  "Morocco", "Mozambique", "Namibia", "Niger", "Nigeria", "Rwanda",
+  "São Tomé and Príncipe", "Senegal", "Seychelles", "Sierra Leone",
+  "Somalia", "South Africa", "South Sudan", "Sudan", "Tanzania", "Togo",
+  "Tunisia", "Uganda", "Zambia", "Zimbabwe",
+];
+
+interface PolicyForm {
+  country: string;
+  entityType: string;
+  retentionYears: number;
+  archiveAfterYears: number | null;
+  description: string;
+  isActive: boolean;
+}
+
+const defaultPolicyForm: PolicyForm = {
+  country: "Ghana",
+  entityType: "borrower",
+  retentionYears: 7,
+  archiveAfterYears: null,
+  description: "",
+  isActive: true,
+};
+
+function RetentionPoliciesTab() {
+  const { toast } = useToast();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<PolicyForm>(defaultPolicyForm);
+
+  const policiesQuery = useQuery<any[]>({ queryKey: ["/api/retention-policies"] });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: PolicyForm) => {
+      const res = await apiRequest("POST", "/api/retention-policies", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Policy created" });
+      queryClient.invalidateQueries({ queryKey: ["/api/retention-policies"] });
+      setDialogOpen(false);
+      setForm(defaultPolicyForm);
+    },
+    onError: (e: Error) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<PolicyForm> }) => {
+      const res = await apiRequest("PATCH", `/api/retention-policies/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Policy updated" });
+      queryClient.invalidateQueries({ queryKey: ["/api/retention-policies"] });
+      setDialogOpen(false);
+      setEditingId(null);
+      setForm(defaultPolicyForm);
+    },
+    onError: (e: Error) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("DELETE", `/api/retention-policies/${id}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Policy deleted" });
+      queryClient.invalidateQueries({ queryKey: ["/api/retention-policies"] });
+    },
+    onError: (e: Error) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
+  });
+
+  const openCreate = () => {
+    setEditingId(null);
+    setForm(defaultPolicyForm);
+    setDialogOpen(true);
+  };
+
+  const openEdit = (policy: any) => {
+    setEditingId(policy.id);
+    setForm({
+      country: policy.country,
+      entityType: policy.entityType,
+      retentionYears: policy.retentionYears,
+      archiveAfterYears: policy.archiveAfterYears ?? null,
+      description: policy.description || "",
+      isActive: policy.isActive ?? true,
+    });
+    setDialogOpen(true);
+  };
+
+  const handleSubmit = () => {
+    if (editingId) {
+      updateMutation.mutate({ id: editingId, data: form });
+    } else {
+      createMutation.mutate(form);
+    }
+  };
+
+  const policies = policiesQuery.data || [];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Retention Policies</h3>
+          <p className="text-sm text-muted-foreground">
+            Configure data retention periods per country and entity type. The daily enforcement scheduler
+            automatically archives and expunges records based on these policies.
+          </p>
+        </div>
+        <Button onClick={openCreate} data-testid="button-create-policy">
+          <Plus className="h-4 w-4 mr-2" />
+          Add Policy
+        </Button>
+      </div>
+
+      {policiesQuery.isLoading ? (
+        <div className="text-muted-foreground text-sm py-8 text-center">Loading policies...</div>
+      ) : policies.length === 0 ? (
+        <Card>
+          <CardContent className="py-8 text-center text-muted-foreground">
+            <Shield className="h-8 w-8 mx-auto mb-2" />
+            No retention policies configured yet. Click "Add Policy" to create one.
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Country</TableHead>
+                  <TableHead>Entity Type</TableHead>
+                  <TableHead>Retention</TableHead>
+                  <TableHead>Archive After</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {policies.map((p: any) => (
+                  <TableRow key={p.id} data-testid={`row-policy-${p.id}`}>
+                    <TableCell className="font-medium">{p.country}</TableCell>
+                    <TableCell>{ENTITY_TYPES.find(e => e.value === p.entityType)?.label || p.entityType}</TableCell>
+                    <TableCell>{p.retentionYears} years</TableCell>
+                    <TableCell>{p.archiveAfterYears ? `${p.archiveAfterYears} years` : "—"}</TableCell>
+                    <TableCell className="text-sm max-w-xs truncate">{p.description || "—"}</TableCell>
+                    <TableCell>
+                      <Badge variant={p.isActive ? "default" : "secondary"}>
+                        {p.isActive ? "Active" : "Inactive"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => openEdit(p)} data-testid={`button-edit-policy-${p.id}`}>
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive"
+                          onClick={() => { if (confirm("Delete this retention policy?")) deleteMutation.mutate(p.id); }}
+                          disabled={deleteMutation.isPending}
+                          data-testid={`button-delete-policy-${p.id}`}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingId ? "Edit Retention Policy" : "Create Retention Policy"}</DialogTitle>
+            <DialogDescription>
+              {editingId ? "Update the retention period and configuration for this policy." : "Define a new data retention policy for a specific country and entity type."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="policy-country">Country</Label>
+              <Select value={form.country} onValueChange={(v) => setForm({ ...form, country: v })}>
+                <SelectTrigger data-testid="select-policy-country">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {AFRICAN_COUNTRIES.map(c => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="policy-entity">Entity Type</Label>
+              <Select value={form.entityType} onValueChange={(v) => setForm({ ...form, entityType: v })}>
+                <SelectTrigger data-testid="select-policy-entity">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ENTITY_TYPES.map(e => (
+                    <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="policy-retention">Retention (years)</Label>
+                <Input
+                  id="policy-retention"
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={form.retentionYears}
+                  onChange={(e) => setForm({ ...form, retentionYears: parseInt(e.target.value) || 1 })}
+                  data-testid="input-retention-years"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="policy-archive">Archive After (years)</Label>
+                <Input
+                  id="policy-archive"
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={form.archiveAfterYears ?? ""}
+                  onChange={(e) => setForm({ ...form, archiveAfterYears: e.target.value ? parseInt(e.target.value) : null })}
+                  placeholder="Optional"
+                  data-testid="input-archive-years"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="policy-description">Description</Label>
+              <Input
+                id="policy-description"
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                placeholder="e.g., Ghana NCA Act 2008 Section 34 compliance"
+                data-testid="input-policy-description"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={form.isActive}
+                onCheckedChange={(v) => setForm({ ...form, isActive: v })}
+                data-testid="switch-policy-active"
+              />
+              <Label>Active</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} data-testid="button-cancel-policy">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={createMutation.isPending || updateMutation.isPending}
+              data-testid="button-save-policy"
+            >
+              {(createMutation.isPending || updateMutation.isPending) ? "Saving..." : editingId ? "Update Policy" : "Create Policy"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 function ExportHistoryTab() {
   const historyQuery = useQuery<any[]>({ queryKey: ["/api/data-management/export-history"] });
 
@@ -512,8 +826,9 @@ export default function DataManagementPage() {
       </div>
 
       <Tabs defaultValue="export" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="export" data-testid="tab-export">Export Center</TabsTrigger>
+          <TabsTrigger value="policies" data-testid="tab-policies">Retention Policies</TabsTrigger>
           <TabsTrigger value="retention" data-testid="tab-retention">Retention Scanner</TabsTrigger>
           <TabsTrigger value="erasure" data-testid="tab-erasure">Erasure Requests</TabsTrigger>
           <TabsTrigger value="history" data-testid="tab-history">Export History</TabsTrigger>
@@ -521,6 +836,10 @@ export default function DataManagementPage() {
 
         <TabsContent value="export">
           <ExportCenterTab />
+        </TabsContent>
+
+        <TabsContent value="policies">
+          <RetentionPoliciesTab />
         </TabsContent>
 
         <TabsContent value="retention">

@@ -1608,7 +1608,10 @@ export class DatabaseStorage implements IStorage {
 
   async getRetentionPolicies(country?: string): Promise<RetentionPolicy[]> {
     requireCountryScope(country, "getRetentionPolicies");
-    return db.select().from(retentionPolicies).where(eq(retentionPolicies.country, country!)).orderBy(retentionPolicies.country);
+    if (country) {
+      return db.select().from(retentionPolicies).where(eq(retentionPolicies.country, country)).orderBy(retentionPolicies.country);
+    }
+    return db.select().from(retentionPolicies).orderBy(retentionPolicies.country);
   }
 
   async createRetentionPolicy(data: InsertRetentionPolicy): Promise<RetentionPolicy> {

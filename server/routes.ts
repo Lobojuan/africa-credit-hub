@@ -6965,7 +6965,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     try {
       const parsed = insertRetentionPolicySchema.parse(req.body);
       const policy = await storage.createRetentionPolicy(parsed);
-      await storage.createAuditLog({ userId: (req as any).user.id, action: "CREATE", entity: "retention_policy", entityId: policy.id, details: `Created retention policy: ${parsed.country} - ${parsed.entityType}`, ipAddress: req.ip });
+      await storage.createAuditLog({ userId: req.session?.userId!, action: "CREATE", entity: "retention_policy", entityId: policy.id, details: `Created retention policy: ${parsed.country} - ${parsed.entityType}`, ipAddress: req.ip });
       res.status(201).json(policy);
     } catch (e: any) {
       if (e instanceof z.ZodError) return res.status(400).json({ message: "Validation error", errors: e.errors });
@@ -6977,7 +6977,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     try {
       const policy = await storage.updateRetentionPolicy(req.params.id, req.body);
       if (!policy) return res.status(404).json({ message: "Policy not found" });
-      await storage.createAuditLog({ userId: (req as any).user.id, action: "UPDATE", entity: "retention_policy", entityId: req.params.id, details: JSON.stringify(req.body), ipAddress: req.ip });
+      await storage.createAuditLog({ userId: req.session?.userId!, action: "UPDATE", entity: "retention_policy", entityId: req.params.id, details: JSON.stringify(req.body), ipAddress: req.ip });
       res.json(policy);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -6986,7 +6986,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     try {
       const deleted = await storage.deleteRetentionPolicy(req.params.id);
       if (!deleted) return res.status(404).json({ message: "Policy not found" });
-      await storage.createAuditLog({ userId: (req as any).user.id, action: "DELETE", entity: "retention_policy", entityId: req.params.id, details: "Deleted retention policy", ipAddress: req.ip });
+      await storage.createAuditLog({ userId: req.session?.userId!, action: "DELETE", entity: "retention_policy", entityId: req.params.id, details: "Deleted retention policy", ipAddress: req.ip });
       res.json({ message: "Deleted" });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -10848,6 +10848,19 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const isValid = verifyExportIntegrity(typeof data === "string" ? data : JSON.stringify(data), expectedHash);
       const actualHash = generateExportHash(typeof data === "string" ? data : JSON.stringify(data));
       res.json({ valid: isValid, expectedHash, actualHash });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.get("/api/export/sha256/:hash", requireAuth, async (req, res) => {
+    try {
+      const { hash } = req.params;
+      if (!hash || hash.length !== 64 || !/^[a-f0-9]{64}$/i.test(hash)) return res.status(400).json({ message: "Invalid SHA-256 hash" });
+      const content = `${hash}  export_file\n`;
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="${hash.substring(0, 16)}.sha256"`);
+      res.send(content);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
     }

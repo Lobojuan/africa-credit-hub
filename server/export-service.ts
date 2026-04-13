@@ -5,10 +5,12 @@ import {
   borrowers, creditAccounts, creditInquiries, disputes,
   paymentHistory, guarantors, courtJudgments, dishonouredCheques,
   auditLogs, retentionPolicies, consumerAccounts, alternativeData,
+  creditReportLogs,
 } from "@shared/schema";
 import type {
   Borrower, CreditAccount, CreditInquiry, Dispute,
   PaymentHistory, Guarantor, RetentionPolicy,
+  CourtJudgment, DishonouredCheque,
 } from "@shared/schema";
 import { decryptBorrowerPII } from "./encryption";
 
@@ -63,8 +65,8 @@ export interface PortabilityBorrower {
   guarantors: Guarantor[];
   inquiries: CreditInquiry[];
   disputes: Dispute[];
-  courtJudgments: any[];
-  dishonouredCheques: any[];
+  courtJudgments: CourtJudgment[];
+  dishonouredCheques: DishonouredCheque[];
 }
 
 export interface ExportAuditEntry {
@@ -147,8 +149,8 @@ export async function buildFullPortabilityExport(
   const allAccounts: CreditAccount[] = [];
   const allInquiries: CreditInquiry[] = [];
   const allDisputes: Dispute[] = [];
-  const allJudgments: any[] = [];
-  const allCheques: any[] = [];
+  const allJudgments: CourtJudgment[] = [];
+  const allCheques: DishonouredCheque[] = [];
 
   for (let i = 0; i < borrowerIds.length; i += batchSize) {
     const batch = borrowerIds.slice(i, i + batchSize);
@@ -188,9 +190,9 @@ export async function buildFullPortabilityExport(
   for (const i of allInquiries) { (inquiriesByBorrower.get(i.borrowerId) || (inquiriesByBorrower.set(i.borrowerId, []), inquiriesByBorrower.get(i.borrowerId)!)).push(i); }
   const disputesByBorrower = new Map<string, Dispute[]>();
   for (const d of allDisputes) { (disputesByBorrower.get(d.borrowerId) || (disputesByBorrower.set(d.borrowerId, []), disputesByBorrower.get(d.borrowerId)!)).push(d); }
-  const judgmentsByBorrower = new Map<string, any[]>();
+  const judgmentsByBorrower = new Map<string, CourtJudgment[]>();
   for (const j of allJudgments) { (judgmentsByBorrower.get(j.borrowerId) || (judgmentsByBorrower.set(j.borrowerId, []), judgmentsByBorrower.get(j.borrowerId)!)).push(j); }
-  const chequesByBorrower = new Map<string, any[]>();
+  const chequesByBorrower = new Map<string, DishonouredCheque[]>();
   for (const c of allCheques) { (chequesByBorrower.get(c.borrowerId) || (chequesByBorrower.set(c.borrowerId, []), chequesByBorrower.get(c.borrowerId)!)).push(c); }
 
   const paymentsByAccount = new Map<string, PaymentHistory[]>();
@@ -199,7 +201,7 @@ export async function buildFullPortabilityExport(
   for (const g of allGuarantors) { (guarantorsByAccount.get(g.creditAccountId) || (guarantorsByAccount.set(g.creditAccountId, []), guarantorsByAccount.get(g.creditAccountId)!)).push(g); }
 
   const exportBorrowers: PortabilityBorrower[] = allBorrowers.map(b => {
-    const decrypted = decryptBorrowerPII(b as any);
+    const decrypted = decryptBorrowerPII(b as Record<string, unknown>);
     const bAccounts = accountsByBorrower.get(b.id) || [];
     const bPayments: PaymentHistory[] = [];
     const bGuarantors: Guarantor[] = [];
@@ -254,7 +256,7 @@ export async function buildConsumerDataExport(borrowerId: string): Promise<Recor
   const [borrower] = await db.select().from(borrowers).where(eq(borrowers.id, borrowerId)).limit(1);
   if (!borrower) throw new Error("Borrower not found");
 
-  const decrypted = decryptBorrowerPII(borrower as any);
+  const decrypted = decryptBorrowerPII(borrower as Record<string, unknown>);
   const accounts = await db.select().from(creditAccounts).where(eq(creditAccounts.borrowerId, borrowerId));
   const accountIds = accounts.map(a => a.id);
 
@@ -279,6 +281,18 @@ export async function buildConsumerDataExport(borrowerId: string): Promise<Recor
     altData = await db.select().from(alternativeData).where(sql`borrower_id::text = ${borrowerId}`);
   } catch (e: any) {
     console.warn("[Export] Alternative data query failed for borrower", borrowerId, e.message);
+  }
+
+  let reportLogs: Array<{ institution: string; purpose: string; serialNumber: string; createdAt: Date | null }> = [];
+  try {
+    reportLogs = await db.select({
+      institution: creditReportLogs.institution,
+      purpose: creditReportLogs.purpose,
+      serialNumber: creditReportLogs.serialNumber,
+      createdAt: creditReportLogs.createdAt,
+    }).from(creditReportLogs).where(eq(creditReportLogs.borrowerId, borrowerId));
+  } catch (e: any) {
+    console.warn("[Export] Credit report logs query failed for borrower", borrowerId, e.message);
   }
 
   return {
@@ -362,11 +376,18 @@ export async function buildConsumerDataExport(borrowerId: string): Promise<Recor
       provider: a.provider,
       score: a.score,
     })),
+    creditReportHistory: reportLogs.map(r => ({
+      institution: r.institution,
+      purpose: r.purpose,
+      serialNumber: r.serialNumber,
+      date: r.createdAt,
+    })),
     statistics: {
       totalAccounts: accounts.length,
       totalPayments: payments.length,
       totalInquiries: inquiries.length,
       totalDisputes: borrowerDisputes.length,
+      totalCreditReports: reportLogs.length,
     },
   };
 }
