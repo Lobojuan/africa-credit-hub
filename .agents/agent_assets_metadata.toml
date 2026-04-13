@@ -168,3 +168,9 @@ id = "b2CVPLDZ_Y5Cv3Ah66Q2h"
 uri = "file://sample-reports/Sample_Business_Credit_Report_AI_Enhanced.pdf"
 type = "pdf"
 title = "Business Credit Report with AI Intelligence — Tema Steel Works Ltd"
+
+[[outputs]]
+id = "2QljSXiRj-DsuBM7DfWkg"
+uri = "file://codebase-dump.zip"
+type = "unspecified"
+title = "Africa Credit Hub — Full Codebase (17 MB)"
