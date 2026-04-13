@@ -679,23 +679,40 @@ export async function scanRetentionPolicies(countryFilter?: string): Promise<{
     }
 
     if (recordsAffected > 0) {
-      if (action === "archive") {
-        totalArchived += recordsAffected;
+      if (action === "delete") {
+        try {
+          const entityIds = await getAffectedEntityIds(policy.entityType, policy.country, cutoffDate);
+          for (const entityId of entityIds) {
+            await deleteEntityById(policy.entityType, entityId);
+          }
+          totalFlagged += entityIds.length;
+        } catch (delErr: any) {
+          console.warn(`[Retention] Delete failed for ${policy.entityType}:`, delErr.message);
+        }
+      } else if (action === "archive") {
+        try {
+          const entityIds = await getAffectedEntityIds(policy.entityType, policy.country, cutoffDate);
+          for (const entityId of entityIds) {
+            await archiveEntityById(policy.entityType, entityId, policy.country, policy.id);
+          }
+          totalArchived += entityIds.length;
+        } catch (archErr: any) {
+          console.warn(`[Retention] Archive failed for ${policy.entityType}:`, archErr.message);
+        }
       } else {
         totalFlagged += recordsAffected;
-      }
-
-      try {
-        const entityIds = await getAffectedEntityIds(policy.entityType, policy.country, cutoffDate);
-        for (const entityId of entityIds) {
-          await db.execute(sql`
-            INSERT INTO retention_flags (entity_type, entity_id, policy_id, action, country)
-            VALUES (${policy.entityType}, ${entityId}, ${policy.id}, ${action}, ${policy.country})
-            ON CONFLICT (entity_type, entity_id, policy_id) DO UPDATE SET action = ${action}, flagged_at = now()
-          `);
+        try {
+          const entityIds = await getAffectedEntityIds(policy.entityType, policy.country, cutoffDate);
+          for (const entityId of entityIds) {
+            await db.execute(sql`
+              INSERT INTO retention_flags (entity_type, entity_id, policy_id, action, country)
+              VALUES (${policy.entityType}, ${entityId}, ${policy.id}, ${action}, ${policy.country})
+              ON CONFLICT (entity_type, entity_id, policy_id) DO UPDATE SET action = ${action}, flagged_at = now()
+            `);
+          }
+        } catch (flagErr: any) {
+          console.warn(`[Retention] Failed to persist flags for ${policy.entityType}:`, flagErr.message);
         }
-      } catch (flagErr: any) {
-        console.warn(`[Retention] Failed to persist flags for ${policy.entityType}:`, flagErr.message);
       }
     }
 
@@ -759,4 +776,35 @@ async function getAffectedEntityIds(entityType: string, country: string, cutoffD
     }
   } catch { return []; }
   return (result?.rows || []).map((r: any) => r.id);
+}
+
+const ENTITY_TABLE_MAP: Record<string, string> = {
+  credit_account: "credit_accounts", credit_accounts: "credit_accounts",
+  borrower: "borrowers", borrowers: "borrowers",
+  inquiry: "credit_inquiries", credit_inquiries: "credit_inquiries",
+  dispute: "disputes", disputes: "disputes",
+  audit_log: "audit_logs", audit_logs: "audit_logs",
+  consent_record: "consent_records", consent_records: "consent_records",
+  court_judgment: "court_judgments", court_judgments: "court_judgments",
+  payment_history: "payment_history",
+};
+
+async function deleteEntityById(entityType: string, entityId: string): Promise<void> {
+  const table = ENTITY_TABLE_MAP[entityType];
+  if (!table) return;
+  await db.execute(sql`DELETE FROM ${sql.identifier(table)} WHERE id = ${entityId}`);
+}
+
+async function archiveEntityById(entityType: string, entityId: string, country: string, policyId: string): Promise<void> {
+  const table = ENTITY_TABLE_MAP[entityType];
+  if (!table) return;
+  const result = await db.execute(sql`SELECT * FROM ${sql.identifier(table)} WHERE id = ${entityId}`);
+  const row = (result as any).rows?.[0];
+  if (!row) return;
+  await db.execute(sql`
+    INSERT INTO archived_records (entity_type, entity_id, country, policy_id, original_data)
+    VALUES (${entityType}, ${entityId}, ${country}, ${policyId}, ${JSON.stringify(row)}::jsonb)
+    ON CONFLICT (entity_type, entity_id) DO UPDATE SET original_data = ${JSON.stringify(row)}::jsonb, archived_at = now()
+  `);
+  await db.execute(sql`DELETE FROM ${sql.identifier(table)} WHERE id = ${entityId}`);
 }

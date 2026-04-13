@@ -2515,6 +2515,16 @@ export async function registerRoutes(
             } else if (updated.entityType === "credit_account") {
               await storage.updateCreditAccount(updated.entityId, payload);
             }
+          } else if (updated.action === "DELETE" && updated.entityType === "borrower" && updated.entityId) {
+            const erasureResult = await cascadeDeleteBorrower(updated.entityId);
+            await storage.createAuditLog({
+              userId: currentUserId,
+              action: "DATA_ERASURE_COMPLETED",
+              entity: "borrower",
+              entityId: updated.entityId,
+              details: JSON.stringify({ approvalId: updated.id, ...erasureResult, trigger: "dual_approval_auto" }),
+              ipAddress: req.ip || null,
+            });
           }
         } catch (applyErr: any) {
           routeLogger.error("Error applying approved change:", { detail: applyErr });
@@ -10783,64 +10793,27 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const exportJobId = `export_${orgId}_${Date.now()}`;
 
       try {
-        const writeStream = fs.createWriteStream(tmpFile);
-        const hashStream = crypto.createHash("sha256");
-        let totalRecords = 0;
-
-        const allBorrowers = await db.select().from(borrowers).where(eq(borrowers.organizationId, orgId));
-        exportJobProgress.set(exportJobId, { total: allBorrowers.length, processed: 0, status: "processing", startedAt: Date.now() });
+        exportJobProgress.set(exportJobId, { total: 0, processed: 0, status: "processing", startedAt: Date.now() });
         res.setHeader("X-Export-Job-Id", exportJobId);
-        const header = JSON.stringify({
-          exportDate: new Date().toISOString(), exportVersion: "3.0.0",
-          compliance: "POPIA/NDPA/Ghana DPA/GDPR Article 20 — Right to Data Portability",
-          organization: { id: orgId, name: org!.name, country: org!.country, tier: org!.subscriptionTier },
-        });
-        const headerChunk = header.slice(0, -1) + ',"borrowers":[';
-        writeStream.write(headerChunk);
-        hashStream.update(headerChunk);
 
-        const decryptedBorrowers = decryptBorrowerArray(allBorrowers as Record<string, any>[]);
-        for (let idx = 0; idx < decryptedBorrowers.length; idx++) {
-          const b = decryptedBorrowers[idx];
-          const [accts, inqs, disps, judgs, cheqs, audits] = await Promise.all([
-            db.select().from(creditAccounts).where(eq(creditAccounts.borrowerId, b.id)),
-            db.select().from(creditInquiries).where(eq(creditInquiries.borrowerId, b.id)),
-            db.select().from(disputes).where(eq(disputes.borrowerId, b.id)),
-            db.select().from(courtJudgments).where(eq(courtJudgments.borrowerId, b.id)),
-            db.select().from(dishonouredCheques).where(eq(dishonouredCheques.borrowerId, b.id)),
-            db.select().from(auditLogs).where(eq(auditLogs.entityId, b.id)),
-          ]);
-          const accountIds = accts.map(a => a.id);
-          let payments: any[] = [];
-          let guars: any[] = [];
-          if (accountIds.length > 0) {
-            [payments, guars] = await Promise.all([
-              db.select().from(paymentHistory).where(inArray(paymentHistory.creditAccountId, accountIds)),
-              db.select().from(guarantors).where(inArray(guarantors.creditAccountId, accountIds)),
-            ]);
-          }
-          const chunk = (idx > 0 ? "," : "") + JSON.stringify({
-            id: b.id, firstName: b.firstName, lastName: b.lastName, companyName: b.companyName,
-            type: b.type, nationalId: b.nationalId, country: b.country,
-            creditAccounts: accts, paymentHistory: payments, guarantors: guars,
-            inquiries: inqs, disputes: disps, courtJudgments: judgs, dishonouredCheques: cheqs,
-            auditTrail: audits.map(a => ({ action: a.action, entity: a.entity, details: a.details, createdAt: a.createdAt })),
-          });
-          writeStream.write(chunk);
-          hashStream.update(chunk);
-          totalRecords += 1 + accts.length + payments.length + guars.length + inqs.length + disps.length + judgs.length + cheqs.length;
-          const jobState = exportJobProgress.get(exportJobId);
-          if (jobState) { jobState.processed = idx + 1; }
-        }
+        const writeStream = fs.createWriteStream(tmpFile);
+        const tmpRes = {
+          write: (chunk: string) => writeStream.write(chunk),
+          end: () => {},
+        } as any;
 
-        const tail = "]}";
-        writeStream.write(tail);
-        hashStream.update(tail);
+        const { totalRecords, sha256Hash } = await streamPortabilityExport(
+          orgId, org!.name, org!.country, org!.subscriptionTier, tmpRes,
+          (processed, total) => {
+            const job = exportJobProgress.get(exportJobId);
+            if (job) { job.total = total; job.processed = processed; }
+          },
+        );
         await new Promise<void>((resolve) => writeStream.end(() => resolve()));
+
         const jobState = exportJobProgress.get(exportJobId);
         if (jobState) { jobState.status = "encrypting"; }
 
-        const sha256Hash = hashStream.digest("hex");
         const stats = fs.statSync(tmpFile);
         const sizeBytes = stats.size;
 
