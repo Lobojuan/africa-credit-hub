@@ -5688,27 +5688,38 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
           const hasStrengths = ai.narrative.keyStrengths && ai.narrative.keyStrengths.length > 0;
           const hasRisks = ai.narrative.keyRisks && ai.narrative.keyRisks.length > 0;
           if (hasStrengths || hasRisks) {
-            const halfW = (W - 20) / 2;
-            const colStartY = doc.y;
+            const contentW = W - 12;
+            const bulletW = 14;
+            const textX = 48 + bulletW;
+            const textW = contentW - bulletW - 6;
+
             if (hasStrengths) {
-              doc.fontSize(7).font("Helvetica-Bold").fill("#16a34a").text("KEY STRENGTHS", 46, colStartY);
-              let sy = colStartY + 10;
+              ensureSpace(14);
+              doc.fontSize(7).font("Helvetica-Bold").fill("#16a34a").text("KEY STRENGTHS", 46, doc.y);
+              doc.moveDown(0.2);
               ai.narrative.keyStrengths.forEach((s: string) => {
-                ensureSpace(10);
-                doc.fontSize(6.5).font("Helvetica").fill(DARK).text(`+ ${s}`, 46, sy, { width: halfW });
-                sy += 10;
+                ensureSpace(14);
+                const bulletY = doc.y;
+                doc.fontSize(6.5).font("Helvetica-Bold").fill("#16a34a").text("+", 48, bulletY, { width: bulletW });
+                doc.fontSize(6.5).font("Helvetica").fill(DARK).text(s, textX, bulletY, { width: textW });
+                doc.moveDown(0.15);
               });
             }
+
             if (hasRisks) {
-              const rx = 46 + (W - 20) / 2 + 10;
-              doc.fontSize(7).font("Helvetica-Bold").fill("#dc2626").text("KEY RISKS", rx, colStartY, { width: halfW });
-              let ry = colStartY + 10;
+              doc.moveDown(0.3);
+              ensureSpace(14);
+              doc.fontSize(7).font("Helvetica-Bold").fill("#dc2626").text("KEY RISKS", 46, doc.y);
+              doc.moveDown(0.2);
               ai.narrative.keyRisks.forEach((r: string) => {
-                doc.fontSize(6.5).font("Helvetica").fill(DARK).text(`- ${r}`, rx, ry, { width: halfW });
-                ry += 10;
+                ensureSpace(14);
+                const bulletY = doc.y;
+                doc.fontSize(6.5).font("Helvetica-Bold").fill("#dc2626").text("-", 48, bulletY, { width: bulletW });
+                doc.fontSize(6.5).font("Helvetica").fill(DARK).text(r, textX, bulletY, { width: textW });
+                doc.moveDown(0.15);
               });
             }
-            doc.moveDown(1);
+            doc.moveDown(0.5);
           }
 
           doc.fontSize(6).font("Helvetica").fill(LIGHT)
