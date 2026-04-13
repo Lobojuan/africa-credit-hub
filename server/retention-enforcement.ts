@@ -76,7 +76,6 @@ async function getExpiredEntityIds(tableName: string, resolver: Resolver, countr
     SELECT ${sql.identifier(tableName)}.id FROM ${sql.identifier(tableName)}
     WHERE ${whereClause}
       AND created_at < NOW() - make_interval(years => ${years})
-    LIMIT 1000
   `);
   return ((result as any).rows || []).map((r: any) => r.id);
 }
@@ -87,7 +86,6 @@ async function archiveExpired(tableName: string, resolver: Resolver, country: st
     SELECT * FROM ${sql.identifier(tableName)}
     WHERE ${whereClause}
       AND created_at < NOW() - make_interval(years => ${years})
-    LIMIT 500
   `);
   const rows = (result as any).rows || [];
   let archived = 0;

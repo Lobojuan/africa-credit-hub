@@ -73,7 +73,7 @@ import { BUSINESS_CREDIT_TYPES, inferCreditCategory, normalizeAccountType } from
 import { BSL_EXPORT_GENERATORS } from "./bsl-export";
 import type { BslFileType } from "@shared/bsl-codes";
 import {
-  encryptExportData, decryptExportData, generateExportHash, generateExportHashBuffer, verifyExportIntegrity,
+  encryptExportData, encryptExportBuffer, decryptExportData, generateExportHash, generateExportHashBuffer, verifyExportIntegrity,
   buildFullPortabilityExport, streamPortabilityExport, buildConsumerDataExport, cascadeDeleteBorrower,
   scanRetentionPolicies,
 } from "./export-service";
@@ -6055,8 +6055,8 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const type = (req.query.type as string) || "portfolio";
 
       const country = getCountryFilter(req);
-      const accounts = type === "portfolio" ? await storage.getAllCreditAccounts(orgId, country, 1000000) : [];
-      const borrowersList = type === "borrowers" ? (await storage.getBorrowers(1, 1000000, orgId, country)).data : [];
+      const accounts = type === "portfolio" ? await storage.getAllCreditAccounts(orgId, country, Number.MAX_SAFE_INTEGER) : [];
+      const borrowersList = type === "borrowers" ? (await storage.getBorrowers(1, Number.MAX_SAFE_INTEGER, orgId, country)).data : [];
 
       recordUsageEvent({
         organizationId: orgId || req.session?.organizationId,
@@ -6106,7 +6106,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
             sheet.addRow({ ...b, name, isPep: b.isPep ? "Yes" : "No" });
           });
         } else if (type === "audit") {
-          const auditLogsList = await storage.getAuditLogs(orgId, country, 1000000);
+          const auditLogsList = await storage.getAuditLogs(orgId, country, Number.MAX_SAFE_INTEGER);
           const sheet = workbook.addWorksheet("Audit Trail");
           sheet.columns = [
             { header: "Timestamp", key: "createdAt", width: 22 },
@@ -6137,7 +6137,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
           xlsxRecordCount = ws ? Math.max(0, ws.rowCount - 1) : 0;
         }
 
-        const encResult = encryptExportData(xlsxBuf.toString("base64"));
+        const encResult = encryptExportBuffer(xlsxBuf);
 
         await storage.createAuditLog({
           userId: req.session.userId,
@@ -6174,7 +6174,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
             csv += `"${name}","${b.type}","${b.nationalId}","${b.tinNumber || ''}","${b.gender || ''}","${b.city || ''}","${b.region || ''}","${b.isPep}","${b.educationLevel || ''}","${b.sector || ''}"\n`;
           }
         } else if (type === "audit") {
-          const auditLogsList = await storage.getAuditLogs(orgId, country, 1000000);
+          const auditLogsList = await storage.getAuditLogs(orgId, country, Number.MAX_SAFE_INTEGER);
           csv = "Timestamp,Action,Entity,Entity ID,Details,User ID,IP Address\n";
           for (const log of auditLogsList) {
             const ts = log.createdAt ? new Date(log.createdAt).toISOString() : "";
@@ -10764,16 +10764,69 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     return `${hash}  ${filename}\n`;
   }
 
-  const exportJobProgress = new Map<string, { total: number; processed: number; status: string; startedAt: number }>();
+  interface ExportJob {
+    total: number;
+    processed: number;
+    status: "queued" | "processing" | "encrypting" | "completed" | "failed";
+    startedAt: number;
+    initiatorUserId: string;
+    orgId: string;
+    encFilePath?: string;
+    oneTimeKey?: string;
+    iv?: string;
+    ciphertextHash?: string;
+    sha256Hash?: string;
+    sizeBytes?: number;
+    totalRecords?: number;
+    filename?: string;
+    error?: string;
+  }
+  const exportJobs = new Map<string, ExportJob>();
+
+  function verifyJobOwnership(req: any, job: ExportJob): boolean {
+    if (req.session.userRole === "super_admin" || req.session.userRole === "platform_admin") return true;
+    return job.initiatorUserId === req.session.userId;
+  }
 
   app.get("/api/export/progress/:jobId", requireAuth, async (req, res) => {
-    const job = exportJobProgress.get(req.params.jobId);
+    const job = exportJobs.get(req.params.jobId);
     if (!job) return res.status(404).json({ message: "Export job not found" });
+    if (!verifyJobOwnership(req, job)) return res.status(403).json({ message: "Access denied" });
     const pct = job.total > 0 ? Math.round((job.processed / job.total) * 100) : 0;
     res.json({ jobId: req.params.jobId, total: job.total, processed: job.processed, percent: pct, status: job.status, elapsedMs: Date.now() - job.startedAt });
   });
 
-  app.get("/api/admin/export/:orgId", requireAuth, requireRole("admin", "super_admin"), exportLimiter, async (req, res) => {
+  app.get("/api/export/download/:jobId", requireAuth, async (req, res) => {
+    const job = exportJobs.get(req.params.jobId);
+    if (!job) return res.status(404).json({ message: "Export job not found" });
+    if (!verifyJobOwnership(req, job)) return res.status(403).json({ message: "Access denied" });
+    if (job.status !== "completed" || !job.encFilePath) return res.status(400).json({ message: `Export not ready. Status: ${job.status}` });
+
+    try {
+      const filename = job.filename || "export.enc";
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.setHeader("Content-Type", "application/octet-stream");
+      res.setHeader("X-Export-SHA256", job.ciphertextHash || "");
+      res.setHeader("X-Export-Plaintext-SHA256", job.sha256Hash || "");
+      res.setHeader("X-Export-IV", job.iv || "");
+      res.setHeader("X-Export-Key", job.oneTimeKey || "");
+      res.setHeader("X-Export-Original-Size", String(job.sizeBytes || 0));
+      res.setHeader("X-Export-Encrypted", "true");
+      res.setHeader("X-Export-Record-Count", String(job.totalRecords || 0));
+      res.setHeader("X-Export-SHA256-Companion", Buffer.from(generateSha256Companion(job.ciphertextHash || "", filename)).toString("base64"));
+
+      const encReadStream = fs.createReadStream(job.encFilePath);
+      encReadStream.pipe(res);
+      encReadStream.on("end", () => {
+        try { fs.unlinkSync(job.encFilePath!); } catch {}
+        setTimeout(() => exportJobs.delete(req.params.jobId), 60000);
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: "Download failed" });
+    }
+  });
+
+  app.post("/api/admin/export/:orgId", requireAuth, requireRole("admin", "super_admin"), exportLimiter, async (req, res) => {
     try {
       const orgId = req.params.orgId;
       if (!orgId) return res.status(400).json({ message: "Invalid organization ID" });
@@ -10787,91 +10840,86 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
       const safeName = org.name.replace(/[^a-zA-Z0-9]/g, "_");
       const dateStr = new Date().toISOString().split("T")[0];
+      const exportJobId = crypto.randomUUID();
+      const orgEncFilename = `ach_export_${safeName}_${dateStr}.enc`;
 
-      const os = await import("os");
-      const tmpFile = path.join(os.tmpdir(), `export_${orgId}_${Date.now()}.json`);
-      const exportJobId = `export_${orgId}_${Date.now()}`;
+      const job: ExportJob = { total: 0, processed: 0, status: "queued", startedAt: Date.now(), filename: orgEncFilename, initiatorUserId: req.session.userId!, orgId };
+      exportJobs.set(exportJobId, job);
 
-      try {
-        exportJobProgress.set(exportJobId, { total: 0, processed: 0, status: "processing", startedAt: Date.now() });
-        res.setHeader("X-Export-Job-Id", exportJobId);
+      res.json({ jobId: exportJobId, status: "queued", message: "Export job started. Poll /api/export/progress/:jobId for status, then download from /api/export/download/:jobId when completed." });
 
-        const writeStream = fs.createWriteStream(tmpFile);
-        const tmpRes = {
-          write: (chunk: string) => writeStream.write(chunk),
-          end: () => {},
-        } as any;
+      (async () => {
+        const os = await import("os");
+        const tmpFile = path.join(os.tmpdir(), `export_${exportJobId}.json`);
+        try {
+          job.status = "processing";
+          const writeStream = fs.createWriteStream(tmpFile);
+          const tmpRes = {
+            write: (chunk: string) => writeStream.write(chunk),
+            end: () => {},
+          } as any;
 
-        const { totalRecords, sha256Hash } = await streamPortabilityExport(
-          orgId, org!.name, org!.country, org!.subscriptionTier, tmpRes,
-          (processed, total) => {
-            const job = exportJobProgress.get(exportJobId);
-            if (job) { job.total = total; job.processed = processed; }
-          },
-        );
-        await new Promise<void>((resolve) => writeStream.end(() => resolve()));
+          const { totalRecords, sha256Hash } = await streamPortabilityExport(
+            orgId, org!.name, org!.country, org!.subscriptionTier, tmpRes,
+            (processed, total) => { job.total = total; job.processed = processed; },
+          );
+          await new Promise<void>((resolve) => writeStream.end(() => resolve()));
 
-        const jobState = exportJobProgress.get(exportJobId);
-        if (jobState) { jobState.status = "encrypting"; }
+          job.status = "encrypting";
+          const stats = fs.statSync(tmpFile);
+          job.sizeBytes = stats.size;
 
-        const stats = fs.statSync(tmpFile);
-        const sizeBytes = stats.size;
+          const oneTimeKey = crypto.randomBytes(32);
+          const iv = crypto.randomBytes(16);
+          const cipher = crypto.createCipheriv("aes-256-cbc", oneTimeKey, iv);
+          const encHashStream = crypto.createHash("sha256");
+          const encTmpFile = tmpFile + ".enc";
 
-        const oneTimeKey = crypto.randomBytes(32);
-        const iv = crypto.randomBytes(16);
-        const cipher = crypto.createCipheriv("aes-256-cbc", oneTimeKey, iv);
-        const encHashStream = crypto.createHash("sha256");
+          await new Promise<void>((resolve, reject) => {
+            const readStream = fs.createReadStream(tmpFile);
+            const encWriteStream = fs.createWriteStream(encTmpFile);
+            readStream.pipe(cipher).on("data", (chunk: Buffer) => {
+              encHashStream.update(chunk);
+              encWriteStream.write(chunk);
+            }).on("end", () => {
+              encWriteStream.end(() => resolve());
+            }).on("error", reject);
+          });
 
-        const encTmpFile = tmpFile + ".enc";
-        await new Promise<void>((resolve, reject) => {
-          const readStream = fs.createReadStream(tmpFile);
-          const encWriteStream = fs.createWriteStream(encTmpFile);
-          readStream.pipe(cipher).on("data", (chunk: Buffer) => {
-            encHashStream.update(chunk);
-            encWriteStream.write(chunk);
-          }).on("end", () => {
-            encWriteStream.end(() => resolve());
-          }).on("error", reject);
-        });
+          job.ciphertextHash = encHashStream.digest("hex");
+          job.oneTimeKey = oneTimeKey.toString("hex");
+          job.iv = iv.toString("hex");
+          job.sha256Hash = sha256Hash;
+          job.totalRecords = totalRecords;
+          job.encFilePath = encTmpFile;
+          job.status = "completed";
 
-        const ciphertextHash = encHashStream.digest("hex");
+          await storage.createAuditLog({
+            userId: req.session?.userId,
+            action: "FULL_DATA_EXPORT",
+            entity: "organization",
+            entityId: orgId,
+            details: JSON.stringify({ version: "3.0.0", org: org!.name, recordCount: totalRecords, sizeBytes: job.sizeBytes, sha256: sha256Hash, encrypted: true }),
+            ipAddress: req.ip || "unknown",
+          });
 
-        await storage.createAuditLog({
-          userId: req.session.userId,
-          action: "FULL_DATA_EXPORT",
-          entity: "organization",
-          entityId: orgId,
-          details: JSON.stringify({ version: "3.0.0", org: org!.name, recordCount: totalRecords, sizeBytes, sha256: sha256Hash, encrypted: true }),
-          ipAddress: req.ip || "unknown",
-        });
-
-        const orgEncFilename = `ach_export_${safeName}_${dateStr}.enc`;
-        res.setHeader("Content-Disposition", `attachment; filename="${orgEncFilename}"`);
-        res.setHeader("Content-Type", "application/octet-stream");
-        res.setHeader("X-Export-SHA256", ciphertextHash);
-        res.setHeader("X-Export-Plaintext-SHA256", sha256Hash);
-        res.setHeader("X-Export-IV", iv.toString("hex"));
-        res.setHeader("X-Export-Key", oneTimeKey.toString("hex"));
-        res.setHeader("X-Export-Original-Size", String(sizeBytes));
-        res.setHeader("X-Export-Encrypted", "true");
-        res.setHeader("X-Export-Record-Count", String(totalRecords));
-        res.setHeader("X-Export-SHA256-Companion", Buffer.from(generateSha256Companion(ciphertextHash, orgEncFilename)).toString("base64"));
-
-        const encReadStream = fs.createReadStream(encTmpFile);
-        encReadStream.pipe(res);
-        encReadStream.on("end", () => {
-          try { fs.unlinkSync(encTmpFile); } catch {}
-          const finalState = exportJobProgress.get(exportJobId);
-          if (finalState) { finalState.status = "completed"; }
-          setTimeout(() => exportJobProgress.delete(exportJobId), 300000);
-        });
-      } finally {
-        try { fs.unlinkSync(tmpFile); } catch {}
-      }
+          setTimeout(() => { if (exportJobs.has(exportJobId) && job.status === "completed") { try { fs.unlinkSync(encTmpFile); } catch {} exportJobs.delete(exportJobId); } }, 3600000);
+        } catch (err: any) {
+          job.status = "failed";
+          job.error = err.message;
+          routeLogger.error("[Export] Background job error:", { detail: err.message });
+        } finally {
+          try { fs.unlinkSync(tmpFile); } catch {}
+        }
+      })();
     } catch (err: any) {
       routeLogger.error("[Export] Error:", { detail: err.message });
       if (!res.headersSent) res.status(500).json({ message: "Export failed" });
     }
+  });
+
+  app.get("/api/admin/export/:orgId", requireAuth, requireRole("admin", "super_admin"), exportLimiter, async (req, res) => {
+    res.status(400).json({ message: "Use POST /api/admin/export/:orgId to initiate an async export job, then poll /api/export/progress/:jobId and download from /api/export/download/:jobId" });
   });
 
   app.post("/api/export/verify-integrity", requireAuth, async (req, res) => {

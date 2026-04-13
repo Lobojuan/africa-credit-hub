@@ -105,6 +105,27 @@ export function encryptExportData(plaintext: string): ExportEncryptionResult & {
   };
 }
 
+export function encryptExportBuffer(rawBuffer: Buffer): ExportEncryptionResult & { ciphertextHash: string } {
+  const oneTimeKey = crypto.randomBytes(32).toString("hex");
+  const iv = crypto.randomBytes(16);
+  const keyBuffer = Buffer.from(oneTimeKey, "hex");
+
+  const cipher = crypto.createCipheriv(EXPORT_ALGORITHM, keyBuffer, iv);
+  const encrypted = Buffer.concat([cipher.update(rawBuffer), cipher.final()]);
+
+  const sha256Hash = crypto.createHash("sha256").update(rawBuffer).digest("hex");
+  const ciphertextHash = crypto.createHash("sha256").update(encrypted).digest("hex");
+
+  return {
+    encryptedData: encrypted,
+    oneTimeKey,
+    iv: iv.toString("hex"),
+    sha256Hash,
+    ciphertextHash,
+    originalSizeBytes: rawBuffer.byteLength,
+  };
+}
+
 export function generateExportHashBuffer(data: Buffer): string {
   return crypto.createHash("sha256").update(data).digest("hex");
 }
@@ -114,6 +135,13 @@ export function decryptExportData(encryptedData: Buffer, oneTimeKey: string, iv:
   const ivBuffer = Buffer.from(iv, "hex");
   const decipher = crypto.createDecipheriv(EXPORT_ALGORITHM, keyBuffer, ivBuffer);
   return Buffer.concat([decipher.update(encryptedData), decipher.final()]).toString("utf8");
+}
+
+export function decryptExportBuffer(encryptedData: Buffer, oneTimeKey: string, iv: string): Buffer {
+  const keyBuffer = Buffer.from(oneTimeKey, "hex");
+  const ivBuffer = Buffer.from(iv, "hex");
+  const decipher = crypto.createDecipheriv(EXPORT_ALGORITHM, keyBuffer, ivBuffer);
+  return Buffer.concat([decipher.update(encryptedData), decipher.final()]);
 }
 
 export function generateExportHash(data: string): string {
@@ -739,39 +767,39 @@ async function getAffectedEntityIds(entityType: string, country: string, cutoffD
     if (entityType === "credit_account" || entityType === "credit_accounts") {
       result = await db.execute(sql`
         SELECT ca.id FROM credit_accounts ca JOIN borrowers b ON ca.borrower_id = b.id
-        WHERE b.country = ${country} AND ca.status IN ('closed', 'written_off', 'settled') AND ca.updated_at < ${cutoffDate} LIMIT 1000
+        WHERE b.country = ${country} AND ca.status IN ('closed', 'written_off', 'settled') AND ca.updated_at < ${cutoffDate}
       `);
     } else if (entityType === "borrower" || entityType === "borrowers") {
       result = await db.execute(sql`
         SELECT b.id FROM borrowers b WHERE b.country = ${country} AND b.updated_at < ${cutoffDate}
-        AND NOT EXISTS (SELECT 1 FROM credit_accounts ca WHERE ca.borrower_id = b.id AND ca.status IN ('active', 'current', 'delinquent')) LIMIT 1000
+        AND NOT EXISTS (SELECT 1 FROM credit_accounts ca WHERE ca.borrower_id = b.id AND ca.status IN ('active', 'current', 'delinquent'))
       `);
     } else if (entityType === "inquiry" || entityType === "credit_inquiries") {
       result = await db.execute(sql`
         SELECT ci.id FROM credit_inquiries ci JOIN borrowers b ON ci.borrower_id = b.id
-        WHERE b.country = ${country} AND ci.created_at < ${cutoffDate} LIMIT 1000
+        WHERE b.country = ${country} AND ci.created_at < ${cutoffDate}
       `);
     } else if (entityType === "dispute" || entityType === "disputes") {
       result = await db.execute(sql`
         SELECT d.id FROM disputes d WHERE d.country = ${country}
-        AND d.status IN ('resolved', 'closed', 'rejected') AND d.updated_at < ${cutoffDate} LIMIT 1000
+        AND d.status IN ('resolved', 'closed', 'rejected') AND d.updated_at < ${cutoffDate}
       `);
     } else if (entityType === "audit_log" || entityType === "audit_logs") {
-      result = await db.execute(sql`SELECT id FROM audit_logs WHERE created_at < ${cutoffDate} LIMIT 1000`);
+      result = await db.execute(sql`SELECT id FROM audit_logs WHERE created_at < ${cutoffDate}`);
     } else if (entityType === "consent_record" || entityType === "consent_records") {
       result = await db.execute(sql`
         SELECT cr.id FROM consent_records cr JOIN borrowers b ON cr.borrower_id = b.id
-        WHERE b.country = ${country} AND cr.created_at < ${cutoffDate} LIMIT 1000
+        WHERE b.country = ${country} AND cr.created_at < ${cutoffDate}
       `);
     } else if (entityType === "court_judgment" || entityType === "court_judgments") {
       result = await db.execute(sql`
         SELECT cj.id FROM court_judgments cj JOIN borrowers b ON cj.borrower_id = b.id
-        WHERE b.country = ${country} AND cj.created_at < ${cutoffDate} LIMIT 1000
+        WHERE b.country = ${country} AND cj.created_at < ${cutoffDate}
       `);
     } else if (entityType === "payment_history") {
       result = await db.execute(sql`
         SELECT ph.id FROM payment_history ph JOIN credit_accounts ca ON ph.credit_account_id = ca.id
-        JOIN borrowers b ON ca.borrower_id = b.id WHERE b.country = ${country} AND ph.created_at < ${cutoffDate} LIMIT 1000
+        JOIN borrowers b ON ca.borrower_id = b.id WHERE b.country = ${country} AND ph.created_at < ${cutoffDate}
       `);
     }
   } catch { return []; }

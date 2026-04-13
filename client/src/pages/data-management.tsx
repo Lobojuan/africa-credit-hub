@@ -31,50 +31,88 @@ function ExportCenterTab() {
     enabled: user?.role === "super_admin",
   });
 
+  const [exportJobId, setExportJobId] = useState<string | null>(null);
+  const [exportProgress, setExportProgress] = useState<{ percent: number; status: string } | null>(null);
+
   const handlePortabilityExport = async (orgId: string) => {
     try {
-      const url = `/api/admin/export/${orgId}`;
-      const res = await fetch(url, { credentials: "include" });
-      if (!res.ok) {
-        const err = await res.json();
+      const csrfRes = await fetch("/api/auth/csrf-token", { credentials: "include" });
+      const { token: csrfToken } = await csrfRes.json();
+
+      const initRes = await fetch(`/api/admin/export/${orgId}`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json", "x-csrf-token": csrfToken },
+      });
+      if (!initRes.ok) {
+        const err = await initRes.json();
         throw new Error(err.message || "Export failed");
       }
+      const { jobId } = await initRes.json();
+      setExportJobId(jobId);
+      setExportProgress({ percent: 0, status: "queued" });
 
-      const sha256 = res.headers.get("X-Export-SHA256");
-      const isEncrypted = res.headers.get("X-Export-Encrypted") === "true";
-      const oneTimeKey = res.headers.get("X-Export-Key");
-      const iv = res.headers.get("X-Export-IV");
+      toast({ title: "Export started", description: "Processing in the background. Progress will update automatically." });
 
-      const blob = await res.blob();
-      const disposition = res.headers.get("Content-Disposition") || "";
-      const filenameMatch = disposition.match(/filename="?([^"]+)"?/);
-      const filename = filenameMatch?.[1] || `export_${Date.now()}.json`;
+      const pollInterval = setInterval(async () => {
+        try {
+          const progressRes = await fetch(`/api/export/progress/${jobId}`, { credentials: "include" });
+          if (!progressRes.ok) { clearInterval(pollInterval); return; }
+          const progress = await progressRes.json();
+          setExportProgress({ percent: progress.percent, status: progress.status });
 
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(a.href);
+          if (progress.status === "completed") {
+            clearInterval(pollInterval);
+            const dlRes = await fetch(`/api/export/download/${jobId}`, { credentials: "include" });
+            if (!dlRes.ok) throw new Error("Download failed");
 
-      if (sha256) {
-        const sha256Res = await fetch(`/api/export/sha256/${sha256}`, { credentials: "include" });
-        if (sha256Res.ok) {
-          const sha256Blob = await sha256Res.blob();
-          const sha256Link = document.createElement("a");
-          sha256Link.href = URL.createObjectURL(sha256Blob);
-          sha256Link.download = `${sha256.substring(0, 16)}.sha256`;
-          sha256Link.click();
-          URL.revokeObjectURL(sha256Link.href);
+            const sha256 = dlRes.headers.get("X-Export-SHA256");
+            const oneTimeKey = dlRes.headers.get("X-Export-Key");
+            const iv = dlRes.headers.get("X-Export-IV");
+
+            const blob = await dlRes.blob();
+            const disposition = dlRes.headers.get("Content-Disposition") || "";
+            const filenameMatch = disposition.match(/filename="?([^"]+)"?/);
+            const filename = filenameMatch?.[1] || `export_${Date.now()}.enc`;
+
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(a.href);
+
+            const companionB64 = dlRes.headers.get("X-Export-SHA256-Companion");
+            if (companionB64) {
+              const companionText = atob(companionB64);
+              const sha256Blob = new Blob([companionText], { type: "text/plain" });
+              const sha256Link = document.createElement("a");
+              sha256Link.href = URL.createObjectURL(sha256Blob);
+              sha256Link.download = filename.replace(/\.enc$/, ".sha256");
+              sha256Link.click();
+              URL.revokeObjectURL(sha256Link.href);
+            }
+
+            let desc = `SHA-256: ${sha256?.substring(0, 16)}...`;
+            if (oneTimeKey) {
+              desc += `\nDecryption Key: ${oneTimeKey}\nIV: ${iv}\n\nSave this key — it cannot be recovered.`;
+            }
+            toast({ title: "Encrypted export downloaded", description: desc });
+            setExportJobId(null);
+            setExportProgress(null);
+          } else if (progress.status === "failed") {
+            clearInterval(pollInterval);
+            toast({ title: "Export failed", description: "Background export job failed.", variant: "destructive" });
+            setExportJobId(null);
+            setExportProgress(null);
+          }
+        } catch {
+          clearInterval(pollInterval);
         }
-      }
-
-      let desc = `SHA-256: ${sha256?.substring(0, 16)}...`;
-      if (isEncrypted && oneTimeKey) {
-        desc += `\nDecryption Key: ${oneTimeKey}\nIV: ${iv}\n\nSave this key — it cannot be recovered.`;
-      }
-      toast({ title: isEncrypted ? "Encrypted export downloaded" : "Export downloaded", description: desc + "\nCompanion .sha256 file also downloaded." });
+      }, 2000);
     } catch (e: any) {
       toast({ title: "Export failed", description: e.message, variant: "destructive" });
+      setExportJobId(null);
+      setExportProgress(null);
     }
   };
 
@@ -151,11 +189,23 @@ function ExportCenterTab() {
             <Button
               onClick={() => handlePortabilityExport(user.organizationId!)}
               data-testid="button-export-my-org"
+              disabled={!!exportJobId}
             >
               <Download className="h-4 w-4 mr-2" />
               Export My Organization Data
             </Button>
           ) : null}
+          {exportProgress && (
+            <div className="mt-4 space-y-2" data-testid="export-progress">
+              <div className="flex items-center justify-between text-sm">
+                <span className="capitalize">{exportProgress.status}</span>
+                <span>{exportProgress.percent}%</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2">
+                <div className="bg-primary h-2 rounded-full transition-all" style={{ width: `${exportProgress.percent}%` }} />
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
