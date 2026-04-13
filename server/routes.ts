@@ -5605,14 +5605,18 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
             ai.mlScore.featureImportance.forEach((f: any) => {
               ensureSpace(16);
               const rY = doc.y;
+              const descWidth = fCols[2].width - 8;
+              const descText = f.description || "";
+              const estLines = Math.ceil(doc.fontSize(6.5).font("Helvetica").widthOfString(descText) / descWidth);
+              const rowH = Math.max(15, estLines * 9 + 6);
               const bg = tableRowIdx % 2 === 0 ? "#ffffff" : AI_LIGHT_BG;
-              doc.rect(40, rY, W, 14).fill(bg);
+              doc.rect(40, rY, W, rowH).fill(bg);
               doc.fill(DARK).fontSize(7).font("Helvetica-Bold").text(f.feature, 44, rY + 3, { width: fCols[0].width - 8 });
               const dirColor = f.direction === "positive" ? "#16a34a" : f.direction === "negative" ? "#dc2626" : GRAY;
               const dirSymbol = f.direction === "positive" ? "+" : f.direction === "negative" ? "-" : "=";
               doc.fill(dirColor).fontSize(7).font("Helvetica-Bold").text(`${dirSymbol} ${f.direction}`, 44 + fCols[0].width, rY + 3, { width: fCols[1].width - 8 });
-              doc.fill(GRAY).fontSize(6.5).font("Helvetica").text(f.description, 44 + fCols[0].width + fCols[1].width, rY + 3, { width: fCols[2].width - 8 });
-              doc.y = rY + 15;
+              doc.fill(GRAY).fontSize(6.5).font("Helvetica").text(descText, 44 + fCols[0].width + fCols[1].width, rY + 3, { width: descWidth });
+              doc.y = rY + rowH + 1;
               tableRowIdx++;
             });
           }
