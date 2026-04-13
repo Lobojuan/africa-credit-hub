@@ -80,7 +80,7 @@ export interface ExportAuditEntry {
   country?: string;
 }
 
-export function encryptExportData(plaintext: string): ExportEncryptionResult {
+export function encryptExportData(plaintext: string): ExportEncryptionResult & { ciphertextHash: string } {
   const oneTimeKey = crypto.randomBytes(32).toString("hex");
   const iv = crypto.randomBytes(16);
   const keyBuffer = Buffer.from(oneTimeKey, "hex");
@@ -89,14 +89,20 @@ export function encryptExportData(plaintext: string): ExportEncryptionResult {
   const encrypted = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
 
   const sha256Hash = crypto.createHash("sha256").update(plaintext).digest("hex");
+  const ciphertextHash = crypto.createHash("sha256").update(encrypted).digest("hex");
 
   return {
     encryptedData: encrypted,
     oneTimeKey,
     iv: iv.toString("hex"),
     sha256Hash,
+    ciphertextHash,
     originalSizeBytes: Buffer.byteLength(plaintext, "utf8"),
   };
+}
+
+export function generateExportHashBuffer(data: Buffer): string {
+  return crypto.createHash("sha256").update(data).digest("hex");
 }
 
 export function decryptExportData(encryptedData: Buffer, oneTimeKey: string, iv: string): string {
@@ -271,7 +277,9 @@ export async function buildConsumerDataExport(borrowerId: string): Promise<Recor
   let altData: any[] = [];
   try {
     altData = await db.select().from(alternativeData).where(sql`borrower_id::text = ${borrowerId}`);
-  } catch {}
+  } catch (e: any) {
+    console.warn("[Export] Alternative data query failed for borrower", borrowerId, e.message);
+  }
 
   return {
     exportDate: new Date().toISOString(),
@@ -401,16 +409,16 @@ export async function cascadeDeleteBorrower(borrowerId: string): Promise<{
   let deletedReportLogs = 0;
   let deletedConsumerAccounts = 0;
 
-  try { const r = await db.execute(sql`DELETE FROM borrower_alerts WHERE borrower_id = ${borrowerId}`); deletedAlerts = (r as any).rowCount || 0; } catch {}
-  try { const r = await db.execute(sql`DELETE FROM consent_records WHERE borrower_id = ${borrowerId}`); deletedConsent = (r as any).rowCount || 0; } catch {}
-  try { const r = await db.execute(sql`DELETE FROM credit_report_logs WHERE borrower_id = ${borrowerId}`); deletedReportLogs = (r as any).rowCount || 0; } catch {}
+  try { const r = await db.execute(sql`DELETE FROM borrower_alerts WHERE borrower_id = ${borrowerId}`); deletedAlerts = (r as any).rowCount || 0; } catch (e: any) { console.warn("[Erasure] borrower_alerts cleanup:", e.message); }
+  try { const r = await db.execute(sql`DELETE FROM consent_records WHERE borrower_id = ${borrowerId}`); deletedConsent = (r as any).rowCount || 0; } catch (e: any) { console.warn("[Erasure] consent_records cleanup:", e.message); }
+  try { const r = await db.execute(sql`DELETE FROM credit_report_logs WHERE borrower_id = ${borrowerId}`); deletedReportLogs = (r as any).rowCount || 0; } catch (e: any) { console.warn("[Erasure] credit_report_logs cleanup:", e.message); }
 
   const [bor] = await db.select().from(borrowers).where(eq(borrowers.id, borrowerId)).limit(1);
   if (bor?.nationalId) {
     try {
       const r = await db.delete(consumerAccounts).where(eq(consumerAccounts.nationalId, bor.nationalId)).returning({ id: consumerAccounts.id });
       deletedConsumerAccounts = r.length;
-    } catch {}
+    } catch (e: any) { console.warn("[Erasure] consumer_accounts cleanup:", e.message); }
   }
 
   await db.delete(borrowers).where(eq(borrowers.id, borrowerId));
@@ -501,7 +509,9 @@ export async function scanRetentionPolicies(countryFilter?: string): Promise<{
         `);
         recordsAffected = parseInt((result.rows[0] as any)?.count || "0");
       }
-    } catch {}
+    } catch (e: any) {
+      console.warn(`[Retention] Policy scan failed for ${policy.entityType} in ${policy.country}:`, e.message);
+    }
 
     if (recordsAffected > 0) {
       totalFlagged += recordsAffected;

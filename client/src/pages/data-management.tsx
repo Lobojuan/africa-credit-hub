@@ -430,8 +430,11 @@ function ExportHistoryTab() {
       case "FULL_DATA_EXPORT": return <Badge className="bg-emerald-600">Full Export</Badge>;
       case "CONSUMER_DATA_EXPORT": return <Badge className="bg-blue-600">Consumer Export</Badge>;
       case "data_export": return <Badge className="bg-purple-600">Report Export</Badge>;
+      case "REPORT_EXPORT": return <Badge className="bg-purple-600">Report Export</Badge>;
+      case "REGULATORY_EXPORT": return <Badge className="bg-indigo-600">Regulatory Export</Badge>;
       case "DATA_ERASURE_REQUEST": return <Badge variant="destructive">Erasure Request</Badge>;
       case "DATA_ERASURE_COMPLETED": return <Badge className="bg-red-700">Erasure Completed</Badge>;
+      case "CASCADE_ENTITY_DELETED": return <Badge className="bg-red-500">Entity Deleted</Badge>;
       case "RETENTION_SCAN": return <Badge className="bg-amber-600">Retention Scan</Badge>;
       default: return <Badge variant="secondary">{action}</Badge>;
     }

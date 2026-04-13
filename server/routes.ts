@@ -73,7 +73,7 @@ import { BUSINESS_CREDIT_TYPES, inferCreditCategory, normalizeAccountType } from
 import { BSL_EXPORT_GENERATORS } from "./bsl-export";
 import type { BslFileType } from "@shared/bsl-codes";
 import {
-  encryptExportData, decryptExportData, generateExportHash, verifyExportIntegrity,
+  encryptExportData, decryptExportData, generateExportHash, generateExportHashBuffer, verifyExportIntegrity,
   buildFullPortabilityExport, buildConsumerDataExport, cascadeDeleteBorrower,
   scanRetentionPolicies,
 } from "./export-service";
@@ -6117,22 +6117,37 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
           });
         }
 
-        const xlsxBuf = await workbook.xlsx.writeBuffer();
-        const xlsxHash = generateExportHash(Buffer.from(xlsxBuf as ArrayBuffer).toString("base64"));
-        res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        res.setHeader("Content-Disposition", `attachment; filename=${type}_report_${Date.now()}.xlsx`);
-        res.setHeader("X-Export-SHA256", xlsxHash);
-        res.setHeader("X-Export-Encrypted", "false");
-        res.setHeader("X-Export-Size-Bytes", String((xlsxBuf as ArrayBuffer).byteLength));
+        const xlsxBuf = Buffer.from(await workbook.xlsx.writeBuffer() as ArrayBuffer);
+        const xlsxHash = generateExportHashBuffer(xlsxBuf);
+        const shouldEncrypt = req.query.encrypt === "true";
+
         await storage.createAuditLog({
           userId: req.session.userId,
           action: "REPORT_EXPORT",
           entity: "report",
           entityId: type,
-          details: JSON.stringify({ format: "xlsx", type, sizeBytes: (xlsxBuf as ArrayBuffer).byteLength, sha256: xlsxHash, encrypted: false }),
+          details: JSON.stringify({ format: "xlsx", type, sizeBytes: xlsxBuf.byteLength, sha256: xlsxHash, encrypted: shouldEncrypt }),
           ipAddress: req.ip || "unknown",
         });
-        res.send(Buffer.from(xlsxBuf as ArrayBuffer));
+
+        if (shouldEncrypt) {
+          const encResult = encryptExportData(xlsxBuf.toString("base64"));
+          res.setHeader("Content-Type", "application/octet-stream");
+          res.setHeader("Content-Disposition", `attachment; filename=${type}_report_${Date.now()}.enc`);
+          res.setHeader("X-Export-SHA256", encResult.ciphertextHash);
+          res.setHeader("X-Export-Plaintext-SHA256", xlsxHash);
+          res.setHeader("X-Export-IV", encResult.iv);
+          res.setHeader("X-Export-Key", encResult.oneTimeKey);
+          res.setHeader("X-Export-Encrypted", "true");
+          return res.send(encResult.encryptedData);
+        }
+
+        res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        res.setHeader("Content-Disposition", `attachment; filename=${type}_report_${Date.now()}.xlsx`);
+        res.setHeader("X-Export-SHA256", xlsxHash);
+        res.setHeader("X-Export-Encrypted", "false");
+        res.setHeader("X-Export-Size-Bytes", String(xlsxBuf.byteLength));
+        res.send(xlsxBuf);
         res.end();
       } else if (format === "csv") {
         let csv = "";
@@ -6158,19 +6173,34 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
         const csvHash = generateExportHash(csv);
         const csvSizeBytes = Buffer.byteLength(csv, "utf8");
-        res.setHeader("Content-Type", "text/csv");
-        res.setHeader("Content-Disposition", `attachment; filename=${type}_report_${Date.now()}.csv`);
-        res.setHeader("X-Export-SHA256", csvHash);
-        res.setHeader("X-Export-Encrypted", "false");
-        res.setHeader("X-Export-Size-Bytes", String(csvSizeBytes));
+        const shouldEncryptCsv = req.query.encrypt === "true";
+
         await storage.createAuditLog({
           userId: req.session.userId,
           action: "REPORT_EXPORT",
           entity: "report",
           entityId: type,
-          details: JSON.stringify({ format: "csv", type, sizeBytes: csvSizeBytes, sha256: csvHash, encrypted: false }),
+          details: JSON.stringify({ format: "csv", type, sizeBytes: csvSizeBytes, sha256: csvHash, encrypted: shouldEncryptCsv }),
           ipAddress: req.ip || "unknown",
         });
+
+        if (shouldEncryptCsv) {
+          const encResult = encryptExportData(csv);
+          res.setHeader("Content-Type", "application/octet-stream");
+          res.setHeader("Content-Disposition", `attachment; filename=${type}_report_${Date.now()}.enc`);
+          res.setHeader("X-Export-SHA256", encResult.ciphertextHash);
+          res.setHeader("X-Export-Plaintext-SHA256", csvHash);
+          res.setHeader("X-Export-IV", encResult.iv);
+          res.setHeader("X-Export-Key", encResult.oneTimeKey);
+          res.setHeader("X-Export-Encrypted", "true");
+          return res.send(encResult.encryptedData);
+        }
+
+        res.setHeader("Content-Type", "text/csv");
+        res.setHeader("Content-Disposition", `attachment; filename=${type}_report_${Date.now()}.csv`);
+        res.setHeader("X-Export-SHA256", csvHash);
+        res.setHeader("X-Export-Encrypted", "false");
+        res.setHeader("X-Export-Size-Bytes", String(csvSizeBytes));
         res.send(csv);
       } else {
         res.status(400).json({ message: "Unsupported format. Use csv or xlsx." });
@@ -6289,19 +6319,34 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
       const bogHash = generateExportHash(content);
       const bogSizeBytes = Buffer.byteLength(content, "utf8");
-      res.setHeader("Content-Type", "text/csv; charset=utf-8");
-      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-      res.setHeader("X-Export-SHA256", bogHash);
-      res.setHeader("X-Export-Encrypted", "false");
-      res.setHeader("X-Export-Size-Bytes", String(bogSizeBytes));
+      const bogEncrypt = req.query.encrypt === "true";
+
       await storage.createAuditLog({
         userId: req.session.userId,
         action: "REGULATORY_EXPORT",
         entity: "bog_report",
         entityId: fileType,
-        details: JSON.stringify({ regulator: "BoG", fileType, filename, sizeBytes: bogSizeBytes, sha256: bogHash, encrypted: false }),
+        details: JSON.stringify({ regulator: "BoG", fileType, filename, sizeBytes: bogSizeBytes, sha256: bogHash, encrypted: bogEncrypt }),
         ipAddress: req.ip || "unknown",
       });
+
+      if (bogEncrypt) {
+        const encResult = encryptExportData(content);
+        res.setHeader("Content-Type", "application/octet-stream");
+        res.setHeader("Content-Disposition", `attachment; filename="${filename}.enc"`);
+        res.setHeader("X-Export-SHA256", encResult.ciphertextHash);
+        res.setHeader("X-Export-Plaintext-SHA256", bogHash);
+        res.setHeader("X-Export-IV", encResult.iv);
+        res.setHeader("X-Export-Key", encResult.oneTimeKey);
+        res.setHeader("X-Export-Encrypted", "true");
+        return res.send(encResult.encryptedData);
+      }
+
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.setHeader("X-Export-SHA256", bogHash);
+      res.setHeader("X-Export-Encrypted", "false");
+      res.setHeader("X-Export-Size-Bytes", String(bogSizeBytes));
       res.send(content);
     } catch (e: any) {
       routeLogger.error("BoG export error:", { detail: e });
@@ -6344,19 +6389,34 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
       const bslHash = generateExportHash(content);
       const bslSizeBytes = Buffer.byteLength(content, "utf8");
-      res.setHeader("Content-Type", "text/csv; charset=utf-8");
-      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-      res.setHeader("X-Export-SHA256", bslHash);
-      res.setHeader("X-Export-Encrypted", "false");
-      res.setHeader("X-Export-Size-Bytes", String(bslSizeBytes));
+      const bslEncrypt = req.query.encrypt === "true";
+
       await storage.createAuditLog({
         userId: req.session.userId,
         action: "REGULATORY_EXPORT",
         entity: "bsl_report",
         entityId: fileType,
-        details: JSON.stringify({ regulator: "BSL", fileType, filename, sizeBytes: bslSizeBytes, sha256: bslHash, encrypted: false }),
+        details: JSON.stringify({ regulator: "BSL", fileType, filename, sizeBytes: bslSizeBytes, sha256: bslHash, encrypted: bslEncrypt }),
         ipAddress: req.ip || "unknown",
       });
+
+      if (bslEncrypt) {
+        const encResult = encryptExportData(content);
+        res.setHeader("Content-Type", "application/octet-stream");
+        res.setHeader("Content-Disposition", `attachment; filename="${filename}.enc"`);
+        res.setHeader("X-Export-SHA256", encResult.ciphertextHash);
+        res.setHeader("X-Export-Plaintext-SHA256", bslHash);
+        res.setHeader("X-Export-IV", encResult.iv);
+        res.setHeader("X-Export-Key", encResult.oneTimeKey);
+        res.setHeader("X-Export-Encrypted", "true");
+        return res.send(encResult.encryptedData);
+      }
+
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.setHeader("X-Export-SHA256", bslHash);
+      res.setHeader("X-Export-Encrypted", "false");
+      res.setHeader("X-Export-Size-Bytes", String(bslSizeBytes));
       res.send(content);
     } catch (e: any) {
       routeLogger.error("BSL export error:", { detail: e });
@@ -10748,7 +10808,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         const result = encryptExportData(jsonStr);
         res.setHeader("Content-Disposition", `attachment; filename="ach_export_${safeName}_${dateStr}.enc"`);
         res.setHeader("Content-Type", "application/octet-stream");
-        res.setHeader("X-Export-SHA256", sha256Hash);
+        res.setHeader("X-Export-SHA256", result.ciphertextHash);
+        res.setHeader("X-Export-Plaintext-SHA256", sha256Hash);
         res.setHeader("X-Export-IV", result.iv);
         res.setHeader("X-Export-Key", result.oneTimeKey);
         res.setHeader("X-Export-Original-Size", String(result.originalSizeBytes));
@@ -10851,11 +10912,12 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const country = getCountryFilter(req);
       const orgId = getOrgScope(req);
       const logs = await storage.getAuditLogs(orgId, country, 200);
-      const exportLogs = logs.filter(l =>
-        l.action === "FULL_DATA_EXPORT" || l.action === "CONSUMER_DATA_EXPORT" ||
-        l.action === "data_export" || l.action === "DATA_ERASURE_REQUEST" ||
-        l.action === "DATA_ERASURE_COMPLETED" || l.action === "RETENTION_SCAN"
-      );
+      const exportActions = new Set([
+        "FULL_DATA_EXPORT", "CONSUMER_DATA_EXPORT", "REPORT_EXPORT", "REGULATORY_EXPORT",
+        "data_export", "DATA_ERASURE_REQUEST", "DATA_ERASURE_COMPLETED",
+        "CASCADE_ENTITY_DELETED", "RETENTION_SCAN",
+      ]);
+      const exportLogs = logs.filter(l => exportActions.has(l.action));
       res.json(exportLogs);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
