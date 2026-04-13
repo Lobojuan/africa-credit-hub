@@ -113,9 +113,13 @@ export async function enforceRetentionPolicies(): Promise<RetentionResult[]> {
       const resolver = ENTITY_RESOLVER[policy.entityType];
       const archiveYears = policy.archiveAfterYears ?? policy.retentionYears;
       const expungeYears = policy.retentionYears;
+      const policyAction = (policy as any).action || "flag";
 
       result.archiveEligible = await countEligible(tableName, resolver, policy.country, archiveYears, expungeYears);
-      result.expungedCount = await expungeExpired(tableName, resolver, policy.country, expungeYears);
+
+      if (policyAction === "delete") {
+        result.expungedCount = await expungeExpired(tableName, resolver, policy.country, expungeYears);
+      }
     } catch (err: any) {
       result.errors.push(err.message || String(err));
     }

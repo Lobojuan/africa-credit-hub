@@ -6,7 +6,7 @@ import {
   borrowers, creditAccounts, creditInquiries, disputes,
   paymentHistory, guarantors, courtJudgments, dishonouredCheques,
   auditLogs, retentionPolicies, consumerAccounts, alternativeData,
-  creditReportLogs,
+  creditReportLogs, creditScoreHistory,
 } from "@shared/schema";
 import type {
   Borrower, CreditAccount, CreditInquiry, Dispute,
@@ -393,6 +393,19 @@ export async function buildConsumerDataExport(borrowerId: string): Promise<Recor
     console.warn("[Export] Credit report logs query failed for borrower", borrowerId, e.message);
   }
 
+  let scoreHistory: Array<{ score: number; scoreModel: string; factors: string | null; provider: string | null; createdAt: Date | null }> = [];
+  try {
+    scoreHistory = await db.select({
+      score: creditScoreHistory.score,
+      scoreModel: creditScoreHistory.scoreModel,
+      factors: creditScoreHistory.factors,
+      provider: creditScoreHistory.provider,
+      createdAt: creditScoreHistory.createdAt,
+    }).from(creditScoreHistory).where(eq(creditScoreHistory.borrowerId, borrowerId));
+  } catch (e: any) {
+    console.warn("[Export] Credit score history query failed for borrower", borrowerId, e.message);
+  }
+
   return {
     exportDate: new Date().toISOString(),
     exportVersion: "3.0.0",
@@ -480,12 +493,20 @@ export async function buildConsumerDataExport(borrowerId: string): Promise<Recor
       serialNumber: r.serialNumber,
       date: r.createdAt,
     })),
+    scoreHistory: scoreHistory.map(s => ({
+      score: s.score,
+      scoreModel: s.scoreModel,
+      factors: s.factors,
+      provider: s.provider,
+      date: s.createdAt,
+    })),
     statistics: {
       totalAccounts: accounts.length,
       totalPayments: payments.length,
       totalInquiries: inquiries.length,
       totalDisputes: borrowerDisputes.length,
       totalCreditReports: reportLogs.length,
+      totalScoreRecords: scoreHistory.length,
     },
   };
 }
@@ -585,7 +606,7 @@ export async function scanRetentionPolicies(countryFilter?: string): Promise<{
     cutoffDate.setFullYear(cutoffDate.getFullYear() - policy.retentionYears);
 
     let recordsAffected = 0;
-    const action = policy.archiveAfterYears ? "archive" : "flag";
+    const action = (policy as any).action || (policy.archiveAfterYears ? "archive" : "flag");
 
     try {
       if (policy.entityType === "credit_account" || policy.entityType === "credit_accounts") {

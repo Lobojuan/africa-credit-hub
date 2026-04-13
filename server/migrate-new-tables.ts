@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { db } from "./db";
 
-async function run() {
+export async function migrateNewTables() {
   await db.execute(sql`ALTER TABLE borrowers ADD COLUMN IF NOT EXISTS passport_number text`);
 
   await db.execute(sql`CREATE TABLE IF NOT EXISTS exchange_rates (
@@ -21,10 +21,23 @@ async function run() {
     entity_type text NOT NULL,
     retention_years integer NOT NULL,
     archive_after_years integer,
+    action text DEFAULT 'flag',
     description text,
     is_active boolean DEFAULT true,
     created_at timestamp DEFAULT now(),
     updated_at timestamp DEFAULT now()
+  )`);
+
+  await db.execute(sql`ALTER TABLE retention_policies ADD COLUMN IF NOT EXISTS action text DEFAULT 'flag'`);
+
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS credit_score_history (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    borrower_id varchar NOT NULL REFERENCES borrowers(id),
+    score integer NOT NULL,
+    score_model text NOT NULL,
+    factors text,
+    provider text,
+    created_at timestamp DEFAULT now()
   )`);
 
   await db.execute(sql`CREATE TABLE IF NOT EXISTS api_configurations (
@@ -108,7 +121,5 @@ async function run() {
     console.log('Seeded', apis.length, 'API configurations');
   }
 
-  console.log('Migration complete');
-  process.exit(0);
+  console.log('[NewTables] Migration complete');
 }
-run().catch(e => { console.error(e); process.exit(1); });

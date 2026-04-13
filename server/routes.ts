@@ -6120,13 +6120,14 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         const xlsxBuf = Buffer.from(await workbook.xlsx.writeBuffer() as ArrayBuffer);
         const xlsxHash = generateExportHashBuffer(xlsxBuf);
         const shouldEncrypt = req.query.encrypt === "true";
+        const xlsxRecordCount = type === "portfolio" ? accounts.length : borrowersList.length;
 
         await storage.createAuditLog({
           userId: req.session.userId,
           action: "REPORT_EXPORT",
           entity: "report",
           entityId: type,
-          details: JSON.stringify({ format: "xlsx", type, sizeBytes: xlsxBuf.byteLength, sha256: xlsxHash, encrypted: shouldEncrypt }),
+          details: JSON.stringify({ format: "xlsx", type, recordCount: xlsxRecordCount, sizeBytes: xlsxBuf.byteLength, sha256: xlsxHash, encrypted: shouldEncrypt }),
           ipAddress: req.ip || "unknown",
         });
 
@@ -6174,13 +6175,14 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         const csvHash = generateExportHash(csv);
         const csvSizeBytes = Buffer.byteLength(csv, "utf8");
         const shouldEncryptCsv = req.query.encrypt === "true";
+        const csvRecordCount = type === "portfolio" ? accounts.length : borrowersList.length;
 
         await storage.createAuditLog({
           userId: req.session.userId,
           action: "REPORT_EXPORT",
           entity: "report",
           entityId: type,
-          details: JSON.stringify({ format: "csv", type, sizeBytes: csvSizeBytes, sha256: csvHash, encrypted: shouldEncryptCsv }),
+          details: JSON.stringify({ format: "csv", type, recordCount: csvRecordCount, sizeBytes: csvSizeBytes, sha256: csvHash, encrypted: shouldEncryptCsv }),
           ipAddress: req.ip || "unknown",
         });
 
@@ -6319,35 +6321,28 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
       const bogHash = generateExportHash(content);
       const bogSizeBytes = Buffer.byteLength(content, "utf8");
-      const bogEncrypt = req.query.encrypt === "true";
+      const bogRecordCount = content.split("\n").filter(l => l.trim()).length - 1;
 
+      const encResult = encryptExportData(content);
       await storage.createAuditLog({
         userId: req.session.userId,
         action: "REGULATORY_EXPORT",
         entity: "bog_report",
         entityId: fileType,
-        details: JSON.stringify({ regulator: "BoG", fileType, filename, sizeBytes: bogSizeBytes, sha256: bogHash, encrypted: bogEncrypt }),
+        details: JSON.stringify({ regulator: "BoG", fileType, filename, sizeBytes: bogSizeBytes, recordCount: bogRecordCount, sha256: bogHash, encrypted: true }),
         ipAddress: req.ip || "unknown",
       });
 
-      if (bogEncrypt) {
-        const encResult = encryptExportData(content);
-        res.setHeader("Content-Type", "application/octet-stream");
-        res.setHeader("Content-Disposition", `attachment; filename="${filename}.enc"`);
-        res.setHeader("X-Export-SHA256", encResult.ciphertextHash);
-        res.setHeader("X-Export-Plaintext-SHA256", bogHash);
-        res.setHeader("X-Export-IV", encResult.iv);
-        res.setHeader("X-Export-Key", encResult.oneTimeKey);
-        res.setHeader("X-Export-Encrypted", "true");
-        return res.send(encResult.encryptedData);
-      }
-
-      res.setHeader("Content-Type", "text/csv; charset=utf-8");
-      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-      res.setHeader("X-Export-SHA256", bogHash);
-      res.setHeader("X-Export-Encrypted", "false");
+      res.setHeader("Content-Type", "application/octet-stream");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}.enc"`);
+      res.setHeader("X-Export-SHA256", encResult.ciphertextHash);
+      res.setHeader("X-Export-Plaintext-SHA256", bogHash);
+      res.setHeader("X-Export-IV", encResult.iv);
+      res.setHeader("X-Export-Key", encResult.oneTimeKey);
+      res.setHeader("X-Export-Encrypted", "true");
       res.setHeader("X-Export-Size-Bytes", String(bogSizeBytes));
-      res.send(content);
+      res.setHeader("X-Export-Record-Count", String(bogRecordCount));
+      res.send(encResult.encryptedData);
     } catch (e: any) {
       routeLogger.error("BoG export error:", { detail: e });
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -6389,35 +6384,28 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
       const bslHash = generateExportHash(content);
       const bslSizeBytes = Buffer.byteLength(content, "utf8");
-      const bslEncrypt = req.query.encrypt === "true";
+      const bslRecordCount = content.split("\n").filter(l => l.trim()).length - 1;
 
+      const encResult = encryptExportData(content);
       await storage.createAuditLog({
         userId: req.session.userId,
         action: "REGULATORY_EXPORT",
         entity: "bsl_report",
         entityId: fileType,
-        details: JSON.stringify({ regulator: "BSL", fileType, filename, sizeBytes: bslSizeBytes, sha256: bslHash, encrypted: bslEncrypt }),
+        details: JSON.stringify({ regulator: "BSL", fileType, filename, sizeBytes: bslSizeBytes, recordCount: bslRecordCount, sha256: bslHash, encrypted: true }),
         ipAddress: req.ip || "unknown",
       });
 
-      if (bslEncrypt) {
-        const encResult = encryptExportData(content);
-        res.setHeader("Content-Type", "application/octet-stream");
-        res.setHeader("Content-Disposition", `attachment; filename="${filename}.enc"`);
-        res.setHeader("X-Export-SHA256", encResult.ciphertextHash);
-        res.setHeader("X-Export-Plaintext-SHA256", bslHash);
-        res.setHeader("X-Export-IV", encResult.iv);
-        res.setHeader("X-Export-Key", encResult.oneTimeKey);
-        res.setHeader("X-Export-Encrypted", "true");
-        return res.send(encResult.encryptedData);
-      }
-
-      res.setHeader("Content-Type", "text/csv; charset=utf-8");
-      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-      res.setHeader("X-Export-SHA256", bslHash);
-      res.setHeader("X-Export-Encrypted", "false");
+      res.setHeader("Content-Type", "application/octet-stream");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}.enc"`);
+      res.setHeader("X-Export-SHA256", encResult.ciphertextHash);
+      res.setHeader("X-Export-Plaintext-SHA256", bslHash);
+      res.setHeader("X-Export-IV", encResult.iv);
+      res.setHeader("X-Export-Key", encResult.oneTimeKey);
+      res.setHeader("X-Export-Encrypted", "true");
       res.setHeader("X-Export-Size-Bytes", String(bslSizeBytes));
-      res.send(content);
+      res.setHeader("X-Export-Record-Count", String(bslRecordCount));
+      res.send(encResult.encryptedData);
     } catch (e: any) {
       routeLogger.error("BSL export error:", { detail: e });
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -6963,7 +6951,9 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
   app.post("/api/retention-policies", requireRole("admin"), async (req, res) => {
     try {
-      const parsed = insertRetentionPolicySchema.parse(req.body);
+      const body = { ...req.body };
+      if (body.archiveAfterYears === null || body.archiveAfterYears === "") delete body.archiveAfterYears;
+      const parsed = insertRetentionPolicySchema.parse(body);
       const policy = await storage.createRetentionPolicy(parsed);
       await storage.createAuditLog({ userId: req.session?.userId!, action: "CREATE", entity: "retention_policy", entityId: policy.id, details: `Created retention policy: ${parsed.country} - ${parsed.entityType}`, ipAddress: req.ip });
       res.status(201).json(policy);

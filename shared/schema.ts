@@ -463,10 +463,21 @@ export const retentionPolicies = pgTable("retention_policies", {
   entityType: text("entity_type").notNull(),
   retentionYears: integer("retention_years").notNull(),
   archiveAfterYears: integer("archive_after_years"),
+  action: text("action").default("flag"),
   description: text("description"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const creditScoreHistory = pgTable("credit_score_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id),
+  score: integer("score").notNull(),
+  scoreModel: text("score_model").notNull(),
+  factors: text("factors"),
+  provider: text("provider"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const apiConfigurations = pgTable("api_configurations", {
@@ -589,6 +600,7 @@ export const insertBillingRecordSchema = createInsertSchema(billingRecords).omit
 export const insertCreditReportLogSchema = createInsertSchema(creditReportLogs).omit({ id: true, createdAt: true });
 export const insertExchangeRateSchema = createInsertSchema(exchangeRates).omit({ id: true, createdAt: true });
 export const insertRetentionPolicySchema = createInsertSchema(retentionPolicies).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertCreditScoreHistorySchema = createInsertSchema(creditScoreHistory).omit({ id: true, createdAt: true });
 export const insertApiConfigurationSchema = createInsertSchema(apiConfigurations).omit({ id: true, createdAt: true, updatedAt: true, lastTestedAt: true, lastTestStatus: true });
 export const insertDishonouredChequeSchema = createInsertSchema(dishonouredCheques).omit({ id: true, createdAt: true });
 export const insertGuarantorSchema = createInsertSchema(guarantors).omit({ id: true, createdAt: true });
@@ -629,6 +641,8 @@ export type InsertExchangeRate = z.infer<typeof insertExchangeRateSchema>;
 export type ExchangeRate = typeof exchangeRates.$inferSelect;
 export type InsertRetentionPolicy = z.infer<typeof insertRetentionPolicySchema>;
 export type RetentionPolicy = typeof retentionPolicies.$inferSelect;
+export type InsertCreditScoreHistory = z.infer<typeof insertCreditScoreHistorySchema>;
+export type CreditScoreHistory = typeof creditScoreHistory.$inferSelect;
 export type InsertApiConfiguration = z.infer<typeof insertApiConfigurationSchema>;
 export type ApiConfiguration = typeof apiConfigurations.$inferSelect;
 export type InsertDishonouredCheque = z.infer<typeof insertDishonouredChequeSchema>;

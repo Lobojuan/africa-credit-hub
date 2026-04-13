@@ -552,6 +552,13 @@ process.stderr.write = function (...args: any[]) {
   }
 
   try {
+    const { migrateNewTables } = await import("./migrate-new-tables");
+    await migrateNewTables();
+  } catch (e) {
+    console.error("[NewTables] Migration error (non-fatal):", e);
+  }
+
+  try {
     const { ensureIdempotencyTable } = await import("./routes/middleware");
     await ensureIdempotencyTable();
   } catch (e) {

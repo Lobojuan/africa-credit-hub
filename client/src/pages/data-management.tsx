@@ -459,11 +459,18 @@ const AFRICAN_COUNTRIES = [
   "Tunisia", "Uganda", "Zambia", "Zimbabwe",
 ];
 
+const POLICY_ACTIONS = [
+  { value: "flag", label: "Flag for Review" },
+  { value: "archive", label: "Archive" },
+  { value: "delete", label: "Delete / Expunge" },
+];
+
 interface PolicyForm {
   country: string;
   entityType: string;
   retentionYears: number;
   archiveAfterYears: number | null;
+  action: string;
   description: string;
   isActive: boolean;
 }
@@ -473,6 +480,7 @@ const defaultPolicyForm: PolicyForm = {
   entityType: "borrower",
   retentionYears: 7,
   archiveAfterYears: null,
+  action: "flag",
   description: "",
   isActive: true,
 };
@@ -539,6 +547,7 @@ function RetentionPoliciesTab() {
       entityType: policy.entityType,
       retentionYears: policy.retentionYears,
       archiveAfterYears: policy.archiveAfterYears ?? null,
+      action: policy.action || "flag",
       description: policy.description || "",
       isActive: policy.isActive ?? true,
     });
@@ -590,6 +599,7 @@ function RetentionPoliciesTab() {
                   <TableHead>Entity Type</TableHead>
                   <TableHead>Retention</TableHead>
                   <TableHead>Archive After</TableHead>
+                  <TableHead>Action</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
@@ -602,6 +612,11 @@ function RetentionPoliciesTab() {
                     <TableCell>{ENTITY_TYPES.find(e => e.value === p.entityType)?.label || p.entityType}</TableCell>
                     <TableCell>{p.retentionYears} years</TableCell>
                     <TableCell>{p.archiveAfterYears ? `${p.archiveAfterYears} years` : "—"}</TableCell>
+                    <TableCell>
+                      <Badge variant={p.action === "delete" ? "destructive" : p.action === "archive" ? "default" : "secondary"}>
+                        {POLICY_ACTIONS.find(a => a.value === p.action)?.label || p.action || "Flag"}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-sm max-w-xs truncate">{p.description || "—"}</TableCell>
                     <TableCell>
                       <Badge variant={p.isActive ? "default" : "secondary"}>
@@ -664,6 +679,19 @@ function RetentionPoliciesTab() {
                 <SelectContent>
                   {ENTITY_TYPES.map(e => (
                     <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Enforcement Action</Label>
+              <Select value={form.action} onValueChange={(v) => setForm({ ...form, action: v })}>
+                <SelectTrigger data-testid="select-policy-action">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {POLICY_ACTIONS.map(a => (
+                    <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
