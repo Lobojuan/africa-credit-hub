@@ -584,8 +584,12 @@ export async function cascadeDeleteBorrower(borrowerId: string): Promise<{
   const [bor] = await db.select().from(borrowers).where(eq(borrowers.id, borrowerId)).limit(1);
   if (bor?.nationalId) {
     try {
-      const r = await db.delete(consumerAccounts).where(eq(consumerAccounts.nationalId, bor.nationalId)).returning({ id: consumerAccounts.id });
-      deletedConsumerAccounts = r.length;
+      const decryptedBor = decryptBorrowerPII(bor);
+      const decryptedNationalId = decryptedBor.nationalId;
+      if (decryptedNationalId) {
+        const r = await db.delete(consumerAccounts).where(eq(consumerAccounts.nationalId, decryptedNationalId)).returning({ id: consumerAccounts.id });
+        deletedConsumerAccounts = r.length;
+      }
     } catch (e: any) { console.warn("[Erasure] consumer_accounts cleanup:", e.message); }
   }
 

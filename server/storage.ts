@@ -74,6 +74,7 @@ export interface IStorage {
 
   getBorrower(id: string): Promise<Borrower | undefined>;
   getBorrowers(page?: number, limit?: number, organizationId?: string, country?: string, recentDays?: number): Promise<{ data: Borrower[]; total: number }>;
+  getAllBorrowersForExport(organizationId?: string, country?: string): Promise<Borrower[]>;
   getBorrowersByType(type: "individual" | "corporate", page?: number, limit?: number, organizationId?: string, country?: string, recentDays?: number): Promise<{ data: Borrower[]; total: number }>;
   searchBorrowersByType(type: "individual" | "corporate", query: string, organizationId?: string, country?: string): Promise<Borrower[]>;
   searchBorrowers(query: string, organizationId?: string, country?: string): Promise<Borrower[]>;
@@ -394,6 +395,16 @@ export class DatabaseStorage implements IStorage {
     const [totalResult] = await db.select({ value: count() }).from(borrowers).where(where);
     const data = await db.select().from(borrowers).where(where).orderBy(desc(borrowers.createdAt)).limit(safeLimit).offset(offset);
     return { data: decryptBorrowerArray(data as Record<string, any>[]) as Borrower[], total: totalResult.value };
+  }
+
+  async getAllBorrowersForExport(organizationId?: string, country?: string): Promise<Borrower[]> {
+    requireCountryScope(country, "getAllBorrowersForExport");
+    const filters: any[] = [];
+    if (organizationId) filters.push(eq(borrowers.organizationId, organizationId));
+    if (country) filters.push(eq(borrowers.country, country));
+    const where = filters.length > 1 ? and(...filters) : filters[0];
+    const data = await db.select().from(borrowers).where(where).orderBy(desc(borrowers.createdAt));
+    return decryptBorrowerArray(data as Record<string, any>[]) as Borrower[];
   }
 
   async getBorrowersByType(type: "individual" | "corporate", page: number = 1, limit: number = 50, organizationId?: string, country?: string, recentDays?: number): Promise<{ data: Borrower[]; total: number }> {
