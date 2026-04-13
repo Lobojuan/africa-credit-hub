@@ -144,3 +144,15 @@ id = "8aZFLaFfivhm_pUEzqSNj"
 uri = "file://africa-credit-hub-v2.5-codebase.zip"
 type = "unspecified"
 title = "Africa Credit Hub v2.5 — Full Codebase"
+
+[[outputs]]
+id = "cquNcbYM0TPTOFwHrGPab"
+uri = "file://sample-reports/Sample_Consumer_Credit_Report.pdf"
+type = "pdf"
+title = "Sample Consumer Credit Report"
+
+[[outputs]]
+id = "xlYl2pJzmmHzJymNiV0t7"
+uri = "file://sample-reports/Sample_Business_Credit_Report.pdf"
+type = "pdf"
+title = "Sample Business Credit Report"
