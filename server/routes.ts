@@ -2629,21 +2629,78 @@ export async function registerRoutes(
     }
   });
 
+  async function findOrCreateBatchBorrower(
+    record: any,
+    orgId?: string
+  ): Promise<string> {
+    const nationalId = record.nationalId || record.borrowerId;
+    if (!nationalId) throw new Error("No nationalId or borrowerId to identify borrower");
+
+    const existing = await db.select({ id: borrowers.id })
+      .from(borrowers)
+      .where(eq(borrowers.nationalId, nationalId))
+      .limit(1);
+
+    if (existing.length > 0) {
+      const updateData: any = {};
+      if (record.borrowerName) {
+        const parts = record.borrowerName.split(" ");
+        updateData.firstName = parts[0];
+        updateData.lastName = parts.slice(1).join(" ") || null;
+      }
+      if (record.address) updateData.address = record.address;
+      if (record.phoneNumber) updateData.phone = record.phoneNumber;
+      if (record.dateOfBirth) updateData.dateOfBirth = record.dateOfBirth;
+      if (Object.keys(updateData).length > 0) {
+        await db.update(borrowers).set({ ...updateData, updatedAt: new Date() }).where(eq(borrowers.id, existing[0].id));
+      }
+      return existing[0].id;
+    }
+
+    const nameParts = (record.borrowerName || "Unknown").split(" ");
+    const [created] = await db.insert(borrowers).values({
+      type: "individual",
+      firstName: nameParts[0],
+      lastName: nameParts.slice(1).join(" ") || null,
+      nationalId: nationalId,
+      phone: record.phoneNumber || null,
+      address: record.address || null,
+      dateOfBirth: record.dateOfBirth || null,
+      country: "Ghana",
+      organizationId: orgId || null,
+    }).returning();
+    return created.id;
+  }
+
   async function batchInsertCreditAccounts(
-    validated: Array<{ index: number; data: any }>,
-    results: { successCount: number; errorCount: number; updatedCount?: number; errors: Array<{ index: number; message: string }> }
+    validated: Array<{ index: number; data: any; rawRecord?: any }>,
+    results: { successCount: number; errorCount: number; updatedCount?: number; errors: Array<{ index: number; message: string }> },
+    orgId?: string
   ) {
     if (!results.updatedCount) results.updatedCount = 0;
-    const CHUNK_SIZE = 500;
 
+    for (const item of validated) {
+      try {
+        const raw = item.rawRecord || item.data;
+        const resolvedBorrowerId = await findOrCreateBatchBorrower(raw, orgId);
+        item.data.borrowerId = resolvedBorrowerId;
+      } catch (err: any) {
+        results.errorCount++;
+        results.errors.push({ index: item.index, message: `Borrower resolution failed: ${err.message}` });
+        item.data._skip = true;
+      }
+    }
+
+    const activeItems = validated.filter(v => !v.data._skip);
+
+    const CHUNK_SIZE = 500;
     const toInsert: any[] = [];
     const toUpdate: Array<{ id: string; data: any; index: number }> = [];
 
-    const allAccountNumbers = validated.map(v => v.data.accountNumber).filter(Boolean);
-    const allBorrowerIds = validated.map(v => v.data.borrowerId).filter(Boolean);
+    const allAccountNumbers = activeItems.map(v => v.data.accountNumber).filter(Boolean);
     const existingMap = new Map<string, string>();
 
-    if (allAccountNumbers.length > 0 && allBorrowerIds.length > 0) {
+    if (allAccountNumbers.length > 0) {
       for (let i = 0; i < allAccountNumbers.length; i += CHUNK_SIZE) {
         const chunkAcctNums = allAccountNumbers.slice(i, i + CHUNK_SIZE);
         const existing = await db.select({ id: creditAccounts.id, accountNumber: creditAccounts.accountNumber, borrowerId: creditAccounts.borrowerId })
@@ -2655,13 +2712,14 @@ export async function registerRoutes(
       }
     }
 
-    for (const item of validated) {
-      const key = `${item.data.accountNumber}::${item.data.borrowerId}`;
+    for (const item of activeItems) {
+      const { _skip, ...cleanData } = item.data;
+      const key = `${cleanData.accountNumber}::${cleanData.borrowerId}`;
       const existingId = existingMap.get(key);
       if (existingId) {
-        toUpdate.push({ id: existingId, data: item.data, index: item.index });
+        toUpdate.push({ id: existingId, data: cleanData, index: item.index });
       } else {
-        toInsert.push(item);
+        toInsert.push({ ...item, data: cleanData });
       }
     }
 
@@ -2722,7 +2780,7 @@ export async function registerRoutes(
         errors: [],
       };
 
-      const validated: Array<{ index: number; data: any }> = [];
+      const validated: Array<{ index: number; data: any; rawRecord?: any }> = [];
       for (let i = 0; i < records.length; i++) {
         const missingFields = validateBatchRequiredFields(records[i], i);
         if (missingFields.length > 0) {
@@ -2732,14 +2790,14 @@ export async function registerRoutes(
         }
         try {
           const parsed = insertCreditAccountSchema.parse(records[i]);
-          validated.push({ index: i, data: parsed });
+          validated.push({ index: i, data: parsed, rawRecord: records[i] });
         } catch (err: any) {
           results.errorCount++;
           results.errors.push({ index: i, message: err.message || "Validation failed" });
         }
       }
 
-      await batchInsertCreditAccounts(validated, results);
+      await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
 
       const batchMeta = JSON.stringify({
         totalRecords: results.totalSubmitted,
@@ -2815,7 +2873,7 @@ export async function registerRoutes(
       }
 
       const results = { totalSubmitted: records.length, successCount: 0, errorCount: 0, errors: [] as Array<{ index: number; message: string }> };
-      const validated: Array<{ index: number; data: any }> = [];
+      const validated: Array<{ index: number; data: any; rawRecord?: any }> = [];
       for (let i = 0; i < records.length; i++) {
         const missingFields = validateBatchRequiredFields(records[i], i);
         if (missingFields.length > 0) {
@@ -2824,13 +2882,13 @@ export async function registerRoutes(
           continue;
         }
         try {
-          validated.push({ index: i, data: insertCreditAccountSchema.parse(records[i]) });
+          validated.push({ index: i, data: insertCreditAccountSchema.parse(records[i]), rawRecord: records[i] });
         } catch (err: any) {
           results.errorCount++;
           results.errors.push({ index: i, message: err.message || "Validation failed" });
         }
       }
-      await batchInsertCreditAccounts(validated, results);
+      await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
 
       const xbrlMeta = JSON.stringify({ totalRecords: results.totalSubmitted, successCount: results.successCount, updatedCount: results.updatedCount || 0, errorCount: results.errorCount, errors: results.errors.slice(0, 50) });
       await storage.createAuditLog({
@@ -2922,6 +2980,8 @@ export async function registerRoutes(
           };
           record.accountType = facilityMap[record.facilityTypeCode] || "Other";
         }
+        if (!record.borrowerId) record.borrowerId = record.nationalId || `BOG-${i}`;
+        if (!record.borrowerName) record.borrowerName = record.nationalId || "Unknown";
         if (!record.lenderInstitution) record.lenderInstitution = "Unknown";
         if (!record.creditCategory && record.accountType) {
           record.creditCategory = inferCreditCategory(record.accountType);
@@ -2937,7 +2997,7 @@ export async function registerRoutes(
         errors: [] as Array<{ index: number; message: string }>,
       };
 
-      const validated: Array<{ index: number; data: any }> = [];
+      const validated: Array<{ index: number; data: any; rawRecord?: any }> = [];
       for (let i = 0; i < records.length; i++) {
         const missingFields = validateBatchRequiredFields(records[i], i);
         if (missingFields.length > 0) {
@@ -2946,13 +3006,13 @@ export async function registerRoutes(
           continue;
         }
         try {
-          validated.push({ index: i, data: insertCreditAccountSchema.parse(records[i]) });
+          validated.push({ index: i, data: insertCreditAccountSchema.parse(records[i]), rawRecord: records[i] });
         } catch (err: any) {
           results.errorCount++;
           results.errors.push({ index: i, message: err.message || "Validation failed" });
         }
       }
-      await batchInsertCreditAccounts(validated, results);
+      await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
 
       const bogMeta = JSON.stringify({ totalRecords: results.totalSubmitted, successCount: results.successCount, updatedCount: results.updatedCount || 0, errorCount: results.errorCount, errors: results.errors.slice(0, 50) });
       await storage.createAuditLog({
@@ -3025,7 +3085,7 @@ export async function registerRoutes(
         errors: [] as Array<{ index: number; message: string }>,
       };
 
-      const validated: Array<{ index: number; data: any }> = [];
+      const validated: Array<{ index: number; data: any; rawRecord?: any }> = [];
       for (let i = 0; i < records.length; i++) {
         const missingFields = validateBatchRequiredFields(records[i], i);
         if (missingFields.length > 0) {
@@ -3034,13 +3094,13 @@ export async function registerRoutes(
           continue;
         }
         try {
-          validated.push({ index: i, data: insertCreditAccountSchema.parse(records[i]) });
+          validated.push({ index: i, data: insertCreditAccountSchema.parse(records[i]), rawRecord: records[i] });
         } catch (err: any) {
           results.errorCount++;
           results.errors.push({ index: i, message: err.message || "Validation failed" });
         }
       }
-      await batchInsertCreditAccounts(validated, results);
+      await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
 
       const csvMeta = JSON.stringify({ totalRecords: results.totalSubmitted, successCount: results.successCount, updatedCount: results.updatedCount || 0, errorCount: results.errorCount, errors: results.errors.slice(0, 50) });
       await storage.createAuditLog({
