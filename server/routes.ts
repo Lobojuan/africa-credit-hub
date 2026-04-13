@@ -6119,37 +6119,29 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
         const xlsxBuf = Buffer.from(await workbook.xlsx.writeBuffer() as ArrayBuffer);
         const xlsxHash = generateExportHashBuffer(xlsxBuf);
-        const shouldEncrypt = req.query.encrypt === "true";
         const xlsxRecordCount = type === "portfolio" ? accounts.length : borrowersList.length;
+
+        const encResult = encryptExportData(xlsxBuf.toString("base64"));
 
         await storage.createAuditLog({
           userId: req.session.userId,
           action: "REPORT_EXPORT",
           entity: "report",
           entityId: type,
-          details: JSON.stringify({ format: "xlsx", type, recordCount: xlsxRecordCount, sizeBytes: xlsxBuf.byteLength, sha256: xlsxHash, encrypted: shouldEncrypt }),
+          details: JSON.stringify({ format: "xlsx", type, recordCount: xlsxRecordCount, sizeBytes: xlsxBuf.byteLength, sha256: xlsxHash, encrypted: true }),
           ipAddress: req.ip || "unknown",
         });
 
-        if (shouldEncrypt) {
-          const encResult = encryptExportData(xlsxBuf.toString("base64"));
-          res.setHeader("Content-Type", "application/octet-stream");
-          res.setHeader("Content-Disposition", `attachment; filename=${type}_report_${Date.now()}.enc`);
-          res.setHeader("X-Export-SHA256", encResult.ciphertextHash);
-          res.setHeader("X-Export-Plaintext-SHA256", xlsxHash);
-          res.setHeader("X-Export-IV", encResult.iv);
-          res.setHeader("X-Export-Key", encResult.oneTimeKey);
-          res.setHeader("X-Export-Encrypted", "true");
-          return res.send(encResult.encryptedData);
-        }
-
-        res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        res.setHeader("Content-Disposition", `attachment; filename=${type}_report_${Date.now()}.xlsx`);
-        res.setHeader("X-Export-SHA256", xlsxHash);
-        res.setHeader("X-Export-Encrypted", "false");
-        res.setHeader("X-Export-Size-Bytes", String(xlsxBuf.byteLength));
-        res.send(xlsxBuf);
-        res.end();
+        res.setHeader("Content-Type", "application/octet-stream");
+        res.setHeader("Content-Disposition", `attachment; filename=${type}_report_${Date.now()}.enc`);
+        res.setHeader("X-Export-SHA256", encResult.ciphertextHash);
+        res.setHeader("X-Export-Plaintext-SHA256", xlsxHash);
+        res.setHeader("X-Export-IV", encResult.iv);
+        res.setHeader("X-Export-Key", encResult.oneTimeKey);
+        res.setHeader("X-Export-Original-Size", String(xlsxBuf.byteLength));
+        res.setHeader("X-Export-Encrypted", "true");
+        res.setHeader("X-Export-Record-Count", String(xlsxRecordCount));
+        return res.send(encResult.encryptedData);
       } else if (format === "csv") {
         let csv = "";
         if (type === "portfolio") {
@@ -6174,36 +6166,29 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
         const csvHash = generateExportHash(csv);
         const csvSizeBytes = Buffer.byteLength(csv, "utf8");
-        const shouldEncryptCsv = req.query.encrypt === "true";
         const csvRecordCount = type === "portfolio" ? accounts.length : borrowersList.length;
+
+        const encResult = encryptExportData(csv);
 
         await storage.createAuditLog({
           userId: req.session.userId,
           action: "REPORT_EXPORT",
           entity: "report",
           entityId: type,
-          details: JSON.stringify({ format: "csv", type, recordCount: csvRecordCount, sizeBytes: csvSizeBytes, sha256: csvHash, encrypted: shouldEncryptCsv }),
+          details: JSON.stringify({ format: "csv", type, recordCount: csvRecordCount, sizeBytes: csvSizeBytes, sha256: csvHash, encrypted: true }),
           ipAddress: req.ip || "unknown",
         });
 
-        if (shouldEncryptCsv) {
-          const encResult = encryptExportData(csv);
-          res.setHeader("Content-Type", "application/octet-stream");
-          res.setHeader("Content-Disposition", `attachment; filename=${type}_report_${Date.now()}.enc`);
-          res.setHeader("X-Export-SHA256", encResult.ciphertextHash);
-          res.setHeader("X-Export-Plaintext-SHA256", csvHash);
-          res.setHeader("X-Export-IV", encResult.iv);
-          res.setHeader("X-Export-Key", encResult.oneTimeKey);
-          res.setHeader("X-Export-Encrypted", "true");
-          return res.send(encResult.encryptedData);
-        }
-
-        res.setHeader("Content-Type", "text/csv");
-        res.setHeader("Content-Disposition", `attachment; filename=${type}_report_${Date.now()}.csv`);
-        res.setHeader("X-Export-SHA256", csvHash);
-        res.setHeader("X-Export-Encrypted", "false");
-        res.setHeader("X-Export-Size-Bytes", String(csvSizeBytes));
-        res.send(csv);
+        res.setHeader("Content-Type", "application/octet-stream");
+        res.setHeader("Content-Disposition", `attachment; filename=${type}_report_${Date.now()}.enc`);
+        res.setHeader("X-Export-SHA256", encResult.ciphertextHash);
+        res.setHeader("X-Export-Plaintext-SHA256", csvHash);
+        res.setHeader("X-Export-IV", encResult.iv);
+        res.setHeader("X-Export-Key", encResult.oneTimeKey);
+        res.setHeader("X-Export-Original-Size", String(csvSizeBytes));
+        res.setHeader("X-Export-Encrypted", "true");
+        res.setHeader("X-Export-Record-Count", String(csvRecordCount));
+        return res.send(encResult.encryptedData);
       } else {
         res.status(400).json({ message: "Unsupported format. Use csv or xlsx." });
       }
@@ -10760,56 +10745,36 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const org = await storage.getOrganization(orgId);
       if (!org) return res.status(404).json({ message: "Organization not found" });
 
-      const encrypt = req.query.encrypt === "true";
       const safeName = org.name.replace(/[^a-zA-Z0-9]/g, "_");
       const dateStr = new Date().toISOString().split("T")[0];
 
-      if (encrypt) {
-        const exportData = await buildFullPortabilityExport(orgId, org.name, org.country, org.subscriptionTier);
-        const jsonStr = JSON.stringify(exportData, null, 2);
-        const sha256Hash = generateExportHash(jsonStr);
-        const recordCount = exportData.statistics.totalBorrowers + exportData.statistics.totalAccounts + exportData.statistics.totalPaymentRecords + exportData.statistics.totalGuarantors + exportData.statistics.totalInquiries + exportData.statistics.totalDisputes;
+      const exportData = await buildFullPortabilityExport(orgId, org.name, org.country, org.subscriptionTier);
+      const jsonStr = JSON.stringify(exportData, null, 2);
+      const sha256Hash = generateExportHash(jsonStr);
+      const sizeBytes = Buffer.byteLength(jsonStr, "utf-8");
+      const recordCount = exportData.statistics.totalBorrowers + exportData.statistics.totalAccounts + exportData.statistics.totalPaymentRecords + exportData.statistics.totalGuarantors + exportData.statistics.totalInquiries + exportData.statistics.totalDisputes;
 
-        await storage.createAuditLog({
-          userId: req.session.userId,
-          action: "FULL_DATA_EXPORT",
-          entity: "organization",
-          entityId: orgId,
-          details: JSON.stringify({ version: "3.0.0", org: org.name, totalRecords: recordCount, sha256: sha256Hash, encrypted: true }),
-          ipAddress: req.ip || "unknown",
-        });
-
-        const result = encryptExportData(jsonStr);
-        res.setHeader("Content-Disposition", `attachment; filename="ach_export_${safeName}_${dateStr}.enc"`);
-        res.setHeader("Content-Type", "application/octet-stream");
-        res.setHeader("X-Export-SHA256", result.ciphertextHash);
-        res.setHeader("X-Export-Plaintext-SHA256", sha256Hash);
-        res.setHeader("X-Export-IV", result.iv);
-        res.setHeader("X-Export-Key", result.oneTimeKey);
-        res.setHeader("X-Export-Original-Size", String(result.originalSizeBytes));
-        res.setHeader("X-Export-Encrypted", "true");
-        return res.send(result.encryptedData);
-      }
-
-      res.setHeader("Content-Disposition", `attachment; filename="ach_export_${safeName}_${dateStr}.json"`);
-      res.setHeader("Content-Type", "application/json");
-      res.setHeader("Transfer-Encoding", "chunked");
-      res.setHeader("X-Export-Encrypted", "false");
-
-      const { totalRecords, sha256Hash } = await streamPortabilityExport(
-        orgId, org.name, org.country, org.subscriptionTier, res
-      );
-
-      res.end();
+      const result = encryptExportData(jsonStr);
 
       await storage.createAuditLog({
         userId: req.session.userId,
         action: "FULL_DATA_EXPORT",
         entity: "organization",
         entityId: orgId,
-        details: JSON.stringify({ version: "3.0.0", org: org.name, totalRecords, sha256: sha256Hash, encrypted: false, streamed: true }),
+        details: JSON.stringify({ version: "3.0.0", org: org.name, recordCount, sizeBytes, sha256: sha256Hash, encrypted: true }),
         ipAddress: req.ip || "unknown",
       });
+
+      res.setHeader("Content-Disposition", `attachment; filename="ach_export_${safeName}_${dateStr}.enc"`);
+      res.setHeader("Content-Type", "application/octet-stream");
+      res.setHeader("X-Export-SHA256", result.ciphertextHash);
+      res.setHeader("X-Export-Plaintext-SHA256", sha256Hash);
+      res.setHeader("X-Export-IV", result.iv);
+      res.setHeader("X-Export-Key", result.oneTimeKey);
+      res.setHeader("X-Export-Original-Size", String(result.originalSizeBytes));
+      res.setHeader("X-Export-Encrypted", "true");
+      res.setHeader("X-Export-Record-Count", String(recordCount));
+      return res.send(result.encryptedData);
     } catch (err: any) {
       routeLogger.error("[Export] Error:", { detail: err.message });
       if (!res.headersSent) res.status(500).json({ message: "Export failed" });
@@ -10876,20 +10841,30 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const exportData = await buildConsumerDataExport(borrower.id);
       const jsonStr = JSON.stringify(exportData, null, 2);
       const sha256Hash = generateExportHash(jsonStr);
+      const sizeBytes = Buffer.byteLength(jsonStr, "utf-8");
+      const recordCount = (exportData.statistics.totalAccounts || 0) + (exportData.statistics.totalPayments || 0);
+
+      const encResult = encryptExportData(jsonStr);
 
       await storage.createAuditLog({
         userId: null,
         action: "CONSUMER_DATA_EXPORT",
         entity: "borrower",
         entityId: borrower.id,
-        details: `Consumer self-service data export. ${exportData.statistics.totalAccounts} accounts, ${exportData.statistics.totalPayments} payments. SHA-256: ${sha256Hash}`,
+        details: JSON.stringify({ recordCount, sizeBytes, sha256: sha256Hash, encrypted: true }),
         ipAddress: req.ip || "unknown",
       });
 
-      res.setHeader("Content-Disposition", `attachment; filename="my_credit_data_${new Date().toISOString().split("T")[0]}.json"`);
-      res.setHeader("Content-Type", "application/json");
-      res.setHeader("X-Export-SHA256", sha256Hash);
-      res.send(jsonStr);
+      res.setHeader("Content-Disposition", `attachment; filename="my_credit_data_${new Date().toISOString().split("T")[0]}.enc"`);
+      res.setHeader("Content-Type", "application/octet-stream");
+      res.setHeader("X-Export-SHA256", encResult.ciphertextHash);
+      res.setHeader("X-Export-Plaintext-SHA256", sha256Hash);
+      res.setHeader("X-Export-IV", encResult.iv);
+      res.setHeader("X-Export-Key", encResult.oneTimeKey);
+      res.setHeader("X-Export-Original-Size", String(encResult.originalSizeBytes));
+      res.setHeader("X-Export-Encrypted", "true");
+      res.setHeader("X-Export-Record-Count", String(recordCount));
+      res.send(encResult.encryptedData);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
     }
@@ -10936,7 +10911,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
 
       const orgId = borrower.organizationId || req.session.organizationId || "";
-      const country = borrower.country || req.session.country || "";
+      const country = borrower.country || req.session.userCountry || "";
       const allApprovals = await storage.getPendingApprovals(orgId, country);
       const approvedErasure = allApprovals.find((a: any) => {
         if (a.status !== "approved") return false;
@@ -10998,7 +10973,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.post("/api/data-management/retention-scan", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
     try {
-      const countryFilter = req.session.role === "super_admin" ? undefined : req.session.country || undefined;
+      const countryFilter = req.session.userRole === "super_admin" ? undefined : req.session.userCountry || undefined;
       const result = await scanRetentionPolicies(countryFilter);
       await storage.createAuditLog({
         userId: req.session.userId,

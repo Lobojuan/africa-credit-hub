@@ -26,8 +26,6 @@ function ExportCenterTab() {
   const { toast } = useToast();
   const [exportFormat, setExportFormat] = useState("csv");
   const [exportType, setExportType] = useState("portfolio");
-  const [encrypt, setEncrypt] = useState(false);
-
   const orgsQuery = useQuery<any[]>({
     queryKey: ["/api/organizations"],
     enabled: user?.role === "super_admin",
@@ -35,7 +33,7 @@ function ExportCenterTab() {
 
   const handlePortabilityExport = async (orgId: string) => {
     try {
-      const url = `/api/admin/export/${orgId}${encrypt ? "?encrypt=true" : ""}`;
+      const url = `/api/admin/export/${orgId}`;
       const res = await fetch(url, { credentials: "include" });
       if (!res.ok) {
         const err = await res.json();
@@ -85,10 +83,14 @@ function ExportCenterTab() {
       const res = await fetch(`/api/reports/export?format=${exportFormat}&type=${exportType}`, { credentials: "include" });
       if (!res.ok) throw new Error((await res.json()).message || "Export failed");
 
+      const sha256 = res.headers.get("X-Export-SHA256");
+      const oneTimeKey = res.headers.get("X-Export-Key");
+      const iv = res.headers.get("X-Export-IV");
+
       const blob = await res.blob();
       const disposition = res.headers.get("Content-Disposition") || "";
       const filenameMatch = disposition.match(/filename="?([^"]+)"?/);
-      const filename = filenameMatch?.[1] || `${exportType}_report.${exportFormat}`;
+      const filename = filenameMatch?.[1] || `${exportType}_report.enc`;
 
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
@@ -96,7 +98,10 @@ function ExportCenterTab() {
       a.click();
       URL.revokeObjectURL(a.href);
 
-      toast({ title: "Report exported", description: `${exportType} report downloaded as ${exportFormat.toUpperCase()}` });
+      let desc = `Encrypted ${exportType} report downloaded.`;
+      if (sha256) desc += `\nSHA-256: ${sha256.substring(0, 16)}...`;
+      if (oneTimeKey) desc += `\nDecryption Key: ${oneTimeKey}\nIV: ${iv}\n\nSave this key — it cannot be recovered.`;
+      toast({ title: "Encrypted export downloaded", description: desc });
     } catch (e: any) {
       toast({ title: "Export failed", description: e.message, variant: "destructive" });
     }
@@ -116,28 +121,12 @@ function ExportCenterTab() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={encrypt}
-                onChange={(e) => setEncrypt(e.target.checked)}
-                data-testid="checkbox-encrypt"
-                className="rounded"
-              />
-              <Lock className="h-4 w-4" />
-              AES-256 Encrypt export
-            </label>
-          </div>
-
-          {encrypt && (
-            <Alert>
-              <Lock className="h-4 w-4" />
-              <AlertDescription>
-                The export will be encrypted with a one-time key. Save the decryption key shown after download — it cannot be recovered.
-              </AlertDescription>
-            </Alert>
-          )}
+          <Alert>
+            <Lock className="h-4 w-4" />
+            <AlertDescription>
+              All exports are AES-256 encrypted with a one-time key. Save the decryption key shown after download — it cannot be recovered.
+            </AlertDescription>
+          </Alert>
 
           {user?.role === "super_admin" && orgsQuery.data ? (
             <div className="space-y-2">
