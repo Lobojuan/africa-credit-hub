@@ -1552,8 +1552,9 @@ export async function registerRoutes(
   // Stricter consumer auth rate limit: 3 attempts / 15 min to prevent brute-force on consumer accounts
   const consumerAuthLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 3, message: { message: "Too many login attempts. Please try again in 15 minutes." }, standardHeaders: true, legacyHeaders: false });
   const consumerLookupLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { message: "Too many lookup requests. Please try again later." }, standardHeaders: true, legacyHeaders: false });
-  const exportLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, message: { message: "Export rate limit exceeded. Maximum 5 exports per hour." }, standardHeaders: true, legacyHeaders: false, keyGenerator: rateLimitKeyGenerator, validate: { keyGeneratorIpFallback: false } });
-  const consumerExportLimiter = rateLimit({ windowMs: 24 * 60 * 60 * 1000, max: 1, message: { message: "You can only download your data once per day." }, standardHeaders: true, legacyHeaders: false, keyGenerator: rateLimitKeyGenerator, validate: { keyGeneratorIpFallback: false } });
+  const perUserKeyGenerator = (req: any) => req.session?.userId || rateLimitKeyGenerator(req);
+  const exportLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, message: { message: "Export rate limit exceeded. Maximum 5 exports per hour." }, standardHeaders: true, legacyHeaders: false, keyGenerator: perUserKeyGenerator, validate: { keyGeneratorIpFallback: false } });
+  const consumerExportLimiter = rateLimit({ windowMs: 24 * 60 * 60 * 1000, max: 1, message: { message: "You can only download your data once per day." }, standardHeaders: true, legacyHeaders: false, keyGenerator: (req: any) => req.session?.consumerId || rateLimitKeyGenerator(req), validate: { keyGeneratorIpFallback: false } });
 
   const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
   const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
@@ -6116,9 +6117,22 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
           });
         }
 
+        const xlsxBuf = await workbook.xlsx.writeBuffer();
+        const xlsxHash = generateExportHash(Buffer.from(xlsxBuf as ArrayBuffer).toString("base64"));
         res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         res.setHeader("Content-Disposition", `attachment; filename=${type}_report_${Date.now()}.xlsx`);
-        await workbook.xlsx.write(res);
+        res.setHeader("X-Export-SHA256", xlsxHash);
+        res.setHeader("X-Export-Encrypted", "false");
+        res.setHeader("X-Export-Size-Bytes", String((xlsxBuf as ArrayBuffer).byteLength));
+        await storage.createAuditLog({
+          userId: req.session.userId,
+          action: "REPORT_EXPORT",
+          entity: "report",
+          entityId: type,
+          details: JSON.stringify({ format: "xlsx", type, sizeBytes: (xlsxBuf as ArrayBuffer).byteLength, sha256: xlsxHash, encrypted: false }),
+          ipAddress: req.ip || "unknown",
+        });
+        res.send(Buffer.from(xlsxBuf as ArrayBuffer));
         res.end();
       } else if (format === "csv") {
         let csv = "";
@@ -6142,8 +6156,21 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
           }
         }
 
+        const csvHash = generateExportHash(csv);
+        const csvSizeBytes = Buffer.byteLength(csv, "utf8");
         res.setHeader("Content-Type", "text/csv");
         res.setHeader("Content-Disposition", `attachment; filename=${type}_report_${Date.now()}.csv`);
+        res.setHeader("X-Export-SHA256", csvHash);
+        res.setHeader("X-Export-Encrypted", "false");
+        res.setHeader("X-Export-Size-Bytes", String(csvSizeBytes));
+        await storage.createAuditLog({
+          userId: req.session.userId,
+          action: "REPORT_EXPORT",
+          entity: "report",
+          entityId: type,
+          details: JSON.stringify({ format: "csv", type, sizeBytes: csvSizeBytes, sha256: csvHash, encrypted: false }),
+          ipAddress: req.ip || "unknown",
+        });
         res.send(csv);
       } else {
         res.status(400).json({ message: "Unsupported format. Use csv or xlsx." });
@@ -6260,8 +6287,21 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const generator = BOG_EXPORT_GENERATORS[fileType];
       const { content, filename } = await generator(reportingDate, sequenceNumber, correctionIndicator, orgId);
 
+      const bogHash = generateExportHash(content);
+      const bogSizeBytes = Buffer.byteLength(content, "utf8");
       res.setHeader("Content-Type", "text/csv; charset=utf-8");
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.setHeader("X-Export-SHA256", bogHash);
+      res.setHeader("X-Export-Encrypted", "false");
+      res.setHeader("X-Export-Size-Bytes", String(bogSizeBytes));
+      await storage.createAuditLog({
+        userId: req.session.userId,
+        action: "REGULATORY_EXPORT",
+        entity: "bog_report",
+        entityId: fileType,
+        details: JSON.stringify({ regulator: "BoG", fileType, filename, sizeBytes: bogSizeBytes, sha256: bogHash, encrypted: false }),
+        ipAddress: req.ip || "unknown",
+      });
       res.send(content);
     } catch (e: any) {
       routeLogger.error("BoG export error:", { detail: e });
@@ -6302,8 +6342,21 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const generator = BSL_EXPORT_GENERATORS[fileType];
       const { content, filename } = await generator(reportingDate, sequenceNumber, correctionIndicator, orgId);
 
+      const bslHash = generateExportHash(content);
+      const bslSizeBytes = Buffer.byteLength(content, "utf8");
       res.setHeader("Content-Type", "text/csv; charset=utf-8");
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.setHeader("X-Export-SHA256", bslHash);
+      res.setHeader("X-Export-Encrypted", "false");
+      res.setHeader("X-Export-Size-Bytes", String(bslSizeBytes));
+      await storage.createAuditLog({
+        userId: req.session.userId,
+        action: "REGULATORY_EXPORT",
+        entity: "bsl_report",
+        entityId: fileType,
+        details: JSON.stringify({ regulator: "BSL", fileType, filename, sizeBytes: bslSizeBytes, sha256: bslHash, encrypted: false }),
+        ipAddress: req.ip || "unknown",
+      });
       res.send(content);
     } catch (e: any) {
       routeLogger.error("BSL export error:", { detail: e });
@@ -10665,6 +10718,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const jsonStr = JSON.stringify(exportData, null, 2);
       const sha256Hash = generateExportHash(jsonStr);
       const fileSizeBytes = Buffer.byteLength(jsonStr, "utf8");
+      const recordCount = exportData.statistics.totalBorrowers + exportData.statistics.totalAccounts + exportData.statistics.totalPaymentRecords + exportData.statistics.totalGuarantors + exportData.statistics.totalInquiries + exportData.statistics.totalDisputes;
       const safeName = org.name.replace(/[^a-zA-Z0-9]/g, "_");
       const dateStr = new Date().toISOString().split("T")[0];
 
@@ -10673,7 +10727,20 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         action: "FULL_DATA_EXPORT",
         entity: "organization",
         entityId: orgId,
-        details: `Full portability export v3.0 for ${org.name}: ${exportData.statistics.totalBorrowers} borrowers, ${exportData.statistics.totalAccounts} accounts, ${exportData.statistics.totalPaymentRecords} payments, ${exportData.statistics.totalGuarantors} guarantors, ${exportData.statistics.totalInquiries} inquiries, ${exportData.statistics.totalDisputes} disputes. Size: ${(fileSizeBytes / 1024).toFixed(1)}KB. SHA-256: ${sha256Hash}. Encrypted: ${encrypt}`,
+        details: JSON.stringify({
+          version: "3.0.0",
+          org: org.name,
+          borrowers: exportData.statistics.totalBorrowers,
+          accounts: exportData.statistics.totalAccounts,
+          payments: exportData.statistics.totalPaymentRecords,
+          guarantors: exportData.statistics.totalGuarantors,
+          inquiries: exportData.statistics.totalInquiries,
+          disputes: exportData.statistics.totalDisputes,
+          totalRecords: recordCount,
+          sizeBytes: fileSizeBytes,
+          sha256: sha256Hash,
+          encrypted: encrypt,
+        }),
         ipAddress: req.ip || "unknown",
       });
 
@@ -10693,10 +10760,23 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       res.setHeader("Content-Type", "application/json");
       res.setHeader("X-Export-SHA256", sha256Hash);
       res.setHeader("X-Export-Encrypted", "false");
-      res.send(jsonStr);
+      res.setHeader("X-Export-Record-Count", String(recordCount));
+      res.setHeader("X-Export-Size-Bytes", String(fileSizeBytes));
+
+      const { Readable } = require("stream");
+      const CHUNK_SIZE = 64 * 1024;
+      const readable = new Readable({
+        read() {
+          for (let offset = 0; offset < jsonStr.length; offset += CHUNK_SIZE) {
+            this.push(jsonStr.slice(offset, offset + CHUNK_SIZE));
+          }
+          this.push(null);
+        },
+      });
+      readable.pipe(res);
     } catch (err: any) {
       routeLogger.error("[Export] Error:", { detail: err.message });
-      res.status(500).json({ message: "Export failed" });
+      if (!res.headersSent) res.status(500).json({ message: "Export failed" });
     }
   });
 
@@ -10805,18 +10885,58 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const borrower = await storage.getBorrower(borrowerId);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
 
+      const orgId = borrower.organizationId || req.session.organizationId || "";
+      const country = borrower.country || req.session.country || "";
+      const allApprovals = await storage.getPendingApprovals(orgId, country);
+      const approvedErasure = allApprovals.find((a: any) => {
+        if (a.status !== "approved") return false;
+        try {
+          const payload = typeof a.payload === "string" ? JSON.parse(a.payload) : a.payload;
+          return payload?.type === "data_erasure" && payload?.borrowerId === borrowerId;
+        } catch { return false; }
+      });
+      if (!approvedErasure) {
+        return res.status(403).json({ message: "Cascade erasure requires an approved erasure request. Submit and approve an erasure request first (dual-approval)." });
+      }
+
       const activeAccounts = await storage.getCreditAccountsByBorrower(borrowerId);
       const hasActive = activeAccounts.some((a: any) => a.status === "active" || a.status === "current");
       if (hasActive) return res.status(409).json({ message: "Cannot erase borrower with active accounts. Close all accounts first." });
 
       const result = await cascadeDeleteBorrower(borrowerId);
 
+      const entityDeletions = [
+        { entity: "credit_accounts", count: result.deletedAccounts },
+        { entity: "payment_history", count: result.deletedPayments },
+        { entity: "guarantors", count: result.deletedGuarantors },
+        { entity: "credit_inquiries", count: result.deletedInquiries },
+        { entity: "disputes", count: result.deletedDisputes },
+        { entity: "court_judgments", count: result.deletedJudgments },
+        { entity: "dishonoured_cheques", count: result.deletedCheques },
+        { entity: "borrower_alerts", count: result.deletedAlerts },
+        { entity: "consent_records", count: result.deletedConsent },
+        { entity: "credit_report_logs", count: result.deletedReportLogs },
+        { entity: "consumer_accounts", count: result.deletedConsumerAccounts },
+      ];
+      for (const del of entityDeletions) {
+        if (del.count > 0) {
+          await storage.createAuditLog({
+            userId: req.session.userId,
+            action: "CASCADE_ENTITY_DELETED",
+            entity: del.entity,
+            entityId: borrowerId,
+            details: `Cascade erasure: deleted ${del.count} ${del.entity} records for borrower ${borrower.firstName} ${borrower.lastName} (${borrowerId})`,
+            ipAddress: req.ip || "unknown",
+          });
+        }
+      }
+
       await storage.createAuditLog({
         userId: req.session.userId,
         action: "DATA_ERASURE_COMPLETED",
         entity: "borrower",
         entityId: borrowerId,
-        details: `Cascade erasure completed for ${borrower.firstName} ${borrower.lastName}. Deleted: ${result.deletedAccounts} accounts, ${result.deletedPayments} payments, ${result.deletedGuarantors} guarantors, ${result.deletedInquiries} inquiries, ${result.deletedDisputes} disputes, ${result.deletedJudgments} judgments, ${result.deletedCheques} cheques, ${result.deletedAlerts} alerts, ${result.deletedConsent} consent records, ${result.deletedReportLogs} report logs, ${result.deletedConsumerAccounts} consumer accounts`,
+        details: `Cascade erasure completed for ${borrower.firstName} ${borrower.lastName}. Approval ID: ${approvedErasure.id}. Deleted: ${result.deletedAccounts} accounts, ${result.deletedPayments} payments, ${result.deletedGuarantors} guarantors, ${result.deletedInquiries} inquiries, ${result.deletedDisputes} disputes, ${result.deletedJudgments} judgments, ${result.deletedCheques} cheques, ${result.deletedAlerts} alerts, ${result.deletedConsent} consent records, ${result.deletedReportLogs} report logs, ${result.deletedConsumerAccounts} consumer accounts`,
         ipAddress: req.ip || "unknown",
       });
 
