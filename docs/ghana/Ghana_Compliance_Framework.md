@@ -1,6 +1,6 @@
 # Ghana Credit Registry — Regulatory Compliance Framework
 
-**Carlson Capital & Systems In Motion Limited**
+**Africa Credit Hub**
 **Version 2.5 | Bank of Ghana CRB Standards Compliance | CDH v2.5**
 
 ---

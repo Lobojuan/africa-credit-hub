@@ -5060,7 +5060,7 @@ function SuspendedScreen({ orgName, onLogout }: { orgName?: string; onLogout: ()
         </div>
         <div className="space-y-3">
           <p className="text-xs text-muted-foreground">
-            If you believe this is an error, please contact support at <span className="font-medium">uffe.carlson@gmail.com</span>
+            If you believe this is an error, please contact support at <span className="font-medium">support@africacredithub.com</span>
           </p>
           <Button variant="outline" onClick={onLogout} data-testid="button-suspended-logout">
             <LogOut className="w-4 h-4 mr-2" />
@@ -6533,10 +6533,10 @@ export default function LoginPage() {
         transitionDelay: "0.6s",
       }}>
         <p className="text-xs" style={{ color: "hsl(215 10% 58%)" }}>
-          Carlson Capital & Systems In Motion Limited&trade; &middot; {isGhanaMode() ? "Ghana Credit Registry v2.5" : "Cross-Jurisdictional CDH v2.5"}
+          Africa Credit Hub&trade; &middot; {isGhanaMode() ? "Ghana Credit Registry v2.5" : "Cross-Jurisdictional CDH v2.5"}
         </p>
         <p className="text-[10px] mt-1" style={{ color: "hsl(215 10% 68%)" }}>
-          &copy; 2026 Carlson Capital & Systems In Motion Limited. All rights reserved.
+          &copy; 2026 Africa Credit Hub. All rights reserved.
         </p>
       </footer>
     </div>
@@ -6976,7 +6976,7 @@ export default function SignUpPage() {
 
         <div className="text-center mt-6">
           <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.2)" }}>
-            &copy; 2026 Carlson Capital & Systems In Motion Limited. All rights reserved.
+            &copy; 2026 Africa Credit Hub. All rights reserved.
           </p>
         </div>
       </div>

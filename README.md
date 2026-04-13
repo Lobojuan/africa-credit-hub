@@ -13,7 +13,7 @@
 
 Africa Credit Hub is a centralised credit registry platform purpose-built for the African financial ecosystem. It enables banks, microfinance institutions, fintechs, regulators, and development finance institutions to share, query, and analyse credit data across jurisdictions while maintaining strict data sovereignty, regulatory compliance, and consumer privacy.
 
-The platform is developed by **Carlson Capital** and **Systems In Motion Limited (Bsystems)** under the technical leadership of Uffe Jon Carlson (CEO) and Thomas Baafi (CTO).
+The platform is developed by **Africa Credit Hub** in partnership with **Systems In Motion Limited (Bsystems)**.
 
 ### Key Differentiators
 
@@ -228,4 +228,4 @@ The platform is designed for deployment on Replit with built-in PostgreSQL, TLS,
 
 ## License
 
-Proprietary. Copyright 2024-2026 Carlson Capital & Systems In Motion Limited. All rights reserved.
+Proprietary. Copyright 2024-2026 Africa Credit Hub. All rights reserved.

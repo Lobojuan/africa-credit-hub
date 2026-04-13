@@ -1243,7 +1243,7 @@ FILE: server/routes.ts — CONSUMER PORTAL (lines 3800-4100)
   const PDF_LABELS: Record<string, Record<string, string>> = {
     en: {
       headerTitle: "Comprehensive Credit Information Report",
-      headerSub: "Cross-Jurisdictional Central Data Hub v2.5 | Carlson Capital & Systems In Motion Limited",
+      headerSub: "Cross-Jurisdictional Central Data Hub v2.5 | Africa Credit Hub",
       orderNumber: "ORDER NUMBER",
       cirNumber: "CIR NUMBER",
       reportOrderDate: "Report Order Date",
@@ -4887,7 +4887,7 @@ export function AppSidebar() {
         </div>
         <div className="px-1 pt-0.5">
           <p className="text-[10px] text-sidebar-foreground/45 leading-relaxed" data-testid="text-provider-credit">
-            <span className="text-sidebar-foreground/65 font-semibold">Carlson Capital & Systems In Motion Limited</span>
+            <span className="text-sidebar-foreground/65 font-semibold">Africa Credit Hub</span>
           </p>
           <p className="text-[9px] text-sidebar-foreground/35 font-medium" data-testid="text-copyright">
             2026 All rights reserved.

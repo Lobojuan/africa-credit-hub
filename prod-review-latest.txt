@@ -15,7 +15,7 @@ Focus areas:
 5. Secrets & Config (no hardcoded secrets, PII in logs, company name centralization)
 6. Rate Limiting (IPv6, bypass vectors)
 7. Session Security (cookie flags, session invalidation on password change, MFA disable)
-8. Branding (all UI surfaces use PLATFORM_COMPANY_NAME, not hardcoded "Carlson Capital")
+8. Branding (all UI surfaces use PLATFORM_COMPANY_NAME, not hardcoded "Africa Credit Hub")
 9. API Security (dead routes, debug endpoints, backup path traversal)
 10. Error Handling (safe error messages, no stack traces leaked)
 
@@ -444,7 +444,7 @@ import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
 const COUNTRY_REGISTRY: Record<string, CountryConfig> = {
   ghana: {
     brandTitle: "Ghana Credit Registry",
-    brandSubtitle: `${PLATFORM_COMPANY_NAME}™`,  // ← was hardcoded "Carlson Capital..."
+    brandSubtitle: `${PLATFORM_COMPANY_NAME}™`,  // ← was hardcoded "Africa Credit Hub..."
     // ...
   },
   liberia: {

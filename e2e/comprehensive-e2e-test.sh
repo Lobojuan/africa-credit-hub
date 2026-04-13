@@ -76,7 +76,7 @@ code=$(api_post_code "/api/auth/login" "{\"username\":\"admin\",\"password\":\"$
 check_code "Login with valid credentials returns 200" "$code" "200"
 check_body_contains "Login response contains fullName" "fullName"
 check_body_contains "Login response contains super_admin role" "super_admin"
-check_body_contains "Login response shows Uffe J Carlson" "Uffe J Carlson"
+check_body_contains "Login response shows Platform Admin" "Platform Admin"
 
 code=$(api_get_code "/api/auth/me")
 check_code "Authenticated /api/auth/me returns 200" "$code" "200"

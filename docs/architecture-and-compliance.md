@@ -3,7 +3,7 @@
 **Africa Credit Hub — CDH v2.5**
 **Classification: Confidential — For Regulatory Auditors and Data Protection Officers**
 
-**Prepared by:** Carlson Capital & Systems In Motion Limited
+**Prepared by:** Africa Credit Hub
 **Version:** 2.5 | **Date:** April 2026
 
 ---
@@ -381,6 +381,6 @@ This model supports both country-to-country and institution-to-institution agree
 | Document ID | CDH-ARC-2026-001 |
 | Version | 2.1 |
 | Classification | Confidential |
-| Authors | Uffe Jon Carlson, Thomas Baafi |
-| Organisation | Carlson Capital & Systems In Motion Limited |
+| Authors | Africa Credit Hub Team |
+| Organisation | Africa Credit Hub |
 | Last Updated | March 2026 |

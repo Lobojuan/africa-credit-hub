@@ -17,7 +17,7 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     classificationValue: "CONFIDENTIAL — PROPRIETARY",
     dateOfIssue: "Date of Issue:",
     copyrightHolder: "Copyright Holder:",
-    copyrightHolderValue: "Carlson Capital & Systems In Motion Limited",
+    copyrightHolderValue: getCompanyName(),
     jurisdiction: "Jurisdiction:",
     jurisdictionValue: "Republic of Ghana & Pan-African Territories",
     coverDisclaimer1: "This document and all its contents are the exclusive intellectual property of Carlson Capital & Systems In Motion Limited.",
@@ -53,7 +53,7 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     classificationValue: "CONFIDENTIEL — PROPRIÉTAIRE",
     dateOfIssue: "Date d'Émission :",
     copyrightHolder: "Titulaire du Droit d'Auteur :",
-    copyrightHolderValue: "Carlson Capital & Systems In Motion Limited",
+    copyrightHolderValue: getCompanyName(),
     jurisdiction: "Juridiction :",
     jurisdictionValue: "République du Ghana et Territoires Panafricains",
     coverDisclaimer1: "Ce document et tout son contenu sont la propriété intellectuelle exclusive de Carlson Capital & Systems In Motion Limited.",
@@ -89,7 +89,7 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     classificationValue: "CONFIDENCIAL — PROPRIETÁRIO",
     dateOfIssue: "Data de Emissão:",
     copyrightHolder: "Titular dos Direitos Autorais:",
-    copyrightHolderValue: "Carlson Capital & Systems In Motion Limited",
+    copyrightHolderValue: getCompanyName(),
     jurisdiction: "Jurisdição:",
     jurisdictionValue: "República do Gana e Territórios Pan-Africanos",
     coverDisclaimer1: "Este documento e todo o seu conteúdo são propriedade intelectual exclusiva da Carlson Capital & Systems In Motion Limited.",
@@ -125,7 +125,7 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     classificationValue: "سري — ملكية خاصة",
     dateOfIssue: "تاريخ الإصدار:",
     copyrightHolder: "صاحب حقوق النشر:",
-    copyrightHolderValue: "Carlson Capital & Systems In Motion Limited",
+    copyrightHolderValue: getCompanyName(),
     jurisdiction: "الاختصاص القضائي:",
     jurisdictionValue: "جمهورية غانا والأقاليم الأفريقية",
     coverDisclaimer1: "هذه الوثيقة وجميع محتوياتها هي ملكية فكرية حصرية لشركة Carlson Capital & Systems In Motion Limited.",
@@ -161,7 +161,7 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     classificationValue: "SIRI — MALI BINAFSI",
     dateOfIssue: "Tarehe ya Kutolewa:",
     copyrightHolder: "Mmiliki wa Hakimiliki:",
-    copyrightHolderValue: "Carlson Capital & Systems In Motion Limited",
+    copyrightHolderValue: getCompanyName(),
     jurisdiction: "Mamlaka:",
     jurisdictionValue: "Jamhuri ya Ghana na Maeneo ya Afrika",
     coverDisclaimer1: "Hati hii na yaliyomo yote ni mali ya akili ya kipekee ya Carlson Capital & Systems In Motion Limited.",
@@ -352,7 +352,7 @@ export function generateCopyrightPdf(lang: string = "en"): Promise<Buffer> {
       bufferPages: true,
       info: {
         Title: "Pan-African Credit Data Hub — Software Copyright & Intellectual Property Protection",
-        Author: "Carlson Capital & Systems In Motion Limited",
+        Author: getCompanyName(),
         Subject: "Copyright and IP Protection Document",
         Keywords: "copyright, intellectual property, software, credit registry, pan-african, Africa Credit Hub",
         Creator: "Africa Credit Hub v2.5 Platform",
@@ -394,7 +394,7 @@ export function generateCopyrightPdf(lang: string = "en"): Promise<Buffer> {
       .restore();
 
     doc.font("Helvetica-Bold").fontSize(11).fillColor("#ffffff").fillOpacity(0.6)
-      .text("CARLSON CAPITAL & SYSTEMS IN MOTION LIMITED", ml, 60, { width: cw, align: "center" });
+      .text(getCompanyName().toUpperCase(), ml, 60, { width: cw, align: "center" });
 
     doc.fillOpacity(1);
 
@@ -491,7 +491,7 @@ export function generateCopyrightPdf(lang: string = "en"): Promise<Buffer> {
 
     sectionTitle(doc, "1", CL("s1"));
 
-    bodyText(doc, "This document constitutes a formal declaration and assertion of copyright and intellectual property rights over the Pan-African Credit Data Hub (\"CDH\" or \"the Platform\"), version 2.5, a comprehensive software system developed by Carlson Capital & Systems In Motion Limited (\"the Company\", \"the Owner\", or \"the Copyright Holder\").");
+    bodyText(doc, `This document constitutes a formal declaration and assertion of copyright and intellectual property rights over the Pan-African Credit Data Hub ("CDH" or "the Platform"), version 2.5, a comprehensive software system developed by ${getCompanyName()} ("the Company", "the Owner", or "the Copyright Holder").`);
 
     bodyText(doc, "The Platform is a sophisticated, multi-jurisdiction credit registry and risk assessment system designed and built to serve financial institutions, regulatory bodies, telecommunications companies, and government agencies across the African continent. It represents a significant investment of creative, technical, and financial resources.");
 
@@ -508,7 +508,7 @@ export function generateCopyrightPdf(lang: string = "en"): Promise<Buffer> {
     doc.font("Helvetica-Bold").fontSize(10).fillColor(NORDIC_BLUE)
       .text("COPYRIGHT NOTICE", ml + 25, noticeY + 12, { width: cw - 50 });
     doc.font("Helvetica-Bold").fontSize(9.5).fillColor(DARK)
-      .text("© 2024–2026 Carlson Capital & Systems In Motion Limited. All Rights Reserved.", ml + 25, undefined, { width: cw - 50 });
+      .text(`© 2024–2026 ${getCompanyName()}. All Rights Reserved.`, ml + 25, undefined, { width: cw - 50 });
     doc.font("Helvetica").fontSize(8.5).fillColor(GRAY)
       .text("No part of this software, its source code, object code, documentation, user interfaces, algorithms, databases, data structures, or any derivative works may be reproduced, distributed, modified, reverse-engineered, decompiled, or transmitted in any form without the prior written consent of the Copyright Holder.", ml + 25, undefined, { width: cw - 50, lineGap: 2 });
 
@@ -576,7 +576,7 @@ export function generateCopyrightPdf(lang: string = "en"): Promise<Buffer> {
     // ──── SECTION 4: OWNERSHIP ────
     sectionTitle(doc, "4", CL("s4"));
 
-    bodyText(doc, "4.1  The Platform, in its entirety and in all its individual components, is the sole and exclusive intellectual property of Carlson Capital & Systems In Motion Limited, a company duly incorporated and registered in the Republic of Ghana.");
+    bodyText(doc, `4.1  The Platform, in its entirety and in all its individual components, is the sole and exclusive intellectual property of ${getCompanyName()}, a company duly incorporated and registered in the Republic of Ghana.`);
 
     bodyText(doc, "4.2  All rights, title, and interest in and to the Platform, including all copyrights, patent rights, trade secret rights, trademark rights, and all other intellectual property rights therein, are and shall remain the exclusive property of the Company.");
 
@@ -743,7 +743,7 @@ export function generateCopyrightPdf(lang: string = "en"): Promise<Buffer> {
 
     const contactY = doc.y;
     doc.font("Helvetica-Bold").fontSize(10).fillColor(NORDIC_BLUE)
-      .text("Carlson Capital & Systems In Motion Limited", ml + 35, contactY + 12, { width: cw - 70 });
+      .text(getCompanyName(), ml + 35, contactY + 12, { width: cw - 70 });
     doc.font("Helvetica").fontSize(9).fillColor(GRAY)
       .text("Intellectual Property Department", ml + 35, undefined, { width: cw - 70 })
       .text("Accra, Republic of Ghana", ml + 35, undefined, { width: cw - 70 })
@@ -812,11 +812,11 @@ export function generateCopyrightPdf(lang: string = "en"): Promise<Buffer> {
     doc.save().rect(ml + (cw / 2) - 30, doc.y, 60, 2).fill(NORDIC_ACCENT).restore();
     doc.moveDown(2);
 
-    bodyText(doc, "This Software Copyright and Intellectual Property Protection Document has been duly authorized, executed, and issued by the undersigned authorized representative(s) of Carlson Capital & Systems In Motion Limited.");
+    bodyText(doc, `This Software Copyright and Intellectual Property Protection Document has been duly authorized, executed, and issued by the undersigned authorized representative(s) of ${getCompanyName()}.`);
     doc.moveDown(1.5);
 
     const sigBoxes = [
-      { title: "For and on behalf of:", company: "Carlson Capital & Systems In Motion Limited" },
+      { title: "For and on behalf of:", company: getCompanyName() },
       { title: "Witness:", company: "" },
     ];
 

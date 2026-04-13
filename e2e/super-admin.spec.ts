@@ -21,7 +21,7 @@ test.describe('Super Admin Pages', () => {
     expect(data[0]).toHaveProperty('role');
     const admin = data.find((u: Record<string, unknown>) => u.username === 'admin');
     expect(admin).toBeTruthy();
-    expect(admin.fullName).toBe('Uffe J Carlson');
+    expect(admin.fullName).toBe('Platform Admin');
   });
 
   test('country settings API returns data', async ({ page }) => {

@@ -2,7 +2,7 @@
 
 **Version 2.5** | Pan-African Credit Registry — Central Data Hub (CDH)
 
-**Carlson Capital & Systems In Motion Limited™**
+**Africa Credit Hub™**
 
 ---
 
@@ -596,9 +596,9 @@ POST /api/external/v1/consent
 | Technical support | helpdesk@africacredithub.com |
 | API documentation | API Integration Guide (available in Documentation section) |
 | BoG data standards | Ghana Data Standards Reference (Ghana documentation) |
-| Uffe Jon Carlson (Carlson Capital) | uffe.carlson@gmail.com · +233 552 395 548 |
-| Thomas Baafi (Systems In Motion) | Thomas.baafi@prischell.com · +233 24 433 9985 |
+| Africa Credit Hub Support | support@africacredithub.com |
+
 
 ---
 
-*© 2026 Carlson Capital & Systems In Motion Limited. All rights reserved.*
+*© 2026 Africa Credit Hub. All rights reserved.*

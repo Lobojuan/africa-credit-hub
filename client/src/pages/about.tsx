@@ -107,7 +107,7 @@ export default function AboutPage() {
             Est. 2024
           </Badge>
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white tracking-tight leading-[1.15]">
-            Carlson Capital &<br />Systems In Motion Limited
+            Africa Credit Hub
           </h1>
           <p className="text-white/50 mt-3 text-sm max-w-lg mx-auto leading-relaxed">
             Building Africa's definitive credit information infrastructure — one country, one institution, one borrower at a time.
@@ -164,12 +164,12 @@ export default function AboutPage() {
                       <Briefcase className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-sm">Carlson Capital</h3>
-                      <p className="text-[11px] text-muted-foreground">Strategic Capital & Advisory</p>
+                      <h3 className="font-bold text-sm">Strategic Advisory</h3>
+                      <p className="text-[11px] text-muted-foreground">Capital & Regulatory Expertise</p>
                     </div>
                   </div>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    Carlson Capital provides the strategic investment framework and financial architecture that powers the Africa Credit Hub platform. With deep expertise in African capital markets and regulatory environments, Carlson Capital ensures the platform meets the fiduciary and compliance standards required by central banks and development finance institutions across the continent.
+                    Our strategic advisory division provides the investment framework and financial architecture that powers the Africa Credit Hub platform. With deep expertise in African capital markets and regulatory environments, we ensure the platform meets the fiduciary and compliance standards required by central banks and development finance institutions across the continent.
                   </p>
                 </div>
                 <div>
@@ -189,7 +189,7 @@ export default function AboutPage() {
               </div>
               <div className="mt-6 pt-6 border-t border-border/50">
                 <p className="text-xs text-muted-foreground leading-relaxed text-center max-w-2xl mx-auto">
-                  Together, Carlson Capital and Systems In Motion Limited form a partnership uniquely positioned at the intersection of African finance and technology — combining regulatory expertise with engineering excellence to build credit infrastructure that serves the entire continent.
+                  Our team is uniquely positioned at the intersection of African finance and technology — combining regulatory expertise with engineering excellence to build credit infrastructure that serves the entire continent.
                 </p>
               </div>
             </CardContent>
@@ -253,7 +253,7 @@ export default function AboutPage() {
           </div>
           <Card className="border-border/50">
             <CardContent className="p-6 sm:p-8">
-              <TimelineItem year="2024" title="Foundation" description="Carlson Capital and Systems In Motion Limited established the partnership with a mandate to build Africa's first cross-jurisdictional credit registry." />
+              <TimelineItem year="2024" title="Foundation" description="Africa Credit Hub was founded with a mandate to build Africa's first cross-jurisdictional credit registry." />
               <TimelineItem year="2025" title="Platform Architecture" description="Designed the multi-tenant SaaS architecture covering 54 African countries, 42+ currencies, and 5 AU languages. Built core RBAC, borrower management, and credit scoring engine." />
               <TimelineItem year="2026 Q1" title="Africa Credit Hub v1.0 — v1.2" description="Launched the foundation platform with enterprise features: TOTP MFA, OAuth 2.1, AI chatbot, entity resolution, exchange rates, XBRL uploads, full internationalization, and mobile-responsive design." />
               <TimelineItem year="2026 Q1" title="Africa Credit Hub v2.5 — Ghana Launch" description="Achieved full Bank of Ghana CRB v1.1 compliance. Deployed Ghana-specific mode with 85 borrowers, 181 credit accounts, 17 institutions, pipe-delimited export engine, and BoG code catalogs." />

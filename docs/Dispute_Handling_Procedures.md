@@ -2,7 +2,7 @@
 
 **Version 2.5** | Pan-African Credit Registry — Central Data Hub (CDH)
 
-**Carlson Capital & Systems In Motion Limited™**
+**Africa Credit Hub™**
 
 ---
 
@@ -478,9 +478,9 @@ After the retention period:
 | Helpdesk (in-app) | Navigate to Helpdesk from the sidebar |
 | Consumer Portal | `/my-credit` — self-service dispute filing |
 | Technical support | helpdesk@africacredithub.com |
-| Uffe Jon Carlson (Carlson Capital) | uffe.carlson@gmail.com · +233 552 395 548 |
-| Thomas Baafi (Systems In Motion) | Thomas.baafi@prischell.com · +233 24 433 9985 |
+| Africa Credit Hub Support | support@africacredithub.com |
+
 
 ---
 
-*© 2026 Carlson Capital & Systems In Motion Limited. All rights reserved.*
+*© 2026 Africa Credit Hub. All rights reserved.*

@@ -3,7 +3,7 @@
 ## Cross-Jurisdictional Central Data Hub & Credit Registry System v2.5
 
 **Prepared for:** Central Bank Supervisors, National Data Protection Authorities & Financial Sector Regulators  
-**Prepared by:** Carlson Capital & Systems In Motion Limited  
+**Prepared by:** Africa Credit Hub  
 **Document Version:** 2.5  
 **Date:** April 2026  
 **Classification:** Confidential
@@ -24,7 +24,7 @@ The Pan-African Credit Registry System (CDH v2.5) is a multi-tenant, SaaS credit
 | Deployment | Cloud-hosted SaaS with per-country data sovereignty |
 | Languages | English, French, Portuguese, Arabic, Swahili |
 | Coverage | 54 African countries with country-specific regulatory mappings |
-| Operator | Carlson Capital & Systems In Motion Limited |
+| Operator | Africa Credit Hub |
 
 ### 1.2 Core Capabilities
 
@@ -331,9 +331,9 @@ Cross-border data access requires:
 
 | Role | Name | Organisation |
 |------|------|-------------|
-| Platform Operator | Uffe Jon Carlson | Carlson Capital |
-| Technical Lead | Thomas Baafi | Systems In Motion Limited |
-| Data Protection Officer | DPO Office | Carlson Capital & Systems In Motion Limited |
+| Platform Operator | Africa Credit Hub Team | Africa Credit Hub |
+| Technical Lead | Africa Credit Hub Team | Africa Credit Hub |
+| Data Protection Officer | DPO Office | Africa Credit Hub |
 
 ---
 
@@ -344,6 +344,6 @@ Cross-border data access requires:
 | Document ID | CDH-REP-2026-001 |
 | Version | 2.5 |
 | Classification | Confidential |
-| Authors | Uffe Jon Carlson, Thomas Baafi |
-| Organisation | Carlson Capital & Systems In Motion Limited |
+| Authors | Africa Credit Hub Team |
+| Organisation | Africa Credit Hub |
 | Last Updated | April 2026 |

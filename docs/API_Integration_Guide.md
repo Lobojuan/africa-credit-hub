@@ -1,4 +1,4 @@
-# Carlson Capital & Systems In Motion Limited
+# Africa Credit Hub
 # Pan-African Credit Registry — External API Integration Guide
 ## Cross-Jurisdictional Credit Data Hub (CDH) v2.5
 
@@ -7,7 +7,7 @@
 **Document Version:** 2.5  
 **Last Updated:** April 2026  
 **Classification:** CONFIDENTIAL — For Authorized Institutions Only  
-**Contact:** Carlson Capital & Systems In Motion Limited — uffe.carlson@gmail.com | Thomas.baafi@prischell.com  
+**Contact:** Africa Credit Hub — support@africacredithub.com  
 **Website:** https://africacredithub.com
 
 ---
@@ -1465,7 +1465,7 @@ GET /api/platform/audit-logs?limit=100&offset=0&action=LOGIN&entity=system&searc
 **Response:**
 ```json
 {
-  "logs": [{ "id": "...", "userId": "...", "action": "LOGIN", "entity": "system", "details": "...", "ipAddress": "...", "createdAt": "...", "userName": "Uffe J Carlson" }],
+  "logs": [{ "id": "...", "userId": "...", "action": "LOGIN", "entity": "system", "details": "...", "ipAddress": "...", "createdAt": "...", "userName": "Admin User" }],
   "total": 153,
   "actionCounts": [{ "action": "LOGIN", "count": 103 }],
   "entityCounts": [{ "entity": "system", "count": 103 }]
@@ -1570,7 +1570,7 @@ GET /api/platform/activity-feed
 Returns the 100 most recent audit events with resolved user names.
 
 ```json
-[{ "id": "...", "action": "LOGIN", "entity": "system", "details": "...", "userName": "Uffe J Carlson", "ipAddress": "...", "createdAt": "..." }]
+[{ "id": "...", "action": "LOGIN", "entity": "system", "details": "...", "userName": "Admin User", "ipAddress": "...", "createdAt": "..." }]
 ```
 
 ---
@@ -1579,8 +1579,8 @@ Returns the 100 most recent audit events with resolved user names.
 
 | Contact | Details |
 |---|---|
-| **Uffe Jon Carlson (Carlson Capital)** | uffe.carlson@gmail.com · +233 552 395 548 |
-| **Thomas Baafi (Systems In Motion)** | Thomas.baafi@prischell.com · +233 24 433 9985 |
+| **Africa Credit Hub Support** | support@africacredithub.com |
+
 | **Technical Documentation** | This document |
 | **Platform** | https://africacredithub.com |
 
@@ -1588,4 +1588,4 @@ For urgent production issues, include your institution name, API key prefix (e.g
 
 ---
 
-*© 2026 Carlson Capital & Systems In Motion Limited. All rights reserved. This document is confidential and intended only for authorized institutions integrating with the Pan-African Credit Registry.*
+*© 2026 Africa Credit Hub. All rights reserved. This document is confidential and intended only for authorized institutions integrating with the Pan-African Credit Registry.*

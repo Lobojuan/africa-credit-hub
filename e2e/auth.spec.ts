@@ -36,7 +36,7 @@ test.describe('Authentication Flow', () => {
     });
     expect(loginResponse.ok()).toBeTruthy();
     const loginData = await loginResponse.json();
-    expect(loginData.fullName).toBe('Uffe J Carlson');
+    expect(loginData.fullName).toBe('Platform Admin');
     expect(loginData.role).toBe('super_admin');
 
     const meResponse = await request.get('/api/auth/me');

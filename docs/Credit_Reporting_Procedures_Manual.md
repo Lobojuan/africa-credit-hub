@@ -2,7 +2,7 @@
 
 ## Cross-Jurisdictional Central Data Hub & Credit Registry System v2.5
 
-**Prepared for:** Carlson Capital & Systems In Motion Limited  
+**Prepared for:** Africa Credit Hub  
 **Document Version:** 2.5  
 **Date:** April 2026  
 **Classification:** Confidential
@@ -383,6 +383,6 @@ The platform supports multiple AI providers:
 | Document ID | CDH-CRP-2026-001 |
 | Version | 2.5 |
 | Classification | Confidential |
-| Authors | Uffe Jon Carlson, Thomas Baafi |
-| Organisation | Carlson Capital & Systems In Motion Limited |
+| Authors | Africa Credit Hub Team |
+| Organisation | Africa Credit Hub |
 | Last Updated | April 2026 |

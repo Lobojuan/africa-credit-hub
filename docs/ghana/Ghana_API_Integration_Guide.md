@@ -1,6 +1,6 @@
 # Ghana Credit Registry — API Integration Guide
 
-**Carlson Capital & Systems In Motion Limited**
+**Africa Credit Hub**
 **Version 2.5 | Bank of Ghana CRB v1.1 Compliant API | CDH v2.5**
 
 ---
@@ -468,7 +468,7 @@ Returns hash chain verification result for the audit trail.
 Use of this API constitutes agreement to comply with the Credit Reporting Act, 2007 (Act 726), the Data Protection Act, 2012 (Act 843), and all Bank of Ghana directives. Misuse of the API, including unauthorized data access, data harvesting, or failure to maintain consent records, may result in license revocation and criminal prosecution.
 
 ### 11.2 Liability
-Carlson Capital & Systems In Motion Limited provides this API on an "as-is" basis and is not liable for data accuracy issues originating from submitting institutions. Each institution remains legally responsible for the accuracy of data submitted per Act 726, Section 7(3).
+Africa Credit Hub provides this API on an "as-is" basis and is not liable for data accuracy issues originating from submitting institutions. Each institution remains legally responsible for the accuracy of data submitted per Act 726, Section 7(3).
 
 ### 11.3 Governing Law
 This API and all data processed through it are governed by the laws of the Republic of Ghana, with the Courts of Ghana having exclusive jurisdiction over any disputes.
