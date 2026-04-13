@@ -72,6 +72,11 @@ import { BOG_CHEQUE_RETURN_REASON, BOG_NATURE_OF_GUARANTOR, BOG_EMPLOYMENT_TYPE,
 import { BUSINESS_CREDIT_TYPES, inferCreditCategory, normalizeAccountType } from "@shared/credit-types";
 import { BSL_EXPORT_GENERATORS } from "./bsl-export";
 import type { BslFileType } from "@shared/bsl-codes";
+import {
+  encryptExportData, decryptExportData, generateExportHash, verifyExportIntegrity,
+  buildFullPortabilityExport, buildConsumerDataExport, cascadeDeleteBorrower,
+  scanRetentionPolicies,
+} from "./export-service";
 
 
 
@@ -1547,6 +1552,8 @@ export async function registerRoutes(
   // Stricter consumer auth rate limit: 3 attempts / 15 min to prevent brute-force on consumer accounts
   const consumerAuthLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 3, message: { message: "Too many login attempts. Please try again in 15 minutes." }, standardHeaders: true, legacyHeaders: false });
   const consumerLookupLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { message: "Too many lookup requests. Please try again later." }, standardHeaders: true, legacyHeaders: false });
+  const exportLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, message: { message: "Export rate limit exceeded. Maximum 5 exports per hour." }, standardHeaders: true, legacyHeaders: false, keyGenerator: rateLimitKeyGenerator, validate: { keyGeneratorIpFallback: false } });
+  const consumerExportLimiter = rateLimit({ windowMs: 24 * 60 * 60 * 1000, max: 1, message: { message: "You can only download your data once per day." }, standardHeaders: true, legacyHeaders: false, keyGenerator: rateLimitKeyGenerator, validate: { keyGeneratorIpFallback: false } });
 
   const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
   const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
@@ -6029,7 +6036,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     }
   });
 
-  app.get("/api/reports/export", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
+  app.get("/api/reports/export", requireRole("admin", "regulator", "super_admin"), exportLimiter, async (req, res) => {
     try {
       const orgId = getOrgScope(req);
       const format = (req.query.format as string) || "csv";
@@ -6238,7 +6245,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     }
   });
 
-  app.get("/api/bog/export/:fileType", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
+  app.get("/api/bog/export/:fileType", requireRole("admin", "regulator", "super_admin"), exportLimiter, async (req, res) => {
     try {
       const fileType = req.params.fileType.toUpperCase() as BogFileType;
       const validTypes: BogFileType[] = ["CONC", "BUSC", "CONJ", "BUSJ", "COND", "BUSD"];
@@ -6280,7 +6287,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     }
   });
 
-  app.get("/api/bsl/export/:fileType", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
+  app.get("/api/bsl/export/:fileType", requireRole("admin", "regulator", "super_admin"), exportLimiter, async (req, res) => {
     try {
       const fileType = req.params.fileType.toUpperCase() as BslFileType;
       const validTypes: BslFileType[] = ["CONC", "BUSC", "CONJ", "BUSJ", "COND", "BUSD"];
@@ -10638,7 +10645,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     res.json({ connectedClients: getConnectedClientsCount() });
   });
 
-  app.get("/api/admin/export/:orgId", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
+  app.get("/api/admin/export/:orgId", requireAuth, requireRole("admin", "super_admin"), exportLimiter, async (req, res) => {
     try {
       const orgId = req.params.orgId;
       if (!orgId) return res.status(400).json({ message: "Invalid organization ID" });
@@ -10649,48 +10656,191 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
       const org = await storage.getOrganization(orgId);
       if (!org) return res.status(404).json({ message: "Organization not found" });
-      const exportCountry = org.country || getCountryFilter(req);
 
-      const { data: borrowers } = await storage.getBorrowers(1, 10000, orgId, exportCountry);
+      const encrypt = req.query.encrypt === "true";
 
-      const exportData = {
-        exportDate: new Date().toISOString(),
-        exportVersion: "2.5.0",
-        compliance: "POPIA/NDPA/Ghana DPA/GDPR Article 20 — Right to Data Portability",
-        organization: {
-          id: org.id,
-          name: org.name,
-          country: org.country,
-          tier: org.subscriptionTier,
-        },
-        statistics: {
-          totalBorrowers: borrowers.length,
-        },
-        borrowers: borrowers.map(b => ({
-          id: b.id,
-          firstName: b.firstName,
-          lastName: b.lastName,
-          nationalId: b.nationalId,
-          dateOfBirth: b.dateOfBirth,
-          country: b.country,
-        })),
-      };
+      const exportData = await buildFullPortabilityExport(
+        orgId, org.name, org.country, org.subscriptionTier
+      );
+      const jsonStr = JSON.stringify(exportData, null, 2);
+      const sha256Hash = generateExportHash(jsonStr);
+      const fileSizeBytes = Buffer.byteLength(jsonStr, "utf8");
+      const safeName = org.name.replace(/[^a-zA-Z0-9]/g, "_");
+      const dateStr = new Date().toISOString().split("T")[0];
 
       await storage.createAuditLog({
         userId: req.session.userId,
-        action: "data_export",
+        action: "FULL_DATA_EXPORT",
         entity: "organization",
         entityId: orgId,
-        details: `Full data export for org ${org.name} (${borrowers.length} borrowers)`,
+        details: `Full portability export v3.0 for ${org.name}: ${exportData.statistics.totalBorrowers} borrowers, ${exportData.statistics.totalAccounts} accounts, ${exportData.statistics.totalPaymentRecords} payments, ${exportData.statistics.totalGuarantors} guarantors, ${exportData.statistics.totalInquiries} inquiries, ${exportData.statistics.totalDisputes} disputes. Size: ${(fileSizeBytes / 1024).toFixed(1)}KB. SHA-256: ${sha256Hash}. Encrypted: ${encrypt}`,
         ipAddress: req.ip || "unknown",
       });
 
-      res.setHeader("Content-Disposition", `attachment; filename="ach_export_${org.name.replace(/[^a-zA-Z0-9]/g, "_")}_${new Date().toISOString().split("T")[0]}.json"`);
+      if (encrypt) {
+        const result = encryptExportData(jsonStr);
+        res.setHeader("Content-Disposition", `attachment; filename="ach_export_${safeName}_${dateStr}.enc"`);
+        res.setHeader("Content-Type", "application/octet-stream");
+        res.setHeader("X-Export-SHA256", sha256Hash);
+        res.setHeader("X-Export-IV", result.iv);
+        res.setHeader("X-Export-Key", result.oneTimeKey);
+        res.setHeader("X-Export-Original-Size", String(result.originalSizeBytes));
+        res.setHeader("X-Export-Encrypted", "true");
+        return res.send(result.encryptedData);
+      }
+
+      res.setHeader("Content-Disposition", `attachment; filename="ach_export_${safeName}_${dateStr}.json"`);
       res.setHeader("Content-Type", "application/json");
-      res.json(exportData);
+      res.setHeader("X-Export-SHA256", sha256Hash);
+      res.setHeader("X-Export-Encrypted", "false");
+      res.send(jsonStr);
     } catch (err: any) {
       routeLogger.error("[Export] Error:", { detail: err.message });
       res.status(500).json({ message: "Export failed" });
+    }
+  });
+
+  app.post("/api/export/verify-integrity", requireAuth, async (req, res) => {
+    try {
+      const { data, expectedHash } = req.body;
+      if (!data || !expectedHash) return res.status(400).json({ message: "data and expectedHash are required" });
+      const isValid = verifyExportIntegrity(typeof data === "string" ? data : JSON.stringify(data), expectedHash);
+      const actualHash = generateExportHash(typeof data === "string" ? data : JSON.stringify(data));
+      res.json({ valid: isValid, expectedHash, actualHash });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.post("/api/export/decrypt", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const { encryptedBase64, key, iv } = req.body;
+      if (!encryptedBase64 || !key || !iv) return res.status(400).json({ message: "encryptedBase64, key, and iv are required" });
+      const encBuffer = Buffer.from(encryptedBase64, "base64");
+      const decrypted = decryptExportData(encBuffer, key, iv);
+      res.setHeader("Content-Type", "application/json");
+      res.send(decrypted);
+    } catch (e: any) {
+      res.status(400).json({ message: "Decryption failed — invalid key, IV, or data" });
+    }
+  });
+
+  app.post("/api/consumer/export-my-data", requireConsumer, consumerExportLimiter, async (req, res) => {
+    try {
+      const consumerId = (req.session as any).consumerId;
+      const consumerNationalId = (req.session as any).consumerNationalId;
+      if (!consumerId || !consumerNationalId) return res.status(401).json({ message: "Consumer session required" });
+
+      const [consumerAccount] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.id, consumerId)).limit(1);
+      if (!consumerAccount) return res.status(401).json({ message: "Consumer account not found" });
+
+      const borrowerResult = await db.select().from(borrowers).where(
+        or(
+          ilike(borrowers.nationalId, consumerNationalId),
+          ilike(borrowers.ghanaCardNumber, consumerNationalId),
+          ilike(borrowers.passportNumber, consumerNationalId)
+        )
+      ).limit(1);
+      const borrower = borrowerResult[0];
+      if (!borrower) return res.status(404).json({ message: "No credit file found" });
+
+      const exportData = await buildConsumerDataExport(borrower.id);
+      const jsonStr = JSON.stringify(exportData, null, 2);
+      const sha256Hash = generateExportHash(jsonStr);
+
+      await storage.createAuditLog({
+        userId: null,
+        action: "CONSUMER_DATA_EXPORT",
+        entity: "borrower",
+        entityId: borrower.id,
+        details: `Consumer self-service data export. ${exportData.statistics.totalAccounts} accounts, ${exportData.statistics.totalPayments} payments. SHA-256: ${sha256Hash}`,
+        ipAddress: req.ip || "unknown",
+      });
+
+      res.setHeader("Content-Disposition", `attachment; filename="my_credit_data_${new Date().toISOString().split("T")[0]}.json"`);
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader("X-Export-SHA256", sha256Hash);
+      res.send(jsonStr);
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.get("/api/data-management/export-history", requireAuth, requireRole("admin", "regulator", "super_admin"), async (req, res) => {
+    try {
+      const country = getCountryFilter(req);
+      const orgId = getOrgScope(req);
+      const logs = await storage.getAuditLogs(orgId, country, 200);
+      const exportLogs = logs.filter(l =>
+        l.action === "FULL_DATA_EXPORT" || l.action === "CONSUMER_DATA_EXPORT" ||
+        l.action === "data_export" || l.action === "DATA_ERASURE_REQUEST" ||
+        l.action === "DATA_ERASURE_COMPLETED" || l.action === "RETENTION_SCAN"
+      );
+      res.json(exportLogs);
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.get("/api/data-management/erasure-requests", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const country = getCountryFilter(req);
+      const orgId = getOrgScope(req);
+      const approvals = await storage.getPendingApprovals(orgId, country);
+      const erasureRequests = approvals.filter((a: any) => {
+        try {
+          const payload = typeof a.payload === "string" ? JSON.parse(a.payload) : a.payload;
+          return payload?.type === "data_erasure";
+        } catch { return false; }
+      });
+      res.json(erasureRequests);
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.post("/api/data-management/cascade-erasure/:borrowerId", requireAuth, requireRole("super_admin"), async (req, res) => {
+    try {
+      const { borrowerId } = req.params;
+      const borrower = await storage.getBorrower(borrowerId);
+      if (!borrower) return res.status(404).json({ message: "Borrower not found" });
+
+      const activeAccounts = await storage.getCreditAccountsByBorrower(borrowerId);
+      const hasActive = activeAccounts.some((a: any) => a.status === "active" || a.status === "current");
+      if (hasActive) return res.status(409).json({ message: "Cannot erase borrower with active accounts. Close all accounts first." });
+
+      const result = await cascadeDeleteBorrower(borrowerId);
+
+      await storage.createAuditLog({
+        userId: req.session.userId,
+        action: "DATA_ERASURE_COMPLETED",
+        entity: "borrower",
+        entityId: borrowerId,
+        details: `Cascade erasure completed for ${borrower.firstName} ${borrower.lastName}. Deleted: ${result.deletedAccounts} accounts, ${result.deletedPayments} payments, ${result.deletedGuarantors} guarantors, ${result.deletedInquiries} inquiries, ${result.deletedDisputes} disputes, ${result.deletedJudgments} judgments, ${result.deletedCheques} cheques, ${result.deletedAlerts} alerts, ${result.deletedConsent} consent records, ${result.deletedReportLogs} report logs, ${result.deletedConsumerAccounts} consumer accounts`,
+        ipAddress: req.ip || "unknown",
+      });
+
+      res.json({ message: "Cascade erasure completed", ...result });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.post("/api/data-management/retention-scan", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const countryFilter = req.session.role === "super_admin" ? undefined : req.session.country || undefined;
+      const result = await scanRetentionPolicies(countryFilter);
+      await storage.createAuditLog({
+        userId: req.session.userId,
+        action: "RETENTION_SCAN",
+        entity: "system",
+        entityId: "retention_scan",
+        details: `Retention scan: ${result.policiesEvaluated} policies evaluated, ${result.recordsFlagged} records flagged`,
+        ipAddress: req.ip || "unknown",
+      });
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 

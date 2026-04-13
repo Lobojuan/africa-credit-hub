@@ -81,6 +81,7 @@ const DocumentationPage = lazy(() => import("@/pages/documentation"));
 const ExchangeRatesPage = lazy(() => import("@/pages/exchange-rates"));
 const ApiAdminPage = lazy(() => import("@/pages/api-admin"));
 const RetentionPoliciesPage = lazy(() => import("@/pages/retention-policies"));
+const DataManagementPage = lazy(() => import("@/pages/data-management"));
 const RegulatoryCompliancePage = lazy(() => import("@/pages/regulatory-compliance"));
 const BogExportPage = lazy(() => import("@/pages/bog-export"));
 const BslExportPage = lazy(() => import("@/pages/bsl-export"));
@@ -194,6 +195,7 @@ function Router() {
         <Route path="/exchange-rates" component={ExchangeRatesPage} />
         <Route path="/api-admin" component={ApiAdminPage} />
         <Route path="/retention-policies" component={RetentionPoliciesPage} />
+        <Route path="/data-management" component={DataManagementPage} />
         <Route path="/regulatory-compliance" component={RegulatoryCompliancePage} />
         <Route path="/bog-export" component={BogExportPage} />
         <Route path="/bsl-export" component={BslExportPage} />

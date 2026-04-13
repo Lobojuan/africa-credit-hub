@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search, Shield, AlertTriangle, CheckCircle2, TrendingUp, User, Loader2, Scale, Phone, CalendarDays, Lock, LogOut, UserPlus, KeyRound, ArrowLeft, ArrowRight, Eye, EyeOff, Mail, MessageSquare, RefreshCw, Globe } from "lucide-react";
+import { Search, Shield, AlertTriangle, CheckCircle2, TrendingUp, User, Loader2, Scale, Phone, CalendarDays, Lock, LogOut, UserPlus, KeyRound, ArrowLeft, ArrowRight, Eye, EyeOff, Mail, MessageSquare, RefreshCw, Globe, Download } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CreditScoreGauge } from "@/components/credit-score-gauge";
@@ -783,6 +783,47 @@ export default function ConsumerPortalPage() {
                         <span>Lenders must get your consent before accessing your data.</span>
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="shadow-sm">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Download className="w-4 h-4 text-primary" />
+                      <h3 className="text-sm font-bold">Download My Data</h3>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Export all your credit data in a portable format. Compliant with POPIA, NDPA, Ghana DPA & GDPR Article 20.
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full rounded-xl"
+                      data-testid="button-consumer-download-data"
+                      onClick={async () => {
+                        try {
+                          const res = await fetch("/api/consumer/export-my-data", { method: "POST", credentials: "include" });
+                          if (!res.ok) {
+                            const err = await res.json();
+                            throw new Error(err.message || "Export failed");
+                          }
+                          const blob = await res.blob();
+                          const disposition = res.headers.get("Content-Disposition") || "";
+                          const match = disposition.match(/filename="?([^"]+)"?/);
+                          const filename = match?.[1] || `my_credit_data_${Date.now()}.json`;
+                          const a = document.createElement("a");
+                          a.href = URL.createObjectURL(blob);
+                          a.download = filename;
+                          a.click();
+                          URL.revokeObjectURL(a.href);
+                        } catch (e: any) {
+                          alert(e.message || "Failed to download your data. Please try again later.");
+                        }
+                      }}
+                    >
+                      <Download className="w-3.5 h-3.5 mr-1.5" />
+                      Download All My Credit Data
+                    </Button>
                   </CardContent>
                 </Card>
 
