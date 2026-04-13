@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Bell, Search, Filter, Clock, Mail, Phone, CheckCircle, XCircle, AlertTriangle, Building2, Eye, FileText, ShieldAlert, TrendingUp, Loader2 } from "lucide-react";
+import { useLocation } from "wouter";
+import { Bell, Search, Filter, Clock, Mail, Phone, CheckCircle, XCircle, AlertTriangle, Building2, Eye, FileText, ShieldAlert, TrendingUp, Loader2, User } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { BorrowerAlert } from "@shared/schema";
+
+type EnrichedAlert = BorrowerAlert & { borrowerName?: string | null };
 
 function getAlertTypeIcon(type: string) {
   switch (type) {
@@ -62,7 +65,9 @@ export default function BorrowerAlertsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [recentDays, setRecentDays] = useState(0);
 
-  const { data: alerts, isLoading } = useQuery<BorrowerAlert[]>({
+  const [, navigate] = useLocation();
+
+  const { data: alerts, isLoading } = useQuery<EnrichedAlert[]>({
     queryKey: ["/api/borrower-alerts", recentDays],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -84,7 +89,8 @@ export default function BorrowerAlertsPage() {
         (alert.accessedBy || "").toLowerCase().includes(q) ||
         (alert.recipientEmail || "").toLowerCase().includes(q) ||
         (alert.recipientPhone || "").toLowerCase().includes(q) ||
-        (alert.borrowerId || "").toLowerCase().includes(q)
+        (alert.borrowerId || "").toLowerCase().includes(q) ||
+        ((alert as EnrichedAlert).borrowerName || "").toLowerCase().includes(q)
       );
     }
     return true;
@@ -251,6 +257,7 @@ export default function BorrowerAlertsPage() {
                   <TableRow>
                     <TableHead className="w-10"></TableHead>
                     <TableHead>{t("borrowerAlerts.type", "Type")}</TableHead>
+                    <TableHead>{t("borrowerAlerts.borrower", "Borrower")}</TableHead>
                     <TableHead>{t("borrowerAlerts.institution", "Institution")}</TableHead>
                     <TableHead>{t("borrowerAlerts.accessedBy", "Accessed By")}</TableHead>
                     <TableHead>{t("borrowerAlerts.purpose", "Purpose")}</TableHead>
@@ -261,13 +268,26 @@ export default function BorrowerAlertsPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredAlerts.map((alert) => (
-                    <TableRow key={alert.id} data-testid={`row-alert-${alert.id}`}>
+                    <TableRow
+                      key={alert.id}
+                      data-testid={`row-alert-${alert.id}`}
+                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => navigate(`/consumers/${alert.borrowerId}`)}
+                    >
                       <TableCell>
                         <div className="flex items-center justify-center w-8 h-8 rounded-md bg-accent">
                           {getAlertTypeIcon(alert.alertType)}
                         </div>
                       </TableCell>
                       <TableCell>{getAlertTypeBadge(alert.alertType)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          <User className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-sm font-medium text-primary hover:underline" data-testid={`link-borrower-${alert.borrowerId}`}>
+                            {alert.borrowerName || alert.borrowerId}
+                          </span>
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1.5">
                           <Building2 className="w-3 h-3 text-muted-foreground" />

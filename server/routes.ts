@@ -9881,7 +9881,20 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const country = getCountryFilter(req);
       const recentDays = parseInt(req.query.recentDays as string) || 0;
       const alerts = await storage.getBorrowerAlerts(orgScope, country, recentDays > 0 ? recentDays : undefined);
-      res.json(alerts);
+      const borrowerIds = [...new Set(alerts.map(a => a.borrowerId))];
+      const borrowerMap = new Map<string, { firstName?: string | null; lastName?: string | null; companyName?: string | null }>();
+      for (const bid of borrowerIds) {
+        try {
+          const b = await storage.getBorrower(bid);
+          if (b) borrowerMap.set(bid, { firstName: b.firstName, lastName: b.lastName, companyName: b.companyName });
+        } catch {}
+      }
+      const enriched = alerts.map(a => {
+        const b = borrowerMap.get(a.borrowerId);
+        const borrowerName = b ? (b.companyName || [b.firstName, b.lastName].filter(Boolean).join(" ") || null) : null;
+        return { ...a, borrowerName };
+      });
+      res.json(enriched);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
     }
