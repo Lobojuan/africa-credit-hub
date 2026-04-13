@@ -6834,7 +6834,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     try {
       const { phone, message } = req.body;
       if (!phone || typeof phone !== "string") {
-        return res.status(400).json({ message: "Phone number is required (E.164 format, e.g. +233552395548)" });
+        return res.status(400).json({ message: "Phone number is required (E.164 format, e.g. +233200000000)" });
       }
       if (!isSmsConfigured()) {
         return res.status(400).json({ message: "SMS is not configured. Add TWILIO or Africa's Talking credentials." });

@@ -3542,7 +3542,7 @@ function SmsTestPanel() {
 
   const handleSend = async () => {
     if (!phone || phone.length < 10) {
-      toast({ title: "Enter a valid phone number in E.164 format (e.g. +233552395548)", variant: "destructive" });
+      toast({ title: "Enter a valid phone number in E.164 format (e.g. +233200000000)", variant: "destructive" });
       return;
     }
     setSending(true);
@@ -3586,7 +3586,7 @@ function SmsTestPanel() {
             <Input
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="+233552395548"
+              placeholder="+233200000000"
               className="h-8 text-xs pl-8 bg-muted border-border/50"
               data-testid="input-test-phone"
             />
