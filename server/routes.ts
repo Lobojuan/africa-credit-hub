@@ -6144,7 +6144,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
           action: "REPORT_EXPORT",
           entity: "report",
           entityId: type,
-          details: JSON.stringify({ format: "xlsx", type, recordCount: xlsxRecordCount, sizeBytes: xlsxBuf.byteLength, sha256: xlsxHash, encrypted: true }),
+          details: JSON.stringify({ format: "xlsx", type, recordCount: xlsxRecordCount, sizeBytes: xlsxBuf.byteLength, plaintextSha256: xlsxHash, ciphertextSha256: encResult.ciphertextHash, encrypted: true }),
           ipAddress: req.ip || "unknown",
         });
 
@@ -6196,7 +6196,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
           action: "REPORT_EXPORT",
           entity: "report",
           entityId: type,
-          details: JSON.stringify({ format: "csv", type, recordCount: csvRecordCount, sizeBytes: csvSizeBytes, sha256: csvHash, encrypted: true }),
+          details: JSON.stringify({ format: "csv", type, recordCount: csvRecordCount, sizeBytes: csvSizeBytes, plaintextSha256: csvHash, ciphertextSha256: encResult.ciphertextHash, encrypted: true }),
           ipAddress: req.ip || "unknown",
         });
 
@@ -6337,7 +6337,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         action: "REGULATORY_EXPORT",
         entity: "bog_report",
         entityId: fileType,
-        details: JSON.stringify({ regulator: "BoG", fileType, filename, sizeBytes: bogSizeBytes, recordCount: bogRecordCount, sha256: bogHash, encrypted: true }),
+        details: JSON.stringify({ regulator: "BoG", fileType, filename, sizeBytes: bogSizeBytes, recordCount: bogRecordCount, plaintextSha256: bogHash, ciphertextSha256: encResult.ciphertextHash, encrypted: true }),
         ipAddress: req.ip || "unknown",
       });
 
@@ -6402,7 +6402,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         action: "REGULATORY_EXPORT",
         entity: "bsl_report",
         entityId: fileType,
-        details: JSON.stringify({ regulator: "BSL", fileType, filename, sizeBytes: bslSizeBytes, recordCount: bslRecordCount, sha256: bslHash, encrypted: true }),
+        details: JSON.stringify({ regulator: "BSL", fileType, filename, sizeBytes: bslSizeBytes, recordCount: bslRecordCount, plaintextSha256: bslHash, ciphertextSha256: encResult.ciphertextHash, encrypted: true }),
         ipAddress: req.ip || "unknown",
       });
 
@@ -10899,7 +10899,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
             action: "FULL_DATA_EXPORT",
             entity: "organization",
             entityId: orgId,
-            details: JSON.stringify({ version: "3.0.0", org: org!.name, recordCount: totalRecords, sizeBytes: job.sizeBytes, sha256: sha256Hash, encrypted: true }),
+            details: JSON.stringify({ version: "3.0.0", org: org!.name, recordCount: totalRecords, sizeBytes: job.sizeBytes, plaintextSha256: sha256Hash, ciphertextSha256: job.ciphertextHash, encrypted: true }),
             ipAddress: req.ip || "unknown",
           });
 
@@ -11027,7 +11027,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         action: "CONSUMER_DATA_EXPORT",
         entity: "borrower",
         entityId: borrower.id,
-        details: JSON.stringify({ recordCount, sizeBytes, sha256: sha256Hash, encrypted: true }),
+        details: JSON.stringify({ recordCount, sizeBytes, plaintextSha256: sha256Hash, ciphertextSha256: encResult.ciphertextHash, encrypted: true }),
         ipAddress: req.ip || "unknown",
       });
 
