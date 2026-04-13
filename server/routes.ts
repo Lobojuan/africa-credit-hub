@@ -10769,12 +10769,13 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
           for (let idx = 0; idx < allBorrowers.length; idx++) {
             const b = allBorrowers[idx];
-            const [accts, inqs, disps, judgs, cheqs] = await Promise.all([
+            const [accts, inqs, disps, judgs, cheqs, audits] = await Promise.all([
               db.select().from(creditAccounts).where(eq(creditAccounts.borrowerId, b.id)),
               db.select().from(creditInquiries).where(eq(creditInquiries.borrowerId, b.id)),
               db.select().from(disputes).where(eq(disputes.borrowerId, b.id)),
               db.select().from(courtJudgments).where(eq(courtJudgments.borrowerId, b.id)),
               db.select().from(dishonouredCheques).where(eq(dishonouredCheques.borrowerId, b.id)),
+              db.select().from(auditLogs).where(eq(auditLogs.entityId, b.id)),
             ]);
             const accountIds = accts.map(a => a.id);
             let payments: any[] = [];
@@ -10790,6 +10791,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
               type: b.type, nationalId: b.nationalId, country: b.country,
               creditAccounts: accts, paymentHistory: payments, guarantors: guars,
               inquiries: inqs, disputes: disps, courtJudgments: judgs, dishonouredCheques: cheqs,
+              auditTrail: audits.map(a => ({ action: a.action, entity: a.entity, details: a.details, createdAt: a.createdAt })),
             });
             writeStream.write(chunk);
             hashStream.update(chunk);
@@ -10805,8 +10807,25 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         const sha256Hash = hashStream.digest("hex");
         const stats = fs.statSync(tmpFile);
         const sizeBytes = stats.size;
-        const plaintext = fs.readFileSync(tmpFile, "utf8");
-        const encResult = encryptExportData(plaintext);
+
+        const oneTimeKey = crypto.randomBytes(32);
+        const iv = crypto.randomBytes(16);
+        const cipher = crypto.createCipheriv("aes-256-cbc", oneTimeKey, iv);
+        const encHashStream = crypto.createHash("sha256");
+
+        const encTmpFile = tmpFile + ".enc";
+        await new Promise<void>((resolve, reject) => {
+          const readStream = fs.createReadStream(tmpFile);
+          const encWriteStream = fs.createWriteStream(encTmpFile);
+          readStream.pipe(cipher).on("data", (chunk: Buffer) => {
+            encHashStream.update(chunk);
+            encWriteStream.write(chunk);
+          }).on("end", () => {
+            encWriteStream.end(() => resolve());
+          }).on("error", reject);
+        });
+
+        const ciphertextHash = encHashStream.digest("hex");
 
         await storage.createAuditLog({
           userId: req.session.userId,
@@ -10819,14 +10838,19 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
         res.setHeader("Content-Disposition", `attachment; filename="ach_export_${safeName}_${dateStr}.enc"`);
         res.setHeader("Content-Type", "application/octet-stream");
-        res.setHeader("X-Export-SHA256", encResult.ciphertextHash);
+        res.setHeader("X-Export-SHA256", ciphertextHash);
         res.setHeader("X-Export-Plaintext-SHA256", sha256Hash);
-        res.setHeader("X-Export-IV", encResult.iv);
-        res.setHeader("X-Export-Key", encResult.oneTimeKey);
-        res.setHeader("X-Export-Original-Size", String(encResult.originalSizeBytes));
+        res.setHeader("X-Export-IV", iv.toString("hex"));
+        res.setHeader("X-Export-Key", oneTimeKey.toString("hex"));
+        res.setHeader("X-Export-Original-Size", String(sizeBytes));
         res.setHeader("X-Export-Encrypted", "true");
         res.setHeader("X-Export-Record-Count", String(totalRecords));
-        return res.send(encResult.encryptedData);
+
+        const encReadStream = fs.createReadStream(encTmpFile);
+        encReadStream.pipe(res);
+        encReadStream.on("end", () => {
+          try { fs.unlinkSync(encTmpFile); } catch {}
+        });
       } finally {
         try { fs.unlinkSync(tmpFile); } catch {}
       }

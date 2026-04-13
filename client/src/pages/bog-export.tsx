@@ -68,7 +68,10 @@ export default function BogExportPage() {
       }
       const disposition = res.headers.get("content-disposition") || "";
       const filenameMatch = disposition.match(/filename="(.+)"/);
-      const filename = filenameMatch ? filenameMatch[1] : `${fileType}-export.csv`;
+      const filename = filenameMatch ? filenameMatch[1] : `${fileType}-export.enc`;
+      const oneTimeKey = res.headers.get("X-Export-Key");
+      const iv = res.headers.get("X-Export-IV");
+      const sha256 = res.headers.get("X-Export-SHA256");
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       try {
@@ -81,7 +84,11 @@ export default function BogExportPage() {
       } finally {
         URL.revokeObjectURL(url);
       }
-      toast({ title: "Export complete", description: `Downloaded ${filename}` });
+      let desc = `Downloaded ${filename}`;
+      if (oneTimeKey) {
+        desc += `\n\nDecryption Key: ${oneTimeKey}\nIV: ${iv}\nSHA-256: ${sha256}\n\nSave this key — it cannot be recovered.`;
+      }
+      toast({ title: "Encrypted export complete", description: desc });
     } catch (e: any) {
       toast({ title: "Export failed", description: e.message, variant: "destructive" });
     } finally {

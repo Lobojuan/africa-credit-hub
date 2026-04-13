@@ -182,11 +182,31 @@ export default function AuditTrailPage() {
     );
   }, [logs]);
 
-  const handleExport = (format: "csv" | "xlsx") => {
+  const handleExport = async (format: "csv" | "xlsx") => {
     if (format === "csv") {
       exportToCSV(filteredLogs);
     } else {
-      window.open(`/api/reports/export?format=${format}&type=audit`, "_blank");
+      try {
+        const res = await fetch(`/api/reports/export?format=${format}&type=audit`, { credentials: "include" });
+        if (!res.ok) throw new Error("Export failed");
+        const oneTimeKey = res.headers.get("X-Export-Key");
+        const iv = res.headers.get("X-Export-IV");
+        const sha256 = res.headers.get("X-Export-SHA256");
+        const blob = await res.blob();
+        const disposition = res.headers.get("Content-Disposition") || "";
+        const match = disposition.match(/filename="?([^"]+)"?/);
+        const filename = match?.[1] || `audit_trail.enc`;
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        if (oneTimeKey) {
+          alert(`Encrypted export downloaded.\n\nDecryption Key: ${oneTimeKey}\nIV: ${iv}\nSHA-256: ${sha256}\n\nSave this key — it cannot be recovered.`);
+        }
+      } catch (e: any) {
+        alert(e.message || "Export failed");
+      }
     }
   };
 

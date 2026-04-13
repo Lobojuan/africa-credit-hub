@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
@@ -131,6 +131,29 @@ function BorrowerSearchSelect({ onSelect }: { onSelect: (b: Borrower) => void })
   );
 }
 
+async function downloadEncryptedExport(url: string, defaultFilename: string) {
+  const res = await fetch(url, { credentials: "include" });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: "Export failed" }));
+    throw new Error(err.message || "Export failed");
+  }
+  const oneTimeKey = res.headers.get("X-Export-Key");
+  const iv = res.headers.get("X-Export-IV");
+  const sha256 = res.headers.get("X-Export-SHA256");
+  const blob = await res.blob();
+  const disposition = res.headers.get("Content-Disposition") || "";
+  const match = disposition.match(/filename="?([^"]+)"?/);
+  const filename = match?.[1] || defaultFilename;
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  if (oneTimeKey) {
+    alert(`Encrypted export downloaded.\n\nDecryption Key: ${oneTimeKey}\nIV: ${iv}\nSHA-256: ${sha256}\n\nSave this key — it cannot be recovered.`);
+  }
+}
+
 export default function ReportsPage() {
   const { t, i18n } = useTranslation();
   const brandColors = useBrandColors();
@@ -253,16 +276,16 @@ export default function ReportsPage() {
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" data-testid="button-export-portfolio-csv" onClick={() => window.open("/api/reports/export?format=csv&type=portfolio", "_blank")}>
+          <Button variant="outline" size="sm" data-testid="button-export-portfolio-csv" onClick={() => downloadEncryptedExport("/api/reports/export?format=csv&type=portfolio", "portfolio.enc")}>
             <Download className="w-4 h-4 mr-2" />{t('reports.exportPortfolio')} (CSV)
           </Button>
-          <Button variant="outline" size="sm" className="border-emerald-600/40 text-emerald-700 dark:text-emerald-300 dark:text-emerald-400" data-testid="button-export-portfolio-xlsx" onClick={() => window.open("/api/reports/export?format=xlsx&type=portfolio", "_blank")}>
+          <Button variant="outline" size="sm" className="border-emerald-600/40 text-emerald-700 dark:text-emerald-300 dark:text-emerald-400" data-testid="button-export-portfolio-xlsx" onClick={() => downloadEncryptedExport("/api/reports/export?format=xlsx&type=portfolio", "portfolio.enc")}>
             <FileSpreadsheet className="w-4 h-4 mr-2" />{t('reports.exportPortfolio')} (Excel)
           </Button>
-          <Button variant="outline" size="sm" data-testid="button-export-borrowers-csv" onClick={() => window.open("/api/reports/export?format=csv&type=borrowers", "_blank")}>
+          <Button variant="outline" size="sm" data-testid="button-export-borrowers-csv" onClick={() => downloadEncryptedExport("/api/reports/export?format=csv&type=borrowers", "borrowers.enc")}>
             <Download className="w-4 h-4 mr-2" />{t('reports.exportBorrowers')} (CSV)
           </Button>
-          <Button variant="outline" size="sm" className="border-emerald-600/40 text-emerald-700 dark:text-emerald-300 dark:text-emerald-400" data-testid="button-export-borrowers-xlsx" onClick={() => window.open("/api/reports/export?format=xlsx&type=borrowers", "_blank")}>
+          <Button variant="outline" size="sm" className="border-emerald-600/40 text-emerald-700 dark:text-emerald-300 dark:text-emerald-400" data-testid="button-export-borrowers-xlsx" onClick={() => downloadEncryptedExport("/api/reports/export?format=xlsx&type=borrowers", "borrowers.enc")}>
             <FileSpreadsheet className="w-4 h-4 mr-2" />{t('reports.exportBorrowers')} (Excel)
           </Button>
         </div>
@@ -466,10 +489,10 @@ export default function ReportsPage() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" data-testid="button-export-audit-csv" onClick={() => window.open("/api/reports/export?format=csv&type=audit", "_blank")}>
+            <Button variant="outline" size="sm" data-testid="button-export-audit-csv" onClick={() => downloadEncryptedExport("/api/reports/export?format=csv&type=audit", "audit_trail.enc")}>
               <Download className="w-4 h-4 mr-2" />Export Audit Trail (CSV)
             </Button>
-            <Button variant="outline" size="sm" className="border-emerald-600/40 text-emerald-700 dark:text-emerald-300 dark:text-emerald-400" data-testid="button-export-audit-xlsx" onClick={() => window.open("/api/reports/export?format=xlsx&type=audit", "_blank")}>
+            <Button variant="outline" size="sm" className="border-emerald-600/40 text-emerald-700 dark:text-emerald-300 dark:text-emerald-400" data-testid="button-export-audit-xlsx" onClick={() => downloadEncryptedExport("/api/reports/export?format=xlsx&type=audit", "audit_trail.enc")}>
               <FileSpreadsheet className="w-4 h-4 mr-2" />Export Audit Trail (Excel)
             </Button>
           </div>
