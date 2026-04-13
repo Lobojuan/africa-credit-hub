@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { Readable } from "stream";
 import { db } from "./db";
 import { eq, sql, and, lt, inArray } from "drizzle-orm";
 import {
@@ -9,7 +10,7 @@ import {
 } from "@shared/schema";
 import type {
   Borrower, CreditAccount, CreditInquiry, Dispute,
-  PaymentHistory, Guarantor, RetentionPolicy,
+  PaymentHistory, Guarantor, RetentionPolicy, AuditLog,
   CourtJudgment, DishonouredCheque,
 } from "@shared/schema";
 import { decryptBorrowerPII } from "./encryption";
@@ -67,6 +68,7 @@ export interface PortabilityBorrower {
   disputes: Dispute[];
   courtJudgments: CourtJudgment[];
   dishonouredCheques: DishonouredCheque[];
+  auditTrail: Array<{ action: string; entity: string; details: string | null; createdAt: Date | null }>;
 }
 
 export interface ExportAuditEntry {
@@ -123,6 +125,94 @@ export function verifyExportIntegrity(data: string, expectedHash: string): boole
   return actualHash === expectedHash;
 }
 
+export async function streamPortabilityExport(
+  organizationId: string,
+  orgName: string,
+  orgCountry: string | null,
+  orgTier: string | null,
+  res: import("express").Response,
+  onProgress?: (processed: number, total: number) => void,
+): Promise<{ totalRecords: number; sha256Hash: string }> {
+  const hashStream = crypto.createHash("sha256");
+  let totalRecords = 0;
+
+  const write = (chunk: string) => {
+    res.write(chunk);
+    hashStream.update(chunk);
+  };
+
+  const allBorrowers = await db.select().from(borrowers)
+    .where(eq(borrowers.organizationId, organizationId));
+  const borrowerIds = allBorrowers.map(b => b.id);
+
+  const header = JSON.stringify({
+    exportDate: new Date().toISOString(),
+    exportVersion: "3.0.0",
+    compliance: "POPIA/NDPA/Ghana DPA/GDPR Article 20 — Right to Data Portability",
+    organization: { id: organizationId, name: orgName, country: orgCountry, tier: orgTier },
+  });
+  write(header.slice(0, -1) + ',"borrowers":[');
+
+  for (let idx = 0; idx < allBorrowers.length; idx++) {
+    const b = allBorrowers[idx];
+    const decrypted = decryptBorrowerPII(b as Record<string, unknown>);
+
+    const [accts, inqs, disps, judgs, cheqs, audits] = await Promise.all([
+      db.select().from(creditAccounts).where(eq(creditAccounts.borrowerId, b.id)),
+      db.select().from(creditInquiries).where(eq(creditInquiries.borrowerId, b.id)),
+      db.select().from(disputes).where(eq(disputes.borrowerId, b.id)),
+      db.select().from(courtJudgments).where(eq(courtJudgments.borrowerId, b.id)),
+      db.select().from(dishonouredCheques).where(eq(dishonouredCheques.borrowerId, b.id)),
+      db.select().from(auditLogs).where(eq(auditLogs.entityId, b.id)),
+    ]);
+
+    const accountIds = accts.map(a => a.id);
+    let payments: PaymentHistory[] = [];
+    let guars: Guarantor[] = [];
+    if (accountIds.length > 0) {
+      [payments, guars] = await Promise.all([
+        db.select().from(paymentHistory).where(inArray(paymentHistory.creditAccountId, accountIds)),
+        db.select().from(guarantors).where(inArray(guarantors.creditAccountId, accountIds)),
+      ]);
+    }
+
+    const borrowerObj: PortabilityBorrower = {
+      id: b.id,
+      firstName: decrypted.firstName || b.firstName,
+      lastName: decrypted.lastName || b.lastName,
+      companyName: b.companyName,
+      type: b.type,
+      nationalId: decrypted.nationalId || b.nationalId,
+      dateOfBirth: decrypted.dateOfBirth || b.dateOfBirth,
+      country: b.country,
+      gender: b.gender,
+      phone: b.phone,
+      email: b.email,
+      address: b.address,
+      city: b.city,
+      region: b.region,
+      creditAccounts: accts,
+      paymentHistory: payments,
+      guarantors: guars,
+      inquiries: inqs,
+      disputes: disps,
+      courtJudgments: judgs,
+      dishonouredCheques: cheqs,
+      auditTrail: audits.map(a => ({ action: a.action, entity: a.entity, details: a.details, createdAt: a.createdAt })),
+    };
+
+    if (idx > 0) write(",");
+    write(JSON.stringify(borrowerObj));
+    totalRecords += 1 + accts.length + payments.length + guars.length + inqs.length + disps.length + judgs.length + cheqs.length;
+
+    if (onProgress) onProgress(idx + 1, allBorrowers.length);
+  }
+
+  write("]}");
+  const sha256Hash = hashStream.digest("hex");
+  return { totalRecords, sha256Hash };
+}
+
 export async function buildFullPortabilityExport(
   organizationId: string,
   orgName: string,
@@ -151,21 +241,24 @@ export async function buildFullPortabilityExport(
   const allDisputes: Dispute[] = [];
   const allJudgments: CourtJudgment[] = [];
   const allCheques: DishonouredCheque[] = [];
+  const allAuditEntries: AuditLog[] = [];
 
   for (let i = 0; i < borrowerIds.length; i += batchSize) {
     const batch = borrowerIds.slice(i, i + batchSize);
-    const [accts, inqs, disps, judgs, cheqs] = await Promise.all([
+    const [accts, inqs, disps, judgs, cheqs, audits] = await Promise.all([
       db.select().from(creditAccounts).where(inArray(creditAccounts.borrowerId, batch)),
       db.select().from(creditInquiries).where(inArray(creditInquiries.borrowerId, batch)),
       db.select().from(disputes).where(inArray(disputes.borrowerId, batch)),
       db.select().from(courtJudgments).where(inArray(courtJudgments.borrowerId, batch)),
       db.select().from(dishonouredCheques).where(inArray(dishonouredCheques.borrowerId, batch)),
+      db.select().from(auditLogs).where(inArray(auditLogs.entityId, batch)),
     ]);
     allAccounts.push(...accts);
     allInquiries.push(...inqs);
     allDisputes.push(...disps);
     allJudgments.push(...judgs);
     allCheques.push(...cheqs);
+    allAuditEntries.push(...audits);
   }
 
   const accountIds = allAccounts.map(a => a.id);
@@ -194,6 +287,8 @@ export async function buildFullPortabilityExport(
   for (const j of allJudgments) { (judgmentsByBorrower.get(j.borrowerId) || (judgmentsByBorrower.set(j.borrowerId, []), judgmentsByBorrower.get(j.borrowerId)!)).push(j); }
   const chequesByBorrower = new Map<string, DishonouredCheque[]>();
   for (const c of allCheques) { (chequesByBorrower.get(c.borrowerId) || (chequesByBorrower.set(c.borrowerId, []), chequesByBorrower.get(c.borrowerId)!)).push(c); }
+  const auditsByBorrower = new Map<string, AuditLog[]>();
+  for (const a of allAuditEntries) { if (a.entityId) { (auditsByBorrower.get(a.entityId) || (auditsByBorrower.set(a.entityId, []), auditsByBorrower.get(a.entityId)!)).push(a); } }
 
   const paymentsByAccount = new Map<string, PaymentHistory[]>();
   for (const p of allPayments) { (paymentsByAccount.get(p.creditAccountId) || (paymentsByAccount.set(p.creditAccountId, []), paymentsByAccount.get(p.creditAccountId)!)).push(p); }
@@ -232,6 +327,9 @@ export async function buildFullPortabilityExport(
       disputes: disputesByBorrower.get(b.id) || [],
       courtJudgments: judgmentsByBorrower.get(b.id) || [],
       dishonouredCheques: chequesByBorrower.get(b.id) || [],
+      auditTrail: (auditsByBorrower.get(b.id) || []).map(a => ({
+        action: a.action, entity: a.entity, details: a.details, createdAt: a.createdAt,
+      })),
     };
   });
 
@@ -529,13 +627,42 @@ export async function scanRetentionPolicies(countryFilter?: string): Promise<{
           AND d.updated_at < ${cutoffDate}
         `);
         recordsAffected = parseInt((result.rows[0] as any)?.count || "0");
+      } else if (policy.entityType === "consent_record" || policy.entityType === "consent_records") {
+        const result = await db.execute(sql`
+          SELECT COUNT(*) as count FROM consent_records cr
+          JOIN borrowers b ON cr.borrower_id = b.id
+          WHERE b.country = ${policy.country}
+          AND cr.created_at < ${cutoffDate}
+        `);
+        recordsAffected = parseInt((result.rows[0] as any)?.count || "0");
+      } else if (policy.entityType === "court_judgment" || policy.entityType === "court_judgments") {
+        const result = await db.execute(sql`
+          SELECT COUNT(*) as count FROM court_judgments cj
+          JOIN borrowers b ON cj.borrower_id = b.id
+          WHERE b.country = ${policy.country}
+          AND cj.created_at < ${cutoffDate}
+        `);
+        recordsAffected = parseInt((result.rows[0] as any)?.count || "0");
+      } else if (policy.entityType === "payment_history") {
+        const result = await db.execute(sql`
+          SELECT COUNT(*) as count FROM payment_history ph
+          JOIN credit_accounts ca ON ph.credit_account_id = ca.id
+          JOIN borrowers b ON ca.borrower_id = b.id
+          WHERE b.country = ${policy.country}
+          AND ph.created_at < ${cutoffDate}
+        `);
+        recordsAffected = parseInt((result.rows[0] as any)?.count || "0");
       }
     } catch (e: any) {
       console.warn(`[Retention] Policy scan failed for ${policy.entityType} in ${policy.country}:`, e.message);
     }
 
     if (recordsAffected > 0) {
-      totalFlagged += recordsAffected;
+      if (action === "archive") {
+        totalArchived += recordsAffected;
+      } else {
+        totalFlagged += recordsAffected;
+      }
     }
 
     details.push({

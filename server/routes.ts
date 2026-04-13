@@ -74,7 +74,7 @@ import { BSL_EXPORT_GENERATORS } from "./bsl-export";
 import type { BslFileType } from "@shared/bsl-codes";
 import {
   encryptExportData, decryptExportData, generateExportHash, generateExportHashBuffer, verifyExportIntegrity,
-  buildFullPortabilityExport, buildConsumerDataExport, cascadeDeleteBorrower,
+  buildFullPortabilityExport, streamPortabilityExport, buildConsumerDataExport, cascadeDeleteBorrower,
   scanRetentionPolicies,
 } from "./export-service";
 
@@ -10771,40 +10771,24 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (!org) return res.status(404).json({ message: "Organization not found" });
 
       const encrypt = req.query.encrypt === "true";
-
-      const exportData = await buildFullPortabilityExport(
-        orgId, org.name, org.country, org.subscriptionTier
-      );
-      const jsonStr = JSON.stringify(exportData, null, 2);
-      const sha256Hash = generateExportHash(jsonStr);
-      const fileSizeBytes = Buffer.byteLength(jsonStr, "utf8");
-      const recordCount = exportData.statistics.totalBorrowers + exportData.statistics.totalAccounts + exportData.statistics.totalPaymentRecords + exportData.statistics.totalGuarantors + exportData.statistics.totalInquiries + exportData.statistics.totalDisputes;
       const safeName = org.name.replace(/[^a-zA-Z0-9]/g, "_");
       const dateStr = new Date().toISOString().split("T")[0];
 
-      await storage.createAuditLog({
-        userId: req.session.userId,
-        action: "FULL_DATA_EXPORT",
-        entity: "organization",
-        entityId: orgId,
-        details: JSON.stringify({
-          version: "3.0.0",
-          org: org.name,
-          borrowers: exportData.statistics.totalBorrowers,
-          accounts: exportData.statistics.totalAccounts,
-          payments: exportData.statistics.totalPaymentRecords,
-          guarantors: exportData.statistics.totalGuarantors,
-          inquiries: exportData.statistics.totalInquiries,
-          disputes: exportData.statistics.totalDisputes,
-          totalRecords: recordCount,
-          sizeBytes: fileSizeBytes,
-          sha256: sha256Hash,
-          encrypted: encrypt,
-        }),
-        ipAddress: req.ip || "unknown",
-      });
-
       if (encrypt) {
+        const exportData = await buildFullPortabilityExport(orgId, org.name, org.country, org.subscriptionTier);
+        const jsonStr = JSON.stringify(exportData, null, 2);
+        const sha256Hash = generateExportHash(jsonStr);
+        const recordCount = exportData.statistics.totalBorrowers + exportData.statistics.totalAccounts + exportData.statistics.totalPaymentRecords + exportData.statistics.totalGuarantors + exportData.statistics.totalInquiries + exportData.statistics.totalDisputes;
+
+        await storage.createAuditLog({
+          userId: req.session.userId,
+          action: "FULL_DATA_EXPORT",
+          entity: "organization",
+          entityId: orgId,
+          details: JSON.stringify({ version: "3.0.0", org: org.name, totalRecords: recordCount, sha256: sha256Hash, encrypted: true }),
+          ipAddress: req.ip || "unknown",
+        });
+
         const result = encryptExportData(jsonStr);
         res.setHeader("Content-Disposition", `attachment; filename="ach_export_${safeName}_${dateStr}.enc"`);
         res.setHeader("Content-Type", "application/octet-stream");
@@ -10819,22 +10803,23 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
       res.setHeader("Content-Disposition", `attachment; filename="ach_export_${safeName}_${dateStr}.json"`);
       res.setHeader("Content-Type", "application/json");
-      res.setHeader("X-Export-SHA256", sha256Hash);
+      res.setHeader("Transfer-Encoding", "chunked");
       res.setHeader("X-Export-Encrypted", "false");
-      res.setHeader("X-Export-Record-Count", String(recordCount));
-      res.setHeader("X-Export-Size-Bytes", String(fileSizeBytes));
 
-      const { Readable } = require("stream");
-      const CHUNK_SIZE = 64 * 1024;
-      const readable = new Readable({
-        read() {
-          for (let offset = 0; offset < jsonStr.length; offset += CHUNK_SIZE) {
-            this.push(jsonStr.slice(offset, offset + CHUNK_SIZE));
-          }
-          this.push(null);
-        },
+      const { totalRecords, sha256Hash } = await streamPortabilityExport(
+        orgId, org.name, org.country, org.subscriptionTier, res
+      );
+
+      res.end();
+
+      await storage.createAuditLog({
+        userId: req.session.userId,
+        action: "FULL_DATA_EXPORT",
+        entity: "organization",
+        entityId: orgId,
+        details: JSON.stringify({ version: "3.0.0", org: org.name, totalRecords, sha256: sha256Hash, encrypted: false, streamed: true }),
+        ipAddress: req.ip || "unknown",
       });
-      readable.pipe(res);
     } catch (err: any) {
       routeLogger.error("[Export] Error:", { detail: err.message });
       if (!res.headersSent) res.status(500).json({ message: "Export failed" });
