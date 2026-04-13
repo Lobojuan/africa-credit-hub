@@ -156,3 +156,15 @@ id = "xlYl2pJzmmHzJymNiV0t7"
 uri = "file://sample-reports/Sample_Business_Credit_Report.pdf"
 type = "pdf"
 title = "Sample Business Credit Report"
+
+[[outputs]]
+id = "MLv_Jn1C21d-UHuIuhNIS"
+uri = "file://sample-reports/Sample_Consumer_Credit_Report_AI_Enhanced.pdf"
+type = "pdf"
+title = "Consumer Credit Report with AI Intelligence — Augustina Amankwah"
+
+[[outputs]]
+id = "b2CVPLDZ_Y5Cv3Ah66Q2h"
+uri = "file://sample-reports/Sample_Business_Credit_Report_AI_Enhanced.pdf"
+type = "pdf"
+title = "Business Credit Report with AI Intelligence — Tema Steel Works Ltd"

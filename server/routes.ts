@@ -357,7 +357,8 @@ export async function registerRoutes(
 
   app.use("/api", (req, res, next) => {
     const isExport = req.path.includes("/export");
-    const timeout = isExport ? 30000 : 15000;
+    const isAIReport = req.path.includes("/credit-reports/generate") || req.path.includes("/credit-reports/download-pdf");
+    const timeout = isAIReport ? 120000 : isExport ? 30000 : 15000;
     req.setTimeout(timeout);
     res.setTimeout(timeout, () => {
       if (!res.headersSent) {
