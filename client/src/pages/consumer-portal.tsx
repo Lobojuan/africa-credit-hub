@@ -807,15 +807,25 @@ export default function ConsumerPortalPage() {
                             const err = await res.json();
                             throw new Error(err.message || "Export failed");
                           }
+
+                          const oneTimeKey = res.headers.get("X-Export-Key");
+                          const iv = res.headers.get("X-Export-IV");
+                          const sha256 = res.headers.get("X-Export-SHA256");
+
                           const blob = await res.blob();
                           const disposition = res.headers.get("Content-Disposition") || "";
                           const match = disposition.match(/filename="?([^"]+)"?/);
-                          const filename = match?.[1] || `my_credit_data_${Date.now()}.json`;
+                          const filename = match?.[1] || `my_credit_data_${Date.now()}.enc`;
                           const a = document.createElement("a");
                           a.href = URL.createObjectURL(blob);
                           a.download = filename;
                           a.click();
                           URL.revokeObjectURL(a.href);
+
+                          if (oneTimeKey) {
+                            const keyInfo = `Your encrypted data has been downloaded.\n\nDecryption Key: ${oneTimeKey}\nIV: ${iv}\nSHA-256: ${sha256}\n\nIMPORTANT: Copy and save this key now — it cannot be recovered later.`;
+                            alert(keyInfo);
+                          }
                         } catch (e: any) {
                           alert(e.message || "Failed to download your data. Please try again later.");
                         }

@@ -10748,33 +10748,88 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const safeName = org.name.replace(/[^a-zA-Z0-9]/g, "_");
       const dateStr = new Date().toISOString().split("T")[0];
 
-      const exportData = await buildFullPortabilityExport(orgId, org.name, org.country, org.subscriptionTier);
-      const jsonStr = JSON.stringify(exportData, null, 2);
-      const sha256Hash = generateExportHash(jsonStr);
-      const sizeBytes = Buffer.byteLength(jsonStr, "utf-8");
-      const recordCount = exportData.statistics.totalBorrowers + exportData.statistics.totalAccounts + exportData.statistics.totalPaymentRecords + exportData.statistics.totalGuarantors + exportData.statistics.totalInquiries + exportData.statistics.totalDisputes;
+      const os = await import("os");
+      const tmpFile = path.join(os.tmpdir(), `export_${orgId}_${Date.now()}.json`);
 
-      const result = encryptExportData(jsonStr);
+      try {
+        const writeStream = fs.createWriteStream(tmpFile);
+        const hashStream = crypto.createHash("sha256");
+        let totalRecords = 0;
 
-      await storage.createAuditLog({
-        userId: req.session.userId,
-        action: "FULL_DATA_EXPORT",
-        entity: "organization",
-        entityId: orgId,
-        details: JSON.stringify({ version: "3.0.0", org: org.name, recordCount, sizeBytes, sha256: sha256Hash, encrypted: true }),
-        ipAddress: req.ip || "unknown",
-      });
+        await new Promise<void>(async (resolve, reject) => {
+          const allBorrowers = await db.select().from(borrowers).where(eq(borrowers.organizationId, orgId));
+          const header = JSON.stringify({
+            exportDate: new Date().toISOString(), exportVersion: "3.0.0",
+            compliance: "POPIA/NDPA/Ghana DPA/GDPR Article 20 — Right to Data Portability",
+            organization: { id: orgId, name: org!.name, country: org!.country, tier: org!.subscriptionTier },
+          });
+          const headerChunk = header.slice(0, -1) + ',"borrowers":[';
+          writeStream.write(headerChunk);
+          hashStream.update(headerChunk);
 
-      res.setHeader("Content-Disposition", `attachment; filename="ach_export_${safeName}_${dateStr}.enc"`);
-      res.setHeader("Content-Type", "application/octet-stream");
-      res.setHeader("X-Export-SHA256", result.ciphertextHash);
-      res.setHeader("X-Export-Plaintext-SHA256", sha256Hash);
-      res.setHeader("X-Export-IV", result.iv);
-      res.setHeader("X-Export-Key", result.oneTimeKey);
-      res.setHeader("X-Export-Original-Size", String(result.originalSizeBytes));
-      res.setHeader("X-Export-Encrypted", "true");
-      res.setHeader("X-Export-Record-Count", String(recordCount));
-      return res.send(result.encryptedData);
+          for (let idx = 0; idx < allBorrowers.length; idx++) {
+            const b = allBorrowers[idx];
+            const [accts, inqs, disps, judgs, cheqs] = await Promise.all([
+              db.select().from(creditAccounts).where(eq(creditAccounts.borrowerId, b.id)),
+              db.select().from(creditInquiries).where(eq(creditInquiries.borrowerId, b.id)),
+              db.select().from(disputes).where(eq(disputes.borrowerId, b.id)),
+              db.select().from(courtJudgments).where(eq(courtJudgments.borrowerId, b.id)),
+              db.select().from(dishonouredCheques).where(eq(dishonouredCheques.borrowerId, b.id)),
+            ]);
+            const accountIds = accts.map(a => a.id);
+            let payments: any[] = [];
+            let guars: any[] = [];
+            if (accountIds.length > 0) {
+              [payments, guars] = await Promise.all([
+                db.select().from(paymentHistory).where(inArray(paymentHistory.creditAccountId, accountIds)),
+                db.select().from(guarantors).where(inArray(guarantors.creditAccountId, accountIds)),
+              ]);
+            }
+            const chunk = (idx > 0 ? "," : "") + JSON.stringify({
+              id: b.id, firstName: b.firstName, lastName: b.lastName, companyName: b.companyName,
+              type: b.type, nationalId: b.nationalId, country: b.country,
+              creditAccounts: accts, paymentHistory: payments, guarantors: guars,
+              inquiries: inqs, disputes: disps, courtJudgments: judgs, dishonouredCheques: cheqs,
+            });
+            writeStream.write(chunk);
+            hashStream.update(chunk);
+            totalRecords += 1 + accts.length + payments.length + guars.length + inqs.length + disps.length + judgs.length + cheqs.length;
+          }
+
+          const tail = "]}";
+          writeStream.write(tail);
+          hashStream.update(tail);
+          writeStream.end(() => resolve());
+        });
+
+        const sha256Hash = hashStream.digest("hex");
+        const stats = fs.statSync(tmpFile);
+        const sizeBytes = stats.size;
+        const plaintext = fs.readFileSync(tmpFile, "utf8");
+        const encResult = encryptExportData(plaintext);
+
+        await storage.createAuditLog({
+          userId: req.session.userId,
+          action: "FULL_DATA_EXPORT",
+          entity: "organization",
+          entityId: orgId,
+          details: JSON.stringify({ version: "3.0.0", org: org!.name, recordCount: totalRecords, sizeBytes, sha256: sha256Hash, encrypted: true }),
+          ipAddress: req.ip || "unknown",
+        });
+
+        res.setHeader("Content-Disposition", `attachment; filename="ach_export_${safeName}_${dateStr}.enc"`);
+        res.setHeader("Content-Type", "application/octet-stream");
+        res.setHeader("X-Export-SHA256", encResult.ciphertextHash);
+        res.setHeader("X-Export-Plaintext-SHA256", sha256Hash);
+        res.setHeader("X-Export-IV", encResult.iv);
+        res.setHeader("X-Export-Key", encResult.oneTimeKey);
+        res.setHeader("X-Export-Original-Size", String(encResult.originalSizeBytes));
+        res.setHeader("X-Export-Encrypted", "true");
+        res.setHeader("X-Export-Record-Count", String(totalRecords));
+        return res.send(encResult.encryptedData);
+      } finally {
+        try { fs.unlinkSync(tmpFile); } catch {}
+      }
     } catch (err: any) {
       routeLogger.error("[Export] Error:", { detail: err.message });
       if (!res.headersSent) res.status(500).json({ message: "Export failed" });
