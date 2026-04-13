@@ -98,7 +98,7 @@ export function generatePdfFromMarkdown(markdownContent: string, title: string, 
     info: {
       Title: title,
       Author: process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub",
-      Creator: "Credit Registry System v1.1",
+      Creator: "Credit Registry System v2.5",
     },
   });
 
@@ -125,7 +125,7 @@ export function generatePdfFromMarkdown(markdownContent: string, title: string, 
   doc.font("Helvetica-Bold").fontSize(20).fillColor(NORDIC_BLUE).text(title);
   doc.moveDown(0.3);
   doc.font("Helvetica").fontSize(9).fillColor(LIGHT_GRAY)
-    .text(`${process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub"} — Cross-Jurisdictional Central Data Hub & Credit Registry System v1.1`);
+    .text(`${process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub"} — Cross-Jurisdictional Central Data Hub & Credit Registry System v2.5`);
   doc.moveDown(0.2);
   doc.font("Helvetica").fontSize(9).fillColor(LIGHT_GRAY)
     .text(`Generated: ${new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}`);
@@ -192,40 +192,53 @@ export function generatePdfFromMarkdown(markdownContent: string, title: string, 
         const colCount = headers.length;
         const cellPadding = 4;
         const colWidth = pageWidth / colCount;
-        const rowHeight = 18;
+        const minRowHeight = 18;
 
-        ensureSpace(doc, rowHeight * Math.min(3, rows.length + 1) + 10);
+        const calcRowH = (cells: string[], fontSize: number, font: string): number => {
+          let maxH = minRowHeight;
+          for (const cell of cells) {
+            const cellW = colWidth - cellPadding * 2;
+            const h = doc.font(font).fontSize(fontSize).heightOfString(cell || "", { width: cellW }) + 8;
+            if (h > maxH) maxH = h;
+          }
+          return Math.min(maxH, 60);
+        };
+
+        const headerH = calcRowH(headers, 7.5, "Helvetica-Bold");
+        ensureSpace(doc, headerH + minRowHeight * Math.min(3, rows.length) + 10);
 
         let y = doc.y;
         const x = doc.page.margins.left;
 
-        doc.rect(x, y, pageWidth, rowHeight).fill(TABLE_HEADER_BG);
+        doc.rect(x, y, pageWidth, headerH).fill(TABLE_HEADER_BG);
         for (let c = 0; c < colCount; c++) {
           doc.font("Helvetica-Bold").fontSize(7.5).fillColor(DARK)
-            .text(headers[c] || "", x + c * colWidth + cellPadding, y + 4, { width: colWidth - cellPadding * 2, height: rowHeight - 4 });
+            .text(headers[c] || "", x + c * colWidth + cellPadding, y + 4, { width: colWidth - cellPadding * 2 });
         }
-        doc.rect(x, y, pageWidth, rowHeight).strokeColor(TABLE_BORDER).lineWidth(0.5).stroke();
-        y += rowHeight;
+        doc.rect(x, y, pageWidth, headerH).strokeColor(TABLE_BORDER).lineWidth(0.5).stroke();
+        y += headerH;
 
         for (const row of rows) {
-          if (y + rowHeight > doc.page.height - doc.page.margins.bottom) {
+          const rH = calcRowH(row, 7, "Helvetica");
+
+          if (y + rH > doc.page.height - doc.page.margins.bottom) {
             doc.addPage();
             y = doc.page.margins.top;
-            doc.rect(x, y, pageWidth, rowHeight).fill(TABLE_HEADER_BG);
+            doc.rect(x, y, pageWidth, headerH).fill(TABLE_HEADER_BG);
             for (let c = 0; c < colCount; c++) {
               doc.font("Helvetica-Bold").fontSize(7.5).fillColor(DARK)
-                .text(headers[c] || "", x + c * colWidth + cellPadding, y + 4, { width: colWidth - cellPadding * 2, height: rowHeight - 4 });
+                .text(headers[c] || "", x + c * colWidth + cellPadding, y + 4, { width: colWidth - cellPadding * 2 });
             }
-            doc.rect(x, y, pageWidth, rowHeight).strokeColor(TABLE_BORDER).lineWidth(0.5).stroke();
-            y += rowHeight;
+            doc.rect(x, y, pageWidth, headerH).strokeColor(TABLE_BORDER).lineWidth(0.5).stroke();
+            y += headerH;
           }
 
           for (let c = 0; c < colCount; c++) {
             doc.font("Helvetica").fontSize(7).fillColor(DARK)
-              .text(row[c] || "", x + c * colWidth + cellPadding, y + 4, { width: colWidth - cellPadding * 2, height: rowHeight - 4 });
+              .text(row[c] || "", x + c * colWidth + cellPadding, y + 4, { width: colWidth - cellPadding * 2 });
           }
-          doc.rect(x, y, pageWidth, rowHeight).strokeColor(TABLE_BORDER).lineWidth(0.5).stroke();
-          y += rowHeight;
+          doc.rect(x, y, pageWidth, rH).strokeColor(TABLE_BORDER).lineWidth(0.5).stroke();
+          y += rH;
         }
 
         doc.y = y + 6;
@@ -326,7 +339,7 @@ export function generatePdfFromMarkdown(markdownContent: string, title: string, 
     .stroke();
   doc.moveDown(0.5);
   doc.font("Helvetica").fontSize(8).fillColor(LIGHT_GRAY)
-    .text(`${process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub"} — Cross-Jurisdictional Central Data Hub & Credit Registry System v1.1`, { align: "center" });
+    .text(`${process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub"} — Cross-Jurisdictional Central Data Hub & Credit Registry System v2.5`, { align: "center" });
   doc.text(`© 2026 ${process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub"}. All rights reserved.`, { align: "center" });
 
   const totalPages = doc.bufferedPageRange().count;
