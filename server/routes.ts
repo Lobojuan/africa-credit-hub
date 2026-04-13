@@ -6044,9 +6044,8 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const type = (req.query.type as string) || "portfolio";
 
       const country = getCountryFilter(req);
-      const exportLimit = 50000;
-      const accounts = type === "portfolio" ? await storage.getAllCreditAccounts(orgId, country, exportLimit) : [];
-      const borrowersList = type === "borrowers" ? (await storage.getBorrowers(1, exportLimit, orgId, country)).data : [];
+      const accounts = type === "portfolio" ? await storage.getAllCreditAccounts(orgId, country) : [];
+      const borrowersList = type === "borrowers" ? (await storage.getBorrowers(1, 1000000, orgId, country)).data : [];
 
       recordUsageEvent({
         organizationId: orgId || req.session?.organizationId,
@@ -6096,7 +6095,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
             sheet.addRow({ ...b, name, isPep: b.isPep ? "Yes" : "No" });
           });
         } else if (type === "audit") {
-          const auditLogsList = await storage.getAuditLogs(orgId, country, exportLimit);
+          const auditLogsList = await storage.getAuditLogs(orgId, country, 1000000);
           const sheet = workbook.addWorksheet("Audit Trail");
           sheet.columns = [
             { header: "Timestamp", key: "createdAt", width: 22 },
@@ -6156,7 +6155,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
             csv += `"${name}","${b.type}","${b.nationalId}","${b.tinNumber || ''}","${b.gender || ''}","${b.city || ''}","${b.region || ''}","${b.isPep}","${b.educationLevel || ''}","${b.sector || ''}"\n`;
           }
         } else if (type === "audit") {
-          const auditLogsList = await storage.getAuditLogs(orgId, country, exportLimit);
+          const auditLogsList = await storage.getAuditLogs(orgId, country, 1000000);
           csv = "Timestamp,Action,Entity,Entity ID,Details,User ID,IP Address\n";
           for (const log of auditLogsList) {
             const ts = log.createdAt ? new Date(log.createdAt).toISOString() : "";
@@ -10862,10 +10861,44 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.post("/api/export/verify-integrity", requireAuth, async (req, res) => {
     try {
-      const { data, expectedHash } = req.body;
-      if (!data || !expectedHash) return res.status(400).json({ message: "data and expectedHash are required" });
-      const isValid = verifyExportIntegrity(typeof data === "string" ? data : JSON.stringify(data), expectedHash);
-      const actualHash = generateExportHash(typeof data === "string" ? data : JSON.stringify(data));
+      const contentType = req.headers["content-type"] || "";
+      let fileData: Buffer | null = null;
+      let expectedHash: string | null = null;
+
+      if (contentType.includes("multipart/form-data")) {
+        const chunks: Buffer[] = [];
+        await new Promise<void>((resolve, reject) => {
+          req.on("data", (chunk: Buffer) => chunks.push(chunk));
+          req.on("end", resolve);
+          req.on("error", reject);
+        });
+        const rawBody = Buffer.concat(chunks);
+        const boundary = contentType.split("boundary=")[1]?.trim();
+        if (boundary) {
+          const parts = rawBody.toString("binary").split(`--${boundary}`);
+          for (const part of parts) {
+            if (part.includes('name="expectedHash"')) {
+              const val = part.split("\r\n\r\n")[1]?.split("\r\n")[0]?.trim();
+              if (val) expectedHash = val;
+            } else if (part.includes('name="file"')) {
+              const headerEnd = part.indexOf("\r\n\r\n");
+              if (headerEnd !== -1) {
+                const bodyPart = part.substring(headerEnd + 4);
+                const endIdx = bodyPart.lastIndexOf("\r\n");
+                fileData = Buffer.from(endIdx > 0 ? bodyPart.substring(0, endIdx) : bodyPart, "binary");
+              }
+            }
+          }
+        }
+      } else {
+        const { data, expectedHash: eh } = req.body;
+        expectedHash = eh;
+        if (data) fileData = Buffer.from(typeof data === "string" ? data : JSON.stringify(data));
+      }
+
+      if (!fileData || !expectedHash) return res.status(400).json({ message: "file (or data) and expectedHash are required" });
+      const actualHash = crypto.createHash("sha256").update(fileData).digest("hex");
+      const isValid = actualHash === expectedHash;
       res.json({ valid: isValid, expectedHash, actualHash });
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });

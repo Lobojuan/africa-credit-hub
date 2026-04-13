@@ -69,33 +69,6 @@ function getTimelineDotColor(action: string) {
   }
 }
 
-function exportToCSV(logs: AuditLog[]) {
-  const headers = ["Timestamp", "Action", "Entity", "Entity ID", "Details", "IP Address", "User ID", "Hash"];
-  const rows = logs.map(log => [
-    log.createdAt ? new Date(log.createdAt).toISOString() : "",
-    log.action,
-    log.entity,
-    log.entityId || "",
-    (log.details || "").replace(/"/g, '""'),
-    log.ipAddress || "",
-    log.userId || "",
-    log.currentHash || "",
-  ]);
-
-  const csvContent = [
-    headers.join(","),
-    ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
-  ].join("\n");
-
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `audit-trail-${new Date().toISOString().slice(0, 10)}.csv`;
-  link.click();
-  URL.revokeObjectURL(url);
-}
-
 export default function AuditTrailPage() {
   const { t } = useTranslation();
   const [filter, setFilter] = useState("");
@@ -183,30 +156,26 @@ export default function AuditTrailPage() {
   }, [logs]);
 
   const handleExport = async (format: "csv" | "xlsx") => {
-    if (format === "csv") {
-      exportToCSV(filteredLogs);
-    } else {
-      try {
-        const res = await fetch(`/api/reports/export?format=${format}&type=audit`, { credentials: "include" });
-        if (!res.ok) throw new Error("Export failed");
-        const oneTimeKey = res.headers.get("X-Export-Key");
-        const iv = res.headers.get("X-Export-IV");
-        const sha256 = res.headers.get("X-Export-SHA256");
-        const blob = await res.blob();
-        const disposition = res.headers.get("Content-Disposition") || "";
-        const match = disposition.match(/filename="?([^"]+)"?/);
-        const filename = match?.[1] || `audit_trail.enc`;
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = filename;
-        a.click();
-        URL.revokeObjectURL(a.href);
-        if (oneTimeKey) {
-          alert(`Encrypted export downloaded.\n\nDecryption Key: ${oneTimeKey}\nIV: ${iv}\nSHA-256: ${sha256}\n\nSave this key — it cannot be recovered.`);
-        }
-      } catch (e: any) {
-        alert(e.message || "Export failed");
+    try {
+      const res = await fetch(`/api/reports/export?format=${format}&type=audit`, { credentials: "include" });
+      if (!res.ok) throw new Error("Export failed");
+      const oneTimeKey = res.headers.get("X-Export-Key");
+      const iv = res.headers.get("X-Export-IV");
+      const sha256 = res.headers.get("X-Export-SHA256");
+      const blob = await res.blob();
+      const disposition = res.headers.get("Content-Disposition") || "";
+      const match = disposition.match(/filename="?([^"]+)"?/);
+      const filename = match?.[1] || `audit_trail.enc`;
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      if (oneTimeKey) {
+        alert(`Encrypted export downloaded.\n\nDecryption Key: ${oneTimeKey}\nIV: ${iv}\nSHA-256: ${sha256}\n\nSave this key — it cannot be recovered.`);
       }
+    } catch (e: any) {
+      alert(e.message || "Export failed");
     }
   };
 

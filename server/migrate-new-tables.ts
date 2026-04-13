@@ -30,6 +30,18 @@ export async function migrateNewTables() {
 
   await db.execute(sql`ALTER TABLE retention_policies ADD COLUMN IF NOT EXISTS action text DEFAULT 'flag'`);
 
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS retention_flags (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    entity_type text NOT NULL,
+    entity_id varchar NOT NULL,
+    policy_id varchar REFERENCES retention_policies(id),
+    action text NOT NULL DEFAULT 'flag',
+    country text NOT NULL,
+    flagged_at timestamp DEFAULT now(),
+    resolved_at timestamp,
+    UNIQUE(entity_type, entity_id, policy_id)
+  )`);
+
   await db.execute(sql`CREATE TABLE IF NOT EXISTS credit_score_history (
     id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
     borrower_id varchar NOT NULL REFERENCES borrowers(id),

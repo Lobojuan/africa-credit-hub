@@ -70,6 +70,17 @@ async function countEligible(tableName: string, resolver: Resolver, country: str
   return parseInt((result as any).rows?.[0]?.cnt || "0", 10);
 }
 
+async function getExpiredEntityIds(tableName: string, resolver: Resolver, country: string, years: number): Promise<string[]> {
+  const whereClause = buildWhereClause(resolver, country, tableName);
+  const result = await db.execute(sql`
+    SELECT ${sql.identifier(tableName)}.id FROM ${sql.identifier(tableName)}
+    WHERE ${whereClause}
+      AND created_at < NOW() - make_interval(years => ${years})
+    LIMIT 1000
+  `);
+  return ((result as any).rows || []).map((r: any) => r.id);
+}
+
 async function expungeExpired(tableName: string, resolver: Resolver, country: string, years: number): Promise<number> {
   const whereClause = buildWhereClause(resolver, country, tableName);
   const result = await db.execute(sql`
@@ -119,6 +130,20 @@ export async function enforceRetentionPolicies(): Promise<RetentionResult[]> {
 
       if (policyAction === "delete") {
         result.expungedCount = await expungeExpired(tableName, resolver, policy.country, expungeYears);
+      } else if (policyAction === "flag" || policyAction === "archive") {
+        try {
+          const flaggedIds = await getExpiredEntityIds(tableName, resolver, policy.country, archiveYears);
+          for (const entityId of flaggedIds) {
+            await db.execute(sql`
+              INSERT INTO retention_flags (entity_type, entity_id, policy_id, action, country)
+              VALUES (${policy.entityType}, ${entityId}, ${policy.id}, ${policyAction}, ${policy.country})
+              ON CONFLICT (entity_type, entity_id, policy_id) DO UPDATE SET action = ${policyAction}, flagged_at = now()
+            `);
+          }
+          result.expungedCount = flaggedIds.length;
+        } catch (flagErr: any) {
+          result.errors.push(`Flag persist failed: ${flagErr.message}`);
+        }
       }
     } catch (err: any) {
       result.errors.push(err.message || String(err));

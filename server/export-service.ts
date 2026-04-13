@@ -684,6 +684,19 @@ export async function scanRetentionPolicies(countryFilter?: string): Promise<{
       } else {
         totalFlagged += recordsAffected;
       }
+
+      try {
+        const entityIds = await getAffectedEntityIds(policy.entityType, policy.country, cutoffDate);
+        for (const entityId of entityIds) {
+          await db.execute(sql`
+            INSERT INTO retention_flags (entity_type, entity_id, policy_id, action, country)
+            VALUES (${policy.entityType}, ${entityId}, ${policy.id}, ${action}, ${policy.country})
+            ON CONFLICT (entity_type, entity_id, policy_id) DO UPDATE SET action = ${action}, flagged_at = now()
+          `);
+        }
+      } catch (flagErr: any) {
+        console.warn(`[Retention] Failed to persist flags for ${policy.entityType}:`, flagErr.message);
+      }
     }
 
     details.push({
@@ -701,4 +714,49 @@ export async function scanRetentionPolicies(countryFilter?: string): Promise<{
     recordsArchived: totalArchived,
     details,
   };
+}
+
+async function getAffectedEntityIds(entityType: string, country: string, cutoffDate: Date): Promise<string[]> {
+  let result: any;
+  try {
+    if (entityType === "credit_account" || entityType === "credit_accounts") {
+      result = await db.execute(sql`
+        SELECT ca.id FROM credit_accounts ca JOIN borrowers b ON ca.borrower_id = b.id
+        WHERE b.country = ${country} AND ca.status IN ('closed', 'written_off', 'settled') AND ca.updated_at < ${cutoffDate} LIMIT 1000
+      `);
+    } else if (entityType === "borrower" || entityType === "borrowers") {
+      result = await db.execute(sql`
+        SELECT b.id FROM borrowers b WHERE b.country = ${country} AND b.updated_at < ${cutoffDate}
+        AND NOT EXISTS (SELECT 1 FROM credit_accounts ca WHERE ca.borrower_id = b.id AND ca.status IN ('active', 'current', 'delinquent')) LIMIT 1000
+      `);
+    } else if (entityType === "inquiry" || entityType === "credit_inquiries") {
+      result = await db.execute(sql`
+        SELECT ci.id FROM credit_inquiries ci JOIN borrowers b ON ci.borrower_id = b.id
+        WHERE b.country = ${country} AND ci.created_at < ${cutoffDate} LIMIT 1000
+      `);
+    } else if (entityType === "dispute" || entityType === "disputes") {
+      result = await db.execute(sql`
+        SELECT d.id FROM disputes d WHERE d.country = ${country}
+        AND d.status IN ('resolved', 'closed', 'rejected') AND d.updated_at < ${cutoffDate} LIMIT 1000
+      `);
+    } else if (entityType === "audit_log" || entityType === "audit_logs") {
+      result = await db.execute(sql`SELECT id FROM audit_logs WHERE created_at < ${cutoffDate} LIMIT 1000`);
+    } else if (entityType === "consent_record" || entityType === "consent_records") {
+      result = await db.execute(sql`
+        SELECT cr.id FROM consent_records cr JOIN borrowers b ON cr.borrower_id = b.id
+        WHERE b.country = ${country} AND cr.created_at < ${cutoffDate} LIMIT 1000
+      `);
+    } else if (entityType === "court_judgment" || entityType === "court_judgments") {
+      result = await db.execute(sql`
+        SELECT cj.id FROM court_judgments cj JOIN borrowers b ON cj.borrower_id = b.id
+        WHERE b.country = ${country} AND cj.created_at < ${cutoffDate} LIMIT 1000
+      `);
+    } else if (entityType === "payment_history") {
+      result = await db.execute(sql`
+        SELECT ph.id FROM payment_history ph JOIN credit_accounts ca ON ph.credit_account_id = ca.id
+        JOIN borrowers b ON ca.borrower_id = b.id WHERE b.country = ${country} AND ph.created_at < ${cutoffDate} LIMIT 1000
+      `);
+    }
+  } catch { return []; }
+  return (result?.rows || []).map((r: any) => r.id);
 }
