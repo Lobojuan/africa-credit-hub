@@ -26,7 +26,7 @@ The system employs a modern full-stack architecture built for scalability and co
 -   **Authentication**: Session-based with MFA (TOTP), strong password policies, biometric (WebAuthn) support, Google OAuth, Microsoft/Azure AD OAuth, and SAML 2.0 SSO.
 -   **Core Capabilities**: Credit management, consumer/business segmentation, algorithmic credit scoring (300-850) with explainable AI, maker-checker workflow, dispute management, and regulatory compliance (consent, audit trails, 54 African jurisdictions).
 -   **Institutional Management**: Self-registration, approval, billing, and fee management for data providers.
--   **Reporting**: Regulatory analytics, CSV/PDF export, bulk data upload (XBRL/XML, IFF), and structured search.
+-   **Reporting**: Regulatory analytics, CSV/PDF export, bulk data upload (XBRL/XML, IFF), structured search, and AI-Enhanced credit reports (ML score, dual-AI risk analysis, AI narrative with clear visual separation from verified bureau data).
 -   **Security & Compliance**: Role-Based Access Control (RBAC), external REST API with OAuth 2.1, fuzzy entity matching, tamper-evident audit logs (blockchain-anchored), data sovereignty enforcement, and HMAC-SHA256 webhook signatures.
 -   **Financials**: Multi-currency conversion with live rate fetching, multi-tenant SaaS, API rate limiting, transaction-based monetization, two-tier revenue split, settlement & payout system, and real-time wallet/prepaid billing.
 -   **AI & Advanced Features**: Credit Registry Assistant chatbot (Multi-Model AI Ensemble), AI Portfolio Intelligence, AI Command Center (6 tools), Open Banking profile management, configurable Decision Rules Engine, and ESG Scoring for corporate borrowers.

@@ -4063,6 +4063,23 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
       const { score: creditScore, reasonCodes, factors: scoreFactors } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep, altData);
 
+      const mlResult = calculateMLCreditScore(
+        accounts.map(a => ({ status: a.status || "current", currentBalance: a.currentBalance, currency: a.currency, openedDate: a.disbursementDate, lastPaymentDate: a.lastPaymentDate, creditLimit: a.originalAmount, monthlyPayment: a.monthlyInstallment })),
+        inquiries.length, judgments.length, borrower.isPep ?? false,
+        altData.map(d => ({ source: d.source || "", totalTransactions: d.totalTransactions, onTimePayments: d.onTimePayments, latePayments: d.latePayments, status: d.status || "active" }))
+      );
+
+      let aiAnalysis: any = null;
+      let aiNarrative: any = null;
+      try {
+        const [riskResult, narrativeResult] = await Promise.allSettled([
+          analyzeCreditRisk(borrowerId),
+          generateCreditNarrative(borrowerId),
+        ]);
+        if (riskResult.status === "fulfilled") aiAnalysis = riskResult.value;
+        if (narrativeResult.status === "fulfilled") aiNarrative = narrativeResult.value;
+      } catch {}
+
       const log = await storage.createCreditReportLog({
         borrowerId,
         requestedBy: req.session?.userId!,
@@ -4126,6 +4143,28 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
           inquiryCount: inquiries.length,
           judgmentCount: judgments.length,
           isPep: borrower.isPep,
+        },
+        aiEnhanced: {
+          mlScore: mlResult,
+          riskAnalysis: aiAnalysis ? {
+            riskLevel: aiAnalysis.riskLevel || "medium",
+            riskScore: aiAnalysis.riskScore ?? 50,
+            summary: aiAnalysis.summary || "",
+            factors: Array.isArray(aiAnalysis.factors) ? aiAnalysis.factors : [],
+            recommendations: Array.isArray(aiAnalysis.recommendations) ? aiAnalysis.recommendations : [],
+            regulatoryFlags: Array.isArray(aiAnalysis.regulatoryFlags) ? aiAnalysis.regulatoryFlags : [],
+          } : null,
+          narrative: aiNarrative ? {
+            narrative: aiNarrative.narrative || "",
+            creditworthiness: aiNarrative.creditworthiness || "Fair",
+            keyStrengths: Array.isArray(aiNarrative.keyStrengths) ? aiNarrative.keyStrengths : [],
+            keyRisks: Array.isArray(aiNarrative.keyRisks) ? aiNarrative.keyRisks : [],
+            recommendedActions: Array.isArray(aiNarrative.recommendedActions) ? aiNarrative.recommendedActions : [],
+            borrowerName: aiNarrative.borrowerName || "",
+            generatedAt: aiNarrative.generatedAt || new Date().toISOString(),
+          } : null,
+          disclaimer: "AI-generated analysis is provided for decision support only. It does not replace professional judgment or verified bureau data. Model outputs may vary and should be independently validated.",
+          generatedAt: new Date().toISOString(),
         },
       });
     } catch (e: any) {
@@ -5464,6 +5503,212 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       doc.fontSize(6).font("Helvetica").fill(LIGHT)
         .text("Under the Credit Reporting Act, consumers have the right to dispute inaccurate information and add a personal statement to their credit file. Contact the Credit Registry to exercise these rights.", 46, doc.y, { width: W - 12 });
       doc.moveDown(0.4);
+
+      // === AI-ENHANCED INTELLIGENCE SECTION ===
+      const ai = reportData.aiEnhanced;
+      if (ai) {
+        doc.addPage();
+        doc.y = 50;
+
+        const AI_PURPLE = "#7c3aed";
+        const AI_LIGHT_BG = "#f5f3ff";
+        const AI_BORDER = "#c4b5fd";
+
+        ensureSpace(50);
+        const aiBannerY = doc.y;
+        doc.rect(40, aiBannerY, W, 36).fill(AI_PURPLE);
+        doc.fill("#ffffff").fontSize(12).font("Helvetica-Bold")
+          .text("AI-ENHANCED INTELLIGENCE", 55, aiBannerY + 6, { width: W - 120 });
+        doc.fill("#e0d4ff").fontSize(7).font("Helvetica")
+          .text("Machine Learning & Dual-AI Analysis", 55, aiBannerY + 22, { width: W - 120 });
+        doc.fill("#ffffff").fontSize(7).font("Helvetica-Bold")
+          .text("AI-GENERATED", W - 100, aiBannerY + 12, { width: 80, align: "right" });
+        doc.y = aiBannerY + 42;
+
+        ensureSpace(30);
+        const disclaimerY = doc.y;
+        const disclaimerText = ai.disclaimer || "AI-generated analysis is for decision support only.";
+        const disclaimerH = doc.fontSize(6.5).font("Helvetica").heightOfString(disclaimerText, { width: W - 30 });
+        doc.rect(40, disclaimerY, W, disclaimerH + 12).fill("#fffbeb");
+        doc.rect(40, disclaimerY, W, disclaimerH + 12).strokeColor("#f59e0b").lineWidth(0.5).stroke();
+        doc.fill("#92400e").fontSize(7).font("Helvetica-Bold")
+          .text("DISCLAIMER:", 48, disclaimerY + 4, { width: 60 });
+        doc.fill("#78350f").fontSize(6.5).font("Helvetica")
+          .text(disclaimerText, 48, disclaimerY + 4 + 10, { width: W - 30 });
+        doc.y = disclaimerY + disclaimerH + 18;
+
+        if (ai.mlScore) {
+          ensureSpace(60);
+          doc.moveDown(0.4);
+          const mlY = doc.y;
+          doc.rect(40, mlY - 2, W, 18).fill(AI_LIGHT_BG);
+          doc.fill(AI_PURPLE).fontSize(9).font("Helvetica-Bold")
+            .text(`ML CREDIT SCORE — ${ai.mlScore.modelVersion || "GBM-v2.5.0"}`, 46, mlY + 2);
+          doc.y = mlY + 20;
+          doc.moveTo(40, doc.y).lineTo(40 + W, doc.y).strokeColor(AI_BORDER).lineWidth(0.5).stroke();
+          doc.moveDown(0.5);
+
+          const colW4 = (W - 30) / 4;
+          const scoreY = doc.y;
+          const scoreLabels = ["ML SCORE", "BUREAU SCORE", "CONFIDENCE", "DEFAULT PROB."];
+          const scoreValues = [
+            String(ai.mlScore.mlScore),
+            String(s?.creditScore || "—"),
+            `${(ai.mlScore.confidence * 100).toFixed(0)}%`,
+            `${(ai.mlScore.defaultProbability * 100).toFixed(1)}%`,
+          ];
+          const scoreDetails = [
+            "Range 300–850",
+            "Traditional Model",
+            `${ai.mlScore.confidenceInterval[0]}–${ai.mlScore.confidenceInterval[1]}`,
+            `Risk: ${(ai.mlScore.riskCategory || "").replace("_", " ")}`,
+          ];
+          for (let ci = 0; ci < 4; ci++) {
+            const cx = 40 + ci * (colW4 + 10);
+            doc.rect(cx, scoreY, colW4, 44).fill(AI_LIGHT_BG);
+            doc.rect(cx, scoreY, colW4, 44).strokeColor(AI_BORDER).lineWidth(0.3).stroke();
+            doc.fill(AI_PURPLE).fontSize(5.5).font("Helvetica-Bold")
+              .text(scoreLabels[ci], cx + 4, scoreY + 4, { width: colW4 - 8, align: "center" });
+            doc.fill(DARK).fontSize(16).font("Helvetica-Bold")
+              .text(scoreValues[ci], cx + 4, scoreY + 13, { width: colW4 - 8, align: "center" });
+            doc.fill(LIGHT).fontSize(5.5).font("Helvetica")
+              .text(scoreDetails[ci], cx + 4, scoreY + 32, { width: colW4 - 8, align: "center" });
+          }
+          doc.y = scoreY + 50;
+
+          if (ai.mlScore.featureImportance && ai.mlScore.featureImportance.length > 0) {
+            doc.moveDown(0.3);
+            doc.fontSize(7).font("Helvetica-Bold").fill(AI_PURPLE).text("FEATURE IMPORTANCE", 46, doc.y);
+            doc.moveDown(0.3);
+            resetTableRowIdx();
+            const fCols = [
+              { label: "Feature", width: W * 0.3 },
+              { label: "Direction", width: W * 0.15 },
+              { label: "Description", width: W * 0.55 },
+            ];
+            const fY0 = doc.y;
+            doc.rect(40, fY0, W, 14).fill(AI_PURPLE);
+            let fX = 44;
+            fCols.forEach(col => {
+              doc.fill("#ffffff").fontSize(6).font("Helvetica-Bold")
+                .text(col.label.toUpperCase(), fX, fY0 + 4, { width: col.width - 8 });
+              fX += col.width;
+            });
+            doc.y = fY0 + 16;
+            ai.mlScore.featureImportance.forEach((f: any) => {
+              ensureSpace(16);
+              const rY = doc.y;
+              const bg = tableRowIdx % 2 === 0 ? "#ffffff" : AI_LIGHT_BG;
+              doc.rect(40, rY, W, 14).fill(bg);
+              doc.fill(DARK).fontSize(7).font("Helvetica-Bold").text(f.feature, 44, rY + 3, { width: fCols[0].width - 8 });
+              const dirColor = f.direction === "positive" ? "#16a34a" : f.direction === "negative" ? "#dc2626" : GRAY;
+              const dirSymbol = f.direction === "positive" ? "+" : f.direction === "negative" ? "-" : "=";
+              doc.fill(dirColor).fontSize(7).font("Helvetica-Bold").text(`${dirSymbol} ${f.direction}`, 44 + fCols[0].width, rY + 3, { width: fCols[1].width - 8 });
+              doc.fill(GRAY).fontSize(6.5).font("Helvetica").text(f.description, 44 + fCols[0].width + fCols[1].width, rY + 3, { width: fCols[2].width - 8 });
+              doc.y = rY + 15;
+              tableRowIdx++;
+            });
+          }
+        }
+
+        if (ai.riskAnalysis) {
+          doc.moveDown(0.6);
+          ensureSpace(50);
+          const raY = doc.y;
+          doc.rect(40, raY - 2, W, 18).fill(AI_LIGHT_BG);
+          doc.fill(AI_PURPLE).fontSize(9).font("Helvetica-Bold")
+            .text("AI RISK ASSESSMENT — GPT-4o", 46, raY + 2);
+          doc.y = raY + 20;
+          doc.moveTo(40, doc.y).lineTo(40 + W, doc.y).strokeColor(AI_BORDER).lineWidth(0.5).stroke();
+          doc.moveDown(0.4);
+
+          const rlColor = ai.riskAnalysis.riskLevel === "low" ? "#16a34a" : ai.riskAnalysis.riskLevel === "medium" ? "#ca8a04" : ai.riskAnalysis.riskLevel === "high" ? "#ea580c" : "#dc2626";
+          doc.fontSize(10).font("Helvetica-Bold").fill(rlColor)
+            .text(`${(ai.riskAnalysis.riskLevel || "").toUpperCase()} RISK`, 46, doc.y, { continued: true })
+            .fill(GRAY).fontSize(8).font("Helvetica")
+            .text(`   Score: ${ai.riskAnalysis.riskScore}/100`);
+          doc.moveDown(0.3);
+          doc.fontSize(7.5).font("Helvetica").fill(DARK).text(ai.riskAnalysis.summary, 46, doc.y, { width: W - 12 });
+          doc.moveDown(0.4);
+
+          if (ai.riskAnalysis.factors && ai.riskAnalysis.factors.length > 0) {
+            doc.fontSize(7).font("Helvetica-Bold").fill(AI_PURPLE).text("CONTRIBUTING FACTORS", 46, doc.y);
+            doc.moveDown(0.2);
+            ai.riskAnalysis.factors.forEach((f: any) => {
+              ensureSpace(14);
+              const fColor = f.impact === "positive" ? "#16a34a" : "#dc2626";
+              const fSym = f.impact === "positive" ? "+" : "-";
+              doc.fontSize(7).font("Helvetica-Bold").fill(fColor).text(fSym, 46, doc.y, { continued: true })
+                .fill(DARK).font("Helvetica-Bold").text(` ${f.factor}: `, { continued: true })
+                .font("Helvetica").fill(GRAY).text(f.detail);
+              doc.moveDown(0.1);
+            });
+          }
+
+          if (ai.riskAnalysis.recommendations && ai.riskAnalysis.recommendations.length > 0) {
+            doc.moveDown(0.3);
+            doc.fontSize(7).font("Helvetica-Bold").fill(AI_PURPLE).text("AI RECOMMENDATIONS", 46, doc.y);
+            doc.moveDown(0.2);
+            ai.riskAnalysis.recommendations.forEach((r: string) => {
+              ensureSpace(12);
+              doc.fontSize(7).font("Helvetica").fill(GRAY).text(`  -> ${r}`, 46, doc.y, { width: W - 12 });
+              doc.moveDown(0.1);
+            });
+          }
+        }
+
+        if (ai.narrative) {
+          doc.moveDown(0.6);
+          ensureSpace(50);
+          const naY = doc.y;
+          doc.rect(40, naY - 2, W, 18).fill(AI_LIGHT_BG);
+          doc.fill(AI_PURPLE).fontSize(9).font("Helvetica-Bold")
+            .text("AI CREDIT NARRATIVE — Claude", 46, naY + 2);
+          doc.y = naY + 20;
+          doc.moveTo(40, doc.y).lineTo(40 + W, doc.y).strokeColor(AI_BORDER).lineWidth(0.5).stroke();
+          doc.moveDown(0.4);
+
+          if (ai.narrative.creditworthiness) {
+            doc.fontSize(8).font("Helvetica-Bold").fill(AI_PURPLE)
+              .text(`Creditworthiness: ${ai.narrative.creditworthiness}`, 46, doc.y);
+            doc.moveDown(0.3);
+          }
+
+          doc.fontSize(7).font("Helvetica").fill(DARK)
+            .text(ai.narrative.narrative, 46, doc.y, { width: W - 12 });
+          doc.moveDown(0.4);
+
+          const hasStrengths = ai.narrative.keyStrengths && ai.narrative.keyStrengths.length > 0;
+          const hasRisks = ai.narrative.keyRisks && ai.narrative.keyRisks.length > 0;
+          if (hasStrengths || hasRisks) {
+            const halfW = (W - 20) / 2;
+            const colStartY = doc.y;
+            if (hasStrengths) {
+              doc.fontSize(7).font("Helvetica-Bold").fill("#16a34a").text("KEY STRENGTHS", 46, colStartY);
+              let sy = colStartY + 10;
+              ai.narrative.keyStrengths.forEach((s: string) => {
+                ensureSpace(10);
+                doc.fontSize(6.5).font("Helvetica").fill(DARK).text(`+ ${s}`, 46, sy, { width: halfW });
+                sy += 10;
+              });
+            }
+            if (hasRisks) {
+              const rx = 46 + (W - 20) / 2 + 10;
+              doc.fontSize(7).font("Helvetica-Bold").fill("#dc2626").text("KEY RISKS", rx, colStartY, { width: halfW });
+              let ry = colStartY + 10;
+              ai.narrative.keyRisks.forEach((r: string) => {
+                doc.fontSize(6.5).font("Helvetica").fill(DARK).text(`- ${r}`, rx, ry, { width: halfW });
+                ry += 10;
+              });
+            }
+            doc.moveDown(1);
+          }
+
+          doc.fontSize(6).font("Helvetica").fill(LIGHT)
+            .text(`AI analysis generated: ${ai.generatedAt ? new Date(ai.generatedAt).toLocaleString("en-GB") : "N/A"}`, 46, doc.y, { width: W - 12, align: "right" });
+          doc.moveDown(0.3);
+        }
+      }
 
       // === END OF REPORT ===
       ensureSpace(80);

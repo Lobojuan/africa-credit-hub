@@ -47,6 +47,36 @@ interface CreditReportData {
     judgmentCount: number;
     isPep: boolean;
   };
+  aiEnhanced?: {
+    mlScore?: {
+      mlScore: number;
+      confidence: number;
+      confidenceInterval: [number, number];
+      riskCategory: string;
+      defaultProbability: number;
+      featureImportance: { feature: string; value: number; contribution: number; direction: string; description: string }[];
+      modelVersion: string;
+    };
+    riskAnalysis?: {
+      riskLevel: string;
+      riskScore: number;
+      summary: string;
+      factors: { factor: string; impact: string; detail: string }[];
+      recommendations: string[];
+      regulatoryFlags: string[];
+    };
+    narrative?: {
+      narrative: string;
+      creditworthiness: string;
+      keyStrengths: string[];
+      keyRisks: string[];
+      recommendedActions: string[];
+      borrowerName: string;
+      generatedAt: string;
+    };
+    disclaimer: string;
+    generatedAt: string;
+  };
 }
 
 function getScoreGrade(score: number) {
@@ -1721,6 +1751,184 @@ export default function CreditReportPage() {
               </Card>
             );
           })()}
+
+          {report.aiEnhanced && (
+            <Card data-testid="card-ai-enhanced-analysis" className="border-2 border-dashed border-purple-300 dark:border-purple-700 print:border print:border-purple-400">
+              <CardContent className="p-5 print:p-3">
+                <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg px-4 py-3 mb-4 print:mb-2 flex items-center gap-3">
+                  <Brain className="w-5 h-5 text-white print:hidden" />
+                  <div>
+                    <h2 className="text-white font-bold text-sm print:text-xs">AI-Enhanced Intelligence</h2>
+                    <p className="text-purple-200 text-[10px] print:text-[8px]">Machine Learning & Dual-AI Analysis</p>
+                  </div>
+                  <Badge className="ml-auto bg-white/20 text-white border-white/30 text-[9px] print:text-[7px]" data-testid="badge-ai-generated">AI-GENERATED</Badge>
+                </div>
+
+                <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md px-3 py-2 mb-4 print:mb-2">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0 print:hidden" />
+                    <p className="text-[9px] text-amber-800 dark:text-amber-300 print:text-[7px]">
+                      {report.aiEnhanced.disclaimer}
+                    </p>
+                  </div>
+                </div>
+
+                {report.aiEnhanced.mlScore && (
+                  <div className="mb-4 print:mb-2">
+                    <div className="flex items-center gap-2 mb-3 print:mb-1">
+                      <Badge variant="outline" className="border-purple-300 dark:border-purple-600 text-purple-700 dark:text-purple-300 text-[9px] print:text-[7px]" data-testid="badge-ml-score-label">
+                        <Sparkles className="w-3 h-3 mr-1" />ML Score — {report.aiEnhanced.mlScore.modelVersion}
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 print:gap-1 mb-3 print:mb-1">
+                      <div className="bg-purple-50 dark:bg-purple-950/30 rounded-lg p-3 print:p-1 text-center border border-purple-200 dark:border-purple-800">
+                        <p className="text-[9px] text-purple-600 dark:text-purple-400 font-medium uppercase print:text-[7px]">ML Score</p>
+                        <p className="text-2xl font-bold text-purple-700 dark:text-purple-300 print:text-lg" data-testid="text-ml-score">{report.aiEnhanced.mlScore.mlScore}</p>
+                        <p className="text-[8px] text-muted-foreground print:text-[6px]">Range 300–850</p>
+                      </div>
+                      <div className="bg-purple-50 dark:bg-purple-950/30 rounded-lg p-3 print:p-1 text-center border border-purple-200 dark:border-purple-800">
+                        <p className="text-[9px] text-purple-600 dark:text-purple-400 font-medium uppercase print:text-[7px]">Bureau Score</p>
+                        <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 print:text-lg" data-testid="text-bureau-score-comparison">{report.summary.creditScore}</p>
+                        <p className="text-[8px] text-muted-foreground print:text-[6px]">Traditional Model</p>
+                      </div>
+                      <div className="bg-purple-50 dark:bg-purple-950/30 rounded-lg p-3 print:p-1 text-center border border-purple-200 dark:border-purple-800">
+                        <p className="text-[9px] text-purple-600 dark:text-purple-400 font-medium uppercase print:text-[7px]">Confidence</p>
+                        <p className="text-2xl font-bold text-purple-700 dark:text-purple-300 print:text-lg" data-testid="text-ml-confidence">{(report.aiEnhanced.mlScore.confidence * 100).toFixed(0)}%</p>
+                        <p className="text-[8px] text-muted-foreground print:text-[6px]">{report.aiEnhanced.mlScore.confidenceInterval[0]}–{report.aiEnhanced.mlScore.confidenceInterval[1]}</p>
+                      </div>
+                      <div className="bg-purple-50 dark:bg-purple-950/30 rounded-lg p-3 print:p-1 text-center border border-purple-200 dark:border-purple-800">
+                        <p className="text-[9px] text-purple-600 dark:text-purple-400 font-medium uppercase print:text-[7px]">Default Prob.</p>
+                        <p className="text-2xl font-bold text-purple-700 dark:text-purple-300 print:text-lg" data-testid="text-default-prob">{(report.aiEnhanced.mlScore.defaultProbability * 100).toFixed(1)}%</p>
+                        <p className="text-[8px] text-muted-foreground print:text-[6px]">Risk: {report.aiEnhanced.mlScore.riskCategory.replace("_", " ")}</p>
+                      </div>
+                    </div>
+
+                    {(report.aiEnhanced.mlScore.featureImportance?.length ?? 0) > 0 && (
+                      <div className="border rounded-lg overflow-hidden print:border-border">
+                        <table className="w-full text-xs print:text-[8px]">
+                          <thead>
+                            <tr className="bg-purple-100 dark:bg-purple-900/30">
+                              <th className="text-left px-3 py-1.5 text-purple-700 dark:text-purple-300 font-semibold text-[9px] print:text-[7px]">Feature</th>
+                              <th className="text-center px-3 py-1.5 text-purple-700 dark:text-purple-300 font-semibold text-[9px] print:text-[7px]">Direction</th>
+                              <th className="text-left px-3 py-1.5 text-purple-700 dark:text-purple-300 font-semibold text-[9px] print:text-[7px]">Description</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y">
+                            {report.aiEnhanced.mlScore.featureImportance.map((f, i) => (
+                              <tr key={i} className="hover:bg-muted/20" data-testid={`row-ml-feature-${i}`}>
+                                <td className="px-3 py-1.5 font-medium">{f.feature}</td>
+                                <td className="px-3 py-1.5 text-center">
+                                  <Badge variant="outline" className={`text-[8px] ${f.direction === "positive" ? "text-green-600 border-green-300" : f.direction === "negative" ? "text-red-600 border-red-300" : "text-gray-500 border-gray-300"}`}>
+                                    {f.direction === "positive" ? "▲" : f.direction === "negative" ? "▼" : "—"} {f.direction}
+                                  </Badge>
+                                </td>
+                                <td className="px-3 py-1.5 text-muted-foreground text-[9px] print:text-[7px]">{f.description}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {report.aiEnhanced.riskAnalysis && (
+                  <div className="mb-4 print:mb-2">
+                    <div className="flex items-center gap-2 mb-3 print:mb-1">
+                      <Badge variant="outline" className="border-purple-300 dark:border-purple-600 text-purple-700 dark:text-purple-300 text-[9px] print:text-[7px]" data-testid="badge-ai-risk-label">
+                        <Brain className="w-3 h-3 mr-1" />AI Risk Assessment — GPT-4o
+                      </Badge>
+                    </div>
+                    <div className="bg-purple-50 dark:bg-purple-950/20 rounded-lg p-3 print:p-2 border border-purple-200 dark:border-purple-800">
+                      <div className="flex items-center gap-3 mb-2">
+                        <Badge className={`text-xs ${
+                          report.aiEnhanced.riskAnalysis.riskLevel === "low" ? "bg-green-500" :
+                          report.aiEnhanced.riskAnalysis.riskLevel === "medium" ? "bg-yellow-500 text-black" :
+                          report.aiEnhanced.riskAnalysis.riskLevel === "high" ? "bg-orange-500" :
+                          "bg-red-500"
+                        }`} data-testid="badge-ai-risk-level">{report.aiEnhanced.riskAnalysis.riskLevel.toUpperCase()} RISK</Badge>
+                        <span className="text-xs text-muted-foreground">Score: {report.aiEnhanced.riskAnalysis.riskScore}/100</span>
+                      </div>
+                      <p className="text-xs text-foreground mb-3 print:text-[9px]" data-testid="text-ai-risk-summary">{report.aiEnhanced.riskAnalysis.summary}</p>
+                      {(report.aiEnhanced.riskAnalysis.factors?.length ?? 0) > 0 && (
+                        <div className="space-y-1.5">
+                          <p className="text-[9px] font-semibold text-purple-700 dark:text-purple-300 uppercase print:text-[7px]">Contributing Factors</p>
+                          {report.aiEnhanced.riskAnalysis.factors.map((f, i) => (
+                            <div key={i} className="flex items-start gap-2 text-[10px] print:text-[8px]" data-testid={`row-ai-factor-${i}`}>
+                              <span className={`mt-0.5 ${f.impact === "positive" ? "text-green-500" : "text-red-500"}`}>
+                                {f.impact === "positive" ? "✓" : "✗"}
+                              </span>
+                              <span><strong>{f.factor}:</strong> {f.detail}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {(report.aiEnhanced.riskAnalysis.recommendations?.length ?? 0) > 0 && (
+                        <div className="mt-3 pt-2 border-t border-purple-200 dark:border-purple-700">
+                          <p className="text-[9px] font-semibold text-purple-700 dark:text-purple-300 uppercase mb-1 print:text-[7px]">AI Recommendations</p>
+                          <ul className="space-y-1">
+                            {report.aiEnhanced.riskAnalysis.recommendations.map((r, i) => (
+                              <li key={i} className="text-[10px] text-muted-foreground flex items-start gap-1 print:text-[8px]" data-testid={`text-ai-rec-${i}`}>
+                                <span className="text-purple-500">→</span> {r}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {report.aiEnhanced.narrative && (
+                  <div className="mb-2">
+                    <div className="flex items-center gap-2 mb-3 print:mb-1">
+                      <Badge variant="outline" className="border-purple-300 dark:border-purple-600 text-purple-700 dark:text-purple-300 text-[9px] print:text-[7px]" data-testid="badge-ai-narrative-label">
+                        <Sparkles className="w-3 h-3 mr-1" />AI Credit Narrative — Claude
+                      </Badge>
+                      <Badge variant="outline" className={`text-[8px] ${
+                        report.aiEnhanced.narrative.creditworthiness === "Excellent" || report.aiEnhanced.narrative.creditworthiness === "Good" ? "text-green-600 border-green-300" :
+                        report.aiEnhanced.narrative.creditworthiness === "Fair" ? "text-yellow-600 border-yellow-300" :
+                        "text-red-600 border-red-300"
+                      }`} data-testid="badge-creditworthiness">{report.aiEnhanced.narrative.creditworthiness}</Badge>
+                    </div>
+                    <div className="bg-purple-50 dark:bg-purple-950/20 rounded-lg p-3 print:p-2 border border-purple-200 dark:border-purple-800">
+                      <p className="text-xs text-foreground whitespace-pre-line leading-relaxed print:text-[9px]" data-testid="text-ai-narrative">{report.aiEnhanced.narrative.narrative}</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3 print:gap-1">
+                        {(report.aiEnhanced.narrative.keyStrengths?.length ?? 0) > 0 && (
+                          <div>
+                            <p className="text-[9px] font-semibold text-green-700 dark:text-green-400 uppercase mb-1 print:text-[7px]">Key Strengths</p>
+                            <ul className="space-y-0.5">
+                              {report.aiEnhanced.narrative.keyStrengths.map((s, i) => (
+                                <li key={i} className="text-[10px] text-muted-foreground flex items-start gap-1 print:text-[8px]" data-testid={`text-strength-${i}`}>
+                                  <span className="text-green-500">✓</span> {s}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {(report.aiEnhanced.narrative.keyRisks?.length ?? 0) > 0 && (
+                          <div>
+                            <p className="text-[9px] font-semibold text-red-700 dark:text-red-400 uppercase mb-1 print:text-[7px]">Key Risks</p>
+                            <ul className="space-y-0.5">
+                              {report.aiEnhanced.narrative.keyRisks.map((r, i) => (
+                                <li key={i} className="text-[10px] text-muted-foreground flex items-start gap-1 print:text-[8px]" data-testid={`text-risk-${i}`}>
+                                  <span className="text-red-500">✗</span> {r}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-[8px] text-muted-foreground/60 mt-1 text-right print:text-[6px]" data-testid="text-ai-generated-at">
+                      AI analysis generated: {new Date(report.aiEnhanced.generatedAt).toLocaleString("en-GB")}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           <Card data-testid="card-consumer-statement">
             <CardContent className="p-5 print:p-3">
