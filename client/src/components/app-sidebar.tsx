@@ -86,22 +86,22 @@ type NavItem = {
 };
 
 const overviewItems: NavItem[] = [
-  { label: "Dashboard", tKey: "sidebar.dashboard", url: "/dashboard", icon: LayoutDashboard, testId: "nav-dashboard" },
+  { label: "Dashboard", tKey: "sidebar.dashboard", url: "/dashboard", icon: LayoutDashboard, testId: "nav-dashboard", roles: ["super_admin", "admin", "regulator", "lender", "viewer"] },
   { label: "Platform Metrics", tKey: "sidebar.platformMetrics", url: "/platform-metrics", icon: Gauge, testId: "nav-platform-metrics", roles: ["admin", "super_admin"] },
 ];
 
 const creditDataItems: NavItem[] = [
-  { label: "Consumers", tKey: "sidebar.consumers", url: "/consumers", icon: User, testId: "nav-consumers" },
-  { label: "Businesses", tKey: "sidebar.businesses", url: "/businesses", icon: Building2, testId: "nav-businesses" },
+  { label: "Consumers", tKey: "sidebar.consumers", url: "/consumers", icon: User, testId: "nav-consumers", roles: ["super_admin", "admin", "regulator", "lender", "viewer"] },
+  { label: "Businesses", tKey: "sidebar.businesses", url: "/businesses", icon: Building2, testId: "nav-businesses", roles: ["super_admin", "admin", "regulator", "lender", "viewer"] },
   { label: "Borrowers (All)", tKey: "sidebar.borrowers", url: "/borrowers", icon: Users, testId: "nav-borrowers", roles: ["super_admin"] },
-  { label: "Credit Accounts", tKey: "sidebar.creditAccounts", url: "/credit-accounts", icon: CreditCard, testId: "nav-credit-accounts" },
-  { label: "Dishonoured Cheques", tKey: "sidebar.dishonouredCheques", url: "/dishonoured-cheques", icon: Ban, testId: "nav-dishonoured-cheques" },
-  { label: "Court Judgments", tKey: "sidebar.courtJudgments", url: "/court-judgments", icon: Gavel, testId: "nav-court-judgments" },
+  { label: "Credit Accounts", tKey: "sidebar.creditAccounts", url: "/credit-accounts", icon: CreditCard, testId: "nav-credit-accounts", roles: ["super_admin", "admin", "regulator", "lender"] },
+  { label: "Dishonoured Cheques", tKey: "sidebar.dishonouredCheques", url: "/dishonoured-cheques", icon: Ban, testId: "nav-dishonoured-cheques", roles: ["super_admin", "admin", "regulator", "lender"] },
+  { label: "Court Judgments", tKey: "sidebar.courtJudgments", url: "/court-judgments", icon: Gavel, testId: "nav-court-judgments", roles: ["super_admin", "admin", "regulator", "lender"] },
 ];
 
 const reportsScoringItems: NavItem[] = [
-  { label: "Generate Credit Report", tKey: "sidebar.creditSearch", url: "/search", icon: Search, testId: "nav-credit-search" },
-  { label: "Credit Reports", tKey: "sidebar.creditReports", url: "/reports", icon: FileText, testId: "nav-credit-reports" },
+  { label: "Generate Credit Report", tKey: "sidebar.creditSearch", url: "/search", icon: Search, testId: "nav-credit-search", roles: ["super_admin", "admin", "lender"] },
+  { label: "Credit Reports", tKey: "sidebar.creditReports", url: "/reports", icon: FileText, testId: "nav-credit-reports", roles: ["super_admin", "admin", "regulator", "lender", "viewer"] },
   { label: "Score Methodology", tKey: "sidebar.creditScoreMethodology", url: "/credit-score-methodology", icon: Brain, testId: "nav-credit-score-methodology", roles: ["admin", "lender", "super_admin"] },
 ];
 
@@ -114,7 +114,7 @@ const dataManagementItems: NavItem[] = [
 const workflowItems: NavItem[] = [
   { label: "Disputes", tKey: "sidebar.disputes", url: "/disputes", icon: AlertCircle, testId: "nav-disputes", roles: ["admin", "lender", "regulator", "super_admin"] },
   { label: "Approvals", tKey: "sidebar.pendingApprovals", url: "/approvals", icon: CheckSquare, testId: "nav-pending-approvals", roles: ["admin", "regulator", "super_admin"] },
-  { label: "Helpdesk", tKey: "sidebar.helpdesk", url: "/helpdesk", icon: Headset, testId: "nav-helpdesk" },
+  { label: "Helpdesk", tKey: "sidebar.helpdesk", url: "/helpdesk", icon: Headset, testId: "nav-helpdesk", roles: ["super_admin", "admin", "regulator", "lender", "viewer"] },
 ];
 
 const intelligenceItems: NavItem[] = [
@@ -170,19 +170,20 @@ const infrastructureItems: NavItem[] = [
 ];
 
 function getHelpItems(): NavItem[] {
+  const allRoles = ["super_admin", "admin", "regulator", "lender", "viewer"];
   const items: NavItem[] = [
-    { label: "My Credit", tKey: "sidebar.myCredit", url: "/my-credit", icon: UserCheck, testId: "nav-consumer-portal" },
+    { label: "My Credit", tKey: "sidebar.myCredit", url: "/my-credit", icon: UserCheck, testId: "nav-consumer-portal", roles: allRoles },
   ];
   if (isGhanaMode()) {
-    items.push({ label: "Ghana Docs", tKey: "sidebar.ghanaDocs", url: "/ghana-docs", icon: BookOpen, testId: "nav-ghana-docs" });
+    items.push({ label: "Ghana Docs", tKey: "sidebar.ghanaDocs", url: "/ghana-docs", icon: BookOpen, testId: "nav-ghana-docs", roles: allRoles });
   }
   items.push(
-    { label: "Documentation", tKey: "sidebar.documentation", url: "/documentation", icon: FileText, testId: "nav-documentation" },
-    { label: "App Guide", tKey: "sidebar.appGuide", url: "/guide", icon: Play, testId: "nav-app-guide" },
-    { label: "Help", tKey: "sidebar.help", url: "/help", icon: HelpCircle, testId: "nav-help" },
-    { label: "Version History", tKey: "sidebar.versionHistory", url: "/version-history", icon: History, testId: "nav-version-history" },
-    { label: "Legal & Copyright", tKey: "sidebar.legal", url: "/legal", icon: Scale, testId: "nav-legal" },
-    { label: "About", tKey: "sidebar.about", url: "/about", icon: Info, testId: "nav-about" },
+    { label: "Documentation", tKey: "sidebar.documentation", url: "/documentation", icon: FileText, testId: "nav-documentation", roles: ["super_admin", "admin", "regulator", "lender"] },
+    { label: "App Guide", tKey: "sidebar.appGuide", url: "/guide", icon: Play, testId: "nav-app-guide", roles: allRoles },
+    { label: "Help", tKey: "sidebar.help", url: "/help", icon: HelpCircle, testId: "nav-help", roles: allRoles },
+    { label: "Version History", tKey: "sidebar.versionHistory", url: "/version-history", icon: History, testId: "nav-version-history", roles: ["super_admin", "admin"] },
+    { label: "Legal & Copyright", tKey: "sidebar.legal", url: "/legal", icon: Scale, testId: "nav-legal", roles: allRoles },
+    { label: "About", tKey: "sidebar.about", url: "/about", icon: Info, testId: "nav-about", roles: allRoles },
   );
   return items;
 }
