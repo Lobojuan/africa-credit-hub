@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 
+const ADMIN_PASSWORD = process.env.TEST_ADMIN_PASSWORD || 'admin0987';
+
 interface UserRecord {
   id: number;
   username: string;
@@ -22,7 +24,7 @@ test.describe('Security & Authentication [NFR-SEC]', () => {
   test('NFR-SEC-04: account lockout after 3 failed attempts returns 423', async ({ request }) => {
     const lockoutUser = 'lockout_e2e_' + Date.now();
     const loginRes = await request.post('/api/auth/login', {
-      data: { username: 'admin', password: 'admin0987' }
+      data: { username: 'admin', password: ADMIN_PASSWORD }
     });
     if (loginRes.status() === 429) { test.skip(); return; }
 
@@ -64,7 +66,7 @@ test.describe('Security & Authentication [NFR-SEC]', () => {
 
   test('NFR-SEC-03: weak passwords are rejected', async ({ request }) => {
     const loginRes = await request.post('/api/auth/login', {
-      data: { username: 'admin', password: 'admin0987' }
+      data: { username: 'admin', password: ADMIN_PASSWORD }
     });
     if (loginRes.status() === 429) { test.skip(); return; }
     expect(loginRes.ok()).toBeTruthy();
@@ -76,7 +78,7 @@ test.describe('Security & Authentication [NFR-SEC]', () => {
     const weakPasswords = ['short', '12345678', 'alllowercase1!', 'ALLUPPERCASE1!', 'NoSpecialChar1'];
     for (const weak of weakPasswords) {
       const res = await request.post('/api/auth/change-password', {
-        data: { currentPassword: 'admin0987', newPassword: weak },
+        data: { currentPassword: ADMIN_PASSWORD, newPassword: weak },
         headers: { 'x-csrf-token': csrfToken }
       });
       expect(res.ok()).toBeFalsy();
@@ -98,7 +100,7 @@ test.describe('Security & Authentication [NFR-SEC]', () => {
 
   test('NFR-SEC-02: user API never exposes password fields', async ({ request }) => {
     const loginRes = await request.post('/api/auth/login', {
-      data: { username: 'admin', password: 'admin0987' }
+      data: { username: 'admin', password: ADMIN_PASSWORD }
     });
     if (loginRes.status() === 429) { test.skip(); return; }
     expect(loginRes.ok()).toBeTruthy();
@@ -114,7 +116,7 @@ test.describe('Security & Authentication [NFR-SEC]', () => {
 
   test('NFR-SEC-05: audit log captures LOGIN action', async ({ request }) => {
     const loginRes = await request.post('/api/auth/login', {
-      data: { username: 'admin', password: 'admin0987' }
+      data: { username: 'admin', password: ADMIN_PASSWORD }
     });
     if (loginRes.status() === 429) { test.skip(); return; }
     expect(loginRes.ok()).toBeTruthy();
@@ -129,7 +131,7 @@ test.describe('Security & Authentication [NFR-SEC]', () => {
 
   test('NFR-SEC-06: audit logs contain IP address', async ({ request }) => {
     const loginRes = await request.post('/api/auth/login', {
-      data: { username: 'admin', password: 'admin0987' }
+      data: { username: 'admin', password: ADMIN_PASSWORD }
     });
     if (loginRes.status() === 429) { test.skip(); return; }
     expect(loginRes.ok()).toBeTruthy();

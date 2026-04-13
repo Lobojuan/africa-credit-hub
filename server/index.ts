@@ -64,6 +64,9 @@ function validateProductionConfig() {
     if (!process.env.TWILIO_ACCOUNT_SID && !process.env.AT_USERNAME) {
       console.warn("[Production] WARNING: No SMS provider configured — OTP and notifications via SMS will not be delivered");
     }
+    if (!process.env.MASTER_CONTROL_PASSWORD) {
+      errors.push('MASTER_CONTROL_PASSWORD is required in production for platform control access');
+    }
   }
 
   if (errors.length > 0) {
@@ -506,11 +509,11 @@ process.stderr.write = function (...args: any[]) {
   }
 
   try {
-    const { runMigrations } = await import('stripe-replit-sync');
+    const { runPortableMigrations } = await import('./stripeClient');
     const databaseUrl = process.env.DATABASE_URL;
     if (databaseUrl) {
       console.log('Initializing Stripe schema...');
-      await runMigrations({ databaseUrl, schema: 'stripe' });
+      await runPortableMigrations({ databaseUrl, schema: 'stripe' });
       console.log('Stripe schema ready');
 
       const { getStripeSync } = await import('./stripeClient');

@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 
+const ADMIN_PASSWORD = process.env.TEST_ADMIN_PASSWORD || 'admin0987';
+
 interface MFASetupResponse {
   secret: string;
   uri: string;
@@ -57,7 +59,7 @@ test.describe('MFA & Session Security [ENT-01, NFR-SEC-09/10]', () => {
     const csrfData = await csrfRes.json() as { token: string };
 
     const disableRes = await page.request.post('/api/auth/mfa/disable', {
-      data: { password: 'admin0987' },
+      data: { password: ADMIN_PASSWORD },
       headers: { 'x-csrf-token': csrfData.token }
     });
     expect(disableRes.ok()).toBeTruthy();
@@ -65,7 +67,7 @@ test.describe('MFA & Session Security [ENT-01, NFR-SEC-09/10]', () => {
 
   test('NFR-SEC-09: session user has security fields', async ({ page }) => {
     const loginRes = await page.request.post('/api/auth/login', {
-      data: { username: 'admin', password: 'admin0987' }
+      data: { username: 'admin', password: ADMIN_PASSWORD }
     });
     expect(loginRes.ok()).toBeTruthy();
     const data = await loginRes.json() as LoginResponse;
@@ -80,7 +82,7 @@ test.describe('MFA & Session Security [ENT-01, NFR-SEC-09/10]', () => {
 
   test('NFR-SEC-10: login response has password expiry data', async ({ page }) => {
     const loginRes = await page.request.post('/api/auth/login', {
-      data: { username: 'admin', password: 'admin0987' }
+      data: { username: 'admin', password: ADMIN_PASSWORD }
     });
     expect(loginRes.ok()).toBeTruthy();
     const data = await loginRes.json() as LoginResponse;

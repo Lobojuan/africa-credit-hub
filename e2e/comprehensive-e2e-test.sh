@@ -72,7 +72,7 @@ check_code "Login with wrong password returns 401" "$code" "401"
 code=$(api_post_code "/api/auth/login" '{}')
 check_code "Login with empty body returns 400" "$code" "400"
 
-code=$(api_post_code "/api/auth/login" '{"username":"admin","password":"admin0987"}')
+code=$(api_post_code "/api/auth/login" "{\"username\":\"admin\",\"password\":\"${TEST_ADMIN_PASSWORD:-admin0987}\"}")
 check_code "Login with valid credentials returns 200" "$code" "200"
 check_body_contains "Login response contains fullName" "fullName"
 check_body_contains "Login response contains super_admin role" "super_admin"

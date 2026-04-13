@@ -3,6 +3,7 @@ import pg from "pg";
 import * as schema from "@shared/schema";
 
 const isProd = process.env.NODE_ENV === "production";
+const isProductionBoot = isProd || process.env.PRODUCTION_MODE === "true";
 
 export const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
@@ -14,6 +15,7 @@ export const pool = new pg.Pool({
   keepAlive: true,
   keepAliveInitialDelayMillis: 10000,
   allowExitOnIdle: false,
+  ssl: isProductionBoot ? { rejectUnauthorized: false } : false,
 });
 
 pool.on("error", (err) => {

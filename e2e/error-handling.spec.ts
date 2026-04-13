@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 
+const ADMIN_PASSWORD = process.env.TEST_ADMIN_PASSWORD || 'admin0987';
+
 test.describe('Error Handling', () => {
   test('unknown frontend route loads without crashing', async ({ page }) => {
     await page.goto('/');
@@ -7,7 +9,7 @@ test.describe('Error Handling', () => {
     const passwordInput = page.locator('input[type="password"]').first();
     await usernameInput.waitFor({ timeout: 15000 });
     await usernameInput.fill('admin');
-    await passwordInput.fill('admin0987');
+    await passwordInput.fill(ADMIN_PASSWORD);
     await page.locator('button[type="submit"]').first().click();
     await page.waitForLoadState('domcontentloaded');
 

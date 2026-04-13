@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 
+const ADMIN_PASSWORD = process.env.TEST_ADMIN_PASSWORD || 'admin0987';
+
 interface HealthResponse {
   status: string;
   version: string;
@@ -31,7 +33,7 @@ test.describe('SLA & Performance Validation', () => {
   test('SLA-02: login API < 2 seconds', async ({ page }) => {
     const start = Date.now();
     const response = await page.request.post('/api/auth/login', {
-      data: { username: 'admin', password: 'admin0987' }
+      data: { username: 'admin', password: ADMIN_PASSWORD }
     });
     const elapsed = Date.now() - start;
     expect(elapsed).toBeLessThan(2000);

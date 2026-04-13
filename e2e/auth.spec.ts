@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 
+const ADMIN_PASSWORD = process.env.TEST_ADMIN_PASSWORD || 'admin0987';
+
 test.describe('Authentication Flow', () => {
   test('unauthenticated user sees login page', async ({ page }) => {
     await page.goto('/');
@@ -23,14 +25,14 @@ test.describe('Authentication Flow', () => {
     const passwordInput = page.locator('input[type="password"]').first();
     await usernameInput.waitFor({ timeout: 15000 });
     await usernameInput.fill('admin');
-    await passwordInput.fill('admin0987');
+    await passwordInput.fill(ADMIN_PASSWORD);
     await page.locator('button[type="submit"]').first().click();
     await expect(page.locator('text=/dashboard|overview|welcome|borrower/i').first()).toBeVisible({ timeout: 15000 });
   });
 
   test('auth/me API returns user data when authenticated', async ({ request }) => {
     const loginResponse = await request.post('/api/auth/login', {
-      data: { username: 'admin', password: 'admin0987' }
+      data: { username: 'admin', password: ADMIN_PASSWORD }
     });
     expect(loginResponse.ok()).toBeTruthy();
     const loginData = await loginResponse.json();
@@ -45,7 +47,7 @@ test.describe('Authentication Flow', () => {
 
   test('logout clears session', async ({ request }) => {
     const loginResponse = await request.post('/api/auth/login', {
-      data: { username: 'admin', password: 'admin0987' }
+      data: { username: 'admin', password: ADMIN_PASSWORD }
     });
     expect(loginResponse.ok()).toBeTruthy();
 

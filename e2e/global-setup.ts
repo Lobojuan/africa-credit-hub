@@ -1,5 +1,7 @@
 import { chromium, FullConfig } from '@playwright/test';
 
+const ADMIN_PASSWORD = process.env.TEST_ADMIN_PASSWORD || 'admin0987';
+
 async function globalSetup(config: FullConfig) {
   const baseURL = config.projects[0].use.baseURL || 'http://localhost:5000';
   const browser = await chromium.launch();
@@ -10,7 +12,7 @@ async function globalSetup(config: FullConfig) {
   const maxRetries = 5;
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     const apiLogin = await page.request.post(`${baseURL}/api/auth/login`, {
-      data: { username: 'admin', password: 'admin0987' }
+      data: { username: 'admin', password: ADMIN_PASSWORD }
     });
     if (apiLogin.ok()) {
       authenticated = true;

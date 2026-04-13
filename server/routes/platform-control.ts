@@ -330,7 +330,7 @@ export function registerPlatformControlRoutes(app: Express) {
 
       const env = process.env;
       const integrations = {
-        stripe: { connected: !!(env.REPLIT_CONNECTORS_HOSTNAME || env.STRIPE_SECRET_KEY), label: "Stripe Payments" },
+        stripe: { connected: !!env.STRIPE_SECRET_KEY, label: "Stripe Payments" },
         sendgrid: { connected: !!env.SENDGRID_API_KEY, label: "SendGrid Email" },
         smtp: { connected: !!(env.SMTP_HOST && env.SMTP_USER), label: "SMTP Email", detail: env.SMTP_HOST || "" },
         twilio: { connected: !!(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN), label: "Twilio SMS" },
@@ -339,8 +339,8 @@ export function registerPlatformControlRoutes(app: Express) {
         microsoftSSO: { connected: !!(env.AZURE_CLIENT_ID && env.AZURE_CLIENT_SECRET), label: "Microsoft Azure SSO" },
         saml: { connected: !!(env.SAML_ENTRY_POINT && env.SAML_ISSUER), label: "SAML 2.0 SSO" },
         piiEncryption: { connected: !!(env.PII_ENCRYPTION_KEY && env.PII_ENCRYPTION_SALT), label: "PII Encryption (AES-256)" },
-        openai: { connected: !!(env.OPENAI_API_KEY || env.REPLIT_CONNECTORS_HOSTNAME), label: "OpenAI AI" },
-        anthropic: { connected: !!(env.ANTHROPIC_API_KEY || env.REPLIT_CONNECTORS_HOSTNAME), label: "Anthropic AI" },
+        openai: { connected: !!(env.OPENAI_API_KEY || env.AI_INTEGRATIONS_OPENAI_API_KEY), label: "OpenAI AI" },
+        anthropic: { connected: !!(env.ANTHROPIC_API_KEY || env.AI_INTEGRATIONS_ANTHROPIC_API_KEY), label: "Anthropic AI" },
       };
 
       const envConfig = {
@@ -353,8 +353,7 @@ export function registerPlatformControlRoutes(app: Express) {
         SESSION_SECRET: env.SESSION_SECRET ? "configured" : "auto-generated",
         MASTER_CONTROL_PASSWORD: "configured",
         CANONICAL_URL: env.CANONICAL_URL || "not set",
-        REPLIT_DEPLOYMENT: env.REPLIT_DEPLOYMENT || "none",
-        REPLIT_DEV_DOMAIN: env.REPLIT_DEV_DOMAIN || "",
+        DEPLOYMENT_ENV: env.NODE_ENV || "development",
       };
 
       const security = {
