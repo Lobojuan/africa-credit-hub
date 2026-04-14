@@ -117,6 +117,44 @@ describe("calculateCreditScore", () => {
     expect(withInactive.score).toBe(withoutAlt.score);
   });
 
+  it("penalizes high utilization ratio", () => {
+    const accounts = [
+      { status: "current", currentBalance: "80000", creditLimit: "100000" },
+      { status: "current", currentBalance: "45000", creditLimit: "50000" },
+    ];
+    const result = calculateCreditScore(accounts, 0);
+    const utilizationFactor = result.factors.find(f => f.name === "Utilization Ratio");
+    expect(utilizationFactor).toBeDefined();
+    expect(utilizationFactor!.impact).toBeLessThan(0);
+    expect(utilizationFactor!.direction).toBe("negative");
+    expect(result.reasonCodes).toContain("HIGH_UTILIZATION");
+  });
+
+  it("rewards low utilization ratio", () => {
+    const accounts = [
+      { status: "current", currentBalance: "5000", creditLimit: "100000" },
+      { status: "current", currentBalance: "2000", creditLimit: "50000" },
+    ];
+    const result = calculateCreditScore(accounts, 0);
+    const utilizationFactor = result.factors.find(f => f.name === "Utilization Ratio");
+    expect(utilizationFactor).toBeDefined();
+    expect(utilizationFactor!.impact).toBe(0);
+    expect(utilizationFactor!.direction).toBe("positive");
+    expect(result.reasonCodes).toContain("LOW_UTILIZATION");
+  });
+
+  it("handles accounts without credit limits gracefully", () => {
+    const accounts = [
+      { status: "current", currentBalance: "5000" },
+      { status: "current", currentBalance: "10000" },
+    ];
+    const result = calculateCreditScore(accounts, 0);
+    const utilizationFactor = result.factors.find(f => f.name === "Utilization Ratio");
+    expect(utilizationFactor).toBeDefined();
+    expect(utilizationFactor!.impact).toBe(0);
+    expect(utilizationFactor!.direction).toBe("neutral");
+  });
+
   it("clamps score between 300 and 850", () => {
     const badAccounts = Array.from({ length: 10 }, () => ({ status: "written_off", currentBalance: "100000" }));
     const judgments = Array.from({ length: 5 }, () => ({ status: "active" }));

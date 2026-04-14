@@ -3,6 +3,7 @@ import { getServerCountryConfig } from "./country-mode";
 interface AccountLike {
   status: string;
   currentBalance?: string | null;
+  creditLimit?: string | null;
   currency?: string | null;
   daysInArrears?: number | null;
   amountOverdue?: string | null;
@@ -216,14 +217,38 @@ export function calculateCreditScore(
   });
 
   const totalDebt = accounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
-  const debtDirection = totalDebt > 1000000 ? "negative" : totalDebt > 500000 ? "neutral" : "positive";
+  const totalLimits = accounts.reduce((s, a) => s + parseFloat(a.creditLimit || "0"), 0);
+  const accountsWithLimits = accounts.filter(a => parseFloat(a.creditLimit || "0") > 0);
+
+  let utilizationPenalty = 0;
+  let utilizationRatio = 0;
+  let utilizationDescription: string;
+  let utilizationDirection: "positive" | "negative" | "neutral";
+
+  if (accountsWithLimits.length > 0) {
+    utilizationRatio = totalLimits > 0 ? totalDebt / totalLimits : 0;
+    utilizationRatio = Math.min(utilizationRatio, 2);
+
+    if (utilizationRatio <= 0.10) { utilizationPenalty = 0; utilizationDirection = "positive"; }
+    else if (utilizationRatio <= 0.30) { utilizationPenalty = 10; utilizationDirection = "positive"; }
+    else if (utilizationRatio <= 0.50) { utilizationPenalty = 30; utilizationDirection = "neutral"; }
+    else if (utilizationRatio <= 0.75) { utilizationPenalty = 60; utilizationDirection = "negative"; }
+    else if (utilizationRatio <= 1.0) { utilizationPenalty = 90; utilizationDirection = "negative"; }
+    else { utilizationPenalty = 120; utilizationDirection = "negative"; }
+
+    utilizationDescription = `Utilization ratio ${Math.round(utilizationRatio * 100)}% — total balance ${totalDebt.toLocaleString()} against total limits ${totalLimits.toLocaleString()} across ${accountsWithLimits.length} account${accountsWithLimits.length > 1 ? "s" : ""}`;
+  } else {
+    utilizationDirection = "neutral";
+    utilizationDescription = `No credit limits on file — total outstanding balance ${totalDebt.toLocaleString()}. Utilization ratio cannot be calculated.`;
+  }
+
   factors.push({
-    name: "Debt Level",
-    impact: 0,
-    maxImpact: 0,
-    direction: debtDirection,
-    description: `Total outstanding balance of ${totalDebt.toLocaleString()}`,
-    weight: 5,
+    name: "Utilization Ratio",
+    impact: utilizationPenalty === 0 ? 0 : -utilizationPenalty,
+    maxImpact: -120,
+    direction: utilizationDirection,
+    description: utilizationDescription,
+    weight: 15,
   });
 
   let altDataBonus = 0;
@@ -264,6 +289,7 @@ export function calculateCreditScore(
     + (onTimeRatio * 500)
     - ndiaPenalty
     - arrearsPenalty
+    - utilizationPenalty
     - (writtenOffCount * 75)
     - (restructuredCount * 20)
     - (activeJudgments * 40)
@@ -281,6 +307,8 @@ export function calculateCreditScore(
   if (restructuredCount > 0) reasonCodes.push("RESTRUCTURED_ACCOUNTS");
   if (activeJudgments > 0) reasonCodes.push("ACTIVE_COURT_JUDGMENTS");
   if (inquiryCount > 5) reasonCodes.push("HIGH_INQUIRY_VOLUME");
+  if (utilizationRatio > 0.75) reasonCodes.push("HIGH_UTILIZATION");
+  if (utilizationRatio <= 0.30 && accountsWithLimits.length > 0) reasonCodes.push("LOW_UTILIZATION");
 
   if (totalDebt > 1000000) reasonCodes.push("HIGH_DEBT_LEVEL");
   if (isPep) reasonCodes.push("POLITICALLY_EXPOSED_PERSON");

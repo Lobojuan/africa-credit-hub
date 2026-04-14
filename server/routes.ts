@@ -4953,6 +4953,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const scoringVars = [
         ["Base Score", "+300", "Starting score for all borrowers"],
         ["On-Time Payment Ratio", "+500 (max)", "Proportion of current/closed accounts vs total"],
+        ["Utilization Ratio", "-0 to -120", "Total outstanding balance ÷ total credit limits"],
         ["Delinquent Accounts", "-50 each", "Accounts in delinquent or default status"],
         ["Written-Off Accounts", "-75 each", "Accounts written off as losses"],
         ["Restructured Accounts", "-20 each", "Restructured/rescheduled facilities"],
