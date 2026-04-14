@@ -363,8 +363,8 @@ export async function registerRoutes(
 
   app.use("/api", (req, res, next) => {
     const isExport = req.path.includes("/export");
-    const isAIReport = req.path.includes("/credit-reports/generate") || req.path.includes("/credit-reports/download-pdf");
-    const timeout = isAIReport ? 120000 : isExport ? 30000 : 15000;
+    const isAI = req.path.includes("/ai/") || req.path.includes("/credit-reports/generate") || req.path.includes("/credit-reports/download-pdf") || req.path.includes("/public/chat");
+    const timeout = isAI ? 120000 : isExport ? 30000 : 15000;
     req.setTimeout(timeout);
     res.setTimeout(timeout, () => {
       if (!res.headersSent) {
@@ -9208,9 +9208,9 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     try {
       const provider = parseOptionalProvider(req.body?.provider);
       const result = await analyzeCreditRisk(req.params.borrowerId, provider);
-      res.json(result);
+      if (!res.headersSent) res.json(result);
     } catch (e: any) {
-      res.status(500).json({ message: safeErrorMessage(e) });
+      if (!res.headersSent) res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
@@ -9219,9 +9219,9 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const provider = parseOptionalProvider(req.body?.provider);
       const language = (req.body?.language || req.query.lang || "en") as string;
       const result = await generateReportSummary(req.params.borrowerId, provider, language);
-      res.json(result);
+      if (!res.headersSent) res.json(result);
     } catch (e: any) {
-      res.status(500).json({ message: safeErrorMessage(e) });
+      if (!res.headersSent) res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
