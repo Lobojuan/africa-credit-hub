@@ -305,6 +305,6 @@ export function calculateMLCreditScore(
     riskCategory,
     defaultProbability,
     featureImportance,
-    modelVersion: "GBM-v2.5.0",
+    modelVersion: "ACH-Scorecard-v1.0",
   };
 }

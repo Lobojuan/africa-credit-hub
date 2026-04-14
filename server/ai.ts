@@ -805,7 +805,7 @@ The CDH v2.5 is a multi-tenant SaaS credit registry platform currently operating
 
 5. CREDIT SCORING ENGINE:
    a) Rule-Based Scoring: Algorithmic scoring on a 300-850 scale. Five factors: Payment History (35%), Credit Utilization (30%), Credit History Length (15%), Credit Mix (10%), New Credit (10%). Score bands: Excellent (750-850), Good (700-749), Fair (650-699), Poor (550-649), Very Poor (300-549). Model validation metrics: Gini coefficient, KS statistic, Rank Ordering, Stress Testing, Probability of Default (PD).
-   b) ML Credit Scoring: Gradient Boosting Machine (GBM-v2.5.0) model producing Probability of Default with confidence intervals. Features: payment velocity, account health ratio, utilization trends, age diversity, cross-border exposure. Provides feature importance analysis.
+   b) ML Credit Scoring: ACH Scorecard v1.0 — a proprietary logistic scoring model producing Probability of Default with confidence intervals. Features: payment velocity, account health ratio, utilization trends, age diversity, cross-border exposure. Provides feature importance analysis.
    c) AI Credit Risk Analysis: Dual-AI routing (GPT-4o + Claude 3.5 Opus) for qualitative assessments — risk levels from Low to Critical with structured recommendations.
 
 6. BANK OF GHANA CRB v1.1 COMPLIANCE:

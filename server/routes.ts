@@ -5629,7 +5629,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
           const mlY = doc.y;
           doc.rect(40, mlY - 2, W, 18).fill(AI_LIGHT_BG);
           doc.fill(AI_PURPLE).fontSize(9).font("Helvetica-Bold")
-            .text(`ML CREDIT SCORE — ${ai.mlScore.modelVersion || "GBM-v2.5.0"}`, 46, mlY + 2);
+            .text(`ML CREDIT SCORE — ${ai.mlScore.modelVersion || "ACH-Scorecard-v1.0"}`, 46, mlY + 2);
           doc.y = mlY + 20;
           doc.moveTo(40, doc.y).lineTo(40 + W, doc.y).strokeColor(AI_BORDER).lineWidth(0.5).stroke();
           doc.moveDown(0.5);
@@ -9289,7 +9289,7 @@ STANDARD — $299/month ($239/month annual)
 PROFESSIONAL — $799/month ($639/month annual) [MOST POPULAR]
 - For growing institutions needing advanced analytics
 - Up to 50 users, multi-country deployment (up to 5 countries)
-- Everything in Standard plus: Advanced ML credit scoring (GBM v2.5), cross-border credit searches, portfolio intelligence suite
+- Everything in Standard plus: Advanced credit scoring (ACH Scorecard v1.0), cross-border credit searches, portfolio intelligence suite
 - Priority API access (10,000 calls/day)
 - WebAuthn biometric authentication, maker-checker workflows
 - Regulatory compliance dashboards, batch upload processing

@@ -550,7 +550,7 @@ export function generateCopyrightPdf(lang: string = "en"): Promise<Buffer> {
     subSection(doc, "3.2", "Proprietary Algorithms & Models");
     bulletPoint(doc, "NDIA (Number of Days in Arrears) tiered penalty scoring model with 5 classification tiers");
     bulletPoint(doc, "Amount in Arrears weighted penalty calculation engine");
-    bulletPoint(doc, "Gradient boosting-inspired credit scoring model with reason code generation");
+    bulletPoint(doc, "Proprietary rule-based credit scoring model with reason code generation");
     bulletPoint(doc, "Telco behavioral scoring algorithms analyzing 14+ mobile usage dimensions");
     bulletPoint(doc, "Fuzzy entity matching algorithms utilizing Levenshtein distance, phonetic matching, and probabilistic record linkage");
 
