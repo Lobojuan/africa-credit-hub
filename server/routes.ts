@@ -10785,8 +10785,6 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       res.setHeader("Content-Type", "application/octet-stream");
       res.setHeader("X-Export-SHA256", job.ciphertextHash || "");
       res.setHeader("X-Export-Plaintext-SHA256", job.sha256Hash || "");
-      res.setHeader("X-Export-IV", job.iv || "");
-      res.setHeader("X-Export-Key", job.oneTimeKey || "");
       res.setHeader("X-Export-Original-Size", String(job.sizeBytes || 0));
       res.setHeader("X-Export-Encrypted", "true");
       res.setHeader("X-Export-Record-Count", String(job.totalRecords || 0));
@@ -10803,6 +10801,30 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     }
   });
 
+  app.get("/api/export/key/:jobId", requireAuth, async (req, res) => {
+    const job = exportJobs.get(req.params.jobId);
+    if (!job) return res.status(404).json({ message: "Export job not found" });
+    if (!verifyJobOwnership(req, job)) return res.status(403).json({ message: "Access denied" });
+    if (job.status !== "completed") return res.status(400).json({ message: `Export not ready. Status: ${job.status}` });
+    if (!job.oneTimeKey || !job.iv) return res.status(410).json({ message: "Decryption key has already been retrieved. Keys are single-use for security." });
+
+    const oneTimeKey = job.oneTimeKey;
+    const iv = job.iv;
+    job.oneTimeKey = undefined;
+    job.iv = undefined;
+
+    await storage.createAuditLog({
+      userId: req.session?.userId,
+      action: "EXPORT_KEY_RETRIEVED",
+      entity: "export_job",
+      entityId: req.params.jobId,
+      details: JSON.stringify({ jobId: req.params.jobId, retrievedAt: new Date().toISOString() }),
+      ipAddress: req.ip || "unknown",
+    });
+
+    res.json({ oneTimeKey, iv });
+  });
+
   app.post("/api/admin/export/:orgId", requireAuth, requireRole("admin", "super_admin"), exportLimiter, async (req, res) => {
     try {
       const orgId = req.params.orgId;
@@ -10810,6 +10832,13 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
       if (req.session.userRole !== "super_admin" && req.session.organizationId !== orgId) {
         return res.status(403).json({ message: "You can only export your own organization's data" });
+      }
+
+      const activeJobsForOrg = [...exportJobs.values()].filter(
+        j => j.orgId === orgId && (j.status === "queued" || j.status === "processing")
+      ).length;
+      if (activeJobsForOrg >= 2) {
+        return res.status(429).json({ message: "Maximum 2 concurrent exports per organisation. Please wait for existing exports to complete." });
       }
 
       const org = await storage.getOrganization(orgId);
