@@ -349,6 +349,11 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
 
+  function csvSafe(val: unknown): string {
+    const str = String(val ?? '');
+    return /^[=+\-@\t\r]/.test(str) ? "'" + str : str;
+  }
+
   app.use("/api", apiLimiter, (req, res, next) => {
     const route = req.method + " " + req.path;
     trackApiUsage(route);
@@ -3430,7 +3435,13 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
   const iffUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 }, fileFilter: (_req, file, cb) => {
     const ext = file.originalname.toLowerCase();
-    if (ext.endsWith(".xlsx") || ext.endsWith(".xls") || ext.endsWith(".csv")) cb(null, true);
+    const validMimes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel',
+      'text/csv',
+      'application/csv',
+    ];
+    if ((ext.endsWith(".xlsx") || ext.endsWith(".xls") || ext.endsWith(".csv")) && validMimes.includes(file.mimetype)) cb(null, true);
     else cb(new Error("Only .xlsx, .xls and .csv files are accepted"));
   }});
 
@@ -6166,20 +6177,20 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         if (type === "portfolio") {
           csv = "Account Number,Borrower ID,Institution,Type,Original Amount,Current Balance,Currency,Status,Days in Arrears,Interest Free,Grace Period,Restructure Count\n";
           for (const a of accounts) {
-            csv += `"${a.accountNumber}","${a.borrowerId}","${a.lenderInstitution}","${a.accountType}","${a.originalAmount}","${a.currentBalance}","${a.currency}","${a.status}","${a.daysInArrears}","${a.isInterestFree}","${a.gracePeriodMonths || ''}","${a.restructureCount}"\n`;
+            csv += `"${csvSafe(a.accountNumber)}","${csvSafe(a.borrowerId)}","${csvSafe(a.lenderInstitution)}","${csvSafe(a.accountType)}","${csvSafe(a.originalAmount)}","${csvSafe(a.currentBalance)}","${csvSafe(a.currency)}","${csvSafe(a.status)}","${csvSafe(a.daysInArrears)}","${csvSafe(a.isInterestFree)}","${csvSafe(a.gracePeriodMonths || '')}","${csvSafe(a.restructureCount)}"\n`;
           }
         } else if (type === "borrowers") {
           csv = "Name,Type,National ID,TIN,Gender,City,Region,PEP,Education,Sector\n";
           for (const b of borrowersList) {
             const name = b.type === "individual" ? `${b.firstName} ${b.lastName}` : b.companyName;
-            csv += `"${name}","${b.type}","${b.nationalId}","${b.tinNumber || ''}","${b.gender || ''}","${b.city || ''}","${b.region || ''}","${b.isPep}","${b.educationLevel || ''}","${b.sector || ''}"\n`;
+            csv += `"${csvSafe(name)}","${csvSafe(b.type)}","${csvSafe(b.nationalId)}","${csvSafe(b.tinNumber || '')}","${csvSafe(b.gender || '')}","${csvSafe(b.city || '')}","${csvSafe(b.region || '')}","${csvSafe(b.isPep)}","${csvSafe(b.educationLevel || '')}","${csvSafe(b.sector || '')}"\n`;
           }
         } else if (type === "audit") {
           const auditLogsList = await storage.getAuditLogs(orgId, country, Number.MAX_SAFE_INTEGER);
           csv = "Timestamp,Action,Entity,Entity ID,Details,User ID,IP Address\n";
           for (const log of auditLogsList) {
             const ts = log.createdAt ? new Date(log.createdAt).toISOString() : "";
-            csv += `"${ts}","${log.action}","${log.entity}","${log.entityId || ''}","${(log.details || '').replace(/"/g, '""')}","${log.userId || ''}","${log.ipAddress || ''}"\n`;
+            csv += `"${csvSafe(ts)}","${csvSafe(log.action)}","${csvSafe(log.entity)}","${csvSafe(log.entityId || '')}","${csvSafe((log.details || '').replace(/"/g, '""'))}","${csvSafe(log.userId || '')}","${csvSafe(log.ipAddress || '')}"\n`;
           }
         }
 
