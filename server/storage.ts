@@ -39,6 +39,10 @@ import {
   type DishonouredCheque, type InsertDishonouredCheque,
   type BorrowerAlert, type InsertBorrowerAlert,
   type Guarantor, type InsertGuarantor,
+  identityVerifications, watchlistHits, fraudAlerts,
+  type IdentityVerification, type InsertIdentityVerification,
+  type WatchlistHit, type InsertWatchlistHit,
+  type FraudAlert, type InsertFraudAlert,
 } from "@shared/schema";
 
 export function requireCountryScope(country: string | undefined, methodName: string): void {
@@ -1728,6 +1732,65 @@ export class DatabaseStorage implements IStorage {
   async createBorrowerAlert(alert: InsertBorrowerAlert): Promise<BorrowerAlert> {
     const [created] = await db.insert(borrowerAlerts).values(alert).returning();
     return created;
+  }
+
+  async createIdentityVerification(v: InsertIdentityVerification): Promise<IdentityVerification> {
+    const [created] = await db.insert(identityVerifications).values(v).returning();
+    return created;
+  }
+  async getIdentityVerifications(borrowerId: string): Promise<IdentityVerification[]> {
+    return db.select().from(identityVerifications).where(eq(identityVerifications.borrowerId, borrowerId)).orderBy(desc(identityVerifications.createdAt));
+  }
+  async createWatchlistHit(h: InsertWatchlistHit): Promise<WatchlistHit> {
+    const [created] = await db.insert(watchlistHits).values(h).returning();
+    return created;
+  }
+  async getWatchlistHits(borrowerId: string): Promise<WatchlistHit[]> {
+    return db.select().from(watchlistHits).where(eq(watchlistHits.borrowerId, borrowerId)).orderBy(desc(watchlistHits.createdAt));
+  }
+  async getOpenWatchlistHits(organizationId?: string): Promise<WatchlistHit[]> {
+    const filters: any[] = [eq(watchlistHits.status, "open")];
+    if (organizationId) filters.push(eq(watchlistHits.organizationId, organizationId));
+    return db.select().from(watchlistHits).where(and(...filters)).orderBy(desc(watchlistHits.createdAt)).limit(500);
+  }
+  async getWatchlistHit(id: string): Promise<WatchlistHit | undefined> {
+    const [row] = await db.select().from(watchlistHits).where(eq(watchlistHits.id, id)).limit(1);
+    return row;
+  }
+  async updateWatchlistHit(id: string, data: Partial<InsertWatchlistHit> & { resolvedAt?: Date }): Promise<WatchlistHit | undefined> {
+    const [u] = await db.update(watchlistHits).set(data).where(eq(watchlistHits.id, id)).returning();
+    return u;
+  }
+  async createFraudAlert(a: InsertFraudAlert): Promise<FraudAlert> {
+    const [created] = await db.insert(fraudAlerts).values(a).returning();
+    return created;
+  }
+  async getFraudAlerts(borrowerId: string): Promise<FraudAlert[]> {
+    return db.select().from(fraudAlerts).where(eq(fraudAlerts.borrowerId, borrowerId)).orderBy(desc(fraudAlerts.createdAt));
+  }
+  async getOpenFraudAlerts(organizationId?: string): Promise<FraudAlert[]> {
+    const filters: any[] = [eq(fraudAlerts.status, "open")];
+    if (organizationId) filters.push(eq(fraudAlerts.organizationId, organizationId));
+    return db.select().from(fraudAlerts).where(and(...filters)).orderBy(desc(fraudAlerts.createdAt)).limit(500);
+  }
+  async getFraudAlert(id: string): Promise<FraudAlert | undefined> {
+    const [row] = await db.select().from(fraudAlerts).where(eq(fraudAlerts.id, id)).limit(1);
+    return row;
+  }
+  async updateFraudAlert(id: string, data: Partial<InsertFraudAlert> & { resolvedAt?: Date }): Promise<FraudAlert | undefined> {
+    const [u] = await db.update(fraudAlerts).set(data).where(eq(fraudAlerts.id, id)).returning();
+    return u;
+  }
+  async findBorrowersByNationalId(nationalId: string, excludeId?: string): Promise<Borrower[]> {
+    const encrypted = encryptBorrowerPII({ nationalId } as any).nationalId;
+    const filters: any[] = [or(eq(borrowers.nationalId, nationalId), eq(borrowers.nationalId, encrypted))];
+    if (excludeId) filters.push(sql`${borrowers.id} != ${excludeId}`);
+    const rows = await db.select().from(borrowers).where(and(...filters)).limit(20);
+    return decryptBorrowerArray(rows as Record<string, any>[]) as Borrower[];
+  }
+  async getRecentInquiriesForBorrower(borrowerId: string, days: number): Promise<CreditInquiry[]> {
+    const cutoff = new Date(Date.now() - days * 24 * 3600 * 1000);
+    return db.select().from(creditInquiries).where(and(eq(creditInquiries.borrowerId, borrowerId), gte(creditInquiries.createdAt, cutoff)));
   }
 
   async getTelcoProfiles(organizationId?: string, country?: string, options?: { page?: number; limit?: number; search?: string; provider?: string; kycLevel?: string; accountStatus?: string }): Promise<{ data: TelcoProfile[]; total: number; page: number; totalPages: number }> {

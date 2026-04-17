@@ -580,6 +580,71 @@ export const papssSettlements = pgTable("papss_settlements", {
 export const insertDataSharingAgreementSchema = createInsertSchema(dataSharingAgreements).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertPapssSettlementSchema = createInsertSchema(papssSettlements).omit({ id: true, createdAt: true, updatedAt: true, completedAt: true });
 
+export const verificationMethodEnum = pgEnum("verification_method", ["id_lookup", "biometric_match", "liveness_check", "document_ocr", "phone_match"]);
+export const verificationResultEnum = pgEnum("verification_result", ["passed", "failed", "manual_review", "stub", "error"]);
+export const watchlistSourceEnum = pgEnum("watchlist_source", ["sanctions_un", "sanctions_ofac", "sanctions_eu", "pep", "adverse_media", "internal_block"]);
+export const fraudSeverityEnum = pgEnum("fraud_severity", ["low", "medium", "high", "critical"]);
+export const fraudReviewStatusEnum = pgEnum("fraud_review_status", ["open", "investigating", "resolved", "false_positive", "escalated"]);
+
+export const identityVerifications = pgTable("identity_verifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id),
+  provider: text("provider").notNull(),
+  method: verificationMethodEnum("method").notNull(),
+  result: verificationResultEnum("result").notNull(),
+  confidenceScore: decimal("confidence_score", { precision: 5, scale: 2 }),
+  evidenceHash: text("evidence_hash"),
+  evidenceUrl: text("evidence_url"),
+  rawResponse: text("raw_response"),
+  errorMessage: text("error_message"),
+  verifiedBy: varchar("verified_by").references(() => users.id),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const watchlistHits = pgTable("watchlist_hits", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id),
+  source: watchlistSourceEnum("source").notNull(),
+  provider: text("provider").notNull(),
+  matchScore: decimal("match_score", { precision: 5, scale: 2 }).notNull(),
+  matchedName: text("matched_name"),
+  matchDetails: text("match_details"),
+  status: fraudReviewStatusEnum("status").notNull().default("open"),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewNotes: text("review_notes"),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  resolvedAt: timestamp("resolved_at"),
+});
+
+export const fraudAlerts = pgTable("fraud_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id),
+  ruleCode: text("rule_code").notNull(),
+  ruleDescription: text("rule_description").notNull(),
+  severity: fraudSeverityEnum("severity").notNull(),
+  evidence: text("evidence"),
+  relatedBorrowerIds: text("related_borrower_ids").array().default(sql`ARRAY[]::TEXT[]`),
+  status: fraudReviewStatusEnum("status").notNull().default("open"),
+  assignedTo: varchar("assigned_to").references(() => users.id),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewNotes: text("review_notes"),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  resolvedAt: timestamp("resolved_at"),
+});
+
+export const insertIdentityVerificationSchema = createInsertSchema(identityVerifications).omit({ id: true, createdAt: true });
+export const insertWatchlistHitSchema = createInsertSchema(watchlistHits).omit({ id: true, createdAt: true, resolvedAt: true });
+export const insertFraudAlertSchema = createInsertSchema(fraudAlerts).omit({ id: true, createdAt: true, resolvedAt: true });
+export type InsertIdentityVerification = z.infer<typeof insertIdentityVerificationSchema>;
+export type IdentityVerification = typeof identityVerifications.$inferSelect;
+export type InsertWatchlistHit = z.infer<typeof insertWatchlistHitSchema>;
+export type WatchlistHit = typeof watchlistHits.$inferSelect;
+export type InsertFraudAlert = z.infer<typeof insertFraudAlertSchema>;
+export type FraudAlert = typeof fraudAlerts.$inferSelect;
+
 export const insertBorrowerAlertSchema = createInsertSchema(borrowerAlerts).omit({ id: true, createdAt: true });
 export const insertOrganizationSchema = createInsertSchema(organizations).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertApiKeySchema = createInsertSchema(apiKeys).omit({ id: true, createdAt: true, lastUsedAt: true, revokedAt: true });

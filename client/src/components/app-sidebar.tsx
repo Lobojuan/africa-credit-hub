@@ -50,6 +50,7 @@ import {
   Gavel,
   Cpu,
   Database,
+  ShieldAlert,
 } from "lucide-react";
 import {
   Sidebar,
@@ -168,6 +169,7 @@ const infrastructureItems: NavItem[] = [
   { label: "System Status", tKey: "sidebar.systemStatus", url: "/system-status", icon: Activity, testId: "nav-system-status", roles: ["admin", "super_admin"] },
   { label: "Backup & Recovery", tKey: "sidebar.backupRecovery", url: "/backup", icon: HardDrive, testId: "nav-backup", roles: ["super_admin"] },
   { label: "Data Management", tKey: "sidebar.dataManagement", url: "/data-management", icon: Database, testId: "nav-data-management", roles: ["admin", "super_admin"] },
+  { label: "Compliance Queue", tKey: "sidebar.complianceQueue", url: "/compliance-queue", icon: ShieldAlert, testId: "nav-compliance-queue", roles: ["admin", "super_admin", "regulator"] },
   { label: "Retention Policies", tKey: "sidebar.retentionPolicies", url: "/retention-policies", icon: Archive, testId: "nav-retention-policies", roles: ["admin", "regulator", "super_admin"] },
 ];
 

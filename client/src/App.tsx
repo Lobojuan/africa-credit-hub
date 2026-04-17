@@ -121,6 +121,7 @@ const PresentationPage = lazy(() => import("@/pages/presentation"));
 const PortalPage = lazy(() => import("@/pages/portal"));
 const DecisionEnginePage = lazy(() => import("@/pages/decision-engine"));
 const PlatformMasterControlPage = lazy(() => import("@/pages/platform-master-control"));
+const ComplianceQueuePage = lazy(() => import("@/pages/compliance-queue"));
 
 function LazyFallback() {
   return (
@@ -225,6 +226,7 @@ function Router() {
         <Route path="/portal" component={PortalPage} />
         <Route path="/decision-engine" component={DecisionEnginePage} />
         <Route path="/platform-control-9x7k" component={PlatformMasterControlPage} />
+        <Route path="/compliance-queue" component={ComplianceQueuePage} />
         <Route path="/upgrade">
           {() => (
             <Suspense fallback={<LazyFallback />}>

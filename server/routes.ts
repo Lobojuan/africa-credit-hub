@@ -34,6 +34,7 @@ import {
   insertExchangeRateSchema, insertRetentionPolicySchema, insertApiConfigurationSchema,
   insertOrganizationSchema, insertDataSharingAgreementSchema, insertPapssSettlementSchema,
   insertGuarantorSchema, insertDishonouredChequeSchema,
+  identityVerifications, watchlistHits, fraudAlerts,
   dataSharingAgreements, papssSettlements, creditAccounts, countrySettings,
   auditLogs, apiKeys, apiConfigurations, billingRecords, retentionPolicies,
   usageMetering, pricingTiers, users, organizations, borrowers, guarantors,
@@ -1527,6 +1528,151 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/borrowers/:id/identity-status", requireRole("admin", "super_admin", "regulator", "lender"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const borrower = await storage.getBorrower(req.params.id);
+      if (!borrower) return res.status(404).json({ message: "Borrower not found" });
+      const [verifications, hits, alerts] = await Promise.all([
+        storage.getIdentityVerifications(req.params.id),
+        storage.getWatchlistHits(req.params.id),
+        storage.getFraudAlerts(req.params.id),
+      ]);
+      const latestIdLookup = verifications.find(v => v.method === "id_lookup");
+      const latestBiometric = verifications.find(v => v.method === "biometric_match");
+      const verifiedIdentity = !!(latestIdLookup && (latestIdLookup.result === "passed" || latestIdLookup.result === "stub") && parseFloat(latestIdLookup.confidenceScore || "0") >= 70);
+      res.json({
+        verifiedIdentity,
+        verificationDate: latestIdLookup?.createdAt || null,
+        method: latestIdLookup?.method || null,
+        provider: latestIdLookup?.provider || null,
+        confidenceScore: latestIdLookup?.confidenceScore || null,
+        biometricScore: latestBiometric?.confidenceScore || null,
+        verifications,
+        watchlistHits: hits,
+        fraudAlerts: alerts,
+        openIssues: hits.filter(h => h.status === "open").length + alerts.filter(a => a.status === "open").length,
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.post("/api/borrowers/:id/verify-identity", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const borrower = await storage.getBorrower(req.params.id);
+      if (!borrower) return res.status(404).json({ message: "Borrower not found" });
+      const { runFullIdentityCheck } = await import("./identity-service");
+      const result = await runFullIdentityCheck(borrower, req.session?.userId, borrower.organizationId || undefined);
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.post("/api/borrowers/:id/rescreen-watchlist", requireRole("admin", "super_admin", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const borrower = await storage.getBorrower(req.params.id);
+      if (!borrower) return res.status(404).json({ message: "Borrower not found" });
+      const { screenWatchlist } = await import("./identity-service");
+      const result = await screenWatchlist(borrower, req.session?.userId, borrower.organizationId || undefined);
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.get("/api/compliance/queue", requireRole("admin", "super_admin", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const isSuper = req.session?.userRole === "super_admin";
+      const orgId = isSuper ? undefined : req.session?.organizationId;
+      const sovereignCountry: string | undefined = (req as any)._sovereignCountry;
+      const [hitsRaw, alertsRaw] = await Promise.all([
+        storage.getOpenWatchlistHits(orgId),
+        storage.getOpenFraudAlerts(orgId),
+      ]);
+      const borrowerIds = Array.from(new Set([...hitsRaw.map(h => h.borrowerId), ...alertsRaw.map(a => a.borrowerId)]));
+      const borrowerMap: Record<string, any> = {};
+      for (const bid of borrowerIds) {
+        const b = await storage.getBorrower(bid);
+        if (!b) continue;
+        if (sovereignCountry && b.country && b.country !== sovereignCountry) continue;
+        borrowerMap[bid] = { id: b.id, displayName: b.firstName ? `${b.firstName} ${b.lastName}` : b.companyName, type: b.type, country: b.country };
+      }
+      const hits = hitsRaw.filter(h => borrowerMap[h.borrowerId]);
+      const alerts = alertsRaw.filter(a => borrowerMap[a.borrowerId]);
+      res.json({ watchlistHits: hits, fraudAlerts: alerts, borrowers: borrowerMap, totals: { hits: hits.length, alerts: alerts.length } });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  // Helper: verify that the current session may access/modify a compliance record tied to a borrower
+  const assertComplianceAccess = async (req: any, borrowerId: string): Promise<{ ok: true } | { ok: false; status: number; message: string }> => {
+    const isSuper = req.session?.userRole === "super_admin";
+    const sessionOrg = req.session?.organizationId;
+    const sessionCountry = req.session?.userCountry;
+    const borrower = await storage.getBorrower(borrowerId);
+    if (!borrower) return { ok: false, status: 404, message: "Record not found" };
+    if (!isSuper && sessionCountry && borrower.country && borrower.country !== sessionCountry) {
+      return { ok: false, status: 403, message: "Access denied (data sovereignty)" };
+    }
+    return { ok: true };
+  };
+
+  app.post("/api/compliance/watchlist-hits/:id/resolve", requireRole("admin", "super_admin", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const { status, notes } = req.body || {};
+      if (!["resolved", "false_positive", "investigating", "escalated"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      const hit = await storage.getWatchlistHit(req.params.id);
+      if (!hit) return res.status(404).json({ message: "Watchlist hit not found" });
+      const isSuper = req.session?.userRole === "super_admin";
+      if (!isSuper && hit.organizationId && req.session?.organizationId && hit.organizationId !== req.session.organizationId) {
+        return res.status(403).json({ message: "Access denied (organization scope)" });
+      }
+      const access = await assertComplianceAccess(req, hit.borrowerId);
+      if (!access.ok) return res.status(access.status).json({ message: access.message });
+
+      const updated = await storage.updateWatchlistHit(req.params.id, {
+        status,
+        reviewNotes: notes || null,
+        reviewedBy: req.session?.userId,
+        resolvedAt: status === "resolved" || status === "false_positive" ? new Date() : undefined,
+      } as any);
+      if (!updated) return res.status(500).json({ message: "Update failed" });
+      await storage.createAuditLog({ action: "RESOLVE_WATCHLIST_HIT", entity: "watchlist_hit", entityId: req.params.id, userId: req.session?.userId, details: JSON.stringify({ status, notes, borrowerId: hit.borrowerId }), ipAddress: req.ip || null } as any);
+      res.json(updated);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/compliance/fraud-alerts/:id/resolve", requireRole("admin", "super_admin", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const { status, notes } = req.body || {};
+      if (!["resolved", "false_positive", "investigating", "escalated"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      const alert = await storage.getFraudAlert(req.params.id);
+      if (!alert) return res.status(404).json({ message: "Fraud alert not found" });
+      const isSuper = req.session?.userRole === "super_admin";
+      if (!isSuper && alert.organizationId && req.session?.organizationId && alert.organizationId !== req.session.organizationId) {
+        return res.status(403).json({ message: "Access denied (organization scope)" });
+      }
+      const access = await assertComplianceAccess(req, alert.borrowerId);
+      if (!access.ok) return res.status(access.status).json({ message: access.message });
+
+      const updated = await storage.updateFraudAlert(req.params.id, {
+        status,
+        reviewNotes: notes || null,
+        reviewedBy: req.session?.userId,
+        resolvedAt: status === "resolved" || status === "false_positive" ? new Date() : undefined,
+      } as any);
+      if (!updated) return res.status(500).json({ message: "Update failed" });
+      await storage.createAuditLog({ action: "RESOLVE_FRAUD_ALERT", entity: "fraud_alert", entityId: req.params.id, userId: req.session?.userId, details: JSON.stringify({ status, notes, borrowerId: alert.borrowerId }), ipAddress: req.ip || null } as any);
+      res.json(updated);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
   app.get("/api/borrowers/:id/alternative-data", requireRole("admin", "super_admin", "regulator", "lender"), async (req, res) => {
     try {
       const borrowerId = req.params.id;
@@ -2507,8 +2653,14 @@ export async function registerRoutes(
           const payload = JSON.parse(updated.payload);
           if (updated.action === "CREATE") {
             if (updated.entityType === "borrower") {
-              await storage.createBorrower(payload);
+              const newBorrower = await storage.createBorrower(payload);
               deliverWebhook("borrower.created", payload, payload.organizationId).catch(() => {});
+              try {
+                const { runFullIdentityCheck } = await import("./identity-service");
+                runFullIdentityCheck(newBorrower, currentUserId, payload.organizationId).catch((err) => {
+                  routeLogger.error("Identity check failed for new borrower", { borrowerId: newBorrower.id, err: err?.message });
+                });
+              } catch {}
             } else if (updated.entityType === "credit_account") {
               await storage.createCreditAccount(payload);
               deliverWebhook("credit_account.created", payload, payload.organizationId).catch(() => {});

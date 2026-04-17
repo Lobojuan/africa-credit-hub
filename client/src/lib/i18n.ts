@@ -66,6 +66,7 @@ const en = {
     creditData: "Credit Data",
     reportsScoring: "Reports & Scoring",
     dataManagement: "Data Management",
+    complianceQueue: "Compliance Queue",
     workflows: "Workflows",
     intelligence: "Intelligence",
     apiIntegrations: "API & Integrations",

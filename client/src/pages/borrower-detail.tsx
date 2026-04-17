@@ -232,6 +232,38 @@ export default function BorrowerDetailPage() {
     enabled: !!borrowerId,
   });
 
+  const { data: identityStatus } = useQuery<{
+    verifiedIdentity: boolean;
+    verificationDate: string | null;
+    method: string | null;
+    provider: string | null;
+    confidenceScore: string | null;
+    biometricScore: string | null;
+    openIssues: number;
+    watchlistHits: any[];
+    fraudAlerts: any[];
+  }>({
+    queryKey: ['/api/borrowers', borrowerId, 'identity-status'],
+    queryFn: async () => {
+      const res = await fetch(`/api/borrowers/${borrowerId}/identity-status`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch");
+      return res.json();
+    },
+    enabled: !!borrowerId,
+  });
+
+  const verifyIdentityMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/borrowers/${borrowerId}/verify-identity`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/borrowers', borrowerId, 'identity-status'] });
+      toast({ title: "Identity verification complete" });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
   const { data: fraudRisk } = useQuery<{
     riskScore: number;
     riskLevel: string;
@@ -359,6 +391,18 @@ export default function BorrowerDetailPage() {
             {t("borrowerDetail.pepFlag")}
           </Badge>
         )}
+        {identityStatus?.verifiedIdentity && (
+          <Badge variant="default" className="ml-1 bg-emerald-600 hover:bg-emerald-700" data-testid="badge-verified-identity">
+            <ShieldCheck className="w-3 h-3 mr-1" />
+            Verified Identity
+          </Badge>
+        )}
+        {identityStatus && identityStatus.openIssues > 0 && (
+          <Badge variant="destructive" className="ml-1" data-testid="badge-open-compliance-issues">
+            <ShieldAlert className="w-3 h-3 mr-1" />
+            {identityStatus.openIssues} compliance issue{identityStatus.openIssues !== 1 ? "s" : ""}
+          </Badge>
+        )}
         <div className="ml-auto flex gap-2">
           <Button
             size="sm"
@@ -369,6 +413,16 @@ export default function BorrowerDetailPage() {
           >
             <IdCard className="w-4 h-4 mr-2" />
             {uploadDocMutation.isPending ? t("borrowerDetail.uploading") : t("borrowerDetail.uploadIdDoc")}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => verifyIdentityMutation.mutate()}
+            disabled={verifyIdentityMutation.isPending}
+            data-testid="button-verify-identity"
+          >
+            {verifyIdentityMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ShieldCheck className="w-4 h-4 mr-2" />}
+            {verifyIdentityMutation.isPending ? "Verifying..." : "Verify Identity"}
           </Button>
           <Button
             size="sm"
