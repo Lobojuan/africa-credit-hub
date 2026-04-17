@@ -1364,3 +1364,84 @@ export const platformDeployments = pgTable("platform_deployments", {
 export const insertPlatformDeploymentSchema = createInsertSchema(platformDeployments).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertPlatformDeployment = z.infer<typeof insertPlatformDeploymentSchema>;
 export type PlatformDeployment = typeof platformDeployments.$inferSelect;
+
+export const incomeSourceTypeEnum = pgEnum("income_source_type", [
+  "salary", "business_income", "government_benefit", "remittance", "rental",
+  "investment", "pension", "freelance", "momo_inflow", "other",
+]);
+
+export const incomeSources = pgTable("income_sources", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id),
+  sourceType: incomeSourceTypeEnum("source_type").notNull(),
+  description: text("description"),
+  amountMonthly: decimal("amount_monthly", { precision: 15, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("GHS"),
+  frequency: text("frequency").notNull().default("monthly"),
+  confidence: decimal("confidence", { precision: 5, scale: 2 }).notNull().default("0"),
+  evidenceType: text("evidence_type"),
+  evidenceRef: text("evidence_ref"),
+  detectedFrom: text("detected_from"),
+  verifiedAt: timestamp("verified_at"),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertIncomeSourceSchema = createInsertSchema(incomeSources).omit({ id: true, createdAt: true });
+export type InsertIncomeSource = z.infer<typeof insertIncomeSourceSchema>;
+export type IncomeSource = typeof incomeSources.$inferSelect;
+
+export const expenseCategoryEnum = pgEnum("expense_category", [
+  "rent", "utilities", "food", "transport", "debt_servicing", "education",
+  "healthcare", "telecom", "discretionary", "transfers_out", "other",
+]);
+
+export const expenseCategorisations = pgTable("expense_categorisations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id),
+  category: expenseCategoryEnum("category").notNull(),
+  amountMonthly: decimal("amount_monthly", { precision: 15, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("GHS"),
+  periodDays: integer("period_days").notNull().default(90),
+  source: text("source").notNull(),
+  detail: text("detail"),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertExpenseCategorisationSchema = createInsertSchema(expenseCategorisations).omit({ id: true, createdAt: true });
+export type InsertExpenseCategorisation = z.infer<typeof insertExpenseCategorisationSchema>;
+export type ExpenseCategorisation = typeof expenseCategorisations.$inferSelect;
+
+export const affordabilityDataSourceEnum = pgEnum("affordability_data_source", [
+  "open_banking", "bank_statement_pdf", "momo_only", "self_declared", "hybrid",
+]);
+
+export const affordabilityAssessments = pgTable("affordability_assessments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id),
+  country: text("country"),
+  currency: text("currency").notNull().default("GHS"),
+  dataSource: affordabilityDataSourceEnum("data_source").notNull(),
+  periodDays: integer("period_days").notNull().default(90),
+  grossIncomeMonthly: decimal("gross_income_monthly", { precision: 15, scale: 2 }).notNull().default("0"),
+  totalExpensesMonthly: decimal("total_expenses_monthly", { precision: 15, scale: 2 }).notNull().default("0"),
+  existingDebtServiceMonthly: decimal("existing_debt_service_monthly", { precision: 15, scale: 2 }).notNull().default("0"),
+  disposableIncomeMonthly: decimal("disposable_income_monthly", { precision: 15, scale: 2 }).notNull().default("0"),
+  debtToIncomeRatio: decimal("debt_to_income_ratio", { precision: 6, scale: 4 }).notNull().default("0"),
+  maxRecommendedNewCredit: decimal("max_recommended_new_credit", { precision: 15, scale: 2 }).notNull().default("0"),
+  maxRecommendedMonthlyRepayment: decimal("max_recommended_monthly_repayment", { precision: 15, scale: 2 }).notNull().default("0"),
+  affordabilityRating: text("affordability_rating").notNull().default("unknown"),
+  confidenceLabel: text("confidence_label").notNull().default("low"),
+  regulatoryRule: text("regulatory_rule"),
+  inputsSnapshot: jsonb("inputs_snapshot"),
+  outputsSnapshot: jsonb("outputs_snapshot"),
+  computedBy: varchar("computed_by").references(() => users.id),
+  expiresAt: timestamp("expires_at"),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertAffordabilityAssessmentSchema = createInsertSchema(affordabilityAssessments).omit({ id: true, createdAt: true });
+export type InsertAffordabilityAssessment = z.infer<typeof insertAffordabilityAssessmentSchema>;
+export type AffordabilityAssessment = typeof affordabilityAssessments.$inferSelect;

@@ -279,6 +279,32 @@ export default function BorrowerDetailPage() {
     enabled: !!borrowerId,
   });
 
+  const { data: affordability, refetch: refetchAffordability } = useQuery<{
+    assessment: any | null;
+    incomeSources: any[];
+    expenses: any[];
+  }>({
+    queryKey: ['/api/borrowers', borrowerId, 'affordability'],
+    queryFn: async () => {
+      const res = await fetch(`/api/borrowers/${borrowerId}/affordability`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch affordability");
+      return res.json();
+    },
+    enabled: !!borrowerId,
+  });
+
+  const affordabilityMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", `/api/borrowers/${borrowerId}/affordability`, { source: "auto" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/borrowers', borrowerId, 'affordability'] });
+      refetchAffordability();
+      toast({ title: "Affordability recomputed" });
+    },
+    onError: (e: any) => toast({ title: "Affordability failed", description: e?.message, variant: "destructive" }),
+  });
+
   const { data: relatedBorrowers } = useQuery<Borrower[]>({
     queryKey: ['/api/borrowers', borrowerId, 'related'],
     queryFn: async () => {
@@ -562,6 +588,126 @@ export default function BorrowerDetailPage() {
       {fraudRisk && (
         <FraudRiskIndicator data={fraudRisk as any} />
       )}
+
+      <Card className="border-emerald-200 dark:border-emerald-800 bg-gradient-to-br from-emerald-50/50 to-teal-50/50 dark:from-emerald-950/20 dark:to-teal-950/20" data-testid="card-affordability">
+        <CardContent className="p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Banknote className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              <span className="font-semibold text-sm">Affordability & Income Verification</span>
+              {affordability?.assessment && (
+                <Badge variant="outline" className="text-[10px]" data-testid="badge-affordability-rating">
+                  {String(affordability.assessment.affordabilityRating || "unknown").toUpperCase()} · {String(affordability.assessment.confidenceLabel || "low").toUpperCase()} CONF
+                </Badge>
+              )}
+            </div>
+            <Button
+              size="sm" variant="outline"
+              onClick={() => affordabilityMutation.mutate()}
+              disabled={affordabilityMutation.isPending}
+              data-testid="button-recompute-affordability"
+            >
+              {affordabilityMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <TrendingUp className="w-4 h-4 mr-2" />}
+              {affordability?.assessment ? "Recompute" : "Compute"}
+            </Button>
+          </div>
+
+          {!affordability?.assessment && (
+            <p className="text-xs text-muted-foreground" data-testid="text-affordability-empty">
+              No affordability assessment yet. Compute one using open banking, MoMo, or self-declared income.
+            </p>
+          )}
+
+          {affordability?.assessment && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div>
+                  <p className="text-[10px] uppercase text-muted-foreground">Gross Income / mo</p>
+                  <p className="text-lg font-bold" data-testid="text-gross-income">
+                    {formatCurrency(parseFloat(affordability.assessment.grossIncomeMonthly), affordability.assessment.currency)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase text-muted-foreground">Expenses / mo</p>
+                  <p className="text-lg font-bold" data-testid="text-total-expenses">
+                    {formatCurrency(parseFloat(affordability.assessment.totalExpensesMonthly), affordability.assessment.currency)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase text-muted-foreground">Existing Debt Service</p>
+                  <p className="text-lg font-bold" data-testid="text-debt-service">
+                    {formatCurrency(parseFloat(affordability.assessment.existingDebtServiceMonthly), affordability.assessment.currency)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase text-muted-foreground">Disposable / mo</p>
+                  <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400" data-testid="text-disposable-income">
+                    {formatCurrency(parseFloat(affordability.assessment.disposableIncomeMonthly), affordability.assessment.currency)}
+                  </p>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg bg-background/60 border border-border/40">
+                  <p className="text-[10px] uppercase text-muted-foreground">Max Recommended New Credit</p>
+                  <p className="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300" data-testid="text-max-credit">
+                    {formatCurrency(parseFloat(affordability.assessment.maxRecommendedNewCredit), affordability.assessment.currency)}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    @ {formatCurrency(parseFloat(affordability.assessment.maxRecommendedMonthlyRepayment), affordability.assessment.currency)} / month
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg bg-background/60 border border-border/40">
+                  <p className="text-[10px] uppercase text-muted-foreground">Debt-to-Income Ratio</p>
+                  <p className="text-2xl font-extrabold" data-testid="text-dti-ratio">
+                    {(parseFloat(affordability.assessment.debtToIncomeRatio) * 100).toFixed(1)}%
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-1">Source: {affordability.assessment.dataSource}</p>
+                </div>
+              </div>
+
+              <div className="text-[11px] text-muted-foreground italic" data-testid="text-regulatory-rule">
+                {affordability.assessment.regulatoryRule}
+              </div>
+
+              {affordability.incomeSources && affordability.incomeSources.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold mb-2 uppercase tracking-wide text-muted-foreground">Income Sources</p>
+                  <div className="space-y-1">
+                    {affordability.incomeSources.map((s: any) => (
+                      <div key={s.id} className="flex items-center justify-between text-xs" data-testid={`row-income-${s.id}`}>
+                        <span className="flex items-center gap-2">
+                          <Badge variant="secondary" className="text-[9px]">{s.sourceType}</Badge>
+                          <span className="text-foreground">{s.description}</span>
+                        </span>
+                        <span className="font-mono font-medium">
+                          {formatCurrency(parseFloat(s.amountMonthly), s.currency)} <span className="text-muted-foreground">({Math.round(parseFloat(s.confidence))}%)</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {affordability.expenses && affordability.expenses.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold mb-2 uppercase tracking-wide text-muted-foreground">Expense Categories</p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-1">
+                    {affordability.expenses.map((e: any) => (
+                      <div key={e.id} className="flex items-center justify-between text-xs px-2 py-1 rounded bg-background/40" data-testid={`row-expense-${e.id}`}>
+                        <span className="capitalize text-muted-foreground">{e.category.replace(/_/g, " ")}</span>
+                        <span className="font-mono font-medium">{formatCurrency(parseFloat(e.amountMonthly), e.currency)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {summary.scoreFactors && summary.scoreFactors.length > 0 && (
         <Card>

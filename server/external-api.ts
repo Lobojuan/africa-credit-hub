@@ -733,4 +733,43 @@ export function registerExternalApi(app: Express) {
       res.status(500).json(wrapError("Score and decide failed", e.message));
     }
   });
+
+  app.post("/api/external/v1/borrowers/:id/affordability", requireApiKey, requirePermission("read"), async (req: Request, res: Response) => {
+    try {
+      const borrower = await storage.getBorrower(req.params.id);
+      if (!borrower) return res.status(404).json(wrapError("Borrower not found"));
+      const { computeAffordability } = await import("./affordability-service");
+      const { source, periodDays, useLlmFallback, provider, accountId } = req.body || {};
+      const out = await computeAffordability(borrower, {
+        source: source || "auto",
+        periodDays: periodDays ? Number(periodDays) : undefined,
+        useLlmFallback: !!useLlmFallback,
+        openBankingProvider: provider,
+        openBankingAccountId: accountId,
+      });
+      res.json(wrapResponse({
+        borrowerId: borrower.id,
+        country: out.result.country,
+        currency: out.result.currency,
+        dataSource: out.result.dataSource,
+        grossIncomeMonthly: out.result.grossIncomeMonthly,
+        totalExpensesMonthly: out.result.totalExpensesMonthly,
+        existingDebtServiceMonthly: out.result.existingDebtServiceMonthly,
+        disposableIncomeMonthly: out.result.disposableIncomeMonthly,
+        debtToIncomeRatio: out.result.debtToIncomeRatio,
+        maxRecommendedNewCredit: out.result.maxRecommendedNewCredit,
+        maxRecommendedMonthlyRepayment: out.result.maxRecommendedMonthlyRepayment,
+        affordabilityRating: out.result.affordabilityRating,
+        confidenceLabel: out.result.confidenceLabel,
+        regulatoryRule: out.result.regulatoryRule,
+        incomeSources: out.result.incomeSources,
+        expenses: out.result.expenses,
+        notes: out.result.notes,
+        assessmentId: out.assessment.id,
+      }, "Affordability computed"));
+    } catch (e: any) {
+      console.error("[ExternalAPI] Affordability error:", e.message);
+      res.status(500).json(wrapError("Affordability computation failed", e.message));
+    }
+  });
 }

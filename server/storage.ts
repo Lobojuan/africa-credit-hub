@@ -43,6 +43,10 @@ import {
   type IdentityVerification, type InsertIdentityVerification,
   type WatchlistHit, type InsertWatchlistHit,
   type FraudAlert, type InsertFraudAlert,
+  incomeSources, expenseCategorisations, affordabilityAssessments,
+  type IncomeSource, type InsertIncomeSource,
+  type ExpenseCategorisation, type InsertExpenseCategorisation,
+  type AffordabilityAssessment, type InsertAffordabilityAssessment,
 } from "@shared/schema";
 
 export function requireCountryScope(country: string | undefined, methodName: string): void {
@@ -2177,6 +2181,38 @@ export class DatabaseStorage implements IStorage {
       byMethod[r.method] = (byMethod[r.method] || 0) + 1;
     }
     return { total: rows.length, active, revoked, byMethod };
+  }
+
+  async getIncomeSourcesByBorrower(borrowerId: string): Promise<IncomeSource[]> {
+    return await db.select().from(incomeSources).where(eq(incomeSources.borrowerId, borrowerId)).orderBy(desc(incomeSources.createdAt));
+  }
+  async createIncomeSource(source: InsertIncomeSource): Promise<IncomeSource> {
+    const [created] = await db.insert(incomeSources).values(source).returning();
+    return created;
+  }
+  async deleteIncomeSourcesByBorrower(borrowerId: string): Promise<void> {
+    await db.delete(incomeSources).where(eq(incomeSources.borrowerId, borrowerId));
+  }
+  async getExpenseCategorisationsByBorrower(borrowerId: string): Promise<ExpenseCategorisation[]> {
+    return await db.select().from(expenseCategorisations).where(eq(expenseCategorisations.borrowerId, borrowerId)).orderBy(desc(expenseCategorisations.createdAt));
+  }
+  async createExpenseCategorisation(exp: InsertExpenseCategorisation): Promise<ExpenseCategorisation> {
+    const [created] = await db.insert(expenseCategorisations).values(exp).returning();
+    return created;
+  }
+  async deleteExpenseCategorisationsByBorrower(borrowerId: string): Promise<void> {
+    await db.delete(expenseCategorisations).where(eq(expenseCategorisations.borrowerId, borrowerId));
+  }
+  async getAffordabilityAssessmentsByBorrower(borrowerId: string): Promise<AffordabilityAssessment[]> {
+    return await db.select().from(affordabilityAssessments).where(eq(affordabilityAssessments.borrowerId, borrowerId)).orderBy(desc(affordabilityAssessments.createdAt));
+  }
+  async getLatestAffordabilityAssessment(borrowerId: string): Promise<AffordabilityAssessment | undefined> {
+    const [row] = await db.select().from(affordabilityAssessments).where(eq(affordabilityAssessments.borrowerId, borrowerId)).orderBy(desc(affordabilityAssessments.createdAt)).limit(1);
+    return row;
+  }
+  async createAffordabilityAssessment(a: InsertAffordabilityAssessment): Promise<AffordabilityAssessment> {
+    const [created] = await db.insert(affordabilityAssessments).values(a).returning();
+    return created;
   }
 }
 

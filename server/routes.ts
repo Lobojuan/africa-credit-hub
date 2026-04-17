@@ -1581,6 +1581,94 @@ export async function registerRoutes(
     }
   });
 
+  // ==================== AFFORDABILITY ====================
+
+  app.get("/api/borrowers/:id/affordability", requireRole("admin", "super_admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const borrower = await storage.getBorrower(req.params.id);
+      if (!borrower) return res.status(404).json({ message: "Borrower not found" });
+      const latest = await storage.getLatestAffordabilityAssessment(req.params.id);
+      const incomeSources = await storage.getIncomeSourcesByBorrower(req.params.id);
+      const expenses = await storage.getExpenseCategorisationsByBorrower(req.params.id);
+      res.json({ assessment: latest || null, incomeSources, expenses });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.post("/api/borrowers/:id/affordability", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const borrower = await storage.getBorrower(req.params.id);
+      if (!borrower) return res.status(404).json({ message: "Borrower not found" });
+      const { computeAffordability } = await import("./affordability-service");
+      const { source, periodDays, useLlmFallback } = req.body || {};
+      const out = await computeAffordability(borrower, {
+        source: source || "auto",
+        periodDays: periodDays ? Number(periodDays) : undefined,
+        useLlmFallback: !!useLlmFallback,
+        computedBy: req.session?.userId,
+      });
+      await storage.createAuditLog({
+        action: "COMPUTE_AFFORDABILITY", entity: "borrower", entityId: req.params.id, userId: req.session?.userId,
+        details: `Affordability computed (${out.result.dataSource}): gross=${out.result.grossIncomeMonthly} ${out.result.currency}, max=${out.result.maxRecommendedNewCredit}`,
+        ipAddress: req.ip || null,
+      });
+      res.json(out);
+    } catch (e: any) {
+      console.error("[affordability]", e);
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.post("/api/borrowers/:id/affordability/bank-statement", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, memoryUploadDoc.single("statement"), async (req, res) => {
+    try {
+      const borrower = await storage.getBorrower(req.params.id);
+      if (!borrower) return res.status(404).json({ message: "Borrower not found" });
+      if (!req.file) return res.status(400).json({ message: "No statement uploaded" });
+      const { computeAffordability } = await import("./affordability-service");
+      const out = await computeAffordability(borrower, {
+        source: "bank_statement_pdf",
+        pdfBuffer: req.file.buffer,
+        computedBy: req.session?.userId,
+        useLlmFallback: true,
+      });
+      await storage.createAuditLog({
+        action: "AFFORDABILITY_PDF_UPLOAD", entity: "borrower", entityId: req.params.id, userId: req.session?.userId,
+        details: `Bank statement parsed (${req.file.originalname}, ${req.file.size}B); gross=${out.result.grossIncomeMonthly}`,
+        ipAddress: req.ip || null,
+      });
+      res.json(out);
+    } catch (e: any) {
+      console.error("[affordability/pdf]", e);
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.post("/api/borrowers/:id/affordability/connect-bank", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const borrower = await storage.getBorrower(req.params.id);
+      if (!borrower) return res.status(404).json({ message: "Borrower not found" });
+      const { computeAffordability } = await import("./affordability-service");
+      const { provider, accountId, periodDays } = req.body || {};
+      const out = await computeAffordability(borrower, {
+        source: "open_banking",
+        openBankingProvider: provider,
+        openBankingAccountId: accountId,
+        periodDays: periodDays ? Number(periodDays) : undefined,
+        computedBy: req.session?.userId,
+      });
+      await storage.createAuditLog({
+        action: "AFFORDABILITY_OPEN_BANKING", entity: "borrower", entityId: req.params.id, userId: req.session?.userId,
+        details: `Open banking (${provider || "auto"}); gross=${out.result.grossIncomeMonthly}`,
+        ipAddress: req.ip || null,
+      });
+      res.json(out);
+    } catch (e: any) {
+      console.error("[affordability/connect-bank]", e);
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
   app.get("/api/compliance/queue", requireRole("admin", "super_admin", "regulator"), enforceDataSovereignty, async (req, res) => {
     try {
       const isSuper = req.session?.userRole === "super_admin";
