@@ -7,6 +7,7 @@ import {
   paymentHistory, guarantors, courtJudgments, dishonouredCheques,
   auditLogs, retentionPolicies, consumerAccounts, alternativeData,
   creditReportLogs, creditScoreHistory,
+  identityVerifications, watchlistHits, fraudAlerts,
 } from "@shared/schema";
 import type {
   Borrower, CreditAccount, CreditInquiry, Dispute,
@@ -69,6 +70,9 @@ export interface PortabilityBorrower {
   courtJudgments: CourtJudgment[];
   dishonouredCheques: DishonouredCheque[];
   auditTrail: Array<{ action: string; entity: string; details: string | null; createdAt: Date | null }>;
+  identityVerifications: any[];
+  watchlistHits: any[];
+  fraudAlerts: any[];
 }
 
 export interface ExportAuditEntry {
@@ -185,13 +189,16 @@ export async function streamPortabilityExport(
     const b = allBorrowers[idx];
     const decrypted = decryptBorrowerPII(b as Record<string, unknown>);
 
-    const [accts, inqs, disps, judgs, cheqs, audits] = await Promise.all([
+    const [accts, inqs, disps, judgs, cheqs, audits, idVer, wlHits, frAlerts] = await Promise.all([
       db.select().from(creditAccounts).where(eq(creditAccounts.borrowerId, b.id)),
       db.select().from(creditInquiries).where(eq(creditInquiries.borrowerId, b.id)),
       db.select().from(disputes).where(eq(disputes.borrowerId, b.id)),
       db.select().from(courtJudgments).where(eq(courtJudgments.borrowerId, b.id)),
       db.select().from(dishonouredCheques).where(eq(dishonouredCheques.borrowerId, b.id)),
       db.select().from(auditLogs).where(eq(auditLogs.entityId, b.id)),
+      db.select().from(identityVerifications).where(eq(identityVerifications.borrowerId, b.id)).catch(() => []),
+      db.select().from(watchlistHits).where(eq(watchlistHits.borrowerId, b.id)).catch(() => []),
+      db.select().from(fraudAlerts).where(eq(fraudAlerts.borrowerId, b.id)).catch(() => []),
     ]);
 
     const accountIds = accts.map(a => a.id);
@@ -227,11 +234,14 @@ export async function streamPortabilityExport(
       courtJudgments: judgs,
       dishonouredCheques: cheqs,
       auditTrail: audits.map(a => ({ action: a.action, entity: a.entity, details: a.details, createdAt: a.createdAt })),
+      identityVerifications: idVer,
+      watchlistHits: wlHits,
+      fraudAlerts: frAlerts,
     };
 
     if (idx > 0) write(",");
     write(JSON.stringify(borrowerObj));
-    totalRecords += 1 + accts.length + payments.length + guars.length + inqs.length + disps.length + judgs.length + cheqs.length;
+    totalRecords += 1 + accts.length + payments.length + guars.length + inqs.length + disps.length + judgs.length + cheqs.length + idVer.length + wlHits.length + frAlerts.length;
 
     if (onProgress) onProgress(idx + 1, allBorrowers.length);
   }
@@ -270,16 +280,22 @@ export async function buildFullPortabilityExport(
   const allJudgments: CourtJudgment[] = [];
   const allCheques: DishonouredCheque[] = [];
   const allAuditEntries: AuditLog[] = [];
+  const allIdentityVerifications: any[] = [];
+  const allWatchlistHits: any[] = [];
+  const allFraudAlerts: any[] = [];
 
   for (let i = 0; i < borrowerIds.length; i += batchSize) {
     const batch = borrowerIds.slice(i, i + batchSize);
-    const [accts, inqs, disps, judgs, cheqs, audits] = await Promise.all([
+    const [accts, inqs, disps, judgs, cheqs, audits, idVer, wlHits, frAlerts] = await Promise.all([
       db.select().from(creditAccounts).where(inArray(creditAccounts.borrowerId, batch)),
       db.select().from(creditInquiries).where(inArray(creditInquiries.borrowerId, batch)),
       db.select().from(disputes).where(inArray(disputes.borrowerId, batch)),
       db.select().from(courtJudgments).where(inArray(courtJudgments.borrowerId, batch)),
       db.select().from(dishonouredCheques).where(inArray(dishonouredCheques.borrowerId, batch)),
       db.select().from(auditLogs).where(inArray(auditLogs.entityId, batch)),
+      db.select().from(identityVerifications).where(inArray(identityVerifications.borrowerId, batch)).catch(() => [] as any[]),
+      db.select().from(watchlistHits).where(inArray(watchlistHits.borrowerId, batch)).catch(() => [] as any[]),
+      db.select().from(fraudAlerts).where(inArray(fraudAlerts.borrowerId, batch)).catch(() => [] as any[]),
     ]);
     allAccounts.push(...accts);
     allInquiries.push(...inqs);
@@ -287,7 +303,17 @@ export async function buildFullPortabilityExport(
     allJudgments.push(...judgs);
     allCheques.push(...cheqs);
     allAuditEntries.push(...audits);
+    allIdentityVerifications.push(...idVer);
+    allWatchlistHits.push(...wlHits);
+    allFraudAlerts.push(...frAlerts);
   }
+
+  const idVerByBorrower = new Map<string, any[]>();
+  for (const v of allIdentityVerifications) { (idVerByBorrower.get(v.borrowerId) || (idVerByBorrower.set(v.borrowerId, []), idVerByBorrower.get(v.borrowerId)!)).push(v); }
+  const wlByBorrower = new Map<string, any[]>();
+  for (const w of allWatchlistHits) { (wlByBorrower.get(w.borrowerId) || (wlByBorrower.set(w.borrowerId, []), wlByBorrower.get(w.borrowerId)!)).push(w); }
+  const frByBorrower = new Map<string, any[]>();
+  for (const f of allFraudAlerts) { (frByBorrower.get(f.borrowerId) || (frByBorrower.set(f.borrowerId, []), frByBorrower.get(f.borrowerId)!)).push(f); }
 
   const accountIds = allAccounts.map(a => a.id);
   let allPayments: PaymentHistory[] = [];
@@ -358,6 +384,9 @@ export async function buildFullPortabilityExport(
       auditTrail: (auditsByBorrower.get(b.id) || []).map(a => ({
         action: a.action, entity: a.entity, details: a.details, createdAt: a.createdAt,
       })),
+      identityVerifications: idVerByBorrower.get(b.id) || [],
+      watchlistHits: wlByBorrower.get(b.id) || [],
+      fraudAlerts: frByBorrower.get(b.id) || [],
     };
   });
 
@@ -580,6 +609,9 @@ export async function cascadeDeleteBorrower(borrowerId: string): Promise<{
   try { const r = await db.execute(sql`DELETE FROM borrower_alerts WHERE borrower_id = ${borrowerId}`); deletedAlerts = (r as any).rowCount || 0; } catch (e: any) { console.warn("[Erasure] borrower_alerts cleanup:", e.message); }
   try { const r = await db.execute(sql`DELETE FROM consent_records WHERE borrower_id = ${borrowerId}`); deletedConsent = (r as any).rowCount || 0; } catch (e: any) { console.warn("[Erasure] consent_records cleanup:", e.message); }
   try { const r = await db.execute(sql`DELETE FROM credit_report_logs WHERE borrower_id = ${borrowerId}`); deletedReportLogs = (r as any).rowCount || 0; } catch (e: any) { console.warn("[Erasure] credit_report_logs cleanup:", e.message); }
+  try { await db.execute(sql`DELETE FROM identity_verifications WHERE borrower_id = ${borrowerId}`); } catch (e: any) { console.warn("[Erasure] identity_verifications cleanup:", e.message); }
+  try { await db.execute(sql`DELETE FROM watchlist_hits WHERE borrower_id = ${borrowerId}`); } catch (e: any) { console.warn("[Erasure] watchlist_hits cleanup:", e.message); }
+  try { await db.execute(sql`DELETE FROM fraud_alerts WHERE borrower_id = ${borrowerId}`); } catch (e: any) { console.warn("[Erasure] fraud_alerts cleanup:", e.message); }
 
   const [bor] = await db.select().from(borrowers).where(eq(borrowers.id, borrowerId)).limit(1);
   if (bor?.nationalId) {
