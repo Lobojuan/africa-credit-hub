@@ -144,5 +144,83 @@ export async function migrateNewTables() {
     console.log('Seeded', apis.length, 'API configurations');
   }
 
+  // Identity & Fraud module (Task #27) — idempotent DDL so production
+  // environments without manual db:push still get the new tables/enums.
+  // Names match shared/schema.ts exactly (verification_method, verification_result,
+  // watchlist_source, fraud_severity, fraud_review_status).
+  await db.execute(sql`DO $$ BEGIN
+    CREATE TYPE verification_method AS ENUM ('id_lookup','biometric_match','liveness_check','document_ocr','phone_match');
+  EXCEPTION WHEN duplicate_object THEN NULL; END $$`);
+  await db.execute(sql`DO $$ BEGIN
+    CREATE TYPE verification_result AS ENUM ('passed','failed','manual_review','stub','error');
+  EXCEPTION WHEN duplicate_object THEN NULL; END $$`);
+  await db.execute(sql`DO $$ BEGIN
+    CREATE TYPE watchlist_source AS ENUM ('sanctions_un','sanctions_ofac','sanctions_eu','pep','adverse_media','internal_block');
+  EXCEPTION WHEN duplicate_object THEN NULL; END $$`);
+  await db.execute(sql`DO $$ BEGIN
+    CREATE TYPE fraud_severity AS ENUM ('low','medium','high','critical');
+  EXCEPTION WHEN duplicate_object THEN NULL; END $$`);
+  await db.execute(sql`DO $$ BEGIN
+    CREATE TYPE fraud_review_status AS ENUM ('open','investigating','resolved','false_positive','escalated');
+  EXCEPTION WHEN duplicate_object THEN NULL; END $$`);
+
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS identity_verifications (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    borrower_id varchar NOT NULL REFERENCES borrowers(id),
+    provider text NOT NULL,
+    method verification_method NOT NULL,
+    result verification_result NOT NULL,
+    confidence_score decimal(5,2),
+    evidence_hash text,
+    evidence_url text,
+    raw_response text,
+    error_message text,
+    verified_by varchar REFERENCES users(id),
+    organization_id varchar REFERENCES organizations(id),
+    created_at timestamp DEFAULT now()
+  )`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_identity_verifications_borrower ON identity_verifications(borrower_id)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_identity_verifications_result ON identity_verifications(result)`);
+
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS watchlist_hits (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    borrower_id varchar NOT NULL REFERENCES borrowers(id),
+    source watchlist_source NOT NULL,
+    provider text NOT NULL,
+    match_score decimal(5,2) NOT NULL,
+    matched_name text,
+    match_details text,
+    status fraud_review_status NOT NULL DEFAULT 'open',
+    reviewed_by varchar REFERENCES users(id),
+    review_notes text,
+    organization_id varchar REFERENCES organizations(id),
+    created_at timestamp DEFAULT now(),
+    resolved_at timestamp
+  )`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_watchlist_hits_borrower ON watchlist_hits(borrower_id)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_watchlist_hits_status ON watchlist_hits(status)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_watchlist_hits_org ON watchlist_hits(organization_id)`);
+
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS fraud_alerts (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    borrower_id varchar NOT NULL REFERENCES borrowers(id),
+    rule_code text NOT NULL,
+    rule_description text NOT NULL,
+    severity fraud_severity NOT NULL,
+    evidence text,
+    related_borrower_ids text[] DEFAULT ARRAY[]::TEXT[],
+    status fraud_review_status NOT NULL DEFAULT 'open',
+    assigned_to varchar REFERENCES users(id),
+    reviewed_by varchar REFERENCES users(id),
+    review_notes text,
+    organization_id varchar REFERENCES organizations(id),
+    created_at timestamp DEFAULT now(),
+    resolved_at timestamp
+  )`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_fraud_alerts_borrower ON fraud_alerts(borrower_id)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_fraud_alerts_status ON fraud_alerts(status)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_fraud_alerts_org ON fraud_alerts(organization_id)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_fraud_alerts_assigned ON fraud_alerts(assigned_to)`);
+
   console.log('[NewTables] Migration complete');
 }

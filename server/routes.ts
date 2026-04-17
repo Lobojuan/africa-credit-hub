@@ -1673,6 +1673,40 @@ export async function registerRoutes(
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
+  // Assign a fraud alert to a reviewer (assignment workflow)
+  app.post("/api/compliance/fraud-alerts/:id/assign", requireRole("admin", "super_admin", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const { assigneeUserId } = req.body || {};
+      if (!assigneeUserId || typeof assigneeUserId !== "string") {
+        return res.status(400).json({ message: "assigneeUserId is required" });
+      }
+      const assignee = await storage.getUser(assigneeUserId);
+      if (!assignee) return res.status(404).json({ message: "Assignee user not found" });
+
+      const alert = await storage.getFraudAlert(req.params.id);
+      if (!alert) return res.status(404).json({ message: "Fraud alert not found" });
+      const isSuper = req.session?.userRole === "super_admin";
+      if (!isSuper && alert.organizationId && req.session?.organizationId && alert.organizationId !== req.session.organizationId) {
+        return res.status(403).json({ message: "Access denied (organization scope)" });
+      }
+      const access = await assertComplianceAccess(req, alert.borrowerId);
+      if (!access.ok) return res.status(access.status).json({ message: access.message });
+
+      const updated = await storage.updateFraudAlert(req.params.id, {
+        assignedTo: assigneeUserId,
+        status: alert.status === "open" ? "investigating" : alert.status,
+      } as any);
+      if (!updated) return res.status(500).json({ message: "Update failed" });
+      await storage.createAuditLog({
+        action: "ASSIGN_FRAUD_ALERT", entity: "fraud_alert", entityId: req.params.id,
+        userId: req.session?.userId,
+        details: JSON.stringify({ assigneeUserId, borrowerId: alert.borrowerId }),
+        ipAddress: req.ip || null,
+      } as any);
+      res.json(updated);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
   app.get("/api/borrowers/:id/alternative-data", requireRole("admin", "super_admin", "regulator", "lender"), async (req, res) => {
     try {
       const borrowerId = req.params.id;

@@ -108,19 +108,25 @@ export async function verifyIdentity(borrower: Borrower, userId?: string, organi
   const liveness = await livenessCheckStub(borrower);
 
   const records: { id: string; method: string }[] = [];
-  for (const [method, outcome] of [["id_lookup", idLookup], ["biometric_match", biometric], ["liveness_check", liveness]] as const) {
-    const v = await storage.createIdentityVerification({
+  const methodOutcomes: [InsertIdentityVerification["method"], VerificationOutcome][] = [
+    ["id_lookup", idLookup],
+    ["biometric_match", biometric],
+    ["liveness_check", liveness],
+  ];
+  for (const [method, outcome] of methodOutcomes) {
+    const insert: InsertIdentityVerification = {
       borrowerId: borrower.id,
       provider: outcome.provider,
-      method: method as any,
-      result: outcome.result,
+      method,
+      result: outcome.result as InsertIdentityVerification["result"],
       confidenceScore: String(outcome.confidenceScore),
       evidenceHash: outcome.evidenceHash,
       rawResponse: JSON.stringify(outcome.rawResponse).slice(0, 8000),
       errorMessage: outcome.errorMessage || null,
       verifiedBy: userId || null,
       organizationId: organizationId || borrower.organizationId || null,
-    } as any);
+    };
+    const v = await storage.createIdentityVerification(insert);
     records.push({ id: v.id, method });
     await storage.createAuditLog({
       action: "IDENTITY_VERIFICATION",
@@ -129,7 +135,7 @@ export async function verifyIdentity(borrower: Borrower, userId?: string, organi
       userId: userId || null,
       details: JSON.stringify({ method, provider: outcome.provider, result: outcome.result, score: outcome.confidenceScore, hash: outcome.evidenceHash }),
       ipAddress: null,
-    } as any);
+    });
   }
   return { idLookup, biometric, liveness, records };
 }
@@ -137,14 +143,31 @@ export async function verifyIdentity(borrower: Borrower, userId?: string, organi
 const SANCTIONS_KEYWORDS = ["taliban", "isis", "al-qaeda", "kim jong", "putin"];
 const PEP_KEYWORDS = ["minister", "president", "governor", "senator", "ambassador"];
 
-export async function screenWatchlist(borrower: Borrower, userId?: string, organizationId?: string): Promise<{
-  hits: { source: string; matchScore: number; matchedName: string; matchDetails: string }[];
+type WatchlistHitDraft = { source: string; matchScore: number; matchedName: string; matchDetails: string };
+
+// In-memory TTL cache for watchlist screening results to avoid repeat external calls
+const WATCHLIST_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+const watchlistCache = new Map<string, { ts: number; hits: WatchlistHitDraft[] }>();
+
+export async function screenWatchlist(borrower: Borrower, userId?: string, organizationId?: string, options?: { bypassCache?: boolean }): Promise<{
+  hits: WatchlistHitDraft[];
   recordIds: string[];
+  cached: boolean;
 }> {
   const fullName = `${borrower.firstName || ""} ${borrower.lastName || borrower.companyName || ""}`.trim().toLowerCase();
-  const hits: { source: string; matchScore: number; matchedName: string; matchDetails: string }[] = [];
+  const cacheKey = `${fullName}|${borrower.country || ""}|${borrower.dateOfBirth || ""}`;
+  let hits: WatchlistHitDraft[] = [];
+  let cached = false;
 
-  if (PROVIDERS_AVAILABLE.complyAdvantage) {
+  if (!options?.bypassCache) {
+    const entry = watchlistCache.get(cacheKey);
+    if (entry && Date.now() - entry.ts < WATCHLIST_CACHE_TTL_MS) {
+      hits = entry.hits;
+      cached = true;
+    }
+  }
+
+  if (!cached && PROVIDERS_AVAILABLE.complyAdvantage) {
     try {
       const res = await fetch("https://api.complyadvantage.com/searches", {
         method: "POST",
@@ -183,28 +206,37 @@ export async function screenWatchlist(borrower: Borrower, userId?: string, organ
     }
   }
 
+  // Cache only fresh, non-degraded results
+  if (!cached) {
+    const isDegraded = hits.some(h => h.matchDetails.includes('"degraded":true'));
+    if (!isDegraded) {
+      watchlistCache.set(cacheKey, { ts: Date.now(), hits });
+    }
+  }
+
   const recordIds: string[] = [];
   for (const h of hits) {
-    const w = await storage.createWatchlistHit({
+    const insertData: InsertWatchlistHit = {
       borrowerId: borrower.id,
-      source: h.source as any,
+      source: h.source as InsertWatchlistHit["source"],
       provider: PROVIDERS_AVAILABLE.complyAdvantage ? "comply_advantage" : "stub_screening",
       matchScore: String(h.matchScore),
       matchedName: h.matchedName,
       matchDetails: h.matchDetails,
       organizationId: organizationId || borrower.organizationId || null,
-    } as any);
+    };
+    const w = await storage.createWatchlistHit(insertData);
     recordIds.push(w.id);
     await storage.createAuditLog({
       action: "WATCHLIST_SCREENING",
       entity: "borrower",
       entityId: borrower.id,
       userId: userId || null,
-      details: JSON.stringify({ source: h.source, matchScore: h.matchScore, hitId: w.id }),
+      details: JSON.stringify({ source: h.source, matchScore: h.matchScore, hitId: w.id, cached }),
       ipAddress: null,
-    } as any);
+    });
   }
-  return { hits, recordIds };
+  return { hits, recordIds, cached };
 }
 
 export async function runFraudRules(borrower: Borrower, userId?: string, organizationId?: string): Promise<{
@@ -218,15 +250,18 @@ export async function runFraudRules(borrower: Borrower, userId?: string, organiz
     try {
       const dupes = await storage.findBorrowersByNationalId?.(borrower.nationalId, borrower.id);
       if (dupes && dupes.length > 0) {
+        const dupeIds = dupes.map((d: Borrower) => d.id).slice(0, 10);
         alerts.push({
           ruleCode: "DUPLICATE_ID_MULTI_ORG",
           ruleDescription: `National ID appears on ${dupes.length} other borrower record(s) across organizations`,
           severity: dupes.length >= 3 ? "high" : "medium",
-          evidence: JSON.stringify({ duplicateCount: dupes.length, ids: dupes.map((d: any) => d.id).slice(0, 10) }),
-          relatedBorrowerIds: dupes.map((d: any) => d.id).slice(0, 10),
+          evidence: JSON.stringify({ duplicateCount: dupes.length, ids: dupeIds }),
+          relatedBorrowerIds: dupeIds,
         });
       }
-    } catch {}
+    } catch (err: any) {
+      console.error("[FraudRules] DUPLICATE_ID_MULTI_ORG check failed:", err?.message || err);
+    }
   }
 
   // Rule 2: velocity — many credit inquiries in last 24h
@@ -240,7 +275,9 @@ export async function runFraudRules(borrower: Borrower, userId?: string, organiz
         evidence: JSON.stringify({ inquiryCount: inquiries.length, window: "24h" }),
       });
     }
-  } catch {}
+  } catch (err: any) {
+    console.error("[FraudRules] VELOCITY_INQUIRIES_24H check failed:", err?.message || err);
+  }
 
   // Rule 3: phone-to-ID consistency check (very basic stub)
   if (borrower.phone && borrower.nationalId) {
@@ -276,15 +313,16 @@ export async function runFraudRules(borrower: Borrower, userId?: string, organiz
 
   const recordIds: string[] = [];
   for (const a of alerts) {
-    const f = await storage.createFraudAlert({
+    const insert: InsertFraudAlert = {
       borrowerId: borrower.id,
       ruleCode: a.ruleCode,
       ruleDescription: a.ruleDescription,
-      severity: a.severity as any,
+      severity: a.severity,
       evidence: a.evidence,
       relatedBorrowerIds: a.relatedBorrowerIds || [],
       organizationId: organizationId || borrower.organizationId || null,
-    } as any);
+    };
+    const f = await storage.createFraudAlert(insert);
     recordIds.push(f.id);
     await storage.createAuditLog({
       action: "FRAUD_RULE_TRIGGERED",
@@ -293,7 +331,7 @@ export async function runFraudRules(borrower: Borrower, userId?: string, organiz
       userId: userId || null,
       details: JSON.stringify({ ruleCode: a.ruleCode, severity: a.severity, alertId: f.id }),
       ipAddress: null,
-    } as any);
+    });
   }
   return { alerts, recordIds };
 }

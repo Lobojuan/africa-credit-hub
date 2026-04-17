@@ -35,6 +35,21 @@ export default function ComplianceQueuePage() {
 
   const { data, isLoading } = useQuery<QueueResponse>({ queryKey: ["/api/compliance/queue"] });
 
+  const { data: meData } = useQuery<{ id: string }>({ queryKey: ["/api/auth/me"] });
+
+  const assignMutation = useMutation({
+    mutationFn: async ({ id }: { id: string }) => {
+      if (!meData?.id) throw new Error("Not authenticated");
+      const res = await apiRequest("POST", `/api/compliance/fraud-alerts/${id}/assign`, { assigneeUserId: meData.id });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/compliance/queue"] });
+      toast({ title: "Alert assigned to you" });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
   const resolveMutation = useMutation({
     mutationFn: async ({ kind, id, status, notes }: { kind: "hit" | "alert"; id: string; status: string; notes: string }) => {
       const url = kind === "hit" ? `/api/compliance/watchlist-hits/${id}/resolve` : `/api/compliance/fraud-alerts/${id}/resolve`;
@@ -113,9 +128,20 @@ export default function ComplianceQueuePage() {
                       {a.evidence && <p className="mt-1 text-[11px] text-muted-foreground font-mono break-all">{a.evidence.slice(0, 200)}</p>}
                       <p className="text-[10px] text-muted-foreground mt-1">{a.createdAt && new Date(a.createdAt).toLocaleString()}</p>
                     </div>
-                    <Button size="sm" variant="outline" onClick={() => { setResolveTarget({ kind: "alert", id: a.id, title: a.ruleDescription }); setResolveStatus("resolved"); }} data-testid={`button-resolve-alert-${a.id}`}>
-                      Review
-                    </Button>
+                    <div className="flex flex-col gap-2">
+                      <Button size="sm" variant="outline" onClick={() => { setResolveTarget({ kind: "alert", id: a.id, title: a.ruleDescription }); setResolveStatus("resolved"); }} data-testid={`button-resolve-alert-${a.id}`}>
+                        Review
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => assignMutation.mutate({ id: a.id })}
+                        disabled={assignMutation.isPending}
+                        data-testid={`button-assign-alert-${a.id}`}
+                      >
+                        {a.assignedTo ? "Reassign to me" : "Assign to me"}
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               );
