@@ -367,6 +367,50 @@ export async function sendCollectionSlaBreachEmail(
   );
 }
 
+export async function sendRegistryDownEmail(
+  to: string,
+  provider: string,
+  error: string,
+  isRecovery = false,
+): Promise<boolean> {
+  const providerLabel = provider
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+  const subject = isRecovery
+    ? `[Resolved] Registry Back Online: ${providerLabel}`
+    : `[Alert] Registry Down: ${providerLabel}`;
+
+  const body = isRecovery
+    ? `
+      <p style="color:#333;font-size:14px;line-height:1.6;">
+        The <strong>${esc(providerLabel)}</strong> registry is now responding normally and has been marked as operational.
+      </p>
+      <div style="background:#f0fdf4;border-radius:8px;padding:16px 20px;margin:16px 0;border-left:4px solid #22c55e;">
+        <p style="margin:0;font-size:13px;color:#555;"><strong>Registry:</strong> ${esc(providerLabel)}</p>
+        <p style="margin:4px 0 0;font-size:13px;color:#555;"><strong>Status:</strong> <span style="color:#16a34a;font-weight:600;">Operational</span></p>
+        <p style="margin:4px 0 0;font-size:13px;color:#555;"><strong>Time:</strong> ${new Date().toUTCString()}</p>
+      </div>
+      <p style="color:#333;font-size:14px;line-height:1.6;">No further action is required. Asset traces for this registry will resume normally.</p>
+    `
+    : `
+      <p style="color:#333;font-size:14px;line-height:1.6;">
+        The <strong>${esc(providerLabel)}</strong> live registry has failed two consecutive health checks and may be unreachable.
+      </p>
+      <div style="background:#fff5f5;border-radius:8px;padding:16px 20px;margin:16px 0;border-left:4px solid #ef4444;">
+        <p style="margin:0;font-size:13px;color:#555;"><strong>Registry:</strong> ${esc(providerLabel)}</p>
+        <p style="margin:4px 0 0;font-size:13px;color:#555;"><strong>Error:</strong> <span style="color:#dc2626;">${esc(error)}</span></p>
+        <p style="margin:4px 0 0;font-size:13px;color:#555;"><strong>Detected at:</strong> ${new Date().toUTCString()}</p>
+      </div>
+      <p style="color:#333;font-size:14px;line-height:1.6;">Asset traces using this registry will return errors until the issue is resolved. Please check the registry endpoint configuration and contact the registry authority if the problem persists.</p>
+      <p style="color:#333;font-size:14px;line-height:1.6;">View the System Status page to monitor live health and run manual tests.</p>
+    `;
+
+  return sendEmail(to, subject, createEmailHtml(
+    isRecovery ? "Registry Recovery" : "Registry Down Alert",
+    body,
+  ));
+}
+
 export function isEmailConfigured(): boolean {
   return emailConfigured;
 }

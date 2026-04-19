@@ -12009,6 +12009,14 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
+  // Registry health-check state — last result per provider from the background scheduler
+  app.get("/api/trace/registry-health", requireRole("admin", "super_admin", "regulator"), async (_req, res) => {
+    try {
+      const { getRegistryHealthState } = await import("./registry-health-checker");
+      res.json(getRegistryHealthState());
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
   // Test connectivity for a specific registry (probe with synthetic reference)
   app.post("/api/trace/registry-status/:provider/test", requireRole("admin", "super_admin"), async (req, res) => {
     try {

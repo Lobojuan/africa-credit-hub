@@ -706,6 +706,9 @@ process.stderr.write = function (...args: any[]) {
     const { startBackupScheduler } = await import("./backup-service");
     startBackupScheduler();
 
+    const { startRegistryHealthChecker } = await import("./registry-health-checker");
+    startRegistryHealthChecker();
+
     const { isEmailConfigured } = await import("./email");
     const { isSmsConfigured } = await import("./sms");
     const isProduction = process.env.PRODUCTION_MODE === "true";

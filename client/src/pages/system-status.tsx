@@ -393,10 +393,25 @@ interface RegistryTestResult {
   source: "live" | "sandbox" | "not_configured";
 }
 
+interface RegistryHealthEntry {
+  provider: string;
+  lastCheckedAt: string | null;
+  lastStatus: "ok" | "fail" | "unknown";
+  consecutiveFailures: number;
+  latencyMs?: number;
+  error?: string;
+  alertSent: boolean;
+}
+
 function RegistryStatusPanel() {
   const { data, isLoading, refetch } = useQuery<Record<string, { live: boolean; url?: string; sandbox?: boolean }>>({
     queryKey: ["/api/trace/registry-status"],
     staleTime: 60000,
+  });
+  const { data: healthData } = useQuery<RegistryHealthEntry[]>({
+    queryKey: ["/api/trace/registry-health"],
+    refetchInterval: 60000,
+    staleTime: 30000,
   });
   const { toast } = useToast();
   const [testResults, setTestResults] = useState<Record<string, RegistryTestResult | "testing">>({});
@@ -405,6 +420,13 @@ function RegistryStatusPanel() {
   const liveCount = data ? Object.values(data).filter(r => r.live && !r.sandbox).length : 0;
   const sandboxCount = data ? Object.values(data).filter(r => r.live && r.sandbox).length : 0;
   const totalCount = registries.filter(([k]) => k !== "manual").length;
+
+  const healthByProvider = (healthData ?? []).reduce<Record<string, RegistryHealthEntry>>((acc, h) => {
+    acc[h.provider] = h;
+    return acc;
+  }, {});
+
+  const failingCount = Object.values(healthByProvider).filter(h => h.lastStatus === "fail" && h.consecutiveFailures >= 2).length;
 
   async function testRegistry(provider: string) {
     setTestResults(prev => ({ ...prev, [provider]: "testing" }));
@@ -436,6 +458,12 @@ function RegistryStatusPanel() {
         <CardTitle className="text-sm flex items-center gap-2">
           <Globe className="w-4 h-4" />
           Asset Registry Connections
+          {failingCount > 0 && (
+            <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/20 text-[10px] ml-1" data-testid="badge-registries-failing">
+              <AlertTriangle className="w-2.5 h-2.5 mr-1" />
+              {failingCount} down
+            </Badge>
+          )}
         </CardTitle>
         <div className="flex items-center gap-2">
           {sandboxCount > 0 && (
@@ -465,17 +493,29 @@ function RegistryStatusPanel() {
               const testResult = testResults[key];
               const isTesting = testResult === "testing";
               const testData = testResult && testResult !== "testing" ? testResult : null;
+              const health = healthByProvider[key];
+              const isHealthFailing = health && health.lastStatus === "fail" && health.consecutiveFailures >= 2;
               return (
-                <div key={key} data-testid={`registry-row-${key}`} className="rounded-lg border px-3 py-2 text-sm">
+                <div
+                  key={key}
+                  data-testid={`registry-row-${key}`}
+                  className={`rounded-lg border px-3 py-2 text-sm ${isHealthFailing ? "border-red-500/30 bg-red-500/5" : ""}`}
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 min-w-0">
-                      <Radio className={`w-3 h-3 shrink-0 ${isLive && !isSandbox ? "text-emerald-500" : isLive && isSandbox ? "text-amber-500" : "text-muted-foreground/40"}`} />
+                      <Radio className={`w-3 h-3 shrink-0 ${isHealthFailing ? "text-red-500" : isLive && !isSandbox ? "text-emerald-500" : isLive && isSandbox ? "text-amber-500" : "text-muted-foreground/40"}`} />
                       <div className="min-w-0">
                         <p className="font-medium truncate" data-testid={`text-registry-label-${key}`}>{meta.label}</p>
                         <p className="text-[11px] text-muted-foreground">{meta.country} · {meta.assetType}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 ml-2">
+                      {isHealthFailing && (
+                        <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/20 text-[10px]" data-testid={`badge-registry-health-fail-${key}`}>
+                          <XCircle className="w-2.5 h-2.5 mr-1" />
+                          Down
+                        </Badge>
+                      )}
                       <Badge
                         variant="outline"
                         data-testid={`badge-registry-status-${key}`}
@@ -506,6 +546,26 @@ function RegistryStatusPanel() {
                       )}
                     </div>
                   </div>
+                  {health && health.lastCheckedAt && (
+                    <div
+                      data-testid={`text-registry-health-${key}`}
+                      className={`mt-1.5 text-[10px] rounded px-2 py-1 flex items-center gap-1 ${
+                        health.lastStatus === "ok"
+                          ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                          : health.lastStatus === "fail"
+                          ? "bg-red-500/10 text-red-700 dark:text-red-400"
+                          : "bg-muted/50 text-muted-foreground"
+                      }`}
+                    >
+                      <Clock className="w-2.5 h-2.5 shrink-0" />
+                      {health.lastStatus === "ok"
+                        ? `Last check OK · ${health.latencyMs}ms · ${new Date(health.lastCheckedAt).toLocaleTimeString()}`
+                        : `Failed ${health.consecutiveFailures}× · ${health.error ?? "Unknown error"} · ${new Date(health.lastCheckedAt).toLocaleTimeString()}`}
+                      {health.alertSent && (
+                        <span className="ml-1 font-medium">(team alerted)</span>
+                      )}
+                    </div>
+                  )}
                   {testData && (
                     <div
                       data-testid={`text-registry-test-result-${key}`}
@@ -524,7 +584,7 @@ function RegistryStatusPanel() {
         <p className="text-[10px] text-muted-foreground mt-3">
           <span className="font-medium text-amber-600 dark:text-amber-400">Sandbox</span> — connected to the built-in sandbox registry (realistic deterministic data, no real government API).{" "}
           <span className="font-medium text-emerald-600 dark:text-emerald-400">Live</span> — connected to the government production API.{" "}
-          To activate a live registry, set its <code className="bg-muted px-1 rounded">*_API_URL</code> and <code className="bg-muted px-1 rounded">*_API_KEY</code> Replit Secrets to the production values issued by the registry authority, then restart the application. See the Registry Credential Cutover Runbook in <code className="bg-muted px-1 rounded">docs/Registry_Credential_Cutover_Runbook.md</code> for step-by-step instructions for each registry.
+          Health checks run every 15 minutes; the ops team is alerted after two consecutive failures via Slack (<code className="bg-muted px-1 rounded">REGISTRY_ALERT_SLACK_WEBHOOK</code>) and/or email (<code className="bg-muted px-1 rounded">REGISTRY_ALERT_EMAIL</code>).
         </p>
       </CardContent>
     </Card>
