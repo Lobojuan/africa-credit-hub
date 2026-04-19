@@ -258,6 +258,61 @@ test.describe('Borrower Trace Section', () => {
     await assertNewAuditEntry(page, 'SUBMIT_APPROVAL', borrowerId, auditSnapshot);
     await assertNewAuditEntry(page, 'APPROVE', approvalId, auditSnapshot);
   });
+
+  test('sandbox badge is visible for asset trace returned by sandbox provider', async ({ page }) => {
+    const borrowerId = await getFirstBorrowerId(page);
+
+    // ghana_dvla is configured to use the in-process registry sandbox, so
+    // rawResponse.source will equal "sandbox" and the badge should render.
+    const res = await postWithCSRF(page, `/api/trace/borrower/${borrowerId}/assets`, {
+      provider: 'ghana_dvla',
+      reference: 'GR-SANDBOX-BADGE-01',
+      reason: REASON,
+    });
+    expect(res.ok()).toBeTruthy();
+    const record = await res.json() as { id: string; provider: string };
+    expect(record.id).toBeTruthy();
+
+    await page.goto(`/borrowers/${borrowerId}`);
+    await page.waitForLoadState('domcontentloaded');
+
+    await page.locator('[data-testid="input-trace-access-reason"]').fill(REASON);
+    await page.locator('[data-testid="button-trace-access-confirm"]').click();
+    await expect(page.locator('[data-testid="section-asset-traces"]')).toBeVisible({ timeout: 8000 });
+
+    // Assert the sandbox badge is present specifically on the newly created row
+    const sandboxRow = page.locator(`[data-testid="row-asset-${record.id}"]`);
+    await expect(sandboxRow).toBeVisible({ timeout: 8000 });
+    await expect(sandboxRow.locator('[data-testid^="badge-sandbox-"]')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('sandbox badge is absent for asset trace returned by stub-only provider', async ({ page }) => {
+    const borrowerId = await getFirstBorrowerId(page);
+
+    // liberia_motor has no live integration and no sandbox env vars — it always
+    // falls back to the plain stubVehicle helper which does NOT set
+    // rawResponse.source = "sandbox", so the badge should never appear.
+    const res = await postWithCSRF(page, `/api/trace/borrower/${borrowerId}/assets`, {
+      provider: 'liberia_motor',
+      reference: 'LR-STUB-BADGE-01',
+      reason: REASON,
+    });
+    expect(res.ok()).toBeTruthy();
+    const record = await res.json() as { id: string; provider: string };
+    expect(record.id).toBeTruthy();
+
+    await page.goto(`/borrowers/${borrowerId}`);
+    await page.waitForLoadState('domcontentloaded');
+
+    await page.locator('[data-testid="input-trace-access-reason"]').fill(REASON);
+    await page.locator('[data-testid="button-trace-access-confirm"]').click();
+    await expect(page.locator('[data-testid="section-asset-traces"]')).toBeVisible({ timeout: 8000 });
+
+    // Wait for the liberia_motor row to appear, then confirm it has no sandbox badge
+    const row = page.locator(`[data-testid="row-asset-${record.id}"]`);
+    await expect(row).toBeVisible({ timeout: 8000 });
+    await expect(row.locator('[data-testid^="badge-sandbox-"]')).toHaveCount(0);
+  });
 });
 
 test.describe('Find Connections', () => {
