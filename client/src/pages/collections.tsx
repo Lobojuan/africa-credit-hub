@@ -22,6 +22,7 @@ interface Assignment {
   borrowerId: string;
   status: string;
   priority: string;
+  segment?: string | null;
   amountOutstanding?: string;
   currency?: string;
   dueDate?: string;
@@ -85,10 +86,15 @@ export default function CollectionsPage() {
 
   const [newBorrowerId, setNewBorrowerId] = useState("");
   const [newPriority, setNewPriority] = useState("medium");
+  const [newSegment, setNewSegment] = useState("");
   const [newAmount, setNewAmount] = useState("");
   const [newCurrency, setNewCurrency] = useState("GHS");
   const [newDueDate, setNewDueDate] = useState("");
   const [newNotes, setNewNotes] = useState("");
+
+  const [editSegmentOpen, setEditSegmentOpen] = useState(false);
+  const [editSegmentValue, setEditSegmentValue] = useState("");
+  const [editSegmentId, setEditSegmentId] = useState<string | null>(null);
 
   const [aChannel, setAChannel] = useState("phone");
   const [aOutcome, setAOutcome] = useState("contacted");
@@ -156,6 +162,7 @@ export default function CollectionsPage() {
       const res = await apiRequest("POST", "/api/collections/assignments", {
         borrowerId: newBorrowerId,
         priority: newPriority,
+        segment: newSegment || undefined,
         amountOutstanding: newAmount || undefined,
         currency: newCurrency,
         dueDate: newDueDate || undefined,
@@ -167,7 +174,22 @@ export default function CollectionsPage() {
       toast({ title: "Assignment created" });
       queryClient.invalidateQueries({ queryKey: ["/api/collections/assignments"] });
       setCreateOpen(false);
-      setNewBorrowerId(""); setNewAmount(""); setNewDueDate(""); setNewNotes("");
+      setNewBorrowerId(""); setNewSegment(""); setNewAmount(""); setNewDueDate(""); setNewNotes("");
+    },
+    onError: (e: any) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
+  });
+
+  const updateSegment = useMutation({
+    mutationFn: async ({ id, segment }: { id: string; segment: string }) => {
+      const res = await apiRequest("PATCH", `/api/collections/assignments/${id}`, { segment: segment || null });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Segment updated" });
+      queryClient.invalidateQueries({ queryKey: ["/api/collections/assignments"] });
+      setEditSegmentOpen(false);
+      setEditSegmentId(null);
+      setEditSegmentValue("");
     },
     onError: (e: any) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
   });
@@ -438,6 +460,7 @@ export default function CollectionsPage() {
                     <TableRow>
                       <TableHead>Status</TableHead>
                       <TableHead>Priority</TableHead>
+                      <TableHead>Segment</TableHead>
                       <TableHead>Borrower</TableHead>
                       <TableHead>Outstanding</TableHead>
                       <TableHead>Due</TableHead>
@@ -472,6 +495,19 @@ export default function CollectionsPage() {
                                 </TooltipProvider>
                               )}
                             </div>
+                          </TableCell>
+                          <TableCell>
+                            <button
+                              className="text-xs text-left"
+                              onClick={() => { setEditSegmentId(a.id); setEditSegmentValue(a.segment || ""); setEditSegmentOpen(true); }}
+                              data-testid={`button-edit-segment-${a.id}`}
+                            >
+                              {a.segment ? (
+                                <Badge variant="secondary" className="text-[10px]" data-testid={`badge-segment-${a.id}`}>{a.segment}</Badge>
+                              ) : (
+                                <span className="text-muted-foreground italic">—</span>
+                              )}
+                            </button>
                           </TableCell>
                           <TableCell>
                             <Link href={`/borrowers/${a.borrowerId}`}>
@@ -703,6 +739,15 @@ export default function CollectionsPage() {
               </div>
             </div>
             <div>
+              <Label className="text-xs">Segment / Product Type <span className="text-muted-foreground">(optional)</span></Label>
+              <Input
+                value={newSegment}
+                onChange={e => setNewSegment(e.target.value)}
+                placeholder="e.g. SME Loans, Retail, Mortgage"
+                data-testid="input-segment"
+              />
+            </div>
+            <div>
               <Label className="text-xs">Notes</Label>
               <Textarea value={newNotes} onChange={e => setNewNotes(e.target.value)} rows={2} />
             </div>
@@ -712,6 +757,37 @@ export default function CollectionsPage() {
             <Button onClick={() => create.mutate()} disabled={!newBorrowerId || create.isPending} data-testid="button-create-assignment">
               {create.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editSegmentOpen} onOpenChange={setEditSegmentOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit Segment / Product Type</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Tag this case with a product segment so segment-specific SLA rules apply.
+            </p>
+            <div>
+              <Label className="text-xs">Segment / Product Type</Label>
+              <Input
+                value={editSegmentValue}
+                onChange={e => setEditSegmentValue(e.target.value)}
+                placeholder="e.g. SME Loans, Retail, Mortgage"
+                data-testid="input-edit-segment"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditSegmentOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => { if (editSegmentId) updateSegment.mutate({ id: editSegmentId, segment: editSegmentValue }); }}
+              disabled={updateSegment.isPending}
+              data-testid="button-save-segment"
+            >
+              {updateSegment.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Save
             </Button>
           </DialogFooter>
         </DialogContent>
