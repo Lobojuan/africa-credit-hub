@@ -2,6 +2,7 @@ import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { storage } from "./storage";
 import { broadcastEvent } from "./websocket";
+import { sendCollectionSlaBreachEmail } from "./email";
 
 const DEFAULT_THRESHOLDS: Record<string, number> = {
   urgent: 3,
@@ -93,6 +94,20 @@ export async function checkCollectionSla(scopeOrgId?: string, scopeCountry?: str
                 organizationId: assignment.organizationId ?? undefined,
                 country,
               });
+
+              const agentEmail = await getUserEmail(assignment.assignedTo);
+              if (agentEmail) {
+                const baseUrl = process.env.CANONICAL_URL || "https://africacredithub.com";
+                const caseUrl = `${baseUrl}/collections?assignment=${assignment.id}`;
+                sendCollectionSlaBreachEmail(
+                  agentEmail,
+                  assignment.id,
+                  assignment.borrowerId,
+                  priority,
+                  days,
+                  caseUrl
+                ).catch((e: any) => console.error(`[SLA] Email send failed for assignment ${assignment.id}:`, e.message));
+              }
 
               broadcastEvent(
                 {

@@ -328,6 +328,45 @@ export async function sendContactSalesEmail(data: { name: string; email: string;
   return sendEmail(adminEmail, `[Africa Credit Hub Sales Inquiry] ${data.organization} — ${tierLabel}`, createEmailHtml("New Sales Inquiry", body));
 }
 
+export async function sendCollectionSlaBreachEmail(
+  agentEmail: string,
+  assignmentId: string,
+  borrowerId: string,
+  priority: string,
+  thresholdDays: number,
+  caseUrl: string
+): Promise<boolean> {
+  const priorityColors: Record<string, string> = {
+    urgent: "#ef4444",
+    high: "#f97316",
+    medium: "#f59e0b",
+    low: "#64748b",
+  };
+  const color = priorityColors[priority] || "#64748b";
+  const priorityLabel = priority.charAt(0).toUpperCase() + priority.slice(1);
+
+  const body = `
+    <p style="color:#333;font-size:14px;line-height:1.6;">A collection case assigned to you has breached its SLA threshold and requires immediate attention.</p>
+    <div style="background:#fff5f5;border-radius:8px;padding:16px 20px;margin:16px 0;border-left:4px solid ${color};">
+      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Priority:</strong> <span style="color:${color};font-weight:600;">${esc(priorityLabel)}</span></p>
+      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Borrower ID:</strong> ${esc(borrowerId)}</p>
+      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Days without contact:</strong> ${thresholdDays}+ days</p>
+      <p style="margin:0;font-size:13px;color:#555;"><strong>Assignment ID:</strong> #${assignmentId}</p>
+    </div>
+    <p style="color:#333;font-size:14px;line-height:1.6;">Please contact this borrower as soon as possible to bring the case back within SLA.</p>
+    <div style="text-align:center;margin:24px 0;">
+      <a href="${esc(caseUrl)}" style="display:inline-block;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:600;">View Case</a>
+    </div>
+    <p style="color:#888;font-size:12px;margin-top:16px;">You will not receive another email alert for this case for the next 24 hours.</p>
+  `;
+
+  return sendEmail(
+    agentEmail,
+    `SLA Breach — ${priorityLabel} Priority Collection Case #${assignmentId}`,
+    createEmailHtml("Collection SLA Breach Alert", body)
+  );
+}
+
 export function isEmailConfigured(): boolean {
   return emailConfigured;
 }
