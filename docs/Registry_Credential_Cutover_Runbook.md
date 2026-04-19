@@ -16,7 +16,9 @@ This runbook documents the exact steps to activate production credentials for ea
 
 ## How the Switch Works
 
-Each registry adapter in `server/asset-trace.ts` checks two environment variables at call time:
+Each registry adapter in `server/asset-trace.ts` checks environment variables at call time and supports **two authentication modes**.
+
+### Static API Key Mode
 
 | Registry | URL variable | Key variable |
 |---|---|---|
@@ -28,16 +30,35 @@ Each registry adapter in `server/asset-trace.ts` checks two environment variable
 | Uganda URSB (vehicles) | `UGANDA_URSB_API_URL` | `UGANDA_URSB_API_KEY` |
 | Ethiopia MVAA (vehicles) | `ETHIOPIA_MVAA_API_URL` | `ETHIOPIA_MVAA_API_KEY` |
 
+### OAuth 2.0 Client Credentials Mode
+
+Some registries (e.g. Nigeria FRSC, South Africa NaTIS) issue short-lived bearer tokens via OAuth 2.0 instead of a static API key. Set the following three variables to enable OAuth for a registry — **OAuth takes priority over the API key variable** when all three are present.
+
+| Registry | Token URL variable | Client ID variable | Client Secret variable |
+|---|---|---|---|
+| Ghana DVLA | `GHANA_DVLA_TOKEN_URL` | `GHANA_DVLA_CLIENT_ID` | `GHANA_DVLA_CLIENT_SECRET` |
+| South Africa NaTIS | `SA_NATIS_TOKEN_URL` | `SA_NATIS_CLIENT_ID` | `SA_NATIS_CLIENT_SECRET` |
+| Ghana Lands Commission | `GHANA_LANDS_TOKEN_URL` | `GHANA_LANDS_CLIENT_ID` | `GHANA_LANDS_CLIENT_SECRET` |
+| Kenya NTSA | `KENYA_NTSA_TOKEN_URL` | `KENYA_NTSA_CLIENT_ID` | `KENYA_NTSA_CLIENT_SECRET` |
+| Nigeria FRSC/MVAA | `NIGERIA_FRSC_TOKEN_URL` | `NIGERIA_FRSC_CLIENT_ID` | `NIGERIA_FRSC_CLIENT_SECRET` |
+| Uganda URSB | `UGANDA_URSB_TOKEN_URL` | `UGANDA_URSB_CLIENT_ID` | `UGANDA_URSB_CLIENT_SECRET` |
+| Ethiopia MVAA | `ETHIOPIA_MVAA_TOKEN_URL` | `ETHIOPIA_MVAA_CLIENT_ID` | `ETHIOPIA_MVAA_CLIENT_SECRET` |
+
+The `*_API_URL` variable is still required to identify the registry API base URL — only authentication changes.
+
 **Logic:**
+- If the URL variable and all three OAuth variables are **set** → adapter fetches a bearer token using the OAuth 2.0 client credentials grant, caches it in memory, and sends `Authorization: Bearer <token>` on each request. Tokens are refreshed automatically 60 seconds before expiry.
+- If the URL variable and the API key variable are **set** (and OAuth vars are absent) → adapter sends the key in the `X-Api-Key` header (static API key mode, unchanged behaviour).
 - If both variables are **absent** → adapter returns `status: "stub"` (deterministic, offline).
 - If both variables point at **localhost / 127.0.0.1** → adapter calls the built-in sandbox and the System Status page shows **Sandbox** (amber).
-- If both variables point at a **non-localhost URL** → adapter calls the live government API and the System Status page shows **Live** (green).
+- If the URL points at a **non-localhost URL** → adapter calls the live government API and the System Status page shows **Live** (green).
 
 The API contract expected from every live registry endpoint is:
 
 ```
 POST {REGISTRY_URL}/lookup
-Headers: X-Api-Key: {REGISTRY_KEY}
+Headers: Authorization: Bearer <token>   (OAuth mode)
+         X-Api-Key: {REGISTRY_KEY}        (static key mode)
          Content-Type: application/json
 Body:    { "reference": "<plate/title number>", "provider": "<provider_id>" }
 
@@ -53,13 +74,13 @@ Response:
 
 ---
 
-## Step-by-Step: Activating Production Credentials
+## Step-by-Step: Activating Production Credentials (Static API Key)
 
 ### Step 1 — Obtain credentials from the registry authority
 
 Contact the registry authority and request:
 - A **base API URL** (e.g. `https://api.dvla.gov.gh`)
-- A **production API key** or bearer token
+- A **production API key**
 
 Keep both values secure. Do not share them in email or chat without encryption.
 
@@ -99,6 +120,63 @@ Once a registry is fully live, the sandbox endpoint at
 `/api/registry-sandbox/{provider}/lookup` remains available but is unreachable when credentials point elsewhere. You do not need to remove the sandbox code; it serves the remaining stub registries.
 
 If you wish to fully remove a sandbox route to reduce attack surface, edit `server/registry-sandbox.ts` and delete the corresponding handler.
+
+---
+
+## Step-by-Step: Activating Production Credentials (OAuth 2.0)
+
+Use this section when the registry authority issues OAuth 2.0 client credentials instead of (or in addition to) a static API key.
+
+### Step 1 — Obtain OAuth credentials from the registry authority
+
+Contact the registry authority and request:
+- A **base API URL** for the registry lookup endpoint (e.g. `https://api.frsc.gov.ng`)
+- An **OAuth 2.0 token endpoint URL** (e.g. `https://auth.frsc.gov.ng/oauth/token`)
+- A **client ID**
+- A **client secret**
+
+Confirm that the authority uses the **client credentials grant** (`grant_type=client_credentials`). This is the only OAuth flow supported by the system.
+
+Keep all values secure. Do not share them in email or chat without encryption.
+
+### Step 2 — Store OAuth credentials as Replit Secrets
+
+In the Replit project:
+1. Open the **Secrets** tab (lock icon in the sidebar).
+2. Set the registry's `*_API_URL` secret to the production base API URL (e.g. `NIGERIA_FRSC_API_URL` = `https://api.frsc.gov.ng`).
+3. Set the three OAuth secrets for that registry. Using Nigeria FRSC as an example:
+   - `NIGERIA_FRSC_TOKEN_URL` = `https://auth.frsc.gov.ng/oauth/token`
+   - `NIGERIA_FRSC_CLIENT_ID` = `<your client ID>`
+   - `NIGERIA_FRSC_CLIENT_SECRET` = `<your client secret>`
+4. The `*_API_KEY` secret is **not required** when OAuth vars are set — but leave it in place if it was already configured; it will simply be ignored.
+
+> **Note:** When all three OAuth secrets are present, the system will use the OAuth flow and ignore the API key variable. This is true even if the API key variable is also set.
+
+### Step 3 — Restart the application
+
+After updating secrets, restart the application workflow (`Start application`). Environment variables are read at call time, so a restart ensures the new secrets are loaded.
+
+### Step 4 — Validate on the System Status page
+
+Navigate to **System Status** (`/system-status`) as an admin or super-admin. The **Asset Registry Connections** panel should now show a **green "Live"** badge for the registry.
+
+If it still shows **Stub**, verify:
+- `*_API_URL` is set.
+- All three OAuth secrets (`*_TOKEN_URL`, `*_CLIENT_ID`, `*_CLIENT_SECRET`) are set.
+- The application was restarted after saving secrets.
+
+### Step 5 — Validate with a real plate / title lookup
+
+1. Open a borrower record in the system.
+2. Navigate to **Asset Trace** and run a lookup against the newly-live registry.
+3. Confirm the response shows `status: "found"` and the vehicle details match real data.
+4. Monitor the server logs for `[AssetTrace] OAuth token refreshed for <provider>` — this confirms the token exchange succeeded.
+
+### OAuth Rollback
+
+To revert to static API key mode: remove (or unset) the three OAuth secrets (`*_TOKEN_URL`, `*_CLIENT_ID`, `*_CLIENT_SECRET`) and ensure `*_API_KEY` is set. Restart the application.
+
+To revert to sandbox: set `*_API_URL` to the sandbox URL (e.g. `http://localhost:5000/api/registry-sandbox/<provider>`), remove the OAuth secrets, and set `*_API_KEY` to the sandbox key. Restart the application.
 
 ---
 
@@ -172,21 +250,25 @@ The System Status page will revert to showing **Sandbox** (amber).
 
 | Symptom | Likely cause | Resolution |
 |---|---|---|
-| Status page shows Stub (grey) | Both env vars are absent | Set both `*_API_URL` and `*_API_KEY` secrets |
+| Status page shows Stub (grey) | Env vars are absent | Set `*_API_URL` and either `*_API_KEY` or all three OAuth secrets, then restart |
 | Status page shows Sandbox (amber) | URL contains localhost | Update URL secret to production URL, restart app |
 | Test button shows "Failed" with HTTP 404 | Registry returns 404 for unknown plates (expected) — credentials are valid | The probe "TEST-PROBE" reference is intentionally synthetic. A 404 response is treated as reachable. If the System Status page still shows "Failed", the registry may use a non-standard error format — run a real plate lookup to confirm |
 | Status page shows Live but lookups return `error` | Invalid API key or wrong URL path | Verify credentials with registry authority; check server logs |
 | Timeout errors in server logs | Registry API slow or unreachable | Check network egress rules; consider increasing `timeoutMs` in `callLiveRegistry()` |
 | `status: "not_found"` on known plates | Plate format mismatch | Confirm reference format with registry authority; normalize plate number |
+| Server log: `OAuth token request failed (401)` | Wrong client ID or client secret | Verify `*_CLIENT_ID` and `*_CLIENT_SECRET` secrets with the registry authority |
+| Server log: `OAuth token request failed (400)` | Registry does not support client credentials grant, or wrong token URL | Confirm the token URL and grant type with the registry authority |
+| Server log: `OAuth token request failed` on first lookup, then succeeds | Transient network issue during token fetch | The cache is empty on first request — retry the lookup; subsequent requests will use the cached token |
 
 ---
 
 ## Security Considerations
 
-- Never commit API keys to the codebase. All credentials must be stored as Replit Secrets.
-- The `callLiveRegistry()` function sends the API key in the `X-Api-Key` header over HTTPS. Ensure the production API URL uses `https://`.
-- If a registry uses OAuth bearer tokens instead of a static API key, the adapter in `server/asset-trace.ts` will need to be extended to handle token refresh. Contact the engineering team to implement this before going live.
-- Rotate API keys periodically and whenever team members leave. Update the Replit Secret immediately and restart the application.
+- Never commit API keys or OAuth secrets to the codebase. All credentials must be stored as Replit Secrets.
+- In static API key mode, `callLiveRegistry()` sends the key in the `X-Api-Key` header. In OAuth mode, it sends a short-lived bearer token in the `Authorization: Bearer` header. Always use `https://` for both the registry API URL and the OAuth token URL.
+- OAuth tokens are cached in memory (per server process) and refreshed automatically 60 seconds before expiry. A server restart clears the token cache; the first request after restart will perform a fresh token exchange.
+- The OAuth client secret is stored as a Replit Secret and is never logged or exposed in responses.
+- Rotate API keys and OAuth client secrets periodically and whenever team members with access leave. Update the Replit Secret immediately and restart the application.
 
 ---
 
