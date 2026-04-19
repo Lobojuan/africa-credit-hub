@@ -1616,7 +1616,8 @@ export async function registerRoutes(
       res.json(out);
     } catch (e: any) {
       console.error("[affordability]", e);
-      res.status(500).json({ message: safeErrorMessage(e) });
+      const status = e?.statusCode || 500;
+      res.status(status).json({ message: safeErrorMessage(e), code: e?.code });
     }
   });
 

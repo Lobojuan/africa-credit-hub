@@ -457,9 +457,48 @@ export type ComputeOpts = {
   periodDays?: number;
   computedBy?: string;
   useLlmFallback?: boolean;
+  /** When true, skip the borrower-consent check (use only for internal admin/audit flows that already validated consent). */
+  skipConsentCheck?: boolean;
 };
 
+export type AffordabilityInputsSnapshot = {
+  transactionCount: number;
+  hasMomo: boolean;
+};
+
+export type AffordabilityOutputsSnapshot = {
+  incomeSources: IncomeSourceCandidate[];
+  expenses: ExpenseCandidate[];
+  notes: string[];
+};
+
+/**
+ * Verify that the borrower has granted consent for affordability / financial-data analysis,
+ * either via an active ConsentRecord (preferred) or the legacy borrower.consentProvided flag.
+ */
+export async function hasAffordabilityConsent(borrowerId: string, _borrower?: Borrower): Promise<{ ok: boolean; reason?: string; consentId?: string }> {
+  const records = await storage.getConsentRecordsByBorrower(borrowerId);
+  const acceptableNeedles = ["affordability", "credit", "financial", "openbanking", "datasharing"];
+  const active = records.find(r => {
+    if (r.status !== "active") return false;
+    const t = (r.consentType || "").toLowerCase().replace(/[\s_-]/g, "");
+    return acceptableNeedles.some(n => t.includes(n));
+  });
+  if (active) return { ok: true, consentId: active.id };
+  return { ok: false, reason: "Borrower has not granted an active consent record for affordability / credit / financial-data analysis." };
+}
+
 export async function computeAffordability(borrower: Borrower, opts: ComputeOpts = {}): Promise<{ assessment: AffordabilityAssessment; result: AffordabilityResult }> {
+  // 0. Consent gate — borrower must have granted permission for affordability/financial-data analysis.
+  if (!opts.skipConsentCheck) {
+    const consent = await hasAffordabilityConsent(borrower.id, borrower);
+    if (!consent.ok) {
+      const err: any = new Error(consent.reason || "Borrower consent required for affordability assessment.");
+      err.statusCode = 403;
+      err.code = "CONSENT_REQUIRED";
+      throw err;
+    }
+  }
   const periodDays = opts.periodDays || 90;
   const country = borrower.country || null;
   const rule = getAffordabilityRule(country);
@@ -638,14 +677,28 @@ export async function computeAffordability(borrower: Borrower, opts: ComputeOpts
       affordabilityRating,
       confidenceLabel,
       regulatoryRule: result.regulatoryRule,
-      inputsSnapshot: { transactionCount: txns.length, hasMomo: dataSource === "momo_only" || dataSource === "hybrid" } as any,
-      outputsSnapshot: { incomeSources, expenses, notes } as any,
+      inputsSnapshot: { transactionCount: txns.length, hasMomo: dataSource === "momo_only" || dataSource === "hybrid" } satisfies AffordabilityInputsSnapshot,
+      outputsSnapshot: { incomeSources, expenses, notes } satisfies AffordabilityOutputsSnapshot,
       computedBy: opts.computedBy || null,
       expiresAt,
       organizationId: borrower.organizationId || null,
     }).returning();
     return created;
   });
+
+  // 9. Verified-income write-back: only when income came from a real verified bank feed
+  //    (open_banking with non-stub provider) and the value differs materially from the borrower's record.
+  if (dataSource === "open_banking" && grossIncomeMonthly > 0) {
+    const declared = parseFloat(borrower.monthlyIncome || "0");
+    const drift = Math.abs(grossIncomeMonthly - declared) / Math.max(1, declared);
+    if (declared === 0 || drift >= 0.05) {
+      await storage.updateBorrower(borrower.id, {
+        monthlyIncome: grossIncomeMonthly.toFixed(2),
+        incomeCurrency: currency,
+      });
+      result.notes.push(`Borrower record updated with verified monthly income ${grossIncomeMonthly.toFixed(2)} ${currency} (was ${declared.toFixed(2)}).`);
+    }
+  }
 
   return { assessment, result };
 }

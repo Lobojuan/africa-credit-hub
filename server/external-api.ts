@@ -750,14 +750,33 @@ export function registerExternalApi(app: Express) {
           && borrower.country && !apiKey.allowedCountries.includes(borrower.country)) {
         return res.status(403).json(wrapError("Borrower country not permitted by API key"));
       }
-      const { computeAffordability } = await import("./affordability-service");
-      const { source, periodDays, useLlmFallback, provider, accountId } = req.body || {};
+      const { computeAffordability, hasAffordabilityConsent } = await import("./affordability-service");
+      const { source, periodDays, useLlmFallback, provider, accountId, forceRecompute } = req.body || {};
+
+      // Consent gate (also enforced inside computeAffordability, but check early so we can return cached result without recomputing).
+      const consent = await hasAffordabilityConsent(borrower.id, borrower);
+      if (!consent.ok) return res.status(403).json(wrapError("Borrower consent required", consent.reason));
+
+      // Latest-or-fresh: return the latest non-expired snapshot unless forceRecompute is true.
+      if (!forceRecompute) {
+        const latest = await storage.getLatestAffordabilityAssessment(borrower.id);
+        const stillFresh = latest && latest.expiresAt && new Date(latest.expiresAt).getTime() > Date.now();
+        if (stillFresh) {
+          return res.json(wrapResponse({
+            borrowerId: borrower.id,
+            assessment: latest,
+            cached: true,
+          }, "Affordability snapshot (cached)"));
+        }
+      }
+
       const out = await computeAffordability(borrower, {
         source: source || "auto",
         periodDays: periodDays ? Number(periodDays) : undefined,
         useLlmFallback: !!useLlmFallback,
         openBankingProvider: provider,
         openBankingAccountId: accountId,
+        skipConsentCheck: true, // already validated above
       });
       res.json(wrapResponse({
         borrowerId: borrower.id,
