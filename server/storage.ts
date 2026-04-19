@@ -289,6 +289,7 @@ export interface IStorage {
   deleteCollectionSlaSettings(id: string): Promise<void>;
   getOverdueCollectionAssignments(thresholdDays: number, priority: string, organizationId?: string, country?: string, segment?: string | null): Promise<CollectionAssignment[]>;
   getOverdueCollectionAssignmentDetails(thresholds: Record<string, number>, organizationId?: string, country?: string): Promise<OverdueAssignmentDetail[]>;
+  countActiveAssignmentsBySegment(organizationId: string | undefined, country: string): Promise<Record<string, number>>;
 }
 
 export interface OverdueAssignmentDetail {
@@ -775,6 +776,23 @@ export class DatabaseStorage implements IStorage {
 
   async deleteCollectionSlaSettings(id: string): Promise<void> {
     await db.delete(collectionSlaSettings).where(eq(collectionSlaSettings.id, id));
+  }
+
+  async countActiveAssignmentsBySegment(organizationId: string | undefined, country: string): Promise<Record<string, number>> {
+    const rows = await db.execute(sql`
+      SELECT segment, COUNT(*)::int AS cnt
+      FROM collection_assignments
+      WHERE status != 'closed'
+        ${organizationId ? sql`AND organization_id = ${organizationId}` : sql`AND organization_id IS NULL`}
+        AND country = ${country}
+        AND segment IS NOT NULL
+      GROUP BY segment
+    `);
+    const result: Record<string, number> = {};
+    for (const row of rows.rows as { segment: string; cnt: number }[]) {
+      result[row.segment] = row.cnt;
+    }
+    return result;
   }
 
   async getOverdueCollectionAssignments(thresholdDays: number, priority: string, organizationId?: string, country?: string, segment?: string | null): Promise<CollectionAssignment[]> {

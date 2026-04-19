@@ -12322,6 +12322,15 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
+  app.get("/api/collections/sla-segment-coverage", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const country = await resolveCollectionCountry(req);
+      const orgId = req.session.organizationId;
+      const coverage = await storage.countActiveAssignmentsBySegment(orgId, country ?? "");
+      res.json(coverage);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
   app.post("/api/collections/sla-check", requireRole("super_admin"), async (req, res) => {
     try {
       const country = await resolveCollectionCountry(req);

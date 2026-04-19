@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Phone, Mail, MessageSquare, ClipboardList, Plus, Loader2, ArrowRight, AlertCircle, Settings, Clock, CheckCircle2, RefreshCw, ShieldAlert, Users, Filter, Trash2, PlusCircle } from "lucide-react";
+import { Phone, Mail, MessageSquare, ClipboardList, Plus, Loader2, ArrowRight, AlertCircle, Settings, Clock, CheckCircle2, RefreshCw, ShieldAlert, Users, Filter, Trash2, PlusCircle, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -146,6 +146,15 @@ export default function CollectionsPage() {
     },
   });
 
+  const { data: segmentCoverage = {} } = useQuery<Record<string, number>>({
+    queryKey: ["/api/collections/sla-segment-coverage"],
+    queryFn: async () => {
+      const res = await fetch("/api/collections/sla-segment-coverage", { credentials: "include" });
+      if (!res.ok) return {};
+      return res.json();
+    },
+  });
+
   const [breachPriorityFilter, setBreachPriorityFilter] = useState<string>("all");
 
   const { data: breachData } = useQuery<{ breachIds: string[]; breaches: BreachDetail[] }>({
@@ -179,6 +188,7 @@ export default function CollectionsPage() {
     onSuccess: () => {
       toast({ title: "Assignment created" });
       queryClient.invalidateQueries({ queryKey: ["/api/collections/assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/collections/sla-segment-coverage"] });
       setCreateOpen(false);
       setNewBorrowerId(""); setNewSegment(""); setNewAmount(""); setNewDueDate(""); setNewNotes("");
     },
@@ -193,6 +203,7 @@ export default function CollectionsPage() {
     onSuccess: () => {
       toast({ title: "Segment updated" });
       queryClient.invalidateQueries({ queryKey: ["/api/collections/assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/collections/sla-segment-coverage"] });
       setEditSegmentOpen(false);
       setEditSegmentId(null);
       setEditSegmentValue("");
@@ -235,6 +246,7 @@ export default function CollectionsPage() {
       setSlaProfiles(prev => prev.map((p, i) => i === idx ? { ...p, id: saved.id } : p));
       queryClient.invalidateQueries({ queryKey: ["/api/collections/sla-settings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/collections/sla-breaches"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/collections/sla-segment-coverage"] });
     },
     onError: (e: any) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
   });
@@ -250,6 +262,7 @@ export default function CollectionsPage() {
       setSelectedProfileIdx(prev => Math.max(0, prev >= idx ? prev - 1 : prev));
       queryClient.invalidateQueries({ queryKey: ["/api/collections/sla-settings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/collections/sla-breaches"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/collections/sla-segment-coverage"] });
     },
     onError: (e: any) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
   });
@@ -663,16 +676,35 @@ export default function CollectionsPage() {
             {/* Profile list */}
             <div className="w-44 shrink-0 flex flex-col gap-1 border-r pr-3">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Profiles</p>
-              {slaProfiles.map((p, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => { setSelectedProfileIdx(idx); setAddingProfile(false); }}
-                  data-testid={`button-sla-profile-${idx}`}
-                  className={`text-left px-2 py-1.5 rounded text-sm truncate transition-colors ${selectedProfileIdx === idx && !addingProfile ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-                >
-                  {p.segment ? p.segment : "Default"}
-                </button>
-              ))}
+              {slaProfiles.map((p, idx) => {
+                const hasNoCoverage = !!p.segment && (segmentCoverage[p.segment] ?? 0) === 0;
+                return (
+                  <TooltipProvider key={idx}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => { setSelectedProfileIdx(idx); setAddingProfile(false); }}
+                          data-testid={`button-sla-profile-${idx}`}
+                          className={`text-left px-2 py-1.5 rounded text-sm transition-colors flex items-center gap-1.5 w-full ${selectedProfileIdx === idx && !addingProfile ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                        >
+                          <span className="truncate flex-1">{p.segment ? p.segment : "Default"}</span>
+                          {hasNoCoverage && (
+                            <AlertTriangle
+                              className={`w-3.5 h-3.5 shrink-0 ${selectedProfileIdx === idx && !addingProfile ? "text-yellow-300" : "text-yellow-500"}`}
+                              data-testid={`icon-sla-no-coverage-${idx}`}
+                            />
+                          )}
+                        </button>
+                      </TooltipTrigger>
+                      {hasNoCoverage && (
+                        <TooltipContent side="right" className="max-w-[220px]">
+                          <p className="text-xs">No active assignments are tagged with &ldquo;{p.segment}&rdquo;. Assignments must carry this segment name for the rule to apply.</p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
+                );
+              })}
               {addingProfile ? (
                 <div className="mt-1 space-y-1">
                   <Input
