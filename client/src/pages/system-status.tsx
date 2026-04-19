@@ -1,7 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Activity, Database, Server, Wifi, Clock, CheckCircle2, AlertTriangle, Shield, Cpu, HardDrive, RefreshCw, Archive, Download, Upload, Trash2, Loader2, XCircle } from "lucide-react";
+import { Activity, Database, Server, Wifi, Clock, CheckCircle2, AlertTriangle, Shield, Cpu, HardDrive, RefreshCw, Archive, Download, Upload, Trash2, Loader2, XCircle, Globe, Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { useBrandColors } from "@/hooks/use-brand-colors";
@@ -305,6 +305,85 @@ function BackupManagementPanel() {
   );
 }
 
+const REGISTRY_LABELS: Record<string, { label: string; country: string; assetType: string }> = {
+  ghana_dvla:        { label: "Ghana DVLA", country: "Ghana", assetType: "Vehicle" },
+  sa_natis:          { label: "SA NaTIS", country: "South Africa", assetType: "Vehicle" },
+  ghana_lands:       { label: "Ghana Lands Commission", country: "Ghana", assetType: "Property" },
+  kenya_ntsa:        { label: "Kenya NTSA", country: "Kenya", assetType: "Vehicle" },
+  nigeria_frsc:      { label: "Nigeria FRSC / MVAA", country: "Nigeria", assetType: "Vehicle" },
+  uganda_ursb_motor: { label: "Uganda URSB", country: "Uganda", assetType: "Vehicle" },
+  ethiopia_motor:    { label: "Ethiopia MVAA", country: "Ethiopia", assetType: "Vehicle" },
+  liberia_motor:     { label: "Liberia Motor Registry", country: "Liberia", assetType: "Vehicle" },
+  manual:            { label: "Manual Entry", country: "Any", assetType: "Any" },
+};
+
+function RegistryStatusPanel() {
+  const { data, isLoading, refetch } = useQuery<Record<string, { live: boolean; url?: string }>>({
+    queryKey: ["/api/trace/registry-status"],
+    staleTime: 60000,
+  });
+
+  const registries = Object.entries(REGISTRY_LABELS);
+  const liveCount = data ? Object.values(data).filter(r => r.live).length : 0;
+  const totalCount = registries.filter(([k]) => k !== "manual").length;
+
+  return (
+    <Card data-testid="card-registry-status">
+      <CardHeader className="flex flex-row items-center justify-between pb-3">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Globe className="w-4 h-4" />
+          Asset Registry Connections
+        </CardTitle>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">{liveCount}/{totalCount} live</span>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => refetch()} data-testid="button-refresh-registry">
+            <RefreshCw className="w-3 h-3" />
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Checking registries...
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {registries.filter(([k]) => k !== "manual").map(([key, meta]) => {
+              const status = data?.[key];
+              const isLive = status?.live ?? false;
+              return (
+                <div key={key} data-testid={`registry-row-${key}`} className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Radio className={`w-3 h-3 shrink-0 ${isLive ? "text-emerald-500" : "text-muted-foreground/40"}`} />
+                    <div className="min-w-0">
+                      <p className="font-medium truncate" data-testid={`text-registry-label-${key}`}>{meta.label}</p>
+                      <p className="text-[11px] text-muted-foreground">{meta.country} · {meta.assetType}</p>
+                    </div>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    data-testid={`badge-registry-status-${key}`}
+                    className={isLive
+                      ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px]"
+                      : "bg-muted/50 text-muted-foreground border-border text-[10px]"}
+                  >
+                    {isLive ? <CheckCircle2 className="w-2.5 h-2.5 mr-1" /> : <AlertTriangle className="w-2.5 h-2.5 mr-1" />}
+                    {isLive ? "Live" : "Stub"}
+                  </Badge>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        <p className="text-[10px] text-muted-foreground mt-3">
+          Set registry API credentials (e.g. <code className="bg-muted px-1 rounded">GHANA_DVLA_API_URL</code> + <code className="bg-muted px-1 rounded">GHANA_DVLA_API_KEY</code>) to activate live lookups. Stubs remain active until credentials are configured.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function SystemStatusPage() {
   const brandColors = useBrandColors();
   const { data: status, isLoading, isError, refetch } = useQuery<any>({
@@ -483,6 +562,8 @@ export default function SystemStatusPage() {
           </CardContent>
         </Card>
       )}
+
+      <RegistryStatusPanel />
 
       <Card data-testid="card-infrastructure">
         <CardHeader>

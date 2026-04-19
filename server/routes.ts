@@ -11856,6 +11856,14 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
+  // Registry status — shows which registries are live vs stub mode
+  app.get("/api/trace/registry-status", requireRole("admin", "super_admin", "regulator"), async (_req, res) => {
+    try {
+      const { registryStatus } = await import("./asset-trace");
+      res.json(registryStatus());
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
   // Skip-trace PDF report
   app.post("/api/trace/borrower/:id/skip-trace-pdf", requireRole("admin", "super_admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
     try {
