@@ -25,8 +25,9 @@
 
 import crypto from "crypto";
 import { db } from "./db";
-import { assetTraceRecords, type AssetTraceRecord } from "@shared/schema";
+import { assetTraceRecords, registryCredentials as registryCredentialsTable, type AssetTraceRecord } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
+import { decryptPII } from "./encryption";
 
 export type AssetProvider =
   | "ghana_dvla"
@@ -57,8 +58,36 @@ export interface AssetTraceResult {
   rawResponse: Record<string, any>;
 }
 
-/** Returns { url, key } if both env vars are set for the given registry, else null. */
-function registryCredentials(urlVar: string, keyVar: string): { url: string; key: string } | null {
+/** In-memory override cache: provider -> { url, key } loaded from DB */
+const _credOverrides = new Map<string, { url: string; key: string }>();
+
+/** Load all DB-stored credentials into the in-memory cache. Call on startup and after each save. */
+export async function loadRegistryCredentialsFromDb(): Promise<void> {
+  try {
+    const rows = await db.select().from(registryCredentialsTable);
+    _credOverrides.clear();
+    for (const row of rows) {
+      const decryptedKey = decryptPII(row.apiKeyEncrypted);
+      _credOverrides.set(row.provider, { url: row.apiUrl, key: decryptedKey });
+    }
+  } catch (err: any) {
+    console.error("[AssetTrace] Failed to load registry credentials from DB:", err.message);
+  }
+}
+
+/** Set or clear an in-memory credential override for a provider. */
+export function setRegistryCredentialOverride(provider: string, url: string, key: string): void {
+  _credOverrides.set(provider, { url, key });
+}
+
+export function clearRegistryCredentialOverride(provider: string): void {
+  _credOverrides.delete(provider);
+}
+
+/** Returns { url, key } checking DB overrides first, then env vars. */
+function registryCredentials(provider: string, urlVar: string, keyVar: string): { url: string; key: string } | null {
+  const override = _credOverrides.get(provider);
+  if (override) return override;
   const url = process.env[urlVar];
   const key = process.env[keyVar];
   if (url && key) return { url, key };
@@ -66,21 +95,22 @@ function registryCredentials(urlVar: string, keyVar: string): { url: string; key
 }
 
 /** Return a status object for each registry showing live vs stub. */
-export function registryStatus(): Record<AssetProvider, { live: boolean; url?: string; sandbox?: boolean }> {
-  const check = (urlVar: string, keyVar: string) => {
-    const creds = registryCredentials(urlVar, keyVar);
+export function registryStatus(): Record<AssetProvider, { live: boolean; url?: string; sandbox?: boolean; source?: string }> {
+  const check = (provider: string, urlVar: string, keyVar: string) => {
+    const creds = registryCredentials(provider, urlVar, keyVar);
     if (!creds) return { live: false };
     const isSandbox = creds.url.includes("localhost") || creds.url.includes("127.0.0.1") || creds.url.includes("registry-sandbox");
-    return { live: true, url: creds.url, sandbox: isSandbox };
+    const source = _credOverrides.has(provider) ? "database" : "env";
+    return { live: true, url: creds.url, sandbox: isSandbox, source };
   };
   return {
-    ghana_dvla:       check("GHANA_DVLA_API_URL",    "GHANA_DVLA_API_KEY"),
-    sa_natis:         check("SA_NATIS_API_URL",       "SA_NATIS_API_KEY"),
-    ghana_lands:      check("GHANA_LANDS_API_URL",    "GHANA_LANDS_API_KEY"),
-    kenya_ntsa:       check("KENYA_NTSA_API_URL",     "KENYA_NTSA_API_KEY"),
-    nigeria_frsc:     check("NIGERIA_FRSC_API_URL",   "NIGERIA_FRSC_API_KEY"),
-    uganda_ursb_motor:check("UGANDA_URSB_API_URL",    "UGANDA_URSB_API_KEY"),
-    ethiopia_motor:   check("ETHIOPIA_MVAA_API_URL",  "ETHIOPIA_MVAA_API_KEY"),
+    ghana_dvla:       check("ghana_dvla",        "GHANA_DVLA_API_URL",    "GHANA_DVLA_API_KEY"),
+    sa_natis:         check("sa_natis",           "SA_NATIS_API_URL",       "SA_NATIS_API_KEY"),
+    ghana_lands:      check("ghana_lands",        "GHANA_LANDS_API_URL",    "GHANA_LANDS_API_KEY"),
+    kenya_ntsa:       check("kenya_ntsa",         "KENYA_NTSA_API_URL",     "KENYA_NTSA_API_KEY"),
+    nigeria_frsc:     check("nigeria_frsc",       "NIGERIA_FRSC_API_URL",   "NIGERIA_FRSC_API_KEY"),
+    uganda_ursb_motor:check("uganda_ursb_motor",  "UGANDA_URSB_API_URL",    "UGANDA_URSB_API_KEY"),
+    ethiopia_motor:   check("ethiopia_motor",     "ETHIOPIA_MVAA_API_URL",  "ETHIOPIA_MVAA_API_KEY"),
     liberia_motor:    { live: false },
     manual:           { live: false },
   };
@@ -196,7 +226,7 @@ function stubProperty(
 type AdapterFn = (req: AssetTraceRequest) => Promise<AssetTraceResult>;
 
 async function adapterGhanaDvla(req: AssetTraceRequest): Promise<AssetTraceResult> {
-  const creds = registryCredentials("GHANA_DVLA_API_URL", "GHANA_DVLA_API_KEY");
+  const creds = registryCredentials("ghana_dvla", "GHANA_DVLA_API_URL", "GHANA_DVLA_API_KEY");
   if (creds && req.reference) {
     try {
       const live = await callLiveRegistry(creds.url, creds.key, req.reference, req.provider);
@@ -221,7 +251,7 @@ async function adapterGhanaDvla(req: AssetTraceRequest): Promise<AssetTraceResul
 }
 
 async function adapterSaNatis(req: AssetTraceRequest): Promise<AssetTraceResult> {
-  const creds = registryCredentials("SA_NATIS_API_URL", "SA_NATIS_API_KEY");
+  const creds = registryCredentials("sa_natis", "SA_NATIS_API_URL", "SA_NATIS_API_KEY");
   if (creds && req.reference) {
     try {
       const live = await callLiveRegistry(creds.url, creds.key, req.reference, req.provider);
@@ -246,7 +276,7 @@ async function adapterSaNatis(req: AssetTraceRequest): Promise<AssetTraceResult>
 }
 
 async function adapterGhanaLands(req: AssetTraceRequest): Promise<AssetTraceResult> {
-  const creds = registryCredentials("GHANA_LANDS_API_URL", "GHANA_LANDS_API_KEY");
+  const creds = registryCredentials("ghana_lands", "GHANA_LANDS_API_URL", "GHANA_LANDS_API_KEY");
   if (creds && req.reference) {
     try {
       const live = await callLiveRegistry(creds.url, creds.key, req.reference, req.provider);
@@ -269,7 +299,7 @@ async function adapterGhanaLands(req: AssetTraceRequest): Promise<AssetTraceResu
 }
 
 async function adapterKenyaNtsa(req: AssetTraceRequest): Promise<AssetTraceResult> {
-  const creds = registryCredentials("KENYA_NTSA_API_URL", "KENYA_NTSA_API_KEY");
+  const creds = registryCredentials("kenya_ntsa", "KENYA_NTSA_API_URL", "KENYA_NTSA_API_KEY");
   if (creds && req.reference) {
     try {
       const live = await callLiveRegistry(creds.url, creds.key, req.reference, req.provider);
@@ -294,7 +324,7 @@ async function adapterKenyaNtsa(req: AssetTraceRequest): Promise<AssetTraceResul
 }
 
 async function adapterNigeriaFrsc(req: AssetTraceRequest): Promise<AssetTraceResult> {
-  const creds = registryCredentials("NIGERIA_FRSC_API_URL", "NIGERIA_FRSC_API_KEY");
+  const creds = registryCredentials("nigeria_frsc", "NIGERIA_FRSC_API_URL", "NIGERIA_FRSC_API_KEY");
   if (creds && req.reference) {
     try {
       const live = await callLiveRegistry(creds.url, creds.key, req.reference, req.provider);
@@ -319,7 +349,7 @@ async function adapterNigeriaFrsc(req: AssetTraceRequest): Promise<AssetTraceRes
 }
 
 async function adapterUgandaUrsb(req: AssetTraceRequest): Promise<AssetTraceResult> {
-  const creds = registryCredentials("UGANDA_URSB_API_URL", "UGANDA_URSB_API_KEY");
+  const creds = registryCredentials("uganda_ursb_motor", "UGANDA_URSB_API_URL", "UGANDA_URSB_API_KEY");
   if (creds && req.reference) {
     try {
       const live = await callLiveRegistry(creds.url, creds.key, req.reference, req.provider);
@@ -344,7 +374,7 @@ async function adapterUgandaUrsb(req: AssetTraceRequest): Promise<AssetTraceResu
 }
 
 async function adapterEthiopiaMvaa(req: AssetTraceRequest): Promise<AssetTraceResult> {
-  const creds = registryCredentials("ETHIOPIA_MVAA_API_URL", "ETHIOPIA_MVAA_API_KEY");
+  const creds = registryCredentials("ethiopia_motor", "ETHIOPIA_MVAA_API_URL", "ETHIOPIA_MVAA_API_KEY");
   if (creds && req.reference) {
     try {
       const live = await callLiveRegistry(creds.url, creds.key, req.reference, req.provider);

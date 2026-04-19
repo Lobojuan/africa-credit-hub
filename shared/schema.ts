@@ -1609,3 +1609,13 @@ export const xdsBureauQueries = pgTable("xds_bureau_queries", {
 export const insertXdsBureauQuerySchema = createInsertSchema(xdsBureauQueries).omit({ id: true, createdAt: true });
 export type InsertXdsBureauQuery = z.infer<typeof insertXdsBureauQuerySchema>;
 export type XdsBureauQuery = typeof xdsBureauQueries.$inferSelect;
+
+export const registryCredentials = pgTable("registry_credentials", {
+  provider: text("provider").primaryKey(),
+  apiUrl: text("api_url").notNull(),
+  apiKeyEncrypted: text("api_key_encrypted").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedBy: text("updated_by"),
+});
+
+export type RegistryCredential = typeof registryCredentials.$inferSelect;

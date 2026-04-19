@@ -13,7 +13,7 @@ import {
   BarChart3, Eye, Layers, Zap, Key, Mail, MessageSquare,
   Smartphone, CreditCard, Fingerprint, ShieldCheck, Heart,
   TrendingUp, ArrowRightLeft, GitBranch, Link2, Unlink, ExternalLink,
-  HeartPulse, Signal, SignalZero,
+  HeartPulse, Signal, SignalZero, Radio, TestTube, Save, X, Pencil,
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
@@ -1405,6 +1405,247 @@ function GitHubPanel() {
   );
 }
 
+interface RegistryRow {
+  provider: string;
+  label: string;
+  live: boolean;
+  sandbox: boolean;
+  source: string;
+  hasDbCredentials: boolean;
+  apiUrl: string | null;
+  updatedAt: string | null;
+  updatedBy: string | null;
+}
+
+function RegistryCredentialsPanel() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const [editingProvider, setEditingProvider] = useState<string | null>(null);
+  const [form, setForm] = useState({ apiUrl: "", apiKey: "" });
+  const [testRef, setTestRef] = useState("TEST-001");
+  const [testingProvider, setTestingProvider] = useState<string | null>(null);
+  type TestResult = { ok: boolean; error?: string; statusCode?: number; latencyMs?: number; response?: unknown } | null;
+  const [testResult, setTestResult] = useState<Record<string, TestResult>>({});
+
+  const { data, isLoading, refetch } = useQuery<{ registries: RegistryRow[] }>({
+    queryKey: ["/api/platform-control/registry-credentials"],
+    queryFn: async () => { const r = await pcFetch("/api/platform-control/registry-credentials"); return r.json(); },
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: async ({ provider, apiUrl, apiKey }: { provider: string; apiUrl: string; apiKey: string }) => {
+      const r = await pcFetch(`/api/platform-control/registry-credentials/${provider}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiUrl, apiKey }),
+      });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.message || "Failed to save"); }
+      return r.json();
+    },
+    onSuccess: (_, vars) => {
+      toast({ title: "Credentials saved", description: `${vars.provider} updated successfully` });
+      qc.invalidateQueries({ queryKey: ["/api/platform-control/registry-credentials"] });
+      setEditingProvider(null);
+      setForm({ apiUrl: "", apiKey: "" });
+    },
+    onError: (e: Error) => toast({ title: "Failed to save", description: e.message, variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (provider: string) => {
+      const r = await pcFetch(`/api/platform-control/registry-credentials/${provider}`, { method: "DELETE" });
+      if (!r.ok) { const e = await r.json(); throw new Error(e.message || "Failed"); }
+      return r.json();
+    },
+    onSuccess: (_, provider) => {
+      toast({ title: "Credentials cleared", description: `${provider} will fall back to env vars` });
+      qc.invalidateQueries({ queryKey: ["/api/platform-control/registry-credentials"] });
+    },
+    onError: (e: Error) => toast({ title: "Failed to clear", description: e.message, variant: "destructive" }),
+  });
+
+  const handleTest = async (provider: string) => {
+    setTestingProvider(provider);
+    setTestResult(prev => ({ ...prev, [provider]: null }));
+    try {
+      const r = await pcFetch(`/api/platform-control/registry-credentials/${provider}/test`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiUrl: form.apiUrl, apiKey: form.apiKey, testReference: testRef }),
+      });
+      const result = await r.json();
+      setTestResult(prev => ({ ...prev, [provider]: result }));
+    } catch (e: any) {
+      setTestResult(prev => ({ ...prev, [provider]: { ok: false, error: e.message } }));
+    } finally {
+      setTestingProvider(null);
+    }
+  };
+
+  const startEdit = (row: RegistryRow) => {
+    setEditingProvider(row.provider);
+    setForm({ apiUrl: row.apiUrl ?? "", apiKey: "" });
+    setTestResult({});
+  };
+
+  if (isLoading) return <div className="text-sm text-muted-foreground p-4">Loading registry credentials...</div>;
+
+  const registries = data?.registries ?? [];
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">{registries.filter(r => r.live).length} of {registries.length} registries live</p>
+        <Button variant="ghost" size="sm" onClick={() => refetch()} data-testid="button-refresh-registry-creds">
+          <RefreshCw className="w-3.5 h-3.5" />
+        </Button>
+      </div>
+
+      <div className="space-y-2">
+        {registries.map(row => {
+          const isEditing = editingProvider === row.provider;
+          const tResult = testResult[row.provider];
+
+          return (
+            <div key={row.provider} className={`rounded-lg border ${isEditing ? "border-blue-500/40 bg-blue-500/5" : "border-border"} p-3`} data-testid={`registry-row-${row.provider}`}>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-3">
+                  <Radio className={`w-4 h-4 shrink-0 ${row.live ? "text-emerald-500" : "text-zinc-400"}`} />
+                  <div>
+                    <p className="text-sm font-medium" data-testid={`text-registry-label-${row.provider}`}>{row.label}</p>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      {row.live ? (
+                        <>
+                          <Badge variant="outline" className="text-[10px] border-emerald-500/30 text-emerald-500 bg-emerald-500/10">
+                            {row.sandbox ? "Sandbox" : "Live"}
+                          </Badge>
+                          {row.source === "database" && (
+                            <Badge variant="outline" className="text-[10px] border-blue-500/30 text-blue-500 bg-blue-500/10">
+                              <Database className="w-2.5 h-2.5 mr-0.5" /> DB
+                            </Badge>
+                          )}
+                          {row.source === "env" && (
+                            <Badge variant="outline" className="text-[10px] border-amber-500/30 text-amber-500 bg-amber-500/10">
+                              <Key className="w-2.5 h-2.5 mr-0.5" /> Env Var
+                            </Badge>
+                          )}
+                          {row.apiUrl && (
+                            <span className="text-[10px] text-muted-foreground font-mono truncate max-w-[200px]">{row.apiUrl}</span>
+                          )}
+                        </>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px] border-zinc-500/30 text-zinc-400">Stub / No credentials</Badge>
+                      )}
+                      {row.updatedAt && (
+                        <span className="text-[10px] text-muted-foreground">Updated {new Date(row.updatedAt).toLocaleDateString()}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  {row.hasDbCredentials && !isEditing && (
+                    <Button variant="ghost" size="sm" className="h-7 text-xs text-red-500 hover:text-red-600" onClick={() => deleteMutation.mutate(row.provider)} disabled={deleteMutation.isPending} data-testid={`button-clear-creds-${row.provider}`}>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
+                  {isEditing ? (
+                    <Button variant="ghost" size="sm" className="h-7" onClick={() => { setEditingProvider(null); setForm({ apiUrl: "", apiKey: "" }); }} data-testid={`button-cancel-edit-${row.provider}`}>
+                      <X className="w-3.5 h-3.5" />
+                    </Button>
+                  ) : (
+                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => startEdit(row)} data-testid={`button-edit-creds-${row.provider}`}>
+                      <Pencil className="w-3 h-3 mr-1" /> Edit
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {isEditing && (
+                <div className="mt-3 space-y-3 border-t border-border pt-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium">API URL *</label>
+                      <Input
+                        value={form.apiUrl}
+                        onChange={e => setForm(f => ({ ...f, apiUrl: e.target.value }))}
+                        placeholder="https://api.registry.example.com"
+                        data-testid={`input-api-url-${row.provider}`}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium">API Key *</label>
+                      <Input
+                        type="password"
+                        value={form.apiKey}
+                        onChange={e => setForm(f => ({ ...f, apiKey: e.target.value }))}
+                        placeholder={row.hasDbCredentials ? "Leave blank to keep existing" : "Enter API key"}
+                        data-testid={`input-api-key-${row.provider}`}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+                      <label className="text-xs font-medium shrink-0">Test reference:</label>
+                      <Input
+                        value={testRef}
+                        onChange={e => setTestRef(e.target.value)}
+                        placeholder="TEST-001"
+                        className="h-7 text-xs w-32"
+                        data-testid={`input-test-ref-${row.provider}`}
+                      />
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => handleTest(row.provider)}
+                      disabled={testingProvider === row.provider || !form.apiUrl || (!form.apiKey && !row.hasDbCredentials)}
+                      data-testid={`button-test-${row.provider}`}
+                    >
+                      {testingProvider === row.provider ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <TestTube className="w-3 h-3 mr-1" />}
+                      {!form.apiKey && row.hasDbCredentials ? "Test with Stored Key" : "Test Connection"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => saveMutation.mutate({ provider: row.provider, apiUrl: form.apiUrl, apiKey: form.apiKey })}
+                      disabled={saveMutation.isPending || !form.apiUrl || (!form.apiKey && !row.hasDbCredentials)}
+                      data-testid={`button-save-${row.provider}`}
+                    >
+                      {saveMutation.isPending ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <Save className="w-3 h-3 mr-1" />}
+                      {!form.apiKey && row.hasDbCredentials ? "Update URL Only" : "Save Credentials"}
+                    </Button>
+                  </div>
+
+                  {tResult && (
+                    <div className={`rounded-lg p-3 text-xs ${tResult.ok ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300" : "bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-300"}`} data-testid={`test-result-${row.provider}`}>
+                      <div className="flex items-center gap-2 font-medium mb-1">
+                        {tResult.ok ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                        {tResult.ok ? "Connection successful" : "Connection failed"}
+                        {tResult.latencyMs != null && <span className="text-muted-foreground font-normal ml-1">{tResult.latencyMs}ms</span>}
+                        {tResult.statusCode != null && <span className="text-muted-foreground font-normal">HTTP {tResult.statusCode}</span>}
+                      </div>
+                      {tResult.error && <p className="text-xs opacity-80">{tResult.error}</p>}
+                      {tResult.response && <pre className="mt-1 text-[10px] overflow-x-auto bg-black/5 rounded p-1">{JSON.stringify(tResult.response, null, 2).slice(0, 400)}</pre>}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-700 dark:text-amber-300">
+        <AlertTriangle className="w-3.5 h-3.5 inline mr-1" />
+        Credentials saved here are encrypted and stored in the database, taking priority over environment variables.
+        Use &ldquo;Test Connection&rdquo; to verify before saving. Clearing removes DB credentials and reverts to env vars.
+      </div>
+    </div>
+  );
+}
+
 function ControlDashboard() {
   const { data: summary } = useQuery<SummaryData>({
     queryKey: ["/api/platform-control/summary"],
@@ -1485,6 +1726,10 @@ function ControlDashboard() {
 
           <Panel title="Update Tracker" icon={Clock} color="text-orange-500" defaultOpen={false}>
             <UpdateTracker />
+          </Panel>
+
+          <Panel title="Registry API Credentials" icon={Radio} color="text-teal-500" defaultOpen={false}>
+            <RegistryCredentialsPanel />
           </Panel>
         </div>
       </div>

@@ -459,5 +459,13 @@ export async function migrateNewTables() {
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_xds_queries_borrower ON xds_bureau_queries(borrower_id)`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_xds_queries_requested_by ON xds_bureau_queries(requested_by)`);
 
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS registry_credentials (
+    provider text PRIMARY KEY,
+    api_url text NOT NULL,
+    api_key_encrypted text NOT NULL,
+    updated_at timestamp DEFAULT now(),
+    updated_by text
+  )`);
+
   console.log('[NewTables] Migration complete');
 }

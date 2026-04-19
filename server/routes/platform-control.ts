@@ -1,6 +1,8 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { pool } from "../db";
-import { platformDeployments, insertPlatformDeploymentSchema } from "@shared/schema";
+import { platformDeployments, insertPlatformDeploymentSchema, registryCredentials as registryCredentialsTable } from "@shared/schema";
+import { encryptPII } from "../encryption";
+import { registryStatus, setRegistryCredentialOverride, clearRegistryCredentialOverride, loadRegistryCredentialsFromDb } from "../asset-trace";
 import { db } from "../db";
 import { eq, desc, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
@@ -800,6 +802,220 @@ export function registerPlatformControlRoutes(app: Express) {
       logger.error("GitHub repo status failed", { error: (e as Error).message });
       return res.status(500).json({ message: "Failed to get repo status" });
     }
+  });
+
+  // ── Registry Credential Management ────────────────────────────────────────
+
+  const REGISTRY_PROVIDERS = [
+    { provider: "ghana_dvla",        label: "Ghana DVLA",          urlVar: "GHANA_DVLA_API_URL",    keyVar: "GHANA_DVLA_API_KEY" },
+    { provider: "sa_natis",          label: "South Africa NaTIS",  urlVar: "SA_NATIS_API_URL",       keyVar: "SA_NATIS_API_KEY" },
+    { provider: "ghana_lands",       label: "Ghana Lands Comm.",   urlVar: "GHANA_LANDS_API_URL",    keyVar: "GHANA_LANDS_API_KEY" },
+    { provider: "kenya_ntsa",        label: "Kenya NTSA",          urlVar: "KENYA_NTSA_API_URL",     keyVar: "KENYA_NTSA_API_KEY" },
+    { provider: "nigeria_frsc",      label: "Nigeria FRSC/MVAA",   urlVar: "NIGERIA_FRSC_API_URL",   keyVar: "NIGERIA_FRSC_API_KEY" },
+    { provider: "uganda_ursb_motor", label: "Uganda URSB Motor",   urlVar: "UGANDA_URSB_API_URL",    keyVar: "UGANDA_URSB_API_KEY" },
+    { provider: "ethiopia_motor",    label: "Ethiopia MVAA",       urlVar: "ETHIOPIA_MVAA_API_URL",  keyVar: "ETHIOPIA_MVAA_API_KEY" },
+  ];
+
+  const updateRegistryCredSchema = z.object({
+    apiUrl: z.string().url("Must be a valid URL"),
+    apiKey: z.string().optional(),
+  });
+
+  app.get("/api/platform-control/registry-credentials", requireMasterAuth, async (_req: Request, res: Response) => {
+    try {
+      const statuses = registryStatus();
+      const stored = await db.select().from(registryCredentialsTable);
+      const storedByProvider = new Map(stored.map(r => [r.provider, r]));
+
+      const rows = REGISTRY_PROVIDERS.map(p => {
+        const st = statuses[p.provider as keyof typeof statuses] || { live: false };
+        const dbRow = storedByProvider.get(p.provider);
+        return {
+          provider: p.provider,
+          label: p.label,
+          live: st.live,
+          sandbox: st.sandbox ?? false,
+          source: (st as { source?: string }).source ?? (st.live ? "env" : "none"),
+          hasDbCredentials: !!dbRow,
+          apiUrl: dbRow?.apiUrl ?? null,
+          updatedAt: dbRow?.updatedAt ?? null,
+          updatedBy: dbRow?.updatedBy ?? null,
+        };
+      });
+      return res.json({ registries: rows });
+    } catch (e: unknown) {
+      logger.error("Failed to list registry credentials", { error: (e as Error).message });
+      return res.status(500).json({ message: "Failed to load registry credentials" });
+    }
+  });
+
+  app.patch("/api/platform-control/registry-credentials/:provider", requireMasterAuth, async (req: Request, res: Response) => {
+    const { provider } = req.params;
+    if (!REGISTRY_PROVIDERS.find(p => p.provider === provider)) {
+      return res.status(400).json({ message: "Unknown registry provider" });
+    }
+    const parsed = updateRegistryCredSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: parsed.error.errors[0]?.message || "Validation error" });
+    }
+    const { apiUrl, apiKey } = parsed.data;
+    try {
+      let encryptedKey: string;
+      let plainKey: string;
+
+      if (apiKey) {
+        encryptedKey = encryptPII(apiKey);
+        plainKey = apiKey;
+      } else {
+        // Keep the existing encrypted key from DB
+        const existing = await db.select().from(registryCredentialsTable)
+          .where(eq(registryCredentialsTable.provider, provider));
+        if (!existing.length) {
+          return res.status(400).json({ message: "API key is required when no existing credentials are stored" });
+        }
+        encryptedKey = existing[0].apiKeyEncrypted;
+        const { decryptPII } = await import("../encryption");
+        plainKey = decryptPII(encryptedKey);
+      }
+
+      await db.insert(registryCredentialsTable).values({
+        provider,
+        apiUrl,
+        apiKeyEncrypted: encryptedKey,
+        updatedBy: "platform-admin",
+      }).onConflictDoUpdate({
+        target: registryCredentialsTable.provider,
+        set: { apiUrl, apiKeyEncrypted: encryptedKey, updatedAt: new Date(), updatedBy: "platform-admin" },
+      });
+
+      setRegistryCredentialOverride(provider, apiUrl, plainKey);
+
+      logger.info("Registry credentials updated", { provider, apiUrl: apiUrl.replace(/\/\/.*@/, "//***@") });
+      return res.json({ ok: true, provider, apiUrl });
+    } catch (e: unknown) {
+      logger.error("Failed to save registry credentials", { error: (e as Error).message });
+      return res.status(500).json({ message: "Failed to save credentials" });
+    }
+  });
+
+  app.delete("/api/platform-control/registry-credentials/:provider", requireMasterAuth, async (req: Request, res: Response) => {
+    const { provider } = req.params;
+    if (!REGISTRY_PROVIDERS.find(p => p.provider === provider)) {
+      return res.status(400).json({ message: "Unknown registry provider" });
+    }
+    try {
+      await db.delete(registryCredentialsTable).where(eq(registryCredentialsTable.provider, provider));
+      clearRegistryCredentialOverride(provider);
+      return res.json({ ok: true });
+    } catch (e: unknown) {
+      logger.error("Failed to delete registry credentials", { error: (e as Error).message });
+      return res.status(500).json({ message: "Failed to delete credentials" });
+    }
+  });
+
+  app.post("/api/platform-control/registry-credentials/:provider/test", requireMasterAuth, async (req: Request, res: Response) => {
+    const { provider } = req.params;
+    const entry = REGISTRY_PROVIDERS.find(p => p.provider === provider);
+    if (!entry) {
+      return res.status(400).json({ message: "Unknown registry provider" });
+    }
+
+    const testRef = (req.body?.testReference as string) || "TEST-001";
+    const apiUrl = req.body?.apiUrl as string | undefined;
+    let apiKey = req.body?.apiKey as string | undefined;
+
+    if (!apiUrl) {
+      return res.status(400).json({ message: "apiUrl is required for test" });
+    }
+
+    // If no apiKey supplied, fall back to the stored key for this provider
+    if (!apiKey) {
+      const existing = await db.select().from(registryCredentialsTable)
+        .where(eq(registryCredentialsTable.provider, provider));
+      if (existing.length) {
+        const { decryptPII: decrypt } = await import("../encryption");
+        apiKey = decrypt(existing[0].apiKeyEncrypted);
+      }
+    }
+
+    if (!apiKey) {
+      return res.status(400).json({ message: "apiKey is required — either provide it in the request or save credentials first" });
+    }
+
+    // SSRF guard: only allow https/http, block private/loopback addresses
+    try {
+      const parsed = new URL(apiUrl);
+      if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+        return res.status(400).json({ ok: false, error: "Only http/https URLs are allowed" });
+      }
+      const hostname = parsed.hostname.toLowerCase();
+      const privatePatterns = [
+        /^localhost$/,
+        /^127\./,
+        /^10\./,
+        /^192\.168\./,
+        /^172\.(1[6-9]|2\d|3[01])\./,
+        /^0\./,
+        /^::1$/,
+        /^fc00:/,
+        /^fe80:/,
+      ];
+      const isPrivate = privatePatterns.some(p => p.test(hostname));
+      if (isPrivate && process.env.NODE_ENV === "production") {
+        return res.status(400).json({ ok: false, error: "Connections to private/internal hosts are not allowed" });
+      }
+    } catch {
+      return res.status(400).json({ ok: false, error: "Invalid URL" });
+    }
+
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 8000);
+      let responseStatus = 0;
+      let responseBody = "";
+      let latencyMs = 0;
+      const t0 = Date.now();
+      try {
+        const resp = await fetch(`${apiUrl.replace(/\/$/, "")}/lookup`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Api-Key": apiKey, "User-Agent": "AfricaCreditHub/2.5" },
+          body: JSON.stringify({ reference: testRef, provider }),
+          signal: controller.signal,
+        });
+        latencyMs = Date.now() - t0;
+        clearTimeout(timer);
+        responseStatus = resp.status;
+        responseBody = await resp.text().catch(() => "");
+      } catch (fetchErr: any) {
+        clearTimeout(timer);
+        latencyMs = Date.now() - t0;
+        if (fetchErr.name === "AbortError") {
+          return res.json({ ok: false, error: "Connection timed out after 8s", latencyMs });
+        }
+        return res.json({ ok: false, error: fetchErr.message, latencyMs });
+      }
+
+      if (responseStatus >= 200 && responseStatus < 300) {
+        let parsed: unknown = null;
+        try { parsed = JSON.parse(responseBody); } catch { parsed = responseBody; }
+        return res.json({ ok: true, statusCode: responseStatus, latencyMs, response: parsed });
+      } else {
+        return res.json({ ok: false, statusCode: responseStatus, latencyMs, error: `Registry returned HTTP ${responseStatus}`, response: responseBody.slice(0, 300) });
+      }
+    } catch (e: unknown) {
+      return res.status(500).json({ ok: false, message: (e as Error).message });
+    }
+  });
+
+  // Spec-compatible aliases: /api/admin/registry-credentials/* mirrors the platform-control routes
+  app.get("/api/admin/registry-credentials", requireMasterAuth, (_req, res) => res.redirect(307, "/api/platform-control/registry-credentials"));
+  app.patch("/api/admin/registry-credentials/:provider", requireMasterAuth, (req, res) => res.redirect(307, `/api/platform-control/registry-credentials/${req.params.provider}`));
+  app.delete("/api/admin/registry-credentials/:provider", requireMasterAuth, (req, res) => res.redirect(307, `/api/platform-control/registry-credentials/${req.params.provider}`));
+  app.post("/api/admin/registry-credentials/:provider/test", requireMasterAuth, (req, res) => res.redirect(307, `/api/platform-control/registry-credentials/${req.params.provider}/test`));
+
+  // Load DB-stored registry credentials into in-memory cache at startup
+  loadRegistryCredentialsFromDb().catch((err: Error) => {
+    logger.warn("Could not pre-load registry credentials from DB at startup", { error: err.message });
   });
 
   logger.info("Platform control center routes registered");
