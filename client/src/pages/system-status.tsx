@@ -413,6 +413,12 @@ interface RegistryHealthConfigData {
   updatedAt: string | null;
 }
 
+interface RegistryCleanupStats {
+  lastRanAt: string | null;
+  deletedCount: number | null;
+  retentionDays: number | null;
+}
+
 function RegistryHealthConfigPanel() {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
@@ -422,6 +428,12 @@ function RegistryHealthConfigPanel() {
     queryKey: ["/api/admin/registry-health-config"],
     staleTime: 30000,
     enabled: open,
+  });
+
+  const { data: cleanupStats } = useQuery<RegistryCleanupStats>({
+    queryKey: ["/api/admin/registry-health-cleanup-stats"],
+    staleTime: 60000,
+    refetchInterval: 5 * 60 * 1000,
   });
 
   useEffect(() => {
@@ -483,11 +495,46 @@ function RegistryHealthConfigPanel() {
               Checks every {data.currentIntervalMinutes} min
             </span>
           )}
+          {cleanupStats?.lastRanAt && (
+            <span className="text-xs text-muted-foreground hidden sm:inline" data-testid="text-cleanup-stats-summary">
+              · Last cleanup: {cleanupStats.deletedCount ?? 0} row{cleanupStats.deletedCount !== 1 ? "s" : ""} deleted
+            </span>
+          )}
           {open ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
         </div>
       </CardHeader>
       {open && (
         <CardContent className="space-y-4">
+          <div
+            className="flex items-start gap-2 rounded-md border border-border bg-muted/40 px-3 py-2.5 text-xs"
+            data-testid="card-cleanup-stats"
+          >
+            <Trash2 className="w-3.5 h-3.5 mt-0.5 shrink-0 text-muted-foreground" />
+            <div className="space-y-0.5">
+              <p className="font-medium text-foreground">Health Record Cleanup</p>
+              {cleanupStats?.lastRanAt ? (
+                <p className="text-muted-foreground" data-testid="text-cleanup-last-ran">
+                  Last cleanup ran at{" "}
+                  <span className="text-foreground font-medium">
+                    {new Date(cleanupStats.lastRanAt).toLocaleString()}
+                  </span>
+                  {" — deleted "}
+                  <span className="text-foreground font-medium" data-testid="text-cleanup-deleted-count">
+                    {cleanupStats.deletedCount ?? 0} row{cleanupStats.deletedCount !== 1 ? "s" : ""}
+                  </span>
+                  {cleanupStats.retentionDays != null && (
+                    <span className="text-muted-foreground">
+                      {" "}older than {cleanupStats.retentionDays} days
+                    </span>
+                  )}
+                </p>
+              ) : (
+                <p className="text-muted-foreground" data-testid="text-cleanup-never-ran">
+                  No cleanup has run yet since the server started. The pruning job runs automatically once daily.
+                </p>
+              )}
+            </div>
+          </div>
           {isLoading || !data ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />

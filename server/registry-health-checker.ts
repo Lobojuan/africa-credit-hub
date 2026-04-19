@@ -230,8 +230,13 @@ async function pruneOldHealthEvents(): Promise<void> {
   const beforeDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
   try {
     const deleted = await storage.deleteOldRegistryHealthEvents(beforeDate);
+    _cleanupStats.lastRanAt = new Date();
+    _cleanupStats.deletedCount = deleted;
+    _cleanupStats.retentionDays = days;
     if (deleted > 0) {
       console.log(`[RegistryHealth] Pruned ${deleted} health event(s) older than ${days} days`);
+    } else {
+      console.log(`[RegistryHealth] Cleanup ran — no events older than ${days} days to prune`);
     }
   } catch (err: any) {
     console.error("[RegistryHealth] Failed to prune old health events:", err.message);
@@ -241,6 +246,22 @@ async function pruneOldHealthEvents(): Promise<void> {
 let _timer: ReturnType<typeof setInterval> | null = null;
 let _cleanupTimer: ReturnType<typeof setInterval> | null = null;
 let _currentIntervalMs = DEFAULT_CHECK_INTERVAL_MS;
+
+interface CleanupStats {
+  lastRanAt: Date | null;
+  deletedCount: number | null;
+  retentionDays: number | null;
+}
+
+const _cleanupStats: CleanupStats = {
+  lastRanAt: null,
+  deletedCount: null,
+  retentionDays: null,
+};
+
+export function getCleanupStats(): CleanupStats {
+  return { ..._cleanupStats };
+}
 
 export async function startRegistryHealthChecker(intervalMs = DEFAULT_CHECK_INTERVAL_MS): Promise<void> {
   if (_timer) return;
