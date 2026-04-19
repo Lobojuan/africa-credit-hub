@@ -687,12 +687,13 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(assetTraceRecords.createdAt));
   }
 
-  async getCollectionAssignments(opts: { organizationId?: string; country?: string; assignedTo?: string; status?: string } = {}): Promise<CollectionAssignment[]> {
+  async getCollectionAssignments(opts: { organizationId?: string; country?: string; assignedTo?: string; status?: string; segment?: string } = {}): Promise<CollectionAssignment[]> {
     const filters: any[] = [];
     if (opts.organizationId) filters.push(eq(collectionAssignments.organizationId, opts.organizationId));
     if (opts.country) filters.push(eq(collectionAssignments.country, opts.country));
     if (opts.assignedTo) filters.push(eq(collectionAssignments.assignedTo, opts.assignedTo));
     if (opts.status) filters.push(eq(collectionAssignments.status, opts.status as any));
+    if (opts.segment) filters.push(eq(collectionAssignments.segment, opts.segment));
     const where = filters.length > 1 ? and(...filters) : filters[0];
     return db.select().from(collectionAssignments).where(where).orderBy(desc(collectionAssignments.createdAt)).limit(500);
   }

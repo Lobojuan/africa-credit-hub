@@ -28,6 +28,7 @@ interface Assignment {
   dueDate?: string;
   notes?: string;
   assignedTo?: string;
+  segment?: string | null;
   createdAt: string;
 }
 
@@ -79,6 +80,7 @@ const STATUS_COLORS: Record<string, string> = {
 export default function CollectionsPage() {
   const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [segmentFilter, setSegmentFilter] = useState<string>("all");
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [attemptOpen, setAttemptOpen] = useState(false);
@@ -111,9 +113,13 @@ export default function CollectionsPage() {
   const [addingProfile, setAddingProfile] = useState(false);
 
   const { data: assignments = [], isLoading } = useQuery<Assignment[]>({
-    queryKey: ["/api/collections/assignments", statusFilter],
+    queryKey: ["/api/collections/assignments", statusFilter, segmentFilter],
     queryFn: async () => {
-      const url = statusFilter === "all" ? "/api/collections/assignments" : `/api/collections/assignments?status=${statusFilter}`;
+      const params = new URLSearchParams();
+      if (statusFilter !== "all") params.set("status", statusFilter);
+      if (segmentFilter !== "all") params.set("segment", segmentFilter);
+      const qs = params.toString();
+      const url = qs ? `/api/collections/assignments?${qs}` : "/api/collections/assignments";
       const res = await fetch(url, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to load");
       return res.json();
@@ -284,6 +290,26 @@ export default function CollectionsPage() {
 
   const breachCount = breachSet.size;
 
+  const { data: allAssignments = [] } = useQuery<Assignment[]>({
+    queryKey: ["/api/collections/assignments", "all-segments"],
+    queryFn: async () => {
+      const res = await fetch("/api/collections/assignments", { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  const knownSegments = Array.from(new Set([
+    ...(slaSettings ?? []).map(s => s.segment).filter(Boolean) as string[],
+    ...allAssignments.map(a => a.segment).filter(Boolean) as string[],
+  ])).sort();
+
+  const segmentStats = knownSegments.map(seg => {
+    const cases = allAssignments.filter(a => a.segment === seg);
+    const breaches = cases.filter(a => breachSet.has(a.id));
+    return { seg, total: cases.length, breaches: breaches.length };
+  });
+
   return (
     <div className="space-y-4 p-4 md:p-6">
       <div className="flex items-start justify-between gap-3">
@@ -436,14 +462,58 @@ export default function CollectionsPage() {
         </Card>
       )}
 
+      {segmentStats.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3" data-testid="segment-summary-cards">
+          {segmentStats.map(({ seg, total, breaches: segBreaches }) => (
+            <button
+              key={seg}
+              onClick={() => setSegmentFilter(segmentFilter === seg ? "all" : seg)}
+              className={`text-left rounded-lg border p-3 transition-colors hover:bg-accent/50 focus:outline-none focus:ring-2 focus:ring-primary/30 ${segmentFilter === seg ? "border-primary bg-primary/5" : "border-border bg-card"}`}
+              data-testid={`card-segment-${seg}`}
+            >
+              <p className="text-[11px] font-medium text-muted-foreground truncate">{seg}</p>
+              <p className="text-lg font-bold mt-1">{total}</p>
+              <div className="flex items-center gap-1 mt-0.5">
+                {segBreaches > 0 ? (
+                  <span className="text-[10px] text-destructive font-medium flex items-center gap-0.5">
+                    <AlertCircle className="w-3 h-3" />{segBreaches} breach{segBreaches > 1 ? "es" : ""}
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-green-600 dark:text-green-400 flex items-center gap-0.5">
+                    <CheckCircle2 className="w-3 h-3" />No breaches
+                  </span>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
       <Tabs value={statusFilter} onValueChange={setStatusFilter}>
-        <TabsList>
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="open">Open</TabsTrigger>
-          <TabsTrigger value="in_progress">In Progress</TabsTrigger>
-          <TabsTrigger value="promised">Promised</TabsTrigger>
-          <TabsTrigger value="resolved">Resolved</TabsTrigger>
-        </TabsList>
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <TabsList>
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="open">Open</TabsTrigger>
+            <TabsTrigger value="in_progress">In Progress</TabsTrigger>
+            <TabsTrigger value="promised">Promised</TabsTrigger>
+            <TabsTrigger value="resolved">Resolved</TabsTrigger>
+          </TabsList>
+          <div className="flex items-center gap-2">
+            <Filter className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">Segment:</span>
+            <Select value={segmentFilter} onValueChange={setSegmentFilter}>
+              <SelectTrigger className="h-8 text-xs w-44" data-testid="select-segment-filter">
+                <SelectValue placeholder="All segments" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All segments</SelectItem>
+                {knownSegments.map(seg => (
+                  <SelectItem key={seg} value={seg}>{seg}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
         <TabsContent value={statusFilter} className="mt-4">
           <Card>
             <CardContent className="p-0">
@@ -462,6 +532,7 @@ export default function CollectionsPage() {
                       <TableHead>Priority</TableHead>
                       <TableHead>Segment</TableHead>
                       <TableHead>Borrower</TableHead>
+                      <TableHead>Segment</TableHead>
                       <TableHead>Outstanding</TableHead>
                       <TableHead>Due</TableHead>
                       <TableHead>Created</TableHead>
@@ -513,6 +584,13 @@ export default function CollectionsPage() {
                             <Link href={`/borrowers/${a.borrowerId}`}>
                               <span className="text-xs font-mono text-primary hover:underline">{a.borrowerId.slice(0, 12)}…</span>
                             </Link>
+                          </TableCell>
+                          <TableCell>
+                            {a.segment ? (
+                              <Badge variant="outline" className="text-[10px]" data-testid={`badge-segment-${a.id}`}>{a.segment}</Badge>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
                           </TableCell>
                           <TableCell className="text-xs">
                             {a.amountOutstanding ? `${a.currency || ""} ${parseFloat(a.amountOutstanding).toLocaleString()}` : "—"}

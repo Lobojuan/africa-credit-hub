@@ -12142,11 +12142,12 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
-      const { status, mine } = req.query as any;
+      const { status, mine, segment } = req.query as any;
       const list = await storage.getCollectionAssignments({
         organizationId: orgId,
         country,
         status,
+        segment: segment || undefined,
         assignedTo: mine === "true" ? (req as any).session?.userId : undefined,
       });
       res.json(list);
