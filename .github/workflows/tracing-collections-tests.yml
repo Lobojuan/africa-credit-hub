@@ -188,6 +188,27 @@ jobs:
           webhook-type: incoming-webhook
           payload: ${{ env.SLACK_PAYLOAD }}
 
+      - name: Send email alert (Slack not configured)
+        if: failure() && github.ref == 'refs/heads/main' && secrets.SLACK_WEBHOOK_URL == '' && secrets.ALERT_EMAIL_TO != '' && secrets.SMTP_SERVER != '' && secrets.SMTP_USERNAME != '' && secrets.SMTP_PASSWORD != ''
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_SERVER }}
+          server_port: ${{ secrets.SMTP_PORT || 587 }}
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "CI failure — Tracing & Collections Tests (${{ github.repository }})"
+          to: ${{ secrets.ALERT_EMAIL_TO }}
+          from: "GitHub Actions <${{ secrets.SMTP_USERNAME }}>"
+          body: |
+            CI failure — Tracing & Collections Tests
+
+            Workflow:     ${{ github.workflow }}
+            Run:          ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            Triggered by: ${{ github.actor }}
+            Commit:       ${{ github.event.head_commit.message || github.event.pull_request.title || 'no message' }}
+
+            View run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
       - name: Stop application server
         if: always()
         run: |

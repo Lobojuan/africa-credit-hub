@@ -247,3 +247,26 @@ jobs:
                 }
               ]
             }
+
+      - name: Send email alert (Slack not configured)
+        if: ${{ secrets.SLACK_WEBHOOK_URL == '' && secrets.ALERT_EMAIL_TO != '' && secrets.SMTP_SERVER != '' && secrets.SMTP_USERNAME != '' && secrets.SMTP_PASSWORD != '' }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_SERVER }}
+          server_port: ${{ secrets.SMTP_PORT || 587 }}
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "CI failure — Playwright Full Test Suite (${{ github.repository }})"
+          to: ${{ secrets.ALERT_EMAIL_TO }}
+          from: "GitHub Actions <${{ secrets.SMTP_USERNAME }}>"
+          body: |
+            CI failure — Playwright Full Test Suite
+
+            Repository: ${{ github.repository }}
+            Branch:     ${{ github.ref_name }}
+            Triggered by: ${{ github.actor }}
+            Failed jobs:
+              - unauthenticated: ${{ needs.playwright-unauthenticated.result }}
+              - authenticated:   ${{ needs.playwright-authenticated.result }}
+
+            View run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
