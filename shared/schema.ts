@@ -1563,3 +1563,19 @@ export const collectionAttempts = pgTable("collection_attempts", {
 export const insertCollectionAttemptSchema = createInsertSchema(collectionAttempts).omit({ id: true, createdAt: true });
 export type InsertCollectionAttempt = z.infer<typeof insertCollectionAttemptSchema>;
 export type CollectionAttempt = typeof collectionAttempts.$inferSelect;
+
+export const collectionSlaSettings = pgTable("collection_sla_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  country: text("country").notNull(),
+  urgentThresholdDays: integer("urgent_threshold_days").notNull().default(3),
+  highThresholdDays: integer("high_threshold_days").notNull().default(5),
+  mediumThresholdDays: integer("medium_threshold_days").notNull().default(7),
+  lowThresholdDays: integer("low_threshold_days").notNull().default(14),
+  enabled: boolean("enabled").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+export const insertCollectionSlaSettingsSchema = createInsertSchema(collectionSlaSettings).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertCollectionSlaSettings = z.infer<typeof insertCollectionSlaSettingsSchema>;
+export type CollectionSlaSettings = typeof collectionSlaSettings.$inferSelect;

@@ -12009,6 +12009,91 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
+  // ─── Collections SLA settings ────────────────────────────────────────────
+  const resolveCollectionCountry = async (req: any, bodyCountry?: string): Promise<string | undefined> => {
+    const fromFilter = getCountryFilter(req);
+    if (fromFilter) return fromFilter;
+    if (bodyCountry) return bodyCountry;
+    if (req.session.userCountry) return req.session.userCountry;
+    if (req.session.organizationId) {
+      const org = await storage.getOrganization(req.session.organizationId);
+      if (org?.country) return org.country;
+    }
+    return undefined;
+  };
+
+  app.get("/api/collections/sla-settings", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const country = await resolveCollectionCountry(req);
+      const orgId = req.session.organizationId;
+      const settings = await storage.getCollectionSlaSettings(orgId, country ?? "");
+      const defaults = { urgentThresholdDays: 3, highThresholdDays: 5, mediumThresholdDays: 7, lowThresholdDays: 14, enabled: true };
+      res.json(settings ?? { ...defaults, country: country ?? null, organizationId: orgId ?? null });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.put("/api/collections/sla-settings", requireRole("admin", "super_admin"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const body = req.body || {};
+      const orgId = req.session.organizationId;
+      const country = await resolveCollectionCountry(req, body.country);
+      if (!country) return res.status(400).json({ message: "Country scope required: set a viewing country or provide country in request body" });
+      const parseThreshold = (val: unknown, def: number): number => {
+        const n = Math.floor(Number(val));
+        return (Number.isFinite(n) && n >= 1) ? n : def;
+      };
+      const data = {
+        country,
+        organizationId: orgId ?? null,
+        urgentThresholdDays: parseThreshold(body.urgentThresholdDays, 3),
+        highThresholdDays: parseThreshold(body.highThresholdDays, 5),
+        mediumThresholdDays: parseThreshold(body.mediumThresholdDays, 7),
+        lowThresholdDays: parseThreshold(body.lowThresholdDays, 14),
+        enabled: body.enabled !== false,
+      };
+      const saved = await storage.upsertCollectionSlaSettings(data);
+      res.json(saved);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/collections/sla-check", requireRole("super_admin"), async (req, res) => {
+    try {
+      const country = await resolveCollectionCountry(req);
+      const orgId = req.session.organizationId;
+      const { checkCollectionSla } = await import("./collection-sla-checker");
+      const result = await checkCollectionSla(orgId, country);
+      res.json({ message: "SLA check complete", ...result });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.get("/api/collections/sla-breaches", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const country = await resolveCollectionCountry(req);
+      const orgId = req.session.organizationId;
+      const settings = await storage.getCollectionSlaSettings(orgId, country ?? "");
+      if (settings && !settings.enabled) {
+        return res.json({ breachIds: [] });
+      }
+      const thresholds: Record<string, number> = {
+        urgent: settings?.urgentThresholdDays ?? 3,
+        high: settings?.highThresholdDays ?? 5,
+        medium: settings?.mediumThresholdDays ?? 7,
+        low: settings?.lowThresholdDays ?? 14,
+      };
+      const breachIds: string[] = [];
+      for (const priority of ["urgent", "high", "medium", "low"]) {
+        const overdue = await storage.getOverdueCollectionAssignments(thresholds[priority], priority, orgId, country);
+        overdue.forEach(a => breachIds.push(a.id));
+      }
+      res.json({ breachIds });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // Start the collection SLA background checker
+  import("./collection-sla-checker").then(({ startCollectionSlaChecker }) => {
+    startCollectionSlaChecker();
+  }).catch(e => console.error("[routes] Failed to start SLA checker:", e.message));
+
   return httpServer;
 }
 

@@ -6,10 +6,11 @@ import {
   users, borrowers, creditAccounts, creditInquiries, auditLogs, pendingApprovals, disputes, notifications,
   courtJudgments, consentRecords, paymentHistory, institutions, billingRecords, creditReportLogs, apiKeys,
   exchangeRates, retentionPolicies, apiConfigurations, organizations, dishonouredCheques, borrowerAlerts,
-  contactEvents, linkClusters, assetTraceRecords, collectionAssignments, collectionAttempts,
+  contactEvents, linkClusters, assetTraceRecords, collectionAssignments, collectionAttempts, collectionSlaSettings,
   type ContactEvent, type LinkCluster, type AssetTraceRecord,
   type CollectionAssignment, type InsertCollectionAssignment,
   type CollectionAttempt, type InsertCollectionAttempt,
+  type CollectionSlaSettings, type InsertCollectionSlaSettings,
   guarantors, telcoProfiles, momoTransactions, telcoCreditScores,
   telcoDecisionRules, telcoDecisionLogs,
   telcoLoans, telcoLoanRepayments, telcoConsentEvents,
@@ -280,6 +281,10 @@ export interface IStorage {
   getTelcoConsentEvents(profileId: string): Promise<TelcoConsentEvent[]>;
   createTelcoConsentEvent(event: InsertTelcoConsentEvent): Promise<TelcoConsentEvent>;
   getTelcoConsentSummary(organizationId?: string, country?: string): Promise<{ total: number; active: number; revoked: number; byMethod: Record<string, number> }>;
+
+  getCollectionSlaSettings(organizationId: string | undefined, country: string): Promise<CollectionSlaSettings | undefined>;
+  upsertCollectionSlaSettings(data: InsertCollectionSlaSettings): Promise<CollectionSlaSettings>;
+  getOverdueCollectionAssignments(thresholdDays: number, priority: string, organizationId?: string, country?: string): Promise<CollectionAssignment[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -697,6 +702,53 @@ export class DatabaseStorage implements IStorage {
     const [created] = await db.insert(collectionAttempts).values(data).returning();
     return created;
   }
+
+  async getCollectionSlaSettings(organizationId: string | undefined, country: string): Promise<CollectionSlaSettings | undefined> {
+    if (organizationId) {
+      const [r] = await db.select().from(collectionSlaSettings)
+        .where(and(eq(collectionSlaSettings.organizationId, organizationId), eq(collectionSlaSettings.country, country)));
+      if (r) return r;
+    }
+    const [r] = await db.select().from(collectionSlaSettings)
+      .where(and(sql`organization_id IS NULL`, eq(collectionSlaSettings.country, country)));
+    return r;
+  }
+
+  async upsertCollectionSlaSettings(data: InsertCollectionSlaSettings): Promise<CollectionSlaSettings> {
+    const existing = await this.getCollectionSlaSettings(data.organizationId ?? undefined, data.country);
+    if (existing) {
+      const [updated] = await db.update(collectionSlaSettings)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(collectionSlaSettings.id, existing.id))
+        .returning();
+      return updated;
+    }
+    const [created] = await db.insert(collectionSlaSettings).values(data).returning();
+    return created;
+  }
+
+  async getOverdueCollectionAssignments(thresholdDays: number, priority: string, organizationId?: string, country?: string): Promise<CollectionAssignment[]> {
+    const cutoff = new Date(Date.now() - thresholdDays * 24 * 60 * 60 * 1000);
+    const result = await db.execute(sql`
+      SELECT ca.*
+      FROM collection_assignments ca
+      WHERE ca.status IN ('open', 'in_progress')
+        AND ca.priority = ${priority}
+        ${organizationId ? sql`AND ca.organization_id = ${organizationId}` : sql``}
+        ${country ? sql`AND ca.country = ${country}` : sql``}
+        AND ca.assigned_to IS NOT NULL
+        AND (
+          NOT EXISTS (
+            SELECT 1 FROM collection_attempts att WHERE att.assignment_id = ca.id
+          )
+          OR (
+            SELECT MAX(att.attempted_at) FROM collection_attempts att WHERE att.assignment_id = ca.id
+          ) < ${cutoff}
+        )
+    `);
+    return (result.rows || []) as unknown as CollectionAssignment[];
+  }
+
   // ──────────────────────────────────────────────────────────────────────────
 
   async getCreditAccount(id: string): Promise<CreditAccount | undefined> {

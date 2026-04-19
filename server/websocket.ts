@@ -26,7 +26,8 @@ export type WSEventType =
   | "system_alert"
   | "score_computed"
   | "fraud_alert"
-  | "anchor_created";
+  | "anchor_created"
+  | "collection_sla_breach";
 
 export interface WSEvent {
   type: WSEventType;

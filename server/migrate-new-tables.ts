@@ -415,5 +415,19 @@ export async function migrateNewTables() {
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_afford_borrower ON affordability_assessments(borrower_id)`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_afford_org ON affordability_assessments(organization_id)`);
 
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS collection_sla_settings (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id varchar REFERENCES organizations(id),
+    country text NOT NULL,
+    urgent_threshold_days integer NOT NULL DEFAULT 3,
+    high_threshold_days integer NOT NULL DEFAULT 5,
+    medium_threshold_days integer NOT NULL DEFAULT 7,
+    low_threshold_days integer NOT NULL DEFAULT 14,
+    enabled boolean NOT NULL DEFAULT true,
+    created_at timestamp DEFAULT now(),
+    updated_at timestamp DEFAULT now()
+  )`);
+  await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_collection_sla_org_country ON collection_sla_settings(organization_id, country)`);
+
   console.log('[NewTables] Migration complete');
 }
