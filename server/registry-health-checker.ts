@@ -9,12 +9,16 @@
  * (stored in the registry_health_config DB table) and fall back to env vars
  * when no DB record exists.
  *
+ * Each probe result (ok or fail) is persisted to the registry_health_events
+ * table so the team can spot patterns over time.
+ *
  * Configuration env vars (fallbacks):
  *   REGISTRY_ALERT_EMAIL       — recipient for alert emails (falls back to PLATFORM_OPS_EMAIL or SMTP_FROM)
  *   REGISTRY_ALERT_SLACK_WEBHOOK — incoming webhook URL for Slack alerts
  */
 
 import { testRegistryCredentials, registryStatus, TESTABLE_PROVIDERS, type AssetProvider } from "./asset-trace";
+import { storage } from "./storage";
 
 const DEFAULT_CHECK_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
 const FAILURE_THRESHOLD = 2;
@@ -115,6 +119,14 @@ async function sendAlerts(provider: string, error: string, isRecovery = false): 
   ]);
 }
 
+async function persistEvent(provider: string, status: "ok" | "fail", latencyMs?: number, error?: string): Promise<void> {
+  try {
+    await storage.insertRegistryHealthEvent({ provider, status, latencyMs: latencyMs ?? null, error: error ?? null });
+  } catch (err: any) {
+    console.error(`[RegistryHealth] Failed to persist health event for ${provider}:`, err.message);
+  }
+}
+
 async function runHealthChecks(): Promise<void> {
   const statuses = registryStatus();
 
@@ -148,6 +160,8 @@ async function runHealthChecks(): Promise<void> {
           alertSent: false,
         });
 
+        await persistEvent(provider, "ok", result.latencyMs);
+
         if (wasDown) {
           console.log(`[RegistryHealth] ${provider} recovered — sending recovery alert`);
           await sendAlerts(provider, "", true);
@@ -169,6 +183,8 @@ async function runHealthChecks(): Promise<void> {
           alertSent: existing.alertSent || shouldAlert,
         });
 
+        await persistEvent(provider, "fail", result.latencyMs, errMsg);
+
         console.warn(`[RegistryHealth] ${provider} FAIL (attempt ${failures}): ${errMsg}`);
 
         if (shouldAlert) {
@@ -189,6 +205,8 @@ async function runHealthChecks(): Promise<void> {
         error: errMsg,
         alertSent: existing.alertSent || shouldAlert,
       });
+
+      await persistEvent(provider, "fail", undefined, errMsg);
 
       console.error(`[RegistryHealth] ${provider} probe threw: ${errMsg}`);
 

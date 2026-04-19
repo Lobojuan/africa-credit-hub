@@ -12054,6 +12054,18 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
+  // Registry health event history — persisted probe results from the last N days (default 7)
+  app.get("/api/trace/registry-health/history", requireRole("admin", "super_admin", "regulator"), async (req, res) => {
+    try {
+      const days = Math.min(Math.max(parseInt((req.query.days as string) ?? "7", 10) || 7, 1), 90);
+      const provider = req.query.provider as string | undefined;
+      const events = provider
+        ? await storage.getRegistryHealthEvents(provider, days)
+        : await storage.getAllRegistryHealthEvents(days);
+      res.json(events);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
   // Test connectivity for a specific registry (probe with synthetic reference)
   app.post("/api/trace/registry-status/:provider/test", requireRole("admin", "super_admin"), async (req, res) => {
     try {

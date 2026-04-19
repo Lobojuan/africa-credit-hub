@@ -566,6 +566,15 @@ function RegistryHealthConfigPanel() {
   );
 }
 
+interface RegistryHealthEvent {
+  id: string;
+  provider: string;
+  status: "ok" | "fail";
+  latencyMs: number | null;
+  error: string | null;
+  checkedAt: string;
+}
+
 function RegistryStatusPanel() {
   const { data, isLoading, refetch } = useQuery<Record<string, { live: boolean; url?: string; sandbox?: boolean }>>({
     queryKey: ["/api/trace/registry-status"],
@@ -576,8 +585,14 @@ function RegistryStatusPanel() {
     refetchInterval: 60000,
     staleTime: 30000,
   });
+  const { data: historyData } = useQuery<RegistryHealthEvent[]>({
+    queryKey: ["/api/trace/registry-health/history"],
+    refetchInterval: 5 * 60 * 1000,
+    staleTime: 2 * 60 * 1000,
+  });
   const { toast } = useToast();
   const [testResults, setTestResults] = useState<Record<string, RegistryTestResult | "testing">>({});
+  const [expandedHistory, setExpandedHistory] = useState<Record<string, boolean>>({});
 
   const registries = Object.entries(REGISTRY_LABELS);
   const liveCount = data ? Object.values(data).filter(r => r.live && !r.sandbox).length : 0;
@@ -590,6 +605,16 @@ function RegistryStatusPanel() {
   }, {});
 
   const failingCount = Object.values(healthByProvider).filter(h => h.lastStatus === "fail" && h.consecutiveFailures >= 2).length;
+
+  const historyByProvider = (historyData ?? []).reduce<Record<string, RegistryHealthEvent[]>>((acc, e) => {
+    if (!acc[e.provider]) acc[e.provider] = [];
+    acc[e.provider].push(e);
+    return acc;
+  }, {});
+
+  function toggleHistory(provider: string) {
+    setExpandedHistory(prev => ({ ...prev, [provider]: !prev[provider] }));
+  }
 
   async function testRegistry(provider: string) {
     setTestResults(prev => ({ ...prev, [provider]: "testing" }));
@@ -664,6 +689,13 @@ function RegistryStatusPanel() {
                   data-testid={`registry-row-${key}`}
                   className={`rounded-lg border px-3 py-2 text-sm ${isHealthFailing ? "border-red-500/30 bg-red-500/5" : ""}`}
                 >
+                  {(() => {
+                    const providerHistory = historyByProvider[key] ?? [];
+                    const failEvents7d = providerHistory.filter(e => e.status === "fail").length;
+                    const totalEvents7d = providerHistory.length;
+                    const isExpanded = expandedHistory[key] ?? false;
+                    return (
+                      <>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 min-w-0">
                       <Radio className={`w-3 h-3 shrink-0 ${isHealthFailing ? "text-red-500" : isLive && !isSandbox ? "text-emerald-500" : isLive && isSandbox ? "text-amber-500" : "text-muted-foreground/40"}`} />
@@ -739,6 +771,48 @@ function RegistryStatusPanel() {
                         : `Failed · ${testData.error ?? "Unknown error"}${testData.statusCode ? ` (HTTP ${testData.statusCode})` : ""}`}
                     </div>
                   )}
+                  {totalEvents7d > 0 && (
+                    <div className="mt-1.5">
+                      <button
+                        data-testid={`button-toggle-history-${key}`}
+                        onClick={() => toggleHistory(key)}
+                        className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <Clock className="w-2.5 h-2.5" />
+                        {failEvents7d > 0
+                          ? `${failEvents7d} failure${failEvents7d !== 1 ? "s" : ""} in last 7 days`
+                          : `${totalEvents7d} check${totalEvents7d !== 1 ? "s" : ""} in last 7 days — all OK`}
+                        <span className="ml-0.5">{isExpanded ? "▲" : "▼"}</span>
+                      </button>
+                      {isExpanded && (
+                        <div
+                          data-testid={`list-registry-history-${key}`}
+                          className="mt-1 space-y-0.5 max-h-36 overflow-y-auto border rounded bg-muted/30 p-1"
+                        >
+                          {providerHistory.slice(0, 50).map(event => (
+                            <div
+                              key={event.id}
+                              data-testid={`item-registry-history-${event.id}`}
+                              className={`flex items-center gap-1.5 text-[10px] px-1.5 py-0.5 rounded ${event.status === "ok" ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}`}
+                            >
+                              {event.status === "ok"
+                                ? <CheckCircle2 className="w-2.5 h-2.5 shrink-0" />
+                                : <XCircle className="w-2.5 h-2.5 shrink-0" />}
+                              <span className="text-muted-foreground shrink-0">
+                                {new Date(event.checkedAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                              </span>
+                              {event.status === "ok"
+                                ? <span>OK{event.latencyMs != null ? ` · ${event.latencyMs}ms` : ""}</span>
+                                : <span className="truncate">Fail{event.error ? ` · ${event.error}` : ""}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                      </>
+                    );
+                  })()}
                 </div>
               );
             })}

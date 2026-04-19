@@ -19,6 +19,8 @@ const sw: Record<string, any> = {
     creditReports: "Ripoti za Mikopo",
     pendingApprovals: "Idhini Zinazosubiri",
     disputes: "Migogoro",
+    findConnections: "Tafuta Miunganiko",
+    collections: "Makusanyo",
     auditTrail: "Njia ya Ukaguzi",
     userManagement: "Usimamizi wa Watumiaji",
     institutions: "Taasisi",

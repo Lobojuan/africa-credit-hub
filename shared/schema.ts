@@ -1636,3 +1636,20 @@ export const registryHealthConfig = pgTable("registry_health_config", {
 export const insertRegistryHealthConfigSchema = createInsertSchema(registryHealthConfig).omit({ updatedAt: true });
 export type InsertRegistryHealthConfig = z.infer<typeof insertRegistryHealthConfigSchema>;
 export type RegistryHealthConfig = typeof registryHealthConfig.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Registry health events — persisted history of every health-check probe
+// ---------------------------------------------------------------------------
+
+export const registryHealthEvents = pgTable("registry_health_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  provider: text("provider").notNull(),
+  status: text("status").notNull(), // "ok" | "fail"
+  latencyMs: integer("latency_ms"),
+  error: text("error"),
+  checkedAt: timestamp("checked_at").defaultNow().notNull(),
+});
+
+export const insertRegistryHealthEventSchema = createInsertSchema(registryHealthEvents).omit({ id: true, checkedAt: true });
+export type InsertRegistryHealthEvent = z.infer<typeof insertRegistryHealthEventSchema>;
+export type RegistryHealthEvent = typeof registryHealthEvents.$inferSelect;

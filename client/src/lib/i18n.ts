@@ -26,6 +26,8 @@ const en = {
     creditReports: "Credit Reports",
     pendingApprovals: "Pending Approvals",
     disputes: "Disputes",
+    findConnections: "Find Connections",
+    collections: "Collections",
     auditTrail: "Audit Trail",
     userManagement: "User Management",
     institutions: "Institutions",

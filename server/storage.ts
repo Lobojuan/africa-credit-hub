@@ -54,6 +54,8 @@ import {
   type AffordabilityAssessment, type InsertAffordabilityAssessment,
   registryHealthConfig,
   type RegistryHealthConfig, type InsertRegistryHealthConfig,
+  registryHealthEvents,
+  type RegistryHealthEvent, type InsertRegistryHealthEvent,
 } from "@shared/schema";
 
 export function requireCountryScope(country: string | undefined, methodName: string): void {
@@ -295,6 +297,10 @@ export interface IStorage {
 
   getRegistryHealthConfig(): Promise<RegistryHealthConfig | undefined>;
   upsertRegistryHealthConfig(data: Partial<InsertRegistryHealthConfig>, updatedBy?: string): Promise<RegistryHealthConfig>;
+
+  insertRegistryHealthEvent(event: InsertRegistryHealthEvent): Promise<RegistryHealthEvent>;
+  getRegistryHealthEvents(provider: string, sinceDays?: number): Promise<RegistryHealthEvent[]>;
+  getAllRegistryHealthEvents(sinceDays?: number): Promise<RegistryHealthEvent[]>;
 }
 
 export interface OverdueAssignmentDetail {
@@ -2574,6 +2580,29 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return row;
+  }
+
+  async insertRegistryHealthEvent(event: InsertRegistryHealthEvent): Promise<RegistryHealthEvent> {
+    const [created] = await db.insert(registryHealthEvents).values(event).returning();
+    return created;
+  }
+
+  async getRegistryHealthEvents(provider: string, sinceDays = 7): Promise<RegistryHealthEvent[]> {
+    const since = new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000);
+    return await db
+      .select()
+      .from(registryHealthEvents)
+      .where(and(eq(registryHealthEvents.provider, provider), gte(registryHealthEvents.checkedAt, since)))
+      .orderBy(desc(registryHealthEvents.checkedAt));
+  }
+
+  async getAllRegistryHealthEvents(sinceDays = 7): Promise<RegistryHealthEvent[]> {
+    const since = new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000);
+    return await db
+      .select()
+      .from(registryHealthEvents)
+      .where(gte(registryHealthEvents.checkedAt, since))
+      .orderBy(desc(registryHealthEvents.checkedAt));
   }
 }
 

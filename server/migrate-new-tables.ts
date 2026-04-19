@@ -476,5 +476,17 @@ export async function migrateNewTables() {
     updated_by varchar REFERENCES users(id)
   )`);
 
+  // Registry health event history — persisted probe results (Task #82)
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS registry_health_events (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    provider text NOT NULL,
+    status text NOT NULL,
+    latency_ms integer,
+    error text,
+    checked_at timestamp DEFAULT now() NOT NULL
+  )`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_registry_health_events_provider_time
+    ON registry_health_events(provider, checked_at DESC)`);
+
   console.log('[NewTables] Migration complete');
 }

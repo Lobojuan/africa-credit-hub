@@ -16,6 +16,8 @@ const ar: Record<string, any> = {
     creditReports: "تقارير الائتمان",
     pendingApprovals: "الموافقات المعلّقة",
     disputes: "النزاعات",
+    findConnections: "البحث عن الاتصالات",
+    collections: "التحصيلات",
     auditTrail: "سجل التدقيق",
     userManagement: "إدارة المستخدمين",
     institutions: "المؤسسات",

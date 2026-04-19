@@ -16,6 +16,8 @@ const pt = {
     creditReports: "Relatórios de Crédito",
     pendingApprovals: "Aprovações Pendentes",
     disputes: "Disputas",
+    findConnections: "Encontrar Conexões",
+    collections: "Cobranças",
     auditTrail: "Trilha de Auditoria",
     userManagement: "Gestão de Utilizadores",
     institutions: "Instituições",
