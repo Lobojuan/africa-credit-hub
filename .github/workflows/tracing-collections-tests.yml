@@ -103,6 +103,86 @@ jobs:
             e2e/test-results-artifacts/
           retention-days: 14
 
+      - name: Build Slack failure payload
+        if: failure() && github.ref == 'refs/heads/main'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          GH_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          GH_RUN_NUMBER: ${{ github.run_number }}
+          GH_WORKFLOW: ${{ github.workflow }}
+          GH_ACTOR: ${{ github.actor }}
+          GH_COMMIT_MSG: ${{ github.event.head_commit.message || github.event.pull_request.title || 'no message' }}
+        run: |
+          FAILED_TESTS=$(node -e "
+            let failed = '_No results file found — see the full report artifact._';
+            try {
+              const r = require('./e2e/results.json');
+              const names = [];
+              function walk(suites) {
+                (suites || []).forEach(s => {
+                  (s.specs || []).forEach(sp => {
+                    const hasFail = (sp.tests || []).some(t =>
+                      (t.results || []).some(r2 => r2.status === 'failed' || r2.status === 'timedOut')
+                    );
+                    if (hasFail) names.push(sp.title);
+                  });
+                  walk(s.suites);
+                });
+              }
+              walk(r.suites);
+              if (names.length === 0) {
+                failed = '_No individual test names available — see the full report artifact._';
+              } else {
+                const lines = names.slice(0, 10).map((t, i) => (i + 1) + '. ' + t);
+                if (names.length > 10) lines.push('… and ' + (names.length - 10) + ' more');
+                failed = lines.join('\n');
+              }
+            } catch (e) {
+              failed = '_Could not parse test results — see the full report artifact._';
+            }
+            console.log(failed);
+          " 2>/dev/null || echo '_Could not parse test results — see the full report artifact._')
+
+          PAYLOAD=$(FAILED_TESTS="$FAILED_TESTS" node -e "
+            const payload = {
+              text: ':red_circle: CI test suite failed on main',
+              blocks: [
+                {
+                  type: 'section',
+                  text: {
+                    type: 'mrkdwn',
+                    text: ':red_circle: *Tracing & Collections tests failed on \`main\`*\n\n' +
+                      '*Workflow:* ' + process.env.GH_WORKFLOW + '\n' +
+                      '*Run:* <' + process.env.GH_RUN_URL + '|View failed run #' + process.env.GH_RUN_NUMBER + '>\n' +
+                      '*Triggered by:* \`' + process.env.GH_ACTOR + '\` — ' + process.env.GH_COMMIT_MSG
+                  }
+                },
+                {
+                  type: 'section',
+                  text: {
+                    type: 'mrkdwn',
+                    text: '*Failed tests:*\n' + (process.env.FAILED_TESTS || '_No test names available._')
+                  }
+                }
+              ]
+            };
+            console.log(JSON.stringify(payload));
+          " 2>/dev/null)
+
+          echo "SLACK_PAYLOAD<<EOF" >> "$GITHUB_ENV"
+          echo "$PAYLOAD" >> "$GITHUB_ENV"
+          echo "EOF" >> "$GITHUB_ENV"
+
+      - name: Notify Slack on failure
+        if: failure() && github.ref == 'refs/heads/main' && env.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        uses: slackapi/slack-github-action@v2.0.0
+        with:
+          webhook: ${{ env.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: ${{ env.SLACK_PAYLOAD }}
+
       - name: Stop application server
         if: always()
         run: |

@@ -54,6 +54,10 @@ export default defineConfig({
       },
     },
   ],
-  reporter: [['list'], ['html', { open: 'never', outputFolder: 'e2e/report' }]],
+  reporter: [
+    ['list'],
+    ['html', { open: 'never', outputFolder: 'e2e/report' }],
+    ...(process.env.CI ? [['json', { outputFile: 'e2e/results.json' }] as const] : []),
+  ],
   outputDir: 'e2e/test-results-artifacts',
 });
