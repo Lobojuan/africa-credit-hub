@@ -1,4 +1,7 @@
 import { storage } from "./storage";
+import { db } from "./db";
+import { incomeSources as incomeSourcesTable, expenseCategorisations as expenseCategorisationsTable, affordabilityAssessments as affordabilityAssessmentsTable } from "@shared/schema";
+import { eq } from "drizzle-orm";
 import { generateAIResponse } from "./ai";
 import { computeTelcoKPIs } from "./telco-scoring";
 import type {
@@ -479,10 +482,11 @@ export async function computeAffordability(borrower: Borrower, opts: ComputeOpts
       const ob = await fetchOpenBankingTransactions(borrower, { provider: opts.openBankingProvider, accountId: opts.openBankingAccountId, periodDays });
       if (ob.transactions.length > 0) {
         txns = ob.transactions;
-        dataSource = ob.account.provider === "stub" ? "open_banking" : "open_banking";
+        // Mark stub data as self_declared (lowest trust) so downstream decisioning never treats synthetic data as verified open banking.
+        dataSource = ob.account.provider === "stub" ? "self_declared" : "open_banking";
         confidenceLabel = ob.account.provider === "stub" ? "low" : "high";
         notes.push(`Open banking (${ob.account.provider}) returned ${txns.length} transactions for account ${ob.account.accountId}.`);
-        if (ob.account.provider === "stub") notes.push("Stub mode active — synthetic data. Connect a real open-banking provider for verified results.");
+        if (ob.account.provider === "stub") notes.push("STUB / synthetic data — NOT a verified bank feed. Output is for demo only and must not be used for credit decisioning. Connect Mono/Stitch/Okra for verified results.");
       }
     } catch (err: any) {
       notes.push(`Open banking lookup failed: ${err.message}`);
@@ -544,8 +548,13 @@ export async function computeAffordability(borrower: Borrower, opts: ComputeOpts
   const subsistence = grossIncomeMonthly * rule.subsistenceReservePct;
   const disposableIncomeMonthly = Math.max(0, grossIncomeMonthly - totalExpensesMonthly - existingDebtServiceMonthly);
   const debtToIncomeRatio = grossIncomeMonthly > 0 ? existingDebtServiceMonthly / grossIncomeMonthly : 0;
-  const headroom = Math.max(0, grossIncomeMonthly - subsistence - existingDebtServiceMonthly);
-  const maxRecommendedMonthlyRepayment = round2(Math.min(disposableIncomeMonthly * rule.maxDsrOfDisposable, headroom));
+  const subsistenceHeadroom = Math.max(0, grossIncomeMonthly - subsistence - existingDebtServiceMonthly);
+  const dtiHeadroom = Math.max(0, grossIncomeMonthly * rule.maxDti - existingDebtServiceMonthly);
+  const maxRecommendedMonthlyRepayment = round2(Math.min(
+    disposableIncomeMonthly * rule.maxDsrOfDisposable,
+    subsistenceHeadroom,
+    dtiHeadroom,
+  ));
   const maxRecommendedNewCredit = round2(maxRecommendedMonthlyRepayment * rule.defaultTermMonths);
 
   // 7. Rating
@@ -580,59 +589,62 @@ export async function computeAffordability(borrower: Borrower, opts: ComputeOpts
     notes,
   };
 
-  // 8. Persist snapshot — replace prior fine-grained rows for this borrower
-  await storage.deleteIncomeSourcesByBorrower(borrower.id);
-  await storage.deleteExpenseCategorisationsByBorrower(borrower.id);
-  for (const s of incomeSources) {
-    await storage.createIncomeSource({
-      borrowerId: borrower.id,
-      sourceType: s.sourceType,
-      description: s.description,
-      amountMonthly: s.amountMonthly.toFixed(2),
-      currency: s.currency,
-      frequency: s.frequency,
-      confidence: s.confidence.toFixed(2),
-      evidenceType: s.evidenceType,
-      evidenceRef: s.evidenceRef || null,
-      detectedFrom: dataSource,
-      verifiedAt: new Date(),
-      organizationId: borrower.organizationId || null,
-    });
-  }
-  for (const e of expenses) {
-    await storage.createExpenseCategorisation({
-      borrowerId: borrower.id,
-      category: e.category,
-      amountMonthly: e.amountMonthly.toFixed(2),
-      currency: e.currency,
-      periodDays,
-      source: e.source,
-      detail: e.detail || null,
-      organizationId: borrower.organizationId || null,
-    });
-  }
+  // 8. Persist snapshot — replace prior fine-grained rows for this borrower atomically
   const expiresAt = new Date(Date.now() + 30 * 86400000);
-  const assessment = await storage.createAffordabilityAssessment({
-    borrowerId: borrower.id,
-    country: result.country,
-    currency,
-    dataSource,
-    periodDays,
-    grossIncomeMonthly: result.grossIncomeMonthly.toFixed(2),
-    totalExpensesMonthly: result.totalExpensesMonthly.toFixed(2),
-    existingDebtServiceMonthly: result.existingDebtServiceMonthly.toFixed(2),
-    disposableIncomeMonthly: result.disposableIncomeMonthly.toFixed(2),
-    debtToIncomeRatio: result.debtToIncomeRatio.toFixed(4),
-    maxRecommendedNewCredit: result.maxRecommendedNewCredit.toFixed(2),
-    maxRecommendedMonthlyRepayment: result.maxRecommendedMonthlyRepayment.toFixed(2),
-    affordabilityRating,
-    confidenceLabel,
-    regulatoryRule: result.regulatoryRule,
-    inputsSnapshot: { transactionCount: txns.length, hasMomo: dataSource === "momo_only" || dataSource === "hybrid" } as any,
-    outputsSnapshot: { incomeSources, expenses, notes } as any,
-    computedBy: opts.computedBy || null,
-    expiresAt,
-    organizationId: borrower.organizationId || null,
+  const assessment = await db.transaction(async (tx) => {
+    await tx.delete(incomeSourcesTable).where(eq(incomeSourcesTable.borrowerId, borrower.id));
+    await tx.delete(expenseCategorisationsTable).where(eq(expenseCategorisationsTable.borrowerId, borrower.id));
+    if (incomeSources.length > 0) {
+      await tx.insert(incomeSourcesTable).values(incomeSources.map(s => ({
+        borrowerId: borrower.id,
+        sourceType: s.sourceType,
+        description: s.description,
+        amountMonthly: s.amountMonthly.toFixed(2),
+        currency: s.currency,
+        frequency: s.frequency,
+        confidence: s.confidence.toFixed(2),
+        evidenceType: s.evidenceType,
+        evidenceRef: s.evidenceRef || null,
+        detectedFrom: dataSource,
+        verifiedAt: new Date(),
+        organizationId: borrower.organizationId || null,
+      })));
+    }
+    if (expenses.length > 0) {
+      await tx.insert(expenseCategorisationsTable).values(expenses.map(e => ({
+        borrowerId: borrower.id,
+        category: e.category,
+        amountMonthly: e.amountMonthly.toFixed(2),
+        currency: e.currency,
+        periodDays,
+        source: e.source,
+        detail: e.detail || null,
+        organizationId: borrower.organizationId || null,
+      })));
+    }
+    const [created] = await tx.insert(affordabilityAssessmentsTable).values({
+      borrowerId: borrower.id,
+      country: result.country,
+      currency,
+      dataSource,
+      periodDays,
+      grossIncomeMonthly: result.grossIncomeMonthly.toFixed(2),
+      totalExpensesMonthly: result.totalExpensesMonthly.toFixed(2),
+      existingDebtServiceMonthly: result.existingDebtServiceMonthly.toFixed(2),
+      disposableIncomeMonthly: result.disposableIncomeMonthly.toFixed(2),
+      debtToIncomeRatio: result.debtToIncomeRatio.toFixed(4),
+      maxRecommendedNewCredit: result.maxRecommendedNewCredit.toFixed(2),
+      maxRecommendedMonthlyRepayment: result.maxRecommendedMonthlyRepayment.toFixed(2),
+      affordabilityRating,
+      confidenceLabel,
+      regulatoryRule: result.regulatoryRule,
+      inputsSnapshot: { transactionCount: txns.length, hasMomo: dataSource === "momo_only" || dataSource === "hybrid" } as any,
+      outputsSnapshot: { incomeSources, expenses, notes } as any,
+      computedBy: opts.computedBy || null,
+      expiresAt,
+      organizationId: borrower.organizationId || null,
+    }).returning();
+    return created;
   });
 
   return { assessment, result };

@@ -734,10 +734,22 @@ export function registerExternalApi(app: Express) {
     }
   });
 
-  app.post("/api/external/v1/borrowers/:id/affordability", requireApiKey, requirePermission("read"), async (req: Request, res: Response) => {
+  app.post("/api/external/v1/borrowers/:id/affordability", requireApiKey, requirePermission("submit"), async (req: Request, res: Response) => {
     try {
       const borrower = await storage.getBorrower(req.params.id);
       if (!borrower) return res.status(404).json(wrapError("Borrower not found"));
+      const institution = (req as any).institution;
+      // Cross-tenant isolation: API key may only compute for borrowers within its own institution/org.
+      if (institution && borrower.organizationId && institution.organizationId &&
+          borrower.organizationId !== institution.organizationId) {
+        return res.status(403).json(wrapError("Borrower not in your institution scope"));
+      }
+      // Country sovereignty (if API key restricts countries)
+      const apiKey = (req as any).apiKey;
+      if (apiKey?.allowedCountries && Array.isArray(apiKey.allowedCountries) && apiKey.allowedCountries.length > 0
+          && borrower.country && !apiKey.allowedCountries.includes(borrower.country)) {
+        return res.status(403).json(wrapError("Borrower country not permitted by API key"));
+      }
       const { computeAffordability } = await import("./affordability-service");
       const { source, periodDays, useLlmFallback, provider, accountId } = req.body || {};
       const out = await computeAffordability(borrower, {
