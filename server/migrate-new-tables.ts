@@ -429,5 +429,27 @@ export async function migrateNewTables() {
   )`);
   await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_collection_sla_org_country ON collection_sla_settings(organization_id, country)`);
 
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS xds_bureau_queries (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    borrower_id varchar NOT NULL,
+    requested_by varchar REFERENCES users(id),
+    organization_id varchar,
+    purpose varchar(100) NOT NULL,
+    request_ref varchar(100) NOT NULL,
+    ghana_card varchar(50),
+    ssnit_number varchar(50),
+    tin_number varchar(50),
+    xds_ref varchar(100),
+    found boolean,
+    credit_score integer,
+    score_category varchar(20),
+    source varchar(20) DEFAULT 'sandbox',
+    response_data jsonb,
+    error_message text,
+    created_at timestamp DEFAULT now()
+  )`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_xds_queries_borrower ON xds_bureau_queries(borrower_id)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_xds_queries_requested_by ON xds_bureau_queries(requested_by)`);
+
   console.log('[NewTables] Migration complete');
 }

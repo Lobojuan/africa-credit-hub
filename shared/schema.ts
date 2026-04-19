@@ -1579,3 +1579,31 @@ export const collectionSlaSettings = pgTable("collection_sla_settings", {
 export const insertCollectionSlaSettingsSchema = createInsertSchema(collectionSlaSettings).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertCollectionSlaSettings = z.infer<typeof insertCollectionSlaSettingsSchema>;
 export type CollectionSlaSettings = typeof collectionSlaSettings.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// XDS Data Ghana — bureau enquiry audit log
+// ---------------------------------------------------------------------------
+
+export const xdsBureauQueries = pgTable("xds_bureau_queries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  borrowerId: varchar("borrower_id").notNull(),
+  requestedBy: varchar("requested_by").references(() => users.id),
+  organizationId: varchar("organization_id"),
+  purpose: varchar("purpose", { length: 100 }).notNull(),
+  requestRef: varchar("request_ref", { length: 100 }).notNull(),
+  ghanaCard: varchar("ghana_card", { length: 50 }),
+  ssnitNumber: varchar("ssnit_number", { length: 50 }),
+  tinNumber: varchar("tin_number", { length: 50 }),
+  xdsRef: varchar("xds_ref", { length: 100 }),
+  found: boolean("found"),
+  creditScore: integer("credit_score"),
+  scoreCategory: varchar("score_category", { length: 20 }),
+  source: varchar("source", { length: 20 }).default("sandbox"),
+  responseData: jsonb("response_data"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertXdsBureauQuerySchema = createInsertSchema(xdsBureauQueries).omit({ id: true, createdAt: true });
+export type InsertXdsBureauQuery = z.infer<typeof insertXdsBureauQuerySchema>;
+export type XdsBureauQuery = typeof xdsBureauQueries.$inferSelect;

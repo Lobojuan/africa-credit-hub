@@ -935,7 +935,7 @@ export async function registerRoutes(
   });
 
   app.use("/api", apiLimiter, (req, res, next) => {
-    if (req.path.startsWith("/auth") || req.path.startsWith("/external") || req.path.startsWith("/docs") || req.path.startsWith("/consumer") || req.path.startsWith("/ai-demo") || req.path.startsWith("/public") || req.path.startsWith("/contact-sales") || req.path.startsWith("/platform-control")) return next();
+    if (req.path.startsWith("/auth") || req.path.startsWith("/external") || req.path.startsWith("/docs") || req.path.startsWith("/consumer") || req.path.startsWith("/ai-demo") || req.path.startsWith("/public") || req.path.startsWith("/contact-sales") || req.path.startsWith("/platform-control") || req.path.startsWith("/registry-sandbox")) return next();
     requireAuth(req, res, next);
   });
 
@@ -4387,7 +4387,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
   app.post("/api/credit-reports/generate", creditReportLimiter, requireAuth, async (req, res) => {
     try {
-      const { borrowerId, purpose, includeAI = true } = req.body;
+      const { borrowerId, purpose, includeAI = true, includeXds = false } = req.body;
       if (!borrowerId || !purpose) {
         return res.status(400).json({ message: "borrowerId and purpose are required" });
       }
@@ -4428,6 +4428,45 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const restructuredCount = accounts.filter(a => a.status === "restructured").length;
 
       const { score: creditScore, reasonCodes, factors: scoreFactors } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep, altData);
+
+      let xdsBureauData: any = null;
+      if (includeXds) {
+        try {
+          const { queryXdsGhana } = await import("./xds-ghana");
+          const { xdsBureauQueries: xdsTable } = await import("@shared/schema");
+          const requestRef = `RPT-${serialNumber}`;
+          const xdsResult = await queryXdsGhana({
+            ghanaCard: borrower.nationalId || undefined,
+            ssnitNumber: (borrower as any).ssnitNumber || undefined,
+            tinNumber: borrower.tinNumber || undefined,
+            firstName: borrower.firstName || undefined,
+            lastName: borrower.lastName || undefined,
+            dateOfBirth: borrower.dateOfBirth || undefined,
+            permissiblePurpose: purpose,
+            requestRef,
+          });
+          xdsBureauData = xdsResult;
+          await db.insert(xdsTable).values({
+            borrowerId,
+            requestedBy: req.session?.userId,
+            organizationId: req.session?.organizationId,
+            purpose,
+            requestRef,
+            ghanaCard: borrower.nationalId || null,
+            ssnitNumber: (borrower as any).ssnitNumber || null,
+            tinNumber: borrower.tinNumber || null,
+            xdsRef: xdsResult.xdsRef,
+            found: xdsResult.found,
+            creditScore: xdsResult.creditScore ?? null,
+            scoreCategory: xdsResult.scoreCategory ?? null,
+            source: xdsResult.source,
+            responseData: xdsResult as any,
+            errorMessage: xdsResult.error ?? null,
+          }).catch(() => {});
+        } catch (xdsErr: any) {
+          console.error("[XDS] Failed to query bureau for credit report:", xdsErr.message);
+        }
+      }
 
       let mlResult: any = null;
       let aiAnalysis: any = null;
@@ -4500,6 +4539,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         guarantors: guarantorMap,
         paymentHistory: paymentHistoryMap,
         requestedBy: user ? { fullName: user.fullName, institution: user.institution } : null,
+        ...(xdsBureauData ? { xdsBureauData } : {}),
         summary: {
           totalAccounts: accounts.length,
           activeAccounts: accounts.filter(a => a.status !== "closed").length,
@@ -6095,6 +6135,83 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
           doc.fontSize(6).font("Helvetica").fill(LIGHT)
             .text(`AI analysis generated: ${ai.generatedAt ? new Date(ai.generatedAt).toLocaleString("en-GB") : "N/A"}`, 46, doc.y, { width: W - 12, align: "right" });
           doc.moveDown(0.3);
+        }
+      }
+
+      // === XDS Data Ghana Bureau Section ===
+      const xdsBureau = reportData.xdsBureauData;
+      if (xdsBureau) {
+        const xdsSandbox = xdsBureau.source === "sandbox";
+        sectionTitle(xdsSandbox ? "XDS Data Ghana — Bureau Enquiry (Sandbox)" : "XDS Data Ghana — Bureau Enquiry");
+        ensureSpace(30);
+
+        if (!xdsBureau.found) {
+          doc.fontSize(8).font("Helvetica").fill(GRAY)
+            .text(`No bureau record found. XDS Ref: ${xdsBureau.xdsRef || "—"}${xdsBureau.error ? ` | Error: ${xdsBureau.error}` : ""}`, 46, doc.y, { width: W - 12 });
+          doc.moveDown(0.5);
+        } else {
+          const scoreColor = (xdsBureau.creditScore || 0) >= 670 ? "#16a34a" : (xdsBureau.creditScore || 0) >= 540 ? "#ca8a04" : "#dc2626";
+          doc.fontSize(20).font("Helvetica-Bold").fill(scoreColor)
+            .text(String(xdsBureau.creditScore || "—"), 46, doc.y, { width: 60, align: "left" });
+          doc.fontSize(8).font("Helvetica-Bold").fill(DARK)
+            .text(`${xdsBureau.scoreCategory || ""} (Band ${xdsBureau.scoreBand || "?"}) · XDS Ref: ${xdsBureau.xdsRef}`, 110, doc.y - 8, { width: W - 120 });
+          doc.fontSize(6.5).font("Helvetica").fill(LIGHT)
+            .text(`Bureau: XDS Data Ghana · Enquiry: ${new Date(xdsBureau.enquiryDate).toLocaleDateString("en-GB")} · Purpose: ${xdsBureau.permissiblePurpose}`, 110, doc.y + 2, { width: W - 120 });
+          doc.moveDown(0.8);
+
+          if (xdsBureau.summary) {
+            const xs = xdsBureau.summary;
+            const summaryFields: [string, string][] = [
+              ["Total Facilities", String(xs.totalFacilities)],
+              ["Active", String(xs.activeFacilities)],
+              ["Closed", String(xs.closedFacilities)],
+              ["Total Outstanding", `GHS ${xs.totalOutstanding.toLocaleString()}`],
+              ["Adverse Items", String(xs.adverseCount)],
+              ["Enquiries (12 mo)", String(xs.enquiriesLast12Months)],
+              ["Highest Days Arrears", String(xs.highestDaysInArrears)],
+            ];
+            infoGrid(summaryFields, 46, W - 12);
+            doc.moveDown(0.3);
+          }
+
+          if (xdsBureau.facilities && xdsBureau.facilities.length > 0) {
+            ensureSpace(20);
+            doc.fontSize(7).font("Helvetica-Bold").fill(NORDIC_BLUE).text("FACILITIES", 46, doc.y);
+            doc.moveDown(0.2);
+            xdsBureau.facilities.forEach((f: any) => {
+              ensureSpace(18);
+              const statusColor = ["current","performing"].includes(f.status) ? "#16a34a" : ["closed"].includes(f.status) ? LIGHT : "#dc2626";
+              doc.fontSize(6.5).font("Helvetica-Bold").fill(DARK)
+                .text(`${f.lender} — ${f.facilityType}`, 48, doc.y, { width: W - 120 });
+              doc.fontSize(6.5).font("Helvetica").fill(statusColor)
+                .text(f.status.toUpperCase(), W - 60, doc.y - 8, { width: 60, align: "right" });
+              doc.fontSize(6).font("Helvetica").fill(GRAY)
+                .text(`GHS ${f.originalAmount.toLocaleString()} orig · GHS ${f.outstandingBalance.toLocaleString()} outstanding · Open: ${f.openDate}${f.daysInArrears > 0 ? ` · ${f.daysInArrears}d arrears` : ""}`, 48, doc.y, { width: W - 12 });
+              doc.moveDown(0.3);
+            });
+          }
+
+          if (xdsBureau.adverseItems && xdsBureau.adverseItems.length > 0) {
+            ensureSpace(20);
+            doc.moveDown(0.3);
+            doc.fontSize(7).font("Helvetica-Bold").fill("#dc2626").text("ADVERSE ITEMS", 46, doc.y);
+            doc.moveDown(0.2);
+            xdsBureau.adverseItems.forEach((a: any) => {
+              ensureSpace(18);
+              doc.fontSize(6.5).font("Helvetica-Bold").fill("#dc2626").text(`[${a.type.replace(/_/g," ").toUpperCase()}]`, 48, doc.y, { width: 100 });
+              doc.fontSize(6.5).font("Helvetica").fill(DARK).text(a.description, 48, doc.y, { width: W - 60 });
+              doc.fontSize(6).font("Helvetica").fill(GRAY)
+                .text(`${a.date} · Status: ${a.status}${a.amount ? ` · GHS ${a.amount.toLocaleString()}` : ""}`, 48, doc.y, { width: W - 12 });
+              doc.moveDown(0.3);
+            });
+          }
+
+          if (xdsSandbox) {
+            doc.moveDown(0.3);
+            doc.fontSize(6).font("Helvetica").fill(LIGHT)
+              .text("* Bureau data sourced from XDS Data Ghana sandbox (deterministic synthetic data). Switch to production credentials for authoritative records.", 46, doc.y, { width: W - 12 });
+            doc.moveDown(0.2);
+          }
         }
       }
 
@@ -11849,11 +11966,126 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
+  // ── Registry Sandbox ─────────────────────────────────────────────────────
+  // Self-hosted mock endpoint that satisfies the same JSON contract as a real
+  // government registry API.  Activated automatically when the REGISTRY_SANDBOX_*
+  // environment variables are set (see server/registry-sandbox.ts).
+  //
+  // Route is intentionally outside the session-auth middleware chain because
+  // server-side fetch calls from callLiveRegistry() do not carry a session
+  // cookie.  Authentication is performed via the X-Api-Key header instead.
+  app.post("/api/registry-sandbox/:provider/lookup", async (req, res) => {
+    try {
+      const { provider } = req.params;
+      const { reference } = req.body || {};
+      const suppliedKey = req.headers["x-api-key"] as string | undefined;
+
+      const { validateSandboxKey, handleSandboxLookup } = await import("./registry-sandbox");
+
+      if (!suppliedKey || !validateSandboxKey(provider, suppliedKey)) {
+        return res.status(401).json({ error: "Invalid or missing API key for sandbox provider" });
+      }
+
+      if (!reference || typeof reference !== "string") {
+        return res.status(400).json({ error: "reference is required" });
+      }
+
+      const result = handleSandboxLookup(provider, reference);
+      if (!result) {
+        return res.status(404).json({ error: `No sandbox handler for provider: ${provider}` });
+      }
+
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ error: safeErrorMessage(e) });
+    }
+  });
+
   // Registry status — shows which registries are live vs stub mode
   app.get("/api/trace/registry-status", requireRole("admin", "super_admin", "regulator"), async (_req, res) => {
     try {
       const { registryStatus } = await import("./asset-trace");
       res.json(registryStatus());
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ── XDS Data Ghana — Credit Bureau Integration ───────────────────────────
+  // Requires env vars: XDS_GHANA_API_URL + XDS_GHANA_API_KEY
+  // Falls back to a deterministic sandbox when credentials are absent.
+
+  app.get("/api/xds/status", requireRole("admin", "super_admin", "regulator"), async (_req, res) => {
+    try {
+      const { xdsStatus } = await import("./xds-ghana");
+      res.json(xdsStatus());
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/xds/query", requireRole("admin", "super_admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const { borrowerId, ghanaCard, ssnitNumber, tinNumber, firstName, lastName, dateOfBirth, purpose } = req.body;
+      if (!borrowerId || !purpose) {
+        return res.status(400).json({ message: "borrowerId and purpose are required" });
+      }
+      if (!ghanaCard && !ssnitNumber && !tinNumber && !(firstName && lastName)) {
+        return res.status(400).json({ message: "At least one identifier is required (Ghana Card, SSNIT, TIN, or name)" });
+      }
+
+      const borrower = await storage.getBorrower(borrowerId);
+      if (!borrower) return res.status(404).json({ message: "Borrower not found" });
+
+      const requestRef = `ACH-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+
+      const { queryXdsGhana } = await import("./xds-ghana");
+      const { xdsBureauQueries } = await import("@shared/schema");
+
+      const result = await queryXdsGhana({ ghanaCard, ssnitNumber, tinNumber, firstName, lastName, dateOfBirth, permissiblePurpose: purpose, requestRef });
+
+      await db.insert(xdsBureauQueries).values({
+        borrowerId,
+        requestedBy: req.session?.userId,
+        organizationId: req.session?.organizationId,
+        purpose,
+        requestRef,
+        ghanaCard: ghanaCard || null,
+        ssnitNumber: ssnitNumber || null,
+        tinNumber: tinNumber || null,
+        xdsRef: result.xdsRef,
+        found: result.found,
+        creditScore: result.creditScore ?? null,
+        scoreCategory: result.scoreCategory ?? null,
+        source: result.source,
+        responseData: result as any,
+        errorMessage: result.error ?? null,
+      });
+
+      await storage.createAuditLog({
+        userId: req.session?.userId,
+        action: "XDS_BUREAU_QUERY",
+        entity: "borrower",
+        entityId: borrowerId,
+        details: `XDS Ghana bureau query for ${borrower.firstName || borrower.companyName || borrowerId} — ref=${requestRef} found=${result.found} source=${result.source}`,
+        ipAddress: req.ip,
+        organizationId: req.session?.organizationId,
+      });
+
+      recordUsageEvent({
+        organizationId: borrower.organizationId || req.session?.organizationId,
+        eventType: "bureau_query",
+        country: borrower.country || "GH",
+        metadata: JSON.stringify({ provider: "xds_ghana", found: result.found, source: result.source }),
+      });
+
+      res.json(result);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.get("/api/xds/borrower/:id/history", requireRole("admin", "super_admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const { xdsBureauQueries } = await import("@shared/schema");
+      const rows = await db.select().from(xdsBureauQueries)
+        .where(eq(xdsBureauQueries.borrowerId, req.params.id))
+        .orderBy(desc(xdsBureauQueries.createdAt));
+      res.json(rows);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 

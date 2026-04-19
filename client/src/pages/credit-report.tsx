@@ -77,6 +77,45 @@ interface CreditReportData {
     disclaimer: string;
     generatedAt: string;
   };
+  xdsBureauData?: {
+    found: boolean;
+    source: "live" | "sandbox";
+    xdsRef: string;
+    enquiryDate: string;
+    permissiblePurpose: string;
+    creditScore?: number;
+    scoreCategory?: string;
+    scoreBand?: string;
+    summary?: {
+      totalFacilities: number;
+      activeFacilities: number;
+      closedFacilities: number;
+      totalOutstanding: number;
+      adverseCount: number;
+      enquiriesLast12Months: number;
+      highestDaysInArrears: number;
+    };
+    facilities?: {
+      facilityId: string;
+      lender: string;
+      facilityType: string;
+      status: string;
+      originalAmount: number;
+      outstandingBalance: number;
+      currency: string;
+      openDate: string;
+      daysInArrears: number;
+    }[];
+    adverseItems?: {
+      type: string;
+      date: string;
+      description: string;
+      amount?: number;
+      status: string;
+    }[];
+    enquiryHistory?: { date: string; subscriber: string; purpose: string }[];
+    error?: string;
+  };
 }
 
 function getScoreGrade(score: number) {
@@ -438,6 +477,7 @@ export default function CreditReportPage() {
   const borrowerId = params?.borrowerId;
   const [purpose, setPurpose] = useState("new_credit");
   const [includeAI, setIncludeAI] = useState(true);
+  const [includeXds, setIncludeXds] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
   const generateMutation = useMutation({
@@ -446,6 +486,7 @@ export default function CreditReportPage() {
         borrowerId,
         purpose,
         includeAI,
+        includeXds,
       });
       return res.json();
     },
@@ -566,6 +607,22 @@ export default function CreditReportPage() {
                     {includeAI ? (
                       <span className="flex items-center gap-1"><Brain className="w-3 h-3 text-purple-500" /> ML Score + AI Risk + Narrative</span>
                     ) : "Bureau data only (faster)"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium">XDS Ghana Bureau</span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={includeXds}
+                    onClick={() => setIncludeXds(!includeXds)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${includeXds ? "bg-green-600" : "bg-gray-300 dark:bg-gray-600"}`}
+                    data-testid="toggle-include-xds"
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${includeXds ? "translate-x-6" : "translate-x-1"}`} />
+                  </button>
+                  <span className="text-xs text-muted-foreground">
+                    {includeXds ? "XDS Data Ghana credit bureau check included" : "Skip XDS Ghana bureau (Ghana borrowers only)"}
                   </span>
                 </div>
               </div>
@@ -1973,6 +2030,118 @@ export default function CreditReportPage() {
               </div>
             </CardContent>
           </Card>
+
+          {report.xdsBureauData && (
+            <Card data-testid="card-xds-bureau" className="border-2 border-green-200 dark:border-green-800 print:break-inside-avoid">
+              <CardContent className="p-5 print:p-3">
+                <div className="flex items-center gap-3 mb-4 print:mb-2">
+                  <div className="flex-1">
+                    <h2 className="text-sm font-bold text-green-800 dark:text-green-300">XDS Data Ghana — Credit Bureau Enquiry</h2>
+                    <p className="text-[10px] text-muted-foreground print:text-[8px]">
+                      {report.xdsBureauData.source === "sandbox" ? "Sandbox (deterministic synthetic data)" : "Live — XDS Data Ghana"} · Ref: {report.xdsBureauData.xdsRef}
+                    </p>
+                  </div>
+                  {report.xdsBureauData.source === "sandbox" && (
+                    <Badge variant="outline" className="text-amber-700 dark:text-amber-400 border-amber-400 text-[9px]" data-testid="badge-xds-sandbox">SANDBOX</Badge>
+                  )}
+                  {report.xdsBureauData.source === "live" && (
+                    <Badge className="bg-green-600 text-white text-[9px]" data-testid="badge-xds-live">LIVE</Badge>
+                  )}
+                </div>
+
+                {!report.xdsBureauData.found ? (
+                  <p className="text-sm text-muted-foreground italic" data-testid="text-xds-not-found">
+                    No bureau record found for this subject at XDS Data Ghana.
+                    {report.xdsBureauData.error && ` (${report.xdsBureauData.error})`}
+                  </p>
+                ) : (
+                  <div className="space-y-4 print:space-y-2">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 print:gap-1">
+                      <div className={`rounded-lg p-3 print:p-1 text-center border ${(report.xdsBureauData.creditScore || 0) >= 670 ? "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800" : (report.xdsBureauData.creditScore || 0) >= 540 ? "bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200 dark:border-yellow-800" : "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800"}`}>
+                        <p className="text-[9px] font-medium uppercase text-muted-foreground print:text-[7px]">XDS Score</p>
+                        <p className="text-2xl font-bold print:text-lg" data-testid="text-xds-score">{report.xdsBureauData.creditScore ?? "—"}</p>
+                        <p className="text-[8px] text-muted-foreground print:text-[6px]">{report.xdsBureauData.scoreCategory} · Band {report.xdsBureauData.scoreBand}</p>
+                      </div>
+                      {report.xdsBureauData.summary && (
+                        <>
+                          <div className="bg-muted/30 rounded-lg p-3 print:p-1 text-center border border-border">
+                            <p className="text-[9px] font-medium uppercase text-muted-foreground print:text-[7px]">Total Facilities</p>
+                            <p className="text-2xl font-bold print:text-lg" data-testid="text-xds-facilities">{report.xdsBureauData.summary.totalFacilities}</p>
+                            <p className="text-[8px] text-muted-foreground print:text-[6px]">{report.xdsBureauData.summary.activeFacilities} active</p>
+                          </div>
+                          <div className={`rounded-lg p-3 print:p-1 text-center border ${report.xdsBureauData.summary.adverseCount > 0 ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800" : "bg-muted/30 border-border"}`}>
+                            <p className="text-[9px] font-medium uppercase text-muted-foreground print:text-[7px]">Adverse Items</p>
+                            <p className="text-2xl font-bold print:text-lg" data-testid="text-xds-adverse">{report.xdsBureauData.summary.adverseCount}</p>
+                            <p className="text-[8px] text-muted-foreground print:text-[6px]">on file</p>
+                          </div>
+                          <div className="bg-muted/30 rounded-lg p-3 print:p-1 text-center border border-border">
+                            <p className="text-[9px] font-medium uppercase text-muted-foreground print:text-[7px]">Outstanding</p>
+                            <p className="text-lg font-bold print:text-base" data-testid="text-xds-outstanding">GHS {report.xdsBureauData.summary.totalOutstanding.toLocaleString()}</p>
+                            <p className="text-[8px] text-muted-foreground print:text-[6px]">{report.xdsBureauData.summary.enquiriesLast12Months} enquiries / 12mo</p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {report.xdsBureauData.facilities && report.xdsBureauData.facilities.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold text-green-700 dark:text-green-400 mb-1 print:text-[9px]">Registered Facilities</p>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs print:text-[8px]">
+                            <thead>
+                              <tr className="border-b text-left text-muted-foreground">
+                                <th className="pb-1 pr-3 font-medium">Lender</th>
+                                <th className="pb-1 pr-3 font-medium">Type</th>
+                                <th className="pb-1 pr-3 font-medium">Status</th>
+                                <th className="pb-1 pr-3 font-medium text-right">Original</th>
+                                <th className="pb-1 pr-3 font-medium text-right">Outstanding</th>
+                                <th className="pb-1 font-medium text-right">Days Arr.</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {report.xdsBureauData.facilities.map((f, idx) => (
+                                <tr key={idx} className="border-b border-border/40" data-testid={`row-xds-facility-${idx}`}>
+                                  <td className="py-1 pr-3">{f.lender}</td>
+                                  <td className="py-1 pr-3 text-muted-foreground">{f.facilityType}</td>
+                                  <td className="py-1 pr-3">
+                                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${["current","performing"].includes(f.status) ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" : f.status === "closed" ? "bg-muted text-muted-foreground" : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"}`}>{f.status}</span>
+                                  </td>
+                                  <td className="py-1 pr-3 text-right">{f.currency} {f.originalAmount.toLocaleString()}</td>
+                                  <td className="py-1 pr-3 text-right">{f.currency} {f.outstandingBalance.toLocaleString()}</td>
+                                  <td className="py-1 text-right">{f.daysInArrears > 0 ? <span className="text-red-600 font-semibold">{f.daysInArrears}</span> : "0"}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+
+                    {report.xdsBureauData.adverseItems && report.xdsBureauData.adverseItems.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold text-red-700 dark:text-red-400 mb-1 print:text-[9px]">Adverse Items</p>
+                        <div className="space-y-1">
+                          {report.xdsBureauData.adverseItems.map((a, idx) => (
+                            <div key={idx} className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded px-3 py-2 text-xs print:text-[8px]" data-testid={`card-xds-adverse-${idx}`}>
+                              <span className="font-semibold text-red-700 dark:text-red-400 mr-2">[{a.type.replace(/_/g, " ").toUpperCase()}]</span>
+                              {a.description}
+                              <span className="text-muted-foreground ml-2 text-[10px]">{a.date} · {a.status}{a.amount ? ` · GHS ${a.amount.toLocaleString()}` : ""}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {report.xdsBureauData.source === "sandbox" && (
+                      <p className="text-[10px] text-amber-700 dark:text-amber-400 italic print:text-[7px]">
+                        * This bureau data is from the XDS Data Ghana sandbox environment (deterministic synthetic data). Configure live API credentials for authoritative records.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="bg-muted/20 print:bg-card print:break-inside-avoid">
             <CardContent className="p-5 print:p-3">

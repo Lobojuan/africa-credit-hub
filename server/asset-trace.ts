@@ -66,10 +66,12 @@ function registryCredentials(urlVar: string, keyVar: string): { url: string; key
 }
 
 /** Return a status object for each registry showing live vs stub. */
-export function registryStatus(): Record<AssetProvider, { live: boolean; url?: string }> {
+export function registryStatus(): Record<AssetProvider, { live: boolean; url?: string; sandbox?: boolean }> {
   const check = (urlVar: string, keyVar: string) => {
     const creds = registryCredentials(urlVar, keyVar);
-    return creds ? { live: true, url: creds.url } : { live: false };
+    if (!creds) return { live: false };
+    const isSandbox = creds.url.includes("localhost") || creds.url.includes("127.0.0.1") || creds.url.includes("registry-sandbox");
+    return { live: true, url: creds.url, sandbox: isSandbox };
   };
   return {
     ghana_dvla:       check("GHANA_DVLA_API_URL",    "GHANA_DVLA_API_KEY"),

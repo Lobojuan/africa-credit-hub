@@ -317,14 +317,80 @@ const REGISTRY_LABELS: Record<string, { label: string; country: string; assetTyp
   manual:            { label: "Manual Entry", country: "Any", assetType: "Any" },
 };
 
+function XdsBureauStatusPanel() {
+  const { data, isLoading, refetch } = useQuery<{ live: boolean; sandbox: boolean; url?: string }>({
+    queryKey: ["/api/xds/status"],
+    staleTime: 60000,
+  });
+
+  return (
+    <Card data-testid="card-xds-status">
+      <CardHeader className="flex flex-row items-center justify-between pb-3">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Globe className="w-4 h-4" />
+          XDS Data Ghana — Credit Bureau
+        </CardTitle>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => refetch()} data-testid="button-refresh-xds">
+            <RefreshCw className="w-3 h-3" />
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Checking XDS bureau...
+          </div>
+        ) : (
+          <div className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm" data-testid="row-xds-connection">
+            <div className="flex items-center gap-2">
+              <Radio className={`w-3 h-3 ${data?.live && !data?.sandbox ? "text-emerald-500" : data?.live && data?.sandbox ? "text-amber-500" : "text-muted-foreground/40"}`} />
+              <div>
+                <p className="font-medium">XDS Data Ghana Bureau API</p>
+                <p className="text-[11px] text-muted-foreground">Ghana · Credit Bureau · Scores, Facilities, Adverse Items</p>
+              </div>
+            </div>
+            <Badge
+              variant="outline"
+              data-testid="badge-xds-connection-status"
+              className={
+                data?.live && !data?.sandbox
+                  ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px]"
+                  : data?.live && data?.sandbox
+                  ? "bg-amber-500/10 text-amber-600 border-amber-500/20 text-[10px]"
+                  : "bg-muted/50 text-muted-foreground border-border text-[10px]"
+              }
+            >
+              {data?.live && !data?.sandbox && <CheckCircle2 className="w-2.5 h-2.5 mr-1" />}
+              {data?.live && data?.sandbox && <CheckCircle2 className="w-2.5 h-2.5 mr-1" />}
+              {!data?.live && <AlertTriangle className="w-2.5 h-2.5 mr-1" />}
+              {data?.live && data?.sandbox ? "Sandbox" : data?.live ? "Live" : "Not configured"}
+            </Badge>
+          </div>
+        )}
+        <p className="text-[10px] text-muted-foreground mt-3">
+          {data?.live && !data?.sandbox
+            ? `Connected to production XDS Data Ghana bureau API at ${data?.url || "configured URL"}.`
+            : data?.live && data?.sandbox
+            ? "Running against the built-in XDS sandbox (deterministic synthetic data). Set XDS_GHANA_API_URL and XDS_GHANA_API_KEY environment secrets to switch to production."
+            : "XDS bureau integration not configured. Set XDS_GHANA_API_URL and XDS_GHANA_API_KEY environment secrets to enable Ghana credit bureau lookups."
+          }
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
 function RegistryStatusPanel() {
-  const { data, isLoading, refetch } = useQuery<Record<string, { live: boolean; url?: string }>>({
+  const { data, isLoading, refetch } = useQuery<Record<string, { live: boolean; url?: string; sandbox?: boolean }>>({
     queryKey: ["/api/trace/registry-status"],
     staleTime: 60000,
   });
 
   const registries = Object.entries(REGISTRY_LABELS);
-  const liveCount = data ? Object.values(data).filter(r => r.live).length : 0;
+  const liveCount = data ? Object.values(data).filter(r => r.live && !r.sandbox).length : 0;
+  const sandboxCount = data ? Object.values(data).filter(r => r.live && r.sandbox).length : 0;
   const totalCount = registries.filter(([k]) => k !== "manual").length;
 
   return (
@@ -335,7 +401,13 @@ function RegistryStatusPanel() {
           Asset Registry Connections
         </CardTitle>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">{liveCount}/{totalCount} live</span>
+          {sandboxCount > 0 && (
+            <span className="text-xs text-amber-600 dark:text-amber-400">{sandboxCount} sandbox</span>
+          )}
+          {liveCount > 0 && (
+            <span className="text-xs text-emerald-600 dark:text-emerald-400">{liveCount} live</span>
+          )}
+          <span className="text-xs text-muted-foreground">/ {totalCount}</span>
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => refetch()} data-testid="button-refresh-registry">
             <RefreshCw className="w-3 h-3" />
           </Button>
@@ -352,10 +424,11 @@ function RegistryStatusPanel() {
             {registries.filter(([k]) => k !== "manual").map(([key, meta]) => {
               const status = data?.[key];
               const isLive = status?.live ?? false;
+              const isSandbox = status?.sandbox ?? false;
               return (
                 <div key={key} data-testid={`registry-row-${key}`} className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
                   <div className="flex items-center gap-2 min-w-0">
-                    <Radio className={`w-3 h-3 shrink-0 ${isLive ? "text-emerald-500" : "text-muted-foreground/40"}`} />
+                    <Radio className={`w-3 h-3 shrink-0 ${isLive && !isSandbox ? "text-emerald-500" : isLive && isSandbox ? "text-amber-500" : "text-muted-foreground/40"}`} />
                     <div className="min-w-0">
                       <p className="font-medium truncate" data-testid={`text-registry-label-${key}`}>{meta.label}</p>
                       <p className="text-[11px] text-muted-foreground">{meta.country} · {meta.assetType}</p>
@@ -364,12 +437,18 @@ function RegistryStatusPanel() {
                   <Badge
                     variant="outline"
                     data-testid={`badge-registry-status-${key}`}
-                    className={isLive
-                      ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px]"
-                      : "bg-muted/50 text-muted-foreground border-border text-[10px]"}
+                    className={
+                      isLive && !isSandbox
+                        ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px]"
+                        : isLive && isSandbox
+                        ? "bg-amber-500/10 text-amber-600 border-amber-500/20 text-[10px]"
+                        : "bg-muted/50 text-muted-foreground border-border text-[10px]"
+                    }
                   >
-                    {isLive ? <CheckCircle2 className="w-2.5 h-2.5 mr-1" /> : <AlertTriangle className="w-2.5 h-2.5 mr-1" />}
-                    {isLive ? "Live" : "Stub"}
+                    {isLive && !isSandbox && <CheckCircle2 className="w-2.5 h-2.5 mr-1" />}
+                    {isLive && isSandbox && <CheckCircle2 className="w-2.5 h-2.5 mr-1" />}
+                    {!isLive && <AlertTriangle className="w-2.5 h-2.5 mr-1" />}
+                    {isLive && isSandbox ? "Sandbox" : isLive ? "Live" : "Stub"}
                   </Badge>
                 </div>
               );
@@ -377,7 +456,7 @@ function RegistryStatusPanel() {
           </div>
         )}
         <p className="text-[10px] text-muted-foreground mt-3">
-          Set registry API credentials (e.g. <code className="bg-muted px-1 rounded">GHANA_DVLA_API_URL</code> + <code className="bg-muted px-1 rounded">GHANA_DVLA_API_KEY</code>) to activate live lookups. Stubs remain active until credentials are configured.
+          <span className="font-medium text-amber-600 dark:text-amber-400">Sandbox</span> — connected to the built-in sandbox registry (realistic deterministic data, no real government API). Replace <code className="bg-muted px-1 rounded">GHANA_DVLA_API_URL</code> / <code className="bg-muted px-1 rounded">GHANA_DVLA_API_KEY</code> with production credentials to switch to live lookups.
         </p>
       </CardContent>
     </Card>
@@ -564,6 +643,8 @@ export default function SystemStatusPage() {
       )}
 
       <RegistryStatusPanel />
+
+      <XdsBureauStatusPanel />
 
       <Card data-testid="card-infrastructure">
         <CardHeader>
