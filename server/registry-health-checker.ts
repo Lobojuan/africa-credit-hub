@@ -219,14 +219,27 @@ async function runHealthChecks(): Promise<void> {
   }
 }
 
-async function pruneOldHealthEvents(): Promise<void> {
+function resolveRetentionDaysFromEnv(): number {
   const rawEnv = process.env.REGISTRY_HEALTH_RETENTION_DAYS;
-  const retentionDays = parseInt(rawEnv ?? "", 10);
-  const usingDefault = !rawEnv || isNaN(retentionDays) || retentionDays <= 0;
-  if (rawEnv && usingDefault) {
+  const envDays = parseInt(rawEnv ?? "", 10);
+  if (rawEnv && (isNaN(envDays) || envDays <= 0)) {
     console.warn(`[RegistryHealth] REGISTRY_HEALTH_RETENTION_DAYS="${rawEnv}" is invalid — falling back to ${DEFAULT_RETENTION_DAYS} days`);
   }
-  const days = usingDefault ? DEFAULT_RETENTION_DAYS : retentionDays;
+  return (!rawEnv || isNaN(envDays) || envDays <= 0) ? DEFAULT_RETENTION_DAYS : envDays;
+}
+
+async function pruneOldHealthEvents(): Promise<void> {
+  let days: number;
+  try {
+    const cfg = await storage.getRegistryHealthConfig();
+    if (cfg?.retentionDays && cfg.retentionDays > 0) {
+      days = cfg.retentionDays;
+    } else {
+      days = resolveRetentionDaysFromEnv();
+    }
+  } catch {
+    days = resolveRetentionDaysFromEnv();
+  }
   const beforeDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
   try {
     const deleted = await storage.deleteOldRegistryHealthEvents(beforeDate);

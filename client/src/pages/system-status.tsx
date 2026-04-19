@@ -409,6 +409,8 @@ interface RegistryHealthConfigData {
   alertEmail: string | null;
   slackWebhookUrl: string | null;
   checkIntervalMinutes: number;
+  retentionDays: number | null;
+  effectiveRetentionDays: number;
   currentIntervalMinutes: number;
   updatedAt: string | null;
 }
@@ -422,7 +424,7 @@ interface RegistryCleanupStats {
 function RegistryHealthConfigPanel() {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<{ alertEmail: string; slackWebhookUrl: string; checkIntervalMinutes: string } | null>(null);
+  const [form, setForm] = useState<{ alertEmail: string; slackWebhookUrl: string; checkIntervalMinutes: string; retentionDays: string } | null>(null);
 
   const { data, isLoading } = useQuery<RegistryHealthConfigData>({
     queryKey: ["/api/admin/registry-health-config"],
@@ -442,12 +444,13 @@ function RegistryHealthConfigPanel() {
         alertEmail: data.alertEmail ?? "",
         slackWebhookUrl: data.slackWebhookUrl ?? "",
         checkIntervalMinutes: String(data.checkIntervalMinutes),
+        retentionDays: data.retentionDays != null ? String(data.retentionDays) : "",
       });
     }
   }, [data]);
 
   const saveMutation = useMutation({
-    mutationFn: async (payload: { alertEmail: string | null; slackWebhookUrl: string | null; checkIntervalMinutes: number }) => {
+    mutationFn: async (payload: { alertEmail: string | null; slackWebhookUrl: string | null; checkIntervalMinutes: number; retentionDays: number | null }) => {
       const res = await apiRequest("PUT", "/api/admin/registry-health-config", payload);
       return res.json();
     },
@@ -471,10 +474,20 @@ function RegistryHealthConfigPanel() {
       toast({ title: "Invalid interval", description: "Interval must be between 1 and 1440 minutes.", variant: "destructive" });
       return;
     }
+    const retentionRaw = form.retentionDays.trim();
+    let retentionDays: number | null = null;
+    if (retentionRaw !== "") {
+      retentionDays = parseInt(retentionRaw, 10);
+      if (isNaN(retentionDays) || retentionDays < 1 || retentionDays > 3650) {
+        toast({ title: "Invalid retention window", description: "Retention must be between 1 and 3650 days.", variant: "destructive" });
+        return;
+      }
+    }
     saveMutation.mutate({
       alertEmail: form.alertEmail.trim() || null,
       slackWebhookUrl: form.slackWebhookUrl.trim() || null,
       checkIntervalMinutes: interval,
+      retentionDays,
     });
   }
 
@@ -571,6 +584,23 @@ function RegistryHealthConfigPanel() {
                         data-testid="input-registry-check-interval"
                       />
                       <p className="text-[10px] text-muted-foreground">Currently running every {data.currentIntervalMinutes} min</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="registry-retention-days" className="text-xs">Retention window (days)</Label>
+                      <Input
+                        id="registry-retention-days"
+                        type="number"
+                        min={1}
+                        max={3650}
+                        placeholder={String(data.effectiveRetentionDays)}
+                        value={form.retentionDays}
+                        onChange={e => setForm(f => f ? { ...f, retentionDays: e.target.value } : f)}
+                        className="h-8 text-sm"
+                        data-testid="input-registry-retention-days"
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        Currently keeping {data.effectiveRetentionDays} days of history. Overrides <code className="bg-muted px-1 rounded">REGISTRY_HEALTH_RETENTION_DAYS</code>
+                      </p>
                     </div>
                   </div>
                   <div className="space-y-1.5">

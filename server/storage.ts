@@ -2562,6 +2562,7 @@ export class DatabaseStorage implements IStorage {
       alertEmail: data.alertEmail ?? null,
       slackWebhookUrl: data.slackWebhookUrl ?? null,
       checkIntervalMinutes: data.checkIntervalMinutes ?? 15,
+      retentionDays: data.retentionDays ?? null,
       updatedAt: new Date(),
       updatedBy: updatedBy ?? null,
     };
@@ -2572,6 +2573,7 @@ export class DatabaseStorage implements IStorage {
     if (data.alertEmail !== undefined) updateSet.alertEmail = data.alertEmail;
     if (data.slackWebhookUrl !== undefined) updateSet.slackWebhookUrl = data.slackWebhookUrl;
     if (data.checkIntervalMinutes !== undefined) updateSet.checkIntervalMinutes = data.checkIntervalMinutes;
+    if (data.retentionDays !== undefined) updateSet.retentionDays = data.retentionDays;
     const [row] = await db
       .insert(registryHealthConfig)
       .values(insertValues)
