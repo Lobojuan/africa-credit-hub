@@ -12304,7 +12304,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const orgId = req.session.organizationId;
       const settings = await storage.getCollectionSlaSettings(orgId, country ?? "");
       if (settings && !settings.enabled) {
-        return res.json({ breachIds: [] });
+        return res.json({ breachIds: [], breaches: [] });
       }
       const thresholds: Record<string, number> = {
         urgent: settings?.urgentThresholdDays ?? 3,
@@ -12312,12 +12312,9 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         medium: settings?.mediumThresholdDays ?? 7,
         low: settings?.lowThresholdDays ?? 14,
       };
-      const breachIds: string[] = [];
-      for (const priority of ["urgent", "high", "medium", "low"]) {
-        const overdue = await storage.getOverdueCollectionAssignments(thresholds[priority], priority, orgId, country);
-        overdue.forEach(a => breachIds.push(a.id));
-      }
-      res.json({ breachIds });
+      const breaches = await storage.getOverdueCollectionAssignmentDetails(thresholds, orgId, country);
+      const breachIds = breaches.map(b => b.id);
+      res.json({ breachIds, breaches });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 

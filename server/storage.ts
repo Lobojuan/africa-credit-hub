@@ -285,6 +285,21 @@ export interface IStorage {
   getCollectionSlaSettings(organizationId: string | undefined, country: string): Promise<CollectionSlaSettings | undefined>;
   upsertCollectionSlaSettings(data: InsertCollectionSlaSettings): Promise<CollectionSlaSettings>;
   getOverdueCollectionAssignments(thresholdDays: number, priority: string, organizationId?: string, country?: string): Promise<CollectionAssignment[]>;
+  getOverdueCollectionAssignmentDetails(thresholds: Record<string, number>, organizationId?: string, country?: string): Promise<OverdueAssignmentDetail[]>;
+}
+
+export interface OverdueAssignmentDetail {
+  id: string;
+  borrowerId: string;
+  priority: string;
+  status: string;
+  assignedTo: string | null;
+  agentName: string | null;
+  agentEmail: string | null;
+  lastAttemptAt: string | null;
+  daysSinceContact: number;
+  amountOutstanding: string | null;
+  currency: string | null;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -747,6 +762,85 @@ export class DatabaseStorage implements IStorage {
         )
     `);
     return (result.rows || []) as unknown as CollectionAssignment[];
+  }
+
+  async getOverdueCollectionAssignmentDetails(thresholds: Record<string, number>, organizationId?: string, country?: string): Promise<OverdueAssignmentDetail[]> {
+    const now = Date.now();
+    const results: OverdueAssignmentDetail[] = [];
+    interface BreachRow {
+      id: string;
+      borrower_id: string;
+      priority: string;
+      status: string;
+      assigned_to: string | null;
+      amount_outstanding: string | null;
+      currency: string | null;
+      created_at: string | null;
+      agent_name: string | null;
+      agent_email: string | null;
+      last_attempt_at: string | null;
+    }
+
+    for (const [priority, thresholdDays] of Object.entries(thresholds)) {
+      const cutoff = new Date(now - thresholdDays * 24 * 60 * 60 * 1000);
+      const rows = await db.execute(sql`
+        SELECT
+          ca.id,
+          ca.borrower_id,
+          ca.priority,
+          ca.status,
+          ca.assigned_to,
+          ca.amount_outstanding,
+          ca.currency,
+          ca.created_at,
+          u.full_name AS agent_name,
+          u.email AS agent_email,
+          (
+            SELECT MAX(att.attempted_at)
+            FROM collection_attempts att
+            WHERE att.assignment_id = ca.id
+          ) AS last_attempt_at
+        FROM collection_assignments ca
+        LEFT JOIN users u ON u.id = ca.assigned_to
+        WHERE ca.status IN ('open', 'in_progress')
+          AND ca.priority = ${priority}
+          ${organizationId ? sql`AND ca.organization_id = ${organizationId}` : sql``}
+          ${country ? sql`AND ca.country = ${country}` : sql``}
+          AND ca.assigned_to IS NOT NULL
+          AND (
+            NOT EXISTS (
+              SELECT 1 FROM collection_attempts att WHERE att.assignment_id = ca.id
+            )
+            OR (
+              SELECT MAX(att.attempted_at) FROM collection_attempts att WHERE att.assignment_id = ca.id
+            ) < ${cutoff}
+          )
+        ORDER BY ca.priority DESC, last_attempt_at ASC NULLS FIRST
+      `);
+      for (const row of (rows.rows || []) as BreachRow[]) {
+        const lastAttemptAt = row.last_attempt_at ? new Date(row.last_attempt_at) : null;
+        const fallbackDate = row.created_at ? new Date(row.created_at) : new Date(now);
+        const daysSinceContact = lastAttemptAt
+          ? Math.floor((now - lastAttemptAt.getTime()) / (24 * 60 * 60 * 1000))
+          : Math.floor((now - fallbackDate.getTime()) / (24 * 60 * 60 * 1000));
+        results.push({
+          id: row.id,
+          borrowerId: row.borrower_id,
+          priority: row.priority,
+          status: row.status,
+          assignedTo: row.assigned_to ?? null,
+          agentName: row.agent_name ?? null,
+          agentEmail: row.agent_email ?? null,
+          lastAttemptAt: lastAttemptAt ? lastAttemptAt.toISOString() : null,
+          daysSinceContact,
+          amountOutstanding: row.amount_outstanding ?? null,
+          currency: row.currency ?? null,
+        });
+      }
+    }
+    const priorityOrder: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
+    results.sort((a, b) => (priorityOrder[a.priority] ?? 9) - (priorityOrder[b.priority] ?? 9) || b.daysSinceContact - a.daysSinceContact);
+    return results;
   }
 
   // ──────────────────────────────────────────────────────────────────────────

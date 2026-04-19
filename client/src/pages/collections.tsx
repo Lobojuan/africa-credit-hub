@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Phone, Mail, MessageSquare, ClipboardList, Plus, Loader2, ArrowRight, AlertCircle, Settings, Clock, CheckCircle2, RefreshCw } from "lucide-react";
+import { Phone, Mail, MessageSquare, ClipboardList, Plus, Loader2, ArrowRight, AlertCircle, Settings, Clock, CheckCircle2, RefreshCw, ShieldAlert, Users, Filter } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +49,20 @@ interface SlaSettings {
   enabled: boolean;
   country?: string;
   organizationId?: string | null;
+}
+
+interface BreachDetail {
+  id: string;
+  borrowerId: string;
+  priority: string;
+  status: string;
+  assignedTo: string | null;
+  agentName: string | null;
+  agentEmail: string | null;
+  lastAttemptAt: string | null;
+  daysSinceContact: number;
+  amountOutstanding: string | null;
+  currency: string | null;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -120,16 +134,22 @@ export default function CollectionsPage() {
     },
   });
 
-  const { data: breachData } = useQuery<{ breachIds: string[] }>({
+  const [breachPriorityFilter, setBreachPriorityFilter] = useState<string>("all");
+
+  const { data: breachData } = useQuery<{ breachIds: string[]; breaches: BreachDetail[] }>({
     queryKey: ["/api/collections/sla-breaches"],
     queryFn: async () => {
       const res = await fetch("/api/collections/sla-breaches", { credentials: "include" });
-      if (!res.ok) return { breachIds: [] };
+      if (!res.ok) return { breachIds: [], breaches: [] };
       return res.json();
     },
     refetchInterval: 5 * 60 * 1000,
   });
   const breachSet = new Set(breachData?.breachIds ?? []);
+  const allBreaches: BreachDetail[] = breachData?.breaches ?? [];
+  const filteredBreaches = breachPriorityFilter === "all"
+    ? allBreaches
+    : allBreaches.filter(b => b.priority === breachPriorityFilter);
 
   const create = useMutation({
     mutationFn: async () => {
@@ -248,6 +268,121 @@ export default function CollectionsPage() {
           </Button>
         </div>
       </div>
+
+      {allBreaches.length > 0 && (
+        <Card className="border-destructive/30 bg-destructive/5" data-testid="sla-breach-dashboard">
+          <CardHeader className="pb-2 pt-4 px-4">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 text-destructive" />
+                <span className="text-sm font-semibold text-destructive">
+                  SLA Breach Dashboard — {allBreaches.length} overdue case{allBreaches.length > 1 ? "s" : ""}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Filter className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">Filter by priority:</span>
+                <div className="flex gap-1" data-testid="breach-priority-filter">
+                  {["all", "urgent", "high", "medium", "low"].map(p => (
+                    <Button
+                      key={p}
+                      size="sm"
+                      variant={breachPriorityFilter === p ? "default" : "outline"}
+                      className="h-6 text-[10px] px-2 capitalize"
+                      onClick={() => setBreachPriorityFilter(p)}
+                      data-testid={`filter-breach-${p}`}
+                    >
+                      {p === "all" ? "All" : p}
+                      {p !== "all" && (
+                        <span className="ml-1 opacity-70">({allBreaches.filter(b => b.priority === p).length})</span>
+                      )}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="px-0 pb-3">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="pl-4">Priority</TableHead>
+                  <TableHead>Borrower</TableHead>
+                  <TableHead>
+                    <div className="flex items-center gap-1"><Users className="w-3 h-3" />Agent</div>
+                  </TableHead>
+                  <TableHead>
+                    <div className="flex items-center gap-1"><Clock className="w-3 h-3" />Days Since Contact</div>
+                  </TableHead>
+                  <TableHead className="text-right pr-4">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredBreaches.map(b => (
+                  <TableRow key={b.id} data-testid={`row-breach-${b.id}`} className="hover:bg-destructive/5">
+                    <TableCell className="pl-4">
+                      <Badge
+                        variant={b.priority === "urgent" ? "destructive" : b.priority === "high" ? "default" : "outline"}
+                        className="text-[10px] capitalize"
+                        data-testid={`badge-priority-${b.id}`}
+                      >
+                        {b.priority}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Link href={`/borrowers/${b.borrowerId}`}>
+                        <span className="text-xs font-mono text-primary hover:underline" data-testid={`link-borrower-${b.id}`}>
+                          {b.borrowerId.slice(0, 12)}…
+                        </span>
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      {b.agentName ? (
+                        <span className="text-xs" data-testid={`text-agent-${b.id}`}>{b.agentName}</span>
+                      ) : b.agentEmail ? (
+                        <span className="text-xs text-muted-foreground" data-testid={`text-agent-${b.id}`}>{b.agentEmail}</span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Unassigned</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <span
+                        className={`text-xs font-medium ${b.daysSinceContact >= 7 ? "text-destructive" : "text-amber-600 dark:text-amber-400"}`}
+                        data-testid={`text-days-${b.id}`}
+                      >
+                        {b.daysSinceContact === 0 ? "Today" : `${b.daysSinceContact}d`}
+                      </span>
+                      {b.lastAttemptAt && (
+                        <span className="text-[10px] text-muted-foreground ml-1">
+                          (last: {new Date(b.lastAttemptAt).toLocaleDateString("en-GB")})
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right pr-4">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs border-destructive/40 text-destructive hover:bg-destructive/10"
+                        onClick={() => { setSelectedId(b.id); setAttemptOpen(true); }}
+                        data-testid={`button-breach-attempt-${b.id}`}
+                      >
+                        <Phone className="w-3 h-3 mr-1" />Log Attempt
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filteredBreaches.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-xs text-muted-foreground py-4">
+                      No breaches at this priority level.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs value={statusFilter} onValueChange={setStatusFilter}>
         <TabsList>
