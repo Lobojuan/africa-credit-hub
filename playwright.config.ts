@@ -43,6 +43,7 @@ export default defineConfig({
         'consumer-portal-docs.spec.ts',
         'mfa-session-security.spec.ts',
         'sovereignty-password-rbac.spec.ts',
+        'tracing-collections.spec.ts',
       ],
       use: {
         baseURL: 'http://localhost:5000',

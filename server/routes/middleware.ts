@@ -13,8 +13,16 @@ export const rateLimitKeyGenerator = (req: Request) => {
 
 const validate = { keyGeneratorIpFallback: false } as const;
 
+const isLocalhost = (req: Request): boolean => {
+  if (process.env.NODE_ENV === "production") return false;
+  const ip = req.ip ?? req.socket.remoteAddress ?? "";
+  const normalizedIp = ip.startsWith("::ffff:") ? ip.slice(7) : ip;
+  return normalizedIp === "127.0.0.1" || normalizedIp === "::1";
+};
+
 export const loginLimiter = rateLimit({
   keyGenerator: rateLimitKeyGenerator,
+  skip: isLocalhost,
   windowMs: 15 * 60 * 1000,
   max: 5,
   message: { message: "Too many login attempts. Please try again in 15 minutes." },
@@ -25,7 +33,7 @@ export const loginLimiter = rateLimit({
 
 export const apiLimiter = rateLimit({
   keyGenerator: rateLimitKeyGenerator,
-  skip: (req) => req.path === "/health" || req.path === "/api/health",
+  skip: (req) => req.path === "/health" || req.path === "/api/health" || isLocalhost(req),
   windowMs: 60 * 1000,
   max: 200,
   message: { message: "Too many requests. Please slow down." },
@@ -36,6 +44,7 @@ export const apiLimiter = rateLimit({
 
 export const writeLimiter = rateLimit({
   keyGenerator: rateLimitKeyGenerator,
+  skip: isLocalhost,
   windowMs: 60 * 1000,
   max: 60,
   message: { message: "Too many write requests. Please slow down." },
