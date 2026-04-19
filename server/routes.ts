@@ -12017,6 +12017,43 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
+  // Registry health checker — admin-configurable settings
+  app.get("/api/admin/registry-health-config", requireRole("admin", "super_admin"), async (_req, res) => {
+    try {
+      const cfg = await storage.getRegistryHealthConfig();
+      const { getCurrentIntervalMs } = await import("./registry-health-checker");
+      res.json({
+        alertEmail: cfg?.alertEmail ?? null,
+        slackWebhookUrl: cfg?.slackWebhookUrl ?? null,
+        checkIntervalMinutes: cfg?.checkIntervalMinutes ?? 15,
+        currentIntervalMinutes: Math.round(getCurrentIntervalMs() / 60000),
+        updatedAt: cfg?.updatedAt ?? null,
+      });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.put("/api/admin/registry-health-config", requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const schema = z.object({
+        alertEmail: z.string().email().nullable().optional(),
+        slackWebhookUrl: z.string().url().nullable().optional(),
+        checkIntervalMinutes: z.number().int().min(1).max(1440).optional(),
+      });
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: parsed.error.errors[0]?.message ?? "Invalid input" });
+
+      const userId = (req as any).user?.id;
+      const cfg = await storage.upsertRegistryHealthConfig(parsed.data, userId);
+
+      if (parsed.data.checkIntervalMinutes !== undefined) {
+        const { restartRegistryHealthChecker } = await import("./registry-health-checker");
+        restartRegistryHealthChecker(parsed.data.checkIntervalMinutes * 60 * 1000);
+      }
+
+      res.json(cfg);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
   // Test connectivity for a specific registry (probe with synthetic reference)
   app.post("/api/trace/registry-status/:provider/test", requireRole("admin", "super_admin"), async (req, res) => {
     try {

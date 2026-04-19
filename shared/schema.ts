@@ -1619,3 +1619,20 @@ export const registryCredentials = pgTable("registry_credentials", {
 });
 
 export type RegistryCredential = typeof registryCredentials.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Registry Health Checker — admin-configurable settings (single row, id="default")
+// ---------------------------------------------------------------------------
+
+export const registryHealthConfig = pgTable("registry_health_config", {
+  id: text("id").primaryKey().default("default"),
+  alertEmail: text("alert_email"),
+  slackWebhookUrl: text("slack_webhook_url"),
+  checkIntervalMinutes: integer("check_interval_minutes").notNull().default(15),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedBy: varchar("updated_by").references(() => users.id),
+});
+
+export const insertRegistryHealthConfigSchema = createInsertSchema(registryHealthConfig).omit({ updatedAt: true });
+export type InsertRegistryHealthConfig = z.infer<typeof insertRegistryHealthConfigSchema>;
+export type RegistryHealthConfig = typeof registryHealthConfig.$inferSelect;

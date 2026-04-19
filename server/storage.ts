@@ -52,6 +52,8 @@ import {
   type IncomeSource, type InsertIncomeSource,
   type ExpenseCategorisation, type InsertExpenseCategorisation,
   type AffordabilityAssessment, type InsertAffordabilityAssessment,
+  registryHealthConfig,
+  type RegistryHealthConfig, type InsertRegistryHealthConfig,
 } from "@shared/schema";
 
 export function requireCountryScope(country: string | undefined, methodName: string): void {
@@ -290,6 +292,9 @@ export interface IStorage {
   getOverdueCollectionAssignments(thresholdDays: number, priority: string, organizationId?: string, country?: string, segment?: string | null): Promise<CollectionAssignment[]>;
   getOverdueCollectionAssignmentDetails(thresholds: Record<string, number>, organizationId?: string, country?: string): Promise<OverdueAssignmentDetail[]>;
   countActiveAssignmentsBySegment(organizationId: string | undefined, country: string): Promise<Record<string, number>>;
+
+  getRegistryHealthConfig(): Promise<RegistryHealthConfig | undefined>;
+  upsertRegistryHealthConfig(data: Partial<InsertRegistryHealthConfig>, updatedBy?: string): Promise<RegistryHealthConfig>;
 }
 
 export interface OverdueAssignmentDetail {
@@ -2537,6 +2542,38 @@ export class DatabaseStorage implements IStorage {
   async createAffordabilityAssessment(a: InsertAffordabilityAssessment): Promise<AffordabilityAssessment> {
     const [created] = await db.insert(affordabilityAssessments).values(a).returning();
     return created;
+  }
+
+  async getRegistryHealthConfig(): Promise<RegistryHealthConfig | undefined> {
+    const [row] = await db.select().from(registryHealthConfig).where(eq(registryHealthConfig.id, "default")).limit(1);
+    return row;
+  }
+
+  async upsertRegistryHealthConfig(data: Partial<InsertRegistryHealthConfig>, updatedBy?: string): Promise<RegistryHealthConfig> {
+    const insertValues: typeof registryHealthConfig.$inferInsert = {
+      id: "default",
+      alertEmail: data.alertEmail ?? null,
+      slackWebhookUrl: data.slackWebhookUrl ?? null,
+      checkIntervalMinutes: data.checkIntervalMinutes ?? 15,
+      updatedAt: new Date(),
+      updatedBy: updatedBy ?? null,
+    };
+    const updateSet: Partial<typeof registryHealthConfig.$inferInsert> = {
+      updatedAt: new Date(),
+      updatedBy: updatedBy ?? null,
+    };
+    if (data.alertEmail !== undefined) updateSet.alertEmail = data.alertEmail;
+    if (data.slackWebhookUrl !== undefined) updateSet.slackWebhookUrl = data.slackWebhookUrl;
+    if (data.checkIntervalMinutes !== undefined) updateSet.checkIntervalMinutes = data.checkIntervalMinutes;
+    const [row] = await db
+      .insert(registryHealthConfig)
+      .values(insertValues)
+      .onConflictDoUpdate({
+        target: registryHealthConfig.id,
+        set: updateSet,
+      })
+      .returning();
+    return row;
   }
 }
 

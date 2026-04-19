@@ -1,11 +1,13 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Activity, Database, Server, Wifi, Clock, CheckCircle2, AlertTriangle, Shield, Cpu, HardDrive, RefreshCw, Archive, Download, Upload, Trash2, Loader2, XCircle, Globe, Radio } from "lucide-react";
+import { Activity, Database, Server, Wifi, Clock, CheckCircle2, AlertTriangle, Shield, Cpu, HardDrive, RefreshCw, Archive, Download, Upload, Trash2, Loader2, XCircle, Globe, Radio, Settings2, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { useBrandColors } from "@/hooks/use-brand-colors";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -403,6 +405,167 @@ interface RegistryHealthEntry {
   alertSent: boolean;
 }
 
+interface RegistryHealthConfigData {
+  alertEmail: string | null;
+  slackWebhookUrl: string | null;
+  checkIntervalMinutes: number;
+  currentIntervalMinutes: number;
+  updatedAt: string | null;
+}
+
+function RegistryHealthConfigPanel() {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState<{ alertEmail: string; slackWebhookUrl: string; checkIntervalMinutes: string } | null>(null);
+
+  const { data, isLoading } = useQuery<RegistryHealthConfigData>({
+    queryKey: ["/api/admin/registry-health-config"],
+    staleTime: 30000,
+    enabled: open,
+  });
+
+  useEffect(() => {
+    if (data && form === null) {
+      setForm({
+        alertEmail: data.alertEmail ?? "",
+        slackWebhookUrl: data.slackWebhookUrl ?? "",
+        checkIntervalMinutes: String(data.checkIntervalMinutes),
+      });
+    }
+  }, [data]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (payload: { alertEmail: string | null; slackWebhookUrl: string | null; checkIntervalMinutes: number }) => {
+      const res = await apiRequest("PUT", "/api/admin/registry-health-config", payload);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Settings saved", description: "Registry alert settings have been updated." });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/registry-health-config"] });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Save failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  function handleToggle() {
+    setOpen(v => !v);
+  }
+
+  function handleSave() {
+    if (!form) return;
+    const interval = parseInt(form.checkIntervalMinutes, 10);
+    if (isNaN(interval) || interval < 1 || interval > 1440) {
+      toast({ title: "Invalid interval", description: "Interval must be between 1 and 1440 minutes.", variant: "destructive" });
+      return;
+    }
+    saveMutation.mutate({
+      alertEmail: form.alertEmail.trim() || null,
+      slackWebhookUrl: form.slackWebhookUrl.trim() || null,
+      checkIntervalMinutes: interval,
+    });
+  }
+
+  return (
+    <Card data-testid="card-registry-health-config">
+      <CardHeader
+        className="flex flex-row items-center justify-between pb-3 cursor-pointer select-none"
+        onClick={handleToggle}
+        data-testid="button-toggle-registry-health-config"
+      >
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Settings2 className="w-4 h-4" />
+          Registry Alert Settings
+        </CardTitle>
+        <div className="flex items-center gap-2">
+          {data && (
+            <span className="text-xs text-muted-foreground">
+              Checks every {data.currentIntervalMinutes} min
+            </span>
+          )}
+          {open ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+        </div>
+      </CardHeader>
+      {open && (
+        <CardContent className="space-y-4">
+          {isLoading || !data ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Loading settings...
+            </div>
+          ) : (
+            <>
+              {form && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="registry-alert-email" className="text-xs">Alert Email</Label>
+                      <Input
+                        id="registry-alert-email"
+                        type="email"
+                        placeholder="ops@example.com"
+                        value={form.alertEmail}
+                        onChange={e => setForm(f => f ? { ...f, alertEmail: e.target.value } : f)}
+                        className="h-8 text-sm"
+                        data-testid="input-registry-alert-email"
+                      />
+                      <p className="text-[10px] text-muted-foreground">Overrides <code className="bg-muted px-1 rounded">REGISTRY_ALERT_EMAIL</code> env var</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="registry-check-interval" className="text-xs">Check Interval (minutes)</Label>
+                      <Input
+                        id="registry-check-interval"
+                        type="number"
+                        min={1}
+                        max={1440}
+                        value={form.checkIntervalMinutes}
+                        onChange={e => setForm(f => f ? { ...f, checkIntervalMinutes: e.target.value } : f)}
+                        className="h-8 text-sm"
+                        data-testid="input-registry-check-interval"
+                      />
+                      <p className="text-[10px] text-muted-foreground">Currently running every {data.currentIntervalMinutes} min</p>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="registry-slack-webhook" className="text-xs">Slack Webhook URL</Label>
+                    <Input
+                      id="registry-slack-webhook"
+                      type="url"
+                      placeholder="https://hooks.slack.com/services/..."
+                      value={form.slackWebhookUrl}
+                      onChange={e => setForm(f => f ? { ...f, slackWebhookUrl: e.target.value } : f)}
+                      className="h-8 text-sm"
+                      data-testid="input-registry-slack-webhook"
+                    />
+                    <p className="text-[10px] text-muted-foreground">Overrides <code className="bg-muted px-1 rounded">REGISTRY_ALERT_SLACK_WEBHOOK</code> env var</p>
+                  </div>
+                  <div className="flex items-center justify-between pt-1">
+                    {data.updatedAt && (
+                      <span className="text-[10px] text-muted-foreground">
+                        Last saved {new Date(data.updatedAt).toLocaleString()}
+                      </span>
+                    )}
+                    <Button
+                      size="sm"
+                      className="h-7 text-xs ml-auto"
+                      onClick={handleSave}
+                      disabled={saveMutation.isPending}
+                      data-testid="button-save-registry-health-config"
+                    >
+                      {saveMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+                      Save Settings
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      )}
+    </Card>
+  );
+}
+
 function RegistryStatusPanel() {
   const { data, isLoading, refetch } = useQuery<Record<string, { live: boolean; url?: string; sandbox?: boolean }>>({
     queryKey: ["/api/trace/registry-status"],
@@ -584,7 +747,7 @@ function RegistryStatusPanel() {
         <p className="text-[10px] text-muted-foreground mt-3">
           <span className="font-medium text-amber-600 dark:text-amber-400">Sandbox</span> — connected to the built-in sandbox registry (realistic deterministic data, no real government API).{" "}
           <span className="font-medium text-emerald-600 dark:text-emerald-400">Live</span> — connected to the government production API.{" "}
-          Health checks run every 15 minutes; the ops team is alerted after two consecutive failures via Slack (<code className="bg-muted px-1 rounded">REGISTRY_ALERT_SLACK_WEBHOOK</code>) and/or email (<code className="bg-muted px-1 rounded">REGISTRY_ALERT_EMAIL</code>).
+          Health checks run periodically; the ops team is alerted after two consecutive failures. Alert recipients and interval are configurable in <span className="font-medium">Registry Alert Settings</span> below (falling back to <code className="bg-muted px-1 rounded">REGISTRY_ALERT_EMAIL</code> / <code className="bg-muted px-1 rounded">REGISTRY_ALERT_SLACK_WEBHOOK</code> env vars).
         </p>
       </CardContent>
     </Card>
@@ -771,6 +934,8 @@ export default function SystemStatusPage() {
       )}
 
       <RegistryStatusPanel />
+
+      <RegistryHealthConfigPanel />
 
       <XdsBureauStatusPanel />
 

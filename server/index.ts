@@ -707,7 +707,7 @@ process.stderr.write = function (...args: any[]) {
     startBackupScheduler();
 
     const { startRegistryHealthChecker } = await import("./registry-health-checker");
-    startRegistryHealthChecker();
+    await startRegistryHealthChecker();
 
     const { isEmailConfigured } = await import("./email");
     const { isSmsConfigured } = await import("./sms");

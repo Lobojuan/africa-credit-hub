@@ -467,5 +467,14 @@ export async function migrateNewTables() {
     updated_by text
   )`);
 
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS registry_health_config (
+    id text PRIMARY KEY DEFAULT 'default',
+    alert_email text,
+    slack_webhook_url text,
+    check_interval_minutes integer NOT NULL DEFAULT 15,
+    updated_at timestamp DEFAULT now(),
+    updated_by varchar REFERENCES users(id)
+  )`);
+
   console.log('[NewTables] Migration complete');
 }

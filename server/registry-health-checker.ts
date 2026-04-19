@@ -5,15 +5,19 @@
  * After two consecutive failures the operations team is alerted via Slack
  * webhook and/or email.  Sandbox-only registries are skipped entirely.
  *
- * Configuration env vars:
+ * Alert recipients and check frequency are configurable from the admin UI
+ * (stored in the registry_health_config DB table) and fall back to env vars
+ * when no DB record exists.
+ *
+ * Configuration env vars (fallbacks):
  *   REGISTRY_ALERT_EMAIL       — recipient for alert emails (falls back to PLATFORM_OPS_EMAIL or SMTP_FROM)
  *   REGISTRY_ALERT_SLACK_WEBHOOK — incoming webhook URL for Slack alerts
  */
 
 import { testRegistryCredentials, registryStatus, TESTABLE_PROVIDERS, type AssetProvider } from "./asset-trace";
 
-const CHECK_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
-const FAILURE_THRESHOLD = 2;              // alert after N consecutive failures
+const DEFAULT_CHECK_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
+const FAILURE_THRESHOLD = 2;
 
 export interface RegistryHealthEntry {
   provider: string;
@@ -31,8 +35,20 @@ export function getRegistryHealthState(): RegistryHealthEntry[] {
   return Array.from(healthState.values());
 }
 
-function opsAlertEmail(): string | null {
+async function getDbConfig(): Promise<{ alertEmail?: string | null; slackWebhookUrl?: string | null; checkIntervalMinutes?: number }> {
+  try {
+    const { storage } = await import("./storage");
+    const cfg = await storage.getRegistryHealthConfig();
+    return cfg ?? {};
+  } catch {
+    return {};
+  }
+}
+
+async function opsAlertEmail(): Promise<string | null> {
+  const cfg = await getDbConfig();
   return (
+    cfg.alertEmail ||
     process.env.REGISTRY_ALERT_EMAIL ||
     process.env.PLATFORM_OPS_EMAIL ||
     process.env.SMTP_FROM ||
@@ -41,7 +57,8 @@ function opsAlertEmail(): string | null {
 }
 
 async function sendSlackAlert(provider: string, error: string, isRecovery = false): Promise<void> {
-  const webhookUrl = process.env.REGISTRY_ALERT_SLACK_WEBHOOK;
+  const cfg = await getDbConfig();
+  const webhookUrl = cfg.slackWebhookUrl || process.env.REGISTRY_ALERT_SLACK_WEBHOOK;
   if (!webhookUrl) return;
 
   const color = isRecovery ? "#22c55e" : "#ef4444";
@@ -80,7 +97,7 @@ async function sendSlackAlert(provider: string, error: string, isRecovery = fals
 }
 
 async function sendEmailAlert(provider: string, error: string, isRecovery = false): Promise<void> {
-  const to = opsAlertEmail();
+  const to = await opsAlertEmail();
   if (!to) return;
 
   try {
@@ -183,11 +200,18 @@ async function runHealthChecks(): Promise<void> {
 }
 
 let _timer: ReturnType<typeof setInterval> | null = null;
+let _currentIntervalMs = DEFAULT_CHECK_INTERVAL_MS;
 
-export function startRegistryHealthChecker(intervalMs = CHECK_INTERVAL_MS): void {
+export async function startRegistryHealthChecker(intervalMs = DEFAULT_CHECK_INTERVAL_MS): Promise<void> {
   if (_timer) return;
 
-  console.log(`[RegistryHealth] Scheduler started — checks every ${intervalMs / 60000} min`);
+  const cfg = await getDbConfig().catch(() => ({}));
+  const effectiveInterval = cfg.checkIntervalMinutes
+    ? cfg.checkIntervalMinutes * 60 * 1000
+    : intervalMs;
+
+  _currentIntervalMs = effectiveInterval;
+  console.log(`[RegistryHealth] Scheduler started — checks every ${effectiveInterval / 60000} min`);
 
   setTimeout(async () => {
     try {
@@ -203,5 +227,27 @@ export function startRegistryHealthChecker(intervalMs = CHECK_INTERVAL_MS): void
     } catch (e: any) {
       console.error("[RegistryHealth] Periodic check error:", e.message);
     }
-  }, intervalMs);
+  }, effectiveInterval);
+}
+
+export function restartRegistryHealthChecker(newIntervalMs: number): void {
+  if (_timer) {
+    clearInterval(_timer);
+    _timer = null;
+  }
+  _currentIntervalMs = newIntervalMs;
+
+  console.log(`[RegistryHealth] Restarting scheduler — checks every ${newIntervalMs / 60000} min`);
+
+  _timer = setInterval(async () => {
+    try {
+      await runHealthChecks();
+    } catch (e: any) {
+      console.error("[RegistryHealth] Periodic check error:", e.message);
+    }
+  }, newIntervalMs);
+}
+
+export function getCurrentIntervalMs(): number {
+  return _currentIntervalMs;
 }
