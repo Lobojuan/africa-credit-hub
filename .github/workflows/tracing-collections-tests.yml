@@ -9,8 +9,8 @@ on:
       - main
 
 jobs:
-  playwright:
-    name: Run tracing-collections Playwright tests
+  tracing-collections:
+    name: Tracing and collections specs
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -95,14 +95,14 @@ jobs:
             sleep 3
           done
 
-      - name: Run tracing-collections Playwright tests
+      - name: Run tracing and collections Playwright specs
         run: npx playwright test e2e/tracing-collections.spec.ts --project=authenticated
 
       - name: Upload Playwright report on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-tracing-collections
           path: |
             e2e/report/
             e2e/test-results-artifacts/
