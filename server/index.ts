@@ -641,6 +641,54 @@ process.stderr.write = function (...args: any[]) {
     const { startAnchorScheduler } = await import("./blockchain-anchor");
     startAnchorScheduler(6);
 
+    // Tracing & Skip-Tracing (Task #29) — periodic link-cluster recompute + one-time backfill
+    try {
+      const { recomputeLinkClusters, backfillContactEvents } = await import("./trace-engine");
+      // One-time backfill guarded by an audit-log checkpoint marker.
+      // Re-running across restarts would not corrupt rows (capture skips
+      // lastSeen/occurrences updates when source='backfill'), but skipping
+      // entirely is faster and idempotent at the workload level.
+      const { db: _db } = await import("./db");
+      const { auditLogs: _audit } = await import("@shared/schema");
+      const { eq: _eq, and: _and } = await import("drizzle-orm");
+      const existingMarker = await _db.select().from(_audit).where(_and(
+        _eq(_audit.action, "TRACE_BACKFILL_COMPLETE"),
+        _eq(_audit.entity, "trace"),
+      )).limit(1);
+      if (existingMarker.length === 0) {
+        const bf = await backfillContactEvents({ batchSize: 1000 });
+        console.log(`[Trace] One-time backfill complete: ${bf.borrowers} borrowers, ${bf.writes} contact events captured`);
+        try {
+          await _db.insert(_audit).values({
+            action: "TRACE_BACKFILL_COMPLETE",
+            entity: "trace",
+            entityId: "system",
+            details: `borrowers=${bf.borrowers} writes=${bf.writes} scope=current_borrowers_table_only`,
+          });
+        } catch (mErr) {
+          const err = mErr as Error;
+          console.warn("[Trace] Could not record backfill marker:", err.message);
+        }
+      } else {
+        console.log("[Trace] Backfill already completed — skipping (use admin endpoint to re-run)");
+      }
+      // Initial cluster recompute (deferred to next tick so server can start serving)
+      setTimeout(() => {
+        recomputeLinkClusters().then(r =>
+          console.log(`[Trace] Initial cluster recompute: created=${r.created} updated=${r.updated} skipped=${r.skipped}`)
+        ).catch(e => console.error("[Trace] Initial cluster recompute failed:", e.message));
+      }, 30_000);
+      // Then every 6 hours
+      setInterval(() => {
+        recomputeLinkClusters().then(r =>
+          console.log(`[Trace] Cluster recompute: created=${r.created} updated=${r.updated} skipped=${r.skipped}`)
+        ).catch(e => console.error("[Trace] Cluster recompute failed:", e.message));
+      }, 6 * 60 * 60 * 1000);
+      console.log("[Trace] Scheduler started — link clusters recomputed every 6 hours");
+    } catch (e: any) {
+      console.error("[Trace] Failed to start trace scheduler:", e.message);
+    }
+
     const { startIntegrityScheduler, encryptAllUnencryptedPII } = await import("./security-hardening");
     try {
       const encResult = await encryptAllUnencryptedPII();

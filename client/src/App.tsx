@@ -63,6 +63,8 @@ const CreditSearchPage = lazy(() => import("@/pages/credit-search"));
 const reportsImport = () => import("@/pages/reports");
 const ReportsPage = lazy(reportsImport);
 const AuditTrailPage = lazy(() => import("@/pages/audit-trail"));
+const FindConnectionsPage = lazy(() => import("@/pages/find-connections"));
+const CollectionsPage = lazy(() => import("@/pages/collections"));
 const UserManagementPage = lazy(() => import("@/pages/user-management"));
 const PendingApprovalsPage = lazy(() => import("@/pages/pending-approvals"));
 const DisputesPage = lazy(() => import("@/pages/disputes"));
@@ -179,6 +181,8 @@ function Router() {
         <Route path="/search" component={CreditSearchPage} />
         <Route path="/reports" component={ReportsPage} />
         <Route path="/audit" component={AuditTrailPage} />
+        <Route path="/find-connections" component={FindConnectionsPage} />
+        <Route path="/collections" component={CollectionsPage} />
         <Route path="/users" component={UserManagementPage} />
         <Route path="/approvals" component={PendingApprovalsPage} />
         <Route path="/disputes" component={DisputesPage} />

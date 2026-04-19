@@ -6,6 +6,10 @@ import {
   users, borrowers, creditAccounts, creditInquiries, auditLogs, pendingApprovals, disputes, notifications,
   courtJudgments, consentRecords, paymentHistory, institutions, billingRecords, creditReportLogs, apiKeys,
   exchangeRates, retentionPolicies, apiConfigurations, organizations, dishonouredCheques, borrowerAlerts,
+  contactEvents, linkClusters, assetTraceRecords, collectionAssignments, collectionAttempts,
+  type ContactEvent, type LinkCluster, type AssetTraceRecord,
+  type CollectionAssignment, type InsertCollectionAssignment,
+  type CollectionAttempt, type InsertCollectionAttempt,
   guarantors, telcoProfiles, momoTransactions, telcoCreditScores,
   telcoDecisionRules, telcoDecisionLogs,
   telcoLoans, telcoLoanRepayments, telcoConsentEvents,
@@ -602,14 +606,98 @@ export class DatabaseStorage implements IStorage {
   async createBorrower(borrower: InsertBorrower): Promise<Borrower> {
     const encrypted = encryptBorrowerPII(borrower as Record<string, any>);
     const [created] = await db.insert(borrowers).values(encrypted as InsertBorrower).returning();
-    return decryptBorrowerPII(created as Record<string, any>) as Borrower;
+    const decrypted = decryptBorrowerPII(created as Record<string, any>) as Borrower;
+    // Capture trace contact events (non-blocking on failure)
+    try {
+      const { captureBorrowerContactEvents } = await import("./trace-engine");
+      await captureBorrowerContactEvents(decrypted.id, decrypted as any, "borrower_create", {
+        organizationId: decrypted.organizationId, country: decrypted.country,
+        sourceRef: `borrower:${decrypted.id}`,
+      });
+    } catch (e: any) {
+      console.error("[trace] capture on create failed:", e.message);
+    }
+    return decrypted;
   }
 
   async updateBorrower(id: string, data: Partial<InsertBorrower>): Promise<Borrower | undefined> {
     const encrypted = encryptBorrowerPII(data as Record<string, any>);
     const [updated] = await db.update(borrowers).set({ ...encrypted, updatedAt: new Date() }).where(eq(borrowers.id, id)).returning();
-    return updated ? decryptBorrowerPII(updated as Record<string, any>) as Borrower : undefined;
+    if (!updated) return undefined;
+    const decrypted = decryptBorrowerPII(updated as Record<string, any>) as Borrower;
+    try {
+      const { captureBorrowerContactEvents } = await import("./trace-engine");
+      // Diff semantics: only capture fields that were actually present in this
+      // update payload (so unrelated edits don't refresh recency on stable
+      // contact data points).
+      const submittedKeys = new Set(Object.keys(data || {}));
+      const submittedSubset: Record<string, unknown> = {};
+      for (const k of submittedKeys) submittedSubset[k] = (decrypted as Record<string, unknown>)[k];
+      await captureBorrowerContactEvents(decrypted.id, submittedSubset, "borrower_update", {
+        organizationId: decrypted.organizationId, country: decrypted.country,
+        sourceRef: `borrower:${decrypted.id}`,
+      });
+    } catch (e) {
+      const err = e as Error;
+      console.error("[trace] capture on update failed:", err.message);
+    }
+    return decrypted;
   }
+
+  // ─── Tracing & Skip-Tracing (Task #29) ───────────────────────────────────
+  async getContactEventsByBorrower(borrowerId: string): Promise<ContactEvent[]> {
+    return db.select().from(contactEvents)
+      .where(eq(contactEvents.borrowerId, borrowerId))
+      .orderBy(desc(contactEvents.lastSeen));
+  }
+
+  async getLinkClustersForBorrower(borrowerId: string, country?: string): Promise<LinkCluster[]> {
+    const filters: any[] = [sql`${borrowerId} = ANY(${linkClusters.memberBorrowerIds})`];
+    if (country) filters.push(eq(linkClusters.country, country));
+    const where = filters.length > 1 ? and(...filters) : filters[0];
+    return db.select().from(linkClusters).where(where).orderBy(desc(linkClusters.memberCount)).limit(100);
+  }
+
+  async getAssetTracesByBorrower(borrowerId: string): Promise<AssetTraceRecord[]> {
+    return db.select().from(assetTraceRecords)
+      .where(eq(assetTraceRecords.borrowerId, borrowerId))
+      .orderBy(desc(assetTraceRecords.createdAt));
+  }
+
+  async getCollectionAssignments(opts: { organizationId?: string; country?: string; assignedTo?: string; status?: string } = {}): Promise<CollectionAssignment[]> {
+    const filters: any[] = [];
+    if (opts.organizationId) filters.push(eq(collectionAssignments.organizationId, opts.organizationId));
+    if (opts.country) filters.push(eq(collectionAssignments.country, opts.country));
+    if (opts.assignedTo) filters.push(eq(collectionAssignments.assignedTo, opts.assignedTo));
+    if (opts.status) filters.push(eq(collectionAssignments.status, opts.status as any));
+    const where = filters.length > 1 ? and(...filters) : filters[0];
+    return db.select().from(collectionAssignments).where(where).orderBy(desc(collectionAssignments.createdAt)).limit(500);
+  }
+
+  async getCollectionAssignment(id: string): Promise<CollectionAssignment | undefined> {
+    const [r] = await db.select().from(collectionAssignments).where(eq(collectionAssignments.id, id));
+    return r;
+  }
+
+  async createCollectionAssignment(data: InsertCollectionAssignment): Promise<CollectionAssignment> {
+    const [created] = await db.insert(collectionAssignments).values(data).returning();
+    return created;
+  }
+
+  async updateCollectionAssignment(id: string, data: Partial<InsertCollectionAssignment>): Promise<CollectionAssignment | undefined> {
+    const [r] = await db.update(collectionAssignments).set({ ...data, updatedAt: new Date() }).where(eq(collectionAssignments.id, id)).returning();
+    return r;
+  }
+
+  async getCollectionAttempts(assignmentId: string): Promise<CollectionAttempt[]> {
+    return db.select().from(collectionAttempts).where(eq(collectionAttempts.assignmentId, assignmentId)).orderBy(desc(collectionAttempts.attemptedAt));
+  }
+
+  async createCollectionAttempt(data: InsertCollectionAttempt): Promise<CollectionAttempt> {
+    const [created] = await db.insert(collectionAttempts).values(data).returning();
+    return created;
+  }
+  // ──────────────────────────────────────────────────────────────────────────
 
   async getCreditAccount(id: string): Promise<CreditAccount | undefined> {
     const [account] = await db.select().from(creditAccounts).where(eq(creditAccounts.id, id));
@@ -635,11 +723,44 @@ export class DatabaseStorage implements IStorage {
 
   async createCreditAccount(account: InsertCreditAccount): Promise<CreditAccount> {
     const [created] = await db.insert(creditAccounts).values(account).returning();
+    // Refresh borrower contact-event last-seen on every account open
+    try {
+      const b = await this.getBorrower(created.borrowerId);
+      if (b) {
+        const { captureBorrowerContactEvents } = await import("./trace-engine");
+        // Only pass the new credit-account row's own fields, not the borrower
+        // record — opening an account does not constitute a fresh observation
+        // of the borrower's existing contact data.
+        await captureBorrowerContactEvents(created.borrowerId, created as Record<string, unknown>, "credit_account_create",
+          { organizationId: b.organizationId, country: b.country, sourceRef: `credit_account:${created.id}` });
+      }
+    } catch (e) {
+      const err = e as Error;
+      console.error("[trace] account-create capture failed:", err.message);
+    }
     return created;
   }
 
   async updateCreditAccount(id: string, data: Partial<InsertCreditAccount>): Promise<CreditAccount | undefined> {
     const [updated] = await db.update(creditAccounts).set({ ...data, updatedAt: new Date() }).where(eq(creditAccounts.id, id)).returning();
+    if (updated) {
+      try {
+        const b = await this.getBorrower(updated.borrowerId);
+        if (b) {
+          const { captureBorrowerContactEvents } = await import("./trace-engine");
+          // Diff semantics: only pass the credit-account fields explicitly
+          // changed in this update, projected from the updated row.
+          const submittedKeys = Object.keys(data || {});
+          const submittedSubset: Record<string, unknown> = {};
+          for (const k of submittedKeys) submittedSubset[k] = (updated as Record<string, unknown>)[k];
+          await captureBorrowerContactEvents(updated.borrowerId, submittedSubset, "credit_account_update",
+            { organizationId: b.organizationId, country: b.country, sourceRef: `credit_account:${updated.id}` });
+        }
+      } catch (e) {
+        const err = e as Error;
+        console.error("[trace] account-update capture failed:", err.message);
+      }
+    }
     return updated;
   }
 

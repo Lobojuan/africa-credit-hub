@@ -222,5 +222,117 @@ export async function migrateNewTables() {
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_fraud_alerts_org ON fraud_alerts(organization_id)`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_fraud_alerts_assigned ON fraud_alerts(assigned_to)`);
 
+  // Tracing & Skip-Tracing module (Task #29)
+  await db.execute(sql`DO $$ BEGIN
+    CREATE TYPE contact_event_type AS ENUM ('phone','email','address','postal_address','employer','employer_address','bank_account','mobile_money','other_id');
+  EXCEPTION WHEN duplicate_object THEN NULL; END $$`);
+  await db.execute(sql`DO $$ BEGIN
+    CREATE TYPE asset_trace_type AS ENUM ('vehicle','property','watercraft','aircraft');
+  EXCEPTION WHEN duplicate_object THEN NULL; END $$`);
+  await db.execute(sql`DO $$ BEGIN
+    CREATE TYPE asset_trace_status AS ENUM ('found','not_found','error','stub');
+  EXCEPTION WHEN duplicate_object THEN NULL; END $$`);
+  await db.execute(sql`DO $$ BEGIN
+    CREATE TYPE collection_status AS ENUM ('open','in_progress','promised','resolved','closed');
+  EXCEPTION WHEN duplicate_object THEN NULL; END $$`);
+  await db.execute(sql`DO $$ BEGIN
+    CREATE TYPE collection_priority AS ENUM ('low','medium','high','urgent');
+  EXCEPTION WHEN duplicate_object THEN NULL; END $$`);
+  await db.execute(sql`DO $$ BEGIN
+    CREATE TYPE collection_channel AS ENUM ('phone','sms','email','visit','letter','note');
+  EXCEPTION WHEN duplicate_object THEN NULL; END $$`);
+  await db.execute(sql`DO $$ BEGIN
+    CREATE TYPE collection_outcome AS ENUM ('contacted','no_answer','wrong_number','promise_to_pay','refused','left_message','callback_requested','paid','note');
+  EXCEPTION WHEN duplicate_object THEN NULL; END $$`);
+
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS contact_events (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    borrower_id varchar NOT NULL REFERENCES borrowers(id),
+    contact_type contact_event_type NOT NULL,
+    value text NOT NULL,
+    value_normalized text NOT NULL,
+    source text NOT NULL DEFAULT 'borrower_update',
+    first_seen timestamp NOT NULL DEFAULT now(),
+    last_seen timestamp NOT NULL DEFAULT now(),
+    occurrences integer NOT NULL DEFAULT 1,
+    organization_id varchar REFERENCES organizations(id),
+    country text,
+    created_at timestamp DEFAULT now()
+  )`);
+  await db.execute(sql`ALTER TABLE contact_events ADD COLUMN IF NOT EXISTS source_ref text`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_contact_events_borrower ON contact_events(borrower_id)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_contact_events_norm ON contact_events(contact_type, value_normalized)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_contact_events_country ON contact_events(country)`);
+
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS link_clusters (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    link_type text NOT NULL,
+    link_value_hash text NOT NULL,
+    link_value_display text NOT NULL,
+    member_borrower_ids text[] NOT NULL DEFAULT ARRAY[]::text[],
+    member_count integer NOT NULL DEFAULT 0,
+    confidence decimal(4,2) NOT NULL DEFAULT 0.50,
+    country text,
+    last_recomputed_at timestamp DEFAULT now(),
+    created_at timestamp DEFAULT now(),
+    UNIQUE(link_type, link_value_hash, country)
+  )`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_link_clusters_country ON link_clusters(country)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_link_clusters_type ON link_clusters(link_type)`);
+
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS asset_trace_records (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    borrower_id varchar NOT NULL REFERENCES borrowers(id),
+    asset_type asset_trace_type NOT NULL,
+    provider text NOT NULL,
+    reference text,
+    description text,
+    estimated_value decimal(15,2),
+    currency text,
+    status asset_trace_status NOT NULL DEFAULT 'stub',
+    raw_response jsonb,
+    requested_by varchar REFERENCES users(id),
+    organization_id varchar REFERENCES organizations(id),
+    country text,
+    created_at timestamp DEFAULT now()
+  )`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_asset_trace_borrower ON asset_trace_records(borrower_id)`);
+
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS collection_assignments (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    borrower_id varchar NOT NULL REFERENCES borrowers(id),
+    credit_account_id varchar REFERENCES credit_accounts(id),
+    assigned_to varchar REFERENCES users(id),
+    status collection_status NOT NULL DEFAULT 'open',
+    priority collection_priority NOT NULL DEFAULT 'medium',
+    amount_outstanding decimal(15,2),
+    currency text,
+    due_date text,
+    notes text,
+    organization_id varchar REFERENCES organizations(id),
+    country text,
+    created_by varchar REFERENCES users(id),
+    created_at timestamp DEFAULT now(),
+    updated_at timestamp DEFAULT now()
+  )`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_collections_borrower ON collection_assignments(borrower_id)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_collections_assigned ON collection_assignments(assigned_to)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_collections_status ON collection_assignments(status)`);
+
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS collection_attempts (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    assignment_id varchar NOT NULL REFERENCES collection_assignments(id),
+    channel collection_channel NOT NULL,
+    outcome collection_outcome NOT NULL,
+    contact_value text,
+    notes text,
+    promised_amount decimal(15,2),
+    promised_date text,
+    attempted_by varchar REFERENCES users(id),
+    attempted_at timestamp NOT NULL DEFAULT now(),
+    created_at timestamp DEFAULT now()
+  )`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_attempts_assignment ON collection_attempts(assignment_id)`);
+
   console.log('[NewTables] Migration complete');
 }

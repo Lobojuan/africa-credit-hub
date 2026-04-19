@@ -11625,6 +11625,389 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e) }); }
   });
 
+  // ════════════════════════════════════════════════════════════════════════
+  // Tracing & Skip-Tracing Module (Task #29)
+  // ════════════════════════════════════════════════════════════════════════
+  const {
+    captureBorrowerContactEvents, recomputeLinkClusters, getLinkedBorrowers,
+    findConnections, getBorrowerContactEvents, decryptedBorrowersByIds,
+  } = await import("./trace-engine");
+  const { executeAssetTrace, getAssetTracesByBorrower } = await import("./asset-trace");
+  const { generateSkipTracePdf } = await import("./skip-trace-pdf");
+
+  // Authorization: ensure caller can access this borrower (super_admin bypasses;
+  // others must match borrower's organization OR country scope).
+  async function ensureBorrowerAccess(req: any, borrowerId: string): Promise<{ ok: true; borrower: any } | { ok: false; status: number; message: string }> {
+    const borrower = await storage.getBorrower(borrowerId);
+    if (!borrower) return { ok: false, status: 404, message: "Borrower not found" };
+    const role = req.session?.userRole;
+    const orgId = req.session?.organizationId;
+    const userCountry = getCountryFilter(req);
+    if (role === "super_admin") return { ok: true, borrower };
+    if (role === "regulator") {
+      if (userCountry && borrower.country && borrower.country === userCountry) return { ok: true, borrower };
+      return { ok: false, status: 403, message: "Not authorized for this borrower" };
+    }
+    if (orgId && borrower.organizationId && borrower.organizationId === orgId) return { ok: true, borrower };
+    return { ok: false, status: 403, message: "Not authorized for this borrower" };
+  }
+
+  async function ensureAssignmentAccess(req: any, assignmentId: string): Promise<{ ok: true; assignment: any } | { ok: false; status: number; message: string }> {
+    const assignment = await storage.getCollectionAssignment(assignmentId);
+    if (!assignment) return { ok: false, status: 404, message: "Assignment not found" };
+    const role = req.session?.userRole;
+    const orgId = req.session?.organizationId;
+    if (role === "super_admin") return { ok: true, assignment };
+    if (orgId && assignment.organizationId && assignment.organizationId === orgId) return { ok: true, assignment };
+    return { ok: false, status: 403, message: "Not authorized for this assignment" };
+  }
+
+  function getTraceReason(req: any): string {
+    const r = (req.query?.reason || req.body?.reason || "").toString().trim();
+    return r;
+  }
+
+  async function logTraceAudit(req: Request, action: string, entityId: string, details: string) {
+    // Fail-closed: if we cannot durably write the compliance audit log,
+    // the calling endpoint MUST surface the failure rather than serve PII.
+    const reason = getTraceReason(req);
+    let lastErr: Error | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        await storage.createAuditLog({
+          userId: req.session?.userId,
+          action,
+          entity: "trace",
+          entityId,
+          details: reason ? `${details} | reason=${reason}` : details,
+          ipAddress: req.ip,
+          organizationId: req.session?.organizationId,
+        });
+        return;
+      } catch (e) {
+        lastErr = e as Error;
+      }
+    }
+    console.error(`[trace-audit] FAIL-CLOSED on ${action}/${entityId}:`, lastErr?.message);
+    throw new Error(`Compliance audit log write failed (${action}). Trace request denied.`);
+  }
+
+  function requireTraceReason(req: any, res: any): boolean {
+    const reason = getTraceReason(req);
+    if (!reason || reason.length < 5) {
+      res.status(400).json({ message: "Permissible-purpose reason required (min 5 chars). Pass `reason` as query string for GET, or in body for POST." });
+      return false;
+    }
+    return true;
+  }
+
+  // Borrower's contact event history
+  app.get("/api/trace/borrower/:id/history", requireRole("admin", "super_admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      if (!requireTraceReason(req, res)) return;
+      const { id } = req.params;
+      const acl = await ensureBorrowerAccess(req, id);
+      if (!acl.ok) return res.status(acl.status).json({ message: acl.message });
+      const events = await getBorrowerContactEvents(id);
+      // Enrich with confidence + still-valid signal vs current borrower record
+      const b = acl.borrower as any;
+      const currentValues = new Set<string>([
+        b.phone, b.homeTelephone, b.workTelephone, b.mobileMoneyNumber, b.email,
+        b.address, b.postalAddress1, b.postalAddress2, b.employerName, b.employerAddress, b.ezwichNumber,
+      ].filter(Boolean).map((v: string) => String(v).trim().toLowerCase()));
+      const enriched = events.map((ev: any) => {
+        const ageDays = ev.lastSeen ? Math.floor((Date.now() - new Date(ev.lastSeen).getTime()) / (1000 * 60 * 60 * 24)) : null;
+        const stillValid = currentValues.has(String(ev.value).trim().toLowerCase());
+        const confidence = stillValid ? 0.95 : ageDays === null ? 0.5 : ageDays < 90 ? 0.85 : ageDays < 365 ? 0.6 : 0.35;
+        return { ...ev, confidence, stillValid, ageDays };
+      });
+      await logTraceAudit(req, "TRACE_HISTORY_VIEW", id, `Viewed ${events.length} contact events`);
+      res.json(enriched);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // Borrower's linked borrowers
+  app.get("/api/trace/borrower/:id/links", requireRole("admin", "super_admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      if (!requireTraceReason(req, res)) return;
+      const { id } = req.params;
+      const acl = await ensureBorrowerAccess(req, id);
+      if (!acl.ok) return res.status(acl.status).json({ message: acl.message });
+      const country = getCountryFilter(req);
+      const links = await getLinkedBorrowers(id, country);
+      const otherIds = Array.from(new Set(links.map(l => l.borrowerId)));
+      const others = await decryptedBorrowersByIds(otherIds);
+      const role = (req as any).session?.userRole;
+      const orgId = (req as any).session?.organizationId;
+      const visible = (role === "super_admin" || role === "regulator")
+        ? others
+        : others.filter((b: any) => orgId && b.organizationId === orgId);
+      const visibleIds = new Set<string>(visible.map((b: any) => b.id));
+      const idMap = new Map(visible.map((b: any) => [b.id, b]));
+      const filteredLinks = links.filter(l => visibleIds.has(l.borrowerId));
+      const enriched = filteredLinks.map(l => {
+        const o = idMap.get(l.borrowerId);
+        const name = o ? (o.companyName || `${o.firstName || ""} ${o.lastName || ""}`.trim() || o.id) : l.borrowerId;
+        return { ...l, name, nationalId: o?.nationalId, type: o?.type };
+      });
+      await logTraceAudit(req, "TRACE_LINKS_VIEW", id, `Viewed ${enriched.length} linked borrowers (filtered from ${links.length})`);
+      res.json(enriched);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // Recompute link clusters (admin/regulator)
+  app.post("/api/trace/recompute-links", requireAuth, requireRole("super_admin", "admin", "regulator"), async (req, res) => {
+    try {
+      const country = getCountryFilter(req);
+      const result = await recomputeLinkClusters(country);
+      await logTraceAudit(req, "TRACE_RECOMPUTE", "system", `Recomputed clusters: ${JSON.stringify(result)}`);
+      res.json(result);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // Find Connections — search any borrower file by phone/email/address/employer
+  app.post("/api/trace/find-connections", requireRole("admin", "super_admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const { type, value, reason } = req.body || {};
+      if (!value || typeof value !== "string" || value.length < 3) {
+        return res.status(400).json({ message: "Search value must be at least 3 characters" });
+      }
+      if (!reason || typeof reason !== "string" || reason.length < 5) {
+        return res.status(400).json({ message: "Permissible-purpose reason is required" });
+      }
+      const role = (req as any).session?.userRole;
+      const orgId = (req as any).session?.organizationId;
+      const country = getCountryFilter(req);
+      const result = await findConnections({ type, value, country });
+      const ids = Array.from(new Set(result.matches.map(m => m.borrowerId)));
+      const borrowersFound = await decryptedBorrowersByIds(ids);
+
+      // Org-aware filtering: lender/admin (non-bureau roles) only see borrowers
+      // in their own organization. super_admin and regulator see all in scope.
+      const visibleBorrowers = (role === "super_admin" || role === "regulator")
+        ? borrowersFound
+        : borrowersFound.filter((b: any) => orgId && b.organizationId === orgId);
+      const visibleIds = new Set(visibleBorrowers.map((b: any) => b.id));
+      const idMap = new Map(visibleBorrowers.map((b: any) => [b.id, b]));
+
+      const filteredMatches = result.matches.filter(m => visibleIds.has(m.borrowerId));
+      const enrichedMatches = filteredMatches.map(m => {
+        const b = idMap.get(m.borrowerId);
+        return {
+          ...m,
+          borrowerName: b ? (b.companyName || `${b.firstName || ""} ${b.lastName || ""}`.trim()) : m.borrowerId,
+          nationalId: b?.nationalId,
+          country: b?.country,
+        };
+      });
+
+      // Filter cluster member lists AND recalculate counts so non-bureau callers
+      // cannot infer hidden cross-org cluster size from the response.
+      const filteredClusters = result.clusters.map((c) => {
+        const filteredMembers = (c.memberBorrowerIds || []).filter((bid) => visibleIds.has(bid));
+        if (role === "super_admin" || role === "regulator") return c;
+        return {
+          ...c,
+          memberBorrowerIds: filteredMembers,
+          memberCount: filteredMembers.length,
+          // Recompute confidence as a function of *visible* size only:
+          // single-member clusters have no link information.
+          confidence: filteredMembers.length <= 1 ? "0" : c.confidence,
+        };
+      }).filter((c) => (c.memberBorrowerIds || []).length > 0);
+
+      const valueHash = (await import("crypto")).createHash("sha256").update(String(value).trim().toLowerCase()).digest("hex").slice(0, 16);
+      await logTraceAudit(req, "TRACE_FIND_CONNECTIONS", "search",
+        `type=${type || "any"} value_hash=${valueHash} value_len=${value.length} hits=${enrichedMatches.length} (filtered from ${result.matches.length})`);
+      res.json({ matches: enrichedMatches, clusters: filteredClusters });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // Asset trace — list and execute
+  app.get("/api/trace/borrower/:id/assets", requireRole("admin", "super_admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      if (!requireTraceReason(req, res)) return;
+      const acl = await ensureBorrowerAccess(req, req.params.id);
+      if (!acl.ok) return res.status(acl.status).json({ message: acl.message });
+      const list = await getAssetTracesByBorrower(req.params.id);
+      await logTraceAudit(req, "TRACE_ASSET_LIST", req.params.id, `Listed ${list.length} asset trace records`);
+      res.json(list);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/trace/borrower/:id/assets", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
+    try {
+      if (!requireTraceReason(req, res)) return;
+      const { id } = req.params;
+      const { provider, reference } = req.body || {};
+      if (!provider) return res.status(400).json({ message: "provider is required" });
+      const acl = await ensureBorrowerAccess(req, id);
+      if (!acl.ok) return res.status(acl.status).json({ message: acl.message });
+      const borrower = acl.borrower;
+      const record = await executeAssetTrace({
+        borrowerId: id, provider, reference,
+        requestedBy: (req as any).session?.userId,
+        organizationId: borrower.organizationId,
+        country: borrower.country,
+      });
+      await logTraceAudit(req, "TRACE_ASSET_LOOKUP", id, `provider=${provider} ref=${reference || ""} status=${record.status}`);
+      try { broadcastEvent("trace:asset", { borrowerId: id, provider, status: record.status }); } catch {}
+      res.json(record);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // Skip-trace PDF report
+  app.post("/api/trace/borrower/:id/skip-trace-pdf", requireRole("admin", "super_admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { reason } = req.body || {};
+      if (!reason || typeof reason !== "string" || reason.length < 5) {
+        return res.status(400).json({ message: "Permissible-purpose reason is required" });
+      }
+      const acl = await ensureBorrowerAccess(req, id);
+      if (!acl.ok) return res.status(acl.status).json({ message: acl.message });
+      const decrypted = (await decryptedBorrowersByIds([id]))[0] || acl.borrower;
+      const events = await getBorrowerContactEvents(id);
+      const judgments = await storage.getCourtJudgmentsByBorrower(id).catch(() => [] as any[]);
+      const links = await getLinkedBorrowers(id, getCountryFilter(req));
+      const otherIds = Array.from(new Set(links.map(l => l.borrowerId)));
+      const others = await decryptedBorrowersByIds(otherIds);
+      const role = (req as any).session?.userRole;
+      const sessionOrgId = (req as any).session?.organizationId;
+      const visibleOthers = (role === "super_admin" || role === "regulator")
+        ? others
+        : others.filter((b: any) => sessionOrgId && b.organizationId === sessionOrgId);
+      const visibleIds = new Set<string>(visibleOthers.map((b: any) => b.id));
+      const idMap = new Map(visibleOthers.map((b: any) => [b.id, b]));
+      const enrichedLinks = links.filter(l => visibleIds.has(l.borrowerId)).map(l => {
+        const o = idMap.get(l.borrowerId);
+        return { ...l, name: o ? (o.companyName || `${o.firstName || ""} ${o.lastName || ""}`.trim()) : l.borrowerId, nationalId: o?.nationalId };
+      });
+      const assets = await getAssetTracesByBorrower(id);
+      const userId = (req as any).session?.userId || "system";
+      const orgId = (req as any).session?.organizationId;
+      const org = orgId ? await storage.getOrganization(orgId) : null;
+      const pdfBuffer = await generateSkipTracePdf({
+        borrower: decrypted as any,
+        contactEvents: events,
+        linkedBorrowers: enrichedLinks,
+        assetTraces: assets,
+        courtJudgments: judgments as any[],
+        requestedBy: userId,
+        requestReason: reason,
+        organizationName: org?.name || "Africa Credit Hub",
+      });
+      await logTraceAudit(req, "TRACE_SKIP_TRACE_PDF", id, `reason="${reason}" events=${events.length} links=${enrichedLinks.length} assets=${assets.length}`);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="skip-trace-${id}.pdf"`);
+      res.send(pdfBuffer);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ─── Collections workflow ────────────────────────────────────────────────
+  app.get("/api/collections/assignments", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const orgId = getOrgScope(req);
+      const country = getCountryFilter(req);
+      const { status, mine } = req.query as any;
+      const list = await storage.getCollectionAssignments({
+        organizationId: orgId,
+        country,
+        status,
+        assignedTo: mine === "true" ? (req as any).session?.userId : undefined,
+      });
+      res.json(list);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/collections/assignments", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const body = req.body || {};
+      if (!body.borrowerId) return res.status(400).json({ message: "borrowerId is required" });
+      const acl = await ensureBorrowerAccess(req, body.borrowerId);
+      if (!acl.ok) return res.status(acl.status).json({ message: acl.message });
+      const borrower = acl.borrower;
+      // Tenant integrity: ALWAYS derive organizationId/country from the
+      // authorized borrower record. Ignore any client-supplied values to
+      // prevent cross-tenant assignment writes (e.g., a lender writing into
+      // another org's collections queue).
+      const { organizationId: _ignoredOrg, country: _ignoredCountry, createdBy: _ignoredCreatedBy, ...safeBody } = body;
+      const created = await storage.createCollectionAssignment({
+        ...safeBody,
+        organizationId: borrower.organizationId,
+        country: borrower.country,
+        createdBy: req.session?.userId,
+      });
+      await logTraceAudit(req, "TRACE_COLLECTION_OPEN", created.id, `borrower=${body.borrowerId} priority=${body.priority || "medium"}`);
+      try { broadcastEvent("collection:created", { id: created.id, borrowerId: body.borrowerId }); } catch {}
+      res.json(created);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.patch("/api/collections/assignments/:id", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const acl = await ensureAssignmentAccess(req, req.params.id);
+      if (!acl.ok) return res.status(acl.status).json({ message: acl.message });
+      const updated = await storage.updateCollectionAssignment(req.params.id, req.body || {});
+      if (!updated) return res.status(404).json({ message: "Not found" });
+      await logTraceAudit(req, "TRACE_COLLECTION_UPDATE", req.params.id, `status=${req.body?.status || ""}`);
+      res.json(updated);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.get("/api/collections/assignments/:id/attempts", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const acl = await ensureAssignmentAccess(req, req.params.id);
+      if (!acl.ok) return res.status(acl.status).json({ message: acl.message });
+      const list = await storage.getCollectionAttempts(req.params.id);
+      res.json(list);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/collections/assignments/:id/attempts", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const acl = await ensureAssignmentAccess(req, req.params.id);
+      if (!acl.ok) return res.status(acl.status).json({ message: acl.message });
+      const assignment = acl.assignment;
+      const body = req.body || {};
+      const attempt = await storage.createCollectionAttempt({
+        ...body,
+        assignmentId: req.params.id,
+        attemptedBy: (req as any).session?.userId,
+        attemptedAt: new Date(),
+      });
+
+      // Optionally send SMS/email through existing utilities
+      if (body.sendNow && body.contactValue) {
+        try {
+          if (body.channel === "sms") {
+            const { sendSms } = await import("./sms");
+            await sendSms(body.contactValue, body.notes || "Reminder regarding your outstanding credit account. Please contact your lender.");
+          } else if (body.channel === "email") {
+            const { sendDisputeNotification } = await import("./email");
+            // Use a generic dispute-notification email template as a stop-gap
+            await sendDisputeNotification("Africa Credit Hub", body.contactValue, 0, "Collection reminder", "collection_reminder");
+          }
+        } catch (e: any) {
+          console.error("[collections] notify failed:", e.message);
+        }
+      }
+
+      await logTraceAudit(req, "TRACE_COLLECTION_ATTEMPT", req.params.id, `channel=${body.channel} outcome=${body.outcome}`);
+
+      // Auto-update assignment status based on outcome
+      if (body.outcome === "promise_to_pay") {
+        await storage.updateCollectionAssignment(req.params.id, { status: "promised" });
+      } else if (body.outcome === "paid") {
+        await storage.updateCollectionAssignment(req.params.id, { status: "resolved" });
+      } else if (assignment.status === "open") {
+        await storage.updateCollectionAssignment(req.params.id, { status: "in_progress" });
+      }
+
+      res.json(attempt);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
   return httpServer;
 }
 

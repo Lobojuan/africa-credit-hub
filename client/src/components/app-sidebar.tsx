@@ -51,6 +51,7 @@ import {
   Cpu,
   Database,
   ShieldAlert,
+  ClipboardList,
 } from "lucide-react";
 import {
   Sidebar,
@@ -116,6 +117,8 @@ const dataManagementItems: NavItem[] = [
 const workflowItems: NavItem[] = [
   { label: "Disputes", tKey: "sidebar.disputes", url: "/disputes", icon: AlertCircle, testId: "nav-disputes", roles: ["admin", "lender", "regulator", "super_admin"] },
   { label: "Approvals", tKey: "sidebar.pendingApprovals", url: "/approvals", icon: CheckSquare, testId: "nav-pending-approvals", roles: ["admin", "regulator", "super_admin"] },
+  { label: "Find Connections", tKey: "sidebar.findConnections", url: "/find-connections", icon: Search, testId: "nav-find-connections", roles: ["admin", "lender", "regulator", "super_admin"] },
+  { label: "Collections", tKey: "sidebar.collections", url: "/collections", icon: ClipboardList, testId: "nav-collections", roles: ["admin", "lender", "super_admin"] },
   { label: "Helpdesk", tKey: "sidebar.helpdesk", url: "/helpdesk", icon: Headset, testId: "nav-helpdesk", roles: ["super_admin", "admin", "regulator", "lender", "viewer"] },
 ];
 

@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, User, Building2, Mail, Phone, MapPin, Briefcase, CreditCard, AlertTriangle, TrendingUp, FileText, Flag, GraduationCap, Users, Link2, ClipboardList, Camera, Upload, IdCard, Brain, Loader2, ShieldCheck, ShieldAlert, ShieldX, ChevronDown, ChevronUp, Sparkles, Smartphone, Heart, Calendar, Percent, Clock, Banknote, ChevronRight } from "lucide-react";
+import { ArrowLeft, User, Building2, Mail, Phone, MapPin, Briefcase, CreditCard, AlertTriangle, TrendingUp, FileText, Flag, GraduationCap, Users, Link2, ClipboardList, Camera, Upload, IdCard, Brain, Loader2, ShieldCheck, ShieldAlert, ShieldX, ChevronDown, ChevronUp, Sparkles, Smartphone, Heart, Calendar, Percent, Clock, Banknote, ChevronRight, History, Shield } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -1132,6 +1132,8 @@ export default function BorrowerDetailPage() {
         </Card>
       )}
 
+      {borrowerId && <TraceSection borrowerId={borrowerId} />}
+
       {accessAlerts && accessAlerts.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
@@ -1188,5 +1190,347 @@ function InfoRow({ label, value }: { label: string; value: string }) {
       <span className="text-muted-foreground">{label}</span>
       <span className="font-medium">{value}</span>
     </div>
+  );
+}
+
+interface ContactEvent {
+  id: string; contactType: string; value: string;
+  firstSeen: string; lastSeen: string; occurrences: number;
+  source: string; sourceRef?: string | null;
+  confidence?: number; stillValid?: boolean; ageDays?: number | null;
+}
+interface LinkedBorrower {
+  borrowerId: string; linkType: string; linkValueDisplay: string;
+  confidence: number; sharedWithCount: number; name?: string; nationalId?: string;
+}
+interface AssetTraceRow {
+  id: string; assetType: string; provider: string; reference?: string;
+  description?: string; estimatedValue?: string; currency?: string; status: string;
+  createdAt: string;
+}
+
+const ASSET_PROVIDERS = [
+  { value: "ghana_dvla", label: "Ghana DVLA (Vehicles)" },
+  { value: "ghana_lands", label: "Ghana Lands Commission" },
+  { value: "sa_natis", label: "South Africa NaTIS (Vehicles)" },
+  { value: "uganda_ursb_motor", label: "Uganda Motor Vehicle Registry" },
+  { value: "ethiopia_motor", label: "Ethiopia Motor Vehicle Registry" },
+  { value: "liberia_motor", label: "Liberia Motor Vehicle Registry" },
+];
+
+function TraceSection({ borrowerId }: { borrowerId: string }) {
+  const { toast } = useToast();
+  const [skipReason, setSkipReason] = useState("");
+  const [skipOpen, setSkipOpen] = useState(false);
+  const [provider, setProvider] = useState("ghana_dvla");
+  const [reference, setReference] = useState("");
+  const [traceReason, setTraceReason] = useState<string>("");
+  const [pendingReason, setPendingReason] = useState<string>("");
+  const reasonReady = traceReason.length >= 5;
+  const reasonParam = encodeURIComponent(traceReason);
+
+  const { data: history = [] } = useQuery<ContactEvent[]>({
+    queryKey: [`/api/trace/borrower/${borrowerId}/history`, traceReason],
+    queryFn: async () => {
+      const res = await fetch(`/api/trace/borrower/${borrowerId}/history?reason=${reasonParam}`, { credentials: "include" });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
+    enabled: reasonReady,
+  });
+  const { data: links = [] } = useQuery<LinkedBorrower[]>({
+    queryKey: [`/api/trace/borrower/${borrowerId}/links`, traceReason],
+    queryFn: async () => {
+      const res = await fetch(`/api/trace/borrower/${borrowerId}/links?reason=${reasonParam}`, { credentials: "include" });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
+    enabled: reasonReady,
+  });
+  const { data: assets = [] } = useQuery<AssetTraceRow[]>({
+    queryKey: [`/api/trace/borrower/${borrowerId}/assets`, traceReason],
+    queryFn: async () => {
+      const res = await fetch(`/api/trace/borrower/${borrowerId}/assets?reason=${reasonParam}`, { credentials: "include" });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
+    enabled: reasonReady,
+  });
+
+  const runAsset = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/trace/borrower/${borrowerId}/assets`, { provider, reference, reason: traceReason });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Asset trace executed" });
+      queryClient.invalidateQueries({ queryKey: [`/api/trace/borrower/${borrowerId}/assets`] });
+      setReference("");
+    },
+    onError: (e: any) => toast({ title: "Trace failed", description: e.message, variant: "destructive" }),
+  });
+
+  const downloadPdf = async () => {
+    if (!skipReason || skipReason.length < 5) {
+      toast({ title: "Reason required", description: "Provide a permissible-purpose reason (5+ chars).", variant: "destructive" });
+      return;
+    }
+    try {
+      const res = await apiRequest("POST", `/api/trace/borrower/${borrowerId}/skip-trace-pdf`, { reason: skipReason });
+      if (!res.ok) throw new Error(await res.text());
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `skip-trace-${borrowerId}.pdf`; a.click();
+      URL.revokeObjectURL(url);
+      setSkipOpen(false); setSkipReason("");
+      toast({ title: "Skip-trace report generated" });
+    } catch (e: any) {
+      toast({ title: "PDF generation failed", description: e.message, variant: "destructive" });
+    }
+  };
+
+  if (!reasonReady) {
+    return (
+      <Card data-testid="section-trace-gate">
+        <CardHeader className="pb-3">
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <Shield className="w-4 h-4" /> Trace Access — Permissible Purpose Required
+          </h3>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Tracing data (contact history, linked borrowers, asset traces) is bureau-sensitive PII.
+            Provide a stated reason — it will be audit-logged with your user ID, the borrower ID, and a timestamp.
+          </p>
+          <input
+            className="w-full px-2 py-1.5 text-sm border rounded-md bg-background"
+            placeholder="e.g. Skip-trace for delinquent loan ACC-12345"
+            value={pendingReason}
+            onChange={(e) => setPendingReason(e.target.value)}
+            data-testid="input-trace-access-reason"
+          />
+          <Button
+            size="sm"
+            disabled={pendingReason.trim().length < 5}
+            onClick={() => setTraceReason(pendingReason.trim())}
+            data-testid="button-trace-access-confirm"
+          >
+            Open Trace Section
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <>
+      <Card data-testid="section-trace-history">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <History className="w-4 h-4" />
+              Contact &amp; Address History
+            </h3>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="text-[10px]">{history.length}</Badge>
+              {!skipOpen ? (
+                <Button size="sm" variant="outline" onClick={() => setSkipOpen(true)} data-testid="button-open-skip-trace">
+                  <FileText className="w-3 h-3 mr-1" /> Skip-Trace Report
+                </Button>
+              ) : null}
+            </div>
+          </div>
+          {skipOpen && (
+            <div className="mt-3 space-y-2 p-3 border rounded-md bg-muted/30">
+              <label className="text-xs font-medium">Permissible-purpose reason (audit-logged):</label>
+              <input
+                className="w-full px-2 py-1.5 text-sm border rounded-md bg-background"
+                placeholder="e.g. Skip-trace for delinquent loan ACC-12345"
+                value={skipReason}
+                onChange={(e) => setSkipReason(e.target.value)}
+                data-testid="input-skip-trace-reason"
+              />
+              <div className="flex gap-2">
+                <Button size="sm" onClick={downloadPdf} data-testid="button-generate-skip-trace">Generate &amp; Download</Button>
+                <Button size="sm" variant="ghost" onClick={() => { setSkipOpen(false); setSkipReason(""); }}>Cancel</Button>
+              </div>
+            </div>
+          )}
+        </CardHeader>
+        <CardContent className="px-0 pb-0">
+          {history.length === 0 ? (
+            <div className="px-5 py-6 text-sm text-muted-foreground text-center">
+              No contact history captured yet — history accrues as borrower data is updated.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Value</TableHead>
+                  <TableHead>First Seen</TableHead>
+                  <TableHead>Last Seen</TableHead>
+                  <TableHead>Source</TableHead>
+                  <TableHead>Still Valid?</TableHead>
+                  <TableHead className="text-right">Confidence</TableHead>
+                  <TableHead className="text-right">Hits</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {history.slice(0, 30).map(ev => (
+                  <TableRow key={ev.id} data-testid={`row-trace-${ev.id}`}>
+                    <TableCell><Badge variant="outline" className="text-[10px] capitalize">{ev.contactType.replace(/_/g, " ")}</Badge></TableCell>
+                    <TableCell className="text-xs font-mono max-w-xs truncate">{ev.value}</TableCell>
+                    <TableCell className="text-xs">{ev.firstSeen ? new Date(ev.firstSeen).toLocaleDateString("en-GB") : "—"}</TableCell>
+                    <TableCell className="text-xs">{ev.lastSeen ? new Date(ev.lastSeen).toLocaleDateString("en-GB") : "—"}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <Badge variant="secondary" className="text-[10px] w-fit" title={`Captured by: ${ev.source}`}>{ev.source.replace(/_/g, " ")}</Badge>
+                        {ev.sourceRef ? (
+                          <span className="text-[10px] font-mono text-muted-foreground mt-0.5" data-testid={`text-source-ref-${ev.id}`} title="Originating record">
+                            {ev.sourceRef}
+                          </span>
+                        ) : null}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {ev.stillValid ? (
+                        <Badge className="text-[10px] bg-emerald-500 hover:bg-emerald-500" data-testid={`badge-valid-${ev.id}`}>Current</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px]" data-testid={`badge-stale-${ev.id}`}>
+                          Stale{typeof ev.ageDays === "number" ? ` (${ev.ageDays}d)` : ""}
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right text-xs font-medium" data-testid={`text-confidence-${ev.id}`}>
+                      {typeof ev.confidence === "number" ? `${Math.round(ev.confidence * 100)}%` : "—"}
+                    </TableCell>
+                    <TableCell className="text-right text-xs">{ev.occurrences}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card data-testid="section-trace-links">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <Link2 className="w-4 h-4" />
+              Linked Borrowers
+            </h3>
+            <Badge variant="secondary" className="text-[10px]">{links.length}</Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="px-0 pb-0">
+          {links.length === 0 ? (
+            <div className="px-5 py-6 text-sm text-muted-foreground text-center">
+              No linked borrowers detected.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Borrower</TableHead>
+                  <TableHead>Link Type</TableHead>
+                  <TableHead>Shared Value</TableHead>
+                  <TableHead className="text-right">Confidence</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {links.slice(0, 25).map((l, i) => (
+                  <TableRow key={`${l.borrowerId}-${i}`} data-testid={`row-link-${l.borrowerId}`}>
+                    <TableCell>
+                      <a href={`/borrowers/${l.borrowerId}`} className="text-primary hover:underline text-sm font-medium">
+                        {l.name || l.borrowerId.slice(0, 12)}
+                      </a>
+                      {l.nationalId && <div className="text-[10px] text-muted-foreground">{l.nationalId}</div>}
+                    </TableCell>
+                    <TableCell><Badge variant="outline" className="text-[10px] capitalize">{l.linkType.replace(/_/g, " ")}</Badge></TableCell>
+                    <TableCell className="text-xs">{l.linkValueDisplay}</TableCell>
+                    <TableCell className="text-right text-xs">{Math.round(l.confidence * 100)}%</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card data-testid="section-asset-traces">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <Briefcase className="w-4 h-4" />
+              Asset Traces
+            </h3>
+            <Badge variant="secondary" className="text-[10px]">{assets.length}</Badge>
+          </div>
+          <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2">
+            <select
+              className="px-2 py-1.5 text-sm border rounded-md bg-background"
+              value={provider}
+              onChange={(e) => setProvider(e.target.value)}
+              data-testid="select-asset-provider"
+            >
+              {ASSET_PROVIDERS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+            </select>
+            <input
+              className="px-2 py-1.5 text-sm border rounded-md bg-background md:col-span-1"
+              placeholder="Reference (plate, parcel, VIN) — optional"
+              value={reference}
+              onChange={(e) => setReference(e.target.value)}
+              data-testid="input-asset-reference"
+            />
+            <Button
+              size="sm"
+              onClick={() => runAsset.mutate()}
+              disabled={runAsset.isPending}
+              data-testid="button-run-asset-trace"
+            >
+              {runAsset.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Briefcase className="w-3 h-3 mr-1" />}
+              Run Trace
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="px-0 pb-0">
+          {assets.length === 0 ? (
+            <div className="px-5 py-6 text-sm text-muted-foreground text-center">
+              No asset traces on record. Use the controls above to query a registry.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Provider</TableHead>
+                  <TableHead>Reference</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Est. Value</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {assets.map(a => (
+                  <TableRow key={a.id} data-testid={`row-asset-${a.id}`}>
+                    <TableCell><Badge variant="outline" className="text-[10px] capitalize">{a.assetType}</Badge></TableCell>
+                    <TableCell className="text-xs">{a.provider}</TableCell>
+                    <TableCell className="text-xs font-mono">{a.reference || "—"}</TableCell>
+                    <TableCell className="text-xs max-w-xs truncate">{a.description || "—"}</TableCell>
+                    <TableCell className="text-xs">{a.estimatedValue ? `${a.currency || ""} ${parseFloat(a.estimatedValue).toLocaleString()}` : "—"}</TableCell>
+                    <TableCell>
+                      <Badge variant={a.status === "found" ? "default" : a.status === "stub" ? "outline" : "secondary"} className="text-[10px] capitalize">{a.status}</Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </>
   );
 }

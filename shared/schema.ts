@@ -1445,3 +1445,121 @@ export const affordabilityAssessments = pgTable("affordability_assessments", {
 export const insertAffordabilityAssessmentSchema = createInsertSchema(affordabilityAssessments).omit({ id: true, createdAt: true });
 export type InsertAffordabilityAssessment = z.infer<typeof insertAffordabilityAssessmentSchema>;
 export type AffordabilityAssessment = typeof affordabilityAssessments.$inferSelect;
+
+// ============================================================================
+// Tracing & Skip-Tracing Module (Task #29)
+// ============================================================================
+
+export const contactEventTypeEnum = pgEnum("contact_event_type", [
+  "phone", "email", "address", "postal_address", "employer", "employer_address",
+  "bank_account", "mobile_money", "other_id",
+]);
+
+export const contactEvents = pgTable("contact_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id),
+  contactType: contactEventTypeEnum("contact_type").notNull(),
+  value: text("value").notNull(),
+  valueNormalized: text("value_normalized").notNull(),
+  source: text("source").notNull().default("borrower_update"),
+  sourceRef: text("source_ref"),
+  firstSeen: timestamp("first_seen").defaultNow().notNull(),
+  lastSeen: timestamp("last_seen").defaultNow().notNull(),
+  occurrences: integer("occurrences").notNull().default(1),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  country: text("country"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertContactEventSchema = createInsertSchema(contactEvents).omit({ id: true, createdAt: true });
+export type InsertContactEvent = z.infer<typeof insertContactEventSchema>;
+export type ContactEvent = typeof contactEvents.$inferSelect;
+
+export const linkClusters = pgTable("link_clusters", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  linkType: text("link_type").notNull(),
+  linkValueHash: text("link_value_hash").notNull(),
+  linkValueDisplay: text("link_value_display").notNull(),
+  memberBorrowerIds: text("member_borrower_ids").array().notNull().default(sql`ARRAY[]::text[]`),
+  memberCount: integer("member_count").notNull().default(0),
+  confidence: decimal("confidence", { precision: 4, scale: 2 }).notNull().default("0.50"),
+  country: text("country"),
+  lastRecomputedAt: timestamp("last_recomputed_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertLinkClusterSchema = createInsertSchema(linkClusters).omit({ id: true, createdAt: true });
+export type InsertLinkCluster = z.infer<typeof insertLinkClusterSchema>;
+export type LinkCluster = typeof linkClusters.$inferSelect;
+
+export const assetTraceTypeEnum = pgEnum("asset_trace_type", ["vehicle", "property", "watercraft", "aircraft"]);
+export const assetTraceStatusEnum = pgEnum("asset_trace_status", ["found", "not_found", "error", "stub"]);
+
+export const assetTraceRecords = pgTable("asset_trace_records", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id),
+  assetType: assetTraceTypeEnum("asset_type").notNull(),
+  provider: text("provider").notNull(),
+  reference: text("reference"),
+  description: text("description"),
+  estimatedValue: decimal("estimated_value", { precision: 15, scale: 2 }),
+  currency: text("currency"),
+  status: assetTraceStatusEnum("status").notNull().default("stub"),
+  rawResponse: jsonb("raw_response"),
+  requestedBy: varchar("requested_by").references(() => users.id),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  country: text("country"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertAssetTraceRecordSchema = createInsertSchema(assetTraceRecords).omit({ id: true, createdAt: true });
+export type InsertAssetTraceRecord = z.infer<typeof insertAssetTraceRecordSchema>;
+export type AssetTraceRecord = typeof assetTraceRecords.$inferSelect;
+
+export const collectionStatusEnum = pgEnum("collection_status", ["open", "in_progress", "promised", "resolved", "closed"]);
+export const collectionPriorityEnum = pgEnum("collection_priority", ["low", "medium", "high", "urgent"]);
+export const collectionChannelEnum = pgEnum("collection_channel", ["phone", "sms", "email", "visit", "letter", "note"]);
+export const collectionOutcomeEnum = pgEnum("collection_outcome", [
+  "contacted", "no_answer", "wrong_number", "promise_to_pay", "refused",
+  "left_message", "callback_requested", "paid", "note",
+]);
+
+export const collectionAssignments = pgTable("collection_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id),
+  creditAccountId: varchar("credit_account_id").references(() => creditAccounts.id),
+  assignedTo: varchar("assigned_to").references(() => users.id),
+  status: collectionStatusEnum("status").notNull().default("open"),
+  priority: collectionPriorityEnum("priority").notNull().default("medium"),
+  amountOutstanding: decimal("amount_outstanding", { precision: 15, scale: 2 }),
+  currency: text("currency"),
+  dueDate: text("due_date"),
+  notes: text("notes"),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  country: text("country"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertCollectionAssignmentSchema = createInsertSchema(collectionAssignments).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertCollectionAssignment = z.infer<typeof insertCollectionAssignmentSchema>;
+export type CollectionAssignment = typeof collectionAssignments.$inferSelect;
+
+export const collectionAttempts = pgTable("collection_attempts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assignmentId: varchar("assignment_id").notNull().references(() => collectionAssignments.id),
+  channel: collectionChannelEnum("channel").notNull(),
+  outcome: collectionOutcomeEnum("outcome").notNull(),
+  contactValue: text("contact_value"),
+  notes: text("notes"),
+  promisedAmount: decimal("promised_amount", { precision: 15, scale: 2 }),
+  promisedDate: text("promised_date"),
+  attemptedBy: varchar("attempted_by").references(() => users.id),
+  attemptedAt: timestamp("attempted_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertCollectionAttemptSchema = createInsertSchema(collectionAttempts).omit({ id: true, createdAt: true });
+export type InsertCollectionAttempt = z.infer<typeof insertCollectionAttemptSchema>;
+export type CollectionAttempt = typeof collectionAttempts.$inferSelect;

@@ -127,7 +127,9 @@ export default function AuditTrailPage() {
         if (!matchesSearch) return false;
       }
 
-      if (actionFilter !== "all" && log.action !== actionFilter) return false;
+      if (actionFilter === "TRACE_*") {
+        if (!log.action || !log.action.startsWith("TRACE_")) return false;
+      } else if (actionFilter !== "all" && log.action !== actionFilter) return false;
       if (entityFilter !== "all" && log.entity !== entityFilter) return false;
 
       if (dateFrom && log.createdAt) {
@@ -402,6 +404,7 @@ export default function AuditTrailPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Actions</SelectItem>
+                    <SelectItem value="TRACE_*">Trace activity (all TRACE_*)</SelectItem>
                     {(stats?.uniqueActions || []).map(action => (
                       <SelectItem key={action} value={action}>{action}</SelectItem>
                     ))}
