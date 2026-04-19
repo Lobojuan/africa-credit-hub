@@ -472,9 +472,11 @@ export async function migrateNewTables() {
     alert_email text,
     slack_webhook_url text,
     check_interval_minutes integer NOT NULL DEFAULT 15,
+    retention_days integer,
     updated_at timestamp DEFAULT now(),
     updated_by varchar REFERENCES users(id)
   )`);
+  await db.execute(sql`ALTER TABLE registry_health_config ADD COLUMN IF NOT EXISTS retention_days integer`);
 
   // Registry health event history — persisted probe results (Task #82)
   await db.execute(sql`CREATE TABLE IF NOT EXISTS registry_health_events (
