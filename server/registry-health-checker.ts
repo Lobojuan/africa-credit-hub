@@ -22,6 +22,8 @@ import { storage } from "./storage";
 
 const DEFAULT_CHECK_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
 const FAILURE_THRESHOLD = 2;
+const CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000; // once per day
+const DEFAULT_RETENTION_DAYS = 90;
 
 export interface RegistryHealthEntry {
   provider: string;
@@ -217,7 +219,27 @@ async function runHealthChecks(): Promise<void> {
   }
 }
 
+async function pruneOldHealthEvents(): Promise<void> {
+  const rawEnv = process.env.REGISTRY_HEALTH_RETENTION_DAYS;
+  const retentionDays = parseInt(rawEnv ?? "", 10);
+  const usingDefault = !rawEnv || isNaN(retentionDays) || retentionDays <= 0;
+  if (rawEnv && usingDefault) {
+    console.warn(`[RegistryHealth] REGISTRY_HEALTH_RETENTION_DAYS="${rawEnv}" is invalid — falling back to ${DEFAULT_RETENTION_DAYS} days`);
+  }
+  const days = usingDefault ? DEFAULT_RETENTION_DAYS : retentionDays;
+  const beforeDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  try {
+    const deleted = await storage.deleteOldRegistryHealthEvents(beforeDate);
+    if (deleted > 0) {
+      console.log(`[RegistryHealth] Pruned ${deleted} health event(s) older than ${days} days`);
+    }
+  } catch (err: any) {
+    console.error("[RegistryHealth] Failed to prune old health events:", err.message);
+  }
+}
+
 let _timer: ReturnType<typeof setInterval> | null = null;
+let _cleanupTimer: ReturnType<typeof setInterval> | null = null;
 let _currentIntervalMs = DEFAULT_CHECK_INTERVAL_MS;
 
 export async function startRegistryHealthChecker(intervalMs = DEFAULT_CHECK_INTERVAL_MS): Promise<void> {
@@ -246,8 +268,20 @@ export async function startRegistryHealthChecker(intervalMs = DEFAULT_CHECK_INTE
       console.error("[RegistryHealth] Periodic check error:", e.message);
     }
   }, effectiveInterval);
+
+  if (!_cleanupTimer) {
+    setTimeout(() => pruneOldHealthEvents(), 30_000);
+    _cleanupTimer = setInterval(() => pruneOldHealthEvents(), CLEANUP_INTERVAL_MS);
+    console.log("[RegistryHealth] Cleanup scheduler started — pruning runs daily");
+  }
 }
 
+/**
+ * Restarts only the health-check interval timer with a new interval.
+ * The daily cleanup timer (_cleanupTimer) is intentionally left running —
+ * it is started once by startRegistryHealthChecker() on application boot
+ * and does not need to be affected by config-driven interval changes.
+ */
 export function restartRegistryHealthChecker(newIntervalMs: number): void {
   if (_timer) {
     clearInterval(_timer);

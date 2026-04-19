@@ -1,4 +1,4 @@
-import { eq, desc, like, or, and, sql, count, ilike, inArray, gte } from "drizzle-orm";
+import { eq, desc, like, or, and, sql, count, ilike, inArray, gte, lt } from "drizzle-orm";
 import crypto from "crypto";
 import { db } from "./db";
 import { encryptBorrowerPII, decryptBorrowerPII, decryptBorrowerArray } from "./encryption";
@@ -301,6 +301,7 @@ export interface IStorage {
   insertRegistryHealthEvent(event: InsertRegistryHealthEvent): Promise<RegistryHealthEvent>;
   getRegistryHealthEvents(provider: string, sinceDays?: number): Promise<RegistryHealthEvent[]>;
   getAllRegistryHealthEvents(sinceDays?: number): Promise<RegistryHealthEvent[]>;
+  deleteOldRegistryHealthEvents(beforeDate: Date): Promise<number>;
 }
 
 export interface OverdueAssignmentDetail {
@@ -2603,6 +2604,13 @@ export class DatabaseStorage implements IStorage {
       .from(registryHealthEvents)
       .where(gte(registryHealthEvents.checkedAt, since))
       .orderBy(desc(registryHealthEvents.checkedAt));
+  }
+
+  async deleteOldRegistryHealthEvents(beforeDate: Date): Promise<number> {
+    const result = await db
+      .delete(registryHealthEvents)
+      .where(lt(registryHealthEvents.checkedAt, beforeDate));
+    return result.rowCount ?? 0;
   }
 }
 
