@@ -23,6 +23,15 @@ import { Gavel, FileCheck } from "lucide-react";
 import { queryClient, apiRequest, apiFormRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
+function isSandboxRawResponse(raw: unknown): boolean {
+  return (
+    typeof raw === "object" &&
+    raw !== null &&
+    "source" in raw &&
+    (raw as Record<string, unknown>).source === "sandbox"
+  );
+}
+
 function getStatusColor(status: string) {
   switch (status) {
     case "current": return "default";
@@ -1514,18 +1523,29 @@ function TraceSection({ borrowerId }: { borrowerId: string }) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {assets.map(a => (
-                  <TableRow key={a.id} data-testid={`row-asset-${a.id}`}>
-                    <TableCell><Badge variant="outline" className="text-[10px] capitalize">{a.assetType}</Badge></TableCell>
-                    <TableCell className="text-xs">{a.provider}</TableCell>
-                    <TableCell className="text-xs font-mono">{a.reference || "—"}</TableCell>
-                    <TableCell className="text-xs max-w-xs truncate">{a.description || "—"}</TableCell>
-                    <TableCell className="text-xs">{a.estimatedValue ? `${a.currency || ""} ${parseFloat(a.estimatedValue).toLocaleString()}` : "—"}</TableCell>
-                    <TableCell>
-                      <Badge variant={a.status === "found" ? "default" : a.status === "stub" ? "outline" : "secondary"} className="text-[10px] capitalize">{a.status}</Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {assets.map(a => {
+                  const isSandbox = isSandboxRawResponse(a.rawResponse);
+                  return (
+                    <TableRow key={a.id} data-testid={`row-asset-${a.id}`}>
+                      <TableCell><Badge variant="outline" className="text-[10px] capitalize">{a.assetType}</Badge></TableCell>
+                      <TableCell className="text-xs">{a.provider}</TableCell>
+                      <TableCell className="text-xs font-mono">{a.reference || "—"}</TableCell>
+                      <TableCell className="text-xs max-w-xs truncate">{a.description || "—"}</TableCell>
+                      <TableCell className="text-xs">{a.estimatedValue ? `${a.currency || ""} ${parseFloat(a.estimatedValue).toLocaleString()}` : "—"}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap items-center gap-1">
+                          <Badge variant={a.status === "found" ? "default" : a.status === "stub" ? "outline" : "secondary"} className="text-[10px] capitalize">{a.status}</Badge>
+                          {isSandbox && (
+                            <Badge variant="outline" className="text-[10px] border-amber-400 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 gap-1" data-testid={`badge-sandbox-${a.id}`}>
+                              <AlertTriangle className="w-2.5 h-2.5" />
+                              Sandbox data
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
