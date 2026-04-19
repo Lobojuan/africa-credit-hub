@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, User, Building2, Mail, Phone, MapPin, Briefcase, CreditCard, AlertTriangle, TrendingUp, FileText, Flag, GraduationCap, Users, Link2, ClipboardList, Camera, Upload, IdCard, Brain, Loader2, ShieldCheck, ShieldAlert, ShieldX, ChevronDown, ChevronUp, Sparkles, Smartphone, Heart, Calendar, Percent, Clock, Banknote, ChevronRight, History, Shield } from "lucide-react";
+import { ArrowLeft, User, Building2, Mail, Phone, MapPin, Briefcase, CreditCard, AlertTriangle, TrendingUp, FileText, Flag, GraduationCap, Users, Link2, ClipboardList, Camera, Upload, IdCard, Brain, Loader2, ShieldCheck, ShieldAlert, ShieldX, ChevronDown, ChevronUp, Sparkles, Smartphone, Heart, Calendar, Percent, Clock, Banknote, ChevronRight, History, Shield, X } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -1235,6 +1235,7 @@ function TraceSection({ borrowerId }: { borrowerId: string }) {
   const [reference, setReference] = useState("");
   const [traceReason, setTraceReason] = useState<string>("");
   const [pendingReason, setPendingReason] = useState<string>("");
+  const [sandboxBannerDismissed, setSandboxBannerDismissed] = useState(false);
   const reasonReady = traceReason.length >= 5;
   const reasonParam = encodeURIComponent(traceReason);
 
@@ -1265,6 +1266,8 @@ function TraceSection({ borrowerId }: { borrowerId: string }) {
     },
     enabled: reasonReady,
   });
+
+  const allSandbox = assets.length > 0 && assets.every(a => isSandboxRawResponse(a.rawResponse));
 
   const runAsset = useMutation({
     mutationFn: async () => {
@@ -1334,6 +1337,27 @@ function TraceSection({ borrowerId }: { borrowerId: string }) {
 
   return (
     <>
+      {allSandbox && !sandboxBannerDismissed && (
+        <div
+          className="flex items-start gap-3 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 text-sm text-amber-800 dark:text-amber-300"
+          data-testid="banner-sandbox-data"
+          role="alert"
+        >
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" />
+          <div className="flex-1">
+            <span className="font-semibold">Sandbox data only —&nbsp;</span>
+            all asset trace records on this page were returned by the registry sandbox environment and contain synthetic test data. These results are <strong>not authoritative</strong> and should not be used as evidence of real-world asset ownership.
+          </div>
+          <button
+            onClick={() => setSandboxBannerDismissed(true)}
+            className="shrink-0 rounded p-0.5 hover:bg-amber-200 dark:hover:bg-amber-800/50 transition-colors"
+            aria-label="Dismiss sandbox banner"
+            data-testid="button-dismiss-sandbox-banner"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
       <Card data-testid="section-trace-history">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-2">
