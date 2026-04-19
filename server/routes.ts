@@ -6440,8 +6440,6 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         res.setHeader("Content-Disposition", `attachment; filename=${xlsxFilename}`);
         res.setHeader("X-Export-SHA256", encResult.ciphertextHash);
         res.setHeader("X-Export-Plaintext-SHA256", xlsxHash);
-        res.setHeader("X-Export-IV", encResult.iv);
-        res.setHeader("X-Export-Key", encResult.oneTimeKey);
         res.setHeader("X-Export-Original-Size", String(xlsxBuf.byteLength));
         res.setHeader("X-Export-Encrypted", "true");
         res.setHeader("X-Export-Record-Count", String(xlsxRecordCount));
@@ -6492,8 +6490,6 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         res.setHeader("Content-Disposition", `attachment; filename=${csvFilename}`);
         res.setHeader("X-Export-SHA256", encResult.ciphertextHash);
         res.setHeader("X-Export-Plaintext-SHA256", csvHash);
-        res.setHeader("X-Export-IV", encResult.iv);
-        res.setHeader("X-Export-Key", encResult.oneTimeKey);
         res.setHeader("X-Export-Original-Size", String(csvSizeBytes));
         res.setHeader("X-Export-Encrypted", "true");
         res.setHeader("X-Export-Record-Count", String(csvRecordCount));
@@ -6633,8 +6629,6 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       res.setHeader("Content-Disposition", `attachment; filename="${bogEncFilename}"`);
       res.setHeader("X-Export-SHA256", encResult.ciphertextHash);
       res.setHeader("X-Export-Plaintext-SHA256", bogHash);
-      res.setHeader("X-Export-IV", encResult.iv);
-      res.setHeader("X-Export-Key", encResult.oneTimeKey);
       res.setHeader("X-Export-Encrypted", "true");
       res.setHeader("X-Export-Size-Bytes", String(bogSizeBytes));
       res.setHeader("X-Export-Record-Count", String(bogRecordCount));
@@ -6698,8 +6692,6 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       res.setHeader("Content-Disposition", `attachment; filename="${bslEncFilename}"`);
       res.setHeader("X-Export-SHA256", encResult.ciphertextHash);
       res.setHeader("X-Export-Plaintext-SHA256", bslHash);
-      res.setHeader("X-Export-IV", encResult.iv);
-      res.setHeader("X-Export-Key", encResult.oneTimeKey);
       res.setHeader("X-Export-Encrypted", "true");
       res.setHeader("X-Export-Size-Bytes", String(bslSizeBytes));
       res.setHeader("X-Export-Record-Count", String(bslRecordCount));
@@ -11330,8 +11322,6 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       res.setHeader("Content-Type", "application/octet-stream");
       res.setHeader("X-Export-SHA256", encResult.ciphertextHash);
       res.setHeader("X-Export-Plaintext-SHA256", sha256Hash);
-      res.setHeader("X-Export-IV", encResult.iv);
-      res.setHeader("X-Export-Key", encResult.oneTimeKey);
       res.setHeader("X-Export-Original-Size", String(encResult.originalSizeBytes));
       res.setHeader("X-Export-Encrypted", "true");
       res.setHeader("X-Export-Record-Count", String(recordCount));
@@ -11841,6 +11831,9 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const { id } = req.params;
       const { provider, reference } = req.body || {};
       if (!provider) return res.status(400).json({ message: "provider is required" });
+      if (reference !== undefined && (typeof reference !== "string" || reference.length > 100)) {
+        return res.status(400).json({ message: "reference must be a string of max 100 characters" });
+      }
       const acl = await ensureBorrowerAccess(req, id);
       if (!acl.ok) return res.status(acl.status).json({ message: acl.message });
       const borrower = acl.borrower;

@@ -2,6 +2,18 @@ import crypto from "crypto";
 import { storage } from "./storage";
 import type { Borrower, InsertIdentityVerification, InsertWatchlistHit, InsertFraudAlert } from "@shared/schema";
 
+function stripPiiFromRawResponse(raw: any): any {
+  if (!raw || typeof raw !== "object") return raw;
+  const PII_KEYS = ["full_name", "fullName", "first_name", "last_name", "date_of_birth", "dob",
+    "id_number", "national_id", "phone_number", "address", "photo", "selfie", "face_image",
+    "image", "portrait", "nationality"];
+  const cleaned = { ...raw };
+  for (const key of PII_KEYS) {
+    if (key in cleaned) cleaned[key] = "[REDACTED]";
+  }
+  return cleaned;
+}
+
 const SMILE_API_KEY = process.env.SMILE_IDENTITY_API_KEY;
 const SMILE_PARTNER_ID = process.env.SMILE_IDENTITY_PARTNER_ID;
 const COMPLY_ADVANTAGE_KEY = process.env.COMPLY_ADVANTAGE_API_KEY;
@@ -121,7 +133,7 @@ export async function verifyIdentity(borrower: Borrower, userId?: string, organi
       result: outcome.result as InsertIdentityVerification["result"],
       confidenceScore: String(outcome.confidenceScore),
       evidenceHash: outcome.evidenceHash,
-      rawResponse: JSON.stringify(outcome.rawResponse).slice(0, 8000),
+      rawResponse: JSON.stringify(stripPiiFromRawResponse(outcome.rawResponse)).slice(0, 8000),
       errorMessage: outcome.errorMessage || null,
       verifiedBy: userId || null,
       organizationId: organizationId || borrower.organizationId || null,
