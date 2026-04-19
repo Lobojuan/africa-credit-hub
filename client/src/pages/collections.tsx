@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Phone, Mail, MessageSquare, ClipboardList, Plus, Loader2, ArrowRight, AlertCircle, Settings, Clock, CheckCircle2, RefreshCw, ShieldAlert, Users, Filter } from "lucide-react";
+import { Phone, Mail, MessageSquare, ClipboardList, Plus, Loader2, ArrowRight, AlertCircle, Settings, Clock, CheckCircle2, RefreshCw, ShieldAlert, Users, Filter, Trash2, PlusCircle } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,7 +41,9 @@ interface Attempt {
   attemptedAt: string;
 }
 
-interface SlaSettings {
+interface SlaProfile {
+  id?: string;
+  segment?: string | null;
   urgentThresholdDays: number;
   highThresholdDays: number;
   mediumThresholdDays: number;
@@ -96,13 +98,11 @@ export default function CollectionsPage() {
   const [aPromisedDate, setAPromisedDate] = useState("");
   const [aSendNow, setASendNow] = useState(false);
 
-  const [slaForm, setSlaForm] = useState<SlaSettings>({
-    urgentThresholdDays: 3,
-    highThresholdDays: 5,
-    mediumThresholdDays: 7,
-    lowThresholdDays: 14,
-    enabled: true,
-  });
+  const defaultProfile: SlaProfile = { urgentThresholdDays: 3, highThresholdDays: 5, mediumThresholdDays: 7, lowThresholdDays: 14, enabled: true, segment: null };
+  const [slaProfiles, setSlaProfiles] = useState<SlaProfile[]>([defaultProfile]);
+  const [selectedProfileIdx, setSelectedProfileIdx] = useState(0);
+  const [newSegmentName, setNewSegmentName] = useState("");
+  const [addingProfile, setAddingProfile] = useState(false);
 
   const { data: assignments = [], isLoading } = useQuery<Assignment[]>({
     queryKey: ["/api/collections/assignments", statusFilter],
@@ -125,11 +125,11 @@ export default function CollectionsPage() {
     enabled: !!selectedId,
   });
 
-  const { data: slaSettings } = useQuery<SlaSettings>({
+  const { data: slaSettings } = useQuery<SlaProfile[]>({
     queryKey: ["/api/collections/sla-settings"],
     queryFn: async () => {
       const res = await fetch("/api/collections/sla-settings", { credentials: "include" });
-      if (!res.ok) return { urgentThresholdDays: 3, highThresholdDays: 5, mediumThresholdDays: 7, lowThresholdDays: 14, enabled: true };
+      if (!res.ok) return [defaultProfile];
       return res.json();
     },
   });
@@ -197,18 +197,31 @@ export default function CollectionsPage() {
     onError: (e: any) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
   });
 
-  const saveSlaSettings = useMutation({
-    mutationFn: async () => {
-      const payload = { ...slaForm };
-      if (!payload.country && slaSettings?.country) payload.country = slaSettings.country;
-      const res = await apiRequest("PUT", "/api/collections/sla-settings", payload);
-      return res.json();
+  const saveSlaProfile = useMutation({
+    mutationFn: async ({ profile, idx }: { profile: SlaProfile; idx: number }) => {
+      const res = await apiRequest("PUT", "/api/collections/sla-settings", profile);
+      return { saved: await res.json() as SlaProfile, idx };
     },
-    onSuccess: () => {
-      toast({ title: "SLA settings saved" });
+    onSuccess: ({ saved, idx }) => {
+      toast({ title: "SLA profile saved" });
+      setSlaProfiles(prev => prev.map((p, i) => i === idx ? { ...p, id: saved.id } : p));
       queryClient.invalidateQueries({ queryKey: ["/api/collections/sla-settings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/collections/sla-breaches"] });
-      setSlaOpen(false);
+    },
+    onError: (e: any) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
+  });
+
+  const deleteSlaSetting = useMutation({
+    mutationFn: async ({ id, idx }: { id: string; idx: number }) => {
+      const res = await apiRequest("DELETE", `/api/collections/sla-settings/${id}`, undefined);
+      return { result: await res.json(), idx };
+    },
+    onSuccess: ({ idx }) => {
+      toast({ title: "SLA profile deleted" });
+      setSlaProfiles(prev => prev.filter((_, i) => i !== idx));
+      setSelectedProfileIdx(prev => Math.max(0, prev >= idx ? prev - 1 : prev));
+      queryClient.invalidateQueries({ queryKey: ["/api/collections/sla-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/collections/sla-breaches"] });
     },
     onError: (e: any) => toast({ title: "Failed", description: e.message, variant: "destructive" }),
   });
@@ -226,8 +239,25 @@ export default function CollectionsPage() {
   });
 
   const openSlaDialog = () => {
-    if (slaSettings) setSlaForm({ ...slaSettings });
+    if (slaSettings && slaSettings.length > 0) setSlaProfiles([...slaSettings]);
+    else setSlaProfiles([{ ...defaultProfile }]);
+    setSelectedProfileIdx(0);
+    setAddingProfile(false);
+    setNewSegmentName("");
     setSlaOpen(true);
+  };
+
+  const updateProfile = (idx: number, patch: Partial<SlaProfile>) => {
+    setSlaProfiles(prev => prev.map((p, i) => i === idx ? { ...p, ...patch } : p));
+  };
+
+  const addNewProfile = () => {
+    if (!newSegmentName.trim()) return;
+    const newProfile: SlaProfile = { ...defaultProfile, segment: newSegmentName.trim() };
+    setSlaProfiles(prev => [...prev, newProfile]);
+    setSelectedProfileIdx(slaProfiles.length);
+    setAddingProfile(false);
+    setNewSegmentName("");
   };
 
   const breachCount = breachSet.size;
@@ -505,7 +535,7 @@ export default function CollectionsPage() {
 
       {/* SLA Settings Dialog */}
       <Dialog open={slaOpen} onOpenChange={setSlaOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Clock className="w-5 h-5 text-primary" />
@@ -513,63 +543,112 @@ export default function CollectionsPage() {
             </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Agents will be alerted when a case has not had a contact attempt within the configured number of days.
+            Configure per-segment SLA profiles. Each profile sets how many days agents have to contact a case before a breach alert is triggered.
           </p>
-          <div className="space-y-4 pt-1">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">Enable SLA Alerts</Label>
-              <Switch
-                checked={slaForm.enabled}
-                onCheckedChange={v => setSlaForm(s => ({ ...s, enabled: v }))}
-                data-testid="switch-sla-enabled"
-              />
+          <div className="flex gap-4 min-h-[280px]">
+            {/* Profile list */}
+            <div className="w-44 shrink-0 flex flex-col gap-1 border-r pr-3">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Profiles</p>
+              {slaProfiles.map((p, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => { setSelectedProfileIdx(idx); setAddingProfile(false); }}
+                  data-testid={`button-sla-profile-${idx}`}
+                  className={`text-left px-2 py-1.5 rounded text-sm truncate transition-colors ${selectedProfileIdx === idx && !addingProfile ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                >
+                  {p.segment ? p.segment : "Default"}
+                </button>
+              ))}
+              {addingProfile ? (
+                <div className="mt-1 space-y-1">
+                  <Input
+                    autoFocus
+                    placeholder="Segment name…"
+                    value={newSegmentName}
+                    onChange={e => setNewSegmentName(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") addNewProfile(); if (e.key === "Escape") setAddingProfile(false); }}
+                    className="h-7 text-xs"
+                    data-testid="input-new-segment-name"
+                  />
+                  <div className="flex gap-1">
+                    <Button size="sm" className="h-6 text-xs px-2" onClick={addNewProfile} disabled={!newSegmentName.trim()} data-testid="button-confirm-add-profile">Add</Button>
+                    <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={() => setAddingProfile(false)}>Cancel</Button>
+                  </div>
+                </div>
+              ) : (
+                <Button variant="ghost" size="sm" className="mt-1 h-7 text-xs justify-start gap-1" onClick={() => setAddingProfile(true)} data-testid="button-add-sla-profile">
+                  <PlusCircle className="w-3.5 h-3.5" />Add Profile
+                </Button>
+              )}
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs text-destructive font-medium">Urgent (days)</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={slaForm.urgentThresholdDays}
-                  onChange={e => setSlaForm(s => ({ ...s, urgentThresholdDays: Number(e.target.value) }))}
-                  data-testid="input-sla-urgent"
-                  disabled={!slaForm.enabled}
-                />
-              </div>
-              <div>
-                <Label className="text-xs font-medium">High (days)</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={slaForm.highThresholdDays}
-                  onChange={e => setSlaForm(s => ({ ...s, highThresholdDays: Number(e.target.value) }))}
-                  data-testid="input-sla-high"
-                  disabled={!slaForm.enabled}
-                />
-              </div>
-              <div>
-                <Label className="text-xs font-medium">Medium (days)</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={slaForm.mediumThresholdDays}
-                  onChange={e => setSlaForm(s => ({ ...s, mediumThresholdDays: Number(e.target.value) }))}
-                  data-testid="input-sla-medium"
-                  disabled={!slaForm.enabled}
-                />
-              </div>
-              <div>
-                <Label className="text-xs font-medium">Low (days)</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={slaForm.lowThresholdDays}
-                  onChange={e => setSlaForm(s => ({ ...s, lowThresholdDays: Number(e.target.value) }))}
-                  data-testid="input-sla-low"
-                  disabled={!slaForm.enabled}
-                />
-              </div>
-            </div>
+
+            {/* Profile editor */}
+            {slaProfiles[selectedProfileIdx] && !addingProfile && (() => {
+              const p = slaProfiles[selectedProfileIdx];
+              return (
+                <div className="flex-1 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-sm">{p.segment ? p.segment : "Default"} Profile</p>
+                      <p className="text-xs text-muted-foreground">{p.segment ? `Applies to assignments tagged "${p.segment}"` : "Applies to untagged assignments (fallback)"}</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs">Enabled</Label>
+                        <Switch
+                          checked={p.enabled}
+                          onCheckedChange={v => updateProfile(selectedProfileIdx, { enabled: v })}
+                          data-testid="switch-sla-enabled"
+                        />
+                      </div>
+                      {p.segment && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => {
+                            if (p.id) {
+                              deleteSlaSetting.mutate({ id: p.id, idx: selectedProfileIdx });
+                            } else {
+                              setSlaProfiles(prev => prev.filter((_, i) => i !== selectedProfileIdx));
+                              setSelectedProfileIdx(Math.max(0, selectedProfileIdx - 1));
+                            }
+                          }}
+                          disabled={deleteSlaSetting.isPending}
+                          data-testid="button-delete-sla-profile"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs text-destructive font-medium">Urgent (days)</Label>
+                      <Input type="number" min={1} value={p.urgentThresholdDays} onChange={e => updateProfile(selectedProfileIdx, { urgentThresholdDays: Number(e.target.value) })} data-testid="input-sla-urgent" disabled={!p.enabled} />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium">High (days)</Label>
+                      <Input type="number" min={1} value={p.highThresholdDays} onChange={e => updateProfile(selectedProfileIdx, { highThresholdDays: Number(e.target.value) })} data-testid="input-sla-high" disabled={!p.enabled} />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium">Medium (days)</Label>
+                      <Input type="number" min={1} value={p.mediumThresholdDays} onChange={e => updateProfile(selectedProfileIdx, { mediumThresholdDays: Number(e.target.value) })} data-testid="input-sla-medium" disabled={!p.enabled} />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium">Low (days)</Label>
+                      <Input type="number" min={1} value={p.lowThresholdDays} onChange={e => updateProfile(selectedProfileIdx, { lowThresholdDays: Number(e.target.value) })} data-testid="input-sla-low" disabled={!p.enabled} />
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button size="sm" onClick={() => saveSlaProfile.mutate({ profile: p, idx: selectedProfileIdx })} disabled={saveSlaProfile.isPending} data-testid="button-save-sla-profile">
+                      {saveSlaProfile.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
+                      Save Profile
+                    </Button>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
           <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
             <Button
@@ -582,13 +661,7 @@ export default function CollectionsPage() {
               {runSlaCheck.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
               Run Check Now
             </Button>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setSlaOpen(false)}>Cancel</Button>
-              <Button onClick={() => saveSlaSettings.mutate()} disabled={saveSlaSettings.isPending} data-testid="button-save-sla">
-                {saveSlaSettings.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
-                Save
-              </Button>
-            </div>
+            <Button variant="outline" onClick={() => setSlaOpen(false)} data-testid="button-save-sla">Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

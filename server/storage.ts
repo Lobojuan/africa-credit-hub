@@ -282,9 +282,12 @@ export interface IStorage {
   createTelcoConsentEvent(event: InsertTelcoConsentEvent): Promise<TelcoConsentEvent>;
   getTelcoConsentSummary(organizationId?: string, country?: string): Promise<{ total: number; active: number; revoked: number; byMethod: Record<string, number> }>;
 
-  getCollectionSlaSettings(organizationId: string | undefined, country: string): Promise<CollectionSlaSettings | undefined>;
+  getCollectionSlaSettings(organizationId: string | undefined, country: string, segment?: string | null): Promise<CollectionSlaSettings | undefined>;
+  getCollectionSlaSettingsById(id: string): Promise<CollectionSlaSettings | undefined>;
+  listCollectionSlaSettings(organizationId: string | undefined, country: string): Promise<CollectionSlaSettings[]>;
   upsertCollectionSlaSettings(data: InsertCollectionSlaSettings): Promise<CollectionSlaSettings>;
-  getOverdueCollectionAssignments(thresholdDays: number, priority: string, organizationId?: string, country?: string): Promise<CollectionAssignment[]>;
+  deleteCollectionSlaSettings(id: string): Promise<void>;
+  getOverdueCollectionAssignments(thresholdDays: number, priority: string, organizationId?: string, country?: string, segment?: string | null): Promise<CollectionAssignment[]>;
   getOverdueCollectionAssignmentDetails(thresholds: Record<string, number>, organizationId?: string, country?: string): Promise<OverdueAssignmentDetail[]>;
 }
 
@@ -718,20 +721,42 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async getCollectionSlaSettings(organizationId: string | undefined, country: string): Promise<CollectionSlaSettings | undefined> {
+  async getCollectionSlaSettings(organizationId: string | undefined, country: string, segment?: string | null): Promise<CollectionSlaSettings | undefined> {
+    const segmentVal = segment || null;
+    if (organizationId && segmentVal) {
+      const [r] = await db.select().from(collectionSlaSettings)
+        .where(and(eq(collectionSlaSettings.organizationId, organizationId), eq(collectionSlaSettings.country, country), eq(collectionSlaSettings.segment, segmentVal)));
+      if (r) return r;
+    }
     if (organizationId) {
       const [r] = await db.select().from(collectionSlaSettings)
-        .where(and(eq(collectionSlaSettings.organizationId, organizationId), eq(collectionSlaSettings.country, country)));
+        .where(and(eq(collectionSlaSettings.organizationId, organizationId), eq(collectionSlaSettings.country, country), sql`segment IS NULL`));
+      if (r) return r;
+    }
+    if (segmentVal) {
+      const [r] = await db.select().from(collectionSlaSettings)
+        .where(and(sql`organization_id IS NULL`, eq(collectionSlaSettings.country, country), eq(collectionSlaSettings.segment, segmentVal)));
       if (r) return r;
     }
     const [r] = await db.select().from(collectionSlaSettings)
-      .where(and(sql`organization_id IS NULL`, eq(collectionSlaSettings.country, country)));
+      .where(and(sql`organization_id IS NULL`, eq(collectionSlaSettings.country, country), sql`segment IS NULL`));
     return r;
   }
 
+  async listCollectionSlaSettings(organizationId: string | undefined, country: string): Promise<CollectionSlaSettings[]> {
+    if (organizationId) {
+      const orgRows = await db.select().from(collectionSlaSettings)
+        .where(and(eq(collectionSlaSettings.organizationId, organizationId), eq(collectionSlaSettings.country, country)));
+      if (orgRows.length > 0) return orgRows;
+    }
+    const globalRows = await db.select().from(collectionSlaSettings)
+      .where(and(sql`organization_id IS NULL`, eq(collectionSlaSettings.country, country)));
+    return globalRows;
+  }
+
   async upsertCollectionSlaSettings(data: InsertCollectionSlaSettings): Promise<CollectionSlaSettings> {
-    const existing = await this.getCollectionSlaSettings(data.organizationId ?? undefined, data.country);
-    if (existing) {
+    const existing = await this.getCollectionSlaSettings(data.organizationId ?? undefined, data.country, data.segment);
+    if (existing && existing.segment === (data.segment ?? null)) {
       const [updated] = await db.update(collectionSlaSettings)
         .set({ ...data, updatedAt: new Date() })
         .where(eq(collectionSlaSettings.id, existing.id))
@@ -742,8 +767,20 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async getOverdueCollectionAssignments(thresholdDays: number, priority: string, organizationId?: string, country?: string): Promise<CollectionAssignment[]> {
+  async getCollectionSlaSettingsById(id: string): Promise<CollectionSlaSettings | undefined> {
+    const [row] = await db.select().from(collectionSlaSettings).where(eq(collectionSlaSettings.id, id));
+    return row;
+  }
+
+  async deleteCollectionSlaSettings(id: string): Promise<void> {
+    await db.delete(collectionSlaSettings).where(eq(collectionSlaSettings.id, id));
+  }
+
+  async getOverdueCollectionAssignments(thresholdDays: number, priority: string, organizationId?: string, country?: string, segment?: string | null): Promise<CollectionAssignment[]> {
     const cutoff = new Date(Date.now() - thresholdDays * 24 * 60 * 60 * 1000);
+    const segmentClause = segment != null
+      ? sql`AND ca.segment = ${segment}`
+      : sql`AND ca.segment IS NULL`;
     const result = await db.execute(sql`
       SELECT ca.*
       FROM collection_assignments ca
@@ -751,6 +788,7 @@ export class DatabaseStorage implements IStorage {
         AND ca.priority = ${priority}
         ${organizationId ? sql`AND ca.organization_id = ${organizationId}` : sql``}
         ${country ? sql`AND ca.country = ${country}` : sql``}
+        ${segmentClause}
         AND ca.assigned_to IS NOT NULL
         AND (
           NOT EXISTS (

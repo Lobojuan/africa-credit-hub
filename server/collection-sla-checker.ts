@@ -13,14 +13,15 @@ const DEFAULT_THRESHOLDS: Record<string, number> = {
 
 const PRIORITIES = ["urgent", "high", "medium", "low"] as const;
 
-interface OrgCountry {
+interface OrgCountrySegment {
   organizationId: string | undefined;
   country: string;
+  segment: string | null;
 }
 
-async function getActiveOrgCountries(): Promise<OrgCountry[]> {
+async function getActiveOrgCountrySegments(): Promise<OrgCountrySegment[]> {
   const result = await db.execute(sql`
-    SELECT DISTINCT organization_id, country
+    SELECT DISTINCT organization_id, country, segment
     FROM collection_assignments
     WHERE status IN ('open', 'in_progress')
       AND assigned_to IS NOT NULL
@@ -29,6 +30,7 @@ async function getActiveOrgCountries(): Promise<OrgCountry[]> {
   return (result.rows || []).map((r: any) => ({
     organizationId: r.organization_id ?? undefined,
     country: r.country as string,
+    segment: r.segment ?? null,
   }));
 }
 
@@ -42,17 +44,17 @@ export async function checkCollectionSla(scopeOrgId?: string, scopeCountry?: str
   let errors = 0;
 
   try {
-    let orgCountries = await getActiveOrgCountries();
+    let orgCountrySegments = await getActiveOrgCountrySegments();
     if (scopeOrgId) {
-      orgCountries = orgCountries.filter(oc => oc.organizationId === scopeOrgId || !oc.organizationId);
+      orgCountrySegments = orgCountrySegments.filter(oc => oc.organizationId === scopeOrgId || !oc.organizationId);
     }
     if (scopeCountry) {
-      orgCountries = orgCountries.filter(oc => oc.country === scopeCountry);
+      orgCountrySegments = orgCountrySegments.filter(oc => oc.country === scopeCountry);
     }
 
-    for (const { organizationId, country } of orgCountries) {
+    for (const { organizationId, country, segment } of orgCountrySegments) {
       try {
-        const settings = await storage.getCollectionSlaSettings(organizationId, country);
+        const settings = await storage.getCollectionSlaSettings(organizationId, country, segment);
 
         if (settings && !settings.enabled) continue;
 
@@ -65,7 +67,7 @@ export async function checkCollectionSla(scopeOrgId?: string, scopeCountry?: str
 
         for (const priority of PRIORITIES) {
           const days = thresholds[priority];
-          const overdueAssignments = await storage.getOverdueCollectionAssignments(days, priority, organizationId, country);
+          const overdueAssignments = await storage.getOverdueCollectionAssignments(days, priority, organizationId, country, segment);
 
           for (const assignment of overdueAssignments) {
             try {
@@ -82,8 +84,9 @@ export async function checkCollectionSla(scopeOrgId?: string, scopeCountry?: str
 
               if ((alreadyNotified.rows?.length || 0) > 0) continue;
 
-              const title = `SLA Breach: ${priority.charAt(0).toUpperCase() + priority.slice(1)} Priority Case`;
-              const message = `A ${priority}-priority collection case has not been contacted in ${days}+ days. Please take action.`;
+              const segmentLabel = segment ? ` [${segment}]` : "";
+              const title = `SLA Breach: ${priority.charAt(0).toUpperCase() + priority.slice(1)} Priority Case${segmentLabel}`;
+              const message = `A ${priority}-priority collection case${segment ? ` (${segment})` : ""} has not been contacted in ${days}+ days. Please take action.`;
 
               await storage.createNotification({
                 userId: assignment.assignedTo,
@@ -118,7 +121,7 @@ export async function checkCollectionSla(scopeOrgId?: string, scopeCountry?: str
                   entityType: "collection_assignment",
                   severity: priority === "urgent" || priority === "high" ? "critical" : "warning",
                   timestamp: new Date().toISOString(),
-                  data: { assignmentId: assignment.id, priority, thresholdDays: days },
+                  data: { assignmentId: assignment.id, priority, thresholdDays: days, segment },
                 },
                 { userId: assignment.assignedTo }
               );
@@ -131,7 +134,7 @@ export async function checkCollectionSla(scopeOrgId?: string, scopeCountry?: str
           }
         }
       } catch (e: any) {
-        console.error(`[SLA] Error processing org=${organizationId} country=${country}:`, e.message);
+        console.error(`[SLA] Error processing org=${organizationId} country=${country} segment=${segment}:`, e.message);
         errors++;
       }
     }

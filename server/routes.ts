@@ -12258,9 +12258,12 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     try {
       const country = await resolveCollectionCountry(req);
       const orgId = req.session.organizationId;
-      const settings = await storage.getCollectionSlaSettings(orgId, country ?? "");
-      const defaults = { urgentThresholdDays: 3, highThresholdDays: 5, mediumThresholdDays: 7, lowThresholdDays: 14, enabled: true };
-      res.json(settings ?? { ...defaults, country: country ?? null, organizationId: orgId ?? null });
+      const profiles = await storage.listCollectionSlaSettings(orgId, country ?? "");
+      if (profiles.length === 0) {
+        const defaults = { urgentThresholdDays: 3, highThresholdDays: 5, mediumThresholdDays: 7, lowThresholdDays: 14, enabled: true, segment: null };
+        return res.json([{ ...defaults, country: country ?? null, organizationId: orgId ?? null }]);
+      }
+      res.json(profiles);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
@@ -12274,9 +12277,11 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         const n = Math.floor(Number(val));
         return (Number.isFinite(n) && n >= 1) ? n : def;
       };
+      const segment = typeof body.segment === "string" && body.segment.trim() ? body.segment.trim() : null;
       const data = {
         country,
         organizationId: orgId ?? null,
+        segment,
         urgentThresholdDays: parseThreshold(body.urgentThresholdDays, 3),
         highThresholdDays: parseThreshold(body.highThresholdDays, 5),
         mediumThresholdDays: parseThreshold(body.mediumThresholdDays, 7),
@@ -12285,6 +12290,20 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       };
       const saved = await storage.upsertCollectionSlaSettings(data);
       res.json(saved);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.delete("/api/collections/sla-settings/:id", requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const existing = await storage.getCollectionSlaSettingsById(req.params.id);
+      if (!existing) return res.status(404).json({ message: "SLA profile not found" });
+      const role = req.session.userRole;
+      const orgId = req.session.organizationId;
+      if (role !== "super_admin" && existing.organizationId !== (orgId ?? null)) {
+        return res.status(403).json({ message: "Not authorized to delete this SLA profile" });
+      }
+      await storage.deleteCollectionSlaSettings(req.params.id);
+      res.json({ success: true });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
@@ -12302,19 +12321,37 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     try {
       const country = await resolveCollectionCountry(req);
       const orgId = req.session.organizationId;
-      const settings = await storage.getCollectionSlaSettings(orgId, country ?? "");
-      if (settings && !settings.enabled) {
-        return res.json({ breachIds: [], breaches: [] });
+      const activeSegmentsResult = await db.execute(sql`
+        SELECT DISTINCT segment FROM collection_assignments
+        WHERE status IN ('open', 'in_progress')
+          AND assigned_to IS NOT NULL
+          ${orgId ? sql`AND organization_id = ${orgId}` : sql``}
+          ${country ? sql`AND country = ${country}` : sql``}
+      `);
+      const activeSegments: (string | null)[] = (activeSegmentsResult.rows || []).map((r: any) => r.segment ?? null);
+      if (activeSegments.length === 0) activeSegments.push(null);
+      const breachIds: string[] = [];
+      for (const segment of activeSegments) {
+        const settings = await storage.getCollectionSlaSettings(orgId, country ?? "", segment);
+        if (settings && !settings.enabled) continue;
+        const thresholds: Record<string, number> = {
+          urgent: settings?.urgentThresholdDays ?? 3,
+          high: settings?.highThresholdDays ?? 5,
+          medium: settings?.mediumThresholdDays ?? 7,
+          low: settings?.lowThresholdDays ?? 14,
+        };
+        for (const priority of ["urgent", "high", "medium", "low"]) {
+          const overdue = await storage.getOverdueCollectionAssignments(thresholds[priority], priority, orgId, country, segment);
+          overdue.forEach(a => breachIds.push(a.id));
+        }
       }
-      const thresholds: Record<string, number> = {
-        urgent: settings?.urgentThresholdDays ?? 3,
-        high: settings?.highThresholdDays ?? 5,
-        medium: settings?.mediumThresholdDays ?? 7,
-        low: settings?.lowThresholdDays ?? 14,
-      };
-      const breaches = await storage.getOverdueCollectionAssignmentDetails(thresholds, orgId, country);
-      const breachIds = breaches.map(b => b.id);
-      res.json({ breachIds, breaches });
+      const uniqueBreachIds = [...new Set(breachIds)];
+      const defaultProfile = profiles.find(p => !p.segment) ?? profiles[0];
+      const defaultThresholds: Record<string, number> = defaultProfile
+        ? { urgent: defaultProfile.urgentThresholdDays, high: defaultProfile.highThresholdDays, medium: defaultProfile.mediumThresholdDays, low: defaultProfile.lowThresholdDays }
+        : { urgent: 3, high: 5, medium: 7, low: 14 };
+      const breaches = await storage.getOverdueCollectionAssignmentDetails(defaultThresholds, orgId, country);
+      res.json({ breachIds: uniqueBreachIds, breaches });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 

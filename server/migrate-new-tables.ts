@@ -419,6 +419,7 @@ export async function migrateNewTables() {
     id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id varchar REFERENCES organizations(id),
     country text NOT NULL,
+    segment text,
     urgent_threshold_days integer NOT NULL DEFAULT 3,
     high_threshold_days integer NOT NULL DEFAULT 5,
     medium_threshold_days integer NOT NULL DEFAULT 7,
@@ -427,7 +428,14 @@ export async function migrateNewTables() {
     created_at timestamp DEFAULT now(),
     updated_at timestamp DEFAULT now()
   )`);
-  await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_collection_sla_org_country ON collection_sla_settings(organization_id, country)`);
+
+  await db.execute(sql`ALTER TABLE collection_sla_settings ADD COLUMN IF NOT EXISTS segment text`);
+
+  await db.execute(sql`DROP INDEX IF EXISTS idx_collection_sla_org_country`);
+  await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_collection_sla_org_country_seg
+    ON collection_sla_settings(COALESCE(organization_id,''), country, COALESCE(segment,''))`);
+
+  await db.execute(sql`ALTER TABLE collection_assignments ADD COLUMN IF NOT EXISTS segment text`);
 
   await db.execute(sql`CREATE TABLE IF NOT EXISTS xds_bureau_queries (
     id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
