@@ -12009,6 +12009,20 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
+  // Test connectivity for a specific registry (probe with synthetic reference)
+  app.post("/api/trace/registry-status/:provider/test", requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const rawProvider = req.params.provider;
+      const { testRegistryCredentials, TESTABLE_PROVIDERS } = await import("./asset-trace");
+      const matched = TESTABLE_PROVIDERS.find(p => p === rawProvider);
+      if (!matched) {
+        return res.status(400).json({ message: `Unknown registry provider: ${rawProvider}` });
+      }
+      const result = await testRegistryCredentials(matched);
+      res.json(result);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
   // ── XDS Data Ghana — Credit Bureau Integration ───────────────────────────
   // Requires env vars: XDS_GHANA_API_URL + XDS_GHANA_API_KEY
   // Falls back to a deterministic sandbox when credentials are absent.

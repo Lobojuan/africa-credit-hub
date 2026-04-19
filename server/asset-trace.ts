@@ -94,6 +94,84 @@ function registryCredentials(provider: string, urlVar: string, keyVar: string): 
   return null;
 }
 
+/** Providers that support live credential testing. */
+export const TESTABLE_PROVIDERS: readonly AssetProvider[] = [
+  "ghana_dvla", "sa_natis", "ghana_lands", "kenya_ntsa",
+  "nigeria_frsc", "uganda_ursb_motor", "ethiopia_motor",
+];
+
+/** Map from provider ID to its URL/key env var names. */
+const REGISTRY_ENV_MAP: Partial<Record<AssetProvider, { urlVar: string; keyVar: string }>> = {
+  ghana_dvla:        { urlVar: "GHANA_DVLA_API_URL",    keyVar: "GHANA_DVLA_API_KEY" },
+  sa_natis:          { urlVar: "SA_NATIS_API_URL",       keyVar: "SA_NATIS_API_KEY" },
+  ghana_lands:       { urlVar: "GHANA_LANDS_API_URL",    keyVar: "GHANA_LANDS_API_KEY" },
+  kenya_ntsa:        { urlVar: "KENYA_NTSA_API_URL",     keyVar: "KENYA_NTSA_API_KEY" },
+  nigeria_frsc:      { urlVar: "NIGERIA_FRSC_API_URL",   keyVar: "NIGERIA_FRSC_API_KEY" },
+  uganda_ursb_motor: { urlVar: "UGANDA_URSB_API_URL",    keyVar: "UGANDA_URSB_API_KEY" },
+  ethiopia_motor:    { urlVar: "ETHIOPIA_MVAA_API_URL",  keyVar: "ETHIOPIA_MVAA_API_KEY" },
+};
+
+export interface RegistryTestResult {
+  provider: string;
+  configured: boolean;
+  sandbox: boolean;
+  reachable: boolean;
+  statusCode?: number;
+  latencyMs?: number;
+  error?: string;
+  source: "live" | "sandbox" | "not_configured";
+}
+
+/**
+ * Test connectivity to a configured registry by issuing a probe lookup.
+ * Uses a synthetic reference ("TEST-PROBE") — the registry is expected to
+ * return found:false for unknown references; any HTTP 2xx response proves
+ * credentials are accepted and the endpoint is reachable.
+ */
+export async function testRegistryCredentials(provider: AssetProvider): Promise<RegistryTestResult> {
+  const envMap = REGISTRY_ENV_MAP[provider];
+  if (!envMap) {
+    return { provider, configured: false, sandbox: false, reachable: false, source: "not_configured", error: "No credential variables defined for this provider" };
+  }
+  const creds = registryCredentials(envMap.urlVar, envMap.keyVar);
+  if (!creds) {
+    return { provider, configured: false, sandbox: false, reachable: false, source: "not_configured", error: `${envMap.urlVar} and ${envMap.keyVar} are not set` };
+  }
+  const isSandbox = creds.url.includes("localhost") || creds.url.includes("127.0.0.1") || creds.url.includes("registry-sandbox");
+  const start = Date.now();
+  try {
+    const result = await callLiveRegistry(creds.url, creds.key, "TEST-PROBE", provider, 10000);
+    const latencyMs = Date.now() - start;
+    return {
+      provider,
+      configured: true,
+      sandbox: isSandbox,
+      reachable: true,
+      latencyMs,
+      source: isSandbox ? "sandbox" : "live",
+    };
+  } catch (err: any) {
+    const latencyMs = Date.now() - start;
+    const statusMatch = err.message?.match(/Registry returned (\d+)/);
+    const statusCode = statusMatch ? parseInt(statusMatch[1], 10) : undefined;
+    // HTTP 404 / 422 mean the endpoint is reachable and credentials were accepted —
+    // the probe reference ("TEST-PROBE") was simply not found in the registry.
+    // Only auth failures (401/403), server errors (5xx), and network timeouts
+    // indicate a genuine credential or connectivity problem.
+    const reachableByStatus = statusCode === 404 || statusCode === 422;
+    return {
+      provider,
+      configured: true,
+      sandbox: isSandbox,
+      reachable: reachableByStatus,
+      latencyMs,
+      statusCode,
+      error: reachableByStatus ? undefined : (err.message ?? "Unknown error"),
+      source: isSandbox ? "sandbox" : "live",
+    };
+  }
+}
+
 /** Return a status object for each registry showing live vs stub. */
 export function registryStatus(): Record<AssetProvider, { live: boolean; url?: string; sandbox?: boolean; source?: string }> {
   const check = (provider: string, urlVar: string, keyVar: string) => {

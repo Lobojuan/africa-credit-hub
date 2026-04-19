@@ -382,16 +382,53 @@ function XdsBureauStatusPanel() {
   );
 }
 
+interface RegistryTestResult {
+  provider: string;
+  configured: boolean;
+  sandbox: boolean;
+  reachable: boolean;
+  statusCode?: number;
+  latencyMs?: number;
+  error?: string;
+  source: "live" | "sandbox" | "not_configured";
+}
+
 function RegistryStatusPanel() {
   const { data, isLoading, refetch } = useQuery<Record<string, { live: boolean; url?: string; sandbox?: boolean }>>({
     queryKey: ["/api/trace/registry-status"],
     staleTime: 60000,
   });
+  const { toast } = useToast();
+  const [testResults, setTestResults] = useState<Record<string, RegistryTestResult | "testing">>({});
 
   const registries = Object.entries(REGISTRY_LABELS);
   const liveCount = data ? Object.values(data).filter(r => r.live && !r.sandbox).length : 0;
   const sandboxCount = data ? Object.values(data).filter(r => r.live && r.sandbox).length : 0;
   const totalCount = registries.filter(([k]) => k !== "manual").length;
+
+  async function testRegistry(provider: string) {
+    setTestResults(prev => ({ ...prev, [provider]: "testing" }));
+    try {
+      const res = await apiRequest("POST", `/api/trace/registry-status/${provider}/test`);
+      const result: RegistryTestResult = await res.json();
+      setTestResults(prev => ({ ...prev, [provider]: result }));
+      if (result.reachable) {
+        toast({
+          title: `${REGISTRY_LABELS[provider as keyof typeof REGISTRY_LABELS]?.label ?? provider} reachable`,
+          description: `${result.sandbox ? "Sandbox" : "Live"} · ${result.latencyMs}ms`,
+        });
+      } else {
+        toast({
+          title: `${REGISTRY_LABELS[provider as keyof typeof REGISTRY_LABELS]?.label ?? provider} unreachable`,
+          description: result.error ?? "Connection failed",
+          variant: "destructive",
+        });
+      }
+    } catch (e: any) {
+      setTestResults(prev => ({ ...prev, [provider]: { provider, configured: false, sandbox: false, reachable: false, source: "not_configured", error: e.message } }));
+      toast({ title: "Test failed", description: e.message, variant: "destructive" });
+    }
+  }
 
   return (
     <Card data-testid="card-registry-status">
@@ -420,43 +457,74 @@ function RegistryStatusPanel() {
             Checking registries...
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-2">
             {registries.filter(([k]) => k !== "manual").map(([key, meta]) => {
               const status = data?.[key];
               const isLive = status?.live ?? false;
               const isSandbox = status?.sandbox ?? false;
+              const testResult = testResults[key];
+              const isTesting = testResult === "testing";
+              const testData = testResult && testResult !== "testing" ? testResult : null;
               return (
-                <div key={key} data-testid={`registry-row-${key}`} className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Radio className={`w-3 h-3 shrink-0 ${isLive && !isSandbox ? "text-emerald-500" : isLive && isSandbox ? "text-amber-500" : "text-muted-foreground/40"}`} />
-                    <div className="min-w-0">
-                      <p className="font-medium truncate" data-testid={`text-registry-label-${key}`}>{meta.label}</p>
-                      <p className="text-[11px] text-muted-foreground">{meta.country} · {meta.assetType}</p>
+                <div key={key} data-testid={`registry-row-${key}`} className="rounded-lg border px-3 py-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Radio className={`w-3 h-3 shrink-0 ${isLive && !isSandbox ? "text-emerald-500" : isLive && isSandbox ? "text-amber-500" : "text-muted-foreground/40"}`} />
+                      <div className="min-w-0">
+                        <p className="font-medium truncate" data-testid={`text-registry-label-${key}`}>{meta.label}</p>
+                        <p className="text-[11px] text-muted-foreground">{meta.country} · {meta.assetType}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                      <Badge
+                        variant="outline"
+                        data-testid={`badge-registry-status-${key}`}
+                        className={
+                          isLive && !isSandbox
+                            ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px]"
+                            : isLive && isSandbox
+                            ? "bg-amber-500/10 text-amber-600 border-amber-500/20 text-[10px]"
+                            : "bg-muted/50 text-muted-foreground border-border text-[10px]"
+                        }
+                      >
+                        {isLive && !isSandbox && <CheckCircle2 className="w-2.5 h-2.5 mr-1" />}
+                        {isLive && isSandbox && <CheckCircle2 className="w-2.5 h-2.5 mr-1" />}
+                        {!isLive && <AlertTriangle className="w-2.5 h-2.5 mr-1" />}
+                        {isLive && isSandbox ? "Sandbox" : isLive ? "Live" : "Stub"}
+                      </Badge>
+                      {isLive && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-[10px]"
+                          onClick={() => testRegistry(key)}
+                          disabled={isTesting}
+                          data-testid={`button-test-registry-${key}`}
+                        >
+                          {isTesting ? <Loader2 className="w-3 h-3 animate-spin" /> : "Test"}
+                        </Button>
+                      )}
                     </div>
                   </div>
-                  <Badge
-                    variant="outline"
-                    data-testid={`badge-registry-status-${key}`}
-                    className={
-                      isLive && !isSandbox
-                        ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px]"
-                        : isLive && isSandbox
-                        ? "bg-amber-500/10 text-amber-600 border-amber-500/20 text-[10px]"
-                        : "bg-muted/50 text-muted-foreground border-border text-[10px]"
-                    }
-                  >
-                    {isLive && !isSandbox && <CheckCircle2 className="w-2.5 h-2.5 mr-1" />}
-                    {isLive && isSandbox && <CheckCircle2 className="w-2.5 h-2.5 mr-1" />}
-                    {!isLive && <AlertTriangle className="w-2.5 h-2.5 mr-1" />}
-                    {isLive && isSandbox ? "Sandbox" : isLive ? "Live" : "Stub"}
-                  </Badge>
+                  {testData && (
+                    <div
+                      data-testid={`text-registry-test-result-${key}`}
+                      className={`mt-1.5 text-[10px] rounded px-2 py-1 ${testData.reachable ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : "bg-red-500/10 text-red-700 dark:text-red-400"}`}
+                    >
+                      {testData.reachable
+                        ? `Connected · ${testData.source} · ${testData.latencyMs}ms`
+                        : `Failed · ${testData.error ?? "Unknown error"}${testData.statusCode ? ` (HTTP ${testData.statusCode})` : ""}`}
+                    </div>
+                  )}
                 </div>
               );
             })}
           </div>
         )}
         <p className="text-[10px] text-muted-foreground mt-3">
-          <span className="font-medium text-amber-600 dark:text-amber-400">Sandbox</span> — connected to the built-in sandbox registry (realistic deterministic data, no real government API). Replace <code className="bg-muted px-1 rounded">GHANA_DVLA_API_URL</code> / <code className="bg-muted px-1 rounded">GHANA_DVLA_API_KEY</code> with production credentials to switch to live lookups.
+          <span className="font-medium text-amber-600 dark:text-amber-400">Sandbox</span> — connected to the built-in sandbox registry (realistic deterministic data, no real government API).{" "}
+          <span className="font-medium text-emerald-600 dark:text-emerald-400">Live</span> — connected to the government production API.{" "}
+          To activate a live registry, set its <code className="bg-muted px-1 rounded">*_API_URL</code> and <code className="bg-muted px-1 rounded">*_API_KEY</code> Replit Secrets to the production values issued by the registry authority, then restart the application. See the Registry Credential Cutover Runbook in <code className="bg-muted px-1 rounded">docs/Registry_Credential_Cutover_Runbook.md</code> for step-by-step instructions for each registry.
         </p>
       </CardContent>
     </Card>
