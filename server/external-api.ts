@@ -8,6 +8,23 @@ import crypto from "crypto";
 import { calculateCreditScore } from "./credit-score";
 import { computeTelcoKPIs, generateTelcoCreditScore } from "./telco-scoring";
 import jwt from "jsonwebtoken";
+import rateLimit from "express-rate-limit";
+
+// Affordability compute is expensive (LLM + DB writes) — 10 requests per API key per 15 minutes
+const affordabilityLimiter = rateLimit({
+  keyGenerator: (req) => {
+    const apiKey = (req as any).apiKey;
+    if (apiKey?.id) return apiKey.id;
+    const ip = req.ip ?? req.socket?.remoteAddress ?? "unknown";
+    return ip.startsWith("::ffff:") ? ip.slice(7) : ip;
+  },
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { success: false, error: "Affordability rate limit exceeded. Maximum 10 requests per 15 minutes per API key." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { keyGeneratorIpFallback: false },
+});
 
 const JWT_SECRET = process.env.EXTERNAL_API_JWT_SECRET || process.env.SESSION_SECRET! + "-jwt-ext";
 const TOKEN_EXPIRY = "1h";
@@ -734,7 +751,7 @@ export function registerExternalApi(app: Express) {
     }
   });
 
-  app.post("/api/external/v1/borrowers/:id/affordability", requireApiKey, requirePermission("submit"), async (req: Request, res: Response) => {
+  app.post("/api/external/v1/borrowers/:id/affordability", requireApiKey, requirePermission("submit"), affordabilityLimiter, async (req: Request, res: Response) => {
     try {
       const borrower = await storage.getBorrower(req.params.id);
       if (!borrower) return res.status(404).json(wrapError("Borrower not found"));
