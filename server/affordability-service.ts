@@ -902,14 +902,14 @@ export async function computeAffordability(borrower: Borrower, opts: ComputeOpts
 
   // 8. Persist snapshot — replace prior fine-grained rows for this borrower atomically
   const expiresAt = new Date(Date.now() + 30 * 86400000);
-  // Determine the next version number for regulator-defensible snapshot versioning
-  const priorAssessments = await db.select({ version: affordabilityAssessmentsTable.version })
-    .from(affordabilityAssessmentsTable)
-    .where(eq(affordabilityAssessmentsTable.borrowerId, borrower.id))
-    .orderBy(desc(affordabilityAssessmentsTable.createdAt))
-    .limit(1);
-  const nextVersion = priorAssessments.length > 0 ? (Number(priorAssessments[0].version) + 1) : 1;
   const assessment = await db.transaction(async (tx) => {
+    // Read the latest version inside the transaction for strict monotonicity under concurrent computes
+    const prior = await tx.select({ version: affordabilityAssessmentsTable.version })
+      .from(affordabilityAssessmentsTable)
+      .where(eq(affordabilityAssessmentsTable.borrowerId, borrower.id))
+      .orderBy(desc(affordabilityAssessmentsTable.createdAt))
+      .limit(1);
+    const nextVersion = prior.length > 0 ? (Number(prior[0].version) + 1) : 1;
     await tx.delete(incomeSourcesTable).where(eq(incomeSourcesTable.borrowerId, borrower.id));
     await tx.delete(expenseCategorisationsTable).where(eq(expenseCategorisationsTable.borrowerId, borrower.id));
     if (incomeSources.length > 0) {
