@@ -1,7 +1,7 @@
 import { storage } from "./storage";
 import { db } from "./db";
 import { incomeSources as incomeSourcesTable, expenseCategorisations as expenseCategorisationsTable, affordabilityAssessments as affordabilityAssessmentsTable } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { generateAIResponse } from "./ai";
 import { computeTelcoKPIs } from "./telco-scoring";
 import type {
@@ -223,8 +223,16 @@ export async function fetchOpenBankingTransactions(
       err.statusCode = 502;
       throw err;
     }
-    // Stitch adapter: OAuth 2.0 client credentials → GraphQL transactions query
-    // Reference: https://docs.stitch.money/reference/graphql
+    // accountId MUST refer to the stable Stitch bankAccount node ID that was persisted during link-session.
+    // Without it we cannot scope the fetch to the borrower's linked account — fail hard rather than pull all accounts.
+    if (!opts.accountId) {
+      const err: any = new Error("Stitch open-banking requires a linked accountId. Complete the link-session flow (POST /affordability/connect-bank with accountId) before computing affordability.");
+      err.code = "ACCOUNT_ID_REQUIRED";
+      err.statusCode = 400;
+      throw err;
+    }
+    // Stitch adapter: OAuth 2.0 client credentials → GraphQL node query scoped to the linked bankAccount
+    // Reference: https://docs.stitch.money/reference/graphql — node(id) returns the specific BankAccount
     try {
       const tokenRes = await fetch("https://secure.stitch.money/connect/token", {
         method: "POST",
@@ -244,42 +252,61 @@ export async function fetchOpenBankingTransactions(
       }
       const { access_token } = await tokenRes.json() as { access_token: string };
       const fromDate = new Date(Date.now() - periodDays * 86400000).toISOString().split("T")[0];
-      const gql = `query Transactions($from: Date!) {
-        user { bankAccounts { edges { node { transactions(filter: { fromDate: $from }) {
-          edges { node { id amount { quantity currency } date description } }
-        } } } } }
+      // Use node(id) to query ONLY the specific linked bank account — never pull all accounts.
+      const gql = `query AccountTransactions($accountId: ID!, $from: Date!) {
+        node(id: $accountId) {
+          ... on BankAccount {
+            name
+            currency { code }
+            transactions(filter: { fromDate: $from }) {
+              edges { node { id amount { quantity currency { code } } date description } }
+            }
+          }
+        }
       }`;
       const gqlRes = await fetch("https://api.stitch.money/graphql", {
         method: "POST",
         headers: { "Authorization": `Bearer ${access_token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ query: gql, variables: { from: fromDate } }),
+        body: JSON.stringify({ query: gql, variables: { accountId: opts.accountId, from: fromDate } }),
       });
       if (!gqlRes.ok) {
         const t = await gqlRes.text();
         const e: any = new Error(`Stitch GraphQL error ${gqlRes.status}: ${t.slice(0, 200)}`);
         e.code = "OPEN_BANKING_ERROR"; e.statusCode = 502; throw e;
       }
-      type StitchTxnNode = { id?: string; amount?: { quantity?: number; currency?: string }; date?: string; description?: string };
-      type StitchGqlResponse = { data?: { user?: { bankAccounts?: { edges?: Array<{ node?: { transactions?: { edges?: Array<{ node?: StitchTxnNode }> } } }> } } } };
-      const gqlData = await gqlRes.json() as StitchGqlResponse;
-      const txnNodes = (gqlData?.data?.user?.bankAccounts?.edges ?? []).flatMap((ba) =>
-        (ba?.node?.transactions?.edges ?? []).map((e) => e?.node)
-      ).filter((n): n is StitchTxnNode => n !== undefined && n !== null);
-      const transactions: NormalisedTxn[] = txnNodes.map((t) => ({
-        date: new Date(t.date ?? Date.now()),
-        amount: Math.abs(Number(t.amount?.quantity ?? 0)),
-        currency: t.amount?.currency || currency,
-        direction: Number(t.amount?.quantity ?? 0) >= 0 ? "credit" : "debit",
-        narration: t.description || "",
-        counterparty: null,
-        category: null,
-      }));
+      type StitchTxnNode = { id?: string; amount?: { quantity?: number; currency?: { code?: string } }; date?: string; description?: string };
+      type StitchNodeResponse = { data?: { node?: { name?: string; currency?: { code?: string }; transactions?: { edges?: Array<{ node?: StitchTxnNode }> } } }; errors?: Array<{ message: string }> };
+      const gqlData = await gqlRes.json() as StitchNodeResponse;
+      if (gqlData.errors?.length) {
+        const e: any = new Error(`Stitch GraphQL error: ${gqlData.errors.map(e => e.message).join("; ")}`);
+        e.code = "OPEN_BANKING_ERROR"; e.statusCode = 502; throw e;
+      }
+      if (!gqlData?.data?.node) {
+        const e: any = new Error(`Stitch account not found for id=${opts.accountId}. Ensure the linked account exists and the API key has access.`);
+        e.code = "ACCOUNT_NOT_FOUND"; e.statusCode = 404; throw e;
+      }
+      const bankNode = gqlData.data.node;
+      const accountCurrency = bankNode.currency?.code || currency;
+      const accountName = bankNode.name || "Stitch Account";
+      const txnEdges = bankNode.transactions?.edges ?? [];
+      const transactions: NormalisedTxn[] = txnEdges
+        .map((e) => e?.node)
+        .filter((n): n is StitchTxnNode => n !== undefined && n !== null)
+        .map((t) => ({
+          date: new Date(t.date ?? Date.now()),
+          amount: Math.abs(Number(t.amount?.quantity ?? 0)),
+          currency: t.amount?.currency?.code || accountCurrency,
+          direction: Number(t.amount?.quantity ?? 0) >= 0 ? "credit" : "debit",
+          narration: t.description || "",
+          counterparty: null,
+          category: null,
+        }));
       return {
-        account: { provider: "stitch", accountId: opts.accountId || borrower.id, accountName: "Stitch Account", currency, bank: "Stitch" },
+        account: { provider: "stitch", accountId: opts.accountId, accountName, currency: accountCurrency, bank: "Stitch" },
         transactions,
       };
     } catch (e: any) {
-      if (e.code && ["OPEN_BANKING_ERROR", "PROVIDER_NOT_CONFIGURED"].includes(e.code)) throw e;
+      if (e.code && ["OPEN_BANKING_ERROR", "PROVIDER_NOT_CONFIGURED", "ACCOUNT_NOT_FOUND", "ACCOUNT_ID_REQUIRED"].includes(e.code)) throw e;
       if (process.env.NODE_ENV === "production") throw e;
       // Dev fallback: return normalised stub so pipeline can proceed during integration testing
       const stubData = generateStubBankingData(borrower, periodDays, currency);
@@ -294,14 +321,24 @@ export async function fetchOpenBankingTransactions(
       err.statusCode = 502;
       throw err;
     }
-    // Okra adapter: REST API — GET /v2/transactions/list
+    // accountId MUST be the Okra account _id persisted during link-session.
+    // Without it the request returns all accounts on the key — not the borrower's linked account.
+    if (!opts.accountId) {
+      const err: any = new Error("Okra open-banking requires a linked accountId. Complete the link-session flow (POST /affordability/connect-bank with accountId) before computing affordability.");
+      err.code = "ACCOUNT_ID_REQUIRED";
+      err.statusCode = 400;
+      throw err;
+    }
+    // Okra adapter: REST API — GET /v2/transactions/list scoped to the linked account_id
     // Reference: https://docs.okra.ng/docs/transactions
     try {
       const fromDate = new Date(Date.now() - periodDays * 86400000).toISOString().split("T")[0];
       const toDate = new Date().toISOString().split("T")[0];
-      const okraRes = await fetch(`https://api.okra.ng/v2/transactions/list?from=${fromDate}&to=${toDate}&limit=200`, {
-        headers: { "Authorization": `Bearer ${process.env.OKRA_SECRET_KEY}`, "Content-Type": "application/json" },
-      });
+      // account_id param constrains the fetch to the specific linked account — required for borrower isolation
+      const okraRes = await fetch(
+        `https://api.okra.ng/v2/transactions/list?from=${fromDate}&to=${toDate}&limit=200&account_id=${encodeURIComponent(opts.accountId)}`,
+        { headers: { "Authorization": `Bearer ${process.env.OKRA_SECRET_KEY}`, "Content-Type": "application/json" } },
+      );
       if (!okraRes.ok) {
         const t = await okraRes.text();
         const e: any = new Error(`Okra API error ${okraRes.status}: ${t.slice(0, 200)}`);
@@ -321,11 +358,11 @@ export async function fetchOpenBankingTransactions(
         category: null,
       }));
       return {
-        account: { provider: "okra", accountId: opts.accountId || borrower.id, accountName: "Okra Account", currency, bank: "Okra" },
+        account: { provider: "okra", accountId: opts.accountId, accountName: "Okra Account", currency, bank: "Okra" },
         transactions,
       };
     } catch (e: any) {
-      if (e.code && ["OPEN_BANKING_ERROR", "PROVIDER_NOT_CONFIGURED"].includes(e.code)) throw e;
+      if (e.code && ["OPEN_BANKING_ERROR", "PROVIDER_NOT_CONFIGURED", "ACCOUNT_ID_REQUIRED"].includes(e.code)) throw e;
       if (process.env.NODE_ENV === "production") throw e;
       // Dev fallback: return normalised stub so pipeline can proceed during integration testing
       const stubData = generateStubBankingData(borrower, periodDays, currency);
@@ -865,6 +902,13 @@ export async function computeAffordability(borrower: Borrower, opts: ComputeOpts
 
   // 8. Persist snapshot — replace prior fine-grained rows for this borrower atomically
   const expiresAt = new Date(Date.now() + 30 * 86400000);
+  // Determine the next version number for regulator-defensible snapshot versioning
+  const priorAssessments = await db.select({ version: affordabilityAssessmentsTable.version })
+    .from(affordabilityAssessmentsTable)
+    .where(eq(affordabilityAssessmentsTable.borrowerId, borrower.id))
+    .orderBy(desc(affordabilityAssessmentsTable.createdAt))
+    .limit(1);
+  const nextVersion = priorAssessments.length > 0 ? (Number(priorAssessments[0].version) + 1) : 1;
   const assessment = await db.transaction(async (tx) => {
     await tx.delete(incomeSourcesTable).where(eq(incomeSourcesTable.borrowerId, borrower.id));
     await tx.delete(expenseCategorisationsTable).where(eq(expenseCategorisationsTable.borrowerId, borrower.id));
@@ -914,6 +958,7 @@ export async function computeAffordability(borrower: Borrower, opts: ComputeOpts
       regulatoryRule: result.regulatoryRule,
       inputsSnapshot: { transactionCount: txns.length, hasMomo: dataSource === "momo_only" || dataSource === "hybrid" } satisfies AffordabilityInputsSnapshot,
       outputsSnapshot: { incomeSources, expenses, notes } satisfies AffordabilityOutputsSnapshot,
+      version: nextVersion,
       computedBy: opts.computedBy || null,
       expiresAt,
       organizationId: borrower.organizationId || null,

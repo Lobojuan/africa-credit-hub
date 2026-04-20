@@ -1424,6 +1424,7 @@ export const affordabilityAssessments = pgTable("affordability_assessments", {
   currency: text("currency").notNull().default("GHS"),
   dataSource: affordabilityDataSourceEnum("data_source").notNull(),
   periodDays: integer("period_days").notNull().default(90),
+  version: integer("version").notNull().default(1),
   grossIncomeMonthly: decimal("gross_income_monthly", { precision: 15, scale: 2 }).notNull().default("0"),
   totalExpensesMonthly: decimal("total_expenses_monthly", { precision: 15, scale: 2 }).notNull().default("0"),
   existingDebtServiceMonthly: decimal("existing_debt_service_monthly", { precision: 15, scale: 2 }).notNull().default("0"),
