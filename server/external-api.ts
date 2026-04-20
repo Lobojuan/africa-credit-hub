@@ -116,8 +116,8 @@ function wrapResponse(data: any, message: string) {
   return { success: true, message, data, timestamp: new Date().toISOString() };
 }
 
-function wrapError(error: string, details?: any) {
-  return { success: false, error, details, timestamp: new Date().toISOString() };
+function wrapError(error: string, details?: any, code?: string) {
+  return { success: false, error, ...(code ? { code } : {}), details, timestamp: new Date().toISOString() };
 }
 
 export function registerExternalApi(app: Express) {
@@ -817,7 +817,8 @@ export function registerExternalApi(app: Express) {
       }, "Affordability computed"));
     } catch (e: any) {
       console.error("[ExternalAPI] Affordability error:", e.message);
-      res.status(500).json(wrapError("Affordability computation failed", e.message));
+      const status = e?.statusCode || e?.status || 500;
+      res.status(status).json(wrapError("Affordability computation failed", e.message, e?.code));
     }
   });
 }

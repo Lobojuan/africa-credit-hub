@@ -1839,10 +1839,18 @@ export async function registerRoutes(
           rawMeta = exchangeData;
         }
       } else if (provider === "stitch") {
-        if (!code && !directAccountId) return res.status(400).json({ message: "code or accountId is required for stitch" });
-        resolvedAccountId = directAccountId || code; // For Stitch, store account reference
-        // Authorization codes are short-lived sensitive credentials — never persisted at rest.
-        rawMeta = { provider: "stitch", codeExchangedAt: new Date().toISOString() };
+        // Stitch authorization codes are short-lived, single-use credentials — they must NEVER
+        // be persisted as an account identifier. The caller must first exchange the code for an
+        // access token via Stitch's token endpoint (https://secure.stitch.money/connect/token),
+        // then resolve the stable accountId from Stitch's account API before calling this endpoint.
+        if (!directAccountId) {
+          return res.status(400).json({
+            message: "accountId is required for stitch. Exchange the authorization code for an access token via Stitch's token endpoint, then resolve the stable accountId from Stitch's account API before calling this endpoint.",
+            code: "STITCH_ACCOUNT_ID_REQUIRED",
+          });
+        }
+        resolvedAccountId = directAccountId;
+        rawMeta = { provider: "stitch", linkedAt: new Date().toISOString() };
       } else if (provider === "okra") {
         if (!directAccountId) return res.status(400).json({ message: "accountId is required for okra" });
         resolvedAccountId = directAccountId;
