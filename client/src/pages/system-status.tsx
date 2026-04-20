@@ -812,6 +812,7 @@ function RegistryStatusPanel() {
                     const uptimePct = totalEvents7d > 0 ? (okEvents7d / totalEvents7d) * 100 : null;
                     const totalEvents30d = providerHistory30d.length;
                     const okEvents30d = providerHistory30d.filter(e => e.status === "ok").length;
+                    const failEvents30d = providerHistory30d.filter(e => e.status === "fail").length;
                     const uptimePct30d = totalEvents30d > 0 ? (okEvents30d / totalEvents30d) * 100 : null;
                     const isExpanded = expandedHistory[key] ?? false;
                     return (
@@ -924,7 +925,7 @@ function RegistryStatusPanel() {
                         : `Failed · ${testData.error ?? "Unknown error"}${testData.statusCode ? ` (HTTP ${testData.statusCode})` : ""}`}
                     </div>
                   )}
-                  {totalEvents7d > 0 && (
+                  {(totalEvents7d > 0 || totalEvents30d > 0) && (
                     <div className="mt-1.5">
                       <button
                         data-testid={`button-toggle-history-${key}`}
@@ -932,9 +933,9 @@ function RegistryStatusPanel() {
                         className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
                       >
                         <Clock className="w-2.5 h-2.5" />
-                        {failEvents7d > 0
-                          ? `${failEvents7d} failure${failEvents7d !== 1 ? "s" : ""} in last 7 days`
-                          : `${totalEvents7d} check${totalEvents7d !== 1 ? "s" : ""} in last 7 days — all OK`}
+                        {failEvents7d > 0 || failEvents30d > 0
+                          ? `${failEvents7d} failure${failEvents7d !== 1 ? "s" : ""} in 7d / ${failEvents30d} in 30d`
+                          : `0 failures in 7d / 0 in 30d — all OK`}
                         <span className="ml-0.5">{isExpanded ? "▲" : "▼"}</span>
                       </button>
                       {isExpanded && (
