@@ -814,6 +814,22 @@ function RegistryStatusPanel() {
                     const okEvents30d = providerHistory30d.filter(e => e.status === "ok").length;
                     const failEvents30d = providerHistory30d.filter(e => e.status === "fail").length;
                     const uptimePct30d = totalEvents30d > 0 ? (okEvents30d / totalEvents30d) * 100 : null;
+                    const CRITICAL_FAIL_7D = 5;
+                    const CRITICAL_STREAK = 5;
+                    const MIN_STREAK_DISPLAY = 2;
+                    const longestStreak30d = (() => {
+                      let max = 0, cur = 0;
+                      const sorted = [...providerHistory30d].sort((a, b) => new Date(a.checkedAt).getTime() - new Date(b.checkedAt).getTime());
+                      for (const e of sorted) {
+                        if (e.status === "fail") { cur++; max = Math.max(max, cur); } else { cur = 0; }
+                      }
+                      return max;
+                    })();
+                    const failSeverity = failEvents7d === 0 && failEvents30d === 0
+                      ? "ok"
+                      : failEvents7d >= CRITICAL_FAIL_7D || longestStreak30d >= CRITICAL_STREAK
+                      ? "critical"
+                      : "minor";
                     const isExpanded = expandedHistory[key] ?? false;
                     return (
                       <>
@@ -930,12 +946,27 @@ function RegistryStatusPanel() {
                       <button
                         data-testid={`button-toggle-history-${key}`}
                         onClick={() => toggleHistory(key)}
-                        className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                        className={`flex items-center gap-1 text-[10px] transition-colors ${
+                          failSeverity === "critical"
+                            ? "text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                            : failSeverity === "minor"
+                            ? "text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
                       >
-                        <Clock className="w-2.5 h-2.5" />
-                        {failEvents7d > 0 || failEvents30d > 0
-                          ? `${failEvents7d} failure${failEvents7d !== 1 ? "s" : ""} in 7d / ${failEvents30d} in 30d`
-                          : `0 failures in 7d / 0 in 30d — all OK`}
+                        <Clock className="w-2.5 h-2.5 shrink-0" />
+                        {failSeverity === "ok"
+                          ? "0 failures in 7d / 0 in 30d — all OK"
+                          : <>
+                              <span className={`font-medium ${failSeverity === "critical" ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`}>
+                                {failSeverity === "critical" ? "●" : "◐"}
+                              </span>
+                              {`${failEvents7d} failure${failEvents7d !== 1 ? "s" : ""} in 7d / ${failEvents30d} in 30d`}
+                              {longestStreak30d >= MIN_STREAK_DISPLAY && (
+                                <span className="opacity-80">{`· streak ${longestStreak30d} checks`}</span>
+                              )}
+                            </>
+                        }
                         <span className="ml-0.5">{isExpanded ? "▲" : "▼"}</span>
                       </button>
                       {isExpanded && (
