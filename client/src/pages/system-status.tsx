@@ -692,7 +692,7 @@ function RegistryStatusPanel() {
     staleTime: 30000,
   });
   const { data: historyData } = useQuery<RegistryHealthEvent[]>({
-    queryKey: ["/api/trace/registry-health/history"],
+    queryKey: ["/api/trace/registry-health/history?days=30"],
     refetchInterval: 5 * 60 * 1000,
     staleTime: 2 * 60 * 1000,
   });
@@ -796,14 +796,23 @@ function RegistryStatusPanel() {
                   className={`rounded-lg border px-3 py-2 text-sm ${isHealthFailing ? "border-red-500/30 bg-red-500/5" : ""}`}
                 >
                   {(() => {
-                    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-                    const providerHistory = (historyByProvider[key] ?? []).filter(
+                    const now = Date.now();
+                    const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
+                    const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+                    const allProviderHistory = historyByProvider[key] ?? [];
+                    const providerHistory = allProviderHistory.filter(
                       e => new Date(e.checkedAt).getTime() >= sevenDaysAgo
+                    );
+                    const providerHistory30d = allProviderHistory.filter(
+                      e => new Date(e.checkedAt).getTime() >= thirtyDaysAgo
                     );
                     const failEvents7d = providerHistory.filter(e => e.status === "fail").length;
                     const totalEvents7d = providerHistory.length;
                     const okEvents7d = providerHistory.filter(e => e.status === "ok").length;
                     const uptimePct = totalEvents7d > 0 ? (okEvents7d / totalEvents7d) * 100 : null;
+                    const totalEvents30d = providerHistory30d.length;
+                    const okEvents30d = providerHistory30d.filter(e => e.status === "ok").length;
+                    const uptimePct30d = totalEvents30d > 0 ? (okEvents30d / totalEvents30d) * 100 : null;
                     const isExpanded = expandedHistory[key] ?? false;
                     return (
                       <>
@@ -833,6 +842,21 @@ function RegistryStatusPanel() {
                         }
                       >
                         {uptimePct === null ? "N/A 7d" : `${uptimePct.toFixed(1)}% 7d`}
+                      </Badge>
+                      <Badge
+                        variant="outline"
+                        data-testid={`badge-registry-uptime-30d-${key}`}
+                        className={
+                          uptimePct30d === null
+                            ? "bg-muted/50 text-muted-foreground border-border text-[10px]"
+                            : uptimePct30d >= 95
+                            ? "bg-green-500/10 text-green-600 border-green-500/20 text-[10px]"
+                            : uptimePct30d >= 80
+                            ? "bg-amber-500/10 text-amber-600 border-amber-500/20 text-[10px]"
+                            : "bg-red-500/10 text-red-600 border-red-500/20 text-[10px]"
+                        }
+                      >
+                        {uptimePct30d === null ? "N/A 30d" : `${uptimePct30d.toFixed(1)}% 30d`}
                       </Badge>
                       {isHealthFailing && (
                         <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/20 text-[10px]" data-testid={`badge-registry-health-fail-${key}`}>
