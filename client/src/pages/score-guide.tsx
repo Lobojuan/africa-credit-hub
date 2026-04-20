@@ -10,17 +10,62 @@ import {
 } from "lucide-react";
 import { useBrandColors } from "@/hooks/use-brand-colors";
 
-const SCORE_BANDS = [
-  { min: 750, max: 850, label: "Excellent", color: "hsl(142 55% 40%)", bgClass: "bg-emerald-100 dark:bg-emerald-900/40", textClass: "text-emerald-700 dark:text-emerald-400", description: "Outstanding credit profile. Borrowers in this range demonstrate exceptional payment history and low risk." },
-  { min: 670, max: 749, label: "Good", color: "hsl(175 55% 28%)", bgClass: "bg-teal-100 dark:bg-teal-900/40", textClass: "text-teal-700 dark:text-teal-400", description: "Strong credit profile. Minor issues may exist but overall responsible credit behavior is evident." },
-  { min: 580, max: 669, label: "Fair", color: "hsl(43 80% 55%)", bgClass: "bg-amber-100 dark:bg-amber-900/40", textClass: "text-amber-700 dark:text-amber-400", description: "Moderate credit risk. Some late payments or high utilization may be present." },
-  { min: 450, max: 579, label: "Poor", color: "hsl(14 70% 50%)", bgClass: "bg-orange-100 dark:bg-orange-900/40", textClass: "text-orange-700 dark:text-orange-400", description: "Below-average credit profile. Multiple negative factors detected." },
-  { min: 300, max: 449, label: "Very Poor", color: "hsl(0 72% 42%)", bgClass: "bg-red-100 dark:bg-red-900/40", textClass: "text-red-700 dark:text-red-400", description: "Significant credit risk. Severe delinquencies or write-offs are likely present." },
-];
-
 export default function ScoreGuidePage() {
   const { t } = useTranslation();
   const brandColors = useBrandColors();
+
+  const SCORE_BANDS = [
+    {
+      min: 750, max: 850,
+      labelKey: "scoreGuide.excellent",
+      labelFallback: "Excellent",
+      color: "hsl(142 55% 40%)",
+      bgClass: "bg-emerald-100 dark:bg-emerald-900/40",
+      textClass: "text-emerald-700 dark:text-emerald-400",
+      descKey: "scoreGuide.excellentDesc",
+      descFallback: "Outstanding credit profile. Borrowers in this range demonstrate exceptional payment history and low risk.",
+    },
+    {
+      min: 670, max: 749,
+      labelKey: "scoreGuide.good",
+      labelFallback: "Good",
+      color: "hsl(175 55% 28%)",
+      bgClass: "bg-teal-100 dark:bg-teal-900/40",
+      textClass: "text-teal-700 dark:text-teal-400",
+      descKey: "scoreGuide.goodDesc",
+      descFallback: "Strong credit profile. Minor issues may exist but overall responsible credit behavior is evident.",
+    },
+    {
+      min: 580, max: 669,
+      labelKey: "scoreGuide.fair",
+      labelFallback: "Fair",
+      color: "hsl(43 80% 55%)",
+      bgClass: "bg-amber-100 dark:bg-amber-900/40",
+      textClass: "text-amber-700 dark:text-amber-400",
+      descKey: "scoreGuide.fairDesc",
+      descFallback: "Moderate credit risk. Some late payments or high utilization may be present.",
+    },
+    {
+      min: 450, max: 579,
+      labelKey: "scoreGuide.poor",
+      labelFallback: "Poor",
+      color: "hsl(14 70% 50%)",
+      bgClass: "bg-orange-100 dark:bg-orange-900/40",
+      textClass: "text-orange-700 dark:text-orange-400",
+      descKey: "scoreGuide.poorDesc",
+      descFallback: "Below-average credit profile. Multiple negative factors detected.",
+    },
+    {
+      min: 300, max: 449,
+      labelKey: "scoreGuide.veryPoor",
+      labelFallback: "Very Poor",
+      color: "hsl(0 72% 42%)",
+      bgClass: "bg-red-100 dark:bg-red-900/40",
+      textClass: "text-red-700 dark:text-red-400",
+      descKey: "scoreGuide.veryPoorDesc",
+      descFallback: "Significant credit risk. Severe delinquencies or write-offs are likely present.",
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-background p-4 sm:p-8">
@@ -49,18 +94,19 @@ export default function ScoreGuidePage() {
                 const bandColor = band.color === "hsl(175 55% 28%)" ? brandColors.accent
                   : band.color === "hsl(43 80% 55%)" ? brandColors.secondary
                   : band.color;
+                const label = t(band.labelKey, band.labelFallback);
                 return (
-                <div key={band.label} className={`rounded-md p-3 ${band.bgClass}`} data-testid={`public-band-${band.label.toLowerCase().replace(/\s/g, "-")}`}>
+                <div key={band.labelKey} className={`rounded-md p-3 ${band.bgClass}`} data-testid={`public-band-${band.labelFallback.toLowerCase().replace(/\s/g, "-")}`}>
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: bandColor }} />
-                      <span className={`text-sm font-bold ${band.textClass}`}>{band.label}</span>
+                      <span className={`text-sm font-bold ${band.textClass}`}>{label}</span>
                     </div>
                     <Badge variant="outline" className="text-[10px] font-mono tabular-nums">
                       {band.min} &ndash; {band.max}
                     </Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{band.description}</p>
+                  <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{t(band.descKey, band.descFallback)}</p>
                 </div>
                 );
               })}
@@ -72,13 +118,13 @@ export default function ScoreGuidePage() {
                   : band.color;
                 return (
                 <div
-                  key={band.label}
+                  key={band.labelKey}
                   className="h-full"
                   style={{
                     backgroundColor: bandColor,
                     width: `${((band.max - band.min + 1) / 551) * 100}%`,
                   }}
-                  title={`${band.label}: ${band.min}-${band.max}`}
+                  title={`${t(band.labelKey, band.labelFallback)}: ${band.min}-${band.max}`}
                 />
                 );
               })}
