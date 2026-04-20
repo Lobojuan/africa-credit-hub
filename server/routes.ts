@@ -12413,8 +12413,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // Registry health cleanup stats — last prune run time and deleted row count
   app.get("/api/admin/registry-health-cleanup-stats", requireRole("admin", "super_admin"), async (_req, res) => {
     try {
-      const { getCleanupStats } = await import("./registry-health-checker");
-      res.json(getCleanupStats());
+      const { getCleanupStats, getNextCleanupAt } = await import("./registry-health-checker");
+      res.json({ ...getCleanupStats(), nextCleanupAt: getNextCleanupAt().toISOString() });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 

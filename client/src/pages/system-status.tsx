@@ -427,6 +427,7 @@ interface RegistryCleanupStats {
   lastRanAt: string | null;
   deletedCount: number | null;
   retentionDays: number | null;
+  nextCleanupAt: string | null;
 }
 
 interface RetentionConfirmState {
@@ -589,6 +590,21 @@ function RegistryHealthConfigPanel() {
               · Last cleanup: {cleanupStats.deletedCount ?? 0} row{cleanupStats.deletedCount !== 1 ? "s" : ""} deleted
             </span>
           )}
+          {cleanupStats?.nextCleanupAt && (() => {
+            const diffMs = new Date(cleanupStats.nextCleanupAt).getTime() - Date.now();
+            if (diffMs > 0) {
+              const totalMin = Math.floor(diffMs / 60000);
+              const hrs = Math.floor(totalMin / 60);
+              const mins = totalMin % 60;
+              const label = hrs > 0 ? `${hrs} hr ${mins} min` : `${mins} min`;
+              return (
+                <span className="text-xs text-muted-foreground hidden sm:inline" data-testid="text-next-cleanup-header-countdown">
+                  · Next cleanup in {label}
+                </span>
+              );
+            }
+            return null;
+          })()}
           {open ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
         </div>
       </CardHeader>
