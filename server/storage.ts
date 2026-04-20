@@ -302,6 +302,17 @@ export interface IStorage {
   getRegistryHealthEvents(provider: string, sinceDays?: number): Promise<RegistryHealthEvent[]>;
   getAllRegistryHealthEvents(sinceDays?: number): Promise<RegistryHealthEvent[]>;
   deleteOldRegistryHealthEvents(beforeDate: Date): Promise<number>;
+
+  // ─── Affordability & Income Verification (Task #28) ───────────────────────
+  getIncomeSourcesByBorrower(borrowerId: string): Promise<IncomeSource[]>;
+  createIncomeSource(source: InsertIncomeSource): Promise<IncomeSource>;
+  deleteIncomeSourcesByBorrower(borrowerId: string): Promise<void>;
+  getExpenseCategorisationsByBorrower(borrowerId: string): Promise<ExpenseCategorisation[]>;
+  createExpenseCategorisation(exp: InsertExpenseCategorisation): Promise<ExpenseCategorisation>;
+  deleteExpenseCategorisationsByBorrower(borrowerId: string): Promise<void>;
+  getAffordabilityAssessmentsByBorrower(borrowerId: string): Promise<AffordabilityAssessment[]>;
+  getLatestAffordabilityAssessment(borrowerId: string): Promise<AffordabilityAssessment | undefined>;
+  createAffordabilityAssessment(a: InsertAffordabilityAssessment): Promise<AffordabilityAssessment>;
 }
 
 export interface OverdueAssignmentDetail {

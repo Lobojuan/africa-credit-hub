@@ -97,8 +97,10 @@ export function generatePdfFromMarkdown(markdownContent: string, title: string, 
     bufferPages: true,
     info: {
       Title: title,
-      Author: process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub",
-      Creator: "Credit Registry System v2.5",
+      Author: "Uffe Jon Carlson",
+      Creator: "Africa Credit Hub — Carlson Capital & Systems In Motion Limited",
+      Producer: "CDH v2.5 | CDH-IP-2026-UJC-001",
+      Subject: "Credit Report — Africa Credit Hub Pan-African Credit Registry",
     },
   });
 

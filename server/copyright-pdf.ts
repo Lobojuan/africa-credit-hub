@@ -4,6 +4,27 @@ function getCompanyName(): string {
   return process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub";
 }
 
+function getPrimaryAuthor(): string {
+  return process.env.PLATFORM_ADMIN_NAME || "Uffe Jon Carlson";
+}
+
+function getAuthorTitle(): string {
+  return "Founder, Lead Architect & Principal Developer";
+}
+
+function getAuthorEmail(): string {
+  return process.env.PLATFORM_ADMIN_EMAIL || "uffe@africacredithub.com";
+}
+
+const PLATFORM_BUILD_IDENTITY = {
+  originalAuthor: "Uffe Jon Carlson",
+  originalCompany: "Carlson Capital & Systems In Motion Limited",
+  country: "Republic of Ghana",
+  creationYear: 2026,
+  platformName: "Africa Credit Hub (CDH)",
+  registryRef: "CDH-IP-2026-UJC-001",
+} as const;
+
 const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
   en: {
     softwareCopyright: "SOFTWARE COPYRIGHT",
@@ -432,6 +453,8 @@ export function generateCopyrightPdf(lang: string = "en"): Promise<Buffer> {
       [CL("classification"), CL("classificationValue")],
       [CL("dateOfIssue"), new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })],
       [CL("copyrightHolder"), CL("copyrightHolderValue")],
+      ["Principal Author:", `${getPrimaryAuthor()} — ${getAuthorTitle()}`],
+      ["IP Registry Reference:", PLATFORM_BUILD_IDENTITY.registryRef],
       [CL("jurisdiction"), CL("jurisdictionValue")],
     ];
 
@@ -585,6 +608,12 @@ export function generateCopyrightPdf(lang: string = "en"): Promise<Buffer> {
     bodyText(doc, "4.4  Any works created by employees, contractors, or consultants in the course of developing, maintaining, or enhancing the Platform are \"works made for hire\" and the copyright therein vests exclusively in the Company.");
 
     bodyText(doc, "4.5  Contributions, customizations, or configurations made by or for Licensees shall not create any ownership interest in the underlying Platform or its source code.");
+
+    bodyText(doc, `4.6  Individual Authorship. The Platform was conceived, designed, architected, and principally developed by ${getPrimaryAuthor()} ("Principal Author"), ${getAuthorTitle()}, acting through ${PLATFORM_BUILD_IDENTITY.originalCompany}. The Principal Author's creative and intellectual contributions constitute the foundational authorship of the Platform within the meaning of Section 4(1) of the Copyright Act, 2005 (Act 690) of Ghana.`);
+
+    bodyText(doc, `4.7  Creation Record. Development of the Platform commenced in the ${PLATFORM_BUILD_IDENTITY.creationYear} financial year in the ${PLATFORM_BUILD_IDENTITY.country}. The Principal Author retains the moral right of attribution (droit moral) under all applicable copyright laws, which right is perpetual and inalienable.`);
+
+    bodyText(doc, `4.8  Dispute of Ownership. Any person or entity claiming any right, title, or interest in the Platform inconsistent with this document bears the burden of producing written evidence of: (a) a signed agreement with the Principal Author or the Company expressly transferring such rights; and (b) consideration paid and received for such transfer. Absent such written evidence, any such claim is without legal foundation.`);
 
     // ──── SECTION 5: JURISDICTIONAL COVERAGE ────
     sectionTitle(doc, "5", CL("s5"));
@@ -816,8 +845,9 @@ export function generateCopyrightPdf(lang: string = "en"): Promise<Buffer> {
     doc.moveDown(1.5);
 
     const sigBoxes = [
-      { title: "For and on behalf of:", company: getCompanyName() },
-      { title: "Witness:", company: "" },
+      { title: "Principal Author & Creator:", company: getPrimaryAuthor(), role: getAuthorTitle() },
+      { title: "For and on behalf of:", company: getCompanyName(), role: "" },
+      { title: "Witness:", company: "", role: "" },
     ];
 
     for (const sigBox of sigBoxes) {
@@ -827,6 +857,10 @@ export function generateCopyrightPdf(lang: string = "en"): Promise<Buffer> {
       if (sigBox.company) {
         doc.font("Helvetica").fontSize(9).fillColor(GRAY)
           .text(sigBox.company, ml + 20);
+      }
+      if (sigBox.role) {
+        doc.font("Helvetica-Oblique").fontSize(8).fillColor(LIGHT_GRAY)
+          .text(sigBox.role, ml + 20);
       }
       doc.moveDown(2);
 
