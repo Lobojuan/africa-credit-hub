@@ -15,14 +15,16 @@ interface ConsumerData {
   };
   creditScore: number;
   affordability?: {
-    status: string | null;
-    affordabilityScore: number | null;
+    affordabilityRating: string;
+    confidenceLabel: string;
     debtToIncomeRatio: string | null;
-    disposableIncome: string | null;
+    disposableIncomeMonthly: string | null;
+    grossIncomeMonthly: string | null;
+    maxRecommendedNewCredit: string | null;
     currency: string;
-    regulatoryFramework: string | null;
+    regulatoryRule: string | null;
     dataSource: string;
-    assessmentDate: string | null;
+    createdAt: string | null;
   } | null;
 }
 
@@ -781,15 +783,15 @@ export default function ConsumerPortalPage() {
                           <TrendingUp className="w-4 h-4 text-emerald-600" />
                           <h3 className="text-sm font-bold">Affordability Snapshot</h3>
                         </div>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${data.affordability.status === "pass" ? "bg-emerald-100 text-emerald-700" : data.affordability.status === "fail" ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700"}`} data-testid="badge-consumer-affordability-status">
-                          {(data.affordability.status ?? "unknown").toUpperCase()}
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground" data-testid="badge-consumer-affordability-status">
+                          {String(data.affordability.affordabilityRating ?? "unknown").toUpperCase()}
                         </span>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-xs">
-                        {data.affordability.affordabilityScore != null && (
+                        {data.affordability.grossIncomeMonthly != null && (
                           <div className="bg-muted/40 rounded-lg p-2.5">
-                            <p className="text-muted-foreground text-[10px] mb-0.5">Affordability Score</p>
-                            <p className="font-bold text-base" data-testid="text-consumer-affordability-score">{data.affordability.affordabilityScore} / 1000</p>
+                            <p className="text-muted-foreground text-[10px] mb-0.5">Gross Income / Month</p>
+                            <p className="font-bold" data-testid="text-consumer-gross-income">{data.affordability.currency} {Number(data.affordability.grossIncomeMonthly).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                           </div>
                         )}
                         {data.affordability.debtToIncomeRatio != null && (
@@ -798,14 +800,20 @@ export default function ConsumerPortalPage() {
                             <p className="font-bold text-base" data-testid="text-consumer-dti">{(Number(data.affordability.debtToIncomeRatio) * 100).toFixed(1)}%</p>
                           </div>
                         )}
-                        {data.affordability.disposableIncome != null && (
-                          <div className="bg-muted/40 rounded-lg p-2.5 col-span-2">
-                            <p className="text-muted-foreground text-[10px] mb-0.5">Estimated Monthly Disposable Income</p>
-                            <p className="font-bold" data-testid="text-consumer-disposable">{data.affordability.currency} {Number(data.affordability.disposableIncome).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                        {data.affordability.disposableIncomeMonthly != null && (
+                          <div className="bg-muted/40 rounded-lg p-2.5">
+                            <p className="text-muted-foreground text-[10px] mb-0.5">Monthly Disposable Income</p>
+                            <p className="font-bold" data-testid="text-consumer-disposable">{data.affordability.currency} {Number(data.affordability.disposableIncomeMonthly).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                          </div>
+                        )}
+                        {data.affordability.maxRecommendedNewCredit != null && (
+                          <div className="bg-muted/40 rounded-lg p-2.5">
+                            <p className="text-muted-foreground text-[10px] mb-0.5">Max Recommended Credit</p>
+                            <p className="font-bold" data-testid="text-consumer-max-credit">{data.affordability.currency} {Number(data.affordability.maxRecommendedNewCredit).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                           </div>
                         )}
                       </div>
-                      <p className="text-[10px] text-muted-foreground mt-2">Regulatory framework: {data.affordability.regulatoryFramework ?? "—"} · Source: {data.affordability.dataSource}</p>
+                      <p className="text-[10px] text-muted-foreground mt-2">Confidence: {data.affordability.confidenceLabel} · Rule: {data.affordability.regulatoryRule ?? "—"} · Source: {data.affordability.dataSource}</p>
                     </CardContent>
                   </Card>
                 )}

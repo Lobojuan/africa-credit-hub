@@ -1192,26 +1192,26 @@ export default function CreditReportPage() {
               <CardContent className="p-5 print:p-3">
                 <SectionHeader icon={TrendingUp} title="Affordability Assessment" />
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 print:gap-2 mt-3">
-                  <InfoField label="Gross Monthly Income" value={`${report.affordability.assessment.currency} ${Number(report.affordability.assessment.grossMonthlyIncome || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
-                  <InfoField label="Net Monthly Income" value={`${report.affordability.assessment.currency} ${Number(report.affordability.assessment.netMonthlyIncome || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
-                  <InfoField label="Monthly Expenses" value={`${report.affordability.assessment.currency} ${Number(report.affordability.assessment.totalMonthlyExpenses || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
-                  <InfoField label="Debt Obligations / Month" value={`${report.affordability.assessment.currency} ${Number(report.affordability.assessment.totalMonthlyDebtObligations || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
-                  <InfoField label="Disposable Income" value={`${report.affordability.assessment.currency} ${Number(report.affordability.assessment.disposableIncome || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
+                  <InfoField label="Gross Monthly Income" value={`${report.affordability.assessment.currency} ${Number(report.affordability.assessment.grossIncomeMonthly || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
+                  <InfoField label="Monthly Expenses" value={`${report.affordability.assessment.currency} ${Number(report.affordability.assessment.totalExpensesMonthly || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
+                  <InfoField label="Debt Service / Month" value={`${report.affordability.assessment.currency} ${Number(report.affordability.assessment.existingDebtServiceMonthly || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
+                  <InfoField label="Disposable Income / Mo" value={`${report.affordability.assessment.currency} ${Number(report.affordability.assessment.disposableIncomeMonthly || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
                   <InfoField label="Debt-to-Income Ratio" value={`${(Number(report.affordability.assessment.debtToIncomeRatio || 0) * 100).toFixed(1)}%`} />
-                  <InfoField label="Affordability Score" value={`${report.affordability.assessment.affordabilityScore ?? "—"} / 1000`} />
-                  <InfoField label="Recommended Credit Limit" value={`${report.affordability.assessment.currency} ${Number(report.affordability.assessment.recommendedCreditLimit || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
-                  <InfoField label="Regulatory Framework" value={report.affordability.assessment.regulatoryFramework ?? "—"} />
+                  <InfoField label="Max Recommended New Credit" value={`${report.affordability.assessment.currency} ${Number(report.affordability.assessment.maxRecommendedNewCredit || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
+                  <InfoField label="Max Monthly Repayment" value={`${report.affordability.assessment.currency} ${Number(report.affordability.assessment.maxRecommendedMonthlyRepayment || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
+                  <InfoField label="Rating" value={String(report.affordability.assessment.affordabilityRating ?? "unknown").toUpperCase()} />
+                  <InfoField label="Regulatory Rule" value={report.affordability.assessment.regulatoryRule ?? "—"} />
                 </div>
                 <div className="mt-3 flex items-center gap-2">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Status</span>
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${report.affordability.assessment.status === "pass" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : report.affordability.assessment.status === "fail" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"}`} data-testid="badge-report-affordability-status">
-                    {(report.affordability.assessment.status ?? "unknown").toUpperCase()}
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Confidence</span>
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-muted text-muted-foreground" data-testid="badge-report-affordability-status">
+                    {String(report.affordability.assessment.confidenceLabel ?? "low").toUpperCase()}
                   </span>
                   <span className="text-[10px] text-muted-foreground ml-2">Source: {report.affordability.assessment.dataSource}</span>
                 </div>
-                {report.affordability.assessment.aiNarrative && (
+                {(report.affordability.assessment.outputsSnapshot as any)?.notes?.length > 0 && (
                   <div className="mt-3 p-3 rounded-lg bg-muted/40 text-xs text-muted-foreground leading-relaxed" data-testid="text-report-affordability-narrative">
-                    {report.affordability.assessment.aiNarrative}
+                    {((report.affordability.assessment.outputsSnapshot as any).notes as string[]).join(" ")}
                   </div>
                 )}
               </CardContent>

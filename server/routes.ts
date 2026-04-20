@@ -2674,14 +2674,16 @@ export async function registerRoutes(
         },
         creditScore,
         affordability: consumerAffordability ? {
-          status: consumerAffordability.status,
-          affordabilityScore: consumerAffordability.affordabilityScore,
+          affordabilityRating: consumerAffordability.affordabilityRating,
+          confidenceLabel: consumerAffordability.confidenceLabel,
           debtToIncomeRatio: consumerAffordability.debtToIncomeRatio,
-          disposableIncome: consumerAffordability.disposableIncome,
+          disposableIncomeMonthly: consumerAffordability.disposableIncomeMonthly,
+          grossIncomeMonthly: consumerAffordability.grossIncomeMonthly,
+          maxRecommendedNewCredit: consumerAffordability.maxRecommendedNewCredit,
           currency: consumerAffordability.currency,
-          regulatoryFramework: consumerAffordability.regulatoryFramework,
+          regulatoryRule: consumerAffordability.regulatoryRule,
           dataSource: consumerAffordability.dataSource,
-          assessmentDate: consumerAffordability.assessmentDate,
+          createdAt: consumerAffordability.createdAt?.toISOString() ?? null,
         } : null,
       });
     } catch (e: any) {
