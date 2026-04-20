@@ -45,6 +45,10 @@ export type AffordabilityResult = {
   country: string | null;
   currency: string;
   dataSource: "open_banking" | "bank_statement_pdf" | "momo_only" | "self_declared" | "hybrid";
+  /** Present when computeAffordability was requested with a higher-trust source (e.g. open_banking)
+   *  but fell back to a lower-trust source. API consumers should surface this to lenders. */
+  downgradedFrom?: "open_banking" | "bank_statement_pdf";
+  downgradedReason?: string;
   periodDays: number;
   grossIncomeMonthly: number;
   totalExpensesMonthly: number;
@@ -706,11 +710,20 @@ export async function computeAffordability(borrower: Borrower, opts: ComputeOpts
   let txns: NormalisedTxn[] = [];
   let dataSource: AffordabilityResult["dataSource"] = "self_declared";
   let confidenceLabel: AffordabilityResult["confidenceLabel"] = "low";
+  let downgradedFrom: AffordabilityResult["downgradedFrom"];
+  let downgradedReason: string | undefined;
 
   if (opts.source === "bank_statement_pdf" && opts.pdfBuffer) {
     txns = await parseBankStatementPdf(opts.pdfBuffer, currency);
-    if (txns.length > 0) { dataSource = "bank_statement_pdf"; confidenceLabel = "medium"; notes.push(`Parsed ${txns.length} transactions from bank statement PDF.`); }
-    else notes.push("PDF parser returned no transactions; falling back.");
+    if (txns.length > 0) {
+      dataSource = "bank_statement_pdf";
+      confidenceLabel = "medium";
+      notes.push(`Parsed ${txns.length} transactions from bank statement PDF.`);
+    } else {
+      downgradedFrom = "bank_statement_pdf";
+      downgradedReason = "PDF parser returned no transactions; falling back to available data sources.";
+      notes.push(downgradedReason);
+    }
   }
 
   if (txns.length === 0 && (opts.source === "open_banking" || opts.source === "auto" || !opts.source)) {
@@ -725,6 +738,11 @@ export async function computeAffordability(borrower: Borrower, opts: ComputeOpts
         if (ob.account.provider === "stub") notes.push("STUB / synthetic data — NOT a verified bank feed. Output is for demo only and must not be used for credit decisioning. Connect Mono/Stitch/Okra for verified results.");
       }
     } catch (err: any) {
+      if (opts.source === "open_banking") {
+        // Explicit open_banking intent that failed — mark downgrade so API consumers can see the trust level dropped
+        downgradedFrom = "open_banking";
+        downgradedReason = `Open banking lookup failed: ${err.message}. Falling back to lower-trust sources.`;
+      }
       notes.push(`Open banking lookup failed: ${err.message}`);
     }
   }
@@ -771,14 +789,16 @@ export async function computeAffordability(borrower: Borrower, opts: ComputeOpts
 
   // 3. Categorise expenses
   let expenses = await categoriseExpenses(txns, currency, opts.useLlmFallback);
-  let totalExpensesMonthly = expenses.reduce((s, e) => s + e.amountMonthly, 0);
-
-  // 4. Existing debt servicing — from credit accounts + debt_servicing expense bucket
+  // 4. Existing debt servicing — from credit accounts + debt_servicing expense bucket.
+  //    IMPORTANT: exclude debt_servicing from totalExpensesMonthly to avoid double-counting.
+  //    disposableIncome = income - livingExpenses - debtService (three distinct buckets).
   const accounts = await storage.getCreditAccountsByBorrower(borrower.id);
   const activeAccts = accounts.filter(a => a.status === "current" || a.status === "delinquent");
   const debtFromAccounts = activeAccts.reduce((s, a) => s + (Number(a.scheduledInstallmentAmount) || 0), 0);
   const debtFromTxns = expenses.find(e => e.category === "debt_servicing")?.amountMonthly || 0;
   const existingDebtServiceMonthly = Math.max(debtFromAccounts, debtFromTxns);
+  // Only living expenses (non-debt) feed into totalExpensesMonthly so debt_servicing is not double-counted
+  let totalExpensesMonthly = expenses.filter(e => e.category !== "debt_servicing").reduce((s, e) => s + e.amountMonthly, 0);
 
   // 5. Self-declared fallback
   if (grossIncomeMonthly === 0) {
@@ -824,6 +844,7 @@ export async function computeAffordability(borrower: Borrower, opts: ComputeOpts
     country,
     currency,
     dataSource,
+    ...(downgradedFrom ? { downgradedFrom, downgradedReason } : {}),
     periodDays,
     grossIncomeMonthly: round2(grossIncomeMonthly),
     totalExpensesMonthly: round2(totalExpensesMonthly),

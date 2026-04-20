@@ -1441,7 +1441,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/borrowers/:id/credit-report", async (req, res) => {
+  app.get("/api/borrowers/:id/credit-report", requireAuth, requireRole("admin", "super_admin", "lender", "regulator"), async (req, res) => {
     try {
       const borrower = await storage.getBorrower(req.params.id);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
