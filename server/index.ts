@@ -7,7 +7,6 @@ import crypto from "crypto";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
-import { writeFileSync, appendFileSync } from "fs";
 import { pool, startPoolHealthCheck } from "./db";
 import { createLogger } from "./logger";
 
@@ -15,10 +14,16 @@ const port = parseInt(process.env.PORT || "5000", 10);
 
 function crashLog(msg: string) {
   try {
-    const ts = new Date().toISOString();
     const mem = process.memoryUsage();
-    const line = `[${ts}] ${msg} | rss=${Math.round(mem.rss / 1024 / 1024)}MB heap=${Math.round(mem.heapUsed / 1024 / 1024)}/${Math.round(mem.heapTotal / 1024 / 1024)}MB\n`;
-    appendFileSync("/tmp/server-crash.log", line);
+    const entry = JSON.stringify({
+      level: "fatal",
+      ts: new Date().toISOString(),
+      msg,
+      rss_mb: Math.round(mem.rss / 1024 / 1024),
+      heap_used_mb: Math.round(mem.heapUsed / 1024 / 1024),
+      heap_total_mb: Math.round(mem.heapTotal / 1024 / 1024),
+    });
+    process.stderr.write(entry + "\n");
   } catch {}
 }
 crashLog("SERVER_START");
@@ -288,6 +293,9 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.get("/api/maintenance/status", (req, res) => {
+  if (!req.session?.userId) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
   res.json({ enabled: maintenanceState.enabled, message: maintenanceState.message });
 });
 

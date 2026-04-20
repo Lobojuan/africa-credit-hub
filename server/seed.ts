@@ -13,8 +13,14 @@ export async function seedDatabase() {
   const ghanaMode = isGhanaMode();
 
   const isProduction = process.env.NODE_ENV === "production" || process.env.PRODUCTION_MODE === "true";
-  if (!process.env.SEED_ADMIN_PASSWORD && isProduction) {
-    throw new Error("SEED_ADMIN_PASSWORD must be set in production before seeding");
+  if (isProduction) {
+    const missingEnvVars: string[] = [];
+    if (!process.env.SEED_ADMIN_PASSWORD) missingEnvVars.push("SEED_ADMIN_PASSWORD");
+    if (!process.env.PLATFORM_SUPPORT_EMAIL) missingEnvVars.push("PLATFORM_SUPPORT_EMAIL");
+    if (!process.env.PLATFORM_CTO_EMAIL) missingEnvVars.push("PLATFORM_CTO_EMAIL");
+    if (missingEnvVars.length > 0) {
+      throw new Error(`Missing required environment variables for production seeding: ${missingEnvVars.join(", ")}`);
+    }
   }
   const seedPassword = process.env.SEED_ADMIN_PASSWORD || (() => {
     const generated = require("crypto").randomBytes(12).toString("hex");
