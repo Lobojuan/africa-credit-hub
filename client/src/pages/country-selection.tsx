@@ -321,7 +321,8 @@ export default function CountrySelectionPage() {
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-            <TabsList className="bg-muted border border-border h-10 flex-wrap sm:flex-nowrap w-full overflow-x-auto gap-0.5 p-1 rounded-lg">
+            <div className="overflow-x-auto w-full" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+            <TabsList className="bg-muted border border-border h-10 flex-nowrap w-max min-w-full gap-0.5 p-1 rounded-lg">
               <TabsTrigger value="overview" className="text-xs text-muted-foreground hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md" data-testid="tab-overview">
                 <Globe className="w-3 h-3 mr-1" /> Jurisdictions
               </TabsTrigger>
@@ -365,6 +366,7 @@ export default function CountrySelectionPage() {
                 <Archive className="w-3 h-3 mr-1" /> Retention
               </TabsTrigger>
             </TabsList>
+            </div>
 
             <TabsContent value="overview" className="space-y-3 mt-0">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
