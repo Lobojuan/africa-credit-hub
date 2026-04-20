@@ -259,12 +259,14 @@ export async function fetchOpenBankingTransactions(
         const e: any = new Error(`Stitch GraphQL error ${gqlRes.status}: ${t.slice(0, 200)}`);
         e.code = "OPEN_BANKING_ERROR"; e.statusCode = 502; throw e;
       }
-      const gqlData = await gqlRes.json() as any;
-      const txnNodes = (gqlData?.data?.user?.bankAccounts?.edges ?? []).flatMap((ba: any) =>
-        (ba?.node?.transactions?.edges ?? []).map((e: any) => e?.node)
-      ).filter(Boolean);
-      const transactions: NormalisedTxn[] = txnNodes.map((t: any) => ({
-        date: new Date(t.date),
+      type StitchTxnNode = { id?: string; amount?: { quantity?: number; currency?: string }; date?: string; description?: string };
+      type StitchGqlResponse = { data?: { user?: { bankAccounts?: { edges?: Array<{ node?: { transactions?: { edges?: Array<{ node?: StitchTxnNode }> } } }> } } } };
+      const gqlData = await gqlRes.json() as StitchGqlResponse;
+      const txnNodes = (gqlData?.data?.user?.bankAccounts?.edges ?? []).flatMap((ba) =>
+        (ba?.node?.transactions?.edges ?? []).map((e) => e?.node)
+      ).filter((n): n is StitchTxnNode => n !== undefined && n !== null);
+      const transactions: NormalisedTxn[] = txnNodes.map((t) => ({
+        date: new Date(t.date ?? Date.now()),
         amount: Math.abs(Number(t.amount?.quantity ?? 0)),
         currency: t.amount?.currency || currency,
         direction: Number(t.amount?.quantity ?? 0) >= 0 ? "credit" : "debit",
@@ -305,10 +307,10 @@ export async function fetchOpenBankingTransactions(
         const e: any = new Error(`Okra API error ${okraRes.status}: ${t.slice(0, 200)}`);
         e.code = "OPEN_BANKING_ERROR"; e.statusCode = 502; throw e;
       }
-      const okraData = await okraRes.json() as any;
-      const txnList = (okraData?.data?.transaction ?? []) as Array<{
-        date: string; amount: number; type: string; notes: string; account?: { name?: string };
-      }>;
+      type OkraTxn = { date?: string; amount?: number; type?: string; notes?: string; account?: { name?: string } };
+      type OkraResponse = { data?: { transaction?: OkraTxn[] } };
+      const okraData = await okraRes.json() as OkraResponse;
+      const txnList: OkraTxn[] = okraData?.data?.transaction ?? [];
       const transactions: NormalisedTxn[] = txnList.map(t => ({
         date: new Date(t.date),
         amount: Math.abs(t.amount || 0),
@@ -517,7 +519,7 @@ export function classifyIncome(txns: NormalisedTxn[], currency: string): IncomeS
       description: key.slice(0, 80),
       amountMonthly: round2(monthly),
       currency,
-      frequency: arr.length / monthsSpan >= 0.9 ? "monthly" : (arr.length / monthsSpan >= 1.8 ? "bi-monthly" : "irregular"),
+      frequency: arr.length / monthsSpan >= 1.8 ? "bi-monthly" : (arr.length / monthsSpan >= 0.9 ? "monthly" : "irregular"),
       confidence,
       evidenceType: "transaction_pattern",
       evidenceRef: `${arr.length} credits over ${monthsSpan} mo`,
@@ -762,7 +764,7 @@ export async function computeAffordability(borrower: Borrower, opts: ComputeOpts
         const { telcoProfiles: tpTable } = await import("@shared/schema");
         const { eq } = await import("drizzle-orm");
         const [linked] = await db.select().from(tpTable).where(eq(tpTable.borrowerId, borrower.id)).limit(1);
-        profile = linked as any;
+        if (linked) profile = linked as TelcoProfile;
       } catch { /* ignore — table may not exist yet in test envs */ }
     }
     if (profile) {

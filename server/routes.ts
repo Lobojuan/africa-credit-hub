@@ -1804,7 +1804,8 @@ export async function registerRoutes(
       } else if (provider === "stitch") {
         if (!code && !directAccountId) return res.status(400).json({ message: "code or accountId is required for stitch" });
         resolvedAccountId = directAccountId || code; // For Stitch, store account reference
-        rawMeta = { provider: "stitch", code };
+        // Authorization codes are short-lived sensitive credentials — never persisted at rest.
+        rawMeta = { provider: "stitch", codeExchangedAt: new Date().toISOString() };
       } else if (provider === "okra") {
         if (!directAccountId) return res.status(400).json({ message: "accountId is required for okra" });
         resolvedAccountId = directAccountId;

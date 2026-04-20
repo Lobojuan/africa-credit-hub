@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { formatCurrency, getCurrencyForCountry } from "@/lib/currency";
 import { getBorrowerAvatarUrl } from "@/lib/avatar";
 import { isGhanaMode, isSierraLeoneMode, getDefaultCurrency } from "@/lib/country-mode";
@@ -306,6 +309,17 @@ export default function BorrowerDetailPage() {
   const [affordabilityComputeError, setAffordabilityComputeError] = useState<{ type: "consent_required" | "open_banking_unavailable" | "generic"; message: string } | null>(null);
   const [bankStatementUploading, setBankStatementUploading] = useState(false);
   const [connectingBank, setConnectingBank] = useState(false);
+  const [linkSessionDialog, setLinkSessionDialog] = useState<{
+    open: boolean;
+    provider?: string;
+    linkUrl?: string;
+    sessionReference?: string;
+    note?: string;
+    callbackUrl?: string;
+    callbackCode: string;
+    callbackAccountId: string;
+    submitting: boolean;
+  }>({ open: false, callbackCode: "", callbackAccountId: "", submitting: false });
 
   async function handleBankStatementUpload(file: File) {
     setBankStatementUploading(true);
@@ -336,10 +350,11 @@ export default function BorrowerDetailPage() {
     try {
       const csrfRes = await fetch("/auth/csrf-token");
       const { token: csrf } = await csrfRes.json();
-      const res = await fetch(`/api/borrowers/${borrowerId}/affordability/connect-bank`, {
+      // Step 1: Initiate link session — get provider-specific link URL / widget config
+      const res = await fetch(`/api/borrowers/${borrowerId}/affordability/link-session`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
-        body: JSON.stringify({ source: "open_banking" }),
+        body: JSON.stringify({}),
         credentials: "include",
       });
       if (!res.ok) {
@@ -348,20 +363,59 @@ export default function BorrowerDetailPage() {
         const lc = msg.toLowerCase();
         if (lc.includes("consent") || res.status === 403) {
           setAffordabilityComputeError({ type: "consent_required", message: "Borrower consent required before connecting open banking. Add an active Consent Record first." });
-        } else if (lc.includes("open_banking_unavailable") || lc.includes("no open-banking")) {
-          setAffordabilityComputeError({ type: "open_banking_unavailable", message: "No live open-banking provider configured. Set MONO_API_KEY (Ghana/Nigeria/Kenya/South Africa), STITCH_CLIENT_ID (South Africa), or OKRA_SECRET_KEY (Nigeria)." });
+        } else if (j.code === "OPEN_BANKING_UNAVAILABLE" || j.code === "MONO_PUBLIC_KEY_MISSING" || lc.includes("not configured") || lc.includes("not set")) {
+          setAffordabilityComputeError({ type: "open_banking_unavailable", message: msg });
         } else {
           setAffordabilityComputeError({ type: "generic", message: msg });
         }
         return;
       }
-      queryClient.invalidateQueries({ queryKey: ['/api/borrowers', borrowerId, 'affordability'] });
-      refetchAffordability();
-      toast({ title: "Bank connected", description: "Affordability assessment updated from open banking." });
+      const linkConfig = await res.json() as { provider?: string; widgetUrl?: string; authorizationUrl?: string; sessionReference?: string; note?: string; callbackUrl?: string };
+      // Step 2: Show link config dialog so admin can complete the linking flow
+      setLinkSessionDialog({
+        open: true,
+        provider: linkConfig.provider,
+        linkUrl: linkConfig.widgetUrl || linkConfig.authorizationUrl,
+        sessionReference: linkConfig.sessionReference,
+        note: linkConfig.note,
+        callbackUrl: linkConfig.callbackUrl,
+        callbackCode: "",
+        callbackAccountId: "",
+        submitting: false,
+      });
     } catch (e: any) {
       setAffordabilityComputeError({ type: "generic", message: e.message });
     } finally {
       setConnectingBank(false);
+    }
+  }
+
+  async function handleLinkSessionCallback() {
+    setLinkSessionDialog(prev => ({ ...prev, submitting: true }));
+    try {
+      const csrfRes = await fetch("/auth/csrf-token");
+      const { token: csrf } = await csrfRes.json();
+      const res = await fetch(`/api/borrowers/${borrowerId}/affordability/link-session/callback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
+        body: JSON.stringify({
+          provider: linkSessionDialog.provider,
+          code: linkSessionDialog.callbackCode || undefined,
+          accountId: linkSessionDialog.callbackAccountId || undefined,
+        }),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const j = await res.json();
+        throw new Error(j.message || res.statusText);
+      }
+      setLinkSessionDialog({ open: false, callbackCode: "", callbackAccountId: "", submitting: false });
+      queryClient.invalidateQueries({ queryKey: ['/api/borrowers', borrowerId, 'affordability'] });
+      refetchAffordability();
+      toast({ title: "Bank account linked", description: "Affordability assessment updated from open banking." });
+    } catch (e: any) {
+      setAffordabilityComputeError({ type: "generic", message: e.message });
+      setLinkSessionDialog(prev => ({ ...prev, submitting: false, open: false }));
     }
   }
 
@@ -462,6 +516,56 @@ export default function BorrowerDetailPage() {
 
   return (
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-[1200px] mx-auto animate-page-enter">
+      {/* Open-banking link session dialog — shown after link-session initiation */}
+      <Dialog open={linkSessionDialog.open} onOpenChange={(open) => !linkSessionDialog.submitting && setLinkSessionDialog(prev => ({ ...prev, open }))}>
+        <DialogContent className="max-w-lg" data-testid="dialog-link-session">
+          <DialogHeader>
+            <DialogTitle>Connect Open-Banking Account</DialogTitle>
+            <DialogDescription>
+              {linkSessionDialog.provider === "mono" && "Share the link below with the borrower. They complete the Mono Connect flow, then you enter the authorization code returned by the widget."}
+              {linkSessionDialog.provider === "stitch" && "Redirect the borrower to the authorization URL. After they approve, enter the authorization code from the callback URL."}
+              {linkSessionDialog.provider === "okra" && (linkSessionDialog.note || "Use your Okra client-side widget token to embed the Okra widget. Enter the account ID returned on completion.")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {linkSessionDialog.linkUrl && (
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">{linkSessionDialog.provider === "stitch" ? "Authorization URL" : "Widget URL"}</Label>
+                <div className="flex gap-2 items-center">
+                  <Input readOnly value={linkSessionDialog.linkUrl} className="text-xs font-mono" data-testid="input-link-session-url" />
+                  <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(linkSessionDialog.linkUrl || ""); toast({ title: "Copied" }); }}>Copy</Button>
+                </div>
+              </div>
+            )}
+            {linkSessionDialog.sessionReference && !linkSessionDialog.linkUrl && (
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Session Reference (customer_id for widget)</Label>
+                <Input readOnly value={linkSessionDialog.sessionReference} className="text-xs font-mono" data-testid="input-link-session-ref" />
+              </div>
+            )}
+            <div className="space-y-1">
+              <Label htmlFor="callback-code" className="text-xs">{linkSessionDialog.provider === "okra" ? "Account ID (from Okra widget)" : "Authorization Code (from provider callback)"}</Label>
+              {linkSessionDialog.provider === "okra" ? (
+                <Input id="callback-code" placeholder="Enter account ID from Okra widget" value={linkSessionDialog.callbackAccountId}
+                  onChange={e => setLinkSessionDialog(prev => ({ ...prev, callbackAccountId: e.target.value }))}
+                  data-testid="input-link-callback-account-id" />
+              ) : (
+                <Input id="callback-code" placeholder="Paste authorization code here" value={linkSessionDialog.callbackCode}
+                  onChange={e => setLinkSessionDialog(prev => ({ ...prev, callbackCode: e.target.value }))}
+                  data-testid="input-link-callback-code" />
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLinkSessionDialog(prev => ({ ...prev, open: false }))} disabled={linkSessionDialog.submitting}>Cancel</Button>
+            <Button onClick={handleLinkSessionCallback} disabled={linkSessionDialog.submitting || (!linkSessionDialog.callbackCode && !linkSessionDialog.callbackAccountId)} data-testid="button-complete-link-session">
+              {linkSessionDialog.submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Link2 className="w-4 h-4 mr-2" />}
+              Complete Linking
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <input type="file" ref={photoInputRef} className="hidden" accept="image/*"
         onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadPhotoMutation.mutate(f); }}
         data-testid="input-upload-photo"
