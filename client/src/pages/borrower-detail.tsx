@@ -302,16 +302,31 @@ export default function BorrowerDetailPage() {
     enabled: !!borrowerId,
   });
 
+  const [affordabilityComputeError, setAffordabilityComputeError] = useState<{ type: "consent_required" | "open_banking_unavailable" | "generic"; message: string } | null>(null);
   const affordabilityMutation = useMutation({
     mutationFn: async () => {
       return await apiRequest("POST", `/api/borrowers/${borrowerId}/affordability`, { source: "auto" });
     },
     onSuccess: () => {
+      setAffordabilityComputeError(null);
       queryClient.invalidateQueries({ queryKey: ['/api/borrowers', borrowerId, 'affordability'] });
       refetchAffordability();
       toast({ title: "Affordability recomputed" });
     },
-    onError: (e: any) => toast({ title: "Affordability failed", description: e?.message, variant: "destructive" }),
+    onError: (e: any) => {
+      const msg: string = e?.message || "Unknown error";
+      const lc = msg.toLowerCase();
+      if (lc.includes("consent") || msg.startsWith("403:")) {
+        setAffordabilityComputeError({ type: "consent_required", message: "Borrower has not granted consent for affordability / financial-data analysis. Add an active Consent Record first (Consent tab), then recompute." });
+      } else if (lc.includes("open_banking_unavailable") || lc.includes("no open-banking provider") || lc.includes("open-banking")) {
+        setAffordabilityComputeError({ type: "open_banking_unavailable", message: "No live open-banking provider is configured. The system will fall back to MoMo transactions or self-declared income if available." });
+        queryClient.invalidateQueries({ queryKey: ['/api/borrowers', borrowerId, 'affordability'] });
+        refetchAffordability();
+      } else {
+        setAffordabilityComputeError({ type: "generic", message: msg });
+        toast({ title: "Affordability computation failed", description: msg, variant: "destructive" });
+      }
+    },
   });
 
   const { data: relatedBorrowers } = useQuery<Borrower[]>({
@@ -621,7 +636,24 @@ export default function BorrowerDetailPage() {
             </Button>
           </div>
 
-          {!affordability?.assessment && (
+          {/* Inline consent / error feedback */}
+          {affordabilityComputeError && (
+            <div
+              className={`flex items-start gap-2 p-3 rounded-lg text-xs mb-2 ${
+                affordabilityComputeError.type === "consent_required"
+                  ? "bg-yellow-50 dark:bg-yellow-950/20 text-yellow-800 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800"
+                  : affordabilityComputeError.type === "open_banking_unavailable"
+                  ? "bg-blue-50 dark:bg-blue-950/20 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                  : "bg-destructive/10 text-destructive border border-destructive/20"
+              }`}
+              data-testid="alert-affordability-error"
+            >
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{affordabilityComputeError.message}</span>
+            </div>
+          )}
+
+          {!affordability?.assessment && !affordabilityComputeError && (
             <p className="text-xs text-muted-foreground" data-testid="text-affordability-empty">
               No affordability assessment yet. Compute one using open banking, MoMo, or self-declared income.
             </p>

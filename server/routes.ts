@@ -1465,10 +1465,21 @@ export async function registerRoutes(
         ipAddress: req.ip || null,
       });
 
+      // Include latest affordability assessment (non-blocking)
+      const latestAffordability = await storage.getLatestAffordabilityAssessment(req.params.id).catch(() => undefined);
+      const incomeSources = latestAffordability ? await storage.getIncomeSourcesByBorrower(req.params.id).catch(() => []) : [];
+      const expenses = latestAffordability ? await storage.getExpenseCategorisationsByBorrower(req.params.id).catch(() => []) : [];
+
       res.json({
         borrower,
         accounts,
         inquiries,
+        courtJudgments: judgments,
+        affordability: latestAffordability ? {
+          assessment: latestAffordability,
+          incomeSources,
+          expenses,
+        } : null,
         summary: {
           totalAccounts: accounts.length,
           activeAccounts: accounts.filter(a => a.status !== "closed").length,
@@ -2650,6 +2661,9 @@ export async function registerRoutes(
       } catch {}
       const { score: creditScore } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep, altData);
 
+      // Include affordability snapshot (if previously computed) — privacy-safe subset
+      const consumerAffordability = await storage.getLatestAffordabilityAssessment(borrower.id).catch(() => undefined);
+
       res.json({
         borrower: {
           firstName: borrower.firstName,
@@ -2659,6 +2673,16 @@ export async function registerRoutes(
           nationalId: borrower.nationalId?.replace(/(.{3}).+(.{3})/, "$1****$2"),
         },
         creditScore,
+        affordability: consumerAffordability ? {
+          status: consumerAffordability.status,
+          affordabilityScore: consumerAffordability.affordabilityScore,
+          debtToIncomeRatio: consumerAffordability.debtToIncomeRatio,
+          disposableIncome: consumerAffordability.disposableIncome,
+          currency: consumerAffordability.currency,
+          regulatoryFramework: consumerAffordability.regulatoryFramework,
+          dataSource: consumerAffordability.dataSource,
+          assessmentDate: consumerAffordability.assessmentDate,
+        } : null,
       });
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -4527,6 +4551,11 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         });
       } catch {}
 
+      // Attach latest affordability assessment (non-blocking)
+      const reportAffordability = await storage.getLatestAffordabilityAssessment(borrowerId).catch(() => undefined);
+      const reportIncomeSources = reportAffordability ? await storage.getIncomeSourcesByBorrower(borrowerId).catch(() => []) : [];
+      const reportExpenses = reportAffordability ? await storage.getExpenseCategorisationsByBorrower(borrowerId).catch(() => []) : [];
+
       res.json({
         serialNumber,
         generatedAt: new Date().toISOString(),
@@ -4539,6 +4568,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         guarantors: guarantorMap,
         paymentHistory: paymentHistoryMap,
         requestedBy: user ? { fullName: user.fullName, institution: user.institution } : null,
+        affordability: reportAffordability ? { assessment: reportAffordability, incomeSources: reportIncomeSources, expenses: reportExpenses } : null,
         ...(xdsBureauData ? { xdsBureauData } : {}),
         summary: {
           totalAccounts: accounts.length,

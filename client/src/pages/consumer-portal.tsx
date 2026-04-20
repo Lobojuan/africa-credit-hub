@@ -14,6 +14,16 @@ interface ConsumerData {
     nationalId: string;
   };
   creditScore: number;
+  affordability?: {
+    status: string | null;
+    affordabilityScore: number | null;
+    debtToIncomeRatio: string | null;
+    disposableIncome: string | null;
+    currency: string;
+    regulatoryFramework: string | null;
+    dataSource: string;
+    assessmentDate: string | null;
+  } | null;
 }
 
 function getScoreLabel(score: number): { label: string; color: string; description: string } {
@@ -762,6 +772,43 @@ export default function ConsumerPortalPage() {
                     </div>
                   </div>
                 </Card>
+
+                {data.affordability && (
+                  <Card className="shadow-sm" data-testid="card-consumer-affordability">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="w-4 h-4 text-emerald-600" />
+                          <h3 className="text-sm font-bold">Affordability Snapshot</h3>
+                        </div>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${data.affordability.status === "pass" ? "bg-emerald-100 text-emerald-700" : data.affordability.status === "fail" ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700"}`} data-testid="badge-consumer-affordability-status">
+                          {(data.affordability.status ?? "unknown").toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        {data.affordability.affordabilityScore != null && (
+                          <div className="bg-muted/40 rounded-lg p-2.5">
+                            <p className="text-muted-foreground text-[10px] mb-0.5">Affordability Score</p>
+                            <p className="font-bold text-base" data-testid="text-consumer-affordability-score">{data.affordability.affordabilityScore} / 1000</p>
+                          </div>
+                        )}
+                        {data.affordability.debtToIncomeRatio != null && (
+                          <div className="bg-muted/40 rounded-lg p-2.5">
+                            <p className="text-muted-foreground text-[10px] mb-0.5">Debt-to-Income</p>
+                            <p className="font-bold text-base" data-testid="text-consumer-dti">{(Number(data.affordability.debtToIncomeRatio) * 100).toFixed(1)}%</p>
+                          </div>
+                        )}
+                        {data.affordability.disposableIncome != null && (
+                          <div className="bg-muted/40 rounded-lg p-2.5 col-span-2">
+                            <p className="text-muted-foreground text-[10px] mb-0.5">Estimated Monthly Disposable Income</p>
+                            <p className="font-bold" data-testid="text-consumer-disposable">{data.affordability.currency} {Number(data.affordability.disposableIncome).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-2">Regulatory framework: {data.affordability.regulatoryFramework ?? "—"} · Source: {data.affordability.dataSource}</p>
+                    </CardContent>
+                  </Card>
+                )}
 
                 <Card className="shadow-sm bg-muted/20">
                   <CardContent className="p-4">

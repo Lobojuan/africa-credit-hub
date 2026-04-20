@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { Borrower, CreditAccount, CreditInquiry, CourtJudgment, ConsentRecord, PaymentHistory, DishonouredCheque } from "@shared/schema";
+import type { Borrower, CreditAccount, CreditInquiry, CourtJudgment, ConsentRecord, PaymentHistory, DishonouredCheque, AffordabilityAssessment, IncomeSource, ExpenseCategorisation } from "@shared/schema";
 import { BOG_CHEQUE_RETURN_REASON, BOG_NATURE_OF_GUARANTOR, BOG_OWNER_TENANT, BOG_EMPLOYMENT_TYPE } from "@shared/bog-codes";
 import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
 
@@ -47,6 +47,11 @@ interface CreditReportData {
     judgmentCount: number;
     isPep: boolean;
   };
+  affordability?: {
+    assessment: AffordabilityAssessment;
+    incomeSources: IncomeSource[];
+    expenses: ExpenseCategorisation[];
+  } | null;
   aiEnhanced?: {
     mlScore?: {
       mlScore: number;
@@ -1181,6 +1186,37 @@ export default function CreditReportPage() {
               )}
             </CardContent>
           </Card>
+
+          {report.affordability?.assessment && (
+            <Card data-testid="card-report-affordability">
+              <CardContent className="p-5 print:p-3">
+                <SectionHeader icon={TrendingUp} title="Affordability Assessment" />
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 print:gap-2 mt-3">
+                  <InfoField label="Gross Monthly Income" value={`${report.affordability.assessment.currency} ${Number(report.affordability.assessment.grossMonthlyIncome || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
+                  <InfoField label="Net Monthly Income" value={`${report.affordability.assessment.currency} ${Number(report.affordability.assessment.netMonthlyIncome || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
+                  <InfoField label="Monthly Expenses" value={`${report.affordability.assessment.currency} ${Number(report.affordability.assessment.totalMonthlyExpenses || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
+                  <InfoField label="Debt Obligations / Month" value={`${report.affordability.assessment.currency} ${Number(report.affordability.assessment.totalMonthlyDebtObligations || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
+                  <InfoField label="Disposable Income" value={`${report.affordability.assessment.currency} ${Number(report.affordability.assessment.disposableIncome || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
+                  <InfoField label="Debt-to-Income Ratio" value={`${(Number(report.affordability.assessment.debtToIncomeRatio || 0) * 100).toFixed(1)}%`} />
+                  <InfoField label="Affordability Score" value={`${report.affordability.assessment.affordabilityScore ?? "—"} / 1000`} />
+                  <InfoField label="Recommended Credit Limit" value={`${report.affordability.assessment.currency} ${Number(report.affordability.assessment.recommendedCreditLimit || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`} />
+                  <InfoField label="Regulatory Framework" value={report.affordability.assessment.regulatoryFramework ?? "—"} />
+                </div>
+                <div className="mt-3 flex items-center gap-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Status</span>
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${report.affordability.assessment.status === "pass" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : report.affordability.assessment.status === "fail" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"}`} data-testid="badge-report-affordability-status">
+                    {(report.affordability.assessment.status ?? "unknown").toUpperCase()}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground ml-2">Source: {report.affordability.assessment.dataSource}</span>
+                </div>
+                {report.affordability.assessment.aiNarrative && (
+                  <div className="mt-3 p-3 rounded-lg bg-muted/40 text-xs text-muted-foreground leading-relaxed" data-testid="text-report-affordability-narrative">
+                    {report.affordability.assessment.aiNarrative}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {profileOverview && (
             <Card>

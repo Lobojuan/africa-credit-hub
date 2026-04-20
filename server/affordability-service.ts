@@ -123,35 +123,130 @@ export type OpenBankingResult = {
   transactions: NormalisedTxn[];
 };
 
-function pickProvider(country?: string | null): OpenBankingProvider {
+/**
+ * Return the best available live open-banking provider for a country, or null if none configured.
+ * Never returns "stub" — callers that need sandbox data must explicitly pass provider:"stub".
+ */
+function pickProvider(country?: string | null): OpenBankingProvider | null {
   const c = (country || "").toLowerCase();
   if (process.env.MONO_API_KEY && (c.includes("nigeria") || c.includes("ghana") || c.includes("kenya") || c.includes("south africa"))) return "mono";
   if (process.env.STITCH_API_KEY && c.includes("south africa")) return "stitch";
   if (process.env.OKRA_API_KEY && c.includes("nigeria")) return "okra";
-  return "stub";
+  return null; // No live provider configured — caller decides what to do
 }
 
 /**
  * Fetch transactions for a linked open-banking account.
- * In stub mode, generates a deterministic synthetic dataset based on borrower id.
+ *
+ * "stub" provider is allowed ONLY when explicitly passed as an option (sandbox/demo use).
+ * If no configured live provider exists and the caller does not request "stub" explicitly,
+ * this function throws OPEN_BANKING_UNAVAILABLE (400) so callers fall back to MoMo or self-declared.
  */
 export async function fetchOpenBankingTransactions(
   borrower: Borrower,
   opts: { provider?: OpenBankingProvider; accountId?: string; periodDays?: number } = {}
 ): Promise<OpenBankingResult> {
-  const provider = opts.provider || pickProvider(borrower.country);
+  const resolvedProvider = opts.provider ?? pickProvider(borrower.country);
   const periodDays = opts.periodDays ?? 90;
   const currency = borrower.incomeCurrency || "GHS";
 
-  if (provider === "stub") {
+  // Explicit stub opt-in — sandbox / demo only
+  if (resolvedProvider === "stub") {
+    if (process.env.NODE_ENV === "production") {
+      const err: any = new Error("Open-banking stub/synthetic mode is disabled in production. Configure MONO_API_KEY, STITCH_API_KEY, or OKRA_API_KEY to enable live open-banking.");
+      err.code = "STUB_DISABLED_IN_PRODUCTION";
+      err.statusCode = 503;
+      throw err;
+    }
     return generateStubBankingData(borrower, periodDays, currency);
   }
 
-  // Real adapter would dispatch on `provider` here. Tokens / clients omitted for brevity.
-  // Implementations would call e.g. https://api.withmono.com/accounts/:id/transactions
-  // For now, fall back to stub so the pipeline still works in dev.
-  console.warn(`[Affordability] Provider ${provider} requested but live adapter not yet wired — using stub.`);
-  return generateStubBankingData(borrower, periodDays, currency);
+  // No live provider configured and caller did not request stub explicitly
+  if (resolvedProvider === null) {
+    const err: any = new Error("No open-banking provider is configured for this country. Set MONO_API_KEY (Ghana/Nigeria/Kenya/South Africa), STITCH_API_KEY (South Africa), or OKRA_API_KEY (Nigeria) to enable live bank feeds.");
+    err.code = "OPEN_BANKING_UNAVAILABLE";
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const provider = resolvedProvider;
+
+  // Dispatch to live adapters. Each provider requires its respective API key in env vars.
+  // These adapters follow a provider-agnostic interface: link, fetch-transactions, revoke-consent.
+  if (provider === "mono") {
+    if (!process.env.MONO_API_KEY) {
+      const err: any = new Error("Mono open-banking not configured: set MONO_API_KEY environment variable.");
+      err.code = "PROVIDER_NOT_CONFIGURED";
+      err.statusCode = 502;
+      throw err;
+    }
+    // Mono adapter: POST /v2/accounts/link → GET /v2/accounts/{id}/statement/json
+    // Reference: https://docs.mono.co/reference/fetch-account-statement
+    const accountId = opts.accountId || borrower.id;
+    const baseUrl = "https://api.withmono.com";
+    const fromDate = new Date(Date.now() - periodDays * 86400000).toISOString().split("T")[0];
+    const response = await fetch(`${baseUrl}/v2/accounts/${accountId}/statement/json?period=${fromDate}`, {
+      headers: { "mono-sec-key": process.env.MONO_API_KEY, "Content-Type": "application/json" },
+    });
+    if (!response.ok) {
+      const body = await response.text();
+      const err: any = new Error(`Mono API error ${response.status}: ${body.slice(0, 200)}`);
+      err.code = "OPEN_BANKING_ERROR";
+      err.statusCode = 502;
+      throw err;
+    }
+    const data = await response.json() as { data?: { history?: Array<{ date: string; narration: string; amount: number; type: string; balance: number }> } };
+    const history = data?.data?.history ?? [];
+    const transactions: NormalisedTxn[] = history.map(t => ({
+      date: new Date(t.date),
+      amount: Math.abs(t.amount / 100), // Mono returns kobo/pesewas
+      currency,
+      direction: t.type === "credit" ? "credit" : "debit",
+      narration: t.narration,
+      counterparty: null,
+      category: null,
+    }));
+    return {
+      account: { provider: "mono", accountId, accountName: "Mono Account", currency, bank: "Mono" },
+      transactions,
+    };
+  }
+
+  if (provider === "stitch") {
+    if (!process.env.STITCH_API_KEY) {
+      const err: any = new Error("Stitch open-banking not configured: set STITCH_API_KEY environment variable.");
+      err.code = "PROVIDER_NOT_CONFIGURED";
+      err.statusCode = 502;
+      throw err;
+    }
+    // Stitch adapter: GraphQL API at https://api.stitch.money/graphql
+    // Reference: https://docs.stitch.money/reference/graphql
+    const err: any = new Error("Stitch live adapter — STITCH_API_KEY configured but GraphQL flow not yet implemented. Use Mono or bank statement PDF for now.");
+    err.code = "PROVIDER_NOT_IMPLEMENTED";
+    err.statusCode = 501;
+    throw err;
+  }
+
+  if (provider === "okra") {
+    if (!process.env.OKRA_API_KEY) {
+      const err: any = new Error("Okra open-banking not configured: set OKRA_API_KEY environment variable.");
+      err.code = "PROVIDER_NOT_CONFIGURED";
+      err.statusCode = 502;
+      throw err;
+    }
+    // Okra adapter: REST API at https://api.okra.ng
+    // Reference: https://docs.okra.ng/docs/transactions
+    const err: any = new Error("Okra live adapter — OKRA_API_KEY configured but REST flow not yet implemented. Use Mono or bank statement PDF for now.");
+    err.code = "PROVIDER_NOT_IMPLEMENTED";
+    err.statusCode = 501;
+    throw err;
+  }
+
+  // Unknown provider — do not fall back to synthetic data
+  const err: any = new Error(`Unknown open-banking provider: ${provider}. Supported: mono, stitch, okra, stub.`);
+  err.code = "UNKNOWN_PROVIDER";
+  err.statusCode = 400;
+  throw err;
 }
 
 function generateStubBankingData(borrower: Borrower, periodDays: number, currency: string): OpenBankingResult {
@@ -473,10 +568,13 @@ export type AffordabilityOutputsSnapshot = {
 };
 
 /**
- * Verify that the borrower has granted consent for affordability / financial-data analysis,
- * either via an active ConsentRecord (preferred) or the legacy borrower.consentProvided flag.
+ * Verify that the borrower has granted consent for affordability / financial-data analysis.
+ * Check order:
+ * 1. Active ConsentRecord with scope matching affordability/credit/financial/openbanking/datasharing (preferred — auditable)
+ * 2. Legacy borrower.consentProvided flag (fallback — backwards compatible with borrowers created before ConsentRecords module)
  */
-export async function hasAffordabilityConsent(borrowerId: string, _borrower?: Borrower): Promise<{ ok: boolean; reason?: string; consentId?: string }> {
+export async function hasAffordabilityConsent(borrowerId: string, borrower?: Borrower): Promise<{ ok: boolean; reason?: string; consentId?: string; source?: string }> {
+  // 1. Check active ConsentRecord
   const records = await storage.getConsentRecordsByBorrower(borrowerId);
   const acceptableNeedles = ["affordability", "credit", "financial", "openbanking", "datasharing"];
   const active = records.find(r => {
@@ -484,7 +582,21 @@ export async function hasAffordabilityConsent(borrowerId: string, _borrower?: Bo
     const t = (r.consentType || "").toLowerCase().replace(/[\s_-]/g, "");
     return acceptableNeedles.some(n => t.includes(n));
   });
-  if (active) return { ok: true, consentId: active.id };
+  if (active) return { ok: true, consentId: active.id, source: "consent_record" };
+
+  // 2. Legacy fallback: check borrower.consentProvided (for borrowers without explicit ConsentRecords)
+  if (borrower?.consentProvided) {
+    return { ok: true, source: "legacy_borrower_flag" };
+  }
+  // If borrower object not passed, fetch the flag directly
+  if (!borrower) {
+    const { db } = await import("./db");
+    const { borrowers } = await import("@shared/schema");
+    const { eq } = await import("drizzle-orm");
+    const [b] = await db.select({ consentProvided: borrowers.consentProvided }).from(borrowers).where(eq(borrowers.id, borrowerId)).limit(1);
+    if (b?.consentProvided) return { ok: true, source: "legacy_borrower_flag" };
+  }
+
   return { ok: false, reason: "Borrower has not granted an active consent record for affordability / credit / financial-data analysis." };
 }
 
