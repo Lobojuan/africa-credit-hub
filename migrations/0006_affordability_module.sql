@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS affordability_assessments (
   currency text NOT NULL DEFAULT 'GHS',
   data_source affordability_data_source NOT NULL,
   period_days integer NOT NULL DEFAULT 90,
+  version integer NOT NULL DEFAULT 1,
   gross_income_monthly numeric(15,2) NOT NULL DEFAULT 0,
   total_expenses_monthly numeric(15,2) NOT NULL DEFAULT 0,
   existing_debt_service_monthly numeric(15,2) NOT NULL DEFAULT 0,

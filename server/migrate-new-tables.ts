@@ -393,6 +393,7 @@ export async function migrateNewTables() {
     currency text NOT NULL DEFAULT 'GHS',
     data_source affordability_data_source NOT NULL,
     period_days integer NOT NULL DEFAULT 90,
+    version integer NOT NULL DEFAULT 1,
     gross_income_monthly numeric(15,2) NOT NULL DEFAULT 0,
     total_expenses_monthly numeric(15,2) NOT NULL DEFAULT 0,
     existing_debt_service_monthly numeric(15,2) NOT NULL DEFAULT 0,
@@ -414,6 +415,8 @@ export async function migrateNewTables() {
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_expense_cat_borrower ON expense_categorisations(borrower_id)`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_afford_borrower ON affordability_assessments(borrower_id)`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_afford_org ON affordability_assessments(organization_id)`);
+  // Idempotent backfill: add version column to existing tables created before schema update
+  await db.execute(sql`ALTER TABLE affordability_assessments ADD COLUMN IF NOT EXISTS version integer NOT NULL DEFAULT 1`);
 
   // Linked open-banking accounts — persisted account linkage per borrower
   // Created as part of Task #28 Affordability Module (open-banking link lifecycle)
