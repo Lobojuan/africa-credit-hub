@@ -652,6 +652,35 @@ interface RegistryHealthEvent {
   checkedAt: string;
 }
 
+function RegistrySparkline({ events }: { events: RegistryHealthEvent[] }) {
+  const sorted = [...events].sort((a, b) => new Date(a.checkedAt).getTime() - new Date(b.checkedAt).getTime());
+  const slots = sorted.slice(-7);
+  const placeholders = Math.max(0, 7 - slots.length);
+
+  return (
+    <div
+      className="flex items-center gap-[2px]"
+      title={`Last ${slots.length} check${slots.length !== 1 ? "s" : ""} (oldest → newest)`}
+      data-testid="sparkline-registry"
+    >
+      {Array.from({ length: placeholders }).map((_, i) => (
+        <span
+          key={`ph-${i}`}
+          className="w-2 h-3 rounded-[2px] bg-muted-foreground/15"
+        />
+      ))}
+      {slots.map((e, i) => (
+        <span
+          key={e.id ?? i}
+          data-testid={`sparkline-slot-${e.status}`}
+          title={`${new Date(e.checkedAt).toLocaleString()} — ${e.status === "ok" ? `OK${e.latencyMs != null ? ` (${e.latencyMs}ms)` : ""}` : `Fail${e.error ? `: ${e.error}` : ""}`}`}
+          className={`w-2 h-3 rounded-[2px] ${e.status === "ok" ? "bg-emerald-500" : "bg-red-500"}`}
+        />
+      ))}
+    </div>
+  );
+}
+
 function RegistryStatusPanel() {
   const { data, isLoading, refetch } = useQuery<Record<string, { live: boolean; url?: string; sandbox?: boolean }>>({
     queryKey: ["/api/trace/registry-status"],
@@ -787,6 +816,9 @@ function RegistryStatusPanel() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 ml-2">
+                      {providerHistory.length > 0 && (
+                        <RegistrySparkline events={providerHistory} />
+                      )}
                       <Badge
                         variant="outline"
                         data-testid={`badge-registry-uptime-${key}`}
