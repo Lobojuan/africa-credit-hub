@@ -62,7 +62,25 @@ async function opsAlertEmail(): Promise<string | null> {
   );
 }
 
-async function sendSlackAlert(provider: string, error: string, isRecovery = false): Promise<void> {
+export interface ThresholdContext {
+  isCustom: boolean;
+  consecutiveFailures: number;
+  criticalFail7d?: number | null;
+  criticalStreak30d?: number | null;
+}
+
+function formatThresholdForSlack(ctx: ThresholdContext): string {
+  if (ctx.isCustom) {
+    const parts: string[] = [];
+    if (ctx.criticalFail7d != null) parts.push(`${ctx.criticalFail7d} failures/7d`);
+    if (ctx.criticalStreak30d != null) parts.push(`streak: ${ctx.criticalStreak30d}/30d`);
+    const detail = parts.length ? parts.join(", ") : "see admin";
+    return `*Threshold:* Custom override — ${detail} (alert trigger: ${ctx.consecutiveFailures} consecutive failures)`;
+  }
+  return `*Threshold:* Global default — ${ctx.consecutiveFailures} consecutive failures`;
+}
+
+async function sendSlackAlert(provider: string, error: string, isRecovery = false, thresholdCtx?: ThresholdContext): Promise<void> {
   const cfg = await getDbConfig();
   const webhookUrl = cfg.slackWebhookUrl || process.env.REGISTRY_ALERT_SLACK_WEBHOOK;
   if (!webhookUrl) return;
@@ -71,9 +89,14 @@ async function sendSlackAlert(provider: string, error: string, isRecovery = fals
   const title = isRecovery
     ? `:white_check_mark: Registry Recovered: ${provider}`
     : `:rotating_light: Registry Down: ${provider}`;
-  const text = isRecovery
+
+  let text = isRecovery
     ? `The \`${provider}\` registry is back online and responding normally.`
     : `The \`${provider}\` live registry has failed consecutive health checks.\n*Error:* ${error}`;
+
+  if (!isRecovery && thresholdCtx) {
+    text += `\n${formatThresholdForSlack(thresholdCtx)}`;
+  }
 
   try {
     const resp = await fetch(webhookUrl, {
@@ -102,22 +125,22 @@ async function sendSlackAlert(provider: string, error: string, isRecovery = fals
   }
 }
 
-async function sendEmailAlert(provider: string, error: string, isRecovery = false): Promise<void> {
+async function sendEmailAlert(provider: string, error: string, isRecovery = false, thresholdCtx?: ThresholdContext): Promise<void> {
   const to = await opsAlertEmail();
   if (!to) return;
 
   try {
     const { sendRegistryDownEmail } = await import("./email");
-    await sendRegistryDownEmail(to, provider, error, isRecovery);
+    await sendRegistryDownEmail(to, provider, error, isRecovery, thresholdCtx);
   } catch (err: any) {
     console.error("[RegistryHealth] Failed to send email alert:", err.message);
   }
 }
 
-async function sendAlerts(provider: string, error: string, isRecovery = false): Promise<void> {
+async function sendAlerts(provider: string, error: string, isRecovery = false, thresholdCtx?: ThresholdContext): Promise<void> {
   await Promise.allSettled([
-    sendSlackAlert(provider, error, isRecovery),
-    sendEmailAlert(provider, error, isRecovery),
+    sendSlackAlert(provider, error, isRecovery, thresholdCtx),
+    sendEmailAlert(provider, error, isRecovery, thresholdCtx),
   ]);
 }
 
@@ -134,6 +157,14 @@ async function runHealthChecks(): Promise<void> {
   const dbCfg = await getDbConfig().catch(() => ({}));
   const failureThreshold = dbCfg.alertConsecutiveFailures ?? FAILURE_THRESHOLD;
 
+  let overridesByProvider: Map<string, { criticalFail7d: number | null; criticalStreak30d: number | null }>;
+  try {
+    const overrides = await storage.getAllRegistryThresholdOverrides();
+    overridesByProvider = new Map(overrides.map((o) => [o.provider, { criticalFail7d: o.criticalFail7d, criticalStreak30d: o.criticalStreak30d }]));
+  } catch {
+    overridesByProvider = new Map();
+  }
+
   for (const provider of TESTABLE_PROVIDERS) {
     const meta = statuses[provider];
     if (!meta.live) continue;
@@ -146,6 +177,11 @@ async function runHealthChecks(): Promise<void> {
       consecutiveFailures: 0,
       alertSent: false,
     };
+
+    const override = overridesByProvider.get(provider);
+    const thresholdCtx: ThresholdContext = override
+      ? { isCustom: true, consecutiveFailures: failureThreshold, criticalFail7d: override.criticalFail7d, criticalStreak30d: override.criticalStreak30d }
+      : { isCustom: false, consecutiveFailures: failureThreshold };
 
     try {
       const result = await testRegistryCredentials(provider as AssetProvider);
@@ -193,7 +229,7 @@ async function runHealthChecks(): Promise<void> {
 
         if (shouldAlert) {
           console.warn(`[RegistryHealth] Alerting ops team for ${provider}`);
-          await sendAlerts(provider, errMsg, false);
+          await sendAlerts(provider, errMsg, false, thresholdCtx);
         }
       }
     } catch (err: any) {
@@ -215,7 +251,7 @@ async function runHealthChecks(): Promise<void> {
       console.error(`[RegistryHealth] ${provider} probe threw: ${errMsg}`);
 
       if (shouldAlert) {
-        await sendAlerts(provider, errMsg, false);
+        await sendAlerts(provider, errMsg, false, thresholdCtx);
       }
     }
   }

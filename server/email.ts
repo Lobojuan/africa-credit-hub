@@ -367,11 +367,30 @@ export async function sendCollectionSlaBreachEmail(
   );
 }
 
+interface EmailThresholdContext {
+  isCustom: boolean;
+  consecutiveFailures: number;
+  criticalFail7d?: number | null;
+  criticalStreak30d?: number | null;
+}
+
+function formatThresholdForEmail(ctx: EmailThresholdContext): string {
+  if (ctx.isCustom) {
+    const parts: string[] = [];
+    if (ctx.criticalFail7d != null) parts.push(`${ctx.criticalFail7d} failures in 7 days`);
+    if (ctx.criticalStreak30d != null) parts.push(`streak: ${ctx.criticalStreak30d} in 30 days`);
+    const detail = parts.length ? ` — ${parts.join(", ")}` : "";
+    return `Custom override${detail} (alert trigger: ${ctx.consecutiveFailures} consecutive failures)`;
+  }
+  return `Global default — ${ctx.consecutiveFailures} consecutive failures`;
+}
+
 export async function sendRegistryDownEmail(
   to: string,
   provider: string,
   error: string,
   isRecovery = false,
+  thresholdCtx?: EmailThresholdContext,
 ): Promise<boolean> {
   const providerLabel = provider
     .replace(/_/g, " ")
@@ -379,6 +398,10 @@ export async function sendRegistryDownEmail(
   const subject = isRecovery
     ? `[Resolved] Registry Back Online: ${providerLabel}`
     : `[Alert] Registry Down: ${providerLabel}`;
+
+  const thresholdRow = !isRecovery && thresholdCtx
+    ? `<p style="margin:4px 0 0;font-size:13px;color:#555;"><strong>Threshold:</strong> ${esc(formatThresholdForEmail(thresholdCtx))}</p>`
+    : "";
 
   const body = isRecovery
     ? `
@@ -394,12 +417,13 @@ export async function sendRegistryDownEmail(
     `
     : `
       <p style="color:#333;font-size:14px;line-height:1.6;">
-        The <strong>${esc(providerLabel)}</strong> live registry has failed two consecutive health checks and may be unreachable.
+        The <strong>${esc(providerLabel)}</strong> live registry has failed consecutive health checks and may be unreachable.
       </p>
       <div style="background:#fff5f5;border-radius:8px;padding:16px 20px;margin:16px 0;border-left:4px solid #ef4444;">
         <p style="margin:0;font-size:13px;color:#555;"><strong>Registry:</strong> ${esc(providerLabel)}</p>
         <p style="margin:4px 0 0;font-size:13px;color:#555;"><strong>Error:</strong> <span style="color:#dc2626;">${esc(error)}</span></p>
         <p style="margin:4px 0 0;font-size:13px;color:#555;"><strong>Detected at:</strong> ${new Date().toUTCString()}</p>
+        ${thresholdRow}
       </div>
       <p style="color:#333;font-size:14px;line-height:1.6;">Asset traces using this registry will return errors until the issue is resolved. Please check the registry endpoint configuration and contact the registry authority if the problem persists.</p>
       <p style="color:#333;font-size:14px;line-height:1.6;">View the System Status page to monitor live health and run manual tests.</p>
