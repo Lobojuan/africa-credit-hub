@@ -750,6 +750,7 @@ function RegistryStatusPanel() {
   const { toast } = useToast();
   const [testResults, setTestResults] = useState<Record<string, RegistryTestResult | "testing">>({});
   const [expandedHistory, setExpandedHistory] = useState<Record<string, boolean>>({});
+  const [historyFailureOnly, setHistoryFailureOnly] = useState<Record<string, boolean>>({});
 
   const registries = Object.entries(REGISTRY_LABELS);
   const liveCount = data ? Object.values(data).filter(r => r.live && !r.sandbox).length : 0;
@@ -770,6 +771,10 @@ function RegistryStatusPanel() {
   }, {});
 
   function toggleHistory(provider: string) {
+    const willExpand = !expandedHistory[provider];
+    if (!willExpand) {
+      setHistoryFailureOnly(f => ({ ...f, [provider]: false }));
+    }
     setExpandedHistory(prev => ({ ...prev, [provider]: !prev[provider] }));
   }
 
@@ -1020,30 +1025,47 @@ function RegistryStatusPanel() {
                         }
                         <span className="ml-0.5">{isExpanded ? "▲" : "▼"}</span>
                       </button>
-                      {isExpanded && (
-                        <div
-                          data-testid={`list-registry-history-${key}`}
-                          className="mt-1 space-y-0.5 max-h-36 overflow-y-auto border rounded bg-muted/30 p-1"
-                        >
-                          {providerHistory.slice(0, 50).map(event => (
-                            <div
-                              key={event.id}
-                              data-testid={`item-registry-history-${event.id}`}
-                              className={`flex items-center gap-1.5 text-[10px] px-1.5 py-0.5 rounded ${event.status === "ok" ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}`}
-                            >
-                              {event.status === "ok"
-                                ? <CheckCircle2 className="w-2.5 h-2.5 shrink-0" />
-                                : <XCircle className="w-2.5 h-2.5 shrink-0" />}
-                              <span className="text-muted-foreground shrink-0">
-                                {new Date(event.checkedAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                              </span>
-                              {event.status === "ok"
-                                ? <span>OK{event.latencyMs != null ? ` · ${event.latencyMs}ms` : ""}</span>
-                                : <span className="truncate">Fail{event.error ? ` · ${event.error}` : ""}</span>}
+                      {isExpanded && (() => {
+                        const visibleHistory = providerHistory.slice(0, 50).filter(e => !historyFailureOnly[key] || e.status !== "ok");
+                        return (
+                          <div className="mt-1">
+                            <div className="flex items-center justify-end mb-0.5">
+                              <button
+                                data-testid={`button-filter-failures-${key}`}
+                                onClick={() => setHistoryFailureOnly(prev => ({ ...prev, [key]: !prev[key] }))}
+                                className={`text-[9px] px-1.5 py-0.5 rounded border transition-colors ${historyFailureOnly[key] ? "bg-red-100 dark:bg-red-900/40 border-red-300 dark:border-red-700 text-red-700 dark:text-red-400 font-medium" : "border-border text-muted-foreground hover:text-foreground"}`}
+                              >
+                                {historyFailureOnly[key] ? "Failures only" : "All checks"}
+                              </button>
                             </div>
-                          ))}
-                        </div>
-                      )}
+                            <div
+                              data-testid={`list-registry-history-${key}`}
+                              className="space-y-0.5 max-h-36 overflow-y-auto border rounded bg-muted/30 p-1"
+                            >
+                              {visibleHistory.map(event => (
+                                <div
+                                  key={event.id}
+                                  data-testid={`item-registry-history-${event.id}`}
+                                  className={`flex items-center gap-1.5 text-[10px] px-1.5 py-0.5 rounded ${event.status === "ok" ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}`}
+                                >
+                                  {event.status === "ok"
+                                    ? <CheckCircle2 className="w-2.5 h-2.5 shrink-0" />
+                                    : <XCircle className="w-2.5 h-2.5 shrink-0" />}
+                                  <span className="text-muted-foreground shrink-0">
+                                    {new Date(event.checkedAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                  </span>
+                                  {event.status === "ok"
+                                    ? <span>OK{event.latencyMs != null ? ` · ${event.latencyMs}ms` : ""}</span>
+                                    : <span className="truncate">Fail{event.error ? ` · ${event.error}` : ""}</span>}
+                                </div>
+                              ))}
+                              {visibleHistory.length === 0 && (
+                                <p data-testid={`text-no-failures-${key}`} className="text-[10px] text-muted-foreground px-1.5 py-1">No failures in this period.</p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
                       </>
