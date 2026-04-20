@@ -125,6 +125,10 @@ const PortalPage = lazy(() => import("@/pages/portal"));
 const DecisionEnginePage = lazy(() => import("@/pages/decision-engine"));
 const PlatformMasterControlPage = lazy(() => import("@/pages/platform-master-control"));
 const ComplianceQueuePage = lazy(() => import("@/pages/compliance-queue"));
+const LoanOriginationPage = lazy(() => import("@/pages/loan-origination"));
+const CollateralRegistryPage = lazy(() => import("@/pages/collateral-registry"));
+const InstitutionAnalyticsPage = lazy(() => import("@/pages/institution-analytics"));
+const InstitutionBrandingPage = lazy(() => import("@/pages/institution-branding"));
 
 function LazyFallback() {
   return (
@@ -208,6 +212,10 @@ function Router() {
         <Route path="/version-history" component={VersionHistoryPage} />
         <Route path="/guide" component={AppGuidePage} />
         <Route path="/training" component={TrainingCenterPage} />
+        <Route path="/loan-origination" component={LoanOriginationPage} />
+        <Route path="/collateral-registry" component={CollateralRegistryPage} />
+        <Route path="/institution-analytics" component={InstitutionAnalyticsPage} />
+        <Route path="/institution-branding" component={InstitutionBrandingPage} />
         <Route path="/organizations" component={OrganizationsPage} />
         <Route path="/ghana-docs" component={GhanaDocsPage} />
         <Route path="/partner-docs" component={PartnerDocsPage} />

@@ -12877,6 +12877,230 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (e: any) { res.status(500).json({ message: e.message }); }
   });
 
+  // ===========================================================================
+  // Loan Origination
+  // ===========================================================================
+
+  app.get("/api/loan-applications", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const { status } = req.query as any;
+      const orgId = user.role === "super_admin" ? undefined : user.organizationId;
+      const loans = await storage.getLoanApplications(orgId, status);
+      res.json(loans);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.get("/api/loan-applications/:id", requireAuth, async (req, res) => {
+    try {
+      const loan = await storage.getLoanApplication(req.params.id);
+      if (!loan) return res.status(404).json({ message: "Not found" });
+      res.json(loan);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.post("/api/loan-applications", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const orgId = req.body.organizationId || user.organizationId;
+      if (!orgId) return res.status(400).json({ message: "organizationId required" });
+      // Generate unique application number
+      const appNum = `LA-${Date.now().toString(36).toUpperCase()}`;
+      const loan = await storage.createLoanApplication({
+        ...req.body,
+        organizationId: orgId,
+        applicationNumber: appNum,
+        makerUserId: user.id,
+        status: "submitted",
+      });
+      res.status(201).json(loan);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.patch("/api/loan-applications/:id", requireRole("admin", "super_admin", "loan_officer"), async (req, res) => {
+    try {
+      const updated = await storage.updateLoanApplication(req.params.id, req.body);
+      if (!updated) return res.status(404).json({ message: "Not found" });
+      res.json(updated);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.post("/api/loan-applications/:id/approve", requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const { approvedAmount, interestRate, notes } = req.body;
+      const updated = await storage.updateLoanApplication(req.params.id, {
+        status: "approved",
+        approvedAmount,
+        interestRate,
+        checkerUserId: user.id,
+        checkerAction: "approved",
+        checkerNotes: notes,
+        checkedAt: new Date(),
+      });
+      if (!updated) return res.status(404).json({ message: "Not found" });
+      res.json(updated);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.post("/api/loan-applications/:id/reject", requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const updated = await storage.updateLoanApplication(req.params.id, {
+        status: "rejected",
+        checkerUserId: user.id,
+        checkerAction: "rejected",
+        checkerNotes: req.body.notes,
+        checkedAt: new Date(),
+      });
+      if (!updated) return res.status(404).json({ message: "Not found" });
+      res.json(updated);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.post("/api/loan-applications/:id/disburse", requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const updated = await storage.updateLoanApplication(req.params.id, {
+        status: "disbursed",
+        disbursedAt: new Date(),
+        disbursementReference: req.body.reference || `DISB-${Date.now()}`,
+      });
+      if (!updated) return res.status(404).json({ message: "Not found" });
+      res.json(updated);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.get("/api/loan-applications/:id/schedule", requireAuth, async (req, res) => {
+    try {
+      const schedule = await storage.getRepaymentSchedule(req.params.id);
+      res.json(schedule);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.post("/api/loan-applications/:id/schedule", requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const loan = await storage.getLoanApplication(req.params.id);
+      if (!loan) return res.status(404).json({ message: "Not found" });
+      const principal = parseFloat(String(loan.approvedAmount || loan.requestedAmount));
+      const rate = parseFloat(String(loan.interestRate || "0.15")) / 12;
+      const n = loan.termMonths;
+      const monthlyPayment = rate > 0
+        ? (principal * rate * Math.pow(1 + rate, n)) / (Math.pow(1 + rate, n) - 1)
+        : principal / n;
+      const schedules: any[] = [];
+      let balance = principal;
+      const startDate = new Date();
+      for (let i = 1; i <= n; i++) {
+        const interestAmt = balance * rate;
+        const principalAmt = monthlyPayment - interestAmt;
+        balance -= principalAmt;
+        const due = new Date(startDate);
+        due.setMonth(due.getMonth() + i);
+        schedules.push({
+          loanApplicationId: loan.id,
+          installmentNumber: i,
+          dueDate: due.toISOString().split("T")[0],
+          principalAmount: principalAmt.toFixed(2),
+          interestAmount: interestAmt.toFixed(2),
+          totalAmount: monthlyPayment.toFixed(2),
+          paidAmount: "0",
+          status: "pending",
+        });
+      }
+      const created = await storage.createRepaymentSchedules(schedules);
+      res.status(201).json(created);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.patch("/api/loan-repayments/:id/pay", requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const updated = await storage.markInstallmentPaid(req.params.id, req.body.paidAmount);
+      res.json(updated);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  // ===========================================================================
+  // Collateral Registry
+  // ===========================================================================
+
+  app.get("/api/collateral", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const { borrowerId } = req.query as any;
+      const orgId = user.role === "super_admin" ? undefined : user.organizationId;
+      const items = await storage.getCollateralItems(orgId, borrowerId);
+      res.json(items);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.get("/api/collateral/:id", requireAuth, async (req, res) => {
+    try {
+      const item = await storage.getCollateralItem(req.params.id);
+      if (!item) return res.status(404).json({ message: "Not found" });
+      res.json(item);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.post("/api/collateral", requireRole("admin", "super_admin", "loan_officer"), async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const regNum = `COL-${Date.now().toString(36).toUpperCase()}`;
+      const item = await storage.createCollateralItem({
+        ...req.body,
+        registrationNumber: req.body.registrationNumber || regNum,
+        lenderOrganizationId: req.body.lenderOrganizationId || user.organizationId,
+      });
+      res.status(201).json(item);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.patch("/api/collateral/:id", requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const updated = await storage.updateCollateralItem(req.params.id, req.body);
+      if (!updated) return res.status(404).json({ message: "Not found" });
+      res.json(updated);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  // ===========================================================================
+  // Institution Branding
+  // ===========================================================================
+
+  app.get("/api/institution-branding", requireAuth, async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const orgId = (req.query.organizationId as string) || user.organizationId;
+      if (!orgId) return res.status(400).json({ message: "organizationId required" });
+      const branding = await storage.getInstitutionBranding(orgId);
+      res.json(branding || null);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.post("/api/institution-branding", requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const orgId = req.body.organizationId || user.organizationId;
+      if (!orgId) return res.status(400).json({ message: "organizationId required" });
+      const branding = await storage.upsertInstitutionBranding({ ...req.body, organizationId: orgId });
+      res.json(branding);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  // ===========================================================================
+  // Institution Analytics
+  // ===========================================================================
+
+  app.get("/api/analytics/institution", requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const user = (req as any).user;
+      const days = parseInt(String(req.query.days || "30"));
+      const orgId = user.organizationId;
+      if (!orgId) return res.status(400).json({ message: "organizationId required" });
+      const stats = await storage.getUsageStats(orgId, days);
+      res.json(stats);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
   return httpServer;
 }
 

@@ -526,5 +526,91 @@ export async function migrateNewTables() {
     updated_by varchar REFERENCES users(id)
   )`);
 
+  // Loan Origination workflow
+  await db.execute(sql`DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'loan_application_status') THEN
+      CREATE TYPE loan_application_status AS ENUM ('draft','submitted','under_review','approved','rejected','disbursed','withdrawn');
+    END IF;
+  END $$`);
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS loan_applications (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    application_number varchar NOT NULL UNIQUE,
+    borrower_id varchar NOT NULL REFERENCES borrowers(id),
+    organization_id varchar NOT NULL REFERENCES organizations(id),
+    loan_type text NOT NULL,
+    purpose text NOT NULL,
+    requested_amount decimal(15,2) NOT NULL,
+    approved_amount decimal(15,2),
+    currency text NOT NULL DEFAULT 'GHS',
+    term_months integer NOT NULL,
+    interest_rate decimal(6,4),
+    repayment_frequency text NOT NULL DEFAULT 'monthly',
+    collateral_type text,
+    collateral_description text,
+    collateral_value decimal(15,2),
+    status loan_application_status NOT NULL DEFAULT 'draft',
+    credit_score_at_application integer,
+    notes text,
+    maker_user_id varchar REFERENCES users(id),
+    checker_user_id varchar REFERENCES users(id),
+    checker_action text,
+    checker_notes text,
+    checked_at timestamp,
+    disbursed_at timestamp,
+    disbursement_reference varchar,
+    created_at timestamp NOT NULL DEFAULT now(),
+    updated_at timestamp NOT NULL DEFAULT now()
+  )`);
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS loan_repayment_schedules (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    loan_application_id varchar NOT NULL REFERENCES loan_applications(id) ON DELETE CASCADE,
+    installment_number integer NOT NULL,
+    due_date text NOT NULL,
+    principal_amount decimal(15,2) NOT NULL,
+    interest_amount decimal(15,2) NOT NULL,
+    total_amount decimal(15,2) NOT NULL,
+    paid_amount decimal(15,2) NOT NULL DEFAULT 0,
+    paid_at timestamp,
+    status text NOT NULL DEFAULT 'pending',
+    created_at timestamp NOT NULL DEFAULT now()
+  )`);
+
+  // Collateral Registry
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS collateral_items (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    registration_number varchar NOT NULL UNIQUE,
+    borrower_id varchar NOT NULL REFERENCES borrowers(id),
+    loan_application_id varchar REFERENCES loan_applications(id),
+    collateral_type text NOT NULL,
+    description text NOT NULL,
+    estimated_value decimal(15,2) NOT NULL,
+    currency text NOT NULL DEFAULT 'GHS',
+    location text,
+    registration_date text NOT NULL,
+    expiry_date text,
+    status text NOT NULL DEFAULT 'active',
+    lender_organization_id varchar NOT NULL REFERENCES organizations(id),
+    document_reference text,
+    notes text,
+    created_at timestamp NOT NULL DEFAULT now(),
+    updated_at timestamp NOT NULL DEFAULT now()
+  )`);
+
+  // Institution Branding
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS institution_branding (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id varchar NOT NULL UNIQUE REFERENCES organizations(id),
+    primary_color text DEFAULT '#6366f1',
+    secondary_color text DEFAULT '#8b5cf6',
+    logo_url text,
+    tagline text,
+    support_email text,
+    support_phone text,
+    footer_text text,
+    custom_domain text,
+    created_at timestamp NOT NULL DEFAULT now(),
+    updated_at timestamp NOT NULL DEFAULT now()
+  )`);
+
   console.log('[NewTables] Migration complete');
 }

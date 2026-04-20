@@ -62,6 +62,11 @@ import {
   type RegistryHealthEvent, type InsertRegistryHealthEvent,
   trainingAttempts,
   type TrainingAttempt, type InsertTrainingAttempt,
+  loanApplications, loanRepaymentSchedules, collateralItems, institutionBranding,
+  type LoanApplication, type InsertLoanApplication,
+  type LoanRepaymentSchedule, type InsertLoanRepaymentSchedule,
+  type CollateralItem, type InsertCollateralItem,
+  type InstitutionBranding, type InsertInstitutionBranding,
 } from "@shared/schema";
 
 export function requireCountryScope(country: string | undefined, methodName: string): void {
@@ -333,6 +338,28 @@ export interface IStorage {
   createTrainingAttempt(data: InsertTrainingAttempt): Promise<TrainingAttempt>;
   getUserTrainingAttempts(userId: string): Promise<TrainingAttempt[]>;
   getBestTrainingAttempts(userId: string): Promise<TrainingAttempt[]>;
+
+  // Loan Origination
+  getLoanApplications(organizationId?: string, status?: string): Promise<LoanApplication[]>;
+  getLoanApplication(id: string): Promise<LoanApplication | undefined>;
+  createLoanApplication(data: InsertLoanApplication): Promise<LoanApplication>;
+  updateLoanApplication(id: string, data: Partial<InsertLoanApplication>): Promise<LoanApplication | undefined>;
+  getRepaymentSchedule(loanApplicationId: string): Promise<LoanRepaymentSchedule[]>;
+  createRepaymentSchedules(schedules: InsertLoanRepaymentSchedule[]): Promise<LoanRepaymentSchedule[]>;
+  markInstallmentPaid(id: string, paidAmount: string): Promise<LoanRepaymentSchedule | undefined>;
+
+  // Collateral Registry
+  getCollateralItems(organizationId?: string, borrowerId?: string): Promise<CollateralItem[]>;
+  getCollateralItem(id: string): Promise<CollateralItem | undefined>;
+  createCollateralItem(data: InsertCollateralItem): Promise<CollateralItem>;
+  updateCollateralItem(id: string, data: Partial<InsertCollateralItem>): Promise<CollateralItem | undefined>;
+
+  // Institution Branding
+  getInstitutionBranding(organizationId: string): Promise<InstitutionBranding | undefined>;
+  upsertInstitutionBranding(data: InsertInstitutionBranding): Promise<InstitutionBranding>;
+
+  // Institution Analytics
+  getUsageStats(organizationId: string, days: number): Promise<{ eventType: string; count: number; date: string }[]>;
 }
 
 export interface OverdueAssignmentDetail {
@@ -2731,6 +2758,135 @@ export class DatabaseStorage implements IStorage {
       }
     }
     return Array.from(best.values());
+  }
+
+  // -------------------------------------------------------------------------
+  // Loan Origination
+  // -------------------------------------------------------------------------
+
+  async getLoanApplications(organizationId?: string, status?: string): Promise<LoanApplication[]> {
+    const conditions: any[] = [];
+    if (organizationId) conditions.push(eq(loanApplications.organizationId, organizationId));
+    if (status) conditions.push(eq(loanApplications.status, status as any));
+    return await db
+      .select()
+      .from(loanApplications)
+      .where(conditions.length ? and(...conditions) : undefined)
+      .orderBy(desc(loanApplications.createdAt));
+  }
+
+  async getLoanApplication(id: string): Promise<LoanApplication | undefined> {
+    const [row] = await db.select().from(loanApplications).where(eq(loanApplications.id, id));
+    return row;
+  }
+
+  async createLoanApplication(data: InsertLoanApplication): Promise<LoanApplication> {
+    const [created] = await db.insert(loanApplications).values(data).returning();
+    return created;
+  }
+
+  async updateLoanApplication(id: string, data: Partial<InsertLoanApplication>): Promise<LoanApplication | undefined> {
+    const [updated] = await db
+      .update(loanApplications)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(loanApplications.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getRepaymentSchedule(loanApplicationId: string): Promise<LoanRepaymentSchedule[]> {
+    return await db
+      .select()
+      .from(loanRepaymentSchedules)
+      .where(eq(loanRepaymentSchedules.loanApplicationId, loanApplicationId))
+      .orderBy(loanRepaymentSchedules.installmentNumber);
+  }
+
+  async createRepaymentSchedules(schedules: InsertLoanRepaymentSchedule[]): Promise<LoanRepaymentSchedule[]> {
+    return await db.insert(loanRepaymentSchedules).values(schedules).returning();
+  }
+
+  async markInstallmentPaid(id: string, paidAmount: string): Promise<LoanRepaymentSchedule | undefined> {
+    const [updated] = await db
+      .update(loanRepaymentSchedules)
+      .set({ paidAmount, paidAt: new Date(), status: "paid" })
+      .where(eq(loanRepaymentSchedules.id, id))
+      .returning();
+    return updated;
+  }
+
+  // -------------------------------------------------------------------------
+  // Collateral Registry
+  // -------------------------------------------------------------------------
+
+  async getCollateralItems(organizationId?: string, borrowerId?: string): Promise<CollateralItem[]> {
+    const conditions: any[] = [];
+    if (organizationId) conditions.push(eq(collateralItems.lenderOrganizationId, organizationId));
+    if (borrowerId) conditions.push(eq(collateralItems.borrowerId, borrowerId));
+    return await db
+      .select()
+      .from(collateralItems)
+      .where(conditions.length ? and(...conditions) : undefined)
+      .orderBy(desc(collateralItems.createdAt));
+  }
+
+  async getCollateralItem(id: string): Promise<CollateralItem | undefined> {
+    const [row] = await db.select().from(collateralItems).where(eq(collateralItems.id, id));
+    return row;
+  }
+
+  async createCollateralItem(data: InsertCollateralItem): Promise<CollateralItem> {
+    const [created] = await db.insert(collateralItems).values(data).returning();
+    return created;
+  }
+
+  async updateCollateralItem(id: string, data: Partial<InsertCollateralItem>): Promise<CollateralItem | undefined> {
+    const [updated] = await db
+      .update(collateralItems)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(collateralItems.id, id))
+      .returning();
+    return updated;
+  }
+
+  // -------------------------------------------------------------------------
+  // Institution Branding
+  // -------------------------------------------------------------------------
+
+  async getInstitutionBranding(organizationId: string): Promise<InstitutionBranding | undefined> {
+    const [row] = await db
+      .select()
+      .from(institutionBranding)
+      .where(eq(institutionBranding.organizationId, organizationId));
+    return row;
+  }
+
+  async upsertInstitutionBranding(data: InsertInstitutionBranding): Promise<InstitutionBranding> {
+    const [upserted] = await db
+      .insert(institutionBranding)
+      .values(data)
+      .onConflictDoUpdate({ target: institutionBranding.organizationId, set: { ...data, updatedAt: new Date() } })
+      .returning();
+    return upserted;
+  }
+
+  // -------------------------------------------------------------------------
+  // Institution Analytics (usage_metering driven)
+  // -------------------------------------------------------------------------
+
+  async getUsageStats(organizationId: string, days: number): Promise<{ eventType: string; count: number; date: string }[]> {
+    const rows = await db.execute(sql`
+      SELECT
+        event_type AS "eventType",
+        DATE(recorded_at) AS date,
+        COUNT(*)::int AS count
+      FROM usage_metering
+      WHERE organization_id = ${organizationId}
+        AND recorded_at >= NOW() - INTERVAL '${sql.raw(String(days))} days'
+      GROUP BY event_type, DATE(recorded_at)
+      ORDER BY date DESC, count DESC
+    `);
+    return (rows as any).rows ?? [];
   }
 }
 

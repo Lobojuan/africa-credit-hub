@@ -53,6 +53,10 @@ import {
   ShieldAlert,
   ClipboardList,
   GraduationCap,
+  Landmark,
+  Package,
+  TrendingUp,
+  Palette,
 } from "lucide-react";
 import {
   Sidebar,
@@ -128,6 +132,10 @@ const intelligenceItems: NavItem[] = [
   { label: "AI Command Center", tKey: "sidebar.aiCommandCenter", url: "/ai-command-center", icon: Sparkles, testId: "nav-ai-command-center", roles: ["admin", "super_admin", "regulator"] },
   { label: "Telco Scoring", tKey: "sidebar.telcoScoring", url: "/telco-scoring", icon: Smartphone, testId: "nav-telco-scoring", roles: ["admin", "lender", "regulator", "super_admin"] },
   { label: "Telco Lending", tKey: "sidebar.telcoLending", url: "/telco-lending", icon: Banknote, testId: "nav-telco-lending", roles: ["admin", "lender", "regulator", "super_admin"] },
+  { label: "Loan Origination", tKey: "sidebar.loanOrigination", url: "/loan-origination", icon: Landmark, testId: "nav-loan-origination", roles: ["super_admin", "admin", "lender"] },
+  { label: "Collateral Registry", tKey: "sidebar.collateralRegistry", url: "/collateral-registry", icon: Package, testId: "nav-collateral-registry", roles: ["super_admin", "admin", "lender"] },
+  { label: "Institution Analytics", tKey: "sidebar.institutionAnalytics", url: "/institution-analytics", icon: TrendingUp, testId: "nav-institution-analytics", roles: ["admin", "super_admin"] },
+  { label: "White-Label Branding", tKey: "sidebar.institutionBranding", url: "/institution-branding", icon: Palette, testId: "nav-institution-branding", roles: ["admin", "super_admin"] },
 ];
 
 const baseOversightItems: NavItem[] = [

@@ -1720,3 +1720,114 @@ export const trainingAttempts = pgTable("training_attempts", {
 export const insertTrainingAttemptSchema = createInsertSchema(trainingAttempts).omit({ id: true, completedAt: true });
 export type InsertTrainingAttempt = z.infer<typeof insertTrainingAttemptSchema>;
 export type TrainingAttempt = typeof trainingAttempts.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Loan Origination — full application lifecycle: draft → review → approved → disbursed
+// ---------------------------------------------------------------------------
+
+export const loanApplicationStatusEnum = pgEnum("loan_application_status", [
+  "draft", "submitted", "under_review", "approved", "rejected", "disbursed", "withdrawn",
+]);
+
+export const loanApplications = pgTable("loan_applications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  applicationNumber: varchar("application_number").notNull().unique(),
+  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id),
+  loanType: text("loan_type").notNull(),
+  purpose: text("purpose").notNull(),
+  requestedAmount: decimal("requested_amount", { precision: 15, scale: 2 }).notNull(),
+  approvedAmount: decimal("approved_amount", { precision: 15, scale: 2 }),
+  currency: text("currency").notNull().default("GHS"),
+  termMonths: integer("term_months").notNull(),
+  interestRate: decimal("interest_rate", { precision: 6, scale: 4 }),
+  repaymentFrequency: text("repayment_frequency").notNull().default("monthly"),
+  collateralType: text("collateral_type"),
+  collateralDescription: text("collateral_description"),
+  collateralValue: decimal("collateral_value", { precision: 15, scale: 2 }),
+  status: loanApplicationStatusEnum("status").notNull().default("draft"),
+  creditScoreAtApplication: integer("credit_score_at_application"),
+  notes: text("notes"),
+  makerUserId: varchar("maker_user_id").references(() => users.id),
+  checkerUserId: varchar("checker_user_id").references(() => users.id),
+  checkerAction: text("checker_action"),
+  checkerNotes: text("checker_notes"),
+  checkedAt: timestamp("checked_at"),
+  disbursedAt: timestamp("disbursed_at"),
+  disbursementReference: varchar("disbursement_reference"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertLoanApplicationSchema = createInsertSchema(loanApplications).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertLoanApplication = z.infer<typeof insertLoanApplicationSchema>;
+export type LoanApplication = typeof loanApplications.$inferSelect;
+
+export const loanRepaymentSchedules = pgTable("loan_repayment_schedules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  loanApplicationId: varchar("loan_application_id").notNull().references(() => loanApplications.id, { onDelete: "cascade" }),
+  installmentNumber: integer("installment_number").notNull(),
+  dueDate: text("due_date").notNull(),
+  principalAmount: decimal("principal_amount", { precision: 15, scale: 2 }).notNull(),
+  interestAmount: decimal("interest_amount", { precision: 15, scale: 2 }).notNull(),
+  totalAmount: decimal("total_amount", { precision: 15, scale: 2 }).notNull(),
+  paidAmount: decimal("paid_amount", { precision: 15, scale: 2 }).notNull().default("0"),
+  paidAt: timestamp("paid_at"),
+  status: text("status").notNull().default("pending"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertLoanRepaymentScheduleSchema = createInsertSchema(loanRepaymentSchedules).omit({ id: true, createdAt: true });
+export type InsertLoanRepaymentSchedule = z.infer<typeof insertLoanRepaymentScheduleSchema>;
+export type LoanRepaymentSchedule = typeof loanRepaymentSchedules.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Collateral Registry — standalone pledged-asset tracking across all loans
+// ---------------------------------------------------------------------------
+
+export const collateralItems = pgTable("collateral_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  registrationNumber: varchar("registration_number").notNull().unique(),
+  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id),
+  loanApplicationId: varchar("loan_application_id").references(() => loanApplications.id),
+  collateralType: text("collateral_type").notNull(),
+  description: text("description").notNull(),
+  estimatedValue: decimal("estimated_value", { precision: 15, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("GHS"),
+  location: text("location"),
+  registrationDate: text("registration_date").notNull(),
+  expiryDate: text("expiry_date"),
+  status: text("status").notNull().default("active"),
+  lenderOrganizationId: varchar("lender_organization_id").notNull().references(() => organizations.id),
+  documentReference: text("document_reference"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertCollateralItemSchema = createInsertSchema(collateralItems).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertCollateralItem = z.infer<typeof insertCollateralItemSchema>;
+export type CollateralItem = typeof collateralItems.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Institution Branding — per-institution white-label customization
+// ---------------------------------------------------------------------------
+
+export const institutionBranding = pgTable("institution_branding", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull().unique().references(() => organizations.id),
+  primaryColor: text("primary_color").default("#6366f1"),
+  secondaryColor: text("secondary_color").default("#8b5cf6"),
+  logoUrl: text("logo_url"),
+  tagline: text("tagline"),
+  supportEmail: text("support_email"),
+  supportPhone: text("support_phone"),
+  footerText: text("footer_text"),
+  customDomain: text("custom_domain"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertInstitutionBrandingSchema = createInsertSchema(institutionBranding).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertInstitutionBranding = z.infer<typeof insertInstitutionBrandingSchema>;
+export type InstitutionBranding = typeof institutionBranding.$inferSelect;
