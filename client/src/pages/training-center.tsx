@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { TRAINING_MODULES, OVERALL_PASS_PERCENT, type TrainingModule, type TrainingQuestion } from "@/lib/training-content";
+import { getModules, OVERALL_PASS_PERCENT, type TrainingModule, type TrainingQuestion } from "@/lib/training-content";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -319,6 +320,9 @@ function OverallProgress({ attempts }: { attempts: BestAttempt[] }) {
 }
 
 export default function TrainingCenter() {
+  const { i18n } = useTranslation();
+  const TRAINING_MODULES = useMemo(() => getModules(i18n.language), [i18n.language]);
+
   const [screen, setScreen] = useState<Screen>("home");
   const [quiz, setQuiz] = useState<QuizState | null>(null);
   const [finalAnswers, setFinalAnswers] = useState<AnswerRecord[]>([]);
