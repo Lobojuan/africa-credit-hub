@@ -415,6 +415,24 @@ export async function migrateNewTables() {
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_afford_borrower ON affordability_assessments(borrower_id)`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_afford_org ON affordability_assessments(organization_id)`);
 
+  // Linked open-banking accounts — persisted account linkage per borrower
+  // Created as part of Task #28 Affordability Module (open-banking link lifecycle)
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS linked_open_banking_accounts (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    borrower_id varchar NOT NULL REFERENCES borrowers(id) ON DELETE CASCADE,
+    provider text NOT NULL,
+    account_id text NOT NULL,
+    account_holder_name text,
+    bank_name text,
+    currency text,
+    status text NOT NULL DEFAULT 'active',
+    linked_at timestamp DEFAULT now() NOT NULL,
+    revoked_at timestamp,
+    meta jsonb
+  )`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_linked_ob_accounts_borrower ON linked_open_banking_accounts(borrower_id)`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_linked_ob_accounts_status ON linked_open_banking_accounts(borrower_id, status)`);
+
   await db.execute(sql`CREATE TABLE IF NOT EXISTS collection_sla_settings (
     id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id varchar REFERENCES organizations(id),
