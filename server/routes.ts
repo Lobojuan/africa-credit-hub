@@ -12356,6 +12356,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         checkIntervalMinutes: cfg?.checkIntervalMinutes ?? 15,
         retentionDays: cfg?.retentionDays ?? null,
         effectiveRetentionDays: Math.min(Math.max(rawEffective, MIN_RETENTION), MAX_RETENTION),
+        defaultRetentionDays: defaultRetention,
         currentIntervalMinutes: Math.round(getCurrentIntervalMs() / 60000),
         cleanupTimeUtc: cfg?.cleanupTimeUtc ?? null,
         currentCleanupTimeUtc: getCurrentCleanupTimeUtc(),
@@ -12388,6 +12389,19 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       }
 
       res.json(cfg);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // Registry health affected count — how many records would be pruned at a given retention period
+  app.get("/api/admin/registry-health-affected-count", requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const retentionDays = parseInt(req.query.retentionDays as string, 10);
+      if (isNaN(retentionDays) || retentionDays < 7 || retentionDays > 90) {
+        return res.status(400).json({ message: "retentionDays must be between 7 and 90" });
+      }
+      const beforeDate = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
+      const count = await storage.countOldRegistryHealthEvents(beforeDate);
+      res.json({ count, retentionDays });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 

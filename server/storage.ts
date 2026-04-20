@@ -306,6 +306,7 @@ export interface IStorage {
   getRegistryHealthEvents(provider: string, sinceDays?: number): Promise<RegistryHealthEvent[]>;
   getAllRegistryHealthEvents(sinceDays?: number): Promise<RegistryHealthEvent[]>;
   deleteOldRegistryHealthEvents(beforeDate: Date): Promise<number>;
+  countOldRegistryHealthEvents(beforeDate: Date): Promise<number>;
 
   // ─── Affordability & Income Verification (Task #28) ───────────────────────
   getIncomeSourcesByBorrower(borrowerId: string): Promise<IncomeSource[]>;
@@ -2656,6 +2657,14 @@ export class DatabaseStorage implements IStorage {
       .delete(registryHealthEvents)
       .where(lt(registryHealthEvents.checkedAt, beforeDate));
     return result.rowCount ?? 0;
+  }
+
+  async countOldRegistryHealthEvents(beforeDate: Date): Promise<number> {
+    const [row] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(registryHealthEvents)
+      .where(lt(registryHealthEvents.checkedAt, beforeDate));
+    return row?.count ?? 0;
   }
 
   async createTrainingAttempt(data: InsertTrainingAttempt): Promise<TrainingAttempt> {

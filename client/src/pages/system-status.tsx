@@ -2,6 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Activity, Database, Server, Wifi, Clock, CheckCircle2, AlertTriangle, Shield, Cpu, HardDrive, RefreshCw, Archive, Download, Upload, Trash2, Loader2, XCircle, Globe, Radio, Settings2, ChevronDown, ChevronUp } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -410,7 +411,9 @@ interface RegistryHealthConfigData {
   slackWebhookUrl: string | null;
   checkIntervalMinutes: number;
   retentionDays: number | null;
+  defaultRetentionDays: number;
   effectiveRetentionDays: number;
+  defaultRetentionDays: number;
   currentIntervalMinutes: number;
   cleanupTimeUtc: string | null;
   currentCleanupTimeUtc: string;
@@ -423,11 +426,20 @@ interface RegistryCleanupStats {
   retentionDays: number | null;
 }
 
+interface RetentionConfirmState {
+  affectedCount: number;
+  countUnavailable: boolean;
+  newRetentionDays: number;
+  payload: { alertEmail: string | null; slackWebhookUrl: string | null; checkIntervalMinutes: number; retentionDays: number | null; cleanupTimeUtc: string | null };
+}
+
 function RegistryHealthConfigPanel() {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<{ alertEmail: string; slackWebhookUrl: string; checkIntervalMinutes: string; retentionDays: string; cleanupTimeUtc: string } | null>(null);
   const [confirmCleanup, setConfirmCleanup] = useState(false);
+  const [retentionConfirm, setRetentionConfirm] = useState<RetentionConfirmState | null>(null);
+  const [checkingAffected, setCheckingAffected] = useState(false);
 
   const { data, isLoading } = useQuery<RegistryHealthConfigData>({
     queryKey: ["/api/admin/registry-health-config"],
@@ -485,8 +497,8 @@ function RegistryHealthConfigPanel() {
     setOpen(v => !v);
   }
 
-  function handleSave() {
-    if (!form) return;
+  async function handleSave() {
+    if (!form || !data) return;
     const interval = parseInt(form.checkIntervalMinutes, 10);
     if (isNaN(interval) || interval < 1 || interval > 1440) {
       toast({ title: "Invalid interval", description: "Interval must be between 1 and 1440 minutes.", variant: "destructive" });
@@ -506,13 +518,36 @@ function RegistryHealthConfigPanel() {
       toast({ title: "Invalid cleanup time", description: "Cleanup time must be in HH:MM format (e.g. 03:00).", variant: "destructive" });
       return;
     }
-    saveMutation.mutate({
+    const payload = {
       alertEmail: form.alertEmail.trim() || null,
       slackWebhookUrl: form.slackWebhookUrl.trim() || null,
       checkIntervalMinutes: interval,
       retentionDays,
       cleanupTimeUtc: cleanupTimeRaw || null,
-    });
+    };
+    const effectiveCurrent = data.effectiveRetentionDays;
+    const effectiveNew = retentionDays !== null ? retentionDays : data.defaultRetentionDays;
+    if (effectiveNew < effectiveCurrent) {
+      setCheckingAffected(true);
+      try {
+        const res = await fetch(`/api/admin/registry-health-affected-count?retentionDays=${effectiveNew}`, { credentials: "include" });
+        if (!res.ok) throw new Error("Failed to fetch affected count");
+        const json = await res.json();
+        setRetentionConfirm({ affectedCount: json.count ?? 0, countUnavailable: false, newRetentionDays: effectiveNew, payload });
+      } catch {
+        setRetentionConfirm({ affectedCount: 0, countUnavailable: true, newRetentionDays: effectiveNew, payload });
+      } finally {
+        setCheckingAffected(false);
+      }
+      return;
+    }
+    saveMutation.mutate(payload);
+  }
+
+  function handleConfirmSave() {
+    if (!retentionConfirm) return;
+    saveMutation.mutate(retentionConfirm.payload);
+    setRetentionConfirm(null);
   }
 
   return (
@@ -712,10 +747,10 @@ function RegistryHealthConfigPanel() {
                       size="sm"
                       className="h-7 text-xs ml-auto"
                       onClick={handleSave}
-                      disabled={saveMutation.isPending}
+                      disabled={saveMutation.isPending || checkingAffected}
                       data-testid="button-save-registry-health-config"
                     >
-                      {saveMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+                      {(saveMutation.isPending || checkingAffected) ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
                       Save Settings
                     </Button>
                   </div>
@@ -725,6 +760,61 @@ function RegistryHealthConfigPanel() {
           )}
         </CardContent>
       )}
+
+      <Dialog open={retentionConfirm !== null} onOpenChange={v => { if (!v) setRetentionConfirm(null); }}>
+        <DialogContent data-testid="dialog-retention-confirm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-500" />
+              Shorten retention period?
+            </DialogTitle>
+            <DialogDescription asChild>
+              <div className="space-y-2 text-sm">
+                <p>
+                  You are reducing the history retention period to{" "}
+                  <span className="font-semibold text-foreground" data-testid="text-confirm-new-retention">{retentionConfirm?.newRetentionDays} days</span>.
+                </p>
+                {retentionConfirm?.countUnavailable ? (
+                  <p data-testid="text-confirm-count-unavailable" className="text-amber-600 dark:text-amber-400">
+                    The estimated number of affected records could not be retrieved. Records older than {retentionConfirm.newRetentionDays} days may be deleted on the next daily cleanup run.
+                  </p>
+                ) : retentionConfirm && retentionConfirm.affectedCount > 0 ? (
+                  <p data-testid="text-confirm-affected-count">
+                    Approximately{" "}
+                    <span className="font-semibold text-amber-600 dark:text-amber-400">{retentionConfirm.affectedCount} record{retentionConfirm.affectedCount !== 1 ? "s" : ""}</span>
+                    {" "}older than {retentionConfirm.newRetentionDays} days will be deleted on the next daily cleanup run.
+                  </p>
+                ) : (
+                  <p data-testid="text-confirm-no-affected">
+                    No existing records are older than {retentionConfirm?.newRetentionDays} days, so no data will be lost immediately.
+                  </p>
+                )}
+                <p className="text-muted-foreground">This action cannot be undone. Are you sure you want to continue?</p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setRetentionConfirm(null)}
+              data-testid="button-confirm-cancel"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleConfirmSave}
+              disabled={saveMutation.isPending}
+              data-testid="button-confirm-save"
+            >
+              {saveMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+              Save anyway
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
