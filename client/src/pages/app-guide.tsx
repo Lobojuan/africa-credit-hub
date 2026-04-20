@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
 import {
   LayoutDashboard, Users, CreditCard, Search, FileText, Shield, Settings,
@@ -23,261 +24,322 @@ interface Slide {
   tips?: string[];
 }
 
-const slides: Slide[] = [
-  {
-    id: "welcome", section: "Welcome", sectionIcon: Globe,
-    title: "Welcome to the Credit Registry System",
-    narration: "This walkthrough will guide you through every feature of the Pan-African Credit Registry System. The system covers all 54 African countries, supports 42+ currencies, and provides comprehensive credit information management across five languages — English, French, Portuguese, Arabic, and Swahili. Let's take a tour of what you'll find inside.",
-    visual: "hero",
-  },
-  {
-    id: "login", section: "Getting Started", sectionIcon: Monitor,
-    title: "Logging In",
-    narration: "To get started, enter your username and password on the login page and click 'Sign In'. You can also sign in using Google, Microsoft, Apple, or Enterprise SSO via the social login buttons below the form. The system supports five user roles — Super Admin, Administrator, Regulator, Lender, and Viewer — each with different access levels. After login, you can enable Multi-Factor Authentication (MFA/TOTP) from your profile for extra security using any authenticator app.",
-    visual: "login",
-    tips: ["Passwords expire every 90 days for security", "After 3 failed attempts, your account is temporarily locked", "Enable MFA/TOTP from your profile for two-factor authentication", "Social login supports Google, Microsoft, Apple, and Enterprise SSO"],
-  },
-  {
-    id: "sidebar", section: "Getting Started", sectionIcon: Monitor,
-    title: "Navigating the Sidebar",
-    narration: "Once logged in, the sidebar on the left is your main navigation. It's organized into twelve sections: Overview (Dashboard, Portfolio Intelligence, Platform Metrics), Credit Data (Consumers, Businesses, Credit Accounts, Credit Search, Institutions), Reports & Scoring (Credit Reports, Score Methodology, AI Reports), Data Management (Batch Upload, Data Quality, Exchange Rates), Workflows (Disputes, Pending Approvals, Consent, Helpdesk, Alerts, Collections), Intelligence (AI Command Center, Telco Scoring & Lending, Find Connections), Oversight & Compliance (Regulatory Dashboard, Audit Trail, Compliance Queue, BOG/BSL Export), Cross-Border (Agreements, Cross-Border Search, PAPSS Settlements), Administration (Command Center, Organizations, Users, Billing, Webhooks, Retention), API & Integrations (API Keys, API Docs, Webhook Management), Infrastructure (System Status, Backup, Security), and Help & Resources (App Guide, Documentation, Ghana Docs, Helpdesk). Items you don't have access to are automatically hidden based on your role.",
-    visual: "sidebar", highlight: "sidebar",
-  },
-  {
-    id: "dashboard-overview", section: "Dashboard", sectionIcon: LayoutDashboard,
-    title: "Your Dashboard — The Command Center",
-    narration: "The Dashboard is your landing page after login. At the top, summary cards show you the key numbers at a glance: Total Borrowers, Total Credit Accounts, Active Disputes, and Pending Approvals. Each card includes a sparkline mini-chart showing 7-day trends below the stat number. These update in real time as data flows into the system. Look for the notification bell in the header area — it shows a red badge with your unread notification count.",
-    visual: "dashboard",
-    roleNotes: [
-      { role: "Super Admin", note: "You see data across ALL countries and institutions" },
-      { role: "Administrator", note: "You see data across all institutions in your country" },
-      { role: "Lender", note: "Numbers reflect only YOUR institution's data" },
-      { role: "Regulator", note: "You see data within your regulatory jurisdiction" },
-    ],
-  },
-  {
-    id: "dashboard-charts", section: "Dashboard", sectionIcon: LayoutDashboard,
-    title: "Portfolio Growth & Analytics Charts",
-    narration: "Below the summary cards, interactive charts appear. The area chart shows 12 months of portfolio growth. A donut chart breaks down accounts by status (Current, Delinquent, Default) and a horizontal bar chart shows distribution by loan type. Hover over any element for detailed tooltips.",
-    visual: "charts",
-    tips: ["Charts are interactive — hover for detailed tooltips", "Colors automatically adjust in dark mode", "Charts resize responsively on smaller screens"],
-  },
-  {
-    id: "dashboard-map", section: "Dashboard", sectionIcon: LayoutDashboard,
-    title: "Africa Coverage Map",
-    narration: "The interactive map shows all 54 African countries color-coded by activity level. Darker shading means more borrowers registered. Hover over any country to see a tooltip with the country name, borrower count, and account count.",
-    visual: "map",
-  },
-  {
-    id: "consumer-portal", section: "Consumer Portal", sectionIcon: UserCheck,
-    title: "Consumer Self-Service Portal",
-    narration: "The Consumer Portal at '/my-credit' lets individuals check their own credit standing. Consumers can register via '/consumer/register' with their national ID and personal details. Once registered, they can view their credit score, credit accounts, dispute history, and consent records — all without needing a system login. This self-service portal supports all five platform languages.",
-    visual: "consumer-portal",
-    tips: ["Consumers register directly — no admin setup needed", "The portal shows a read-only view of their credit data", "Consumers can file disputes directly from the portal"],
-  },
-  {
-    id: "borrowers-list", section: "Borrowers", sectionIcon: Users,
-    title: "Consumers & Businesses",
-    narration: "The system separates borrowers into Consumers (individuals) and Businesses (corporates). Click 'Consumers' or 'Businesses' in the sidebar to see dedicated list views with columns for Name, National ID, Country, Status, and Risk Level. Super Admins also see a combined 'Borrowers (All)' view. Use the search bar to filter by name, ID, phone, or email.",
-    visual: "table-borrowers",
-    roleNotes: [
-      { role: "Administrator", note: "You see ALL borrowers across all institutions" },
-      { role: "Lender", note: "You see borrowers associated with YOUR institution only" },
-      { role: "Viewer", note: "Read-only access — no Add or Edit buttons" },
-    ],
-  },
-  {
-    id: "borrowers-add", section: "Borrowers", sectionIcon: Users,
-    title: "Adding a New Borrower",
-    narration: "Click 'Register Borrower' to open the registration form. Select Individual or Corporate, then fill in the required fields including national ID, contact details, employer, and education level. After submitting, the record enters the maker-checker approval queue — another authorized user must approve it before it becomes active. A pending-approval amber banner appears on records awaiting review.",
-    visual: "form-borrower",
-    tips: ["National ID must be unique within a country", "Set the PEP flag for Politically Exposed Persons", "Select the correct country — it determines the jurisdiction"],
-  },
-  {
-    id: "borrower-detail", section: "Borrowers", sectionIcon: Users,
-    title: "Borrower Detail Page",
-    narration: "Click any borrower row to open their full profile. See all linked credit accounts, payment history, credit inquiries, court judgments, and consent records. Generate a comprehensive credit report by clicking the 'Generate Credit Report' button. You'll also find the purple-gradient 'AI Risk Analysis' button — click it to get an AI-powered risk assessment with a risk score, key risk factors, actionable recommendations, and regulatory flags.",
-    visual: "detail-borrower",
-  },
-  {
-    id: "credit-accounts", section: "Credit Accounts", sectionIcon: CreditCard,
-    title: "Managing Credit Accounts",
-    narration: "Navigate to 'Credit Accounts' in the sidebar. The table shows all credit facilities: Account Number, Borrower, Institution, Type, Status, Currency, Amount, and Days in Arrears. Click '+ Add Account' to record a new facility. The system supports 42+ African currencies with automatic exchange rate conversion.",
-    visual: "table-accounts",
-    tips: ["For Islamic finance, check the 'Interest-Free' checkbox", "Days in Arrears should reflect the latest reporting date", "Supports 42+ currencies including ETB, GHS, NGN, KES, ZAR, XOF, and more"],
-  },
-  {
-    id: "search", section: "Credit Search", sectionIcon: Search,
-    title: "Structured Credit Search",
-    narration: "Click 'Credit Search' in the sidebar. The search page has four structured tabs — Consumer, Business, Telco, and General. The Consumer tab searches by name, national ID, or phone. The Business tab searches by company name, registration number, or TIN. The Telco tab searches telco subscriber profiles by provider, MSISDN, or account ID. The General tab performs a broad cross-entity search. Each tab returns detailed results with direct links to reports.",
-    visual: "search",
-    tips: ["Use the tab that matches your search type for best results", "Partial matching is supported — no need to type the full name", "All searches are logged in the audit trail for compliance"],
-  },
-  {
-    id: "credit-report", section: "Credit Reports", sectionIcon: FileText,
-    title: "Generating Credit Reports",
-    narration: "From a borrower's detail page, click 'Generate Credit Report'. The system produces a comprehensive D&B-style report with a Credit Profile Overview, liability breakdown, aging analysis, credit exposure, and detailed facility cards with 24-month payment history grids. Use the 'AI Summary' button to generate a plain-language overview. When downloading as PDF, choose from all five languages — English, French, Portuguese, Arabic, or Swahili — using the language selector. Business borrowers get a separate Business Credit Report format.",
-    visual: "report",
-    tips: ["Each report gets a unique serial number for audit tracking", "Bureau Score ranges from 300 to 850 with grade and factor analysis", "Every report generation is logged in the audit trail", "PDF reports are available in EN, FR, PT, AR, and SW"],
-  },
-  {
-    id: "score-methodology", section: "Credit Reports", sectionIcon: BarChart3,
-    title: "Score Methodology",
-    narration: "Navigate to 'Score Methodology' in the sidebar to understand how credit scores are calculated. The page explains the 300–850 scoring model, the weight of each factor (payment history, credit utilization, length of credit, credit mix, and new inquiries), grade bands (Excellent, Good, Fair, Poor, Very Poor), and how reason codes are assigned. A public Score Guide is also available at '/score-guide' for external stakeholders.",
-    visual: "score-methodology",
-  },
-  {
-    id: "telco", section: "Telco", sectionIcon: Smartphone,
-    title: "Telco Scoring & Lending",
-    narration: "The Telco module brings mobile network data into credit decisioning. 'Telco Scoring' lets you view and score telco subscriber profiles — airtime usage, mobile money transactions, top-up frequency, and data consumption — to generate alternative credit scores for the unbanked. 'Telco Lending' manages micro-loans originated through telco channels with automated decisioning based on telco scores. Search telco profiles by provider, MSISDN, or account ID.",
-    visual: "telco",
-    tips: ["Telco scores complement traditional bureau scores", "Supports major African mobile networks and mobile money providers", "Search allows empty filters to browse all telco profiles"],
-  },
-  {
-    id: "batch-upload", section: "Operations", sectionIcon: Upload,
-    title: "Uploading Records in Bulk",
-    narration: "Click 'Batch Upload' in the sidebar. Select Borrowers or Credit Accounts, then choose your CSV or JSON file. Download the template first for the required column format. The system validates every row and shows a summary of successful imports and errors. You can also paste JSON data directly.",
-    visual: "upload",
-    tips: ["Date format must be YYYY-MM-DD", "Currency codes must be valid ISO 4217 (ETB, KES, NGN, etc.)", "Maximum file size is 10MB per upload"],
-  },
-  {
-    id: "disputes", section: "Operations", sectionIcon: AlertCircle,
-    title: "Managing Disputes",
-    narration: "Navigate to 'Disputes' in the sidebar. View all dispute cases with their status, priority, and SLA deadline. File a new dispute by selecting the borrower, disputed record, dispute type, and description. Financial corrections have a 2-day SLA, non-financial corrections have a 5-day SLA. Disputes approaching their deadline are highlighted in red. Breached SLAs appear in regulatory reports.",
-    visual: "disputes",
-  },
-  {
-    id: "approvals", section: "Operations", sectionIcon: CheckSquare,
-    title: "Maker-Checker Approvals",
-    narration: "Go to 'Pending Approvals'. When any user creates or modifies a record, the change enters this queue. Click to see full before/after details. Click 'Approve' to apply or 'Reject' with a reason. Important: you cannot approve your own submissions. Only Admin, Regulator, and Super Admin roles can approve or reject changes.",
-    visual: "approval",
-    tips: ["You cannot approve your own submissions", "All approval actions are logged in the audit trail"],
-  },
-  {
-    id: "borrower-alerts", section: "Operations", sectionIcon: Bell,
-    title: "Borrower Alerts",
-    narration: "Navigate to 'Borrower Alerts' in the sidebar. This page shows system-generated alerts for significant borrower events — new delinquencies, status changes, large balance movements, PEP flag changes, and SLA breaches. Alerts are color-coded by severity and can be filtered by type, date range, or institution.",
-    visual: "borrower-alerts",
-  },
-  {
-    id: "audit", section: "Oversight", sectionIcon: Shield,
-    title: "Tamper-Evident Audit Trail",
-    narration: "Click 'Audit Trail' to see every action: record creations, modifications, report generations, login attempts, and approvals. Each entry shows Timestamp, User, Action, Entity, and Details. The audit log uses SHA-256 hash chaining — entries cannot be tampered with. Toggle between table and timeline views, use date range filters to narrow results, and export filtered records as CSV or Excel using the export buttons.",
-    visual: "audit",
-  },
-  {
-    id: "regulatory-dashboard", section: "Oversight", sectionIcon: Eye,
-    title: "Regulatory Dashboard",
-    narration: "Navigate to 'Regulatory Dashboard' for a high-level supervisory overview. See NPL ratios across institutions, data submission compliance rates, dispute resolution performance, and sector exposure breakdowns. This dashboard is designed for regulators and senior management who need a panoramic view of credit market health across jurisdictions.",
-    visual: "regulatory-dashboard",
-    roleNotes: [
-      { role: "Regulator", note: "Primary view for regulatory oversight" },
-      { role: "Administrator", note: "Full access to all regulatory metrics" },
-    ],
-  },
-  {
-    id: "compliance", section: "Oversight", sectionIcon: Scale,
-    title: "Regulatory Compliance",
-    narration: "Navigate to 'Regulatory Compliance'. This dashboard shows compliance metrics: data submission rates, dispute resolution SLA performance, consent coverage, and NPL ratios. Traffic-light indicators show green (compliant), yellow (at risk), or red (non-compliant). Use the 'Generate AI Compliance Report' button with the country selector to produce an AI-powered compliance assessment for any of the 54 African jurisdictions.",
-    visual: "compliance",
-  },
-  {
-    id: "bog-bsl-export", section: "Oversight", sectionIcon: FileText,
-    title: "Regulatory Export (BOG / BSL)",
-    narration: "Depending on your country mode, the sidebar shows either 'BOG Export' (Ghana — Bank of Ghana) or 'BSL Export' (Sierra Leone — Bank of Sierra Leone). These pages let you generate regulatory submission files in the format required by the central bank — batch upload data, borrower records, and credit accounts formatted per BoG CRB v1.1 or BSL standards.",
-    visual: "bog-export",
-  },
-  {
-    id: "cross-border", section: "Cross-Border", sectionIcon: Network,
-    title: "Cross-Border Features",
-    narration: "The Cross-Border section enables pan-African data sharing. 'Agreements' manages bilateral and multilateral data-sharing agreements between countries. 'Cross-Border Search' lets authorized users search borrower records across jurisdictions for cross-border entity resolution. 'PAPSS Settlements' integrates with the Pan-African Payment and Settlement System for cross-border payment tracking and reconciliation.",
-    visual: "cross-border",
-    tips: ["Cross-border access requires a valid data-sharing agreement", "PAPSS settlements track real-time cross-border payments", "Access is controlled per user role and agreement scope"],
-  },
-  {
-    id: "portfolio-intelligence", section: "AI Features", sectionIcon: BarChart3,
-    title: "Portfolio Intelligence",
-    narration: "Navigate to 'Portfolio Intelligence' for AI-driven portfolio analytics. This page provides deep-dive analysis of your credit portfolio — concentration risk, sector exposure, geographic distribution, vintage analysis, and trend forecasting. AI-generated insights highlight emerging risks and opportunities across your book.",
-    visual: "portfolio-intelligence",
-    roleNotes: [{ role: "Administrator", note: "Full portfolio view across all institutions" }],
-  },
-  {
-    id: "ai-command-center", section: "AI Features", sectionIcon: Brain,
-    title: "AI Command Center",
-    narration: "The AI Command Center is your natural-language interface to the entire registry. Ask questions like 'Show me all defaulted borrowers in Ghana' or 'What is the NPL ratio for microfinance institutions?' The AI interprets your query, runs the appropriate analysis, and returns formatted results with charts and tables. It combines GPT-4o intelligence with real-time registry data.",
-    visual: "ai-command-center",
-  },
-  {
-    id: "ai-features", section: "AI Features", sectionIcon: Brain,
-    title: "AI-Powered Intelligence",
-    narration: "The platform integrates AI for intelligent analysis throughout. On any borrower's detail page, click the purple 'AI Risk Analysis' button to get a comprehensive risk assessment with score, risk factors, and recommendations. On credit reports, use 'AI Summary' for a plain-language overview. The floating chatbot (bottom-right) includes an AI Assistant mode for answering questions about credit data and regulations with streaming responses.",
-    visual: "ai-features",
-    tips: ["AI analysis considers all borrower data including accounts, disputes, and payment history", "AI responses are generated fresh each time based on current data", "The AI chatbot supports streaming responses for real-time interaction"],
-  },
-  {
-    id: "institutions", section: "Administration", sectionIcon: Building2,
-    title: "Institution Management",
-    narration: "Navigate to 'Institutions' (Admin only). View and manage all registered financial institutions — their code, name, type (Bank, MFI, Utility, Telecom, Digital Lender, SACCO), country, status, and contact details. Click '+ Add Institution' to register a new participating institution. Newly registered institutions start with 'Pending' status and must be approved.",
-    visual: "institutions",
-  },
-  {
-    id: "users", section: "Administration", sectionIcon: Settings,
-    title: "User Management & Roles",
-    narration: "Go to 'User Management' (Admin only). Create and manage user accounts with five roles: Super Admin (multi-country full access), Administrator (full access within country), Regulator (oversight and approvals), Lender (own institution data entry), or Viewer (read-only). Password policies enforce complexity and 90-day expiry. Accounts lock after 3 failed login attempts.",
-    visual: "users",
-  },
-  {
-    id: "command-center", section: "Administration", sectionIcon: Server,
-    title: "Command Center & Organizations",
-    narration: "Super Admins have access to the 'Command Center' — a multi-country management console for overseeing all jurisdictions, switching country contexts, and managing system-wide settings. The 'Organizations' page manages top-level organizational entities that group institutions. These features are exclusive to the Super Admin role for centralized platform governance.",
-    visual: "command-center",
-    roleNotes: [{ role: "Super Admin", note: "Exclusive access — not visible to other roles" }],
-  },
-  {
-    id: "exchange-rates", section: "Administration", sectionIcon: DollarSign,
-    title: "Exchange Rate Management",
-    narration: "Under Administration, find 'Exchange Rates' (Admin only). The system supports 42+ African currencies. View current rates, update manually, or let the system auto-sync every 6 hours. These rates are used when consolidating multi-currency exposure in credit reports.",
-    visual: "exchange",
-  },
-  {
-    id: "system-admin", section: "Administration", sectionIcon: Activity,
-    title: "System Administration",
-    narration: "Several tools keep the platform running smoothly. 'System Status' shows real-time health of all services — database, API, background jobs, and integrations. 'Backup & Recovery' (Super Admin) manages database backups with restore capabilities. 'Webhook Management' configures outbound event notifications to external systems. 'Retention Policies' sets data retention rules per regulation. 'Platform Metrics' tracks system-wide usage statistics.",
-    visual: "system-admin",
-    tips: ["System Status shows green/yellow/red health indicators", "Backups can be triggered manually or run on schedule", "Webhooks notify external systems of key events in real time"],
-  },
-  {
-    id: "helpdesk", section: "Support", sectionIcon: Headset,
-    title: "Getting Help",
-    narration: "Need assistance? Use the Helpdesk for support tickets, the Online Manual for searchable help articles, or the Documentation page for downloadable guides — 13 general documents plus 8 Ghana-specific documents, all available in five languages with PDF download. The floating chatbot (bottom-right) lets you ask questions, file disputes, or browse FAQs without leaving the page. Click the Sparkles icon in the chatbot to switch to AI Assistant mode.",
-    visual: "help",
-  },
-  {
-    id: "notifications", section: "Notifications", sectionIcon: Bell,
-    title: "Real-Time Notifications",
-    narration: "The notification bell in the header keeps you informed of important events — new disputes, approval requests, system alerts, and more. A red badge shows your unread count. Click the bell to see recent notifications, click any notification to navigate to the relevant page, or mark them all as read.",
-    visual: "notifications",
-  },
-  {
-    id: "excel-export", section: "Reports & Export", sectionIcon: FileText,
-    title: "Excel & CSV Export",
-    narration: "On the Reports page, download portfolio data, borrower lists, or audit trail records in both CSV and Excel (XLSX) format. Excel files include formatted headers with teal styling. On the Audit Trail page, use the export buttons after applying date range filters to download just the filtered records.",
-    visual: "export",
-  },
-  {
-    id: "api-usage", section: "Administration", sectionIcon: Building2,
-    title: "API Usage Analytics",
-    narration: "Administrators can monitor API usage from the 'API Administration' page. Switch to the 'API Usage Analytics' tab to see total requests today, requests this hour, and a breakdown of the most-called endpoints. A bar chart shows hourly request volume for the last 24 hours. The public API documentation is available at '/api-docs'.",
-    visual: "api-usage",
-    roleNotes: [{ role: "Administrator", note: "Only administrators and super admins can view API usage analytics" }],
-  },
-  {
-    id: "end", section: "That's It!", sectionIcon: Globe,
-    title: "You're Ready to Go",
-    narration: "That covers all the key features — AI-powered risk analysis, AI Command Center, Portfolio Intelligence, Telco Scoring & Lending, Cross-Border data sharing, Consumer Self-Service Portal, multi-language support in five languages, real-time notifications, regulatory exports, and comprehensive system administration. The platform spans 54 African countries with 42+ currencies. Remember: the sidebar is your main navigation, the dashboard gives you real-time overview, and every action is logged for audit compliance. Replay this guide anytime from 'App Guide' in the sidebar.",
-    visual: "end",
-  },
-];
+function getSlides(t: (key: string, fallback: string) => string): Slide[] {
+  return [
+    {
+      id: "welcome", section: t("appGuide.slides.welcome.section", "Welcome"), sectionIcon: Globe,
+      title: t("appGuide.slides.welcome.title", "Welcome to the Credit Registry System"),
+      narration: t("appGuide.slides.welcome.narration", "This walkthrough will guide you through every feature of the Pan-African Credit Registry System. The system covers all 54 African countries, supports 42+ currencies, and provides comprehensive credit information management across five languages — English, French, Portuguese, Arabic, and Swahili. Let's take a tour of what you'll find inside."),
+      visual: "hero",
+    },
+    {
+      id: "login", section: t("appGuide.slides.login.section", "Getting Started"), sectionIcon: Monitor,
+      title: t("appGuide.slides.login.title", "Logging In"),
+      narration: t("appGuide.slides.login.narration", "To get started, enter your username and password on the login page and click 'Sign In'. You can also sign in using Google, Microsoft, Apple, or Enterprise SSO via the social login buttons below the form. The system supports five user roles — Super Admin, Administrator, Regulator, Lender, and Viewer — each with different access levels. After login, you can enable Multi-Factor Authentication (MFA/TOTP) from your profile for extra security using any authenticator app."),
+      visual: "login",
+      tips: [
+        t("appGuide.slides.login.tip0", "Passwords expire every 90 days for security"),
+        t("appGuide.slides.login.tip1", "After 3 failed attempts, your account is temporarily locked"),
+        t("appGuide.slides.login.tip2", "Enable MFA/TOTP from your profile for two-factor authentication"),
+        t("appGuide.slides.login.tip3", "Social login supports Google, Microsoft, Apple, and Enterprise SSO"),
+      ],
+    },
+    {
+      id: "sidebar", section: t("appGuide.slides.sidebar.section", "Getting Started"), sectionIcon: Monitor,
+      title: t("appGuide.slides.sidebar.title", "Navigating the Sidebar"),
+      narration: t("appGuide.slides.sidebar.narration", "Once logged in, the sidebar on the left is your main navigation. It's organized into twelve sections: Overview (Dashboard, Portfolio Intelligence, Platform Metrics), Credit Data (Consumers, Businesses, Credit Accounts, Credit Search, Institutions), Reports & Scoring (Credit Reports, Score Methodology, AI Reports), Data Management (Batch Upload, Data Quality, Exchange Rates), Workflows (Disputes, Pending Approvals, Consent, Helpdesk, Alerts, Collections), Intelligence (AI Command Center, Telco Scoring & Lending, Find Connections), Oversight & Compliance (Regulatory Dashboard, Audit Trail, Compliance Queue, BOG/BSL Export), Cross-Border (Agreements, Cross-Border Search, PAPSS Settlements), Administration (Command Center, Organizations, Users, Billing, Webhooks, Retention), API & Integrations (API Keys, API Docs, Webhook Management), Infrastructure (System Status, Backup, Security), and Help & Resources (App Guide, Documentation, Ghana Docs, Helpdesk). Items you don't have access to are automatically hidden based on your role."),
+      visual: "sidebar", highlight: "sidebar",
+    },
+    {
+      id: "dashboard-overview", section: t("appGuide.slides.dashboardOverview.section", "Dashboard"), sectionIcon: LayoutDashboard,
+      title: t("appGuide.slides.dashboardOverview.title", "Your Dashboard — The Command Center"),
+      narration: t("appGuide.slides.dashboardOverview.narration", "The Dashboard is your landing page after login. At the top, summary cards show you the key numbers at a glance: Total Borrowers, Total Credit Accounts, Active Disputes, and Pending Approvals. Each card includes a sparkline mini-chart showing 7-day trends below the stat number. These update in real time as data flows into the system. Look for the notification bell in the header area — it shows a red badge with your unread notification count."),
+      visual: "dashboard",
+      roleNotes: [
+        { role: t("appGuide.slides.dashboardOverview.role0Role", "Super Admin"), note: t("appGuide.slides.dashboardOverview.role0Note", "You see data across ALL countries and institutions") },
+        { role: t("appGuide.slides.dashboardOverview.role1Role", "Administrator"), note: t("appGuide.slides.dashboardOverview.role1Note", "You see data across all institutions in your country") },
+        { role: t("appGuide.slides.dashboardOverview.role2Role", "Lender"), note: t("appGuide.slides.dashboardOverview.role2Note", "Numbers reflect only YOUR institution's data") },
+        { role: t("appGuide.slides.dashboardOverview.role3Role", "Regulator"), note: t("appGuide.slides.dashboardOverview.role3Note", "You see data within your regulatory jurisdiction") },
+      ],
+    },
+    {
+      id: "dashboard-charts", section: t("appGuide.slides.dashboardCharts.section", "Dashboard"), sectionIcon: LayoutDashboard,
+      title: t("appGuide.slides.dashboardCharts.title", "Portfolio Growth & Analytics Charts"),
+      narration: t("appGuide.slides.dashboardCharts.narration", "Below the summary cards, interactive charts appear. The area chart shows 12 months of portfolio growth. A donut chart breaks down accounts by status (Current, Delinquent, Default) and a horizontal bar chart shows distribution by loan type. Hover over any element for detailed tooltips."),
+      visual: "charts",
+      tips: [
+        t("appGuide.slides.dashboardCharts.tip0", "Charts are interactive — hover for detailed tooltips"),
+        t("appGuide.slides.dashboardCharts.tip1", "Colors automatically adjust in dark mode"),
+        t("appGuide.slides.dashboardCharts.tip2", "Charts resize responsively on smaller screens"),
+      ],
+    },
+    {
+      id: "dashboard-map", section: t("appGuide.slides.dashboardMap.section", "Dashboard"), sectionIcon: LayoutDashboard,
+      title: t("appGuide.slides.dashboardMap.title", "Africa Coverage Map"),
+      narration: t("appGuide.slides.dashboardMap.narration", "The interactive map shows all 54 African countries color-coded by activity level. Darker shading means more borrowers registered. Hover over any country to see a tooltip with the country name, borrower count, and account count."),
+      visual: "map",
+    },
+    {
+      id: "consumer-portal", section: t("appGuide.slides.consumerPortal.section", "Consumer Portal"), sectionIcon: UserCheck,
+      title: t("appGuide.slides.consumerPortal.title", "Consumer Self-Service Portal"),
+      narration: t("appGuide.slides.consumerPortal.narration", "The Consumer Portal at '/my-credit' lets individuals check their own credit standing. Consumers can register via '/consumer/register' with their national ID and personal details. Once registered, they can view their credit score, credit accounts, dispute history, and consent records — all without needing a system login. This self-service portal supports all five platform languages."),
+      visual: "consumer-portal",
+      tips: [
+        t("appGuide.slides.consumerPortal.tip0", "Consumers register directly — no admin setup needed"),
+        t("appGuide.slides.consumerPortal.tip1", "The portal shows a read-only view of their credit data"),
+        t("appGuide.slides.consumerPortal.tip2", "Consumers can file disputes directly from the portal"),
+      ],
+    },
+    {
+      id: "borrowers-list", section: t("appGuide.slides.borrowersList.section", "Borrowers"), sectionIcon: Users,
+      title: t("appGuide.slides.borrowersList.title", "Consumers & Businesses"),
+      narration: t("appGuide.slides.borrowersList.narration", "The system separates borrowers into Consumers (individuals) and Businesses (corporates). Click 'Consumers' or 'Businesses' in the sidebar to see dedicated list views with columns for Name, National ID, Country, Status, and Risk Level. Super Admins also see a combined 'Borrowers (All)' view. Use the search bar to filter by name, ID, phone, or email."),
+      visual: "table-borrowers",
+      roleNotes: [
+        { role: t("appGuide.slides.borrowersList.role0Role", "Administrator"), note: t("appGuide.slides.borrowersList.role0Note", "You see ALL borrowers across all institutions") },
+        { role: t("appGuide.slides.borrowersList.role1Role", "Lender"), note: t("appGuide.slides.borrowersList.role1Note", "You see borrowers associated with YOUR institution only") },
+        { role: t("appGuide.slides.borrowersList.role2Role", "Viewer"), note: t("appGuide.slides.borrowersList.role2Note", "Read-only access — no Add or Edit buttons") },
+      ],
+    },
+    {
+      id: "borrowers-add", section: t("appGuide.slides.borrowersAdd.section", "Borrowers"), sectionIcon: Users,
+      title: t("appGuide.slides.borrowersAdd.title", "Adding a New Borrower"),
+      narration: t("appGuide.slides.borrowersAdd.narration", "Click 'Register Borrower' to open the registration form. Select Individual or Corporate, then fill in the required fields including national ID, contact details, employer, and education level. After submitting, the record enters the maker-checker approval queue — another authorized user must approve it before it becomes active. A pending-approval amber banner appears on records awaiting review."),
+      visual: "form-borrower",
+      tips: [
+        t("appGuide.slides.borrowersAdd.tip0", "National ID must be unique within a country"),
+        t("appGuide.slides.borrowersAdd.tip1", "Set the PEP flag for Politically Exposed Persons"),
+        t("appGuide.slides.borrowersAdd.tip2", "Select the correct country — it determines the jurisdiction"),
+      ],
+    },
+    {
+      id: "borrower-detail", section: t("appGuide.slides.borrowerDetail.section", "Borrowers"), sectionIcon: Users,
+      title: t("appGuide.slides.borrowerDetail.title", "Borrower Detail Page"),
+      narration: t("appGuide.slides.borrowerDetail.narration", "Click any borrower row to open their full profile. See all linked credit accounts, payment history, credit inquiries, court judgments, and consent records. Generate a comprehensive credit report by clicking the 'Generate Credit Report' button. You'll also find the purple-gradient 'AI Risk Analysis' button — click it to get an AI-powered risk assessment with a risk score, key risk factors, actionable recommendations, and regulatory flags."),
+      visual: "detail-borrower",
+    },
+    {
+      id: "credit-accounts", section: t("appGuide.slides.creditAccounts.section", "Credit Accounts"), sectionIcon: CreditCard,
+      title: t("appGuide.slides.creditAccounts.title", "Managing Credit Accounts"),
+      narration: t("appGuide.slides.creditAccounts.narration", "Navigate to 'Credit Accounts' in the sidebar. The table shows all credit facilities: Account Number, Borrower, Institution, Type, Status, Currency, Amount, and Days in Arrears. Click '+ Add Account' to record a new facility. The system supports 42+ African currencies with automatic exchange rate conversion."),
+      visual: "table-accounts",
+      tips: [
+        t("appGuide.slides.creditAccounts.tip0", "For Islamic finance, check the 'Interest-Free' checkbox"),
+        t("appGuide.slides.creditAccounts.tip1", "Days in Arrears should reflect the latest reporting date"),
+        t("appGuide.slides.creditAccounts.tip2", "Supports 42+ currencies including ETB, GHS, NGN, KES, ZAR, XOF, and more"),
+      ],
+    },
+    {
+      id: "search", section: t("appGuide.slides.search.section", "Credit Search"), sectionIcon: Search,
+      title: t("appGuide.slides.search.title", "Structured Credit Search"),
+      narration: t("appGuide.slides.search.narration", "Click 'Credit Search' in the sidebar. The search page has four structured tabs — Consumer, Business, Telco, and General. The Consumer tab searches by name, national ID, or phone. The Business tab searches by company name, registration number, or TIN. The Telco tab searches telco subscriber profiles by provider, MSISDN, or account ID. The General tab performs a broad cross-entity search. Each tab returns detailed results with direct links to reports."),
+      visual: "search",
+      tips: [
+        t("appGuide.slides.search.tip0", "Use the tab that matches your search type for best results"),
+        t("appGuide.slides.search.tip1", "Partial matching is supported — no need to type the full name"),
+        t("appGuide.slides.search.tip2", "All searches are logged in the audit trail for compliance"),
+      ],
+    },
+    {
+      id: "credit-report", section: t("appGuide.slides.creditReport.section", "Credit Reports"), sectionIcon: FileText,
+      title: t("appGuide.slides.creditReport.title", "Generating Credit Reports"),
+      narration: t("appGuide.slides.creditReport.narration", "From a borrower's detail page, click 'Generate Credit Report'. The system produces a comprehensive D&B-style report with a Credit Profile Overview, liability breakdown, aging analysis, credit exposure, and detailed facility cards with 24-month payment history grids. Use the 'AI Summary' button to generate a plain-language overview. When downloading as PDF, choose from all five languages — English, French, Portuguese, Arabic, or Swahili — using the language selector. Business borrowers get a separate Business Credit Report format."),
+      visual: "report",
+      tips: [
+        t("appGuide.slides.creditReport.tip0", "Each report gets a unique serial number for audit tracking"),
+        t("appGuide.slides.creditReport.tip1", "Bureau Score ranges from 300 to 850 with grade and factor analysis"),
+        t("appGuide.slides.creditReport.tip2", "Every report generation is logged in the audit trail"),
+        t("appGuide.slides.creditReport.tip3", "PDF reports are available in EN, FR, PT, AR, and SW"),
+      ],
+    },
+    {
+      id: "score-methodology", section: t("appGuide.slides.scoreMethodology.section", "Credit Reports"), sectionIcon: BarChart3,
+      title: t("appGuide.slides.scoreMethodology.title", "Score Methodology"),
+      narration: t("appGuide.slides.scoreMethodology.narration", "Navigate to 'Score Methodology' in the sidebar to understand how credit scores are calculated. The page explains the 300–850 scoring model, the weight of each factor (payment history, credit utilization, length of credit, credit mix, and new inquiries), grade bands (Excellent, Good, Fair, Poor, Very Poor), and how reason codes are assigned. A public Score Guide is also available at '/score-guide' for external stakeholders."),
+      visual: "score-methodology",
+    },
+    {
+      id: "telco", section: t("appGuide.slides.telco.section", "Telco"), sectionIcon: Smartphone,
+      title: t("appGuide.slides.telco.title", "Telco Scoring & Lending"),
+      narration: t("appGuide.slides.telco.narration", "The Telco module brings mobile network data into credit decisioning. 'Telco Scoring' lets you view and score telco subscriber profiles — airtime usage, mobile money transactions, top-up frequency, and data consumption — to generate alternative credit scores for the unbanked. 'Telco Lending' manages micro-loans originated through telco channels with automated decisioning based on telco scores. Search telco profiles by provider, MSISDN, or account ID."),
+      visual: "telco",
+      tips: [
+        t("appGuide.slides.telco.tip0", "Telco scores complement traditional bureau scores"),
+        t("appGuide.slides.telco.tip1", "Supports major African mobile networks and mobile money providers"),
+        t("appGuide.slides.telco.tip2", "Search allows empty filters to browse all telco profiles"),
+      ],
+    },
+    {
+      id: "batch-upload", section: t("appGuide.slides.batchUpload.section", "Operations"), sectionIcon: Upload,
+      title: t("appGuide.slides.batchUpload.title", "Uploading Records in Bulk"),
+      narration: t("appGuide.slides.batchUpload.narration", "Click 'Batch Upload' in the sidebar. Select Borrowers or Credit Accounts, then choose your CSV or JSON file. Download the template first for the required column format. The system validates every row and shows a summary of successful imports and errors. You can also paste JSON data directly."),
+      visual: "upload",
+      tips: [
+        t("appGuide.slides.batchUpload.tip0", "Date format must be YYYY-MM-DD"),
+        t("appGuide.slides.batchUpload.tip1", "Currency codes must be valid ISO 4217 (ETB, KES, NGN, etc.)"),
+        t("appGuide.slides.batchUpload.tip2", "Maximum file size is 10MB per upload"),
+      ],
+    },
+    {
+      id: "disputes", section: t("appGuide.slides.disputes.section", "Operations"), sectionIcon: AlertCircle,
+      title: t("appGuide.slides.disputes.title", "Managing Disputes"),
+      narration: t("appGuide.slides.disputes.narration", "Navigate to 'Disputes' in the sidebar. View all dispute cases with their status, priority, and SLA deadline. File a new dispute by selecting the borrower, disputed record, dispute type, and description. Financial corrections have a 2-day SLA, non-financial corrections have a 5-day SLA. Disputes approaching their deadline are highlighted in red. Breached SLAs appear in regulatory reports."),
+      visual: "disputes",
+    },
+    {
+      id: "approvals", section: t("appGuide.slides.approvals.section", "Operations"), sectionIcon: CheckSquare,
+      title: t("appGuide.slides.approvals.title", "Maker-Checker Approvals"),
+      narration: t("appGuide.slides.approvals.narration", "Go to 'Pending Approvals'. When any user creates or modifies a record, the change enters this queue. Click to see full before/after details. Click 'Approve' to apply or 'Reject' with a reason. Important: you cannot approve your own submissions. Only Admin, Regulator, and Super Admin roles can approve or reject changes."),
+      visual: "approval",
+      tips: [
+        t("appGuide.slides.approvals.tip0", "You cannot approve your own submissions"),
+        t("appGuide.slides.approvals.tip1", "All approval actions are logged in the audit trail"),
+      ],
+    },
+    {
+      id: "borrower-alerts", section: t("appGuide.slides.borrowerAlerts.section", "Operations"), sectionIcon: Bell,
+      title: t("appGuide.slides.borrowerAlerts.title", "Borrower Alerts"),
+      narration: t("appGuide.slides.borrowerAlerts.narration", "Navigate to 'Borrower Alerts' in the sidebar. This page shows system-generated alerts for significant borrower events — new delinquencies, status changes, large balance movements, PEP flag changes, and SLA breaches. Alerts are color-coded by severity and can be filtered by type, date range, or institution."),
+      visual: "borrower-alerts",
+    },
+    {
+      id: "audit", section: t("appGuide.slides.audit.section", "Oversight"), sectionIcon: Shield,
+      title: t("appGuide.slides.audit.title", "Tamper-Evident Audit Trail"),
+      narration: t("appGuide.slides.audit.narration", "Click 'Audit Trail' to see every action: record creations, modifications, report generations, login attempts, and approvals. Each entry shows Timestamp, User, Action, Entity, and Details. The audit log uses SHA-256 hash chaining — entries cannot be tampered with. Toggle between table and timeline views, use date range filters to narrow results, and export filtered records as CSV or Excel using the export buttons."),
+      visual: "audit",
+    },
+    {
+      id: "regulatory-dashboard", section: t("appGuide.slides.regulatoryDashboard.section", "Oversight"), sectionIcon: Eye,
+      title: t("appGuide.slides.regulatoryDashboard.title", "Regulatory Dashboard"),
+      narration: t("appGuide.slides.regulatoryDashboard.narration", "Navigate to 'Regulatory Dashboard' for a high-level supervisory overview. See NPL ratios across institutions, data submission compliance rates, dispute resolution performance, and sector exposure breakdowns. This dashboard is designed for regulators and senior management who need a panoramic view of credit market health across jurisdictions."),
+      visual: "regulatory-dashboard",
+      roleNotes: [
+        { role: t("appGuide.slides.regulatoryDashboard.role0Role", "Regulator"), note: t("appGuide.slides.regulatoryDashboard.role0Note", "Primary view for regulatory oversight") },
+        { role: t("appGuide.slides.regulatoryDashboard.role1Role", "Administrator"), note: t("appGuide.slides.regulatoryDashboard.role1Note", "Full access to all regulatory metrics") },
+      ],
+    },
+    {
+      id: "compliance", section: t("appGuide.slides.compliance.section", "Oversight"), sectionIcon: Scale,
+      title: t("appGuide.slides.compliance.title", "Regulatory Compliance"),
+      narration: t("appGuide.slides.compliance.narration", "Navigate to 'Regulatory Compliance'. This dashboard shows compliance metrics: data submission rates, dispute resolution SLA performance, consent coverage, and NPL ratios. Traffic-light indicators show green (compliant), yellow (at risk), or red (non-compliant). Use the 'Generate AI Compliance Report' button with the country selector to produce an AI-powered compliance assessment for any of the 54 African jurisdictions."),
+      visual: "compliance",
+    },
+    {
+      id: "bog-bsl-export", section: t("appGuide.slides.bogBslExport.section", "Oversight"), sectionIcon: FileText,
+      title: t("appGuide.slides.bogBslExport.title", "Regulatory Export (BOG / BSL)"),
+      narration: t("appGuide.slides.bogBslExport.narration", "Depending on your country mode, the sidebar shows either 'BOG Export' (Ghana — Bank of Ghana) or 'BSL Export' (Sierra Leone — Bank of Sierra Leone). These pages let you generate regulatory submission files in the format required by the central bank — batch upload data, borrower records, and credit accounts formatted per BoG CRB v1.1 or BSL standards."),
+      visual: "bog-export",
+    },
+    {
+      id: "cross-border", section: t("appGuide.slides.crossBorder.section", "Cross-Border"), sectionIcon: Network,
+      title: t("appGuide.slides.crossBorder.title", "Cross-Border Features"),
+      narration: t("appGuide.slides.crossBorder.narration", "The Cross-Border section enables pan-African data sharing. 'Agreements' manages bilateral and multilateral data-sharing agreements between countries. 'Cross-Border Search' lets authorized users search borrower records across jurisdictions for cross-border entity resolution. 'PAPSS Settlements' integrates with the Pan-African Payment and Settlement System for cross-border payment tracking and reconciliation."),
+      visual: "cross-border",
+      tips: [
+        t("appGuide.slides.crossBorder.tip0", "Cross-border access requires a valid data-sharing agreement"),
+        t("appGuide.slides.crossBorder.tip1", "PAPSS settlements track real-time cross-border payments"),
+        t("appGuide.slides.crossBorder.tip2", "Access is controlled per user role and agreement scope"),
+      ],
+    },
+    {
+      id: "portfolio-intelligence", section: t("appGuide.slides.portfolioIntelligence.section", "AI Features"), sectionIcon: BarChart3,
+      title: t("appGuide.slides.portfolioIntelligence.title", "Portfolio Intelligence"),
+      narration: t("appGuide.slides.portfolioIntelligence.narration", "Navigate to 'Portfolio Intelligence' for AI-driven portfolio analytics. This page provides deep-dive analysis of your credit portfolio — concentration risk, sector exposure, geographic distribution, vintage analysis, and trend forecasting. AI-generated insights highlight emerging risks and opportunities across your book."),
+      visual: "portfolio-intelligence",
+      roleNotes: [
+        { role: t("appGuide.slides.portfolioIntelligence.role0Role", "Administrator"), note: t("appGuide.slides.portfolioIntelligence.role0Note", "Full portfolio view across all institutions") },
+      ],
+    },
+    {
+      id: "ai-command-center", section: t("appGuide.slides.aiCommandCenter.section", "AI Features"), sectionIcon: Brain,
+      title: t("appGuide.slides.aiCommandCenter.title", "AI Command Center"),
+      narration: t("appGuide.slides.aiCommandCenter.narration", "The AI Command Center is your natural-language interface to the entire registry. Ask questions like 'Show me all defaulted borrowers in Ghana' or 'What is the NPL ratio for microfinance institutions?' The AI interprets your query, runs the appropriate analysis, and returns formatted results with charts and tables. It combines GPT-4o intelligence with real-time registry data."),
+      visual: "ai-command-center",
+    },
+    {
+      id: "ai-features", section: t("appGuide.slides.aiFeatures.section", "AI Features"), sectionIcon: Brain,
+      title: t("appGuide.slides.aiFeatures.title", "AI-Powered Intelligence"),
+      narration: t("appGuide.slides.aiFeatures.narration", "The platform integrates AI for intelligent analysis throughout. On any borrower's detail page, click the purple 'AI Risk Analysis' button to get a comprehensive risk assessment with score, risk factors, and recommendations. On credit reports, use 'AI Summary' for a plain-language overview. The floating chatbot (bottom-right) includes an AI Assistant mode for answering questions about credit data and regulations with streaming responses."),
+      visual: "ai-features",
+      tips: [
+        t("appGuide.slides.aiFeatures.tip0", "AI analysis considers all borrower data including accounts, disputes, and payment history"),
+        t("appGuide.slides.aiFeatures.tip1", "AI responses are generated fresh each time based on current data"),
+        t("appGuide.slides.aiFeatures.tip2", "The AI chatbot supports streaming responses for real-time interaction"),
+      ],
+    },
+    {
+      id: "institutions", section: t("appGuide.slides.institutions.section", "Administration"), sectionIcon: Building2,
+      title: t("appGuide.slides.institutions.title", "Institution Management"),
+      narration: t("appGuide.slides.institutions.narration", "Navigate to 'Institutions' (Admin only). View and manage all registered financial institutions — their code, name, type (Bank, MFI, Utility, Telecom, Digital Lender, SACCO), country, status, and contact details. Click '+ Add Institution' to register a new participating institution. Newly registered institutions start with 'Pending' status and must be approved."),
+      visual: "institutions",
+    },
+    {
+      id: "users", section: t("appGuide.slides.users.section", "Administration"), sectionIcon: Settings,
+      title: t("appGuide.slides.users.title", "User Management & Roles"),
+      narration: t("appGuide.slides.users.narration", "Go to 'User Management' (Admin only). Create and manage user accounts with five roles: Super Admin (multi-country full access), Administrator (full access within country), Regulator (oversight and approvals), Lender (own institution data entry), or Viewer (read-only). Password policies enforce complexity and 90-day expiry. Accounts lock after 3 failed login attempts."),
+      visual: "users",
+    },
+    {
+      id: "command-center", section: t("appGuide.slides.commandCenter.section", "Administration"), sectionIcon: Server,
+      title: t("appGuide.slides.commandCenter.title", "Command Center & Organizations"),
+      narration: t("appGuide.slides.commandCenter.narration", "Super Admins have access to the 'Command Center' — a multi-country management console for overseeing all jurisdictions, switching country contexts, and managing system-wide settings. The 'Organizations' page manages top-level organizational entities that group institutions. These features are exclusive to the Super Admin role for centralized platform governance."),
+      visual: "command-center",
+      roleNotes: [
+        { role: t("appGuide.slides.commandCenter.role0Role", "Super Admin"), note: t("appGuide.slides.commandCenter.role0Note", "Exclusive access — not visible to other roles") },
+      ],
+    },
+    {
+      id: "exchange-rates", section: t("appGuide.slides.exchangeRates.section", "Administration"), sectionIcon: DollarSign,
+      title: t("appGuide.slides.exchangeRates.title", "Exchange Rate Management"),
+      narration: t("appGuide.slides.exchangeRates.narration", "Under Administration, find 'Exchange Rates' (Admin only). The system supports 42+ African currencies. View current rates, update manually, or let the system auto-sync every 6 hours. These rates are used when consolidating multi-currency exposure in credit reports."),
+      visual: "exchange",
+    },
+    {
+      id: "system-admin", section: t("appGuide.slides.systemAdmin.section", "Administration"), sectionIcon: Activity,
+      title: t("appGuide.slides.systemAdmin.title", "System Administration"),
+      narration: t("appGuide.slides.systemAdmin.narration", "Several tools keep the platform running smoothly. 'System Status' shows real-time health of all services — database, API, background jobs, and integrations. 'Backup & Recovery' (Super Admin) manages database backups with restore capabilities. 'Webhook Management' configures outbound event notifications to external systems. 'Retention Policies' sets data retention rules per regulation. 'Platform Metrics' tracks system-wide usage statistics."),
+      visual: "system-admin",
+      tips: [
+        t("appGuide.slides.systemAdmin.tip0", "System Status shows green/yellow/red health indicators"),
+        t("appGuide.slides.systemAdmin.tip1", "Backups can be triggered manually or run on schedule"),
+        t("appGuide.slides.systemAdmin.tip2", "Webhooks notify external systems of key events in real time"),
+      ],
+    },
+    {
+      id: "helpdesk", section: t("appGuide.slides.helpdesk.section", "Support"), sectionIcon: Headset,
+      title: t("appGuide.slides.helpdesk.title", "Getting Help"),
+      narration: t("appGuide.slides.helpdesk.narration", "Need assistance? Use the Helpdesk for support tickets, the Online Manual for searchable help articles, or the Documentation page for downloadable guides — 13 general documents plus 8 Ghana-specific documents, all available in five languages with PDF download. The floating chatbot (bottom-right) lets you ask questions, file disputes, or browse FAQs without leaving the page. Click the Sparkles icon in the chatbot to switch to AI Assistant mode."),
+      visual: "help",
+    },
+    {
+      id: "notifications", section: t("appGuide.slides.notifications.section", "Notifications"), sectionIcon: Bell,
+      title: t("appGuide.slides.notifications.title", "Real-Time Notifications"),
+      narration: t("appGuide.slides.notifications.narration", "The notification bell in the header keeps you informed of important events — new disputes, approval requests, system alerts, and more. A red badge shows your unread count. Click the bell to see recent notifications, click any notification to navigate to the relevant page, or mark them all as read."),
+      visual: "notifications",
+    },
+    {
+      id: "excel-export", section: t("appGuide.slides.excelExport.section", "Reports & Export"), sectionIcon: FileText,
+      title: t("appGuide.slides.excelExport.title", "Excel & CSV Export"),
+      narration: t("appGuide.slides.excelExport.narration", "On the Reports page, download portfolio data, borrower lists, or audit trail records in both CSV and Excel (XLSX) format. Excel files include formatted headers with teal styling. On the Audit Trail page, use the export buttons after applying date range filters to download just the filtered records."),
+      visual: "export",
+    },
+    {
+      id: "api-usage", section: t("appGuide.slides.apiUsage.section", "Administration"), sectionIcon: Building2,
+      title: t("appGuide.slides.apiUsage.title", "API Usage Analytics"),
+      narration: t("appGuide.slides.apiUsage.narration", "Administrators can monitor API usage from the 'API Administration' page. Switch to the 'API Usage Analytics' tab to see total requests today, requests this hour, and a breakdown of the most-called endpoints. A bar chart shows hourly request volume for the last 24 hours. The public API documentation is available at '/api-docs'."),
+      visual: "api-usage",
+      roleNotes: [
+        { role: t("appGuide.slides.apiUsage.role0Role", "Administrator"), note: t("appGuide.slides.apiUsage.role0Note", "Only administrators and super admins can view API usage analytics") },
+      ],
+    },
+    {
+      id: "end", section: t("appGuide.slides.end.section", "That's It!"), sectionIcon: Globe,
+      title: t("appGuide.slides.end.title", "You're Ready to Go"),
+      narration: t("appGuide.slides.end.narration", "That covers all the key features — AI-powered risk analysis, AI Command Center, Portfolio Intelligence, Telco Scoring & Lending, Cross-Border data sharing, Consumer Self-Service Portal, multi-language support in five languages, real-time notifications, regulatory exports, and comprehensive system administration. The platform spans 54 African countries with 42+ currencies. Remember: the sidebar is your main navigation, the dashboard gives you real-time overview, and every action is logged for audit compliance. Replay this guide anytime from 'App Guide' in the sidebar."),
+      visual: "end",
+    },
+  ];
+}
 
 const SLIDE_DURATION = 12000;
 
@@ -1243,6 +1305,8 @@ function VisualMockup({ type, isActive }: { type: string; isActive: boolean }) {
 }
 
 export default function AppGuidePage() {
+  const { t } = useTranslation();
+  const slides = getSlides(t as (key: string, fallback: string) => string);
   const brandColors = useBrandColors();
   const [, navigate] = useLocation();
   const [currentSlide, setCurrentSlide] = useState(0);
