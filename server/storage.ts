@@ -56,6 +56,8 @@ import {
   type LinkedOpenBankingAccount, type InsertLinkedOpenBankingAccount,
   registryHealthConfig,
   type RegistryHealthConfig, type InsertRegistryHealthConfig,
+  registryThresholdOverrides,
+  type RegistryThresholdOverride,
   registryHealthEvents,
   type RegistryHealthEvent, type InsertRegistryHealthEvent,
   trainingAttempts,
@@ -301,6 +303,10 @@ export interface IStorage {
 
   getRegistryHealthConfig(): Promise<RegistryHealthConfig | undefined>;
   upsertRegistryHealthConfig(data: Partial<InsertRegistryHealthConfig>, updatedBy?: string): Promise<RegistryHealthConfig>;
+
+  getAllRegistryThresholdOverrides(): Promise<RegistryThresholdOverride[]>;
+  upsertRegistryThresholdOverride(provider: string, data: { criticalFail7d: number | null; criticalStreak30d: number | null }, updatedBy?: string): Promise<RegistryThresholdOverride>;
+  deleteRegistryThresholdOverride(provider: string): Promise<void>;
 
   insertRegistryHealthEvent(event: InsertRegistryHealthEvent): Promise<RegistryHealthEvent>;
   getRegistryHealthEvents(provider: string, sinceDays?: number): Promise<RegistryHealthEvent[]>;
@@ -2631,6 +2637,37 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return row;
+  }
+
+  async getAllRegistryThresholdOverrides(): Promise<RegistryThresholdOverride[]> {
+    return await db.select().from(registryThresholdOverrides).orderBy(registryThresholdOverrides.provider);
+  }
+
+  async upsertRegistryThresholdOverride(provider: string, data: { criticalFail7d: number | null; criticalStreak30d: number | null }, updatedBy?: string): Promise<RegistryThresholdOverride> {
+    const [row] = await db
+      .insert(registryThresholdOverrides)
+      .values({
+        provider,
+        criticalFail7d: data.criticalFail7d ?? null,
+        criticalStreak30d: data.criticalStreak30d ?? null,
+        updatedAt: new Date(),
+        updatedBy: updatedBy ?? null,
+      })
+      .onConflictDoUpdate({
+        target: registryThresholdOverrides.provider,
+        set: {
+          criticalFail7d: data.criticalFail7d ?? null,
+          criticalStreak30d: data.criticalStreak30d ?? null,
+          updatedAt: new Date(),
+          updatedBy: updatedBy ?? null,
+        },
+      })
+      .returning();
+    return row;
+  }
+
+  async deleteRegistryThresholdOverride(provider: string): Promise<void> {
+    await db.delete(registryThresholdOverrides).where(eq(registryThresholdOverrides.provider, provider));
   }
 
   async insertRegistryHealthEvent(event: InsertRegistryHealthEvent): Promise<RegistryHealthEvent> {

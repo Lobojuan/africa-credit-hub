@@ -1644,6 +1644,24 @@ export type InsertRegistryHealthConfig = z.infer<typeof insertRegistryHealthConf
 export type RegistryHealthConfig = typeof registryHealthConfig.$inferSelect;
 
 // ---------------------------------------------------------------------------
+// Per-registry severity threshold overrides — admins can override the global
+// criticalFail7d / criticalStreak30d for individual registries
+// ---------------------------------------------------------------------------
+
+export const registryThresholdOverrides = pgTable("registry_threshold_overrides", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  provider: text("provider").notNull().unique(),
+  criticalFail7d: integer("critical_fail_7d"),
+  criticalStreak30d: integer("critical_streak_30d"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedBy: varchar("updated_by").references(() => users.id),
+});
+
+export const insertRegistryThresholdOverrideSchema = createInsertSchema(registryThresholdOverrides).omit({ id: true, updatedAt: true });
+export type InsertRegistryThresholdOverride = z.infer<typeof insertRegistryThresholdOverrideSchema>;
+export type RegistryThresholdOverride = typeof registryThresholdOverrides.$inferSelect;
+
+// ---------------------------------------------------------------------------
 // Registry health events — persisted history of every health-check probe
 // ---------------------------------------------------------------------------
 

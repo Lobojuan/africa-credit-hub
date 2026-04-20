@@ -516,5 +516,15 @@ export async function migrateNewTables() {
   await db.execute(sql`ALTER TABLE registry_health_config ADD COLUMN IF NOT EXISTS critical_fail_7d integer NOT NULL DEFAULT 5`);
   await db.execute(sql`ALTER TABLE registry_health_config ADD COLUMN IF NOT EXISTS critical_streak_30d integer NOT NULL DEFAULT 5`);
 
+  // Per-registry severity threshold overrides (Task #117)
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS registry_threshold_overrides (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    provider text NOT NULL UNIQUE,
+    critical_fail_7d integer,
+    critical_streak_30d integer,
+    updated_at timestamp DEFAULT now(),
+    updated_by varchar REFERENCES users(id)
+  )`);
+
   console.log('[NewTables] Migration complete');
 }

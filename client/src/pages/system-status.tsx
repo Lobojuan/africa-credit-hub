@@ -424,6 +424,13 @@ interface RegistryHealthConfigData {
   updatedAt: string | null;
 }
 
+interface RegistryThresholdOverrideData {
+  provider: string;
+  criticalFail7d: number | null;
+  criticalStreak30d: number | null;
+  updatedAt: string | null;
+}
+
 interface RegistryCleanupStats {
   lastRanAt: string | null;
   deletedCount: number | null;
@@ -993,10 +1000,26 @@ function RegistryStatusPanel() {
     queryKey: ["/api/admin/registry-health-config"],
     staleTime: 60000,
   });
+  const { data: thresholdOverrides, refetch: refetchOverrides } = useQuery<RegistryThresholdOverrideData[]>({
+    queryKey: ["/api/admin/registry-threshold-overrides"],
+    staleTime: 60000,
+  });
+  const saveOverrideMutation = useMutation({
+    mutationFn: async ({ provider, criticalFail7d, criticalStreak30d }: { provider: string; criticalFail7d: number | null; criticalStreak30d: number | null }) => {
+      const res = await apiRequest("PUT", `/api/admin/registry-threshold-overrides/${provider}`, { criticalFail7d, criticalStreak30d });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/registry-threshold-overrides"] });
+      refetchOverrides();
+    },
+  });
   const { toast } = useToast();
   const [testResults, setTestResults] = useState<Record<string, RegistryTestResult | "testing">>({});
   const [expandedHistory, setExpandedHistory] = useState<Record<string, boolean>>({});
   const [historyFailureOnly, setHistoryFailureOnly] = useState<Record<string, boolean>>({});
+  const [overrideOpen, setOverrideOpen] = useState<Record<string, boolean>>({});
+  const [overrideForms, setOverrideForms] = useState<Record<string, { criticalFail7d: string; criticalStreak30d: string }>>({});
 
   const registries = Object.entries(REGISTRY_LABELS);
   const liveCount = data ? Object.values(data).filter(r => r.live && !r.sandbox).length : 0;
@@ -1013,6 +1036,11 @@ function RegistryStatusPanel() {
   const historyByProvider = (historyData ?? []).reduce<Record<string, RegistryHealthEvent[]>>((acc, e) => {
     if (!acc[e.provider]) acc[e.provider] = [];
     acc[e.provider].push(e);
+    return acc;
+  }, {});
+
+  const overridesByProvider = (thresholdOverrides ?? []).reduce<Record<string, RegistryThresholdOverrideData>>((acc, o) => {
+    acc[o.provider] = o;
     return acc;
   }, {});
 
@@ -1116,8 +1144,9 @@ function RegistryStatusPanel() {
                     const okEvents30d = providerHistory30d.filter(e => e.status === "ok").length;
                     const failEvents30d = providerHistory30d.filter(e => e.status === "fail").length;
                     const uptimePct30d = totalEvents30d > 0 ? (okEvents30d / totalEvents30d) * 100 : null;
-                    const CRITICAL_FAIL_7D = healthConfig?.criticalFail7d ?? 5;
-                    const CRITICAL_STREAK = healthConfig?.criticalStreak30d ?? 5;
+                    const providerOverride = overridesByProvider[key];
+                    const CRITICAL_FAIL_7D = providerOverride?.criticalFail7d ?? healthConfig?.criticalFail7d ?? 5;
+                    const CRITICAL_STREAK = providerOverride?.criticalStreak30d ?? healthConfig?.criticalStreak30d ?? 5;
                     const MIN_STREAK_DISPLAY = 2;
                     const longestStreak30d = (() => {
                       let max = 0, cur = 0;
@@ -1211,6 +1240,28 @@ function RegistryStatusPanel() {
                           {isTesting ? <Loader2 className="w-3 h-3 animate-spin" /> : "Test"}
                         </Button>
                       )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={`h-6 w-6 ${providerOverride ? "text-amber-500" : "text-muted-foreground"}`}
+                        title={providerOverride ? "Override thresholds active — click to edit" : "Set per-registry thresholds"}
+                        data-testid={`button-override-settings-${key}`}
+                        onClick={() => {
+                          const isCurrentlyOpen = overrideOpen[key] ?? false;
+                          if (!isCurrentlyOpen) {
+                            setOverrideForms(prev => ({
+                              ...prev,
+                              [key]: {
+                                criticalFail7d: String(providerOverride?.criticalFail7d ?? healthConfig?.criticalFail7d ?? 5),
+                                criticalStreak30d: String(providerOverride?.criticalStreak30d ?? healthConfig?.criticalStreak30d ?? 5),
+                              },
+                            }));
+                          }
+                          setOverrideOpen(prev => ({ ...prev, [key]: !isCurrentlyOpen }));
+                        }}
+                      >
+                        <Settings2 className="w-3 h-3" />
+                      </Button>
                     </div>
                   </div>
                   {health && health.lastCheckedAt && (
@@ -1243,6 +1294,106 @@ function RegistryStatusPanel() {
                         : `Failed · ${testData.error ?? "Unknown error"}${testData.statusCode ? ` (HTTP ${testData.statusCode})` : ""}`}
                     </div>
                   )}
+                  {overrideOpen[key] && (() => {
+                    const form = overrideForms[key] ?? {
+                      criticalFail7d: String(providerOverride?.criticalFail7d ?? healthConfig?.criticalFail7d ?? 5),
+                      criticalStreak30d: String(providerOverride?.criticalStreak30d ?? healthConfig?.criticalStreak30d ?? 5),
+                    };
+                    const hasOverride = !!providerOverride;
+                    async function handleSaveOverride() {
+                      const fail7d = parseInt(form.criticalFail7d, 10);
+                      const streak30d = parseInt(form.criticalStreak30d, 10);
+                      if (isNaN(fail7d) || fail7d < 1 || fail7d > 999 || isNaN(streak30d) || streak30d < 1 || streak30d > 999) {
+                        toast({ title: "Invalid values", description: "Both thresholds must be between 1 and 999.", variant: "destructive" });
+                        return;
+                      }
+                      try {
+                        await saveOverrideMutation.mutateAsync({ provider: key, criticalFail7d: fail7d, criticalStreak30d: streak30d });
+                        toast({ title: "Threshold override saved", description: `${REGISTRY_LABELS[key as keyof typeof REGISTRY_LABELS]?.label ?? key}: fail7d=${fail7d}, streak30d=${streak30d}` });
+                        setOverrideOpen(prev => ({ ...prev, [key]: false }));
+                      } catch {
+                        toast({ title: "Failed to save override", variant: "destructive" });
+                      }
+                    }
+                    async function handleClearOverride() {
+                      try {
+                        await saveOverrideMutation.mutateAsync({ provider: key, criticalFail7d: null, criticalStreak30d: null });
+                        toast({ title: "Override cleared", description: "Global thresholds will now apply." });
+                        setOverrideOpen(prev => ({ ...prev, [key]: false }));
+                      } catch {
+                        toast({ title: "Failed to clear override", variant: "destructive" });
+                      }
+                    }
+                    return (
+                      <div
+                        data-testid={`panel-override-${key}`}
+                        className="mt-2 border rounded-md bg-muted/40 px-3 py-2 space-y-2"
+                      >
+                        <p className="text-[10px] font-medium text-foreground flex items-center gap-1">
+                          <Settings2 className="w-3 h-3" />
+                          Per-registry thresholds
+                          {hasOverride && (
+                            <span className="ml-1 text-amber-600 dark:text-amber-400 font-medium">(override active)</span>
+                          )}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          Global defaults: fail7d={healthConfig?.criticalFail7d ?? 5}, streak30d={healthConfig?.criticalStreak30d ?? 5}
+                        </p>
+                        <div className="flex items-end gap-2">
+                          <div className="flex-1 space-y-1">
+                            <label className="text-[9px] text-muted-foreground uppercase tracking-wide">Critical failures / 7d</label>
+                            <Input
+                              type="number"
+                              min={1}
+                              max={999}
+                              value={form.criticalFail7d}
+                              onChange={e => setOverrideForms(prev => ({ ...prev, [key]: { ...form, criticalFail7d: e.target.value } }))}
+                              className="h-7 text-xs"
+                              data-testid={`input-override-fail7d-${key}`}
+                            />
+                          </div>
+                          <div className="flex-1 space-y-1">
+                            <label className="text-[9px] text-muted-foreground uppercase tracking-wide">Critical streak / 30d</label>
+                            <Input
+                              type="number"
+                              min={1}
+                              max={999}
+                              value={form.criticalStreak30d}
+                              onChange={e => setOverrideForms(prev => ({ ...prev, [key]: { ...form, criticalStreak30d: e.target.value } }))}
+                              className="h-7 text-xs"
+                              data-testid={`input-override-streak30d-${key}`}
+                            />
+                          </div>
+                          <Button
+                            size="sm"
+                            className="h-7 text-xs shrink-0"
+                            onClick={handleSaveOverride}
+                            disabled={saveOverrideMutation.isPending}
+                            data-testid={`button-save-override-${key}`}
+                          >
+                            {saveOverrideMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Save"}
+                          </Button>
+                        </div>
+                        {hasOverride && (
+                          <div className="flex justify-end">
+                            <button
+                              className="text-[9px] text-muted-foreground hover:text-red-500 underline-offset-2 hover:underline"
+                              onClick={handleClearOverride}
+                              disabled={saveOverrideMutation.isPending}
+                              data-testid={`button-clear-override-${key}`}
+                            >
+                              Clear override (use global)
+                            </button>
+                          </div>
+                        )}
+                        {hasOverride && providerOverride?.updatedAt && (
+                          <p className="text-[9px] text-muted-foreground">
+                            Last saved {new Date(providerOverride.updatedAt).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
                   {(totalEvents7d > 0 || totalEvents30d > 0) && (
                     <div className="mt-1.5">
                       <div className="relative group/severity inline-block">

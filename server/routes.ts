@@ -12412,6 +12412,34 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
+  // Per-registry threshold overrides (Task #117)
+  app.get("/api/admin/registry-threshold-overrides", requireRole("admin", "super_admin"), async (_req, res) => {
+    try {
+      const overrides = await storage.getAllRegistryThresholdOverrides();
+      res.json(overrides);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.put("/api/admin/registry-threshold-overrides/:provider", requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const { provider } = req.params;
+      const schema = z.object({
+        criticalFail7d: z.number().int().min(1).max(999).nullable(),
+        criticalStreak30d: z.number().int().min(1).max(999).nullable(),
+      });
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: parsed.error.errors[0]?.message ?? "Invalid input" });
+
+      const userId = (req as any).user?.id;
+      if (parsed.data.criticalFail7d === null && parsed.data.criticalStreak30d === null) {
+        await storage.deleteRegistryThresholdOverride(provider);
+        return res.json({ provider, deleted: true });
+      }
+      const override = await storage.upsertRegistryThresholdOverride(provider, parsed.data, userId);
+      res.json(override);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
   // Registry health cleanup stats — last prune run time and deleted row count
   app.get("/api/admin/registry-health-cleanup-stats", requireRole("admin", "super_admin"), async (_req, res) => {
     try {
