@@ -355,6 +355,17 @@ export async function registerRoutes(
     return /^[=+\-@\t\r]/.test(str) ? "'" + str : str;
   }
 
+  function mapPurposeToXds(purpose: string): string {
+    const map: Record<string, string> = {
+      new_credit:           "credit_application",
+      review:               "credit_review",
+      portfolio_monitoring: "account_management",
+      collection:           "collection",
+      regulatory:           "regulatory",
+    };
+    return map[purpose] ?? "other";
+  }
+
   app.use("/api", apiLimiter, (req, res, next) => {
     const route = req.method + " " + req.path;
     trackApiUsage(route);
@@ -4733,13 +4744,13 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
           const { xdsBureauQueries: xdsTable } = await import("@shared/schema");
           const requestRef = `RPT-${serialNumber}`;
           const xdsResult = await queryXdsGhana({
-            ghanaCard: borrower.nationalId || undefined,
-            ssnitNumber: (borrower as any).ssnitNumber || undefined,
+            ghanaCard: borrower.ghanaCardNumber || borrower.nationalId || undefined,
+            ssnitNumber: borrower.ssnitNumber || undefined,
             tinNumber: borrower.tinNumber || undefined,
             firstName: borrower.firstName || undefined,
             lastName: borrower.lastName || undefined,
             dateOfBirth: borrower.dateOfBirth || undefined,
-            permissiblePurpose: purpose,
+            permissiblePurpose: mapPurposeToXds(purpose),
             requestRef,
           });
           xdsBureauData = xdsResult;
@@ -4749,8 +4760,8 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
             organizationId: req.session?.organizationId,
             purpose,
             requestRef,
-            ghanaCard: borrower.nationalId || null,
-            ssnitNumber: (borrower as any).ssnitNumber || null,
+            ghanaCard: borrower.ghanaCardNumber || borrower.nationalId || null,
+            ssnitNumber: borrower.ssnitNumber || null,
             tinNumber: borrower.tinNumber || null,
             xdsRef: xdsResult.xdsRef,
             found: xdsResult.found,
@@ -12413,6 +12424,14 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (!borrowerId || !purpose) {
         return res.status(400).json({ message: "borrowerId and purpose are required" });
       }
+      const VALID_XDS_PURPOSES = [
+        "new_credit", "review", "collection", "regulatory", "portfolio_monitoring",
+        "credit_application", "credit_review", "account_management",
+        "fraud_prevention", "employment", "other",
+      ];
+      if (!VALID_XDS_PURPOSES.includes(purpose)) {
+        return res.status(400).json({ message: `Invalid purpose. Must be one of: ${VALID_XDS_PURPOSES.join(", ")}` });
+      }
       if (!ghanaCard && !ssnitNumber && !tinNumber && !(firstName && lastName)) {
         return res.status(400).json({ message: "At least one identifier is required (Ghana Card, SSNIT, TIN, or name)" });
       }
@@ -12425,7 +12444,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const { queryXdsGhana } = await import("./xds-ghana");
       const { xdsBureauQueries } = await import("@shared/schema");
 
-      const result = await queryXdsGhana({ ghanaCard, ssnitNumber, tinNumber, firstName, lastName, dateOfBirth, permissiblePurpose: purpose, requestRef });
+      const result = await queryXdsGhana({ ghanaCard, ssnitNumber, tinNumber, firstName, lastName, dateOfBirth, permissiblePurpose: mapPurposeToXds(purpose), requestRef });
 
       await db.insert(xdsBureauQueries).values({
         borrowerId,
