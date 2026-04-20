@@ -417,6 +417,8 @@ interface RegistryHealthConfigData {
   currentIntervalMinutes: number;
   cleanupTimeUtc: string | null;
   currentCleanupTimeUtc: string;
+  criticalFail7d: number;
+  criticalStreak30d: number;
   updatedAt: string | null;
 }
 
@@ -436,7 +438,7 @@ interface RetentionConfirmState {
 function RegistryHealthConfigPanel() {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<{ alertEmail: string; slackWebhookUrl: string; checkIntervalMinutes: string; retentionDays: string; cleanupTimeUtc: string } | null>(null);
+  const [form, setForm] = useState<{ alertEmail: string; slackWebhookUrl: string; checkIntervalMinutes: string; retentionDays: string; cleanupTimeUtc: string; criticalFail7d: string; criticalStreak30d: string } | null>(null);
   const [confirmCleanup, setConfirmCleanup] = useState(false);
   const [retentionConfirm, setRetentionConfirm] = useState<RetentionConfirmState | null>(null);
   const [checkingAffected, setCheckingAffected] = useState(false);
@@ -461,12 +463,14 @@ function RegistryHealthConfigPanel() {
         checkIntervalMinutes: String(data.checkIntervalMinutes),
         retentionDays: data.retentionDays != null ? String(data.retentionDays) : "",
         cleanupTimeUtc: data.cleanupTimeUtc ?? data.currentCleanupTimeUtc ?? "00:00",
+        criticalFail7d: String(data.criticalFail7d ?? 5),
+        criticalStreak30d: String(data.criticalStreak30d ?? 5),
       });
     }
   }, [data]);
 
   const saveMutation = useMutation({
-    mutationFn: async (payload: { alertEmail: string | null; slackWebhookUrl: string | null; checkIntervalMinutes: number; retentionDays: number | null; cleanupTimeUtc: string | null }) => {
+    mutationFn: async (payload: { alertEmail: string | null; slackWebhookUrl: string | null; checkIntervalMinutes: number; retentionDays: number | null; cleanupTimeUtc: string | null; criticalFail7d: number; criticalStreak30d: number }) => {
       const res = await apiRequest("PUT", "/api/admin/registry-health-config", payload);
       return res.json();
     },
@@ -518,12 +522,24 @@ function RegistryHealthConfigPanel() {
       toast({ title: "Invalid cleanup time", description: "Cleanup time must be in HH:MM format (e.g. 03:00).", variant: "destructive" });
       return;
     }
+    const criticalFail7d = parseInt(form.criticalFail7d, 10);
+    if (isNaN(criticalFail7d) || criticalFail7d < 1 || criticalFail7d > 999) {
+      toast({ title: "Invalid threshold", description: "Critical failure count must be between 1 and 999.", variant: "destructive" });
+      return;
+    }
+    const criticalStreak30d = parseInt(form.criticalStreak30d, 10);
+    if (isNaN(criticalStreak30d) || criticalStreak30d < 1 || criticalStreak30d > 999) {
+      toast({ title: "Invalid threshold", description: "Critical streak length must be between 1 and 999.", variant: "destructive" });
+      return;
+    }
     const payload = {
       alertEmail: form.alertEmail.trim() || null,
       slackWebhookUrl: form.slackWebhookUrl.trim() || null,
       checkIntervalMinutes: interval,
       retentionDays,
       cleanupTimeUtc: cleanupTimeRaw || null,
+      criticalFail7d,
+      criticalStreak30d,
     };
     const effectiveCurrent = data.effectiveRetentionDays;
     const effectiveNew = retentionDays !== null ? retentionDays : data.defaultRetentionDays;
@@ -723,6 +739,34 @@ function RegistryHealthConfigPanel() {
                         <span className="font-medium text-foreground">{data.currentCleanupTimeUtc} UTC</span>.
                       </p>
                     </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="registry-critical-fail-7d" className="text-xs">Critical threshold — failures in 7 days</Label>
+                      <Input
+                        id="registry-critical-fail-7d"
+                        type="number"
+                        min={1}
+                        max={999}
+                        value={form.criticalFail7d}
+                        onChange={e => setForm(f => f ? { ...f, criticalFail7d: e.target.value } : f)}
+                        className="h-8 text-sm"
+                        data-testid="input-registry-critical-fail-7d"
+                      />
+                      <p className="text-[10px] text-muted-foreground">Show registry as critical when failures in the last 7 days reach this count (default: 5)</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="registry-critical-streak-30d" className="text-xs">Critical threshold — consecutive failure streak (30 days)</Label>
+                      <Input
+                        id="registry-critical-streak-30d"
+                        type="number"
+                        min={1}
+                        max={999}
+                        value={form.criticalStreak30d}
+                        onChange={e => setForm(f => f ? { ...f, criticalStreak30d: e.target.value } : f)}
+                        className="h-8 text-sm"
+                        data-testid="input-registry-critical-streak-30d"
+                      />
+                      <p className="text-[10px] text-muted-foreground">Show registry as critical when consecutive failures in the last 30 days reach this length (default: 5)</p>
+                    </div>
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="registry-slack-webhook" className="text-xs">Slack Webhook URL</Label>
@@ -872,6 +916,10 @@ function RegistryStatusPanel() {
     refetchInterval: 5 * 60 * 1000,
     staleTime: 2 * 60 * 1000,
   });
+  const { data: healthConfig } = useQuery<RegistryHealthConfigData>({
+    queryKey: ["/api/admin/registry-health-config"],
+    staleTime: 60000,
+  });
   const { toast } = useToast();
   const [testResults, setTestResults] = useState<Record<string, RegistryTestResult | "testing">>({});
   const [expandedHistory, setExpandedHistory] = useState<Record<string, boolean>>({});
@@ -995,8 +1043,8 @@ function RegistryStatusPanel() {
                     const okEvents30d = providerHistory30d.filter(e => e.status === "ok").length;
                     const failEvents30d = providerHistory30d.filter(e => e.status === "fail").length;
                     const uptimePct30d = totalEvents30d > 0 ? (okEvents30d / totalEvents30d) * 100 : null;
-                    const CRITICAL_FAIL_7D = 5;
-                    const CRITICAL_STREAK = 5;
+                    const CRITICAL_FAIL_7D = healthConfig?.criticalFail7d ?? 5;
+                    const CRITICAL_STREAK = healthConfig?.criticalStreak30d ?? 5;
                     const MIN_STREAK_DISPLAY = 2;
                     const longestStreak30d = (() => {
                       let max = 0, cur = 0;

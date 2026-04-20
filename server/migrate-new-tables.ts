@@ -512,6 +512,9 @@ export async function migrateNewTables() {
     ON registry_health_events(provider, checked_at DESC)`);
 
   await db.execute(sql`ALTER TABLE registry_health_config ADD COLUMN IF NOT EXISTS cleanup_time_utc text`);
+  // Configurable critical-failure thresholds on registry health config (Task #103)
+  await db.execute(sql`ALTER TABLE registry_health_config ADD COLUMN IF NOT EXISTS critical_fail_7d integer NOT NULL DEFAULT 5`);
+  await db.execute(sql`ALTER TABLE registry_health_config ADD COLUMN IF NOT EXISTS critical_streak_30d integer NOT NULL DEFAULT 5`);
 
   console.log('[NewTables] Migration complete');
 }

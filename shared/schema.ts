@@ -1632,6 +1632,8 @@ export const registryHealthConfig = pgTable("registry_health_config", {
   checkIntervalMinutes: integer("check_interval_minutes").notNull().default(15),
   retentionDays: integer("retention_days"),
   cleanupTimeUtc: text("cleanup_time_utc"),
+  criticalFail7d: integer("critical_fail_7d").notNull().default(5),
+  criticalStreak30d: integer("critical_streak_30d").notNull().default(5),
   updatedAt: timestamp("updated_at").defaultNow(),
   updatedBy: varchar("updated_by").references(() => users.id),
 });

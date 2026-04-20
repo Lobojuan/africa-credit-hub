@@ -2606,6 +2606,8 @@ export class DatabaseStorage implements IStorage {
       checkIntervalMinutes: data.checkIntervalMinutes ?? 15,
       retentionDays: data.retentionDays ?? null,
       cleanupTimeUtc: data.cleanupTimeUtc ?? null,
+      criticalFail7d: data.criticalFail7d ?? 5,
+      criticalStreak30d: data.criticalStreak30d ?? 5,
       updatedAt: new Date(),
       updatedBy: updatedBy ?? null,
     };
@@ -2618,6 +2620,8 @@ export class DatabaseStorage implements IStorage {
     if (data.checkIntervalMinutes !== undefined) updateSet.checkIntervalMinutes = data.checkIntervalMinutes;
     if (data.retentionDays !== undefined) updateSet.retentionDays = data.retentionDays;
     if (data.cleanupTimeUtc !== undefined) updateSet.cleanupTimeUtc = data.cleanupTimeUtc;
+    if (data.criticalFail7d !== undefined) updateSet.criticalFail7d = data.criticalFail7d;
+    if (data.criticalStreak30d !== undefined) updateSet.criticalStreak30d = data.criticalStreak30d;
     const [row] = await db
       .insert(registryHealthConfig)
       .values(insertValues)
