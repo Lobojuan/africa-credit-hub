@@ -1675,46 +1675,73 @@ export async function registerRoutes(
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
       const { provider } = req.body || {};
 
-      const monoKey = process.env.MONO_API_KEY;
-      const stitchId = process.env.STITCH_CLIENT_ID;
-      const okraKey = process.env.OKRA_SECRET_KEY;
+      // Provider detection uses server-side secret availability, but secrets are NEVER included
+      // in the response. Only public keys / OAuth client IDs / session references are returned.
+      const monoPublicKey = process.env.MONO_PUBLIC_KEY; // Public key for Mono Connect Widget
+      const hasMonoSecret = !!process.env.MONO_API_KEY;  // Secret — server-to-server only
+      const stitchClientId = process.env.STITCH_CLIENT_ID; // OAuth client ID (public)
+      const hasOkraSecret = !!process.env.OKRA_SECRET_KEY; // Secret — server-to-server only
 
-      // Auto-detect provider based on borrower country if not specified
       const country = (borrower.country || "GH").toUpperCase();
       const detectedProvider = provider || (
-        monoKey ? "mono" :
-        stitchId ? "stitch" :
-        okraKey ? "okra" : null
+        (monoPublicKey || hasMonoSecret) ? "mono" :
+        stitchClientId ? "stitch" :
+        hasOkraSecret ? "okra" : null
       );
 
       if (!detectedProvider) {
         return res.status(503).json({
-          message: "No open-banking provider configured. Set MONO_API_KEY, STITCH_CLIENT_ID, or OKRA_SECRET_KEY.",
+          message: "No open-banking provider configured. Set MONO_PUBLIC_KEY + MONO_API_KEY, STITCH_CLIENT_ID, or OKRA_SECRET_KEY.",
           code: "OPEN_BANKING_UNAVAILABLE",
         });
       }
 
-      let linkUrl: string;
-      let sessionMeta: Record<string, unknown> = {};
+      let linkConfig: Record<string, unknown>;
 
       if (detectedProvider === "mono") {
-        if (!monoKey) return res.status(503).json({ message: "MONO_API_KEY not set", code: "OPEN_BANKING_UNAVAILABLE" });
-        // Mono widget link — the lender embeds the Mono Connect Widget using the public key.
-        // The widget calls /link-session/callback with the authorization code on success.
-        linkUrl = `https://connect.withmono.com/?key=${monoKey}&reference=${borrower.id}`;
-        sessionMeta = { provider: "mono", reference: borrower.id };
+        if (!monoPublicKey) {
+          // Server-side secret is present but no public key — cannot generate a safe widget URL.
+          // Return a session reference so the lender can embed the widget using their own Mono public key.
+          return res.status(503).json({
+            message: "MONO_PUBLIC_KEY is not set. Set MONO_PUBLIC_KEY (public-facing Mono Connect Widget key, separate from MONO_API_KEY server secret) to enable link-session initiation.",
+            code: "MONO_PUBLIC_KEY_MISSING",
+          });
+        }
+        // MONO_PUBLIC_KEY is the non-secret Connect Widget key — safe to embed in URLs.
+        const reference = borrower.id;
+        const callbackUrl = `${req.protocol}://${req.hostname}/api/borrowers/${borrower.id}/affordability/link-session/callback`;
+        linkConfig = {
+          provider: "mono",
+          widgetUrl: `https://connect.withmono.com/?key=${monoPublicKey}&reference=${encodeURIComponent(reference)}`,
+          reference,
+          callbackUrl,
+        };
       } else if (detectedProvider === "stitch") {
-        if (!stitchId) return res.status(503).json({ message: "STITCH_CLIENT_ID not set", code: "OPEN_BANKING_UNAVAILABLE" });
+        if (!stitchClientId) return res.status(503).json({ message: "STITCH_CLIENT_ID not set", code: "OPEN_BANKING_UNAVAILABLE" });
+        // STITCH_CLIENT_ID is the public OAuth client ID — safe in authorization URLs.
         const redirectUri = process.env.STITCH_REDIRECT_URI || `${req.protocol}://${req.hostname}/api/borrowers/${borrower.id}/affordability/link-session/callback`;
-        const state = Buffer.from(JSON.stringify({ borrowerId: borrower.id, provider: "stitch" })).toString("base64");
-        const scopes = encodeURIComponent("openid offline_access accounts transactions");
-        linkUrl = `https://secure.stitch.money/connect/authorize?client_id=${stitchId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scopes}&response_type=code&state=${state}`;
-        sessionMeta = { provider: "stitch", redirectUri, state };
+        const state = Buffer.from(JSON.stringify({ borrowerId: borrower.id, provider: "stitch" })).toString("base64url");
+        const scopes = "openid offline_access accounts transactions";
+        const authUrl = new URL("https://secure.stitch.money/connect/authorize");
+        authUrl.searchParams.set("client_id", stitchClientId);
+        authUrl.searchParams.set("redirect_uri", redirectUri);
+        authUrl.searchParams.set("scope", scopes);
+        authUrl.searchParams.set("response_type", "code");
+        authUrl.searchParams.set("state", state);
+        linkConfig = { provider: "stitch", authorizationUrl: authUrl.toString(), redirectUri, state };
       } else if (detectedProvider === "okra") {
-        if (!okraKey) return res.status(503).json({ message: "OKRA_SECRET_KEY not set", code: "OPEN_BANKING_UNAVAILABLE" });
-        // Okra widget — the lender embeds the Okra widget with the secret key
-        linkUrl = `https://connect.okra.ng/widget?token=${okraKey}&customer_id=${borrower.id}`;
-        sessionMeta = { provider: "okra", customerId: borrower.id };
+        // OKRA_SECRET_KEY is a server secret — NEVER returned to clients.
+        // The link-session returns a session reference only; the lender uses their own Okra
+        // client-side token to embed the Okra Widget in their UI.
+        if (!hasOkraSecret) return res.status(503).json({ message: "OKRA_SECRET_KEY not set", code: "OPEN_BANKING_UNAVAILABLE" });
+        const callbackUrl = `${req.protocol}://${req.hostname}/api/borrowers/${borrower.id}/affordability/link-session/callback`;
+        linkConfig = {
+          provider: "okra",
+          widgetBaseUrl: "https://connect.okra.ng/widget",
+          sessionReference: borrower.id,
+          callbackUrl,
+          note: "Embed the Okra widget using your Okra public client token (not the server secret). Pass sessionReference as customer_id and callbackUrl as success_redirect.",
+        };
       } else {
         return res.status(400).json({ message: `Unknown provider: ${detectedProvider}` });
       }
@@ -1725,7 +1752,7 @@ export async function registerRoutes(
         ipAddress: req.ip || null,
       });
 
-      res.json({ provider: detectedProvider, linkUrl, meta: sessionMeta });
+      res.json(linkConfig);
     } catch (e: any) {
       console.error("[affordability/link-session]", e);
       res.status(e?.statusCode || 500).json({ message: safeErrorMessage(e), code: e?.code ?? undefined });
