@@ -12343,7 +12343,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   app.get("/api/admin/registry-health-config", requireRole("admin", "super_admin"), async (_req, res) => {
     try {
       const cfg = await storage.getRegistryHealthConfig();
-      const { getCurrentIntervalMs } = await import("./registry-health-checker");
+      const { getCurrentIntervalMs, getCurrentCleanupTimeUtc } = await import("./registry-health-checker");
       const envRetention = parseInt(process.env.REGISTRY_HEALTH_RETENTION_DAYS ?? "", 10);
       const MIN_RETENTION = 7;
       const MAX_RETENTION = 90;
@@ -12357,6 +12357,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         retentionDays: cfg?.retentionDays ?? null,
         effectiveRetentionDays: Math.min(Math.max(rawEffective, MIN_RETENTION), MAX_RETENTION),
         currentIntervalMinutes: Math.round(getCurrentIntervalMs() / 60000),
+        cleanupTimeUtc: cfg?.cleanupTimeUtc ?? null,
+        currentCleanupTimeUtc: getCurrentCleanupTimeUtc(),
         updatedAt: cfg?.updatedAt ?? null,
       });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
@@ -12369,6 +12371,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         slackWebhookUrl: z.string().url().nullable().optional(),
         checkIntervalMinutes: z.number().int().min(1).max(1440).optional(),
         retentionDays: z.number().int().min(7).max(90).nullable().optional(),
+        cleanupTimeUtc: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Must be HH:MM in 24-hour format").nullable().optional(),
       });
       const parsed = schema.safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ message: parsed.error.errors[0]?.message ?? "Invalid input" });
@@ -12376,9 +12379,12 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const userId = (req as any).user?.id;
       const cfg = await storage.upsertRegistryHealthConfig(parsed.data, userId);
 
+      const { restartRegistryHealthChecker, rescheduleCleanup } = await import("./registry-health-checker");
       if (parsed.data.checkIntervalMinutes !== undefined) {
-        const { restartRegistryHealthChecker } = await import("./registry-health-checker");
         restartRegistryHealthChecker(parsed.data.checkIntervalMinutes * 60 * 1000);
+      }
+      if (parsed.data.cleanupTimeUtc !== undefined) {
+        rescheduleCleanup(parsed.data.cleanupTimeUtc);
       }
 
       res.json(cfg);

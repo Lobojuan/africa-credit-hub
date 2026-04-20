@@ -1631,6 +1631,7 @@ export const registryHealthConfig = pgTable("registry_health_config", {
   slackWebhookUrl: text("slack_webhook_url"),
   checkIntervalMinutes: integer("check_interval_minutes").notNull().default(15),
   retentionDays: integer("retention_days"),
+  cleanupTimeUtc: text("cleanup_time_utc"),
   updatedAt: timestamp("updated_at").defaultNow(),
   updatedBy: varchar("updated_by").references(() => users.id),
 });

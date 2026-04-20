@@ -511,5 +511,7 @@ export async function migrateNewTables() {
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_registry_health_events_provider_time
     ON registry_health_events(provider, checked_at DESC)`);
 
+  await db.execute(sql`ALTER TABLE registry_health_config ADD COLUMN IF NOT EXISTS cleanup_time_utc text`);
+
   console.log('[NewTables] Migration complete');
 }

@@ -412,6 +412,8 @@ interface RegistryHealthConfigData {
   retentionDays: number | null;
   effectiveRetentionDays: number;
   currentIntervalMinutes: number;
+  cleanupTimeUtc: string | null;
+  currentCleanupTimeUtc: string;
   updatedAt: string | null;
 }
 
@@ -424,7 +426,7 @@ interface RegistryCleanupStats {
 function RegistryHealthConfigPanel() {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<{ alertEmail: string; slackWebhookUrl: string; checkIntervalMinutes: string; retentionDays: string } | null>(null);
+  const [form, setForm] = useState<{ alertEmail: string; slackWebhookUrl: string; checkIntervalMinutes: string; retentionDays: string; cleanupTimeUtc: string } | null>(null);
 
   const { data, isLoading } = useQuery<RegistryHealthConfigData>({
     queryKey: ["/api/admin/registry-health-config"],
@@ -445,12 +447,13 @@ function RegistryHealthConfigPanel() {
         slackWebhookUrl: data.slackWebhookUrl ?? "",
         checkIntervalMinutes: String(data.checkIntervalMinutes),
         retentionDays: data.retentionDays != null ? String(data.retentionDays) : "",
+        cleanupTimeUtc: data.cleanupTimeUtc ?? data.currentCleanupTimeUtc ?? "00:00",
       });
     }
   }, [data]);
 
   const saveMutation = useMutation({
-    mutationFn: async (payload: { alertEmail: string | null; slackWebhookUrl: string | null; checkIntervalMinutes: number; retentionDays: number | null }) => {
+    mutationFn: async (payload: { alertEmail: string | null; slackWebhookUrl: string | null; checkIntervalMinutes: number; retentionDays: number | null; cleanupTimeUtc: string | null }) => {
       const res = await apiRequest("PUT", "/api/admin/registry-health-config", payload);
       return res.json();
     },
@@ -497,11 +500,17 @@ function RegistryHealthConfigPanel() {
         return;
       }
     }
+    const cleanupTimeRaw = form.cleanupTimeUtc.trim();
+    if (cleanupTimeRaw && !/^([01]\d|2[0-3]):([0-5]\d)$/.test(cleanupTimeRaw)) {
+      toast({ title: "Invalid cleanup time", description: "Cleanup time must be in HH:MM format (e.g. 03:00).", variant: "destructive" });
+      return;
+    }
     saveMutation.mutate({
       alertEmail: form.alertEmail.trim() || null,
       slackWebhookUrl: form.slackWebhookUrl.trim() || null,
       checkIntervalMinutes: interval,
       retentionDays,
+      cleanupTimeUtc: cleanupTimeRaw || null,
     });
   }
 
@@ -627,6 +636,21 @@ function RegistryHealthConfigPanel() {
                       />
                       <p className="text-[10px] text-muted-foreground">
                         Currently keeping {data.effectiveRetentionDays} days of history (7–90). Overrides <code className="bg-muted px-1 rounded">REGISTRY_HEALTH_RETENTION_DAYS</code>
+                      </p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="registry-cleanup-time" className="text-xs">Cleanup time (UTC)</Label>
+                      <Input
+                        id="registry-cleanup-time"
+                        type="time"
+                        value={form.cleanupTimeUtc}
+                        onChange={e => setForm(f => f ? { ...f, cleanupTimeUtc: e.target.value } : f)}
+                        className="h-8 text-sm"
+                        data-testid="input-registry-cleanup-time"
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        Daily cleanup runs at this UTC time. Currently scheduled for{" "}
+                        <span className="font-medium text-foreground">{data.currentCleanupTimeUtc} UTC</span>.
                       </p>
                     </div>
                   </div>

@@ -22,8 +22,8 @@ import { storage } from "./storage";
 
 const DEFAULT_CHECK_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
 const FAILURE_THRESHOLD = 2;
-const CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000; // once per day
 const DEFAULT_RETENTION_DAYS = 90;
+const DEFAULT_CLEANUP_TIME_UTC = "00:00";
 
 export interface RegistryHealthEntry {
   provider: string;
@@ -41,7 +41,7 @@ export function getRegistryHealthState(): RegistryHealthEntry[] {
   return Array.from(healthState.values());
 }
 
-async function getDbConfig(): Promise<{ alertEmail?: string | null; slackWebhookUrl?: string | null; checkIntervalMinutes?: number }> {
+async function getDbConfig(): Promise<{ alertEmail?: string | null; slackWebhookUrl?: string | null; checkIntervalMinutes?: number; cleanupTimeUtc?: string | null }> {
   try {
     const { storage } = await import("./storage");
     const cfg = await storage.getRegistryHealthConfig();
@@ -259,8 +259,9 @@ export async function pruneOldHealthEvents(): Promise<void> {
 }
 
 let _timer: ReturnType<typeof setInterval> | null = null;
-let _cleanupTimer: ReturnType<typeof setInterval> | null = null;
+let _cleanupTimeout: ReturnType<typeof setTimeout> | null = null;
 let _currentIntervalMs = DEFAULT_CHECK_INTERVAL_MS;
+let _currentCleanupTimeUtc: string = DEFAULT_CLEANUP_TIME_UTC;
 
 interface CleanupStats {
   lastRanAt: Date | null;
@@ -278,10 +279,53 @@ export function getCleanupStats(): CleanupStats {
   return { ..._cleanupStats };
 }
 
+export function getCurrentCleanupTimeUtc(): string {
+  return _currentCleanupTimeUtc;
+}
+
+function parseCleanupTimeUtc(raw: string | null | undefined): string {
+  if (!raw) return DEFAULT_CLEANUP_TIME_UTC;
+  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(raw.trim());
+  return match ? raw.trim() : DEFAULT_CLEANUP_TIME_UTC;
+}
+
+function msUntilNextUtcTime(hhmm: string): number {
+  const [h, m] = hhmm.split(":").map(Number);
+  const now = new Date();
+  const nextFire = new Date();
+  nextFire.setUTCHours(h, m, 0, 0);
+  if (nextFire.getTime() <= now.getTime()) {
+    nextFire.setUTCDate(nextFire.getUTCDate() + 1);
+  }
+  return nextFire.getTime() - now.getTime();
+}
+
+function scheduleCleanupAtTime(hhmm: string): void {
+  if (_cleanupTimeout) {
+    clearTimeout(_cleanupTimeout);
+    _cleanupTimeout = null;
+  }
+  _currentCleanupTimeUtc = hhmm;
+  const delayMs = msUntilNextUtcTime(hhmm);
+  console.log(`[RegistryHealth] Cleanup scheduled at ${hhmm} UTC (in ${Math.round(delayMs / 60000)} min)`);
+
+  function fireAndReschedule() {
+    pruneOldHealthEvents().catch((e: any) => console.error("[RegistryHealth] Scheduled cleanup failed:", e.message));
+    const nextDelay = msUntilNextUtcTime(_currentCleanupTimeUtc);
+    _cleanupTimeout = setTimeout(fireAndReschedule, nextDelay);
+  }
+
+  _cleanupTimeout = setTimeout(fireAndReschedule, delayMs);
+}
+
+export function rescheduleCleanup(timeUtc: string | null): void {
+  scheduleCleanupAtTime(parseCleanupTimeUtc(timeUtc));
+}
+
 export async function startRegistryHealthChecker(intervalMs = DEFAULT_CHECK_INTERVAL_MS): Promise<void> {
   if (_timer) return;
 
-  const cfg = await getDbConfig().catch(() => ({}));
+  const cfg = await getDbConfig().catch(() => ({} as { checkIntervalMinutes?: number; cleanupTimeUtc?: string | null }));
   const effectiveInterval = cfg.checkIntervalMinutes
     ? cfg.checkIntervalMinutes * 60 * 1000
     : intervalMs;
@@ -305,22 +349,16 @@ export async function startRegistryHealthChecker(intervalMs = DEFAULT_CHECK_INTE
     }
   }, effectiveInterval);
 
-  if (!_cleanupTimer) {
-    setTimeout(async () => {
-      try { await pruneOldHealthEvents(); } catch (e: any) { console.error("[RegistryHealth] Scheduled cleanup failed:", e.message); }
-    }, 30_000);
-    _cleanupTimer = setInterval(async () => {
-      try { await pruneOldHealthEvents(); } catch (e: any) { console.error("[RegistryHealth] Scheduled cleanup failed:", e.message); }
-    }, CLEANUP_INTERVAL_MS);
-    console.log("[RegistryHealth] Cleanup scheduler started — pruning runs daily");
+  if (!_cleanupTimeout) {
+    const timeUtc = parseCleanupTimeUtc(cfg.cleanupTimeUtc);
+    scheduleCleanupAtTime(timeUtc);
   }
 }
 
 /**
  * Restarts only the health-check interval timer with a new interval.
- * The daily cleanup timer (_cleanupTimer) is intentionally left running —
- * it is started once by startRegistryHealthChecker() on application boot
- * and does not need to be affected by config-driven interval changes.
+ * The daily cleanup timeout (_cleanupTimeout) is left untouched —
+ * use rescheduleCleanup() to change the cleanup time independently.
  */
 export function restartRegistryHealthChecker(newIntervalMs: number): void {
   if (_timer) {
