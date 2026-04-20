@@ -13101,6 +13101,17 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (e: any) { res.status(500).json({ message: e.message }); }
   });
 
+  // Temporary codebase download route
+  app.get("/download/source", (_req, res) => {
+    const zipPath = path.join(process.cwd(), "africa-credit-hub-v2.5.zip");
+    if (!fs.existsSync(zipPath)) {
+      return res.status(404).json({ message: "File not found" });
+    }
+    res.setHeader("Content-Disposition", "attachment; filename=\"africa-credit-hub-v2.5.zip\"");
+    res.setHeader("Content-Type", "application/zip");
+    res.sendFile(zipPath);
+  });
+
   return httpServer;
 }
 
