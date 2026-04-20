@@ -466,6 +466,12 @@ function RegistryHealthConfigPanel() {
     refetchInterval: 5 * 60 * 1000,
   });
 
+  const { data: thresholdOverrides } = useQuery<RegistryThresholdOverrideData[]>({
+    queryKey: ["/api/admin/registry-threshold-overrides"],
+    staleTime: 60000,
+    enabled: open,
+  });
+
   useEffect(() => {
     if (data && form === null) {
       setForm({
@@ -882,6 +888,80 @@ function RegistryHealthConfigPanel() {
               )}
             </>
           )}
+          {(() => {
+            const overridesByKey = (thresholdOverrides ?? []).reduce<Record<string, RegistryThresholdOverrideData>>((acc, o) => { acc[o.provider] = o; return acc; }, {});
+            const globalFail7d = data?.criticalFail7d ?? 5;
+            const globalStreak30d = data?.criticalStreak30d ?? 5;
+            const registryList = Object.entries(REGISTRY_LABELS).filter(([k]) => k !== "manual");
+            const overrideCount = registryList.filter(([k]) => {
+              const o = overridesByKey[k];
+              return o && (o.criticalFail7d !== null || o.criticalStreak30d !== null);
+            }).length;
+            function scrollAndOpenOverride(provider: string) {
+              const el = document.getElementById(`registry-row-${provider}`);
+              if (el) {
+                el.scrollIntoView({ behavior: "smooth", block: "center" });
+              }
+              window.dispatchEvent(new CustomEvent("open-registry-override", { detail: { provider } }));
+            }
+            return (
+              <div className="space-y-2 pt-1" data-testid="section-threshold-summary">
+                <div className="flex items-center gap-2">
+                  <p className="text-xs font-medium text-foreground">Threshold Summary — Per Registry</p>
+                  {overrideCount > 0 && (
+                    <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-600 border-amber-500/20">
+                      {overrideCount} override{overrideCount !== 1 ? "s" : ""} active
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Global defaults — fail7d: <span className="font-medium text-foreground">{globalFail7d}</span>, streak30d: <span className="font-medium text-foreground">{globalStreak30d}</span>. Click a row to configure per-registry thresholds.
+                </p>
+                <div className="rounded-md border border-border overflow-hidden">
+                  <table className="w-full text-[11px]">
+                    <thead>
+                      <tr className="bg-muted/50 border-b border-border">
+                        <th className="text-left px-3 py-1.5 font-medium text-muted-foreground">Registry</th>
+                        <th className="text-right px-3 py-1.5 font-medium text-muted-foreground">Fail / 7d</th>
+                        <th className="text-right px-3 py-1.5 font-medium text-muted-foreground">Streak / 30d</th>
+                        <th className="text-right px-3 py-1.5 font-medium text-muted-foreground">Source</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {registryList.map(([key, meta]) => {
+                        const o = overridesByKey[key];
+                        const hasOverride = !!o && (o.criticalFail7d !== null || o.criticalStreak30d !== null);
+                        const effectiveFail7d = o?.criticalFail7d ?? globalFail7d;
+                        const effectiveStreak30d = o?.criticalStreak30d ?? globalStreak30d;
+                        return (
+                          <tr
+                            key={key}
+                            data-testid={`summary-row-${key}`}
+                            className="border-b border-border last:border-0 hover:bg-muted/40 cursor-pointer transition-colors"
+                            onClick={() => scrollAndOpenOverride(key)}
+                          >
+                            <td className="px-3 py-1.5 font-medium text-foreground">{meta.label}</td>
+                            <td className="px-3 py-1.5 text-right tabular-nums text-foreground">{effectiveFail7d}</td>
+                            <td className="px-3 py-1.5 text-right tabular-nums text-foreground">{effectiveStreak30d}</td>
+                            <td className="px-3 py-1.5 text-right">
+                              {hasOverride ? (
+                                <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium">
+                                  <Settings2 className="w-3 h-3" />
+                                  override
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground">global</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })()}
         </CardContent>
       )}
 
@@ -1020,6 +1100,25 @@ function RegistryStatusPanel() {
   const [historyFailureOnly, setHistoryFailureOnly] = useState<Record<string, boolean>>({});
   const [overrideOpen, setOverrideOpen] = useState<Record<string, boolean>>({});
   const [overrideForms, setOverrideForms] = useState<Record<string, { criticalFail7d: string; criticalStreak30d: string }>>({});
+
+  useEffect(() => {
+    function handleOpenOverride(e: Event) {
+      const { provider } = (e as CustomEvent<{ provider: string }>).detail;
+      const o = (thresholdOverrides ?? []).find(x => x.provider === provider);
+      const globalFail7d = healthConfig?.criticalFail7d ?? 5;
+      const globalStreak30d = healthConfig?.criticalStreak30d ?? 5;
+      setOverrideForms(prev => ({
+        ...prev,
+        [provider]: {
+          criticalFail7d: String(o?.criticalFail7d ?? globalFail7d),
+          criticalStreak30d: String(o?.criticalStreak30d ?? globalStreak30d),
+        },
+      }));
+      setOverrideOpen(prev => ({ ...prev, [provider]: true }));
+    }
+    window.addEventListener("open-registry-override", handleOpenOverride);
+    return () => window.removeEventListener("open-registry-override", handleOpenOverride);
+  }, [thresholdOverrides, healthConfig]);
 
   const registries = Object.entries(REGISTRY_LABELS);
   const liveCount = data ? Object.values(data).filter(r => r.live && !r.sandbox).length : 0;
@@ -1164,7 +1263,7 @@ function RegistryStatusPanel() {
                     const isExpanded = expandedHistory[key] ?? false;
                     return (
                       <>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between" id={`registry-row-${key}`}>
                     <div className="flex items-center gap-2 min-w-0">
                       <Radio className={`w-3 h-3 shrink-0 ${isHealthFailing ? "text-red-500" : isLive && !isSandbox ? "text-emerald-500" : isLive && isSandbox ? "text-amber-500" : "text-muted-foreground/40"}`} />
                       <div className="min-w-0">
