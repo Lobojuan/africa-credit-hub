@@ -206,16 +206,18 @@ function CollapsibleSection({
   items,
   location,
   icon: Icon,
+  defaultOpen = false,
 }: {
   label: string;
   tKey?: string;
   items: NavItem[];
   location: string;
   icon?: LucideIcon;
+  defaultOpen?: boolean;
 }) {
   const { t } = useTranslation();
   const hasActive = items.some(item => location === item.url || (item.url === "/command-center" && location.startsWith("/command-center")));
-  const [open, setOpen] = useState(hasActive);
+  const [open, setOpen] = useState(hasActive || defaultOpen);
   const [userToggled, setUserToggled] = useState(false);
 
   React.useEffect(() => {
@@ -286,6 +288,14 @@ export function AppSidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
   const role = user?.role;
+  const defaultOpenSection = (sectionName: string): boolean => {
+    if (role === 'viewer')     return sectionName === 'Registry';
+    if (role === 'lender')     return sectionName === 'Registry';
+    if (role === 'regulator')  return sectionName === 'Registry';
+    if (role === 'admin')      return sectionName === 'Registry';
+    if (role === 'super_admin') return sectionName === 'Registry';
+    return false;
+  };
   const isRtl = i18n.language === "ar";
   const countryTheme = useCountryTheme();
   const { visualStyle } = useTheme();
@@ -366,6 +376,7 @@ export function AppSidebar() {
           items={visibleOverview}
           location={location}
           icon={LayoutDashboard}
+          defaultOpen={defaultOpenSection('Overview')}
         />
 
         <CollapsibleSection
@@ -374,6 +385,7 @@ export function AppSidebar() {
           items={visibleCreditData}
           location={location}
           icon={Users}
+          defaultOpen={defaultOpenSection('Credit Data')}
         />
 
         <CollapsibleSection
@@ -382,6 +394,7 @@ export function AppSidebar() {
           items={visibleReportsScoring}
           location={location}
           icon={FileText}
+          defaultOpen={defaultOpenSection('Reports & Scoring')}
         />
 
         <CollapsibleSection
@@ -390,6 +403,7 @@ export function AppSidebar() {
           items={visibleDataMgmt}
           location={location}
           icon={Upload}
+          defaultOpen={defaultOpenSection('Data Management')}
         />
 
         <CollapsibleSection
@@ -398,6 +412,7 @@ export function AppSidebar() {
           items={visibleWorkflows}
           location={location}
           icon={CheckSquare}
+          defaultOpen={defaultOpenSection('Workflows')}
         />
 
         {visibleIntelligence.length > 0 && (
@@ -407,6 +422,7 @@ export function AppSidebar() {
             items={visibleIntelligence}
             location={location}
             icon={Sparkles}
+            defaultOpen={defaultOpenSection('Intelligence')}
           />
         )}
 
@@ -417,6 +433,7 @@ export function AppSidebar() {
             items={visibleOversight}
             location={location}
             icon={Eye}
+            defaultOpen={defaultOpenSection('Oversight & Compliance')}
           />
         )}
 
@@ -427,6 +444,7 @@ export function AppSidebar() {
             items={visibleCrossBorder}
             location={location}
             icon={Globe}
+            defaultOpen={defaultOpenSection('Cross-Border')}
           />
         )}
 
@@ -441,6 +459,7 @@ export function AppSidebar() {
             items={visibleAdmin}
             location={location}
             icon={Settings}
+            defaultOpen={defaultOpenSection('Administration')}
           />
         )}
 
@@ -451,6 +470,7 @@ export function AppSidebar() {
             items={visibleApiIntegration}
             location={location}
             icon={Plug}
+            defaultOpen={defaultOpenSection('API & Integrations')}
           />
         )}
 
@@ -461,6 +481,7 @@ export function AppSidebar() {
             items={visibleInfrastructure}
             location={location}
             icon={Activity}
+            defaultOpen={defaultOpenSection('Infrastructure')}
           />
         )}
 
@@ -474,6 +495,7 @@ export function AppSidebar() {
           items={visibleHelp}
           location={location}
           icon={HelpCircle}
+          defaultOpen={defaultOpenSection('Help & Resources')}
         />
       </SidebarContent>
       <SidebarFooter className="p-3 pt-0 space-y-1.5">
