@@ -228,6 +228,9 @@ function resolveRetentionDaysFromEnv(): number {
   return (!rawEnv || isNaN(envDays) || envDays <= 0) ? DEFAULT_RETENTION_DAYS : envDays;
 }
 
+const MIN_RETENTION_DAYS = 7;
+const MAX_RETENTION_DAYS = 90;
+
 async function pruneOldHealthEvents(): Promise<void> {
   let days: number;
   try {
@@ -240,6 +243,7 @@ async function pruneOldHealthEvents(): Promise<void> {
   } catch {
     days = resolveRetentionDaysFromEnv();
   }
+  days = Math.min(Math.max(days, MIN_RETENTION_DAYS), MAX_RETENTION_DAYS);
   const beforeDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
   try {
     const deleted = await storage.deleteOldRegistryHealthEvents(beforeDate);

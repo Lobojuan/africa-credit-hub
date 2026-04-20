@@ -478,8 +478,8 @@ function RegistryHealthConfigPanel() {
     let retentionDays: number | null = null;
     if (retentionRaw !== "") {
       retentionDays = parseInt(retentionRaw, 10);
-      if (isNaN(retentionDays) || retentionDays < 1 || retentionDays > 3650) {
-        toast({ title: "Invalid retention window", description: "Retention must be between 1 and 3650 days.", variant: "destructive" });
+      if (isNaN(retentionDays) || retentionDays < 7 || retentionDays > 90) {
+        toast({ title: "Invalid retention period", description: "History retention must be between 7 and 90 days.", variant: "destructive" });
         return;
       }
     }
@@ -586,20 +586,20 @@ function RegistryHealthConfigPanel() {
                       <p className="text-[10px] text-muted-foreground">Currently running every {data.currentIntervalMinutes} min</p>
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="registry-retention-days" className="text-xs">Retention window (days)</Label>
+                      <Label htmlFor="registry-retention-days" className="text-xs">History retention (days)</Label>
                       <Input
                         id="registry-retention-days"
                         type="number"
-                        min={1}
-                        max={3650}
-                        placeholder={String(data.effectiveRetentionDays)}
+                        min={7}
+                        max={90}
+                        placeholder={String(Math.min(Math.max(data.effectiveRetentionDays, 7), 90))}
                         value={form.retentionDays}
                         onChange={e => setForm(f => f ? { ...f, retentionDays: e.target.value } : f)}
                         className="h-8 text-sm"
                         data-testid="input-registry-retention-days"
                       />
                       <p className="text-[10px] text-muted-foreground">
-                        Currently keeping {data.effectiveRetentionDays} days of history. Overrides <code className="bg-muted px-1 rounded">REGISTRY_HEALTH_RETENTION_DAYS</code>
+                        Currently keeping {data.effectiveRetentionDays} days of history (7–90). Overrides <code className="bg-muted px-1 rounded">REGISTRY_HEALTH_RETENTION_DAYS</code>
                       </p>
                     </div>
                   </div>

@@ -12345,13 +12345,17 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const cfg = await storage.getRegistryHealthConfig();
       const { getCurrentIntervalMs } = await import("./registry-health-checker");
       const envRetention = parseInt(process.env.REGISTRY_HEALTH_RETENTION_DAYS ?? "", 10);
-      const defaultRetention = (!process.env.REGISTRY_HEALTH_RETENTION_DAYS || isNaN(envRetention) || envRetention <= 0) ? 90 : envRetention;
+      const MIN_RETENTION = 7;
+      const MAX_RETENTION = 90;
+      const rawDefault = (!process.env.REGISTRY_HEALTH_RETENTION_DAYS || isNaN(envRetention) || envRetention <= 0) ? MAX_RETENTION : envRetention;
+      const defaultRetention = Math.min(Math.max(rawDefault, MIN_RETENTION), MAX_RETENTION);
+      const rawEffective = cfg?.retentionDays && cfg.retentionDays > 0 ? cfg.retentionDays : defaultRetention;
       res.json({
         alertEmail: cfg?.alertEmail ?? null,
         slackWebhookUrl: cfg?.slackWebhookUrl ?? null,
         checkIntervalMinutes: cfg?.checkIntervalMinutes ?? 15,
         retentionDays: cfg?.retentionDays ?? null,
-        effectiveRetentionDays: cfg?.retentionDays && cfg.retentionDays > 0 ? cfg.retentionDays : defaultRetention,
+        effectiveRetentionDays: Math.min(Math.max(rawEffective, MIN_RETENTION), MAX_RETENTION),
         currentIntervalMinutes: Math.round(getCurrentIntervalMs() / 60000),
         updatedAt: cfg?.updatedAt ?? null,
       });
@@ -12364,7 +12368,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         alertEmail: z.string().email().nullable().optional(),
         slackWebhookUrl: z.string().url().nullable().optional(),
         checkIntervalMinutes: z.number().int().min(1).max(1440).optional(),
-        retentionDays: z.number().int().min(1).max(3650).nullable().optional(),
+        retentionDays: z.number().int().min(7).max(90).nullable().optional(),
       });
       const parsed = schema.safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ message: parsed.error.errors[0]?.message ?? "Invalid input" });
