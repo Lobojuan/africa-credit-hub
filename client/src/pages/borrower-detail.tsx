@@ -302,7 +302,69 @@ export default function BorrowerDetailPage() {
     enabled: !!borrowerId,
   });
 
+  const affordabilityFileRef = useRef<HTMLInputElement>(null);
   const [affordabilityComputeError, setAffordabilityComputeError] = useState<{ type: "consent_required" | "open_banking_unavailable" | "generic"; message: string } | null>(null);
+  const [bankStatementUploading, setBankStatementUploading] = useState(false);
+  const [connectingBank, setConnectingBank] = useState(false);
+
+  async function handleBankStatementUpload(file: File) {
+    setBankStatementUploading(true);
+    setAffordabilityComputeError(null);
+    try {
+      const csrfRes = await fetch("/auth/csrf-token");
+      const { token: csrf } = await csrfRes.json();
+      const fd = new FormData();
+      fd.append("statement", file);
+      const res = await fetch(`/api/borrowers/${borrowerId}/affordability/bank-statement`, {
+        method: "POST", body: fd, headers: { "X-CSRF-Token": csrf }, credentials: "include",
+      });
+      if (!res.ok) { const j = await res.json(); throw new Error(j.message || res.statusText); }
+      queryClient.invalidateQueries({ queryKey: ['/api/borrowers', borrowerId, 'affordability'] });
+      refetchAffordability();
+      toast({ title: "Bank statement processed", description: "Affordability assessment updated from PDF." });
+    } catch (e: any) {
+      setAffordabilityComputeError({ type: "generic", message: e.message });
+    } finally {
+      setBankStatementUploading(false);
+      if (affordabilityFileRef.current) affordabilityFileRef.current.value = "";
+    }
+  }
+
+  async function handleConnectBank() {
+    setConnectingBank(true);
+    setAffordabilityComputeError(null);
+    try {
+      const csrfRes = await fetch("/auth/csrf-token");
+      const { token: csrf } = await csrfRes.json();
+      const res = await fetch(`/api/borrowers/${borrowerId}/affordability/connect-bank`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
+        body: JSON.stringify({ source: "open_banking" }),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const j = await res.json();
+        const msg = j.message || res.statusText;
+        const lc = msg.toLowerCase();
+        if (lc.includes("consent") || res.status === 403) {
+          setAffordabilityComputeError({ type: "consent_required", message: "Borrower consent required before connecting open banking. Add an active Consent Record first." });
+        } else if (lc.includes("open_banking_unavailable") || lc.includes("no open-banking")) {
+          setAffordabilityComputeError({ type: "open_banking_unavailable", message: "No live open-banking provider configured. Set MONO_API_KEY (Ghana/Nigeria/Kenya/South Africa), STITCH_CLIENT_ID (South Africa), or OKRA_SECRET_KEY (Nigeria)." });
+        } else {
+          setAffordabilityComputeError({ type: "generic", message: msg });
+        }
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ['/api/borrowers', borrowerId, 'affordability'] });
+      refetchAffordability();
+      toast({ title: "Bank connected", description: "Affordability assessment updated from open banking." });
+    } catch (e: any) {
+      setAffordabilityComputeError({ type: "generic", message: e.message });
+    } finally {
+      setConnectingBank(false);
+    }
+  }
+
   const affordabilityMutation = useMutation({
     mutationFn: async () => {
       return await apiRequest("POST", `/api/borrowers/${borrowerId}/affordability`, { source: "auto" });
@@ -625,15 +687,47 @@ export default function BorrowerDetailPage() {
                 </Badge>
               )}
             </div>
-            <Button
-              size="sm" variant="outline"
-              onClick={() => affordabilityMutation.mutate()}
-              disabled={affordabilityMutation.isPending}
-              data-testid="button-recompute-affordability"
-            >
-              {affordabilityMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <TrendingUp className="w-4 h-4 mr-2" />}
-              {affordability?.assessment ? "Recompute" : "Compute"}
-            </Button>
+            <div className="flex items-center gap-1.5">
+              {/* Hidden file input for bank statement PDF upload */}
+              <input
+                ref={affordabilityFileRef}
+                type="file"
+                accept=".pdf"
+                className="hidden"
+                data-testid="input-bank-statement-upload"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleBankStatementUpload(file);
+                }}
+              />
+              <Button
+                size="sm" variant="ghost"
+                onClick={() => affordabilityFileRef.current?.click()}
+                disabled={bankStatementUploading || affordabilityMutation.isPending}
+                title="Upload bank statement PDF"
+                data-testid="button-upload-bank-statement"
+              >
+                {bankStatementUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+              </Button>
+              <Button
+                size="sm" variant="ghost"
+                onClick={handleConnectBank}
+                disabled={connectingBank || affordabilityMutation.isPending}
+                title="Connect via open banking"
+                data-testid="button-connect-bank"
+              >
+                {connectingBank ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
+              </Button>
+              <Button
+                size="sm" variant="outline"
+                onClick={() => affordabilityMutation.mutate()}
+                disabled={affordabilityMutation.isPending}
+                data-testid="button-recompute-affordability"
+              >
+                {affordabilityMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <TrendingUp className="w-4 h-4 mr-2" />}
+                {affordability?.assessment ? "Recompute" : "Compute"}
+              </Button>
+            </div>
           </div>
 
           {/* Inline consent / error feedback */}

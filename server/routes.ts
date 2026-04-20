@@ -1681,6 +1681,41 @@ export async function registerRoutes(
     }
   });
 
+  /**
+   * Revoke open-banking consent for a borrower.
+   * Provider-agnostic: revokes the most recent active consent record with an open-banking/financial scope,
+   * then logs the revocation. Actual provider-side token revocation depends on the provider's API.
+   */
+  app.delete("/api/borrowers/:id/affordability/connect-bank", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const borrower = await storage.getBorrower(req.params.id);
+      if (!borrower) return res.status(404).json({ message: "Borrower not found" });
+
+      // Find active consent records with open-banking/financial scope
+      const records = await storage.getConsentRecordsByBorrower(req.params.id);
+      const openBankingRecord = records.find(r => {
+        if (r.status !== "active") return false;
+        const t = (r.consentType || "").toLowerCase().replace(/[\s_-]/g, "");
+        return ["affordability", "financial", "openbanking", "datasharing"].some(n => t.includes(n));
+      });
+
+      if (openBankingRecord) {
+        await storage.revokeConsent(openBankingRecord.id);
+      }
+
+      await storage.createAuditLog({
+        action: "AFFORDABILITY_BANK_REVOKE", entity: "borrower", entityId: req.params.id, userId: req.session?.userId,
+        details: `Open-banking consent revoked for borrower ${borrower.firstName || borrower.companyName}${openBankingRecord ? ` (consent record: ${openBankingRecord.id})` : " (no active record found)"}`,
+        ipAddress: req.ip || null,
+      });
+
+      res.json({ message: "Open-banking consent revoked.", consentRecordId: openBankingRecord?.id ?? null });
+    } catch (e: any) {
+      console.error("[affordability/revoke-bank]", e);
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
   app.get("/api/compliance/queue", requireRole("admin", "super_admin", "regulator"), enforceDataSovereignty, async (req, res) => {
     try {
       const isSuper = req.session?.userRole === "super_admin";
