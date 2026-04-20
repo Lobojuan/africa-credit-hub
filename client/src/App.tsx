@@ -89,6 +89,7 @@ const BogExportPage = lazy(() => import("@/pages/bog-export"));
 const BslExportPage = lazy(() => import("@/pages/bsl-export"));
 const VersionHistoryPage = lazy(() => import("@/pages/version-history"));
 const AppGuidePage = lazy(() => import("@/pages/app-guide"));
+const TrainingCenterPage = lazy(() => import("@/pages/training-center"));
 const OrganizationsPage = lazy(() => import("@/pages/organizations"));
 const GhanaDocsPage = lazy(() => import("@/pages/ghana-docs"));
 const PartnerDocsPage = lazy(() => import("@/pages/partner-docs"));
@@ -206,6 +207,7 @@ function Router() {
         <Route path="/bsl-export" component={BslExportPage} />
         <Route path="/version-history" component={VersionHistoryPage} />
         <Route path="/guide" component={AppGuidePage} />
+        <Route path="/training" component={TrainingCenterPage} />
         <Route path="/organizations" component={OrganizationsPage} />
         <Route path="/ghana-docs" component={GhanaDocsPage} />
         <Route path="/partner-docs" component={PartnerDocsPage} />

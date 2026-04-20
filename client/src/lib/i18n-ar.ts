@@ -37,6 +37,7 @@ const ar: Record<string, any> = {
     integrations: "التكاملات",
     help: "المساعدة والدليل",
     documentation: "الوثائق",
+    trainingCenter: "مركز التدريب",
     appGuide: "دليل التطبيق",
     versionHistory: "سجل الإصدارات",
     about: "حول",

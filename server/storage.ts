@@ -58,6 +58,8 @@ import {
   type RegistryHealthConfig, type InsertRegistryHealthConfig,
   registryHealthEvents,
   type RegistryHealthEvent, type InsertRegistryHealthEvent,
+  trainingAttempts,
+  type TrainingAttempt, type InsertTrainingAttempt,
 } from "@shared/schema";
 
 export function requireCountryScope(country: string | undefined, methodName: string): void {
@@ -320,6 +322,10 @@ export interface IStorage {
   getActiveLinkedOpenBankingAccount(borrowerId: string, provider?: string): Promise<LinkedOpenBankingAccount | undefined>;
   createLinkedOpenBankingAccount(data: InsertLinkedOpenBankingAccount): Promise<LinkedOpenBankingAccount>;
   revokeLinkedOpenBankingAccount(id: string): Promise<void>;
+
+  createTrainingAttempt(data: InsertTrainingAttempt): Promise<TrainingAttempt>;
+  getUserTrainingAttempts(userId: string): Promise<TrainingAttempt[]>;
+  getBestTrainingAttempts(userId: string): Promise<TrainingAttempt[]>;
 }
 
 export interface OverdueAssignmentDetail {
@@ -2648,6 +2654,31 @@ export class DatabaseStorage implements IStorage {
       .delete(registryHealthEvents)
       .where(lt(registryHealthEvents.checkedAt, beforeDate));
     return result.rowCount ?? 0;
+  }
+
+  async createTrainingAttempt(data: InsertTrainingAttempt): Promise<TrainingAttempt> {
+    const [created] = await db.insert(trainingAttempts).values(data).returning();
+    return created;
+  }
+
+  async getUserTrainingAttempts(userId: string): Promise<TrainingAttempt[]> {
+    return await db
+      .select()
+      .from(trainingAttempts)
+      .where(eq(trainingAttempts.userId, userId))
+      .orderBy(desc(trainingAttempts.completedAt));
+  }
+
+  async getBestTrainingAttempts(userId: string): Promise<TrainingAttempt[]> {
+    const all = await this.getUserTrainingAttempts(userId);
+    const best = new Map<string, TrainingAttempt>();
+    for (const attempt of all) {
+      const existing = best.get(attempt.moduleId);
+      if (!existing || attempt.score > existing.score) {
+        best.set(attempt.moduleId, attempt);
+      }
+    }
+    return Array.from(best.values());
   }
 }
 

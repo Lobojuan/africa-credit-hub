@@ -40,6 +40,7 @@ const sw: Record<string, any> = {
     integrations: "Miunganisho",
     help: "Msaada na Mwongozo",
     documentation: "Nyaraka",
+    trainingCenter: "Kituo cha Mafunzo",
     appGuide: "Mwongozo wa Programu",
     versionHistory: "Historia ya Matoleo",
     about: "Kuhusu",

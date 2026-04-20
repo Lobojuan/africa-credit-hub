@@ -52,6 +52,7 @@ import {
   Database,
   ShieldAlert,
   ClipboardList,
+  GraduationCap,
 } from "lucide-react";
 import {
   Sidebar,
@@ -186,6 +187,7 @@ function getHelpItems(): NavItem[] {
   }
   items.push(
     { label: "Documentation", tKey: "sidebar.documentation", url: "/documentation", icon: FileText, testId: "nav-documentation", roles: ["super_admin", "admin", "regulator", "lender"] },
+    { label: "Training Center", tKey: "sidebar.trainingCenter", url: "/training", icon: GraduationCap, testId: "nav-training-center", roles: allRoles },
     { label: "App Guide", tKey: "sidebar.appGuide", url: "/guide", icon: Play, testId: "nav-app-guide", roles: allRoles },
     { label: "Help", tKey: "sidebar.help", url: "/help", icon: HelpCircle, testId: "nav-help", roles: allRoles },
     { label: "Version History", tKey: "sidebar.versionHistory", url: "/version-history", icon: History, testId: "nav-version-history", roles: ["super_admin", "admin"] },

@@ -37,6 +37,7 @@ const pt = {
     integrations: "Integrações",
     help: "Ajuda e Guia",
     documentation: "Documentação",
+    trainingCenter: "Centro de Formação",
     appGuide: "Guia do App",
     versionHistory: "Histórico de Versões",
     about: "Sobre",

@@ -1679,3 +1679,22 @@ export const linkedOpenBankingAccounts = pgTable("linked_open_banking_accounts",
 export const insertLinkedOpenBankingAccountSchema = createInsertSchema(linkedOpenBankingAccounts).omit({ id: true, linkedAt: true, revokedAt: true });
 export type InsertLinkedOpenBankingAccount = z.infer<typeof insertLinkedOpenBankingAccountSchema>;
 export type LinkedOpenBankingAccount = typeof linkedOpenBankingAccounts.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Training Center — tracks quiz attempts per user per module
+// ---------------------------------------------------------------------------
+
+export const trainingAttempts = pgTable("training_attempts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  moduleId: text("module_id").notNull(),
+  score: integer("score").notNull(),
+  totalQuestions: integer("total_questions").notNull(),
+  passed: boolean("passed").notNull().default(false),
+  answers: jsonb("answers").notNull().default([]),
+  completedAt: timestamp("completed_at").defaultNow().notNull(),
+});
+
+export const insertTrainingAttemptSchema = createInsertSchema(trainingAttempts).omit({ id: true, completedAt: true });
+export type InsertTrainingAttempt = z.infer<typeof insertTrainingAttemptSchema>;
+export type TrainingAttempt = typeof trainingAttempts.$inferSelect;

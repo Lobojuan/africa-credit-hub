@@ -12784,6 +12784,31 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     startCollectionSlaChecker();
   }).catch(e => console.error("[routes] Failed to start SLA checker:", e.message));
 
+  // -------------------------------------------------------------------------
+  // Training Center routes
+  // -------------------------------------------------------------------------
+  app.get("/api/training/progress", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      const best = await storage.getBestTrainingAttempts(userId);
+      res.json(best);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
+  app.post("/api/training/attempts", requireAuth, async (req, res) => {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      const { moduleId, score, totalQuestions, passed, answers } = req.body;
+      if (!moduleId || score === undefined || !totalQuestions) {
+        return res.status(400).json({ message: "moduleId, score, and totalQuestions are required" });
+      }
+      const attempt = await storage.createTrainingAttempt({ userId, moduleId, score, totalQuestions, passed: !!passed, answers: answers ?? [] });
+      res.json(attempt);
+    } catch (e: any) { res.status(500).json({ message: e.message }); }
+  });
+
   return httpServer;
 }
 
