@@ -1654,3 +1654,27 @@ export const registryHealthEvents = pgTable("registry_health_events", {
 export const insertRegistryHealthEventSchema = createInsertSchema(registryHealthEvents).omit({ id: true, checkedAt: true });
 export type InsertRegistryHealthEvent = z.infer<typeof insertRegistryHealthEventSchema>;
 export type RegistryHealthEvent = typeof registryHealthEvents.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Linked open-banking accounts — persisted account linkage per borrower
+// Tracks the result of the provider link-session (Mono widget / Stitch OAuth /
+// Okra widget) so computeAffordability can resolve accountId automatically.
+// ---------------------------------------------------------------------------
+
+export const linkedOpenBankingAccounts = pgTable("linked_open_banking_accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id, { onDelete: "cascade" }),
+  provider: text("provider").notNull(), // "mono" | "stitch" | "okra"
+  accountId: text("account_id").notNull(), // Provider's external account/customer ID
+  accountHolderName: text("account_holder_name"),
+  bankName: text("bank_name"),
+  currency: text("currency"),
+  status: text("status").notNull().default("active"), // "active" | "revoked"
+  linkedAt: timestamp("linked_at").defaultNow().notNull(),
+  revokedAt: timestamp("revoked_at"),
+  meta: jsonb("meta"), // Raw provider response metadata
+});
+
+export const insertLinkedOpenBankingAccountSchema = createInsertSchema(linkedOpenBankingAccounts).omit({ id: true, linkedAt: true, revokedAt: true });
+export type InsertLinkedOpenBankingAccount = z.infer<typeof insertLinkedOpenBankingAccountSchema>;
+export type LinkedOpenBankingAccount = typeof linkedOpenBankingAccounts.$inferSelect;

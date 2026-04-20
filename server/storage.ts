@@ -52,6 +52,8 @@ import {
   type IncomeSource, type InsertIncomeSource,
   type ExpenseCategorisation, type InsertExpenseCategorisation,
   type AffordabilityAssessment, type InsertAffordabilityAssessment,
+  linkedOpenBankingAccounts,
+  type LinkedOpenBankingAccount, type InsertLinkedOpenBankingAccount,
   registryHealthConfig,
   type RegistryHealthConfig, type InsertRegistryHealthConfig,
   registryHealthEvents,
@@ -313,6 +315,11 @@ export interface IStorage {
   getAffordabilityAssessmentsByBorrower(borrowerId: string): Promise<AffordabilityAssessment[]>;
   getLatestAffordabilityAssessment(borrowerId: string): Promise<AffordabilityAssessment | undefined>;
   createAffordabilityAssessment(a: InsertAffordabilityAssessment): Promise<AffordabilityAssessment>;
+  // Linked open-banking accounts
+  getLinkedOpenBankingAccounts(borrowerId: string): Promise<LinkedOpenBankingAccount[]>;
+  getActiveLinkedOpenBankingAccount(borrowerId: string, provider?: string): Promise<LinkedOpenBankingAccount | undefined>;
+  createLinkedOpenBankingAccount(data: InsertLinkedOpenBankingAccount): Promise<LinkedOpenBankingAccount>;
+  revokeLinkedOpenBankingAccount(id: string): Promise<void>;
 }
 
 export interface OverdueAssignmentDetail {
@@ -2560,6 +2567,23 @@ export class DatabaseStorage implements IStorage {
   async createAffordabilityAssessment(a: InsertAffordabilityAssessment): Promise<AffordabilityAssessment> {
     const [created] = await db.insert(affordabilityAssessments).values(a).returning();
     return created;
+  }
+
+  async getLinkedOpenBankingAccounts(borrowerId: string): Promise<LinkedOpenBankingAccount[]> {
+    return await db.select().from(linkedOpenBankingAccounts).where(eq(linkedOpenBankingAccounts.borrowerId, borrowerId)).orderBy(desc(linkedOpenBankingAccounts.linkedAt));
+  }
+  async getActiveLinkedOpenBankingAccount(borrowerId: string, provider?: string): Promise<LinkedOpenBankingAccount | undefined> {
+    const conditions = [eq(linkedOpenBankingAccounts.borrowerId, borrowerId), eq(linkedOpenBankingAccounts.status, "active")];
+    if (provider) conditions.push(eq(linkedOpenBankingAccounts.provider, provider));
+    const [row] = await db.select().from(linkedOpenBankingAccounts).where(and(...conditions)).orderBy(desc(linkedOpenBankingAccounts.linkedAt)).limit(1);
+    return row;
+  }
+  async createLinkedOpenBankingAccount(data: InsertLinkedOpenBankingAccount): Promise<LinkedOpenBankingAccount> {
+    const [created] = await db.insert(linkedOpenBankingAccounts).values(data).returning();
+    return created;
+  }
+  async revokeLinkedOpenBankingAccount(id: string): Promise<void> {
+    await db.update(linkedOpenBankingAccounts).set({ status: "revoked", revokedAt: new Date() }).where(eq(linkedOpenBankingAccounts.id, id));
   }
 
   async getRegistryHealthConfig(): Promise<RegistryHealthConfig | undefined> {

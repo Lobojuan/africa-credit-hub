@@ -898,9 +898,11 @@ export async function computeAffordability(borrower: Borrower, opts: ComputeOpts
     return created;
   });
 
-  // 9. Verified-income write-back: only when income came from a real verified bank feed
-  //    (open_banking with non-stub provider) and the value differs materially from the borrower's record.
-  if (dataSource === "open_banking" && grossIncomeMonthly > 0) {
+  // 9. Verified-income write-back: applies to any trusted source (open_banking, bank_statement_pdf with
+  //    medium+ confidence, hybrid) where the income is materially different from the self-declared value.
+  const trustedSources = new Set<typeof dataSource>(["open_banking", "bank_statement_pdf", "hybrid"]);
+  const hasEnoughTransactions = txns.length >= 5; // At least 5 txns — single paycheque is unreliable
+  if (trustedSources.has(dataSource) && confidenceLabel !== "low" && grossIncomeMonthly > 0 && hasEnoughTransactions) {
     const declared = parseFloat(borrower.monthlyIncome || "0");
     const drift = Math.abs(grossIncomeMonthly - declared) / Math.max(1, declared);
     if (declared === 0 || drift >= 0.05) {
@@ -908,7 +910,7 @@ export async function computeAffordability(borrower: Borrower, opts: ComputeOpts
         monthlyIncome: grossIncomeMonthly.toFixed(2),
         incomeCurrency: currency,
       });
-      result.notes.push(`Borrower record updated with verified monthly income ${grossIncomeMonthly.toFixed(2)} ${currency} (was ${declared.toFixed(2)}).`);
+      result.notes.push(`Borrower record updated with verified monthly income ${grossIncomeMonthly.toFixed(2)} ${currency} from ${dataSource} (was ${declared.toFixed(2)}; confidence: ${confidenceLabel}).`);
     }
   }
 

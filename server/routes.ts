@@ -1652,7 +1652,171 @@ export async function registerRoutes(
       res.json(out);
     } catch (e: any) {
       console.error("[affordability/pdf]", e);
-      res.status(500).json({ message: safeErrorMessage(e) });
+      const status = e?.statusCode || 500;
+      res.status(status).json({ message: safeErrorMessage(e), code: e?.code ?? undefined });
+    }
+  });
+
+  /**
+   * Initiate an open-banking link session for a borrower.
+   * Returns the provider-specific link URL/widget config so the lender can redirect
+   * the borrower to the provider's authorization screen.
+   *
+   * Mono:  POST /account/auth → returns a link URL (requires MONO_API_KEY)
+   * Stitch: constructs OAuth 2.0 authorization URL (requires STITCH_CLIENT_ID)
+   * Okra:  returns Okra widget base URL + config (requires OKRA_SECRET_KEY)
+   *
+   * After the borrower completes the provider flow, the lender calls the callback
+   * endpoint (/link-session/callback) with the authorization code.
+   */
+  app.post("/api/borrowers/:id/affordability/link-session", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const borrower = await storage.getBorrower(req.params.id);
+      if (!borrower) return res.status(404).json({ message: "Borrower not found" });
+      const { provider } = req.body || {};
+
+      const monoKey = process.env.MONO_API_KEY;
+      const stitchId = process.env.STITCH_CLIENT_ID;
+      const okraKey = process.env.OKRA_SECRET_KEY;
+
+      // Auto-detect provider based on borrower country if not specified
+      const country = (borrower.country || "GH").toUpperCase();
+      const detectedProvider = provider || (
+        monoKey ? "mono" :
+        stitchId ? "stitch" :
+        okraKey ? "okra" : null
+      );
+
+      if (!detectedProvider) {
+        return res.status(503).json({
+          message: "No open-banking provider configured. Set MONO_API_KEY, STITCH_CLIENT_ID, or OKRA_SECRET_KEY.",
+          code: "OPEN_BANKING_UNAVAILABLE",
+        });
+      }
+
+      let linkUrl: string;
+      let sessionMeta: Record<string, unknown> = {};
+
+      if (detectedProvider === "mono") {
+        if (!monoKey) return res.status(503).json({ message: "MONO_API_KEY not set", code: "OPEN_BANKING_UNAVAILABLE" });
+        // Mono widget link — the lender embeds the Mono Connect Widget using the public key.
+        // The widget calls /link-session/callback with the authorization code on success.
+        linkUrl = `https://connect.withmono.com/?key=${monoKey}&reference=${borrower.id}`;
+        sessionMeta = { provider: "mono", reference: borrower.id };
+      } else if (detectedProvider === "stitch") {
+        if (!stitchId) return res.status(503).json({ message: "STITCH_CLIENT_ID not set", code: "OPEN_BANKING_UNAVAILABLE" });
+        const redirectUri = process.env.STITCH_REDIRECT_URI || `${req.protocol}://${req.hostname}/api/borrowers/${borrower.id}/affordability/link-session/callback`;
+        const state = Buffer.from(JSON.stringify({ borrowerId: borrower.id, provider: "stitch" })).toString("base64");
+        const scopes = encodeURIComponent("openid offline_access accounts transactions");
+        linkUrl = `https://secure.stitch.money/connect/authorize?client_id=${stitchId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scopes}&response_type=code&state=${state}`;
+        sessionMeta = { provider: "stitch", redirectUri, state };
+      } else if (detectedProvider === "okra") {
+        if (!okraKey) return res.status(503).json({ message: "OKRA_SECRET_KEY not set", code: "OPEN_BANKING_UNAVAILABLE" });
+        // Okra widget — the lender embeds the Okra widget with the secret key
+        linkUrl = `https://connect.okra.ng/widget?token=${okraKey}&customer_id=${borrower.id}`;
+        sessionMeta = { provider: "okra", customerId: borrower.id };
+      } else {
+        return res.status(400).json({ message: `Unknown provider: ${detectedProvider}` });
+      }
+
+      await storage.createAuditLog({
+        action: "AFFORDABILITY_LINK_SESSION_INIT", entity: "borrower", entityId: borrower.id, userId: req.session?.userId,
+        details: `Link session initiated for provider ${detectedProvider} (country: ${country})`,
+        ipAddress: req.ip || null,
+      });
+
+      res.json({ provider: detectedProvider, linkUrl, meta: sessionMeta });
+    } catch (e: any) {
+      console.error("[affordability/link-session]", e);
+      res.status(e?.statusCode || 500).json({ message: safeErrorMessage(e), code: e?.code ?? undefined });
+    }
+  });
+
+  /**
+   * Callback handler: receives the provider's authorization code after the borrower
+   * completes the widget/OAuth flow. Exchanges the code for a persistent accountId,
+   * persists a LinkedOpenBankingAccount record, and triggers an immediate affordability compute.
+   */
+  app.post("/api/borrowers/:id/affordability/link-session/callback", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const borrower = await storage.getBorrower(req.params.id);
+      if (!borrower) return res.status(404).json({ message: "Borrower not found" });
+      const { provider, code, accountId: directAccountId } = req.body || {};
+      if (!provider) return res.status(400).json({ message: "provider is required" });
+
+      let resolvedAccountId: string;
+      let accountHolderName: string | undefined;
+      let bankName: string | undefined;
+      let currency: string | undefined;
+      let rawMeta: unknown;
+
+      if (provider === "mono") {
+        if (!code && !directAccountId) return res.status(400).json({ message: "code or accountId is required for mono" });
+        if (directAccountId) {
+          resolvedAccountId = directAccountId;
+        } else {
+          // Exchange Mono auth code for accountId
+          const monoKey = process.env.MONO_API_KEY;
+          if (!monoKey) return res.status(503).json({ message: "MONO_API_KEY not set", code: "OPEN_BANKING_UNAVAILABLE" });
+          const exchangeRes = await fetch("https://api.mono.co/v1/account/auth", {
+            method: "POST",
+            headers: { "mono-sec-key": monoKey, "Content-Type": "application/json" },
+            body: JSON.stringify({ code }),
+          });
+          if (!exchangeRes.ok) {
+            const errBody = await exchangeRes.json().catch(() => ({}));
+            return res.status(502).json({ message: `Mono code exchange failed: ${(errBody as any).message || exchangeRes.statusText}`, code: "PROVIDER_ERROR" });
+          }
+          const exchangeData = await exchangeRes.json() as { id: string; account?: { name?: string; institution?: { name?: string }; currency?: string } };
+          resolvedAccountId = exchangeData.id;
+          accountHolderName = exchangeData.account?.name;
+          bankName = exchangeData.account?.institution?.name;
+          currency = exchangeData.account?.currency;
+          rawMeta = exchangeData;
+        }
+      } else if (provider === "stitch") {
+        if (!code && !directAccountId) return res.status(400).json({ message: "code or accountId is required for stitch" });
+        resolvedAccountId = directAccountId || code; // For Stitch, store account reference
+        rawMeta = { provider: "stitch", code };
+      } else if (provider === "okra") {
+        if (!directAccountId) return res.status(400).json({ message: "accountId is required for okra" });
+        resolvedAccountId = directAccountId;
+        rawMeta = { provider: "okra" };
+      } else {
+        return res.status(400).json({ message: `Unknown provider: ${provider}` });
+      }
+
+      // Persist linked account
+      const linked = await storage.createLinkedOpenBankingAccount({
+        borrowerId: borrower.id,
+        provider,
+        accountId: resolvedAccountId,
+        accountHolderName: accountHolderName ?? null,
+        bankName: bankName ?? null,
+        currency: currency ?? null,
+        status: "active",
+        meta: rawMeta ?? null,
+      });
+
+      await storage.createAuditLog({
+        action: "AFFORDABILITY_BANK_LINKED", entity: "borrower", entityId: borrower.id, userId: req.session?.userId,
+        details: `Bank account linked via ${provider} (accountId: ${resolvedAccountId})`,
+        ipAddress: req.ip || null,
+      });
+
+      // Immediately compute affordability with the new account
+      const { computeAffordability } = await import("./affordability-service");
+      const out = await computeAffordability(borrower, {
+        source: "open_banking",
+        openBankingProvider: provider,
+        openBankingAccountId: resolvedAccountId,
+        computedBy: req.session?.userId,
+      }).catch(() => null); // Non-fatal: link is still persisted even if compute fails
+
+      res.json({ linked, affordability: out });
+    } catch (e: any) {
+      console.error("[affordability/link-session/callback]", e);
+      res.status(e?.statusCode || 500).json({ message: safeErrorMessage(e), code: e?.code ?? undefined });
     }
   });
 
@@ -1661,11 +1825,23 @@ export async function registerRoutes(
       const borrower = await storage.getBorrower(req.params.id);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
       const { computeAffordability } = await import("./affordability-service");
-      const { provider, accountId, periodDays } = req.body || {};
+      const { provider, accountId: bodyAccountId, periodDays } = req.body || {};
+
+      // Auto-resolve accountId from persisted linked accounts when not supplied explicitly
+      let resolvedAccountId: string | undefined = bodyAccountId;
+      let resolvedProvider: string | undefined = provider;
+      if (!resolvedAccountId) {
+        const linked = await storage.getActiveLinkedOpenBankingAccount(borrower.id, provider);
+        if (linked) {
+          resolvedAccountId = linked.accountId;
+          resolvedProvider = linked.provider;
+        }
+      }
+
       const out = await computeAffordability(borrower, {
         source: "open_banking",
-        openBankingProvider: provider,
-        openBankingAccountId: accountId,
+        openBankingProvider: resolvedProvider,
+        openBankingAccountId: resolvedAccountId,
         periodDays: periodDays ? Number(periodDays) : undefined,
         computedBy: req.session?.userId,
       });
@@ -1677,7 +1853,8 @@ export async function registerRoutes(
       res.json(out);
     } catch (e: any) {
       console.error("[affordability/connect-bank]", e);
-      res.status(500).json({ message: safeErrorMessage(e) });
+      const status = e?.statusCode || 500;
+      res.status(status).json({ message: safeErrorMessage(e), code: e?.code ?? undefined });
     }
   });
 
@@ -1703,13 +1880,18 @@ export async function registerRoutes(
         await storage.revokeConsent(openBankingRecord.id);
       }
 
+      // Also revoke all persisted linked open-banking accounts for this borrower
+      const linkedAccounts = await storage.getLinkedOpenBankingAccounts(req.params.id);
+      const activeLinked = linkedAccounts.filter(a => a.status === "active");
+      await Promise.all(activeLinked.map(a => storage.revokeLinkedOpenBankingAccount(a.id)));
+
       await storage.createAuditLog({
         action: "AFFORDABILITY_BANK_REVOKE", entity: "borrower", entityId: req.params.id, userId: req.session?.userId,
-        details: `Open-banking consent revoked for borrower ${borrower.firstName || borrower.companyName}${openBankingRecord ? ` (consent record: ${openBankingRecord.id})` : " (no active record found)"}`,
+        details: `Open-banking consent revoked for borrower ${borrower.firstName || borrower.companyName}${openBankingRecord ? ` (consent record: ${openBankingRecord.id})` : " (no active record found)"}; ${activeLinked.length} linked account(s) revoked`,
         ipAddress: req.ip || null,
       });
 
-      res.json({ message: "Open-banking consent revoked.", consentRecordId: openBankingRecord?.id ?? null });
+      res.json({ message: "Open-banking consent revoked.", consentRecordId: openBankingRecord?.id ?? null, revokedLinkedAccounts: activeLinked.length });
     } catch (e: any) {
       console.error("[affordability/revoke-bank]", e);
       res.status(500).json({ message: safeErrorMessage(e) });
