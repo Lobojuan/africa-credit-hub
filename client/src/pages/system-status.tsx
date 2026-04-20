@@ -1034,32 +1034,56 @@ function RegistryStatusPanel() {
                   )}
                   {(totalEvents7d > 0 || totalEvents30d > 0) && (
                     <div className="mt-1.5">
-                      <button
-                        data-testid={`button-toggle-history-${key}`}
-                        onClick={() => toggleHistory(key)}
-                        className={`flex items-center gap-1 text-[10px] transition-colors ${
-                          failSeverity === "critical"
-                            ? "text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
-                            : failSeverity === "minor"
-                            ? "text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
-                            : "text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        <Clock className="w-2.5 h-2.5 shrink-0" />
-                        {failSeverity === "ok"
-                          ? "0 failures in 7d / 0 in 30d — all OK"
-                          : <>
-                              <span className={`font-medium ${failSeverity === "critical" ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`}>
-                                {failSeverity === "critical" ? "●" : "◐"}
-                              </span>
-                              {`${failEvents7d} failure${failEvents7d !== 1 ? "s" : ""} in 7d / ${failEvents30d} in 30d`}
-                              {longestStreak30d >= MIN_STREAK_DISPLAY && (
-                                <span className="opacity-80">{`· streak ${longestStreak30d} checks`}</span>
-                              )}
-                            </>
-                        }
-                        <span className="ml-0.5">{isExpanded ? "▲" : "▼"}</span>
-                      </button>
+                      <div className="relative group/severity inline-block">
+                        <button
+                          data-testid={`button-toggle-history-${key}`}
+                          onClick={() => toggleHistory(key)}
+                          className={`flex items-center gap-1 text-[10px] transition-colors ${
+                            failSeverity === "critical"
+                              ? "text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                              : failSeverity === "minor"
+                              ? "text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
+                              : "text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          <Clock className="w-2.5 h-2.5 shrink-0" />
+                          {failSeverity === "ok"
+                            ? "0 failures in 7d / 0 in 30d — all OK"
+                            : <>
+                                <span className={`font-medium ${failSeverity === "critical" ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`}>
+                                  {failSeverity === "critical" ? "●" : "◐"}
+                                </span>
+                                {`${failEvents7d} failure${failEvents7d !== 1 ? "s" : ""} in 7d / ${failEvents30d} in 30d`}
+                                {longestStreak30d >= MIN_STREAK_DISPLAY && (
+                                  <span className="opacity-80">{`· streak ${longestStreak30d} checks`}</span>
+                                )}
+                              </>
+                          }
+                          <span className="ml-0.5">{isExpanded ? "▲" : "▼"}</span>
+                        </button>
+                        {failSeverity !== "ok" && (
+                          <div
+                            data-testid={`tooltip-severity-${key}`}
+                            className="pointer-events-none invisible group-hover/severity:visible absolute left-0 bottom-full mb-1.5 z-50 w-max max-w-[220px] rounded border bg-popover px-2.5 py-1.5 shadow-md text-[10px] leading-snug text-popover-foreground"
+                          >
+                            <p className={`font-semibold mb-0.5 ${failSeverity === "critical" ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`}>
+                              {failSeverity === "critical" ? "Critical severity" : "Minor severity"}
+                            </p>
+                            {failSeverity === "critical" && failEvents7d >= CRITICAL_FAIL_7D && (
+                              <p>{failEvents7d} failures in the last 7 days (threshold: {CRITICAL_FAIL_7D}+)</p>
+                            )}
+                            {failSeverity === "critical" && longestStreak30d >= CRITICAL_STREAK && (
+                              <p>Longest outage streak: {longestStreak30d} consecutive checks (threshold: {CRITICAL_STREAK}+)</p>
+                            )}
+                            {failSeverity === "minor" && (
+                              <p>{failEvents7d} failure{failEvents7d !== 1 ? "s" : ""} in 7d / {failEvents30d} in 30d · below critical threshold</p>
+                            )}
+                            {failSeverity === "minor" && longestStreak30d >= MIN_STREAK_DISPLAY && (
+                              <p>Longest outage streak: {longestStreak30d} consecutive checks</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
                       {isExpanded && (() => {
                         const visibleHistory = providerHistory.slice(0, 50).filter(e => !historyFailureOnly[key] || e.status !== "ok");
                         return (
