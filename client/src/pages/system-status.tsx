@@ -427,6 +427,7 @@ function RegistryHealthConfigPanel() {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<{ alertEmail: string; slackWebhookUrl: string; checkIntervalMinutes: string; retentionDays: string; cleanupTimeUtc: string } | null>(null);
+  const [confirmCleanup, setConfirmCleanup] = useState(false);
 
   const { data, isLoading } = useQuery<RegistryHealthConfigData>({
     queryKey: ["/api/admin/registry-health-config"],
@@ -553,14 +554,48 @@ function RegistryHealthConfigPanel() {
                   size="sm"
                   variant="outline"
                   className="h-6 text-[10px] px-2"
-                  onClick={() => cleanupMutation.mutate()}
-                  disabled={cleanupMutation.isPending}
+                  onClick={() => setConfirmCleanup(true)}
+                  disabled={cleanupMutation.isPending || confirmCleanup}
                   data-testid="button-run-cleanup-now"
                 >
                   {cleanupMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
                   Run cleanup now
                 </Button>
               </div>
+              {confirmCleanup && (
+                <div className="mt-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2.5" data-testid="card-cleanup-confirm">
+                  <p className="text-xs font-medium text-destructive mb-1">Confirm cleanup</p>
+                  <p className="text-[11px] text-muted-foreground mb-2">
+                    This will permanently delete all registry health records older than{" "}
+                    <span className="font-medium text-foreground" data-testid="text-cleanup-confirm-retention">
+                      {data?.effectiveRetentionDays ?? data?.retentionDays ?? cleanupStats?.retentionDays ?? 30} days
+                    </span>
+                    . This action cannot be undone.
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="h-6 text-[10px] px-2"
+                      onClick={() => { cleanupMutation.mutate(); setConfirmCleanup(false); }}
+                      disabled={cleanupMutation.isPending}
+                      data-testid="button-confirm-cleanup"
+                    >
+                      {cleanupMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+                      Yes, delete old records
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-6 text-[10px] px-2"
+                      onClick={() => setConfirmCleanup(false)}
+                      data-testid="button-cancel-cleanup"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
               {cleanupStats?.lastRanAt ? (
                 <p className="text-muted-foreground" data-testid="text-cleanup-last-ran">
                   Last cleanup ran at{" "}
