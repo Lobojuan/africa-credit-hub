@@ -444,6 +444,7 @@ function RegistryHealthConfigPanel() {
   const [confirmCleanup, setConfirmCleanup] = useState(false);
   const [retentionConfirm, setRetentionConfirm] = useState<RetentionConfirmState | null>(null);
   const [checkingAffected, setCheckingAffected] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
 
   const { data, isLoading } = useQuery<RegistryHealthConfigData>({
     queryKey: ["/api/admin/registry-health-config"],
@@ -470,6 +471,24 @@ function RegistryHealthConfigPanel() {
       });
     }
   }, [data]);
+
+  useEffect(() => {
+    if (!open) return;
+    setNow(Date.now());
+    let timerId: ReturnType<typeof setTimeout>;
+    function tick() {
+      setNow(Date.now());
+      const nextCleanup = data?.nextCleanupAt ? new Date(data.nextCleanupAt).getTime() : null;
+      const diffMs = nextCleanup ? nextCleanup - Date.now() : Infinity;
+      const delay = diffMs > 0 && diffMs <= 5 * 60 * 1000 ? 1000 : 60 * 1000;
+      timerId = setTimeout(tick, delay);
+    }
+    const nextCleanup = data?.nextCleanupAt ? new Date(data.nextCleanupAt).getTime() : null;
+    const diffMs = nextCleanup ? nextCleanup - Date.now() : Infinity;
+    const initialDelay = diffMs > 0 && diffMs <= 5 * 60 * 1000 ? 1000 : 60 * 1000;
+    timerId = setTimeout(tick, initialDelay);
+    return () => clearTimeout(timerId);
+  }, [open, data?.nextCleanupAt]);
 
   const saveMutation = useMutation({
     mutationFn: async (payload: { alertEmail: string | null; slackWebhookUrl: string | null; checkIntervalMinutes: number; retentionDays: number | null; cleanupTimeUtc: string | null; criticalFail7d: number; criticalStreak30d: number }) => {
@@ -755,12 +774,16 @@ function RegistryHealthConfigPanel() {
                         Daily cleanup runs at this UTC time. Currently scheduled for{" "}
                         <span className="font-medium text-foreground">{data.currentCleanupTimeUtc} UTC</span>.
                         {data.nextCleanupAt && (() => {
-                          const diffMs = new Date(data.nextCleanupAt).getTime() - Date.now();
+                          const diffMs = new Date(data.nextCleanupAt).getTime() - now;
                           if (diffMs > 0) {
-                            const totalMin = Math.floor(diffMs / 60000);
+                            const totalSec = Math.floor(diffMs / 1000);
+                            const totalMin = Math.floor(totalSec / 60);
                             const hrs = Math.floor(totalMin / 60);
                             const mins = totalMin % 60;
-                            const label = hrs > 0 ? `${hrs} hr ${mins} min` : `${mins} min`;
+                            const secs = totalSec % 60;
+                            const label = diffMs <= 5 * 60 * 1000
+                              ? (mins > 0 ? `${mins} min ${secs} sec` : `${secs} sec`)
+                              : (hrs > 0 ? `${hrs} hr ${mins} min` : `${mins} min`);
                             return <>{" "}<span className="font-medium text-foreground" data-testid="text-next-cleanup-countdown">Next cleanup in {label}.</span></>;
                           }
                           return null;
