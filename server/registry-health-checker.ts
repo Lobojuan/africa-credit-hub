@@ -381,3 +381,8 @@ export function restartRegistryHealthChecker(newIntervalMs: number): void {
 export function getCurrentIntervalMs(): number {
   return _currentIntervalMs;
 }
+
+export function getNextCleanupAt(): Date {
+  const delayMs = msUntilNextUtcTime(_currentCleanupTimeUtc);
+  return new Date(Date.now() + delayMs);
+}

@@ -12343,7 +12343,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   app.get("/api/admin/registry-health-config", requireRole("admin", "super_admin"), async (_req, res) => {
     try {
       const cfg = await storage.getRegistryHealthConfig();
-      const { getCurrentIntervalMs, getCurrentCleanupTimeUtc } = await import("./registry-health-checker");
+      const { getCurrentIntervalMs, getCurrentCleanupTimeUtc, getNextCleanupAt } = await import("./registry-health-checker");
       const envRetention = parseInt(process.env.REGISTRY_HEALTH_RETENTION_DAYS ?? "", 10);
       const MIN_RETENTION = 7;
       const MAX_RETENTION = 90;
@@ -12362,6 +12362,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         currentCleanupTimeUtc: getCurrentCleanupTimeUtc(),
         criticalFail7d: cfg?.criticalFail7d ?? 5,
         criticalStreak30d: cfg?.criticalStreak30d ?? 5,
+        nextCleanupAt: getNextCleanupAt().toISOString(),
         updatedAt: cfg?.updatedAt ?? null,
       });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }

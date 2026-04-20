@@ -419,6 +419,7 @@ interface RegistryHealthConfigData {
   currentCleanupTimeUtc: string;
   criticalFail7d: number;
   criticalStreak30d: number;
+  nextCleanupAt: string | null;
   updatedAt: string | null;
 }
 
@@ -737,6 +738,17 @@ function RegistryHealthConfigPanel() {
                       <p className="text-[10px] text-muted-foreground">
                         Daily cleanup runs at this UTC time. Currently scheduled for{" "}
                         <span className="font-medium text-foreground">{data.currentCleanupTimeUtc} UTC</span>.
+                        {data.nextCleanupAt && (() => {
+                          const diffMs = new Date(data.nextCleanupAt).getTime() - Date.now();
+                          if (diffMs > 0) {
+                            const totalMin = Math.floor(diffMs / 60000);
+                            const hrs = Math.floor(totalMin / 60);
+                            const mins = totalMin % 60;
+                            const label = hrs > 0 ? `${hrs} hr ${mins} min` : `${mins} min`;
+                            return <>{" "}<span className="font-medium text-foreground" data-testid="text-next-cleanup-countdown">Next cleanup in {label}.</span></>;
+                          }
+                          return null;
+                        })()}
                       </p>
                     </div>
                     <div className="space-y-1.5">
