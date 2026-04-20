@@ -420,6 +420,7 @@ interface RegistryHealthConfigData {
   criticalFail7d: number;
   criticalStreak30d: number;
   nextCleanupAt: string | null;
+  alertConsecutiveFailures: number;
   updatedAt: string | null;
 }
 
@@ -440,7 +441,7 @@ interface RetentionConfirmState {
 function RegistryHealthConfigPanel() {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<{ alertEmail: string; slackWebhookUrl: string; checkIntervalMinutes: string; retentionDays: string; cleanupTimeUtc: string; criticalFail7d: string; criticalStreak30d: string } | null>(null);
+  const [form, setForm] = useState<{ alertEmail: string; slackWebhookUrl: string; checkIntervalMinutes: string; retentionDays: string; cleanupTimeUtc: string; criticalFail7d: string; criticalStreak30d: string; alertConsecutiveFailures: string } | null>(null);
   const [confirmCleanup, setConfirmCleanup] = useState(false);
   const [retentionConfirm, setRetentionConfirm] = useState<RetentionConfirmState | null>(null);
   const [checkingAffected, setCheckingAffected] = useState(false);
@@ -468,6 +469,7 @@ function RegistryHealthConfigPanel() {
         cleanupTimeUtc: data.cleanupTimeUtc,
         criticalFail7d: String(data.criticalFail7d ?? 5),
         criticalStreak30d: String(data.criticalStreak30d ?? 5),
+        alertConsecutiveFailures: String(data.alertConsecutiveFailures ?? 2),
       });
     }
   }, [data]);
@@ -491,7 +493,7 @@ function RegistryHealthConfigPanel() {
   }, [open, data?.nextCleanupAt]);
 
   const saveMutation = useMutation({
-    mutationFn: async (payload: { alertEmail: string | null; slackWebhookUrl: string | null; checkIntervalMinutes: number; retentionDays: number | null; cleanupTimeUtc: string | null; criticalFail7d: number; criticalStreak30d: number }) => {
+    mutationFn: async (payload: { alertEmail: string | null; slackWebhookUrl: string | null; checkIntervalMinutes: number; retentionDays: number | null; cleanupTimeUtc: string | null; criticalFail7d: number; criticalStreak30d: number; alertConsecutiveFailures: number }) => {
       const res = await apiRequest("PUT", "/api/admin/registry-health-config", payload);
       return res.json();
     },
@@ -553,6 +555,11 @@ function RegistryHealthConfigPanel() {
       toast({ title: "Invalid threshold", description: "Critical streak length must be between 1 and 999.", variant: "destructive" });
       return;
     }
+    const alertConsecutiveFailures = parseInt(form.alertConsecutiveFailures, 10);
+    if (isNaN(alertConsecutiveFailures) || alertConsecutiveFailures < 1 || alertConsecutiveFailures > 100) {
+      toast({ title: "Invalid alert threshold", description: "Alert threshold must be between 1 and 100 consecutive failures.", variant: "destructive" });
+      return;
+    }
     const payload = {
       alertEmail: form.alertEmail.trim() || null,
       slackWebhookUrl: form.slackWebhookUrl.trim() || null,
@@ -561,6 +568,7 @@ function RegistryHealthConfigPanel() {
       cleanupTimeUtc: cleanupTimeRaw || null,
       criticalFail7d,
       criticalStreak30d,
+      alertConsecutiveFailures,
     };
     const effectiveCurrent = data.effectiveRetentionDays;
     const effectiveNew = retentionDays !== null ? retentionDays : data.defaultRetentionDays;
@@ -817,6 +825,20 @@ function RegistryHealthConfigPanel() {
                         data-testid="input-registry-critical-streak-30d"
                       />
                       <p className="text-[10px] text-muted-foreground">Show registry as critical when consecutive failures in the last 30 days reach this length (default: 5)</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="registry-alert-consecutive-failures" className="text-xs">Alert threshold — consecutive failures before sending notifications</Label>
+                      <Input
+                        id="registry-alert-consecutive-failures"
+                        type="number"
+                        min={1}
+                        max={100}
+                        value={form.alertConsecutiveFailures}
+                        onChange={e => setForm(f => f ? { ...f, alertConsecutiveFailures: e.target.value } : f)}
+                        className="h-8 text-sm"
+                        data-testid="input-registry-alert-consecutive-failures"
+                      />
+                      <p className="text-[10px] text-muted-foreground">Send email/Slack alerts after this many consecutive failures (default: 2)</p>
                     </div>
                   </div>
                   <div className="space-y-1.5">

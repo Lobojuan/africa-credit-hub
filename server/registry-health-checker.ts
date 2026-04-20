@@ -41,7 +41,7 @@ export function getRegistryHealthState(): RegistryHealthEntry[] {
   return Array.from(healthState.values());
 }
 
-async function getDbConfig(): Promise<{ alertEmail?: string | null; slackWebhookUrl?: string | null; checkIntervalMinutes?: number; cleanupTimeUtc?: string | null }> {
+async function getDbConfig(): Promise<{ alertEmail?: string | null; slackWebhookUrl?: string | null; checkIntervalMinutes?: number; cleanupTimeUtc?: string | null; alertConsecutiveFailures?: number }> {
   try {
     const { storage } = await import("./storage");
     const cfg = await storage.getRegistryHealthConfig();
@@ -73,7 +73,7 @@ async function sendSlackAlert(provider: string, error: string, isRecovery = fals
     : `:rotating_light: Registry Down: ${provider}`;
   const text = isRecovery
     ? `The \`${provider}\` registry is back online and responding normally.`
-    : `The \`${provider}\` live registry has failed ${FAILURE_THRESHOLD} consecutive health checks.\n*Error:* ${error}`;
+    : `The \`${provider}\` live registry has failed consecutive health checks.\n*Error:* ${error}`;
 
   try {
     const resp = await fetch(webhookUrl, {
@@ -131,6 +131,8 @@ async function persistEvent(provider: string, status: "ok" | "fail", latencyMs?:
 
 async function runHealthChecks(): Promise<void> {
   const statuses = registryStatus();
+  const dbCfg = await getDbConfig().catch(() => ({}));
+  const failureThreshold = dbCfg.alertConsecutiveFailures ?? FAILURE_THRESHOLD;
 
   for (const provider of TESTABLE_PROVIDERS) {
     const meta = statuses[provider];
@@ -173,7 +175,7 @@ async function runHealthChecks(): Promise<void> {
       } else {
         const failures = existing.consecutiveFailures + 1;
         const errMsg = result.error ?? "Connection failed";
-        const shouldAlert = failures >= FAILURE_THRESHOLD && !existing.alertSent;
+        const shouldAlert = failures >= failureThreshold && !existing.alertSent;
 
         healthState.set(provider, {
           provider,
@@ -197,7 +199,7 @@ async function runHealthChecks(): Promise<void> {
     } catch (err: any) {
       const failures = existing.consecutiveFailures + 1;
       const errMsg = err.message ?? "Unknown error";
-      const shouldAlert = failures >= FAILURE_THRESHOLD && !existing.alertSent;
+      const shouldAlert = failures >= failureThreshold && !existing.alertSent;
 
       healthState.set(provider, {
         provider,

@@ -12363,6 +12363,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         criticalFail7d: cfg?.criticalFail7d ?? 5,
         criticalStreak30d: cfg?.criticalStreak30d ?? 5,
         nextCleanupAt: getNextCleanupAt().toISOString(),
+        alertConsecutiveFailures: cfg?.alertConsecutiveFailures ?? 2,
         updatedAt: cfg?.updatedAt ?? null,
       });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
@@ -12378,6 +12379,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         cleanupTimeUtc: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Must be HH:MM in 24-hour format").nullable().optional(),
         criticalFail7d: z.number().int().min(1).max(999).optional(),
         criticalStreak30d: z.number().int().min(1).max(999).optional(),
+        alertConsecutiveFailures: z.number().int().min(1).max(100).optional(),
       });
       const parsed = schema.safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ message: parsed.error.errors[0]?.message ?? "Invalid input" });
