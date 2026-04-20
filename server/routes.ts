@@ -12358,7 +12358,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         effectiveRetentionDays: Math.min(Math.max(rawEffective, MIN_RETENTION), MAX_RETENTION),
         defaultRetentionDays: defaultRetention,
         currentIntervalMinutes: Math.round(getCurrentIntervalMs() / 60000),
-        cleanupTimeUtc: cfg?.cleanupTimeUtc ?? null,
+        cleanupTimeUtc: cfg?.cleanupTimeUtc ?? getCurrentCleanupTimeUtc(),
         currentCleanupTimeUtc: getCurrentCleanupTimeUtc(),
         criticalFail7d: cfg?.criticalFail7d ?? 5,
         criticalStreak30d: cfg?.criticalStreak30d ?? 5,

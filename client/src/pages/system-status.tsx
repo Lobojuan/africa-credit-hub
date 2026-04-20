@@ -415,7 +415,7 @@ interface RegistryHealthConfigData {
   effectiveRetentionDays: number;
   defaultRetentionDays: number;
   currentIntervalMinutes: number;
-  cleanupTimeUtc: string | null;
+  cleanupTimeUtc: string;
   currentCleanupTimeUtc: string;
   criticalFail7d: number;
   criticalStreak30d: number;
@@ -462,7 +462,7 @@ function RegistryHealthConfigPanel() {
         slackWebhookUrl: data.slackWebhookUrl ?? "",
         checkIntervalMinutes: String(data.checkIntervalMinutes),
         retentionDays: data.retentionDays != null ? String(data.retentionDays) : "",
-        cleanupTimeUtc: data.cleanupTimeUtc ?? data.currentCleanupTimeUtc ?? "00:00",
+        cleanupTimeUtc: data.cleanupTimeUtc,
         criticalFail7d: String(data.criticalFail7d ?? 5),
         criticalStreak30d: String(data.criticalStreak30d ?? 5),
       });
