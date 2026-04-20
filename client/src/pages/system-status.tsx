@@ -463,6 +463,20 @@ function RegistryHealthConfigPanel() {
     },
   });
 
+  const cleanupMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/registry-health-cleanup");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Cleanup complete", description: "Health record pruning ran successfully." });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/registry-health-cleanup-stats"] });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Cleanup failed", description: err.message, variant: "destructive" });
+    },
+  });
+
   function handleToggle() {
     setOpen(v => !v);
   }
@@ -523,8 +537,21 @@ function RegistryHealthConfigPanel() {
             data-testid="card-cleanup-stats"
           >
             <Trash2 className="w-3.5 h-3.5 mt-0.5 shrink-0 text-muted-foreground" />
-            <div className="space-y-0.5">
-              <p className="font-medium text-foreground">Health Record Cleanup</p>
+            <div className="flex-1 space-y-0.5">
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-medium text-foreground">Health Record Cleanup</p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-6 text-[10px] px-2"
+                  onClick={() => cleanupMutation.mutate()}
+                  disabled={cleanupMutation.isPending}
+                  data-testid="button-run-cleanup-now"
+                >
+                  {cleanupMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+                  Run cleanup now
+                </Button>
+              </div>
               {cleanupStats?.lastRanAt ? (
                 <p className="text-muted-foreground" data-testid="text-cleanup-last-ran">
                   Last cleanup ran at{" "}

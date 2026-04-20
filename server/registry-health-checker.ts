@@ -231,7 +231,7 @@ function resolveRetentionDaysFromEnv(): number {
 const MIN_RETENTION_DAYS = 7;
 const MAX_RETENTION_DAYS = 90;
 
-async function pruneOldHealthEvents(): Promise<void> {
+export async function pruneOldHealthEvents(): Promise<void> {
   let days: number;
   try {
     const cfg = await storage.getRegistryHealthConfig();
@@ -245,18 +245,16 @@ async function pruneOldHealthEvents(): Promise<void> {
   }
   days = Math.min(Math.max(days, MIN_RETENTION_DAYS), MAX_RETENTION_DAYS);
   const beforeDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-  try {
-    const deleted = await storage.deleteOldRegistryHealthEvents(beforeDate);
-    _cleanupStats.lastRanAt = new Date();
-    _cleanupStats.deletedCount = deleted;
-    _cleanupStats.retentionDays = days;
-    if (deleted > 0) {
-      console.log(`[RegistryHealth] Pruned ${deleted} health event(s) older than ${days} days`);
-    } else {
-      console.log(`[RegistryHealth] Cleanup ran — no events older than ${days} days to prune`);
-    }
-  } catch (err: any) {
-    console.error("[RegistryHealth] Failed to prune old health events:", err.message);
+  // Let the storage error propagate so callers (e.g. the on-demand POST route)
+  // can surface a meaningful failure instead of silently succeeding.
+  const deleted = await storage.deleteOldRegistryHealthEvents(beforeDate);
+  _cleanupStats.lastRanAt = new Date();
+  _cleanupStats.deletedCount = deleted;
+  _cleanupStats.retentionDays = days;
+  if (deleted > 0) {
+    console.log(`[RegistryHealth] Pruned ${deleted} health event(s) older than ${days} days`);
+  } else {
+    console.log(`[RegistryHealth] Cleanup ran — no events older than ${days} days to prune`);
   }
 }
 
@@ -308,8 +306,12 @@ export async function startRegistryHealthChecker(intervalMs = DEFAULT_CHECK_INTE
   }, effectiveInterval);
 
   if (!_cleanupTimer) {
-    setTimeout(() => pruneOldHealthEvents(), 30_000);
-    _cleanupTimer = setInterval(() => pruneOldHealthEvents(), CLEANUP_INTERVAL_MS);
+    setTimeout(async () => {
+      try { await pruneOldHealthEvents(); } catch (e: any) { console.error("[RegistryHealth] Scheduled cleanup failed:", e.message); }
+    }, 30_000);
+    _cleanupTimer = setInterval(async () => {
+      try { await pruneOldHealthEvents(); } catch (e: any) { console.error("[RegistryHealth] Scheduled cleanup failed:", e.message); }
+    }, CLEANUP_INTERVAL_MS);
     console.log("[RegistryHealth] Cleanup scheduler started — pruning runs daily");
   }
 }
