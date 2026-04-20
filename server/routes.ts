@@ -1673,6 +1673,19 @@ export async function registerRoutes(
     try {
       const borrower = await storage.getBorrower(req.params.id);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
+
+      // Consent gate: borrower must have an active consent record before any open-banking data
+      // linkage is initiated. Linking must not proceed without recorded, active consent.
+      const { hasAffordabilityConsent: checkConsent1 } = await import("./affordability-service");
+      const consentCheck = await checkConsent1(borrower.id, borrower);
+      if (!consentCheck.ok) {
+        await storage.createAuditLog({
+          action: "AFFORDABILITY_LINK_SESSION_DENIED_NO_CONSENT", entity: "borrower", entityId: borrower.id,
+          userId: req.session?.userId, details: consentCheck.reason || "Consent required", ipAddress: req.ip || null,
+        });
+        return res.status(403).json({ message: consentCheck.reason || "Active borrower consent required before initiating open-banking linkage.", code: "CONSENT_REQUIRED" });
+      }
+
       const { provider } = req.body || {};
 
       // Provider detection uses server-side secret availability, but secrets are NEVER included
@@ -1768,6 +1781,19 @@ export async function registerRoutes(
     try {
       const borrower = await storage.getBorrower(req.params.id);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
+
+      // Consent gate: re-verify at callback time before persisting any linked account record.
+      // This prevents race conditions where consent is revoked after link-session is initiated.
+      const { hasAffordabilityConsent: checkConsent2 } = await import("./affordability-service");
+      const callbackConsentCheck = await checkConsent2(borrower.id, borrower);
+      if (!callbackConsentCheck.ok) {
+        await storage.createAuditLog({
+          action: "AFFORDABILITY_LINK_CALLBACK_DENIED_NO_CONSENT", entity: "borrower", entityId: borrower.id,
+          userId: req.session?.userId, details: callbackConsentCheck.reason || "Consent required at callback", ipAddress: req.ip || null,
+        });
+        return res.status(403).json({ message: callbackConsentCheck.reason || "Active borrower consent required before persisting open-banking linkage.", code: "CONSENT_REQUIRED" });
+      }
+
       const { provider, code, accountId: directAccountId } = req.body || {};
       if (!provider) return res.status(400).json({ message: "provider is required" });
 
