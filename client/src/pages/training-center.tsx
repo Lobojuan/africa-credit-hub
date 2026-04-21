@@ -4,21 +4,24 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
-import { getModules, OVERALL_PASS_PERCENT, type TrainingModule, type TrainingQuestion } from "@/lib/training-content";
+import {
+  getModulesForRole, OVERALL_PASS_PERCENT, ROLE_LABELS, ROLE_DESCRIPTIONS,
+  type TrainingModule, type TrainingQuestion, type UserRole,
+} from "@/lib/training-content";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
-  Monitor, Users, CreditCard, Shield, Brain, Settings,
+  Monitor, Users, CreditCard, Shield, Brain, Settings, Terminal, Landmark,
   CheckCircle2, XCircle, Trophy, BookOpen, Clock, ChevronRight,
   RotateCcw, ArrowLeft, Star, GraduationCap, Target, Award,
-  Check, X, AlertCircle, Download, ExternalLink, Printer,
+  Check, X, AlertCircle, ExternalLink, Printer,
 } from "lucide-react";
 
 const ICON_MAP: Record<string, React.ElementType> = {
-  Monitor, Users, CreditCard, Shield, Brain, Settings,
+  Monitor, Users, CreditCard, Shield, Brain, Settings, Terminal, Landmark,
 };
 
 type Screen = "home" | "quiz" | "result";
@@ -286,7 +289,17 @@ function ResultScreen({
   );
 }
 
-function CertificateView({ userName, issuedDate }: { userName: string; issuedDate: string }) {
+function CertificateView({
+  userName,
+  issuedDate,
+  modules,
+  roleLabel,
+}: {
+  userName: string;
+  issuedDate: string;
+  modules: TrainingModule[];
+  roleLabel: string;
+}) {
   return (
     <div
       id="training-certificate"
@@ -313,22 +326,15 @@ function CertificateView({ userName, issuedDate }: { userName: string; issuedDat
           <p className="text-sm text-gray-500 mb-1" style={{ fontFamily: "system-ui, sans-serif" }}>This is to certify that</p>
           <p className="text-3xl font-bold text-gray-900 mb-1">{userName}</p>
           <p className="text-sm text-gray-500" style={{ fontFamily: "system-ui, sans-serif" }}>
-            has successfully completed all required training modules and assessments of the
+            has successfully completed all required training modules for the <strong className="text-gray-700">{roleLabel}</strong> role and passed all assessments of the
           </p>
           <p className="text-lg font-semibold text-gray-800 mt-1">Africa Credit Hub Operator Certification Programme</p>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 mb-6 py-4 border-y border-gray-100">
-          {[
-            { label: "Platform Overview", icon: "✓" },
-            { label: "User & Access Management", icon: "✓" },
-            { label: "Credit Operations", icon: "✓" },
-            { label: "Security & Compliance", icon: "✓" },
-            { label: "AI & Analytics", icon: "✓" },
-            { label: "System Administration", icon: "✓" },
-          ].map((m) => (
-            <div key={m.label} className="flex items-center gap-1.5 text-xs text-gray-600" style={{ fontFamily: "system-ui, sans-serif" }}>
-              <span className="text-emerald-600 font-bold">{m.icon}</span> {m.label}
+        <div className="grid grid-cols-2 gap-2 mb-6 py-4 border-y border-gray-100">
+          {modules.map((m) => (
+            <div key={m.id} className="flex items-center gap-1.5 text-xs text-gray-600" style={{ fontFamily: "system-ui, sans-serif" }}>
+              <span className="text-emerald-600 font-bold">✓</span> {m.title}
             </div>
           ))}
         </div>
@@ -344,8 +350,8 @@ function CertificateView({ userName, issuedDate }: { userName: string; issuedDat
             <div className="text-xs text-gray-600 font-semibold" style={{ fontFamily: "system-ui, sans-serif" }}>Africa Credit Hub</div>
           </div>
           <div className="text-right">
-            <div className="text-xs text-gray-400 mb-1" style={{ fontFamily: "system-ui, sans-serif" }}>Score</div>
-            <div className="text-sm font-semibold text-gray-700">All Modules Passed</div>
+            <div className="text-xs text-gray-400 mb-1" style={{ fontFamily: "system-ui, sans-serif" }}>Certification Level</div>
+            <div className="text-sm font-semibold text-gray-700">{roleLabel}</div>
           </div>
         </div>
       </div>
@@ -359,16 +365,16 @@ function CertificateModal({
   onClose,
   userName,
   issuedDate,
+  modules,
+  roleLabel,
 }: {
   open: boolean;
   onClose: () => void;
   userName: string;
   issuedDate: string;
+  modules: TrainingModule[];
+  roleLabel: string;
 }) {
-  function handlePrint() {
-    window.print();
-  }
-
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="max-w-2xl p-0 gap-0 overflow-hidden" data-testid="modal-certificate">
@@ -377,17 +383,17 @@ function CertificateModal({
             <Award className="w-7 h-7" />
             <h2 className="text-xl font-bold">Congratulations, {userName}!</h2>
           </div>
-          <p className="text-sm text-white/80">You have passed all training modules and earned your certification.</p>
+          <p className="text-sm text-white/80">You have passed all {roleLabel} training modules and earned your certification.</p>
         </div>
 
         <div className="p-6 space-y-4">
-          <CertificateView userName={userName} issuedDate={issuedDate} />
+          <CertificateView userName={userName} issuedDate={issuedDate} modules={modules} roleLabel={roleLabel} />
 
           <div className="flex gap-3 pt-2">
             <Button
               variant="outline"
               className="flex-1 gap-2"
-              onClick={handlePrint}
+              onClick={() => window.print()}
               data-testid="button-print-certificate"
             >
               <Printer className="w-4 h-4" /> Print Certificate
@@ -462,7 +468,8 @@ export default function TrainingCenter() {
   const { i18n } = useTranslation();
   const { user } = useAuth();
   const [, navigate] = useLocation();
-  const TRAINING_MODULES = useMemo(() => getModules(i18n.language), [i18n.language]);
+  const role = (user?.role as UserRole) ?? "viewer";
+  const TRAINING_MODULES = useMemo(() => getModulesForRole(i18n.language, role), [i18n.language, role]);
 
   const [screen, setScreen] = useState<Screen>("home");
   const [quiz, setQuiz] = useState<QuizState | null>(null);
@@ -655,17 +662,27 @@ export default function TrainingCenter() {
         onClose={handleCertModalClose}
         userName={userName}
         issuedDate={issuedDate}
+        modules={TRAINING_MODULES}
+        roleLabel={ROLE_LABELS[role]}
       />
 
       <div className="p-6 max-w-6xl mx-auto space-y-8">
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2" data-testid="text-page-title">
-              <GraduationCap className="w-7 h-7 text-primary" />
-              Training Center
-            </h1>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Complete all six modules to earn your Africa Credit Hub certification. Pass each quiz with {OVERALL_PASS_PERCENT}% or higher.
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h1 className="text-2xl font-bold flex items-center gap-2" data-testid="text-page-title">
+                <GraduationCap className="w-7 h-7 text-primary" />
+                Training Center
+              </h1>
+              <Badge variant="outline" className="text-xs font-semibold shrink-0" data-testid="badge-user-role">
+                {ROLE_LABELS[role]}
+              </Badge>
+            </div>
+            <p className="text-muted-foreground mt-1 text-sm leading-relaxed max-w-2xl" data-testid="text-role-description">
+              {ROLE_DESCRIPTIONS[role]}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Pass each quiz with {OVERALL_PASS_PERCENT}% or higher to earn your certification.
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
