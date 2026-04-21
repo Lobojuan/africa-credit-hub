@@ -238,7 +238,7 @@ function CollapsibleSection({
     <Collapsible open={isOpen} onOpenChange={() => onToggle(label)}>
       <SidebarGroup className="py-0">
         <CollapsibleTrigger className="w-full group">
-          <div className={`text-[10px] font-bold uppercase tracking-widest px-3 py-2 cursor-pointer transition-all duration-200 flex items-center justify-between rounded-lg mx-1.5 my-0.5 ${
+          <div className={`text-[10px] font-bold uppercase tracking-widest px-3 py-2 cursor-pointer transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)] flex items-center justify-between rounded-lg mx-1.5 my-0.5 ${
             hasActive && isOpen
               ? "text-primary-foreground bg-primary/90 shadow-sm"
               : hasActive && !isOpen
@@ -253,7 +253,13 @@ function CollapsibleSection({
               {!isOpen && hasActive && (
                 <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
               )}
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-300 ${isOpen ? "" : "-rotate-90"}`} />
+              <ChevronDown
+                className="w-3.5 h-3.5 will-change-transform"
+                style={{
+                  transform: isOpen ? "rotate(0deg)" : "rotate(-90deg)",
+                  transition: "transform 0.32s cubic-bezier(0.16, 1, 0.3, 1)",
+                }}
+              />
             </div>
           </div>
         </CollapsibleTrigger>
