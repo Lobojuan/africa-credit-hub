@@ -424,13 +424,13 @@ Content-Type: application/json
 
 Response:
 {
-  "access_token": "eyJhbGciOiJI...",
+  "access_token": "<your_jwt_access_token>",
   "token_type": "Bearer",
   "expires_in": 3600
 }
 
 Subsequent requests:
-Authorization: Bearer eyJhbGciOiJI...`}</pre>
+Authorization: Bearer <your_jwt_access_token>`}</pre>
             </div>
           </div>
         </div>
