@@ -1,17 +1,20 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
 import { getModules, OVERALL_PASS_PERCENT, type TrainingModule, type TrainingQuestion } from "@/lib/training-content";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   Monitor, Users, CreditCard, Shield, Brain, Settings,
   CheckCircle2, XCircle, Trophy, BookOpen, Clock, ChevronRight,
   RotateCcw, ArrowLeft, Star, GraduationCap, Target, Award,
-  Check, X, AlertCircle,
+  Check, X, AlertCircle, Download, ExternalLink, Printer,
 } from "lucide-react";
 
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -283,7 +286,135 @@ function ResultScreen({
   );
 }
 
-function OverallProgress({ attempts, total }: { attempts: BestAttempt[]; total: number }) {
+function CertificateView({ userName, issuedDate }: { userName: string; issuedDate: string }) {
+  return (
+    <div
+      id="training-certificate"
+      className="bg-white text-gray-900 rounded-xl overflow-hidden"
+      style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+    >
+      <div className="h-3" style={{ background: "linear-gradient(90deg, #1a5276, #1e8449, #b7950b)" }} />
+      <div className="px-10 py-8">
+        <div className="text-center mb-6">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #1a5276, #154360)" }}>
+              <Award className="w-5 h-5 text-white" />
+            </div>
+            <div className="text-left">
+              <div className="font-bold text-base text-gray-900 leading-tight" style={{ fontFamily: "system-ui, sans-serif" }}>Africa Credit Hub</div>
+              <div className="text-xs text-gray-500" style={{ fontFamily: "system-ui, sans-serif" }}>Pan-African Credit Registry System</div>
+            </div>
+          </div>
+          <div className="text-xs uppercase tracking-[0.25em] text-gray-400 mb-2" style={{ fontFamily: "system-ui, sans-serif" }}>Certificate of Completion</div>
+          <div className="w-16 h-px mx-auto" style={{ background: "#b7950b" }} />
+        </div>
+
+        <div className="text-center mb-6">
+          <p className="text-sm text-gray-500 mb-1" style={{ fontFamily: "system-ui, sans-serif" }}>This is to certify that</p>
+          <p className="text-3xl font-bold text-gray-900 mb-1">{userName}</p>
+          <p className="text-sm text-gray-500" style={{ fontFamily: "system-ui, sans-serif" }}>
+            has successfully completed all required training modules and assessments of the
+          </p>
+          <p className="text-lg font-semibold text-gray-800 mt-1">Africa Credit Hub Operator Certification Programme</p>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4 mb-6 py-4 border-y border-gray-100">
+          {[
+            { label: "Platform Overview", icon: "✓" },
+            { label: "User & Access Management", icon: "✓" },
+            { label: "Credit Operations", icon: "✓" },
+            { label: "Security & Compliance", icon: "✓" },
+            { label: "AI & Analytics", icon: "✓" },
+            { label: "System Administration", icon: "✓" },
+          ].map((m) => (
+            <div key={m.label} className="flex items-center gap-1.5 text-xs text-gray-600" style={{ fontFamily: "system-ui, sans-serif" }}>
+              <span className="text-emerald-600 font-bold">{m.icon}</span> {m.label}
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-end justify-between">
+          <div>
+            <div className="text-xs text-gray-400 mb-1" style={{ fontFamily: "system-ui, sans-serif" }}>Issue Date</div>
+            <div className="text-sm font-semibold text-gray-700">{issuedDate}</div>
+          </div>
+          <div className="text-center">
+            <div className="w-20 h-px bg-gray-400 mb-1" />
+            <div className="text-xs text-gray-400" style={{ fontFamily: "system-ui, sans-serif" }}>Authorised Signature</div>
+            <div className="text-xs text-gray-600 font-semibold" style={{ fontFamily: "system-ui, sans-serif" }}>Africa Credit Hub</div>
+          </div>
+          <div className="text-right">
+            <div className="text-xs text-gray-400 mb-1" style={{ fontFamily: "system-ui, sans-serif" }}>Score</div>
+            <div className="text-sm font-semibold text-gray-700">All Modules Passed</div>
+          </div>
+        </div>
+      </div>
+      <div className="h-1.5" style={{ background: "linear-gradient(90deg, #1a5276, #1e8449, #b7950b)" }} />
+    </div>
+  );
+}
+
+function CertificateModal({
+  open,
+  onClose,
+  userName,
+  issuedDate,
+}: {
+  open: boolean;
+  onClose: () => void;
+  userName: string;
+  issuedDate: string;
+}) {
+  function handlePrint() {
+    window.print();
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-2xl p-0 gap-0 overflow-hidden" data-testid="modal-certificate">
+        <div className="bg-gradient-to-br from-amber-400 to-yellow-500 px-6 py-5 text-white">
+          <div className="flex items-center gap-3 mb-1">
+            <Award className="w-7 h-7" />
+            <h2 className="text-xl font-bold">Congratulations, {userName}!</h2>
+          </div>
+          <p className="text-sm text-white/80">You have passed all training modules and earned your certification.</p>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <CertificateView userName={userName} issuedDate={issuedDate} />
+
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="outline"
+              className="flex-1 gap-2"
+              onClick={handlePrint}
+              data-testid="button-print-certificate"
+            >
+              <Printer className="w-4 h-4" /> Print Certificate
+            </Button>
+            <Button
+              className="flex-1 gap-2"
+              onClick={onClose}
+              data-testid="button-go-to-dashboard"
+            >
+              Go to Dashboard <ExternalLink className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function OverallProgress({
+  attempts,
+  total,
+  onViewCertificate,
+}: {
+  attempts: BestAttempt[];
+  total: number;
+  onViewCertificate: () => void;
+}) {
   const passed = attempts.filter((a) => a.passed).length;
   const attempted = attempts.length;
   const certified = passed === total;
@@ -300,9 +431,18 @@ function OverallProgress({ attempts, total }: { attempts: BestAttempt[]; total: 
           </div>
           <p className="text-sm opacity-80">
             {certified
-              ? "You have passed all modules. Well done!"
+              ? "You have passed all modules. Your certificate is ready."
               : `${passed} of ${total} modules passed · ${total - attempted} not yet started`}
           </p>
+          {certified && (
+            <button
+              onClick={onViewCertificate}
+              className="flex items-center gap-1.5 text-sm font-semibold underline underline-offset-2 opacity-90 hover:opacity-100 mt-1"
+              data-testid="button-view-certificate"
+            >
+              <Award className="w-4 h-4" /> View My Certificate
+            </button>
+          )}
         </div>
         <div className="text-right">
           <div className="text-4xl font-bold">{passed}<span className="text-2xl opacity-70">/{total}</span></div>
@@ -320,12 +460,16 @@ function OverallProgress({ attempts, total }: { attempts: BestAttempt[]; total: 
 
 export default function TrainingCenter() {
   const { i18n } = useTranslation();
+  const { user } = useAuth();
+  const [, navigate] = useLocation();
   const TRAINING_MODULES = useMemo(() => getModules(i18n.language), [i18n.language]);
 
   const [screen, setScreen] = useState<Screen>("home");
   const [quiz, setQuiz] = useState<QuizState | null>(null);
   const [finalAnswers, setFinalAnswers] = useState<AnswerRecord[]>([]);
   const [activeModule, setActiveModule] = useState<TrainingModule | null>(null);
+  const [showCertModal, setShowCertModal] = useState(false);
+  const justCertifiedRef = useRef(false);
 
   const { data: progressData = [], isLoading } = useQuery<BestAttempt[]>({
     queryKey: ["/api/training/progress"],
@@ -343,6 +487,13 @@ export default function TrainingCenter() {
       queryClient.invalidateQueries({ queryKey: ["/api/training/progress"] });
     },
   });
+
+  const totalModules = TRAINING_MODULES.length;
+  const passedCount = progressData.filter((a) => a.passed).length;
+  const isCertified = passedCount === totalModules && totalModules > 0;
+
+  const userName = user?.name || user?.username || "User";
+  const issuedDate = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 
   function startModule(module: TrainingModule) {
     setActiveModule(module);
@@ -385,6 +536,13 @@ export default function TrainingCenter() {
       setActiveModule(quiz.module);
       setScreen("result");
 
+      if (passed) {
+        const prevPassed = progressData.filter((a) => a.passed && a.moduleId !== quiz.module.id).length;
+        if (prevPassed + 1 === totalModules) {
+          justCertifiedRef.current = true;
+        }
+      }
+
       submitAttempt.mutate({
         moduleId: quiz.module.id,
         score,
@@ -400,6 +558,19 @@ export default function TrainingCenter() {
         lastAnswerCorrect: null,
       } : prev);
     }
+  }
+
+  useEffect(() => {
+    if (justCertifiedRef.current && isCertified) {
+      justCertifiedRef.current = false;
+      setScreen("home");
+      setShowCertModal(true);
+    }
+  }, [isCertified]);
+
+  function handleCertModalClose() {
+    setShowCertModal(false);
+    navigate("/dashboard");
   }
 
   function getBestAttempt(moduleId: string): BestAttempt | undefined {
@@ -478,72 +649,85 @@ export default function TrainingCenter() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-8">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2" data-testid="text-page-title">
-            <GraduationCap className="w-7 h-7 text-primary" />
-            Training Center
-          </h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Complete all six modules to earn your Africa Credit Hub certification. Pass each quiz with {OVERALL_PASS_PERCENT}% or higher.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Star className="w-4 h-4 text-amber-500" />
-          <span className="text-sm font-medium">
-            {progressData.filter((a) => a.passed).length}/{TRAINING_MODULES.length} passed
-          </span>
-        </div>
-      </div>
+    <>
+      <CertificateModal
+        open={showCertModal}
+        onClose={handleCertModalClose}
+        userName={userName}
+        issuedDate={issuedDate}
+      />
 
-      {!isLoading && (
-        <OverallProgress attempts={progressData} total={TRAINING_MODULES.length} />
-      )}
+      <div className="p-6 max-w-6xl mx-auto space-y-8">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-2" data-testid="text-page-title">
+              <GraduationCap className="w-7 h-7 text-primary" />
+              Training Center
+            </h1>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Complete all six modules to earn your Africa Credit Hub certification. Pass each quiz with {OVERALL_PASS_PERCENT}% or higher.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Star className="w-4 h-4 text-amber-500" />
+            <span className="text-sm font-medium">
+              {progressData.filter((a) => a.passed).length}/{TRAINING_MODULES.length} passed
+            </span>
+          </div>
+        </div>
 
-      <div>
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
-          Training Modules
-        </h2>
-        {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[...Array(6)].map((_, i) => (
-              <Card key={i} className="h-48 animate-pulse bg-muted" />
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {TRAINING_MODULES.map((module) => (
-              <ModuleCard
-                key={module.id}
-                module={module}
-                attempt={getBestAttempt(module.id)}
-                onStart={() => startModule(module)}
-              />
-            ))}
-          </div>
+        {!isLoading && (
+          <OverallProgress
+            attempts={progressData}
+            total={TRAINING_MODULES.length}
+            onViewCertificate={() => setShowCertModal(true)}
+          />
         )}
-      </div>
 
-      <Card className="border border-dashed border-border/60 bg-muted/30" data-testid="card-tips">
-        <CardContent className="p-5">
-          <div className="flex items-start gap-4">
-            <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary/10 text-primary shrink-0">
-              <BookOpen className="w-4 h-4" />
+        <div>
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
+            Training Modules
+          </h2>
+          {isLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[...Array(6)].map((_, i) => (
+                <Card key={i} className="h-48 animate-pulse bg-muted" />
+              ))}
             </div>
-            <div>
-              <p className="font-semibold text-sm">Study tips</p>
-              <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
-                <li>• Questions are True/False — read each statement carefully before answering</li>
-                <li>• After each answer you will see an explanation — use these to learn from mistakes</li>
-                <li>• You need {OVERALL_PASS_PERCENT}% or higher in each module to pass (6 of 8 correct)</li>
-                <li>• You can retry any module as many times as you like — only your best score is recorded</li>
-                <li>• Use the Score Guide and Online Manual pages as study references before each quiz</li>
-              </ul>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {TRAINING_MODULES.map((module) => (
+                <ModuleCard
+                  key={module.id}
+                  module={module}
+                  attempt={getBestAttempt(module.id)}
+                  onStart={() => startModule(module)}
+                />
+              ))}
             </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+          )}
+        </div>
+
+        <Card className="border border-dashed border-border/60 bg-muted/30" data-testid="card-tips">
+          <CardContent className="p-5">
+            <div className="flex items-start gap-4">
+              <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary/10 text-primary shrink-0">
+                <BookOpen className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="font-semibold text-sm">Study tips</p>
+                <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                  <li>• Questions are True/False — read each statement carefully before answering</li>
+                  <li>• After each answer you will see an explanation — use these to learn from mistakes</li>
+                  <li>• You need {OVERALL_PASS_PERCENT}% or higher in each module to pass (6 of 8 correct)</li>
+                  <li>• You can retry any module as many times as you like — only your best score is recorded</li>
+                  <li>• Use the Score Guide and Online Manual pages as study references before each quiz</li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </>
   );
 }
