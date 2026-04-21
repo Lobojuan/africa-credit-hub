@@ -4024,7 +4024,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     res.status(400).json({ message: "Unsupported format. Use 'csv' or 'json'" });
   });
 
-  const iffUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 }, fileFilter: (_req, file, cb) => {
+  const iffUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 }, fileFilter: (_req, file, cb) => {
     const ext = file.originalname.toLowerCase();
     const validMimes = [
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
