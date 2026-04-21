@@ -154,9 +154,13 @@ export default function SignUpPage() {
               </button>
             ))}
           </div>
-          <div className="text-center mt-6">
-            <a href="/portal" className="text-sm hover:underline" style={{ color: "rgba(255,255,255,0.4)" }} data-testid="link-back-portal">
-              <ArrowLeft className="w-3.5 h-3.5 inline mr-1" /> Back to Portal
+          <div className="flex items-center justify-center gap-6 mt-6">
+            <a href="/login" className="text-sm hover:underline flex items-center gap-1" style={{ color: "rgba(255,255,255,0.4)" }} data-testid="link-back-portal">
+              <ArrowLeft className="w-3.5 h-3.5" /> Back to Login
+            </a>
+            <span style={{ color: "rgba(255,255,255,0.2)" }}>·</span>
+            <a href="/" className="text-sm hover:underline flex items-center gap-1" style={{ color: "rgba(255,255,255,0.4)" }} data-testid="link-back-home">
+              <ArrowLeft className="w-3.5 h-3.5" /> Back to Home
             </a>
           </div>
         </div>
@@ -416,6 +420,17 @@ export default function SignUpPage() {
               Sign in
             </a>
           </p>
+        </div>
+
+        <div className="text-center mt-3">
+          <a
+            href="/"
+            className="text-sm hover:underline flex items-center justify-center gap-1"
+            style={{ color: "rgba(255,255,255,0.35)" }}
+            data-testid="link-back-home-step2"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" /> Back to Home
+          </a>
         </div>
 
         <div className="text-center mt-4">

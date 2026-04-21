@@ -1103,6 +1103,17 @@ export default function ConsumerPortalPage() {
                 </div>
               </div>
             </div>
+            <div className="pt-2">
+              <a
+                href="/"
+                className="flex items-center justify-center gap-1.5 text-xs hover:underline"
+                style={{ color: "var(--muted-foreground)" }}
+                data-testid="link-back-home-consumer"
+              >
+                <ArrowLeft className="w-3 h-3" />
+                Back to Home
+              </a>
+            </div>
           </div>
         )}
       </div>

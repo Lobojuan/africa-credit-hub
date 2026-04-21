@@ -200,8 +200,19 @@ export default function LoginPage() {
             {registryName}
           </span>
         </div>
-        <div data-testid="login-language-switcher">
-          <LanguageSwitcher />
+        <div className="flex items-center gap-4">
+          <a
+            href="/"
+            className="flex items-center gap-1.5 text-sm font-medium transition-colors hover:opacity-80"
+            style={{ color: "hsl(215 30% 45%)" }}
+            data-testid="link-back-home"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Back to Home
+          </a>
+          <div data-testid="login-language-switcher">
+            <LanguageSwitcher />
+          </div>
         </div>
       </header>
 
