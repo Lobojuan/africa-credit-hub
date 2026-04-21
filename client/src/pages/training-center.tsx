@@ -283,8 +283,7 @@ function ResultScreen({
   );
 }
 
-function OverallProgress({ attempts }: { attempts: BestAttempt[] }) {
-  const total = TRAINING_MODULES.length;
+function OverallProgress({ attempts, total }: { attempts: BestAttempt[]; total: number }) {
   const passed = attempts.filter((a) => a.passed).length;
   const attempted = attempts.length;
   const certified = passed === total;
@@ -499,7 +498,7 @@ export default function TrainingCenter() {
       </div>
 
       {!isLoading && (
-        <OverallProgress attempts={progressData} />
+        <OverallProgress attempts={progressData} total={TRAINING_MODULES.length} />
       )}
 
       <div>
