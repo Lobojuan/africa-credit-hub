@@ -12384,7 +12384,13 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const parsed = schema.safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ message: parsed.error.errors[0]?.message ?? "Invalid input" });
 
-      const userId = (req as any).user?.id;
+      if (parsed.data.slackWebhookUrl) {
+        const { isSafeWebhookUrl } = await import("./lib/url-safety");
+        if (!isSafeWebhookUrl(parsed.data.slackWebhookUrl)) {
+          return res.status(400).json({ message: "Slack webhook URL must be a safe external HTTPS address" });
+        }
+      }
+      const userId = req.session?.userId;
       const cfg = await storage.upsertRegistryHealthConfig(parsed.data, userId);
 
       const { restartRegistryHealthChecker, rescheduleCleanup } = await import("./registry-health-checker");
@@ -12857,16 +12863,16 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // -------------------------------------------------------------------------
   app.get("/api/training/progress", requireAuth, async (req, res) => {
     try {
-      const userId = (req as any).user?.id;
+      const userId = req.session?.userId;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
       const best = await storage.getBestTrainingAttempts(userId);
       res.json(best);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.post("/api/training/attempts", requireAuth, async (req, res) => {
     try {
-      const userId = (req as any).user?.id;
+      const userId = req.session?.userId;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
       const { moduleId, score, totalQuestions, passed, answers } = req.body;
       if (!moduleId || score === undefined || !totalQuestions) {
@@ -12874,7 +12880,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       }
       const attempt = await storage.createTrainingAttempt({ userId, moduleId, score, totalQuestions, passed: !!passed, answers: answers ?? [] });
       res.json(attempt);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   // ===========================================================================
@@ -12883,12 +12889,11 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.get("/api/loan-applications", requireAuth, async (req, res) => {
     try {
-      const user = (req as any).user;
       const { status } = req.query as any;
-      const orgId = user.role === "super_admin" ? undefined : user.organizationId;
+      const orgId = req.session?.userRole === "super_admin" ? undefined : req.session?.organizationId;
       const loans = await storage.getLoanApplications(orgId, status);
       res.json(loans);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.get("/api/loan-applications/:id", requireAuth, async (req, res) => {
@@ -12896,13 +12901,12 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const loan = await storage.getLoanApplication(req.params.id);
       if (!loan) return res.status(404).json({ message: "Not found" });
       res.json(loan);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.post("/api/loan-applications", requireAuth, async (req, res) => {
     try {
-      const user = (req as any).user;
-      const orgId = req.body.organizationId || user.organizationId;
+      const orgId = req.body.organizationId || req.session?.organizationId;
       if (!orgId) return res.status(400).json({ message: "organizationId required" });
       // Generate unique application number
       const appNum = `LA-${Date.now().toString(36).toUpperCase()}`;
@@ -12910,52 +12914,50 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         ...req.body,
         organizationId: orgId,
         applicationNumber: appNum,
-        makerUserId: user.id,
+        makerUserId: req.session?.userId,
         status: "submitted",
       });
       res.status(201).json(loan);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
-  app.patch("/api/loan-applications/:id", requireRole("admin", "super_admin", "loan_officer"), async (req, res) => {
+  app.patch("/api/loan-applications/:id", requireRole("admin", "super_admin", "lender"), async (req, res) => {
     try {
       const updated = await storage.updateLoanApplication(req.params.id, req.body);
       if (!updated) return res.status(404).json({ message: "Not found" });
       res.json(updated);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.post("/api/loan-applications/:id/approve", requireRole("admin", "super_admin"), async (req, res) => {
     try {
-      const user = (req as any).user;
       const { approvedAmount, interestRate, notes } = req.body;
       const updated = await storage.updateLoanApplication(req.params.id, {
         status: "approved",
         approvedAmount,
         interestRate,
-        checkerUserId: user.id,
+        checkerUserId: req.session?.userId,
         checkerAction: "approved",
         checkerNotes: notes,
         checkedAt: new Date(),
       });
       if (!updated) return res.status(404).json({ message: "Not found" });
       res.json(updated);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.post("/api/loan-applications/:id/reject", requireRole("admin", "super_admin"), async (req, res) => {
     try {
-      const user = (req as any).user;
       const updated = await storage.updateLoanApplication(req.params.id, {
         status: "rejected",
-        checkerUserId: user.id,
+        checkerUserId: req.session?.userId,
         checkerAction: "rejected",
         checkerNotes: req.body.notes,
         checkedAt: new Date(),
       });
       if (!updated) return res.status(404).json({ message: "Not found" });
       res.json(updated);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.post("/api/loan-applications/:id/disburse", requireRole("admin", "super_admin"), async (req, res) => {
@@ -12967,14 +12969,14 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       });
       if (!updated) return res.status(404).json({ message: "Not found" });
       res.json(updated);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.get("/api/loan-applications/:id/schedule", requireAuth, async (req, res) => {
     try {
       const schedule = await storage.getRepaymentSchedule(req.params.id);
       res.json(schedule);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.post("/api/loan-applications/:id/schedule", requireRole("admin", "super_admin"), async (req, res) => {
@@ -13009,14 +13011,14 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       }
       const created = await storage.createRepaymentSchedules(schedules);
       res.status(201).json(created);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.patch("/api/loan-repayments/:id/pay", requireRole("admin", "super_admin"), async (req, res) => {
     try {
       const updated = await storage.markInstallmentPaid(req.params.id, req.body.paidAmount);
       res.json(updated);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   // ===========================================================================
@@ -13025,12 +13027,11 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.get("/api/collateral", requireAuth, async (req, res) => {
     try {
-      const user = (req as any).user;
       const { borrowerId } = req.query as any;
-      const orgId = user.role === "super_admin" ? undefined : user.organizationId;
+      const orgId = req.session?.userRole === "super_admin" ? undefined : req.session?.organizationId;
       const items = await storage.getCollateralItems(orgId, borrowerId);
       res.json(items);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.get("/api/collateral/:id", requireAuth, async (req, res) => {
@@ -13038,20 +13039,19 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const item = await storage.getCollateralItem(req.params.id);
       if (!item) return res.status(404).json({ message: "Not found" });
       res.json(item);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
-  app.post("/api/collateral", requireRole("admin", "super_admin", "loan_officer"), async (req, res) => {
+  app.post("/api/collateral", requireRole("admin", "super_admin", "lender"), async (req, res) => {
     try {
-      const user = (req as any).user;
       const regNum = `COL-${Date.now().toString(36).toUpperCase()}`;
       const item = await storage.createCollateralItem({
         ...req.body,
         registrationNumber: req.body.registrationNumber || regNum,
-        lenderOrganizationId: req.body.lenderOrganizationId || user.organizationId,
+        lenderOrganizationId: req.body.lenderOrganizationId || req.session?.organizationId,
       });
       res.status(201).json(item);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.patch("/api/collateral/:id", requireRole("admin", "super_admin"), async (req, res) => {
@@ -13059,7 +13059,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const updated = await storage.updateCollateralItem(req.params.id, req.body);
       if (!updated) return res.status(404).json({ message: "Not found" });
       res.json(updated);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   // ===========================================================================
@@ -13068,22 +13068,20 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.get("/api/institution-branding", requireAuth, async (req, res) => {
     try {
-      const user = (req as any).user;
-      const orgId = (req.query.organizationId as string) || user.organizationId;
+      const orgId = (req.query.organizationId as string) || req.session?.organizationId;
       if (!orgId) return res.status(400).json({ message: "organizationId required" });
       const branding = await storage.getInstitutionBranding(orgId);
       res.json(branding || null);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.post("/api/institution-branding", requireRole("admin", "super_admin"), async (req, res) => {
     try {
-      const user = (req as any).user;
-      const orgId = req.body.organizationId || user.organizationId;
+      const orgId = req.body.organizationId || req.session?.organizationId;
       if (!orgId) return res.status(400).json({ message: "organizationId required" });
       const branding = await storage.upsertInstitutionBranding({ ...req.body, organizationId: orgId });
       res.json(branding);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   // ===========================================================================
@@ -13092,13 +13090,12 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.get("/api/analytics/institution", requireRole("admin", "super_admin"), async (req, res) => {
     try {
-      const user = (req as any).user;
       const days = parseInt(String(req.query.days || "30"));
-      const orgId = user.organizationId;
+      const orgId = req.session?.organizationId;
       if (!orgId) return res.status(400).json({ message: "organizationId required" });
       const stats = await storage.getUsageStats(orgId, days);
       res.json(stats);
-    } catch (e: any) { res.status(500).json({ message: e.message }); }
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   return httpServer;

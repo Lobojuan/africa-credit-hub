@@ -99,6 +99,11 @@ async function sendSlackAlert(provider: string, error: string, isRecovery = fals
   }
 
   try {
+    const { isSafeWebhookUrl } = await import("./lib/url-safety");
+    if (!isSafeWebhookUrl(webhookUrl)) {
+      console.warn("[RegistryHealth] Slack webhook URL failed safety check — skipping alert");
+      return;
+    }
     const resp = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

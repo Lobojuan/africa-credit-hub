@@ -63,7 +63,8 @@ export function sandboxApiKey(provider: string): string | undefined {
 export function validateSandboxKey(provider: string, suppliedKey: string): boolean {
   const expected = sandboxApiKey(provider);
   if (!expected) return false;
-  return suppliedKey === expected;
+  if (suppliedKey.length !== expected.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(suppliedKey), Buffer.from(expected));
 }
 
 // ---------------------------------------------------------------------------
