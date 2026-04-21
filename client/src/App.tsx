@@ -362,7 +362,7 @@ function AuthenticatedApp() {
     return <Suspense fallback={<LazyFallback />}><PlatformMasterControlPage /></Suspense>;
   }
 
-  const publicPaths = ["/", "/investor", "/solutions", "/ai-demo", "/pricing", "/security", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/score-guide", "/my-credit", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs"];
+  const publicPaths = ["/", "/investor", "/solutions", "/ai-demo", "/pricing", "/security", "/security-compliance", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/score-guide", "/my-credit", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs"];
   if (!user) {
     if (currentPath === "/login") {
       return <LoginPage />;
@@ -616,7 +616,7 @@ function AuthenticatedApp() {
 
 function PublicChatbotWrapper() {
   const [location] = useLocation();
-  const publicPaths = ["/", "/solutions", "/investor", "/ai-demo", "/pricing", "/security", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/my-credit", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs"];
+  const publicPaths = ["/", "/solutions", "/investor", "/ai-demo", "/pricing", "/security", "/security-compliance", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/my-credit", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs"];
   if (!publicPaths.includes(location)) return null;
   return <PublicChatbot />;
 }
@@ -635,6 +635,7 @@ function App() {
             <Route path="/pricing" component={() => <Suspense fallback={<LazyFallback />}><PricingPage /></Suspense>} />
             <Route path="/contact-sales" component={() => <Suspense fallback={<LazyFallback />}><ContactSalesPage /></Suspense>} />
             <Route path="/security" component={() => <Suspense fallback={<LazyFallback />}><SecurityCompliancePage /></Suspense>} />
+            <Route path="/security-compliance" component={() => <Suspense fallback={<LazyFallback />}><SecurityCompliancePage /></Suspense>} />
             <Route path="/terms" component={() => <Suspense fallback={<LazyFallback />}><TermsOfServicePage /></Suspense>} />
             <Route path="/privacy" component={() => <Suspense fallback={<LazyFallback />}><PrivacyPolicyPage /></Suspense>} />
             <Route path="/market-validation" component={() => <Suspense fallback={<LazyFallback />}><MarketValidationPage /></Suspense>} />
