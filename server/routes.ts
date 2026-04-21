@@ -1093,7 +1093,7 @@ export async function registerRoutes(
       }
       if (searchType === "telco") {
       }
-      const user = (req as any).user;
+      const user = { id: req.session?.userId };
       await storage.createAuditLog({
         action: "structured_search",
         entity: searchType === "telco" ? "telco_profile" : "borrower",
@@ -7604,9 +7604,9 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
   app.post("/api/exchange-rates", requireRole("admin"), async (req, res) => {
     try {
-      const parsed = insertExchangeRateSchema.parse({ ...req.body, createdBy: (req as any).user.id });
+      const parsed = insertExchangeRateSchema.parse({ ...req.body, createdBy: req.session?.userId });
       const rate = await storage.createExchangeRate(parsed);
-      await storage.createAuditLog({ userId: (req as any).user.id, action: "CREATE", entity: "exchange_rate", entityId: rate.id, details: `Created rate ${parsed.baseCurrency}/${parsed.targetCurrency}: ${parsed.rate}`, ipAddress: req.ip });
+      await storage.createAuditLog({ userId: req.session?.userId, action: "CREATE", entity: "exchange_rate", entityId: rate.id, details: `Created rate ${parsed.baseCurrency}/${parsed.targetCurrency}: ${parsed.rate}`, ipAddress: req.ip });
       res.status(201).json(rate);
     } catch (e: any) {
       if (e instanceof z.ZodError) return res.status(400).json({ message: "Validation error", errors: e.errors });
@@ -7618,7 +7618,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     try {
       const rate = await storage.updateExchangeRate(req.params.id, req.body);
       if (!rate) return res.status(404).json({ message: "Rate not found" });
-      await storage.createAuditLog({ userId: (req as any).user.id, action: "UPDATE", entity: "exchange_rate", entityId: req.params.id, details: JSON.stringify(req.body), ipAddress: req.ip });
+      await storage.createAuditLog({ userId: req.session?.userId, action: "UPDATE", entity: "exchange_rate", entityId: req.params.id, details: JSON.stringify(req.body), ipAddress: req.ip });
       res.json(rate);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -7627,7 +7627,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     try {
       const deleted = await storage.deleteExchangeRate(req.params.id);
       if (!deleted) return res.status(404).json({ message: "Rate not found" });
-      await storage.createAuditLog({ userId: (req as any).user.id, action: "DELETE", entity: "exchange_rate", entityId: req.params.id, details: "Deleted exchange rate", ipAddress: req.ip });
+      await storage.createAuditLog({ userId: req.session?.userId, action: "DELETE", entity: "exchange_rate", entityId: req.params.id, details: "Deleted exchange rate", ipAddress: req.ip });
       res.json({ message: "Deleted" });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -7824,7 +7824,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     try {
       const parsed = insertApiConfigurationSchema.parse(req.body);
       const config = await storage.createApiConfiguration(parsed);
-      await storage.createAuditLog({ userId: (req as any).user.id, action: "CREATE", entity: "api_configuration", entityId: config.id, details: `Created API config: ${parsed.name}`, ipAddress: req.ip });
+      await storage.createAuditLog({ userId: req.session?.userId, action: "CREATE", entity: "api_configuration", entityId: config.id, details: `Created API config: ${parsed.name}`, ipAddress: req.ip });
       res.status(201).json(config);
     } catch (e: any) {
       if (e instanceof z.ZodError) return res.status(400).json({ message: "Validation error", errors: e.errors });
@@ -7836,7 +7836,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     try {
       const config = await storage.updateApiConfiguration(req.params.id, req.body);
       if (!config) return res.status(404).json({ message: "Configuration not found" });
-      await storage.createAuditLog({ userId: (req as any).user.id, action: "UPDATE", entity: "api_configuration", entityId: req.params.id, details: JSON.stringify(req.body), ipAddress: req.ip });
+      await storage.createAuditLog({ userId: req.session?.userId, action: "UPDATE", entity: "api_configuration", entityId: req.params.id, details: JSON.stringify(req.body), ipAddress: req.ip });
       res.json(config);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -7845,7 +7845,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     try {
       const deleted = await storage.deleteApiConfiguration(req.params.id);
       if (!deleted) return res.status(404).json({ message: "Configuration not found" });
-      await storage.createAuditLog({ userId: (req as any).user.id, action: "DELETE", entity: "api_configuration", entityId: req.params.id, details: "Deleted API configuration", ipAddress: req.ip });
+      await storage.createAuditLog({ userId: req.session?.userId, action: "DELETE", entity: "api_configuration", entityId: req.params.id, details: "Deleted API configuration", ipAddress: req.ip });
       res.json({ message: "Deleted" });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -11947,7 +11947,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // ── Decision Rules Engine ─────────────────────────────────────────
   app.get("/api/decision-rules", requireAuth, async (req, res) => {
     try {
-      const orgId = (req as any).user?.organizationId;
+      const orgId = req.session?.userRole === 'super_admin' ? undefined : req.session?.organizationId;
       const rules = await db.select().from(decisionRules)
         .where(orgId ? eq(decisionRules.organizationId, orgId) : undefined)
         .orderBy(decisionRules.priority);
@@ -11978,7 +11978,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   app.post("/api/decision-rules/evaluate", requireAuth, async (req, res) => {
     try {
       const { borrowerId } = req.body;
-      const orgId = (req as any).user?.organizationId;
+      const orgId = req.session?.userRole === 'super_admin' ? undefined : req.session?.organizationId;
       const [borrower] = await db.select().from(borrowers).where(eq(borrowers.id, borrowerId));
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
       const accounts = await db.select().from(creditAccounts).where(eq(creditAccounts.borrowerId, borrowerId));
@@ -12436,7 +12436,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const parsed = schema.safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ message: parsed.error.errors[0]?.message ?? "Invalid input" });
 
-      const userId = (req as any).user?.id;
+      const userId = req.session?.userId;
       if (parsed.data.criticalFail7d === null && parsed.data.criticalStreak30d === null) {
         await storage.deleteRegistryThresholdOverride(provider);
         return res.json({ provider, deleted: true });
