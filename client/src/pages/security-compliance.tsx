@@ -112,7 +112,6 @@ export default function SecurityCompliancePage() {
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate("/solutions")} data-testid="link-back-overview">Overview</Button>
-            <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate("/pricing")} data-testid="link-pricing">Pricing</Button>
             <Button size="sm" className="text-xs" onClick={() => navigate("/start-trial")} data-testid="button-start-trial">
               Start Free Trial <ArrowRight className="w-3 h-3 ml-1" />
             </Button>
@@ -334,9 +333,6 @@ export default function SecurityCompliancePage() {
             <Button size="lg" onClick={() => navigate("/start-trial")} data-testid="button-cta-trial">
               Start Free Trial
               <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-            <Button size="lg" variant="outline" onClick={() => navigate("/pricing")} data-testid="button-cta-pricing">
-              View Pricing
             </Button>
           </div>
         </div>

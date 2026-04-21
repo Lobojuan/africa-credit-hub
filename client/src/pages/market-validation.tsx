@@ -162,7 +162,6 @@ export default function MarketValidationPage() {
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate("/solutions")} data-testid="link-back-solutions">Platform Overview</Button>
-            <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate("/pricing")} data-testid="link-pricing">Pricing</Button>
             <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate("/security")} data-testid="link-security">Security</Button>
             <Button size="sm" className="text-xs" onClick={() => navigate("/start-trial")} data-testid="button-start-trial">
               Start Free Trial <ArrowRight className="w-3 h-3 ml-1" />
@@ -471,9 +470,6 @@ export default function MarketValidationPage() {
             </Button>
             <Button size="lg" variant="outline" onClick={() => navigate("/solutions")} data-testid="button-cta-solutions">
               Platform Overview
-            </Button>
-            <Button size="lg" variant="outline" onClick={() => navigate("/pricing")} data-testid="button-cta-pricing">
-              View Pricing
             </Button>
           </div>
         </div>

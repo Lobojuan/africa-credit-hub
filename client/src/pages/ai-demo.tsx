@@ -906,9 +906,6 @@ function AIDemoPage() {
                 <Button size="lg" onClick={() => navigate("/start-trial")} className="gap-2 shadow-lg px-8" data-testid="cta-final-trial">
                   <Zap className="w-4 h-4" /> Start Free Trial Now
                 </Button>
-                <Button size="lg" variant="outline" onClick={() => navigate("/pricing")} className="gap-2" data-testid="cta-final-pricing">
-                  Compare Plans <ChevronRight className="w-4 h-4" />
-                </Button>
               </div>
               <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1"><Lock className="w-3 h-3" /> Bank-grade encryption</span>

@@ -65,11 +65,6 @@ export default function ContactSalesPage() {
             <p className="text-muted-foreground">
               Our enterprise team will review your inquiry and get back to you within 24 hours.
             </p>
-            <div className="pt-4">
-              <Button asChild variant="outline">
-                <Link href="/pricing">Back to Pricing</Link>
-              </Button>
-            </div>
           </CardContent>
         </Card>
       </div>
@@ -80,9 +75,9 @@ export default function ContactSalesPage() {
     <div className="min-h-screen bg-background py-12 px-4">
       <div className="max-w-5xl mx-auto">
         <div className="mb-6">
-          <Button asChild variant="ghost" size="sm" data-testid="link-back-pricing">
-            <Link href="/pricing">
-              <ArrowLeft className="w-4 h-4 mr-1" /> Back to Pricing
+          <Button asChild variant="ghost" size="sm" data-testid="link-back-home">
+            <Link href="/">
+              <ArrowLeft className="w-4 h-4 mr-1" /> Back to Home
             </Link>
           </Button>
         </div>
