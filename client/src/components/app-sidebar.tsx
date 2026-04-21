@@ -216,41 +216,32 @@ function CollapsibleSection({
   items,
   location,
   icon: Icon,
-  defaultOpen = false,
+  isOpen,
+  onToggle,
 }: {
   label: string;
   tKey?: string;
   items: NavItem[];
   location: string;
   icon?: LucideIcon;
-  defaultOpen?: boolean;
+  isOpen: boolean;
+  onToggle: (label: string) => void;
 }) {
   const { t } = useTranslation();
   const hasActive = items.some(item => location === item.url || (item.url === "/command-center" && location.startsWith("/command-center")));
-  const [open, setOpen] = useState(hasActive || defaultOpen);
-  const [userToggled, setUserToggled] = useState(false);
-
-  React.useEffect(() => {
-    if (hasActive) {
-      setOpen(true);
-      setUserToggled(false);
-    } else if (!userToggled) {
-      setOpen(false);
-    }
-  }, [hasActive, location]);
 
   if (items.length === 0) return null;
 
   const sectionLabel = sectionTKey ? t(sectionTKey) : label;
 
   return (
-    <Collapsible open={open} onOpenChange={(v) => { setOpen(v); setUserToggled(true); }}>
+    <Collapsible open={isOpen} onOpenChange={() => onToggle(label)}>
       <SidebarGroup className="py-0">
         <CollapsibleTrigger className="w-full group">
           <div className={`text-[10px] font-bold uppercase tracking-widest px-3 py-2 cursor-pointer transition-all duration-200 flex items-center justify-between rounded-lg mx-1.5 my-0.5 ${
-            hasActive && open
+            hasActive && isOpen
               ? "text-primary-foreground bg-primary/90 shadow-sm"
-              : hasActive && !open
+              : hasActive && !isOpen
               ? "text-primary bg-primary/15 border border-primary/25"
               : "text-sidebar-foreground/50 hover:text-sidebar-foreground/80 hover:bg-sidebar-foreground/5"
           }`}>
@@ -259,10 +250,10 @@ function CollapsibleSection({
               {sectionLabel}
             </span>
             <div className="flex items-center gap-1.5">
-              {!open && hasActive && (
+              {!isOpen && hasActive && (
                 <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
               )}
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-300 ${open ? "" : "-rotate-90"}`} />
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-300 ${isOpen ? "" : "-rotate-90"}`} />
             </div>
           </div>
         </CollapsibleTrigger>
@@ -292,20 +283,47 @@ function CollapsibleSection({
   );
 }
 
+const SECTION_ITEMS_MAP = [
+  { label: "Overview", items: overviewItems },
+  { label: "Credit Data", items: creditDataItems },
+  { label: "Reports & Scoring", items: reportsScoringItems },
+  { label: "Data Management", items: dataManagementItems },
+  { label: "Workflows", items: workflowItems },
+  { label: "Intelligence", items: intelligenceItems },
+  { label: "Oversight & Compliance", items: [] as NavItem[] },
+  { label: "Cross-Border", items: crossBorderItems },
+  { label: "Administration", items: adminItems },
+  { label: "API & Integrations", items: apiIntegrationItems },
+  { label: "Infrastructure", items: infrastructureItems },
+  { label: "Help & Resources", items: [] as NavItem[] },
+];
+
+function getActiveSectionLabel(location: string): string | null {
+  for (const sec of SECTION_ITEMS_MAP) {
+    if (sec.items.some(item => location === item.url || (item.url === "/command-center" && location.startsWith("/command-center")))) {
+      return sec.label;
+    }
+  }
+  return null;
+}
+
 export function AppSidebar() {
   const { i18n } = useTranslation();
   const { t } = useTranslation();
   const [location] = useLocation();
   const { user } = useAuth();
   const role = user?.role;
-  const defaultOpenSection = (sectionName: string): boolean => {
-    if (role === 'viewer')     return sectionName === 'Registry';
-    if (role === 'lender')     return sectionName === 'Registry';
-    if (role === 'regulator')  return sectionName === 'Registry';
-    if (role === 'admin')      return sectionName === 'Registry';
-    if (role === 'super_admin') return sectionName === 'Registry';
-    return false;
-  };
+
+  const [openSection, setOpenSection] = useState<string | null>(() => getActiveSectionLabel(location));
+
+  React.useEffect(() => {
+    const active = getActiveSectionLabel(location);
+    if (active) setOpenSection(active);
+  }, [location]);
+
+  function handleToggle(label: string) {
+    setOpenSection(prev => prev === label ? null : label);
+  }
   const isRtl = i18n.language === "ar";
   const countryTheme = useCountryTheme();
   const { visualStyle } = useTheme();
@@ -386,7 +404,8 @@ export function AppSidebar() {
           items={visibleOverview}
           location={location}
           icon={LayoutDashboard}
-          defaultOpen={defaultOpenSection('Overview')}
+          isOpen={openSection === "Overview"}
+          onToggle={handleToggle}
         />
 
         <CollapsibleSection
@@ -395,7 +414,8 @@ export function AppSidebar() {
           items={visibleCreditData}
           location={location}
           icon={Users}
-          defaultOpen={defaultOpenSection('Credit Data')}
+          isOpen={openSection === "Credit Data"}
+          onToggle={handleToggle}
         />
 
         <CollapsibleSection
@@ -404,7 +424,8 @@ export function AppSidebar() {
           items={visibleReportsScoring}
           location={location}
           icon={FileText}
-          defaultOpen={defaultOpenSection('Reports & Scoring')}
+          isOpen={openSection === "Reports & Scoring"}
+          onToggle={handleToggle}
         />
 
         <CollapsibleSection
@@ -413,7 +434,8 @@ export function AppSidebar() {
           items={visibleDataMgmt}
           location={location}
           icon={Upload}
-          defaultOpen={defaultOpenSection('Data Management')}
+          isOpen={openSection === "Data Management"}
+          onToggle={handleToggle}
         />
 
         <CollapsibleSection
@@ -422,7 +444,8 @@ export function AppSidebar() {
           items={visibleWorkflows}
           location={location}
           icon={CheckSquare}
-          defaultOpen={defaultOpenSection('Workflows')}
+          isOpen={openSection === "Workflows"}
+          onToggle={handleToggle}
         />
 
         {visibleIntelligence.length > 0 && (
@@ -432,7 +455,8 @@ export function AppSidebar() {
             items={visibleIntelligence}
             location={location}
             icon={Sparkles}
-            defaultOpen={defaultOpenSection('Intelligence')}
+            isOpen={openSection === "Intelligence"}
+            onToggle={handleToggle}
           />
         )}
 
@@ -443,7 +467,8 @@ export function AppSidebar() {
             items={visibleOversight}
             location={location}
             icon={Eye}
-            defaultOpen={defaultOpenSection('Oversight & Compliance')}
+            isOpen={openSection === "Oversight & Compliance"}
+            onToggle={handleToggle}
           />
         )}
 
@@ -454,7 +479,8 @@ export function AppSidebar() {
             items={visibleCrossBorder}
             location={location}
             icon={Globe}
-            defaultOpen={defaultOpenSection('Cross-Border')}
+            isOpen={openSection === "Cross-Border"}
+            onToggle={handleToggle}
           />
         )}
 
@@ -469,7 +495,8 @@ export function AppSidebar() {
             items={visibleAdmin}
             location={location}
             icon={Settings}
-            defaultOpen={defaultOpenSection('Administration')}
+            isOpen={openSection === "Administration"}
+            onToggle={handleToggle}
           />
         )}
 
@@ -480,7 +507,8 @@ export function AppSidebar() {
             items={visibleApiIntegration}
             location={location}
             icon={Plug}
-            defaultOpen={defaultOpenSection('API & Integrations')}
+            isOpen={openSection === "API & Integrations"}
+            onToggle={handleToggle}
           />
         )}
 
@@ -491,7 +519,8 @@ export function AppSidebar() {
             items={visibleInfrastructure}
             location={location}
             icon={Activity}
-            defaultOpen={defaultOpenSection('Infrastructure')}
+            isOpen={openSection === "Infrastructure"}
+            onToggle={handleToggle}
           />
         )}
 
@@ -505,7 +534,8 @@ export function AppSidebar() {
           items={visibleHelp}
           location={location}
           icon={HelpCircle}
-          defaultOpen={defaultOpenSection('Help & Resources')}
+          isOpen={openSection === "Help & Resources"}
+          onToggle={handleToggle}
         />
       </SidebarContent>
       <SidebarFooter className="p-3 pt-0 space-y-1.5">
