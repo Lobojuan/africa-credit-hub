@@ -75,11 +75,16 @@ async function getTableStats(): Promise<{ tables: number; rows: number }> {
   }
 }
 
+const ALLOWED_BACKUP_TYPES = ["full", "schema", "data"] as const;
+
 export async function createBackup(
   type: "full" | "schema" | "data" = "full",
   createdBy: string = "system",
   notes?: string
 ): Promise<BackupRecord> {
+  if (!(ALLOWED_BACKUP_TYPES as readonly string[]).includes(type)) {
+    throw new Error(`Invalid backup type: ${type}`);
+  }
   ensureBackupDir();
 
   const id = generateId();
