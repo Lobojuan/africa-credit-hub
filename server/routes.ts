@@ -2654,6 +2654,15 @@ export async function registerRoutes(
     legacyHeaders: false,
   });
 
+  const webauthnLimiter = rateLimit({
+    validate: { trustProxy: false },
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: { message: "Too many WebAuthn attempts. Please try again later." },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
   app.post("/api/contact-sales", contactSalesLimiter, async (req, res) => {
     try {
       const { name, email, phone, organization, title, country, tier, message } = req.body;
@@ -11144,7 +11153,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // SATA compliance stats — admin/super_admin/regulator only
   app.get("/api/sata/stats", requireAuth, requireRole("admin", "super_admin", "regulator"), async (_req, res) => {
     try {
-      const allAgreements = await db.select().from(dataSharingAgreements);
+      const allAgreements = await db.select().from(dataSharingAgreements).limit(10000);
       const activeCount = allAgreements.filter(a => a.status === "active").length;
       const draftCount = allAgreements.filter(a => a.status === "draft").length;
       const suspendedCount = allAgreements.filter(a => a.status === "suspended").length;

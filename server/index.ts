@@ -31,6 +31,9 @@ crashLog("SERVER_START");
 if (!process.env.SESSION_SECRET) {
   throw new Error("SESSION_SECRET environment variable must be set");
 }
+if (!process.env.DATABASE_URL) {
+  throw new Error("DATABASE_URL env var must be set");
+}
 
 const isProductionBoot = process.env.NODE_ENV === "production" || process.env.PRODUCTION_MODE === "true";
 

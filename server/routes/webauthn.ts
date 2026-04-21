@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { loginLimiter, safeErrorMessage } from "./middleware";
+import { loginLimiter, requireAuth, safeErrorMessage } from "./middleware";
 import { storage } from "../storage";
 import { db } from "../db";
 import { eq, and } from "drizzle-orm";
@@ -213,7 +213,7 @@ router.get("/api/auth/webauthn/credentials", async (req, res) => {
   }
 });
 
-router.delete("/api/auth/webauthn/credentials/:id", async (req, res) => {
+router.delete("/api/auth/webauthn/credentials/:id", requireAuth, async (req, res) => {
   try {
     if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
     await db.delete(webauthnCredentials).where(
