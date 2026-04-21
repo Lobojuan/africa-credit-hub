@@ -307,7 +307,7 @@ function RoleBadge({ role }: { role: UserRole }) {
 
 export default function AppGuidePage() {
   const [, setLocation] = useLocation();
-  const { primary } = useBrandColors();
+  const { accent: primary } = useBrandColors();
   const [selectedRole, setSelectedRole] = useState<UserRole | "all">("all");
   const [openGuide, setOpenGuide] = useState<string | null>(null);
 
