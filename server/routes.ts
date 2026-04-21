@@ -1133,7 +1133,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/borrowers/fuzzy-match", async (req, res) => {
+  app.get("/api/borrowers/fuzzy-match", requireAuth, requireRole("admin", "lender", "regulator", "super_admin"), async (req, res) => {
     try {
       const { firstName, lastName, nationalId, companyName, passportNumber, tinNumber } = req.query;
       const results = await storage.fuzzyMatchBorrowers({
@@ -1150,7 +1150,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/borrowers/:id", async (req, res) => {
+  app.get("/api/borrowers/:id", requireAuth, requireRole("admin", "lender", "regulator", "super_admin"), async (req, res) => {
     try {
       const borrower = await storage.getBorrower(req.params.id);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
@@ -1313,7 +1313,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/credit-accounts/:id", async (req, res) => {
+  app.get("/api/credit-accounts/:id", requireAuth, requireRole("admin", "lender", "regulator", "super_admin"), async (req, res) => {
     try {
       const account = await storage.getCreditAccount(req.params.id);
       if (!account) return res.status(404).json({ message: "Account not found" });
@@ -2645,7 +2645,16 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/contact-sales", async (req, res) => {
+  const contactSalesLimiter = rateLimit({
+    validate: { trustProxy: false },
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: { message: "Too many contact requests. Please try again later." },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  app.post("/api/contact-sales", contactSalesLimiter, async (req, res) => {
     try {
       const { name, email, phone, organization, title, country, tier, message } = req.body;
       if (!name || !email || !organization) {
@@ -4374,7 +4383,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     }
   });
 
-  app.get("/api/borrowers/:id/related", async (req, res) => {
+  app.get("/api/borrowers/:id/related", requireAuth, requireRole("admin", "lender", "regulator", "super_admin"), async (req, res) => {
     try {
       if (!(await validateBorrowerCountry(req.params.id, req))) {
         return res.status(403).json({ message: "Access denied" });
@@ -6735,7 +6744,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     }
   });
 
-  app.post("/api/credit-search/bulk", async (req, res) => {
+  app.post("/api/credit-search/bulk", requireAuth, requireRole("admin", "lender", "regulator", "super_admin"), async (req, res) => {
     try {
       const { identifiers } = req.body;
       if (!Array.isArray(identifiers) || identifiers.length === 0) {
@@ -6781,7 +6790,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const type = (req.query.type as string) || "portfolio";
 
       const country = getCountryFilter(req);
-      const accounts = type === "portfolio" ? await storage.getAllCreditAccounts(orgId, country, Number.MAX_SAFE_INTEGER) : [];
+      const accounts = type === "portfolio" ? await storage.getAllCreditAccounts(orgId, country, 5000) : [];
       const borrowersList = type === "borrowers" ? await storage.getAllBorrowersForExport(orgId, country) : [];
 
       recordUsageEvent({
@@ -6832,7 +6841,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
             sheet.addRow({ ...b, name, isPep: b.isPep ? "Yes" : "No" });
           });
         } else if (type === "audit") {
-          const auditLogsList = await storage.getAuditLogs(orgId, country, Number.MAX_SAFE_INTEGER);
+          const auditLogsList = await storage.getAuditLogs(orgId, country, 5000);
           const sheet = workbook.addWorksheet("Audit Trail");
           sheet.columns = [
             { header: "Timestamp", key: "createdAt", width: 22 },
@@ -6898,7 +6907,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
             csv += `"${csvSafe(name)}","${csvSafe(b.type)}","${csvSafe(b.nationalId)}","${csvSafe(b.tinNumber || '')}","${csvSafe(b.gender || '')}","${csvSafe(b.city || '')}","${csvSafe(b.region || '')}","${csvSafe(b.isPep)}","${csvSafe(b.educationLevel || '')}","${csvSafe(b.sector || '')}"\n`;
           }
         } else if (type === "audit") {
-          const auditLogsList = await storage.getAuditLogs(orgId, country, Number.MAX_SAFE_INTEGER);
+          const auditLogsList = await storage.getAuditLogs(orgId, country, 5000);
           csv = "Timestamp,Action,Entity,Entity ID,Details,User ID,IP Address\n";
           for (const log of auditLogsList) {
             const ts = log.createdAt ? new Date(log.createdAt).toISOString() : "";
@@ -10984,7 +10993,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // ── SATA Data Sharing Agreements ──
   app.get("/api/sata/agreements", requireAuth, requireRole("admin", "super_admin", "regulator"), async (_req, res) => {
     try {
-      const rows = await db.select().from(dataSharingAgreements).orderBy(desc(dataSharingAgreements.createdAt));
+      const rows = await db.select().from(dataSharingAgreements).orderBy(desc(dataSharingAgreements.createdAt)).limit(10000);
       res.json(rows);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -11150,7 +11159,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const blocsRaw = allAgreements.filter(a => a.status === "active" && a.regionalBloc).map(a => a.regionalBloc!);
       const blocsSet = new Set(blocsRaw);
 
-      const settlements = await db.select().from(papssSettlements);
+      const settlements = await db.select().from(papssSettlements).limit(10000);
       const completedSettlements = settlements.filter(s => s.status === "completed");
       const totalVolume = completedSettlements.reduce((acc, s) => acc + parseFloat(s.senderAmount || "0"), 0);
 
@@ -11228,7 +11237,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   registerExternalApi(app);
 
-  app.get("/api/borrowers/:id/ml-score", async (req, res) => {
+  app.get("/api/borrowers/:id/ml-score", requireAuth, requireRole("admin", "lender", "super_admin"), async (req, res) => {
     try {
       const borrower = await storage.getBorrower(req.params.id);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
@@ -11891,13 +11900,15 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   });
 
   app.post("/api/maintenance/toggle", async (req, res) => {
-    if (req.session?.userRole !== "super_admin") {
+    if (!req.session?.userId || req.session?.userRole !== "super_admin") {
       return res.status(403).json({ message: "Super admin access required" });
     }
     const { maintenanceState } = await import("./index");
     maintenanceState.enabled = !maintenanceState.enabled;
     if (req.body?.message) {
-      maintenanceState.message = req.body.message;
+      const msg = String(req.body.message).trim();
+      if (msg.length > 500) return res.status(400).json({ message: "Maintenance message must be 500 characters or fewer" });
+      maintenanceState.message = msg;
     }
     try {
       await storage.createAuditLog({
