@@ -209,8 +209,9 @@ export async function encryptAllUnencryptedPII(): Promise<{ totalEncrypted: numb
 
   for (const col of PII_COLUMNS) {
     try {
-      const rows = await pool.query(
-        `SELECT id, ${col} FROM borrowers WHERE ${col} IS NOT NULL AND ${col} != '' AND ${col} NOT LIKE 'enc:%'`
+      const colId = sql.identifier(col);
+      const rows = await db.execute(
+        sql`SELECT id, ${colId} FROM borrowers WHERE ${colId} IS NOT NULL AND ${colId} != '' AND ${colId} NOT LIKE 'enc:%'`
       );
 
       if (rows.rows.length === 0) continue;
@@ -218,23 +219,18 @@ export async function encryptAllUnencryptedPII(): Promise<{ totalEncrypted: numb
       const BATCH_SIZE = 100;
       for (let i = 0; i < rows.rows.length; i += BATCH_SIZE) {
         const batch = rows.rows.slice(i, i + BATCH_SIZE);
-        const client = await pool.connect();
         try {
-          await client.query("BEGIN");
-          for (const row of batch) {
-            const encrypted = encryptPII(row[col]);
-            await client.query(
-              `UPDATE borrowers SET ${col} = $1 WHERE id = $2 AND ${col} NOT LIKE 'enc:%'`,
-              [encrypted, row.id]
-            );
-            totalEncrypted++;
-          }
-          await client.query("COMMIT");
+          await db.transaction(async (tx) => {
+            for (const row of batch) {
+              const encrypted = encryptPII(row[col] as string);
+              await tx.execute(
+                sql`UPDATE borrowers SET ${colId} = ${encrypted} WHERE id = ${row.id} AND ${colId} NOT LIKE 'enc:%'`
+              );
+              totalEncrypted++;
+            }
+          });
         } catch (batchErr: any) {
-          await client.query("ROLLBACK");
           errors.push(`${col} batch at offset ${i}: ${batchErr.message}`);
-        } finally {
-          client.release();
         }
       }
 
