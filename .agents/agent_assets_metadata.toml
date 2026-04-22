@@ -210,3 +210,9 @@ id = "Alt_eSOQ63X5BeyXaYzh9"
 uri = "file://africa-credit-hub-latest.zip"
 type = "unspecified"
 title = "Africa Credit Hub v2.5 — Full Codebase"
+
+[[outputs]]
+id = "SpxSzDmebQKI2DOBjXktE"
+uri = "file://codebase.zip"
+type = "unspecified"
+title = "Africa Credit Hub v2.6 — Source Code"
