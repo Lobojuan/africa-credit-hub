@@ -40,7 +40,7 @@ export default function LoginPage() {
 
   const handlePasskeyLogin = async () => {
     if (!username.trim()) {
-      setError("Enter your username first, then click Sign in with Passkey.");
+      setError("Please enter your username above first.");
       return;
     }
     setPasskeyLoading(true);
@@ -703,6 +703,33 @@ export default function LoginPage() {
                       />
                     </div>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={handlePasskeyLogin}
+                    disabled={passkeyLoading}
+                    data-testid="button-passkey-login"
+                    className="w-full h-12 rounded-xl text-sm font-semibold flex items-center justify-center gap-2.5 transition-all disabled:opacity-50"
+                    style={{
+                      background: "linear-gradient(135deg, hsl(262 60% 96%) 0%, hsl(215 60% 96%) 100%)",
+                      border: "1px solid hsl(262 40% 85%)",
+                      color: "hsl(262 50% 40%)",
+                    }}
+                  >
+                    {passkeyLoading ? (
+                      <span className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" />
+                    ) : (
+                      <Fingerprint className="w-5 h-5" />
+                    )}
+                    {passkeyLoading ? "Waiting for fingerprint…" : "Use Fingerprint / Face ID"}
+                  </button>
+
+                  <div className="relative flex items-center gap-3">
+                    <div className="flex-1 h-px" style={{ background: "hsl(215 25% 88%)" }} />
+                    <span className="text-[11px] whitespace-nowrap" style={{ color: "hsl(215 15% 60%)" }}>or sign in with password</span>
+                    <div className="flex-1 h-px" style={{ background: "hsl(215 25% 88%)" }} />
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="password" className="text-sm font-medium" style={{ color: "hsl(215 25% 30%)" }}>
                       {t('login.password')}
@@ -745,31 +772,6 @@ export default function LoginPage() {
                   </button>
                 </form>
               )}
-            </div>
-
-            <div className="mt-3">
-              <button
-                type="button"
-                onClick={handlePasskeyLogin}
-                disabled={passkeyLoading}
-                data-testid="button-passkey-login"
-                className="w-full h-12 rounded-xl text-sm font-semibold flex items-center justify-center gap-2.5 transition-all disabled:opacity-50"
-                style={{
-                  background: "linear-gradient(135deg, hsl(262 60% 96%) 0%, hsl(215 60% 96%) 100%)",
-                  border: "1px solid hsl(262 40% 85%)",
-                  color: "hsl(262 50% 40%)",
-                }}
-              >
-                {passkeyLoading ? (
-                  <span className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" />
-                ) : (
-                  <Fingerprint className="w-5 h-5" />
-                )}
-                {passkeyLoading ? "Waiting for passkey…" : "Sign in with Passkey"}
-              </button>
-              <p className="text-center text-[10px] mt-1.5" style={{ color: "hsl(215 15% 60%)" }}>
-                Enter your username above · then use Face ID, fingerprint, or security key
-              </p>
             </div>
 
             <div className="relative flex items-center gap-3 my-4">
