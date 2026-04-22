@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useBrandColors } from "@/hooks/use-brand-colors";
-import { PLATFORM_COMPANY_NAME, PLATFORM_SUPPORT_EMAIL } from "@/lib/platform-config";
+import { PLATFORM_COMPANY_NAME, PLATFORM_SUPPORT_EMAIL, supportEmailHref } from "@/lib/platform-config";
 import {
   Shield, Lock, Eye, Key, Fingerprint, Database, Globe,
   CheckCircle2, FileText, Server, AlertTriangle, ArrowRight,
@@ -348,7 +348,7 @@ export default function SecurityCompliancePage() {
             </div>
             <div className="space-y-1.5">
               <p className="text-[10px] font-semibold text-foreground/80 uppercase tracking-wider">Contact</p>
-              <a href={`mailto:${PLATFORM_SUPPORT_EMAIL}`} className="flex items-center gap-1.5 hover:text-primary transition-colors"><Mail className="w-3 h-3" />{PLATFORM_SUPPORT_EMAIL}</a>
+              <a href={supportEmailHref()} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-primary transition-colors"><Mail className="w-3 h-3" />{PLATFORM_SUPPORT_EMAIL}</a>
             </div>
             <div className="space-y-1.5">
             </div>

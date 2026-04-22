@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useBrandColors } from "@/hooks/use-brand-colors";
-import { PLATFORM_SUPPORT_EMAIL, PLATFORM_CONTACT_PHONE } from "@/lib/platform-config";
+import { PLATFORM_SUPPORT_EMAIL, PLATFORM_CONTACT_PHONE, supportEmailHref } from "@/lib/platform-config";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -918,7 +918,7 @@ function AIDemoPage() {
             <div className="mt-8 text-center">
               <p className="text-xs text-muted-foreground mb-2">Prefer to talk to someone first?</p>
               <div className="flex items-center justify-center gap-3">
-                <Button variant="ghost" size="sm" className="text-xs gap-1" onClick={() => window.location.href = `mailto:${PLATFORM_SUPPORT_EMAIL}`} data-testid="cta-email-sales">
+                <Button variant="ghost" size="sm" className="text-xs gap-1" onClick={() => window.open(supportEmailHref(), "_blank", "noopener,noreferrer")} data-testid="cta-email-sales">
                   <Mail className="w-3 h-3" /> {PLATFORM_SUPPORT_EMAIL}
                 </Button>
                 <Button variant="ghost" size="sm" className="text-xs gap-1" onClick={() => window.location.href = `tel:${PLATFORM_CONTACT_PHONE}`} data-testid="cta-phone-sales">

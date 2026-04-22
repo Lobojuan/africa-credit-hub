@@ -25,7 +25,7 @@ import {
   Network,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { PLATFORM_COMPANY_NAME, PLATFORM_SUPPORT_EMAIL } from "@/lib/platform-config";
+import { PLATFORM_COMPANY_NAME, PLATFORM_SUPPORT_EMAIL, supportEmailHref } from "@/lib/platform-config";
 
 function StatBlock({ value, label }: { value: string; label: string }) {
   const brandColors = useBrandColors();
@@ -323,7 +323,7 @@ export default function AboutPage() {
             </div>
             <div className="space-y-1.5">
               <p className="text-[10px] font-semibold text-foreground/80 uppercase tracking-wider">Contact</p>
-              <a href={`mailto:${PLATFORM_SUPPORT_EMAIL}`} className="flex items-center gap-1.5 hover:text-primary transition-colors"><Mail className="w-3 h-3" />{PLATFORM_SUPPORT_EMAIL}</a>
+              <a href={supportEmailHref()} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-primary transition-colors"><Mail className="w-3 h-3" />{PLATFORM_SUPPORT_EMAIL}</a>
             </div>
           </div>
           <p className="text-center text-[10px] text-muted-foreground/60 mt-6 pb-2">&copy; {new Date().getFullYear()} {PLATFORM_COMPANY_NAME}. All rights reserved.</p>

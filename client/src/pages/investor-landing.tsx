@@ -32,7 +32,7 @@ import auditImage from "@assets/app-audit.png";
 import reportsImage from "@assets/app-reports.png";
 import aiPortfolioImage from "@assets/app-ai-portfolio.png";
 import platformDemoVideo from "@assets/39a45e79-6d03-456d-8d41-f5c491f40a66_1774472320799.mp4";
-import { PLATFORM_COMPANY_NAME, PLATFORM_SUPPORT_EMAIL } from "@/lib/platform-config";
+import { PLATFORM_COMPANY_NAME, PLATFORM_SUPPORT_EMAIL, supportEmailHref } from "@/lib/platform-config";
 
 function AnimatedCounter({ end, duration = 2000, suffix = "", prefix = "" }: { end: number; duration?: number; suffix?: string; prefix?: string }) {
   const [count, setCount] = useState(0);
@@ -1316,7 +1316,7 @@ export default function InvestorLandingPage() {
             {[
               { step: "1", title: t('landing.onboardStep1Title'), desc: t('landing.onboardStep1Desc'), cta: t('landing.onboardStep1Cta'), action: () => navigate("/start-trial"), testId: "step-trial" },
               { step: "2", title: t('landing.onboardStep2Title'), desc: t('landing.onboardStep2Desc'), cta: t('landing.onboardStep2Cta'), action: () => navigate("/contact-sales"), testId: "step-pricing" },
-              { step: "3", title: t('landing.onboardStep3Title'), desc: t('landing.onboardStep3Desc'), cta: t('landing.onboardStep3Cta'), action: () => window.location.href = `mailto:${PLATFORM_SUPPORT_EMAIL}`, testId: "step-deploy" },
+              { step: "3", title: t('landing.onboardStep3Title'), desc: t('landing.onboardStep3Desc'), cta: t('landing.onboardStep3Cta'), action: () => window.open(supportEmailHref(), "_blank", "noopener,noreferrer"), testId: "step-deploy" },
             ].map((item) => (
               <Card key={item.step} className="border border-border/60" data-testid={item.testId}>
                 <CardContent className="p-5 sm:p-6 text-center">
@@ -1581,7 +1581,7 @@ export default function InvestorLandingPage() {
             <div className="space-y-3">
               <p className="text-xs font-semibold text-foreground uppercase tracking-wider">Contact</p>
               <div className="space-y-2 text-[11px] text-muted-foreground/80">
-                <a href={`mailto:${PLATFORM_SUPPORT_EMAIL}`} className="flex items-center gap-1.5 hover:text-primary transition-colors">
+                <a href={supportEmailHref()} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-primary transition-colors">
                   <Mail className="w-3 h-3" />{PLATFORM_SUPPORT_EMAIL}
                 </a>
               </div>

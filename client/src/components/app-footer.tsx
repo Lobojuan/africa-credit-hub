@@ -1,6 +1,6 @@
 import { Globe, MapPin } from "lucide-react";
 import { useBrandColors } from "@/hooks/use-brand-colors";
-import { PLATFORM_COMPANY_NAME, PLATFORM_SUPPORT_EMAIL } from "@/lib/platform-config";
+import { PLATFORM_COMPANY_NAME, PLATFORM_SUPPORT_EMAIL, supportEmailHref } from "@/lib/platform-config";
 
 export function AppFooter() {
   const brandColors = useBrandColors();
@@ -26,7 +26,7 @@ export function AppFooter() {
           <div className="space-y-3">
             <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">Contact</h4>
             <div className="space-y-2">
-              <a href={`mailto:${PLATFORM_SUPPORT_EMAIL}`} className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors" data-testid="footer-email">
+              <a href={supportEmailHref()} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors" data-testid="footer-email">
                 {PLATFORM_SUPPORT_EMAIL}
               </a>
             </div>

@@ -9,3 +9,9 @@ export const PLATFORM_CTO_NAME =
 export const PLATFORM_CTO_EMAIL =
   (import.meta.env.VITE_PLATFORM_CTO_EMAIL as string) || "cto@africacredithub.com";
 export const PLATFORM_COPYRIGHT_YEAR = new Date().getFullYear();
+
+export function supportEmailHref(subject?: string): string {
+  const to = encodeURIComponent(PLATFORM_SUPPORT_EMAIL);
+  const sub = subject ? `&su=${encodeURIComponent(subject)}` : "";
+  return `https://mail.google.com/mail/?view=cm&to=${to}${sub}`;
+}
