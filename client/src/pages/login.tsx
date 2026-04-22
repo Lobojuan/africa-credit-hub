@@ -33,6 +33,7 @@ export default function LoginPage() {
   const [consumerError, setConsumerError] = useState("");
 
   const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const [passkeySetupNeeded, setPasskeySetupNeeded] = useState(false);
 
   const { login } = useAuth();
   const { toast } = useToast();
@@ -54,8 +55,9 @@ export default function LoginPage() {
       });
       if (!optRes.ok) {
         const err = await optRes.json();
-        if (err.message === "Biometric login not available") {
-          setError("No passkey registered for this account yet. Sign in with your password first, then click the Passkey button in the top bar to set up Touch ID.");
+        if (err.message === "Biometric login not available" || err.code === "NO_PASSKEY") {
+          setPasskeySetupNeeded(true);
+          setError("");
         } else {
           setError(err.message || "Passkey login failed.");
         }
@@ -110,6 +112,7 @@ export default function LoginPage() {
         return;
       }
       toast({ title: t('login.success') });
+      sessionStorage.setItem("passkey_prompt", "1");
       if (window.location.pathname === "/login") {
         const r = result as any;
         let dest = "/dashboard";
@@ -706,14 +709,16 @@ export default function LoginPage() {
 
                   <button
                     type="button"
-                    onClick={handlePasskeyLogin}
+                    onClick={() => { setPasskeySetupNeeded(false); handlePasskeyLogin(); }}
                     disabled={passkeyLoading}
                     data-testid="button-passkey-login"
                     className="w-full h-12 rounded-xl text-sm font-semibold flex items-center justify-center gap-2.5 transition-all disabled:opacity-50"
                     style={{
-                      background: "linear-gradient(135deg, hsl(262 60% 96%) 0%, hsl(215 60% 96%) 100%)",
-                      border: "1px solid hsl(262 40% 85%)",
-                      color: "hsl(262 50% 40%)",
+                      background: passkeySetupNeeded
+                        ? "linear-gradient(135deg, hsl(215 60% 96%) 0%, hsl(215 55% 93%) 100%)"
+                        : "linear-gradient(135deg, hsl(262 60% 96%) 0%, hsl(215 60% 96%) 100%)",
+                      border: `1px solid ${passkeySetupNeeded ? "hsl(215 40% 82%)" : "hsl(262 40% 85%)"}`,
+                      color: passkeySetupNeeded ? "hsl(215 50% 45%)" : "hsl(262 50% 40%)",
                     }}
                   >
                     {passkeyLoading ? (
@@ -724,9 +729,45 @@ export default function LoginPage() {
                     {passkeyLoading ? "Waiting for fingerprint…" : "Use Fingerprint / Face ID"}
                   </button>
 
+                  {passkeySetupNeeded ? (
+                    <div
+                      className="rounded-xl p-3.5 text-sm space-y-2"
+                      style={{
+                        background: "linear-gradient(135deg, hsl(215 70% 97%) 0%, hsl(262 60% 97%) 100%)",
+                        border: "1px solid hsl(215 50% 87%)",
+                      }}
+                    >
+                      <div className="flex items-start gap-2.5">
+                        <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ background: "hsl(262 60% 93%)" }}>
+                          <Fingerprint className="w-3.5 h-3.5" style={{ color: "hsl(262 50% 45%)" }} />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-xs" style={{ color: "hsl(215 30% 25%)" }}>
+                            No fingerprint saved for <strong>{username}</strong>
+                          </p>
+                          <p className="text-xs mt-0.5" style={{ color: "hsl(215 20% 45%)" }}>
+                            Sign in once with your password below — then tap <strong>Set up fingerprint</strong> when it appears.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 pl-9">
+                        <div className="w-4 h-px" style={{ background: "hsl(215 30% 80%)" }} />
+                        <p className="text-[11px]" style={{ color: "hsl(215 20% 55%)" }}>
+                          Takes 30 seconds • Works on all future logins
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-center text-[11px]" style={{ color: "hsl(215 15% 62%)" }}>
+                      First time? Sign in with password below — we'll guide you through fingerprint setup.
+                    </p>
+                  )}
+
                   <div className="relative flex items-center gap-3">
                     <div className="flex-1 h-px" style={{ background: "hsl(215 25% 88%)" }} />
-                    <span className="text-[11px] whitespace-nowrap" style={{ color: "hsl(215 15% 60%)" }}>or sign in with password</span>
+                    <span className="text-[11px] whitespace-nowrap" style={{ color: "hsl(215 15% 60%)" }}>
+                      {passkeySetupNeeded ? "sign in with password to continue" : "or sign in with password"}
+                    </span>
                     <div className="flex-1 h-px" style={{ background: "hsl(215 25% 88%)" }} />
                   </div>
 

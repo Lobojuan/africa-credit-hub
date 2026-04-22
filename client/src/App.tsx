@@ -297,6 +297,22 @@ function AuthenticatedApp() {
   const [redirecting, setRedirecting] = useState(false);
   const [mfaOpen, setMfaOpen] = useState(false);
   const [passkeyRegistering, setPasskeyRegistering] = useState(false);
+  const [passkeyBanner, setPasskeyBanner] = useState(false);
+  const [passkeyRegistered, setPasskeyRegistered] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    const shouldPrompt = sessionStorage.getItem("passkey_prompt") === "1";
+    const dismissed = sessionStorage.getItem("passkey_banner_dismissed") === "1";
+    if (!shouldPrompt || dismissed) return;
+    sessionStorage.removeItem("passkey_prompt");
+    fetch("/api/auth/webauthn/credentials", { credentials: "include" })
+      .then(r => r.ok ? r.json() : [])
+      .then((creds: any[]) => {
+        if (!creds || creds.length === 0) setPasskeyBanner(true);
+      })
+      .catch(() => {});
+  }, [user]);
 
   const handleRegisterPasskey = async () => {
     setPasskeyRegistering(true);
@@ -311,12 +327,15 @@ function AuthenticatedApp() {
         throw new Error(err.message || "Registration failed");
       }
       const result = await verRes.json();
-      toast({ title: "Passkey registered!", description: `Device passkey (${result.deviceType || "single-device"}) saved. You can now sign in with your fingerprint or face.` });
+      setPasskeyBanner(false);
+      setPasskeyRegistered(true);
+      toast({ title: "Fingerprint saved!", description: `You can now sign in with your fingerprint — no password needed.` });
+      setTimeout(() => setPasskeyRegistered(false), 6000);
     } catch (e: any) {
       if (e.name === "NotAllowedError") {
-        toast({ title: "Cancelled", description: "Passkey setup was dismissed.", variant: "destructive" });
+        toast({ title: "Cancelled", description: "Fingerprint setup was dismissed.", variant: "destructive" });
       } else {
-        toast({ title: "Passkey setup failed", description: e.message || "Please try again.", variant: "destructive" });
+        toast({ title: "Setup failed", description: e.message || "Please try again.", variant: "destructive" });
       }
     } finally {
       setPasskeyRegistering(false);
@@ -679,6 +698,97 @@ function AuthenticatedApp() {
       )}
       <DisputeChatbot open={chatbotOpen} onOpenChange={setChatbotOpen} />
       <SessionTimeoutDialog />
+
+      {passkeyBanner && (
+        <div
+          className="fixed bottom-24 right-5 z-50 w-80 rounded-2xl shadow-2xl border overflow-hidden"
+          style={{ background: "linear-gradient(135deg, #f0f4ff 0%, #f5f0ff 100%)", borderColor: "hsl(262 40% 85%)" }}
+          data-testid="passkey-setup-banner"
+        >
+          <div className="p-4 space-y-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: "hsl(262 60% 92%)" }}>
+                  <Fingerprint className="w-5 h-5" style={{ color: "hsl(262 50% 45%)" }} />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm text-slate-800">Set up fingerprint login</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Skip the password next time</p>
+                </div>
+              </div>
+              <button
+                onClick={() => { setPasskeyBanner(false); sessionStorage.setItem("passkey_banner_dismissed", "1"); }}
+                className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded"
+                data-testid="button-dismiss-passkey-banner"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed pl-11">
+              Touch your fingerprint sensor once to register — then sign in instantly on future visits.
+            </p>
+
+            <div className="pl-11 space-y-1.5 text-[11px] text-slate-500">
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-violet-400" />
+                <span>When the browser shows a QR code, click <strong>"This device"</strong> instead</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-violet-400" />
+                <span>Then touch your fingerprint sensor</span>
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => { setPasskeyBanner(false); sessionStorage.setItem("passkey_banner_dismissed", "1"); }}
+                className="flex-1 h-9 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-700 border border-slate-200 hover:border-slate-300 transition-all bg-white"
+                data-testid="button-not-now-passkey"
+              >
+                Not now
+              </button>
+              <button
+                onClick={handleRegisterPasskey}
+                disabled={passkeyRegistering}
+                className="flex-1 h-9 rounded-xl text-xs font-semibold text-white transition-all disabled:opacity-60"
+                style={{ background: "linear-gradient(135deg, hsl(262 55% 55%) 0%, hsl(215 55% 50%) 100%)" }}
+                data-testid="button-setup-fingerprint"
+              >
+                {passkeyRegistering ? (
+                  <span className="flex items-center justify-center gap-1.5">
+                    <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Setting up…
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-1.5">
+                    <Fingerprint className="w-3.5 h-3.5" />
+                    Set up fingerprint
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {passkeyRegistered && (
+        <div
+          className="fixed bottom-24 right-5 z-50 w-80 rounded-2xl shadow-xl border overflow-hidden"
+          style={{ background: "linear-gradient(135deg, hsl(142 70% 96%) 0%, hsl(142 60% 93%) 100%)", borderColor: "hsl(142 40% 80%)" }}
+          data-testid="passkey-success-banner"
+        >
+          <div className="p-4 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0" style={{ background: "hsl(142 60% 88%)" }}>
+              <svg className="w-5 h-5" style={{ color: "hsl(142 50% 35%)" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+            </div>
+            <div>
+              <p className="font-semibold text-sm" style={{ color: "hsl(142 40% 25%)" }}>Fingerprint saved!</p>
+              <p className="text-xs mt-0.5" style={{ color: "hsl(142 30% 40%)" }}>Next time, just tap "Use Fingerprint" at login.</p>
+            </div>
+          </div>
+        </div>
+      )}
     </SidebarProvider>
   );
 }
