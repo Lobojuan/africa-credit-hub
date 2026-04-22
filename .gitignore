@@ -13,6 +13,7 @@ backups/
 *.sql.gz
 attached_assets/
 cookies.txt
+*.session
 sed*
 
 # Editor swap/backup files
@@ -24,8 +25,8 @@ sed*
 
 # Environment files
 .env
-.env.local
-.env.production
+.env.*
+!.env.example
 
 # Logs
 *.log

@@ -114,7 +114,7 @@ export function CountryThemeProvider({ children }: { children: ReactNode }) {
       await queryClient.invalidateQueries({
         predicate: (q) => {
           const key = q.queryKey[0] as string;
-          return key && !key.startsWith("/api/auth/");
+          return !!key && !key.startsWith("/api/auth/");
         },
         refetchType: "active",
       });

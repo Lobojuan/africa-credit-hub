@@ -1498,7 +1498,7 @@ export default function BatchUploadPage() {
                                         </h5>
                                       </div>
                                       <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
-                                        {item.uploadErrors.map((err, ei) => (
+                                        {item.uploadErrors.map((err: any, ei: number) => (
                                           <div key={ei} className="border border-red-200 dark:border-red-800 rounded-md p-3 bg-red-50 dark:bg-red-950/30" data-testid={`history-error-${ei}`}>
                                             <div className="flex items-start gap-2">
                                               <span className="shrink-0 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 text-[10px] font-mono px-1.5 py-0.5 rounded">

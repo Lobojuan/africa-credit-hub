@@ -18,7 +18,7 @@ interface Message {
 
 type Mode = "menu" | "dispute" | "faq" | "ai";
 type DisputeStep = "issue_type" | "borrower_search" | "select_borrower" | "select_account" | "description" | "confirm" | "done";
-type FaqStep = "categories" | "questions" | "answer" | "search";
+type FaqStep = "categories" | "questions" | "answer" | "search" | "search_results";
 
 const DISPUTE_TYPES = ["incorrect_balance", "wrong_status", "identity_error", "unauthorized_inquiry", "other"];
 
@@ -424,7 +424,7 @@ export function DisputeChatbot({ open, onOpenChange }: ChatbotProps) {
     } else {
       const topResults = results.slice(0, 5);
       const questions = topResults.map((r) => r.item.q);
-      addBot(t("chatbot.faqSearchResults", { count: String(results.length) }), questions);
+      addBot(t("chatbot.faqSearchResults", { count: results.length }), questions);
       setFaqStep("search_results");
     }
   };

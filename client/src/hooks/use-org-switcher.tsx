@@ -19,7 +19,7 @@ export function OrgSwitcherProvider({ children }: { children: ReactNode }) {
     setGlobalOrgId(orgId);
     const skipAuth = (q: any) => {
       const key = q.queryKey[0] as string;
-      return key && !key.startsWith("/api/auth/");
+      return !!key && !key.startsWith("/api/auth/");
     };
     queryClient.removeQueries({ predicate: (q) => skipAuth(q) && !q.observers.length });
     queryClient.invalidateQueries({
