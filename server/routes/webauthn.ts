@@ -20,7 +20,7 @@ router.post("/api/auth/webauthn/register-options", loginLimiter, async (req, res
 
     const { generateRegistrationOptions } = await import("@simplewebauthn/server");
     const rpName = "Africa Credit Hub";
-    const rpID = req.hostname || "localhost";
+    const rpID = ((req.headers["x-forwarded-host"] as string)?.split(",")[0].trim().split(":")[0]) || req.hostname || "localhost";
 
     const options = await generateRegistrationOptions({
       rpName,
@@ -52,8 +52,10 @@ router.post("/api/auth/webauthn/register-verify", loginLimiter, async (req, res)
     if (!challenge) return res.status(400).json({ message: "No registration challenge found" });
 
     const { verifyRegistrationResponse } = await import("@simplewebauthn/server");
-    const rpID = req.hostname || "localhost";
-    const origin = `${req.protocol}://${req.get("host")}`;
+    const proto = (req.headers["x-forwarded-proto"] as string)?.split(",")[0].trim() || req.protocol;
+    const fwdHost = (req.headers["x-forwarded-host"] as string)?.split(",")[0].trim() || req.get("host") || req.hostname;
+    const rpID = fwdHost.split(":")[0];
+    const origin = `${proto}://${fwdHost}`;
 
     const verification = await verifyRegistrationResponse({
       response: req.body,
@@ -107,7 +109,7 @@ router.post("/api/auth/webauthn/login-options", loginLimiter, async (req, res) =
     }
 
     const { generateAuthenticationOptions } = await import("@simplewebauthn/server");
-    const rpID = req.hostname || "localhost";
+    const rpID = ((req.headers["x-forwarded-host"] as string)?.split(",")[0].trim().split(":")[0]) || req.hostname || "localhost";
 
     const options = await generateAuthenticationOptions({
       rpID,
@@ -139,8 +141,10 @@ router.post("/api/auth/webauthn/login-verify", loginLimiter, async (req, res) =>
     const creds = await db.select().from(webauthnCredentials).where(eq(webauthnCredentials.userId, userId));
 
     const { verifyAuthenticationResponse } = await import("@simplewebauthn/server");
-    const rpID = req.hostname || "localhost";
-    const origin = `${req.protocol}://${req.get("host")}`;
+    const proto = (req.headers["x-forwarded-proto"] as string)?.split(",")[0].trim() || req.protocol;
+    const fwdHost = (req.headers["x-forwarded-host"] as string)?.split(",")[0].trim() || req.get("host") || req.hostname;
+    const rpID = fwdHost.split(":")[0];
+    const origin = `${proto}://${fwdHost}`;
 
     const credId = typeof req.body.id === "string" ? req.body.id : Buffer.from(req.body.rawId).toString("base64url");
     const matchingCred = creds.find(c => c.credentialId === credId);

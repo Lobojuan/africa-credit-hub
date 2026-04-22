@@ -54,7 +54,11 @@ export default function LoginPage() {
       });
       if (!optRes.ok) {
         const err = await optRes.json();
-        setError(err.message || "No passkey found for this account. Register one after logging in.");
+        if (err.message === "Biometric login not available") {
+          setError("No passkey registered for this account yet. Sign in with your password first, then click the Passkey button in the top bar to set up Touch ID.");
+        } else {
+          setError(err.message || "Passkey login failed.");
+        }
         return;
       }
       const options = await optRes.json();
