@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search, Shield, AlertTriangle, CheckCircle2, TrendingUp, User, Loader2, Scale, Phone, CalendarDays, Lock, LogOut, UserPlus, KeyRound, ArrowLeft, ArrowRight, Eye, EyeOff, Mail, MessageSquare, RefreshCw, Globe, Download, FileText, Send } from "lucide-react";
+import { Shield, AlertTriangle, CheckCircle2, TrendingUp, User, Loader2, Scale, Phone, Lock, LogOut, UserPlus, KeyRound, ArrowLeft, Eye, EyeOff, Mail, MessageSquare, RefreshCw, Download, FileText, Send } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -211,6 +211,9 @@ export default function ConsumerPortalPage() {
   const [regFullName, setRegFullName] = useState("");
   const [regCountry, setRegCountry] = useState("");
   const [consentGiven, setConsentGiven] = useState(false);
+  const [loginMethod, setLoginMethod] = useState<"password" | "sms">("password");
+  const [smsPhone, setSmsPhone] = useState("");
+  const [verifyMode, setVerifyMode] = useState<"register" | "sms-login">("register");
 
   const sessionQuery = useQuery({
     queryKey: ["/api/consumer/session"],
@@ -333,6 +336,56 @@ export default function ConsumerPortalPage() {
     onError: (err: Error) => setError(err.message),
   });
 
+  const requestLoginOtpMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/consumer/request-login-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: smsPhone }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.message);
+      return body;
+    },
+    onSuccess: (result) => {
+      setError(null);
+      setSuccessMsg(result.message);
+      if (result.otp) setFallbackOtp(result.otp);
+      setVerifyMode("sms-login");
+      setView("verify");
+    },
+    onError: (err: Error) => setError(err.message),
+  });
+
+  const verifyLoginOtpMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/consumer/verify-login-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: smsPhone, otp }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.message);
+      return body;
+    },
+    onSuccess: () => {
+      setError(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/consumer/session"] });
+      setView("dashboard");
+    },
+    onError: (err: Error) => setError(err.message),
+  });
+
+  // Auto-load credit score the moment the dashboard is shown (no button press required)
+  useEffect(() => {
+    if (view !== "dashboard") return;
+    if (data || noCreditFile || lookupMutation.isPending) return;
+    const isOAuth = sessionQuery.data?.nationalId?.startsWith("GOOGLE-") ||
+                    sessionQuery.data?.nationalId?.startsWith("APPLE-");
+    if (isOAuth) return;
+    lookupMutation.mutate();
+  }, [view]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const lookupMutation = useMutation({
     mutationFn: async () => {
       const res = await fetch("/api/consumer/lookup", {
@@ -425,52 +478,102 @@ export default function ConsumerPortalPage() {
         {view === "login" && (
           <Card className="shadow-sm">
             <CardContent className="p-4 sm:p-5 space-y-4">
-              <div>
-                <label className="text-sm font-medium mb-1.5 block">National ID / Passport / Tax ID</label>
-                <input
-                  type="text"
-                  value={nationalId}
-                  onChange={(e) => setNationalId(e.target.value)}
-                  placeholder="e.g. GHA-123456789"
-                  className="w-full px-3 py-2.5 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow"
-                  data-testid="input-consumer-id"
-                  onKeyDown={(e) => e.key === "Enter" && loginMutation.mutate()}
-                />
+              {/* Login method toggle */}
+              <div className="flex rounded-xl border overflow-hidden">
+                <button
+                  className={`flex-1 py-2 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${loginMethod === "password" ? "bg-primary text-primary-foreground" : "bg-transparent text-muted-foreground hover:bg-muted/50"}`}
+                  onClick={() => { setLoginMethod("password"); setError(null); }}
+                  data-testid="tab-password-login"
+                >
+                  <Lock className="w-3.5 h-3.5" /> Password
+                </button>
+                <button
+                  className={`flex-1 py-2 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${loginMethod === "sms" ? "bg-primary text-primary-foreground" : "bg-transparent text-muted-foreground hover:bg-muted/50"}`}
+                  onClick={() => { setLoginMethod("sms"); setError(null); }}
+                  data-testid="tab-sms-login"
+                >
+                  <MessageSquare className="w-3.5 h-3.5" /> SMS Code
+                </button>
               </div>
-              <div>
-                <label className="text-sm font-medium mb-1.5 block">Password</label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Your password"
-                    className="w-full px-3 py-2.5 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow pr-10"
-                    data-testid="input-consumer-password"
-                    onKeyDown={(e) => e.key === "Enter" && loginMutation.mutate()}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                    data-testid="button-toggle-password"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-              <Button
-                onClick={() => loginMutation.mutate()}
-                disabled={loginMutation.isPending || nationalId.length < 6 || password.length < 8}
-                size="lg"
-                className="w-full rounded-xl"
-                data-testid="button-consumer-login"
-              >
-                {loginMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Lock className="w-4 h-4 mr-2" />}
-                {loginMutation.isPending ? "Signing in..." : "Sign In"}
-              </Button>
 
-              <div className="relative my-2">
+              {loginMethod === "password" ? (
+                <>
+                  <div>
+                    <label className="text-sm font-medium mb-1.5 block">National ID / Passport / Tax ID</label>
+                    <input
+                      type="text"
+                      value={nationalId}
+                      onChange={(e) => setNationalId(e.target.value)}
+                      placeholder="e.g. GHA-123456789"
+                      className="w-full px-3 py-2.5 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow"
+                      data-testid="input-consumer-id"
+                      onKeyDown={(e) => e.key === "Enter" && loginMutation.mutate()}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-1.5 block">Password</label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Your password"
+                        className="w-full px-3 py-2.5 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow pr-10"
+                        data-testid="input-consumer-password"
+                        onKeyDown={(e) => e.key === "Enter" && loginMutation.mutate()}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                        data-testid="button-toggle-password"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => loginMutation.mutate()}
+                    disabled={loginMutation.isPending || nationalId.length < 6 || password.length < 8}
+                    size="lg"
+                    className="w-full rounded-xl"
+                    data-testid="button-consumer-login"
+                  >
+                    {loginMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Lock className="w-4 h-4 mr-2" />}
+                    {loginMutation.isPending ? "Signing in..." : "Sign In"}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <div className="text-center py-1">
+                    <p className="text-sm text-muted-foreground">Enter the phone number you registered with. We will send a 6-digit code via SMS.</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-1.5 block">Phone Number</label>
+                    <input
+                      type="tel"
+                      value={smsPhone}
+                      onChange={(e) => setSmsPhone(e.target.value)}
+                      placeholder="+233 55 123 4567"
+                      className="w-full px-3 py-2.5 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow"
+                      data-testid="input-sms-login-phone"
+                      onKeyDown={(e) => e.key === "Enter" && smsPhone.length >= 8 && requestLoginOtpMutation.mutate()}
+                    />
+                  </div>
+                  <Button
+                    onClick={() => { setError(null); setSuccessMsg(null); setFallbackOtp(null); setOtp(""); requestLoginOtpMutation.mutate(); }}
+                    disabled={requestLoginOtpMutation.isPending || smsPhone.replace(/\D/g, "").length < 7}
+                    size="lg"
+                    className="w-full rounded-xl"
+                    data-testid="button-send-sms-code"
+                  >
+                    {requestLoginOtpMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <MessageSquare className="w-4 h-4 mr-2" />}
+                    {requestLoginOtpMutation.isPending ? "Sending code..." : "Send SMS Code"}
+                  </Button>
+                </>
+              )}
+
+              <div className="relative my-1">
                 <div className="absolute inset-0 flex items-center"><div className="w-full border-t" /></div>
                 <div className="relative flex justify-center"><span className="bg-card px-3 text-xs text-muted-foreground">or continue with</span></div>
               </div>
@@ -716,32 +819,48 @@ export default function ConsumerPortalPage() {
                   data-testid="input-consumer-otp"
                   maxLength={6}
                   inputMode="numeric"
-                  onKeyDown={(e) => e.key === "Enter" && otp.length === 6 && verifyMutation.mutate()}
+                  onKeyDown={(e) => e.key === "Enter" && otp.length === 6 && (verifyMode === "sms-login" ? verifyLoginOtpMutation.mutate() : verifyMutation.mutate())}
                 />
               </div>
               <Button
-                onClick={() => verifyMutation.mutate()}
-                disabled={verifyMutation.isPending || otp.length !== 6}
+                onClick={() => verifyMode === "sms-login" ? verifyLoginOtpMutation.mutate() : verifyMutation.mutate()}
+                disabled={(verifyMode === "sms-login" ? verifyLoginOtpMutation.isPending : verifyMutation.isPending) || otp.length !== 6}
                 size="lg"
                 className="w-full rounded-xl"
                 data-testid="button-consumer-verify"
               >
-                {verifyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
-                {verifyMutation.isPending ? "Verifying..." : "Verify & Continue"}
+                {(verifyMode === "sms-login" ? verifyLoginOtpMutation.isPending : verifyMutation.isPending)
+                  ? <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  : <CheckCircle2 className="w-4 h-4 mr-2" />}
+                {(verifyMode === "sms-login" ? verifyLoginOtpMutation.isPending : verifyMutation.isPending)
+                  ? "Verifying..." : "Verify & Sign In"}
               </Button>
               <div className="text-center space-y-2">
-                <button
-                  onClick={() => { setError(null); setSuccessMsg(null); resendMutation.mutate(); }}
-                  disabled={resendMutation.isPending}
-                  className="text-sm text-primary hover:underline disabled:opacity-50"
-                  data-testid="button-resend-otp"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 inline mr-1 ${resendMutation.isPending ? "animate-spin" : ""}`} />
-                  {resendMutation.isPending ? "Sending..." : "Resend verification code"}
-                </button>
+                {verifyMode === "register" && (
+                  <button
+                    onClick={() => { setError(null); setSuccessMsg(null); resendMutation.mutate(); }}
+                    disabled={resendMutation.isPending}
+                    className="text-sm text-primary hover:underline disabled:opacity-50"
+                    data-testid="button-resend-otp"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 inline mr-1 ${resendMutation.isPending ? "animate-spin" : ""}`} />
+                    {resendMutation.isPending ? "Sending..." : "Resend code"}
+                  </button>
+                )}
+                {verifyMode === "sms-login" && (
+                  <button
+                    onClick={() => { setError(null); setSuccessMsg(null); setFallbackOtp(null); requestLoginOtpMutation.mutate(); }}
+                    disabled={requestLoginOtpMutation.isPending}
+                    className="text-sm text-primary hover:underline disabled:opacity-50"
+                    data-testid="button-resend-login-otp"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 inline mr-1 ${requestLoginOtpMutation.isPending ? "animate-spin" : ""}`} />
+                    {requestLoginOtpMutation.isPending ? "Sending..." : "Resend code"}
+                  </button>
+                )}
                 <br />
                 <button
-                  onClick={() => { setError(null); setSuccessMsg(null); setFallbackOtp(null); setView("login"); }}
+                  onClick={() => { setError(null); setSuccessMsg(null); setFallbackOtp(null); setOtp(""); setVerifyMode("register"); setView("login"); }}
                   className="text-sm text-muted-foreground hover:underline"
                   data-testid="link-back-to-login"
                 >
@@ -770,137 +889,78 @@ export default function ConsumerPortalPage() {
 
             {!data && !lookupMutation.isPending && (
               <>
-                <Card className="shadow-sm">
-                  <CardContent className="p-6 text-center space-y-4">
-                    {sessionQuery.data?.profilePicture ? (
-                      <img src={sessionQuery.data.profilePicture} alt="Profile" className="w-14 h-14 rounded-full mx-auto object-cover" data-testid="img-consumer-avatar" />
-                    ) : (
-                      <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                        <Shield className="w-7 h-7 text-primary" />
+                {/* OAuth users — no national ID linked, can't auto-lookup */}
+                {(sessionQuery.data?.nationalId?.startsWith("GOOGLE-") || sessionQuery.data?.nationalId?.startsWith("APPLE-")) && (
+                  <Card className="shadow-sm">
+                    <CardContent className="p-6 text-center space-y-4">
+                      {sessionQuery.data?.profilePicture ? (
+                        <img src={sessionQuery.data.profilePicture} alt="Profile" className="w-14 h-14 rounded-full mx-auto object-cover" data-testid="img-consumer-avatar" />
+                      ) : (
+                        <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                          <Shield className="w-7 h-7 text-primary" />
+                        </div>
+                      )}
+                      <div>
+                        <h3 className="font-bold text-lg">Welcome{sessionQuery.data?.fullName ? `, ${sessionQuery.data.fullName.split(" ")[0]}` : ""}!</h3>
+                        <p className="text-sm text-muted-foreground mt-1">Signed in via {sessionQuery.data?.authProvider === "google" ? "Google" : "social account"}</p>
                       </div>
-                    )}
-                    <div>
-                      <h3 className="font-bold text-lg">Welcome{sessionQuery.data?.fullName ? `, ${sessionQuery.data.fullName.split(" ")[0]}` : ""}!</h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {sessionQuery.data?.authProvider === "google" && sessionQuery.data?.email ? (
-                          <>Signed in as <strong>{sessionQuery.data.email}</strong></>
-                        ) : (
-                          <>You are signed in as <strong>{sessionQuery.data?.nationalId?.replace(/(.{3}).+(.{3})/, "$1****$2")}</strong></>
-                        )}
+                      <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 text-left">
+                        <p className="text-sm font-semibold text-amber-800 dark:text-amber-300 flex items-center gap-2 mb-1">
+                          <AlertTriangle className="w-4 h-4 shrink-0" /> Credit File Not Linked
+                        </p>
+                        <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+                          Social sign-in accounts are not automatically linked to a credit file. Please sign out and log in using your <strong>National ID and phone number</strong> to view your credit score.
+                        </p>
+                      </div>
+                      <Button variant="outline" size="sm" className="rounded-xl" onClick={() => logoutMutation.mutate()} data-testid="button-oauth-signout">
+                        <LogOut className="w-3.5 h-3.5 mr-1.5" /> Sign Out
+                      </Button>
+                      <p className="text-[10px] text-muted-foreground">
+                        <Lock className="w-3 h-3 inline mr-1" />
+                        Your data is protected under POPIA, NDPA, and Ghana DPA.
                       </p>
-                    </div>
+                    </CardContent>
+                  </Card>
+                )}
 
-                    {noCreditFile || sessionQuery.data?.nationalId?.startsWith("GOOGLE-") || sessionQuery.data?.nationalId?.startsWith("APPLE-") ? (
-                      <div className="space-y-3 pt-2">
-                        <div className={`${noCreditFile ? "bg-amber-500/10 border-amber-500/20" : "bg-primary/5 border-primary/15"} border rounded-xl p-4 text-left space-y-2`}>
-                          <h4 className="font-semibold text-sm flex items-center gap-2">
-                            {noCreditFile ? (
-                              <>
-                                <AlertTriangle className="w-4 h-4 text-amber-600" />
-                                No Credit File Found
-                              </>
-                            ) : (
-                              <>
-                                <CheckCircle2 className="w-4 h-4 text-primary" />
-                                Account Created Successfully
-                              </>
-                            )}
-                          </h4>
-                          <p className="text-xs text-muted-foreground">
-                            {noCreditFile
-                              ? "We couldn't find a credit record matching your identity. This could mean your credit history hasn't been reported yet. Here's what you can do:"
-                              : "Your account is set up. Here's what you can do next:"}
-                          </p>
-                        </div>
-
-                        <div className="grid gap-2">
-                          <a
-                            href="/solutions"
-                            className="flex items-center gap-3 p-3 rounded-xl border hover:bg-muted/50 transition-colors text-left"
-                            data-testid="link-explore-platform"
-                          >
-                            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                              <Globe className="w-4 h-4 text-primary" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium">Explore the Platform</p>
-                              <p className="text-[11px] text-muted-foreground">Learn how Africa Credit Hub serves lenders across 54 countries</p>
-                            </div>
-                            <ArrowRight className="w-4 h-4 text-muted-foreground ml-auto shrink-0" />
-                          </a>
-
-                          <a
-                            href="/start-trial"
-                            className="flex items-center gap-3 p-3 rounded-xl border hover:bg-muted/50 transition-colors text-left"
-                            data-testid="link-start-trial-from-portal"
-                          >
-                            <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
-                              <UserPlus className="w-4 h-4 text-emerald-600" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium">Start a Free Trial</p>
-                              <p className="text-[11px] text-muted-foreground">Register your organization for a 14-day free trial</p>
-                            </div>
-                            <ArrowRight className="w-4 h-4 text-muted-foreground ml-auto shrink-0" />
-                          </a>
-
-                          <a
-                            href="/ai-demo"
-                            className="flex items-center gap-3 p-3 rounded-xl border hover:bg-muted/50 transition-colors text-left"
-                            data-testid="link-ai-demo-from-portal"
-                          >
-                            <div className="w-9 h-9 rounded-lg bg-violet-500/10 flex items-center justify-center shrink-0">
-                              <Search className="w-4 h-4 text-violet-600" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium">Try the AI Demo</p>
-                              <p className="text-[11px] text-muted-foreground">See our AI-powered credit analysis in action</p>
-                            </div>
-                            <ArrowRight className="w-4 h-4 text-muted-foreground ml-auto shrink-0" />
-                          </a>
-
-                          {noCreditFile && (
-                            <button
-                              onClick={() => { setNoCreditFile(false); setError(null); }}
-                              className="flex items-center gap-3 p-3 rounded-xl border hover:bg-muted/50 transition-colors text-left"
-                              data-testid="button-try-lookup-again"
-                            >
-                              <div className="w-9 h-9 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
-                                <RefreshCw className="w-4 h-4 text-blue-600" />
-                              </div>
-                              <div>
-                                <p className="text-sm font-medium">Try Again</p>
-                                <p className="text-[11px] text-muted-foreground">Check your credit score again</p>
-                              </div>
-                              <ArrowRight className="w-4 h-4 text-muted-foreground ml-auto shrink-0" />
-                            </button>
-                          )}
-                        </div>
-
-                        <p className="text-[10px] text-muted-foreground pt-1">
-                          <Lock className="w-3 h-3 inline mr-1" />
-                          Your data is protected under POPIA, NDPA, and Ghana DPA.
+                {/* No credit file found */}
+                {noCreditFile && (
+                  <Card className="shadow-sm" data-testid="card-no-credit-file">
+                    <CardContent className="p-6 text-center space-y-4">
+                      <div className="w-14 h-14 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mx-auto">
+                        <AlertTriangle className="w-7 h-7 text-amber-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-lg">No Credit Record Found</h3>
+                        <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                          We could not find a credit file matching your registered identity. This may happen if your lender has not yet reported your credit history to the bureau.
                         </p>
                       </div>
-                    ) : (
-                      <>
+                      <div className="bg-muted/40 rounded-xl p-4 text-left text-xs text-muted-foreground space-y-2">
+                        <p className="font-semibold text-foreground text-sm">What you can do:</p>
+                        <p>• Ask your bank or microfinance institution to report your credit data to Africa Credit Hub.</p>
+                        <p>• Check back in a few weeks after your lender has submitted an update.</p>
+                        <p>• File a dispute if you believe your data should already be on file.</p>
+                      </div>
+                      <div className="flex flex-col gap-2">
                         <Button
-                          onClick={() => lookupMutation.mutate()}
-                          size="lg"
+                          size="sm"
+                          variant="outline"
                           className="w-full rounded-xl"
-                          data-testid="button-consumer-view-score"
+                          onClick={() => { setNoCreditFile(false); setError(null); lookupMutation.mutate(); }}
+                          data-testid="button-try-lookup-again"
                         >
-                          <TrendingUp className="w-4 h-4 mr-2" />
-                          View My Credit Score
+                          <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Try Again
                         </Button>
-                        <p className="text-[10px] text-muted-foreground">
-                          <Lock className="w-3 h-3 inline mr-1" />
-                          Your data is protected under POPIA, NDPA, and Ghana DPA.
-                        </p>
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
+                        <DisputeFilingDialog />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">
+                        <Lock className="w-3 h-3 inline mr-1" />
+                        Your data is protected under POPIA, NDPA, and Ghana DPA.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
               </>
             )}
 

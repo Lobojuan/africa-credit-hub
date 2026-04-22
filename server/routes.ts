@@ -2850,6 +2850,92 @@ export async function registerRoutes(
     }
   });
 
+  // SMS-only (passwordless) login — step 1: send OTP to registered phone
+  app.post("/api/consumer/request-login-otp", consumerAuthLimiter, async (req, res) => {
+    try {
+      const { phone } = req.body;
+      if (!phone || phone.replace(/\D/g, "").length < 7) {
+        return res.status(400).json({ message: "Valid phone number is required" });
+      }
+
+      const [account] = await db.select().from(consumerAccounts)
+        .where(eq(consumerAccounts.phone, phone)).limit(1);
+
+      // Always respond generically to prevent phone enumeration
+      if (!account) {
+        return res.json({ message: "If that number is registered, a code will be sent shortly." });
+      }
+
+      if (account.lockedUntil && new Date() < account.lockedUntil) {
+        const mins = Math.ceil((account.lockedUntil.getTime() - Date.now()) / 60000);
+        return res.status(423).json({ message: `Account locked. Try again in ${mins} minutes.` });
+      }
+
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      await db.update(consumerAccounts).set({
+        otpCode: otp,
+        otpExpiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      }).where(eq(consumerAccounts.id, account.id));
+
+      const smsSent = await sendOtpSms(phone, otp);
+      routeLogger.info(`[Consumer] Login OTP for ${account.id.slice(0, 8)}... — SMS: ${smsSent}`);
+
+      res.json({
+        message: smsSent
+          ? "A 6-digit code has been sent to your phone."
+          : "Could not send SMS — use the code shown on screen.",
+        otp: smsSent ? undefined : otp,
+      });
+    } catch (e: any) {
+      routeLogger.error("[Consumer] Login OTP error:", { detail: e.message });
+      res.status(500).json({ message: "Failed to send code. Please try again." });
+    }
+  });
+
+  // SMS-only login — step 2: verify OTP and create session (phone-based lookup)
+  app.post("/api/consumer/verify-login-otp", consumerAuthLimiter, async (req, res) => {
+    try {
+      const { phone, otp } = req.body;
+      if (!phone || !otp) return res.status(400).json({ message: "Phone and code are required" });
+
+      const [account] = await db.select().from(consumerAccounts)
+        .where(eq(consumerAccounts.phone, phone)).limit(1);
+      if (!account) return res.status(401).json({ message: "Invalid phone number or code" });
+
+      if (account.otpCode !== otp) {
+        const attempts = (account.failedAttempts || 0) + 1;
+        const updates: any = { failedAttempts: attempts };
+        if (attempts >= 5) updates.lockedUntil = new Date(Date.now() + 30 * 60 * 1000);
+        await db.update(consumerAccounts).set(updates).where(eq(consumerAccounts.id, account.id));
+        return res.status(401).json({ message: "Invalid or expired code" });
+      }
+
+      if (account.otpExpiresAt && new Date() > account.otpExpiresAt) {
+        return res.status(401).json({ message: "Code expired. Please request a new one." });
+      }
+
+      await db.update(consumerAccounts).set({
+        verified: true,
+        otpCode: null,
+        otpExpiresAt: null,
+        failedAttempts: 0,
+        lastLogin: new Date(),
+      }).where(eq(consumerAccounts.id, account.id));
+
+      req.session.regenerate((err) => {
+        if (err) return res.status(500).json({ message: "Session error" });
+        (req.session as any).consumerId = account.id;
+        (req.session as any).consumerNationalId = account.nationalId;
+        req.session.save((saveErr) => {
+          if (saveErr) return res.status(500).json({ message: "Session error" });
+          res.json({ message: "Signed in successfully", authenticated: true });
+        });
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: "Verification failed" });
+    }
+  });
+
   app.get("/api/consumer/session", async (req, res) => {
     if (req.session?.userId && !(req.session as any).consumerId) {
       return res.status(403).json({ authenticated: false, message: "Institution sessions cannot access consumer portal" });
