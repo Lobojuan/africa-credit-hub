@@ -22,6 +22,9 @@ export const organizations = pgTable("organizations", {
   logoUrl: text("logo_url"),
   website: text("website"),
   registrationNumber: text("registration_number"),
+  bogLicenseNumber: text("bog_license_number"),
+  bogLicenseVerified: boolean("bog_license_verified").notNull().default(false),
+  bogApprovedAt: timestamp("bog_approved_at"),
   subscriptionTier: text("subscription_tier").notNull().default("standard"),
   platformFeePercent: integer("platform_fee_percent").notNull().default(20),
   monthlyLicenseFeeCents: integer("monthly_license_fee_cents").notNull().default(0),
@@ -372,6 +375,12 @@ export const consentRecords = pgTable("consent_records", {
   revokedAt: timestamp("revoked_at"),
   receiptNumber: text("receipt_number").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  consentMethod: text("consent_method"),
+  permissiblePurpose: text("permissible_purpose"),
+  consentReference: text("consent_reference"),
+  dataSubjectConfirmed: boolean("data_subject_confirmed").notNull().default(false),
+  expiresAt: timestamp("expires_at"),
 });
 
 export const paymentHistory = pgTable("payment_history", {
@@ -390,6 +399,7 @@ export const institutions = pgTable("institutions", {
   name: text("name").notNull(),
   type: text("type").notNull(),
   registrationNumber: text("registration_number"),
+  bogLicenseNumber: text("bog_license_number"),
   country: text("country").notNull().default("Ethiopia"),
   contactEmail: text("contact_email"),
   contactPhone: text("contact_phone"),
@@ -443,6 +453,8 @@ export const creditReportLogs = pgTable("credit_report_logs", {
   purpose: text("purpose").notNull(),
   serialNumber: text("serial_number").notNull().unique(),
   organizationId: varchar("organization_id").references(() => organizations.id),
+  consentRecordId: varchar("consent_record_id").references(() => consentRecords.id),
+  permissiblePurpose: text("permissible_purpose"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

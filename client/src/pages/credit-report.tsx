@@ -1,9 +1,10 @@
 import { useState, useRef } from "react";
 import { useRoute, useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { apiRequest } from "@/lib/queryClient";
 import { useBrandColors } from "@/hooks/use-brand-colors";
+import { ConsentGateModal } from "@/components/consent-gate-modal";
 import { formatCurrency } from "@/lib/currency";
 import { getDefaultFallbackCurrency } from "@/lib/country-mode";
 import { BOG_ACCOUNT_STATUS, mapInternalStatusToBog } from "@shared/bog-codes";
@@ -483,19 +484,37 @@ export default function CreditReportPage() {
   const [purpose, setPurpose] = useState("new_credit");
   const [includeAI, setIncludeAI] = useState(true);
   const [includeXds, setIncludeXds] = useState(false);
+  const [showConsentModal, setShowConsentModal] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
+  const { data: borrowerPreview } = useQuery<any>({
+    queryKey: ["/api/borrowers", borrowerId],
+    enabled: !!borrowerId,
+  });
+
+  const borrowerDisplayName = borrowerPreview
+    ? (borrowerPreview.type === "corporate"
+        ? borrowerPreview.companyName || "Unknown"
+        : `${borrowerPreview.firstName || ""} ${borrowerPreview.lastName || ""}`.trim() || "Unknown")
+    : (borrowerId || "Unknown");
+
   const generateMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({ consentId }: { consentId?: string } = {}) => {
       const res = await apiRequest("POST", "/api/credit-reports/generate", {
         borrowerId,
         purpose,
         includeAI,
         includeXds,
+        consentId,
       });
       return res.json();
     },
   });
+
+  const handleConsentGranted = (consentId: string, grantedPurpose: string) => {
+    setPurpose(grantedPurpose);
+    generateMutation.mutate({ consentId });
+  };
 
   const report = generateMutation.data as CreditReportData | undefined;
 
@@ -632,17 +651,19 @@ export default function CreditReportPage() {
                 </div>
               </div>
               <Button
-                onClick={() => generateMutation.mutate()}
+                onClick={() => setShowConsentModal(true)}
                 disabled={generateMutation.isPending}
                 className="mt-6"
                 data-testid="button-generate-report"
               >
-                <FileText className="w-4 h-4 mr-2" />
-                {generateMutation.isPending ? "Generating..." : "Generate Credit Report"}
+                <Shield className="w-4 h-4 mr-2" />
+                {generateMutation.isPending ? "Generating..." : "Verify Consent & Generate Report"}
               </Button>
             </div>
             {generateMutation.isError && (
-              <p className="text-sm text-destructive">Failed to generate report. Please try again.</p>
+              <p className="text-sm text-destructive">
+                {(generateMutation.error as any)?.message || "Failed to generate report. Please try again."}
+              </p>
             )}
           </CardContent>
         </Card>
@@ -2208,6 +2229,14 @@ export default function CreditReportPage() {
           </Card>
         </div>
       )}
+
+      <ConsentGateModal
+        open={showConsentModal}
+        onClose={() => setShowConsentModal(false)}
+        borrowerId={borrowerId || ""}
+        borrowerName={borrowerDisplayName}
+        onConsentGranted={handleConsentGranted}
+      />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Plus, Building2, CheckCircle, ChevronLeft, ChevronRight, Mail, Phone, MapPin, Calendar, Hash } from "lucide-react";
+import { Plus, Building2, CheckCircle, ChevronLeft, ChevronRight, Mail, Phone, MapPin, Calendar, Hash, Shield } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -352,6 +352,22 @@ export default function InstitutionsPage() {
                   <div>
                     <p className="text-xs text-muted-foreground">{t("institutions.registrationNumber")}</p>
                     <p className="text-sm font-medium" data-testid="text-detail-reg-number">{selectedInstitution.registrationNumber || "—"}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Shield className="w-4 h-4 mt-0.5 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">BOG License Number</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium" data-testid="text-detail-bog-license">
+                        {(selectedInstitution as any).bogLicenseNumber || "—"}
+                      </p>
+                      {!(selectedInstitution as any).bogLicenseNumber && selectedInstitution.status === "pending" && (
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                          Required for approval
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">

@@ -178,6 +178,7 @@ export interface IStorage {
 
   getConsentRecordsByBorrower(borrowerId: string): Promise<ConsentRecord[]>;
   getAllConsentRecords(organizationId: string | undefined, country: string): Promise<ConsentRecord[]>;
+  getConsentRecord(id: string): Promise<ConsentRecord | undefined>;
   createConsentRecord(record: InsertConsentRecord): Promise<ConsentRecord>;
   revokeConsent(id: string): Promise<ConsentRecord | undefined>;
 
@@ -1510,6 +1511,11 @@ export class DatabaseStorage implements IStorage {
     if (country) filters.push(sql`${consentRecords.borrowerId} IN (SELECT id FROM borrowers WHERE country = ${country})`);
     const where = filters.length > 1 ? and(...filters) : filters[0];
     return db.select().from(consentRecords).where(where).orderBy(desc(consentRecords.createdAt)).limit(200);
+  }
+
+  async getConsentRecord(id: string): Promise<ConsentRecord | undefined> {
+    const [record] = await db.select().from(consentRecords).where(eq(consentRecords.id, id));
+    return record;
   }
 
   async createConsentRecord(record: InsertConsentRecord): Promise<ConsentRecord> {

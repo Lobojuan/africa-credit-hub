@@ -4821,9 +4821,19 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
 
   app.post("/api/credit-reports/generate", creditReportLimiter, requireAuth, async (req, res) => {
     try {
-      const { borrowerId, purpose, includeAI = true, includeXds = false } = req.body;
+      const { borrowerId, purpose, includeAI = true, includeXds = false, consentId } = req.body;
       if (!borrowerId || !purpose) {
         return res.status(400).json({ message: "borrowerId and purpose are required" });
+      }
+
+      const userRole = req.session?.role;
+      const isSuperAdmin = userRole === "super_admin";
+
+      if (!isSuperAdmin && !consentId) {
+        return res.status(403).json({
+          message: "Consent verification is required before generating a credit report. Please complete the consent capture step.",
+          code: "CONSENT_REQUIRED",
+        });
       }
 
       const borrower = await storage.getBorrower(borrowerId);
@@ -4831,6 +4841,31 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const country = getCountryFilter(req);
       if (country && borrower.country !== country) {
         return res.status(403).json({ message: "Access denied: borrower belongs to a different country" });
+      }
+
+      const orgId = req.session?.organizationId;
+      if (!isSuperAdmin && orgId) {
+        const [org] = await db.select().from(organizations).where(eq(organizations.id, orgId));
+        if (org && org.status !== "active") {
+          return res.status(403).json({
+            message: `Your institution's access is currently ${org.status}. Only BOG-approved active institutions may generate credit reports. Please contact your administrator.`,
+            code: "INSTITUTION_NOT_ACTIVE",
+          });
+        }
+      }
+
+      let verifiedConsentRecord: any = null;
+      if (!isSuperAdmin && consentId) {
+        verifiedConsentRecord = await storage.getConsentRecord(consentId);
+        if (!verifiedConsentRecord) {
+          return res.status(403).json({ message: "Invalid consent record. Please re-verify consent before generating a report.", code: "CONSENT_INVALID" });
+        }
+        if (verifiedConsentRecord.status !== "active") {
+          return res.status(403).json({ message: "The consent record has been revoked. A new consent must be obtained before generating this report.", code: "CONSENT_REVOKED" });
+        }
+        if (verifiedConsentRecord.borrowerId !== String(borrowerId)) {
+          return res.status(403).json({ message: "Consent record does not match the requested borrower.", code: "CONSENT_MISMATCH" });
+        }
       }
 
       const user = await storage.getUser(req.session?.userId!);
@@ -4929,6 +4964,9 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
         institution: user?.institution || "Unknown",
         purpose,
         serialNumber,
+        organizationId: req.session?.organizationId || null,
+        consentRecordId: verifiedConsentRecord?.id || null,
+        permissiblePurpose: verifiedConsentRecord?.permissiblePurpose || purpose,
       });
 
       await storage.createAuditLog({
