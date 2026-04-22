@@ -1732,7 +1732,7 @@ const en = {
     v26: {
       date: "April 2026",
       tag: "Current",
-      description: "Consumer portal self-service upgrade: SMS passwordless login, email OTP fallback, auto-loading credit score dashboard, clean no-record state, app guide fix, consumer rate limiting, and role-based training curriculum.",
+      description: "Consumer portal self-service upgrade, passkey/biometric login (WebAuthn FIDO2), MFA QR code setup, SMS passwordless login, email OTP fallback, social login transparency, and role-based training curriculum.",
       f1: { title: "SMS Passwordless Login", desc: "Consumer portal login tab lets borrowers sign in with a 6-digit SMS OTP — no password required. Toggle between Password and SMS Code tabs on the sign-in card" },
       f2: { title: "Email OTP Fallback", desc: "When SMS delivery fails, the OTP is automatically sent to the borrower's registered email. Front-end shows mail icon and masked email address to guide the user" },
       f3: { title: "Auto Credit Score Load", desc: "Credit score fetches automatically on dashboard mount via useEffect — no 'View My Score' button needed. OAuth users (Google/Apple) get a clear 'not linked' notice instead" },
@@ -1741,6 +1741,8 @@ const en = {
       f6: { title: "Consumer E2E Testing", desc: "Automated browser tests covering the full consumer journey: registration form, OTP verification via DB lookup, dashboard auto-load, dispute dialog, logout, and re-login" },
       f7: { title: "Consumer Rate Limiting", desc: "Brute-force protection on all consumer auth endpoints (register, verify-otp, login, SMS login) — 3 requests per 15-minute window per IP address" },
       f8: { title: "Training Curriculum", desc: "Role-based interactive training modules with step-by-step guidance, progress tracking, and context-sensitive content tailored to each user role in the platform" },
+      f9: { title: "Passkey / Biometric Login", desc: "WebAuthn FIDO2 passkey support: register using Touch ID, Face ID, or a hardware security key from the header Passkey button, then sign in password-free from the institutional login page. Works on any FIDO2-capable device." },
+      f10: { title: "MFA QR Code Setup", desc: "The Enable MFA dialog now shows a scannable QR code so users can set up TOTP with Google Authenticator, Microsoft Authenticator, Authy, or 1Password. Secret key fallback available for manual entry. Social login clarity: Microsoft, Apple, and Enterprise SSO shown as 'Coming soon'; Google login remains fully active." },
     },
     v25: {
       date: "March 2026",
@@ -4022,7 +4024,7 @@ const fr: typeof en = {
     v26: {
       date: "Avril 2026",
       tag: "Actuelle",
-      description: "Mise a niveau du portail consommateur: connexion SMS sans mot de passe, repli OTP par email, tableau de bord de score auto-charge, etat sans dossier propre, correction du guide, limitation de debit et curriculum de formation.",
+      description: "Mise a niveau du portail consommateur, connexion passkey/biometrique (WebAuthn FIDO2), configuration MFA par QR code, connexion SMS sans mot de passe, repli OTP par email, transparence des connexions sociales et curriculum de formation.",
       f1: { title: "Connexion SMS Sans Mot de Passe", desc: "Onglet de connexion du portail consommateur permettant aux emprunteurs de se connecter avec un OTP SMS a 6 chiffres, sans mot de passe requis" },
       f2: { title: "Repli OTP par Email", desc: "En cas d'echec de la livraison SMS, l'OTP est envoye automatiquement a l'email enregistre. L'interface affiche une icone mail et l'adresse masquee" },
       f3: { title: "Score Auto-Charge", desc: "Le score de credit se charge automatiquement au montage du tableau de bord via useEffect — sans bouton 'Voir mon score'. Les utilisateurs OAuth voient une notice 'non lie'" },
@@ -4031,6 +4033,8 @@ const fr: typeof en = {
       f6: { title: "Tests E2E Consommateur", desc: "Tests navigateur automatises couvrant l'inscription, verification OTP, chargement du tableau de bord, dialog de recours, deconnexion et reconnexion" },
       f7: { title: "Limitation de Debit Consommateur", desc: "Protection anti-force brute sur tous les points d'authentification (inscription, OTP, connexion, SMS) — 3 requetes par fenetre de 15 minutes par IP" },
       f8: { title: "Curriculum de Formation", desc: "Modules de formation interactifs bases sur les roles avec guidance etape par etape, suivi de progression et contenu adapte a chaque role utilisateur" },
+      f9: { title: "Connexion Passkey / Biometrique", desc: "Support passkey WebAuthn FIDO2: enregistrez Touch ID, Face ID ou une cle de securite physique via le bouton Passkey dans l'en-tete, puis connectez-vous sans mot de passe depuis la page de connexion institutionnelle. Fonctionne sur tout appareil compatible FIDO2." },
+      f10: { title: "Configuration MFA par QR Code", desc: "La boite de dialogue Activer MFA affiche desormais un QR code scannable pour configurer TOTP avec Google Authenticator, Microsoft Authenticator, Authy ou 1Password. Cle secrete disponible pour saisie manuelle. Connexion sociale: Microsoft, Apple et Enterprise SSO marques 'Bientot disponible'; Google reste actif." },
     },
     v25: {
       date: "Mars 2026",

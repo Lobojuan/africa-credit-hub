@@ -37,6 +37,8 @@ import {
   MapPin,
   Phone,
   Mail,
+  Fingerprint,
+  ScanFace,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -67,6 +69,8 @@ const versions: VersionEntry[] = [
       { icon: CheckCircle, titleKey: "versionHistory.v26.f6.title", descriptionKey: "versionHistory.v26.f6.desc" },
       { icon: Shield, titleKey: "versionHistory.v26.f7.title", descriptionKey: "versionHistory.v26.f7.desc" },
       { icon: BookOpen, titleKey: "versionHistory.v26.f8.title", descriptionKey: "versionHistory.v26.f8.desc" },
+      { icon: Fingerprint, titleKey: "versionHistory.v26.f9.title", descriptionKey: "versionHistory.v26.f9.desc" },
+      { icon: ScanFace, titleKey: "versionHistory.v26.f10.title", descriptionKey: "versionHistory.v26.f10.desc" },
     ],
   },
   {
