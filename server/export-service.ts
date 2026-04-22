@@ -56,7 +56,7 @@ export interface FullPortabilityExport {
 }
 
 const EXPORT_AUTHORSHIP = {
-  platform: "Africa Credit Hub (CDH v2.5)",
+  platform: "Africa Credit Hub (CDH v2.6)",
   author: "Uffe Jon Carlson",
   company: "Carlson Capital & Systems In Motion Limited",
   registryRef: "CDH-IP-2026-UJC-001",

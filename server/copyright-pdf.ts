@@ -30,7 +30,7 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     softwareCopyright: "SOFTWARE COPYRIGHT",
     intellectualProperty: "& INTELLECTUAL PROPERTY",
     protectionDocument: "PROTECTION DOCUMENT",
-    platformSubtitle: "Africa Credit Hub v2.5",
+    platformSubtitle: "Africa Credit Hub v2.6",
     docReference: "DOCUMENT REFERENCE",
     docId: "Document ID:",
     version: "Version:",
@@ -60,13 +60,13 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     s14: "Notices & Contact Information",
     s15: "Schedules & Annexures",
     confidentialFooter: "CONFIDENTIAL",
-    footerCenter: "Africa Credit Hub v2.5 — Pan-African Credit Registry",
+    footerCenter: "Africa Credit Hub v2.6 — Pan-African Credit Registry",
   },
   fr: {
     softwareCopyright: "DROIT D'AUTEUR LOGICIEL",
     intellectualProperty: "& PROPRIÉTÉ INTELLECTUELLE",
     protectionDocument: "DOCUMENT DE PROTECTION",
-    platformSubtitle: "Africa Credit Hub v2.5",
+    platformSubtitle: "Africa Credit Hub v2.6",
     docReference: "RÉFÉRENCE DU DOCUMENT",
     docId: "ID du Document :",
     version: "Version :",
@@ -96,13 +96,13 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     s14: "Avis et Coordonnées",
     s15: "Annexes et Pièces Jointes",
     confidentialFooter: "CONFIDENTIEL",
-    footerCenter: "Africa Credit Hub v2.5 — Registre de Crédit Panafricain",
+    footerCenter: "Africa Credit Hub v2.6 — Registre de Crédit Panafricain",
   },
   pt: {
     softwareCopyright: "DIREITOS AUTORAIS DE SOFTWARE",
     intellectualProperty: "& PROPRIEDADE INTELECTUAL",
     protectionDocument: "DOCUMENTO DE PROTEÇÃO",
-    platformSubtitle: "Africa Credit Hub v2.5",
+    platformSubtitle: "Africa Credit Hub v2.6",
     docReference: "REFERÊNCIA DO DOCUMENTO",
     docId: "ID do Documento:",
     version: "Versão:",
@@ -132,13 +132,13 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     s14: "Avisos e Informações de Contacto",
     s15: "Anexos e Apêndices",
     confidentialFooter: "CONFIDENCIAL",
-    footerCenter: "Africa Credit Hub v2.5 — Registo de Crédito Pan-Africano",
+    footerCenter: "Africa Credit Hub v2.6 — Registo de Crédito Pan-Africano",
   },
   ar: {
     softwareCopyright: "حقوق نشر البرمجيات",
     intellectualProperty: "والملكية الفكرية",
     protectionDocument: "وثيقة الحماية",
-    platformSubtitle: "Africa Credit Hub الإصدار 2.5",
+    platformSubtitle: "Africa Credit Hub الإصدار 2.6",
     docReference: "مرجع الوثيقة",
     docId: "معرّف الوثيقة:",
     version: "الإصدار:",
@@ -168,13 +168,13 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     s14: "الإشعارات ومعلومات الاتصال",
     s15: "الملاحق والمرفقات",
     confidentialFooter: "سري",
-    footerCenter: "Africa Credit Hub v2.5 — سجل الائتمان الأفريقي",
+    footerCenter: "Africa Credit Hub v2.6 — سجل الائتمان الأفريقي",
   },
   sw: {
     softwareCopyright: "HAKIMILIKI YA PROGRAMU",
     intellectualProperty: "NA MALI YA AKILI",
     protectionDocument: "HATI YA ULINZI",
-    platformSubtitle: "Africa Credit Hub v2.5",
+    platformSubtitle: "Africa Credit Hub v2.6",
     docReference: "REJEA YA HATI",
     docId: "Kitambulisho cha Hati:",
     version: "Toleo:",
@@ -204,7 +204,7 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     s14: "Taarifa na Maelezo ya Mawasiliano",
     s15: "Ratiba na Viambatisho",
     confidentialFooter: "SIRI",
-    footerCenter: "Africa Credit Hub v2.5 — Sajili ya Mikopo ya Afrika",
+    footerCenter: "Africa Credit Hub v2.6 — Sajili ya Mikopo ya Afrika",
   },
 };
 
@@ -268,7 +268,7 @@ function addHeader(doc: PDFKit.PDFDocument) {
   doc.y += 15;
 }
 
-function addFooter(doc: PDFKit.PDFDocument, pageNum: number, totalPages: number, confidentialLabel: string = "CONFIDENTIAL", footerCenterLabel: string = "Africa Credit Hub v2.5 — Pan-African Credit Registry") {
+function addFooter(doc: PDFKit.PDFDocument, pageNum: number, totalPages: number, confidentialLabel: string = "CONFIDENTIAL", footerCenterLabel: string = "Africa Credit Hub v2.6 — Pan-African Credit Registry") {
   const pw = doc.page.width;
   const ml = doc.page.margins.left;
   const mr = doc.page.margins.right;
@@ -376,7 +376,7 @@ export function generateCopyrightPdf(lang: string = "en"): Promise<Buffer> {
         Author: getCompanyName(),
         Subject: "Copyright and IP Protection Document",
         Keywords: "copyright, intellectual property, software, credit registry, pan-african, Africa Credit Hub",
-        Creator: "Africa Credit Hub v2.5 Platform",
+        Creator: "Africa Credit Hub v2.6 Platform",
       },
     });
 
@@ -543,7 +543,7 @@ export function generateCopyrightPdf(lang: string = "en"): Promise<Buffer> {
     bodyText(doc, "For the purposes of this document, the following terms shall have the meanings ascribed below:");
     doc.moveDown(0.2);
 
-    definitionItem(doc, "The Platform", "The Pan-African Credit Data Hub (CDH) v2.5, including all software components, modules, APIs, user interfaces, databases, algorithms, documentation, and related materials.");
+    definitionItem(doc, "The Platform", "The Pan-African Credit Data Hub (CDH) v2.6, including all software components, modules, APIs, user interfaces, databases, algorithms, documentation, and related materials.");
     definitionItem(doc, "Source Code", "The human-readable programming instructions, written in TypeScript, JavaScript, SQL, HTML, CSS, and any other programming languages, that constitute the Platform.");
     definitionItem(doc, "Object Code", "The compiled or interpreted form of the Source Code, including bundled assets, minified scripts, and deployable artifacts.");
     definitionItem(doc, "Algorithms", "The proprietary computational methods, including but not limited to credit scoring models, telco data analysis engines, risk assessment formulas, entity matching algorithms, and machine learning models embedded within the Platform.");
@@ -744,7 +744,7 @@ export function generateCopyrightPdf(lang: string = "en"): Promise<Buffer> {
 
     bodyText(doc, "12.3  The obligations of confidentiality, non-disclosure, and non-use imposed upon Licensees, employees, contractors, and third parties shall survive the expiration or termination of any license agreement, employment contract, or other arrangement.");
 
-    bodyText(doc, "12.4  The first publication date of the Platform is established as January 2024, with continuous development and enhancement through the current version (v2.5, 2026).");
+    bodyText(doc, "12.4  The first publication date of the Platform is established as January 2024, with continuous development and enhancement through the current version (v2.6, 2026).");
 
     // ──── SECTION 13: DISPUTE RESOLUTION ────
     sectionTitle(doc, "13", CL("s13"));

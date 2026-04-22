@@ -74,7 +74,7 @@ const pt = {
     backupRecovery: "Backup & Recuperação",
     brandTitle: "Registo de Crédito",
     brandSubtitle: `${CO}™`,
-    version: "v2.5 — Registo de Crédito",
+    version: "v2.6 — Registo de Crédito",
   },
   dishonouredCheques: {
     title: "Cheques Devolvidos",
@@ -1574,7 +1574,7 @@ const pt = {
     generatingPdf: "A gerar PDF...",
     copyrightNotice: "Aviso de Direitos Autorais",
     copyrightHolder: `© 2024–2026 ${CO}. Todos os Direitos Reservados.`,
-    copyrightDesc: `O Hub de Dados de Crédito Pan-Africano Africa Credit Hub v2.5, incluindo todo o código fonte, código objeto, algoritmos, interfaces de utilizador, esquemas de base de dados, documentação e materiais relacionados, é propriedade intelectual exclusiva da ${CO}. Nenhuma parte deste software pode ser reproduzida, distribuída, modificada, engenharia reversa ou transmitida sem consentimento prévio por escrito.`,
+    copyrightDesc: `O Hub de Dados de Crédito Pan-Africano Africa Credit Hub v2.6, incluindo todo o código fonte, código objeto, algoritmos, interfaces de utilizador, esquemas de base de dados, documentação e materiais relacionados, é propriedade intelectual exclusiva da ${CO}. Nenhuma parte deste software pode ser reproduzida, distribuída, modificada, engenharia reversa ou transmitida sem consentimento prévio por escrito.`,
     confidential: "Confidencial",
     proprietary: "Proprietário",
     scopeTitle: "Âmbito da Proteção",
@@ -1793,9 +1793,22 @@ const pt = {
   versionHistory: {
     title: "Histórico de Versões",
     subtitle: "Notas de versão e registo de alterações do Sistema de Registo de Crédito",
-    v25: {
+    v26: {
       date: "Abril 2026",
       tag: "Atual",
+      description: "Atualização de autoatendimento do portal do consumidor: login SMS sem senha, fallback OTP por email, painel com pontuação auto-carregada, estado limpo sem registo, correção do guia, limitação de taxa e currículo de formação.",
+      f1: { title: "Login SMS Sem Senha", desc: "Separador de login do portal permite que mutuários entrem com um OTP SMS de 6 dígitos — sem necessidade de senha" },
+      f2: { title: "Fallback OTP por Email", desc: "Quando a entrega por SMS falha, o OTP é enviado automaticamente para o email registado. A interface mostra ícone de correio e endereço mascarado" },
+      f3: { title: "Pontuação Auto-Carregada", desc: "A pontuação de crédito carrega automaticamente ao montar o painel via useEffect — sem botão 'Ver pontuação'. Utilizadores OAuth veem aviso 'não vinculado'" },
+      f4: { title: "Painel de Consumidor Limpo", desc: "Removidos todos os links de marketing. O cartão 'Sem Registo de Crédito' mostra apenas Tentar Novamente e Apresentar Contestação" },
+      f5: { title: "Correção do Guia da Aplicação", desc: "Corrigido o crash de desestruturação de BrandColors no guia ciente de funções. Contagens verificadas: super_admin=16, admin=14, lender=9, regulator=8, viewer=4" },
+      f6: { title: "Testes E2E do Consumidor", desc: "Testes de browser automatizados cobrindo registo, verificação OTP via BD, carregamento do painel, diálogo de contestação, logout e relogin" },
+      f7: { title: "Limitação de Taxa do Consumidor", desc: "Proteção anti-força bruta em todos os endpoints de autenticação — 3 pedidos por janela de 15 minutos por endereço IP" },
+      f8: { title: "Currículo de Formação", desc: "Módulos de formação interativos baseados em funções com orientação passo a passo, acompanhamento de progresso e conteúdo adaptado a cada função de utilizador" },
+    },
+    v25: {
+      date: "Março 2026",
+      tag: "Versão de Segurança",
       description: "Renovação visual global, pesquisa estruturada conforme BOG, relatórios PDF melhorados, comutação dinâmica multi-país, pontuação e empréstimos telco, e reforço abrangente de segurança.",
       f1: { title: "Estilo Visual Escandinavo", desc: "Sistema de design global com hook useBrandColors centralizado, paleta azul/ardósia, modo claro/escuro e variáveis CSS tokenizadas" },
       f2: { title: "Pesquisa Estruturada BOG", desc: "Pesquisa de consumidores com 13 campos (Ghana Card obrigatório), pesquisa empresarial com 6 campos, validação no servidor e registo de auditoria" },
@@ -1932,7 +1945,7 @@ const pt = {
     },
   },
   landing: {
-    versionBadge: "Africa Credit Hub v2.5 — Confiança das Instituições Financeiras em toda a África",
+    versionBadge: "Africa Credit Hub v2.6 — Confiança das Instituições Financeiras em toda a África",
     heroTitle1: "Modernize a Sua",
     heroTitle2: "Infraestrutura de Crédito",
     heroDesc: "A única plataforma de registo de crédito compatível com SRS cobrindo todos os <strong>54 países africanos</strong>. Gira o risco de crédito, assegure conformidade regulatória e expanda a inclusão financeira — tudo a partir de uma plataforma unificada.",

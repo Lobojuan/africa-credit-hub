@@ -316,7 +316,7 @@ export default function CountrySelectionPage() {
               <KPICard icon={Building2} label="Institutions" value={filteredPlatform?.totalInstitutions ?? "..."} color="bg-amber-500/20" />
               <KPICard icon={Globe} label="Active Countries" value={filteredPlatform?.activeCountries ?? "..."} sub={`of ${platform?.supportedCountries ?? 10} supported`} color="bg-emerald-500/20" />
               <KPICard icon={CheckCircle2} label="SRS Compliance" value={`${complianceScore}%`} sub={`${srsCompliant}/${srsTotal} requirements`} color="bg-teal-500/20" />
-              <KPICard icon={Shield} label="System Version" value={platform?.systemVersion ?? "Africa Credit Hub v2.5"} sub="Pan-African Registry" color="bg-muted-foreground/20" />
+              <KPICard icon={Shield} label="System Version" value={platform?.systemVersion ?? "Africa Credit Hub v2.6"} sub="Pan-African Registry" color="bg-muted-foreground/20" />
             </div>
           </div>
 
@@ -630,7 +630,7 @@ export default function CountrySelectionPage() {
 
       <footer className="px-4 py-3 border-t border-border flex items-center justify-between">
         <p className="text-[10px] text-muted-foreground">
-          Africa Credit Hub v2.5 | Secured by {PLATFORM_COMPANY_NAME}
+          Africa Credit Hub v2.6 | Secured by {PLATFORM_COMPANY_NAME}
         </p>
         <div className="flex items-center gap-1.5">
           <Lock className="w-3 h-3 text-muted-foreground" />

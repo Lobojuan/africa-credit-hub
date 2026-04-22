@@ -426,7 +426,7 @@ export async function registerRoutes(
     const uptimePct = totalChecks > 0 ? ((okChecks / totalChecks) * 100).toFixed(2) : "100.00";
     res.json({
       status: dbStatus === "ok" ? "healthy" : "degraded",
-      version: "2.5.0",
+      version: "2.6.0",
       uptime: {
         seconds: uptimeSec,
         formatted: `${Math.floor(uptimeSec / 86400)}d ${Math.floor((uptimeSec % 86400) / 3600)}h ${Math.floor((uptimeSec % 3600) / 60)}m`,
@@ -457,7 +457,7 @@ export async function registerRoutes(
     res.json({
       status: dbOk ? "healthy" : "degraded",
       platformName, country, currency,
-      version: "2.5.0",
+      version: "2.6.0",
       uptime: `${Math.floor(uptimeSec / 86400)}d ${Math.floor((uptimeSec % 86400) / 3600)}h ${Math.floor((uptimeSec % 3600) / 60)}m`,
       dbLatencyMs: dbLatency,
       counts: { borrowers, organizations: orgs, users },
@@ -483,7 +483,7 @@ export async function registerRoutes(
     const uptimePct = totalChecks > 0 ? ((okChecks / totalChecks) * 100).toFixed(2) : "100.00";
     res.json({
       status: dbStatus === "ok" ? "healthy" : "degraded",
-      version: "2.5.0",
+      version: "2.6.0",
       environment: process.env.NODE_ENV || "development",
       uptime: {
         seconds: uptimeSec,
@@ -521,7 +521,7 @@ export async function registerRoutes(
 
     res.json({
       platform: "Africa Credit Hub",
-      version: "2.5.0",
+      version: "2.6.0",
       status: overallStatus,
       uptime: {
         seconds: uptimeSec,
@@ -570,7 +570,7 @@ export async function registerRoutes(
 
     res.json({
       platform: "Africa Credit Hub",
-      version: "2.5.0",
+      version: "2.6.0",
       status: overallStatus,
       uptime: {
         seconds: uptimeSec,
@@ -5027,7 +5027,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
   const PDF_LABELS: Record<string, Record<string, string>> = {
     en: {
       headerTitle: "Comprehensive Credit Information Report",
-      headerSub: "Cross-Jurisdictional Central Data Hub v2.5 | Africa Credit Hub",
+      headerSub: "Cross-Jurisdictional Central Data Hub v2.6 | Africa Credit Hub",
       orderNumber: "ORDER NUMBER",
       cirNumber: "CIR NUMBER",
       reportOrderDate: "Report Order Date",
@@ -5097,11 +5097,11 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       account: "Account",
       endOfReport: "End of Credit Information Report",
       disclaimer: "The information in this report has been compiled from data submitted by participating financial institutions. While Africa Credit Hub endeavor to ensure accuracy, we do not accept responsibility for any loss or damage resulting from this report.",
-      footerLine: "Cross-Jurisdictional Central Data Hub & Credit Registry System v2.5 | Africa Credit Hub | Confidential & Proprietary",
+      footerLine: "Cross-Jurisdictional Central Data Hub & Credit Registry System v2.6 | Africa Credit Hub | Confidential & Proprietary",
     },
     fr: {
       headerTitle: "Rapport Complet d'Information de Crédit",
-      headerSub: "Hub Central de Données Inter-Juridictionnel v2.5 | Africa Credit Hub",
+      headerSub: "Hub Central de Données Inter-Juridictionnel v2.6 | Africa Credit Hub",
       orderNumber: "NUMÉRO DE COMMANDE",
       cirNumber: "NUMÉRO CIR",
       reportOrderDate: "Date de Commande du Rapport",
@@ -5171,11 +5171,11 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       account: "Compte",
       endOfReport: "Fin du Rapport d'Information de Crédit",
       disclaimer: "Les informations de ce rapport proviennent des données soumises par les institutions financières participantes. Bien que Africa Credit Hub s'efforce d'assurer l'exactitude, nous déclinons toute responsabilité pour toute perte ou dommage résultant de ce rapport.",
-      footerLine: "Hub Central de Données Inter-Juridictionnel & Système de Registre de Crédit v2.5 | Africa Credit Hub | Confidentiel & Propriétaire",
+      footerLine: "Hub Central de Données Inter-Juridictionnel & Système de Registre de Crédit v2.6 | Africa Credit Hub | Confidentiel & Propriétaire",
     },
     pt: {
       headerTitle: "Relatório Abrangente de Informação de Crédito",
-      headerSub: "Hub Central de Dados Inter-Jurisdicional v2.5 | Africa Credit Hub",
+      headerSub: "Hub Central de Dados Inter-Jurisdicional v2.6 | Africa Credit Hub",
       orderNumber: "NÚMERO DO PEDIDO",
       cirNumber: "NÚMERO CIR",
       reportOrderDate: "Data do Pedido do Relatório",
@@ -5245,11 +5245,11 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       account: "Conta",
       endOfReport: "Fim do Relatório de Informação de Crédito",
       disclaimer: "As informações neste relatório foram compiladas a partir de dados submetidos por instituições financeiras participantes. Embora a Africa Credit Hub se esforce por garantir a precisão, não aceitamos responsabilidade por qualquer perda ou dano resultante deste relatório.",
-      footerLine: "Hub Central de Dados Inter-Jurisdicional & Sistema de Registo de Crédito v2.5 | Africa Credit Hub | Confidencial & Proprietário",
+      footerLine: "Hub Central de Dados Inter-Jurisdicional & Sistema de Registo de Crédito v2.6 | Africa Credit Hub | Confidencial & Proprietário",
     },
     ar: {
       headerTitle: "تقرير معلومات الائتمان الشامل",
-      headerSub: "مركز البيانات المركزي العابر للولايات القضائية الإصدار 2.5 | Africa Credit Hub",
+      headerSub: "مركز البيانات المركزي العابر للولايات القضائية الإصدار 2.6 | Africa Credit Hub",
       orderNumber: "رقم الطلب",
       cirNumber: "رقم CIR",
       reportOrderDate: "تاريخ طلب التقرير",
@@ -5319,11 +5319,11 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       account: "الحساب",
       endOfReport: "نهاية تقرير معلومات الائتمان",
       disclaimer: "تم تجميع المعلومات في هذا التقرير من البيانات المقدمة من المؤسسات المالية المشاركة. بينما تسعى Africa Credit Hub لضمان الدقة، فإننا لا نتحمل المسؤولية عن أي خسارة أو ضرر ناتج عن هذا التقرير.",
-      footerLine: "مركز البيانات المركزي العابر للولايات القضائية ونظام سجل الائتمان الإصدار 2.5 | Africa Credit Hub | سري وملكية خاصة",
+      footerLine: "مركز البيانات المركزي العابر للولايات القضائية ونظام سجل الائتمان الإصدار 2.6 | Africa Credit Hub | سري وملكية خاصة",
     },
     sw: {
       headerTitle: "Ripoti Kamili ya Taarifa za Mikopo",
-      headerSub: "Kituo cha Data Kuu cha Mamlaka Mbalimbali v2.5 | Africa Credit Hub",
+      headerSub: "Kituo cha Data Kuu cha Mamlaka Mbalimbali v2.6 | Africa Credit Hub",
       orderNumber: "NAMBARI YA AGIZO",
       cirNumber: "NAMBARI YA CIR",
       reportOrderDate: "Tarehe ya Agizo la Ripoti",
@@ -5393,7 +5393,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       account: "Akaunti",
       endOfReport: "Mwisho wa Ripoti ya Taarifa za Mikopo",
       disclaimer: "Taarifa katika ripoti hii zimekusanywa kutoka kwa data zilizotolewa na taasisi za kifedha zinazoshiriki. Ingawa Africa Credit Hub inajitahidi kuhakikisha usahihi, hatukubali wajibu kwa hasara au uharibifu wowote unaotokana na ripoti hii.",
-      footerLine: "Kituo cha Data Kuu cha Mamlaka Mbalimbali na Mfumo wa Sajili ya Mikopo v2.5 | Africa Credit Hub | Siri na Mali",
+      footerLine: "Kituo cha Data Kuu cha Mamlaka Mbalimbali na Mfumo wa Sajili ya Mikopo v2.6 | Africa Credit Hub | Siri na Mali",
     },
   };
 
@@ -8526,7 +8526,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
           totalInstitutions: allOrgs.length,
           activeCountries,
           supportedCountries: supportedCountries.length,
-          systemVersion: "Africa Credit Hub v2.5",
+          systemVersion: "Africa Credit Hub v2.6",
           systemStatus: "operational",
         },
         countries: countriesWithData,
@@ -10068,7 +10068,7 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       if (!message || typeof message !== "string") {
         return res.status(400).json({ message: "message required" });
       }
-      const systemPrompt = `You are the AI assistant for Africa Credit Hub (africacredithub.com) — the Pan-African Credit Registry System (CDH v2.5). You are an expert on every aspect of this platform. Answer any question confidently and accurately using the knowledge below.
+      const systemPrompt = `You are the AI assistant for Africa Credit Hub (africacredithub.com) — the Pan-African Credit Registry System (CDH v2.6). You are an expert on every aspect of this platform. Answer any question confidently and accurately using the knowledge below.
 
 ===== COMPANY =====
 - Built by ${process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub"}

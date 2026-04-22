@@ -55,7 +55,7 @@ async function attemptDelivery(
         "X-Webhook-Signature": `sha256=${signature}`,
         "X-Webhook-Event": event,
         "X-Webhook-Timestamp": new Date().toISOString(),
-        "User-Agent": "CDH-Registry/2.5.0",
+        "User-Agent": "CDH-Registry/2.6.0",
       },
       body: payload,
       signal: controller.signal,

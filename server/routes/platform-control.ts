@@ -373,7 +373,7 @@ export function registerPlatformControlRoutes(app: Express) {
         timestamp: new Date().toISOString(),
         responseTimeMs: Date.now() - startTime,
         server: {
-          version: "2.5.0",
+          version: "2.6.0",
           nodeVersion: process.version,
           uptime: uptimeFormatted,
           uptimeSeconds: Math.round(uptimeSec),

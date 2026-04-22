@@ -99,7 +99,7 @@ export function generatePdfFromMarkdown(markdownContent: string, title: string, 
       Title: title,
       Author: "Uffe Jon Carlson",
       Creator: "Africa Credit Hub — Carlson Capital & Systems In Motion Limited",
-      Producer: "CDH v2.5 | CDH-IP-2026-UJC-001",
+      Producer: "CDH v2.6 | CDH-IP-2026-UJC-001",
       Subject: "Credit Report — Africa Credit Hub Pan-African Credit Registry",
     },
   });
@@ -127,7 +127,7 @@ export function generatePdfFromMarkdown(markdownContent: string, title: string, 
   doc.font("Helvetica-Bold").fontSize(20).fillColor(NORDIC_BLUE).text(title);
   doc.moveDown(0.3);
   doc.font("Helvetica").fontSize(9).fillColor(LIGHT_GRAY)
-    .text(`${process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub"} — Cross-Jurisdictional Central Data Hub & Credit Registry System v2.5`);
+    .text(`${process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub"} — Cross-Jurisdictional Central Data Hub & Credit Registry System v2.6`);
   doc.moveDown(0.2);
   doc.font("Helvetica").fontSize(9).fillColor(LIGHT_GRAY)
     .text(`Generated: ${new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}`);
@@ -341,7 +341,7 @@ export function generatePdfFromMarkdown(markdownContent: string, title: string, 
     .stroke();
   doc.moveDown(0.5);
   doc.font("Helvetica").fontSize(8).fillColor(LIGHT_GRAY)
-    .text(`${process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub"} — Cross-Jurisdictional Central Data Hub & Credit Registry System v2.5`, { align: "center" });
+    .text(`${process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub"} — Cross-Jurisdictional Central Data Hub & Credit Registry System v2.6`, { align: "center" });
   doc.text(`© 2026 ${process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub"}. All rights reserved.`, { align: "center" });
 
   const totalPages = doc.bufferedPageRange().count;

@@ -86,7 +86,7 @@ const en = {
     backupRecovery: "Backup & Recovery",
     brandTitle: "Credit Registry",
     brandSubtitle: `${CO}™`,
-    version: "v2.5 — Credit Registry",
+    version: "v2.6 — Credit Registry",
   },
   dishonouredCheques: {
     title: "Dishonoured Cheques",
@@ -1510,7 +1510,7 @@ const en = {
     generatingPdf: "Generating PDF...",
     copyrightNotice: "Copyright Notice",
     copyrightHolder: `© 2024–2026 ${CO}. All Rights Reserved.`,
-    copyrightDesc: `Africa Credit Hub v2.5, including all source code, object code, algorithms, user interfaces, database schemas, documentation, and related materials, is the exclusive intellectual property of ${CO}. No part of this software may be reproduced, distributed, modified, reverse-engineered, or transmitted without prior written consent.`,
+    copyrightDesc: `Africa Credit Hub v2.6, including all source code, object code, algorithms, user interfaces, database schemas, documentation, and related materials, is the exclusive intellectual property of ${CO}. No part of this software may be reproduced, distributed, modified, reverse-engineered, or transmitted without prior written consent.`,
     confidential: "Confidential",
     proprietary: "Proprietary",
     scopeTitle: "Scope of Protection",
@@ -1729,9 +1729,22 @@ const en = {
   versionHistory: {
     title: "Version History",
     subtitle: "Release notes and changelog for the Credit Registry System",
-    v25: {
+    v26: {
       date: "April 2026",
       tag: "Current",
+      description: "Consumer portal self-service upgrade: SMS passwordless login, email OTP fallback, auto-loading credit score dashboard, clean no-record state, app guide fix, consumer rate limiting, and role-based training curriculum.",
+      f1: { title: "SMS Passwordless Login", desc: "Consumer portal login tab lets borrowers sign in with a 6-digit SMS OTP — no password required. Toggle between Password and SMS Code tabs on the sign-in card" },
+      f2: { title: "Email OTP Fallback", desc: "When SMS delivery fails, the OTP is automatically sent to the borrower's registered email. Front-end shows mail icon and masked email address to guide the user" },
+      f3: { title: "Auto Credit Score Load", desc: "Credit score fetches automatically on dashboard mount via useEffect — no 'View My Score' button needed. OAuth users (Google/Apple) get a clear 'not linked' notice instead" },
+      f4: { title: "Clean Consumer Dashboard", desc: "Removed all marketing links (Explore Platform, Start Trial, AI Demo). 'No Credit Record Found' card shows only Try Again and File Dispute, keeping the portal focused" },
+      f5: { title: "App Guide Runtime Fix", desc: "Fixed BrandColors destructuring crash in the role-aware app guide. Verified role feature counts: super_admin=16, admin=14, lender=9, regulator=8, viewer=4" },
+      f6: { title: "Consumer E2E Testing", desc: "Automated browser tests covering the full consumer journey: registration form, OTP verification via DB lookup, dashboard auto-load, dispute dialog, logout, and re-login" },
+      f7: { title: "Consumer Rate Limiting", desc: "Brute-force protection on all consumer auth endpoints (register, verify-otp, login, SMS login) — 3 requests per 15-minute window per IP address" },
+      f8: { title: "Training Curriculum", desc: "Role-based interactive training modules with step-by-step guidance, progress tracking, and context-sensitive content tailored to each user role in the platform" },
+    },
+    v25: {
+      date: "March 2026",
+      tag: "Security Release",
       description: "Global visual refresh, BOG-compliant structured search, enhanced PDF credit reports, multi-country dynamic switching, telco credit scoring and lending, and comprehensive security hardening.",
       f1: { title: "Scandinavian Visual Style", desc: "Global design system with centralized useBrandColors hook, blue/slate palette, light/dark mode, and tokenized CSS variables across all pages" },
       f2: { title: "BOG Structured Search", desc: "Consumer search with 13 fields (Ghana Card mandatory), business search with 6 fields, server-side validation, and audit logging" },
@@ -1868,7 +1881,7 @@ const en = {
     },
   },
   landing: {
-    versionBadge: "Africa Credit Hub v2.5 — Trusted by Financial Institutions Across Africa",
+    versionBadge: "Africa Credit Hub v2.6 — Trusted by Financial Institutions Across Africa",
     heroTitle1: "Modernize Your",
     heroTitle2: "Credit Infrastructure",
     heroDesc: "The only SRS-compliant credit registry platform covering all <strong>54 African countries</strong>. Manage credit risk, ensure regulatory compliance, and expand financial inclusion — all from one unified platform.",
@@ -2363,7 +2376,7 @@ const fr: typeof en = {
     backupRecovery: "Sauvegarde & Récupération",
     brandTitle: "Registre de Crédit",
     brandSubtitle: `${CO}™`,
-    version: "v2.5 — Registre de Crédit",
+    version: "v2.6 — Registre de Crédit",
   },
   dishonouredCheques: {
     title: "Chèques Impayés",
@@ -3787,7 +3800,7 @@ const fr: typeof en = {
     generatingPdf: "Génération du PDF...",
     copyrightNotice: "Avis de Droit d'Auteur",
     copyrightHolder: `© 2024–2026 ${CO}. Tous Droits Réservés.`,
-    copyrightDesc: `Africa Credit Hub v2.5, y compris tout le code source, le code objet, les algorithmes, les interfaces utilisateur, les schémas de base de données, la documentation et les matériaux connexes, est la propriété intellectuelle exclusive de ${CO}. Aucune partie de ce logiciel ne peut être reproduite, distribuée, modifiée, rétro-ingéniérie ou transmise sans consentement écrit préalable.`,
+    copyrightDesc: `Africa Credit Hub v2.6, y compris tout le code source, le code objet, les algorithmes, les interfaces utilisateur, les schémas de base de données, la documentation et les matériaux connexes, est la propriété intellectuelle exclusive de ${CO}. Aucune partie de ce logiciel ne peut être reproduite, distribuée, modifiée, rétro-ingéniérie ou transmise sans consentement écrit préalable.`,
     confidential: "Confidentiel",
     proprietary: "Propriétaire",
     scopeTitle: "Portée de la Protection",
@@ -4006,9 +4019,22 @@ const fr: typeof en = {
   versionHistory: {
     title: "Historique des Versions",
     subtitle: "Notes de version et journal des modifications du Système de Registre de Crédit",
-    v25: {
+    v26: {
       date: "Avril 2026",
       tag: "Actuelle",
+      description: "Mise a niveau du portail consommateur: connexion SMS sans mot de passe, repli OTP par email, tableau de bord de score auto-charge, etat sans dossier propre, correction du guide, limitation de debit et curriculum de formation.",
+      f1: { title: "Connexion SMS Sans Mot de Passe", desc: "Onglet de connexion du portail consommateur permettant aux emprunteurs de se connecter avec un OTP SMS a 6 chiffres, sans mot de passe requis" },
+      f2: { title: "Repli OTP par Email", desc: "En cas d'echec de la livraison SMS, l'OTP est envoye automatiquement a l'email enregistre. L'interface affiche une icone mail et l'adresse masquee" },
+      f3: { title: "Score Auto-Charge", desc: "Le score de credit se charge automatiquement au montage du tableau de bord via useEffect — sans bouton 'Voir mon score'. Les utilisateurs OAuth voient une notice 'non lie'" },
+      f4: { title: "Tableau de Bord Propre", desc: "Suppression de tous les liens marketing. La carte 'Aucun dossier trouve' affiche uniquement Reessayer et Deposer un recours" },
+      f5: { title: "Correction Guide Application", desc: "Correction du crash de destructuration BrandColors dans le guide role-conscient. Comptages verifies: super_admin=16, admin=14, lender=9, regulator=8, viewer=4" },
+      f6: { title: "Tests E2E Consommateur", desc: "Tests navigateur automatises couvrant l'inscription, verification OTP, chargement du tableau de bord, dialog de recours, deconnexion et reconnexion" },
+      f7: { title: "Limitation de Debit Consommateur", desc: "Protection anti-force brute sur tous les points d'authentification (inscription, OTP, connexion, SMS) — 3 requetes par fenetre de 15 minutes par IP" },
+      f8: { title: "Curriculum de Formation", desc: "Modules de formation interactifs bases sur les roles avec guidance etape par etape, suivi de progression et contenu adapte a chaque role utilisateur" },
+    },
+    v25: {
+      date: "Mars 2026",
+      tag: "Version Securite",
       description: "Refonte visuelle globale, recherche structuree conforme BOG, rapports PDF ameliores, commutation multi-pays dynamique, scoring et prets telco, et renforcement complet de la securite.",
       f1: { title: "Style Visuel Scandinave", desc: "Systeme de design global avec hook useBrandColors centralise, palette bleu/ardoise, mode clair/sombre et variables CSS tokenisees" },
       f2: { title: "Recherche Structuree BOG", desc: "Recherche consommateur avec 13 champs (Ghana Card obligatoire), recherche entreprise avec 6 champs, validation serveur et journalisation d'audit" },
@@ -4145,7 +4171,7 @@ const fr: typeof en = {
     },
   },
   landing: {
-    versionBadge: "Africa Credit Hub v2.5 — Approuvé par les Institutions Financières d'Afrique",
+    versionBadge: "Africa Credit Hub v2.6 — Approuvé par les Institutions Financières d'Afrique",
     heroTitle1: "Modernisez Votre",
     heroTitle2: "Infrastructure de Crédit",
     heroDesc: "La seule plateforme de registre de crédit conforme SRS couvrant les <strong>54 pays africains</strong>. Gérez le risque de crédit, assurez la conformité réglementaire et développez l'inclusion financière — le tout depuis une plateforme unifiée.",

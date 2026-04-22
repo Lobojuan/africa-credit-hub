@@ -74,7 +74,7 @@ const sw: Record<string, any> = {
     backupRecovery: "Hifadhi na Urejeshaji",
     brandTitle: "Sajili ya Mikopo",
     brandSubtitle: `${CO}™`,
-    version: "v2.5 — Sajili ya Mikopo",
+    version: "v2.6 — Sajili ya Mikopo",
   },
   dishonouredCheques: {
     title: "Hundi Zilizokataliwa",
@@ -1587,7 +1587,7 @@ const sw: Record<string, any> = {
     generatingPdf: "Inaunda PDF...",
     copyrightNotice: "Taarifa ya Hakimiliki",
     copyrightHolder: `© 2024–2026 ${CO}. Haki Zote Zimehifadhiwa.`,
-    copyrightDesc: `Kituo cha Data ya Mikopo cha Afrika Africa Credit Hub v2.5, ikiwa ni pamoja na msimbo wote wa chanzo, msimbo wa kitu, kanuni, violesura vya mtumiaji, miundo ya hifadhidata, nyaraka na vifaa vinavyohusiana, ni mali ya akili ya kipekee ya ${CO}. Sehemu yoyote ya programu hii haiwezi kurudufiwa, kusambazwa, kubadilishwa, kufanyiwa uhandisi wa nyuma au kupitishwa bila idhini ya awali kwa maandishi.`,
+    copyrightDesc: `Kituo cha Data ya Mikopo cha Afrika Africa Credit Hub v2.6, ikiwa ni pamoja na msimbo wote wa chanzo, msimbo wa kitu, kanuni, violesura vya mtumiaji, miundo ya hifadhidata, nyaraka na vifaa vinavyohusiana, ni mali ya akili ya kipekee ya ${CO}. Sehemu yoyote ya programu hii haiwezi kurudufiwa, kusambazwa, kubadilishwa, kufanyiwa uhandisi wa nyuma au kupitishwa bila idhini ya awali kwa maandishi.`,
     confidential: "Siri",
     proprietary: "Mali Binafsi",
     scopeTitle: "Upeo wa Ulinzi",
@@ -1806,9 +1806,22 @@ const sw: Record<string, any> = {
   versionHistory: {
     title: "Historia ya Matoleo",
     subtitle: "Maelezo ya matoleo na kumbukumbu za mabadiliko ya Mfumo wa Sajili ya Mikopo",
-    v25: {
+    v26: {
       date: "Aprili 2026",
       tag: "Ya Sasa",
+      description: "Uboreshaji wa lango la watumiaji: kuingia SMS bila nywila, uingizwaji wa OTP kwa barua pepe, dashibodi inayopakia alama kiotomatiki, hali safi ya kutokuwa na rekodi, urekebishaji wa mwongozo, kikwazo cha kiwango na mtaala wa mafunzo.",
+      f1: { title: "Kuingia SMS Bila Nywila", desc: "Kichupo cha kuingia cha lango la mtumiaji huruhusu wakopaji kuingia na OTP ya nambari 6 za SMS — bila nywila inayohitajika" },
+      f2: { title: "Uingizwaji wa OTP kwa Barua Pepe", desc: "Wakati utoaji wa SMS unashindwa, OTP inatumwa kiotomatiki kwa barua pepe iliyosajiliwa. Mwonekano wa mbele unaonyesha ikoni ya barua na anwani iliyofichwa" },
+      f3: { title: "Pakia Alama ya Mikopo Kiotomatiki", desc: "Alama ya mikopo inapakia kiotomatiki wakati dashibodi inafunguliwa kupitia useEffect — bila kuhitaji kubofya kitufe. Watumiaji wa OAuth wanaona arifa ya 'haijaungwa'" },
+      f4: { title: "Dashibodi Safi ya Mtumiaji", desc: "Viungo vyote vya uuzaji vimeondolewa. Kadi ya 'Rekodi Haikupatikana' inaonyesha tu Jaribu Tena na Wasilisha Malalamiko" },
+      f5: { title: "Urekebishaji wa Mwongozo wa Programu", desc: "Imerekebisha mgongano wa kuvunja muundo wa BrandColors katika mwongozo unaojua majukumu. Hesabu zilizothibitishwa: super_admin=16, admin=14, lender=9, regulator=8, viewer=4" },
+      f6: { title: "Majaribio ya E2E ya Mtumiaji", desc: "Majaribio ya kivinjari yaliyoautomatishwa yanayofunika usajili, uthibitishaji wa OTP, upakiaji wa dashibodi, mazungumzo ya malalamiko, kutoka nje na kuingia tena" },
+      f7: { title: "Ukomo wa Kiwango cha Mtumiaji", desc: "Ulinzi dhidi ya nguvu kwa vituo vyote vya uthibitishaji — maombi 3 kwa kila dakika 15 kwa anwani ya IP" },
+      f8: { title: "Mtaala wa Mafunzo", desc: "Moduli za mafunzo zinazoshirikiana kulingana na majukumu na mwongozo wa hatua kwa hatua, ufuatiliaji wa maendeleo na maudhui yanayofaa kwa kila jukumu" },
+    },
+    v25: {
+      date: "Machi 2026",
+      tag: "Toleo la Usalama",
       description: "Upya wa muonekano wa kimataifa, utafutaji uliopangwa kwa BOG, ripoti za PDF zilizoimarishwa, ubadilishaji wa nchi nyingi kwa nguvu, alama za mikopo za telco na mikopo, na uimarishaji wa kina wa usalama.",
       f1: { title: "Mtindo wa Kuona wa Skandinavia", desc: "Mfumo wa muundo wa kimataifa na ndoano ya useBrandColors iliyokusanywa, paleti ya bluu/slate, hali ya mwanga/giza na vigezo vya CSS vilivyotokeni" },
       f2: { title: "Utafutaji Uliopangwa BOG", desc: "Utafutaji wa watumiaji na sehemu 13 (Kadi ya Ghana ni lazima), utafutaji wa biashara na sehemu 6, uthibitishaji wa seva na kumbukumbu za ukaguzi" },
@@ -1945,7 +1958,7 @@ const sw: Record<string, any> = {
     },
   },
   landing: {
-    versionBadge: "Africa Credit Hub v2.5 — Inayoaminiwa na Taasisi za Kifedha Kote Afrika",
+    versionBadge: "Africa Credit Hub v2.6 — Inayoaminiwa na Taasisi za Kifedha Kote Afrika",
     heroTitle1: "Sasisha",
     heroTitle2: "Miundombinu Yako ya Mikopo",
     heroDesc: "Jukwaa pekee la sajili ya mikopo linalozingatia SRS linalofunika <strong>nchi zote 54 za Afrika</strong>. Simamia hatari ya mikopo, hakikisha uzingatiaji wa kanuni, na panua ujumuishaji wa kifedha — yote kutoka jukwaa moja lililounganishwa.",

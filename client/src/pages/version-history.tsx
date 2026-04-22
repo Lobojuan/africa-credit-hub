@@ -36,6 +36,7 @@ import {
   Wrench,
   MapPin,
   Phone,
+  Mail,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -52,6 +53,22 @@ type VersionEntry = {
 };
 
 const versions: VersionEntry[] = [
+  {
+    version: "v2.6",
+    dateKey: "versionHistory.v26.date",
+    tagKey: "versionHistory.v26.tag",
+    descriptionKey: "versionHistory.v26.description",
+    features: [
+      { icon: Smartphone, titleKey: "versionHistory.v26.f1.title", descriptionKey: "versionHistory.v26.f1.desc" },
+      { icon: Mail, titleKey: "versionHistory.v26.f2.title", descriptionKey: "versionHistory.v26.f2.desc" },
+      { icon: Zap, titleKey: "versionHistory.v26.f3.title", descriptionKey: "versionHistory.v26.f3.desc" },
+      { icon: LayoutDashboard, titleKey: "versionHistory.v26.f4.title", descriptionKey: "versionHistory.v26.f4.desc" },
+      { icon: Wrench, titleKey: "versionHistory.v26.f5.title", descriptionKey: "versionHistory.v26.f5.desc" },
+      { icon: CheckCircle, titleKey: "versionHistory.v26.f6.title", descriptionKey: "versionHistory.v26.f6.desc" },
+      { icon: Shield, titleKey: "versionHistory.v26.f7.title", descriptionKey: "versionHistory.v26.f7.desc" },
+      { icon: BookOpen, titleKey: "versionHistory.v26.f8.title", descriptionKey: "versionHistory.v26.f8.desc" },
+    ],
+  },
   {
     version: "v2.5",
     dateKey: "versionHistory.v25.date",
