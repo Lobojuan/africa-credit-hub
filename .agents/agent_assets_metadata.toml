@@ -216,3 +216,9 @@ id = "SpxSzDmebQKI2DOBjXktE"
 uri = "file://codebase.zip"
 type = "unspecified"
 title = "Africa Credit Hub v2.6 — Source Code"
+
+[[outputs]]
+id = "D2mt8IMmmQnGeClQcSJsm"
+uri = "file://africa-credit-hub-v2.6-source.zip"
+type = "unspecified"
+title = "Africa Credit Hub v2.6 — Full Source Code"
