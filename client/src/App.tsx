@@ -16,7 +16,7 @@ import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { PasswordChangeDialog } from "@/components/password-change-dialog";
 import { PLATFORM_SUPPORT_EMAIL } from "@/lib/platform-config";
 import { Button } from "@/components/ui/button";
-import { LogOut, Loader2, MessageCircle, Building2, LayoutGrid, User, Clock, XCircle } from "lucide-react";
+import { LogOut, Loader2, MessageCircle, Building2, LayoutGrid, User, Clock, XCircle, Shield } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import {
@@ -38,6 +38,7 @@ import { CountrySelector } from "@/components/country-selector";
 import { QuickAccessBar } from "@/components/quick-access-bar";
 import { SessionTimeoutDialog } from "@/components/session-timeout-dialog";
 import { AppFooter } from "@/components/app-footer";
+import { MfaSetupDialog } from "@/components/mfa-setup";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -292,6 +293,7 @@ function AuthenticatedApp() {
   const { user, isLoading, logout, passwordExpired, accountSuspended, accountPendingReview } = useAuth();
   const [chatbotOpen, setChatbotOpen] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
+  const [mfaOpen, setMfaOpen] = useState(false);
   const { t, i18n } = useTranslation();
   const countryTheme = useCountryTheme();
   const [rawPath, navigate] = useLocation();
@@ -509,6 +511,15 @@ function AuthenticatedApp() {
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
+                      className="gap-2"
+                      onClick={() => setMfaOpen(true)}
+                      data-testid="button-mobile-mfa"
+                    >
+                      <Shield className="w-4 h-4" />
+                      {(user as any).mfaEnabled ? "Manage MFA" : "Enable MFA"}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
                       className="gap-2 text-destructive focus:text-destructive"
                       onClick={async () => {
                         try { await logout(); } catch { window.location.href = "/"; }
@@ -569,6 +580,15 @@ function AuthenticatedApp() {
               <ThemeToggle />
               <LanguageSwitcher />
               <Button
+                variant="outline"
+                className="h-10 gap-2 shrink-0"
+                onClick={() => setMfaOpen(true)}
+                data-testid="button-mfa-setup"
+              >
+                <Shield className="w-4 h-4" />
+                {(user as any).mfaEnabled ? "MFA On" : "Enable MFA"}
+              </Button>
+              <Button
                 variant="destructive"
                 className="h-10 gap-2 text-base font-semibold px-5 shrink-0"
                 onClick={async () => {
@@ -594,6 +614,7 @@ function AuthenticatedApp() {
             <AppFooter />
           </main>
           {passwordExpired && <PasswordChangeDialog open={true} forced={true} />}
+          <MfaSetupDialog open={mfaOpen} onOpenChange={setMfaOpen} mfaEnabled={!!(user as any).mfaEnabled} />
         </div>
       </div>
       {isMobile && <MobileBottomNav />}

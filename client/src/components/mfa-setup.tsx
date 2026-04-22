@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import QRCode from "react-qr-code";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -123,8 +124,23 @@ export function MfaSetupDialog({ open, onOpenChange, mfaEnabled }: MfaSetupProps
           </div>
         ) : (
           <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Scan the QR code below with Google Authenticator, Authy, or any authenticator app.
+            </p>
+
+            {uri && (
+              <div className="flex flex-col items-center gap-3">
+                <div className="p-4 bg-white rounded-xl border border-border shadow-sm" data-testid="mfa-qr-code">
+                  <QRCode value={uri} size={180} />
+                </div>
+                <p className="text-[11px] text-muted-foreground text-center">
+                  Can't scan? Enter the secret key manually instead.
+                </p>
+              </div>
+            )}
+
             <div>
-              <Label className="text-xs font-medium">{t("mfa.secretKey")}</Label>
+              <Label className="text-xs font-medium">Manual entry — secret key</Label>
               <div className="flex items-center gap-2 mt-1">
                 <code className="flex-1 text-xs font-mono bg-muted p-2.5 rounded-md break-all select-all" data-testid="text-mfa-secret">
                   {secret}
@@ -133,18 +149,10 @@ export function MfaSetupDialog({ open, onOpenChange, mfaEnabled }: MfaSetupProps
                   {copied ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
                 </Button>
               </div>
-              <p className="text-[10px] text-muted-foreground mt-1">{t("mfa.copyInstructions")}</p>
             </div>
 
             <div>
-              <Label className="text-xs font-medium">{t("mfa.otpAuthUri")}</Label>
-              <code className="block text-[10px] font-mono bg-muted p-2 rounded-md break-all mt-1 max-h-16 overflow-auto" data-testid="text-mfa-uri">
-                {uri}
-              </code>
-            </div>
-
-            <div>
-              <Label>{t("mfa.enterCode")}</Label>
+              <Label>Enter the 6-digit code from your app to confirm</Label>
               <Input
                 data-testid="input-mfa-verify-code"
                 value={code}
@@ -152,6 +160,7 @@ export function MfaSetupDialog({ open, onOpenChange, mfaEnabled }: MfaSetupProps
                 placeholder="000000"
                 className="text-center text-lg tracking-[0.5em] font-mono h-12 mt-1"
                 maxLength={6}
+                autoFocus
               />
             </div>
 
