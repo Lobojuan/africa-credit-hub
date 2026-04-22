@@ -800,19 +800,26 @@ export default function LoginPage() {
                 Google
               </button>
 
+              <button
+                className="h-11 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all"
+                style={{
+                  background: "rgba(255,255,255,0.9)",
+                  border: "1px solid hsl(215 25% 88%)",
+                  color: "hsl(215 25% 30%)",
+                }}
+                onClick={() => window.location.href = "/api/auth/microsoft?returnTo=/dashboard"}
+                data-testid="button-microsoft-login"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                  <rect x="1" y="1" width="10" height="10" fill="#F25022"/>
+                  <rect x="13" y="1" width="10" height="10" fill="#7FBA00"/>
+                  <rect x="1" y="13" width="10" height="10" fill="#00A4EF"/>
+                  <rect x="13" y="13" width="10" height="10" fill="#FFB900"/>
+                </svg>
+                Microsoft
+              </button>
+
               {[
-                {
-                  label: "Microsoft",
-                  testid: "button-microsoft-login",
-                  icon: (
-                    <svg className="w-4 h-4 opacity-40" viewBox="0 0 24 24">
-                      <rect x="1" y="1" width="10" height="10" fill="#F25022"/>
-                      <rect x="13" y="1" width="10" height="10" fill="#7FBA00"/>
-                      <rect x="1" y="13" width="10" height="10" fill="#00A4EF"/>
-                      <rect x="13" y="13" width="10" height="10" fill="#FFB900"/>
-                    </svg>
-                  ),
-                },
                 {
                   label: "Apple",
                   testid: "button-apple-login-institutional",
