@@ -328,6 +328,54 @@ export async function sendContactSalesEmail(data: { name: string; email: string;
   return sendEmail(adminEmail, `[Africa Credit Hub Sales Inquiry] ${data.organization} — ${tierLabel}`, createEmailHtml("New Sales Inquiry", body));
 }
 
+export async function sendConsentRequestEmail(
+  borrowerEmail: string,
+  borrowerName: string,
+  lenderName: string,
+  purpose: string,
+  consentUrl: string,
+  expiresHours: number = 24
+): Promise<boolean> {
+  const purposeLabels: Record<string, string> = {
+    new_credit: "Credit Application / Loan Origination",
+    review: "Account / Portfolio Review",
+    collection: "Debt Collection",
+    regulatory: "Regulatory / Supervisory Purpose",
+    portfolio_monitoring: "Portfolio Monitoring",
+    fraud_investigation: "Fraud Investigation",
+    employment: "Employment Screening",
+  };
+  const purposeLabel = purposeLabels[purpose] || purpose;
+  const body = `
+    <p style="color:#333;font-size:14px;line-height:1.6;">Dear <strong>${esc(borrowerName)}</strong>,</p>
+    <p style="color:#333;font-size:14px;line-height:1.6;">
+      <strong>${esc(lenderName)}</strong> has requested access to your credit report through the Ghana Credit Registry.
+      Your explicit consent is required before any report can be generated.
+    </p>
+    <div style="background:#f0f7ff;border-radius:12px;padding:20px;margin:20px 0;border-left:4px solid #2563eb;">
+      <p style="margin:0 0 8px;color:#1e3a5f;font-size:13px;font-weight:600;">Request Details</p>
+      <p style="margin:4px 0;color:#333;font-size:13px;"><strong>Requested by:</strong> ${esc(lenderName)}</p>
+      <p style="margin:4px 0;color:#333;font-size:13px;"><strong>Purpose:</strong> ${esc(purposeLabel)}</p>
+      <p style="margin:4px 0;color:#333;font-size:13px;"><strong>Expires:</strong> ${expiresHours} hours from now</p>
+    </div>
+    <p style="color:#333;font-size:14px;line-height:1.6;">
+      Please review this request and click <strong>Approve</strong> or <strong>Deny</strong> below.
+      You have the right to deny this request — denying will prevent access to your credit report.
+    </p>
+    <div style="text-align:center;margin:28px 0;display:flex;gap:12px;justify-content:center;">
+      <a href="${consentUrl}&decision=approved" style="display:inline-block;background:#16a34a;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-size:15px;font-weight:600;margin-right:8px;">✓ Approve</a>
+      <a href="${consentUrl}&decision=denied" style="display:inline-block;background:#dc2626;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-size:15px;font-weight:600;">✗ Deny</a>
+    </div>
+    <p style="color:#555;font-size:13px;line-height:1.5;">Or open this link to review and respond:</p>
+    <p style="color:#3b82f6;font-size:12px;word-break:break-all;">${consentUrl}</p>
+    <p style="color:#888;font-size:12px;margin-top:20px;line-height:1.6;">
+      This request will expire in <strong>${expiresHours} hours</strong>. If you did not expect this request, you may safely ignore or deny it.
+      Your credit data is protected under the Ghana Data Protection Act.
+    </p>
+  `;
+  return sendEmail(borrowerEmail, `Credit Report Access Request — ${lenderName}`, createEmailHtml("Credit Report Consent Request", body));
+}
+
 export async function sendCollectionSlaBreachEmail(
   agentEmail: string,
   assignmentId: string,

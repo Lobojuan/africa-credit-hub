@@ -121,6 +121,7 @@ const PrivacyPolicyPage = lazy(() => import("@/pages/privacy"));
 const MarketValidationPage = lazy(() => import("@/pages/market-validation"));
 const StartTrialPage = lazy(() => import("@/pages/start-trial"));
 const SignUpPage = lazy(() => import("@/pages/signup"));
+const ConsentRespondPage = lazy(() => import("@/pages/consent-respond"));
 const UpgradePage = lazy(() => import("@/pages/upgrade"));
 const PresentationPage = lazy(() => import("@/pages/presentation"));
 const PortalPage = lazy(() => import("@/pages/portal"));
@@ -714,6 +715,11 @@ function App() {
             <Route path="/partner-docs" component={() => <Suspense fallback={<LazyFallback />}><PartnerDocsPage /></Suspense>} />
             <Route path="/portal" component={() => <Suspense fallback={<LazyFallback />}><PortalPage /></Suspense>} />
             <Route path="/platform-control-9x7k" component={() => <Suspense fallback={<LazyFallback />}><PlatformMasterControlPage /></Suspense>} />
+            <Route path="/consent/respond">
+              <Suspense fallback={<LazyFallback />}>
+                <ConsentRespondPage />
+              </Suspense>
+            </Route>
             <Route path="/consumer/register">
               <Suspense fallback={<LazyFallback />}>
                 <ConsumerPortalPage />

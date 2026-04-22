@@ -946,7 +946,7 @@ export async function registerRoutes(
   });
 
   app.use("/api", apiLimiter, (req, res, next) => {
-    if (req.path.startsWith("/auth") || req.path.startsWith("/external") || req.path.startsWith("/docs") || req.path.startsWith("/consumer") || req.path.startsWith("/ai-demo") || req.path.startsWith("/public") || req.path.startsWith("/contact-sales") || req.path.startsWith("/platform-control") || req.path.startsWith("/registry-sandbox")) return next();
+    if (req.path.startsWith("/auth") || req.path.startsWith("/external") || req.path.startsWith("/docs") || req.path.startsWith("/consumer") || req.path.startsWith("/ai-demo") || req.path.startsWith("/public") || req.path.startsWith("/contact-sales") || req.path.startsWith("/platform-control") || req.path.startsWith("/registry-sandbox") || req.path.startsWith("/consent/respond")) return next();
     requireAuth(req, res, next);
   });
 
@@ -4587,6 +4587,232 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
     }
   });
 
+  app.post("/api/consent-requests", requireAuth, requireRole("admin", "lender", "super_admin"), async (req, res) => {
+    try {
+      const { borrowerId, purpose } = req.body;
+      if (!borrowerId || !purpose) return res.status(400).json({ message: "borrowerId and purpose are required" });
+
+      const borrower = await storage.getBorrower(borrowerId);
+      if (!borrower) return res.status(404).json({ message: "Borrower not found" });
+
+      const user = await storage.getUser(req.session?.userId!);
+      const orgId = req.session?.organizationId;
+      const lenderName = user?.institution || user?.fullName || "Unknown Institution";
+
+      const existingAccounts = await db.select({ id: creditAccounts.id, status: creditAccounts.status })
+        .from(creditAccounts)
+        .where(and(
+          eq(creditAccounts.borrowerId, String(borrowerId)),
+          orgId ? eq(creditAccounts.organizationId, orgId) : sql`true`
+        ));
+
+      const activeAccount = existingAccounts.find(a => ["current", "delinquent", "restructured"].includes(a.status || ""));
+
+      const receiptNumber = `CR-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      const borrowerName = borrower.type === "individual"
+        ? `${borrower.firstName || ""} ${borrower.lastName || ""}`.trim()
+        : borrower.companyName || "Unknown";
+
+      if (activeAccount) {
+        const record = await storage.createConsentRecord({
+          borrowerId: String(borrowerId),
+          grantedTo: lenderName,
+          purpose,
+          consentType: "credit_report",
+          receiptNumber,
+          permissiblePurpose: purpose,
+          organizationId: orgId || null,
+          requestedBy: req.session?.userId || null,
+          loanExemption: true,
+          exemptionBasis: `Active loan agreement exists (account ${activeAccount.id})`,
+          borrowerResponse: "approved",
+          dataSubjectConfirmed: true,
+        } as any);
+
+        await storage.createAuditLog({
+          action: "CONSENT_GRANTED_LOAN_EXEMPTION",
+          entity: "consent_record",
+          entityId: record.id,
+          userId: req.session?.userId,
+          details: `Consent granted under loan agreement exemption for borrower ${borrowerName}. Lender: ${lenderName}. Purpose: ${purpose}. Active account: ${activeAccount.id}`,
+          ipAddress: req.ip || null,
+        });
+
+        return res.status(201).json({ consentId: record.id, status: "approved", exemption: true, exemptionBasis: record.exemptionBasis, borrowerName });
+      }
+
+      const token = `${Date.now().toString(36)}-${Math.random().toString(36).substring(2)}-${Math.random().toString(36).substring(2)}`;
+      const tokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+      const record = await storage.createConsentRecord({
+        borrowerId: String(borrowerId),
+        grantedTo: lenderName,
+        purpose,
+        consentType: "credit_report",
+        receiptNumber,
+        permissiblePurpose: purpose,
+        organizationId: orgId || null,
+        requestedBy: req.session?.userId || null,
+        consentToken: token,
+        tokenExpiresAt,
+        borrowerResponse: "pending",
+        loanExemption: false,
+        notificationPhone: borrower.phone || borrower.mobileMoneyNumber || null,
+        notificationEmail: borrower.email || null,
+      } as any);
+
+      const getBaseUrl = (r: Request) => {
+        if (process.env.CANONICAL_URL) return process.env.CANONICAL_URL;
+        const protocol = r.headers["x-forwarded-proto"] || r.protocol || "https";
+        const host = r.headers["x-forwarded-host"] || r.headers.host || "africacredithub.replit.app";
+        return `${protocol}://${host}`;
+      };
+      const baseUrl = getBaseUrl(req);
+      const consentUrl = `${baseUrl}/consent/respond?token=${token}`;
+
+      let smsSent = false;
+      let emailSent = false;
+      const notifPhone = borrower.phone || borrower.mobileMoneyNumber;
+      const notifEmail = borrower.email;
+
+      if (notifPhone && isSmsConfigured()) {
+        try {
+          smsSent = await sendSms(notifPhone, `Credit Report Request: ${lenderName} is requesting your credit report for "${purpose}". Approve or deny: ${consentUrl} — Ghana Credit Registry`);
+        } catch {}
+      }
+
+      if (notifEmail) {
+        try {
+          const { sendConsentRequestEmail } = await import("./email");
+          emailSent = await sendConsentRequestEmail(notifEmail, borrowerName, lenderName, purpose, consentUrl);
+        } catch {}
+      }
+
+      await db.update(consentRecords).set({ notificationSentAt: new Date() } as any).where(eq(consentRecords.id, record.id));
+
+      await storage.createAuditLog({
+        action: "CONSENT_REQUEST_SENT",
+        entity: "consent_record",
+        entityId: record.id,
+        userId: req.session?.userId,
+        details: `Consent request sent to borrower ${borrowerName} (${notifPhone || notifEmail || "no contact"}). Lender: ${lenderName}. Purpose: ${purpose}. SMS: ${smsSent}, Email: ${emailSent}`,
+        ipAddress: req.ip || null,
+      });
+
+      res.status(201).json({
+        consentId: record.id,
+        status: "pending",
+        exemption: false,
+        borrowerName,
+        notifiedPhone: smsSent ? notifPhone : null,
+        notifiedEmail: emailSent ? notifEmail : null,
+        expiresAt: tokenExpiresAt,
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.get("/api/consent-requests/:id/status", requireAuth, async (req, res) => {
+    try {
+      const record = await storage.getConsentRecord(req.params.id);
+      if (!record) return res.status(404).json({ message: "Consent request not found" });
+      const orgId = req.session?.organizationId;
+      if (orgId && record.organizationId && record.organizationId !== orgId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      res.json({
+        id: record.id,
+        status: (record as any).borrowerResponse || "pending",
+        loanExemption: (record as any).loanExemption,
+        exemptionBasis: (record as any).exemptionBasis,
+        respondedAt: (record as any).respondedAt,
+        expiresAt: (record as any).tokenExpiresAt,
+        receiptNumber: record.receiptNumber,
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.get("/api/consent/respond/:token", async (req, res) => {
+    try {
+      const [record] = await db.select().from(consentRecords).where(eq((consentRecords as any).consentToken, req.params.token));
+      if (!record) return res.status(404).json({ message: "Consent request not found or expired" });
+
+      if ((record as any).tokenExpiresAt && new Date() > new Date((record as any).tokenExpiresAt)) {
+        await db.update(consentRecords).set({ borrowerResponse: "expired" } as any).where(eq(consentRecords.id, record.id));
+        return res.status(410).json({ message: "This consent request has expired", status: "expired" });
+      }
+
+      const borrower = await storage.getBorrower(record.borrowerId);
+      const borrowerName = borrower
+        ? (borrower.type === "individual" ? `${borrower.firstName || ""} ${borrower.lastName || ""}`.trim() : borrower.companyName || "Unknown")
+        : "Unknown";
+
+      res.json({
+        id: record.id,
+        status: (record as any).borrowerResponse || "pending",
+        borrowerName,
+        lenderName: record.grantedTo,
+        purpose: record.purpose,
+        permissiblePurpose: (record as any).permissiblePurpose || record.purpose,
+        requestedAt: record.createdAt,
+        expiresAt: (record as any).tokenExpiresAt,
+        respondedAt: (record as any).respondedAt,
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.post("/api/consent/respond/:token", async (req, res) => {
+    try {
+      const { decision } = req.body;
+      if (!["approved", "denied"].includes(decision)) {
+        return res.status(400).json({ message: "decision must be 'approved' or 'denied'" });
+      }
+
+      const [record] = await db.select().from(consentRecords).where(eq((consentRecords as any).consentToken, req.params.token));
+      if (!record) return res.status(404).json({ message: "Consent request not found" });
+
+      if ((record as any).borrowerResponse !== "pending") {
+        return res.status(409).json({ message: `This request has already been ${(record as any).borrowerResponse}`, status: (record as any).borrowerResponse });
+      }
+
+      if ((record as any).tokenExpiresAt && new Date() > new Date((record as any).tokenExpiresAt)) {
+        await db.update(consentRecords).set({ borrowerResponse: "expired" } as any).where(eq(consentRecords.id, record.id));
+        return res.status(410).json({ message: "This consent request has expired", status: "expired" });
+      }
+
+      const newStatus = decision === "approved" ? "active" : "revoked";
+      await db.update(consentRecords).set({
+        status: newStatus as any,
+        borrowerResponse: decision,
+        respondedAt: new Date(),
+        revokedAt: decision === "denied" ? new Date() : null,
+      } as any).where(eq(consentRecords.id, record.id));
+
+      const borrower = await storage.getBorrower(record.borrowerId);
+      const borrowerName = borrower
+        ? (borrower.type === "individual" ? `${borrower.firstName || ""} ${borrower.lastName || ""}`.trim() : borrower.companyName || "Unknown")
+        : "Unknown";
+
+      await storage.createAuditLog({
+        action: decision === "approved" ? "CONSENT_APPROVED_BY_BORROWER" : "CONSENT_DENIED_BY_BORROWER",
+        entity: "consent_record",
+        entityId: record.id,
+        userId: null,
+        details: `Borrower ${borrowerName} ${decision} the credit report consent request from ${record.grantedTo}. Purpose: ${record.purpose}. IP: ${req.ip || "unknown"}`,
+        ipAddress: req.ip || null,
+      });
+
+      res.json({ success: true, decision, borrowerName, lenderName: record.grantedTo });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
   app.get("/api/payment-history/:creditAccountId", async (req, res) => {
     try {
       const country = getCountryFilter(req);
@@ -4858,10 +5084,18 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       if (!isSuperAdmin && consentId) {
         verifiedConsentRecord = await storage.getConsentRecord(consentId);
         if (!verifiedConsentRecord) {
-          return res.status(403).json({ message: "Invalid consent record. Please re-verify consent before generating a report.", code: "CONSENT_INVALID" });
+          return res.status(403).json({ message: "Invalid consent record. Please request borrower consent before generating a report.", code: "CONSENT_INVALID" });
         }
-        if (verifiedConsentRecord.status !== "active") {
-          return res.status(403).json({ message: "The consent record has been revoked. A new consent must be obtained before generating this report.", code: "CONSENT_REVOKED" });
+        const isApproved = verifiedConsentRecord.loanExemption === true || verifiedConsentRecord.borrowerResponse === "approved";
+        if (!isApproved) {
+          const response = verifiedConsentRecord.borrowerResponse || "pending";
+          if (response === "denied") {
+            return res.status(403).json({ message: "The borrower has denied consent for this credit report. You may not generate this report.", code: "CONSENT_DENIED" });
+          }
+          if (response === "expired") {
+            return res.status(403).json({ message: "The consent request has expired. Please send a new consent request to the borrower.", code: "CONSENT_EXPIRED" });
+          }
+          return res.status(403).json({ message: "Borrower consent is still pending. Please wait for the borrower to approve before generating the report.", code: "CONSENT_PENDING" });
         }
         if (verifiedConsentRecord.borrowerId !== String(borrowerId)) {
           return res.status(403).json({ message: "Consent record does not match the requested borrower.", code: "CONSENT_MISMATCH" });

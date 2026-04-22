@@ -381,6 +381,16 @@ export const consentRecords = pgTable("consent_records", {
   consentReference: text("consent_reference"),
   dataSubjectConfirmed: boolean("data_subject_confirmed").notNull().default(false),
   expiresAt: timestamp("expires_at"),
+  requestedBy: varchar("requested_by").references(() => users.id),
+  consentToken: text("consent_token"),
+  tokenExpiresAt: timestamp("token_expires_at"),
+  respondedAt: timestamp("responded_at"),
+  borrowerResponse: text("borrower_response").default("pending"),
+  loanExemption: boolean("loan_exemption").notNull().default(false),
+  exemptionBasis: text("exemption_basis"),
+  notificationSentAt: timestamp("notification_sent_at"),
+  notificationPhone: text("notification_phone"),
+  notificationEmail: text("notification_email"),
 });
 
 export const paymentHistory = pgTable("payment_history", {
