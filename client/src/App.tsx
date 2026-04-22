@@ -317,6 +317,7 @@ function AuthenticatedApp() {
   const handleRegisterPasskey = async () => {
     setPasskeyRegistering(true);
     try {
+      await apiRequest("DELETE", "/api/auth/webauthn/credentials/all");
       const optRes = await apiRequest("POST", "/api/auth/webauthn/register-options");
       const options = await optRes.json();
       const { startRegistration } = await import("@simplewebauthn/browser");
@@ -573,7 +574,7 @@ function AuthenticatedApp() {
                       data-testid="button-mobile-passkey"
                     >
                       <Fingerprint className="w-4 h-4" />
-                      {passkeyRegistering ? "Setting up…" : "Register Passkey"}
+                      {passkeyRegistering ? "Setting up…" : "Set Up Fingerprint Login"}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
@@ -653,7 +654,7 @@ function AuthenticatedApp() {
                 data-testid="button-passkey-register"
               >
                 <Fingerprint className="w-4 h-4" />
-                {passkeyRegistering ? "Setting up…" : "Passkey"}
+                {passkeyRegistering ? "Setting up…" : "Set Up Fingerprint"}
               </Button>
               <Button
                 variant="destructive"
