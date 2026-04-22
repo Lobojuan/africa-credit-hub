@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Shield, ShieldCheck, ShieldOff, Copy, CheckCircle2 } from "lucide-react";
+import { Shield, ShieldCheck, ShieldOff, Copy, CheckCircle2, Smartphone, ExternalLink } from "lucide-react";
 
 interface MfaSetupProps {
   open: boolean;
@@ -111,15 +111,45 @@ export function MfaSetupDialog({ open, onOpenChange, mfaEnabled }: MfaSetupProps
           </div>
         ) : step === "idle" ? (
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">{t("mfa.description")}</p>
-            <div className="space-y-2 text-xs text-muted-foreground">
-              <p>{t("mfa.step1")}</p>
-              <p>{t("mfa.step2")}</p>
-              <p>{t("mfa.step3")}</p>
+            <p className="text-sm text-muted-foreground">
+              MFA adds a second layer of protection. After entering your password, you'll also need a one-time 6-digit code from your phone.
+            </p>
+
+            <div>
+              <div className="flex items-center gap-1.5 mb-2">
+                <Smartphone className="w-3.5 h-3.5 text-muted-foreground" />
+                <p className="text-xs font-semibold text-foreground">Step 1 — Install a free authenticator app</p>
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                {[
+                  { name: "Google Authenticator", platforms: "iOS & Android", url: "https://support.google.com/accounts/answer/1066447" },
+                  { name: "Microsoft Authenticator", platforms: "iOS & Android", url: "https://www.microsoft.com/en-us/security/mobile-authenticator-app" },
+                  { name: "Authy", platforms: "iOS, Android & Desktop", url: "https://authy.com/download/" },
+                  { name: "1Password / Bitwarden", platforms: "Built-in authenticator", url: "" },
+                ].map((app) => (
+                  <div key={app.name} className="flex items-center justify-between px-3 py-2 rounded-lg bg-muted/50 border border-border/50">
+                    <div>
+                      <p className="text-xs font-medium">{app.name}</p>
+                      <p className="text-[10px] text-muted-foreground">{app.platforms}</p>
+                    </div>
+                    {app.url && (
+                      <a href={app.url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary flex items-center gap-0.5 hover:underline shrink-0">
+                        Download <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
+
+            <div className="text-xs text-muted-foreground space-y-1 border-t border-border/50 pt-3">
+              <p className="font-semibold text-foreground">Step 2 — Click the button below</p>
+              <p>We'll generate a QR code. Open your authenticator app, tap <span className="font-medium">Add account</span> → <span className="font-medium">Scan QR code</span>, and point your camera at it.</p>
+            </div>
+
             <Button className="w-full" onClick={handleSetup} disabled={loading} data-testid="button-setup-mfa">
               <Shield className="w-4 h-4 mr-2" />
-              {loading ? t("common.processing") : t("mfa.setup")}
+              {loading ? t("common.processing") : "Generate QR Code"}
             </Button>
           </div>
         ) : (
