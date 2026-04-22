@@ -214,6 +214,7 @@ export default function ConsumerPortalPage() {
   const [loginMethod, setLoginMethod] = useState<"password" | "sms">("password");
   const [smsPhone, setSmsPhone] = useState("");
   const [verifyMode, setVerifyMode] = useState<"register" | "sms-login">("register");
+  const [otpSentByEmail, setOtpSentByEmail] = useState(false);
 
   const sessionQuery = useQuery({
     queryKey: ["/api/consumer/session"],
@@ -351,6 +352,7 @@ export default function ConsumerPortalPage() {
       setError(null);
       setSuccessMsg(result.message);
       if (result.otp) setFallbackOtp(result.otp);
+      setOtpSentByEmail(!!result.emailSent);
       setVerifyMode("sms-login");
       setView("verify");
     },
@@ -788,14 +790,16 @@ export default function ConsumerPortalPage() {
                   <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                     <MessageSquare className="w-6 h-6 text-primary" />
                   </div>
-                  {email && (
+                  {(email || otpSentByEmail) && (
                     <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center">
                       <Mail className="w-6 h-6 text-blue-500" />
                     </div>
                   )}
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {email
+                  {otpSentByEmail
+                    ? "SMS was unavailable — the code was sent to your registered email address instead."
+                    : email
                     ? "We sent a verification code via SMS and a verification link to your email. Use either to verify."
                     : "A 6-digit verification code has been sent to your phone via SMS."}
                 </p>
@@ -860,7 +864,7 @@ export default function ConsumerPortalPage() {
                 )}
                 <br />
                 <button
-                  onClick={() => { setError(null); setSuccessMsg(null); setFallbackOtp(null); setOtp(""); setVerifyMode("register"); setView("login"); }}
+                  onClick={() => { setError(null); setSuccessMsg(null); setFallbackOtp(null); setOtp(""); setVerifyMode("register"); setOtpSentByEmail(false); setView("login"); }}
                   className="text-sm text-muted-foreground hover:underline"
                   data-testid="link-back-to-login"
                 >

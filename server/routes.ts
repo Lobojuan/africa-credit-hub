@@ -2878,13 +2878,27 @@ export async function registerRoutes(
       }).where(eq(consumerAccounts.id, account.id));
 
       const smsSent = await sendOtpSms(phone, otp);
-      routeLogger.info(`[Consumer] Login OTP for ${account.id.slice(0, 8)}... — SMS: ${smsSent}`);
+      let emailSent = false;
+      if (!smsSent && account.email) {
+        emailSent = await sendConsumerOtpEmail(account.email, otp);
+      }
+      routeLogger.info(`[Consumer] Login OTP for ${account.id.slice(0, 8)}... — SMS: ${smsSent}, Email: ${emailSent}`);
+
+      let message: string;
+      if (smsSent && account.email) {
+        message = "A 6-digit code has been sent to your phone by SMS.";
+      } else if (smsSent) {
+        message = "A 6-digit code has been sent to your phone by SMS.";
+      } else if (emailSent) {
+        message = `SMS unavailable — a 6-digit code has been sent to your email address instead (${account.email.replace(/(.{2}).+(@.+)/, "$1***$2")}).`;
+      } else {
+        message = "SMS and email delivery unavailable — use the code shown on screen.";
+      }
 
       res.json({
-        message: smsSent
-          ? "A 6-digit code has been sent to your phone."
-          : "Could not send SMS — use the code shown on screen.",
-        otp: smsSent ? undefined : otp,
+        message,
+        emailSent,
+        otp: (!smsSent && !emailSent) ? otp : undefined,
       });
     } catch (e: any) {
       routeLogger.error("[Consumer] Login OTP error:", { detail: e.message });
