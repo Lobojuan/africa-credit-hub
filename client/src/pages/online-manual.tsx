@@ -4,6 +4,7 @@ import type { TFunction } from "i18next";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Accordion,
   AccordionContent,
@@ -40,6 +41,7 @@ import {
   UserCheck,
   Activity,
   Server,
+  Info,
 } from "lucide-react";
 
 interface HelpSection {
@@ -616,28 +618,28 @@ function getHelpSections(t: TFunction): HelpSection[] {
 }
 
 const roleAccessMatrix = [
-  { moduleKey: "dashboardReports", super_admin: true, admin: true, regulator: true, lender: true, viewer: true },
-  { moduleKey: "consumersBiz", super_admin: true, admin: true, regulator: true, lender: true, viewer: true },
-  { moduleKey: "creditAccounts", super_admin: true, admin: true, regulator: true, lender: true, viewer: true },
-  { moduleKey: "creditSearch", super_admin: true, admin: true, regulator: true, lender: true, viewer: true },
-  { moduleKey: "disputesConsent", super_admin: true, admin: true, regulator: true, lender: true, viewer: true },
-  { moduleKey: "helpdesk", super_admin: true, admin: true, regulator: true, lender: true, viewer: true },
-  { moduleKey: "telco", super_admin: true, admin: true, regulator: true, lender: true, viewer: false },
-  { moduleKey: "portfolioIntelligence", super_admin: true, admin: true, regulator: true, lender: false, viewer: false },
-  { moduleKey: "aiCommandCenter", super_admin: true, admin: true, regulator: true, lender: false, viewer: false },
-  { moduleKey: "regulatoryDashboard", super_admin: true, admin: true, regulator: true, lender: false, viewer: false },
-  { moduleKey: "pendingApprovals", super_admin: true, admin: true, regulator: true, lender: false, viewer: false },
-  { moduleKey: "auditTrail", super_admin: true, admin: true, regulator: true, lender: false, viewer: false },
-  { moduleKey: "crossBorder", super_admin: true, admin: true, regulator: true, lender: true, viewer: false },
-  { moduleKey: "borrowerAlerts", super_admin: true, admin: true, regulator: true, lender: false, viewer: false },
-  { moduleKey: "billing", super_admin: true, admin: true, regulator: true, lender: false, viewer: false },
-  { moduleKey: "batchUpload", super_admin: true, admin: true, regulator: false, lender: true, viewer: false },
-  { moduleKey: "userManagement", super_admin: true, admin: true, regulator: false, lender: false, viewer: false },
-  { moduleKey: "institutions", super_admin: true, admin: true, regulator: false, lender: false, viewer: false },
-  { moduleKey: "apiKeys", super_admin: true, admin: true, regulator: false, lender: false, viewer: false },
-  { moduleKey: "commandCenter", super_admin: true, admin: false, regulator: false, lender: false, viewer: false },
-  { moduleKey: "organizations", super_admin: true, admin: false, regulator: false, lender: false, viewer: false },
-  { moduleKey: "backupRecovery", super_admin: true, admin: false, regulator: false, lender: false, viewer: false },
+  { moduleKey: "dashboardReports", desc: "The main landing page after login. Shows real-time KPI cards (total borrowers, credit accounts, active disputes, pending approvals), 7-day sparkline trends, recent activity feed, and quick-action shortcuts. Lenders and viewers see a read-only summary of their institution's portfolio.", super_admin: true, admin: true, regulator: true, lender: true, viewer: true },
+  { moduleKey: "consumersBiz", desc: "Central registry of all individual and business borrowers. Create, search, update, and merge borrower profiles. Includes NIN/BVN/Tax ID verification, national ID upload, and duplicate detection using entity resolution. Supports Ghana BoG CRB-compliant borrower fields.", super_admin: true, admin: true, regulator: true, lender: true, viewer: true },
+  { moduleKey: "creditAccounts", desc: "Full lifecycle management of loan and credit facility records. Log disbursements, repayments, restructurings, and closures. Each account links to a borrower, institution, and product type. Powers the ACH credit score calculations and BoG pipe-delimited exports.", super_admin: true, admin: true, regulator: true, lender: true, viewer: true },
+  { moduleKey: "creditSearch", desc: "Instant credit enquiry tool. Search any borrower by name, ID number, or phone and retrieve their consolidated credit report — score, account history, repayment performance, and any active disputes. All enquiries are logged to the audit trail.", super_admin: true, admin: true, regulator: true, lender: true, viewer: true },
+  { moduleKey: "disputesConsent", desc: "Manages formal borrower disputes against inaccurate credit data and data-sharing consent records. Lenders can raise, review, and resolve disputes. Regulators monitor dispute volumes by institution. Consumers can file disputes via the self-service portal.", super_admin: true, admin: true, regulator: true, lender: true, viewer: true },
+  { moduleKey: "helpdesk", desc: "Internal ticketing system for platform support. Raise, track, and close support tickets related to data issues, access problems, or platform questions. Links tickets to borrowers or accounts for full context. Visible to all roles; resolution is handled by admins.", super_admin: true, admin: true, regulator: true, lender: true, viewer: true },
+  { moduleKey: "telco", desc: "Telco-derived alternative credit scoring using mobile money transaction patterns, airtime usage, and SIM registration data. Generates a supplementary Telco Score alongside the core ACH Scorecard — particularly valuable for thin-file and unbanked borrowers. Not available to read-only viewers.", super_admin: true, admin: true, regulator: true, lender: true, viewer: false },
+  { moduleKey: "portfolioIntelligence", desc: "AI-powered portfolio analytics suite. Visualises loan book health, concentration risk, vintage curves, and NPL trends. Includes peer benchmarking against anonymised industry averages and early-warning signals for at-risk accounts. Available to lenders with management access only.", super_admin: true, admin: true, regulator: true, lender: false, viewer: false },
+  { moduleKey: "aiCommandCenter", desc: "Conversational AI assistant trained on platform data. Ask natural-language questions about borrowers, portfolios, regulations, and procedures. Can generate credit summaries, flag anomalies, draft dispute responses, and explain score factors. Restricted to admin-level and above.", super_admin: true, admin: true, regulator: true, lender: false, viewer: false },
+  { moduleKey: "regulatoryDashboard", desc: "Oversight dashboard designed for central bank regulators and compliance officers. Displays system-wide metrics: total institutions, credit penetration, NPL ratios by sector, dispute resolution rates, and data submission timeliness. Read-only aggregated view — no PII exposed.", super_admin: true, admin: true, regulator: true, lender: false, viewer: false },
+  { moduleKey: "pendingApprovals", desc: "Maker-checker workflow queue. Any data change submitted by a lower-privileged user appears here for a senior user to review and approve or reject before it takes effect. Covers borrower edits, account modifications, dispute resolutions, and institution setting changes.", super_admin: true, admin: true, regulator: true, lender: false, viewer: false },
+  { moduleKey: "auditTrail", desc: "Immutable, tamper-evident log of every action performed on the platform — logins, data reads, edits, exports, API calls, and approvals. Each entry is SHA-256 hashed and optionally blockchain-anchored. Regulators and compliance teams use this for forensic investigations.", super_admin: true, admin: true, regulator: true, lender: false, viewer: false },
+  { moduleKey: "crossBorder", desc: "Pan-African data sharing module. Query and exchange borrower credit data with partner registries in other African countries under signed data-sharing agreements. Includes cross-border entity resolution to match the same borrower across different national ID schemes.", super_admin: true, admin: true, regulator: true, lender: true, viewer: false },
+  { moduleKey: "borrowerAlerts", desc: "Automated alert engine. Configure triggers that notify your institution when a monitored borrower's credit status changes — new accounts opened, missed payments, disputes filed, or score band changes. Alerts are delivered via email, SMS, or in-app notification.", super_admin: true, admin: true, regulator: true, lender: false, viewer: false },
+  { moduleKey: "billing", desc: "Subscription and transaction billing management. View your institution's current plan, usage metrics (enquiries, reports, API calls), monthly invoices, and payment history. Super admins can manage pricing plans and view revenue across all tenants.", super_admin: true, admin: true, regulator: true, lender: false, viewer: false },
+  { moduleKey: "batchUpload", desc: "Bulk data ingestion tool. Upload credit account data from your core banking system via XBRL or CSV templates. Supports Ghana BoG pipe-delimited format. The system validates, deduplicates, and applies maker-checker approval before committing uploaded records.", super_admin: true, admin: true, regulator: false, lender: true, viewer: false },
+  { moduleKey: "userManagement", desc: "Create, edit, deactivate, and assign roles to platform users within your institution. Set TOTP MFA requirements, manage password policies, and review last-login history. Admins manage their own institution's users; super admins manage all institutions.", super_admin: true, admin: true, regulator: false, lender: false, viewer: false },
+  { moduleKey: "institutions", desc: "Registry of all financial institutions onboarded to the platform. Each institution has its own tenant space with branding, user pool, data scope, and subscription plan. Super admins can activate, suspend, or configure any institution. Admins can only view their own.", super_admin: true, admin: true, regulator: false, lender: false, viewer: false },
+  { moduleKey: "apiKeys", desc: "API key management for programmatic access to the platform. Generate, rotate, scope, and revoke API keys used by your institution's core banking systems, mobile apps, or third-party integrations. Each key carries its own permission scopes and rate limits.", super_admin: true, admin: true, regulator: false, lender: false, viewer: false },
+  { moduleKey: "commandCenter", desc: "Super-admin-only system control panel. Manage platform-wide settings, toggle maintenance mode, monitor server health, view real-time usage metrics across all tenants, push system announcements, and control feature flags. Not accessible to any other role.", super_admin: true, admin: false, regulator: false, lender: false, viewer: false },
+  { moduleKey: "organizations", desc: "Multi-organisation (multi-tenancy) management. Create and configure separate organisational units within the platform, each with isolated data, users, and branding. Used by central banks deploying country-specific instances or large groups managing multiple subsidiaries.", super_admin: true, admin: false, regulator: false, lender: false, viewer: false },
+  { moduleKey: "backupRecovery", desc: "Database backup scheduling, snapshot management, and point-in-time restore controls. Super admins can trigger manual backups, view backup history, verify integrity checksums, and initiate recovery procedures. Critical for DR (disaster recovery) compliance.", super_admin: true, admin: false, regulator: false, lender: false, viewer: false },
 ];
 
 export default function OnlineManualPage() {
@@ -729,9 +731,22 @@ export default function OnlineManualPage() {
                 </tr>
               </thead>
               <tbody>
+                <TooltipProvider delayDuration={200}>
                 {roleAccessMatrix.map((row) => (
-                  <tr key={row.moduleKey} className="border-b last:border-0">
-                    <td className="py-2 pr-4 text-muted-foreground">{t(`manual.roleModule.${row.moduleKey}`, row.moduleKey)}</td>
+                  <tr key={row.moduleKey} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                    <td className="py-2 pr-4">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="flex items-center gap-1.5 text-muted-foreground cursor-default group w-fit">
+                            {t(`manual.roleModule.${row.moduleKey}`, row.moduleKey)}
+                            <Info className="w-3 h-3 text-muted-foreground/40 group-hover:text-primary transition-colors shrink-0" />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-xs text-xs leading-relaxed">
+                          {row.desc}
+                        </TooltipContent>
+                      </Tooltip>
+                    </td>
                     <td className="text-center py-2 px-2">{row.super_admin ? "\u2713" : "\u2014"}</td>
                     <td className="text-center py-2 px-2">{row.admin ? "\u2713" : "\u2014"}</td>
                     <td className="text-center py-2 px-2">{row.regulator ? "\u2713" : "\u2014"}</td>
@@ -739,6 +754,7 @@ export default function OnlineManualPage() {
                     <td className="text-center py-2 px-2">{row.viewer ? "\u2713" : "\u2014"}</td>
                   </tr>
                 ))}
+                </TooltipProvider>
               </tbody>
             </table>
           </div>
