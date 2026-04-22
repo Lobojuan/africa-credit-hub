@@ -30,11 +30,12 @@ router.post("/api/auth/webauthn/register-options", loginLimiter, async (req, res
       excludeCredentials: existingCreds.map(c => ({
         id: c.credentialId,
         type: "public-key" as const,
-        transports: (c.transports || []) as AuthenticatorTransport[],
+        transports: (c.transports?.length ? c.transports : ["internal"]) as AuthenticatorTransport[],
       })),
       authenticatorSelection: {
         residentKey: "preferred",
-        userVerification: "preferred",
+        userVerification: "required",
+        authenticatorAttachment: "platform",
       },
     });
 
@@ -116,9 +117,9 @@ router.post("/api/auth/webauthn/login-options", loginLimiter, async (req, res) =
       allowCredentials: creds.map(c => ({
         id: c.credentialId,
         type: "public-key" as const,
-        transports: (c.transports || []) as AuthenticatorTransport[],
+        transports: (c.transports?.length ? c.transports : ["internal"]) as AuthenticatorTransport[],
       })),
-      userVerification: "preferred",
+      userVerification: "required",
     });
 
     req.session.webauthnChallenge = options.challenge;
