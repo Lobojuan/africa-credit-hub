@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, AlertTriangle, ArrowRight, Globe, ArrowLeft, User, Lock, KeyRound, Building2, UserCircle, CreditCard, Eye, EyeOff, FileText, BarChart3, ScrollText, Search, MessageSquare, Star } from "lucide-react";
+import { Shield, AlertTriangle, ArrowRight, Globe, ArrowLeft, User, Lock, KeyRound, Building2, UserCircle, CreditCard, Eye, EyeOff, FileText, BarChart3, ScrollText, Search, MessageSquare, Star, Fingerprint } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { LanguageSwitcher } from "@/components/language-switcher";
@@ -32,9 +32,58 @@ export default function LoginPage() {
   const [consumerLoading, setConsumerLoading] = useState(false);
   const [consumerError, setConsumerError] = useState("");
 
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
+
   const { login } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
+
+  const handlePasskeyLogin = async () => {
+    if (!username.trim()) {
+      setError("Enter your username first, then click Sign in with Passkey.");
+      return;
+    }
+    setPasskeyLoading(true);
+    setError("");
+    try {
+      const optRes = await fetch("/api/auth/webauthn/login-options", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: username.trim() }),
+        credentials: "include",
+      });
+      if (!optRes.ok) {
+        const err = await optRes.json();
+        setError(err.message || "No passkey found for this account. Register one after logging in.");
+        return;
+      }
+      const options = await optRes.json();
+      const { startAuthentication } = await import("@simplewebauthn/browser");
+      const credential = await startAuthentication({ optionsJSON: options });
+      const verRes = await fetch("/api/auth/webauthn/login-verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(credential),
+        credentials: "include",
+      });
+      if (!verRes.ok) {
+        const err = await verRes.json();
+        setError(err.message || "Passkey verification failed.");
+        return;
+      }
+      const data = await verRes.json();
+      queryClient.setQueryData(["/api/auth/me"], data.user);
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+    } catch (e: any) {
+      if (e.name === "NotAllowedError") {
+        setError("Passkey prompt was dismissed. Try again or use your password.");
+      } else {
+        setError(e.message || "Passkey login failed.");
+      }
+    } finally {
+      setPasskeyLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (mounted) return;
@@ -692,6 +741,31 @@ export default function LoginPage() {
                   </button>
                 </form>
               )}
+            </div>
+
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={handlePasskeyLogin}
+                disabled={passkeyLoading}
+                data-testid="button-passkey-login"
+                className="w-full h-12 rounded-xl text-sm font-semibold flex items-center justify-center gap-2.5 transition-all disabled:opacity-50"
+                style={{
+                  background: "linear-gradient(135deg, hsl(262 60% 96%) 0%, hsl(215 60% 96%) 100%)",
+                  border: "1px solid hsl(262 40% 85%)",
+                  color: "hsl(262 50% 40%)",
+                }}
+              >
+                {passkeyLoading ? (
+                  <span className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" />
+                ) : (
+                  <Fingerprint className="w-5 h-5" />
+                )}
+                {passkeyLoading ? "Waiting for passkey…" : "Sign in with Passkey"}
+              </button>
+              <p className="text-center text-[10px] mt-1.5" style={{ color: "hsl(215 15% 60%)" }}>
+                Enter your username above · then use Face ID, fingerprint, or security key
+              </p>
             </div>
 
             <div className="relative flex items-center gap-3 my-4">

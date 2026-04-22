@@ -16,7 +16,7 @@ import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { PasswordChangeDialog } from "@/components/password-change-dialog";
 import { PLATFORM_SUPPORT_EMAIL } from "@/lib/platform-config";
 import { Button } from "@/components/ui/button";
-import { LogOut, Loader2, MessageCircle, Building2, LayoutGrid, User, Clock, XCircle, Shield } from "lucide-react";
+import { LogOut, Loader2, MessageCircle, Building2, LayoutGrid, User, Clock, XCircle, Shield, Fingerprint } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import {
@@ -39,6 +39,7 @@ import { QuickAccessBar } from "@/components/quick-access-bar";
 import { SessionTimeoutDialog } from "@/components/session-timeout-dialog";
 import { AppFooter } from "@/components/app-footer";
 import { MfaSetupDialog } from "@/components/mfa-setup";
+import { useToast } from "@/hooks/use-toast";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -294,6 +295,33 @@ function AuthenticatedApp() {
   const [chatbotOpen, setChatbotOpen] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
   const [mfaOpen, setMfaOpen] = useState(false);
+  const [passkeyRegistering, setPasskeyRegistering] = useState(false);
+
+  const handleRegisterPasskey = async () => {
+    setPasskeyRegistering(true);
+    try {
+      const optRes = await apiRequest("POST", "/api/auth/webauthn/register-options");
+      const options = await optRes.json();
+      const { startRegistration } = await import("@simplewebauthn/browser");
+      const credential = await startRegistration({ optionsJSON: options });
+      const verRes = await apiRequest("POST", "/api/auth/webauthn/register-verify", credential);
+      if (!verRes.ok) {
+        const err = await verRes.json();
+        throw new Error(err.message || "Registration failed");
+      }
+      const result = await verRes.json();
+      toast({ title: "Passkey registered!", description: `Device passkey (${result.deviceType || "single-device"}) saved. You can now sign in with your fingerprint or face.` });
+    } catch (e: any) {
+      if (e.name === "NotAllowedError") {
+        toast({ title: "Cancelled", description: "Passkey setup was dismissed.", variant: "destructive" });
+      } else {
+        toast({ title: "Passkey setup failed", description: e.message || "Please try again.", variant: "destructive" });
+      }
+    } finally {
+      setPasskeyRegistering(false);
+    }
+  };
+  const { toast } = useToast();
   const { t, i18n } = useTranslation();
   const countryTheme = useCountryTheme();
   const [rawPath, navigate] = useLocation();
@@ -518,6 +546,15 @@ function AuthenticatedApp() {
                       <Shield className="w-4 h-4" />
                       {(user as any).mfaEnabled ? "Manage MFA" : "Enable MFA"}
                     </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="gap-2"
+                      onClick={handleRegisterPasskey}
+                      disabled={passkeyRegistering}
+                      data-testid="button-mobile-passkey"
+                    >
+                      <Fingerprint className="w-4 h-4" />
+                      {passkeyRegistering ? "Setting up…" : "Register Passkey"}
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="gap-2 text-destructive focus:text-destructive"
@@ -587,6 +624,16 @@ function AuthenticatedApp() {
               >
                 <Shield className="w-4 h-4" />
                 {(user as any).mfaEnabled ? "MFA On" : "Enable MFA"}
+              </Button>
+              <Button
+                variant="outline"
+                className="h-10 gap-2 shrink-0"
+                onClick={handleRegisterPasskey}
+                disabled={passkeyRegistering}
+                data-testid="button-passkey-register"
+              >
+                <Fingerprint className="w-4 h-4" />
+                {passkeyRegistering ? "Setting up…" : "Passkey"}
               </Button>
               <Button
                 variant="destructive"
