@@ -223,15 +223,24 @@ export default function DocumentationPage() {
               <div
                 className="prose prose-sm dark:prose-invert max-w-none
                   prose-headings:font-semibold
-                  prose-h1:text-xl prose-h1:mb-4 prose-h1:text-primary
-                  prose-h2:text-lg prose-h2:mt-8 prose-h2:mb-3 prose-h2:text-primary prose-h2:border-b prose-h2:pb-2
-                  prose-h3:text-base prose-h3:mt-6 prose-h3:mb-2
-                  prose-table:text-xs
-                  prose-th:bg-muted prose-th:px-2 sm:prose-th:px-3 prose-th:py-2
-                  prose-td:px-2 sm:prose-td:px-3 prose-td:py-1.5
-                  prose-code:text-[10px] sm:prose-code:text-xs prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded
-                  prose-pre:bg-muted prose-pre:text-[10px] sm:prose-pre:text-xs prose-pre:overflow-x-auto
-                  [&_table]:block [&_table]:overflow-x-auto [&_table]:w-full [&_table]:whitespace-nowrap sm:[&_table]:whitespace-normal"
+                  prose-h1:text-xl prose-h1:mb-6 prose-h1:text-primary prose-h1:border-b prose-h1:pb-3
+                  prose-h2:text-sm prose-h2:mt-8 prose-h2:mb-3 prose-h2:text-primary prose-h2:border-b prose-h2:pb-2 prose-h2:font-bold prose-h2:uppercase prose-h2:tracking-wide
+                  prose-h3:text-sm prose-h3:mt-5 prose-h3:mb-2 prose-h3:font-semibold
+                  prose-p:text-sm prose-p:leading-relaxed
+                  prose-li:text-sm prose-li:leading-relaxed
+                  prose-strong:font-semibold prose-strong:text-foreground
+                  prose-a:text-primary prose-a:no-underline hover:prose-a:underline
+                  prose-code:text-[10px] prose-code:font-mono prose-code:bg-muted/80 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:break-words prose-code:text-primary/80 prose-code:border prose-code:border-border/40
+                  prose-pre:bg-muted prose-pre:rounded-lg prose-pre:border prose-pre:border-border/40 prose-pre:text-[10px] sm:prose-pre:text-xs prose-pre:overflow-x-auto
+                  [&_hr]:border-border/30 [&_hr]:my-6
+                  [&_blockquote]:border-l-4 [&_blockquote]:border-primary/40 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-muted-foreground [&_blockquote]:bg-muted/20 [&_blockquote]:py-2 [&_blockquote]:rounded-r
+                  [&_table]:block [&_table]:overflow-x-auto [&_table]:w-full [&_table]:border-collapse [&_table]:text-xs [&_table]:my-4 [&_table]:rounded-lg [&_table]:border [&_table]:border-border/50
+                  [&_thead]:bg-muted/80
+                  [&_th]:text-left [&_th]:font-semibold [&_th]:text-[11px] [&_th]:uppercase [&_th]:tracking-wide [&_th]:px-3 [&_th]:py-2.5 [&_th]:border [&_th]:border-border/40 [&_th]:whitespace-nowrap [&_th]:text-muted-foreground
+                  [&_tbody_tr]:border-b [&_tbody_tr]:border-border/20 [&_tbody_tr]:transition-colors [&_tbody_tr:hover]:bg-muted/30
+                  [&_td]:px-3 [&_td]:py-2.5 [&_td]:align-top [&_td]:border [&_td]:border-border/20 [&_td]:text-xs [&_td]:leading-snug
+                  [&_td_code]:text-[10px] [&_td_code]:font-mono [&_td_code]:bg-muted [&_td_code]:px-1 [&_td_code]:py-0.5 [&_td_code]:rounded [&_td_code]:break-all [&_td_code]:text-primary/80 [&_td_code]:border [&_td_code]:border-border/30
+                  [&_td:first-child]:font-mono [&_td:first-child]:font-semibold [&_td:first-child]:text-primary [&_td:first-child]:whitespace-nowrap [&_td:first-child]:text-[11px]"
                 dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(docHtml) }}
                 data-testid="doc-content"
               />

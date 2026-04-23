@@ -720,26 +720,26 @@ export default function OnlineManualPage() {
             <h2 className="text-lg font-semibold" data-testid="text-role-access-title">{t("help.roleAccess")}</h2>
           </div>
           <p className="text-sm text-muted-foreground">{t("help.roleAccessDesc")}</p>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm" data-testid="table-role-access">
+          <div className="overflow-x-auto rounded-lg border border-border/50">
+            <table className="w-full text-sm border-collapse" data-testid="table-role-access">
               <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2 pr-4 font-medium">{t("help.module")}</th>
-                  <th className="text-center py-2 px-2 font-medium">Super Admin</th>
-                  <th className="text-center py-2 px-2 font-medium">Admin</th>
-                  <th className="text-center py-2 px-2 font-medium">Regulator</th>
-                  <th className="text-center py-2 px-2 font-medium">Lender</th>
-                  <th className="text-center py-2 px-2 font-medium">Viewer</th>
+                <tr className="bg-muted/70 border-b-2 border-border/50">
+                  <th className="text-left py-3 px-4 font-semibold text-xs uppercase tracking-wide text-muted-foreground">{t("help.module")}</th>
+                  <th className="text-center py-3 px-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Super Admin</th>
+                  <th className="text-center py-3 px-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Admin</th>
+                  <th className="text-center py-3 px-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Regulator</th>
+                  <th className="text-center py-3 px-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Lender</th>
+                  <th className="text-center py-3 px-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Viewer</th>
                 </tr>
               </thead>
               <tbody>
                 <TooltipProvider delayDuration={200}>
-                {roleAccessMatrix.map((row) => (
-                  <tr key={row.moduleKey} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                    <td className="py-2 pr-4">
+                {roleAccessMatrix.map((row, idx) => (
+                  <tr key={row.moduleKey} className={`border-b border-border/20 last:border-0 hover:bg-primary/5 transition-colors ${idx % 2 === 1 ? "bg-muted/20" : ""}`}>
+                    <td className="py-2.5 px-4 font-medium text-sm">
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <span className="flex items-center gap-1.5 text-muted-foreground cursor-default group w-fit">
+                          <span className="flex items-center gap-1.5 cursor-default group w-fit">
                             {t(`manual.roleModule.${row.moduleKey}`, row.moduleKey)}
                             <Info className="w-3 h-3 text-muted-foreground/40 group-hover:text-primary transition-colors shrink-0" />
                           </span>
@@ -749,11 +749,11 @@ export default function OnlineManualPage() {
                         </TooltipContent>
                       </Tooltip>
                     </td>
-                    <td className="text-center py-2 px-2">{row.super_admin ? "\u2713" : "\u2014"}</td>
-                    <td className="text-center py-2 px-2">{row.admin ? "\u2713" : "\u2014"}</td>
-                    <td className="text-center py-2 px-2">{row.regulator ? "\u2713" : "\u2014"}</td>
-                    <td className="text-center py-2 px-2">{row.lender ? "\u2713" : "\u2014"}</td>
-                    <td className="text-center py-2 px-2">{row.viewer ? "\u2713" : "\u2014"}</td>
+                    <td className="text-center py-2.5 px-3 text-base">{row.super_admin ? <span className="text-emerald-600 dark:text-emerald-400 font-bold">✓</span> : <span className="text-muted-foreground/40">—</span>}</td>
+                    <td className="text-center py-2.5 px-3 text-base">{row.admin ? <span className="text-emerald-600 dark:text-emerald-400 font-bold">✓</span> : <span className="text-muted-foreground/40">—</span>}</td>
+                    <td className="text-center py-2.5 px-3 text-base">{row.regulator ? <span className="text-emerald-600 dark:text-emerald-400 font-bold">✓</span> : <span className="text-muted-foreground/40">—</span>}</td>
+                    <td className="text-center py-2.5 px-3 text-base">{row.lender ? <span className="text-emerald-600 dark:text-emerald-400 font-bold">✓</span> : <span className="text-muted-foreground/40">—</span>}</td>
+                    <td className="text-center py-2.5 px-3 text-base">{row.viewer ? <span className="text-emerald-600 dark:text-emerald-400 font-bold">✓</span> : <span className="text-muted-foreground/40">—</span>}</td>
                   </tr>
                 ))}
                 </TooltipProvider>
