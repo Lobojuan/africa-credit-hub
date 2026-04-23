@@ -590,7 +590,7 @@ export default function CreditReportPage() {
           </Button>
           <div>
             <h1 className="text-xl font-bold tracking-tight" data-testid="text-report-title">Comprehensive Credit Information Report</h1>
-            <p className="text-sm text-muted-foreground">Generate a detailed credit report (D&B format)</p>
+            <p className="text-sm text-muted-foreground">Generate a comprehensive credit information report</p>
           </div>
         </div>
       </div>
@@ -631,22 +631,6 @@ export default function CreditReportPage() {
                     {includeAI ? (
                       <span className="flex items-center gap-1"><Brain className="w-3 h-3 text-purple-500" /> ML Score + AI Risk + Narrative</span>
                     ) : "Bureau data only (faster)"}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium">XDS Ghana Bureau</span>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={includeXds}
-                    onClick={() => setIncludeXds(!includeXds)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${includeXds ? "bg-green-600" : "bg-gray-300 dark:bg-gray-600"}`}
-                    data-testid="toggle-include-xds"
-                  >
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${includeXds ? "translate-x-6" : "translate-x-1"}`} />
-                  </button>
-                  <span className="text-xs text-muted-foreground">
-                    {includeXds ? "XDS Data Ghana credit bureau check included" : "Skip XDS Ghana bureau (Ghana borrowers only)"}
                   </span>
                 </div>
               </div>
@@ -1924,7 +1908,7 @@ export default function CreditReportPage() {
                         <p className="text-[8px] text-muted-foreground print:text-[6px]">Range 300–850</p>
                       </div>
                       <div className="bg-purple-50 dark:bg-purple-950/30 rounded-lg p-3 print:p-1 text-center border border-purple-200 dark:border-purple-800">
-                        <p className="text-[9px] text-purple-600 dark:text-purple-400 font-medium uppercase print:text-[7px]">Bureau Score</p>
+                        <p className="text-[9px] text-purple-600 dark:text-purple-400 font-medium uppercase print:text-[7px]">Registry Score</p>
                         <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 print:text-lg" data-testid="text-bureau-score-comparison">{report.summary.creditScore}</p>
                         <p className="text-[8px] text-muted-foreground print:text-[6px]">Traditional Model</p>
                       </div>

@@ -315,7 +315,7 @@ export default function BusinessCreditReportPage() {
           </Button>
           <div>
             <h1 className="text-xl font-bold tracking-tight" data-testid="text-business-report-title">Business Credit Report</h1>
-            <p className="text-sm text-muted-foreground">Comprehensive commercial credit information report (D&B format)</p>
+            <p className="text-sm text-muted-foreground">Comprehensive commercial credit information report</p>
           </div>
         </div>
       </div>
@@ -1100,7 +1100,7 @@ export default function BusinessCreditReportPage() {
                         <p className="text-[8px] text-muted-foreground print:text-[6px]">Range 300–850</p>
                       </div>
                       <div className="bg-purple-50 dark:bg-purple-950/30 rounded-lg p-3 print:p-1 text-center border border-purple-200 dark:border-purple-800">
-                        <p className="text-[9px] text-purple-600 dark:text-purple-400 font-medium uppercase print:text-[7px]">Bureau Score</p>
+                        <p className="text-[9px] text-purple-600 dark:text-purple-400 font-medium uppercase print:text-[7px]">Registry Score</p>
                         <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 print:text-lg" data-testid="text-biz-bureau-compare">{report.summary.creditScore}</p>
                         <p className="text-[8px] text-muted-foreground print:text-[6px]">Traditional Model</p>
                       </div>

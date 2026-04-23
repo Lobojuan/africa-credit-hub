@@ -3369,10 +3369,20 @@ export async function registerRoutes(
     const nationalId = record.nationalId || record.borrowerId;
     if (!nationalId) throw new Error("No nationalId or borrowerId to identify borrower");
 
-    const existing = await db.select({ id: borrowers.id })
+    // First try matching by nationalId
+    let existing = await db.select({ id: borrowers.id })
       .from(borrowers)
       .where(eq(borrowers.nationalId, nationalId))
       .limit(1);
+
+    // Fallback: if borrowerId looks like a UUID, try matching by actual borrower primary key
+    if (existing.length === 0 && /^[0-9a-f-]{36}$/i.test(nationalId)) {
+      const byPk = await db.select({ id: borrowers.id })
+        .from(borrowers)
+        .where(eq(borrowers.id, nationalId))
+        .limit(1);
+      if (byPk.length > 0) return byPk[0].id;
+    }
 
     if (existing.length > 0) {
       const updateData: any = {};
