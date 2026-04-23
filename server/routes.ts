@@ -3389,6 +3389,9 @@ export async function registerRoutes(
   ): Promise<string> {
     const nationalId = record.nationalId || record.borrowerId;
     if (!nationalId) throw new Error("No nationalId or borrowerId to identify borrower");
+    if (!isValidMappingId(nationalId)) {
+      throw new Error(`Invalid mapping ID "${nationalId}" — record must be resubmitted with a valid national ID`);
+    }
 
     // First try matching by nationalId
     let existing = await db.select({ id: borrowers.id })
@@ -3438,7 +3441,7 @@ export async function registerRoutes(
 
   async function batchInsertCreditAccounts(
     validated: Array<{ index: number; data: any; rawRecord?: any }>,
-    results: { successCount: number; errorCount: number; updatedCount?: number; errors: Array<{ index: number; message: string }> },
+    results: { successCount: number; errorCount: number; updatedCount?: number; rejectedCount?: number; errors: Array<{ index: number; message: string; type?: string }> },
     orgId?: string
   ) {
     if (!results.updatedCount) results.updatedCount = 0;
@@ -3518,6 +3521,14 @@ export async function registerRoutes(
   }
 
   const BATCH_REQUIRED_BORROWER_FIELDS = ["borrowerName", "dateOfBirth", "address", "nationalId", "phoneNumber", "reportingDate"];
+
+  function isValidMappingId(id: string | null | undefined): boolean {
+    if (!id || String(id).trim().length === 0) return false;
+    const s = String(id).trim();
+    if (s.length < 5) return false;
+    if (/^(BOG|BATCH|LB|IFF|XBRL|UNKNOWN|N\/A|NA|NONE|NULL|GHOST)-?\d*/i.test(s)) return false;
+    return true;
+  }
 
   function validateBatchRequiredFields(record: any, index: number, fieldList?: string[]): string[] {
     const fields = fieldList || BATCH_REQUIRED_BORROWER_FIELDS;
@@ -3744,7 +3755,6 @@ export async function registerRoutes(
           };
           record.accountType = facilityMap[record.facilityTypeCode] || "Other";
         }
-        if (!record.borrowerId) record.borrowerId = record.nationalId || `BOG-${i}`;
         if (!record.borrowerName) record.borrowerName = record.nationalId || "Unknown";
         if (!record.lenderInstitution) record.lenderInstitution = "Unknown";
         if (!record.creditCategory && record.accountType) {
@@ -3754,38 +3764,48 @@ export async function registerRoutes(
         records.push(record);
       }
 
+      const totalDataRows = records.length;
       const results = {
-        totalSubmitted: records.length,
+        totalSubmitted: totalDataRows,
         successCount: 0,
+        rejectedCount: 0,
         errorCount: 0,
-        errors: [] as Array<{ index: number; message: string }>,
+        errors: [] as Array<{ index: number; message: string; type?: string }>,
       };
 
       const validated: Array<{ index: number; data: any; rawRecord?: any }> = [];
       for (let i = 0; i < records.length; i++) {
+        if (!isValidMappingId(records[i].nationalId)) {
+          results.rejectedCount++;
+          results.errorCount++;
+          results.errors.push({ index: i, message: `[REJECTED] Ghana Card (GhanaCardNo) is missing or invalid (got: "${records[i].nationalId || ""}"). Resubmit with a valid Ghana Card Number.`, type: "rejected" });
+          continue;
+        }
+        records[i].borrowerId = records[i].nationalId;
         const missingFields = validateBatchRequiredFields(records[i], i);
         if (missingFields.length > 0) {
           results.errorCount++;
-          results.errors.push({ index: i, message: `Missing required fields: ${missingFields.join(", ")}` });
+          results.errors.push({ index: i, message: `[ERROR] Missing required fields: ${missingFields.join(", ")}`, type: "error" });
           continue;
         }
         try {
           validated.push({ index: i, data: insertCreditAccountSchema.parse(records[i]), rawRecord: records[i] });
         } catch (err: any) {
           results.errorCount++;
-          results.errors.push({ index: i, message: err.message || "Validation failed" });
+          results.errors.push({ index: i, message: `[ERROR] ${err.message || "Validation failed"}`, type: "error" });
         }
       }
       await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
 
-      const bogMeta = JSON.stringify({ totalRecords: results.totalSubmitted, successCount: results.successCount, updatedCount: results.updatedCount || 0, errorCount: results.errorCount, errors: results.errors.slice(0, 50) });
+      const processedCount = results.successCount;
+      const bogMeta = JSON.stringify({ totalSubmitted: results.totalSubmitted, processedCount, successCount: results.successCount, updatedCount: results.updatedCount || 0, rejectedCount: results.rejectedCount, errorCount: results.errorCount, errors: results.errors.slice(0, 100) });
       await storage.createAuditLog({
         action: "BATCH_UPLOAD_BOG", entity: "credit_account", userId: req.session?.userId,
-        details: `BoG pipe-delimited upload: ${results.successCount} succeeded (${results.updatedCount || 0} updated), ${results.errorCount} failed out of ${results.totalSubmitted}\n---JSON---\n${bogMeta}`,
+        details: `BoG pipe-delimited upload: ${results.successCount} processed (${results.updatedCount || 0} updated), ${results.rejectedCount} rejected, ${results.errorCount - results.rejectedCount} errors, out of ${results.totalSubmitted} submitted\n---JSON---\n${bogMeta}`,
         ipAddress: req.ip || null,
       });
 
-      res.json(results);
+      res.json({ ...results, processedCount });
     } catch (e: any) {
       res.status(400).json({ message: e.message });
     }
@@ -4069,8 +4089,6 @@ export async function registerRoutes(
         // Defaults & fill-ins
         if (!r.accountNumber) r.accountNumber = `LB-${instType.toUpperCase().slice(0,3)}-${i}`;
         if (!r.borrowerName) r.borrowerName = "Unknown";
-        if (!r.nationalId) r.nationalId = r.accountNumber;
-        if (!r.borrowerId) r.borrowerId = r.nationalId;
         if (!r.status) r.status = "current";
         if (!r.daysInArrears) r.daysInArrears = 0;
         if (!r.originalAmount) r.originalAmount = r.currentBalance || 0;
@@ -4091,29 +4109,38 @@ export async function registerRoutes(
         totalSubmitted: records.length,
         successCount: 0,
         updatedCount: 0,
+        rejectedCount: 0,
         errorCount: 0,
-        errors: [] as Array<{ index: number; message: string }>,
+        errors: [] as Array<{ index: number; message: string; type?: string }>,
       };
 
       const validated: Array<{ index: number; data: any; rawRecord?: any }> = [];
       for (let i = 0; i < records.length; i++) {
+        if (!isValidMappingId(records[i].nationalId)) {
+          results.rejectedCount++;
+          results.errorCount++;
+          results.errors.push({ index: i, message: `[REJECTED] National ID is missing or invalid (got: "${records[i].nationalId || ""}"). Resubmit with a valid National ID.`, type: "rejected" });
+          continue;
+        }
+        records[i].borrowerId = records[i].nationalId;
         try {
           validated.push({ index: i, data: insertCreditAccountSchema.parse(records[i]), rawRecord: records[i] });
         } catch (err: any) {
           results.errorCount++;
-          results.errors.push({ index: i, message: err.message || "Validation failed" });
+          results.errors.push({ index: i, message: `[ERROR] ${err.message || "Validation failed"}`, type: "error" });
         }
       }
       await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
 
-      const lbMeta = JSON.stringify({ institutionType: instType, lenderInstitution: lender, totalRecords: results.totalSubmitted, successCount: results.successCount, updatedCount: results.updatedCount, errorCount: results.errorCount, errors: results.errors.slice(0, 50) });
+      const processedCount = results.successCount;
+      const lbMeta = JSON.stringify({ institutionType: instType, lenderInstitution: lender, totalSubmitted: results.totalSubmitted, processedCount, successCount: results.successCount, updatedCount: results.updatedCount, rejectedCount: results.rejectedCount, errorCount: results.errorCount, errors: results.errors.slice(0, 100) });
       await storage.createAuditLog({
         action: "BATCH_UPLOAD_LIBERIA_CRS", entity: "credit_account", userId: req.session?.userId,
-        details: `Liberia CRS upload (${instType}): ${results.successCount} succeeded (${results.updatedCount} updated), ${results.errorCount} failed out of ${results.totalSubmitted}\n---JSON---\n${lbMeta}`,
+        details: `Liberia CRS upload (${instType}): ${results.successCount} processed (${results.updatedCount} updated), ${results.rejectedCount} rejected, ${results.errorCount - results.rejectedCount} errors, out of ${results.totalSubmitted} submitted\n---JSON---\n${lbMeta}`,
         ipAddress: req.ip || null,
       });
 
-      res.json(results);
+      res.json({ ...results, processedCount });
     } catch (e: any) {
       res.status(400).json({ message: e.message });
     }

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, decimal, boolean, timestamp, pgEnum, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, decimal, boolean, timestamp, pgEnum, jsonb, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -228,7 +228,9 @@ export const creditAccounts = pgTable("credit_accounts", {
   organizationId: varchar("organization_id").references(() => organizations.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  accountBorrowerUnique: unique("ca_account_borrower_unique").on(table.accountNumber, table.borrowerId),
+}));
 
 export const guarantors = pgTable("guarantors", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

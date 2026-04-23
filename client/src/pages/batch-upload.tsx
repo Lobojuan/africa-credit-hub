@@ -18,8 +18,10 @@ interface BatchResult {
   totalSubmitted: number;
   successCount: number;
   updatedCount?: number;
+  rejectedCount?: number;
+  processedCount?: number;
   errorCount: number;
-  errors: Array<{ index: number; message: string }>;
+  errors: Array<{ index: number; message: string; type?: string }>;
 }
 
 interface ValidationRow {
@@ -703,6 +705,9 @@ export default function BatchUploadPage() {
 
   const renderResultCard = (testIdPrefix: string = "") => {
     if (!result) return null;
+    const hasRejected = (result.rejectedCount ?? 0) > 0;
+    const hasUpdated = (result.updatedCount ?? 0) > 0;
+    const colCount = [true, true, hasUpdated, hasRejected, true].filter(Boolean).length;
     return (
       <Card>
         <CardHeader className="pb-3">
@@ -716,24 +721,30 @@ export default function BatchUploadPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className={`grid ${(result.updatedCount && result.updatedCount > 0) ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'} gap-3 mb-4`}>
+          <div className={`grid grid-cols-2 sm:grid-cols-${Math.min(colCount, 5)} gap-3 mb-4`}>
             <div className="text-center p-3 bg-muted rounded-md">
               <p className="text-lg font-bold" data-testid={`text-total-submitted${testIdPrefix}`}>{result.totalSubmitted}</p>
-              <p className="text-xs text-muted-foreground">{t('batchUpload.submitted')}</p>
+              <p className="text-xs text-muted-foreground">Submitted</p>
             </div>
             <div className="text-center p-3 bg-green-500/10 rounded-md">
-              <p className="text-lg font-bold text-green-600 dark:text-green-400" data-testid={`text-success-count${testIdPrefix}`}>{(result.updatedCount && result.updatedCount > 0) ? result.successCount - result.updatedCount : result.successCount}</p>
-              <p className="text-xs text-muted-foreground">{(result.updatedCount && result.updatedCount > 0) ? 'Created' : t('batchUpload.succeeded')}</p>
+              <p className="text-lg font-bold text-green-600 dark:text-green-400" data-testid={`text-success-count${testIdPrefix}`}>{hasUpdated ? (result.successCount - (result.updatedCount ?? 0)) : result.successCount}</p>
+              <p className="text-xs text-muted-foreground">{hasUpdated ? 'Created' : 'Processed'}</p>
             </div>
-            {(result.updatedCount !== undefined && result.updatedCount > 0) && (
+            {hasUpdated && (
               <div className="text-center p-3 bg-blue-500/10 rounded-md">
                 <p className="text-lg font-bold text-blue-600 dark:text-blue-400" data-testid={`text-updated-count${testIdPrefix}`}>{result.updatedCount}</p>
                 <p className="text-xs text-muted-foreground">Updated</p>
               </div>
             )}
+            {hasRejected && (
+              <div className="text-center p-3 bg-amber-500/10 rounded-md">
+                <p className="text-lg font-bold text-amber-600 dark:text-amber-400" data-testid={`text-rejected-count${testIdPrefix}`}>{result.rejectedCount}</p>
+                <p className="text-xs text-muted-foreground">Rejected</p>
+              </div>
+            )}
             <div className="text-center p-3 bg-red-500/10 rounded-md">
-              <p className="text-lg font-bold text-red-600 dark:text-red-400" data-testid={`text-error-count${testIdPrefix}`}>{result.errorCount}</p>
-              <p className="text-xs text-muted-foreground">{t('batchUpload.failed')}</p>
+              <p className="text-lg font-bold text-red-600 dark:text-red-400" data-testid={`text-error-count${testIdPrefix}`}>{result.errorCount - (result.rejectedCount ?? 0)}</p>
+              <p className="text-xs text-muted-foreground">Errors</p>
             </div>
           </div>
           {result.errors.length > 0 && (
@@ -747,9 +758,9 @@ export default function BatchUploadPage() {
                 </TableHeader>
                 <TableBody>
                   {result.errors.map((err, i) => (
-                    <TableRow key={i}>
+                    <TableRow key={i} className={err.type === "rejected" ? "bg-amber-50 dark:bg-amber-950/20" : undefined}>
                       <TableCell className="text-sm font-mono">{err.index + 1}</TableCell>
-                      <TableCell className="text-xs text-destructive">{err.message}</TableCell>
+                      <TableCell className={`text-xs ${err.type === "rejected" ? "text-amber-700 dark:text-amber-400" : "text-destructive"}`}>{err.message}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
