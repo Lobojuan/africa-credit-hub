@@ -249,6 +249,9 @@ export default function BatchUploadPage() {
   const [csvInput, setCsvInput] = useState("");
   const [xbrlInput, setXbrlInput] = useState("");
   const [bogInput, setBogInput] = useState("");
+  const [lbcrsInput, setLbcrsInput] = useState("");
+  const [lbcrsInstitutionType, setLbcrsInstitutionType] = useState("commercial_bank_loans");
+  const [lbcrsLenderName, setLbcrsLenderName] = useState("");
   const [uploadTab, setUploadTab] = useState("csv");
   const [result, setResult] = useState<BatchResult | null>(null);
   const [csvValidation, setCsvValidation] = useState<ValidationRow[] | null>(null);
@@ -267,6 +270,7 @@ export default function BatchUploadPage() {
   const jsonFileRef = useRef<HTMLInputElement>(null);
   const xbrlFileRef = useRef<HTMLInputElement>(null);
   const bogFileRef = useRef<HTMLInputElement>(null);
+  const lbcrsFileRef = useRef<HTMLInputElement>(null);
   const iffFileRef = useRef<HTMLInputElement>(null);
 
   const historyQuery = useQuery<UploadHistoryItem[]>({
@@ -338,6 +342,26 @@ export default function BatchUploadPage() {
   const bogUploadMutation = useMutation({
     mutationFn: async (pipeData: string) => {
       const res = await apiRequest("POST", "/api/batch-upload/bog-pipe", { data: pipeData });
+      return res.json() as Promise<BatchResult>;
+    },
+    onSuccess: (data) => {
+      setResult(data);
+      queryClient.invalidateQueries({ queryKey: ["/api/credit-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/batch-upload/history"] });
+      toast({
+        title: t('batchUpload.complete'),
+        description: t('batchUpload.completeDesc', { success: data.successCount, errors: data.errorCount }),
+      });
+    },
+    onError: (e: Error) => {
+      toast({ title: t('batchUpload.uploadFailed'), description: e.message, variant: "destructive" });
+    },
+  });
+
+  const lbcrsUploadMutation = useMutation({
+    mutationFn: async ({ csvData, institutionType, lenderInstitution }: { csvData: string; institutionType: string; lenderInstitution: string }) => {
+      const res = await apiRequest("POST", "/api/batch-upload/liberia-crs", { csvData, institutionType, lenderInstitution });
       return res.json() as Promise<BatchResult>;
     },
     onSuccess: (data) => {
@@ -492,6 +516,16 @@ export default function BatchUploadPage() {
     bogUploadMutation.mutate(bogInput);
   };
 
+  const handleLbcrsSubmit = () => {
+    if (!lbcrsInput.trim()) return;
+    setResult(null);
+    lbcrsUploadMutation.mutate({
+      csvData: lbcrsInput,
+      institutionType: lbcrsInstitutionType,
+      lenderInstitution: lbcrsLenderName.trim() || "Unknown",
+    });
+  };
+
   const handleFileDrop = useCallback((e: React.DragEvent, tab: string) => {
     e.preventDefault();
     setDragOver(null);
@@ -505,6 +539,7 @@ export default function BatchUploadPage() {
       else if (tab === "json") setJsonInput(text);
       else if (tab === "xbrl") setXbrlInput(text);
       else if (tab === "bog") setBogInput(text);
+      else if (tab === "lbcrs") setLbcrsInput(text);
     };
     reader.readAsText(file);
   }, []);
@@ -520,6 +555,7 @@ export default function BatchUploadPage() {
       else if (tab === "json") setJsonInput(text);
       else if (tab === "xbrl") setXbrlInput(text);
       else if (tab === "bog") setBogInput(text);
+      else if (tab === "lbcrs") setLbcrsInput(text);
     };
     reader.readAsText(file);
   }, []);
@@ -557,6 +593,7 @@ export default function BatchUploadPage() {
     else if (tab === "json") { setJsonInput(""); setJsonValidation(null); }
     else if (tab === "xbrl") setXbrlInput("");
     else if (tab === "bog") setBogInput("");
+    else if (tab === "lbcrs") setLbcrsInput("");
   };
 
   const renderDropZone = (tab: string, accept: string, icon: any, label: string, sublabel: string, fileRef: React.RefObject<HTMLInputElement>) => {
@@ -771,6 +808,7 @@ export default function BatchUploadPage() {
           {ghanaMode && (
             <TabsTrigger value="bog" data-testid="tab-bog"><Database className="w-3.5 h-3.5 mr-1.5" /> BoG Format</TabsTrigger>
           )}
+          <TabsTrigger value="lbcrs" data-testid="tab-lbcrs"><Globe className="w-3.5 h-3.5 mr-1.5" /> Liberia CRS</TabsTrigger>
           <TabsTrigger value="history" data-testid="tab-history"><Clock className="w-3.5 h-3.5 mr-1.5" /> History</TabsTrigger>
         </TabsList>
 
@@ -1295,6 +1333,136 @@ export default function BatchUploadPage() {
             </div>
           </TabsContent>
         )}
+
+        <TabsContent value="lbcrs">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-muted-foreground" />
+                  <h3 className="font-semibold text-sm">Liberia CRS Upload</h3>
+                </div>
+                <p className="text-[11px] text-muted-foreground">Central Bank of Liberia Credit Registry Submission format — CSV with LRD/USD amounts</p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Institution Type</Label>
+                    <Select value={lbcrsInstitutionType} onValueChange={setLbcrsInstitutionType}>
+                      <SelectTrigger data-testid="select-lbcrs-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="commercial_bank_loans">Commercial Bank — Loans &amp; Advances (L$)</SelectItem>
+                        <SelectItem value="commercial_bank_overdraft">Commercial Bank — Overdraft (L$)</SelectItem>
+                        <SelectItem value="nbfi_finance">Non-Bank Finance Company (LRD)</SelectItem>
+                        <SelectItem value="nbfi_mfi">Non-Bank MFI</SelectItem>
+                        <SelectItem value="nbfi_usd">Non-Bank Finance Company (USD)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Reporting Institution Name</Label>
+                    <input
+                      type="text"
+                      value={lbcrsLenderName}
+                      onChange={(e) => setLbcrsLenderName(e.target.value)}
+                      placeholder="e.g. Liberia Bank for Development"
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      data-testid="input-lbcrs-lender"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { label: "Loans Template", fmt: "liberia-crs-loans" },
+                    { label: "Overdraft Template", fmt: "liberia-crs-overdraft" },
+                    { label: "NBFI Template", fmt: "liberia-crs-nbfi" },
+                    { label: "MFI Template", fmt: "liberia-crs-mfi" },
+                    { label: "NBFI USD Template", fmt: "liberia-crs-nbfi-usd" },
+                  ].map(({ label, fmt }) => (
+                    <Button key={fmt} variant="outline" size="sm" className="text-[10px] h-7" onClick={() => downloadTemplate(fmt)} data-testid={`button-dl-${fmt}`}>
+                      <Download className="w-3 h-3 mr-1" /> {label}
+                    </Button>
+                  ))}
+                </div>
+
+                {renderDropZone("lbcrs", ".csv,.txt", FileSpreadsheet, "Upload Liberia CRS CSV File", "Comma-delimited CSV (.csv, .txt)", lbcrsFileRef)}
+
+                <div className="relative">
+                  <p className="text-xs text-muted-foreground mb-1">Or paste CSV data directly</p>
+                  <Textarea
+                    data-testid="input-batch-lbcrs"
+                    value={lbcrsInput}
+                    onChange={(e) => setLbcrsInput(e.target.value)}
+                    placeholder="Account Number,Tax Identification Number (TIN),Name of Borrower,..."
+                    rows={10}
+                    className="font-mono text-xs"
+                  />
+                </div>
+
+                <Button
+                  className="w-full"
+                  onClick={handleLbcrsSubmit}
+                  disabled={lbcrsUploadMutation.isPending || !lbcrsInput.trim()}
+                  data-testid="button-submit-lbcrs"
+                >
+                  {lbcrsUploadMutation.isPending ? t('batchUpload.processing') : "Submit Liberia CRS Data"}
+                </Button>
+              </CardContent>
+            </Card>
+
+            <div className="space-y-4">
+              <Card>
+                <CardContent className="p-5 space-y-4">
+                  <h3 className="font-semibold text-sm">Liberia CRS Format Reference</h3>
+                  <div className="text-[11px] text-muted-foreground space-y-3">
+                    <p>The Liberia Credit Registry Submission (CRS) format is defined by the Central Bank of Liberia. Amounts in commercial bank formats are in <strong>L$'000</strong> (thousands of LRD) and will be multiplied by 1,000 on import. NBFI/MFI formats use full LRD/USD values.</p>
+
+                    <div className="border rounded-md divide-y text-[10px]">
+                      {[
+                        { type: "Commercial Bank — Loans", cols: ["Account Number", "TIN", "Name of Borrower", "Original Amount(L$'000)", "Granting Date", "Maturity Date", "Bank Classif", "Nominal Interest Rate (%)"] },
+                        { type: "Commercial Bank — Overdraft", cols: ["Account Number", "TIN", "Name of Borrower", "Principal Balance(L$'000)", "Bank Classification", "Nominal Interest Rate (%)"] },
+                        { type: "NBFI Finance (LRD)", cols: ["LOAN ID NO.", "CLIENT NAME", "LOCATION", "Principal/ORGINAL AMOUNT Granted (LRD)", "OUTSTANDING PRINCIPAL AMOUNT (LRD)", "NBFI's CLASSIFICATION"] },
+                        { type: "MFI", cols: ["NAME OF BORROWER", "AMOUNT CURRENTLY OUTSTANDING", "INTEREST IN ARREARS", "MFI CLASSIFICATION"] },
+                        { type: "NBFI Finance (USD)", cols: ["LOAN ID NO.", "CLIENT NAME", "Principal/ORGINAL AMOUNT Granted (USD)", "OUTSTANDING PRINCIPAL AMOUNT (USD)"] },
+                      ].map(({ type, cols }) => (
+                        <div key={type} className="px-3 py-2">
+                          <p className="font-semibold text-foreground mb-1">{type}</p>
+                          <div className="flex flex-wrap gap-1">
+                            {cols.map(c => <Badge key={c} variant="outline" className="text-[9px] py-0">{c}</Badge>)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="border rounded-md px-3 py-2 space-y-1">
+                      <p className="font-semibold text-foreground text-[10px]">Classification Mapping</p>
+                      {[
+                        { cls: "Pass / Current", status: "current", days: "0" },
+                        { cls: "OLEM / Watch", status: "current", days: "31+" },
+                        { cls: "Substandard", status: "late", days: "91+" },
+                        { cls: "Doubtful", status: "late", days: "181+" },
+                        { cls: "Loss", status: "default", days: "365+" },
+                      ].map(({ cls, status, days }) => (
+                        <div key={cls} className="flex items-center justify-between">
+                          <span className="font-medium">{cls}</span>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className={`text-[9px] ${status === "current" ? "text-green-600 border-green-300" : status === "late" ? "text-yellow-600 border-yellow-300" : "text-red-600 border-red-300"}`}>{status}</Badge>
+                            <span className="text-muted-foreground">{days} days</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {renderResultCard("-lbcrs")}
+            </div>
+          </div>
+        </TabsContent>
 
         <TabsContent value="history">
           <Card>

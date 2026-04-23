@@ -3858,6 +3858,246 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/batch-upload/liberia-crs", batchLimiter, requireRole("admin", "lender"), async (req, res) => {
+    try {
+      const { csvData, institutionType, lenderInstitution } = req.body;
+      if (!csvData || typeof csvData !== "string") {
+        return res.status(400).json({ message: "Request body must contain a 'csvData' string" });
+      }
+      const instType: string = (institutionType || "commercial_bank_loans").toLowerCase();
+      const lender: string = lenderInstitution || "Unknown";
+
+      // ── helpers ────────────────────────────────────────────────────────────
+      function lbParseCSV(line: string): string[] {
+        const result: string[] = [];
+        let cur = "", inQ = false;
+        for (let i = 0; i < line.length; i++) {
+          const ch = line[i];
+          if (ch === '"') {
+            if (inQ && line[i + 1] === '"') { cur += '"'; i++; } else inQ = !inQ;
+          } else if (ch === ',' && !inQ) { result.push(cur.trim()); cur = ""; }
+          else cur += ch;
+        }
+        result.push(cur.trim());
+        return result;
+      }
+
+      function lbAmt(raw: string, inThousands = true): number {
+        const n = parseFloat((raw || "").replace(/[,\s$LRD]/gi, "")) || 0;
+        return inThousands ? n * 1000 : n;
+      }
+
+      function lbDate(s: string): string {
+        const t = (s || "").trim();
+        if (!t) return "";
+        if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
+        const m = t.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+        if (m) return `${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
+        return t;
+      }
+
+      function lbStatus(cls: string): string {
+        const c = (cls || "").toLowerCase();
+        if (c.includes("loss")) return "default";
+        if (c.includes("doubtful") || c.includes("substandard")) return "late";
+        return "current";
+      }
+
+      function lbDays(cls: string): number {
+        const c = (cls || "").toLowerCase();
+        if (c.includes("loss")) return 365;
+        if (c.includes("doubtful")) return 181;
+        if (c.includes("substandard")) return 91;
+        if (c.includes("olem") || c.includes("watch") || c.includes("mention")) return 31;
+        return 0;
+      }
+
+      // ── column maps ────────────────────────────────────────────────────────
+      const colMaps: Record<string, Record<string, string>> = {
+        commercial_bank_loans: {
+          "Account Number": "accountNumber",
+          "Tax Identification Number (TIN)": "nationalId",
+          "Name of Borrower": "borrowerName",
+          "Original Amount(L$'000)": "_origAmt",
+          "Granting Date": "disbursementDate",
+          "Maturity Date": "maturityDate",
+          "Payment Frequency": "repaymentFrequency",
+          "Principal Balance(L$'000)": "_balance",
+          "Bank Classif": "_classification",
+          "Nominal Interest Rate (%)": "interestRate",
+          "Type of Collateral": "collateralType",
+          "Value of Collateral(L$'000)": "_collValue",
+          "Sector": "purposeOfFacility",
+        },
+        commercial_bank_overdraft: {
+          "Account Number": "accountNumber",
+          "Tax Identification Number (TIN)": "nationalId",
+          "Name of Borrower": "borrowerName",
+          "Original Amount(L$'000)": "_origAmt",
+          "Granting Date": "disbursementDate",
+          "Maturity Date": "maturityDate",
+          "Principal Balance(L$'000)": "_balance",
+          "Bank Classification": "_classification",
+          "Nominal Interest Rate (%)": "interestRate",
+          "Type of Collateral": "collateralType",
+          "Value of Collateral(L$'000)": "_collValue",
+          "Sector": "purposeOfFacility",
+        },
+        nbfi_finance: {
+          "LOAN ID NO.": "accountNumber",
+          "CLIENT NAME": "borrowerName",
+          "LOCATION: TOWN, CITY & COUNTY": "address",
+          "Principal/ORGINAL AMOUNT Granted (LRD)": "_origAmt",
+          "INTEREST RATE": "interestRate",
+          "DATE GRANTED": "disbursementDate",
+          "MATURITY DATE": "maturityDate",
+          "FREQUENCY OF PMT (MONTHLY/WEKLY)": "repaymentFrequency",
+          "SECTOR": "purposeOfFacility",
+          "OUTSTANDING PRINCIPAL AMOUNT (LRD)": "_balance",
+          "COLLATERL TYPE": "collateralType",
+          "NBFI's  CLASSIFICATION": "_classification",
+        },
+        nbfi_mfi: {
+          "NAME OF BORROWER": "borrowerName",
+          "GRANTING DATE": "disbursementDate",
+          "MATURITY DATE": "maturityDate",
+          "AMOUNT CURRENTLY OUTSTANDING": "_balance",
+          "INTEREST RATE": "interestRate",
+          "PAYMENT FREQUENCY": "repaymentFrequency",
+          "INTEREST IN ARREARS": "_arrears",
+          "SECTOR": "purposeOfFacility",
+          "MFI CLASSIFICATION": "_classification",
+        },
+        nbfi_usd: {
+          "LOAN ID NO.": "accountNumber",
+          "CLIENT NAME": "borrowerName",
+          "LOCATION: TOWN, CITY & COUNTY": "address",
+          "Principal/ORGINAL AMOUNT Granted (USD)": "_origAmt",
+          "INTEREST RATE": "interestRate",
+          "DATE GRANTED": "disbursementDate",
+          "MATURITY DATE": "maturityDate",
+          "FREQUENCY OF PMT (MONTHLY/WEKLY)": "repaymentFrequency",
+          "SECTOR": "purposeOfFacility",
+          "OUTSTANDING PRINCIPAL AMOUNT (USD)": "_balance",
+          "COLLATERL TYPE": "collateralType",
+          "NBFI's  CLASSIFICATION": "_classification",
+        },
+      };
+
+      const accountTypeMap: Record<string, string> = {
+        commercial_bank_loans: "Personal Loan",
+        commercial_bank_overdraft: "Overdraft",
+        nbfi_finance: "Microfinance Loan",
+        nbfi_mfi: "Microfinance Loan",
+        nbfi_usd: "Personal Loan",
+      };
+
+      const currencyMap: Record<string, string> = {
+        commercial_bank_loans: "LRD",
+        commercial_bank_overdraft: "LRD",
+        nbfi_finance: "LRD",
+        nbfi_mfi: "LRD",
+        nbfi_usd: "USD",
+      };
+
+      const isThousands = instType.startsWith("commercial_bank");
+      const colMap = colMaps[instType] || colMaps["commercial_bank_loans"];
+      const defaultAccountType = accountTypeMap[instType] || "Personal Loan";
+      const currency = currencyMap[instType] || "LRD";
+
+      // ── parse CSV ──────────────────────────────────────────────────────────
+      const lines = csvData.trim().split("\n").filter((l: string) => l.trim());
+      if (lines.length < 2) {
+        return res.status(400).json({ message: "CSV must contain a header row and at least one data row" });
+      }
+
+      const headers = lbParseCSV(lines[0]);
+
+      const records: any[] = [];
+      for (let i = 1; i < lines.length; i++) {
+        const values = lbParseCSV(lines[i]);
+        const raw: any = {};
+        headers.forEach((h, idx) => { raw[h] = (values[idx] || "").trim(); });
+
+        const r: any = { currency, lenderInstitution: lender };
+
+        // Apply column map
+        for (const [colName, field] of Object.entries(colMap)) {
+          // fuzzy header match — try exact, then case-insensitive, then trimmed
+          const val = raw[colName]
+            ?? raw[colName.trim()]
+            ?? Object.entries(raw).find(([k]) => k.trim().toLowerCase() === colName.toLowerCase())?.[1]
+            ?? "";
+          if (field === "_origAmt") r.originalAmount = lbAmt(val, isThousands);
+          else if (field === "_balance") r.currentBalance = lbAmt(val, isThousands);
+          else if (field === "_collValue") r.collateralValue = lbAmt(val, isThousands);
+          else if (field === "_arrears") r.amountOverdue = lbAmt(val, false);
+          else if (field === "_classification") {
+            r.assetClassification = val;
+            r.status = lbStatus(val);
+            r.daysInArrears = lbDays(val);
+          } else if (field) {
+            r[field] = val;
+          }
+        }
+
+        // Date normalization
+        if (r.disbursementDate) r.disbursementDate = lbDate(r.disbursementDate);
+        if (r.maturityDate) r.maturityDate = lbDate(r.maturityDate);
+
+        // Defaults & fill-ins
+        if (!r.accountNumber) r.accountNumber = `LB-${instType.toUpperCase().slice(0,3)}-${i}`;
+        if (!r.borrowerName) r.borrowerName = "Unknown";
+        if (!r.nationalId) r.nationalId = r.accountNumber;
+        if (!r.borrowerId) r.borrowerId = r.nationalId;
+        if (!r.status) r.status = "current";
+        if (!r.daysInArrears) r.daysInArrears = 0;
+        if (!r.originalAmount) r.originalAmount = r.currentBalance || 0;
+        if (!r.currentBalance) r.currentBalance = r.originalAmount || 0;
+        if (!r.accountType) r.accountType = defaultAccountType;
+        if (!r.creditCategory) r.creditCategory = inferCreditCategory(r.accountType);
+        if (!r.reportingDate) r.reportingDate = new Date().toISOString().slice(0, 10);
+        if (!r.interestRate) r.interestRate = "0";
+        if (!r.disbursementDate) r.disbursementDate = r.reportingDate;
+        if (!r.maturityDate) r.maturityDate = r.reportingDate;
+        if (!r.address) r.address = "Liberia";
+        if (!r.phoneNumber) r.phoneNumber = "";
+
+        records.push(r);
+      }
+
+      const results = {
+        totalSubmitted: records.length,
+        successCount: 0,
+        updatedCount: 0,
+        errorCount: 0,
+        errors: [] as Array<{ index: number; message: string }>,
+      };
+
+      const validated: Array<{ index: number; data: any; rawRecord?: any }> = [];
+      for (let i = 0; i < records.length; i++) {
+        try {
+          validated.push({ index: i, data: insertCreditAccountSchema.parse(records[i]), rawRecord: records[i] });
+        } catch (err: any) {
+          results.errorCount++;
+          results.errors.push({ index: i, message: err.message || "Validation failed" });
+        }
+      }
+      await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
+
+      const lbMeta = JSON.stringify({ institutionType: instType, lenderInstitution: lender, totalRecords: results.totalSubmitted, successCount: results.successCount, updatedCount: results.updatedCount, errorCount: results.errorCount, errors: results.errors.slice(0, 50) });
+      await storage.createAuditLog({
+        action: "BATCH_UPLOAD_LIBERIA_CRS", entity: "credit_account", userId: req.session?.userId,
+        details: `Liberia CRS upload (${instType}): ${results.successCount} succeeded (${results.updatedCount} updated), ${results.errorCount} failed out of ${results.totalSubmitted}\n---JSON---\n${lbMeta}`,
+        ipAddress: req.ip || null,
+      });
+
+      res.json(results);
+    } catch (e: any) {
+      res.status(400).json({ message: e.message });
+    }
+  });
+
   app.get("/api/batch-upload/history", requireRole("admin", "lender"), async (req, res) => {
     try {
       const batchActions = ["BATCH_UPLOAD", "BATCH_UPLOAD_CSV", "BATCH_UPLOAD_JSON", "BATCH_UPLOAD_XBRL", "BATCH_QUEUE_ACCOUNTS", "IFF_UPLOAD", "IFF_UPLOAD_JSON"];
@@ -4148,6 +4388,41 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       res.setHeader("Content-Type", "application/json");
       res.setHeader("Content-Disposition", 'attachment; filename="batch-upload-template.json"');
       return res.send(jsonTemplate);
+    } else if (format === "liberia-crs-loans") {
+      const tmpl = `Account Number,Tax Identification Number (TIN),Name of Borrower,Original Amount(L$'000),Granting Date,Maturity Date,Payment Frequency,Principal Balance(L$'000),Bank Classif,Nominal Interest Rate (%),Type of Collateral,Value of Collateral(L$'000),Sector
+CB-LN-2025-001,TIN-123456,John Doe,1500,15/01/2025,15/01/2028,Monthly,1350,Pass,12.50,Real Estate,2000,Commerce
+CB-LN-2025-002,TIN-789012,Jane Smith,800,01/03/2024,01/03/2027,Monthly,650,OLEM,15.00,Vehicle,500,Agriculture`;
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", 'attachment; filename="liberia-crs-commercial-loans-template.csv"');
+      return res.send(tmpl);
+    } else if (format === "liberia-crs-overdraft") {
+      const tmpl = `Account Number,Tax Identification Number (TIN),Name of Borrower,Original Amount(L$'000),Granting Date,Maturity Date,Principal Balance(L$'000),Bank Classification,Nominal Interest Rate (%),Type of Collateral,Value of Collateral(L$'000),Sector
+OD-2025-001,TIN-111222,Acme Corp,500,01/01/2025,31/12/2025,300,Pass,18.00,Inventory,200,Commerce
+OD-2025-002,TIN-333444,Beta Ltd,200,15/02/2025,14/02/2026,180,Substandard,20.00,None,0,Services`;
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", 'attachment; filename="liberia-crs-overdraft-template.csv"');
+      return res.send(tmpl);
+    } else if (format === "liberia-crs-nbfi") {
+      const tmpl = `LOAN ID NO.,CLIENT NAME,LOCATION: TOWN, CITY & COUNTY,Principal/ORGINAL AMOUNT Granted (LRD),INTEREST RATE,DATE GRANTED,MATURITY DATE,FREQUENCY OF PMT (MONTHLY/WEKLY),SECTOR,OUTSTANDING PRINCIPAL AMOUNT (LRD),COLLATERL TYPE,NBFI's  CLASSIFICATION
+NBFI-2025-001,Alice Johnson,"Monrovia, Montserrado",50000,24.00,15/01/2025,15/01/2026,Monthly,Commerce,42000,None,Pass
+NBFI-2025-002,Bob Williams,"Ganta, Nimba",30000,28.00,01/03/2025,01/03/2026,Weekly,Agriculture,28000,Vehicle,OLEM`;
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", 'attachment; filename="liberia-crs-nbfi-template.csv"');
+      return res.send(tmpl);
+    } else if (format === "liberia-crs-mfi") {
+      const tmpl = `NAME OF BORROWER,GRANTING DATE,MATURITY DATE,AMOUNT CURRENTLY OUTSTANDING,INTEREST RATE,PAYMENT FREQUENCY,INTEREST IN ARREARS,SECTOR,MFI CLASSIFICATION
+Mary Kollie,01/06/2025,01/06/2026,15000,30.00,Monthly,0,Agriculture,Pass
+Peter Togba,15/04/2025,15/04/2026,8000,32.00,Weekly,500,Commerce,OLEM`;
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", 'attachment; filename="liberia-crs-mfi-template.csv"');
+      return res.send(tmpl);
+    } else if (format === "liberia-crs-nbfi-usd") {
+      const tmpl = `LOAN ID NO.,CLIENT NAME,LOCATION: TOWN, CITY & COUNTY,Principal/ORGINAL AMOUNT Granted (USD),INTEREST RATE,DATE GRANTED,MATURITY DATE,FREQUENCY OF PMT (MONTHLY/WEKLY),SECTOR,OUTSTANDING PRINCIPAL AMOUNT (USD),COLLATERL TYPE,NBFI's  CLASSIFICATION
+USD-2025-001,Charles Brown,"Monrovia, Montserrado",10000,18.00,15/01/2025,15/01/2026,Monthly,Commerce,8500,Real Estate,Pass
+USD-2025-002,Diana Moore,"Buchanan, Grand Bassa",5000,22.00,01/02/2025,01/02/2026,Monthly,Agriculture,4800,None,Pass`;
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", 'attachment; filename="liberia-crs-nbfi-usd-template.csv"');
+      return res.send(tmpl);
     }
     res.status(400).json({ message: "Unsupported format. Use 'csv' or 'json'" });
   });
