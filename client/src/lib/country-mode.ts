@@ -545,6 +545,10 @@ export function isGhanaMode(): boolean {
   return getCountryMode() === "ghana";
 }
 
+export function isLiberiaMode(): boolean {
+  return getCountryMode() === "liberia";
+}
+
 export function isSierraLeoneMode(): boolean {
   return getCountryMode() === "sierraleone";
 }

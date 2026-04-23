@@ -102,6 +102,10 @@ export function isGhanaMode(): boolean {
   return getCountryMode() === "ghana";
 }
 
+export function isLiberiaMode(): boolean {
+  return getCountryMode() === "liberia";
+}
+
 export function isSingleCountryMode(): boolean {
   return getCountryMode() !== null;
 }

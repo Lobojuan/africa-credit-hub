@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient, fetchCSRFToken } from "@/lib/queryClient";
-import { isGhanaMode } from "@/lib/country-mode";
+import { isGhanaMode, isLiberiaMode } from "@/lib/country-mode";
 
 interface BatchResult {
   totalSubmitted: number;
@@ -67,6 +67,7 @@ interface UploadHistoryItem {
 }
 
 const ghanaMode = isGhanaMode();
+const liberiaMode = isLiberiaMode();
 
 const requiredFields = ["borrowerId", "borrowerName", "dateOfBirth", "address", "nationalId", "phoneNumber", "reportingDate", "lenderInstitution", "accountNumber", "accountType", "originalAmount", "currentBalance", "currency", "disbursementDate", "maturityDate", "status"];
 
@@ -808,7 +809,9 @@ export default function BatchUploadPage() {
           {ghanaMode && (
             <TabsTrigger value="bog" data-testid="tab-bog"><Database className="w-3.5 h-3.5 mr-1.5" /> BoG Format</TabsTrigger>
           )}
-          <TabsTrigger value="lbcrs" data-testid="tab-lbcrs"><Globe className="w-3.5 h-3.5 mr-1.5" /> Liberia CRS</TabsTrigger>
+          {liberiaMode && (
+            <TabsTrigger value="lbcrs" data-testid="tab-lbcrs"><Globe className="w-3.5 h-3.5 mr-1.5" /> Liberia CRS</TabsTrigger>
+          )}
           <TabsTrigger value="history" data-testid="tab-history"><Clock className="w-3.5 h-3.5 mr-1.5" /> History</TabsTrigger>
         </TabsList>
 
@@ -1334,7 +1337,7 @@ export default function BatchUploadPage() {
           </TabsContent>
         )}
 
-        <TabsContent value="lbcrs">
+        {liberiaMode && <TabsContent value="lbcrs">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader className="pb-3">
@@ -1462,7 +1465,7 @@ export default function BatchUploadPage() {
               {renderResultCard("-lbcrs")}
             </div>
           </div>
-        </TabsContent>
+        </TabsContent>}
 
         <TabsContent value="history">
           <Card>
