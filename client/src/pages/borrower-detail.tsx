@@ -779,7 +779,7 @@ export default function BorrowerDetailPage() {
         <FraudRiskIndicator data={fraudRisk as any} />
       )}
 
-      <Card className="border-emerald-200 dark:border-emerald-800 bg-gradient-to-br from-emerald-50/50 to-teal-50/50 dark:from-emerald-950/20 dark:to-teal-950/20" data-testid="card-affordability">
+      {isIndividual && <Card className="border-emerald-200 dark:border-emerald-800 bg-gradient-to-br from-emerald-50/50 to-teal-50/50 dark:from-emerald-950/20 dark:to-teal-950/20" data-testid="card-affordability">
         <CardContent className="p-5">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -946,7 +946,7 @@ export default function BorrowerDetailPage() {
             </div>
           )}
         </CardContent>
-      </Card>
+      </Card>}
 
       {summary.scoreFactors && summary.scoreFactors.length > 0 && (
         <Card>
@@ -1041,50 +1041,54 @@ export default function BorrowerDetailPage() {
                 <span>{borrower.sector}</span>
               </div>
             )}
-            <Separator />
-            <div>
-              <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
-                <IdCard className="w-3.5 h-3.5" />
-                {t("borrowerDetail.idDocument")}
-              </p>
-              {(borrower as any).idDocumentUrl ? (
-                <div className="relative group rounded-lg overflow-hidden border">
-                  <img
-                    src={(borrower as any).idDocumentUrl}
-                    alt="ID Document"
-                    className="w-full h-auto max-h-48 object-contain bg-muted"
-                    data-testid="img-id-document"
-                  />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    <Button size="sm" variant="secondary" onClick={() => docInputRef.current?.click()} data-testid="button-replace-document">
-                      <Upload className="w-3.5 h-3.5 mr-1" />{t("borrowerDetail.replace")}
-                    </Button>
-                  </div>
+            {isIndividual && (
+              <>
+                <Separator />
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+                    <IdCard className="w-3.5 h-3.5" />
+                    {t("borrowerDetail.idDocument")}
+                  </p>
+                  {(borrower as any).idDocumentUrl ? (
+                    <div className="relative group rounded-lg overflow-hidden border">
+                      <img
+                        src={(borrower as any).idDocumentUrl}
+                        alt="ID Document"
+                        className="w-full h-auto max-h-48 object-contain bg-muted"
+                        data-testid="img-id-document"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <Button size="sm" variant="secondary" onClick={() => docInputRef.current?.click()} data-testid="button-replace-document">
+                          <Upload className="w-3.5 h-3.5 mr-1" />{t("borrowerDetail.replace")}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => docInputRef.current?.click()}
+                      className="w-full border-2 border-dashed rounded-lg p-6 text-center hover:border-primary/50 hover:bg-accent/50 transition-colors"
+                      data-testid="button-upload-first-document"
+                    >
+                      <IdCard className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-xs text-muted-foreground">{t("borrowerDetail.uploadIdDocPrompt")}</p>
+                    </button>
+                  )}
+                  {isGhanaMode() && (
+                    <div className="space-y-4 mt-3" data-testid="sample-id-documents">
+                      {(borrower as any).ghanaCardNumber && (
+                        <GhanaCardSample borrower={borrower as any} />
+                      )}
+                      {borrower.passportNumber && (
+                        <GhanaPassportSample borrower={borrower as any} />
+                      )}
+                      {(borrower as any).driversLicense && (
+                        <SampleDriversLicense borrower={borrower as any} />
+                      )}
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <button
-                  onClick={() => docInputRef.current?.click()}
-                  className="w-full border-2 border-dashed rounded-lg p-6 text-center hover:border-primary/50 hover:bg-accent/50 transition-colors"
-                  data-testid="button-upload-first-document"
-                >
-                  <IdCard className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-xs text-muted-foreground">{t("borrowerDetail.uploadIdDocPrompt")}</p>
-                </button>
-              )}
-              {isGhanaMode() && isIndividual && (
-                <div className="space-y-4 mt-3" data-testid="sample-id-documents">
-                  {(borrower as any).ghanaCardNumber && (
-                    <GhanaCardSample borrower={borrower as any} />
-                  )}
-                  {borrower.passportNumber && (
-                    <GhanaPassportSample borrower={borrower as any} />
-                  )}
-                  {(borrower as any).driversLicense && (
-                    <SampleDriversLicense borrower={borrower as any} />
-                  )}
-                </div>
-              )}
-            </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
