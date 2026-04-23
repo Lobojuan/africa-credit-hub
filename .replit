@@ -75,6 +75,8 @@ ETHIOPIA_MVAA_API_KEY = "sbx-ethiopia-mvaa-2025"
 
 [userenv.production]
 CANONICAL_URL = "https://africacredithub.com"
+PRODUCTION_MODE = "true"
+RUN_SEED = "false"
 
 [postMerge]
 path = "scripts/post-merge.sh"
