@@ -219,7 +219,7 @@ export default function BusinessDetailPage() {
                       <TableRow key={a.id} data-testid={`row-facility-${a.id}`}>
                         <TableCell className="text-xs capitalize">{(a.accountType || "").replace(/_/g, " ")}</TableCell>
                         <TableCell className="text-xs">{a.accountNumber}</TableCell>
-                        <TableCell className="text-xs">{a.institutionName || "-"}</TableCell>
+                        <TableCell className="text-xs">{(a as any).institutionName || (a as any).lenderInstitution || "-"}</TableCell>
                         <TableCell className="text-xs font-medium">{formatCurrency(Number(a.currentBalance || 0), currency)}</TableCell>
                         <TableCell><Badge variant={getStatusColor(a.status || "") as any} className="text-[10px] capitalize">{a.status}</Badge></TableCell>
                       </TableRow>
@@ -287,9 +287,9 @@ export default function BusinessDetailPage() {
                   <TableBody>
                     {inquiries.slice(0, 10).map(inq => (
                       <TableRow key={inq.id} data-testid={`row-inquiry-${inq.id}`}>
-                        <TableCell className="text-xs">{inq.institutionName || "-"}</TableCell>
+                        <TableCell className="text-xs">{(inq as any).institutionName || (inq as any).institution || "-"}</TableCell>
                         <TableCell className="text-xs capitalize">{(inq.purpose || "").replace(/_/g, " ")}</TableCell>
-                        <TableCell className="text-xs">{inq.inquiryDate ? new Date(inq.inquiryDate).toLocaleDateString() : "-"}</TableCell>
+                        <TableCell className="text-xs">{inq.createdAt ? new Date(inq.createdAt).toLocaleDateString() : "-"}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

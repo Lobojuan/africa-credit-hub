@@ -188,6 +188,7 @@ declare module "express-session" {
     webauthnChallenge: string;
     webauthnUserId: string;
     csrfToken: string;
+    institution?: string;
   }
 }
 

@@ -49,10 +49,9 @@ async function extractSessionFromRequest(req: IncomingMessage): Promise<{ userId
     const sessionCookieName = Object.keys(cookies).find(k => k.startsWith("connect.sid") || k === "connect.sid");
     if (!sessionCookieName) return null;
 
-    let sid = cookies[sessionCookieName];
-    if (sid.startsWith("s:")) {
-      sid = sid.slice(2).split(".")[0];
-    }
+    const rawSid = cookies[sessionCookieName];
+    if (!rawSid) return null;
+    let sid = rawSid.startsWith("s:") ? rawSid.slice(2).split(".")[0] : rawSid;
 
     const result = await pool.query(
       `SELECT sess FROM "session" WHERE sid = $1 AND expire > NOW()`,

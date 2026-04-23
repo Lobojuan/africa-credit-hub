@@ -519,7 +519,7 @@ async function buildLiveContext(): Promise<string> {
       if (i.contactEmail) instContact.push(`Email: ${sanitizeForPrompt(i.contactEmail)}`);
       if (i.address) instContact.push(`Address: ${sanitizeForPrompt(i.address)}`);
       const contactStr = instContact.length > 0 ? instContact.join(" | ") : "No contact info";
-      return `  - ${sanitizeForPrompt(i.name)} (${sanitizeForPrompt(i.institutionType) || "bank"}, ${sanitizeForPrompt(i.country) || "Ghana"}) — Status: ${sanitizeForPrompt(i.status) || "active"} | Reg#: ${sanitizeForPrompt(i.registrationNumber) || "N/A"}\n    Contact: ${contactStr}`;
+      return `  - ${sanitizeForPrompt(i.name)} (${sanitizeForPrompt((i as any).institutionType || i.type) || "bank"}, ${sanitizeForPrompt(i.country) || "Ghana"}) — Status: ${sanitizeForPrompt(i.status) || "active"} | Reg#: ${sanitizeForPrompt(i.registrationNumber) || "N/A"}\n    Contact: ${contactStr}`;
     }).join("\n");
     const orgList = orgs.map(o => {
       const orgContact = [];
@@ -662,7 +662,7 @@ async function buildLiveContext(): Promise<string> {
     }).join("\n");
 
     const userList = users.slice(0, 50).map(u => {
-      return `  - ${sanitizeForPrompt(u.firstName || "")} ${sanitizeForPrompt(u.lastName || "")} (${sanitizeForPrompt(u.username)}) | Role: ${u.role} | Status: ${u.isActive ? "active" : "inactive"}${u.mfaEnabled ? " | MFA enabled" : ""}`;
+      return `  - ${sanitizeForPrompt((u as any).firstName || "")} ${sanitizeForPrompt((u as any).lastName || "")} (${sanitizeForPrompt(u.username)}) | Role: ${u.role} | Status: ${u.status === "active" ? "active" : "inactive"}${u.mfaEnabled ? " | MFA enabled" : ""}`;
     }).join("\n");
 
     const billingList = billingRecords.slice(0, 20).map(b => {

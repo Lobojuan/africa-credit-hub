@@ -57,7 +57,7 @@ import { recordUsageEvent } from "./usage-metering";
 import { broadcastEvent } from "./websocket";
 import { createAnchor, verifyAuditAgainstAnchor, getAnchors } from "./blockchain-anchor";
 import { deliverWebhook, getWebhookSubscriptions, getWebhookDeliveryHistory, WEBHOOK_EVENTS } from "./webhook-delivery";
-import { webauthnCredentials, blockchainAnchors, webhookSubscriptions, webhookDeliveryLogs, consumerAccounts, telcoProfiles, telcoLoans, telcoLoanRepayments, auditLogs, openBankingProfiles, insertOpenBankingProfileSchema, decisionRules, insertDecisionRuleSchema, esgScores, insertEsgScoreSchema } from "@shared/schema";
+import { webauthnCredentials, blockchainAnchors, webhookSubscriptions, webhookDeliveryLogs, consumerAccounts, telcoProfiles, telcoLoans, telcoLoanRepayments, openBankingProfiles, insertOpenBankingProfileSchema, decisionRules, insertDecisionRuleSchema, esgScores, insertEsgScoreSchema } from "@shared/schema";
 import fs from "fs";
 import path from "path";
 import * as OTPAuth from "otpauth";
@@ -701,9 +701,9 @@ export async function registerRoutes(
       const cac = arpu > 0 ? Math.round(arpu * 2.5) : 0;
       const ltvCacRatio = cac > 0 ? Number((ltv / cac).toFixed(1)) : 0;
 
-      const trialOrgs = orgs.filter(o => o.subscriptionTier === "trial" || o.status === "trial");
+      const trialOrgs = orgs.filter(o => o.subscriptionTier === "trial");
       const paidOrgs = activeOrgs.filter(o => o.subscriptionTier !== "trial");
-      const churnedOrgs = orgs.filter(o => o.status === "suspended" || o.status === "inactive");
+      const churnedOrgs = orgs.filter(o => o.status === "suspended" || o.status === "deactivated");
       const grossChurnRate = orgs.length > 1 ? Number(((churnedOrgs.length / Math.max(orgs.length, 1)) * 100).toFixed(1)) : 2.1;
       const expansionRevenue = activeOrgs.filter(o => o.subscriptionTier === "enterprise" || o.subscriptionTier === "professional").length * 150;
       const contractionRevenue = churnedOrgs.length * (arpu * 0.3);
