@@ -5105,7 +5105,21 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       const user = await storage.getUser(req.session?.userId!);
       const serialNumber = `CR-${new Date().getFullYear()}-${Date.now().toString(36).toUpperCase()}`;
 
-      const accounts = await storage.getCreditAccountsByBorrower(borrowerId);
+      const rawAccounts = await storage.getCreditAccountsByBorrower(borrowerId);
+      // Deduplicate by accountNumber — keep the most recently updated record per unique account number
+      const accountMap = new Map<string, typeof rawAccounts[0]>();
+      for (const acct of rawAccounts) {
+        const key = (acct.accountNumber || "").trim().toLowerCase() || acct.id;
+        const existing = accountMap.get(key);
+        if (!existing) {
+          accountMap.set(key, acct);
+        } else {
+          const acctDate = acct.updatedAt ? new Date(acct.updatedAt).getTime() : 0;
+          const existDate = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+          if (acctDate > existDate) accountMap.set(key, acct);
+        }
+      }
+      const accounts = [...accountMap.values()];
       const inquiries = await storage.getCreditInquiriesByBorrower(borrowerId);
       const judgments = await storage.getCourtJudgmentsByBorrower(borrowerId);
       const consents = await storage.getConsentRecordsByBorrower(borrowerId);

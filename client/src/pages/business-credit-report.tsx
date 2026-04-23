@@ -551,43 +551,76 @@ export default function BusinessCreditReportPage() {
                 );
               })()}
 
-              {report.accounts.length > 0 ? (
-                <div className="border rounded-lg overflow-x-auto print:border-border">
-                  <table className="w-full text-xs print:text-[9px]">
-                    <thead>
-                      <tr className="bg-muted/50">
-                        <TableCell header>Institution</TableCell>
-                        <TableCell header>Account #</TableCell>
-                        <TableCell header>Facility Type</TableCell>
-                        <TableCell header className="text-right">Original Amount</TableCell>
-                        <TableCell header className="text-right">Current Balance</TableCell>
-                        <TableCell header>Status</TableCell>
-                        <TableCell header>Maturity</TableCell>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {report.accounts.map(account => (
-                        <tr key={account.id} className="hover:bg-muted/20" data-testid={`facility-row-${account.id}`}>
-                          <TableCell className="font-medium">{account.lenderInstitution}</TableCell>
-                          <TableCell className="font-mono">{account.accountNumber}</TableCell>
-                          <TableCell className="capitalize">{account.accountType?.replace(/_/g, " ") || "—"}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(account.originalAmount, account.currency || getDefaultFallbackCurrency())}</TableCell>
-                          <TableCell className="text-right font-semibold">{formatCurrency(account.currentBalance, account.currency || getDefaultFallbackCurrency())}</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={account.status === "current" ? "default" : account.status === "closed" ? "secondary" : "destructive"}
-                              className="text-[9px] capitalize print:text-[7px]"
-                            >
-                              {account.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{account.maturityDate || "—"}</TableCell>
-                        </tr>
+              {report.accounts.length > 0 ? (() => {
+                const facilityCurrency = report.accounts.find(a => a.currency)?.currency || getDefaultFallbackCurrency();
+                const totalOriginal = report.accounts.reduce((s, a) => s + parseFloat(a.originalAmount || "0"), 0);
+                const totalBalance = report.accounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
+                const activeCount = report.accounts.filter(a => a.status !== "closed").length;
+                const delinqCount = report.accounts.filter(a => (a.daysInArrears || 0) > 0 || a.status === "delinquent" || a.status === "default").length;
+
+                return (
+                  <>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4 print:mb-2 print:gap-2">
+                      {[
+                        { label: "Total Facilities", value: report.accounts.length.toString(), sub: "" },
+                        { label: "Active", value: activeCount.toString(), sub: `of ${report.accounts.length}` },
+                        { label: `Total Limit (${facilityCurrency})`, value: formatCurrency(totalOriginal.toFixed(2), facilityCurrency), sub: "original amount" },
+                        { label: `Outstanding (${facilityCurrency})`, value: formatCurrency(totalBalance.toFixed(2), facilityCurrency), sub: delinqCount > 0 ? `${delinqCount} past due` : "all current" },
+                      ].map(m => (
+                        <div key={m.label} className="bg-muted/30 rounded-lg p-3 print:p-2">
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold print:text-[8px]">{m.label}</p>
+                          <p className="text-sm font-bold mt-0.5 print:text-xs" data-testid={`text-facility-${m.label.toLowerCase().replace(/\s|\(|\)/g, '-')}`}>{m.value}</p>
+                          {m.sub && <p className="text-[10px] text-muted-foreground print:text-[8px]">{m.sub}</p>}
+                        </div>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
+                    </div>
+
+                    <div className="border rounded-lg overflow-x-auto print:border-border">
+                      <table className="w-full text-xs print:text-[9px]">
+                        <thead>
+                          <tr className="bg-muted/50">
+                            <TableCell header>Institution</TableCell>
+                            <TableCell header>Account #</TableCell>
+                            <TableCell header>Facility Type</TableCell>
+                            <TableCell header className="text-right">Original Amt ({facilityCurrency})</TableCell>
+                            <TableCell header className="text-right">Current Bal ({facilityCurrency})</TableCell>
+                            <TableCell header>Status</TableCell>
+                            <TableCell header>Maturity</TableCell>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {report.accounts.map(account => (
+                            <tr key={account.id} className="hover:bg-muted/20" data-testid={`facility-row-${account.id}`}>
+                              <TableCell className="font-medium">{account.lenderInstitution}</TableCell>
+                              <TableCell className="font-mono">{account.accountNumber}</TableCell>
+                              <TableCell className="capitalize">{account.accountType?.replace(/_/g, " ") || "—"}</TableCell>
+                              <TableCell className="text-right">{formatCurrency(account.originalAmount, account.currency || facilityCurrency)}</TableCell>
+                              <TableCell className="text-right font-semibold">{formatCurrency(account.currentBalance, account.currency || facilityCurrency)}</TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant={account.status === "current" ? "default" : account.status === "closed" ? "secondary" : "destructive"}
+                                  className="text-[9px] capitalize print:text-[7px]"
+                                >
+                                  {account.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{account.maturityDate || "—"}</TableCell>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr className="bg-muted/40 font-semibold border-t-2">
+                            <TableCell colSpan={3} className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground">Totals ({facilityCurrency})</TableCell>
+                            <TableCell className="text-right font-bold">{formatCurrency(totalOriginal.toFixed(2), facilityCurrency)}</TableCell>
+                            <TableCell className="text-right font-bold">{formatCurrency(totalBalance.toFixed(2), facilityCurrency)}</TableCell>
+                            <TableCell colSpan={2} />
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </>
+                );
+              })() : (
                 <p className="text-sm text-muted-foreground text-center py-4 print:py-2">No credit facilities on file</p>
               )}
             </CardContent>
