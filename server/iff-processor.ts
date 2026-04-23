@@ -2,6 +2,15 @@ import { db } from "./db";
 import { borrowers, creditAccounts, dishonouredCheques, courtJudgments, guarantors } from "@shared/schema";
 import { eq, and, or } from "drizzle-orm";
 
+function normaliseGender(val: string | null): string | null {
+  if (!val) return null;
+  const v = val.trim().toUpperCase();
+  if (v === "M" || v === "MALE") return "male";
+  if (v === "F" || v === "FEMALE") return "female";
+  if (v === "D" || v === "OTHER" || v === "UNKNOWN") return "other";
+  return val.toLowerCase().trim() || null;
+}
+
 function formatIffDate(val: any): string | null {
   if (!val) return null;
   const s = String(val);
@@ -260,6 +269,7 @@ function mapConsumerBorrowerFields(row: Record<string, any>): any {
     lastName: toStr(row.Surname),
     middleNames: toStr(row.MiddleNames),
     nationalId: toStr(row.NatIDNum),
+    ghanaCardNumber: /^GHA-\d{9}-\d$/i.test(toStr(row.NatIDNum) || "") ? toStr(row.NatIDNum) : null,
     votersId: toStr(row.VotersIDNum),
     driversLicense: toStr(row.DriverLicNum),
     passportNumber: toStr(row.PassportNum),
@@ -268,7 +278,7 @@ function mapConsumerBorrowerFields(row: Record<string, any>): any {
     otherIdType: toStr(row.OtherID),
     otherIdNumber: toStr(row.OtherIDNum),
     tinNumber: toStr(row.TINum),
-    gender: toStr(row.Gender),
+    gender: normaliseGender(toStr(row.Gender)),
     maritalStatus: toStr(row.MaritalStatus),
     nationality: toStr(row.Nationality),
     dateOfBirth: formatIffDate(row.DOB),
@@ -414,7 +424,7 @@ function extractGuarantors(row: Record<string, any>, creditAccountId: string, or
       driversLicense: toStr(row[`${prefix}DrivLic`]),
       passportNumber: toStr(row[`${prefix}PassNum`]),
       ssnitNumber: toStr(row[`${prefix}SSN`]),
-      gender: toStr(row[`${prefix}Gender`]),
+      gender: normaliseGender(toStr(row[`${prefix}Gender`])),
       dateOfBirth: formatIffDate(row[`${prefix}DOB`]),
       address1: toStr(row[`${prefix}Add1`]),
       address2: toStr(row[`${prefix}Add2`]),

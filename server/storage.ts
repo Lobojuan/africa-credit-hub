@@ -1307,26 +1307,14 @@ export class DatabaseStorage implements IStorage {
     if (organizationId) conditions.push(eq(borrowers.organizationId, organizationId));
     if (country) conditions.push(eq(borrowers.country, country));
 
-    if (params.ghanaCardNumber) {
-      conditions.push(
-        or(
-          ilike(borrowers.ghanaCardNumber, `%${params.ghanaCardNumber}%`),
-          ilike(borrowers.nationalId, `%${params.ghanaCardNumber}%`)
-        )
-      );
-    }
-    if (params.nationalId && !params.ghanaCardNumber) {
-      conditions.push(ilike(borrowers.nationalId, `%${params.nationalId}%`));
-    }
+    // NOTE: ghanaCardNumber, nationalId, and dateOfBirth are PII-encrypted at rest.
+    // They cannot be searched with SQL ILIKE. These are post-decryption filtered below.
+
     if (params.firstName) {
       conditions.push(ilike(borrowers.firstName, `%${params.firstName}%`));
     }
-    
     if (params.lastName) {
       conditions.push(ilike(borrowers.lastName, `%${params.lastName}%`));
-    }
-    if (params.dateOfBirth) {
-      conditions.push(eq(borrowers.dateOfBirth, params.dateOfBirth));
     }
     if (params.mobileNumber) {
       const cleanMobile = params.mobileNumber.replace(/[\s\-\(\)]/g, '');
@@ -1339,7 +1327,14 @@ export class DatabaseStorage implements IStorage {
       );
     }
     if (params.gender) {
-      conditions.push(ilike(borrowers.gender, params.gender));
+      const g = params.gender.toLowerCase().trim();
+      const abbrev = g.charAt(0);
+      conditions.push(
+        or(
+          ilike(borrowers.gender, `${g}%`),
+          ilike(borrowers.gender, abbrev)
+        )
+      );
     }
     if (params.email) {
       conditions.push(ilike(borrowers.email, `%${params.email}%`));
@@ -1354,11 +1349,35 @@ export class DatabaseStorage implements IStorage {
       conditions.push(ilike(borrowers.companyName, `%${params.companyName}%`));
     }
 
-    const results = await db.select().from(borrowers)
+    const rawResults = await db.select().from(borrowers)
       .where(and(...conditions))
       .orderBy(desc(borrowers.createdAt))
-      .limit(50);
-    return results;
+      .limit(200);
+
+    // Decrypt PII fields before post-filtering on encrypted identifiers
+    const decrypted = decryptBorrowerArray(rawResults as Record<string, any>[]) as Borrower[];
+
+    // Post-decrypt filter: ghanaCardNumber / nationalId (both columns, case-insensitive)
+    let filtered = decrypted;
+    if (params.ghanaCardNumber) {
+      const needle = params.ghanaCardNumber.toLowerCase();
+      filtered = filtered.filter(b =>
+        (b.ghanaCardNumber && b.ghanaCardNumber.toLowerCase().includes(needle)) ||
+        (b.nationalId && b.nationalId.toLowerCase().includes(needle))
+      );
+    } else if (params.nationalId) {
+      const needle = params.nationalId.toLowerCase();
+      filtered = filtered.filter(b =>
+        b.nationalId && b.nationalId.toLowerCase().includes(needle)
+      );
+    }
+
+    // Post-decrypt filter: dateOfBirth (exact match)
+    if (params.dateOfBirth) {
+      filtered = filtered.filter(b => b.dateOfBirth === params.dateOfBirth);
+    }
+
+    return filtered.slice(0, 50);
   }
 
   async getPendingApprovals(organizationId?: string, country?: string, recentDays?: number): Promise<PendingApproval[]> {
