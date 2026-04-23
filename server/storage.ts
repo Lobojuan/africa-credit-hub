@@ -69,8 +69,8 @@ import {
   type InstitutionBranding, type InsertInstitutionBranding,
 } from "@shared/schema";
 
-export function requireCountryScope(country: string | undefined, methodName: string): void {
-  if (!country) {
+export function requireCountryScope(country: string | string[] | undefined, methodName: string): void {
+  if (!country || (Array.isArray(country) && country.length === 0)) {
     console.warn(`[CountryScope] No country filter for ${methodName} — returning unscoped data (super_admin context)`);
   }
 }
@@ -101,13 +101,13 @@ export interface IStorage {
   updateLastLogin(userId: string): Promise<void>;
 
   getBorrower(id: string): Promise<Borrower | undefined>;
-  getBorrowers(page?: number, limit?: number, organizationId?: string, country?: string, recentDays?: number): Promise<{ data: Borrower[]; total: number }>;
-  getAllBorrowersForExport(organizationId?: string, country?: string): Promise<Borrower[]>;
-  getBorrowersByType(type: "individual" | "corporate", page?: number, limit?: number, organizationId?: string, country?: string, recentDays?: number): Promise<{ data: Borrower[]; total: number }>;
-  searchBorrowersByType(type: "individual" | "corporate", query: string, organizationId?: string, country?: string): Promise<Borrower[]>;
-  searchBorrowers(query: string, organizationId?: string, country?: string): Promise<Borrower[]>;
+  getBorrowers(page?: number, limit?: number, organizationId?: string, country?: string | string[], recentDays?: number): Promise<{ data: Borrower[]; total: number }>;
+  getAllBorrowersForExport(organizationId?: string, country?: string | string[]): Promise<Borrower[]>;
+  getBorrowersByType(type: "individual" | "corporate", page?: number, limit?: number, organizationId?: string, country?: string | string[], recentDays?: number): Promise<{ data: Borrower[]; total: number }>;
+  searchBorrowersByType(type: "individual" | "corporate", query: string, organizationId?: string, country?: string | string[]): Promise<Borrower[]>;
+  searchBorrowers(query: string, organizationId?: string, country?: string | string[]): Promise<Borrower[]>;
   countBorrowersByNationalId(nationalId: string | null): Promise<number>;
-  globalSearch(query: string, organizationId?: string, country?: string): Promise<{ borrowers: Borrower[]; institutions: Institution[]; creditAccounts: CreditAccount[]; telcoProfiles: TelcoProfile[] }>;
+  globalSearch(query: string, organizationId?: string, country?: string | string[]): Promise<{ borrowers: Borrower[]; institutions: Institution[]; creditAccounts: CreditAccount[]; telcoProfiles: TelcoProfile[] }>;
   createBorrower(borrower: InsertBorrower): Promise<Borrower>;
   updateBorrower(id: string, data: Partial<InsertBorrower>): Promise<Borrower | undefined>;
 
@@ -248,7 +248,7 @@ export interface IStorage {
   createGuarantor(guarantor: InsertGuarantor): Promise<Guarantor>;
   getGuarantorsByBorrower(borrowerId: string, country: string): Promise<Guarantor[]>;
 
-  getBorrowerAlerts(organizationId?: string, country?: string, recentDays?: number): Promise<BorrowerAlert[]>;
+  getBorrowerAlerts(organizationId?: string, country?: string | string[], recentDays?: number): Promise<BorrowerAlert[]>;
   getBorrowerAlertsByBorrower(borrowerId: string): Promise<BorrowerAlert[]>;
   createBorrowerAlert(alert: InsertBorrowerAlert): Promise<BorrowerAlert>;
 
@@ -487,13 +487,14 @@ export class DatabaseStorage implements IStorage {
     return borrower ? decryptBorrowerPII(borrower as Record<string, any>) as Borrower : undefined;
   }
 
-  async getBorrowers(page: number = 1, limit: number = 50, organizationId?: string, country?: string, recentDays?: number): Promise<{ data: Borrower[]; total: number }> {
+  async getBorrowers(page: number = 1, limit: number = 50, organizationId?: string, country?: string | string[], recentDays?: number): Promise<{ data: Borrower[]; total: number }> {
     requireCountryScope(country, "getBorrowers");
     const safeLimit = Math.min(limit, 200);
     const offset = (page - 1) * safeLimit;
     const filters: any[] = [];
     if (organizationId) filters.push(eq(borrowers.organizationId, organizationId));
-    if (country) filters.push(eq(borrowers.country, country));
+    const cc = this.buildCountryCondition(borrowers, country);
+    if (cc) filters.push(cc);
     if (recentDays && recentDays > 0) {
       const cutoff = new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000);
       filters.push(or(gte(borrowers.createdAt, cutoff), gte(borrowers.updatedAt, cutoff)));
@@ -504,23 +505,25 @@ export class DatabaseStorage implements IStorage {
     return { data: decryptBorrowerArray(data as Record<string, any>[]) as Borrower[], total: totalResult.value };
   }
 
-  async getAllBorrowersForExport(organizationId?: string, country?: string): Promise<Borrower[]> {
+  async getAllBorrowersForExport(organizationId?: string, country?: string | string[]): Promise<Borrower[]> {
     requireCountryScope(country, "getAllBorrowersForExport");
     const filters: any[] = [];
     if (organizationId) filters.push(eq(borrowers.organizationId, organizationId));
-    if (country) filters.push(eq(borrowers.country, country));
+    const cc = this.buildCountryCondition(borrowers, country);
+    if (cc) filters.push(cc);
     const where = filters.length > 1 ? and(...filters) : filters[0];
     const data = await db.select().from(borrowers).where(where).orderBy(desc(borrowers.createdAt));
     return decryptBorrowerArray(data as Record<string, any>[]) as Borrower[];
   }
 
-  async getBorrowersByType(type: "individual" | "corporate", page: number = 1, limit: number = 50, organizationId?: string, country?: string, recentDays?: number): Promise<{ data: Borrower[]; total: number }> {
+  async getBorrowersByType(type: "individual" | "corporate", page: number = 1, limit: number = 50, organizationId?: string, country?: string | string[], recentDays?: number): Promise<{ data: Borrower[]; total: number }> {
     requireCountryScope(country, "getBorrowersByType");
     const safeLimit = Math.min(limit, 200);
     const offset = (page - 1) * safeLimit;
     const filters: any[] = [eq(borrowers.type, type)];
     if (organizationId) filters.push(eq(borrowers.organizationId, organizationId));
-    if (country) filters.push(eq(borrowers.country, country));
+    const cc = this.buildCountryCondition(borrowers, country);
+    if (cc) filters.push(cc);
     if (recentDays && recentDays > 0) {
       const cutoff = new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000);
       filters.push(or(gte(borrowers.createdAt, cutoff), gte(borrowers.updatedAt, cutoff)));
@@ -531,11 +534,12 @@ export class DatabaseStorage implements IStorage {
     return { data: decryptBorrowerArray(data as Record<string, any>[]) as Borrower[], total: totalResult.value };
   }
 
-  async searchBorrowersByType(type: "individual" | "corporate", query: string, organizationId?: string, country?: string): Promise<Borrower[]> {
+  async searchBorrowersByType(type: "individual" | "corporate", query: string, organizationId?: string, country?: string | string[]): Promise<Borrower[]> {
     requireCountryScope(country, "searchBorrowersByType");
     const baseFilters: any[] = [eq(borrowers.type, type)];
     if (organizationId) baseFilters.push(eq(borrowers.organizationId, organizationId));
-    if (country) baseFilters.push(eq(borrowers.country, country));
+    const cc = this.buildCountryCondition(borrowers, country);
+    if (cc) baseFilters.push(cc);
 
     if (!query) {
       const results = await db.select().from(borrowers)
@@ -566,11 +570,12 @@ export class DatabaseStorage implements IStorage {
     return decryptBorrowerArray(results as Record<string, any>[]) as Borrower[];
   }
 
-  async searchBorrowers(query: string, organizationId?: string, country?: string): Promise<Borrower[]> {
+  async searchBorrowers(query: string, organizationId?: string, country?: string | string[]): Promise<Borrower[]> {
     requireCountryScope(country, "searchBorrowers");
     const baseFilters: any[] = [];
     if (organizationId) baseFilters.push(eq(borrowers.organizationId, organizationId));
-    if (country) baseFilters.push(eq(borrowers.country, country));
+    const cc = this.buildCountryCondition(borrowers, country);
+    if (cc) baseFilters.push(cc);
 
     if (!query) {
       const where = baseFilters.length > 1 ? and(...baseFilters) : baseFilters[0];
@@ -611,21 +616,37 @@ export class DatabaseStorage implements IStorage {
     return result.value;
   }
 
-  private countryOrgFilter(table: any, country?: string) {
+  private buildCountryCondition(table: any, country?: string | string[]) {
     if (!country) return undefined;
+    if (Array.isArray(country)) {
+      if (country.length === 0) return undefined;
+      if (country.length === 1) return eq(table.country, country[0]);
+      return inArray(table.country, country);
+    }
+    return eq(table.country, country);
+  }
+
+  private countryOrgFilter(table: any, country?: string | string[]) {
+    if (!country) return undefined;
+    if (Array.isArray(country)) {
+      if (country.length === 0) return undefined;
+      if (country.length === 1) return sql`${table.organizationId} IN (SELECT id FROM organizations WHERE country = ${country[0]})`;
+      const clauses = country.map(c => sql`country = ${c}`);
+      return sql`${table.organizationId} IN (SELECT id FROM organizations WHERE ${sql.join(clauses, sql` OR `)})`;
+    }
     return sql`${table.organizationId} IN (SELECT id FROM organizations WHERE country = ${country})`;
   }
 
-  async globalSearch(query: string, organizationId?: string, country?: string): Promise<{ borrowers: Borrower[]; institutions: Institution[]; creditAccounts: CreditAccount[]; telcoProfiles: TelcoProfile[] }> {
+  async globalSearch(query: string, organizationId?: string, country?: string | string[]): Promise<{ borrowers: Borrower[]; institutions: Institution[]; creditAccounts: CreditAccount[]; telcoProfiles: TelcoProfile[] }> {
     requireCountryScope(country, "globalSearch");
     const orgBorrowerFilter = organizationId ? eq(borrowers.organizationId, organizationId) : undefined;
     const orgInstFilter = organizationId ? eq(institutions.organizationId, organizationId) : undefined;
     const orgAccFilter = organizationId ? eq(creditAccounts.organizationId, organizationId) : undefined;
     const orgTelcoFilter = organizationId ? eq(telcoProfiles.organizationId, organizationId) : undefined;
-    const countryBorrowerFilter = country ? eq(borrowers.country, country) : undefined;
-    const countryInstFilter = country ? eq(institutions.country, country) : undefined;
+    const countryBorrowerFilter = this.buildCountryCondition(borrowers, country);
+    const countryInstFilter = this.buildCountryCondition(institutions, country);
     const countryAccFilter = country ? this.countryOrgFilter(creditAccounts, country) : undefined;
-    const countryTelcoFilter = country ? eq(telcoProfiles.country, country) : undefined;
+    const countryTelcoFilter = this.buildCountryCondition(telcoProfiles, country);
 
     let borrowerResults: Borrower[] = [];
     let institutionResults: Institution[] = [];
@@ -2116,7 +2137,7 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(guarantors).where(inArray(guarantors.creditAccountId, accountIds)).orderBy(guarantors.guarantorNumber);
   }
 
-  async getBorrowerAlerts(organizationId?: string, country?: string, recentDays?: number): Promise<BorrowerAlert[]> {
+  async getBorrowerAlerts(organizationId?: string, country?: string | string[], recentDays?: number): Promise<BorrowerAlert[]> {
     requireCountryScope(country, "getBorrowerAlerts");
     const filters: any[] = [];
     if (organizationId) filters.push(eq(borrowerAlerts.organizationId, organizationId));

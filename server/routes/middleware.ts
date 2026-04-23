@@ -3,7 +3,8 @@ import rateLimit from "express-rate-limit";
 import { storage } from "../storage";
 import { getActiveCountryName } from "../country-mode";
 import { pool, db } from "../db";
-import { sql } from "drizzle-orm";
+import { sql, and, or, eq } from "drizzle-orm";
+import { dataSharingAgreements } from "../../shared/schema";
 
 export const rateLimitKeyGenerator = (req: Request) => {
   const ip = req.ip ?? req.socket.remoteAddress ?? "unknown";
@@ -307,7 +308,18 @@ export async function validateBorrowerCountry(borrowerId: string, req: Request):
   if (!country) return true;
   const borrower = await storage.getBorrower(borrowerId);
   if (!borrower) return true;
-  return borrower.country === country;
+  if (borrower.country === country) return true;
+  if (!borrower.country) return false;
+  const agreements = await db.select().from(dataSharingAgreements).where(
+    and(
+      eq(dataSharingAgreements.status, "active"),
+      or(
+        and(eq(dataSharingAgreements.sourceCountry, country), eq(dataSharingAgreements.targetCountry, borrower.country)),
+        and(eq(dataSharingAgreements.sourceCountry, borrower.country), eq(dataSharingAgreements.targetCountry, country))
+      )
+    )
+  );
+  return agreements.length > 0;
 }
 
 import crypto from "crypto";

@@ -133,6 +133,27 @@ async function requireCrossBorderAccess(req: Request, res: Response, next: NextF
   }
 }
 
+async function getAccessibleCountriesForReq(req: Request): Promise<string | string[] | undefined> {
+  const country = getCountryFilter(req);
+  if (!country) return undefined;
+  const agreements = await db.select().from(dataSharingAgreements).where(
+    and(
+      eq(dataSharingAgreements.status, "active"),
+      or(
+        eq(dataSharingAgreements.sourceCountry, country),
+        eq(dataSharingAgreements.targetCountry, country)
+      )
+    )
+  );
+  if (agreements.length === 0) return country;
+  const countries = new Set<string>([country]);
+  for (const agr of agreements) {
+    countries.add(agr.sourceCountry);
+    countries.add(agr.targetCountry);
+  }
+  return [...countries];
+}
+
 async function validateOrgCountry(orgId: string, req?: Request): Promise<boolean> {
   const country = getCountryFilter(req);
   if (!country) return true;
@@ -957,7 +978,7 @@ export async function registerRoutes(
   app.get("/api/borrowers", requireRole("super_admin"), enforceDataSovereignty, async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const country = getCountryFilter(req);
+      const country = await getAccessibleCountriesForReq(req);
       const search = req.query.search as string;
       const recentDays = parseInt(req.query.recentDays as string) || 0;
       if (search) {
@@ -981,7 +1002,7 @@ export async function registerRoutes(
         return res.status(403).json({ message: "Corporate division users cannot access consumer data" });
       }
       const orgId = getOrgScope(req);
-      const country = getCountryFilter(req);
+      const country = await getAccessibleCountriesForReq(req);
       const search = req.query.search as string;
       const recentDays = parseInt(req.query.recentDays as string) || 0;
       if (search) {
@@ -1005,7 +1026,7 @@ export async function registerRoutes(
         return res.status(403).json({ message: "Retail division users cannot access business data" });
       }
       const orgId = getOrgScope(req);
-      const country = getCountryFilter(req);
+      const country = await getAccessibleCountriesForReq(req);
       const search = req.query.search as string;
       const recentDays = parseInt(req.query.recentDays as string) || 0;
       if (search) {
@@ -1031,7 +1052,7 @@ export async function registerRoutes(
   app.get("/api/global-search", async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const country = (req.query.country as string) || getCountryFilter(req);
+      const country = await getAccessibleCountriesForReq(req);
       const query = (req.query.q as string) || "";
       if (!query && !country) {
         return res.json({ borrowers: [], institutions: [], creditAccounts: [], telcoProfiles: [] });
@@ -11443,7 +11464,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   app.get("/api/borrower-alerts", requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
     try {
       const orgScope = getOrgScope(req);
-      const country = getCountryFilter(req);
+      const country = await getAccessibleCountriesForReq(req);
       const recentDays = parseInt(req.query.recentDays as string) || 0;
       const alerts = await storage.getBorrowerAlerts(orgScope, country, recentDays > 0 ? recentDays : undefined);
       const borrowerIds = [...new Set(alerts.map(a => a.borrowerId))];
