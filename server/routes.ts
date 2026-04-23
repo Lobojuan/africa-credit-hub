@@ -3383,23 +3383,52 @@ export async function registerRoutes(
     }
   });
 
+  // Normalise the idType string submitted in a batch row.
+  // Accepted Liberia values: NRA_TAX_ID, PASSPORT, ALIEN_REG_CARD, ECOWAS_ID
+  function normaliseIdType(raw: string | undefined): string {
+    const v = (raw || "").trim().toUpperCase().replace(/[\s\-\/]+/g, "_");
+    if (v === "PASSPORT" || v === "LIBERIAN_PASSPORT") return "PASSPORT";
+    if (v === "ALIEN_REG_CARD" || v === "ALIEN_REGISTRATION" || v === "ALIEN_REGISTRATION_CARD" || v === "ARC") return "ALIEN_REG_CARD";
+    if (v === "ECOWAS_ID" || v === "ECOWAS_BIOMETRIC" || v === "ECOWAS_BIOMETRIC_ID" || v === "ECOWAS") return "ECOWAS_ID";
+    // NRA Tax ID (TIN) is the default for Liberia; also explicit aliases
+    if (v === "NRA_TAX_ID" || v === "NRA" || v === "TIN" || v === "TAX_ID" || v === "TAX_IDENTIFICATION_NUMBER" || v === "") return "NRA_TAX_ID";
+    return v; // pass through any other value (Ghana Card, Voters ID, etc.)
+  }
+
   async function findOrCreateBatchBorrower(
     record: any,
     orgId?: string
   ): Promise<string> {
-    const nationalId = record.nationalId || record.borrowerId;
+    const nationalId = (record.nationalId || record.borrowerId || "").trim();
     if (!nationalId) throw new Error("No nationalId or borrowerId to identify borrower");
     if (!isValidMappingId(nationalId)) {
       throw new Error(`Invalid mapping ID "${nationalId}" — record must be resubmitted with a valid national ID`);
     }
 
-    // First try matching by nationalId
+    const idType = normaliseIdType(record.idType);
+
+    // ── 1. Match by nationalId column ─────────────────────────────────────
     let existing = await db.select({ id: borrowers.id })
       .from(borrowers)
       .where(eq(borrowers.nationalId, nationalId))
       .limit(1);
 
-    // Fallback: if borrowerId looks like a UUID, try matching by actual borrower primary key
+    // ── 2. Match by type-specific secondary column ─────────────────────────
+    if (existing.length === 0) {
+      let altRows: { id: string }[] = [];
+      if (idType === "PASSPORT") {
+        altRows = await db.select({ id: borrowers.id }).from(borrowers).where(eq(borrowers.passportNumber, nationalId)).limit(1);
+      } else if (idType === "NRA_TAX_ID") {
+        altRows = await db.select({ id: borrowers.id }).from(borrowers).where(eq(borrowers.tinNumber, nationalId)).limit(1);
+      } else if (idType === "ALIEN_REG_CARD") {
+        altRows = await db.select({ id: borrowers.id }).from(borrowers).where(eq(borrowers.alienRegCard, nationalId)).limit(1);
+      } else if (idType === "ECOWAS_ID") {
+        altRows = await db.select({ id: borrowers.id }).from(borrowers).where(eq(borrowers.ecowasId, nationalId)).limit(1);
+      }
+      if (altRows.length > 0) existing = altRows;
+    }
+
+    // ── 3. UUID primary-key fallback ───────────────────────────────────────
     if (existing.length === 0 && /^[0-9a-f-]{36}$/i.test(nationalId)) {
       const byPk = await db.select({ id: borrowers.id })
         .from(borrowers)
@@ -3408,6 +3437,7 @@ export async function registerRoutes(
       if (byPk.length > 0) return byPk[0].id;
     }
 
+    // ── 4. Update existing borrower metadata ─────────────────────────────
     if (existing.length > 0) {
       const updateData: any = {};
       if (record.borrowerName) {
@@ -3424,7 +3454,15 @@ export async function registerRoutes(
       return existing[0].id;
     }
 
+    // ── 5. Create new borrower — populate the appropriate ID column ────────
     const nameParts = (record.borrowerName || "Unknown").split(" ");
+    const country = record.country || (record.currency === "USD" || record.currency === "LRD" ? "Liberia" : "Ghana");
+    const idFields: any = { nationalIdType: idType };
+    if (idType === "PASSPORT") idFields.passportNumber = nationalId;
+    else if (idType === "NRA_TAX_ID") idFields.tinNumber = nationalId;
+    else if (idType === "ALIEN_REG_CARD") idFields.alienRegCard = nationalId;
+    else if (idType === "ECOWAS_ID") idFields.ecowasId = nationalId;
+
     const [created] = await db.insert(borrowers).values({
       type: "individual",
       firstName: nameParts[0],
@@ -3433,8 +3471,9 @@ export async function registerRoutes(
       phone: record.phoneNumber || null,
       address: record.address || null,
       dateOfBirth: record.dateOfBirth || null,
-      country: "Ghana",
+      country,
       organizationId: orgId || null,
+      ...idFields,
     }).returning();
     return created.id;
   }
@@ -3957,7 +3996,9 @@ export async function registerRoutes(
       const colMaps: Record<string, Record<string, string>> = {
         commercial_bank_loans: {
           "Account Number": "accountNumber",
+          "National ID": "nationalId",
           "Tax Identification Number (TIN)": "nationalId",
+          "ID Type": "idType",
           "Name of Borrower": "borrowerName",
           "Original Amount(L$'000)": "_origAmt",
           "Granting Date": "disbursementDate",
@@ -3972,7 +4013,9 @@ export async function registerRoutes(
         },
         commercial_bank_overdraft: {
           "Account Number": "accountNumber",
+          "National ID": "nationalId",
           "Tax Identification Number (TIN)": "nationalId",
+          "ID Type": "idType",
           "Name of Borrower": "borrowerName",
           "Original Amount(L$'000)": "_origAmt",
           "Granting Date": "disbursementDate",
@@ -3987,6 +4030,8 @@ export async function registerRoutes(
         nbfi_finance: {
           "LOAN ID NO.": "accountNumber",
           "CLIENT NAME": "borrowerName",
+          "NATIONAL ID": "nationalId",
+          "ID TYPE": "idType",
           "LOCATION: TOWN, CITY & COUNTY": "address",
           "Principal/ORGINAL AMOUNT Granted (LRD)": "_origAmt",
           "INTEREST RATE": "interestRate",
@@ -4000,6 +4045,8 @@ export async function registerRoutes(
         },
         nbfi_mfi: {
           "NAME OF BORROWER": "borrowerName",
+          "NATIONAL ID": "nationalId",
+          "ID TYPE": "idType",
           "GRANTING DATE": "disbursementDate",
           "MATURITY DATE": "maturityDate",
           "AMOUNT CURRENTLY OUTSTANDING": "_balance",
@@ -4012,6 +4059,8 @@ export async function registerRoutes(
         nbfi_usd: {
           "LOAN ID NO.": "accountNumber",
           "CLIENT NAME": "borrowerName",
+          "NATIONAL ID": "nationalId",
+          "ID TYPE": "idType",
           "LOCATION: TOWN, CITY & COUNTY": "address",
           "Principal/ORGINAL AMOUNT Granted (USD)": "_origAmt",
           "INTEREST RATE": "interestRate",
@@ -4119,7 +4168,13 @@ export async function registerRoutes(
         if (!isValidMappingId(records[i].nationalId)) {
           results.rejectedCount++;
           results.errorCount++;
-          results.errors.push({ index: i, message: `[REJECTED] National ID is missing or invalid (got: "${records[i].nationalId || ""}"). Resubmit with a valid National ID.`, type: "rejected" });
+          const idTypeHint = records[i].idType ? ` (ID Type submitted: "${records[i].idType}")` : "";
+          results.errors.push({
+            index: i,
+            message: `[REJECTED] National ID is missing or invalid (got: "${records[i].nationalId || ""}")${idTypeHint}. ` +
+              `Resubmit with a valid National ID. Accepted Liberia ID types: NRA_TAX_ID (NRA Tax ID / TIN), PASSPORT (Liberian Passport), ALIEN_REG_CARD (Alien Registration Card), ECOWAS_ID (ECOWAS Biometric ID).`,
+            type: "rejected",
+          });
           continue;
         }
         records[i].borrowerId = records[i].nationalId;
@@ -4437,37 +4492,40 @@ BORROWER_ID_2,Jane Smith,1990-07-22,"45 Ring Road, Kumasi",GHA-987654321,+233209
       res.setHeader("Content-Disposition", 'attachment; filename="batch-upload-template.json"');
       return res.send(jsonTemplate);
     } else if (format === "liberia-crs-loans") {
-      const tmpl = `Account Number,Tax Identification Number (TIN),Name of Borrower,Original Amount(L$'000),Granting Date,Maturity Date,Payment Frequency,Principal Balance(L$'000),Bank Classif,Nominal Interest Rate (%),Type of Collateral,Value of Collateral(L$'000),Sector
-CB-LN-2025-001,TIN-123456,John Doe,1500,15/01/2025,15/01/2028,Monthly,1350,Pass,12.50,Real Estate,2000,Commerce
-CB-LN-2025-002,TIN-789012,Jane Smith,800,01/03/2024,01/03/2027,Monthly,650,OLEM,15.00,Vehicle,500,Agriculture`;
+      // ID Type accepted values: NRA_TAX_ID | PASSPORT | ALIEN_REG_CARD | ECOWAS_ID
+      const tmpl = `Account Number,National ID,ID Type,Name of Borrower,Original Amount(L$'000),Granting Date,Maturity Date,Payment Frequency,Principal Balance(L$'000),Bank Classif,Nominal Interest Rate (%),Type of Collateral,Value of Collateral(L$'000),Sector
+CB-LN-2025-001,NRA-123456789,NRA_TAX_ID,John Doe,1500,15/01/2025,15/01/2028,Monthly,1350,Pass,12.50,Real Estate,2000,Commerce
+CB-LN-2025-002,LP-A1234567,PASSPORT,Jane Smith,800,01/03/2024,01/03/2027,Monthly,650,OLEM,15.00,Vehicle,500,Agriculture
+CB-LN-2025-003,ARC-2024-00891,ALIEN_REG_CARD,Kofi Mensah,500,01/06/2024,01/06/2027,Monthly,450,Pass,13.00,None,0,Services
+CB-LN-2025-004,ECW-GN-9876543,ECOWAS_ID,Aminata Diallo,300,15/07/2024,15/07/2026,Monthly,280,Pass,14.00,None,0,Agriculture`;
       res.setHeader("Content-Type", "text/csv");
       res.setHeader("Content-Disposition", 'attachment; filename="liberia-crs-commercial-loans-template.csv"');
       return res.send(tmpl);
     } else if (format === "liberia-crs-overdraft") {
-      const tmpl = `Account Number,Tax Identification Number (TIN),Name of Borrower,Original Amount(L$'000),Granting Date,Maturity Date,Principal Balance(L$'000),Bank Classification,Nominal Interest Rate (%),Type of Collateral,Value of Collateral(L$'000),Sector
-OD-2025-001,TIN-111222,Acme Corp,500,01/01/2025,31/12/2025,300,Pass,18.00,Inventory,200,Commerce
-OD-2025-002,TIN-333444,Beta Ltd,200,15/02/2025,14/02/2026,180,Substandard,20.00,None,0,Services`;
+      const tmpl = `Account Number,National ID,ID Type,Name of Borrower,Original Amount(L$'000),Granting Date,Maturity Date,Principal Balance(L$'000),Bank Classification,Nominal Interest Rate (%),Type of Collateral,Value of Collateral(L$'000),Sector
+OD-2025-001,NRA-111222333,NRA_TAX_ID,Acme Corp,500,01/01/2025,31/12/2025,300,Pass,18.00,Inventory,200,Commerce
+OD-2025-002,LP-B9876543,PASSPORT,Beta Ltd,200,15/02/2025,14/02/2026,180,Substandard,20.00,None,0,Services`;
       res.setHeader("Content-Type", "text/csv");
       res.setHeader("Content-Disposition", 'attachment; filename="liberia-crs-overdraft-template.csv"');
       return res.send(tmpl);
     } else if (format === "liberia-crs-nbfi") {
-      const tmpl = `LOAN ID NO.,CLIENT NAME,LOCATION: TOWN, CITY & COUNTY,Principal/ORGINAL AMOUNT Granted (LRD),INTEREST RATE,DATE GRANTED,MATURITY DATE,FREQUENCY OF PMT (MONTHLY/WEKLY),SECTOR,OUTSTANDING PRINCIPAL AMOUNT (LRD),COLLATERL TYPE,NBFI's  CLASSIFICATION
-NBFI-2025-001,Alice Johnson,"Monrovia, Montserrado",50000,24.00,15/01/2025,15/01/2026,Monthly,Commerce,42000,None,Pass
-NBFI-2025-002,Bob Williams,"Ganta, Nimba",30000,28.00,01/03/2025,01/03/2026,Weekly,Agriculture,28000,Vehicle,OLEM`;
+      const tmpl = `LOAN ID NO.,CLIENT NAME,NATIONAL ID,ID TYPE,LOCATION: TOWN, CITY & COUNTY,Principal/ORGINAL AMOUNT Granted (LRD),INTEREST RATE,DATE GRANTED,MATURITY DATE,FREQUENCY OF PMT (MONTHLY/WEKLY),SECTOR,OUTSTANDING PRINCIPAL AMOUNT (LRD),COLLATERL TYPE,NBFI's  CLASSIFICATION
+NBFI-2025-001,Alice Johnson,NRA-445566778,NRA_TAX_ID,"Monrovia, Montserrado",50000,24.00,15/01/2025,15/01/2026,Monthly,Commerce,42000,None,Pass
+NBFI-2025-002,Bob Williams,ARC-2023-01122,ALIEN_REG_CARD,"Ganta, Nimba",30000,28.00,01/03/2025,01/03/2026,Weekly,Agriculture,28000,Vehicle,OLEM`;
       res.setHeader("Content-Type", "text/csv");
       res.setHeader("Content-Disposition", 'attachment; filename="liberia-crs-nbfi-template.csv"');
       return res.send(tmpl);
     } else if (format === "liberia-crs-mfi") {
-      const tmpl = `NAME OF BORROWER,GRANTING DATE,MATURITY DATE,AMOUNT CURRENTLY OUTSTANDING,INTEREST RATE,PAYMENT FREQUENCY,INTEREST IN ARREARS,SECTOR,MFI CLASSIFICATION
-Mary Kollie,01/06/2025,01/06/2026,15000,30.00,Monthly,0,Agriculture,Pass
-Peter Togba,15/04/2025,15/04/2026,8000,32.00,Weekly,500,Commerce,OLEM`;
+      const tmpl = `NAME OF BORROWER,NATIONAL ID,ID TYPE,GRANTING DATE,MATURITY DATE,AMOUNT CURRENTLY OUTSTANDING,INTEREST RATE,PAYMENT FREQUENCY,INTEREST IN ARREARS,SECTOR,MFI CLASSIFICATION
+Mary Kollie,NRA-778899001,NRA_TAX_ID,01/06/2025,01/06/2026,15000,30.00,Monthly,0,Agriculture,Pass
+Peter Togba,ECW-LR-1122334,ECOWAS_ID,15/04/2025,15/04/2026,8000,32.00,Weekly,500,Commerce,OLEM`;
       res.setHeader("Content-Type", "text/csv");
       res.setHeader("Content-Disposition", 'attachment; filename="liberia-crs-mfi-template.csv"');
       return res.send(tmpl);
     } else if (format === "liberia-crs-nbfi-usd") {
-      const tmpl = `LOAN ID NO.,CLIENT NAME,LOCATION: TOWN, CITY & COUNTY,Principal/ORGINAL AMOUNT Granted (USD),INTEREST RATE,DATE GRANTED,MATURITY DATE,FREQUENCY OF PMT (MONTHLY/WEKLY),SECTOR,OUTSTANDING PRINCIPAL AMOUNT (USD),COLLATERL TYPE,NBFI's  CLASSIFICATION
-USD-2025-001,Charles Brown,"Monrovia, Montserrado",10000,18.00,15/01/2025,15/01/2026,Monthly,Commerce,8500,Real Estate,Pass
-USD-2025-002,Diana Moore,"Buchanan, Grand Bassa",5000,22.00,01/02/2025,01/02/2026,Monthly,Agriculture,4800,None,Pass`;
+      const tmpl = `LOAN ID NO.,CLIENT NAME,NATIONAL ID,ID TYPE,LOCATION: TOWN, CITY & COUNTY,Principal/ORGINAL AMOUNT Granted (USD),INTEREST RATE,DATE GRANTED,MATURITY DATE,FREQUENCY OF PMT (MONTHLY/WEKLY),SECTOR,OUTSTANDING PRINCIPAL AMOUNT (USD),COLLATERL TYPE,NBFI's  CLASSIFICATION
+USD-2025-001,Charles Brown,NRA-556677889,NRA_TAX_ID,"Monrovia, Montserrado",10000,18.00,15/01/2025,15/01/2026,Monthly,Commerce,8500,Real Estate,Pass
+USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00,01/02/2025,01/02/2026,Monthly,Agriculture,4800,None,Pass`;
       res.setHeader("Content-Type", "text/csv");
       res.setHeader("Content-Disposition", 'attachment; filename="liberia-crs-nbfi-usd-template.csv"');
       return res.send(tmpl);
