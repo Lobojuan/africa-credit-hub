@@ -112,6 +112,8 @@ export const borrowers = pgTable("borrowers", {
   nationalIdType: text("national_id_type"),
   alienRegCard: text("alien_reg_card"),
   ecowasId: text("ecowas_id"),
+  bvn: text("bvn"),
+  nin: text("nin"),
   ownerOrTenant: text("owner_or_tenant"),
   employmentTypeCode: text("employment_type_code"),
   nationality: text("nationality"),

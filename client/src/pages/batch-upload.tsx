@@ -269,6 +269,11 @@ export default function BatchUploadPage() {
   const [iffProgress, setIffProgress] = useState<{ current: number; total: number } | null>(null);
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
 
+  const [multiCountryCsvInput, setMultiCountryCsvInput] = useState("");
+  const [multiCountryCountry, setMultiCountryCountry] = useState("Nigeria");
+  const [multiCountryLenderName, setMultiCountryLenderName] = useState("");
+  const multiCountryFileRef = useRef<HTMLInputElement>(null);
+
   const csvFileRef = useRef<HTMLInputElement>(null);
   const jsonFileRef = useRef<HTMLInputElement>(null);
   const xbrlFileRef = useRef<HTMLInputElement>(null);
@@ -365,6 +370,26 @@ export default function BatchUploadPage() {
   const lbcrsUploadMutation = useMutation({
     mutationFn: async ({ csvData, institutionType, lenderInstitution }: { csvData: string; institutionType: string; lenderInstitution: string }) => {
       const res = await apiRequest("POST", "/api/batch-upload/liberia-crs", { csvData, institutionType, lenderInstitution });
+      return res.json() as Promise<BatchResult>;
+    },
+    onSuccess: (data) => {
+      setResult(data);
+      queryClient.invalidateQueries({ queryKey: ["/api/credit-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/batch-upload/history"] });
+      toast({
+        title: t('batchUpload.complete'),
+        description: t('batchUpload.completeDesc', { success: data.successCount, errors: data.errorCount }),
+      });
+    },
+    onError: (e: Error) => {
+      toast({ title: t('batchUpload.uploadFailed'), description: e.message, variant: "destructive" });
+    },
+  });
+
+  const multiCountryUploadMutation = useMutation({
+    mutationFn: async ({ csvData, country, lenderInstitution }: { csvData: string; country: string; lenderInstitution: string }) => {
+      const res = await apiRequest("POST", "/api/batch-upload/generic", { csvData, country, lenderInstitution });
       return res.json() as Promise<BatchResult>;
     },
     onSuccess: (data) => {
@@ -823,6 +848,7 @@ export default function BatchUploadPage() {
           {liberiaMode && (
             <TabsTrigger value="lbcrs" data-testid="tab-lbcrs"><Globe className="w-3.5 h-3.5 mr-1.5" /> Liberia CRS</TabsTrigger>
           )}
+          <TabsTrigger value="multicountry" data-testid="tab-multicountry"><Globe className="w-3.5 h-3.5 mr-1.5" /> Multi-Country CRS</TabsTrigger>
           <TabsTrigger value="history" data-testid="tab-history"><Clock className="w-3.5 h-3.5 mr-1.5" /> History</TabsTrigger>
         </TabsList>
 
@@ -1477,6 +1503,154 @@ export default function BatchUploadPage() {
             </div>
           </div>
         </TabsContent>}
+
+        <TabsContent value="multicountry">
+          {(() => {
+            const MULTI_COUNTRIES = ["Nigeria","Kenya","South Africa","Rwanda","Tanzania","Uganda","Ethiopia","Morocco","Senegal","Côte d'Ivoire","Cameroon","Sierra Leone"];
+            const idGuide: Record<string, string> = {
+              "Nigeria": "BVN (11 digits) or NIN (11 digits)",
+              "Kenya": "National ID (6–8 digits), Passport, or Alien ID",
+              "South Africa": "SA ID Number (13 digits, Luhn-verified) or Passport",
+              "Rwanda": "National ID (16 digits) or Passport",
+              "Tanzania": "NIDA Number (20 chars), Voter ID, or Passport",
+              "Uganda": "National ID (14 chars) or Passport",
+              "Ethiopia": "National ID or Passport",
+              "Morocco": "CIN (1–2 letters + 5–6 digits) or Passport",
+              "Senegal": "CNI, NINEA (Tax ID), or Passport",
+              "Côte d'Ivoire": "CNI, NIF (Tax ID), or Passport",
+              "Cameroon": "CNI, NIF (Tax ID), or Passport",
+              "Sierra Leone": "NRA ID, Voter ID, or Passport",
+            };
+            return (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <h3 className="font-semibold text-sm">Multi-Country CRS Upload</h3>
+                    <p className="text-xs text-muted-foreground mt-1">Submit credit records for any supported African country using a standardised CSV format.</p>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs font-medium mb-1.5 block">Country <span className="text-destructive">*</span></Label>
+                        <Select value={multiCountryCountry} onValueChange={setMultiCountryCountry}>
+                          <SelectTrigger data-testid="select-multicountry-country" className="h-8 text-xs">
+                            <SelectValue placeholder="Select country" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {MULTI_COUNTRIES.map(c => <SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-xs font-medium mb-1.5 block">Reporting Institution</Label>
+                        <input
+                          className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          placeholder="Institution name"
+                          value={multiCountryLenderName}
+                          onChange={e => setMultiCountryLenderName(e.target.value)}
+                          data-testid="input-multicountry-lender"
+                        />
+                      </div>
+                    </div>
+
+                    {multiCountryCountry && (
+                      <div className="bg-blue-50 dark:bg-blue-950/20 rounded-md p-3 text-xs text-blue-700 dark:text-blue-300">
+                        <span className="font-medium">{multiCountryCountry} accepted IDs:</span> {idGuide[multiCountryCountry]}
+                      </div>
+                    )}
+
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <Label className="text-xs font-medium">CSV Data</Label>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline" size="sm" className="text-xs h-7"
+                            onClick={() => {
+                              const country = encodeURIComponent(multiCountryCountry);
+                              window.open(`/api/batch-upload/generic/template/${country}`, "_blank");
+                            }}
+                            data-testid="button-multicountry-template"
+                          >
+                            <Download className="w-3 h-3 mr-1" /> Template
+                          </Button>
+                          <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => multiCountryFileRef.current?.click()} data-testid="button-multicountry-file">
+                            <Upload className="w-3 h-3 mr-1" /> File
+                          </Button>
+                          <input ref={multiCountryFileRef} type="file" accept=".csv" className="hidden" onChange={e => {
+                            const file = e.target.files?.[0];
+                            if (file) { const reader = new FileReader(); reader.onload = ev => setMultiCountryCsvInput(ev.target?.result as string || ""); reader.readAsText(file); }
+                          }} />
+                        </div>
+                      </div>
+                      <Textarea
+                        placeholder={`Paste ${multiCountryCountry || "country"} CRS CSV here…`}
+                        className="min-h-[180px] font-mono text-xs"
+                        value={multiCountryCsvInput}
+                        onChange={e => setMultiCountryCsvInput(e.target.value)}
+                        data-testid="textarea-multicountry-csv"
+                      />
+                    </div>
+
+                    <Button
+                      className="w-full"
+                      disabled={!multiCountryCsvInput.trim() || multiCountryUploadMutation.isPending}
+                      onClick={() => multiCountryUploadMutation.mutate({ csvData: multiCountryCsvInput, country: multiCountryCountry, lenderInstitution: multiCountryLenderName })}
+                      data-testid="button-multicountry-submit"
+                    >
+                      {multiCountryUploadMutation.isPending ? "Uploading…" : `Upload ${multiCountryCountry} Records`}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <div className="space-y-4">
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <h3 className="font-semibold text-sm">Supported Countries & ID Types</h3>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="overflow-auto max-h-72">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="text-xs">Country</TableHead>
+                              <TableHead className="text-xs">Primary IDs Accepted</TableHead>
+                              <TableHead className="text-xs w-16">Currency</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {([
+                              ["Nigeria","BVN, NIN, Passport, Voter's Card","NGN"],
+                              ["Kenya","National ID, Passport, Alien ID","KES"],
+                              ["South Africa","SA ID (13-digit), Passport","ZAR"],
+                              ["Rwanda","National ID (16-digit), Passport","RWF"],
+                              ["Tanzania","NIDA (20-char), Voter ID, Passport","TZS"],
+                              ["Uganda","National ID (14-char), Passport","UGX"],
+                              ["Ethiopia","National ID, Passport","ETB"],
+                              ["Morocco","CIN, Passport","MAD"],
+                              ["Senegal","CNI, NINEA, Passport","XOF"],
+                              ["Côte d'Ivoire","CNI, NIF, Passport","XOF"],
+                              ["Cameroon","CNI, NIF, Passport","XAF"],
+                              ["Sierra Leone","NRA ID, Voter ID, Passport","SLE"],
+                              ["Ghana","Ghana Card (GHA-…)","GHS"],
+                              ["Liberia","NRA Tax ID, Passport, Alien Reg., ECOWAS ID","LRD"],
+                            ] as [string,string,string][]).map(([c, ids, cur]) => (
+                              <TableRow key={c} className={multiCountryCountry === c ? "bg-blue-50 dark:bg-blue-950/20" : undefined}>
+                                <TableCell className="text-xs font-medium">{c}</TableCell>
+                                <TableCell className="text-xs text-muted-foreground">{ids}</TableCell>
+                                <TableCell className="text-xs font-mono">{cur}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  {renderResultCard("-multicountry")}
+                </div>
+              </div>
+            );
+          })()}
+        </TabsContent>
 
         <TabsContent value="history">
           <Card>

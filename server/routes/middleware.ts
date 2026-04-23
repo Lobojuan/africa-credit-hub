@@ -310,6 +310,7 @@ export async function validateBorrowerCountry(borrowerId: string, req: Request):
   if (!borrower) return true;
   if (borrower.country === country) return true;
   if (!borrower.country) return false;
+
   const agreements = await db.select().from(dataSharingAgreements).where(
     and(
       eq(dataSharingAgreements.status, "active"),
@@ -319,7 +320,30 @@ export async function validateBorrowerCountry(borrowerId: string, req: Request):
       )
     )
   );
-  return agreements.length > 0;
+  if (agreements.length === 0) return false;
+
+  // Institution-level check: if the agreement specifies named institutions, the
+  // requesting org must appear in the appropriate list.
+  let requestingOrgName: string | null = null;
+  if ((req as any).session?.organizationId) {
+    const org = await storage.getOrganization((req as any).session.organizationId);
+    requestingOrgName = org?.name || null;
+  }
+
+  for (const agr of agreements) {
+    const isSource = agr.sourceCountry === country;
+    const relevantInstitutions: string[] = isSource
+      ? (agr.targetInstitutions || [])
+      : (agr.sourceInstitutions || []);
+
+    const allowed =
+      relevantInstitutions.length === 0 ||
+      !requestingOrgName ||
+      relevantInstitutions.some(inst => inst.toLowerCase() === requestingOrgName!.toLowerCase());
+
+    if (allowed) return true;
+  }
+  return false;
 }
 
 import crypto from "crypto";

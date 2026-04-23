@@ -136,6 +136,7 @@ async function requireCrossBorderAccess(req: Request, res: Response, next: NextF
 async function getAccessibleCountriesForReq(req: Request): Promise<string | string[] | undefined> {
   const country = getCountryFilter(req);
   if (!country) return undefined;
+
   const agreements = await db.select().from(dataSharingAgreements).where(
     and(
       eq(dataSharingAgreements.status, "active"),
@@ -146,11 +147,57 @@ async function getAccessibleCountriesForReq(req: Request): Promise<string | stri
     )
   );
   if (agreements.length === 0) return country;
-  const countries = new Set<string>([country]);
-  for (const agr of agreements) {
-    countries.add(agr.sourceCountry);
-    countries.add(agr.targetCountry);
+
+  // Resolve the requesting org's name for institution-level filtering
+  let requestingOrgName: string | null = null;
+  if (req.session?.organizationId) {
+    const org = await storage.getOrganization(req.session.organizationId);
+    requestingOrgName = org?.name || null;
   }
+
+  const countries = new Set<string>([country]);
+  const crossBorderAccessed: string[] = [];
+
+  for (const agr of agreements) {
+    // Institution-level restriction: if the agreement lists specific institutions,
+    // only allow access when the requesting org is in the relevant list.
+    // An empty array means open to all institutions in that country.
+    const isSource = agr.sourceCountry === country;
+    const relevantInstitutions: string[] = isSource
+      ? (agr.targetInstitutions || [])
+      : (agr.sourceInstitutions || []);
+
+    const institutionAllowed =
+      relevantInstitutions.length === 0 ||
+      !requestingOrgName ||
+      relevantInstitutions.some(inst => inst.toLowerCase() === requestingOrgName!.toLowerCase());
+
+    if (!institutionAllowed) continue; // This org is not party to this agreement
+
+    const added: string[] = [];
+    if (agr.sourceCountry !== country) { countries.add(agr.sourceCountry); added.push(agr.sourceCountry); }
+    if (agr.targetCountry !== country) { countries.add(agr.targetCountry); added.push(agr.targetCountry); }
+    if (added.length > 0) crossBorderAccessed.push(...added);
+  }
+
+  // Async cross-border audit log — fire and forget, non-fatal
+  if (crossBorderAccessed.length > 0) {
+    storage.createAuditLog({
+      action: "CROSS_BORDER_DATA_ACCESS",
+      entity: "data_sharing_agreement",
+      userId: req.session?.userId || null,
+      organizationId: req.session?.organizationId || null,
+      ipAddress: req.ip || null,
+      details: JSON.stringify({
+        requestingCountry: country,
+        requestingOrg: requestingOrgName || "unknown",
+        accessedCountries: [...new Set(crossBorderAccessed)],
+        endpoint: req.path,
+        method: req.method,
+      }),
+    }).catch(() => {});
+  }
+
   return [...countries];
 }
 
@@ -3384,15 +3431,42 @@ export async function registerRoutes(
   });
 
   // Normalise the idType string submitted in a batch row.
-  // Accepted Liberia values: NRA_TAX_ID, PASSPORT, ALIEN_REG_CARD, ECOWAS_ID
+  // Covers all African country ID types currently supported.
   function normaliseIdType(raw: string | undefined): string {
     const v = (raw || "").trim().toUpperCase().replace(/[\s\-\/]+/g, "_");
-    if (v === "PASSPORT" || v === "LIBERIAN_PASSPORT") return "PASSPORT";
+    // ── Universal ──────────────────────────────────────────────────────────
+    if (v === "PASSPORT" || v === "LIBERIAN_PASSPORT" || v === "INTERNATIONAL_PASSPORT") return "PASSPORT";
+    if (v === "DRIVERS_LICENSE" || v === "DRIVERS_LICENCE" || v === "DRIVING_LICENSE" || v === "DRIVING_LICENCE" || v === "DL") return "DRIVERS_LICENSE";
+    if (v === "VOTERS_ID" || v === "VOTERS_CARD" || v === "VOTER_ID" || v === "VOTER_CARD" || v === "VOTER_REGISTRATION") return "VOTERS_ID";
+    // ── Liberia ────────────────────────────────────────────────────────────
     if (v === "ALIEN_REG_CARD" || v === "ALIEN_REGISTRATION" || v === "ALIEN_REGISTRATION_CARD" || v === "ARC") return "ALIEN_REG_CARD";
     if (v === "ECOWAS_ID" || v === "ECOWAS_BIOMETRIC" || v === "ECOWAS_BIOMETRIC_ID" || v === "ECOWAS") return "ECOWAS_ID";
-    // NRA Tax ID (TIN) is the default for Liberia; also explicit aliases
     if (v === "NRA_TAX_ID" || v === "NRA" || v === "TIN" || v === "TAX_ID" || v === "TAX_IDENTIFICATION_NUMBER" || v === "") return "NRA_TAX_ID";
-    return v; // pass through any other value (Ghana Card, Voters ID, etc.)
+    // ── Ghana ──────────────────────────────────────────────────────────────
+    if (v === "GHANA_CARD" || v === "GHANA_CARD_NUMBER" || v === "GHA") return "GHANA_CARD";
+    if (v === "SSNIT" || v === "SSNIT_NUMBER") return "SSNIT";
+    if (v === "EZWICH" || v === "E_ZWICH" || v === "EZWICH_NUMBER") return "EZWICH";
+    // ── Nigeria ────────────────────────────────────────────────────────────
+    if (v === "BVN" || v === "BANK_VERIFICATION_NUMBER") return "BVN";
+    if (v === "NIN" || v === "NATIONAL_IDENTIFICATION_NUMBER" || v === "NATIONAL_IDENTITY_NUMBER") return "NIN";
+    // ── South Africa ───────────────────────────────────────────────────────
+    if (v === "SA_ID" || v === "SOUTH_AFRICAN_ID" || v === "SA_IDENTITY_NUMBER" || v === "RSA_ID") return "SA_ID";
+    // ── Kenya ──────────────────────────────────────────────────────────────
+    if (v === "NATIONAL_ID" || v === "NATIONAL_IDENTITY" || v === "KENYAN_ID" || v === "KENYAN_NATIONAL_ID") return "NATIONAL_ID";
+    if (v === "ALIEN_ID" || v === "ALIEN_IDENTIFICATION" || v === "FOREIGN_NATIONAL_ID") return "ALIEN_ID";
+    // ── Rwanda ─────────────────────────────────────────────────────────────
+    if (v === "RWANDA_NID" || v === "RWANDA_NATIONAL_ID") return "NATIONAL_ID";
+    // ── Tanzania ───────────────────────────────────────────────────────────
+    if (v === "NIDA" || v === "NIDA_NUMBER" || v === "TANZANIA_NATIONAL_ID") return "NIDA";
+    // ── Morocco ────────────────────────────────────────────────────────────
+    if (v === "CIN" || v === "CARTE_D_IDENTITE_NATIONALE" || v === "CARTE_IDENTITE") return "CIN";
+    // ── Francophone West/Central Africa (Senegal, CIV, Cameroon) ─────────
+    if (v === "CNI" || v === "CARTE_NATIONALE_D_IDENTITE" || v === "CARTE_NATIONALE_IDENTITE") return "CNI";
+    if (v === "NIF" || v === "NUMERO_IDENTIFICATION_FISCALE" || v === "FISCAL_ID") return "NIF";
+    if (v === "NINEA" || v === "NUMERO_IDENTIFICATION_NATIONALE_ENTREPRISES_ASSOCIATIONS") return "NINEA";
+    // ── Sierra Leone ───────────────────────────────────────────────────────
+    if (v === "NRA_ID" || v === "SIERRA_LEONE_NRA" || v === "SL_NRA") return "NRA_ID";
+    return v;
   }
 
   async function findOrCreateBatchBorrower(
@@ -3418,12 +3492,22 @@ export async function registerRoutes(
       let altRows: { id: string }[] = [];
       if (idType === "PASSPORT") {
         altRows = await db.select({ id: borrowers.id }).from(borrowers).where(eq(borrowers.passportNumber, nationalId)).limit(1);
-      } else if (idType === "NRA_TAX_ID") {
+      } else if (idType === "NRA_TAX_ID" || idType === "NIF" || idType === "NINEA") {
         altRows = await db.select({ id: borrowers.id }).from(borrowers).where(eq(borrowers.tinNumber, nationalId)).limit(1);
       } else if (idType === "ALIEN_REG_CARD") {
         altRows = await db.select({ id: borrowers.id }).from(borrowers).where(eq(borrowers.alienRegCard, nationalId)).limit(1);
       } else if (idType === "ECOWAS_ID") {
         altRows = await db.select({ id: borrowers.id }).from(borrowers).where(eq(borrowers.ecowasId, nationalId)).limit(1);
+      } else if (idType === "BVN") {
+        altRows = await db.select({ id: borrowers.id }).from(borrowers).where(eq(borrowers.bvn, nationalId)).limit(1);
+      } else if (idType === "NIN") {
+        altRows = await db.select({ id: borrowers.id }).from(borrowers).where(eq(borrowers.nin, nationalId)).limit(1);
+      } else if (idType === "DRIVERS_LICENSE") {
+        altRows = await db.select({ id: borrowers.id }).from(borrowers).where(eq(borrowers.driversLicense, nationalId)).limit(1);
+      } else if (idType === "VOTERS_ID") {
+        altRows = await db.select({ id: borrowers.id }).from(borrowers).where(eq(borrowers.votersId, nationalId)).limit(1);
+      } else if (idType === "GHANA_CARD") {
+        altRows = await db.select({ id: borrowers.id }).from(borrowers).where(eq(borrowers.ghanaCardNumber, nationalId)).limit(1);
       }
       if (altRows.length > 0) existing = altRows;
     }
@@ -3456,12 +3540,17 @@ export async function registerRoutes(
 
     // ── 5. Create new borrower — populate the appropriate ID column ────────
     const nameParts = (record.borrowerName || "Unknown").split(" ");
-    const country = record.country || (record.currency === "USD" || record.currency === "LRD" ? "Liberia" : "Ghana");
+    const country = record.country || "Unknown";
     const idFields: any = { nationalIdType: idType };
     if (idType === "PASSPORT") idFields.passportNumber = nationalId;
-    else if (idType === "NRA_TAX_ID") idFields.tinNumber = nationalId;
+    else if (idType === "NRA_TAX_ID" || idType === "NIF" || idType === "NINEA") idFields.tinNumber = nationalId;
     else if (idType === "ALIEN_REG_CARD") idFields.alienRegCard = nationalId;
     else if (idType === "ECOWAS_ID") idFields.ecowasId = nationalId;
+    else if (idType === "BVN") idFields.bvn = nationalId;
+    else if (idType === "NIN") idFields.nin = nationalId;
+    else if (idType === "DRIVERS_LICENSE") idFields.driversLicense = nationalId;
+    else if (idType === "VOTERS_ID") idFields.votersId = nationalId;
+    else if (idType === "GHANA_CARD") idFields.ghanaCardNumber = nationalId;
 
     const [created] = await db.insert(borrowers).values({
       type: "individual",
@@ -4453,6 +4542,354 @@ export async function registerRoutes(
 
   app.get("/api/batch/queue-stats", requireAuth, requireRole("admin", "super_admin"), (_req, res) => {
     res.json(getQueueStats());
+  });
+
+  // ── Generic multi-country batch upload ──────────────────────────────────
+  function luhnCheck(n: string): boolean {
+    let sum = 0, alt = false;
+    for (let i = n.length - 1; i >= 0; i--) {
+      let d = parseInt(n[i], 10);
+      if (alt) { d *= 2; if (d > 9) d -= 9; }
+      sum += d; alt = !alt;
+    }
+    return sum % 10 === 0;
+  }
+
+  type CountryConfig = {
+    defaultCurrency: string;
+    acceptedIdTypes: string[];
+    primaryIdLabel: string;
+    validateId: (id: string, idType: string) => { valid: boolean; reason?: string };
+  };
+  const genericCountryConfigs: Record<string, CountryConfig> = {
+    "Nigeria": {
+      defaultCurrency: "NGN",
+      acceptedIdTypes: ["BVN", "NIN", "PASSPORT", "VOTERS_ID", "DRIVERS_LICENSE"],
+      primaryIdLabel: "BVN (11 digits) or NIN (11 digits)",
+      validateId: (id, idType) => {
+        if ((idType === "BVN" || idType === "NIN") && !/^\d{11}$/.test(id))
+          return { valid: false, reason: `${idType} must be exactly 11 digits` };
+        return { valid: true };
+      },
+    },
+    "Kenya": {
+      defaultCurrency: "KES",
+      acceptedIdTypes: ["NATIONAL_ID", "PASSPORT", "ALIEN_ID"],
+      primaryIdLabel: "National ID (6–8 digits), Passport, or Alien ID",
+      validateId: (id, idType) => {
+        if (idType === "NATIONAL_ID" && !/^\d{6,8}$/.test(id))
+          return { valid: false, reason: "Kenya National ID must be 6–8 digits" };
+        return { valid: true };
+      },
+    },
+    "South Africa": {
+      defaultCurrency: "ZAR",
+      acceptedIdTypes: ["SA_ID", "PASSPORT"],
+      primaryIdLabel: "SA ID Number (13 digits) or Passport",
+      validateId: (id, idType) => {
+        if (idType === "SA_ID") {
+          if (!/^\d{13}$/.test(id)) return { valid: false, reason: "SA ID must be exactly 13 digits" };
+          if (!luhnCheck(id)) return { valid: false, reason: "SA ID failed Luhn checksum validation" };
+        }
+        return { valid: true };
+      },
+    },
+    "Rwanda": {
+      defaultCurrency: "RWF",
+      acceptedIdTypes: ["NATIONAL_ID", "PASSPORT"],
+      primaryIdLabel: "National ID (16 digits) or Passport",
+      validateId: (id, idType) => {
+        if (idType === "NATIONAL_ID" && !/^\d{16}$/.test(id))
+          return { valid: false, reason: "Rwanda National ID must be exactly 16 digits" };
+        return { valid: true };
+      },
+    },
+    "Tanzania": {
+      defaultCurrency: "TZS",
+      acceptedIdTypes: ["NIDA", "VOTERS_ID", "PASSPORT", "DRIVERS_LICENSE"],
+      primaryIdLabel: "NIDA Number (20 chars), Voter ID, or Passport",
+      validateId: (id, idType) => {
+        if (idType === "NIDA" && id.replace(/[-\s]/g, "").length < 20)
+          return { valid: false, reason: "Tanzania NIDA must be 20 characters (hyphens optional)" };
+        return { valid: true };
+      },
+    },
+    "Uganda": {
+      defaultCurrency: "UGX",
+      acceptedIdTypes: ["NATIONAL_ID", "PASSPORT", "DRIVERS_LICENSE"],
+      primaryIdLabel: "National ID (14 chars) or Passport",
+      validateId: (id, idType) => {
+        if (idType === "NATIONAL_ID" && id.length < 14)
+          return { valid: false, reason: "Uganda National ID must be 14 characters" };
+        return { valid: true };
+      },
+    },
+    "Ethiopia": {
+      defaultCurrency: "ETB",
+      acceptedIdTypes: ["NATIONAL_ID", "PASSPORT", "DRIVERS_LICENSE"],
+      primaryIdLabel: "National ID or Passport",
+      validateId: () => ({ valid: true }),
+    },
+    "Morocco": {
+      defaultCurrency: "MAD",
+      acceptedIdTypes: ["CIN", "PASSPORT"],
+      primaryIdLabel: "CIN (Carte Nationale, 1–2 letters + 5–6 digits) or Passport",
+      validateId: (id, idType) => {
+        if (idType === "CIN" && !/^[A-Z]{1,2}\d{5,6}$/i.test(id))
+          return { valid: false, reason: "Morocco CIN format: 1–2 letters followed by 5–6 digits (e.g. BE123456)" };
+        return { valid: true };
+      },
+    },
+    "Senegal": {
+      defaultCurrency: "XOF",
+      acceptedIdTypes: ["CNI", "NINEA", "PASSPORT", "VOTERS_ID"],
+      primaryIdLabel: "CNI (Carte Nationale) or NINEA (Tax ID) or Passport",
+      validateId: () => ({ valid: true }),
+    },
+    "Côte d'Ivoire": {
+      defaultCurrency: "XOF",
+      acceptedIdTypes: ["CNI", "NIF", "PASSPORT", "VOTERS_ID"],
+      primaryIdLabel: "CNI or NIF (Tax ID) or Passport",
+      validateId: () => ({ valid: true }),
+    },
+    "Cameroon": {
+      defaultCurrency: "XAF",
+      acceptedIdTypes: ["CNI", "NIF", "PASSPORT"],
+      primaryIdLabel: "CNI or NIF (Tax ID) or Passport",
+      validateId: () => ({ valid: true }),
+    },
+    "Sierra Leone": {
+      defaultCurrency: "SLE",
+      acceptedIdTypes: ["NRA_ID", "VOTERS_ID", "PASSPORT", "DRIVERS_LICENSE"],
+      primaryIdLabel: "NRA ID, Voter ID, or Passport",
+      validateId: () => ({ valid: true }),
+    },
+  };
+
+  const GENERIC_COUNTRIES = Object.keys(genericCountryConfigs);
+
+  const genericColMap: Record<string, string> = {
+    "Account Number": "accountNumber",
+    "National ID": "nationalId",
+    "ID Type": "idType",
+    "Borrower Name": "borrowerName",
+    "Date of Birth": "dateOfBirth",
+    "Phone": "phoneNumber",
+    "Address": "address",
+    "Original Amount": "_origAmt",
+    "Current Balance": "_balance",
+    "Currency": "currency",
+    "Interest Rate (%)": "interestRate",
+    "Disbursement Date": "disbursementDate",
+    "Maturity Date": "maturityDate",
+    "Account Type": "accountType",
+    "Loan Classification": "_classification",
+    "Days in Arrears": "_days",
+  };
+
+  function genericClassStatus(cls: string): string {
+    const c = (cls || "").toLowerCase();
+    if (c.includes("loss")) return "default";
+    if (c.includes("doubtful") || c.includes("substandard")) return "late";
+    return "current";
+  }
+  function genericClassDays(cls: string): number {
+    const c = (cls || "").toLowerCase();
+    if (c.includes("loss")) return 365;
+    if (c.includes("doubtful")) return 181;
+    if (c.includes("substandard")) return 91;
+    if (c.includes("olem") || c.includes("watch") || c.includes("mention")) return 31;
+    return 0;
+  }
+
+  app.post("/api/batch-upload/generic", batchLimiter, requireRole("admin", "lender"), async (req, res) => {
+    try {
+      const { csvData, country, lenderInstitution } = req.body;
+      if (!csvData || typeof csvData !== "string")
+        return res.status(400).json({ message: "Request body must contain a 'csvData' string" });
+      if (!country || !genericCountryConfigs[country])
+        return res.status(400).json({ message: `Unsupported country "${country}". Supported: ${GENERIC_COUNTRIES.join(", ")}` });
+
+      const cfg = genericCountryConfigs[country];
+      const lender: string = lenderInstitution || "Unknown";
+
+      function gParseCSV(line: string): string[] {
+        const out: string[] = []; let cur = "", inQ = false;
+        for (let i = 0; i < line.length; i++) {
+          const ch = line[i];
+          if (ch === '"') { if (inQ && line[i + 1] === '"') { cur += '"'; i++; } else inQ = !inQ; }
+          else if (ch === ',' && !inQ) { out.push(cur.trim()); cur = ""; }
+          else cur += ch;
+        }
+        out.push(cur.trim()); return out;
+      }
+
+      function gAmt(raw: string): number {
+        return parseFloat((raw || "").replace(/[,\s]/g, "")) || 0;
+      }
+      function gDate(s: string): string {
+        const t = (s || "").trim();
+        if (!t) return "";
+        if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
+        const m = t.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+        if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+        return t;
+      }
+
+      const lines = csvData.trim().split("\n").filter((l: string) => l.trim());
+      if (lines.length < 2)
+        return res.status(400).json({ message: "CSV must contain a header row and at least one data row" });
+
+      const headers = gParseCSV(lines[0]);
+      const records: any[] = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const values = gParseCSV(lines[i]);
+        const raw: any = {};
+        headers.forEach((h, idx) => { raw[h] = (values[idx] || "").trim(); });
+
+        const r: any = { currency: cfg.defaultCurrency, lenderInstitution: lender, country };
+        for (const [colName, field] of Object.entries(genericColMap)) {
+          const val = raw[colName]
+            ?? raw[colName.trim()]
+            ?? Object.entries(raw).find(([k]) => k.trim().toLowerCase() === colName.toLowerCase())?.[1]
+            ?? "";
+          if (field === "_origAmt") r.originalAmount = gAmt(val);
+          else if (field === "_balance") r.currentBalance = gAmt(val);
+          else if (field === "_classification") {
+            r.assetClassification = val;
+            r.status = genericClassStatus(val);
+            r.daysInArrears = genericClassDays(val);
+          } else if (field === "_days") {
+            if (val && r.daysInArrears === undefined) r.daysInArrears = parseInt(val) || 0;
+          } else if (field) r[field] = val;
+        }
+
+        // Currency override from column if provided
+        if (raw["Currency"] && raw["Currency"].trim()) r.currency = raw["Currency"].trim().toUpperCase();
+        if (r.disbursementDate) r.disbursementDate = gDate(r.disbursementDate);
+        if (r.maturityDate) r.maturityDate = gDate(r.maturityDate);
+        if (!r.accountNumber) r.accountNumber = `${country.slice(0, 3).toUpperCase()}-${i}`;
+        if (!r.borrowerName) r.borrowerName = "Unknown";
+        if (!r.status) r.status = "current";
+        if (!r.daysInArrears) r.daysInArrears = 0;
+        if (!r.originalAmount) r.originalAmount = r.currentBalance || 0;
+        if (!r.currentBalance) r.currentBalance = r.originalAmount || 0;
+        if (!r.accountType) r.accountType = "Personal Loan";
+        if (!r.creditCategory) r.creditCategory = inferCreditCategory(r.accountType);
+        if (!r.reportingDate) r.reportingDate = new Date().toISOString().slice(0, 10);
+        if (!r.interestRate) r.interestRate = "0";
+        if (!r.disbursementDate) r.disbursementDate = r.reportingDate;
+        if (!r.maturityDate) r.maturityDate = r.reportingDate;
+        if (!r.address) r.address = country;
+        r.idType = normaliseIdType(r.idType);
+        records.push(r);
+      }
+
+      const results = {
+        totalSubmitted: records.length,
+        successCount: 0,
+        updatedCount: 0,
+        rejectedCount: 0,
+        errorCount: 0,
+        errors: [] as Array<{ index: number; message: string; type?: string }>,
+      };
+
+      const validated: Array<{ index: number; data: any; rawRecord?: any }> = [];
+      for (let i = 0; i < records.length; i++) {
+        const r = records[i];
+        // Validate ID presence
+        if (!isValidMappingId(r.nationalId)) {
+          results.rejectedCount++;
+          results.errorCount++;
+          results.errors.push({
+            index: i,
+            message: `[REJECTED] National ID is missing or invalid (got: "${r.nationalId || ""}"). ` +
+              `Accepted ${country} ID types: ${cfg.acceptedIdTypes.join(", ")}. Expected format: ${cfg.primaryIdLabel}.`,
+            type: "rejected",
+          });
+          continue;
+        }
+        // Country-specific format validation
+        const fmtCheck = cfg.validateId(r.nationalId, r.idType);
+        if (!fmtCheck.valid) {
+          results.rejectedCount++;
+          results.errorCount++;
+          results.errors.push({
+            index: i,
+            message: `[REJECTED] ID format invalid for ${country} (ID Type: ${r.idType}): ${fmtCheck.reason}`,
+            type: "rejected",
+          });
+          continue;
+        }
+        r.borrowerId = r.nationalId;
+        try {
+          validated.push({ index: i, data: insertCreditAccountSchema.parse(r), rawRecord: r });
+        } catch (err: any) {
+          results.errorCount++;
+          results.errors.push({ index: i, message: `[ERROR] ${err.message || "Validation failed"}`, type: "error" });
+        }
+      }
+
+      await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
+
+      const meta = JSON.stringify({ country, lenderInstitution: lender, ...results, errors: results.errors.slice(0, 100) });
+      await storage.createAuditLog({
+        action: "BATCH_UPLOAD_GENERIC",
+        entity: "credit_account",
+        userId: req.session?.userId,
+        organizationId: req.session?.organizationId,
+        ipAddress: req.ip || null,
+        details: `Generic CRS upload (${country}): ${results.successCount} processed (${results.updatedCount} updated), ${results.rejectedCount} rejected, ${results.errorCount - results.rejectedCount} errors, out of ${results.totalSubmitted} submitted\n---JSON---\n${meta}`,
+      });
+
+      return res.json({
+        totalSubmitted: results.totalSubmitted,
+        successCount: results.successCount,
+        processedCount: results.successCount,
+        updatedCount: results.updatedCount,
+        rejectedCount: results.rejectedCount,
+        errorCount: results.errorCount,
+        errors: results.errors,
+      });
+    } catch (e: any) {
+      return res.status(500).json({ message: e.message || "Upload failed" });
+    }
+  });
+
+  app.get("/api/batch-upload/generic/template/:country", (_req, res) => {
+    const country = decodeURIComponent(_req.params.country);
+    const cfg = genericCountryConfigs[country];
+    if (!cfg) return res.status(400).json({ message: `Unsupported country. Supported: ${GENERIC_COUNTRIES.join(", ")}` });
+
+    const exampleIdsByType: Record<string, [string, string][]> = {
+      "Nigeria": [["22345678901", "BVN"], ["12345678901", "NIN"], ["A12345678", "PASSPORT"]],
+      "Kenya": [["12345678", "NATIONAL_ID"], ["A1234567", "PASSPORT"], ["1234567", "ALIEN_ID"]],
+      "South Africa": [["8001015009087", "SA_ID"], ["A12345678", "PASSPORT"]],
+      "Rwanda": [["1199080012345678", "NATIONAL_ID"], ["PC1234567", "PASSPORT"]],
+      "Tanzania": [["19890115-12345-00001-20", "NIDA"], ["AB1234567", "PASSPORT"]],
+      "Uganda": [["CM91234578KBJA", "NATIONAL_ID"], ["A12345678", "PASSPORT"]],
+      "Ethiopia": [["ET-1234567890", "NATIONAL_ID"], ["EP1234567", "PASSPORT"]],
+      "Morocco": [["BE123456", "CIN"], ["MA1234567", "PASSPORT"]],
+      "Senegal": [["SN-CNI-12345678", "CNI"], ["1234567890123", "NINEA"], ["SN1234567", "PASSPORT"]],
+      "Côte d'Ivoire": [["CI-CNI-12345678", "CNI"], ["CI1234567", "PASSPORT"]],
+      "Cameroon": [["CM-CNI-12345678", "CNI"], ["CM1234567", "PASSPORT"]],
+      "Sierra Leone": [["SL-NRA-12345678", "NRA_ID"], ["SL1234567", "PASSPORT"]],
+    };
+
+    const examples = exampleIdsByType[country] || [["ID-12345", "NATIONAL_ID"]];
+    const today = new Date().toISOString().slice(0, 10);
+    const mat = new Date(Date.now() + 3 * 365 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+
+    const header = "Account Number,National ID,ID Type,Borrower Name,Date of Birth,Phone,Address,Original Amount,Current Balance,Currency,Interest Rate (%),Disbursement Date,Maturity Date,Account Type,Loan Classification,Days in Arrears";
+    const rows = examples.map((ex, i) =>
+      `${country.slice(0, 3).toUpperCase()}-LN-2025-${String(i + 1).padStart(3, "0")},${ex[0]},${ex[1]},Sample Borrower ${i + 1},1985-06-15,+${i + 1}23000000000,"${country} City",500000,450000,${cfg.defaultCurrency},12.50,${today},${mat},Personal Loan,Pass,0`
+    );
+
+    const tmpl = [header, ...rows].join("\n");
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", `attachment; filename="${country.replace(/[^a-z0-9]/gi, "_")}-crs-template.csv"`);
+    return res.send(tmpl);
   });
 
   app.get("/api/batch-upload/template/:format", (_req, res) => {
