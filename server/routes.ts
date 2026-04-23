@@ -66,7 +66,7 @@ import rateLimit from "express-rate-limit";
 import { isGhanaMode, getActiveCountryName, isSingleCountryMode, COUNTRY_REGISTRY, getSupportedCountries } from "./country-mode";
 import { sendWelcomeEmail, sendBillingNotification, sendDisputeNotification, sendNewRegistrationAlert, sendConsumerOtpEmail, sendConsumerVerificationLink, sendContactSalesEmail } from "./email";
 import { sendSms, sendOtpSms, isSmsConfigured } from "./sms";
-import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport, generatePortfolioIntelligence, parseProvider, parseOptionalProvider, generateCreditNarrative, detectAnomalies, generateRegulatoryReport, naturalLanguageQuery, analyzeCrossBorderRisk, generateLoanRecommendation, callAI, parseJSON, generateAIResponse } from "./ai";
+import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport, generatePortfolioIntelligence, parseProvider, parseOptionalProvider, generateCreditNarrative, detectAnomalies, generateRegulatoryReport, naturalLanguageQuery, analyzeCrossBorderRisk, generateLoanRecommendation, generateCreditInsights, callAI, parseJSON, generateAIResponse } from "./ai";
 import { BOG_EXPORT_GENERATORS } from "./bog-export";
 import type { BogFileType } from "@shared/bog-codes";
 import { BOG_CHEQUE_RETURN_REASON, BOG_NATURE_OF_GUARANTOR, BOG_EMPLOYMENT_TYPE, BOG_OWNER_TENANT } from "@shared/bog-codes";
@@ -12030,6 +12030,18 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const validTypes = ["personal_loan", "business_loan", "mortgage", "agriculture_loan", "trade_finance", "microfinance", "auto_loan", "education_loan", "overdraft"];
       if (!validTypes.includes(loanType)) return res.status(400).json({ message: "Invalid loan type" });
       const result = await generateLoanRecommendation(req.params.borrowerId, parsedAmount, loanType, provider);
+      res.json(result);
+    } catch (e: any) {
+      if (e.message === "Borrower not found") return res.status(404).json({ message: e.message });
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.post("/api/ai/credit-insights/:borrowerId", aiLimiter, requireAuth, async (req, res) => {
+    try {
+      const { provider: reqProvider } = req.body;
+      const provider = parseOptionalProvider(reqProvider);
+      const result = await generateCreditInsights(req.params.borrowerId, provider);
       res.json(result);
     } catch (e: any) {
       if (e.message === "Borrower not found") return res.status(404).json({ message: e.message });

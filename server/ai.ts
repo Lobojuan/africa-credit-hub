@@ -1400,3 +1400,86 @@ DEBT-TO-INCOME: ${borrower.monthlyIncome ? `${((totalBalance / (parseFloat(borro
   const raw = await callAI(systemPrompt, `Evaluate this loan application:\n\n${profile}`, provider, 2500, 0.3, "credit_risk");
   return { ...parseJSON(raw, { decision: "decline", confidence: 0 }), borrowerName: name, requestedAmount: loanAmount, loanType, generatedAt: new Date().toISOString() };
 }
+
+export async function generateCreditInsights(borrowerId: string | number, provider?: AIProvider) {
+  const borrower = await storage.getBorrower(borrowerId);
+  if (!borrower) throw new Error("Borrower not found");
+
+  const accounts = await storage.getCreditAccountsByBorrower(borrowerId);
+  const disputes = await storage.getDisputesByBorrower(borrowerId);
+  const judgments = await storage.getCourtJudgmentsByBorrower(String(borrowerId));
+  const defaultCurrency = getDefaultCurrencyCode();
+  const countryName = getActiveCountryName();
+
+  const isIndividual = (borrower.borrowerType || borrower.type) !== "corporate";
+  const name = !isIndividual ? (borrower.companyName || "Unknown") : `${borrower.firstName || ""} ${borrower.lastName || ""}`.trim();
+
+  const totalBalance = accounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
+  const delinquentAccounts = accounts.filter(a => a.status === "delinquent" || a.status === "default");
+  const currentAccounts = accounts.filter(a => a.status === "current");
+  const closedAccounts = accounts.filter(a => a.status === "closed");
+  const maxArrears = accounts.reduce((m, a) => Math.max(m, Number(a.daysInArrears) || 0), 0);
+  const openDisputes = disputes.filter(d => d.status === "open" || d.status === "under_review");
+
+  const profile = `
+BORROWER PROFILE
+Name: ${name}
+Type: ${isIndividual ? "Individual / Consumer" : "Corporate / Business"}
+Country: ${borrower.country || countryName}
+Employment: ${(borrower as any).employmentStatus || "Not specified"}
+Monthly Income: ${(borrower as any).monthlyIncome ? `${defaultCurrency} ${Number((borrower as any).monthlyIncome).toLocaleString()}` : "Not reported"}
+PEP Status: ${borrower.isPep ? "Yes — Politically Exposed Person" : "No"}
+
+CREDIT ACCOUNTS SUMMARY
+Total Accounts: ${accounts.length}
+Current / Active: ${currentAccounts.length}
+Delinquent / Default: ${delinquentAccounts.length}
+Closed: ${closedAccounts.length}
+Total Outstanding Balance: ${defaultCurrency} ${totalBalance.toLocaleString()}
+Maximum Days in Arrears (any account): ${maxArrears}
+Account Details:
+${accounts.map(a => `  - ${a.accountType} at ${a.lenderInstitution || "Unknown"}: Balance ${a.currency || defaultCurrency} ${parseFloat(a.currentBalance || "0").toLocaleString()} | Original ${a.currency || defaultCurrency} ${parseFloat(a.originalAmount || "0").toLocaleString()} | Status: ${a.status} | Rate: ${a.interestRate || "N/A"}% | Opened: ${a.dateOpened || "Unknown"} | Arrears: ${a.daysInArrears || 0} days`).join("\n") || "  No accounts on record"}
+
+OPEN DISPUTES: ${openDisputes.length} (total ${disputes.length})
+
+COURT JUDGMENTS / PUBLIC RECORDS: ${judgments.length}
+${judgments.map(j => `  - ${(j as any).caseType || "Court Judgment"}: ${(j as any).description || "No details"} — ${(j as any).status || "Unknown"}`).join("\n") || "  None on record"}
+  `.trim();
+
+  const systemPrompt = `You are a senior credit bureau trainer at the Pan-African Credit Registry. Your job is to help staff, lenders, and financial institution users understand credit reports by providing clear, section-by-section explanations tailored to the actual data of the specific borrower they are viewing.
+
+For each of the 6 sections below, provide:
+- "headline": A one-line summary (e.g. "Score of 645 — Fair standing with 2 delinquent accounts")
+- "what": 1-2 sentences explaining what this section measures in general (educational, jargon-free)
+- "finding": 2-3 sentences describing what the actual data shows for THIS specific borrower — be precise, reference real numbers
+- "watchFor": 1-2 sentences on key things lenders or analysts should pay attention to
+
+Sections:
+1. creditScore — the credit score and its meaning
+2. accountSummary — account mix, types, total balance, utilisation
+3. paymentBehavior — payment track record, arrears, delinquency pattern
+4. liabilityExposure — total debt burden, exposure relative to income (if known), concentration risk
+5. publicRecords — court judgments, disputes, compliance flags
+6. overallGuidance — bottom line: what should a lender or analyst conclude from this full report?
+
+Use ${defaultCurrency} for all amounts. Be specific, professional, and accessible. Avoid generic statements — everything should reference this borrower's actual numbers.
+
+Respond ONLY in valid JSON:
+{
+  "creditScore":      { "headline": "", "what": "", "finding": "", "watchFor": "" },
+  "accountSummary":   { "headline": "", "what": "", "finding": "", "watchFor": "" },
+  "paymentBehavior":  { "headline": "", "what": "", "finding": "", "watchFor": "" },
+  "liabilityExposure":{ "headline": "", "what": "", "finding": "", "watchFor": "" },
+  "publicRecords":    { "headline": "", "what": "", "finding": "", "watchFor": "" },
+  "overallGuidance":  { "headline": "", "what": "", "finding": "", "watchFor": "" }
+}`;
+
+  const raw = await callAI(systemPrompt, `Generate section-by-section credit report insights for this borrower:\n\n${profile}`, provider, 3000, 0.3, "narrative");
+  const parsed = parseJSON(raw, {});
+
+  return {
+    ...parsed,
+    borrowerName: name,
+    generatedAt: new Date().toISOString(),
+  };
+}

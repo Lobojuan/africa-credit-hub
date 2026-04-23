@@ -4,6 +4,7 @@ import { useRoute, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, User, Building2, Mail, Phone, MapPin, Briefcase, CreditCard, AlertTriangle, TrendingUp, FileText, Flag, GraduationCap, Users, Link2, ClipboardList, Camera, Upload, IdCard, Brain, Loader2, ShieldCheck, ShieldAlert, ShieldX, ChevronDown, ChevronUp, Sparkles, Smartphone, Heart, Calendar, Percent, Clock, Banknote, ChevronRight, History, Shield, X } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -168,6 +169,8 @@ export default function BorrowerDetailPage() {
   const [aiRisk, setAiRisk] = useState<any>(null);
   const [aiExpanded, setAiExpanded] = useState(false);
   const [expandedAccountId, setExpandedAccountId] = useState<string | null>(null);
+  const [showInsights, setShowInsights] = useState(false);
+  const [insights, setInsights] = useState<any>(null);
 
   const aiRiskMutation = useMutation({
     mutationFn: async () => {
@@ -184,6 +187,29 @@ export default function BorrowerDetailPage() {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     },
   });
+
+  const insightsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/ai/credit-insights/${borrowerId}`);
+      if (!res.ok) throw new Error("Failed to generate insights");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setInsights(data);
+    },
+    onError: (e: any) => {
+      toast({ title: "Insights Error", description: e.message, variant: "destructive" });
+    },
+  });
+
+  function handleToggleInsights() {
+    if (!showInsights) {
+      setShowInsights(true);
+      if (!insights) insightsMutation.mutate();
+    } else {
+      setShowInsights(false);
+    }
+  }
 
   const uploadPhotoMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -658,6 +684,17 @@ export default function BorrowerDetailPage() {
             {aiRiskMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Brain className="w-4 h-4 mr-2" />}
             AI Risk Analysis
           </Button>
+          <Button
+            size="sm"
+            variant={showInsights ? "default" : "outline"}
+            onClick={handleToggleInsights}
+            disabled={insightsMutation.isPending}
+            className={showInsights ? "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0" : ""}
+            data-testid="button-ai-insights"
+          >
+            {insightsMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+            {showInsights ? "Hide Insights" : "AI Insights"}
+          </Button>
         </div>
       </div>
 
@@ -774,6 +811,85 @@ export default function BorrowerDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {showInsights && (
+        <Card className="border-amber-200 dark:border-amber-800 bg-gradient-to-br from-amber-50/60 to-orange-50/60 dark:from-amber-950/20 dark:to-orange-950/20" data-testid="card-ai-insights">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/40">
+                  <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm">AI Report Insights</p>
+                  <p className="text-[11px] text-muted-foreground">Section-by-section explanation of this credit report</p>
+                </div>
+              </div>
+              {insights && (
+                <p className="text-[10px] text-muted-foreground">Generated {new Date(insights.generatedAt).toLocaleTimeString()}</p>
+              )}
+            </div>
+            {insightsMutation.isPending ? (
+              <div className="space-y-3">
+                {["Credit Score", "Account Summary", "Payment Behavior", "Liability Exposure", "Public Records", "Overall Guidance"].map((s) => (
+                  <div key={s} className="space-y-1.5">
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-3 w-full" />
+                    <Skeleton className="h-3 w-5/6" />
+                  </div>
+                ))}
+              </div>
+            ) : insights ? (
+              <Accordion type="multiple" defaultValue={["creditScore", "overallGuidance"]} className="space-y-1">
+                {([
+                  { key: "creditScore",       label: "Credit Score",       icon: "📊" },
+                  { key: "accountSummary",    label: "Account Summary",    icon: "🏦" },
+                  { key: "paymentBehavior",   label: "Payment Behavior",   icon: "📅" },
+                  { key: "liabilityExposure", label: "Liability Exposure", icon: "⚖️" },
+                  { key: "publicRecords",     label: "Public Records",     icon: "⚠️" },
+                  { key: "overallGuidance",   label: "Overall Guidance",   icon: "🎯" },
+                ] as const).map(({ key, label, icon }) => {
+                  const section = insights[key];
+                  if (!section) return null;
+                  return (
+                    <AccordionItem key={key} value={key} className="border border-amber-200/60 dark:border-amber-800/40 rounded-lg px-3 bg-white/50 dark:bg-black/10" data-testid={`insight-section-${key}`}>
+                      <AccordionTrigger className="text-sm font-medium py-3 hover:no-underline">
+                        <span className="flex items-center gap-2">
+                          <span>{icon}</span>
+                          <span>{label}</span>
+                          {section.headline && (
+                            <span className="text-xs font-normal text-muted-foreground hidden sm:inline ml-1">— {section.headline}</span>
+                          )}
+                        </span>
+                      </AccordionTrigger>
+                      <AccordionContent className="pb-3 space-y-3">
+                        {section.what && (
+                          <div>
+                            <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wide mb-1">What it measures</p>
+                            <p className="text-xs text-muted-foreground leading-relaxed">{section.what}</p>
+                          </div>
+                        )}
+                        {section.finding && (
+                          <div>
+                            <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wide mb-1">What we see</p>
+                            <p className="text-xs leading-relaxed">{section.finding}</p>
+                          </div>
+                        )}
+                        {section.watchFor && (
+                          <div>
+                            <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wide mb-1">Key watch points</p>
+                            <p className="text-xs text-muted-foreground leading-relaxed">{section.watchFor}</p>
+                          </div>
+                        )}
+                      </AccordionContent>
+                    </AccordionItem>
+                  );
+                })}
+              </Accordion>
+            ) : null}
+          </CardContent>
+        </Card>
+      )}
 
       {fraudRisk && (
         <FraudRiskIndicator data={fraudRisk as any} />
