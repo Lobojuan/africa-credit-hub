@@ -320,70 +320,6 @@ const REGISTRY_LABELS: Record<string, { label: string; country: string; assetTyp
   manual:            { label: "Manual Entry", country: "Any", assetType: "Any" },
 };
 
-function XdsBureauStatusPanel() {
-  const { data, isLoading, refetch } = useQuery<{ live: boolean; sandbox: boolean; url?: string }>({
-    queryKey: ["/api/xds/status"],
-    staleTime: 60000,
-  });
-
-  return (
-    <Card data-testid="card-xds-status">
-      <CardHeader className="flex flex-row items-center justify-between pb-3">
-        <CardTitle className="text-sm flex items-center gap-2">
-          <Globe className="w-4 h-4" />
-          XDS Data Ghana — Credit Bureau
-        </CardTitle>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => refetch()} data-testid="button-refresh-xds">
-            <RefreshCw className="w-3 h-3" />
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Checking XDS bureau...
-          </div>
-        ) : (
-          <div className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm" data-testid="row-xds-connection">
-            <div className="flex items-center gap-2">
-              <Radio className={`w-3 h-3 ${data?.live && !data?.sandbox ? "text-emerald-500" : data?.live && data?.sandbox ? "text-amber-500" : "text-muted-foreground/40"}`} />
-              <div>
-                <p className="font-medium">XDS Data Ghana Bureau API</p>
-                <p className="text-[11px] text-muted-foreground">Ghana · Credit Bureau · Scores, Facilities, Adverse Items</p>
-              </div>
-            </div>
-            <Badge
-              variant="outline"
-              data-testid="badge-xds-connection-status"
-              className={
-                data?.live && !data?.sandbox
-                  ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px]"
-                  : data?.live && data?.sandbox
-                  ? "bg-amber-500/10 text-amber-600 border-amber-500/20 text-[10px]"
-                  : "bg-muted/50 text-muted-foreground border-border text-[10px]"
-              }
-            >
-              {data?.live && !data?.sandbox && <CheckCircle2 className="w-2.5 h-2.5 mr-1" />}
-              {data?.live && data?.sandbox && <CheckCircle2 className="w-2.5 h-2.5 mr-1" />}
-              {!data?.live && <AlertTriangle className="w-2.5 h-2.5 mr-1" />}
-              {data?.live && data?.sandbox ? "Sandbox" : data?.live ? "Live" : "Not configured"}
-            </Badge>
-          </div>
-        )}
-        <p className="text-[10px] text-muted-foreground mt-3">
-          {data?.live && !data?.sandbox
-            ? `Connected to production XDS Data Ghana bureau API at ${data?.url || "configured URL"}.`
-            : data?.live && data?.sandbox
-            ? "Running against the built-in XDS sandbox (deterministic synthetic data). Set XDS_GHANA_API_URL and XDS_GHANA_API_KEY environment secrets to switch to production."
-            : "XDS bureau integration not configured. Set XDS_GHANA_API_URL and XDS_GHANA_API_KEY environment secrets to enable Ghana credit bureau lookups."
-          }
-        </p>
-      </CardContent>
-    </Card>
-  );
-}
 
 interface RegistryTestResult {
   provider: string;
@@ -1788,8 +1724,6 @@ export default function SystemStatusPage() {
       <RegistryStatusPanel />
 
       <RegistryHealthConfigPanel />
-
-      <XdsBureauStatusPanel />
 
       <Card data-testid="card-infrastructure">
         <CardHeader>

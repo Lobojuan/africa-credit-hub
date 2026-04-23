@@ -308,7 +308,7 @@ export default function ReportsPage() {
             </div>
             <div>
               <h2 className="text-lg font-bold">Generate Credit Report</h2>
-              <p className="text-sm text-white/60">Search for a borrower and generate a comprehensive D&B-style credit report</p>
+              <p className="text-sm text-white/60">Search for a borrower and generate a comprehensive credit information report</p>
             </div>
           </div>
         </div>

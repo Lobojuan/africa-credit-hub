@@ -228,6 +228,30 @@ function mapBusinessBorrowerFields(row: Record<string, any>): any {
   };
 }
 
+function normaliseNationality(val: string | null): string {
+  if (!val) return "Ghana";
+  const code = val.trim().toUpperCase();
+  const map: Record<string, string> = {
+    "GH": "Ghana", "GHA": "Ghana",
+    "NG": "Nigeria", "NGA": "Nigeria",
+    "KE": "Kenya", "KEN": "Kenya",
+    "ZA": "South Africa", "ZAF": "South Africa",
+    "RW": "Rwanda", "RWA": "Rwanda",
+    "TZ": "Tanzania", "TZA": "Tanzania",
+    "UG": "Uganda", "UGA": "Uganda",
+    "ET": "Ethiopia", "ETH": "Ethiopia",
+    "MA": "Morocco", "MAR": "Morocco",
+    "SN": "Senegal", "SEN": "Senegal",
+    "CI": "Côte d'Ivoire", "CIV": "Côte d'Ivoire",
+    "CM": "Cameroon", "CMR": "Cameroon",
+    "SL": "Sierra Leone", "SLE": "Sierra Leone",
+    "LR": "Liberia", "LBR": "Liberia",
+    "GHANAIAN": "Ghana", "NIGERIAN": "Nigeria",
+    "KENYAN": "Kenya", "RWANDAN": "Rwanda",
+  };
+  return map[code] || val;
+}
+
 function mapConsumerBorrowerFields(row: Record<string, any>): any {
   return {
     firstName: toStr(row.FirstName),
@@ -282,7 +306,7 @@ function mapConsumerBorrowerFields(row: Record<string, any>): any {
     monthlyIncome: toNum(row.Income),
     branchCode: toStr(row.BranchCode),
     customerId: toStr(row.CustomerID),
-    country: toStr(row.Nationality) || "Ghana",
+    country: normaliseNationality(toStr(row.Nationality)),
   };
 }
 

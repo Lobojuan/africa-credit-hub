@@ -5966,7 +5966,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
         }
       }
 
-      const altData = await db.select().from(alternativeData).where(eq(alternativeData.borrowerId, parseInt(borrowerId)));
+      const altData = await db.select().from(alternativeData).where(eq(alternativeData.borrowerId, borrowerId));
       const totalDebt = accounts.reduce((sum, a) => sum + parseFloat(a.currentBalance || "0"), 0);
       const delinquentCount = accounts.filter(a => a.status === "delinquent" || a.status === "default").length;
       const writtenOffCount = accounts.filter(a => a.status === "written_off").length;
