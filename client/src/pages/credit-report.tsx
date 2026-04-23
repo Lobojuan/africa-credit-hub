@@ -1170,6 +1170,7 @@ export default function CreditReportPage() {
             </CardContent>
           </Card>
 
+          {report.borrower.type !== "corporate" && (
           <Card>
             <CardContent className="p-5 print:p-3">
               <SectionHeader icon={Briefcase} title="Employment History" />
@@ -1191,6 +1192,7 @@ export default function CreditReportPage() {
               )}
             </CardContent>
           </Card>
+          )}
 
           {report.affordability?.assessment && (
             <Card data-testid="card-report-affordability">

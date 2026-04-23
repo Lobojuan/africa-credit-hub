@@ -6943,7 +6943,8 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
         ]);
       });
 
-      // === EMPLOYMENT HISTORY (unnumbered) ===
+      // === EMPLOYMENT HISTORY — consumer/individual only ===
+      if (b.type !== "corporate") {
       sectionTitle("Employment History");
       const empFields: [string, string][] = [
         ["Employer Name", b.employerName || "—"],
@@ -6963,6 +6964,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
         doc.fontSize(7).font("Helvetica").fill(DARK).text(b.employmentHistory, 46, doc.y, { width: W - 12 });
         doc.moveDown(0.3);
       }
+      } // end employment history (individual only)
 
       // === SECTION 1: CREDIT PROFILE OVERVIEW ===
       sectionTitle(L("creditProfileOverview"), 1);
