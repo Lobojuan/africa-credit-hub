@@ -3533,16 +3533,7 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "ca_account_borrower_unique": {
-          "name": "ca_account_borrower_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "account_number",
-            "borrower_id"
-          ]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
