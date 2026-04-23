@@ -18,10 +18,14 @@ import {
   CheckCircle2, XCircle, Trophy, BookOpen, Clock, ChevronRight,
   RotateCcw, ArrowLeft, Star, GraduationCap, Target, Award,
   Check, X, AlertCircle, ExternalLink, Printer,
+  Gavel, DollarSign, Bell, ClipboardList, Cpu, BarChart, Smartphone, Globe, Server,
+  Banknote, Wallet, Database, UserCheck,
 } from "lucide-react";
 
 const ICON_MAP: Record<string, React.ElementType> = {
   Monitor, Users, CreditCard, Shield, Brain, Settings, Terminal, Landmark,
+  Gavel, DollarSign, Bell, ClipboardList, Cpu, BarChart, Smartphone, Globe, Server,
+  Banknote, Wallet, Database, UserCheck,
 };
 
 type Screen = "home" | "quiz" | "result";
