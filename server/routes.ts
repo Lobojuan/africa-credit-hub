@@ -4439,6 +4439,54 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/batch-upload/history/:id/records", requireRole("admin", "lender"), async (req, res) => {
+    try {
+      const logId = parseInt(req.params.id, 10);
+      if (isNaN(logId)) return res.status(400).json({ message: "Invalid log ID" });
+
+      const [log] = await db.select({ details: auditLogs.details }).from(auditLogs).where(eq(auditLogs.id, logId)).limit(1);
+      if (!log) return res.status(404).json({ message: "Upload log not found" });
+
+      const jsonMarker = "\n---JSON---\n";
+      const jsonSep = (log.details || "").indexOf(jsonMarker);
+      let meta: any = null;
+      if (jsonSep >= 0) {
+        try { meta = JSON.parse((log.details || "").substring(jsonSep + jsonMarker.length)); } catch {}
+      }
+
+      const borrowerIds: string[] = meta?.borrowerIds || [];
+      const accountIds: string[] = meta?.accountIds || [];
+
+      const borrowerRows = borrowerIds.length > 0
+        ? await db.select({
+            id: borrowers.id,
+            firstName: borrowers.firstName,
+            lastName: borrowers.lastName,
+            companyName: borrowers.companyName,
+            nationalId: borrowers.nationalId,
+            type: borrowers.type,
+          }).from(borrowers).where(inArray(borrowers.id, borrowerIds))
+        : [];
+
+      const accountRows = accountIds.length > 0
+        ? await db.select({
+            id: creditAccounts.id,
+            accountNumber: creditAccounts.accountNumber,
+            accountType: creditAccounts.accountType,
+            lenderInstitution: creditAccounts.lenderInstitution,
+            status: creditAccounts.status,
+            currentBalance: creditAccounts.currentBalance,
+            currency: creditAccounts.currency,
+            borrowerId: creditAccounts.borrowerId,
+          }).from(creditAccounts).where(inArray(creditAccounts.id, accountIds))
+        : [];
+
+      res.json({ borrowers: borrowerRows, accounts: accountRows, iffType: meta?.iffType || null });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
   app.post("/api/batch/accounts", batchLimiter, requireAuth, requireRole("admin", "lender"), async (req, res) => {
     try {
       const { records } = req.body;
@@ -5038,6 +5086,8 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
         guarantorsUpdated: result.guarantorsUpdated,
         errorCount: result.errors.length,
         errors: result.errors.slice(0, 50),
+        borrowerIds: result.borrowerIds || [],
+        accountIds: result.accountIds || [],
       });
       const summaryText = `IFF upload (${iffType}): ${result.totalRecords} records, ${result.borrowersCreated} borrowers created, ${result.borrowersUpdated} borrowers updated, ${result.accountsCreated} accounts created, ${result.accountsUpdated} accounts updated, ${result.chequesCreated} cheques created, ${result.chequesUpdated} cheques updated, ${result.judgmentsCreated} judgments created, ${result.judgmentsUpdated} judgments updated, ${result.guarantorsCreated} guarantors created, ${result.guarantorsUpdated} guarantors updated, ${result.errors.length} errors`;
       await storage.createAuditLog({
@@ -5095,6 +5145,8 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
         guarantorsUpdated: result.guarantorsUpdated,
         errorCount: result.errors.length,
         errors: result.errors.slice(0, 50),
+        borrowerIds: result.borrowerIds || [],
+        accountIds: result.accountIds || [],
       });
       const iffJsonSummary = `IFF upload (${iffType}): ${result.totalRecords} records, ${result.borrowersCreated} borrowers created, ${result.borrowersUpdated} borrowers updated, ${result.accountsCreated} accounts created, ${result.accountsUpdated} accounts updated, ${result.chequesCreated} cheques created, ${result.chequesUpdated} cheques updated, ${result.judgmentsCreated} judgments created, ${result.judgmentsUpdated} judgments updated, ${result.guarantorsCreated} guarantors created, ${result.guarantorsUpdated} guarantors updated, ${result.errors.length} errors`;
       await storage.createAuditLog({

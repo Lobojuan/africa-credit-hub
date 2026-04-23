@@ -87,6 +87,8 @@ interface ProcessingResult {
   judgmentsUpdated: number;
   guarantorsCreated: number;
   guarantorsUpdated: number;
+  borrowerIds: string[];
+  accountIds: string[];
   errors: Array<{ row: number; message: string; field?: string; value?: string; rowData?: Record<string, string> }>;
 }
 
@@ -434,7 +436,8 @@ export async function processBusinessCreditIFF(
   const result: ProcessingResult = {
     totalRecords: rows.length, borrowersCreated: 0, borrowersUpdated: 0,
     accountsCreated: 0, accountsUpdated: 0, chequesCreated: 0, chequesUpdated: 0,
-    judgmentsCreated: 0, judgmentsUpdated: 0, guarantorsCreated: 0, guarantorsUpdated: 0, errors: [],
+    judgmentsCreated: 0, judgmentsUpdated: 0, guarantorsCreated: 0, guarantorsUpdated: 0,
+    borrowerIds: [], accountIds: [], errors: [],
   };
 
   for (let i = 0; i < rows.length; i++) {
@@ -450,12 +453,14 @@ export async function processBusinessCreditIFF(
         organizationId
       );
       if (created) result.borrowersCreated++; else result.borrowersUpdated++;
+      if (!result.borrowerIds.includes(borrowerId)) result.borrowerIds.push(borrowerId);
 
       const accountData = mapCreditAccountFields(row, borrowerId, lenderInstitution);
       accountData.organizationId = organizationId || null;
 
       const acctResult = await upsertCreditAccount(accountData, borrowerId);
       if (acctResult.created) result.accountsCreated++; else result.accountsUpdated++;
+      if (!result.accountIds.includes(acctResult.id)) result.accountIds.push(acctResult.id);
 
       const gList = extractGuarantors(row, acctResult.id, organizationId);
       for (const g of gList) {
@@ -477,7 +482,8 @@ export async function processConsumerCreditIFF(
   const result: ProcessingResult = {
     totalRecords: rows.length, borrowersCreated: 0, borrowersUpdated: 0,
     accountsCreated: 0, accountsUpdated: 0, chequesCreated: 0, chequesUpdated: 0,
-    judgmentsCreated: 0, judgmentsUpdated: 0, guarantorsCreated: 0, guarantorsUpdated: 0, errors: [],
+    judgmentsCreated: 0, judgmentsUpdated: 0, guarantorsCreated: 0, guarantorsUpdated: 0,
+    borrowerIds: [], accountIds: [], errors: [],
   };
 
   for (let i = 0; i < rows.length; i++) {
@@ -493,12 +499,14 @@ export async function processConsumerCreditIFF(
         organizationId
       );
       if (created) result.borrowersCreated++; else result.borrowersUpdated++;
+      if (!result.borrowerIds.includes(borrowerId)) result.borrowerIds.push(borrowerId);
 
       const accountData = mapCreditAccountFields(row, borrowerId, lenderInstitution);
       accountData.organizationId = organizationId || null;
 
       const acctResult = await upsertCreditAccount(accountData, borrowerId);
       if (acctResult.created) result.accountsCreated++; else result.accountsUpdated++;
+      if (!result.accountIds.includes(acctResult.id)) result.accountIds.push(acctResult.id);
 
       const gList = extractGuarantors(row, acctResult.id, organizationId);
       for (const g of gList) {
@@ -520,7 +528,8 @@ export async function processBusinessDishonouredChequesIFF(
   const result: ProcessingResult = {
     totalRecords: rows.length, borrowersCreated: 0, borrowersUpdated: 0,
     accountsCreated: 0, accountsUpdated: 0, chequesCreated: 0, chequesUpdated: 0,
-    judgmentsCreated: 0, judgmentsUpdated: 0, guarantorsCreated: 0, guarantorsUpdated: 0, errors: [],
+    judgmentsCreated: 0, judgmentsUpdated: 0, guarantorsCreated: 0, guarantorsUpdated: 0,
+    borrowerIds: [], accountIds: [], errors: [],
   };
 
   for (let i = 0; i < rows.length; i++) {
@@ -536,6 +545,7 @@ export async function processBusinessDishonouredChequesIFF(
         organizationId
       );
       if (created) result.borrowersCreated++; else result.borrowersUpdated++;
+      if (!result.borrowerIds.includes(borrowerId)) result.borrowerIds.push(borrowerId);
 
       const chequeData = {
         borrowerId,
@@ -566,7 +576,8 @@ export async function processConsumerDishonouredChequesIFF(
   const result: ProcessingResult = {
     totalRecords: rows.length, borrowersCreated: 0, borrowersUpdated: 0,
     accountsCreated: 0, accountsUpdated: 0, chequesCreated: 0, chequesUpdated: 0,
-    judgmentsCreated: 0, judgmentsUpdated: 0, guarantorsCreated: 0, guarantorsUpdated: 0, errors: [],
+    judgmentsCreated: 0, judgmentsUpdated: 0, guarantorsCreated: 0, guarantorsUpdated: 0,
+    borrowerIds: [], accountIds: [], errors: [],
   };
 
   for (let i = 0; i < rows.length; i++) {
@@ -582,6 +593,7 @@ export async function processConsumerDishonouredChequesIFF(
         organizationId
       );
       if (created) result.borrowersCreated++; else result.borrowersUpdated++;
+      if (!result.borrowerIds.includes(borrowerId)) result.borrowerIds.push(borrowerId);
 
       const chequeData = {
         borrowerId,
@@ -612,7 +624,8 @@ export async function processBusinessJudgmentIFF(
   const result: ProcessingResult = {
     totalRecords: rows.length, borrowersCreated: 0, borrowersUpdated: 0,
     accountsCreated: 0, accountsUpdated: 0, chequesCreated: 0, chequesUpdated: 0,
-    judgmentsCreated: 0, judgmentsUpdated: 0, guarantorsCreated: 0, guarantorsUpdated: 0, errors: [],
+    judgmentsCreated: 0, judgmentsUpdated: 0, guarantorsCreated: 0, guarantorsUpdated: 0,
+    borrowerIds: [], accountIds: [], errors: [],
   };
 
   for (let i = 0; i < rows.length; i++) {
@@ -628,6 +641,7 @@ export async function processBusinessJudgmentIFF(
         organizationId
       );
       if (created) result.borrowersCreated++; else result.borrowersUpdated++;
+      if (!result.borrowerIds.includes(borrowerId)) result.borrowerIds.push(borrowerId);
 
       const caseTypeMap: Record<string, string> = { "M": "civil_judgment", "S": "lawsuit", "A": "lien", "B": "bankruptcy" };
       const caseType = toStr(row.CaseType);
@@ -666,7 +680,8 @@ export async function processConsumerJudgmentIFF(
   const result: ProcessingResult = {
     totalRecords: rows.length, borrowersCreated: 0, borrowersUpdated: 0,
     accountsCreated: 0, accountsUpdated: 0, chequesCreated: 0, chequesUpdated: 0,
-    judgmentsCreated: 0, judgmentsUpdated: 0, guarantorsCreated: 0, guarantorsUpdated: 0, errors: [],
+    judgmentsCreated: 0, judgmentsUpdated: 0, guarantorsCreated: 0, guarantorsUpdated: 0,
+    borrowerIds: [], accountIds: [], errors: [],
   };
 
   for (let i = 0; i < rows.length; i++) {
@@ -682,6 +697,7 @@ export async function processConsumerJudgmentIFF(
         organizationId
       );
       if (created) result.borrowersCreated++; else result.borrowersUpdated++;
+      if (!result.borrowerIds.includes(borrowerId)) result.borrowerIds.push(borrowerId);
 
       const caseTypeMap: Record<string, string> = { "M": "civil_judgment", "S": "lawsuit", "A": "lien", "B": "bankruptcy" };
       const caseType = toStr(row.CaseType);

@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, Fragment } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Upload, FileText, CheckCircle, AlertTriangle, Download, FileCode, Database, Clock, FileSpreadsheet, X, Eye, User, Globe, ChevronDown, ChevronUp, Hash } from "lucide-react";
+import { Upload, FileText, CheckCircle, AlertTriangle, Download, FileCode, Database, Clock, FileSpreadsheet, X, Eye, User, Globe, ChevronDown, ChevronUp, Hash, List, ExternalLink } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient, fetchCSRFToken } from "@/lib/queryClient";
 import { isGhanaMode, isLiberiaMode } from "@/lib/country-mode";
@@ -268,6 +269,7 @@ export default function BatchUploadPage() {
   const [iffResult, setIffResult] = useState<any>(null);
   const [iffProgress, setIffProgress] = useState<{ current: number; total: number } | null>(null);
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
+  const [recordsDialogId, setRecordsDialogId] = useState<string | null>(null);
 
   const [multiCountryCsvInput, setMultiCountryCsvInput] = useState("");
   const [multiCountryCountry, setMultiCountryCountry] = useState("Nigeria");
@@ -283,6 +285,16 @@ export default function BatchUploadPage() {
 
   const historyQuery = useQuery<UploadHistoryItem[]>({
     queryKey: ["/api/batch-upload/history"],
+  });
+
+  const recordsQuery = useQuery<{ borrowers: any[]; accounts: any[]; iffType: string | null }>({
+    queryKey: ["/api/batch-upload/history", recordsDialogId, "records"],
+    queryFn: async () => {
+      const res = await fetch(`/api/batch-upload/history/${recordsDialogId}/records`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load records");
+      return res.json();
+    },
+    enabled: !!recordsDialogId,
   });
 
   const uploadMutation = useMutation({
@@ -1766,10 +1778,17 @@ export default function BatchUploadPage() {
                                       <p className="text-[10px] text-muted-foreground uppercase">Total Records</p>
                                       <p className="text-lg font-bold">{item.totalSubmitted}</p>
                                     </div>
-                                    <div className="bg-background rounded-md p-2.5 border">
-                                      <p className="text-[10px] text-muted-foreground uppercase">Succeeded</p>
+                                    <button
+                                      data-testid={`btn-view-succeeded-${item.id}`}
+                                      className="bg-background rounded-md p-2.5 border text-left w-full hover:bg-green-50 dark:hover:bg-green-950/30 hover:border-green-400 transition-colors cursor-pointer group"
+                                      onClick={(e) => { e.stopPropagation(); setRecordsDialogId(item.id); }}
+                                    >
+                                      <p className="text-[10px] text-muted-foreground uppercase flex items-center gap-1">
+                                        Succeeded
+                                        <List className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                      </p>
                                       <p className="text-lg font-bold text-green-600 dark:text-green-400">{item.successCount}</p>
-                                    </div>
+                                    </button>
                                     <div className="bg-background rounded-md p-2.5 border">
                                       <p className="text-[10px] text-muted-foreground uppercase">Errors</p>
                                       <p className="text-lg font-bold text-red-600 dark:text-red-400">{item.errorCount}</p>
@@ -1910,6 +1929,129 @@ export default function BatchUploadPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={!!recordsDialogId} onOpenChange={(open) => { if (!open) setRecordsDialogId(null); }}>
+        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col" data-testid="dialog-upload-records">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <CheckCircle className="w-4 h-4 text-green-500" />
+              Processed Records
+              {recordsQuery.data?.iffType && (
+                <Badge variant="outline" className="text-[10px] ml-1">{recordsQuery.data.iffType}</Badge>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+
+          {recordsQuery.isLoading && (
+            <div className="flex items-center justify-center py-10 text-muted-foreground text-sm">
+              <Database className="w-4 h-4 mr-2 animate-pulse" /> Loading records…
+            </div>
+          )}
+
+          {recordsQuery.isError && (
+            <div className="flex items-center gap-2 text-destructive text-sm py-6 px-2">
+              <AlertTriangle className="w-4 h-4" /> Failed to load records for this upload.
+            </div>
+          )}
+
+          {recordsQuery.data && !recordsQuery.isLoading && (
+            <div className="flex-1 overflow-y-auto min-h-0 pr-1">
+              <div className="space-y-4">
+                {recordsQuery.data.borrowers.length === 0 && recordsQuery.data.accounts.length === 0 && (
+                  <div className="text-sm text-muted-foreground text-center py-8">
+                    No record IDs stored for this upload (older history entries may not have ID tracking).
+                  </div>
+                )}
+
+                {recordsQuery.data.borrowers.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase mb-2 flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5" /> Borrowers ({recordsQuery.data.borrowers.length})
+                    </p>
+                    <div className="rounded-md border overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-muted/40">
+                            <TableHead className="text-xs py-2">Name</TableHead>
+                            <TableHead className="text-xs py-2">Type</TableHead>
+                            <TableHead className="text-xs py-2">National ID</TableHead>
+                            <TableHead className="text-xs py-2 w-8"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {recordsQuery.data.borrowers.map((b) => (
+                            <TableRow key={b.id} className="text-xs" data-testid={`row-record-borrower-${b.id}`}>
+                              <TableCell className="py-1.5 font-medium">
+                                {b.type === "corporate"
+                                  ? (b.companyName || "—")
+                                  : [b.firstName, b.lastName].filter(Boolean).join(" ") || "—"}
+                              </TableCell>
+                              <TableCell className="py-1.5">
+                                <Badge variant="secondary" className="text-[10px]">{b.type || "—"}</Badge>
+                              </TableCell>
+                              <TableCell className="py-1.5 font-mono text-[11px] text-muted-foreground">{b.nationalId || "—"}</TableCell>
+                              <TableCell className="py-1.5">
+                                <a
+                                  href={`/borrowers/${b.id}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-primary hover:opacity-70 transition-opacity"
+                                  data-testid={`link-borrower-${b.id}`}
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                </a>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+
+                {recordsQuery.data.accounts.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase mb-2 flex items-center gap-1.5">
+                      <Database className="w-3.5 h-3.5" /> Credit Accounts ({recordsQuery.data.accounts.length})
+                    </p>
+                    <div className="rounded-md border overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-muted/40">
+                            <TableHead className="text-xs py-2">Account #</TableHead>
+                            <TableHead className="text-xs py-2">Type</TableHead>
+                            <TableHead className="text-xs py-2">Balance</TableHead>
+                            <TableHead className="text-xs py-2">Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {recordsQuery.data.accounts.map((a) => (
+                            <TableRow key={a.id} className="text-xs" data-testid={`row-record-account-${a.id}`}>
+                              <TableCell className="py-1.5 font-mono text-[11px]">{a.accountNumber || "—"}</TableCell>
+                              <TableCell className="py-1.5">{a.accountType || "—"}</TableCell>
+                              <TableCell className="py-1.5 font-mono">
+                                {a.currentBalance != null ? `${a.currency || ""} ${Number(a.currentBalance).toLocaleString()}` : "—"}
+                              </TableCell>
+                              <TableCell className="py-1.5">
+                                <Badge
+                                  variant={a.status === "current" ? "default" : a.status === "closed" ? "secondary" : "destructive"}
+                                  className="text-[10px]"
+                                >
+                                  {a.status || "—"}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
