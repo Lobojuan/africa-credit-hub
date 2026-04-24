@@ -14824,10 +14824,11 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       // Hard whitelist: lenders may only edit informational/draft fields.
       // Regulatory and workflow-state fields are exclusively controlled by the RA approval endpoints.
       const LENDER_EDITABLE_FIELDS: readonly string[] = [
-        "borrowerName", "borrowerId", "collateralType", "description",
+        "borrowerName", "borrowerId", "collateralType", "collateralClass", "description",
         "estimatedValue", "currency", "documentReference", "grantorNationalId",
         "assetLocalIdentifier", "panAfricanAssetId", "securityInterestType",
-        "financingDuration", "registrationDate", "debtorType",
+        "financingDuration", "expiryDate", "registrationDate", "debtorType",
+        "isPmsi", "location", "notes", "legalRegime",
         "vehicleChassis", "vehicleMake", "vehicleModel", "yearOfManufacture",
         "engineNumber", "chassisNumber", "titleDeedNumber", "plotNumber",
         "landRegistryRef", "surfaceAreaSqm", "serialNumber", "equipmentMake",

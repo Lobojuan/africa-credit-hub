@@ -24,7 +24,7 @@ import {
   Award, Clock, CheckCircle2, XCircle, AlertTriangle,
   Download, Shield, Zap, Star, TrendingUp, Package, Link2,
   Eye, CheckCircle, Building2, User, Tag, Calendar, ExternalLink, Copy, Check,
-  Share2, Mail, MessageSquare, Printer, History, Send,
+  Share2, Mail, MessageSquare, Printer, History, Send, Pencil,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -975,6 +975,7 @@ type RegisterCollateralDialogProps = {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   triggerButton?: React.ReactNode;
+  editItemId?: string;
 };
 
 function RegisterCollateralDialog({
@@ -985,6 +986,7 @@ function RegisterCollateralDialog({
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
   triggerButton,
+  editItemId,
 }: RegisterCollateralDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -1026,11 +1028,21 @@ function RegisterCollateralDialog({
 
   const [step, setStep] = useState(1);
 
+  const isEditMode = !!editItemId;
+
   type CollateralSubmission = typeof form & { verificationCode: string; grantorIdentifier?: string; loanApplicationId?: string };
   const mutation = useMutation({
-    mutationFn: (data: Partial<CollateralSubmission>) => apiRequest("POST", "/api/collateral", data),
+    mutationFn: (data: Partial<CollateralSubmission>) =>
+      isEditMode
+        ? apiRequest("PATCH", `/api/collateral/${editItemId}`, data)
+        : apiRequest("POST", "/api/collateral", data),
     onSuccess: () => {
-      toast({ title: "Financing Statement Submitted", description: "Your registration is pending Registry Authority approval." });
+      toast({
+        title: isEditMode ? "Amendment Saved" : "Financing Statement Submitted",
+        description: isEditMode
+          ? "The financing statement has been updated successfully."
+          : "Your registration is pending Registry Authority approval.",
+      });
       setOpen(false);
       setStep(1);
       onSuccess();
@@ -1039,21 +1051,30 @@ function RegisterCollateralDialog({
   });
 
   const handleSubmit = () => {
-    if (!form.borrowerId || !form.description || !form.estimatedValue) {
-      toast({ title: "Validation", description: "Borrower ID, description, and value are required.", variant: "destructive" });
+    const missingFields = isEditMode
+      ? !form.description || !form.estimatedValue
+      : !form.borrowerId || !form.description || !form.estimatedValue;
+    if (missingFields) {
+      const msg = isEditMode
+        ? "Description and estimated value are required."
+        : "Borrower ID, description, and value are required.";
+      toast({ title: "Validation", description: msg, variant: "destructive" });
       return;
     }
-    const verificationCode = genVerificationCode();
-    const { borrowerId: grantorIdRef, loanApplicationId, ...payload } = form;
-    // borrowerId from the form is the grantor's government/national ID — send as grantorIdentifier.
-    // documentReference stays as the user typed it (title deed #, reg cert, etc.)
-    mutation.mutate({
-      ...payload,
-      verificationCode,
-      grantorIdentifier: grantorIdRef || undefined,
-      loanApplicationId: loanApplicationId || undefined,
-      resubmittedFromId: resubmittedFromId || undefined,
-    });
+    const { borrowerId: grantorIdRef, loanApplicationId, countryCode, ...payloadWithoutCountry } = form;
+    if (isEditMode) {
+      mutation.mutate({ ...payloadWithoutCountry, grantorIdentifier: grantorIdRef || undefined });
+    } else {
+      const verificationCode = genVerificationCode();
+      mutation.mutate({
+        ...payloadWithoutCountry,
+        countryCode,
+        verificationCode,
+        grantorIdentifier: grantorIdRef || undefined,
+        loanApplicationId: loanApplicationId || undefined,
+        resubmittedFromId: resubmittedFromId || undefined,
+      });
+    }
   };
 
   const set = (k: string, v: unknown) => setForm(f => ({ ...f, [k]: v }));
@@ -1073,7 +1094,7 @@ function RegisterCollateralDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Shield className="w-5 h-5 text-primary" />
-            {prefillData ? "Fix & Resubmit Financing Statement" : "Register Financing Statement"}
+            {isEditMode ? "Amend Financing Statement" : prefillData ? "Fix & Resubmit Financing Statement" : "Register Financing Statement"}
           </DialogTitle>
           <p className="text-xs text-muted-foreground">Step {step} of 3 — {step === 1 ? "Grantor & Borrower" : step === 2 ? "Collateral Details" : "Security Interest & Duration"}</p>
         </DialogHeader>
@@ -1085,7 +1106,7 @@ function RegisterCollateralDialog({
           ))}
         </div>
 
-        {prefillData && (
+        {prefillData && !isEditMode && (
           <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 mb-1" data-testid="resubmit-notice">
             <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="text-xs text-amber-800 dark:text-amber-200 space-y-1">
@@ -1094,6 +1115,15 @@ function RegisterCollateralDialog({
                 <p><span className="font-medium">Rejection reason:</span> {rejectionReason}</p>
               )}
               <p className="text-amber-700 dark:text-amber-300">This form is pre-filled with your previous submission. Fix the flagged issues and submit again as a new statement.</p>
+            </div>
+          </div>
+        )}
+        {isEditMode && (
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 mb-1" data-testid="amend-notice">
+            <Pencil className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div className="text-xs text-blue-800 dark:text-blue-200 space-y-1">
+              <p className="font-semibold">Amendment — update the details below</p>
+              <p className="text-blue-700 dark:text-blue-300">The form is pre-filled with the current record. Make your changes and save the amendment.</p>
             </div>
           </div>
         )}
@@ -1287,7 +1317,9 @@ function RegisterCollateralDialog({
             ) : (
               <Button data-testid="btn-submit-collateral" onClick={handleSubmit} disabled={mutation.isPending} className="gap-2">
                 <Shield className="w-4 h-4" />
-                {mutation.isPending ? "Submitting…" : "Submit Financing Statement"}
+                {mutation.isPending
+                  ? (isEditMode ? "Saving…" : "Submitting…")
+                  : (isEditMode ? "Save Amendment" : "Submit Financing Statement")}
               </Button>
             )}
           </div>
@@ -1716,11 +1748,35 @@ function CertificateDetailSheet({
     },
     enabled: open && !!item?.id,
   });
+  const [amendOpen, setAmendOpen] = useState(false);
 
   if (!item) return null;
 
   const collateralLabel = COLLATERAL_TYPES.find(t => t.value === item.collateralType)?.label ?? item.collateralType;
   const siLabel = SECURITY_INTEREST_TYPES.find(t => t.value === item.securityInterestType)?.label ?? item.securityInterestType;
+
+  const canAmend = item.approvalStatus === "pending" || item.approvalStatus === "approved";
+
+  const prefillForAmend: Partial<CollateralFormData> = {
+    borrowerId: item.borrowerId,
+    borrowerName: item.borrowerName,
+    debtorType: item.debtorType,
+    collateralType: item.collateralType,
+    collateralClass: item.collateralClass,
+    description: item.description,
+    estimatedValue: item.estimatedValue,
+    currency: item.currency,
+    assetLocalIdentifier: item.assetLocalIdentifier,
+    location: item.location,
+    documentReference: item.documentReference,
+    notes: item.notes,
+    legalRegime: item.legalRegime,
+    countryCode: item.countryCode,
+    isPmsi: item.isPmsi,
+    securityInterestType: item.securityInterestType,
+    financingDuration: item.financingDuration,
+    expiryDate: item.expiryDate,
+  };
 
   const expiryDisplay =
     item.financingDuration === "perpetual"
@@ -1884,9 +1940,20 @@ function CertificateDetailSheet({
           )}
 
           {/* Actions */}
-          {item.approvalStatus === "approved" && item.certificateNumber && (
-            <>
-              <Separator />
+          <Separator />
+          <div className="flex flex-col gap-2">
+            {canAmend && (
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                onClick={() => setAmendOpen(true)}
+                data-testid="detail-btn-amend"
+              >
+                <Pencil className="w-4 h-4" />
+                Amend Statement
+              </Button>
+            )}
+            {item.approvalStatus === "approved" && item.certificateNumber && (
               <Button
                 className="w-full gap-2"
                 onClick={() => downloadCertificate(item)}
@@ -1895,10 +1962,21 @@ function CertificateDetailSheet({
                 <Download className="w-4 h-4" />
                 Download Certificate PDF
               </Button>
-            </>
-          )}
+            )}
+          </div>
         </div>
       </SheetContent>
+
+      <RegisterCollateralDialog
+        open={amendOpen}
+        onOpenChange={setAmendOpen}
+        editItemId={item.id}
+        prefillData={prefillForAmend}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["/api/collateral"] });
+          setAmendOpen(false);
+        }}
+      />
     </Sheet>
   );
 }
