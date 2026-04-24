@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Building, Plus, Search, RefreshCw, MapPin, FileText,
   Award, Clock, CheckCircle2, XCircle, AlertTriangle,
-  Download, Shield, Zap, Star, TrendingUp, Package,
+  Download, Shield, Zap, Star, TrendingUp, Package, Link2,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -55,6 +55,7 @@ interface CollateralRegistryItem {
   status?: string;
   securityInterestType?: string;
   description?: string;
+  verificationCode?: string;
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -570,6 +571,18 @@ function MyRegistrations() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const { toast } = useToast();
+
+  const copyVerificationLink = (item: CollateralRegistryItem) => {
+    const code = item.verificationCode;
+    if (!code) return;
+    const url = `${window.location.origin}/verify/${code}`;
+    navigator.clipboard.writeText(url).then(() => {
+      toast({ title: "Link copied", description: "Verification link copied to clipboard." });
+    }).catch(() => {
+      toast({ title: "Copy failed", description: "Could not copy link. Please try again.", variant: "destructive" });
+    });
+  };
 
   const { data: items = [], isLoading, refetch } = useQuery<CollateralRegistryItem[]>({
     queryKey: ["/api/collateral"],
@@ -722,15 +735,28 @@ function MyRegistrations() {
                       <TableCell>
                         <div className="flex gap-1">
                           {item.approvalStatus === "approved" && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => downloadCertificate(item)}
-                              title="Download Certificate"
-                              data-testid={`btn-download-cert-${item.id}`}
-                            >
-                              <Download className="w-4 h-4 text-primary" />
-                            </Button>
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => downloadCertificate(item)}
+                                title="Download Certificate"
+                                data-testid={`btn-download-cert-${item.id}`}
+                              >
+                                <Download className="w-4 h-4 text-primary" />
+                              </Button>
+                              {item.verificationCode && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => copyVerificationLink(item)}
+                                  title="Copy verification link"
+                                  data-testid={`btn-copy-verify-link-${item.id}`}
+                                >
+                                  <Link2 className="w-4 h-4 text-primary" />
+                                </Button>
+                              )}
+                            </>
                           )}
                         </div>
                       </TableCell>
