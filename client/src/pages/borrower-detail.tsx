@@ -2,7 +2,8 @@ import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, User, Building2, Mail, Phone, MapPin, Briefcase, CreditCard, AlertTriangle, TrendingUp, FileText, Flag, GraduationCap, Users, Link2, ClipboardList, Camera, Upload, IdCard, Brain, Loader2, ShieldCheck, ShieldAlert, ShieldX, ChevronDown, ChevronUp, Sparkles, Smartphone, Heart, Calendar, Percent, Clock, Banknote, ChevronRight, History, Shield, X } from "lucide-react";
+import { ArrowLeft, User, Building2, Mail, Phone, MapPin, Briefcase, CreditCard, AlertTriangle, TrendingUp, FileText, Flag, GraduationCap, Users, Link2, ClipboardList, Camera, Upload, IdCard, Brain, Loader2, ShieldCheck, ShieldAlert, ShieldX, ChevronDown, ChevronUp, Sparkles, Smartphone, Heart, Calendar, Percent, Clock, Banknote, ChevronRight, History, Shield, X, TrendingDown, BarChart2, Eye, EyeOff, Zap } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
@@ -75,6 +76,8 @@ function PaymentStatusDot({ status }: { status: string }) {
 
 function CreditAccountDetail({ account, currency }: { account: CreditAccount; currency: string }) {
   const { t } = useTranslation();
+  const [showTrend, setShowTrend] = useState(false);
+
   const { data: payments, isLoading } = useQuery<any[]>({
     queryKey: ['/api/payment-history', account.id],
     queryFn: async () => {
@@ -82,6 +85,16 @@ function CreditAccountDetail({ account, currency }: { account: CreditAccount; cu
       if (!res.ok) throw new Error("Failed to fetch payment history");
       return res.json();
     },
+  });
+
+  const { data: trendData, isLoading: trendLoading } = useQuery<any>({
+    queryKey: ['/api/credit-accounts', account.id, 'trends'],
+    queryFn: async () => {
+      const res = await fetch(`/api/credit-accounts/${account.id}/trends`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch trend data");
+      return res.json();
+    },
+    enabled: showTrend,
   });
 
   const utilization = parseFloat(account.originalAmount || "0") > 0
@@ -154,6 +167,106 @@ function CreditAccountDetail({ account, currency }: { account: CreditAccount; cu
           <p className="text-xs text-muted-foreground">No payment history records available.</p>
         )}
       </div>
+
+      {/* 24-Month Trended Data View */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="text-xs font-semibold flex items-center gap-1.5">
+            <BarChart2 className="w-3.5 h-3.5 text-primary" />
+            24-Month Payment Trend
+            <Badge variant="outline" className="text-[9px] px-1.5 py-0 ml-1 text-primary border-primary/30">New</Badge>
+          </h4>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-xs h-7 gap-1.5"
+            data-testid={`btn-toggle-trend-${account.id}`}
+            onClick={() => setShowTrend(v => !v)}
+          >
+            {showTrend ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+            {showTrend ? "Hide" : "Show"} Trend
+          </Button>
+        </div>
+        {showTrend && (
+          trendLoading ? (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground py-4">
+              <Loader2 className="w-3 h-3 animate-spin" /> Loading trend data...
+            </div>
+          ) : !trendData || !trendData.periods || trendData.periods.length === 0 ? (
+            <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-4 text-center">
+              <TrendingUp className="w-6 h-6 mx-auto mb-2 opacity-30" />
+              {trendData?.insights?.message || "No trended data available yet. Payment history is required to build trends."}
+            </div>
+          ) : (
+            <div className="space-y-3" data-testid={`trend-panel-${account.id}`}>
+              {/* Insight banner */}
+              <div className={`flex items-start gap-2 rounded-lg p-3 text-xs ${
+                trendData.insights.trend === "good_standing"
+                  ? "bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800"
+                  : trendData.insights.trend === "high_risk"
+                  ? "bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800"
+                  : "bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800"
+              }`}>
+                <Zap className={`w-3.5 h-3.5 flex-shrink-0 mt-0.5 ${
+                  trendData.insights.trend === "good_standing" ? "text-green-600" : trendData.insights.trend === "high_risk" ? "text-red-600" : "text-amber-600"
+                }`} />
+                <div className="flex-1">
+                  <p className="font-medium capitalize">{trendData.insights.trend?.replace(/_/g, " ")}</p>
+                  <p className="text-muted-foreground mt-0.5">{trendData.insights.message}</p>
+                </div>
+                <div className="flex gap-2 text-[10px] font-mono flex-shrink-0">
+                  <span className="text-green-600">{trendData.insights.onTimePct}% on-time</span>
+                  {trendData.insights.latePct > 0 && <span className="text-amber-600">{trendData.insights.latePct}% late</span>}
+                  {trendData.insights.missedPct > 0 && <span className="text-red-600">{trendData.insights.missedPct}% missed</span>}
+                </div>
+              </div>
+
+              {/* Bar chart */}
+              <div className="h-28 rounded-lg border border-border/40 bg-muted/10 px-2 pt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={trendData.periods.map((p: any) => ({
+                      period: p.period,
+                      value: p.status === "on_time" ? 3 : p.status === "late" ? 2 : p.status === "missed" ? 1 : 0,
+                      status: p.status,
+                    }))}
+                    barSize={6}
+                    margin={{ top: 4, right: 4, bottom: 4, left: -32 }}
+                  >
+                    <XAxis dataKey="period" tick={{ fontSize: 8 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                    <YAxis hide domain={[0, 3]} />
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (!active || !payload?.[0]) return null;
+                        const d = payload[0].payload;
+                        return (
+                          <div className="bg-background border border-border rounded shadow p-2 text-xs">
+                            <p className="font-medium">{d.period}</p>
+                            <p className="capitalize text-muted-foreground">{d.status?.replace(/_/g, " ")}</p>
+                          </div>
+                        );
+                      }}
+                    />
+                    <Bar dataKey="value" radius={[2, 2, 0, 0]}>
+                      {trendData.periods.map((p: any, idx: number) => (
+                        <Cell
+                          key={idx}
+                          fill={p.status === "on_time" ? "#22c55e" : p.status === "late" ? "#f59e0b" : p.status === "missed" ? "#ef4444" : "#94a3b8"}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex items-center gap-4 text-[10px] text-muted-foreground justify-center">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> On-time</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500 inline-block" /> Late</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> Missed</span>
+              </div>
+            </div>
+          )
+        )}
+      </div>
     </div>
   );
 }
@@ -172,6 +285,8 @@ export default function BorrowerDetailPage() {
   const [showInsights, setShowInsights] = useState(false);
   const [insights, setInsights] = useState<any>(null);
   const [showRecoveryPlan, setShowRecoveryPlan] = useState(false);
+  const [softPullResult, setSoftPullResult] = useState<any>(null);
+  const [softPullOpen, setSoftPullOpen] = useState(false);
 
   const aiRiskMutation = useMutation({
     mutationFn: async () => {
@@ -186,6 +301,21 @@ export default function BorrowerDetailPage() {
     },
     onError: (e: any) => {
       toast({ title: "Error", description: e.message, variant: "destructive" });
+    },
+  });
+
+  const softPullMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/credit-inquiries/soft-pull", { borrowerId });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.message || "Soft pull failed"); }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setSoftPullResult(data);
+      setSoftPullOpen(true);
+    },
+    onError: (e: any) => {
+      toast({ title: "Soft Pull Failed", description: e.message, variant: "destructive" });
     },
   });
 
@@ -1569,6 +1699,75 @@ export default function BorrowerDetailPage() {
         </Card>
       </div>
 
+      {/* Soft Pull Result Dialog */}
+      {softPullResult && (
+        <Dialog open={softPullOpen} onOpenChange={setSoftPullOpen}>
+          <DialogContent className="max-w-md" data-testid="dialog-soft-pull-result">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-primary" />
+                Soft Pull Pre-Qualification
+              </DialogTitle>
+              <DialogDescription>
+                This inquiry did not affect the borrower's credit score and is not visible to other lenders.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="flex items-center justify-between p-4 bg-muted/30 rounded-xl">
+                <div>
+                  <p className="text-3xl font-extrabold">{softPullResult.score}</p>
+                  <p className="text-xs text-muted-foreground">Credit Score</p>
+                </div>
+                <div className="text-right">
+                  <Badge
+                    variant={softPullResult.recommendation === "APPROVE" ? "default" : softPullResult.recommendation === "MANUAL_REVIEW" ? "secondary" : "destructive"}
+                    className="text-sm px-3 py-1"
+                    data-testid="badge-soft-pull-recommendation"
+                  >
+                    {softPullResult.recommendation?.replace(/_/g, " ")}
+                  </Badge>
+                  <p className="text-xs text-muted-foreground mt-1">{softPullResult.tier}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-3 text-center text-xs">
+                <div className="bg-muted/20 rounded-lg p-2">
+                  <p className="text-lg font-bold">{softPullResult.totalAccounts}</p>
+                  <p className="text-muted-foreground">Accounts</p>
+                </div>
+                <div className="bg-muted/20 rounded-lg p-2">
+                  <p className={`text-lg font-bold ${softPullResult.activeDelinquencies > 0 ? "text-destructive" : "text-green-600"}`}>{softPullResult.activeDelinquencies}</p>
+                  <p className="text-muted-foreground">Delinquencies</p>
+                </div>
+                <div className="bg-muted/20 rounded-lg p-2">
+                  <p className="text-lg font-bold">{softPullResult.hardInquiriesLast6Mo}</p>
+                  <p className="text-muted-foreground">Hard Inquiries (6mo)</p>
+                </div>
+              </div>
+              {softPullResult.keyFactors && softPullResult.keyFactors.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold mb-2">Key Score Factors</p>
+                  <ul className="space-y-1">
+                    {softPullResult.keyFactors.map((f: any, i: number) => (
+                      <li key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
+                        {f.impact === "positive" ? <TrendingUp className="w-3 h-3 text-green-500 flex-shrink-0" /> : <TrendingDown className="w-3 h-3 text-red-500 flex-shrink-0" />}
+                        {f.description || f.factor || String(f)}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <div className="flex items-start gap-2 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-3 text-xs">
+                <Shield className="w-3.5 h-3.5 text-green-600 flex-shrink-0 mt-0.5" />
+                <p className="text-green-800 dark:text-green-300">{softPullResult.noteToLender}</p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setSoftPullOpen(false)} data-testid="btn-close-soft-pull">Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-2">
@@ -1576,7 +1775,20 @@ export default function BorrowerDetailPage() {
               <FileText className="w-4 h-4" />
               {t("borrowerDetail.creditInquiries")}
             </h3>
-            <Badge variant="secondary" className="text-[10px]">{inquiries.length} {t("borrowerDetail.inquiriesCount")}</Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="text-[10px]">{inquiries.length} {t("borrowerDetail.inquiriesCount")}</Badge>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/5"
+                data-testid="btn-run-soft-pull"
+                onClick={() => softPullMutation.mutate()}
+                disabled={softPullMutation.isPending}
+              >
+                {softPullMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+                Soft Pull
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="px-0 pb-0">

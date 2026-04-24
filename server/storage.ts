@@ -4,7 +4,7 @@ import { db } from "./db";
 import { encryptBorrowerPII, decryptBorrowerPII, decryptBorrowerArray } from "./encryption";
 import {
   users, borrowers, creditAccounts, creditInquiries, auditLogs, pendingApprovals, disputes, notifications,
-  courtJudgments, consentRecords, paymentHistory, institutions, billingRecords, creditReportLogs, apiKeys,
+  courtJudgments, consentRecords, paymentHistory, creditScoreHistory, institutions, billingRecords, creditReportLogs, apiKeys,
   exchangeRates, retentionPolicies, apiConfigurations, organizations, dishonouredCheques, borrowerAlerts,
   contactEvents, linkClusters, assetTraceRecords, collectionAssignments, collectionAttempts, collectionSlaSettings,
   type ContactEvent, type LinkCluster, type AssetTraceRecord,
@@ -67,6 +67,12 @@ import {
   type LoanRepaymentSchedule, type InsertLoanRepaymentSchedule,
   type CollateralItem, type InsertCollateralItem,
   type InstitutionBranding, type InsertInstitutionBranding,
+  portfolioTriggerSubscriptions, portfolioTriggerEvents,
+  consumerMonitoringPrefs, consumerMonitoringAlerts, consumerAccounts,
+  type PortfolioTriggerSubscription, type InsertPortfolioTriggerSubscription,
+  type PortfolioTriggerEvent, type InsertPortfolioTriggerEvent,
+  type ConsumerMonitoringPrefs, type InsertConsumerMonitoringPrefs,
+  type ConsumerMonitoringAlert, type InsertConsumerMonitoringAlert,
 } from "@shared/schema";
 
 export function requireCountryScope(country: string | string[] | undefined, methodName: string): void {
@@ -361,6 +367,29 @@ export interface IStorage {
 
   // Institution Analytics
   getUsageStats(organizationId: string, days: number): Promise<{ eventType: string; count: number; date: string }[]>;
+
+  // Portfolio Trigger Alerts
+  getPortfolioTriggerSubscriptions(organizationId: string): Promise<PortfolioTriggerSubscription[]>;
+  getPortfolioTriggerSubscription(id: string): Promise<PortfolioTriggerSubscription | undefined>;
+  getPortfolioTriggerSubscriptionByBorrower(organizationId: string, borrowerId: string): Promise<PortfolioTriggerSubscription | undefined>;
+  createPortfolioTriggerSubscription(data: InsertPortfolioTriggerSubscription): Promise<PortfolioTriggerSubscription>;
+  updatePortfolioTriggerSubscription(id: string, data: Partial<InsertPortfolioTriggerSubscription>): Promise<PortfolioTriggerSubscription | undefined>;
+  deletePortfolioTriggerSubscription(id: string): Promise<boolean>;
+  getPortfolioTriggerEvents(organizationId: string, limit?: number): Promise<PortfolioTriggerEvent[]>;
+  createPortfolioTriggerEvent(data: InsertPortfolioTriggerEvent): Promise<PortfolioTriggerEvent>;
+  acknowledgePortfolioTriggerEvent(id: string): Promise<PortfolioTriggerEvent | undefined>;
+  firePortfolioTriggers(borrowerId: string, eventType: string, eventData: object): Promise<number>;
+  getAccountTrends(creditAccountId: string): Promise<{ period: string; amountDue: string; amountPaid: string; status: string; daysLate: number }[]>;
+  getBorrowerTrendSummary(borrowerId: string): Promise<{ scoreHistory: { score: number; createdAt: Date }[]; accountCount: number; activeDelinquencies: number; balanceTrend: string }>;
+
+  // Consumer Monitoring
+  getConsumerMonitoringPrefs(consumerAccountId: string): Promise<ConsumerMonitoringPrefs | undefined>;
+  upsertConsumerMonitoringPrefs(data: InsertConsumerMonitoringPrefs): Promise<ConsumerMonitoringPrefs>;
+  getConsumerMonitoringAlerts(consumerAccountId: string, limit?: number): Promise<ConsumerMonitoringAlert[]>;
+  createConsumerMonitoringAlert(data: InsertConsumerMonitoringAlert): Promise<ConsumerMonitoringAlert>;
+  markConsumerMonitoringAlertRead(id: string): Promise<boolean>;
+  markAllConsumerMonitoringAlertsRead(consumerAccountId: string): Promise<number>;
+  fireConsumerMonitoringAlerts(borrowerId: string, alertType: string, title: string, message: string, details?: object): Promise<number>;
 }
 
 export interface OverdueAssignmentDetail {
@@ -2933,6 +2962,192 @@ export class DatabaseStorage implements IStorage {
       ORDER BY date DESC, count DESC
     `);
     return (rows as any).rows ?? [];
+  }
+
+  // -------------------------------------------------------------------------
+  // Portfolio Trigger Alerts
+  // -------------------------------------------------------------------------
+
+  async getPortfolioTriggerSubscriptions(organizationId: string): Promise<PortfolioTriggerSubscription[]> {
+    return db.select().from(portfolioTriggerSubscriptions)
+      .where(eq(portfolioTriggerSubscriptions.organizationId, organizationId))
+      .orderBy(desc(portfolioTriggerSubscriptions.createdAt));
+  }
+
+  async getPortfolioTriggerSubscription(id: string): Promise<PortfolioTriggerSubscription | undefined> {
+    const [row] = await db.select().from(portfolioTriggerSubscriptions).where(eq(portfolioTriggerSubscriptions.id, id));
+    return row;
+  }
+
+  async getPortfolioTriggerSubscriptionByBorrower(organizationId: string, borrowerId: string): Promise<PortfolioTriggerSubscription | undefined> {
+    const [row] = await db.select().from(portfolioTriggerSubscriptions).where(
+      and(eq(portfolioTriggerSubscriptions.organizationId, organizationId), eq(portfolioTriggerSubscriptions.borrowerId, borrowerId))
+    );
+    return row;
+  }
+
+  async createPortfolioTriggerSubscription(data: InsertPortfolioTriggerSubscription): Promise<PortfolioTriggerSubscription> {
+    const [created] = await db.insert(portfolioTriggerSubscriptions).values(data).returning();
+    return created;
+  }
+
+  async updatePortfolioTriggerSubscription(id: string, data: Partial<InsertPortfolioTriggerSubscription>): Promise<PortfolioTriggerSubscription | undefined> {
+    const [updated] = await db.update(portfolioTriggerSubscriptions)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(portfolioTriggerSubscriptions.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deletePortfolioTriggerSubscription(id: string): Promise<boolean> {
+    const result = await db.delete(portfolioTriggerSubscriptions).where(eq(portfolioTriggerSubscriptions.id, id));
+    return (result as any).rowCount > 0;
+  }
+
+  async getPortfolioTriggerEvents(organizationId: string, limit = 50): Promise<PortfolioTriggerEvent[]> {
+    return db.select().from(portfolioTriggerEvents)
+      .where(eq(portfolioTriggerEvents.organizationId, organizationId))
+      .orderBy(desc(portfolioTriggerEvents.firedAt))
+      .limit(limit);
+  }
+
+  async createPortfolioTriggerEvent(data: InsertPortfolioTriggerEvent): Promise<PortfolioTriggerEvent> {
+    const [created] = await db.insert(portfolioTriggerEvents).values(data).returning();
+    return created;
+  }
+
+  async acknowledgePortfolioTriggerEvent(id: string): Promise<PortfolioTriggerEvent | undefined> {
+    const [updated] = await db.update(portfolioTriggerEvents)
+      .set({ acknowledgedAt: new Date() })
+      .where(eq(portfolioTriggerEvents.id, id))
+      .returning();
+    return updated;
+  }
+
+  async firePortfolioTriggers(borrowerId: string, eventType: string, eventData: object): Promise<number> {
+    const subs = await db.select().from(portfolioTriggerSubscriptions)
+      .where(and(eq(portfolioTriggerSubscriptions.borrowerId, borrowerId), eq(portfolioTriggerSubscriptions.status, "active")));
+    let count = 0;
+    for (const sub of subs) {
+      const types = sub.triggerTypes as string[];
+      if (types.includes(eventType)) {
+        await db.insert(portfolioTriggerEvents).values({
+          subscriptionId: sub.id,
+          organizationId: sub.organizationId,
+          borrowerId,
+          eventType,
+          eventData,
+          notifiedVia: ["in_app"],
+        });
+        count++;
+      }
+    }
+    return count;
+  }
+
+  async getAccountTrends(creditAccountId: string): Promise<{ period: string; amountDue: string; amountPaid: string; status: string; daysLate: number }[]> {
+    const rows = await db.select({
+      period: paymentHistory.period,
+      amountDue: paymentHistory.amountDue,
+      amountPaid: paymentHistory.amountPaid,
+      status: paymentHistory.status,
+      daysLate: paymentHistory.daysLate,
+    }).from(paymentHistory)
+      .where(eq(paymentHistory.creditAccountId, creditAccountId))
+      .orderBy(desc(paymentHistory.period))
+      .limit(24);
+    return rows.map(r => ({ ...r, daysLate: r.daysLate ?? 0 }));
+  }
+
+  async getBorrowerTrendSummary(borrowerId: string): Promise<{ scoreHistory: { score: number; createdAt: Date }[]; accountCount: number; activeDelinquencies: number; balanceTrend: string }> {
+    const [scoreRows, accounts] = await Promise.all([
+      db.select({ score: creditScoreHistory.score, createdAt: creditScoreHistory.createdAt })
+        .from(creditScoreHistory)
+        .where(eq(creditScoreHistory.borrowerId, borrowerId))
+        .orderBy(desc(creditScoreHistory.createdAt))
+        .limit(24),
+      db.select().from(creditAccounts).where(eq(creditAccounts.borrowerId, borrowerId)),
+    ]);
+    const delinquent = accounts.filter(a => a.status === "delinquent" || a.status === "default").length;
+    let balanceTrend = "stable";
+    if (scoreRows.length >= 3) {
+      const recent = scoreRows[0].score;
+      const older = scoreRows[Math.min(2, scoreRows.length - 1)].score;
+      if (recent > older + 10) balanceTrend = "improving";
+      else if (recent < older - 10) balanceTrend = "deteriorating";
+    }
+    return { scoreHistory: scoreRows.map(r => ({ score: r.score, createdAt: r.createdAt! })), accountCount: accounts.length, activeDelinquencies: delinquent, balanceTrend };
+  }
+
+  // -------------------------------------------------------------------------
+  // Consumer Credit Monitoring
+  // -------------------------------------------------------------------------
+
+  async getConsumerMonitoringPrefs(consumerAccountId: string): Promise<ConsumerMonitoringPrefs | undefined> {
+    const [row] = await db.select().from(consumerMonitoringPrefs).where(eq(consumerMonitoringPrefs.consumerAccountId, consumerAccountId));
+    return row;
+  }
+
+  async upsertConsumerMonitoringPrefs(data: InsertConsumerMonitoringPrefs): Promise<ConsumerMonitoringPrefs> {
+    const [upserted] = await db.insert(consumerMonitoringPrefs).values(data)
+      .onConflictDoUpdate({ target: consumerMonitoringPrefs.consumerAccountId, set: { ...data, updatedAt: new Date() } })
+      .returning();
+    return upserted;
+  }
+
+  async getConsumerMonitoringAlerts(consumerAccountId: string, limit = 50): Promise<ConsumerMonitoringAlert[]> {
+    return db.select().from(consumerMonitoringAlerts)
+      .where(eq(consumerMonitoringAlerts.consumerAccountId, consumerAccountId))
+      .orderBy(desc(consumerMonitoringAlerts.sentAt))
+      .limit(limit);
+  }
+
+  async createConsumerMonitoringAlert(data: InsertConsumerMonitoringAlert): Promise<ConsumerMonitoringAlert> {
+    const [created] = await db.insert(consumerMonitoringAlerts).values(data).returning();
+    return created;
+  }
+
+  async markConsumerMonitoringAlertRead(id: string): Promise<boolean> {
+    const result = await db.update(consumerMonitoringAlerts)
+      .set({ isRead: true, readAt: new Date() })
+      .where(eq(consumerMonitoringAlerts.id, id));
+    return (result as any).rowCount > 0;
+  }
+
+  async markAllConsumerMonitoringAlertsRead(consumerAccountId: string): Promise<number> {
+    const result = await db.update(consumerMonitoringAlerts)
+      .set({ isRead: true, readAt: new Date() })
+      .where(and(eq(consumerMonitoringAlerts.consumerAccountId, consumerAccountId), eq(consumerMonitoringAlerts.isRead, false)));
+    return (result as any).rowCount ?? 0;
+  }
+
+  async fireConsumerMonitoringAlerts(borrowerId: string, alertType: string, title: string, message: string, details?: object): Promise<number> {
+    const prefs = await db.select().from(consumerMonitoringPrefs)
+      .where(and(eq(consumerMonitoringPrefs.borrowerId, borrowerId), eq(consumerMonitoringPrefs.isActive, true)));
+    let fired = 0;
+    for (const pref of prefs) {
+      const shouldFire =
+        (alertType === "score_change" && pref.alertScoreChange) ||
+        (alertType === "new_inquiry" && pref.alertNewInquiry) ||
+        (alertType === "new_account" && pref.alertNewAccount) ||
+        (alertType === "dispute_update" && pref.alertDisputeUpdate) ||
+        (alertType === "late_payment" && pref.alertLatePayment) ||
+        (alertType === "new_judgment" && pref.alertNewJudgment);
+      if (shouldFire) {
+        await db.insert(consumerMonitoringAlerts).values({
+          consumerAccountId: pref.consumerAccountId,
+          borrowerId,
+          alertType,
+          title,
+          message,
+          details: details ?? null,
+          sentViaSms: false,
+          sentViaEmail: false,
+        });
+        fired++;
+      }
+    }
+    return fired;
   }
 }
 

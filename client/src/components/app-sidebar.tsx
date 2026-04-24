@@ -57,6 +57,8 @@ import {
   Package,
   TrendingUp,
   Palette,
+  BellRing,
+  Radar,
 } from "lucide-react";
 import {
   Sidebar,
@@ -129,6 +131,7 @@ const workflowItems: NavItem[] = [
 
 const intelligenceItems: NavItem[] = [
   { label: "Portfolio Intelligence", tKey: "sidebar.portfolioIntelligence", url: "/portfolio-intelligence", icon: Brain, testId: "nav-portfolio-intelligence", roles: ["admin", "super_admin", "regulator"] },
+  { label: "Portfolio Triggers", tKey: "sidebar.portfolioTriggers", url: "/portfolio-triggers", icon: BellRing, testId: "nav-portfolio-triggers", roles: ["admin", "super_admin", "lender"] },
   { label: "AI Command Center", tKey: "sidebar.aiCommandCenter", url: "/ai-command-center", icon: Sparkles, testId: "nav-ai-command-center", roles: ["admin", "super_admin", "regulator"] },
   { label: "Telco Scoring", tKey: "sidebar.telcoScoring", url: "/telco-scoring", icon: Smartphone, testId: "nav-telco-scoring", roles: ["admin", "lender", "regulator", "super_admin"] },
   { label: "Telco Lending", tKey: "sidebar.telcoLending", url: "/telco-lending", icon: Banknote, testId: "nav-telco-lending", roles: ["admin", "lender", "regulator", "super_admin"] },

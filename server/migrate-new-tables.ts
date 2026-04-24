@@ -612,5 +612,71 @@ export async function migrateNewTables() {
     updated_at timestamp NOT NULL DEFAULT now()
   )`);
 
+  // Soft Pull — add columns to credit_inquiries
+  await db.execute(sql`ALTER TABLE credit_inquiries ADD COLUMN IF NOT EXISTS is_soft_pull boolean NOT NULL DEFAULT false`);
+  await db.execute(sql`ALTER TABLE credit_inquiries ADD COLUMN IF NOT EXISTS soft_pull_result jsonb`);
+
+  // Portfolio Trigger Subscriptions
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS portfolio_trigger_subscriptions (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id varchar NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    borrower_id varchar NOT NULL REFERENCES borrowers(id) ON DELETE CASCADE,
+    trigger_types text[] NOT NULL DEFAULT ARRAY['new_inquiry','new_account','status_change','score_drop','new_judgment','late_payment'],
+    webhook_url text,
+    status text NOT NULL DEFAULT 'active',
+    label text,
+    created_by varchar REFERENCES users(id),
+    created_at timestamp NOT NULL DEFAULT now(),
+    updated_at timestamp NOT NULL DEFAULT now(),
+    UNIQUE(organization_id, borrower_id)
+  )`);
+
+  // Portfolio Trigger Events
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS portfolio_trigger_events (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    subscription_id varchar NOT NULL REFERENCES portfolio_trigger_subscriptions(id) ON DELETE CASCADE,
+    organization_id varchar NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    borrower_id varchar NOT NULL REFERENCES borrowers(id) ON DELETE CASCADE,
+    event_type text NOT NULL,
+    event_data jsonb,
+    notified_via text[] DEFAULT ARRAY[]::text[],
+    webhook_status text,
+    acknowledged_at timestamp,
+    fired_at timestamp NOT NULL DEFAULT now()
+  )`);
+
+  // Consumer Monitoring Preferences
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS consumer_monitoring_prefs (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    consumer_account_id varchar NOT NULL UNIQUE REFERENCES consumer_accounts(id) ON DELETE CASCADE,
+    borrower_id varchar REFERENCES borrowers(id) ON DELETE CASCADE,
+    alert_score_change boolean NOT NULL DEFAULT true,
+    alert_new_inquiry boolean NOT NULL DEFAULT true,
+    alert_new_account boolean NOT NULL DEFAULT true,
+    alert_dispute_update boolean NOT NULL DEFAULT true,
+    alert_late_payment boolean NOT NULL DEFAULT true,
+    alert_new_judgment boolean NOT NULL DEFAULT true,
+    alert_channel text NOT NULL DEFAULT 'both',
+    is_active boolean NOT NULL DEFAULT true,
+    created_at timestamp NOT NULL DEFAULT now(),
+    updated_at timestamp NOT NULL DEFAULT now()
+  )`);
+
+  // Consumer Monitoring Alerts
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS consumer_monitoring_alerts (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    consumer_account_id varchar NOT NULL REFERENCES consumer_accounts(id) ON DELETE CASCADE,
+    borrower_id varchar REFERENCES borrowers(id) ON DELETE CASCADE,
+    alert_type text NOT NULL,
+    title text NOT NULL,
+    message text NOT NULL,
+    details jsonb,
+    sent_via_sms boolean NOT NULL DEFAULT false,
+    sent_via_email boolean NOT NULL DEFAULT false,
+    is_read boolean NOT NULL DEFAULT false,
+    read_at timestamp,
+    sent_at timestamp NOT NULL DEFAULT now()
+  )`);
+
   console.log('[NewTables] Migration complete');
 }

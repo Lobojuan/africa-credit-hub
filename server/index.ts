@@ -476,6 +476,13 @@ process.stderr.write = function (...args: any[]) {
 } as any;
 
 (async () => {
+  try {
+    const { migrateNewTables } = await import("./migrate-new-tables");
+    await migrateNewTables();
+  } catch (e) {
+    console.error("[NewTables] Early migration error (non-fatal):", e);
+  }
+
   if (process.env.RUN_SEED === "true") {
     try {
       const { cleanupNonGhanaData } = await import("./ghana-cleanup");

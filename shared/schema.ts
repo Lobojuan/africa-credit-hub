@@ -269,6 +269,8 @@ export const creditInquiries = pgTable("credit_inquiries", {
   purpose: inquiryPurposeEnum("purpose").notNull(),
   institution: text("institution").notNull(),
   consentProvided: boolean("consent_provided").notNull().default(false),
+  isSoftPull: boolean("is_soft_pull").notNull().default(false),
+  softPullResult: jsonb("soft_pull_result"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -1858,3 +1860,84 @@ export const institutionBranding = pgTable("institution_branding", {
 export const insertInstitutionBrandingSchema = createInsertSchema(institutionBranding).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertInstitutionBranding = z.infer<typeof insertInstitutionBrandingSchema>;
 export type InstitutionBranding = typeof institutionBranding.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Portfolio Trigger Alerts — institutions subscribe to borrower profile changes
+// ---------------------------------------------------------------------------
+
+export const portfolioTriggerSubscriptions = pgTable("portfolio_trigger_subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id, { onDelete: "cascade" }),
+  triggerTypes: text("trigger_types").array().notNull().default(["new_inquiry", "new_account", "status_change", "score_drop", "new_judgment", "late_payment"]),
+  webhookUrl: text("webhook_url"),
+  status: text("status").notNull().default("active"),
+  label: text("label"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertPortfolioTriggerSubscriptionSchema = createInsertSchema(portfolioTriggerSubscriptions).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertPortfolioTriggerSubscription = z.infer<typeof insertPortfolioTriggerSubscriptionSchema>;
+export type PortfolioTriggerSubscription = typeof portfolioTriggerSubscriptions.$inferSelect;
+
+export const portfolioTriggerEvents = pgTable("portfolio_trigger_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  subscriptionId: varchar("subscription_id").notNull().references(() => portfolioTriggerSubscriptions.id, { onDelete: "cascade" }),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id, { onDelete: "cascade" }),
+  eventType: text("event_type").notNull(),
+  eventData: jsonb("event_data"),
+  notifiedVia: text("notified_via").array().default([]),
+  webhookStatus: text("webhook_status"),
+  acknowledgedAt: timestamp("acknowledged_at"),
+  firedAt: timestamp("fired_at").notNull().defaultNow(),
+});
+
+export const insertPortfolioTriggerEventSchema = createInsertSchema(portfolioTriggerEvents).omit({ id: true, firedAt: true });
+export type InsertPortfolioTriggerEvent = z.infer<typeof insertPortfolioTriggerEventSchema>;
+export type PortfolioTriggerEvent = typeof portfolioTriggerEvents.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Consumer Credit Monitoring Alerts — borrower-side change notifications
+// ---------------------------------------------------------------------------
+
+export const consumerMonitoringPrefs = pgTable("consumer_monitoring_prefs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  consumerAccountId: varchar("consumer_account_id").notNull().unique().references(() => consumerAccounts.id, { onDelete: "cascade" }),
+  borrowerId: varchar("borrower_id").references(() => borrowers.id, { onDelete: "cascade" }),
+  alertScoreChange: boolean("alert_score_change").notNull().default(true),
+  alertNewInquiry: boolean("alert_new_inquiry").notNull().default(true),
+  alertNewAccount: boolean("alert_new_account").notNull().default(true),
+  alertDisputeUpdate: boolean("alert_dispute_update").notNull().default(true),
+  alertLatePayment: boolean("alert_late_payment").notNull().default(true),
+  alertNewJudgment: boolean("alert_new_judgment").notNull().default(true),
+  alertChannel: text("alert_channel").notNull().default("both"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertConsumerMonitoringPrefsSchema = createInsertSchema(consumerMonitoringPrefs).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertConsumerMonitoringPrefs = z.infer<typeof insertConsumerMonitoringPrefsSchema>;
+export type ConsumerMonitoringPrefs = typeof consumerMonitoringPrefs.$inferSelect;
+
+export const consumerMonitoringAlerts = pgTable("consumer_monitoring_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  consumerAccountId: varchar("consumer_account_id").notNull().references(() => consumerAccounts.id, { onDelete: "cascade" }),
+  borrowerId: varchar("borrower_id").references(() => borrowers.id, { onDelete: "cascade" }),
+  alertType: text("alert_type").notNull(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  details: jsonb("details"),
+  sentViaSms: boolean("sent_via_sms").notNull().default(false),
+  sentViaEmail: boolean("sent_via_email").notNull().default(false),
+  isRead: boolean("is_read").notNull().default(false),
+  readAt: timestamp("read_at"),
+  sentAt: timestamp("sent_at").notNull().defaultNow(),
+});
+
+export const insertConsumerMonitoringAlertSchema = createInsertSchema(consumerMonitoringAlerts).omit({ id: true, sentAt: true });
+export type InsertConsumerMonitoringAlert = z.infer<typeof insertConsumerMonitoringAlertSchema>;
+export type ConsumerMonitoringAlert = typeof consumerMonitoringAlerts.$inferSelect;

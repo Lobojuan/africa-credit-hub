@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Shield, AlertTriangle, CheckCircle2, TrendingUp, User, Loader2, Scale, Phone, Lock, LogOut, UserPlus, KeyRound, ArrowLeft, Eye, EyeOff, Mail, MessageSquare, RefreshCw, Download, FileText, Send } from "lucide-react";
+import { Shield, AlertTriangle, CheckCircle2, TrendingUp, User, Loader2, Scale, Phone, Lock, LogOut, UserPlus, KeyRound, ArrowLeft, Eye, EyeOff, Mail, MessageSquare, RefreshCw, Download, FileText, Send, BellRing, Bell, BellOff, Settings2, Info } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -225,6 +228,72 @@ export default function ConsumerPortalPage() {
     },
     retry: false,
   });
+
+  const isLoggedIn = sessionQuery.data?.authenticated && view === "dashboard";
+
+  const monitoringAlertsQuery = useQuery<any[]>({
+    queryKey: ["/api/consumer/monitoring-alerts"],
+    queryFn: async () => {
+      const res = await fetch("/api/consumer/monitoring-alerts?limit=20", { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!isLoggedIn,
+    retry: false,
+  });
+
+  const monitoringPrefsQuery = useQuery<any>({
+    queryKey: ["/api/consumer/monitoring-prefs"],
+    queryFn: async () => {
+      const res = await fetch("/api/consumer/monitoring-prefs", { credentials: "include" });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!isLoggedIn,
+    retry: false,
+  });
+
+  const saveMonitoringPrefs = useMutation({
+    mutationFn: async (prefs: any) => {
+      const res = await fetch("/api/consumer/monitoring-prefs", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(prefs),
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.message); }
+      return res.json();
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/consumer/monitoring-prefs"] }); },
+  });
+
+  const markAllAlertsRead = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/consumer/monitoring-alerts/mark-all-read", {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/consumer/monitoring-alerts"] }); },
+  });
+
+  const [monitorPrefsOpen, setMonitorPrefsOpen] = useState(false);
+  const [localPrefs, setLocalPrefs] = useState({ alertOnInquiry: true, alertOnScoreChange: true, alertOnNewAccount: true, alertOnDelinquency: true, emailAlerts: true, smsAlerts: false });
+
+  useEffect(() => {
+    if (monitoringPrefsQuery.data) {
+      setLocalPrefs({
+        alertOnInquiry: monitoringPrefsQuery.data.alertOnInquiry ?? true,
+        alertOnScoreChange: monitoringPrefsQuery.data.alertOnScoreChange ?? true,
+        alertOnNewAccount: monitoringPrefsQuery.data.alertOnNewAccount ?? true,
+        alertOnDelinquency: monitoringPrefsQuery.data.alertOnDelinquency ?? true,
+        emailAlerts: monitoringPrefsQuery.data.emailAlerts ?? true,
+        smsAlerts: monitoringPrefsQuery.data.smsAlerts ?? false,
+      });
+    }
+  }, [monitoringPrefsQuery.data]);
 
   useEffect(() => {
     if (sessionQuery.isLoading) return;
@@ -1036,6 +1105,129 @@ export default function ConsumerPortalPage() {
                     </CardContent>
                   </Card>
                 )}
+
+                {/* ---- CREDIT MONITORING ALERTS ---- */}
+                <Card className="shadow-sm border-primary/20" data-testid="card-monitoring-alerts">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <BellRing className="w-4 h-4 text-primary" />
+                        <h3 className="text-sm font-bold">Credit Monitoring Alerts</h3>
+                        {monitoringAlertsQuery.data && monitoringAlertsQuery.data.filter((a: any) => !a.isRead).length > 0 && (
+                          <Badge variant="destructive" className="h-4 px-1 text-[10px]">
+                            {monitoringAlertsQuery.data.filter((a: any) => !a.isRead).length}
+                          </Badge>
+                        )}
+                      </div>
+                      <button
+                        className="text-muted-foreground hover:text-foreground"
+                        data-testid="btn-monitoring-settings"
+                        onClick={() => setMonitorPrefsOpen(true)}
+                      >
+                        <Settings2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      We monitor your credit file 24/7 and alert you when lenders access your data, your score changes, or new accounts are opened.
+                    </p>
+                    {monitoringAlertsQuery.isLoading ? (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Loader2 className="w-3 h-3 animate-spin" /> Loading alerts...
+                      </div>
+                    ) : !monitoringAlertsQuery.data || monitoringAlertsQuery.data.length === 0 ? (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 rounded-lg p-3">
+                        <Bell className="w-4 h-4 flex-shrink-0" />
+                        <span>No alerts yet. Monitoring is active — you will be notified of any changes to your credit file.</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {monitoringAlertsQuery.data.slice(0, 5).map((alert: any) => (
+                          <div
+                            key={alert.id}
+                            data-testid={`monitoring-alert-${alert.id}`}
+                            className={`flex items-start gap-2 text-xs rounded-lg p-2.5 ${alert.isRead ? "bg-muted/20" : "bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800"}`}
+                          >
+                            <AlertTriangle className={`w-3.5 h-3.5 flex-shrink-0 mt-0.5 ${alert.isRead ? "text-muted-foreground" : "text-amber-500"}`} />
+                            <div className="flex-1 min-w-0">
+                              <p className={`font-medium ${alert.isRead ? "text-muted-foreground" : "text-amber-800 dark:text-amber-300"}`}>
+                                {alert.alertType?.replace(/_/g, " ") || "Alert"}
+                              </p>
+                              <p className="text-muted-foreground truncate">{alert.message || "—"}</p>
+                            </div>
+                            {!alert.isRead && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0 mt-1.5" />
+                            )}
+                          </div>
+                        ))}
+                        {monitoringAlertsQuery.data.filter((a: any) => !a.isRead).length > 0 && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="w-full text-xs text-muted-foreground"
+                            data-testid="btn-mark-all-read"
+                            onClick={() => markAllAlertsRead.mutate()}
+                          >
+                            Mark all as read
+                          </Button>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Preferences Dialog */}
+                    {monitorPrefsOpen && (
+                      <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4" onClick={() => setMonitorPrefsOpen(false)}>
+                        <div className="bg-background rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-xl" onClick={e => e.stopPropagation()} data-testid="dialog-monitoring-prefs">
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-bold text-sm">Alert Preferences</h3>
+                            <button onClick={() => setMonitorPrefsOpen(false)} className="text-muted-foreground">✕</button>
+                          </div>
+                          <div className="space-y-3">
+                            {[
+                              { key: "alertOnInquiry", label: "Lender accesses my file" },
+                              { key: "alertOnScoreChange", label: "My score changes" },
+                              { key: "alertOnNewAccount", label: "New account opened" },
+                              { key: "alertOnDelinquency", label: "Delinquency detected" },
+                            ].map(({ key, label }) => (
+                              <div key={key} className="flex items-center justify-between">
+                                <span className="text-sm">{label}</span>
+                                <Switch
+                                  data-testid={`pref-switch-${key}`}
+                                  checked={(localPrefs as any)[key]}
+                                  onCheckedChange={(v) => setLocalPrefs(prev => ({ ...prev, [key]: v }))}
+                                />
+                              </div>
+                            ))}
+                            <Separator />
+                            <p className="text-xs text-muted-foreground font-medium">Delivery</p>
+                            {[
+                              { key: "emailAlerts", label: "Email" },
+                              { key: "smsAlerts", label: "SMS" },
+                            ].map(({ key, label }) => (
+                              <div key={key} className="flex items-center justify-between">
+                                <span className="text-sm">{label}</span>
+                                <Switch
+                                  data-testid={`pref-switch-${key}`}
+                                  checked={(localPrefs as any)[key]}
+                                  onCheckedChange={(v) => setLocalPrefs(prev => ({ ...prev, [key]: v }))}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                          <Button
+                            className="w-full rounded-xl"
+                            size="sm"
+                            data-testid="btn-save-monitoring-prefs"
+                            disabled={saveMonitoringPrefs.isPending}
+                            onClick={() => { saveMonitoringPrefs.mutate(localPrefs); setMonitorPrefsOpen(false); }}
+                          >
+                            {saveMonitoringPrefs.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                            Save Preferences
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
 
                 <Card className="shadow-sm bg-muted/20">
                   <CardContent className="p-4">

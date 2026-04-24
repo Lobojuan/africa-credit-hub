@@ -57,7 +57,7 @@ import { recordUsageEvent } from "./usage-metering";
 import { broadcastEvent } from "./websocket";
 import { createAnchor, verifyAuditAgainstAnchor, getAnchors } from "./blockchain-anchor";
 import { deliverWebhook, getWebhookSubscriptions, getWebhookDeliveryHistory, WEBHOOK_EVENTS } from "./webhook-delivery";
-import { webauthnCredentials, blockchainAnchors, webhookSubscriptions, webhookDeliveryLogs, consumerAccounts, telcoProfiles, telcoLoans, telcoLoanRepayments, openBankingProfiles, insertOpenBankingProfileSchema, decisionRules, insertDecisionRuleSchema, esgScores, insertEsgScoreSchema } from "@shared/schema";
+import { webauthnCredentials, blockchainAnchors, webhookSubscriptions, webhookDeliveryLogs, consumerAccounts, telcoProfiles, telcoLoans, telcoLoanRepayments, openBankingProfiles, insertOpenBankingProfileSchema, decisionRules, insertDecisionRuleSchema, esgScores, insertEsgScoreSchema, portfolioTriggerSubscriptions, portfolioTriggerEvents, consumerMonitoringPrefs, consumerMonitoringAlerts, insertPortfolioTriggerSubscriptionSchema, insertConsumerMonitoringPrefsSchema } from "@shared/schema";
 import fs from "fs";
 import path from "path";
 import * as OTPAuth from "otpauth";
@@ -14395,6 +14395,232 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (!orgId) return res.status(400).json({ message: "organizationId required" });
       const stats = await storage.getUsageStats(orgId, days);
       res.json(stats);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ===========================================================================
+  // PORTFOLIO TRIGGER ALERTS — institutional subscriptions + event feed
+  // ===========================================================================
+
+  app.get("/api/portfolio-triggers", requireAuth, async (req, res) => {
+    try {
+      const orgId = req.session?.organizationId;
+      if (!orgId) return res.status(400).json({ message: "organizationId required" });
+      const subs = await storage.getPortfolioTriggerSubscriptions(orgId);
+      const borrowerIds = [...new Set(subs.map(s => s.borrowerId))];
+      const borrowerMap: Record<string, any> = {};
+      await Promise.all(borrowerIds.map(async (bid) => {
+        const b = await storage.getBorrower(bid);
+        if (b) borrowerMap[bid] = b;
+      }));
+      res.json(subs.map(s => ({ ...s, borrower: borrowerMap[s.borrowerId] ?? null })));
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/portfolio-triggers", requireRole("admin", "super_admin", "lender"), async (req, res) => {
+    try {
+      const orgId = req.session?.organizationId;
+      if (!orgId) return res.status(400).json({ message: "organizationId required" });
+      const parsed = insertPortfolioTriggerSubscriptionSchema.safeParse({ ...req.body, organizationId: orgId, createdBy: req.session?.userId });
+      if (!parsed.success) return res.status(400).json({ message: "Validation error", errors: parsed.error.errors });
+      const existing = await storage.getPortfolioTriggerSubscriptionByBorrower(orgId, parsed.data.borrowerId);
+      if (existing) return res.status(409).json({ message: "Already watching this borrower" });
+      const sub = await storage.createPortfolioTriggerSubscription(parsed.data);
+      res.status(201).json(sub);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.patch("/api/portfolio-triggers/:id", requireRole("admin", "super_admin", "lender"), async (req, res) => {
+    try {
+      const updated = await storage.updatePortfolioTriggerSubscription(req.params.id, req.body);
+      if (!updated) return res.status(404).json({ message: "Subscription not found" });
+      res.json(updated);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.delete("/api/portfolio-triggers/:id", requireRole("admin", "super_admin", "lender"), async (req, res) => {
+    try {
+      const ok = await storage.deletePortfolioTriggerSubscription(req.params.id);
+      if (!ok) return res.status(404).json({ message: "Subscription not found" });
+      res.json({ message: "Unsubscribed" });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.get("/api/portfolio-trigger-events", requireAuth, async (req, res) => {
+    try {
+      const orgId = req.session?.organizationId;
+      if (!orgId) return res.status(400).json({ message: "organizationId required" });
+      const limit = parseInt(String(req.query.limit || "50"));
+      const events = await storage.getPortfolioTriggerEvents(orgId, limit);
+      const borrowerIds = [...new Set(events.map(e => e.borrowerId))];
+      const borrowerMap: Record<string, any> = {};
+      await Promise.all(borrowerIds.map(async (bid) => {
+        const b = await storage.getBorrower(bid);
+        if (b) borrowerMap[bid] = { id: b.id, firstName: b.firstName, lastName: b.lastName, companyName: b.companyName, nationalId: b.nationalId };
+      }));
+      res.json(events.map(e => ({ ...e, borrower: borrowerMap[e.borrowerId] ?? null })));
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.patch("/api/portfolio-trigger-events/:id/acknowledge", requireAuth, async (req, res) => {
+    try {
+      const updated = await storage.acknowledgePortfolioTriggerEvent(req.params.id);
+      if (!updated) return res.status(404).json({ message: "Event not found" });
+      res.json(updated);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ===========================================================================
+  // SOFT PULL / PRE-QUALIFICATION — creditworthiness check without hard inquiry
+  // ===========================================================================
+
+  app.post("/api/credit-inquiries/soft-pull", requireRole("admin", "super_admin", "lender"), async (req, res) => {
+    try {
+      const { borrowerId, institution, purpose } = req.body;
+      if (!borrowerId) return res.status(400).json({ message: "borrowerId required" });
+      const userId = req.session?.userId as string;
+      const orgId = req.session?.organizationId;
+
+      const borrower = await storage.getBorrower(borrowerId);
+      if (!borrower) return res.status(404).json({ message: "Borrower not found" });
+
+      const accounts = await storage.getCreditAccountsByBorrower(borrowerId);
+      const inquiries = await storage.getCreditInquiriesByBorrower(borrowerId);
+      const scoreResult = calculateCreditScore(borrower, accounts, inquiries.filter(i => !(i as any).isSoftPull));
+      const trendSummary = await storage.getBorrowerTrendSummary(borrowerId);
+
+      const hardInquiriesLast6Mo = inquiries.filter(i => {
+        if ((i as any).isSoftPull) return false;
+        const inqDate = i.createdAt ? new Date(i.createdAt) : null;
+        if (!inqDate) return false;
+        return (Date.now() - inqDate.getTime()) < 1000 * 60 * 60 * 24 * 180;
+      }).length;
+
+      const result = {
+        score: scoreResult.score,
+        tier: scoreResult.score >= 750 ? "Excellent" : scoreResult.score >= 670 ? "Good" : scoreResult.score >= 580 ? "Fair" : "Poor",
+        recommendation: scoreResult.score >= 670 ? "APPROVE" : scoreResult.score >= 580 ? "MANUAL_REVIEW" : "DECLINE",
+        keyFactors: scoreResult.factors?.slice(0, 5) || [],
+        totalAccounts: accounts.length,
+        activeDelinquencies: accounts.filter(a => a.status === "delinquent" || a.status === "default").length,
+        hardInquiriesLast6Mo,
+        balanceTrend: trendSummary.balanceTrend,
+        noteToLender: "This is a soft pull — borrower's score was NOT affected. No inquiry record visible to other lenders.",
+        pullType: "SOFT",
+        pullTimestamp: new Date().toISOString(),
+      };
+
+      await storage.createCreditInquiry({
+        borrowerId,
+        inquiredBy: userId,
+        purpose: (purpose || "review") as any,
+        institution: institution || req.session?.institution || "Unknown",
+        consentProvided: true,
+        isSoftPull: true,
+        softPullResult: result,
+        organizationId: orgId,
+      } as any);
+
+      await storage.createAuditLog({
+        userId,
+        action: "SOFT_PULL",
+        entity: "borrower",
+        entityId: borrowerId,
+        details: `Soft pull pre-qualification for borrower ${borrowerId}. Score: ${result.score}. Recommendation: ${result.recommendation}`,
+        country: borrower.country || "Unknown",
+        organizationId: orgId || null,
+      } as any);
+
+      res.json(result);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ===========================================================================
+  // TRENDED DATA — 24-month account + borrower trend views
+  // ===========================================================================
+
+  app.get("/api/credit-accounts/:id/trends", requireAuth, async (req, res) => {
+    try {
+      const trends = await storage.getAccountTrends(req.params.id);
+      if (!trends.length) return res.json({ periods: [], insights: { trend: "insufficient_data", message: "Less than 2 months of payment data available." } });
+      const onTime = trends.filter(t => t.status === "on_time").length;
+      const late = trends.filter(t => t.status === "late").length;
+      const missed = trends.filter(t => t.status === "missed").length;
+      const pct = (n: number) => Math.round((n / trends.length) * 100);
+      const trend = missed > 2 ? "high_risk" : late > 3 ? "moderate_risk" : onTime / trends.length > 0.85 ? "good_standing" : "watch";
+      res.json({
+        periods: trends,
+        insights: {
+          trend,
+          onTimePct: pct(onTime),
+          latePct: pct(late),
+          missedPct: pct(missed),
+          totalPeriods: trends.length,
+          message: trend === "good_standing" ? "Strong payment history — 85%+ on-time over tracked period."
+            : trend === "high_risk" ? "Multiple missed payments detected. High default risk."
+            : trend === "moderate_risk" ? "Several late payments in the period. Manual review recommended."
+            : "Payment behaviour is acceptable but warrants monitoring.",
+        },
+      });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.get("/api/borrowers/:id/trend-summary", requireAuth, async (req, res) => {
+    try {
+      const summary = await storage.getBorrowerTrendSummary(req.params.id);
+      res.json(summary);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ===========================================================================
+  // CONSUMER CREDIT MONITORING — consumer alert preferences + alert history
+  // ===========================================================================
+
+  app.get("/api/consumer/monitoring-prefs", async (req, res) => {
+    try {
+      const consumerAccountId = (req.session as any)?.consumerAccountId;
+      if (!consumerAccountId) return res.status(401).json({ message: "Consumer session required" });
+      const prefs = await storage.getConsumerMonitoringPrefs(consumerAccountId);
+      res.json(prefs ?? null);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.put("/api/consumer/monitoring-prefs", async (req, res) => {
+    try {
+      const consumerAccountId = (req.session as any)?.consumerAccountId;
+      if (!consumerAccountId) return res.status(401).json({ message: "Consumer session required" });
+      const parsed = insertConsumerMonitoringPrefsSchema.safeParse({ ...req.body, consumerAccountId });
+      if (!parsed.success) return res.status(400).json({ message: "Validation error", errors: parsed.error.errors });
+      const prefs = await storage.upsertConsumerMonitoringPrefs(parsed.data);
+      res.json(prefs);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.get("/api/consumer/monitoring-alerts", async (req, res) => {
+    try {
+      const consumerAccountId = (req.session as any)?.consumerAccountId;
+      if (!consumerAccountId) return res.status(401).json({ message: "Consumer session required" });
+      const limit = parseInt(String(req.query.limit || "50"));
+      const alerts = await storage.getConsumerMonitoringAlerts(consumerAccountId, limit);
+      res.json(alerts);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.patch("/api/consumer/monitoring-alerts/:id/read", async (req, res) => {
+    try {
+      const consumerAccountId = (req.session as any)?.consumerAccountId;
+      if (!consumerAccountId) return res.status(401).json({ message: "Consumer session required" });
+      const ok = await storage.markConsumerMonitoringAlertRead(req.params.id);
+      res.json({ success: ok });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/consumer/monitoring-alerts/mark-all-read", async (req, res) => {
+    try {
+      const consumerAccountId = (req.session as any)?.consumerAccountId;
+      if (!consumerAccountId) return res.status(401).json({ message: "Consumer session required" });
+      const count = await storage.markAllConsumerMonitoringAlertsRead(consumerAccountId);
+      res.json({ marked: count });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 

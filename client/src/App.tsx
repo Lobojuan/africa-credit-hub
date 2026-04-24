@@ -98,6 +98,7 @@ const PartnerDocsPage = lazy(() => import("@/pages/partner-docs"));
 const AboutPage = lazy(() => import("@/pages/about"));
 const LegalCopyrightPage = lazy(() => import("@/pages/legal-copyright"));
 const PortfolioIntelligencePage = lazy(() => import("@/pages/portfolio-intelligence"));
+const PortfolioTriggersPage = lazy(() => import("@/pages/portfolio-triggers"));
 const AICommandCenterPage = lazy(() => import("@/pages/ai-command-center"));
 const CommandCenterPage = lazy(() => import("@/pages/country-selection"));
 const AIDemoPage = lazy(() => import("@/pages/ai-demo"));
@@ -225,6 +226,7 @@ function Router() {
         <Route path="/about" component={AboutPage} />
         <Route path="/legal" component={LegalCopyrightPage} />
         <Route path="/portfolio-intelligence" component={PortfolioIntelligencePage} />
+        <Route path="/portfolio-triggers" component={PortfolioTriggersPage} />
         <Route path="/ai-command-center" component={AICommandCenterPage} />
         <Route path="/command-center" component={CommandCenterPage} />
         <Route path="/command-center/:rest*" component={CommandCenterPage} />
