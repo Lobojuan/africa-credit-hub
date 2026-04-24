@@ -1685,6 +1685,86 @@ export default function InvestorLandingPage() {
             ))}
           </div>
 
+          {/* Value for Money */}
+          <div className="mb-10">
+            <div className="text-center mb-6">
+              <h3 className="font-bold text-lg mb-1">More for Your Money — Every Time</h3>
+              <p className="text-sm text-muted-foreground max-w-xl mx-auto">Legacy bureaus sell you a fraction of what you need, then charge more for everything else. One Africa Credit Hub subscription includes the full platform.</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Legacy column */}
+              <Card className="border-red-200 dark:border-red-900/40 bg-red-500/5">
+                <CardContent className="pt-5 pb-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-7 h-7 rounded-full bg-red-500/10 flex items-center justify-center">
+                      <XCircle className="w-4 h-4 text-red-500" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm">Legacy Bureau Model</p>
+                      <p className="text-[10px] text-muted-foreground">Experian · TransUnion · Equifax</p>
+                    </div>
+                  </div>
+                  <ul className="space-y-2.5">
+                    {[
+                      { item: "Separate contract & integration per country", note: "each with its own legal, billing, and data model" },
+                      { item: "Per-query or per-report pricing", note: "costs scale unpredictably as your volume grows" },
+                      { item: "AI features billed as separate add-ons", note: "if available at all — most are bolt-ons" },
+                      { item: "Regulatory exports custom-built at your cost", note: "months of development per central bank format" },
+                      { item: "English-only or limited language support", note: "no Arabic RTL, no French Africa, no Swahili" },
+                      { item: "Islamic finance requires custom work", note: "not natively supported on any global bureau" },
+                      { item: "18–24 months to deploy per new country", note: "licensing, legal, and data pipeline setup" },
+                      { item: "Opaque multi-year enterprise pricing", note: "negotiated separately — no published rates" },
+                    ].map((r) => (
+                      <li key={r.item} className="flex items-start gap-2">
+                        <XCircle className="w-3 h-3 text-red-400 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <span className="text-xs font-medium text-foreground/80">{r.item}</span>
+                          <span className="text-[10px] text-muted-foreground block">{r.note}</span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+
+              {/* ACH column */}
+              <Card className="border-green-200 dark:border-green-900/40 bg-green-500/5">
+                <CardContent className="pt-5 pb-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-7 h-7 rounded-full bg-green-500/10 flex items-center justify-center">
+                      <Trophy className="w-4 h-4 text-green-600 dark:text-green-400" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm">Africa Credit Hub — One Subscription</p>
+                      <p className="text-[10px] text-muted-foreground">Everything included. No hidden extras.</p>
+                    </div>
+                  </div>
+                  <ul className="space-y-2.5">
+                    {[
+                      { item: "54 countries — one contract, one API", note: "unified data model across the full continent" },
+                      { item: "Unlimited queries within your plan tier", note: "no per-report billing surprises" },
+                      { item: "AI Command Center & Portfolio Intelligence", note: "natural-language queries and AI risk analysis, included" },
+                      { item: "BoG, BSL, CBN regulatory exports built-in", note: "automated — no custom development required" },
+                      { item: "8 languages including Arabic RTL & French", note: "full UI and reporting in 8 languages, standard" },
+                      { item: "Islamic finance flag native in every account", note: "interest-free lending supported out of the box" },
+                      { item: "Go live within hours of onboarding", note: "all 54 jurisdictions pre-configured on day one" },
+                      { item: "Transparent SaaS subscription pricing", note: "no multi-year lock-in, no opaque negotiations" },
+                    ].map((r) => (
+                      <li key={r.item} className="flex items-start gap-2">
+                        <CheckCircle2 className="w-3 h-3 text-green-500 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <span className="text-xs font-medium text-foreground/80">{r.item}</span>
+                          <span className="text-[10px] text-muted-foreground block">{r.note}</span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            </div>
+            <p className="text-center text-xs text-muted-foreground mt-4">All 16 platform modules — credit registry, collateral registry, telco scoring, dispute management, regulatory exports, AI intelligence, and more — are included in one subscription.</p>
+          </div>
+
           {/* Global Market Opportunity CTA */}
           <Card className="border-primary/20 bg-primary/5">
             <CardContent className="pt-6 pb-6">
