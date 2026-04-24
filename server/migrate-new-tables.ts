@@ -2,7 +2,16 @@ import { sql } from "drizzle-orm";
 import { db } from "./db";
 
 export async function migrateNewTables() {
+  // Ensure registry_authority enum value exists — idempotent (DO NOTHING if already present)
+  await db.execute(sql`
+    DO $$ BEGIN
+      ALTER TYPE organization_type ADD VALUE IF NOT EXISTS 'registry_authority';
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$;
+  `);
+
   await db.execute(sql`ALTER TABLE borrowers ADD COLUMN IF NOT EXISTS passport_number text`);
+
 
   await db.execute(sql`CREATE TABLE IF NOT EXISTS exchange_rates (
     id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -579,7 +588,7 @@ export async function migrateNewTables() {
   await db.execute(sql`CREATE TABLE IF NOT EXISTS collateral_items (
     id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
     registration_number varchar NOT NULL UNIQUE,
-    borrower_id varchar NOT NULL REFERENCES borrowers(id),
+    borrower_id varchar REFERENCES borrowers(id),
     loan_application_id varchar REFERENCES loan_applications(id),
     collateral_type text NOT NULL,
     description text NOT NULL,
@@ -595,6 +604,49 @@ export async function migrateNewTables() {
     created_at timestamp NOT NULL DEFAULT now(),
     updated_at timestamp NOT NULL DEFAULT now()
   )`);
+  // Make borrower_id nullable if it was created as NOT NULL (idempotent)
+  await db.execute(sql`ALTER TABLE collateral_items ALTER COLUMN borrower_id DROP NOT NULL`).catch(() => {});
+  // Pan-African Collateral Registry columns
+  await db.execute(sql`ALTER TABLE collateral_items ADD COLUMN IF NOT EXISTS registry_authority_id varchar REFERENCES organizations(id)`);
+  await db.execute(sql`ALTER TABLE collateral_items ADD COLUMN IF NOT EXISTS asset_local_identifier text`);
+  await db.execute(sql`ALTER TABLE collateral_items ADD COLUMN IF NOT EXISTS pan_african_asset_id text`);
+  await db.execute(sql`ALTER TABLE collateral_items ADD COLUMN IF NOT EXISTS legal_regime text`);
+  await db.execute(sql`ALTER TABLE collateral_items ADD COLUMN IF NOT EXISTS approval_status text NOT NULL DEFAULT 'pending'`).catch(() => {});
+  await db.execute(sql`ALTER TABLE collateral_items ADD COLUMN IF NOT EXISTS approved_by varchar REFERENCES users(id)`);
+  await db.execute(sql`ALTER TABLE collateral_items ADD COLUMN IF NOT EXISTS approval_date text`);
+  await db.execute(sql`ALTER TABLE collateral_items ADD COLUMN IF NOT EXISTS rejection_reason text`);
+  await db.execute(sql`ALTER TABLE collateral_items ADD COLUMN IF NOT EXISTS certificate_number text`);
+  await db.execute(sql`ALTER TABLE collateral_items ADD COLUMN IF NOT EXISTS lien_priority integer`);
+  await db.execute(sql`ALTER TABLE collateral_items ADD COLUMN IF NOT EXISTS enforcement_status text`);
+  await db.execute(sql`ALTER TABLE collateral_items ADD COLUMN IF NOT EXISTS discharge_date text`);
+  await db.execute(sql`ALTER TABLE collateral_items ADD COLUMN IF NOT EXISTS borrower_name text`);
+  await db.execute(sql`ALTER TABLE collateral_items ADD COLUMN IF NOT EXISTS country_code text`);
+  // PPSR-inspired columns
+  await db.execute(sql`ALTER TABLE collateral_items ADD COLUMN IF NOT EXISTS is_pmsi boolean NOT NULL DEFAULT false`).catch(() => {});
+  await db.execute(sql`ALTER TABLE collateral_items ADD COLUMN IF NOT EXISTS security_interest_type text NOT NULL DEFAULT 'loan_security'`).catch(() => {});
+  await db.execute(sql`ALTER TABLE collateral_items ADD COLUMN IF NOT EXISTS collateral_class text`);
+  await db.execute(sql`ALTER TABLE collateral_items ADD COLUMN IF NOT EXISTS financing_duration text NOT NULL DEFAULT 'custom'`).catch(() => {});
+  await db.execute(sql`ALTER TABLE collateral_items ADD COLUMN IF NOT EXISTS debtor_type text NOT NULL DEFAULT 'individual'`).catch(() => {});
+  await db.execute(sql`ALTER TABLE collateral_items ADD COLUMN IF NOT EXISTS verification_code text`);
+  // grantorNationalId: stores the borrower/grantor's government-issued national ID for audit/search
+  // Placed here — after CREATE TABLE collateral_items — to be safe in fresh environments
+  await db.execute(sql`ALTER TABLE collateral_items ADD COLUMN IF NOT EXISTS grantor_national_id text`);
+
+  // Registry Country Config — 54 African countries
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS registry_country_config (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    country_code text NOT NULL UNIQUE,
+    country_name text NOT NULL,
+    authority_name text NOT NULL,
+    legal_regime text NOT NULL,
+    currency text NOT NULL DEFAULT 'USD',
+    is_live boolean NOT NULL DEFAULT false,
+    registry_authority_org_id varchar REFERENCES organizations(id),
+    required_fields_json text,
+    created_at timestamp NOT NULL DEFAULT now()
+  )`);
+  // Add required_fields_json if table already existed without it
+  await db.execute(sql`ALTER TABLE registry_country_config ADD COLUMN IF NOT EXISTS required_fields_json text`);
 
   // Institution Branding
   await db.execute(sql`CREATE TABLE IF NOT EXISTS institution_branding (

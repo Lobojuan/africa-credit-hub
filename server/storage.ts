@@ -63,10 +63,12 @@ import {
   trainingAttempts,
   type TrainingAttempt, type InsertTrainingAttempt,
   loanApplications, loanRepaymentSchedules, collateralItems, institutionBranding,
+  registryCountryConfig,
   type LoanApplication, type InsertLoanApplication,
   type LoanRepaymentSchedule, type InsertLoanRepaymentSchedule,
   type CollateralItem, type InsertCollateralItem,
   type InstitutionBranding, type InsertInstitutionBranding,
+  type RegistryCountryConfig, type InsertRegistryCountryConfig,
   portfolioTriggerSubscriptions, portfolioTriggerEvents,
   consumerMonitoringPrefs, consumerMonitoringAlerts, consumerAccounts,
   type PortfolioTriggerSubscription, type InsertPortfolioTriggerSubscription,
@@ -360,6 +362,26 @@ export interface IStorage {
   getCollateralItem(id: string): Promise<CollateralItem | undefined>;
   createCollateralItem(data: InsertCollateralItem): Promise<CollateralItem>;
   updateCollateralItem(id: string, data: Partial<InsertCollateralItem>): Promise<CollateralItem | undefined>;
+  // Pan-African Registry Authority methods
+  getPendingCollateralItems(registryAuthorityId: string, countryCode?: string): Promise<CollateralItem[]>;
+  getActiveLiensByCountry(countryCode: string): Promise<CollateralItem[]>;
+  searchLiensByAssetId(assetIdentifier: string, countryCode: string): Promise<CollateralItem[]>;
+  getSubmissionRankForAsset(id: string, panAfricanAssetId: string | null, assetLocalIdentifier: string | null, countryCode: string): Promise<number>;
+  approveCollateralItem(id: string, approvedBy: string, certificateNumber: string, lienPriority: number): Promise<CollateralItem | undefined>;
+  rejectCollateralItem(id: string, rejectionReason: string): Promise<CollateralItem | undefined>;
+  enforceCollateralItem(id: string): Promise<CollateralItem | undefined>;
+  dischargeCollateralItem(id: string): Promise<CollateralItem | undefined>;
+  getCollateralRegulatoryReport(countryCode: string): Promise<{
+    totalActive: number; totalValue: number;
+    byInstitution: { orgId: string; orgName: string; count: number; value: number }[];
+    byAssetType: { type: string; count: number; value: number }[];
+    bySector: { sector: string; count: number; value: number }[];
+  }>;
+  // Registry Country Config
+  getRegistryCountryConfigs(): Promise<RegistryCountryConfig[]>;
+  getRegistryCountryConfig(countryCode: string): Promise<RegistryCountryConfig | undefined>;
+  upsertRegistryCountryConfig(data: InsertRegistryCountryConfig): Promise<RegistryCountryConfig>;
+  linkRegistryAuthorityToCountry(countryCode: string, orgId: string): Promise<void>;
 
   // Institution Branding
   getInstitutionBranding(organizationId: string): Promise<InstitutionBranding | undefined>;
@@ -2922,6 +2944,214 @@ export class DatabaseStorage implements IStorage {
       .where(eq(collateralItems.id, id))
       .returning();
     return updated;
+  }
+
+  // Pan-African Registry Authority methods
+  async getPendingCollateralItems(registryAuthorityId: string, countryCode?: string): Promise<CollateralItem[]> {
+    // Match items assigned to this RA, OR items in the same country with no RA assigned yet
+    const byRaId = eq(collateralItems.registryAuthorityId, registryAuthorityId);
+    const conditions = countryCode
+      ? or(byRaId, and(eq(collateralItems.countryCode, countryCode), sql`${collateralItems.registryAuthorityId} IS NULL`))
+      : byRaId;
+    return await db.select().from(collateralItems)
+      .where(and(conditions, eq(collateralItems.approvalStatus, "pending")))
+      .orderBy(collateralItems.createdAt);
+  }
+
+  async getActiveLiensByCountry(countryCode: string): Promise<CollateralItem[]> {
+    // All active liens in this country regardless of which RA org is on the record.
+    // Country-scoping is enforced by the route (RA can only query their own country).
+    // Filtering by registryAuthorityId would hide items approved before RA provisioning.
+    return await db.select().from(collateralItems)
+      .where(and(
+        eq(collateralItems.approvalStatus, "approved"),
+        eq(collateralItems.status, "active"),
+        eq(collateralItems.countryCode, countryCode)
+      ))
+      .orderBy(collateralItems.lienPriority, desc(collateralItems.approvalDate));
+  }
+
+  async searchLiensByAssetId(assetIdentifier: string, countryCode: string): Promise<CollateralItem[]> {
+    // Case-insensitive exact match using lower() — no wildcards (ilike would permit % and _ injection)
+    // Must be approved AND status=active (excludes discharged liens from results)
+    const normalizedId = assetIdentifier.toLowerCase();
+    return await db.select().from(collateralItems)
+      .where(and(
+        eq(collateralItems.approvalStatus, "approved"),
+        eq(collateralItems.status, "active"),
+        eq(collateralItems.countryCode, countryCode),
+        or(
+          sql`lower(${collateralItems.assetLocalIdentifier}) = ${normalizedId}`,
+          sql`lower(${collateralItems.panAfricanAssetId}) = ${normalizedId}`
+        )
+      ))
+      .orderBy(collateralItems.lienPriority);
+  }
+
+  // Returns the 1-based submission rank of item `id` among all items filed for the same asset,
+  // ordered by createdAt (first-to-file wins, PPSR style). Uses panAfricanAssetId exact match
+  // when available, falls back to assetLocalIdentifier exact match.
+  async getSubmissionRankForAsset(id: string, panAfricanAssetId: string | null, assetLocalIdentifier: string | null, countryCode: string): Promise<number> {
+    // Priority implements the PPSR first-to-file rule:
+    // The chronological position of this filing among all non-rejected sibling filings
+    // (pending + approved) determines its priority rank.
+    // Rejected filings are excluded so they never consume a priority slot.
+    // Because rank is based on submission timestamp (not approval timestamp), two concurrent
+    // approvals will each land at their correct position in the filing queue without collision.
+    const searchKey = panAfricanAssetId || assetLocalIdentifier;
+    if (!searchKey) return 1;
+    const paId = panAfricanAssetId?.toLowerCase() || null;
+    const alId = assetLocalIdentifier?.toLowerCase() || null;
+    const siblings = await db
+      .select({ id: collateralItems.id, createdAt: collateralItems.createdAt })
+      .from(collateralItems)
+      .where(and(
+        eq(collateralItems.countryCode, countryCode),
+        sql`${collateralItems.approvalStatus} != 'rejected'`,
+        or(
+          paId ? sql`lower(${collateralItems.panAfricanAssetId}) = ${paId}` : sql`false`,
+          alId ? sql`lower(${collateralItems.assetLocalIdentifier}) = ${alId}` : sql`false`
+        )
+      ))
+      .orderBy(collateralItems.createdAt);
+    const idx = siblings.findIndex(s => s.id === id);
+    // Position 0-based → 1-based priority; fallback to next slot if not found
+    return idx >= 0 ? idx + 1 : siblings.length + 1;
+  }
+
+  async approveCollateralItem(id: string, approvedBy: string, certificateNumber: string, lienPriority: number): Promise<CollateralItem | undefined> {
+    const today = new Date().toISOString().split("T")[0];
+    const [updated] = await db.update(collateralItems)
+      .set({
+        approvalStatus: "approved",
+        approvedBy,
+        approvalDate: today,
+        certificateNumber,
+        lienPriority,
+        status: "active",
+        updatedAt: new Date(),
+      })
+      .where(eq(collateralItems.id, id))
+      .returning();
+    return updated;
+  }
+
+  async rejectCollateralItem(id: string, rejectionReason: string): Promise<CollateralItem | undefined> {
+    const [updated] = await db.update(collateralItems)
+      .set({ approvalStatus: "rejected", rejectionReason, updatedAt: new Date() })
+      .where(eq(collateralItems.id, id))
+      .returning();
+    return updated;
+  }
+
+  async enforceCollateralItem(id: string): Promise<CollateralItem | undefined> {
+    // Only set enforcementStatus — do NOT change status to "defaulted".
+    // Encumbrances must remain visible (status='active') during enforcement proceedings
+    // to preserve anti-double-pledging protection until the lien is formally discharged.
+    const [updated] = await db.update(collateralItems)
+      .set({ enforcementStatus: "in_enforcement", updatedAt: new Date() })
+      .where(eq(collateralItems.id, id))
+      .returning();
+    return updated;
+  }
+
+  async dischargeCollateralItem(id: string): Promise<CollateralItem | undefined> {
+    const today = new Date().toISOString().split("T")[0];
+    const [updated] = await db.update(collateralItems)
+      .set({ status: "released", dischargeDate: today, updatedAt: new Date() })
+      .where(eq(collateralItems.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getCollateralRegulatoryReport(countryCode: string): Promise<{
+    totalActive: number; totalValue: number;
+    byInstitution: { orgId: string; orgName: string; count: number; value: number }[];
+    byAssetType: { type: string; count: number; value: number }[];
+    bySector: { sector: string; count: number; value: number }[];
+  }> {
+    const items = await db.select().from(collateralItems)
+      .where(and(
+        eq(collateralItems.approvalStatus, "approved"),
+        eq(collateralItems.countryCode, countryCode),
+        eq(collateralItems.status, "active"),
+      ));
+
+    const allOrgs = await db.select().from(organizations);
+    const orgMap = new Map(allOrgs.map(o => [o.id, o.name]));
+
+    const totalActive = items.length;
+    const totalValue = items.reduce((s, i) => s + Number(i.estimatedValue || 0), 0);
+
+    const byInstitutionMap = new Map<string, { count: number; value: number }>();
+    for (const item of items) {
+      const orgId = item.lenderOrganizationId;
+      const cur = byInstitutionMap.get(orgId) || { count: 0, value: 0 };
+      cur.count++;
+      cur.value += Number(item.estimatedValue || 0);
+      byInstitutionMap.set(orgId, cur);
+    }
+    const byInstitution = [...byInstitutionMap.entries()].map(([orgId, d]) => ({
+      orgId, orgName: orgMap.get(orgId) || orgId, ...d
+    }));
+
+    const byAssetTypeMap = new Map<string, { count: number; value: number }>();
+    for (const item of items) {
+      const type = item.collateralType;
+      const cur = byAssetTypeMap.get(type) || { count: 0, value: 0 };
+      cur.count++;
+      cur.value += Number(item.estimatedValue || 0);
+      byAssetTypeMap.set(type, cur);
+    }
+    const byAssetType = [...byAssetTypeMap.entries()].map(([type, d]) => ({ type, ...d }));
+
+    // Map collateral types to economic sectors for regulatory sector exposure reporting
+    const COLLATERAL_SECTOR: Record<string, string> = {
+      vehicle: "Transport & Mobility",
+      real_estate: "Real Estate & Construction",
+      equipment: "Manufacturing & Industry",
+      inventory: "Trade & Commerce",
+      shares: "Financial Services",
+      agricultural: "Agriculture & Agribusiness",
+      livestock: "Agriculture & Agribusiness",
+      intellectual_property: "Technology & IP",
+    };
+    const bySectorMap = new Map<string, { count: number; value: number }>();
+    for (const item of items) {
+      const sector = COLLATERAL_SECTOR[item.collateralType] || "Other / General";
+      const cur = bySectorMap.get(sector) || { count: 0, value: 0 };
+      cur.count++;
+      cur.value += Number(item.estimatedValue || 0);
+      bySectorMap.set(sector, cur);
+    }
+    const bySector = [...bySectorMap.entries()].map(([sector, d]) => ({ sector, ...d }));
+
+    return { totalActive, totalValue, byInstitution, byAssetType, bySector };
+  }
+
+  // Registry Country Config
+  async getRegistryCountryConfigs(): Promise<RegistryCountryConfig[]> {
+    return await db.select().from(registryCountryConfig).orderBy(registryCountryConfig.countryName);
+  }
+
+  async getRegistryCountryConfig(countryCode: string): Promise<RegistryCountryConfig | undefined> {
+    const [row] = await db.select().from(registryCountryConfig)
+      .where(eq(registryCountryConfig.countryCode, countryCode));
+    return row;
+  }
+
+  async upsertRegistryCountryConfig(data: InsertRegistryCountryConfig): Promise<RegistryCountryConfig> {
+    const [row] = await db.insert(registryCountryConfig)
+      .values(data)
+      .onConflictDoUpdate({ target: registryCountryConfig.countryCode, set: data })
+      .returning();
+    return row;
+  }
+
+  async linkRegistryAuthorityToCountry(countryCode: string, orgId: string): Promise<void> {
+    await db.update(registryCountryConfig)
+      .set({ registryAuthorityOrgId: orgId, isLive: true })
+      .where(eq(registryCountryConfig.countryCode, countryCode));
   }
 
   // -------------------------------------------------------------------------

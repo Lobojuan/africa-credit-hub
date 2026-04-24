@@ -45,6 +45,7 @@ import {
   payoutBatches, insertPayoutBatchSchema,
   payoutItems, insertPayoutItemSchema,
   wallets, walletTransactions,
+  registryCountryConfig,
 } from "@shared/schema";
 import { processIFFData, detectIFFType, type IFFType } from "./iff-processor";
 import bcrypt from "bcryptjs";
@@ -12523,6 +12524,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   await seedCountrySettings();
   await repairCountrySettings();
   await seedOrganizations();
+  await seedRegistryCountryConfig();
 
   registerExternalApi(app);
 
@@ -14325,12 +14327,271 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // Collateral Registry
   // ===========================================================================
 
+  // ── Helper: resolve caller's country from session (never trust caller-supplied value for auth) ──
+  // Resolve a country name or code to its ISO-2 code via registry_country_config
+  // Common country name aliases that differ from the canonical registry names
+  const COUNTRY_NAME_ALIASES: Record<string, string> = {
+    "dr congo": "CD",
+    "drc": "CD",
+    "democratic republic of congo": "CD",
+    "democratic republic of the congo": "CD",
+    "congo, democratic republic": "CD",
+    "cape verde": "CV",
+    "cabo verde": "CV",
+    "ivory coast": "CI",
+    "cote d'ivoire": "CI",
+    "cote divoire": "CI",
+    "swaziland": "SZ",
+    "eswatini": "SZ",
+    "gambia, the": "GM",
+    "the gambia": "GM",
+    "republic of the gambia": "GM",
+    "tanzania, united republic of": "TZ",
+    "united republic of tanzania": "TZ",
+    "republic of tanzania": "TZ",
+    "libya": "LY",
+    "libyan arab jamahiriya": "LY",
+    "western sahara": "EH",
+    "central african republic": "CF",
+    "south sudan": "SS",
+    "equatorial guinea": "GQ",
+    "são tomé and príncipe": "ST",
+    "sao tome and principe": "ST",
+  };
+
+  async function resolveCountryCode(nameOrCode: string): Promise<string | null> {
+    if (!nameOrCode) return null;
+    const trimmed = nameOrCode.trim();
+    // If already a 2-char ISO code, return it uppercased
+    if (trimmed.length === 2) return trimmed.toUpperCase();
+    // Check alias map first (handles naming variants not in the canonical DB list)
+    const aliasKey = trimmed.toLowerCase();
+    if (COUNTRY_NAME_ALIASES[aliasKey]) return COUNTRY_NAME_ALIASES[aliasKey];
+    // Look up by country name in registry_country_config (case-insensitive)
+    const [cfg] = await db.select({ countryCode: registryCountryConfig.countryCode })
+      .from(registryCountryConfig)
+      .where(sql`lower(${registryCountryConfig.countryName}) = lower(${trimmed})`)
+      .limit(1);
+    if (cfg?.countryCode) return cfg.countryCode;
+    // Fallback: partial match for common variants like "Congo" matching "Republic of Congo"
+    const [partial] = await db.select({ countryCode: registryCountryConfig.countryCode })
+      .from(registryCountryConfig)
+      .where(sql`lower(${registryCountryConfig.countryName}) like ${'%' + trimmed.toLowerCase() + '%'}`)
+      .limit(1);
+    return partial?.countryCode || null;
+  }
+
+  // Licensed financial institution org types — only these may file and search liens
+  const LICENSED_FI_TYPES = new Set(["bank", "microfinance", "fintech", "investment", "insurance"]);
+
+  async function isLicensedFI(req: Request): Promise<boolean> {
+    const orgId = (req as any).session?.organizationId;
+    if (!orgId) return false;
+    const org = await storage.getOrganization(orgId);
+    return org != null && LICENSED_FI_TYPES.has(org.type ?? "");
+  }
+
+  async function getCallerCountry(req: any): Promise<string | null> {
+    const orgId = req.session?.organizationId;
+    if (!orgId) {
+      const raw = req.session?.userCountry || null;
+      return raw ? resolveCountryCode(raw) : null;
+    }
+    const org = await storage.getOrganization(orgId);
+    const raw = org?.country || req.session?.userCountry || null;
+    return raw ? resolveCountryCode(raw) : null;
+  }
+
+  // ── Helper: verify caller's org is of type registry_authority ──
+  async function isRegistryAuthority(req: any): Promise<boolean> {
+    const orgId = req.session?.organizationId;
+    if (!orgId) return false;
+    const org = await storage.getOrganization(orgId);
+    return org?.type === "registry_authority";
+  }
+
+  // ── Helper: generate deterministic Pan-African Asset ID ──
+  function makePanAfricanAssetId(countryCode: string, collateralType: string, localId: string): string {
+    const typeCode = (collateralType || "oth").slice(0, 6).toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const ts = Date.now().toString(36).toUpperCase();
+    const local = (localId || "").replace(/[^A-Z0-9\-]/gi, "").toUpperCase().slice(0, 20);
+    return `PACA-${(countryCode || "XX").toUpperCase()}-${typeCode}-${local || ts}`;
+  }
+
+  // List lender's own collateral items
   app.get("/api/collateral", requireAuth, async (req, res) => {
     try {
       const { borrowerId } = req.query as any;
-      const orgId = req.session?.userRole === "super_admin" ? undefined : req.session?.organizationId;
+      const isSuperAdmin = req.session?.userRole === "super_admin";
+      // Registry authority sees nothing in the lender portal (use /api/collateral/pending)
+      const orgId = isSuperAdmin ? undefined : req.session?.organizationId;
       const items = await storage.getCollateralItems(orgId, borrowerId);
       res.json(items);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // Specific collateral sub-routes MUST come before the generic /:id route
+  // Cross-institution lien search — licensed FIs only; country enforced from session
+  app.get("/api/collateral/search", requireRole("admin", "super_admin", "lender"), async (req, res) => {
+    try {
+      const isSuperAdmin = (req as any).session?.userRole === "super_admin";
+      const isAdmin = (req as any).session?.userRole === "admin";
+      // Only licensed FIs (bank/microfinance/fintech/investment/insurance), admins, and super admins
+      // may query the cross-institution lien search. Non-licensed org types (e.g. telecom, utility) are blocked.
+      if (!isSuperAdmin && !(await isLicensedFI(req))) {
+        return res.status(403).json({ message: "Access restricted to licensed financial institutions" });
+      }
+      const { assetIdentifier } = req.query as Record<string, string>;
+      if (!assetIdentifier) return res.status(400).json({ message: "assetIdentifier is required" });
+      // Country comes from the caller's org, never from query param (data-sovereignty)
+      const callerCountry = await getCallerCountry(req);
+      if (!callerCountry) return res.status(400).json({ message: "Could not determine your country" });
+      const results = await storage.searchLiensByAssetId(assetIdentifier, callerCountry);
+      // Enrich with institution names (lenders see who holds each lien)
+      const enriched = await Promise.all(results.map(async (item) => {
+        const org = item.lenderOrganizationId ? await storage.getOrganization(item.lenderOrganizationId) : null;
+        return { ...item, lenderInstitutionName: org?.name || "Unknown Institution" };
+      }));
+      res.json(enriched);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // Pending lien queue — registry_authority only
+  app.get("/api/collateral/pending", requireAuth, async (req, res) => {
+    try {
+      const isRA = await isRegistryAuthority(req);
+      const isSuperAdmin = req.session?.userRole === "super_admin";
+      if (!isRA && !isSuperAdmin) return res.status(403).json({ message: "Registry Authority access required" });
+      const orgId = req.session?.organizationId;
+      if (!orgId) return res.status(400).json({ message: "Organization required" });
+      // Also pass country code so items without registryAuthorityId set can be found
+      const countryCode = await getCallerCountry(req);
+      const items = await storage.getPendingCollateralItems(orgId, countryCode || undefined);
+      res.json(items);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // Active liens — registry_authority (scoped to own country) or super_admin
+  app.get("/api/collateral/active-liens", requireAuth, async (req, res) => {
+    try {
+      const isSuperAdmin = req.session?.userRole === "super_admin";
+      const isRA = await isRegistryAuthority(req);
+      if (!isRA && !isSuperAdmin) return res.status(403).json({ message: "Registry Authority access required" });
+      const callerCountry = await getCallerCountry(req);
+      // Super-admins may supply ?countryCode for cross-country access; all others must resolve server-side
+      const countryCode = isSuperAdmin ? ((req.query as any).countryCode || callerCountry) : callerCountry;
+      if (!countryCode) return res.status(400).json({ message: "Could not determine country — check organisation record" });
+      const items = await storage.getActiveLiensByCountry(countryCode);
+      // Enrich with institution name for institution-based search in RA portal
+      const orgLookups = await Promise.all(
+        [...new Set(items.map(i => i.lenderOrganizationId).filter(Boolean))].map(
+          (id) => storage.getOrganization(id as string)
+        )
+      );
+      const orgMap = new Map(orgLookups.filter(Boolean).map((o) => [o!.id, o!.name]));
+      const enriched = items.map(item => ({
+        ...item,
+        lenderInstitutionName: item.lenderOrganizationId
+          ? (orgMap.get(item.lenderOrganizationId) || item.lenderInstitution || "Unknown Institution")
+          : (item.lenderInstitution || "Unknown Institution"),
+      }));
+      res.json(enriched);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // Regulatory report — registry_authority or super_admin
+  app.get("/api/collateral/regulatory-report", requireAuth, async (req, res) => {
+    try {
+      const isSuperAdmin = req.session?.userRole === "super_admin";
+      const isRA = await isRegistryAuthority(req);
+      if (!isRA && !isSuperAdmin) return res.status(403).json({ message: "Registry Authority access required" });
+      const callerCountry = await getCallerCountry(req);
+      // Super-admins may supply ?countryCode; all others scoped server-side (fail closed)
+      const countryCode = isSuperAdmin ? ((req.query as any).countryCode || callerCountry) : callerCountry;
+      if (!countryCode) return res.status(400).json({ message: "Could not determine country — check organisation record" });
+      const report = await storage.getCollateralRegulatoryReport(countryCode);
+      res.json(report);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // PDF certificate download endpoint — lender (owner) or RA of same country
+  app.get("/api/collateral/:id/certificate", requireAuth, async (req, res) => {
+    try {
+      const item = await storage.getCollateralItem(req.params.id);
+      if (!item) return res.status(404).json({ message: "Not found" });
+      // Access check: must be the lender or an RA of the same country or super_admin
+      const orgId = req.session?.organizationId;
+      const isSuperAdmin = req.session?.userRole === "super_admin";
+      const isOwner = item.lenderOrganizationId === orgId;
+      const isRA = await isRegistryAuthority(req);
+      const callerCountry = await getCallerCountry(req);
+      const sameCountry = item.countryCode && callerCountry && item.countryCode === callerCountry;
+      if (!isSuperAdmin && !isOwner && !(isRA && sameCountry)) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      if (item.approvalStatus !== "approved") {
+        return res.status(400).json({ message: "Certificate only available for approved registrations" });
+      }
+
+      // Fetch enrichment data: lender institution name, RA config (authority name + legal regime)
+      const lenderOrg = item.lenderOrganizationId ? await storage.getOrganization(item.lenderOrganizationId) : null;
+      const countryConfig = item.countryCode
+        ? await db.select().from(registryCountryConfig).where(eq(registryCountryConfig.countryCode, item.countryCode)).limit(1).then(r => r[0])
+        : null;
+
+      // Generate PDF with pdfkit
+      const PDFDocument = (await import("pdfkit")).default;
+      const doc = new PDFDocument({ margin: 60, size: "A4" });
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="cert-${item.registrationNumber}.pdf"`);
+      doc.pipe(res);
+
+      // Header
+      const raName = countryConfig?.authorityName || "National Collateral Registry";
+      doc.fontSize(20).font("Helvetica-Bold").text("PAN-AFRICAN COLLATERAL REGISTRY", { align: "center" });
+      doc.fontSize(13).font("Helvetica-Bold").text(raName.toUpperCase(), { align: "center" });
+      doc.fontSize(11).font("Helvetica").text("FINANCING STATEMENT CERTIFICATE", { align: "center" });
+      doc.moveDown().moveTo(60, doc.y).lineTo(535, doc.y).stroke().moveDown();
+
+      // Certificate fields
+      const field = (label: string, value: string) => {
+        doc.fontSize(10).font("Helvetica-Bold").text(label + ":", { continued: true })
+           .font("Helvetica").text(" " + (value || "—"));
+      };
+      field("Registration Number", item.registrationNumber);
+      field("Certificate Number", item.certificateNumber || "—");
+      field("Issuing Registry Authority", raName);
+      field("Legal Regime", countryConfig?.legalRegime || "—");
+      field("Country", item.countryCode || "—");
+      field("Approval Date", item.approvalDate || "—");
+      field("Lien Priority Rank", item.lienPriority ? `#${item.lienPriority}` : "—");
+      doc.moveDown();
+      field("Secured Party / Lien Holder", lenderOrg?.name || "—");
+      field("Borrower / Grantor Name", item.borrowerName || "—");
+      field("Grantor National ID", item.grantorNationalId || item.documentReference || "—");
+      field("Debtor Type", item.debtorType || "individual");
+      doc.moveDown();
+      field("Pan-African Asset ID (PACA-ID)", item.panAfricanAssetId || "—");
+      field("Asset Local Identifier", item.assetLocalIdentifier || "—");
+      field("Collateral Type", item.collateralType || "—");
+      field("Collateral Class", item.collateralClass || "—");
+      field("Estimated Value", `${item.estimatedValue} ${item.currency}`);
+      field("Description", item.description);
+      doc.moveDown();
+      field("Security Interest Type", item.securityInterestType || "—");
+      field("PMSI (Purchase Money Super Priority)", item.isPmsi ? "YES" : "NO");
+      field("Financing Duration", item.financingDuration || "—");
+      field("Registration Date", item.registrationDate);
+      field("Expiry Date", item.expiryDate || "Perpetual / As specified");
+      doc.moveDown();
+      field("Verification Code", item.verificationCode || "—");
+
+      doc.moveDown().moveTo(60, doc.y).lineTo(535, doc.y).stroke().moveDown();
+      doc.fontSize(8).font("Helvetica").text(
+        `This certificate was issued by the ${raName} under the Pan-African Collateral Registry framework. Generated: ${new Date().toISOString()}`,
+        { align: "center" }
+      );
+      doc.end();
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
@@ -14338,27 +14599,257 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     try {
       const item = await storage.getCollateralItem(req.params.id);
       if (!item) return res.status(404).json({ message: "Not found" });
+      // Lender can see own items; RA can see items for their country; super_admin sees all
+      const orgId = req.session?.organizationId;
+      const isSuperAdmin = req.session?.userRole === "super_admin";
+      const isOwner = item.lenderOrganizationId === orgId;
+      const isRA = await isRegistryAuthority(req);
+      const callerCountry = await getCallerCountry(req);
+      const sameCountry = item.countryCode && callerCountry && item.countryCode === callerCountry;
+      if (!isSuperAdmin && !isOwner && !(isRA && sameCountry)) {
+        return res.status(403).json({ message: "Access denied" });
+      }
       res.json(item);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
+  // Create financing statement — licensed FIs only
   app.post("/api/collateral", requireRole("admin", "super_admin", "lender"), async (req, res) => {
     try {
+      const isSuperAdminPost = req.session?.userRole === "super_admin";
+      const isAdminPost = req.session?.userRole === "admin";
+      // Only licensed FIs (bank/microfinance/fintech/investment/insurance), admins, and super admins
+      // may file collateral registrations. Non-licensed org types are blocked.
+      if (!isSuperAdminPost && !(await isLicensedFI(req))) {
+        return res.status(403).json({ message: "Only licensed financial institutions may file collateral registrations" });
+      }
       const regNum = `COL-${Date.now().toString(36).toUpperCase()}`;
+      const body = req.body;
+      const today = new Date().toISOString().split("T")[0];
+      const orgId = req.session?.organizationId;
+      // Country is always server-derived — fail closed if resolution fails
+      const callerCountry = await getCallerCountry(req);
+      const isSuperAdminCreate = req.session?.userRole === "super_admin";
+      // Super-admins may file cross-country; all others scoped by server-resolved country
+      const effectiveCountry = isSuperAdminCreate ? (callerCountry || body.countryCode) : callerCountry;
+      if (!effectiveCountry) return res.status(400).json({ message: "Could not determine country for filing — check organisation record" });
+      // Look up registry authority for this country
+      const countryConfig = await storage.getRegistryCountryConfig(effectiveCountry);
+      const registryAuthorityId = countryConfig?.registryAuthorityOrgId || body.registryAuthorityId || null;
+      // Generate Pan-African Asset ID server-side
+      const panAfricanAssetId = makePanAfricanAssetId(
+        effectiveCountry,
+        body.collateralType || "other",
+        body.assetLocalIdentifier || ""
+      );
+      // Derive legalRegime from country config (authoritative) — never accept from client
+      const derivedLegalRegime = countryConfig?.legalRegime || null;
       const item = await storage.createCollateralItem({
-        ...req.body,
-        registrationNumber: req.body.registrationNumber || regNum,
-        lenderOrganizationId: req.body.lenderOrganizationId || req.session?.organizationId,
+        ...body,
+        registrationNumber: body.registrationNumber || regNum,
+        lenderOrganizationId: orgId || body.lenderOrganizationId,
+        approvalStatus: "pending",
+        registrationDate: body.registrationDate || today,
+        collateralType: body.collateralType || "other",
+        description: body.description || "Collateral item",
+        estimatedValue: String(body.estimatedValue || "0"),
+        countryCode: effectiveCountry,
+        panAfricanAssetId,
+        registryAuthorityId,
+        legalRegime: derivedLegalRegime,
+        grantorNationalId: body.grantorIdentifier || null,
+        loanApplicationId: body.loanApplicationId || undefined,
       });
       res.status(201).json(item);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
-  app.patch("/api/collateral/:id", requireRole("admin", "super_admin"), async (req, res) => {
+  // Update financing statement — only the lender that owns it
+  app.patch("/api/collateral/:id", requireRole("admin", "super_admin", "lender"), async (req, res) => {
     try {
-      const updated = await storage.updateCollateralItem(req.params.id, req.body);
+      const item = await storage.getCollateralItem(req.params.id);
+      if (!item) return res.status(404).json({ message: "Not found" });
+      const orgId = req.session?.organizationId;
+      const isSuperAdmin = req.session?.userRole === "super_admin";
+      if (!isSuperAdmin && item.lenderOrganizationId !== orgId) {
+        return res.status(403).json({ message: "Access denied — not your registration" });
+      }
+      // Prevent editing approved items
+      if (item.approvalStatus === "approved" && !isSuperAdmin) {
+        return res.status(400).json({ message: "Cannot edit an approved registration" });
+      }
+      // Hard whitelist: lenders may only edit informational/draft fields.
+      // Regulatory and workflow-state fields are exclusively controlled by the RA approval endpoints.
+      const LENDER_EDITABLE_FIELDS: readonly string[] = [
+        "borrowerName", "borrowerId", "collateralType", "description",
+        "estimatedValue", "currency", "documentReference", "grantorNationalId",
+        "assetLocalIdentifier", "panAfricanAssetId", "securityInterestType",
+        "financingDuration", "registrationDate", "debtorType",
+        "vehicleChassis", "vehicleMake", "vehicleModel", "yearOfManufacture",
+        "engineNumber", "chassisNumber", "titleDeedNumber", "plotNumber",
+        "landRegistryRef", "surfaceAreaSqm", "serialNumber", "equipmentMake",
+        "equipmentModel", "purchaseDate", "assetDescription",
+        "grantorBusinessRegistryNumber", "grantorIdNumber",
+      ];
+      const BLOCKED_FIELDS: readonly string[] = [
+        "approvalStatus", "approvedBy", "approvalDate", "certificateNumber",
+        "lienPriority", "registryAuthorityId", "enforcementStatus",
+        "dischargeDate", "rejectionReason", "status", "countryCode",
+        "lenderOrganizationId",
+      ];
+      let patchData: Record<string, unknown>;
+      if (isSuperAdmin) {
+        // Super admin can patch any field except explicit blocks
+        patchData = Object.fromEntries(
+          Object.entries(req.body).filter(([k]) => !BLOCKED_FIELDS.includes(k))
+        );
+      } else {
+        // Lenders restricted to draft informational fields only
+        const blocked = Object.keys(req.body).filter(k => !LENDER_EDITABLE_FIELDS.includes(k));
+        if (blocked.length > 0) {
+          return res.status(400).json({ message: `Field(s) not editable by lender: ${blocked.join(", ")}` });
+        }
+        patchData = Object.fromEntries(
+          Object.entries(req.body).filter(([k]) => LENDER_EDITABLE_FIELDS.includes(k))
+        );
+      }
+      const updated = await storage.updateCollateralItem(req.params.id, patchData);
       if (!updated) return res.status(404).json({ message: "Not found" });
       res.json(updated);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // Approve a lien registration — registry_authority only, same country
+  app.post("/api/collateral/:id/approve", requireAuth, async (req, res) => {
+    try {
+      const isSuperAdmin = req.session?.userRole === "super_admin";
+      const isRA = await isRegistryAuthority(req);
+      if (!isRA && !isSuperAdmin) return res.status(403).json({ message: "Registry Authority access required" });
+      const item = await storage.getCollateralItem(req.params.id);
+      if (!item) return res.status(404).json({ message: "Not found" });
+      // RA can only approve items for their country — fail closed if country cannot be resolved
+      const callerCountry = await getCallerCountry(req);
+      if (!isSuperAdmin) {
+        if (!callerCountry) return res.status(400).json({ message: "Could not determine your country — check organisation record" });
+        if (item.countryCode && item.countryCode !== callerCountry) {
+          return res.status(403).json({ message: "Cross-country approval not permitted" });
+        }
+      }
+      const userId = req.session?.userId!;
+      // Priority is determined by submission timestamp order (first-to-file wins, PPSR style).
+      // Count all filings for the same asset (any status) ordered by createdAt.
+      const priority = await storage.getSubmissionRankForAsset(
+        req.params.id,
+        item.panAfricanAssetId || null,
+        item.assetLocalIdentifier || null,
+        item.countryCode || ""
+      );
+      const certNum = `CERT-${(item.countryCode || "XX").toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
+      // Ensure registryAuthorityId is set before approving (items submitted before RA provisioned may lack it)
+      const approverOrgId = req.session?.organizationId;
+      if (!item.registryAuthorityId && approverOrgId && !isSuperAdmin) {
+        await storage.updateCollateralItem(req.params.id, { registryAuthorityId: approverOrgId });
+      }
+      const updated = await storage.approveCollateralItem(req.params.id, userId, certNum, priority);
+      res.json(updated);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // Reject a lien registration — registry_authority only, same country
+  app.post("/api/collateral/:id/reject", requireAuth, async (req, res) => {
+    try {
+      const isSuperAdmin = req.session?.userRole === "super_admin";
+      const isRA = await isRegistryAuthority(req);
+      if (!isRA && !isSuperAdmin) return res.status(403).json({ message: "Registry Authority access required" });
+      const item = await storage.getCollateralItem(req.params.id);
+      if (!item) return res.status(404).json({ message: "Not found" });
+      const callerCountry = await getCallerCountry(req);
+      if (!isSuperAdmin) {
+        if (!callerCountry) return res.status(400).json({ message: "Could not determine your country — check organisation record" });
+        if (item.countryCode && item.countryCode !== callerCountry) {
+          return res.status(403).json({ message: "Cross-country action not permitted" });
+        }
+      }
+      const { reason } = req.body;
+      if (!reason) return res.status(400).json({ message: "Rejection reason required" });
+      const updated = await storage.rejectCollateralItem(req.params.id, reason);
+      if (!updated) return res.status(404).json({ message: "Not found" });
+      res.json(updated);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // Flag a lien as "in enforcement" — registry_authority only, same country
+  app.post("/api/collateral/:id/enforce", requireAuth, async (req, res) => {
+    try {
+      const isSuperAdmin = req.session?.userRole === "super_admin";
+      const isRA = await isRegistryAuthority(req);
+      if (!isRA && !isSuperAdmin) return res.status(403).json({ message: "Registry Authority access required" });
+      const item = await storage.getCollateralItem(req.params.id);
+      if (!item) return res.status(404).json({ message: "Not found" });
+      const callerCountry = await getCallerCountry(req);
+      if (!isSuperAdmin) {
+        if (!callerCountry) return res.status(400).json({ message: "Could not determine your country — check organisation record" });
+        if (item.countryCode && item.countryCode !== callerCountry) {
+          return res.status(403).json({ message: "Cross-country action not permitted" });
+        }
+      }
+      const updated = await storage.enforceCollateralItem(req.params.id);
+      if (!updated) return res.status(404).json({ message: "Not found" });
+      res.json(updated);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // Discharge (release) a lien — registry_authority or owning lender
+  app.post("/api/collateral/:id/discharge", requireAuth, async (req, res) => {
+    try {
+      const isSuperAdmin = req.session?.userRole === "super_admin";
+      const isRA = await isRegistryAuthority(req);
+      // Discharge is a government-registry lifecycle action — restricted to Registry Authority
+      // and super_admin only. Lenders cannot self-discharge; they must apply to the RA.
+      if (!isRA && !isSuperAdmin) return res.status(403).json({ message: "Registry Authority access required" });
+      const item = await storage.getCollateralItem(req.params.id);
+      if (!item) return res.status(404).json({ message: "Not found" });
+      // RA must operate within their country (fail closed if country unresolvable)
+      const callerCountry = await getCallerCountry(req);
+      if (!isSuperAdmin) {
+        if (!callerCountry) return res.status(400).json({ message: "Could not determine your country — check organisation record" });
+        if (item.countryCode && item.countryCode !== callerCountry) {
+          return res.status(403).json({ message: "Cross-country discharge not permitted" });
+        }
+      }
+      const updated = await storage.dischargeCollateralItem(req.params.id);
+      if (!updated) return res.status(404).json({ message: "Not found" });
+      res.json(updated);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // Registry Country Config
+  app.get("/api/registry-country-config", requireAuth, async (_req, res) => {
+    try {
+      const configs = await storage.getRegistryCountryConfigs();
+      res.json(configs);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // Provision a Registry Authority for a country (super_admin only)
+  app.post("/api/registry-authority/provision", requireSuperAdmin, async (req, res) => {
+    try {
+      const { countryCode, organizationName, contactEmail } = req.body;
+      if (!countryCode || !organizationName) return res.status(400).json({ message: "countryCode and organizationName required" });
+      const config = await storage.getRegistryCountryConfig(countryCode);
+      if (!config) return res.status(404).json({ message: "Country not found in registry config" });
+      const slug = `registry-${countryCode.toLowerCase()}-${Date.now()}`;
+      const org = await storage.createOrganization({
+        name: organizationName,
+        slug,
+        type: "registry_authority",
+        status: "active",
+        country: config.countryName,
+        contactEmail: contactEmail || null,
+        contactPhone: null,
+      });
+      await storage.linkRegistryAuthorityToCountry(countryCode, org.id);
+      res.status(201).json({ organization: org, config });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
@@ -14822,6 +15313,131 @@ async function repairCountrySettings() {
     }
   } catch (e) {
     routeLogger.info("[Repair] Country settings repair skipped:", { detail: e });
+  }
+}
+
+async function seedRegistryCountryConfig() {
+  try {
+    const OHADA = "OHADA";
+    const CIVIL = "Civil Law";
+    const COMMON = "Common Law";
+    const CUSTOMARY = "Customary Law";
+
+    // Required fields per asset type, keyed by legal regime
+    // Follows OHADA Uniform Act on Secured Transactions, Civil Code, and PPSR models
+    const requiredByRegime: Record<string, Record<string, string[]>> = {
+      [OHADA]: {
+        vehicle: ["chassisNumber", "vehicleMake", "vehicleModel", "yearOfManufacture", "engineNumber", "grantorBusinessRegistryNumber"],
+        real_estate: ["titleDeedNumber", "plotNumber", "landRegistryRef", "surfaceAreaSqm", "grantorBusinessRegistryNumber"],
+        equipment: ["serialNumber", "equipmentMake", "equipmentModel", "purchaseDate", "grantorBusinessRegistryNumber"],
+        inventory: ["inventoryDescription", "estimatedQuantity", "storageLocation", "warehouseReceiptNumber"],
+        receivables: ["debtorName", "invoiceReference", "dueDate", "assignmentNoticeDate", "estimatedValue"],
+        other: ["assetDescription", "estimatedValue", "grantorIdNumber"],
+      },
+      [CIVIL]: {
+        vehicle: ["chassisNumber", "vehicleMake", "vehicleModel", "yearOfManufacture", "licensePlate", "nationalIdNumber"],
+        real_estate: ["titleDeedNumber", "cadastralReference", "propertyAddress", "surfaceAreaSqm", "witnessName1", "witnessName2"],
+        equipment: ["serialNumber", "technicalDescription", "purchaseDate", "supplierName", "nationalIdNumber"],
+        inventory: ["commodityType", "estimatedQuantity", "storageLocation", "custodianName"],
+        receivables: ["creditorName", "debtorName", "contractReference", "debtAmount"],
+        other: ["assetDescription", "estimatedValue", "nationalIdNumber"],
+      },
+      [COMMON]: {
+        vehicle: ["vin", "vehicleMake", "vehicleModel", "yearOfManufacture", "registrationPlate", "debtorFullName"],
+        real_estate: ["titleNumber", "plotDescription", "propertyAddress", "landTitleCertificate", "debtorFullName"],
+        equipment: ["serialNumber", "description", "purchaseDate", "manufacturer", "debtorFullName"],
+        inventory: ["description", "estimatedQuantity", "storageLocation", "debtorFullName"],
+        receivables: ["debtorDetails", "assignmentDate", "originalContractRef", "invoiceNumbers"],
+        other: ["collateralDescription", "estimatedValue", "debtorFullName"],
+      },
+      [CUSTOMARY]: {
+        vehicle: ["assetDescription", "communityWitnessName", "chieftainRef", "localRegistryRef"],
+        real_estate: ["assetDescription", "communityWitnessName", "chieftainRef", "localRegistryRef", "landCouncilApproval"],
+        equipment: ["assetDescription", "communityWitnessName", "localRegistryRef"],
+        inventory: ["assetDescription", "communityWitnessName", "localRegistryRef"],
+        receivables: ["assetDescription", "communityWitnessName", "localRegistryRef"],
+        other: ["assetDescription", "communityWitnessName", "chieftainRef"],
+      },
+    };
+
+    // OHADA member states (17): BJ BF CM CF TD KM CG CD GQ GA GN GW CI ML NE SN TG
+    // + Burundi (BI) joined 2012, Guinea-Bissau and Comoros also members
+    // Civil law (non-OHADA francophone / North Africa / Lusophone): DZ AO CV DJ EG ET LY MG MR MA MZ ST SD TN BI*
+    // *Note: BI (Burundi) is OHADA member since 2012 — corrected from prior Civil Law mapping
+    // Common law (Anglophone): BW GH KE LS LR MW MU NA NG RW SC SL ZA SS TZ UG ZM ZW SZ GM
+    const countries = [
+      { countryCode: "DZ", countryName: "Algeria", authorityName: "Banque d'Algérie – Registre National des Nantissements", legalRegime: CIVIL, currency: "DZD" },
+      { countryCode: "AO", countryName: "Angola", authorityName: "Banco Nacional de Angola – Registo de Garantias", legalRegime: CIVIL, currency: "AOA" },
+      { countryCode: "BJ", countryName: "Benin", authorityName: "Greffe du Tribunal de Commerce – Registre du Commerce et du Crédit Mobilier", legalRegime: OHADA, currency: "XOF" },
+      { countryCode: "BW", countryName: "Botswana", authorityName: "Bank of Botswana – Collateral Registry", legalRegime: COMMON, currency: "BWP" },
+      { countryCode: "BF", countryName: "Burkina Faso", authorityName: "Greffe du Tribunal de Commerce – RCCM Burkina Faso", legalRegime: OHADA, currency: "XOF" },
+      { countryCode: "BI", countryName: "Burundi", authorityName: "Greffe du Tribunal de Commerce du Burundi – RCCM", legalRegime: OHADA, currency: "BIF" },
+      { countryCode: "CV", countryName: "Cabo Verde", authorityName: "Banco de Cabo Verde – Registo de Garantias", legalRegime: CIVIL, currency: "CVE" },
+      { countryCode: "CM", countryName: "Cameroon", authorityName: "Greffe du Tribunal de Commerce – RCCM Cameroun", legalRegime: OHADA, currency: "XAF" },
+      { countryCode: "CF", countryName: "Central African Republic", authorityName: "Greffe du Tribunal de Commerce – RCCM RCA", legalRegime: OHADA, currency: "XAF" },
+      { countryCode: "TD", countryName: "Chad", authorityName: "Greffe du Tribunal de Commerce – RCCM Tchad", legalRegime: OHADA, currency: "XAF" },
+      { countryCode: "KM", countryName: "Comoros", authorityName: "Banque Centrale des Comores – Registre des Sûretés", legalRegime: OHADA, currency: "KMF" },
+      { countryCode: "CG", countryName: "Republic of Congo", authorityName: "Greffe du Tribunal de Commerce – RCCM Congo", legalRegime: OHADA, currency: "XAF" },
+      { countryCode: "CD", countryName: "Democratic Republic of Congo", authorityName: "Greffe du Tribunal de Commerce – RCCM RDC", legalRegime: OHADA, currency: "CDF" },
+      { countryCode: "DJ", countryName: "Djibouti", authorityName: "Banque Centrale de Djibouti – Registre des Sûretés", legalRegime: CIVIL, currency: "DJF" },
+      { countryCode: "EG", countryName: "Egypt", authorityName: "Central Bank of Egypt – Movable Collateral Registry", legalRegime: CIVIL, currency: "EGP" },
+      { countryCode: "GQ", countryName: "Equatorial Guinea", authorityName: "Greffe du Tribunal de Commerce – RCCM Guinée Équatoriale", legalRegime: OHADA, currency: "XAF" },
+      { countryCode: "ER", countryName: "Eritrea", authorityName: "Bank of Eritrea – National Collateral Registry", legalRegime: CUSTOMARY, currency: "ERN" },
+      { countryCode: "SZ", countryName: "Eswatini", authorityName: "Central Bank of Eswatini – Collateral Registry", legalRegime: COMMON, currency: "SZL" },
+      { countryCode: "ET", countryName: "Ethiopia", authorityName: "National Bank of Ethiopia – Movable Collateral Registry", legalRegime: CIVIL, currency: "ETB" },
+      { countryCode: "GA", countryName: "Gabon", authorityName: "Greffe du Tribunal de Commerce – RCCM Gabon", legalRegime: OHADA, currency: "XAF" },
+      { countryCode: "GM", countryName: "Gambia", authorityName: "Central Bank of The Gambia – Collateral Registry", legalRegime: COMMON, currency: "GMD" },
+      { countryCode: "GH", countryName: "Ghana", authorityName: "Bank of Ghana – Collateral Registry", legalRegime: COMMON, currency: "GHS" },
+      { countryCode: "GN", countryName: "Guinea", authorityName: "Greffe du Tribunal de Commerce – RCCM Guinée", legalRegime: OHADA, currency: "GNF" },
+      { countryCode: "GW", countryName: "Guinea-Bissau", authorityName: "Greffe du Tribunal de Commerce – RCCM Guinée-Bissau", legalRegime: OHADA, currency: "XOF" },
+      { countryCode: "CI", countryName: "Ivory Coast", authorityName: "Greffe du Tribunal de Commerce – RCCM Côte d'Ivoire", legalRegime: OHADA, currency: "XOF" },
+      { countryCode: "KE", countryName: "Kenya", authorityName: "Central Bank of Kenya – Collateral Registry", legalRegime: COMMON, currency: "KES" },
+      { countryCode: "LS", countryName: "Lesotho", authorityName: "Central Bank of Lesotho – Collateral Registry", legalRegime: COMMON, currency: "LSL" },
+      { countryCode: "LR", countryName: "Liberia", authorityName: "Central Bank of Liberia – Collateral Registry", legalRegime: COMMON, currency: "LRD" },
+      { countryCode: "LY", countryName: "Libya", authorityName: "Central Bank of Libya – Movable Assets Registry", legalRegime: CIVIL, currency: "LYD" },
+      { countryCode: "MG", countryName: "Madagascar", authorityName: "Banque Centrale de Madagascar – Registre des Garanties", legalRegime: CIVIL, currency: "MGA" },
+      { countryCode: "MW", countryName: "Malawi", authorityName: "Reserve Bank of Malawi – Collateral Registry", legalRegime: COMMON, currency: "MWK" },
+      { countryCode: "ML", countryName: "Mali", authorityName: "Greffe du Tribunal de Commerce – RCCM Mali", legalRegime: OHADA, currency: "XOF" },
+      { countryCode: "MR", countryName: "Mauritania", authorityName: "Banque Centrale de Mauritanie – Registre des Nantissements", legalRegime: CIVIL, currency: "MRU" },
+      { countryCode: "MU", countryName: "Mauritius", authorityName: "Bank of Mauritius – Collateral Registry", legalRegime: COMMON, currency: "MUR" },
+      { countryCode: "MA", countryName: "Morocco", authorityName: "Bank Al-Maghrib – Registre Central des Sûretés Mobilières", legalRegime: CIVIL, currency: "MAD" },
+      { countryCode: "MZ", countryName: "Mozambique", authorityName: "Banco de Moçambique – Registo de Garantias Mobiliárias", legalRegime: CIVIL, currency: "MZN" },
+      { countryCode: "NA", countryName: "Namibia", authorityName: "Bank of Namibia – Collateral Registry", legalRegime: COMMON, currency: "NAD" },
+      { countryCode: "NE", countryName: "Niger", authorityName: "Greffe du Tribunal de Commerce – RCCM Niger", legalRegime: OHADA, currency: "XOF" },
+      { countryCode: "NG", countryName: "Nigeria", authorityName: "Central Bank of Nigeria – Collateral Registry", legalRegime: COMMON, currency: "NGN" },
+      { countryCode: "RW", countryName: "Rwanda", authorityName: "National Bank of Rwanda – Collateral Registry", legalRegime: COMMON, currency: "RWF" },
+      { countryCode: "ST", countryName: "São Tomé and Príncipe", authorityName: "Banco Central de São Tomé e Príncipe – Registo de Garantias", legalRegime: CIVIL, currency: "STN" },
+      { countryCode: "SN", countryName: "Senegal", authorityName: "Greffe du Tribunal de Commerce – RCCM Sénégal", legalRegime: OHADA, currency: "XOF" },
+      { countryCode: "SC", countryName: "Seychelles", authorityName: "Central Bank of Seychelles – Collateral Registry", legalRegime: COMMON, currency: "SCR" },
+      { countryCode: "SL", countryName: "Sierra Leone", authorityName: "Bank of Sierra Leone – Collateral Registry", legalRegime: COMMON, currency: "SLL" },
+      { countryCode: "SO", countryName: "Somalia", authorityName: "Central Bank of Somalia – National Collateral Registry", legalRegime: CUSTOMARY, currency: "SOS" },
+      { countryCode: "ZA", countryName: "South Africa", authorityName: "South African Reserve Bank – NCRISA", legalRegime: COMMON, currency: "ZAR" },
+      { countryCode: "SS", countryName: "South Sudan", authorityName: "Bank of South Sudan – Collateral Registry", legalRegime: COMMON, currency: "SSP" },
+      { countryCode: "SD", countryName: "Sudan", authorityName: "Bank of Sudan – Movable Collateral Registry", legalRegime: CIVIL, currency: "SDG" },
+      { countryCode: "TZ", countryName: "Tanzania", authorityName: "Bank of Tanzania – Collateral Registry", legalRegime: COMMON, currency: "TZS" },
+      { countryCode: "TG", countryName: "Togo", authorityName: "Greffe du Tribunal de Commerce – RCCM Togo", legalRegime: OHADA, currency: "XOF" },
+      { countryCode: "TN", countryName: "Tunisia", authorityName: "Banque Centrale de Tunisie – Registre des Sûretés", legalRegime: CIVIL, currency: "TND" },
+      { countryCode: "UG", countryName: "Uganda", authorityName: "Bank of Uganda – Collateral Registry", legalRegime: COMMON, currency: "UGX" },
+      { countryCode: "ZM", countryName: "Zambia", authorityName: "Bank of Zambia – Collateral Registry", legalRegime: COMMON, currency: "ZMW" },
+      { countryCode: "ZW", countryName: "Zimbabwe", authorityName: "Reserve Bank of Zimbabwe – Collateral Registry", legalRegime: COMMON, currency: "ZWL" },
+    ];
+
+    for (const c of countries) {
+      const fields = requiredByRegime[c.legalRegime] || requiredByRegime[COMMON];
+      await db.insert(registryCountryConfig)
+        .values({ ...c, requiredFieldsJson: JSON.stringify(fields) })
+        .onConflictDoUpdate({
+          target: registryCountryConfig.countryCode,
+          set: {
+            legalRegime: c.legalRegime,
+            authorityName: c.authorityName,
+            requiredFieldsJson: JSON.stringify(fields),
+          },
+        });
+    }
+    routeLogger.info(`[Seed] Registry country config upserted ${countries.length} countries with required fields and legal regime mapping`);
+  } catch (e) {
+    routeLogger.info("[Seed] Registry country config seed skipped:", { detail: e });
   }
 }
 

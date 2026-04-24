@@ -131,6 +131,7 @@ const PlatformMasterControlPage = lazy(() => import("@/pages/platform-master-con
 const ComplianceQueuePage = lazy(() => import("@/pages/compliance-queue"));
 const LoanOriginationPage = lazy(() => import("@/pages/loan-origination"));
 const CollateralRegistryPage = lazy(() => import("@/pages/collateral-registry"));
+const RegistryAuthorityPortalPage = lazy(() => import("@/pages/registry-authority-portal"));
 const InstitutionAnalyticsPage = lazy(() => import("@/pages/institution-analytics"));
 const InstitutionBrandingPage = lazy(() => import("@/pages/institution-branding"));
 
@@ -218,6 +219,7 @@ function Router() {
         <Route path="/training" component={TrainingCenterPage} />
         <Route path="/loan-origination" component={LoanOriginationPage} />
         <Route path="/collateral-registry" component={CollateralRegistryPage} />
+        <Route path="/registry-authority-portal" component={RegistryAuthorityPortalPage} />
         <Route path="/institution-analytics" component={InstitutionAnalyticsPage} />
         <Route path="/institution-branding" component={InstitutionBrandingPage} />
         <Route path="/organizations" component={OrganizationsPage} />
@@ -429,17 +431,18 @@ function AuthenticatedApp() {
   if (currentPath === "/login") {
     let dest = "/dashboard";
     if (user.role === "super_admin") dest = "/command-center";
-    else if ((user as any).division === "corporate") dest = "/businesses";
-    else if ((user as any).division === "telco") dest = "/telco-scoring";
-    else if ((user as any).division === "retail") dest = "/consumers";
+    else if (user?.organization?.type === "registry_authority") dest = "/registry-authority-portal";
+    else if (user.division === "corporate") dest = "/businesses";
+    else if (user.division === "telco") dest = "/telco-scoring";
+    else if (user.division === "retail") dest = "/consumers";
     return doRedirect(dest);
   }
 
   if (accountSuspended) {
-    return <SuspendedScreen orgName={(user as any)?.organization?.name} onLogout={logout} />;
+    return <SuspendedScreen orgName={user?.organization?.name} onLogout={logout} />;
   }
 
-  const orgStatus = (user as any)?.organization?.status;
+  const orgStatus = user?.organization?.status;
   const isPendingOrg = accountPendingReview || orgStatus === "pending";
   const isDeactivatedOrg = orgStatus === "deactivated";
 
@@ -472,7 +475,7 @@ function AuthenticatedApp() {
           </div>
           <h1 className="text-xl font-bold text-foreground" data-testid="text-pending-title">Registration Under Review</h1>
           <p className="text-sm text-muted-foreground">
-            Your institution registration for <span className="font-medium text-foreground">{(user as any)?.organization?.name || "your organization"}</span> is currently being reviewed by the registry administrator.
+            Your institution registration for <span className="font-medium text-foreground">{user?.organization?.name || "your organization"}</span> is currently being reviewed by the registry administrator.
           </p>
           <p className="text-xs text-muted-foreground">You will receive an email notification once your application has been approved.</p>
           <Button variant="outline" onClick={logout} data-testid="button-pending-logout">
@@ -484,7 +487,7 @@ function AuthenticatedApp() {
     );
   }
 
-  const viewingCountry = (user as any)?.viewingCountry;
+  const viewingCountry = user?.viewingCountry;
 
   const style = {
     "--sidebar-width": "16rem",
@@ -567,7 +570,7 @@ function AuthenticatedApp() {
                       data-testid="button-mobile-mfa"
                     >
                       <Shield className="w-4 h-4" />
-                      {(user as any).mfaEnabled ? "Manage MFA" : "Enable MFA"}
+                      {user.mfaEnabled ? "Manage MFA" : "Enable MFA"}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className="gap-2"
@@ -627,10 +630,10 @@ function AuthenticatedApp() {
               )}
               {user.role === "super_admin" && <CountrySelector />}
               {user.role === "super_admin" && <OrgSwitcher />}
-              {(user as any)?.organization?.name && user.role !== "super_admin" && (
+              {user?.organization?.name && user.role !== "super_admin" && (
                 <span className="text-base text-muted-foreground inline-flex items-center gap-2" data-testid="text-org-context">
                   <Building2 className="w-5 h-5" />
-                  {(user as any).organization.name}
+                  {user.organization!.name}
                 </span>
               )}
               <span className="text-base text-muted-foreground" data-testid="text-current-user">
@@ -646,7 +649,7 @@ function AuthenticatedApp() {
                 data-testid="button-mfa-setup"
               >
                 <Shield className="w-4 h-4" />
-                {(user as any).mfaEnabled ? "MFA On" : "Enable MFA"}
+                {user.mfaEnabled ? "MFA On" : "Enable MFA"}
               </Button>
               <Button
                 variant="outline"
@@ -684,7 +687,7 @@ function AuthenticatedApp() {
             <AppFooter />
           </main>
           {passwordExpired && <PasswordChangeDialog open={true} forced={true} />}
-          <MfaSetupDialog open={mfaOpen} onOpenChange={setMfaOpen} mfaEnabled={!!(user as any).mfaEnabled} />
+          <MfaSetupDialog open={mfaOpen} onOpenChange={setMfaOpen} mfaEnabled={!!user.mfaEnabled} />
         </div>
       </div>
       {isMobile && <MobileBottomNav />}

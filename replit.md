@@ -62,6 +62,17 @@ The system employs a modern full-stack architecture built for scalability and co
 -   **Third-Party APIs**: open.er-api.com (exchange rates), DiceBear (avatars)
 -   **GitHub**: @octokit/rest via Replit GitHub connector (repo management for client deployments)
 
+## Pan-African Collateral Registry (v2.6, Task #131)
+PPSR-inspired (AU/NZ model) pledged-asset registry for all 54 African countries.
+-   **Lender Portal**: `/collateral-registry` — 3-step financing statement wizard (Grantor → Collateral → Security Interest), PMSI (Purchase Money Security Interest) super-priority flag with 10-day timing warning, cross-institution lien search by asset identifier, priority rank badges, text certificate download.
+-   **Registry Authority Portal**: `/registry-authority-portal` — Pending Queue (approve/reject), Active Liens Ledger, Regulatory Reports tab. Login redirect auto-triggers for `registry_authority` org type.
+-   **PPSR fields**: `isPmsi`, `securityInterestType` (loan_security/retention_of_title/lease/consignment/blanket_lien), `collateralClass`, `financingDuration` (7yr/25yr/custom/perpetual), `debtorType`, `verificationCode`.
+-   **54-country config**: `registry_country_config` table seeded at startup with all African countries, their authority names, legal regimes, and currencies.
+-   **Double pledging allowed**: Cross-institution search shows all liens with priority rank visible to lenders.
+-   **Same-country search only**: Lien search scoped to the lender's country.
+-   **Admin provisioning**: CollateralRegistrySetupPanel in platform-master-control.tsx lists all 54 countries, allows super admin to create Registry Authority orgs.
+-   **Schema note**: `collateral_items.borrower_id` is nullable (registry submissions don't need a credit bureau borrower UUID; grantor national ID stored in `document_reference`).
+
 ## Platform Master Control Center
 Hidden route at `/platform-control-9x7k` (not in sidebar/nav). Protected by `MASTER_CONTROL_PASSWORD` env secret. Session cookie `pc_session` (no maxAge, in-memory). Features:
 -   **Client Deployments**: Register/edit/delete deployment instances with full config (branding, fees, dates, GitHub repo, heartbeat URL)

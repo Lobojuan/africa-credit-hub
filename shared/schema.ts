@@ -5,7 +5,7 @@ import { z } from "zod";
 
 export const userRoleEnum = pgEnum("user_role", ["super_admin", "admin", "regulator", "lender", "viewer"]);
 export const userStatusEnum = pgEnum("user_status", ["active", "suspended", "deactivated"]);
-export const organizationTypeEnum = pgEnum("organization_type", ["bank", "microfinance", "insurance", "telecom", "fintech", "utility", "government", "regulator", "real_estate", "investment", "other"]);
+export const organizationTypeEnum = pgEnum("organization_type", ["bank", "microfinance", "insurance", "telecom", "fintech", "utility", "government", "regulator", "real_estate", "investment", "other", "registry_authority"]);
 export const organizationStatusEnum = pgEnum("organization_status", ["active", "suspended", "pending", "deactivated"]);
 export const borrowerTypeEnum = pgEnum("borrower_type", ["individual", "corporate"]);
 
@@ -1817,7 +1817,7 @@ export type LoanRepaymentSchedule = typeof loanRepaymentSchedules.$inferSelect;
 export const collateralItems = pgTable("collateral_items", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   registrationNumber: varchar("registration_number").notNull().unique(),
-  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id),
+  borrowerId: varchar("borrower_id").references(() => borrowers.id),
   loanApplicationId: varchar("loan_application_id").references(() => loanApplications.id),
   collateralType: text("collateral_type").notNull(),
   description: text("description").notNull(),
@@ -1830,6 +1830,29 @@ export const collateralItems = pgTable("collateral_items", {
   lenderOrganizationId: varchar("lender_organization_id").notNull().references(() => organizations.id),
   documentReference: text("document_reference"),
   notes: text("notes"),
+  // Pan-African Collateral Registry fields
+  registryAuthorityId: varchar("registry_authority_id").references(() => organizations.id),
+  assetLocalIdentifier: text("asset_local_identifier"),
+  panAfricanAssetId: text("pan_african_asset_id"),
+  legalRegime: text("legal_regime"),
+  approvalStatus: text("approval_status").notNull().default("pending"),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvalDate: text("approval_date"),
+  rejectionReason: text("rejection_reason"),
+  certificateNumber: text("certificate_number"),
+  lienPriority: integer("lien_priority"),
+  enforcementStatus: text("enforcement_status"),
+  dischargeDate: text("discharge_date"),
+  borrowerName: text("borrower_name"),
+  grantorNationalId: text("grantor_national_id"),
+  countryCode: text("country_code"),
+  // PPSR-inspired fields
+  isPmsi: boolean("is_pmsi").notNull().default(false),
+  securityInterestType: text("security_interest_type").notNull().default("loan_security"),
+  collateralClass: text("collateral_class"),
+  financingDuration: text("financing_duration").notNull().default("custom"),
+  debtorType: text("debtor_type").notNull().default("individual"),
+  verificationCode: text("verification_code"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -1837,6 +1860,28 @@ export const collateralItems = pgTable("collateral_items", {
 export const insertCollateralItemSchema = createInsertSchema(collateralItems).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertCollateralItem = z.infer<typeof insertCollateralItemSchema>;
 export type CollateralItem = typeof collateralItems.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Registry Country Config — 54 African countries pre-configured
+// ---------------------------------------------------------------------------
+
+export const registryCountryConfig = pgTable("registry_country_config", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  countryCode: text("country_code").notNull().unique(),
+  countryName: text("country_name").notNull(),
+  authorityName: text("authority_name").notNull(),
+  legalRegime: text("legal_regime").notNull(),
+  currency: text("currency").notNull().default("USD"),
+  isLive: boolean("is_live").notNull().default(false),
+  registryAuthorityOrgId: varchar("registry_authority_org_id").references(() => organizations.id),
+  // JSON: { vehicle: ["vin","make","model","year"], real_estate: ["titleDeedNumber","plotNumber",...], ... }
+  requiredFieldsJson: text("required_fields_json"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertRegistryCountryConfigSchema = createInsertSchema(registryCountryConfig).omit({ id: true, createdAt: true });
+export type InsertRegistryCountryConfig = z.infer<typeof insertRegistryCountryConfigSchema>;
+export type RegistryCountryConfig = typeof registryCountryConfig.$inferSelect;
 
 // ---------------------------------------------------------------------------
 // Institution Branding — per-institution white-label customization

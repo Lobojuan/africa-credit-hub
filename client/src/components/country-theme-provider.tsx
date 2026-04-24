@@ -56,7 +56,7 @@ export function CountryThemeProvider({ children }: { children: ReactNode }) {
   const { visualStyle } = useTheme();
   const isSuperAdmin = user?.role === "super_admin";
 
-  const serverCountry = (user as any)?.viewingCountry as string | undefined;
+  const serverCountry = user?.viewingCountry ?? undefined;
 
   const initialCountry = serverCountry && serverCountry !== "global" ? serverCountry : null;
   const [activeCountry, setActiveCountry] = useState<string | null>(initialCountry);

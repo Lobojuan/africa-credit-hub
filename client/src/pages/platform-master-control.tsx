@@ -1646,6 +1646,169 @@ function RegistryCredentialsPanel() {
   );
 }
 
+function CollateralRegistrySetupPanel() {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const [provisionForm, setProvisionForm] = useState({ countryCode: "", organizationName: "", contactEmail: "" });
+  const [provisionOpen, setProvisionOpen] = useState(false);
+
+  const { data: countries = [], isLoading } = useQuery<any[]>({
+    queryKey: ["/api/registry-country-config"],
+    queryFn: () => fetch("/api/registry-country-config", { credentials: "include" }).then(r => r.json()),
+  });
+
+  const provisionMutation = useMutation({
+    mutationFn: (data: any) => fetch("/api/registry-authority/provision", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(data),
+    }).then(async r => { const j = await r.json(); if (!r.ok) throw new Error(j.message); return j; }),
+    onSuccess: (data) => {
+      toast({ title: "Registry Authority Provisioned", description: `${data.organization.name} created for ${data.config.countryName}` });
+      setProvisionOpen(false);
+      setProvisionForm({ countryCode: "", organizationName: "", contactEmail: "" });
+      qc.invalidateQueries({ queryKey: ["/api/registry-country-config"] });
+    },
+    onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const live = countries.filter((c: any) => c.isLive || c.registryAuthorityOrgId);
+  const pending = countries.filter((c: any) => !c.isLive && !c.registryAuthorityOrgId);
+
+  return (
+    <div className="space-y-4 text-sm">
+      <div className="grid grid-cols-3 gap-3">
+        <div className="rounded-lg border p-3 text-center">
+          <div className="text-2xl font-bold text-emerald-600">{live.length}</div>
+          <div className="text-xs text-muted-foreground">Countries Live</div>
+        </div>
+        <div className="rounded-lg border p-3 text-center">
+          <div className="text-2xl font-bold text-amber-600">{pending.length}</div>
+          <div className="text-xs text-muted-foreground">Pending Provisioning</div>
+        </div>
+        <div className="rounded-lg border p-3 text-center">
+          <div className="text-2xl font-bold">{countries.length}</div>
+          <div className="text-xs text-muted-foreground">Total Countries</div>
+        </div>
+      </div>
+
+      <div className="flex justify-between items-center">
+        <p className="text-xs text-muted-foreground">Provision a government Registry Authority for any African country. This creates a dedicated organization that can approve/reject lien registrations for that country.</p>
+        <Dialog open={provisionOpen} onOpenChange={setProvisionOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm" className="gap-2 shrink-0" data-testid="btn-provision-registry">
+              <Plus className="w-3.5 h-3.5" /> Provision Authority
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-emerald-600" /> Provision Registry Authority
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <div>
+                <label className="text-xs font-medium">Country</label>
+                <Select value={provisionForm.countryCode} onValueChange={v => setProvisionForm(f => ({ ...f, countryCode: v }))}>
+                  <SelectTrigger data-testid="select-provision-country"><SelectValue placeholder="Select country…" /></SelectTrigger>
+                  <SelectContent>
+                    {pending.map((c: any) => (
+                      <SelectItem key={c.countryCode} value={c.countryCode}>{c.countryName} ({c.countryCode}) — {c.legalRegime}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs font-medium">Authority Organization Name</label>
+                <Input
+                  data-testid="input-provision-org-name"
+                  placeholder="e.g. Ghana Collateral Registry Authority"
+                  value={provisionForm.organizationName}
+                  onChange={e => setProvisionForm(f => ({ ...f, organizationName: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium">Contact Email (optional)</label>
+                <Input
+                  data-testid="input-provision-email"
+                  type="email"
+                  placeholder="registry@authority.gov"
+                  value={provisionForm.contactEmail}
+                  onChange={e => setProvisionForm(f => ({ ...f, contactEmail: e.target.value }))}
+                />
+              </div>
+              {provisionForm.countryCode && (
+                <div className="rounded-lg bg-muted/50 p-3 text-xs space-y-1">
+                  {(() => {
+                    const c = countries.find((x: any) => x.countryCode === provisionForm.countryCode);
+                    return c ? (
+                      <>
+                        <div><span className="font-medium">Country:</span> {c.countryName}</div>
+                        <div><span className="font-medium">Default Authority:</span> {c.authorityName}</div>
+                        <div><span className="font-medium">Legal Regime:</span> {c.legalRegime}</div>
+                        <div><span className="font-medium">Currency:</span> {c.currency}</div>
+                      </>
+                    ) : null;
+                  })()}
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setProvisionOpen(false)}>Cancel</Button>
+              <Button
+                onClick={() => provisionMutation.mutate(provisionForm)}
+                disabled={!provisionForm.countryCode || !provisionForm.organizationName || provisionMutation.isPending}
+                data-testid="btn-confirm-provision"
+                className="bg-emerald-600 hover:bg-emerald-700"
+              >
+                {provisionMutation.isPending ? "Provisioning…" : "Create Registry Authority"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {isLoading ? (
+        <p className="text-xs text-muted-foreground">Loading country config…</p>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border max-h-80 overflow-y-auto">
+          <table className="w-full text-xs">
+            <thead className="bg-muted/50 sticky top-0">
+              <tr>
+                <th className="text-left p-2 font-medium">Code</th>
+                <th className="text-left p-2 font-medium">Country</th>
+                <th className="text-left p-2 font-medium">Legal Regime</th>
+                <th className="text-left p-2 font-medium">Currency</th>
+                <th className="text-left p-2 font-medium">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {countries.map((c: any) => (
+                <tr key={c.countryCode} className="border-t hover:bg-muted/30" data-testid={`row-country-${c.countryCode}`}>
+                  <td className="p-2 font-mono font-bold text-primary">{c.countryCode}</td>
+                  <td className="p-2">{c.countryName}</td>
+                  <td className="p-2 text-muted-foreground">{c.legalRegime}</td>
+                  <td className="p-2 font-mono">{c.currency}</td>
+                  <td className="p-2">
+                    {c.registryAuthorityOrgId ? (
+                      <span className="inline-flex items-center gap-1 text-emerald-600 font-medium">
+                        <CheckCircle2 className="w-3 h-3" /> Provisioned
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">Not provisioned</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ControlDashboard() {
   const { data: summary } = useQuery<SummaryData>({
     queryKey: ["/api/platform-control/summary"],
@@ -1730,6 +1893,10 @@ function ControlDashboard() {
 
           <Panel title="Registry API Credentials" icon={Radio} color="text-teal-500" defaultOpen={false}>
             <RegistryCredentialsPanel />
+          </Panel>
+
+          <Panel title="Pan-African Collateral Registry Setup" icon={Shield} color="text-emerald-600" defaultOpen={false}>
+            <CollateralRegistrySetupPanel />
           </Panel>
         </div>
       </div>

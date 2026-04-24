@@ -4,7 +4,7 @@ import { apiRequest, queryClient, getQueryFn, clearCSRFToken, fetchCSRFToken } f
 import { useToast } from "@/hooks/use-toast";
 import type { User, Organization } from "@shared/schema";
 
-type AuthUser = Omit<User, "password"> & { passwordExpired?: boolean; organization?: Organization | null };
+type AuthUser = Omit<User, "password"> & { passwordExpired?: boolean; organization?: Organization | null; viewingCountry?: string | null };
 
 interface AuthContextType {
   user: AuthUser | null;
