@@ -18,6 +18,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import QRCode from "react-qr-code";
 import {
   Building, Plus, Search, RefreshCw, MapPin, FileText,
@@ -2016,6 +2017,13 @@ function MyRegistrations() {
 
   const itemById = Object.fromEntries(items.map(i => [i.id, i]));
 
+  // IDs of rejected items that already have an active (non-rejected) resubmission pending
+  const alreadyResubmittedIds = new Set(
+    items
+      .filter(i => i.resubmittedFromId && i.approvalStatus !== "rejected")
+      .map(i => i.resubmittedFromId as string)
+  );
+
   const filtered = items.filter(i => {
     if (typeFilter !== "all" && i.collateralType !== typeFilter) return false;
     if (statusFilter !== "all" && i.approvalStatus !== statusFilter) return false;
@@ -2241,18 +2249,40 @@ function MyRegistrations() {
                               </Button>
                             </>
                           )}
-                          {item.approvalStatus === "rejected" && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => { e.stopPropagation(); setResubmitItem(item); }}
-                              data-testid={`btn-fix-resubmit-${item.id}`}
-                              className="gap-1.5 text-xs h-7 px-2 text-amber-700 border-amber-300 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-700 dark:hover:bg-amber-950/30"
-                            >
-                              <RefreshCw className="w-3.5 h-3.5" />
-                              Fix &amp; Resubmit
-                            </Button>
-                          )}
+                          {item.approvalStatus === "rejected" && (() => {
+                            const isChain = !!item.resubmittedFromId;
+                            const hasPending = alreadyResubmittedIds.has(item.id);
+                            const isBlocked = isChain || hasPending;
+                            const tooltipMsg = isChain
+                              ? "This item is already a resubmission and cannot be resubmitted again"
+                              : "A resubmission is already in progress for this item";
+                            return (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={(e) => { e.stopPropagation(); if (!isBlocked) setResubmitItem(item); }}
+                                        disabled={isBlocked}
+                                        data-testid={`btn-fix-resubmit-${item.id}`}
+                                        className="gap-1.5 text-xs h-7 px-2 text-amber-700 border-amber-300 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-700 dark:hover:bg-amber-950/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                                      >
+                                        <RefreshCw className="w-3.5 h-3.5" />
+                                        Fix &amp; Resubmit
+                                      </Button>
+                                    </span>
+                                  </TooltipTrigger>
+                                  {isBlocked && (
+                                    <TooltipContent side="top">
+                                      <p>{tooltipMsg}</p>
+                                    </TooltipContent>
+                                  )}
+                                </Tooltip>
+                              </TooltipProvider>
+                            );
+                          })()}
                         </div>
                       </TableCell>
                     </TableRow>

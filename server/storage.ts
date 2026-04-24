@@ -362,6 +362,7 @@ export interface IStorage {
   // Collateral Registry
   getCollateralItems(organizationId?: string, borrowerId?: string): Promise<(CollateralItem & { shareCount: number })[]>;
   getCollateralItem(id: string): Promise<CollateralItem | undefined>;
+  getActiveResubmissionFor(originalId: string): Promise<CollateralItem | undefined>;
   createCollateralItem(data: InsertCollateralItem): Promise<CollateralItem>;
   updateCollateralItem(id: string, data: Partial<InsertCollateralItem>): Promise<CollateralItem | undefined>;
   // Pan-African Registry Authority methods
@@ -2943,6 +2944,15 @@ export class DatabaseStorage implements IStorage {
 
   async getCollateralItem(id: string): Promise<CollateralItem | undefined> {
     const [row] = await db.select().from(collateralItems).where(eq(collateralItems.id, id));
+    return row;
+  }
+
+  async getActiveResubmissionFor(originalId: string): Promise<CollateralItem | undefined> {
+    const [row] = await db.select().from(collateralItems)
+      .where(and(
+        eq(collateralItems.resubmittedFromId, originalId),
+        sql`${collateralItems.approvalStatus} != 'rejected'`
+      ));
     return row;
   }
 

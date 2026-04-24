@@ -14771,6 +14771,27 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const body = req.body;
       const today = new Date().toISOString().split("T")[0];
       const orgId = req.session?.organizationId;
+      // Guard: prevent duplicate or chained resubmissions
+      if (body.resubmittedFromId) {
+        const sourceItem = await storage.getCollateralItem(body.resubmittedFromId);
+        // 0. Source item must exist
+        if (!sourceItem) {
+          return res.status(404).json({ message: "Original filing not found" });
+        }
+        // 0b. Scope check: lenders may only resubmit their own filings
+        if (!isSuperAdminPost && !isAdminPost && sourceItem.lenderOrganizationId !== orgId) {
+          return res.status(403).json({ message: "Access denied — not your registration" });
+        }
+        // 1. Block chains: the source item must not itself be a resubmission
+        if (sourceItem.resubmittedFromId) {
+          return res.status(409).json({ message: "This item is already a resubmission and cannot be resubmitted again" });
+        }
+        // 2. Block duplicates: the source item must not already have an active resubmission
+        const existing = await storage.getActiveResubmissionFor(body.resubmittedFromId);
+        if (existing) {
+          return res.status(409).json({ message: "A resubmission is already in progress for this item" });
+        }
+      }
       // Country is always server-derived — fail closed if resolution fails
       const callerCountry = await getCallerCountry(req);
       const isSuperAdminCreate = req.session?.userRole === "super_admin";
