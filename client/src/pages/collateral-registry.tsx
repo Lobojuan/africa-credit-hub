@@ -212,6 +212,8 @@ function ShareVerificationLinkDialog({ item }: { item: CollateralRegistryItem })
   const [recipient, setRecipient] = useState("");
   const [personalMessage, setPersonalMessage] = useState("");
   const [senderFilter, setSenderFilter] = useState<string>("__all__");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
 
   const shareLogQuery = useQuery<ShareLogEntry[]>({
     queryKey: ["/api/collateral", item.id, "share-log"],
@@ -260,12 +262,24 @@ function ShareVerificationLinkDialog({ item }: { item: CollateralRegistryItem })
     }
   }, [uniqueSenders, senderFilter]);
 
-  const filteredLog = senderFilter === "__all__"
-    ? shareLog
-    : shareLog.filter(e => (e.sentBy ?? e.senderName) === senderFilter);
+  const filteredLog = shareLog.filter(e => {
+    if (senderFilter !== "__all__" && (e.sentBy ?? e.senderName) !== senderFilter) return false;
+    const sentAt = new Date(e.sentAt);
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      from.setHours(0, 0, 0, 0);
+      if (sentAt < from) return false;
+    }
+    if (dateTo) {
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      if (sentAt > to) return false;
+    }
+    return true;
+  });
 
   return (
-    <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) { setRecipient(""); setPersonalMessage(""); setSenderFilter("__all__"); } }}>
+    <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) { setRecipient(""); setPersonalMessage(""); setSenderFilter("__all__"); setDateFrom(""); setDateTo(""); } }}>
       <DialogTrigger asChild>
         <Button
           variant="ghost"
@@ -356,12 +370,12 @@ function ShareVerificationLinkDialog({ item }: { item: CollateralRegistryItem })
 
           {shareLog.length > 0 && (
             <div className="border-t pt-3 space-y-2" data-testid="share-history">
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                   <History className="w-4 h-4" />
                   Share history ({filteredLog.length}{filteredLog.length !== shareLog.length ? ` of ${shareLog.length}` : ""} entr{filteredLog.length !== 1 ? "ies" : "y"})
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   {uniqueSenders.length > 1 && (
                     <select
                       value={senderFilter}
@@ -384,6 +398,37 @@ function ShareVerificationLinkDialog({ item }: { item: CollateralRegistryItem })
                     <Download className="w-3 h-3" /> Export CSV
                   </a>
                 </div>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-muted-foreground shrink-0">Date range:</span>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={e => setDateFrom(e.target.value)}
+                  data-testid="input-date-from"
+                  aria-label="Filter from date"
+                  className="text-xs rounded border border-input bg-background px-2 py-1 text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+                <span className="text-xs text-muted-foreground">to</span>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={e => setDateTo(e.target.value)}
+                  data-testid="input-date-to"
+                  aria-label="Filter to date"
+                  min={dateFrom || undefined}
+                  className="text-xs rounded border border-input bg-background px-2 py-1 text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+                {(dateFrom || dateTo) && (
+                  <button
+                    type="button"
+                    onClick={() => { setDateFrom(""); setDateTo(""); }}
+                    data-testid="btn-clear-date-filter"
+                    className="text-xs text-muted-foreground hover:text-foreground underline"
+                  >
+                    Clear
+                  </button>
+                )}
               </div>
               <div className="space-y-1 max-h-40 overflow-y-auto">
                 {filteredLog.length === 0 ? (
