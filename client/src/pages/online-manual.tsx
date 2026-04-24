@@ -106,6 +106,8 @@ function getHelpSections(t: TFunction): HelpSection[] {
         t("manual.borrowers.s8", "Set education level, institution, and employment history as needed."),
         t("manual.borrowers.s9", "New registrations are submitted through the maker-checker workflow — a different authorized user must approve the change. A pending-approval amber banner appears on records awaiting review."),
         t("manual.borrowers.s10", "Click any row to view the full detail page with credit accounts, inquiries, court judgments, consent records, AI Risk Analysis, and credit report generation."),
+        t("manual.borrowers.s11", "At the top of every individual borrower's summary you will see a Lending Decision panel — a colour-coded APPROVE (green), REFER (amber), or DECLINE (red) verdict calculated automatically from credit score, default history, and account status. No manual input is needed. DECLINE = any default or score below 500; REFER = score 500–649 or no active accounts; APPROVE = score 650+ with no defaults."),
+        t("manual.borrowers.s12", "For DECLINE and REFER verdicts, click 'Path to Approval' to expand a tailored, numbered recovery roadmap with timeframe estimates. Steps already satisfied by the borrower — for example, income is on file — are automatically marked Done. Use this roadmap to advise the borrower on what they need to do to qualify in the future. A declined borrower with good income typically needs 12–15 months of clean repayment history; a referred borrower can often reach conditional approval in 3–6 months."),
       ],
       roles: ["super_admin", "admin", "regulator", "lender", "viewer"],
     },
