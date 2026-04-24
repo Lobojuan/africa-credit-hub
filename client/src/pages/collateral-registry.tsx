@@ -23,7 +23,7 @@ import {
   Award, Clock, CheckCircle2, XCircle, AlertTriangle,
   Download, Shield, Zap, Star, TrendingUp, Package, Link2,
   Eye, CheckCircle, Building2, User, Tag, Calendar, ExternalLink, Copy, Check,
-  Share2, Mail, MessageSquare,
+  Share2, Mail, MessageSquare, Printer,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -358,6 +358,10 @@ interface CertificatePreviewData {
 function CertificatePreviewDialog({ item }: { item: { id: string; registrationNumber?: string } }) {
   const [open, setOpen] = useState(false);
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   const { data: preview, isLoading } = useQuery<CertificatePreviewData>({
     queryKey: ["/api/collateral", item.id, "certificate-preview"],
     queryFn: async () => {
@@ -595,9 +599,13 @@ function CertificatePreviewDialog({ item }: { item: { id: string; registrationNu
             <Separator />
 
             {/* Actions */}
-            <div className="flex justify-end gap-2 pt-1">
+            <div className="flex justify-end gap-2 pt-1 print:hidden">
               <Button variant="outline" onClick={() => setOpen(false)} data-testid="btn-close-preview">
                 Close
+              </Button>
+              <Button variant="outline" onClick={handlePrint} data-testid="btn-print-certificate">
+                <Printer className="w-4 h-4 mr-2" />
+                Print
               </Button>
               <Button
                 onClick={() => { downloadCertificate(item); }}

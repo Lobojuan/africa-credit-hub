@@ -984,6 +984,22 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
     break-inside: avoid;
     page-break-inside: avoid;
   }
+
+  [data-testid="certificate-preview-content"],
+  [data-testid="certificate-preview-content"] * {
+    visibility: visible;
+  }
+
+  [data-testid="certificate-preview-content"] {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 16px !important;
+    margin: 0 !important;
+    background: white !important;
+    color: black !important;
+  }
 }
 
 /* ========================================================
