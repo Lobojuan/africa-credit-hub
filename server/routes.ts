@@ -15309,6 +15309,33 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
+  // Export share history for a collateral item as CSV
+  app.get("/api/collateral/:id/share-log/export", requireRole("admin", "super_admin", "lender"), async (req, res) => {
+    try {
+      const item = await storage.getCollateralItem(req.params.id);
+      if (!item) return res.status(404).json({ message: "Not found" });
+
+      const orgId = (req.session as any)?.organizationId;
+      if (item.organizationId && orgId && String(item.organizationId) !== String(orgId)) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const log = await storage.getCollateralShareLog(req.params.id);
+
+      const csvQ = (val: unknown) => csvSafe(val).replace(/"/g, '""');
+      let csv = "Timestamp,Channel,Masked Recipient,Sender Name\n";
+      for (const entry of log) {
+        const ts = entry.sentAt ? new Date(entry.sentAt).toISOString() : "";
+        csv += `"${csvQ(ts)}","${csvQ(entry.channel)}","${csvQ(entry.maskedRecipient)}","${csvQ(entry.senderName ?? "")}"\n`;
+      }
+
+      const filename = `share-history-${req.params.id}-${Date.now()}.csv`;
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      return res.send(csv);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
   // Registry Country Config
   app.get("/api/registry-country-config", requireAuth, async (_req, res) => {
     try {

@@ -335,9 +335,19 @@ function ShareVerificationLinkDialog({ item }: { item: CollateralRegistryItem })
 
           {shareLog.length > 0 && (
             <div className="border-t pt-3 space-y-2" data-testid="share-history">
-              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <History className="w-4 h-4" />
-                Share history ({shareLog.length} recipient{shareLog.length !== 1 ? "s" : ""})
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <History className="w-4 h-4" />
+                  Share history ({shareLog.length} recipient{shareLog.length !== 1 ? "s" : ""})
+                </div>
+                <a
+                  href={`/api/collateral/${item.id}/share-log/export`}
+                  download
+                  data-testid="btn-export-share-history-csv"
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  <Download className="w-3 h-3" /> Export CSV
+                </a>
               </div>
               <div className="space-y-1 max-h-40 overflow-y-auto">
                 {shareLog.map(entry => (
