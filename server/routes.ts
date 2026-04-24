@@ -5935,7 +5935,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
         return res.status(400).json({ message: "borrowerId and purpose are required" });
       }
 
-      const userRole = req.session?.role;
+      const userRole = req.session?.userRole;
       const isSuperAdmin = userRole === "super_admin";
 
       if (!isSuperAdmin && !consentId) {
