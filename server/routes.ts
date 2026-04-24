@@ -47,6 +47,7 @@ import {
   wallets, walletTransactions,
   registryCountryConfig,
   collateralItems,
+  type InsertCollateralItem,
 } from "@shared/schema";
 import { processIFFData, detectIFFType, type IFFType } from "./iff-processor";
 import bcrypt from "bcryptjs";
@@ -12554,6 +12555,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   await repairCountrySettings();
   await seedOrganizations();
   await seedRegistryCountryConfig();
+  await ensureRegistryAuthoritySeeded();
 
   registerExternalApi(app);
 
@@ -15661,5 +15663,151 @@ async function seedCountrySettings() {
     routeLogger.info("[Seed] Country settings initialized");
   } catch (e) {
     routeLogger.info("[Seed] Country settings seed skipped:", { detail: e });
+  }
+}
+
+async function ensureRegistryAuthoritySeeded() {
+  // Only run in development — never create hardcoded accounts in production
+  const isProduction = process.env.NODE_ENV === "production" || process.env.PRODUCTION_MODE === "true";
+  if (isProduction) return;
+
+  try {
+    const ghanaMode = isGhanaMode();
+    const raCountry = ghanaMode ? "Ghana" : "Ethiopia";
+    const raCountryCode = ghanaMode ? "GH" : "ET";
+
+    // Look up any registry_authority org scoped to the active country
+    const [existingRA] = await db
+      .select()
+      .from(organizations)
+      .where(and(eq(organizations.type, "registry_authority"), eq(organizations.country, raCountry)))
+      .limit(1);
+
+    let raOrg: typeof existingRA;
+    if (!existingRA) {
+      raOrg = await storage.createOrganization({
+        name: ghanaMode ? "Ghana Collateral Registry Authority" : "Ethiopia Collateral Registry Authority",
+        slug: ghanaMode ? "registry-gh" : "registry-et",
+        type: "registry_authority",
+        status: "active",
+        country: raCountry,
+        contactEmail: ghanaMode ? "registry@ghana.gov.gh" : "registry@ethiopia.gov.et",
+        subscriptionTier: "enterprise",
+        maxUsers: 20,
+      });
+      routeLogger.info(`[Seed] Registry Authority org created for ${raCountry}`);
+
+      // Link to country config if available
+      try {
+        await storage.linkRegistryAuthorityToCountry(raCountryCode, raOrg.id);
+        routeLogger.info(`[Seed] Registry Authority linked to country ${raCountryCode}`);
+      } catch (e) {
+        routeLogger.info(`[Seed] Could not link RA to country config: ${(e as Error).message}`);
+      }
+    } else {
+      raOrg = existingRA;
+      routeLogger.info(`[Seed] Registry Authority org already exists for ${raOrg.country}`);
+    }
+
+    // Determine a stable RA admin username for this country (allows multiple countries in dev)
+    const countrySlug = raCountryCode.toLowerCase();
+    const preferredUsername = "registry_admin";
+    const countryUsername = `registry_admin_${countrySlug}`;
+
+    const bcryptLib = await import("bcryptjs");
+    const devPassword = process.env.REGISTRY_ADMIN_SEED_PASSWORD || "registry123";
+
+    // Try preferred username first; fall back to country-specific if it's taken by another org
+    const preferredUser = await storage.getUserByUsername(preferredUsername);
+    let resolvedUsername = preferredUsername;
+    if (preferredUser && preferredUser.organizationId && preferredUser.organizationId !== raOrg.id) {
+      // Generic name taken by a different org — use country-specific fallback
+      resolvedUsername = countryUsername;
+    }
+
+    const existingUser = await storage.getUserByUsername(resolvedUsername);
+    if (!existingUser) {
+      const hashedPassword = await bcryptLib.hash(devPassword, 10);
+      await storage.createUser({
+        username: resolvedUsername,
+        password: hashedPassword,
+        fullName: "Registry Authority Administrator",
+        email: ghanaMode ? "registry@ghana.gov.gh" : "registry@ethiopia.gov.et",
+        role: "admin",
+        status: "active",
+        organizationId: raOrg.id,
+      });
+      routeLogger.info(`[Seed] ${resolvedUsername} user created (default dev credentials apply)`);
+    } else if (!existingUser.organizationId) {
+      // Only link the user to the RA org if they have no org yet — never reassign
+      await storage.updateUser(existingUser.id, { organizationId: raOrg.id });
+      routeLogger.info(`[Seed] ${resolvedUsername} user linked to RA org`);
+    }
+
+    // Seed a couple of pending collateral items if there are none for this RA
+    const existingItems = await storage.getPendingCollateralItems(raOrg.id, raCountryCode);
+    if (existingItems.length === 0) {
+      // Find a lender org to attach items to
+      const allOrgs = await storage.getOrganizations();
+      const lenderOrg = allOrgs.find(o => o.type !== "registry_authority" && o.type !== "other" && o.id !== raOrg.id)
+        || allOrgs.find(o => o.id !== raOrg.id);
+      if (lenderOrg) {
+        const today = new Date().toISOString().split("T")[0];
+        const seedItems: InsertCollateralItem[] = [
+          {
+            registrationNumber: `REG-${raCountryCode}-DEMO-001`,
+            collateralType: "vehicle",
+            description: "Toyota Land Cruiser 2020 - VIN: JTMHX3JH1L4072241",
+            estimatedValue: "85000",
+            currency: ghanaMode ? "GHS" : "ETB",
+            location: ghanaMode ? "Accra, Ghana" : "Addis Ababa, Ethiopia",
+            registrationDate: today,
+            status: "active",
+            approvalStatus: "pending",
+            lenderOrganizationId: lenderOrg.id,
+            countryCode: raCountryCode,
+            registryAuthorityId: raOrg.id,
+            assetLocalIdentifier: "JTMHX3JH1L4072241",
+            legalRegime: ghanaMode ? "Common Law" : "Civil Law",
+            borrowerName: "Demo Borrower One",
+            debtorType: "individual",
+            securityInterestType: "loan_security",
+            financingDuration: "custom",
+            isPmsi: false,
+          },
+          {
+            registrationNumber: `REG-${raCountryCode}-DEMO-002`,
+            collateralType: "equipment",
+            description: "Caterpillar D6 Bulldozer - Serial: CAT00D6KD01234",
+            estimatedValue: "220000",
+            currency: ghanaMode ? "GHS" : "ETB",
+            location: ghanaMode ? "Kumasi, Ghana" : "Dire Dawa, Ethiopia",
+            registrationDate: today,
+            status: "active",
+            approvalStatus: "pending",
+            lenderOrganizationId: lenderOrg.id,
+            countryCode: raCountryCode,
+            registryAuthorityId: raOrg.id,
+            assetLocalIdentifier: "CAT00D6KD01234",
+            legalRegime: ghanaMode ? "Common Law" : "Civil Law",
+            borrowerName: "Demo Borrower Two",
+            debtorType: "business",
+            securityInterestType: "loan_security",
+            financingDuration: "custom",
+            isPmsi: false,
+          },
+        ];
+        for (const item of seedItems) {
+          try {
+            await storage.createCollateralItem(item);
+          } catch (e) {
+            routeLogger.info(`[Seed] Collateral item seed skipped (likely duplicate): ${(e as Error).message}`);
+          }
+        }
+        routeLogger.info("[Seed] Seeded demo pending collateral items for Registry Authority");
+      }
+    }
+  } catch (e: any) {
+    routeLogger.info(`[Seed] ensureRegistryAuthoritySeeded skipped: ${e.message}`);
   }
 }
