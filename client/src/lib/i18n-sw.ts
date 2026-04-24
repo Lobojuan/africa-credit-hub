@@ -72,6 +72,11 @@ const sw: Record<string, any> = {
     myCredit: "Mkopo Wangu",
     legal: "Kisheria na Hakimiliki",
     backupRecovery: "Hifadhi na Urejeshaji",
+    complianceQueue: "Foleni ya Utiifu",
+    loanOrigination: "Uanzishaji wa Mkopo",
+    collateralRegistry: "Daftari la Dhamana",
+    institutionAnalytics: "Uchanganuzi wa Taasisi",
+    institutionBranding: "Chapa Nyeupe",
     brandTitle: "Sajili ya Mikopo",
     brandSubtitle: `${CO}™`,
     version: "v2.6 — Sajili ya Mikopo",
@@ -2121,6 +2126,7 @@ const sw: Record<string, any> = {
       readiness: "Utayari wa Benki Kuu",
       readinessLabel: "Kujenga utayari na benki kuu na wadhibiti kote Afrika",
     },
+    contactSales: "Wasiliana na Mauzo",
   },
   appGuide: {
     slides: {

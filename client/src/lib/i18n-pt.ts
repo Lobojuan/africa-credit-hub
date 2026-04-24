@@ -74,6 +74,11 @@ const pt = {
     myCredit: "Meu Crédito",
     legal: "Jurídico & Direitos Autorais",
     backupRecovery: "Backup & Recuperação",
+    complianceQueue: "Fila de Conformidade",
+    loanOrigination: "Originação de Empréstimos",
+    collateralRegistry: "Registo de Garantias",
+    institutionAnalytics: "Análise da Instituição",
+    institutionBranding: "Marca Branca",
     brandTitle: "Registo de Crédito",
     brandSubtitle: `${CO}™`,
     version: "v2.6 — Registo de Crédito",
@@ -2110,6 +2115,7 @@ const pt = {
       readiness: "Prontidão do Banco Central",
       readinessLabel: "A construir prontidão com bancos centrais e reguladores em toda a África",
     },
+    contactSales: "Contactar Vendas",
   },
   appGuide: {
     slides: {
