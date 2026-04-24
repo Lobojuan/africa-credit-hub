@@ -1,4 +1,4 @@
-# Africa Credit Hub v2.6
+# Africa Credit Hub v2.6 — Competitive Intelligence Update
 
 ## Overview
 This project is a web-based Pan-African Credit Registry System (Africa Credit Hub v2.5) designed to centralize credit information, manage borrower records, and support credit risk assessment for financial institutions across Africa. It handles multiple African currencies plus USD/EUR/GBP, enforces jurisdiction-specific data retention, ensures regulatory compliance, and facilitates cross-border entity resolution. The system aims to bolster financial stability and responsible lending through robust security, adherence to regulatory workflows, fault tolerance, multi-tenant SaaS capabilities, AI-powered portfolio intelligence, blockchain audit anchoring, and a consumer self-service portal. The system is designed for scalability, supporting over 10 million records and offers transaction-based monetization with a two-tier revenue split and a comprehensive settlement and payout system.
@@ -43,6 +43,8 @@ The system employs a modern full-stack architecture built for scalability and co
 -   **Data Management**: Centralized Data Management page (`/data-management`) with Export Center (full portability export with optional AES-256 encryption + SHA-256 integrity hashing), Retention Policies CRUD (with configurable enforcement action: flag/archive/delete), Retention Policy Scanner (country-scoped for admin, global for super_admin), Erasure Requests (cascade erasure deleting all borrower-related data), and Export History audit trail. Rate-limited exports (5/hr admin, 1/day consumer). Consumer self-export via "Download My Data" button in consumer portal. Credit Score History table tracks score changes over time. Module: `server/export-service.ts`. Migration: `server/migrate-new-tables.ts`.
 -   **Performance**: Database query parallelization, SQL-based aggregation, integrity verification caching, and request timeout middleware.
 -   **Reliability**: Email/SMS with 3-attempt retry, exponential backoff, provider failover, and outbound rate limiting.
+
+-   **Investor Landing — Competitive Intelligence Section** (`id="vs-global"`): Full research-backed competitive teardown section on `/investor`. Includes: 4-card industry snapshot (Experian $7.5B revenue, TransUnion 8/54 countries, Equifax 0/54 countries, Experian 1.3/5 SiteJabber), 14-row head-to-head feature comparison table (Africa Credit Hub vs Experian vs TransUnion vs Equifax), 4 "Why We Win" differentiator cards, 3 competitor deep-dive profiles (7 named weaknesses each), $191B global market opportunity callout block. Data sources: Experian FY2025 Annual Report, TransUnion 2024 Investor Day, Equifax 10-K 2024, GSMA 2025, World Bank Findex 2024, SiteJabber, CFPB.
 
 ## External Dependencies
 -   **Database**: PostgreSQL (Neon)

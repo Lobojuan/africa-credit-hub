@@ -13,6 +13,7 @@ import {
   BookOpen, Headphones, Receipt, ServerCog, Banknote,
   CircleDollarSign, Activity, Hash, ChevronRight,
   Sparkles, MonitorSmartphone, Brain, Mail, Phone, X, ZoomIn, Play,
+  Trophy, XCircle, Medal, Cpu, Wifi, DollarSign,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -1338,6 +1339,404 @@ export default function InvestorLandingPage() {
         </div>
       </section>
 
+      {/* ═══════════════════════════════════════════════════════════
+          GLOBAL COMPETITIVE INTELLIGENCE SECTION
+          ═══════════════════════════════════════════════════════════ */}
+      <section id="vs-global" className="py-20 sm:py-28 bg-muted/20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+          {/* Header */}
+          <div className="text-center mb-14">
+            <Badge variant="outline" className="mb-4 gap-1.5">
+              <Trophy className="w-3 h-3" />
+              Global Competitive Intelligence
+            </Badge>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-4">
+              Why We Outperform Experian, TransUnion & Equifax<br className="hidden sm:block" />
+              <span className="bg-clip-text text-transparent" style={{ backgroundImage: brandColors.textGradient }}>
+                {" "}Across All of Africa
+              </span>
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base">
+              The global credit bureau giants built empires in North America and Europe — then stopped. Experian covers ~12 of 54 African countries. TransUnion covers 8. Equifax covers <strong>zero</strong>. We were built from day one for every African nation.
+            </p>
+          </div>
+
+          {/* Industry Snapshot Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-14">
+            {[
+              { val: "$7.5B", label: "Experian Annual Revenue", sub: "Yet covers just ~22% of Africa", icon: DollarSign, color: "text-red-500" },
+              { val: "8 / 54", label: "African Countries (TransUnion)", sub: "The largest Africa-focused bureau still misses 46 nations", icon: Globe, color: "text-amber-500" },
+              { val: "0 / 54", label: "African Countries (Equifax)", sub: "The second-largest global bureau has no African presence", icon: XCircle, color: "text-red-500" },
+              { val: "1.3 / 5", label: "Experian Customer Rating", sub: "SiteJabber — 488K+ CFPB complaints filed against Big 3", icon: AlertTriangle, color: "text-amber-500" },
+            ].map((item) => (
+              <Card key={item.label} className="text-center p-4 border-border/60">
+                <CardContent className="pt-2">
+                  <item.icon className={`w-5 h-5 mx-auto mb-2 ${item.color}`} />
+                  <div className="text-2xl font-bold mb-1">{item.val}</div>
+                  <p className="text-xs font-semibold mb-1">{item.label}</p>
+                  <p className="text-[10px] text-muted-foreground">{item.sub}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Head-to-Head Comparison Table */}
+          <div className="mb-14">
+            <h3 className="font-bold text-center text-base mb-6">Feature-by-Feature: Africa Credit Hub vs. The World's Largest Bureaus</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-3 px-4 font-semibold text-muted-foreground w-[26%]">Feature</th>
+                    <th className="py-3 px-3 text-center font-bold w-[22%]">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs" style={{ background: brandColors.headerGradient, color: "white" }}>
+                        <Trophy className="w-3 h-3" />
+                        Africa Credit Hub
+                      </div>
+                    </th>
+                    <th className="py-3 px-3 text-center text-muted-foreground font-semibold w-[17%]">Experian</th>
+                    <th className="py-3 px-3 text-center text-muted-foreground font-semibold w-[17%]">TransUnion</th>
+                    <th className="py-3 px-3 text-center text-muted-foreground font-semibold w-[18%]">Equifax</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/50">
+                  {[
+                    {
+                      feature: "African Countries Covered",
+                      us: "54 / 54 — Every Nation",
+                      experian: "~12 / 54",
+                      transunion: "8 / 54",
+                      equifax: "0 / 54",
+                      usGood: true, exGood: false, tuGood: false, eqGood: false,
+                    },
+                    {
+                      feature: "Platform Languages",
+                      us: "8 (incl. Arabic RTL, Chinese, Spanish)",
+                      experian: "1–2",
+                      transunion: "1–2",
+                      equifax: "1",
+                      usGood: true, exGood: false, tuGood: false, eqGood: false,
+                    },
+                    {
+                      feature: "Supported Currencies",
+                      us: "42+ African + major FX",
+                      experian: "1–3",
+                      transunion: "1–3",
+                      equifax: "1",
+                      usGood: true, exGood: false, tuGood: false, eqGood: false,
+                    },
+                    {
+                      feature: "AI Command Center (NL queries)",
+                      us: "✓ Full natural-language AI",
+                      experian: "✗ None",
+                      transunion: "✗ None",
+                      equifax: "✗ None",
+                      usGood: true, exGood: false, tuGood: false, eqGood: false,
+                    },
+                    {
+                      feature: "Telco & Mobile Money Scoring",
+                      us: "✓ Built-in alternative scoring",
+                      experian: "✗ Not for Africa",
+                      transunion: "⚠ Pilot only",
+                      equifax: "✗ None",
+                      usGood: true, exGood: false, tuGood: null, eqGood: false,
+                    },
+                    {
+                      feature: "Islamic Finance (Interest-Free)",
+                      us: "✓ Native flag per account",
+                      experian: "✗",
+                      transunion: "✗",
+                      equifax: "✗",
+                      usGood: true, exGood: false, tuGood: false, eqGood: false,
+                    },
+                    {
+                      feature: "PAPSS Cross-Border Integration",
+                      us: "✓ Real-time settlement tracking",
+                      experian: "✗",
+                      transunion: "✗",
+                      equifax: "✗",
+                      usGood: true, exGood: false, tuGood: false, eqGood: false,
+                    },
+                    {
+                      feature: "Maker-Checker Dual Approval",
+                      us: "✓ Built-in every write operation",
+                      experian: "✗ Not standard",
+                      transunion: "✗ Not standard",
+                      equifax: "✗",
+                      usGood: true, exGood: false, tuGood: false, eqGood: false,
+                    },
+                    {
+                      feature: "Architecture",
+                      us: "Cloud-native multi-tenant SaaS",
+                      experian: "Legacy + SaaS hybrid",
+                      transunion: "Legacy + SaaS hybrid",
+                      equifax: "Legacy mainframe",
+                      usGood: true, exGood: null, tuGood: null, eqGood: false,
+                    },
+                    {
+                      feature: "Time to Deploy New Country",
+                      us: "Instant — already live",
+                      experian: "18–24 months",
+                      transunion: "12–18 months",
+                      equifax: "N/A (not in Africa)",
+                      usGood: true, exGood: false, tuGood: false, eqGood: false,
+                    },
+                    {
+                      feature: "Automated Regulatory Exports",
+                      us: "✓ BoG, BSL, CBN, and more",
+                      experian: "✗ Manual process",
+                      transunion: "✗ Manual process",
+                      equifax: "N/A",
+                      usGood: true, exGood: false, tuGood: false, eqGood: false,
+                    },
+                    {
+                      feature: "Blockchain Audit Trail",
+                      us: "✓ SHA-256 hash-chained",
+                      experian: "✗",
+                      transunion: "✗",
+                      equifax: "✗",
+                      usGood: true, exGood: false, tuGood: false, eqGood: false,
+                    },
+                    {
+                      feature: "Consumer Self-Service Portal",
+                      us: "✓ Full self-service + dispute filing",
+                      experian: "⚠ Basic (mature markets only)",
+                      transunion: "⚠ Basic (SA only)",
+                      equifax: "N/A",
+                      usGood: true, exGood: null, tuGood: null, eqGood: false,
+                    },
+                    {
+                      feature: "Pricing Model",
+                      us: "Transparent SaaS subscription",
+                      experian: "Opaque enterprise licensing",
+                      transunion: "Opaque enterprise licensing",
+                      equifax: "Per-query + licensing",
+                      usGood: true, exGood: false, tuGood: false, eqGood: false,
+                    },
+                  ].map((row) => (
+                    <tr key={row.feature} className="hover:bg-muted/30 transition-colors">
+                      <td className="py-2.5 px-4 font-medium text-foreground/90">{row.feature}</td>
+                      <td className="py-2.5 px-3 text-center">
+                        <span className="inline-flex items-center gap-1 text-green-700 dark:text-green-400 font-medium">{row.us}</span>
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        {row.exGood === false ? (
+                          <span className="text-red-500/80">{row.experian}</span>
+                        ) : row.exGood === null ? (
+                          <span className="text-amber-500/90">{row.experian}</span>
+                        ) : (
+                          <span className="text-muted-foreground">{row.experian}</span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        {row.tuGood === false ? (
+                          <span className="text-red-500/80">{row.transunion}</span>
+                        ) : row.tuGood === null ? (
+                          <span className="text-amber-500/90">{row.transunion}</span>
+                        ) : (
+                          <span className="text-muted-foreground">{row.transunion}</span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        {row.eqGood === false ? (
+                          <span className="text-red-500/80">{row.equifax}</span>
+                        ) : (
+                          <span className="text-muted-foreground">{row.equifax}</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[10px] text-muted-foreground text-center mt-3">
+              Sources: Experian Annual Report FY2025, TransUnion 2024 Investor Day, Equifax 10-K 2024, GSMA 2025, World Bank Findex 2024, SiteJabber, CFPB Complaint Database.
+            </p>
+          </div>
+
+          {/* Why We Win — 4 Big Differentiators */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-14">
+            {[
+              {
+                icon: Globe,
+                title: "6.75x More Coverage",
+                sub: "Than the Next Best Competitor",
+                desc: "TransUnion — the largest Africa-focused bureau — covers 8 countries. We cover 54. That's every nation on the continent, all from one platform with zero additional licensing.",
+                accent: "from-blue-500/10 to-blue-600/5",
+                iconColor: "text-blue-500",
+              },
+              {
+                icon: Cpu,
+                title: "AI-Native From Day One",
+                sub: "Not a Bolt-On Feature",
+                desc: "While incumbents retrofit AI onto 30-year-old mainframes, our AI Command Center, Portfolio Intelligence, and real-time Risk Analysis were built into the architecture from the ground up.",
+                accent: "from-purple-500/10 to-purple-600/5",
+                iconColor: "text-purple-500",
+              },
+              {
+                icon: Wifi,
+                title: "Scores the Other 70%",
+                sub: "Unbanked & Thin-File Borrowers",
+                desc: "African lenders can't score 70% of customers using traditional bureau data (Credolab). Our Telco Scoring uses airtime usage, M-Pesa transactions, and top-up frequency to lend safely to the unbanked.",
+                accent: "from-green-500/10 to-green-600/5",
+                iconColor: "text-green-500",
+              },
+              {
+                icon: Zap,
+                title: "Instant. Not 24 Months.",
+                sub: "Deployment Speed Advantage",
+                desc: "Legacy bureau deployments take 18–24 months per new country. Regulations change, deals die. Africa Credit Hub is live across all 54 jurisdictions today — sign up and start filing data within hours.",
+                accent: "from-amber-500/10 to-amber-600/5",
+                iconColor: "text-amber-500",
+              },
+            ].map((item) => (
+              <Card key={item.title} className={`bg-gradient-to-br ${item.accent} border-border/60`}>
+                <CardContent className="pt-5 pb-5">
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center bg-background/80 mb-3 ${item.iconColor}`}>
+                    <item.icon className="w-4.5 h-4.5 w-5 h-5" />
+                  </div>
+                  <p className={`text-xs font-bold uppercase tracking-wide mb-0.5 ${item.iconColor}`}>{item.sub}</p>
+                  <h4 className="font-bold text-base mb-2">{item.title}</h4>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Competitor Deep-Dives */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
+            {[
+              {
+                name: "Experian",
+                revenue: "$7.52B revenue (FY2025)",
+                hq: "Dublin, Ireland",
+                africaCount: "~12 countries",
+                rating: "1.3 / 5 (SiteJabber)",
+                weaknesses: [
+                  "South Africa is the only country with real direct operations",
+                  "Remaining African presence is via 2019 Compuscan acquisition",
+                  "Legacy on-premise architecture dominates many deployments",
+                  "No pan-African multi-currency credit view",
+                  "No Islamic finance or PAPSS integration",
+                  "English-first; limited African language support",
+                  "488K+ CFPB consumer complaints (shared with Big 3)",
+                ],
+              },
+              {
+                name: "TransUnion",
+                revenue: "$4.0B revenue (2024)",
+                hq: "Chicago, USA",
+                africaCount: "8 countries",
+                rating: "1.0 / 5 (SiteJabber)",
+                weaknesses: [
+                  "Only 8 of 54 African countries — misses 85% of the continent",
+                  "No presence in West, Central, or North Africa",
+                  "Fragmented country-by-country deployments with different data models",
+                  "No AI Command Center or portfolio-level intelligence",
+                  "Telco alternative scoring is pilot-stage only",
+                  "No PAPSS integration or cross-border settlement tracking",
+                  "No Islamic finance product support",
+                ],
+              },
+              {
+                name: "Equifax",
+                revenue: "$5.53B revenue (2024)",
+                hq: "Atlanta, USA",
+                africaCount: "0 countries",
+                rating: "No Africa ops",
+                weaknesses: [
+                  "Zero African presence — entirely absent from the continent",
+                  "Focus is Americas (US, Canada, Brazil) and select European markets",
+                  "2017 mega-breach (147M records) exposed deep security legacy debt",
+                  "Mainframe-first legacy architecture with multi-year modernisation lag",
+                  "No multi-currency African credit view",
+                  "No language support for Arabic, Swahili, French (Africa context)",
+                  "Not an option for African financial institutions — full stop",
+                ],
+              },
+            ].map((comp) => (
+              <Card key={comp.name} className="border-border/60">
+                <CardContent className="pt-5">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h4 className="font-bold text-sm">{comp.name}</h4>
+                      <p className="text-[10px] text-muted-foreground">{comp.revenue} · {comp.hq}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="inline-block bg-red-500/10 text-red-600 dark:text-red-400 text-[10px] font-semibold px-2 py-0.5 rounded-full">{comp.africaCount}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 mb-3 p-2 rounded-lg bg-amber-500/10">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                    <span className="text-[10px] text-amber-700 dark:text-amber-400 font-medium">Customer rating: {comp.rating}</span>
+                  </div>
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Why They Fall Short in Africa</p>
+                  <ul className="space-y-1.5">
+                    {comp.weaknesses.map((w) => (
+                      <li key={w} className="flex items-start gap-1.5">
+                        <XCircle className="w-3 h-3 text-red-500 mt-0.5 flex-shrink-0" />
+                        <span className="text-[11px] text-muted-foreground">{w}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Global Market Opportunity CTA */}
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="pt-6 pb-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
+                <div className="lg:col-span-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Medal className="w-4 h-4 text-primary" />
+                    <p className="text-xs font-bold uppercase tracking-wide text-primary">The Opportunity</p>
+                  </div>
+                  <h3 className="font-bold text-lg mb-2">The Global Credit Bureau Market Reaches $191B by 2029</h3>
+                  <p className="text-sm text-muted-foreground mb-3">Africa is the fastest-growing region — and the least served. With a CAGR of 13% and 350M+ unscored adults, this is the largest untapped credit data market on earth. The AI credit scoring market alone is growing at 25.9% CAGR. Africa Credit Hub is the only platform built to capture it.</p>
+                  <div className="flex flex-wrap gap-4">
+                    {[
+                      { val: "$191B", desc: "Global bureau market by 2029 (13% CAGR)" },
+                      { val: "350M+", desc: "Unbanked adults with no credit score" },
+                      { val: "25.9%", desc: "AI credit scoring CAGR (2024–2031)" },
+                      { val: "1,263", desc: "African fintechs needing credit data APIs" },
+                    ].map((s) => (
+                      <div key={s.val} className="text-center">
+                        <div className="text-lg font-bold text-primary">{s.val}</div>
+                        <div className="text-[10px] text-muted-foreground max-w-[100px]">{s.desc}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <Button
+                    className="gap-2 text-sm"
+                    onClick={() => window.location.href = "/start-trial"}
+                    data-testid="cta-vs-global-trial"
+                  >
+                    <ArrowRight className="w-4 h-4" />
+                    Start Free — No Credit Card
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="gap-2 text-sm"
+                    onClick={() => window.location.href = "/market-validation"}
+                    data-testid="cta-vs-global-market"
+                  >
+                    <BarChart3 className="w-4 h-4" />
+                    Full Market Analysis
+                  </Button>
+                  <p className="text-[10px] text-muted-foreground text-center">Sources: Fortune Business Insights, World Bank, GSMA, IFC, CFPB</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+        </div>
+      </section>
+
       <section id="market-proof" className="py-20 sm:py-28">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
@@ -1392,9 +1791,11 @@ export default function InvestorLandingPage() {
             </h3>
             <div className="space-y-3">
               {[
-                { name: "TransUnion / Experian Africa", gap: "Coverage limited to South Africa + a few countries. No pan-African reach. Legacy on-premise architecture.", solve: "Africa Credit Hub covers all 54 countries with cloud-native multi-tenant architecture and cross-border entity resolution." },
-                { name: "Country-Specific Bureaus (e.g. CRB Kenya)", gap: "Single-country systems with no cross-border capability. Separate systems per jurisdiction.", solve: "One platform across all jurisdictions. Your team learns one system, not dozens." },
-                { name: "Building In-House", gap: "Years of development per country. No data sharing across institutions. No regulatory compliance automation.", solve: "Production-ready today with 16 integrated modules, regulatory compliance engine, and automated data retention." },
+                { name: "Experian Africa (~12 countries)", gap: "Primary African base is South Africa only, with ~11 more countries via 2019 Compuscan acquisition. No coverage across West, Central, East, or North Africa. Legacy architecture, no AI Command Center, no Islamic finance, no PAPSS. Customer rating: 1.3/5.", solve: "Africa Credit Hub covers all 54 countries natively. AI-native from day one, 8 languages, 42+ currencies, PAPSS integration, Islamic finance support — built for the full continent, not retrofitted." },
+                { name: "TransUnion Africa (8 countries)", gap: "Only 8 of 54 African countries: Botswana, Kenya, Namibia, Rwanda, SA, eSwatini, Zambia, Malawi. Zero presence in Nigeria, Ethiopia, Egypt, Tanzania, Ghana, DRC — 85% of the continent is uncovered. No AI Command Center or portfolio intelligence. Customer rating: 1.0/5.", solve: "One platform, 54 countries, instant cross-border entity resolution. Portfolio Intelligence covers your entire book — not one country at a time. No separate contracts per jurisdiction." },
+                { name: "Equifax (0 African Countries)", gap: "Zero African operations. Entirely absent from all 54 African nations. Builds for Americas and Europe only. Also suffered a 2017 breach of 147M records, exposing systemic security debt in legacy mainframe architecture.", solve: "Not a viable option for African institutions — but included here to illustrate the gap. Africa Credit Hub provides what the world's No.2 bureau cannot: a purpose-built, cloud-native, fully-compliant pan-African credit registry." },
+                { name: "Country-Specific Bureaus (e.g. CRB Kenya, CreditInfo)", gap: "Single-country systems with no cross-border capability. Each jurisdiction requires a separate contract, separate integration, separate data model, and separate staff training. Fails for any cross-border lender.", solve: "One platform across all jurisdictions with unified data models. Your team learns one system, one API, and one workflow — regardless of how many African countries you operate in." },
+                { name: "Building In-House", gap: "18–24 months of development per country. No data sharing across institutions. Regulatory compliance automation must be custom-built and updated constantly. Estimated cost: $10M–$50M+ per country.", solve: "Production-ready today with 16 integrated modules, full regulatory compliance engine, automated SLA monitoring, and pre-built BoG/BSL/CBN export formats. Go live within hours." },
               ].map((comp) => (
                 <Card key={comp.name} data-testid={`comp-${comp.name.toLowerCase().replace(/[^a-z]/g, "-")}`}>
                   <CardContent className="p-4 sm:p-5">
