@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -523,6 +523,36 @@ export default function CreditReportPage() {
   const [aiSummary, setAiSummary] = useState<{ summary: string; borrowerName: string; generatedAt: string } | null>(null);
   const [showAiSummary, setShowAiSummary] = useState(true);
 
+  const ESTIMATED_SECONDS_AI = 12;
+  const ESTIMATED_SECONDS_PLAIN = 5;
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [showReadyPopup, setShowReadyPopup] = useState(false);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (generateMutation.isPending) {
+      const startAt = includeAI ? ESTIMATED_SECONDS_AI : ESTIMATED_SECONDS_PLAIN;
+      setCountdown(startAt);
+      setShowReadyPopup(false);
+      countdownRef.current = setInterval(() => {
+        setCountdown(prev => {
+          if (prev === null || prev <= 1) {
+            if (countdownRef.current) clearInterval(countdownRef.current);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+      if (generateMutation.isSuccess) {
+        setCountdown(0);
+        setShowReadyPopup(true);
+      }
+    }
+    return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
+  }, [generateMutation.isPending, generateMutation.isSuccess]);
+
   const aiSummaryMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", `/api/ai/report-summary/${report?.borrower?.id}`, { language: reportLanguage });
@@ -653,16 +683,96 @@ export default function CreditReportPage() {
         </Card>
       )}
 
-      {generateMutation.isPending && (
-        <div className="space-y-4">
-          <Skeleton className="h-40 w-full" />
-          <Skeleton className="h-60 w-full" />
-          <Skeleton className="h-40 w-full" />
+      {generateMutation.isPending && countdown !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm print:hidden" data-testid="overlay-report-generating">
+          <div className="flex flex-col items-center gap-8 px-8 py-10 max-w-sm w-full text-center">
+            <div className="relative flex items-center justify-center">
+              <svg className="w-36 h-36 -rotate-90" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="52" fill="none" stroke="currentColor" strokeWidth="6" className="text-muted/20" />
+                <circle
+                  cx="60" cy="60" r="52"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="6"
+                  strokeLinecap="round"
+                  className="text-primary transition-all duration-1000"
+                  strokeDasharray={`${2 * Math.PI * 52}`}
+                  strokeDashoffset={`${2 * Math.PI * 52 * (countdown / (includeAI ? ESTIMATED_SECONDS_AI : ESTIMATED_SECONDS_PLAIN))}`}
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-4xl font-bold tabular-nums text-primary" data-testid="text-countdown-seconds">
+                  {countdown}
+                </span>
+                <span className="text-xs text-muted-foreground font-medium mt-0.5">seconds</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-lg font-semibold tracking-tight" data-testid="text-report-generating-label">
+                {countdown > 0 ? "Your report is being prepared" : "Almost ready…"}
+              </p>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {includeAI
+                  ? `Running ML scoring, AI risk analysis and credit narrative — this usually takes about ${ESTIMATED_SECONDS_AI} seconds.`
+                  : `Compiling bureau data and credit summary — this usually takes about ${ESTIMATED_SECONDS_PLAIN} seconds.`}
+              </p>
+            </div>
+
+            <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+              <div
+                className="h-full bg-primary rounded-full transition-all duration-1000 ease-linear"
+                style={{ width: `${((( includeAI ? ESTIMATED_SECONDS_AI : ESTIMATED_SECONDS_PLAIN) - countdown) / (includeAI ? ESTIMATED_SECONDS_AI : ESTIMATED_SECONDS_PLAIN)) * 100}%` }}
+                data-testid="progress-bar-report"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <span>Fetching credit data, accounts &amp; history…</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showReadyPopup && report && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm print:hidden" data-testid="overlay-report-ready">
+          <div className="bg-card border border-border rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center space-y-5 mx-4 animate-in fade-in zoom-in-95 duration-300">
+            <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto">
+              <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-xl font-bold tracking-tight" data-testid="text-report-ready">Report Ready!</p>
+              <p className="text-sm text-muted-foreground">
+                Your credit report for <span className="font-medium text-foreground">{borrowerDisplayName}</span> has been generated successfully.
+              </p>
+            </div>
+            <Button
+              className="w-full gap-2 h-11 text-base font-semibold"
+              onClick={() => {
+                setShowReadyPopup(false);
+                setTimeout(() => {
+                  document.getElementById("credit-report-content")?.scrollIntoView({ behavior: "smooth" });
+                }, 100);
+              }}
+              data-testid="btn-view-report-ready"
+            >
+              <FileText className="w-4 h-4" />
+              Click to View Report
+            </Button>
+            <button
+              className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
+              onClick={() => setShowReadyPopup(false)}
+              data-testid="btn-dismiss-ready-popup"
+            >
+              Dismiss
+            </button>
+          </div>
         </div>
       )}
 
       {report && (
-        <div ref={printRef} className="space-y-5 print:space-y-3" data-testid="credit-report-content">
+        <div ref={printRef} id="credit-report-content" className="space-y-5 print:space-y-3" data-testid="credit-report-content">
           <div className="flex items-center justify-end gap-2 flex-wrap print:hidden">
             <Select value={reportLanguage} onValueChange={setReportLanguage}>
               <SelectTrigger className="w-[150px]" data-testid="select-report-language">
