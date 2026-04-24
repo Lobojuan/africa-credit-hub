@@ -1812,6 +1812,8 @@ const pt = {
       f6: { title: "Testes E2E do Consumidor", desc: "Testes de browser automatizados cobrindo registo, verificação OTP via BD, carregamento do painel, diálogo de contestação, logout e relogin" },
       f7: { title: "Limitação de Taxa do Consumidor", desc: "Proteção anti-força bruta em todos os endpoints de autenticação — 3 pedidos por janela de 15 minutos por endereço IP" },
       f8: { title: "Currículo de Formação", desc: "Módulos de formação interativos baseados em funções com orientação passo a passo, acompanhamento de progresso e conteúdo adaptado a cada função de utilizador" },
+      f9: { title: "Login com Chave de Acesso / Biométrica", desc: "Suporte a chave de acesso WebAuthn FIDO2 para login sem senha; biometria Face ID/Touch ID suportada em dispositivos compatíveis" },
+      f10: { title: "Configuração de QR Code para MFA", desc: "Interface de configuração de MFA renovada com QR Code no painel esquerdo, instruções passo a passo e campo de verificação de token" },
     },
     v25: {
       date: "Março 2026",

@@ -534,7 +534,13 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
       "beneficialOwner": "实际受益人",
       "subsidiary": "子公司",
       "parentCompany": "母公司"
-    }
+    },
+    "firstName": "名",
+    "lastName": "姓",
+    "companyName": "公司名称",
+    "gender": "性别",
+    "employer": "雇主",
+    "occupation": "职业"
   },
   "creditAccounts": {
     "title": "信贷账户",
@@ -585,7 +591,44 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
       "restructured": "重组次数",
       "collateralType": "担保品类型",
       "collateralValue": "担保品价值"
-    }
+    },
+    "addCreditAccount": "添加信贷账户",
+    "selectBorrower": "选择借款人",
+    "lenderInstitution": "贷款机构",
+    "accountNumber": "账号",
+    "accountType": "账户类型",
+    "originalAmount": "原始金额",
+    "currentBalance": "当前余额",
+    "interestRate": "利率 (%)",
+    "disbursementDate": "发放日期",
+    "maturityDate": "到期日期",
+    "collateralType": "担保品类型",
+    "collateralValue": "担保品价值",
+    "account": "账户",
+    "original": "原始：",
+    "rate": "利率：",
+    "arrearsCol": "欠款",
+    "creating": "创建中...",
+    "createAccount": "创建账户",
+    "select": "选择",
+    "noAccountsSub": "添加信贷账户以开始",
+    "personalLoan": "个人贷款",
+    "mortgage": "抵押贷款",
+    "vehicleLoan": "车辆贷款",
+    "businessLoan": "企业贷款",
+    "corporateLoan": "公司贷款",
+    "overdraft": "透支",
+    "creditCard": "信用卡",
+    "microfinance": "小额贷款",
+    "current": "正常",
+    "delinquent": "逾期",
+    "default": "违约",
+    "closed": "已结清",
+    "restructured": "重组",
+    "interestFree": "无息",
+    "gracePeriod": "宽限期",
+    "months": "月",
+    "restructureCount": "重组次数"
   },
   "disputes": {
     "title": "争议管理",
@@ -604,6 +647,7 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
     "types": {
       "data_error": "数据错误",
       "identity_theft": "身份窃取",
+      "identity_error": "身份错误",
       "unauthorized_inquiry": "未经授权的查询",
       "duplicate_record": "重复记录",
       "incorrect_balance": "余额不正确",
@@ -624,7 +668,35 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
       "within_sla": "符合 SLA",
       "near_breach": "临近违约",
       "breached": "违反 SLA"
-    }
+    },
+    "fileDispute": "提交争议",
+    "fileADispute": "提交争议",
+    "selectBorrower": "选择借款人",
+    "creditAccount": "信贷账户",
+    "selectAccount": "选择账户",
+    "disputeType": "争议类型",
+    "description": "描述",
+    "descriptionPlaceholder": "详细描述问题...",
+    "filing": "提交中...",
+    "resolve": "解决",
+    "resolveDispute": "解决争议",
+    "resolutionNotes": "解决备注",
+    "resolutionPlaceholder": "输入解决详情...",
+    "updating": "更新中...",
+    "updateDispute": "更新争议",
+    "underReview": "处理中",
+    "resolved": "已解决",
+    "rejected": "已驳回",
+    "open": "开启",
+    "filed": "已提交",
+    "noDisputesSub": "争议一经提交将显示在此",
+    "filedSuccess": "争议提交成功",
+    "updated": "争议更新成功",
+    "correctionType": "更正类型",
+    "financial": "财务",
+    "nonFinancial": "非财务",
+    "slaDeadline": "SLA 截止日期",
+    "breached": "已违约"
   },
   "users": {
     "title": "用户管理",
@@ -647,7 +719,9 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
     "statuses": {
       "active": "激活",
       "inactive": "不活跃",
-      "locked": "锁定"
+      "locked": "锁定",
+      "suspended": "暂停",
+      "deactivated": "已停用"
     },
     "form": {
       "userInfo": "用户信息",
@@ -656,7 +730,29 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
       "password": "密码",
       "confirmPassword": "确认密码",
       "forcePasswordChange": "下次登录时强制更改密码"
-    }
+    },
+    "addUser": "添加用户",
+    "addNewUser": "添加新用户",
+    "password": "密码",
+    "fullName": "全名",
+    "email": "电子邮件",
+    "user": "用户",
+    "created": "已创建",
+    "creating": "创建中...",
+    "createUser": "创建用户",
+    "createdSuccess": "用户创建成功",
+    "updatedSuccess": "用户更新成功",
+    "deletedSuccess": "用户删除成功",
+    "confirmDelete": "删除用户",
+    "confirmDeleteMessage": "确定要永久删除 {{name}} 吗？此操作无法撤销。",
+    "deleting": "删除中...",
+    "statusUpdated": "用户状态已更新",
+    "editUser": "编辑用户",
+    "newPassword": "新密码",
+    "leaveBlankPassword": "留空以保持当前密码",
+    "saving": "保存中...",
+    "saveChanges": "保存更改",
+    "noUsersSub": "添加您的第一个用户以开始"
   },
   "settings": {
     "title": "设置",
@@ -757,7 +853,17 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
     "outOf": "共",
     "page": "页",
     "limit": "限制",
-    "offset": "偏移"
+    "offset": "偏移",
+    "processing": "处理中...",
+    "edit": "编辑",
+    "language": "语言",
+    "english": "English",
+    "french": "Français",
+    "portuguese": "Português",
+    "arabic": "العربية",
+    "swahili": "Kiswahili",
+    "of": "共",
+    "clear": "清除"
   },
   "billing": {
     "title": "计费与结算",
@@ -1135,7 +1241,9 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
       "s3": "点击“查看详情”查看每条日志的变更载荷（变更前后的差异）。",
       "s4": "点击“验证完整性”运行加密检查，确保审计日志未被篡改。验证状态显示在顶部（已验证/不可用）。",
       "s5": "审计追踪使用 SHA-256 哈希链，每条记录都与前一条链接。",
-      "s6": "按动作类型、实体或用户搜索日志。按日期范围过滤。"
+      "s6": "按动作类型、实体或用户搜索日志。按日期范围过滤。",
+      "s7": "使用导出按钮将过滤后的记录下载为 CSV 或 Excel。",
+      "s8": "所有用户操作，包括登录、数据更改、审批和 API 调用均被记录。"
     },
     "billing": {
       "title": "计费与结算",
@@ -1145,7 +1253,8 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
       "s3": "发票显示机构名称、服务类型、金额、状态（待处理、已支付、逾期）和创建日期。",
       "s4": "管理员可以点击“创建发票”手动为服务生成新发票。",
       "s5": "在发票表格上方查看总收入、待付金额和逾期金额的摘要。",
-      "s6": "按机构名称或状态过滤发票。使用“导出”按钮下载报告。"
+      "s6": "按机构名称或状态过滤发票。使用“导出”按钮下载报告。",
+      "s7": "点击任何账单行以查看详细发票信息。"
     },
     "batchUpload": {
       "title": "批量上传与数据采集",
@@ -1168,7 +1277,10 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
       "s4": "选择用户所属的机构。",
       "s5": "设置初始密码。您可以选择“下次登录时强制更改密码”。",
       "s6": "管理员可以编辑现有用户以更改其角色、机构或状态（激活/停用）。",
-      "s7": "对于登录失败过多的用户，可以点击“解锁”。"
+      "s7": "对于登录失败过多的用户，可以点击“解锁”。",
+      "s8": "密码策略：8个以上字符，包含大小写字母、数字和特殊字符。",
+      "s9": "密码每 90 天过期——用户被提示更换。",
+      "s10": "账户在 3 次登录失败后锏定 15 分钟。"
     },
     "institutions": {
       "title": "金融机构管理",
@@ -1177,7 +1289,10 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
       "s2": "查看所有金融机构的列表，包括其类型（商业银行、小额信贷等）、代码和状态。",
       "s3": "点击“添加机构”登记新成员。",
       "s4": "机构详情包括名称、唯一代码、类型、地址、联系电话、电邮和网站。",
-      "s5": "管理员可以编辑或停用机构以限制其所有用户的访问。"
+      "s5": "管理员可以编辑或停用机构以限制其所有用户的访问。",
+      "s6": "新登记的机构以「待审批」状态开始。",
+      "s7": "点击待审机构上的「批准」以激活它。",
+      "s8": "已批准的机构可以被分配 API 密鑰以进行程序化数据提交。"
     },
     "apiKeys": {
       "title": "API 密钥管理",
@@ -1187,7 +1302,10 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
       "s3": "选择机构，设置标签（例如“测试密钥”），并分配权限（仅提交、仅读取、完全访问）。",
       "s4": "生成的密钥仅在屏幕上显示一次。请安全复制并保存。",
       "s5": "列表显示所有密钥的前缀、状态、权限和最后使用日期。",
-      "s6": "如果密钥可能被泄露，请点击“撤销”以立即使其失效。"
+      "s6": "如果密钥可能被泄露，请点击“撤销”以立即使其失效。",
+      "s7": "密鑰前缀（如 sim_xxxxxxxx）显示用于识别。",
+      "s8": "追踪最后使用时间戳以监控密鑰活动。",
+      "s9": "点击“撤销”以永久禁用密鑰。"
     },
     "backupRecovery": {
       "title": "备份与灾难恢复",
@@ -1197,6 +1315,138 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
       "s3": "列表显示历史备份，包括时间戳、大小和存储状态。",
       "s4": "系统定期安排自动备份。",
       "s5": "该模块仅供具有“基础设施管理”权限的超级管理员使用。"
+    }
+,
+    "compliance": {
+      "title": "监管合规",
+      "desc": "合规指标、交通燃岗指示灵以及 AI 驱动的合规报告。",
+      "s1": "在侧边栏导航至“监管合规”。",
+      "s2": "查看合规指标：数据提交率、争议解决 SLA 表现、知情同意覆盖率和 NPL 比率。",
+      "s3": "交通燃岗指示眆显示绿色（合规）、黄色（有风险）或红色（不合规）。",
+      "s4": "使用“生成 AI 合规报告”按鈕配合国家选择器，为 54 个非洲辖区中的任一个生成 AI 驱动的合规评估。"
+    },
+    "bogBslExport": {
+      "title": "监管导出 (BOG / BSL)",
+      "desc": "为中央銀行生成监管报送文件。",
+      "s1": "根据您的国家模式，侧边栏显示“BOG 导出”（加纳——加纳銀行）或“BSL 导出”（塞拉利昂——塞拉利昂銀行）。",
+      "s2": "生成符合中央銀行要求格式的监管报送文件。",
+      "s3": "BOG 导出遵循加纳銀行 CRB v1.1 标准。",
+      "s4": "BSL 导出遵循塞拉利昂銀行报告标准。",
+      "s5": "文件包括按监管要求格式化的批量上传数据、借款人记录和信贷账户。"
+    },
+    "crossBorder": {
+      "title": "跨境功能",
+      "desc": "泛非数据共享、跨境搜索和 PAPSS 结算。",
+      "s1": "跨境部分支持泛非数据共享（需要有效的数据共享协议）。",
+      "s2": "“协议”管理国家间的双边和多边数据共享协议。",
+      "s3": "“跨境搜索”允许授权用户跨管辖區搜索借款人记录。",
+      "s4": "“PAPSS 结算”与泛非支付和结算系统集成，用于跨境付款跟踪和对账。",
+      "s5": "访问权限按用户角色和协议范围控制。"
+    },
+    "helpdesk": {
+      "title": "帮助台",
+      "desc": "询问服务单元门户，用于消费者争议和知情同意管理。",
+      "s1": "在侧边栏导航至“帮助台”。",
+      "s2": "使用搜索栏通过姓名、身份证号或 TIN 查找借款人。",
+      "s3": "从搜索结果中选择借款人以查看其信息。",
+      "s4": "查看借款人现有的争议和知情同意记录。",
+      "s5": "使用“提交争议”代表借款人创建争议。",
+      "s6": "使用“授予知情同意”从帮助台创建知情同意记录。",
+      "s7": "摘要卡显示开启中的和查询、SLA 违起和今日已解决的数量。"
+    },
+    "commandCenter": {
+      "title": "指挥中心与组织",
+      "desc": "超级管理员的多国管理控制台。",
+      "s1": "在侧边栏导航至“指挥中心”（仅限超级管理员）。",
+      "s2": "指挥中心是用于监督所有管辖區的多国管理控制台。",
+      "s3": "切换国家上下文、管理全系统设置并查看跨国指标。",
+      "s4": "“组织”管理对机构进行分组的顶层组织实体。",
+      "s5": "这些功能专属于超级管理员角色，用于集中化平台治理。"
+    },
+    "systemAdmin": {
+      "title": "系统管理",
+      "desc": "系统状态、备份、Webhook、保留策略和平台指标。",
+      "s1": "“系统状态”显示所有服务的实时健康状况——数据库、API、后台任务和集成，以绿/黄/红指示眆显示。",
+      "s2": "“备份与恢复”（超级管理员）管理带恢复功能的数据库备份。备份可手动触发或按计划运行。",
+      "s3": "“Webhook 管理”配置向外部系统发送的出站事件通知。Webhook 实时通知外部系统关键事件。",
+      "s4": "“保留策略”按法规设置数据保留规则。",
+      "s5": "“平台指标”追踪全系统使用统计，包括 API 调用量和用户活动。",
+      "s6": "“汇率”管理 42+ 种非洲货币。查看当前汇率，手动更新，或让系统每 6 小时自动同步。"
+    },
+    "externalApi": {
+      "title": "外部 API",
+      "desc": "通过 REST API 进行程序化数据提交和检索。",
+      "s1": "所有外部 API 端点均在 /api/external/v1/ 下。",
+      "s2": "使用包含您的 API 密鑰的 X-API-Key 请求头进行身份验证。",
+      "s3": "POST /borrowers —— 创建借款人记录（单条或批量数组）。",
+      "s4": "GET /borrowers/search —— 通过身份证号、姓名或查询搜索借款人。",
+      "s5": "GET /borrowers/:id/credit-report —— 生成带评分的完整信用报告。",
+      "s6": "POST /credit-accounts —— 提交信贷账户数据（单条或批量）。",
+      "s7": "POST /payment-history —— 提交还款历史记录。",
+      "s8": "POST /court-judgments —— 提交法院判决记录。",
+      "s9": "GET /health —— 检查 API 可用性（无需身份验证）。",
+      "s10": "在 '/api-docs' 查看完整的 API 文档（公开访问）。"
+    },
+    "aiFeatures": {
+      "title": "AI 驱动的功能",
+      "desc": "AI 风险分析、AI 报告摘要和 AI 聊天机器人助手。",
+      "s1": "在任意借款人详情页面，点击紫色“AI 风险分析”按鈕，获取带评分、风险因素和建议的 AI 驱动风险评估。",
+      "s2": "在信用报告中，使用“AI 摘要”获取借款人信用状况的通俗语言概述。",
+      "s3": "浮动聊天机器人（右下角）允许您提问、提交争议或浏览常见问题而无需离开页面。",
+      "s4": "点击聊天机器人中的闪光图标切换到 AI 助手模式——它使用 GPT-4o 回答有关信用数据、法规和系统功能的问题。",
+      "s5": "AI 分析考虑所有借款人数据，包括账户、争议和还款历史。",
+      "s6": "AI 响应每次根据当前数据重新生成。"
+    },
+    "reports": {
+      "title": "报告与导出",
+      "desc": "生成投资组合分析并导出 CSV 或 Excel 格式的数据。",
+      "s1": "在侧边栏导航至“信用报告”。",
+      "s2": "查看摘要卡片：注册借款人、总投数、不良资产和 NPL 比率。",
+      "s3": "查看“按机构划分的投资组合”，显示每个贷款方的投数。",
+      "s4": "查看“按贷款类型划分的投资组合”，显示每个产品的投数。",
+      "s5": "点击“导出投资组合 CSV”以下载投资组合数据为 CSV 文件。",
+      "s6": "点击“导出借款人 CSV”以下载借款人数据为 CSV 文件。",
+      "s7": "以 Excel (XLSX) 格式导出，带有以青色样式设计的格式化标题。",
+      "s8": "监管分析包括 NPL 比率、投资组合分解和 SLA 违起追踪。"
+    },
+    "notifications": {
+      "title": "通知",
+      "desc": "随时了解审批、争议和系统警报。",
+      "s1": "顶部头部的通知铃铛显示未读通知的数量。",
+      "s2": "点击铃铛图标查看您的通知。",
+      "s3": "通知为以下情况生成：审批请求、审批结果、争议提交和系统警报。",
+      "s4": "点击通知将其标记为已读并导航至相关页面。",
+      "s5": "使用“全部标记为已读”清除所有未读通知徽章。",
+      "s6": "通知按最新的排列在前面。"
+    },
+    "documents": {
+      "title": "文档与资源",
+      "desc": "可下载的文档、加纳专用文档、应用指南和版本历史。",
+      "s1": "在侧边栏导航至“文档”以访问通用文档——API 指南、UAT、系统、用户手册、SRS 矩阵、数据字典、部署指南、安全报告、安全策略、DR 计划、变更管理、渗透测试准备和利比里亚提案。",
+      "s2": "导航至“加纳文档”（在加纳模式下）获取加纳专用文档。",
+      "s3": "所有文档均提供八种语言版本，可下载为 PDF 或 Markdown。",
+      "s4": "使用“应用指南”获取所有平台功能的动画演示。",
+      "s5": "查看“版本历史”以获取发布说明和更日志。",
+      "s6": "“法律与版权”包含条款和法律信息。",
+      "s7": "“关于”显示平台版本和系统信息。"
+    },
+    "faq": {
+      "title": "常见问题",
+      "desc": "关于信贷登记系统使用的常见问题与解答。",
+      "s1": "Q: 如何重置密码？—— 点击用户菜单选择“更改密码”，或联系您的管理员。",
+      "s2": "Q: 如何启用 MFA？—— 登录后，转到您的个人资料并点击“启用 MFA”。使用任何身份验证应用扫描二维码。",
+      "s3": "Q: 为什么我不能批准自己的提交？—— 制衡审批工作流需要不同的用户来审查和批准更改以确保数据完整性。",
+      "s4": "Q: 争议 SLA 违起后会发生什么？—— 争议被标记为“已违起”并出现在监管报告中以便升级。",
+      "s5": "Q: 支持多少种货币？—— 42 种以上非洲货币加上用于国际结算的 USD、EUR 和 GBP。",
+      "s6": "Q: 支持哪些管辖區？—— 支持所有54 个非洲国家，作为泛非信贷發行登记系统。",
+      "s7": "Q: 如何切换语言？—— 使用顶部头部栏中的语言切换器。支持英语、法语、葡萄牙语、阿拉伯语、斯瓦希里语、西班牙语、简体中文和繁体中文。",
+      "s8": "Q: 什么是 PEP 标记？—— 政治公众人物标记，适用于担任重要公共职务的个人。",
+      "s9": "Q: 我的会话多久超时？—— 会话在 15 分钟无活动后自动过期。",
+      "s10": "Q: 使用哪些信用评分范围？—— 300-850 量表：750–850 优秀，670–749 良好，580–669 一般，450–579 较差，300–449 极差。",
+      "s11": "Q: 如何生成 API 密鑰？—— 导航至 API 密鑰（仅限管理员/超级管理员），点击“生成密鑰”，选择机构和权限。",
+      "s12": "Q: 支持哪些社交登录方式？—— Google、Microsoft、Apple 和企业级 SSO (SAML)。",
+      "s13": "Q: 消费者门户如何工作？—— 个人在 '/consumer/register' 注册并在 '/my-credit' 查看其信用数据——无需系统登录。",
+      "s14": "Q: 什么是电信评分？—— 基于移动网络数据（话费、移动钱包、充値）的替代信用评分，适用于无銀行账户人群。"
     }
   },
   "borrowerDetail": {
@@ -1325,7 +1575,33 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
     "uploadFailed": "上传失败",
     "invalidJson": "无效的 JSON 格式",
     "mustBeArray": "JSON 必须是记录数组",
-    "csvParseFailed": "CSV 解析失败"
+    "csvParseFailed": "CSV 解析失败",
+    "xbrlUpload": "XBRL 上传",
+    "uploadXbrlFile": "上传 XBRL 或 XML 文件",
+    "uploadXbrlFileSub": "支持 .xbrl 和 .xml 格式",
+    "pasteXbrl": "或直接粘贴 XBRL/XML：",
+    "xbrlPlaceholder": "粘贴 XBRL/XML 信贷账户数据...",
+    "submitXbrl": "提交 XBRL 批次",
+    "xbrlSampleFormat": "XBRL 示例格式",
+    "csvUpload": "CSV 上传",
+    "uploadCsvFile": "上传 CSV 文件",
+    "uploadCsvFileSub": "逗号分隔值 (.csv)",
+    "pasteCsv": "或直接粘贴 CSV：",
+    "csvPlaceholder": "粘贴带有表头的 CSV 数据...",
+    "submitCsv": "提交 CSV 批次",
+    "csvSampleFormat": "CSV 示例格式",
+    "validatePreview": "验证并预览",
+    "validationPreview": "验证预览",
+    "statusLabel": "状态",
+    "accountNum": "账号 #",
+    "institution": "机构",
+    "issues": "问题",
+    "uploadHistory": "上传历史",
+    "noHistory": "暂无批量上传记录。使用任意格式上传数据以查看历史。",
+    "dateTime": "日期和时间",
+    "format": "格式",
+    "totalRecords": "总计",
+    "successRate": "成功率"
   },
   "approvals": {
     "title": "待审批",
@@ -2274,7 +2550,9 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
         "narration": "需要将您的系统与信贷登记系统集成？前往「API 密钥」生成认证密钥。然后访问「API 文档」获取完整的 REST API 文档，包含 Python、JavaScript 和 cURL 代码示例。API 涵盖借款人管理、信贷账户、报告生成、评分等。注册 Webhook 以实时接收平台事件通知。",
         "tip0": "从测试连接端点开始以验证您的配置",
         "tip1": "使用 API 权限范围在需要时限制为只读访问",
-        "tip2": "Webhook 可为争议、审批、警报和状态变更触发"
+        "tip2": "Webhook 可为争议、审批、警报和状态变更触发",
+        "role0Role": "贷方",
+        "role0Note": "需要 API 访问的机构用户"
       },
       "end": {
         "section": "导览结束",

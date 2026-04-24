@@ -1823,6 +1823,8 @@ const sw: Record<string, any> = {
       f6: { title: "Majaribio ya E2E ya Mtumiaji", desc: "Majaribio ya kivinjari yaliyoautomatishwa yanayofunika usajili, uthibitishaji wa OTP, upakiaji wa dashibodi, mazungumzo ya malalamiko, kutoka nje na kuingia tena" },
       f7: { title: "Ukomo wa Kiwango cha Mtumiaji", desc: "Ulinzi dhidi ya nguvu kwa vituo vyote vya uthibitishaji — maombi 3 kwa kila dakika 15 kwa anwani ya IP" },
       f8: { title: "Mtaala wa Mafunzo", desc: "Moduli za mafunzo zinazoshirikiana kulingana na majukumu na mwongozo wa hatua kwa hatua, ufuatiliaji wa maendeleo na maudhui yanayofaa kwa kila jukumu" },
+      f9: { title: "Kuingia kwa Ufunguo wa Nenosiri / Biometriki", desc: "Msaada wa ufunguo wa nenosiri wa WebAuthn FIDO2 kwa kuingia bila nywila; biometriki ya Face ID/Touch ID inayoungwa mkono kwenye vifaa vinavyoafikiana" },
+      f10: { title: "Usanidi wa QR Code kwa MFA", desc: "Kiolesura kipya cha usanidi wa MFA chenye QR Code kwenye jopo la kushoto, maelekezo ya hatua kwa hatua, na sehemu ya uthibitishaji wa tokeni" },
     },
     v25: {
       date: "Machi 2026",
