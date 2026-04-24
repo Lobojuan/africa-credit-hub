@@ -698,6 +698,138 @@ export default function BorrowerDetailPage() {
         </div>
       </div>
 
+      {/* ── Lending Decision ── */}
+      {(() => {
+        const score = summary.creditScore;
+        const hasDefault = summary.delinquentAccounts > 0;
+        const grossIncome = affordability?.assessment
+          ? parseFloat(affordability.assessment.grossIncomeMonthly)
+          : 0;
+        const disposable = affordability?.assessment
+          ? parseFloat(affordability.assessment.disposableIncomeMonthly)
+          : 0;
+        const currency = affordability?.assessment?.currency || borrowerCurrency;
+
+        let verdict: "approve" | "refer" | "decline";
+        let cardClass: string;
+        let iconEl: React.ReactNode;
+        let action: string;
+
+        if (hasDefault || score < 500) {
+          verdict = "decline";
+          cardClass =
+            "border-red-200 dark:border-red-800 bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-950/30 dark:to-rose-950/20";
+          iconEl = <ShieldX className="w-12 h-12 text-red-500" />;
+          action =
+            "Do not lend at this time. Require the borrower to clear the default and demonstrate 12+ months of clean repayment history, then reassess.";
+        } else if (score < 650 || summary.activeAccounts === 0) {
+          verdict = "refer";
+          cardClass =
+            "border-amber-200 dark:border-amber-800 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/20";
+          iconEl = <ShieldAlert className="w-12 h-12 text-amber-500" />;
+          action =
+            "Refer to senior credit officer. Conditional lending may be possible with collateral, a guarantor, a reduced amount, or a shorter term.";
+        } else {
+          verdict = "approve";
+          cardClass =
+            "border-green-200 dark:border-green-800 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/20";
+          iconEl = <ShieldCheck className="w-12 h-12 text-green-500" />;
+          action =
+            "Proceed with standard loan application. Confirm purpose and verify income documents before disbursement.";
+        }
+
+        const verdictLabel =
+          verdict === "decline" ? "DECLINE" : verdict === "refer" ? "REFER" : "APPROVE";
+        const verdictColor =
+          verdict === "decline"
+            ? "text-red-600 dark:text-red-400"
+            : verdict === "refer"
+            ? "text-amber-600 dark:text-amber-400"
+            : "text-green-600 dark:text-green-400";
+
+        const factors = [
+          {
+            text: `Credit score ${score} — ${getCreditScoreLabel(score)}`,
+            good: score >= 650,
+          },
+          {
+            text: hasDefault
+              ? `${summary.delinquentAccounts} defaulted account${summary.delinquentAccounts > 1 ? "s" : ""} on record`
+              : "No defaults on record",
+            good: !hasDefault,
+          },
+          {
+            text: `${summary.activeAccounts} active / ${summary.totalAccounts} total accounts`,
+            good: summary.activeAccounts > 0,
+          },
+          ...(grossIncome > 0
+            ? [{ text: `Monthly income: ${formatCurrency(grossIncome, currency)}`, good: true }]
+            : []),
+          ...(disposable > 0
+            ? [
+                {
+                  text: `Disposable income: ${formatCurrency(disposable, currency)} / mo`,
+                  good: disposable > 500,
+                },
+              ]
+            : []),
+        ];
+
+        return (
+          <Card className={`border ${cardClass}`} data-testid="card-lending-decision">
+            <CardContent className="p-5">
+              <div className="flex items-stretch gap-5">
+                <div className="flex flex-col items-center justify-center gap-1.5 flex-shrink-0">
+                  {iconEl}
+                  <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    Decision
+                  </span>
+                </div>
+                <div className="flex flex-col justify-center flex-shrink-0 pr-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">
+                    Lending Decision
+                  </p>
+                  <p
+                    className={`text-5xl font-black tracking-tighter leading-none ${verdictColor}`}
+                    data-testid="text-lending-verdict"
+                  >
+                    {verdictLabel}
+                  </p>
+                </div>
+                <div className="hidden sm:flex flex-col justify-center flex-1 border-l pl-5 border-border/60 gap-1.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">
+                    Key Factors
+                  </p>
+                  {factors.map((f, i) => (
+                    <div key={i} className="flex items-center gap-2 text-xs">
+                      <div
+                        className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                          f.good ? "bg-green-500" : "bg-red-500"
+                        }`}
+                      />
+                      <span
+                        className={
+                          f.good ? "" : "font-semibold text-red-600 dark:text-red-400"
+                        }
+                      >
+                        {f.text}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="mt-4 pt-3 border-t border-border/40 flex items-start gap-2">
+                <Banknote className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-semibold text-foreground">Lender guidance: </span>
+                  {action}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
       {aiRisk && (
         <Card className="border-purple-200 dark:border-purple-800 bg-gradient-to-br from-purple-50/50 to-indigo-50/50 dark:from-purple-950/20 dark:to-indigo-950/20">
           <CardContent className="p-5">
