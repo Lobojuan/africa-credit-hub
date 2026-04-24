@@ -234,3 +234,9 @@ id = "9BSH57HtHt2_7r-h9qxeq"
 uri = "file://africacredithub-codebase.tar.gz"
 type = "unspecified"
 title = "Africa Credit Hub — Codebase Dump (24 MB)"
+
+[[outputs]]
+id = "COs1Lz8m6C4AB4Pyfkouj"
+uri = "file://africa-credit-hub-v2.6.tar.gz"
+type = "unspecified"
+title = "Africa Credit Hub v2.6 — Full Codebase (tar.gz, 3.7MB)"
