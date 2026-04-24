@@ -15,6 +15,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import QRCode from "react-qr-code";
 import {
   Building, Plus, Search, RefreshCw, MapPin, FileText,
   Award, Clock, CheckCircle2, XCircle, AlertTriangle,
@@ -293,14 +295,215 @@ function ShareVerificationLinkDialog({ item }: { item: CollateralRegistryItem })
   );
 }
 
-// ─── Certificate Download ─────────────────────────────────────────────────────
+// ─── Certificate Download & Preview ──────────────────────────────────────────
 
 function downloadCertificate(item: { id: string; registrationNumber?: string }) {
-  // Download PDF from server endpoint
   const a = document.createElement("a");
   a.href = `/api/collateral/${item.id}/certificate`;
   a.download = `cert-${item.registrationNumber}.pdf`;
   a.click();
+}
+
+interface CertificatePreviewData {
+  registrationNumber?: string;
+  certificateNumber?: string;
+  authorityName?: string;
+  legalRegime?: string;
+  countryCode?: string;
+  approvalDate?: string;
+  lienPriority?: number;
+  lenderInstitutionName?: string;
+  borrowerName?: string;
+  grantorNationalId?: string;
+  debtorType?: string;
+  panAfricanAssetId?: string;
+  assetLocalIdentifier?: string;
+  collateralType?: string;
+  collateralClass?: string;
+  estimatedValue?: string;
+  currency?: string;
+  description?: string;
+  securityInterestType?: string;
+  isPmsi?: boolean;
+  financingDuration?: string;
+  registrationDate?: string;
+  expiryDate?: string;
+  verificationCode?: string;
+  verifyUrl?: string;
+}
+
+function CertificatePreviewDialog({ item }: { item: { id: string; registrationNumber?: string } }) {
+  const [open, setOpen] = useState(false);
+
+  const { data: preview, isLoading } = useQuery<CertificatePreviewData>({
+    queryKey: ["/api/collateral", item.id, "certificate-preview"],
+    queryFn: async () => {
+      const res = await fetch(`/api/collateral/${item.id}/certificate-preview`);
+      if (!res.ok) throw new Error("Failed to load preview");
+      return res.json();
+    },
+    enabled: open,
+  });
+
+  const Field = ({ label, value }: { label: string; value?: string | number | boolean | null }) => {
+    if (value === undefined || value === null || value === "") return null;
+    const display = typeof value === "boolean" ? (value ? "YES" : "NO") : String(value);
+    return (
+      <div className="flex flex-col gap-0.5">
+        <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">{label}</span>
+        <span className="text-sm font-medium break-all">{display}</span>
+      </div>
+    );
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          title="Preview Certificate"
+          data-testid={`btn-preview-cert-${item.id}`}
+          onClick={() => setOpen(true)}
+        >
+          <Eye className="w-4 h-4 text-primary" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-certificate-preview">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Award className="w-5 h-5 text-primary" />
+            Certificate Preview
+          </DialogTitle>
+        </DialogHeader>
+
+        {isLoading && (
+          <div className="flex items-center justify-center py-12 text-muted-foreground">
+            Loading certificate data…
+          </div>
+        )}
+
+        {preview && (
+          <div className="space-y-4" data-testid="certificate-preview-content">
+            {/* Header */}
+            <div className="text-center space-y-0.5 border rounded-lg p-4 bg-muted/30">
+              <div className="font-bold text-base uppercase tracking-wide">Pan-African Collateral Registry</div>
+              <div className="font-semibold text-sm uppercase">{preview.authorityName}</div>
+              <div className="text-xs text-muted-foreground">Financing Statement Certificate</div>
+            </div>
+
+            <Separator />
+
+            {/* Registration Details */}
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-2">Registration Details</div>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Registration Number" value={preview.registrationNumber} />
+                <Field label="Certificate Number" value={preview.certificateNumber} />
+                <Field label="Issuing Authority" value={preview.authorityName} />
+                <Field label="Legal Regime" value={preview.legalRegime} />
+                <Field label="Country" value={preview.countryCode} />
+                <Field label="Approval Date" value={preview.approvalDate} />
+                <Field label="Registration Date" value={preview.registrationDate} />
+                <Field label="Lien Priority Rank" value={preview.lienPriority != null ? `#${preview.lienPriority}` : undefined} />
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Parties */}
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-2">Parties</div>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Secured Party / Lender" value={preview.lenderInstitutionName} />
+                <Field label="Borrower / Grantor" value={preview.borrowerName} />
+                <Field label="Grantor National ID" value={preview.grantorNationalId} />
+                <Field label="Debtor Type" value={preview.debtorType} />
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Collateral */}
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-2">Collateral Details</div>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="PACA-ID" value={preview.panAfricanAssetId} />
+                <Field label="Asset Local Identifier" value={preview.assetLocalIdentifier} />
+                <Field label="Collateral Type" value={preview.collateralType?.replace(/_/g, " ")} />
+                <Field label="Collateral Class" value={preview.collateralClass?.replace(/_/g, " ")} />
+                <Field label="Estimated Value" value={preview.estimatedValue && preview.currency ? `${preview.estimatedValue} ${preview.currency}` : preview.estimatedValue} />
+                <Field label="Description" value={preview.description} />
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Legal */}
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-2">Legal & Financial</div>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Security Interest Type" value={preview.securityInterestType?.replace(/_/g, " ")} />
+                <Field label="PMSI (Purchase Money Super Priority)" value={preview.isPmsi} />
+                <Field label="Financing Duration" value={preview.financingDuration} />
+                <Field label="Expiry Date" value={preview.expiryDate || "Perpetual / As specified"} />
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Verification */}
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-2">Verification</div>
+              <div className="flex gap-6 items-start">
+                {preview.verifyUrl && (
+                  <div className="shrink-0 border rounded p-2 bg-white">
+                    <QRCode value={preview.verifyUrl} size={96} data-testid="certificate-qr-code" />
+                  </div>
+                )}
+                <div className="space-y-2 flex-1">
+                  <Field label="Verification Code" value={preview.verificationCode} />
+                  {preview.verifyUrl && (
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Verify URL</span>
+                      <a
+                        href={preview.verifyUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 hover:underline break-all"
+                        data-testid="certificate-verify-url"
+                      >
+                        {preview.verifyUrl}
+                      </a>
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Scan the QR code or visit the link above to verify this lien registration.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Actions */}
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="outline" onClick={() => setOpen(false)} data-testid="btn-close-preview">
+                Close
+              </Button>
+              <Button
+                onClick={() => { downloadCertificate(item); }}
+                data-testid="btn-download-pdf"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Download PDF
+              </Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 // ─── Register Collateral Dialog ───────────────────────────────────────────────
@@ -1005,17 +1208,7 @@ function MyRegistrations() {
                         <div className="flex gap-1">
                           {item.approvalStatus === "approved" && (
                             <>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => downloadCertificate(item)}
-                                title="Download PDF Certificate"
-                                data-testid={`btn-download-cert-${item.id}`}
-                                className="gap-1.5 text-xs h-7 px-2 text-primary border-primary/30 hover:bg-primary/5"
-                              >
-                                <Download className="w-3.5 h-3.5" />
-                                Certificate
-                              </Button>
+                              <CertificatePreviewDialog item={item} />
                               {item.verificationCode && (
                                 <>
                                   <Button

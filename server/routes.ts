@@ -14559,6 +14559,59 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
+  // Certificate preview data endpoint — returns JSON with all certificate fields
+  app.get("/api/collateral/:id/certificate-preview", requireAuth, async (req, res) => {
+    try {
+      const item = await storage.getCollateralItem(req.params.id);
+      if (!item) return res.status(404).json({ message: "Not found" });
+      const orgId = req.session?.organizationId;
+      const isSuperAdmin = req.session?.userRole === "super_admin";
+      const isOwner = item.lenderOrganizationId === orgId;
+      const isRA = await isRegistryAuthority(req);
+      const callerCountry = await getCallerCountry(req);
+      const sameCountry = item.countryCode && callerCountry && item.countryCode === callerCountry;
+      if (!isSuperAdmin && !isOwner && !(isRA && sameCountry)) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      if (item.approvalStatus !== "approved") {
+        return res.status(400).json({ message: "Certificate only available for approved registrations" });
+      }
+      const lenderOrg = item.lenderOrganizationId ? await storage.getOrganization(item.lenderOrganizationId) : null;
+      const countryConfig = item.countryCode
+        ? await db.select().from(registryCountryConfig).where(eq(registryCountryConfig.countryCode, item.countryCode)).limit(1).then((r: any[]) => r[0])
+        : null;
+      const baseUrl = getBaseUrl();
+      const verifyUrl = `${baseUrl}/verify/${item.verificationCode || ""}`;
+      res.json({
+        registrationNumber: item.registrationNumber,
+        certificateNumber: item.certificateNumber,
+        authorityName: countryConfig?.authorityName || "National Collateral Registry",
+        legalRegime: countryConfig?.legalRegime || null,
+        countryCode: item.countryCode,
+        approvalDate: item.approvalDate,
+        lienPriority: item.lienPriority,
+        lenderInstitutionName: lenderOrg?.name || null,
+        borrowerName: item.borrowerName,
+        grantorNationalId: item.grantorNationalId || item.documentReference || null,
+        debtorType: item.debtorType,
+        panAfricanAssetId: item.panAfricanAssetId,
+        assetLocalIdentifier: item.assetLocalIdentifier,
+        collateralType: item.collateralType,
+        collateralClass: item.collateralClass,
+        estimatedValue: item.estimatedValue,
+        currency: item.currency,
+        description: item.description,
+        securityInterestType: item.securityInterestType,
+        isPmsi: item.isPmsi,
+        financingDuration: item.financingDuration,
+        registrationDate: item.registrationDate,
+        expiryDate: item.expiryDate,
+        verificationCode: item.verificationCode,
+        verifyUrl,
+      });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
   // Shared helper: generate a certificate PDF buffer for an approved collateral item
   async function generateCertificatePdfBuffer(item: any): Promise<Buffer> {
     const lenderOrg = item.lenderOrganizationId ? await storage.getOrganization(item.lenderOrganizationId) : null;
