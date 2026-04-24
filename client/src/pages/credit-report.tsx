@@ -155,10 +155,15 @@ function buildCreditUtilizationSummary(accounts: CreditAccount[]) {
     byCurrency[c].limit += parseFloat(a.originalAmount || "0");
     byCurrency[c].used += parseFloat(a.currentBalance || "0");
   });
+  const currencyKeys = Object.keys(byCurrency);
+  const isMixedCurrency = currencyKeys.length > 1;
+  const dominantCurrency = currencyKeys.length === 1
+    ? currencyKeys[0]
+    : (currencyKeys.sort((a, b) => byCurrency[b].limit - byCurrency[a].limit)[0] || getDefaultFallbackCurrency());
   const totalLimit = openAccounts.reduce((s, a) => s + parseFloat(a.originalAmount || "0"), 0);
   const totalUsed = openAccounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
   const ratio = totalLimit > 0 ? ((totalUsed / totalLimit) * 100) : 0;
-  return { totalLimit, totalUsed, ratio, byCurrency };
+  return { totalLimit, totalUsed, ratio, byCurrency, dominantCurrency, isMixedCurrency };
 }
 
 function buildRiskAssessment(report: CreditReportData) {
@@ -771,7 +776,15 @@ export default function CreditReportPage() {
         </div>
       )}
 
-      {report && (
+      {report && (() => {
+        const reportCurrencies = [...new Set(report.accounts.map(a => a.currency || getDefaultFallbackCurrency()))];
+        const reportDominantCurrency = reportCurrencies.length === 1
+          ? reportCurrencies[0]
+          : (reportCurrencies.sort((a, b) =>
+              report.accounts.filter(ac => (ac.currency || getDefaultFallbackCurrency()) === b).reduce((s, ac) => s + parseFloat(ac.currentBalance || "0"), 0) -
+              report.accounts.filter(ac => (ac.currency || getDefaultFallbackCurrency()) === a).reduce((s, ac) => s + parseFloat(ac.currentBalance || "0"), 0)
+            )[0] || getDefaultFallbackCurrency());
+        return (
         <div ref={printRef} id="credit-report-content" className="space-y-5 print:space-y-3" data-testid="credit-report-content">
           <div className="flex items-center justify-end gap-2 flex-wrap print:hidden">
             <Select value={reportLanguage} onValueChange={setReportLanguage}>
@@ -954,7 +967,7 @@ export default function CreditReportPage() {
             <Card>
               <CardContent className="p-4 text-center print:p-2">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold print:text-[8px]">Total Outstanding</p>
-                <p className="text-2xl font-black mt-1 print:text-lg">{formatCurrency(report.summary.totalDebt, getDefaultFallbackCurrency(), { compact: true })}</p>
+                <p className="text-2xl font-black mt-1 print:text-lg">{formatCurrency(report.summary.totalDebt, reportDominantCurrency, { compact: true })}</p>
                 <p className="text-[10px] text-muted-foreground print:text-[8px]">Current Balance</p>
               </CardContent>
             </Card>
@@ -973,7 +986,6 @@ export default function CreditReportPage() {
 
           {(() => {
             const utilSummary = buildCreditUtilizationSummary(report.accounts);
-            const defaultCurrency = getDefaultFallbackCurrency();
             const openAccounts = report.accounts.filter(a => a.status !== "closed");
             const oldestAccount = report.accounts.reduce((oldest, a) => {
               const d = a.disbursementDate ? new Date(a.disbursementDate) : null;
@@ -985,14 +997,28 @@ export default function CreditReportPage() {
               <Card data-testid="card-credit-utilization-summary">
                 <CardContent className="p-5 print:p-3">
                   <SectionHeader icon={BarChart3} title="Credit Utilization Summary" />
+                  {utilSummary.isMixedCurrency && (
+                    <div className="flex items-center gap-2 mb-3 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md px-3 py-2" data-testid="banner-mixed-currency">
+                      <span className="font-semibold">Multi-currency portfolio</span>
+                      <span className="text-muted-foreground">— amounts are shown per currency as uploaded; see breakdown table below for details</span>
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 print:gap-2 mb-4 print:mb-2">
                     <div className="text-center p-3 bg-muted/30 rounded-lg print:p-2">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold print:text-[8px]">Total Credit Limit</p>
-                      <p className="text-lg font-bold mt-1 print:text-sm">{formatCurrency(utilSummary.totalLimit.toFixed(2), defaultCurrency)}</p>
+                      <p className="text-lg font-bold mt-1 print:text-sm" data-testid="text-total-credit-limit">
+                        {utilSummary.isMixedCurrency
+                          ? Object.entries(utilSummary.byCurrency).map(([cur, d]) => formatCurrency(d.limit.toFixed(2), cur)).join(" / ")
+                          : formatCurrency(utilSummary.totalLimit.toFixed(2), utilSummary.dominantCurrency)}
+                      </p>
                     </div>
                     <div className="text-center p-3 bg-muted/30 rounded-lg print:p-2">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold print:text-[8px]">Total Credit Used</p>
-                      <p className="text-lg font-bold mt-1 print:text-sm">{formatCurrency(utilSummary.totalUsed.toFixed(2), defaultCurrency)}</p>
+                      <p className="text-lg font-bold mt-1 print:text-sm" data-testid="text-total-credit-used">
+                        {utilSummary.isMixedCurrency
+                          ? Object.entries(utilSummary.byCurrency).map(([cur, d]) => formatCurrency(d.used.toFixed(2), cur)).join(" / ")
+                          : formatCurrency(utilSummary.totalUsed.toFixed(2), utilSummary.dominantCurrency)}
+                      </p>
                     </div>
                     <div className={`text-center p-3 rounded-lg print:p-2 ${utilSummary.ratio > 75 ? "bg-red-50 dark:bg-red-950/20" : utilSummary.ratio > 50 ? "bg-yellow-50 dark:bg-yellow-950/20" : "bg-green-50 dark:bg-green-950/20"}`}>
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold print:text-[8px]">Utilization Ratio</p>
@@ -1003,7 +1029,11 @@ export default function CreditReportPage() {
                     </div>
                     <div className="text-center p-3 bg-muted/30 rounded-lg print:p-2">
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold print:text-[8px]">Available Credit</p>
-                      <p className="text-lg font-bold mt-1 print:text-sm">{formatCurrency(Math.max(0, utilSummary.totalLimit - utilSummary.totalUsed).toFixed(2), defaultCurrency)}</p>
+                      <p className="text-lg font-bold mt-1 print:text-sm" data-testid="text-available-credit">
+                        {utilSummary.isMixedCurrency
+                          ? Object.entries(utilSummary.byCurrency).map(([cur, d]) => formatCurrency(Math.max(0, d.limit - d.used).toFixed(2), cur)).join(" / ")
+                          : formatCurrency(Math.max(0, utilSummary.totalLimit - utilSummary.totalUsed).toFixed(2), utilSummary.dominantCurrency)}
+                      </p>
                     </div>
                   </div>
                   {Object.keys(utilSummary.byCurrency).length > 1 && (
@@ -2324,7 +2354,8 @@ export default function CreditReportPage() {
             </CardContent>
           </Card>
         </div>
-      )}
+        );
+      })()}
 
       <ConsentGateModal
         open={showConsentModal}
