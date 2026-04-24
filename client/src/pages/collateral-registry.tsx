@@ -21,7 +21,7 @@ import {
   Building, Plus, Search, RefreshCw, MapPin, FileText,
   Award, Clock, CheckCircle2, XCircle, AlertTriangle,
   Download, Shield, Zap, Star, TrendingUp, Package, Link2,
-  Eye, CheckCircle, Building2, User, Tag, Calendar, ExternalLink,
+  Eye, CheckCircle, Building2, User, Tag, Calendar, ExternalLink, Copy, Check,
   Share2, Mail, MessageSquare,
 } from "lucide-react";
 import { format } from "date-fns";
@@ -904,9 +904,18 @@ function VerifyInfoField({ icon, label, value }: { icon: React.ReactNode; label:
 }
 
 function VerificationPreviewPopover({ item }: { item: CollateralRegistryItem }) {
+  const [copied, setCopied] = useState(false);
   const collateralLabel = item.collateralType
     ? item.collateralType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
     : undefined;
+
+  const handleCopyLink = () => {
+    const url = `${window.location.origin}/verify/${item.verificationCode}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {});
+  };
 
   return (
     <Popover>
@@ -998,18 +1007,32 @@ function VerificationPreviewPopover({ item }: { item: CollateralRegistryItem }) 
 
           {item.verificationCode && (
             <div className="px-4 pb-3 pt-2 border-t border-slate-100 dark:border-slate-700">
-              <a
-                href={`${window.location.origin}/verify/${item.verificationCode}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                data-testid={`link-open-verify-${item.id}`}
-                className="flex items-center justify-between gap-2 w-full rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors group"
-              >
-                <span className="font-mono text-xs text-blue-700 dark:text-blue-300 truncate">
-                  {window.location.origin}/verify/{item.verificationCode}
-                </span>
-                <ExternalLink className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 shrink-0 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors" />
-              </a>
+              <div className="flex items-center gap-1.5">
+                <a
+                  href={`${window.location.origin}/verify/${item.verificationCode}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-testid={`link-open-verify-${item.id}`}
+                  className="flex items-center justify-between gap-2 flex-1 min-w-0 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors group"
+                >
+                  <span className="font-mono text-xs text-blue-700 dark:text-blue-300 truncate">
+                    {window.location.origin}/verify/{item.verificationCode}
+                  </span>
+                  <ExternalLink className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 shrink-0 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors" />
+                </a>
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  data-testid={`button-copy-verify-link-${item.id}`}
+                  title="Copy verification link"
+                  className="shrink-0 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-2 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+                >
+                  {copied
+                    ? <Check className="w-3.5 h-3.5 text-green-500 dark:text-green-400" />
+                    : <Copy className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
+                  }
+                </button>
+              </div>
             </div>
           )}
 
