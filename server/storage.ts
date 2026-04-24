@@ -359,7 +359,7 @@ export interface IStorage {
   markInstallmentPaid(id: string, paidAmount: string): Promise<LoanRepaymentSchedule | undefined>;
 
   // Collateral Registry
-  getCollateralItems(organizationId?: string, borrowerId?: string): Promise<CollateralItem[]>;
+  getCollateralItems(organizationId?: string, borrowerId?: string): Promise<(CollateralItem & { shareCount: number })[]>;
   getCollateralItem(id: string): Promise<CollateralItem | undefined>;
   createCollateralItem(data: InsertCollateralItem): Promise<CollateralItem>;
   updateCollateralItem(id: string, data: Partial<InsertCollateralItem>): Promise<CollateralItem | undefined>;
@@ -2919,15 +2919,24 @@ export class DatabaseStorage implements IStorage {
   // Collateral Registry
   // -------------------------------------------------------------------------
 
-  async getCollateralItems(organizationId?: string, borrowerId?: string): Promise<CollateralItem[]> {
+  async getCollateralItems(organizationId?: string, borrowerId?: string): Promise<(CollateralItem & { shareCount: number })[]> {
     const conditions: any[] = [];
     if (organizationId) conditions.push(eq(collateralItems.lenderOrganizationId, organizationId));
     if (borrowerId) conditions.push(eq(collateralItems.borrowerId, borrowerId));
-    return await db
+    const items = await db
       .select()
       .from(collateralItems)
       .where(conditions.length ? and(...conditions) : undefined)
       .orderBy(desc(collateralItems.createdAt));
+    if (items.length === 0) return [];
+    const ids = items.map(i => i.id);
+    const shareCounts = await db
+      .select({ collateralItemId: collateralShareLog.collateralItemId, cnt: count() })
+      .from(collateralShareLog)
+      .where(inArray(collateralShareLog.collateralItemId, ids))
+      .groupBy(collateralShareLog.collateralItemId);
+    const countMap = new Map(shareCounts.map(r => [r.collateralItemId, r.cnt]));
+    return items.map(item => ({ ...item, shareCount: countMap.get(item.id) ?? 0 }));
   }
 
   async getCollateralItem(id: string): Promise<CollateralItem | undefined> {

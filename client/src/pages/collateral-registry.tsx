@@ -72,6 +72,7 @@ interface CollateralRegistryItem {
   legalRegime?: string;
   countryCode?: string;
   debtorType?: string;
+  shareCount?: number;
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -1692,6 +1693,21 @@ function MyRegistrations() {
                             <Badge className="text-xs bg-blue-100 text-blue-700">
                               {item.securityInterestType.replace(/_/g, " ")}
                             </Badge>
+                          )}
+                          {(item.shareCount ?? 0) > 0 ? (
+                            <Badge
+                              className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300"
+                              data-testid={`share-count-badge-${item.id}`}
+                            >
+                              Shared {item.shareCount}×
+                            </Badge>
+                          ) : (
+                            <span
+                              className="text-xs text-muted-foreground"
+                              data-testid={`share-count-none-${item.id}`}
+                            >
+                              Not shared
+                            </span>
                           )}
                         </div>
                       </TableCell>
