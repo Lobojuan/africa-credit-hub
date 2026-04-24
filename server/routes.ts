@@ -14747,7 +14747,12 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (!isSuperAdmin && !isOwner && !(isRA && sameCountry)) {
         return res.status(403).json({ message: "Access denied" });
       }
-      res.json(item);
+      let approvedByName: string | null = null;
+      if (item.approvedBy) {
+        const actor = await storage.getUser(item.approvedBy);
+        approvedByName = actor ? (actor.fullName || actor.email) : null;
+      }
+      res.json({ ...item, approvedByName });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 

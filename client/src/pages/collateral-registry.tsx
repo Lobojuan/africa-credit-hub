@@ -24,7 +24,7 @@ import {
   Award, Clock, CheckCircle2, XCircle, AlertTriangle,
   Download, Shield, Zap, Star, TrendingUp, Package, Link2,
   Eye, CheckCircle, Building2, User, Tag, Calendar, ExternalLink, Copy, Check,
-  Share2, Mail, MessageSquare, Printer, History,
+  Share2, Mail, MessageSquare, Printer, History, Send,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -209,7 +209,6 @@ function ShareVerificationLinkDialog({ item }: { item: CollateralRegistryItem })
   const [channel, setChannel] = useState<"email" | "sms">("email");
   const [recipient, setRecipient] = useState("");
   const [personalMessage, setPersonalMessage] = useState("");
-
   const shareLogQuery = useQuery<ShareLogEntry[]>({
     queryKey: ["/api/collateral", item.id, "share-log"],
     queryFn: () => apiRequest("GET", `/api/collateral/${item.id}/share-log`).then(r => r.json()),
@@ -374,6 +373,172 @@ function ShareVerificationLinkDialog({ item }: { item: CollateralRegistryItem })
             </div>
           )}
         </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Lien Status Timeline Dialog ─────────────────────────────────────────────
+
+interface CollateralDetail extends CollateralRegistryItem {
+  createdAt?: string;
+  approvalDate?: string;
+  approvedByName?: string | null;
+}
+
+interface TimelineStep {
+  key: string;
+  label: string;
+  icon: React.ReactNode;
+  timestamp?: string | null;
+  actor?: string | null;
+  note?: string | null;
+  status: "done" | "active" | "pending";
+}
+
+function formatTimestamp(ts?: string | null) {
+  if (!ts) return null;
+  try {
+    return format(new Date(ts), "d MMM yyyy, HH:mm");
+  } catch {
+    return ts;
+  }
+}
+
+function LienStatusTimelineDialog({ item }: { item: CollateralDetail }) {
+  const [open, setOpen] = useState(false);
+  const { data: detail, isLoading } = useQuery<CollateralDetail>({
+    queryKey: ["/api/collateral", item.id],
+    queryFn: () => fetch(`/api/collateral/${item.id}`, { credentials: "include" }).then(r => r.json()),
+    enabled: open,
+  });
+
+  const d = detail ?? item;
+  const approvalStatus = d.approvalStatus ?? "pending";
+  const isApproved = approvalStatus === "approved";
+  const isRejected = approvalStatus === "rejected";
+  const isSettled = isApproved || isRejected;
+
+  const steps: TimelineStep[] = [
+    {
+      key: "submitted",
+      label: "Submitted",
+      icon: <Send className="w-4 h-4" />,
+      timestamp: formatTimestamp(d.createdAt),
+      actor: null,
+      note: "Financing statement filed with the Registry.",
+      status: "done",
+    },
+    {
+      key: "under_review",
+      label: "Under Review",
+      icon: <Eye className="w-4 h-4" />,
+      timestamp: null,
+      actor: null,
+      note: isSettled ? null : "Awaiting Registry Authority review.",
+      status: isSettled ? "done" : "active",
+    },
+    {
+      key: "decision",
+      label: isRejected ? "Rejected" : "Approved",
+      icon: isRejected
+        ? <XCircle className="w-4 h-4" />
+        : <CheckCircle2 className="w-4 h-4" />,
+      timestamp: formatTimestamp(d.approvalDate),
+      actor: d.approvedByName ?? null,
+      note: isRejected ? (d.rejectionReason ?? null) : (d.certificateNumber ? `Certificate: ${d.certificateNumber}` : null),
+      status: isSettled ? "done" : "pending",
+    },
+  ];
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          title="View status history"
+          data-testid={`btn-lien-history-${item.id}`}
+          className="h-7 px-2"
+        >
+          <History className="w-3.5 h-3.5" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <History className="w-4 h-4 text-primary" />
+            Status History
+          </DialogTitle>
+          <p className="text-xs text-muted-foreground font-mono">{d.registrationNumber}</p>
+        </DialogHeader>
+
+        {isLoading ? (
+          <div className="py-8 text-center text-muted-foreground text-sm">Loading…</div>
+        ) : (
+          <div className="relative py-2">
+            <div className="absolute left-[19px] top-4 bottom-4 w-0.5 bg-border" aria-hidden="true" />
+            <ol className="space-y-6" data-testid="lien-timeline">
+              {steps.map((step, idx) => {
+                const isDone = step.status === "done";
+                const isActive = step.status === "active";
+                const isPending = step.status === "pending";
+                const isDecision = step.key === "decision";
+                const dotColor = isDone
+                  ? (isDecision && isRejected ? "bg-red-500 border-red-500" : "bg-primary border-primary")
+                  : isActive
+                  ? "bg-amber-400 border-amber-400"
+                  : "bg-muted border-border";
+                const labelColor = isDone
+                  ? (isDecision && isRejected ? "text-red-600 dark:text-red-400" : "text-foreground")
+                  : isActive
+                  ? "text-amber-700 dark:text-amber-400"
+                  : "text-muted-foreground";
+
+                return (
+                  <li key={step.key} className="flex gap-4 relative" data-testid={`timeline-step-${step.key}`}>
+                    <div className={`flex-shrink-0 w-10 h-10 rounded-full border-2 flex items-center justify-center z-10 bg-background ${dotColor}`}>
+                      <span className={isDone ? (isDecision && isRejected ? "text-red-500" : "text-primary") : isActive ? "text-amber-500" : "text-muted-foreground"}>
+                        {step.icon}
+                      </span>
+                    </div>
+                    <div className="flex-1 pt-1.5 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`font-semibold text-sm ${labelColor}`}>{step.label}</span>
+                        {isActive && (
+                          <span className="text-xs px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                            Current
+                          </span>
+                        )}
+                        {isPending && (
+                          <span className="text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
+                            Pending
+                          </span>
+                        )}
+                      </div>
+                      {step.timestamp && (
+                        <p className="text-xs text-muted-foreground mt-0.5" data-testid={`timeline-timestamp-${step.key}`}>
+                          <Clock className="w-3 h-3 inline mr-1" />{step.timestamp}
+                        </p>
+                      )}
+                      {step.actor && (
+                        <p className="text-xs text-muted-foreground" data-testid={`timeline-actor-${step.key}`}>
+                          By {step.actor}
+                        </p>
+                      )}
+                      {step.note && (
+                        <p className={`text-xs mt-1 ${isDecision && isRejected ? "text-red-600 dark:text-red-400 font-medium" : "text-muted-foreground"}`} data-testid={`timeline-note-${step.key}`}>
+                          {isDecision && isRejected && <XCircle className="w-3 h-3 inline mr-1" />}
+                          {step.note}
+                        </p>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -1712,7 +1877,8 @@ function MyRegistrations() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex gap-1 flex-wrap">
+                        <div className="flex gap-1 items-center flex-wrap">
+                          <LienStatusTimelineDialog item={item} />
                           {item.approvalStatus === "approved" && (
                             <>
                               <div onClick={e => e.stopPropagation()}>
