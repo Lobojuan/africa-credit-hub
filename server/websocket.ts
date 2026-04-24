@@ -27,7 +27,9 @@ export type WSEventType =
   | "score_computed"
   | "fraud_alert"
   | "anchor_created"
-  | "collection_sla_breach";
+  | "collection_sla_breach"
+  | "lien_approved"
+  | "lien_rejected";
 
 export interface WSEvent {
   type: WSEventType;

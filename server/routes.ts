@@ -14915,6 +14915,48 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         });
       }
 
+      // Create in-app notifications for all users of the lender organisation (fire-and-forget)
+      if (item.lenderOrganizationId) {
+        (async () => {
+          try {
+            const [lenderOrg] = await db.select({ country: organizations.country }).from(organizations).where(eq(organizations.id, item.lenderOrganizationId!)).limit(1);
+            const lenderUsers = await db.select({ id: users.id }).from(users).where(eq(users.organizationId, item.lenderOrganizationId!));
+            const assetDesc = item.description || item.collateralType || "Registered Asset";
+            const resolvedCountry = item.countryCode || lenderOrg?.country;
+            if (!resolvedCountry) {
+              console.warn(`[LienNotify] Could not resolve country for collateral ${req.params.id} — falling back to GH for notification storage`);
+            }
+            const notifCountry = resolvedCountry || "GH";
+            if (lenderUsers.length === 0) {
+              console.warn(`[LienNotify] No users found in lender org ${item.lenderOrganizationId} for collateral ${req.params.id} — notification not delivered in-app`);
+            }
+            await Promise.all(lenderUsers.map(lu =>
+              storage.createNotification({
+                userId: lu.id,
+                type: "lien_approved",
+                title: "Lien Registration Approved",
+                message: `Your lien registration for "${assetDesc}" has been approved. Certificate: ${certNum}, Priority rank: ${priority}.`,
+                link: "/collateral-registry",
+                country: notifCountry,
+              }).catch((e: any) => {
+                console.error(`[LienNotify] Failed to create lien_approved notification for user ${lu.id}:`, e?.message || e);
+              })
+            ));
+            broadcastEvent({
+              type: "lien_approved",
+              title: "Lien Registration Approved",
+              message: `Lien registration for "${assetDesc}" approved. Certificate: ${certNum}, Priority rank: ${priority}.`,
+              entityId: req.params.id,
+              entityType: "collateral_item",
+              severity: "info",
+              timestamp: new Date().toISOString(),
+            }, { organizationId: item.lenderOrganizationId });
+          } catch (err: any) {
+            console.error(`[LienNotify] Failed to create approval in-app notification for collateral ${req.params.id}:`, err?.message || err);
+          }
+        })();
+      }
+
       res.json(updated);
 
       // Fire-and-forget: generate PDF and email the certificate to the lender (and optionally borrower)
@@ -14996,6 +15038,48 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         }).catch((err: any) => {
           console.error(`[LienEmail] Failed to fetch lender org for rejection email (collateral ${req.params.id}):`, err?.message || err);
         });
+      }
+
+      // Create in-app notifications for all users of the lender organisation (fire-and-forget)
+      if (item.lenderOrganizationId) {
+        (async () => {
+          try {
+            const [lenderOrg] = await db.select({ country: organizations.country }).from(organizations).where(eq(organizations.id, item.lenderOrganizationId!)).limit(1);
+            const lenderUsers = await db.select({ id: users.id }).from(users).where(eq(users.organizationId, item.lenderOrganizationId!));
+            const assetDesc = item.description || item.collateralType || "Registered Asset";
+            const resolvedCountry = item.countryCode || lenderOrg?.country;
+            if (!resolvedCountry) {
+              console.warn(`[LienNotify] Could not resolve country for collateral ${req.params.id} — falling back to GH for notification storage`);
+            }
+            const notifCountry = resolvedCountry || "GH";
+            if (lenderUsers.length === 0) {
+              console.warn(`[LienNotify] No users found in lender org ${item.lenderOrganizationId} for collateral ${req.params.id} — notification not delivered in-app`);
+            }
+            await Promise.all(lenderUsers.map(lu =>
+              storage.createNotification({
+                userId: lu.id,
+                type: "lien_rejected",
+                title: "Lien Registration Rejected",
+                message: `Your lien registration for "${assetDesc}" was rejected. Reason: ${reason}`,
+                link: "/collateral-registry",
+                country: notifCountry,
+              }).catch((e: any) => {
+                console.error(`[LienNotify] Failed to create lien_rejected notification for user ${lu.id}:`, e?.message || e);
+              })
+            ));
+            broadcastEvent({
+              type: "lien_rejected",
+              title: "Lien Registration Rejected",
+              message: `Lien registration for "${assetDesc}" was rejected. Reason: ${reason}`,
+              entityId: req.params.id,
+              entityType: "collateral_item",
+              severity: "warning",
+              timestamp: new Date().toISOString(),
+            }, { organizationId: item.lenderOrganizationId });
+          } catch (err: any) {
+            console.error(`[LienNotify] Failed to create rejection in-app notification for collateral ${req.params.id}:`, err?.message || err);
+          }
+        })();
       }
 
       res.json(updated);
