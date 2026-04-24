@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { Search, User, Building2, FileText, ChevronRight, Globe, Landmark, CreditCard, Calendar, IdCard, Smartphone, Phone } from "lucide-react";
+import { Search, User, Building2, FileText, ChevronRight, Globe, Landmark, CreditCard, Calendar, IdCard, Smartphone, Phone, Merge, CheckSquare, Square, AlertTriangle, CheckCircle2, Loader2, Crown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,10 +11,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { SUPPORTED_COUNTRIES } from "@/lib/currency";
 import { isGhanaMode } from "@/lib/country-mode";
 import type { Borrower, Institution, CreditAccount, TelcoProfile } from "@shared/schema";
 import { getBorrowerAvatarUrl } from "@/lib/avatar";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface GlobalSearchResults {
   borrowers: Borrower[];
@@ -65,7 +68,65 @@ const BUSINESS_PURPOSES = [
 export default function CreditSearchPage() {
   const { t } = useTranslation();
   const [, navigate] = useLocation();
+  const { toast } = useToast();
   const [searchTab, setSearchTab] = useState<"consumer" | "business" | "telco" | "general">("consumer");
+
+  const [mergeMode, setMergeMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [primaryId, setPrimaryId] = useState<string | null>(null);
+  const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
+  const [mergePreview, setMergePreview] = useState<{ borrowers: Borrower[]; accountCounts: Record<string, number> } | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  const mergeMutation = useMutation({
+    mutationFn: async ({ pId, dupIds }: { pId: string; dupIds: string[] }) => {
+      const res = await apiRequest("POST", "/api/borrowers/merge", { primaryId: pId, duplicateIds: dupIds });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.message || "Merge failed"); }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setMergeDialogOpen(false);
+      setMergeMode(false);
+      setSelectedIds([]);
+      setPrimaryId(null);
+      setMergePreview(null);
+      toast({ title: "Records merged", description: data.message });
+      navigate(`/borrowers/${data.primaryId}`);
+    },
+    onError: (e: any) => {
+      toast({ title: "Merge failed", description: e.message, variant: "destructive" });
+    },
+  });
+
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => {
+      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
+      if (!next.includes(primaryId || "")) setPrimaryId(next[0] || null);
+      return next;
+    });
+  }
+
+  async function openMergeDialog() {
+    if (selectedIds.length < 2) return;
+    setPreviewLoading(true);
+    try {
+      const res = await fetch(`/api/borrowers/merge/preview?ids=${selectedIds.join(",")}`, { credentials: "include" });
+      const data = await res.json();
+      setMergePreview(data);
+      if (!primaryId || !selectedIds.includes(primaryId)) setPrimaryId(selectedIds[0]);
+      setMergeDialogOpen(true);
+    } catch {
+      toast({ title: "Preview failed", description: "Could not load merge preview", variant: "destructive" });
+    } finally {
+      setPreviewLoading(false);
+    }
+  }
+
+  function confirmMerge() {
+    if (!primaryId) return;
+    const dupIds = selectedIds.filter(id => id !== primaryId);
+    mergeMutation.mutate({ pId: primaryId, dupIds });
+  }
 
   const [consumerForm, setConsumerForm] = useState({
     ghanaCardNumber: "",
@@ -461,9 +522,46 @@ export default function CreditSearchPage() {
 
           {consumerSubmitted && (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground" data-testid="text-consumer-result-count">
-                {consumerLoading ? "Searching..." : `${consumerResults?.length || 0} consumer(s) found`}
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground" data-testid="text-consumer-result-count">
+                  {consumerLoading ? "Searching..." : `${consumerResults?.length || 0} consumer(s) found`}
+                </p>
+                {!consumerLoading && consumerResults && consumerResults.length > 1 && (
+                  <Button
+                    variant={mergeMode ? "default" : "outline"}
+                    size="sm"
+                    className="gap-2 text-xs"
+                    data-testid="btn-toggle-merge-mode"
+                    onClick={() => { setMergeMode(v => !v); setSelectedIds([]); setPrimaryId(null); }}
+                  >
+                    <Merge className="w-3.5 h-3.5" />
+                    {mergeMode ? "Cancel Merge" : "Select to Merge"}
+                  </Button>
+                )}
+              </div>
+
+              {mergeMode && (
+                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 flex items-start gap-3">
+                  <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                  <div className="flex-1 text-xs text-amber-800 dark:text-amber-300 space-y-1">
+                    <p className="font-medium">Merge mode active</p>
+                    <p>Select 2 or more duplicate records, then click "Merge Records". All credit data (accounts, inquiries, payments) will be consolidated into the primary record and duplicates will be removed.</p>
+                  </div>
+                  {selectedIds.length >= 2 && (
+                    <Button
+                      size="sm"
+                      className="shrink-0 h-7 text-xs gap-1.5"
+                      data-testid="btn-open-merge-dialog"
+                      onClick={openMergeDialog}
+                      disabled={previewLoading}
+                    >
+                      {previewLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Merge className="w-3 h-3" />}
+                      Merge {selectedIds.length} Records
+                    </Button>
+                  )}
+                </div>
+              )}
+
               {consumerLoading ? (
                 <div className="space-y-3">
                   {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
@@ -471,7 +569,17 @@ export default function CreditSearchPage() {
               ) : (consumerResults && consumerResults.length > 0) ? (
                 <div className="space-y-3">
                   {consumerResults.map((borrower) => (
-                    <BorrowerResultCard key={borrower.id} borrower={borrower} navigate={navigate} t={t} />
+                    <BorrowerResultCard
+                      key={borrower.id}
+                      borrower={borrower}
+                      navigate={navigate}
+                      t={t}
+                      mergeMode={mergeMode}
+                      isSelected={selectedIds.includes(borrower.id)}
+                      isPrimary={primaryId === borrower.id}
+                      onToggle={() => toggleSelect(borrower.id)}
+                      onSetPrimary={() => setPrimaryId(borrower.id)}
+                    />
                   ))}
                 </div>
               ) : (
@@ -580,9 +688,37 @@ export default function CreditSearchPage() {
 
           {businessSubmitted && (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground" data-testid="text-business-result-count">
-                {businessLoading ? "Searching..." : `${businessResults?.length || 0} business(es) found`}
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground" data-testid="text-business-result-count">
+                  {businessLoading ? "Searching..." : `${businessResults?.length || 0} business(es) found`}
+                </p>
+                {!businessLoading && businessResults && businessResults.length > 1 && (
+                  <Button
+                    variant={mergeMode ? "default" : "outline"}
+                    size="sm"
+                    className="gap-2 text-xs"
+                    data-testid="btn-toggle-merge-mode-business"
+                    onClick={() => { setMergeMode(v => !v); setSelectedIds([]); setPrimaryId(null); }}
+                  >
+                    <Merge className="w-3.5 h-3.5" />
+                    {mergeMode ? "Cancel Merge" : "Select to Merge"}
+                  </Button>
+                )}
+              </div>
+              {mergeMode && (
+                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 flex items-start gap-3">
+                  <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                  <div className="flex-1 text-xs text-amber-800 dark:text-amber-300 space-y-1">
+                    <p className="font-medium">Merge mode active — select duplicate records below</p>
+                  </div>
+                  {selectedIds.length >= 2 && (
+                    <Button size="sm" className="shrink-0 h-7 text-xs gap-1.5" data-testid="btn-open-merge-dialog-business" onClick={openMergeDialog} disabled={previewLoading}>
+                      {previewLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Merge className="w-3 h-3" />}
+                      Merge {selectedIds.length} Records
+                    </Button>
+                  )}
+                </div>
+              )}
               {businessLoading ? (
                 <div className="space-y-3">
                   {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
@@ -590,7 +726,17 @@ export default function CreditSearchPage() {
               ) : (businessResults && businessResults.length > 0) ? (
                 <div className="space-y-3">
                   {businessResults.map((borrower) => (
-                    <BorrowerResultCard key={borrower.id} borrower={borrower} navigate={navigate} t={t} />
+                    <BorrowerResultCard
+                      key={borrower.id}
+                      borrower={borrower}
+                      navigate={navigate}
+                      t={t}
+                      mergeMode={mergeMode}
+                      isSelected={selectedIds.includes(borrower.id)}
+                      isPrimary={primaryId === borrower.id}
+                      onToggle={() => toggleSelect(borrower.id)}
+                      onSetPrimary={() => setPrimaryId(borrower.id)}
+                    />
                   ))}
                 </div>
               ) : (
@@ -747,7 +893,17 @@ export default function CreditSearchPage() {
                         </h2>
                       </div>
                       {generalResults!.borrowers.map((borrower) => (
-                        <BorrowerResultCard key={borrower.id} borrower={borrower} navigate={navigate} t={t} />
+                        <BorrowerResultCard
+                          key={borrower.id}
+                          borrower={borrower}
+                          navigate={navigate}
+                          t={t}
+                          mergeMode={mergeMode}
+                          isSelected={selectedIds.includes(borrower.id)}
+                          isPrimary={primaryId === borrower.id}
+                          onToggle={() => toggleSelect(borrower.id)}
+                          onSetPrimary={() => setPrimaryId(borrower.id)}
+                        />
                       ))}
                     </div>
                   )}
@@ -881,20 +1037,125 @@ export default function CreditSearchPage() {
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={mergeDialogOpen} onOpenChange={(open) => { if (!open && !mergeMutation.isPending) setMergeDialogOpen(false); }}>
+        <DialogContent className="max-w-lg" data-testid="dialog-merge-preview">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Merge className="w-4 h-4 text-primary" />
+              Merge Duplicate Records
+            </DialogTitle>
+            <DialogDescription>
+              Choose which record becomes the primary. All credit data from the others will be merged into it and the duplicates will be permanently deleted.
+            </DialogDescription>
+          </DialogHeader>
+
+          {mergePreview && (
+            <div className="space-y-3 py-2 max-h-[360px] overflow-y-auto">
+              {mergePreview.borrowers.map((b) => {
+                const isP = primaryId === b.id;
+                return (
+                  <div
+                    key={b.id}
+                    className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${isP ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/50"}`}
+                    onClick={() => { if (!mergeMutation.isPending) setPrimaryId(b.id); }}
+                    data-testid={`merge-preview-row-${b.id}`}
+                  >
+                    <img
+                      src={(b as any).photoUrl || getBorrowerAvatarUrl(b.id, b.type === "corporate" ? (b.companyName || "") : `${b.firstName} ${b.lastName}`, b.type as any)}
+                      alt=""
+                      className="w-9 h-9 rounded-full object-cover border border-border shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {b.type === "corporate" ? b.companyName : `${b.firstName} ${b.lastName}`}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{b.nationalId || b.passportNumber || (b as any).ghanaCardNumber}</p>
+                      <p className="text-xs text-muted-foreground">{mergePreview.accountCounts[b.id] ?? 0} credit account(s)</p>
+                    </div>
+                    <div className="shrink-0">
+                      {isP ? (
+                        <Badge variant="default" className="text-[10px] flex items-center gap-1">
+                          <Crown className="w-2.5 h-2.5" />Primary
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px] text-muted-foreground">Duplicate</Badge>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              <p className="text-xs text-muted-foreground text-center pt-1">Click a record to set it as the primary</p>
+            </div>
+          )}
+
+          <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-3 flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+            <p className="text-xs text-destructive">
+              This action is irreversible. {selectedIds.length - 1} record(s) will be permanently removed after their data is consolidated.
+            </p>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setMergeDialogOpen(false)}
+              disabled={mergeMutation.isPending}
+              data-testid="btn-cancel-merge"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmMerge}
+              disabled={mergeMutation.isPending || !primaryId}
+              data-testid="btn-confirm-merge"
+              className="gap-2"
+            >
+              {mergeMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+              {mergeMutation.isPending ? "Merging..." : `Merge ${selectedIds.length} Records`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function BorrowerResultCard({ borrower, navigate, t }: { borrower: Borrower; navigate: (path: string) => void; t: any }) {
+function BorrowerResultCard({
+  borrower, navigate, t,
+  mergeMode = false, isSelected = false, isPrimary = false,
+  onToggle, onSetPrimary,
+}: {
+  borrower: Borrower;
+  navigate: (path: string) => void;
+  t: any;
+  mergeMode?: boolean;
+  isSelected?: boolean;
+  isPrimary?: boolean;
+  onToggle?: () => void;
+  onSetPrimary?: () => void;
+}) {
   return (
     <Card
-      className="cursor-pointer hover-elevate"
-      onClick={() => navigate(`/borrowers/${borrower.id}`)}
+      className={`hover-elevate transition-all ${mergeMode ? "cursor-default" : "cursor-pointer"} ${isSelected ? "ring-2 ring-primary border-primary" : ""} ${isPrimary ? "bg-primary/5" : ""}`}
+      onClick={() => { if (mergeMode) { onToggle?.(); } else { navigate(`/borrowers/${borrower.id}`); } }}
       data-testid={`result-borrower-${borrower.id}`}
     >
       <CardContent className="p-5">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-4 min-w-0">
+            {mergeMode && (
+              <button
+                className="shrink-0 text-primary"
+                onClick={(e) => { e.stopPropagation(); onToggle?.(); }}
+                data-testid={`checkbox-merge-${borrower.id}`}
+              >
+                {isSelected
+                  ? <CheckSquare className="w-5 h-5 text-primary" />
+                  : <Square className="w-5 h-5 text-muted-foreground" />}
+              </button>
+            )}
             <img
               src={(borrower as any).photoUrl || getBorrowerAvatarUrl(borrower.id, borrower.type === "corporate" ? (borrower.companyName || "") : `${borrower.firstName} ${borrower.lastName}`, borrower.type as "individual" | "corporate")}
               alt=""
@@ -902,9 +1163,16 @@ function BorrowerResultCard({ borrower, navigate, t }: { borrower: Borrower; nav
               data-testid={`img-search-avatar-${borrower.id}`}
             />
             <div className="min-w-0">
-              <p className="text-sm font-semibold truncate">
-                {borrower.type === "corporate" ? borrower.companyName : `${borrower.firstName} ${borrower.lastName}`}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold truncate">
+                  {borrower.type === "corporate" ? borrower.companyName : `${borrower.firstName} ${borrower.lastName}`}
+                </p>
+                {isPrimary && (
+                  <Badge variant="default" className="text-[9px] px-1.5 py-0 bg-primary/80 flex items-center gap-0.5">
+                    <Crown className="w-2.5 h-2.5" />Primary
+                  </Badge>
+                )}
+              </div>
               <p className="text-xs text-muted-foreground">{borrower.nationalId}</p>
               {(borrower as any).ghanaCardNumber && <p className="text-xs text-muted-foreground">Ghana Card: {(borrower as any).ghanaCardNumber}</p>}
               {borrower.passportNumber && <p className="text-xs text-muted-foreground">Passport: {borrower.passportNumber}</p>}
@@ -917,16 +1185,31 @@ function BorrowerResultCard({ borrower, navigate, t }: { borrower: Borrower; nav
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Button
-              variant="outline"
-              size="sm"
-              data-testid={`button-view-report-${borrower.id}`}
-              onClick={(e) => { e.stopPropagation(); navigate(`/credit-report/${borrower.id}`); }}
-            >
-              <FileText className="w-3.5 h-3.5 mr-1.5" />
-              {t('search.viewReport')}
-            </Button>
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            {mergeMode && isSelected && !isPrimary && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-[10px] h-6 px-2 text-primary"
+                data-testid={`btn-set-primary-${borrower.id}`}
+                onClick={(e) => { e.stopPropagation(); onSetPrimary?.(); }}
+              >
+                Set Primary
+              </Button>
+            )}
+            {!mergeMode && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  data-testid={`button-view-report-${borrower.id}`}
+                  onClick={(e) => { e.stopPropagation(); navigate(`/credit-report/${borrower.id}`); }}
+                >
+                  <FileText className="w-3.5 h-3.5 mr-1.5" />
+                  {t('search.viewReport')}
+                </Button>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </>
+            )}
           </div>
         </div>
       </CardContent>

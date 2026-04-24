@@ -14890,6 +14890,120 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   });
 
   // ===========================================================================
+  // BORROWER RECORD MERGE — deduplicate borrowers uploaded multiple times
+  // ===========================================================================
+
+  app.post("/api/borrowers/merge", requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const { primaryId, duplicateIds } = req.body as { primaryId: string; duplicateIds: string[] };
+      if (!primaryId || !Array.isArray(duplicateIds) || duplicateIds.length === 0) {
+        return res.status(400).json({ message: "primaryId and at least one duplicateId required" });
+      }
+      if (duplicateIds.includes(primaryId)) {
+        return res.status(400).json({ message: "primaryId cannot be in duplicateIds" });
+      }
+
+      const primary = await storage.getBorrower(primaryId);
+      if (!primary) return res.status(404).json({ message: "Primary borrower not found" });
+
+      const userId = req.session?.userId as string;
+      const orgId = req.session?.organizationId;
+
+      const dupRecords: any[] = [];
+      for (const dupId of duplicateIds) {
+        const dup = await storage.getBorrower(dupId);
+        if (dup) dupRecords.push(dup);
+      }
+      if (dupRecords.length === 0) return res.status(404).json({ message: "No valid duplicate records found" });
+
+      const tables = [
+        "credit_accounts",
+        "credit_inquiries",
+        "disputes",
+        "court_judgments",
+        "dishonoured_cheques",
+        "consent_records",
+        "alternative_data",
+        "guarantors",
+        "portfolio_trigger_subscriptions",
+        "portfolio_trigger_events",
+        "consumer_monitoring_prefs",
+        "consumer_monitoring_alerts",
+        "identity_verifications",
+        "watchlist_hits",
+        "fraud_alerts",
+        "audit_logs",
+        "borrower_alerts",
+      ];
+
+      for (const dupId of duplicateIds) {
+        for (const table of tables) {
+          try {
+            await db.execute(sql`UPDATE ${sql.raw(table)} SET borrower_id = ${primaryId} WHERE borrower_id = ${dupId}`);
+          } catch {}
+        }
+        try {
+          await db.execute(sql`UPDATE payment_history SET borrower_id = ${primaryId} WHERE borrower_id = ${dupId}`);
+        } catch {}
+      }
+
+      const fillFromDups = (field: string) => {
+        if ((primary as any)[field]) return;
+        for (const dup of dupRecords) {
+          if ((dup as any)[field]) {
+            (primary as any)[field] = (dup as any)[field];
+            break;
+          }
+        }
+      };
+
+      const fieldsToFill = ["email", "phone", "city", "region", "address", "nationalId", "passportNumber", "tinNumber", "employmentStatus", "employerName", "monthlyIncome", "sector", "ghanaCardNumber", "votersId", "ssnitNumber", "driversLicense", "ezwichNumber", "mobileMoneyNumber", "dateOfBirth", "gender", "nationality", "photoUrl"];
+      fieldsToFill.forEach(fillFromDups);
+
+      await storage.updateBorrower(primaryId, primary as any);
+
+      for (const dupId of duplicateIds) {
+        try {
+          await db.execute(sql`DELETE FROM borrowers WHERE id = ${dupId}`);
+        } catch {}
+      }
+
+      await storage.createAuditLog({
+        userId,
+        action: "BORROWER_MERGE",
+        entity: "borrower",
+        entityId: primaryId,
+        details: `Merged ${duplicateIds.length} duplicate record(s) into primary borrower ${primaryId}. Duplicates removed: ${duplicateIds.join(", ")}`,
+        country: primary.country || "Unknown",
+        organizationId: orgId || null,
+      } as any);
+
+      res.json({
+        success: true,
+        primaryId,
+        mergedCount: duplicateIds.length,
+        message: `Successfully merged ${duplicateIds.length} duplicate record(s) into the primary record.`,
+      });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.get("/api/borrowers/merge/preview", requireRole("admin", "super_admin", "lender"), async (req, res) => {
+    try {
+      const ids = String(req.query.ids || "").split(",").filter(Boolean);
+      if (ids.length < 2) return res.status(400).json({ message: "At least 2 borrower IDs required" });
+      const borrowers = await Promise.all(ids.map(id => storage.getBorrower(id)));
+      const validBorrowers = borrowers.filter(Boolean);
+      const accountCounts: Record<string, number> = {};
+      for (const b of validBorrowers) {
+        if (!b) continue;
+        const accs = await storage.getCreditAccountsByBorrower(b.id);
+        accountCounts[b.id] = accs.length;
+      }
+      res.json({ borrowers: validBorrowers, accountCounts });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ===========================================================================
   // PORTFOLIO TRIGGER ALERTS — institutional subscriptions + event feed
   // ===========================================================================
 
