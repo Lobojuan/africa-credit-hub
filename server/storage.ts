@@ -62,12 +62,13 @@ import {
   type RegistryHealthEvent, type InsertRegistryHealthEvent,
   trainingAttempts,
   type TrainingAttempt, type InsertTrainingAttempt,
-  loanApplications, loanRepaymentSchedules, collateralItems, collateralShareLog, institutionBranding,
+  loanApplications, loanRepaymentSchedules, collateralItems, collateralShareLog, collateralRejectionHistory, institutionBranding,
   registryCountryConfig,
   type LoanApplication, type InsertLoanApplication,
   type LoanRepaymentSchedule, type InsertLoanRepaymentSchedule,
   type CollateralItem, type InsertCollateralItem,
   type CollateralShareLog, type InsertCollateralShareLog,
+  type CollateralRejectionHistory, type InsertCollateralRejectionHistory,
   type InstitutionBranding, type InsertInstitutionBranding,
   type RegistryCountryConfig, type InsertRegistryCountryConfig,
   portfolioTriggerSubscriptions, portfolioTriggerEvents,
@@ -369,7 +370,8 @@ export interface IStorage {
   searchLiensByAssetId(assetIdentifier: string, countryCode: string): Promise<CollateralItem[]>;
   getSubmissionRankForAsset(id: string, panAfricanAssetId: string | null, assetLocalIdentifier: string | null, countryCode: string): Promise<number>;
   approveCollateralItem(id: string, approvedBy: string, certificateNumber: string, lienPriority: number): Promise<CollateralItem | undefined>;
-  rejectCollateralItem(id: string, rejectionReason: string): Promise<CollateralItem | undefined>;
+  rejectCollateralItem(id: string, rejectionReason: string, rejectedBy?: string): Promise<CollateralItem | undefined>;
+  getCollateralRejectionHistory(collateralItemId: string): Promise<CollateralRejectionHistory[]>;
   enforceCollateralItem(id: string): Promise<CollateralItem | undefined>;
   dischargeCollateralItem(id: string): Promise<CollateralItem | undefined>;
   createCollateralShareLog(data: InsertCollateralShareLog): Promise<CollateralShareLog>;
@@ -3048,12 +3050,26 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
-  async rejectCollateralItem(id: string, rejectionReason: string): Promise<CollateralItem | undefined> {
+  async rejectCollateralItem(id: string, rejectionReason: string, rejectedBy?: string): Promise<CollateralItem | undefined> {
     const [updated] = await db.update(collateralItems)
       .set({ approvalStatus: "rejected", rejectionReason, updatedAt: new Date() })
       .where(eq(collateralItems.id, id))
       .returning();
+    if (updated) {
+      await db.insert(collateralRejectionHistory).values({
+        collateralItemId: id,
+        reason: rejectionReason,
+        rejectedBy: rejectedBy ?? null,
+      });
+    }
     return updated;
+  }
+
+  async getCollateralRejectionHistory(collateralItemId: string): Promise<CollateralRejectionHistory[]> {
+    return db.select()
+      .from(collateralRejectionHistory)
+      .where(eq(collateralRejectionHistory.collateralItemId, collateralItemId))
+      .orderBy(desc(collateralRejectionHistory.rejectedAt));
   }
 
   async enforceCollateralItem(id: string): Promise<CollateralItem | undefined> {

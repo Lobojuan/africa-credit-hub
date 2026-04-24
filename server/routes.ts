@@ -14844,7 +14844,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (isSuperAdmin && req.body.approvalStatus === "rejected") {
         const reason = req.body.rejectionReason as string | undefined;
         if (!reason) return res.status(400).json({ message: "rejectionReason required when approvalStatus is 'rejected'" });
-        const rejected = await storage.rejectCollateralItem(req.params.id, reason);
+        const rejected = await storage.rejectCollateralItem(req.params.id, reason, req.session?.userId);
         if (!rejected) return res.status(404).json({ message: "Not found" });
         // Fire-and-forget rejection email to lender
         if (item.lenderOrganizationId) {
@@ -15050,7 +15050,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       }
       const { reason } = req.body;
       if (!reason) return res.status(400).json({ message: "Rejection reason required" });
-      const updated = await storage.rejectCollateralItem(req.params.id, reason);
+      const updated = await storage.rejectCollateralItem(req.params.id, reason, req.session?.userId);
       if (!updated) return res.status(404).json({ message: "Not found" });
 
       // Send rejection email to the lender organisation (fire-and-forget, non-blocking)
@@ -15116,6 +15116,34 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       }
 
       res.json(updated);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // Get rejection history for a collateral item — lender (owner), RA (same country), or super_admin
+  app.get("/api/collateral/:id/rejection-history", requireAuth, async (req, res) => {
+    try {
+      const item = await storage.getCollateralItem(req.params.id);
+      if (!item) return res.status(404).json({ message: "Not found" });
+
+      const isSuperAdmin = req.session?.userRole === "super_admin";
+      const orgId = req.session?.organizationId;
+      const isOwner = item.lenderOrganizationId === orgId;
+      const isRA = await isRegistryAuthority(req);
+
+      if (!isSuperAdmin && !isOwner) {
+        if (isRA) {
+          // RA users may only access items in their own country
+          const callerCountry = await getCallerCountry(req);
+          if (!callerCountry || (item.countryCode && item.countryCode !== callerCountry)) {
+            return res.status(403).json({ message: "Access denied — cross-country access not permitted" });
+          }
+        } else {
+          return res.status(403).json({ message: "Access denied" });
+        }
+      }
+
+      const history = await storage.getCollateralRejectionHistory(req.params.id);
+      res.json(history);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 

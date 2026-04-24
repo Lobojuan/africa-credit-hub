@@ -1862,6 +1862,22 @@ export type InsertCollateralItem = z.infer<typeof insertCollateralItemSchema>;
 export type CollateralItem = typeof collateralItems.$inferSelect;
 
 // ---------------------------------------------------------------------------
+// Collateral Rejection History — immutable log of every rejection event
+// ---------------------------------------------------------------------------
+
+export const collateralRejectionHistory = pgTable("collateral_rejection_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  collateralItemId: varchar("collateral_item_id").notNull().references(() => collateralItems.id, { onDelete: "cascade" }),
+  reason: text("reason").notNull(),
+  rejectedBy: varchar("rejected_by").references(() => users.id),
+  rejectedAt: timestamp("rejected_at").notNull().defaultNow(),
+});
+
+export const insertCollateralRejectionHistorySchema = createInsertSchema(collateralRejectionHistory).omit({ id: true, rejectedAt: true });
+export type InsertCollateralRejectionHistory = z.infer<typeof insertCollateralRejectionHistorySchema>;
+export type CollateralRejectionHistory = typeof collateralRejectionHistory.$inferSelect;
+
+// ---------------------------------------------------------------------------
 // Collateral Share Log — tracks who received verification links and when
 // ---------------------------------------------------------------------------
 

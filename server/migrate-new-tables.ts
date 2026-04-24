@@ -740,5 +740,33 @@ export async function migrateNewTables() {
     sent_at timestamp NOT NULL DEFAULT now()
   )`);
 
+  // Collateral Rejection History — immutable log of every rejection event
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS collateral_rejection_history (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    collateral_item_id varchar NOT NULL REFERENCES collateral_items(id) ON DELETE CASCADE,
+    reason text NOT NULL,
+    rejected_by varchar REFERENCES users(id),
+    rejected_at timestamp NOT NULL DEFAULT now()
+  )`);
+
+  // Backfill: create one history entry for each rejected collateral item that has a
+  // rejection_reason but no entry yet in collateral_rejection_history.
+  // Uses updated_at as the best available timestamp for when the rejection occurred.
+  await db.execute(sql`
+    INSERT INTO collateral_rejection_history (id, collateral_item_id, reason, rejected_at)
+    SELECT
+      gen_random_uuid(),
+      ci.id,
+      ci.rejection_reason,
+      COALESCE(ci.updated_at, NOW())
+    FROM collateral_items ci
+    WHERE ci.approval_status = 'rejected'
+      AND ci.rejection_reason IS NOT NULL
+      AND ci.rejection_reason <> ''
+      AND NOT EXISTS (
+        SELECT 1 FROM collateral_rejection_history crh WHERE crh.collateral_item_id = ci.id
+      )
+  `);
+
   console.log('[NewTables] Migration complete');
 }
