@@ -705,7 +705,14 @@ export async function sendCollateralVerificationLinkEmail(
   verificationUrl: string,
   collateralDescription: string,
   borrowerName: string,
+  personalMessage?: string,
 ): Promise<boolean> {
+  const personalMessageSection = personalMessage
+    ? `<div style="background:#fffbeb;border-radius:8px;padding:14px 18px;margin:16px 0;border-left:4px solid #f59e0b;">
+        <p style="margin:0 0 4px;font-size:12px;color:#92400e;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Personal message from ${esc(lenderName)}</p>
+        <p style="margin:0;font-size:14px;color:#333;line-height:1.6;">${esc(personalMessage)}</p>
+      </div>`
+    : "";
   const body = `
     <p style="color:#333;font-size:14px;line-height:1.6;">
       <strong>${esc(lenderName)}</strong> has shared a collateral verification link with you via the Pan-African Credit Registry.
@@ -714,6 +721,7 @@ export async function sendCollateralVerificationLinkEmail(
       <p style="margin:0 0 6px;font-size:13px;color:#555;"><strong>Borrower:</strong> ${esc(borrowerName)}</p>
       <p style="margin:0;font-size:13px;color:#555;"><strong>Collateral:</strong> ${esc(collateralDescription)}</p>
     </div>
+    ${personalMessageSection}
     <p style="color:#333;font-size:14px;line-height:1.6;">
       Click the button below to verify the authenticity and status of this registered security interest on the public registry.
     </p>

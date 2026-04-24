@@ -188,10 +188,11 @@ function ShareVerificationLinkDialog({ item }: { item: CollateralRegistryItem })
   const [open, setOpen] = useState(false);
   const [channel, setChannel] = useState<"email" | "sms">("email");
   const [recipient, setRecipient] = useState("");
+  const [personalMessage, setPersonalMessage] = useState("");
 
   const shareMutation = useMutation({
-    mutationFn: ({ channel, recipient }: { channel: "email" | "sms"; recipient: string }) =>
-      apiRequest("POST", `/api/collateral/${item.id}/share`, { channel, recipient }),
+    mutationFn: ({ channel, recipient, message }: { channel: "email" | "sms"; recipient: string; message?: string }) =>
+      apiRequest("POST", `/api/collateral/${item.id}/share`, { channel, recipient, message }),
     onSuccess: () => {
       toast({
         title: "Verification link sent",
@@ -201,6 +202,7 @@ function ShareVerificationLinkDialog({ item }: { item: CollateralRegistryItem })
       });
       setOpen(false);
       setRecipient("");
+      setPersonalMessage("");
     },
     onError: (e: Error) => toast({ title: "Failed to send", description: e.message, variant: "destructive" }),
   });
@@ -210,11 +212,11 @@ function ShareVerificationLinkDialog({ item }: { item: CollateralRegistryItem })
       toast({ title: "Recipient required", description: "Please enter an email address or phone number.", variant: "destructive" });
       return;
     }
-    shareMutation.mutate({ channel, recipient: recipient.trim() });
+    shareMutation.mutate({ channel, recipient: recipient.trim(), message: personalMessage.trim() || undefined });
   };
 
   return (
-    <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) setRecipient(""); }}>
+    <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) { setRecipient(""); setPersonalMessage(""); } }}>
       <DialogTrigger asChild>
         <Button
           variant="ghost"
@@ -274,6 +276,19 @@ function ShareVerificationLinkDialog({ item }: { item: CollateralRegistryItem })
               onChange={e => setRecipient(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter") handleSend(); }}
               className="mt-1"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="share-personal-message">Personal message <span className="text-muted-foreground font-normal">(optional)</span></Label>
+            <textarea
+              id="share-personal-message"
+              data-testid="input-share-personal-message"
+              placeholder="e.g. Please review the collateral details before our meeting."
+              value={personalMessage}
+              onChange={e => setPersonalMessage(e.target.value)}
+              rows={3}
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
             />
           </div>
 

@@ -15050,7 +15050,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // Share verification link via email or SMS
   app.post("/api/collateral/:id/share", requireRole("admin", "super_admin", "lender"), async (req, res) => {
     try {
-      const { channel, recipient } = req.body as { channel: "email" | "sms"; recipient: string };
+      const { channel, recipient, message } = req.body as { channel: "email" | "sms"; recipient: string; message?: string };
       if (!channel || !recipient) return res.status(400).json({ message: "channel and recipient are required" });
       if (channel !== "email" && channel !== "sms") return res.status(400).json({ message: "channel must be 'email' or 'sms'" });
 
@@ -15075,7 +15075,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
           return res.status(400).json({ message: "Invalid email address" });
         }
-        sent = await sendCollateralVerificationLinkEmail(recipient, lenderName, verificationUrl, description, borrowerName);
+        sent = await sendCollateralVerificationLinkEmail(recipient, lenderName, verificationUrl, description, borrowerName, message);
         if (!sent) {
           console.log(`[Collateral Share][Email Stub] Would send to ${recipient}: ${verificationUrl}`);
           sent = true;
@@ -15085,7 +15085,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         if (!/^\+?[0-9]{7,15}$/.test(phone)) {
           return res.status(400).json({ message: "Invalid phone number" });
         }
-        const smsText = `${lenderName} shared a collateral verification link with you.\n\nBorrower: ${borrowerName}\nCollateral: ${description.substring(0, 60)}\n\nVerify at: ${verificationUrl}\n\n- Africa Credit Hub`;
+        const personalNote = message ? `\n\nMessage from ${lenderName}: ${message}` : "";
+        const smsText = `${lenderName} shared a collateral verification link with you.\n\nBorrower: ${borrowerName}\nCollateral: ${description.substring(0, 60)}${personalNote}\n\nVerify at: ${verificationUrl}\n\n- Africa Credit Hub`;
         sent = await sendSms(phone, smsText);
         if (!sent) {
           console.log(`[Collateral Share][SMS Stub] Would send to ${phone}: ${verificationUrl}`);
