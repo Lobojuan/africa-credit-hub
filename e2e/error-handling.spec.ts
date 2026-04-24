@@ -1,10 +1,11 @@
 import { test, expect } from '@playwright/test';
 
-const ADMIN_PASSWORD = process.env.TEST_ADMIN_PASSWORD || 'admin0987';
+const ADMIN_PASSWORD = process.env.TEST_ADMIN_PASSWORD || process.env.SEED_ADMIN_PASSWORD || 'admin0987';
 
 test.describe('Error Handling', () => {
   test('unknown frontend route loads without crashing', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
+    await page.locator('[data-testid="button-login-institution"]').click();
     const usernameInput = page.locator('input[type="text"], input[name="username"], input[placeholder*="user" i]').first();
     const passwordInput = page.locator('input[type="password"]').first();
     await usernameInput.waitFor({ timeout: 15000 });

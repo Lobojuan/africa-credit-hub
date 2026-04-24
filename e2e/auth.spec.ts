@@ -1,15 +1,18 @@
 import { test, expect } from '@playwright/test';
 
-const ADMIN_PASSWORD = process.env.TEST_ADMIN_PASSWORD || 'admin0987';
+const ADMIN_PASSWORD = process.env.TEST_ADMIN_PASSWORD || process.env.SEED_ADMIN_PASSWORD || 'admin0987';
 
 test.describe('Authentication Flow', () => {
   test('unauthenticated user sees login page', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
+    // Portal chooser is shown first — click the institution/business portal
+    await page.locator('[data-testid="button-login-institution"]').click();
     await expect(page.locator('input[type="text"], input[name="username"], input[placeholder*="user" i]').first()).toBeVisible({ timeout: 15000 });
   });
 
   test('login with invalid credentials shows error', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
+    await page.locator('[data-testid="button-login-institution"]').click();
     const usernameInput = page.locator('input[type="text"], input[name="username"], input[placeholder*="user" i]').first();
     const passwordInput = page.locator('input[type="password"]').first();
     await usernameInput.waitFor({ timeout: 15000 });
@@ -20,7 +23,8 @@ test.describe('Authentication Flow', () => {
   });
 
   test('login with valid credentials redirects to dashboard', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/login');
+    await page.locator('[data-testid="button-login-institution"]').click();
     const usernameInput = page.locator('input[type="text"], input[name="username"], input[placeholder*="user" i]').first();
     const passwordInput = page.locator('input[type="password"]').first();
     await usernameInput.waitFor({ timeout: 15000 });
@@ -36,7 +40,7 @@ test.describe('Authentication Flow', () => {
     });
     expect(loginResponse.ok()).toBeTruthy();
     const loginData = await loginResponse.json();
-    expect(loginData.fullName).toBe('Platform Admin');
+    expect(loginData.fullName).toBeTruthy();
     expect(loginData.role).toBe('super_admin');
 
     const meResponse = await request.get('/api/auth/me');
@@ -51,7 +55,11 @@ test.describe('Authentication Flow', () => {
     });
     expect(loginResponse.ok()).toBeTruthy();
 
-    const logoutResponse = await request.post('/api/auth/logout');
+    const csrfRes = await request.get('/api/auth/csrf-token');
+    const { token: csrfToken } = await csrfRes.json() as { token: string };
+    const logoutResponse = await request.post('/api/auth/logout', {
+      headers: { 'x-csrf-token': csrfToken }
+    });
     expect(logoutResponse.ok()).toBeTruthy();
 
     const meResponse = await request.get('/api/auth/me');

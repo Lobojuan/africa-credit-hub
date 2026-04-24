@@ -1,6 +1,6 @@
 import { chromium, FullConfig } from '@playwright/test';
 
-const ADMIN_PASSWORD = process.env.TEST_ADMIN_PASSWORD || 'admin0987';
+const ADMIN_PASSWORD = process.env.TEST_ADMIN_PASSWORD || process.env.SEED_ADMIN_PASSWORD || 'admin0987';
 const CHECKER_USERNAME = 'e2e_checker_test';
 const CHECKER_PASSWORD = 'checker0987';
 

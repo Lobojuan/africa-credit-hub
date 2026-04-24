@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const ADMIN_PASSWORD = process.env.TEST_ADMIN_PASSWORD || 'admin0987';
+const ADMIN_PASSWORD = process.env.TEST_ADMIN_PASSWORD || process.env.SEED_ADMIN_PASSWORD || 'admin0987';
 
 interface HealthResponse {
   status: string;
