@@ -1246,9 +1246,125 @@ function RegisterCollateralDialog({
 
 // ─── Lien Search Panel ────────────────────────────────────────────────────────
 
+function LienDetailSheet({ lien, open, onClose }: { lien: SearchResultItem | null; open: boolean; onClose: () => void }) {
+  if (!lien) return null;
+
+  const Field = ({ icon, label, value }: { icon?: ReactNode; label: string; value?: string | number | boolean | null }) => {
+    const display = value === null || value === undefined || value === ""
+      ? "—"
+      : typeof value === "boolean"
+      ? (value ? "Yes" : "No")
+      : String(value);
+    return (
+      <div className="flex flex-col gap-0.5">
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          {icon}
+          <span>{label}</span>
+        </div>
+        <div className="text-sm font-medium">{display}</div>
+      </div>
+    );
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={v => { if (!v) onClose(); }}>
+      <SheetContent className="w-full sm:max-w-md overflow-y-auto" data-testid="sheet-lien-detail">
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2">
+            <Shield className="w-5 h-5 text-primary" />
+            Lien Details
+          </SheetTitle>
+        </SheetHeader>
+
+        <div className="mt-4 space-y-5">
+          {/* Priority & PMSI */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <PriorityBadge rank={lien.lienPriority ?? null} />
+            {lien.isPmsi && <PmsiTag />}
+            {!lien.isPmsi && (
+              <span className="text-xs text-muted-foreground">No PMSI</span>
+            )}
+          </div>
+
+          <Separator />
+
+          {/* Registration */}
+          <div>
+            <div className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-3">Registration</div>
+            <div className="grid grid-cols-1 gap-3">
+              <Field
+                icon={<Award className="w-3 h-3" />}
+                label="Certificate Number"
+                value={lien.certificateNumber}
+              />
+              <Field
+                icon={<Calendar className="w-3 h-3" />}
+                label="Registration Date"
+                value={lien.registrationDate}
+              />
+              <Field
+                icon={<Clock className="w-3 h-3" />}
+                label="Expiry Date"
+                value={lien.expiryDate || "No expiry"}
+              />
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Lien Holder */}
+          <div>
+            <div className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-3">Lien Holder</div>
+            <div className="grid grid-cols-1 gap-3">
+              <Field
+                icon={<Building2 className="w-3 h-3" />}
+                label="Institution"
+                value={lien.lenderInstitutionName || lien.lenderOrganizationId}
+              />
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Collateral */}
+          <div>
+            <div className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-3">Collateral</div>
+            <div className="grid grid-cols-1 gap-3">
+              <Field
+                icon={<Package className="w-3 h-3" />}
+                label="Collateral Type"
+                value={lien.collateralType?.replace(/_/g, " ")}
+              />
+              <Field
+                icon={<TrendingUp className="w-3 h-3" />}
+                label="Estimated Value"
+                value={formatCurrency(lien.estimatedValue, lien.currency)}
+              />
+              <Field
+                icon={<Zap className="w-3 h-3" />}
+                label="PMSI (Purchase Money Super Priority)"
+                value={lien.isPmsi}
+              />
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+            <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+              This information is sourced from the public collateral registry. Grantor identifiers and other sensitive details are not disclosed in cross-institution search results.
+            </p>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 function LienSearchPanel() {
   const [assetId, setAssetId] = useState("");
   const [searched, setSearched] = useState(false);
+  const [selectedLien, setSelectedLien] = useState<SearchResultItem | null>(null);
 
   const { data: results = [], isLoading, refetch } = useQuery<SearchResultItem[]>({
     queryKey: ["/api/collateral/search", assetId],
@@ -1259,6 +1375,7 @@ function LienSearchPanel() {
   const handleSearch = () => {
     if (!assetId.trim()) return;
     setSearched(true);
+    setSelectedLien(null);
     refetch();
   };
 
@@ -1300,6 +1417,7 @@ function LienSearchPanel() {
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-amber-500" />
                 <p className="text-sm font-medium text-amber-700">{results.length} registered lien{results.length !== 1 ? "s" : ""} found on this asset</p>
+                <span className="text-xs text-muted-foreground ml-auto">Click a row to view details</span>
               </div>
               <div className="overflow-x-auto rounded-lg border">
                 <Table>
@@ -1317,7 +1435,12 @@ function LienSearchPanel() {
                   </TableHeader>
                   <TableBody>
                     {results.map((r) => (
-                      <TableRow key={r.id} data-testid={`row-lien-result-${r.id}`}>
+                      <TableRow
+                        key={r.id}
+                        data-testid={`row-lien-result-${r.id}`}
+                        className="cursor-pointer hover:bg-muted/60 transition-colors"
+                        onClick={() => setSelectedLien(r)}
+                      >
                         <TableCell><PriorityBadge rank={r.lienPriority} /></TableCell>
                         <TableCell className="font-mono text-xs">{r.certificateNumber || "—"}</TableCell>
                         <TableCell className="text-sm font-medium">{r.lenderInstitutionName || r.lenderOrganizationId}</TableCell>
@@ -1335,6 +1458,12 @@ function LienSearchPanel() {
           )}
         </div>
       )}
+
+      <LienDetailSheet
+        lien={selectedLien}
+        open={selectedLien !== null}
+        onClose={() => setSelectedLien(null)}
+      />
     </div>
   );
 }
