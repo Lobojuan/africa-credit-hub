@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
@@ -210,6 +210,8 @@ function ShareVerificationLinkDialog({ item }: { item: CollateralRegistryItem })
   const [channel, setChannel] = useState<"email" | "sms">("email");
   const [recipient, setRecipient] = useState("");
   const [personalMessage, setPersonalMessage] = useState("");
+  const [senderFilter, setSenderFilter] = useState<string>("__all__");
+
   const shareLogQuery = useQuery<ShareLogEntry[]>({
     queryKey: ["/api/collateral", item.id, "share-log"],
     queryFn: () => apiRequest("GET", `/api/collateral/${item.id}/share-log`).then(r => r.json()),
@@ -243,8 +245,26 @@ function ShareVerificationLinkDialog({ item }: { item: CollateralRegistryItem })
 
   const shareLog = shareLogQuery.data ?? [];
 
+  const uniqueSenders = Array.from(
+    new Map(
+      shareLog
+        .filter(e => e.senderName || e.sentBy)
+        .map(e => [e.sentBy ?? e.senderName, e.senderName ?? "Unknown user"] as [string, string])
+    ).entries()
+  );
+
+  useEffect(() => {
+    if (senderFilter !== "__all__" && !uniqueSenders.some(([key]) => key === senderFilter)) {
+      setSenderFilter("__all__");
+    }
+  }, [uniqueSenders, senderFilter]);
+
+  const filteredLog = senderFilter === "__all__"
+    ? shareLog
+    : shareLog.filter(e => (e.sentBy ?? e.senderName) === senderFilter);
+
   return (
-    <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) { setRecipient(""); setPersonalMessage(""); } }}>
+    <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) { setRecipient(""); setPersonalMessage(""); setSenderFilter("__all__"); } }}>
       <DialogTrigger asChild>
         <Button
           variant="ghost"
@@ -335,22 +355,41 @@ function ShareVerificationLinkDialog({ item }: { item: CollateralRegistryItem })
 
           {shareLog.length > 0 && (
             <div className="border-t pt-3 space-y-2" data-testid="share-history">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                   <History className="w-4 h-4" />
-                  Share history ({shareLog.length} recipient{shareLog.length !== 1 ? "s" : ""})
+                  Share history ({filteredLog.length}{filteredLog.length !== shareLog.length ? ` of ${shareLog.length}` : ""} entr{filteredLog.length !== 1 ? "ies" : "y"})
                 </div>
-                <a
-                  href={`/api/collateral/${item.id}/share-log/export`}
-                  download
-                  data-testid="btn-export-share-history-csv"
-                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                >
-                  <Download className="w-3 h-3" /> Export CSV
-                </a>
+                <div className="flex items-center gap-2">
+                  {uniqueSenders.length > 1 && (
+                    <select
+                      value={senderFilter}
+                      onChange={e => setSenderFilter(e.target.value)}
+                      data-testid="select-sender-filter"
+                      className="text-xs rounded border border-input bg-background px-2 py-1 text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    >
+                      <option value="__all__">All senders</option>
+                      {uniqueSenders.map(([key, name]) => (
+                        <option key={key} value={key}>{name}</option>
+                      ))}
+                    </select>
+                  )}
+                  <a
+                    href={`/api/collateral/${item.id}/share-log/export`}
+                    download
+                    data-testid="btn-export-share-history-csv"
+                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                  >
+                    <Download className="w-3 h-3" /> Export CSV
+                  </a>
+                </div>
               </div>
               <div className="space-y-1 max-h-40 overflow-y-auto">
-                {shareLog.map(entry => (
+                {filteredLog.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-2" data-testid="share-history-empty">
+                    No entries match this filter.
+                  </p>
+                ) : filteredLog.map(entry => (
                   <div
                     key={entry.id}
                     className="flex flex-col gap-0.5 text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1.5"
