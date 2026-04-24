@@ -81,7 +81,7 @@ import {
 
 export function requireCountryScope(country: string | string[] | undefined, methodName: string): void {
   if (!country || (Array.isArray(country) && country.length === 0)) {
-    console.warn(`[CountryScope] No country filter for ${methodName} — returning unscoped data (super_admin context)`);
+    throw new Error(`Country scope required for ${methodName}`);
   }
 }
 

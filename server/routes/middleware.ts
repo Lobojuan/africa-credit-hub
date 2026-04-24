@@ -246,9 +246,9 @@ export function getCountryFilter(req?: Request): string | undefined {
 
   if (req?.session?.userRole === "super_admin") {
     if (hasExplicit) return explicitCountry;
-    if (!req.session.viewingCountry) return undefined;
-    if (req.session.viewingCountry === "global") return undefined;
-    return req.session.viewingCountry;
+    if (req.session.viewingCountry && req.session.viewingCountry !== "global") return req.session.viewingCountry;
+    // Global/unset super_admin view: fall back to the platform's active country
+    return getActiveCountryName() || undefined;
   }
   if (req?.session?.userCountry) {
     return req.session.userCountry;
