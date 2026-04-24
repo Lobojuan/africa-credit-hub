@@ -67,7 +67,7 @@ import * as OTPAuth from "otpauth";
 import multer from "multer";
 import rateLimit from "express-rate-limit";
 import { isGhanaMode, getActiveCountryName, isSingleCountryMode, COUNTRY_REGISTRY, getSupportedCountries } from "./country-mode";
-import { sendWelcomeEmail, sendBillingNotification, sendDisputeNotification, sendNewRegistrationAlert, sendConsumerOtpEmail, sendConsumerVerificationLink, sendContactSalesEmail, sendRegistryAuthorityWelcomeEmail, sendCertificateEmail, sendLienApprovalEmail, sendLienRejectionEmail } from "./email";
+import { sendWelcomeEmail, sendBillingNotification, sendDisputeNotification, sendNewRegistrationAlert, sendConsumerOtpEmail, sendConsumerVerificationLink, sendContactSalesEmail, sendRegistryAuthorityWelcomeEmail, sendCertificateEmail, sendLienApprovalEmail, sendLienRejectionEmail, sendCollateralVerificationLinkEmail } from "./email";
 import { sendSms, sendOtpSms, isSmsConfigured } from "./sms";
 import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport, generatePortfolioIntelligence, parseProvider, parseOptionalProvider, generateCreditNarrative, detectAnomalies, generateRegulatoryReport, naturalLanguageQuery, analyzeCrossBorderRisk, generateLoanRecommendation, generateCreditInsights, callAI, parseJSON, generateAIResponse } from "./ai";
 import { BOG_EXPORT_GENERATORS } from "./bog-export";
@@ -14981,6 +14981,56 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const updated = await storage.dischargeCollateralItem(req.params.id);
       if (!updated) return res.status(404).json({ message: "Not found" });
       res.json(updated);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // Share verification link via email or SMS
+  app.post("/api/collateral/:id/share", requireRole("admin", "super_admin", "lender"), async (req, res) => {
+    try {
+      const { channel, recipient } = req.body as { channel: "email" | "sms"; recipient: string };
+      if (!channel || !recipient) return res.status(400).json({ message: "channel and recipient are required" });
+      if (channel !== "email" && channel !== "sms") return res.status(400).json({ message: "channel must be 'email' or 'sms'" });
+
+      const item = await storage.getCollateralItem(req.params.id);
+      if (!item) return res.status(404).json({ message: "Not found" });
+      if (item.approvalStatus !== "approved") return res.status(400).json({ message: "Collateral is not approved" });
+      if (!item.verificationCode) return res.status(400).json({ message: "No verification code available" });
+
+      const orgId = (req.session as any)?.organizationId;
+      if (item.organizationId && orgId && String(item.organizationId) !== String(orgId)) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const origin = `${req.protocol}://${req.get("host")}`;
+      const verificationUrl = `${origin}/verify/${item.verificationCode}`;
+      const lenderName = (req.session as any)?.orgName || "Your Lender";
+      const borrowerName = (item as any).borrowerName || "Borrower";
+      const description = (item as any).description || (item as any).collateralType || "Registered Security Interest";
+
+      let sent = false;
+      if (channel === "email") {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
+          return res.status(400).json({ message: "Invalid email address" });
+        }
+        sent = await sendCollateralVerificationLinkEmail(recipient, lenderName, verificationUrl, description, borrowerName);
+        if (!sent) {
+          console.log(`[Collateral Share][Email Stub] Would send to ${recipient}: ${verificationUrl}`);
+          sent = true;
+        }
+      } else {
+        const phone = recipient.replace(/\s/g, "");
+        if (!/^\+?[0-9]{7,15}$/.test(phone)) {
+          return res.status(400).json({ message: "Invalid phone number" });
+        }
+        const smsText = `${lenderName} shared a collateral verification link with you.\n\nBorrower: ${borrowerName}\nCollateral: ${description.substring(0, 60)}\n\nVerify at: ${verificationUrl}\n\n- Africa Credit Hub`;
+        sent = await sendSms(phone, smsText);
+        if (!sent) {
+          console.log(`[Collateral Share][SMS Stub] Would send to ${phone}: ${verificationUrl}`);
+          sent = true;
+        }
+      }
+
+      res.json({ success: sent, channel, recipient });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 

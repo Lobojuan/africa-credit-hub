@@ -699,6 +699,34 @@ export async function sendLienRejectionEmail(
   );
 }
 
+export async function sendCollateralVerificationLinkEmail(
+  to: string,
+  lenderName: string,
+  verificationUrl: string,
+  collateralDescription: string,
+  borrowerName: string,
+): Promise<boolean> {
+  const body = `
+    <p style="color:#333;font-size:14px;line-height:1.6;">
+      <strong>${esc(lenderName)}</strong> has shared a collateral verification link with you via the Pan-African Credit Registry.
+    </p>
+    <div style="background:#f0f9ff;border-radius:8px;padding:16px 20px;margin:16px 0;border-left:4px solid #0ea5e9;">
+      <p style="margin:0 0 6px;font-size:13px;color:#555;"><strong>Borrower:</strong> ${esc(borrowerName)}</p>
+      <p style="margin:0;font-size:13px;color:#555;"><strong>Collateral:</strong> ${esc(collateralDescription)}</p>
+    </div>
+    <p style="color:#333;font-size:14px;line-height:1.6;">
+      Click the button below to verify the authenticity and status of this registered security interest on the public registry.
+    </p>
+    <a href="${verificationUrl}" style="display:inline-block;background:#1a1a2e;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:14px;margin-top:8px;">Verify Registration</a>
+    <p style="color:#888;font-size:12px;margin-top:16px;">Or copy this link: <a href="${verificationUrl}" style="color:#0ea5e9;">${verificationUrl}</a></p>
+  `;
+  return sendEmail(
+    to,
+    `Collateral Verification Link — ${lenderName}`,
+    createEmailHtml("Collateral Verification", body),
+  );
+}
+
 export function isEmailConfigured(): boolean {
   return emailConfigured;
 }

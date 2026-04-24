@@ -20,6 +20,7 @@ import {
   Award, Clock, CheckCircle2, XCircle, AlertTriangle,
   Download, Shield, Zap, Star, TrendingUp, Package, Link2,
   Eye, CheckCircle, Building2, User, Tag, Calendar, ExternalLink,
+  Share2, Mail, MessageSquare,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -175,6 +176,120 @@ function PmsiTag() {
     <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-violet-100 text-violet-800" title="Purchase Money Security Interest — Super Priority">
       <Zap className="w-3 h-3" /> PMSI
     </span>
+  );
+}
+
+// ─── Share Verification Link Dialog ──────────────────────────────────────────
+
+function ShareVerificationLinkDialog({ item }: { item: CollateralRegistryItem }) {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [channel, setChannel] = useState<"email" | "sms">("email");
+  const [recipient, setRecipient] = useState("");
+
+  const shareMutation = useMutation({
+    mutationFn: ({ channel, recipient }: { channel: "email" | "sms"; recipient: string }) =>
+      apiRequest("POST", `/api/collateral/${item.id}/share`, { channel, recipient }),
+    onSuccess: () => {
+      toast({
+        title: "Verification link sent",
+        description: channel === "email"
+          ? `Email sent to ${recipient}`
+          : `SMS sent to ${recipient}`,
+      });
+      setOpen(false);
+      setRecipient("");
+    },
+    onError: (e: Error) => toast({ title: "Failed to send", description: e.message, variant: "destructive" }),
+  });
+
+  const handleSend = () => {
+    if (!recipient.trim()) {
+      toast({ title: "Recipient required", description: "Please enter an email address or phone number.", variant: "destructive" });
+      return;
+    }
+    shareMutation.mutate({ channel, recipient: recipient.trim() });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) setRecipient(""); }}>
+      <DialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          title="Share verification link"
+          data-testid={`btn-share-verify-link-${item.id}`}
+        >
+          <Share2 className="w-4 h-4 text-primary" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Share2 className="w-5 h-5 text-primary" /> Share Verification Link
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="p-3 rounded-lg bg-muted text-sm text-muted-foreground">
+            Share the public verification link for <strong>{item.borrowerName || "this borrower"}</strong>&apos;s
+            {" "}{item.collateralType?.replace(/_/g, " ")} registration so third parties can confirm it is officially registered.
+          </div>
+
+          <div>
+            <Label className="mb-2 block">Send via</Label>
+            <div className="flex gap-2">
+              <Button
+                variant={channel === "email" ? "default" : "outline"}
+                size="sm"
+                className="gap-2 flex-1"
+                onClick={() => { setChannel("email"); setRecipient(""); }}
+                data-testid="btn-channel-email"
+              >
+                <Mail className="w-4 h-4" /> Email
+              </Button>
+              <Button
+                variant={channel === "sms" ? "default" : "outline"}
+                size="sm"
+                className="gap-2 flex-1"
+                onClick={() => { setChannel("sms"); setRecipient(""); }}
+                data-testid="btn-channel-sms"
+              >
+                <MessageSquare className="w-4 h-4" /> SMS
+              </Button>
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="share-recipient">
+              {channel === "email" ? "Recipient email address" : "Recipient phone number"}
+            </Label>
+            <Input
+              id="share-recipient"
+              data-testid="input-share-recipient"
+              placeholder={channel === "email" ? "name@example.com" : "+233 24 000 0000"}
+              type={channel === "email" ? "email" : "tel"}
+              value={recipient}
+              onChange={e => setRecipient(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") handleSend(); }}
+              className="mt-1"
+            />
+          </div>
+
+          <div className="flex gap-2 justify-end pt-2 border-t">
+            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button
+              onClick={handleSend}
+              disabled={shareMutation.isPending}
+              data-testid="btn-send-share"
+              className="gap-2"
+            >
+              {channel === "email" ? <Mail className="w-4 h-4" /> : <MessageSquare className="w-4 h-4" />}
+              {shareMutation.isPending ? "Sending…" : `Send via ${channel === "email" ? "Email" : "SMS"}`}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -913,6 +1028,7 @@ function MyRegistrations() {
                                     <Link2 className="w-4 h-4 text-primary" />
                                   </Button>
                                   <VerificationPreviewPopover item={item} />
+                                  <ShareVerificationLinkDialog item={item} />
                                 </>
                               )}
                             </>
