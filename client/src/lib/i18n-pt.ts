@@ -1,5 +1,7 @@
-import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
+import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } from "@/lib/platform-config";
 const CO = PLATFORM_COMPANY_NAME;
+const CO_AUTHOR = PLATFORM_ADMIN_NAME;
+const CO_REF = PLATFORM_REGISTRY_REF;
 
 const pt = {
   sidebar: {
@@ -1587,7 +1589,7 @@ const pt = {
     scope6: "Especificações de API e protocolos de integração",
     scope7: "Toda a documentação e materiais de formação",
     ownershipTitle: "Propriedade",
-    ownershipP1: `Todos os direitos, títulos e interesses na Plataforma são <strong>propriedade exclusiva da ${CO}</strong>, originalmente criada e desenvolvida por <strong>Uffe Jon Carlson</strong> (Fundador &amp; Arquiteto Principal), através da Carlson Capital &amp; Systems In Motion Limited, constituída na República do Gana.`,
+    ownershipP1: `Todos os direitos, títulos e interesses na Plataforma são <strong>propriedade exclusiva da ${CO}</strong>, originalmente criada e desenvolvida por <strong>${CO_AUTHOR}</strong> (Fundador &amp; Arquiteto Principal), através da ${CO}, constituída na República do Gana.`,
     ownershipP2: "Nenhuma transferência de propriedade será implícita de qualquer acordo de licença, contrato de serviço ou acordo de implementação, salvo indicação expressa em acordo escrito separado.",
     ownershipP3: "Obras criadas por funcionários, contratados ou consultores no âmbito do desenvolvimento da Plataforma são \"obras feitas por encomenda\" com direitos autorais atribuídos à Empresa.",
     jurisdictionTitle: "Cobertura Jurisdicional",
@@ -1653,8 +1655,8 @@ const pt = {
     termP1: "Ao abrigo da Lei de Direitos Autorais do Gana de 2005, os direitos autorais de uma obra feita por uma pessoa coletiva duram <strong>setenta (70) anos</strong> a partir da data de primeira publicação. Data de primeira publicação: <strong>janeiro de 2024</strong>.",
     termP2: "A proteção de segredo comercial continua indefinidamente enquanto a informação permanecer confidencial e derivar valor económico do seu sigilo.",
     contactTitle: "Contacto — Departamento de Propriedade Intelectual",
-    contactCompany: `Africa Credit Hub — Carlson Capital & Systems In Motion Limited`,
-    contactLocation: `Fundador: Uffe Jon Carlson | Acra, República do Gana | Ref. PI: CDH-IP-2026-UJC-001`,
+    contactCompany: `Africa Credit Hub — ${CO}`,
+    contactLocation: `Fundador: ${CO_AUTHOR} | Acra, República do Gana | Ref. PI: ${CO_REF}`,
     contactDesc: "Para consultas de licenciamento, questões de direitos autorais ou denúncias de infração, contacte a Empresa através dos canais oficiais.",
     downloadComplete: "Descarregar Documento Completo de Direitos Autorais (PDF)",
     downloadNote: "O PDF descarregável contém o documento jurídico completo de 15 secções com páginas de assinatura.",

@@ -1,12 +1,14 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
-import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
+import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } from "@/lib/platform-config";
 import pt from "./i18n-pt";
 import ar from "./i18n-ar";
 import sw from "./i18n-sw";
 
 const CO = PLATFORM_COMPANY_NAME;
+const CO_AUTHOR = PLATFORM_ADMIN_NAME;
+const CO_REF = PLATFORM_REGISTRY_REF;
 
 const en = {
   sidebar: {
@@ -1523,7 +1525,7 @@ const en = {
     scope6: "API specifications & integration protocols",
     scope7: "All documentation & training materials",
     ownershipTitle: "Ownership",
-    ownershipP1: `All rights, title, and interest in the Platform are the <strong>exclusive property of ${CO}</strong>, originally created and authored by <strong>Uffe Jon Carlson</strong> (Founder &amp; Lead Architect), trading through Carlson Capital &amp; Systems In Motion Limited, incorporated in the Republic of Ghana.`,
+    ownershipP1: `All rights, title, and interest in the Platform are the <strong>exclusive property of ${CO}</strong>, originally created and authored by <strong>${CO_AUTHOR}</strong> (Founder &amp; Lead Architect), trading through ${CO}, incorporated in the Republic of Ghana.`,
     ownershipP2: "No transfer of ownership shall be implied from any license agreement, service contract, or deployment arrangement unless expressly stated in a separate written agreement.",
     ownershipP3: "Works created by employees, contractors, or consultants in the course of developing the Platform are \"works made for hire\" with copyright vesting in the Company.",
     jurisdictionTitle: "Jurisdictional Coverage",
@@ -1589,8 +1591,8 @@ const en = {
     termP1: "Under Ghana's Copyright Act, 2005, copyright in a work made by a body corporate endures for <strong>seventy (70) years</strong> from the date of first publication. First publication date: <strong>January 2024</strong>.",
     termP2: "Trade secret protection continues indefinitely for so long as the information remains confidential and derives economic value from its secrecy.",
     contactTitle: "Contact — Intellectual Property Department",
-    contactCompany: `Africa Credit Hub — Carlson Capital & Systems In Motion Limited`,
-    contactLocation: `Founder: Uffe Jon Carlson | Accra, Republic of Ghana | IP Ref: CDH-IP-2026-UJC-001`,
+    contactCompany: `Africa Credit Hub — ${CO}`,
+    contactLocation: `Founder: ${CO_AUTHOR} | Accra, Republic of Ghana | IP Ref: ${CO_REF}`,
     contactDesc: "For licensing inquiries, copyright matters, or infringement reports, please contact the Company through official channels.",
     downloadComplete: "Download Complete Copyright Document (PDF)",
     downloadNote: "The downloadable PDF contains the full 15-section legal document with signature pages.",
@@ -3815,7 +3817,7 @@ const fr: typeof en = {
     scope6: "Spécifications API et protocoles d'intégration",
     scope7: "Toute la documentation et les matériaux de formation",
     ownershipTitle: "Propriété",
-    ownershipP1: `Tous les droits, titres et intérêts dans la Plateforme sont la <strong>propriété exclusive de ${CO}</strong>, initialement créée et conçue par <strong>Uffe Jon Carlson</strong> (Fondateur &amp; Architecte Principal), via Carlson Capital &amp; Systems In Motion Limited, constituée en République du Ghana.`,
+    ownershipP1: `Tous les droits, titres et intérêts dans la Plateforme sont la <strong>propriété exclusive de ${CO}</strong>, initialement créée et conçue par <strong>${CO_AUTHOR}</strong> (Fondateur &amp; Architecte Principal), via ${CO}, constituée en République du Ghana.`,
     ownershipP2: "Aucun transfert de propriété ne sera implicite dans tout accord de licence, contrat de service ou arrangement de déploiement, sauf indication expresse dans un accord écrit séparé.",
     ownershipP3: "Les œuvres créées par les employés, contractants ou consultants dans le cadre du développement de la Plateforme sont des « œuvres faites pour le compte » avec le droit d'auteur revenant à la Société.",
     jurisdictionTitle: "Couverture Juridictionnelle",
@@ -3881,8 +3883,8 @@ const fr: typeof en = {
     termP1: "En vertu de la loi sur le droit d'auteur du Ghana de 2005, le droit d'auteur d'une œuvre réalisée par une personne morale dure <strong>soixante-dix (70) ans</strong> à compter de la date de première publication. Date de première publication : <strong>janvier 2024</strong>.",
     termP2: "La protection du secret commercial se poursuit indéfiniment tant que l'information reste confidentielle et tire une valeur économique de son secret.",
     contactTitle: "Contact — Département de Propriété Intellectuelle",
-    contactCompany: `Africa Credit Hub — Carlson Capital & Systems In Motion Limited`,
-    contactLocation: `Fondateur: Uffe Jon Carlson | Accra, République du Ghana | Réf. PI: CDH-IP-2026-UJC-001`,
+    contactCompany: `Africa Credit Hub — ${CO}`,
+    contactLocation: `Fondateur: ${CO_AUTHOR} | Accra, République du Ghana | Réf. PI: ${CO_REF}`,
     contactDesc: "Pour les demandes de licence, les questions de droit d'auteur ou les signalements de contrefaçon, veuillez contacter la Société par les canaux officiels.",
     downloadComplete: "Télécharger le Document de Droit d'Auteur Complet (PDF)",
     downloadNote: "Le PDF téléchargeable contient le document juridique complet de 15 sections avec les pages de signature.",
