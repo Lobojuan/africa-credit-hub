@@ -680,7 +680,7 @@ function MyRegistrations() {
                     <TableHead>Identifier</TableHead>
                     <TableHead className="text-right">Value</TableHead>
                     <TableHead>Expiry</TableHead>
-                    <TableHead>Approval</TableHead>
+                    <TableHead>Status / Certificate</TableHead>
                     <TableHead>Flags</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -709,18 +709,33 @@ function MyRegistrations() {
                           item.expiryDate || (item.financingDuration === "7_years" ? "7 yr" : item.financingDuration?.replace("_", " ") || "—")}
                       </TableCell>
                       <TableCell>
-                        <Badge className={`text-xs ${APPROVAL_COLORS[item.approvalStatus] || "bg-gray-100 text-gray-600"}`}>
-                          {item.approvalStatus === "approved" ? <CheckCircle2 className="w-3 h-3 inline mr-1" /> :
-                            item.approvalStatus === "rejected" ? <XCircle className="w-3 h-3 inline mr-1" /> :
-                            <Clock className="w-3 h-3 inline mr-1" />}
-                          {item.approvalStatus}
-                        </Badge>
-                        {item.approvalStatus === "approved" && item.certificateNumber && (
-                          <div className="text-xs text-muted-foreground mt-0.5 font-mono">{item.certificateNumber}</div>
-                        )}
-                        {item.approvalStatus === "rejected" && item.rejectionReason && (
-                          <div className="text-xs text-red-500 mt-0.5 max-w-[120px] truncate" title={item.rejectionReason}>{item.rejectionReason}</div>
-                        )}
+                        <div className="space-y-1.5">
+                          <Badge className={`text-xs ${APPROVAL_COLORS[item.approvalStatus] || "bg-gray-100 text-gray-600"}`}>
+                            {item.approvalStatus === "approved" ? <CheckCircle2 className="w-3 h-3 inline mr-1" /> :
+                              item.approvalStatus === "rejected" ? <XCircle className="w-3 h-3 inline mr-1" /> :
+                              <Clock className="w-3 h-3 inline mr-1" />}
+                            {item.approvalStatus}
+                          </Badge>
+                          {item.approvalStatus === "approved" && item.certificateNumber && (
+                            <div
+                              className="flex items-center gap-1 text-xs font-semibold font-mono text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded px-1.5 py-0.5 w-fit"
+                              data-testid={`cert-number-${item.id}`}
+                            >
+                              <Award className="w-3 h-3 flex-shrink-0" />
+                              {item.certificateNumber}
+                            </div>
+                          )}
+                          {item.approvalStatus === "rejected" && item.rejectionReason && (
+                            <div
+                              className="flex items-start gap-1 text-xs text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded px-1.5 py-0.5 max-w-[160px]"
+                              title={item.rejectionReason}
+                              data-testid={`rejection-reason-${item.id}`}
+                            >
+                              <XCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                              <span className="break-words">{item.rejectionReason}</span>
+                            </div>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1 flex-wrap">
@@ -737,13 +752,15 @@ function MyRegistrations() {
                           {item.approvalStatus === "approved" && (
                             <>
                               <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
                                 onClick={() => downloadCertificate(item)}
-                                title="Download Certificate"
+                                title="Download PDF Certificate"
                                 data-testid={`btn-download-cert-${item.id}`}
+                                className="gap-1.5 text-xs h-7 px-2 text-primary border-primary/30 hover:bg-primary/5"
                               >
-                                <Download className="w-4 h-4 text-primary" />
+                                <Download className="w-3.5 h-3.5" />
+                                Certificate
                               </Button>
                               {item.verificationCode && (
                                 <Button
