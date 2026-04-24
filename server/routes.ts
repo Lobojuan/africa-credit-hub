@@ -14984,8 +14984,57 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
           Object.entries(req.body).filter(([k]) => LENDER_EDITABLE_FIELDS.includes(k))
         );
       }
+      // Capture changed fields (before → after) for the amendment log
+      const changedFields: Record<string, { from: unknown; to: unknown }> = {};
+      for (const [field, newVal] of Object.entries(patchData)) {
+        const oldVal = (item as Record<string, unknown>)[field];
+        if (String(oldVal ?? "") !== String(newVal ?? "")) {
+          changedFields[field] = { from: oldVal ?? null, to: newVal ?? null };
+        }
+      }
+
       const updated = await storage.updateCollateralItem(req.params.id as string, patchData);
       if (!updated) return res.status(404).json({ message: "Not found" });
+
+      // Record amendment history (fire-and-forget if no fields changed)
+      if (Object.keys(changedFields).length > 0) {
+        const amendingUserId = req.session?.userId as string | undefined;
+        const amendingUserName = req.session?.userFullName as string | undefined;
+        storage.createCollateralAmendment({
+          collateralItemId: req.params.id,
+          amendedBy: amendingUserId ?? null,
+          amendedByName: amendingUserName ?? null,
+          changedFields: JSON.stringify(changedFields),
+        }).catch((err: any) => {
+          console.error(`[AmendmentLog] Failed to record amendment for collateral ${req.params.id}:`, err?.message || err);
+        });
+
+        // Notify RA users if the item is pending review
+        if (item.approvalStatus === "pending" && item.registryAuthorityId) {
+          (async () => {
+            try {
+              const raUsers = await db.select({ id: users.id }).from(users).where(eq(users.organizationId, item.registryAuthorityId!));
+              const assetDesc = updated.description || updated.collateralType || "Registered Asset";
+              const notifCountry = updated.countryCode || "GH";
+              await Promise.all(raUsers.map((ru: { id: string }) =>
+                storage.createNotification({
+                  userId: ru.id,
+                  type: "lien_amended",
+                  title: "Financing Statement Amended",
+                  message: `A pending financing statement for "${assetDesc}" (Reg: ${updated.registrationNumber}) has been amended by the lender. Please review the updated details.`,
+                  link: "/collateral-registry",
+                  country: notifCountry,
+                }).catch((e: any) => {
+                  console.error(`[AmendmentNotify] Failed to create notification for RA user ${ru.id}:`, e?.message || e);
+                })
+              ));
+            } catch (err: any) {
+              console.error(`[AmendmentNotify] Failed to notify RA for collateral ${req.params.id}:`, err?.message || err);
+            }
+          })();
+        }
+      }
+
       res.json(updated);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -15397,6 +15446,33 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       }
 
       const history = await storage.getCollateralRejectionHistory(req.params.id as string);
+      res.json(history);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // Amendment history — accessible by item owner, RA (same country), or super_admin
+  app.get("/api/collateral/:id/amendment-history", requireAuth, async (req, res) => {
+    try {
+      const item = await storage.getCollateralItem(req.params.id);
+      if (!item) return res.status(404).json({ message: "Not found" });
+
+      const isSuperAdmin = req.session?.userRole === "super_admin";
+      const orgId = req.session?.organizationId;
+      const isOwner = item.lenderOrganizationId === orgId;
+      const isRA = await isRegistryAuthority(req);
+
+      if (!isSuperAdmin && !isOwner) {
+        if (isRA) {
+          const callerCountry = await getCallerCountry(req);
+          if (!callerCountry || (item.countryCode && item.countryCode !== callerCountry)) {
+            return res.status(403).json({ message: "Access denied — cross-country access not permitted" });
+          }
+        } else {
+          return res.status(403).json({ message: "Access denied" });
+        }
+      }
+
+      const history = await storage.getCollateralAmendments(req.params.id);
       res.json(history);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });

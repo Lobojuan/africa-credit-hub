@@ -62,13 +62,14 @@ import {
   type RegistryHealthEvent, type InsertRegistryHealthEvent,
   trainingAttempts,
   type TrainingAttempt, type InsertTrainingAttempt,
-  loanApplications, loanRepaymentSchedules, collateralItems, collateralShareLog, collateralRejectionHistory, institutionBranding,
+  loanApplications, loanRepaymentSchedules, collateralItems, collateralShareLog, collateralRejectionHistory, collateralAmendments, institutionBranding,
   registryCountryConfig, collateralAmendmentRequests,
   type LoanApplication, type InsertLoanApplication,
   type LoanRepaymentSchedule, type InsertLoanRepaymentSchedule,
   type CollateralItem, type InsertCollateralItem,
   type CollateralShareLog, type InsertCollateralShareLog,
   type CollateralRejectionHistory, type InsertCollateralRejectionHistory,
+  type CollateralAmendment, type InsertCollateralAmendment,
   type InstitutionBranding, type InsertInstitutionBranding,
   type RegistryCountryConfig, type InsertRegistryCountryConfig,
   type CollateralAmendmentRequest, type InsertCollateralAmendmentRequest,
@@ -378,6 +379,8 @@ export interface IStorage {
   dischargeCollateralItem(id: string): Promise<CollateralItem | undefined>;
   createCollateralShareLog(data: InsertCollateralShareLog): Promise<CollateralShareLog>;
   getCollateralShareLog(collateralItemId: string): Promise<(CollateralShareLog & { senderName: string | null })[]>;
+  createCollateralAmendment(data: InsertCollateralAmendment): Promise<CollateralAmendment>;
+  getCollateralAmendments(collateralItemId: string): Promise<CollateralAmendment[]>;
   getCollateralRegulatoryReport(countryCode: string): Promise<{
     totalActive: number; totalValue: number;
     byInstitution: { orgId: string; orgName: string; count: number; value: number }[];
@@ -3131,6 +3134,19 @@ export class DatabaseStorage implements IStorage {
       .where(eq(collateralShareLog.collateralItemId, collateralItemId))
       .orderBy(desc(collateralShareLog.sentAt));
     return rows;
+  }
+
+  async createCollateralAmendment(data: InsertCollateralAmendment): Promise<CollateralAmendment> {
+    const [row] = await db.insert(collateralAmendments).values(data).returning();
+    return row;
+  }
+
+  async getCollateralAmendments(collateralItemId: string): Promise<CollateralAmendment[]> {
+    return await db
+      .select()
+      .from(collateralAmendments)
+      .where(eq(collateralAmendments.collateralItemId, collateralItemId))
+      .orderBy(desc(collateralAmendments.amendedAt));
   }
 
   async getCollateralRegulatoryReport(countryCode: string): Promise<{

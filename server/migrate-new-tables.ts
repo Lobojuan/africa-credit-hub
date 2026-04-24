@@ -794,5 +794,19 @@ export async function migrateNewTables() {
     END $$;
   `);
 
+  // Collateral Amendment History — immutable log of every amendment event on a financing statement
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS collateral_amendments (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    collateral_item_id varchar NOT NULL REFERENCES collateral_items(id) ON DELETE CASCADE,
+    amended_by varchar REFERENCES users(id),
+    amended_by_name text,
+    changed_fields text NOT NULL,
+    amended_at timestamp NOT NULL DEFAULT now()
+  )`);
+
+  // Index to speed up amendment history lookups by collateral item
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_collateral_amendments_item_id
+    ON collateral_amendments (collateral_item_id, amended_at DESC)`);
+
   console.log('[NewTables] Migration complete');
 }

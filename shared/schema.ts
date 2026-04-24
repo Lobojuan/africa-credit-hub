@@ -1879,6 +1879,23 @@ export type InsertCollateralRejectionHistory = z.infer<typeof insertCollateralRe
 export type CollateralRejectionHistory = typeof collateralRejectionHistory.$inferSelect;
 
 // ---------------------------------------------------------------------------
+// Collateral Amendment History — immutable log of every amendment event
+// ---------------------------------------------------------------------------
+
+export const collateralAmendments = pgTable("collateral_amendments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  collateralItemId: varchar("collateral_item_id").notNull().references(() => collateralItems.id, { onDelete: "cascade" }),
+  amendedBy: varchar("amended_by").references(() => users.id),
+  amendedByName: text("amended_by_name"),
+  changedFields: text("changed_fields").notNull(), // JSON: { field: { from, to } }
+  amendedAt: timestamp("amended_at").notNull().defaultNow(),
+});
+
+export const insertCollateralAmendmentSchema = createInsertSchema(collateralAmendments).omit({ id: true, amendedAt: true });
+export type InsertCollateralAmendment = z.infer<typeof insertCollateralAmendmentSchema>;
+export type CollateralAmendment = typeof collateralAmendments.$inferSelect;
+
+// ---------------------------------------------------------------------------
 // Collateral Share Log — tracks who received verification links and when
 // ---------------------------------------------------------------------------
 
