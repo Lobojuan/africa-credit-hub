@@ -699,6 +699,77 @@ export async function sendLienRejectionEmail(
   );
 }
 
+export async function sendLienEnforcementEmail(
+  lenderEmail: string,
+  lenderOrgName: string,
+  assetDescription: string,
+  baseUrl: string,
+): Promise<boolean> {
+  const portalUrl = `${baseUrl}/collateral-registry`;
+  const body = `
+    <p style="color:#333;font-size:14px;line-height:1.6;">
+      We are writing to inform you that one of your registered collateral items has been placed <strong style="color:#b45309;">in enforcement</strong> by the Registry Authority.
+    </p>
+    <div style="background:#fffbeb;border-radius:8px;padding:16px 20px;margin:16px 0;border-left:4px solid #d97706;">
+      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Organisation:</strong> ${esc(lenderOrgName)}</p>
+      <p style="margin:0;font-size:13px;color:#555;"><strong>Asset:</strong> ${esc(assetDescription)}</p>
+    </div>
+    <p style="color:#333;font-size:14px;line-height:1.6;">
+      <strong>What this means:</strong> The Registry Authority has initiated enforcement proceedings against this collateral. This typically occurs when a borrower has defaulted on their obligations and you as the secured party are entitled to exercise your rights under the registered security interest.
+    </p>
+    <p style="color:#333;font-size:14px;line-height:1.6;">
+      <strong>Recommended next steps:</strong>
+    </p>
+    <ul style="color:#333;font-size:14px;line-height:1.8;padding-left:20px;">
+      <li>Log in to the registry portal and review the full details of this collateral registration.</li>
+      <li>Consult your legal counsel regarding enforcement rights and procedures in the relevant jurisdiction.</li>
+      <li>Contact the Registry Authority if you require further clarification on the enforcement action.</li>
+    </ul>
+    <div style="text-align:center;margin:24px 0;">
+      <a href="${esc(portalUrl)}" style="display:inline-block;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:600;">View Collateral Portal</a>
+    </div>
+    <p style="color:#888;font-size:12px;margin-top:16px;">If you believe this enforcement action was raised in error, please contact the Registry Authority or our support team immediately.</p>
+  `;
+  return sendEmail(
+    lenderEmail,
+    `Collateral In Enforcement — Action May Be Required`,
+    createEmailHtml("Collateral Placed In Enforcement", body),
+  );
+}
+
+export async function sendLienReleaseEmail(
+  lenderEmail: string,
+  lenderOrgName: string,
+  assetDescription: string,
+  baseUrl: string,
+): Promise<boolean> {
+  const portalUrl = `${baseUrl}/collateral-registry`;
+  const body = `
+    <p style="color:#333;font-size:14px;line-height:1.6;">
+      We are writing to confirm that your collateral registration has been <strong style="color:#0369a1;">released / discharged</strong> by the Registry Authority.
+    </p>
+    <div style="background:#f0f9ff;border-radius:8px;padding:16px 20px;margin:16px 0;border-left:4px solid #0284c7;">
+      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Organisation:</strong> ${esc(lenderOrgName)}</p>
+      <p style="margin:0;font-size:13px;color:#555;"><strong>Asset:</strong> ${esc(assetDescription)}</p>
+    </div>
+    <p style="color:#333;font-size:14px;line-height:1.6;">
+      <strong>What this means:</strong> The security interest registered against this collateral has been formally discharged and is no longer enforceable. The asset is no longer encumbered by your lien in the Pan-African Collateral Registry.
+    </p>
+    <p style="color:#333;font-size:14px;line-height:1.6;">
+      Please update your internal records accordingly. If this release was not expected or was made in error, contact the Registry Authority as soon as possible.
+    </p>
+    <div style="text-align:center;margin:24px 0;">
+      <a href="${esc(portalUrl)}" style="display:inline-block;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:600;">View Collateral Portal</a>
+    </div>
+    <p style="color:#888;font-size:12px;margin-top:16px;">If you have any questions about this discharge, please contact the Registry Authority or our support team.</p>
+  `;
+  return sendEmail(
+    lenderEmail,
+    `Collateral Registration Released / Discharged`,
+    createEmailHtml("Collateral Registration Released", body),
+  );
+}
+
 export async function sendCollateralVerificationLinkEmail(
   to: string,
   lenderName: string,

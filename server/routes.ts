@@ -67,7 +67,7 @@ import * as OTPAuth from "otpauth";
 import multer from "multer";
 import rateLimit from "express-rate-limit";
 import { isGhanaMode, getActiveCountryName, isSingleCountryMode, COUNTRY_REGISTRY, getSupportedCountries } from "./country-mode";
-import { sendWelcomeEmail, sendBillingNotification, sendDisputeNotification, sendNewRegistrationAlert, sendConsumerOtpEmail, sendConsumerVerificationLink, sendContactSalesEmail, sendRegistryAuthorityWelcomeEmail, sendCertificateEmail, sendLienApprovalEmail, sendLienRejectionEmail, sendCollateralVerificationLinkEmail } from "./email";
+import { sendWelcomeEmail, sendBillingNotification, sendDisputeNotification, sendNewRegistrationAlert, sendConsumerOtpEmail, sendConsumerVerificationLink, sendContactSalesEmail, sendRegistryAuthorityWelcomeEmail, sendCertificateEmail, sendLienApprovalEmail, sendLienRejectionEmail, sendCollateralVerificationLinkEmail, sendLienEnforcementEmail, sendLienReleaseEmail } from "./email";
 import { sendSms, sendOtpSms, isSmsConfigured } from "./sms";
 import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport, generatePortfolioIntelligence, parseProvider, parseOptionalProvider, generateCreditNarrative, detectAnomalies, generateRegulatoryReport, naturalLanguageQuery, analyzeCrossBorderRisk, generateLoanRecommendation, generateCreditInsights, callAI, parseJSON, generateAIResponse } from "./ai";
 import { BOG_EXPORT_GENERATORS } from "./bog-export";
@@ -15136,6 +15136,24 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       }
       const updated = await storage.enforceCollateralItem(req.params.id);
       if (!updated) return res.status(404).json({ message: "Not found" });
+      // Fire-and-forget enforcement email to lender
+      if (item.lenderOrganizationId) {
+        storage.getOrganization(item.lenderOrganizationId).then((lenderOrg) => {
+          if (lenderOrg?.contactEmail) {
+            const assetDesc = item.description || item.collateralType || "Registered Asset";
+            sendLienEnforcementEmail(
+              lenderOrg.contactEmail,
+              lenderOrg.name,
+              assetDesc,
+              getBaseUrl(),
+            ).catch((err: any) => {
+              console.error(`[LienEmail] Failed to send enforcement email for collateral ${req.params.id}:`, err?.message || err);
+            });
+          }
+        }).catch((err: any) => {
+          console.error(`[LienEmail] Failed to fetch lender org for enforcement email (collateral ${req.params.id}):`, err?.message || err);
+        });
+      }
       res.json(updated);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -15160,6 +15178,24 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       }
       const updated = await storage.dischargeCollateralItem(req.params.id);
       if (!updated) return res.status(404).json({ message: "Not found" });
+      // Fire-and-forget release/discharge email to lender
+      if (item.lenderOrganizationId) {
+        storage.getOrganization(item.lenderOrganizationId).then((lenderOrg) => {
+          if (lenderOrg?.contactEmail) {
+            const assetDesc = item.description || item.collateralType || "Registered Asset";
+            sendLienReleaseEmail(
+              lenderOrg.contactEmail,
+              lenderOrg.name,
+              assetDesc,
+              getBaseUrl(),
+            ).catch((err: any) => {
+              console.error(`[LienEmail] Failed to send release email for collateral ${req.params.id}:`, err?.message || err);
+            });
+          }
+        }).catch((err: any) => {
+          console.error(`[LienEmail] Failed to fetch lender org for release email (collateral ${req.params.id}):`, err?.message || err);
+        });
+      }
       res.json(updated);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
