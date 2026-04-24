@@ -409,8 +409,23 @@ interface CertificatePreviewData {
 
 function CertificatePreviewDialog({ item }: { item: { id: string; registrationNumber?: string } }) {
   const [open, setOpen] = useState(false);
+  const [paperSize, setPaperSize] = useState<"A4" | "Letter">("A4");
+  const [orientation, setOrientation] = useState<"portrait" | "landscape">("portrait");
 
   const handlePrint = () => {
+    const styleId = "print-page-settings";
+    let style = document.getElementById(styleId) as HTMLStyleElement | null;
+    if (!style) {
+      style = document.createElement("style");
+      style.id = styleId;
+      document.head.appendChild(style);
+    }
+    style.textContent = `@page { size: ${paperSize} ${orientation}; margin: 12mm 10mm; }`;
+    const cleanup = () => {
+      style?.remove();
+      window.removeEventListener("afterprint", cleanup);
+    };
+    window.addEventListener("afterprint", cleanup);
     window.print();
   };
 
@@ -651,7 +666,35 @@ function CertificatePreviewDialog({ item }: { item: { id: string; registrationNu
             <Separator />
 
             {/* Actions */}
-            <div className="flex justify-end gap-2 pt-1 print:hidden">
+            <div className="print:hidden pt-1 space-y-3">
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Print settings</span>
+                <div className="flex items-center gap-1.5">
+                  <Label htmlFor="print-paper-size" className="text-xs text-muted-foreground whitespace-nowrap">Paper size</Label>
+                  <Select value={paperSize} onValueChange={(v) => setPaperSize(v as "A4" | "Letter")}>
+                    <SelectTrigger id="print-paper-size" className="h-7 text-xs w-24" data-testid="select-paper-size">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="A4">A4</SelectItem>
+                      <SelectItem value="Letter">Letter</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Label htmlFor="print-orientation" className="text-xs text-muted-foreground whitespace-nowrap">Orientation</Label>
+                  <Select value={orientation} onValueChange={(v) => setOrientation(v as "portrait" | "landscape")}>
+                    <SelectTrigger id="print-orientation" className="h-7 text-xs w-28" data-testid="select-orientation">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="portrait">Portrait</SelectItem>
+                      <SelectItem value="landscape">Landscape</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setOpen(false)} data-testid="btn-close-preview">
                 Close
               </Button>
@@ -666,6 +709,7 @@ function CertificatePreviewDialog({ item }: { item: { id: string; registrationNu
                 <Download className="w-4 h-4 mr-2" />
                 Download PDF
               </Button>
+            </div>
             </div>
           </div>
         )}
