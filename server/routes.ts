@@ -49,6 +49,7 @@ import {
   collateralItems,
   collateralAmendmentRequests,
   type InsertCollateralItem,
+  type CollateralItem,
 } from "@shared/schema";
 import { processIFFData, detectIFFType, type IFFType } from "./iff-processor";
 import bcrypt from "bcryptjs";
@@ -14518,11 +14519,18 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const uniqueOrgIds = [...new Set(items.map(i => i.lenderOrganizationId).filter(Boolean))] as string[];
       const orgLookups = await Promise.all(uniqueOrgIds.map(id => storage.getOrganization(id)));
       const orgMap = new Map(orgLookups.filter(Boolean).map(o => [o!.id, o!.name]));
+      // Resolve parent registration numbers for resubmitted items
+      const parentIds = [...new Set(items.map(i => i.resubmittedFromId).filter((id): id is string => !!id))];
+      const parentLookups = await Promise.all(parentIds.map(id => storage.getCollateralItem(id)));
+      const parentRegMap = new Map(parentLookups.filter((p): p is CollateralItem => !!p).map(p => [p.id, p.registrationNumber]));
       const enriched = items.map(item => ({
         ...item,
         lenderInstitutionName: item.lenderOrganizationId
-          ? (orgMap.get(item.lenderOrganizationId) ?? (item as any).lenderInstitution ?? "Unknown Institution")
-          : ((item as any).lenderInstitution ?? null),
+          ? (orgMap.get(item.lenderOrganizationId) ?? item.lenderInstitution ?? "Unknown Institution")
+          : (item.lenderInstitution ?? null),
+        resubmittedFromRegistrationNumber: item.resubmittedFromId
+          ? (parentRegMap.get(item.resubmittedFromId) ?? null)
+          : null,
       }));
       res.json(enriched);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
@@ -14568,6 +14576,40 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (!countryCode) return res.status(400).json({ message: "Could not determine country — check organisation record" });
       const report = await storage.getCollateralRegulatoryReport(countryCode);
       res.json(report);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // Resubmission history chain — walk resubmittedFromId up to the root
+  app.get("/api/collateral/:id/history", requireAuth, async (req, res) => {
+    try {
+      const isRA = await isRegistryAuthority(req);
+      const isSuperAdmin = req.session?.userRole === "super_admin";
+      if (!isRA && !isSuperAdmin) return res.status(403).json({ message: "Registry Authority access required" });
+      // RA users must have a resolvable country — fail closed if not (super_admin exempt)
+      const callerCountry = isSuperAdmin ? null : await getCallerCountry(req);
+      if (!isSuperAdmin && !callerCountry) {
+        return res.status(400).json({ message: "Could not determine country — check organisation record" });
+      }
+      const rootItem = await storage.getCollateralItem(req.params.id);
+      if (!rootItem) return res.status(404).json({ message: "Not found" });
+      // Enforce country jurisdiction on the initial item for RA users — fail closed if country is missing or mismatched
+      if (!isSuperAdmin && (!rootItem.countryCode || rootItem.countryCode !== callerCountry)) {
+        return res.status(403).json({ message: "Access denied: item is outside your jurisdiction" });
+      }
+      const chain: CollateralItem[] = [];
+      let currentId: string | null = req.params.id;
+      const visited = new Set<string>();
+      while (currentId && !visited.has(currentId)) {
+        visited.add(currentId);
+        const item = await storage.getCollateralItem(currentId);
+        if (!item) break;
+        // Enforce jurisdiction on every ancestor — fail closed if country is missing or mismatched
+        if (!isSuperAdmin && (!item.countryCode || item.countryCode !== callerCountry)) break;
+        chain.push(item);
+        currentId = item.resubmittedFromId ?? null;
+      }
+      chain.reverse();
+      res.json(chain);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
