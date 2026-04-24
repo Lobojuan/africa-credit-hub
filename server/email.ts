@@ -136,6 +136,127 @@ async function sendViaSmtp(to: string, subject: string, htmlBody: string): Promi
   }
 }
 
+async function sendViaSmtpWithAttachment(
+  to: string,
+  subject: string,
+  htmlBody: string,
+  attachment: { filename: string; content: Buffer; contentType: string },
+): Promise<boolean> {
+  if (!transporter) return false;
+  try {
+    await transporter.sendMail({
+      from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
+      to,
+      subject,
+      html: htmlBody,
+      attachments: [{ filename: attachment.filename, content: attachment.content, contentType: attachment.contentType }],
+    });
+    console.log(`[Email][SMTP] Sent with attachment to ${redactEmail(to)}`);
+    return true;
+  } catch (err: any) {
+    console.error(`[Email][SMTP] Send with attachment failed:`, err.message);
+    return false;
+  }
+}
+
+async function sendViaSendGridWithAttachment(
+  to: string,
+  subject: string,
+  htmlBody: string,
+  attachment: { filename: string; content: Buffer; contentType: string },
+): Promise<boolean> {
+  const apiKey = process.env.SENDGRID_API_KEY;
+  if (!apiKey) return false;
+  try {
+    const resp = await fetch("https://api.sendgrid.com/v3/mail/send", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email: to }] }],
+        from: { email: FROM_EMAIL, name: FROM_NAME },
+        subject,
+        content: [{ type: "text/html", value: htmlBody }],
+        attachments: [{
+          content: attachment.content.toString("base64"),
+          filename: attachment.filename,
+          type: attachment.contentType,
+          disposition: "attachment",
+        }],
+      }),
+    });
+    if (resp.ok || resp.status === 202) {
+      console.log(`[Email][SendGrid] Sent with attachment to ${redactEmail(to)}`);
+      return true;
+    }
+    console.error(`[Email][SendGrid] Failed ${resp.status} (with attachment)`);
+    return false;
+  } catch (err: any) {
+    console.error(`[Email][SendGrid] Error (with attachment):`, err.message);
+    return false;
+  }
+}
+
+async function attemptSendWithAttachment(
+  to: string,
+  subject: string,
+  htmlBody: string,
+  attachment: { filename: string; content: Buffer; contentType: string },
+): Promise<boolean> {
+  if (emailProvider === "sendgrid") {
+    const ok = await sendViaSendGridWithAttachment(to, subject, htmlBody, attachment);
+    if (ok) return true;
+    if (hasSmtp) {
+      console.log(`[Email] SendGrid failed, falling back to SMTP (with attachment)...`);
+      return sendViaSmtpWithAttachment(to, subject, htmlBody, attachment);
+    }
+    return false;
+  }
+
+  const ok = await sendViaSmtpWithAttachment(to, subject, htmlBody, attachment);
+  if (ok) return true;
+  if (hasSendGrid) {
+    console.log(`[Email] SMTP failed, falling back to SendGrid (with attachment)...`);
+    return sendViaSendGridWithAttachment(to, subject, htmlBody, attachment);
+  }
+  return false;
+}
+
+async function sendEmailWithAttachment(
+  to: string,
+  subject: string,
+  htmlBody: string,
+  attachment: { filename: string; content: Buffer; contentType: string },
+): Promise<boolean> {
+  if (!emailConfigured) {
+    console.log(`[Email][Stub] Would send with attachment to ${redactEmail(to)}: ${attachment.filename}`);
+    return false;
+  }
+
+  if (emailsSentThisMinute >= MAX_EMAILS_PER_MINUTE) {
+    console.warn(`[Email] Rate limit reached (${MAX_EMAILS_PER_MINUTE}/min) — deferring attachment send to ${redactEmail(to)}`);
+    return false;
+  }
+
+  for (let attempt = 0; attempt < RETRY_DELAYS.length; attempt++) {
+    if (attempt > 0) {
+      console.log(`[Email] Retry ${attempt}/${RETRY_DELAYS.length - 1} for ${redactEmail(to)} (attachment, waiting ${RETRY_DELAYS[attempt]}ms)...`);
+      await sleep(RETRY_DELAYS[attempt]);
+    }
+    try {
+      const ok = await attemptSendWithAttachment(to, subject, htmlBody, attachment);
+      if (ok) {
+        emailsSentThisMinute++;
+        return true;
+      }
+    } catch (err: any) {
+      console.error(`[Email] Attempt ${attempt + 1} error (with attachment):`, err.message);
+    }
+  }
+
+  console.error(`[Email] All ${RETRY_DELAYS.length} attempts failed for ${redactEmail(to)} (with attachment) — subject: "${subject.substring(0, 60)}"`);
+  return false;
+}
+
 const RETRY_DELAYS = [0, 2000, 8000];
 const MAX_EMAILS_PER_MINUTE = 30;
 let emailsSentThisMinute = 0;
@@ -513,4 +634,42 @@ export async function sendRegistryAuthorityWelcomeEmail(
 
 export function isEmailConfigured(): boolean {
   return emailConfigured;
+}
+
+export async function sendCertificateEmail(
+  to: string,
+  opts: {
+    recipientLabel: string;
+    certNumber: string;
+    regNumber: string;
+    borrowerName: string;
+    lenderOrgName: string;
+    countryCode: string;
+    approvalDate: string;
+    pdfBuffer: Buffer;
+  },
+): Promise<boolean> {
+  const { recipientLabel, certNumber, regNumber, borrowerName, lenderOrgName, countryCode, approvalDate, pdfBuffer } = opts;
+  const body = `
+    <p style="color:#333;font-size:14px;line-height:1.6;">Dear ${esc(recipientLabel)},</p>
+    <p style="color:#333;font-size:14px;line-height:1.6;">
+      A collateral financing statement has been <strong style="color:#16a34a;">approved</strong> on the Pan-African Collateral Registry.
+      The official certificate is attached to this email as a PDF.
+    </p>
+    <div style="background:#f0fdf4;border-radius:8px;padding:16px 20px;margin:16px 0;border-left:4px solid #16a34a;">
+      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Certificate Number:</strong> ${esc(certNumber)}</p>
+      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Registration Number:</strong> ${esc(regNumber)}</p>
+      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Secured Party / Lender:</strong> ${esc(lenderOrgName)}</p>
+      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Borrower / Grantor:</strong> ${esc(borrowerName)}</p>
+      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Country:</strong> ${esc(countryCode)}</p>
+      <p style="margin:0;font-size:13px;color:#555;"><strong>Approval Date:</strong> ${esc(approvalDate)}</p>
+    </div>
+    <p style="color:#333;font-size:14px;line-height:1.6;">
+      Please retain this certificate for your records. You may also download it at any time from the registry portal.
+    </p>
+  `;
+  const subject = `Collateral Certificate Issued — ${regNumber} (${certNumber})`;
+  const htmlBody = createEmailHtml("Financing Statement Certificate", body);
+  const filename = `cert-${regNumber}.pdf`;
+  return sendEmailWithAttachment(to, subject, htmlBody, { filename, content: pdfBuffer, contentType: "application/pdf" });
 }

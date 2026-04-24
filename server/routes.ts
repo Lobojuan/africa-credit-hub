@@ -67,7 +67,7 @@ import * as OTPAuth from "otpauth";
 import multer from "multer";
 import rateLimit from "express-rate-limit";
 import { isGhanaMode, getActiveCountryName, isSingleCountryMode, COUNTRY_REGISTRY, getSupportedCountries } from "./country-mode";
-import { sendWelcomeEmail, sendBillingNotification, sendDisputeNotification, sendNewRegistrationAlert, sendConsumerOtpEmail, sendConsumerVerificationLink, sendContactSalesEmail, sendRegistryAuthorityWelcomeEmail } from "./email";
+import { sendWelcomeEmail, sendBillingNotification, sendDisputeNotification, sendNewRegistrationAlert, sendConsumerOtpEmail, sendConsumerVerificationLink, sendContactSalesEmail, sendRegistryAuthorityWelcomeEmail, sendCertificateEmail } from "./email";
 import { sendSms, sendOtpSms, isSmsConfigured } from "./sms";
 import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport, generatePortfolioIntelligence, parseProvider, parseOptionalProvider, generateCreditNarrative, detectAnomalies, generateRegulatoryReport, naturalLanguageQuery, analyzeCrossBorderRisk, generateLoanRecommendation, generateCreditInsights, callAI, parseJSON, generateAIResponse } from "./ai";
 import { BOG_EXPORT_GENERATORS } from "./bog-export";
@@ -14545,56 +14545,35 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
-  // PDF certificate download endpoint — lender (owner) or RA of same country
-  app.get("/api/collateral/:id/certificate", requireAuth, async (req, res) => {
+  // Shared helper: generate a certificate PDF buffer for an approved collateral item
+  async function generateCertificatePdfBuffer(item: any): Promise<Buffer> {
+    const lenderOrg = item.lenderOrganizationId ? await storage.getOrganization(item.lenderOrganizationId) : null;
+    const countryConfig = item.countryCode
+      ? await db.select().from(registryCountryConfig).where(eq(registryCountryConfig.countryCode, item.countryCode)).limit(1).then((r: any[]) => r[0])
+      : null;
+    const baseUrl = getBaseUrl();
+    const verificationCode = item.verificationCode || "";
+    const verifyUrl = `${baseUrl}/verify/${verificationCode}`;
+    const QRCode = (await import("qrcode")).default;
+    let qrBuffer: Buffer | null = null;
     try {
-      const item = await storage.getCollateralItem(req.params.id);
-      if (!item) return res.status(404).json({ message: "Not found" });
-      // Access check: must be the lender or an RA of the same country or super_admin
-      const orgId = req.session?.organizationId;
-      const isSuperAdmin = req.session?.userRole === "super_admin";
-      const isOwner = item.lenderOrganizationId === orgId;
-      const isRA = await isRegistryAuthority(req);
-      const callerCountry = await getCallerCountry(req);
-      const sameCountry = item.countryCode && callerCountry && item.countryCode === callerCountry;
-      if (!isSuperAdmin && !isOwner && !(isRA && sameCountry)) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      if (item.approvalStatus !== "approved") {
-        return res.status(400).json({ message: "Certificate only available for approved registrations" });
-      }
+      qrBuffer = await QRCode.toBuffer(verifyUrl, { type: "png", width: 120, margin: 1, errorCorrectionLevel: "M" });
+    } catch (_) { /* skip QR if generation fails */ }
 
-      // Fetch enrichment data: lender institution name, RA config (authority name + legal regime)
-      const lenderOrg = item.lenderOrganizationId ? await storage.getOrganization(item.lenderOrganizationId) : null;
-      const countryConfig = item.countryCode
-        ? await db.select().from(registryCountryConfig).where(eq(registryCountryConfig.countryCode, item.countryCode)).limit(1).then(r => r[0])
-        : null;
+    const PDFDocument = (await import("pdfkit")).default;
+    const doc = new PDFDocument({ margin: 60, size: "A4" });
+    const chunks: Buffer[] = [];
+    await new Promise<void>((resolve, reject) => {
+      doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+      doc.on("end", resolve);
+      doc.on("error", reject);
 
-      // Build verification URL and generate QR code
-      const baseUrl = getBaseUrl();
-      const verificationCode = item.verificationCode || "";
-      const verifyUrl = `${baseUrl}/verify/${verificationCode}`;
-      const QRCode = (await import("qrcode")).default;
-      let qrBuffer: Buffer | null = null;
-      try {
-        qrBuffer = await QRCode.toBuffer(verifyUrl, { type: "png", width: 120, margin: 1, errorCorrectionLevel: "M" });
-      } catch (_) { /* skip QR if generation fails */ }
-
-      // Generate PDF with pdfkit
-      const PDFDocument = (await import("pdfkit")).default;
-      const doc = new PDFDocument({ margin: 60, size: "A4" });
-      res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename="cert-${item.registrationNumber}.pdf"`);
-      doc.pipe(res);
-
-      // Header
       const raName = countryConfig?.authorityName || "National Collateral Registry";
       doc.fontSize(20).font("Helvetica-Bold").text("PAN-AFRICAN COLLATERAL REGISTRY", { align: "center" });
       doc.fontSize(13).font("Helvetica-Bold").text(raName.toUpperCase(), { align: "center" });
       doc.fontSize(11).font("Helvetica").text("FINANCING STATEMENT CERTIFICATE", { align: "center" });
       doc.moveDown().moveTo(60, doc.y).lineTo(535, doc.y).stroke().moveDown();
 
-      // Certificate fields
       const field = (label: string, value: string) => {
         doc.fontSize(10).font("Helvetica-Bold").text(label + ":", { continued: true })
            .font("Helvetica").text(" " + (value || "—"));
@@ -14627,7 +14606,6 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       doc.moveDown();
       field("Verification Code", item.verificationCode || "—");
 
-      // QR Code section
       doc.moveDown().moveTo(60, doc.y).lineTo(535, doc.y).stroke().moveDown();
       const qrSectionY = doc.y;
       if (qrBuffer) {
@@ -14642,13 +14620,39 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         doc.fontSize(8).font("Helvetica").fillColor("#1a56db").text(verifyUrl);
         doc.fillColor("#000000");
       }
-
       doc.moveDown().moveTo(60, doc.y).lineTo(535, doc.y).stroke().moveDown();
       doc.fontSize(8).font("Helvetica").text(
         `This certificate was issued by the ${raName} under the Pan-African Collateral Registry framework. Generated: ${new Date().toISOString()}`,
         { align: "center" }
       );
       doc.end();
+    });
+    return Buffer.concat(chunks);
+  }
+
+  // PDF certificate download endpoint — lender (owner) or RA of same country
+  app.get("/api/collateral/:id/certificate", requireAuth, async (req, res) => {
+    try {
+      const item = await storage.getCollateralItem(req.params.id);
+      if (!item) return res.status(404).json({ message: "Not found" });
+      // Access check: must be the lender or an RA of the same country or super_admin
+      const orgId = req.session?.organizationId;
+      const isSuperAdmin = req.session?.userRole === "super_admin";
+      const isOwner = item.lenderOrganizationId === orgId;
+      const isRA = await isRegistryAuthority(req);
+      const callerCountry = await getCallerCountry(req);
+      const sameCountry = item.countryCode && callerCountry && item.countryCode === callerCountry;
+      if (!isSuperAdmin && !isOwner && !(isRA && sameCountry)) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      if (item.approvalStatus !== "approved") {
+        return res.status(400).json({ message: "Certificate only available for approved registrations" });
+      }
+
+      const pdfBuffer = await generateCertificatePdfBuffer(item);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="cert-${item.registrationNumber}.pdf"`);
+      res.end(pdfBuffer);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
@@ -14784,6 +14788,9 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (!isRA && !isSuperAdmin) return res.status(403).json({ message: "Registry Authority access required" });
       const item = await storage.getCollateralItem(req.params.id);
       if (!item) return res.status(404).json({ message: "Not found" });
+      if (item.approvalStatus === "approved") {
+        return res.status(409).json({ message: "This financing statement has already been approved" });
+      }
       // RA can only approve items for their country — fail closed if country cannot be resolved
       const callerCountry = await getCallerCountry(req);
       if (!isSuperAdmin) {
@@ -14809,6 +14816,45 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       }
       const updated = await storage.approveCollateralItem(req.params.id, userId, certNum, priority);
       res.json(updated);
+
+      // Fire-and-forget: generate PDF and email the certificate to the lender (and optionally borrower)
+      if (updated) {
+        (async () => {
+          try {
+            const pdfBuffer = await generateCertificatePdfBuffer(updated);
+            const lenderOrg = updated.lenderOrganizationId ? await storage.getOrganization(updated.lenderOrganizationId) : null;
+            const lenderEmail = lenderOrg?.contactEmail;
+            const emailOpts = {
+              recipientLabel: lenderOrg?.name || "Secured Party",
+              certNumber: updated.certificateNumber || certNum,
+              regNumber: updated.registrationNumber,
+              borrowerName: updated.borrowerName || "—",
+              lenderOrgName: lenderOrg?.name || "—",
+              countryCode: updated.countryCode || "—",
+              approvalDate: updated.approvalDate || new Date().toISOString().split("T")[0],
+              pdfBuffer,
+            };
+            if (lenderEmail) {
+              await sendCertificateEmail(lenderEmail, emailOpts).catch((err: any) =>
+                console.error(`[Certificate Email] Failed to send to lender ${lenderEmail}:`, err.message)
+              );
+            } else {
+              console.warn(`[Certificate Email] No lender email on file for org ${updated.lenderOrganizationId}`);
+            }
+            // Optionally send to borrower if email is on file
+            if (updated.borrowerId) {
+              const [borrowerRow] = await db.select({ email: borrowers.email }).from(borrowers).where(eq(borrowers.id, updated.borrowerId)).limit(1);
+              if (borrowerRow?.email) {
+                await sendCertificateEmail(borrowerRow.email, { ...emailOpts, recipientLabel: updated.borrowerName || "Borrower" }).catch((err: any) =>
+                  console.error(`[Certificate Email] Failed to send to borrower:`, err.message)
+                );
+              }
+            }
+          } catch (err: any) {
+            console.error("[Certificate Email] Background send failed:", err.message);
+          }
+        })();
+      }
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
