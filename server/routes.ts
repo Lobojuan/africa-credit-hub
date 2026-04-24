@@ -65,7 +65,7 @@ import * as OTPAuth from "otpauth";
 import multer from "multer";
 import rateLimit from "express-rate-limit";
 import { isGhanaMode, getActiveCountryName, isSingleCountryMode, COUNTRY_REGISTRY, getSupportedCountries } from "./country-mode";
-import { sendWelcomeEmail, sendBillingNotification, sendDisputeNotification, sendNewRegistrationAlert, sendConsumerOtpEmail, sendConsumerVerificationLink, sendContactSalesEmail } from "./email";
+import { sendWelcomeEmail, sendBillingNotification, sendDisputeNotification, sendNewRegistrationAlert, sendConsumerOtpEmail, sendConsumerVerificationLink, sendContactSalesEmail, sendRegistryAuthorityWelcomeEmail } from "./email";
 import { sendSms, sendOtpSms, isSmsConfigured } from "./sms";
 import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport, generatePortfolioIntelligence, parseProvider, parseOptionalProvider, generateCreditNarrative, detectAnomalies, generateRegulatoryReport, naturalLanguageQuery, analyzeCrossBorderRisk, generateLoanRecommendation, generateCreditInsights, callAI, parseJSON, generateAIResponse } from "./ai";
 import { BOG_EXPORT_GENERATORS } from "./bog-export";
@@ -14849,7 +14849,38 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         contactPhone: null,
       });
       await storage.linkRegistryAuthorityToCountry(countryCode, org.id);
-      res.status(201).json({ organization: org, config });
+
+      // Generate initial admin credentials for the new registry authority (CSPRNG)
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+      const randBytes = crypto.randomBytes(14);
+      const temporaryPassword = Array.from(randBytes, (b: number) => chars[b % chars.length]).join("");
+      const username = `registry.${countryCode.toLowerCase()}@${slug}`;
+      const hashedPassword = await bcrypt.hash(temporaryPassword, 12);
+      const adminUser = await storage.createUser({
+        username,
+        password: hashedPassword,
+        fullName: `${organizationName} Administrator`,
+        email: contactEmail || `admin@${slug}.registry`,
+        role: "admin",
+        organizationId: org.id,
+        mustChangePassword: true,
+        status: "active",
+      });
+
+      // Send welcome email with credentials if a contact email was provided
+      if (contactEmail) {
+        sendRegistryAuthorityWelcomeEmail(organizationName, config.countryName, contactEmail, username, temporaryPassword).catch(() => {});
+      }
+
+      res.status(201).json({
+        organization: org,
+        config,
+        credentials: {
+          username,
+          temporaryPassword,
+          adminUserId: adminUser.id,
+        },
+      });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 

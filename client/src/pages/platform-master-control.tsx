@@ -1651,11 +1651,18 @@ function CollateralRegistrySetupPanel() {
   const qc = useQueryClient();
   const [provisionForm, setProvisionForm] = useState({ countryCode: "", organizationName: "", contactEmail: "" });
   const [provisionOpen, setProvisionOpen] = useState(false);
+  const [createdCredentials, setCreatedCredentials] = useState<{ username: string; temporaryPassword: string; orgName: string; countryName: string } | null>(null);
 
   const { data: countries = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/registry-country-config"],
     queryFn: () => fetch("/api/registry-country-config", { credentials: "include" }).then(r => r.json()),
   });
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast({ title: "Copied", description: `${label} copied to clipboard` });
+    });
+  };
 
   const provisionMutation = useMutation({
     mutationFn: (data: any) => fetch("/api/registry-authority/provision", {
@@ -1665,10 +1672,14 @@ function CollateralRegistrySetupPanel() {
       body: JSON.stringify(data),
     }).then(async r => { const j = await r.json(); if (!r.ok) throw new Error(j.message); return j; }),
     onSuccess: (data) => {
-      toast({ title: "Registry Authority Provisioned", description: `${data.organization.name} created for ${data.config.countryName}` });
-      setProvisionOpen(false);
-      setProvisionForm({ countryCode: "", organizationName: "", contactEmail: "" });
       qc.invalidateQueries({ queryKey: ["/api/registry-country-config"] });
+      setCreatedCredentials({
+        username: data.credentials.username,
+        temporaryPassword: data.credentials.temporaryPassword,
+        orgName: data.organization.name,
+        countryName: data.config.countryName,
+      });
+      setProvisionForm({ countryCode: "", organizationName: "", contactEmail: "" });
     },
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
@@ -1695,76 +1706,115 @@ function CollateralRegistrySetupPanel() {
 
       <div className="flex justify-between items-center">
         <p className="text-xs text-muted-foreground">Provision a government Registry Authority for any African country. This creates a dedicated organization that can approve/reject lien registrations for that country.</p>
-        <Dialog open={provisionOpen} onOpenChange={setProvisionOpen}>
+        <Dialog open={provisionOpen} onOpenChange={open => { setProvisionOpen(open); if (!open) setCreatedCredentials(null); }}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-2 shrink-0" data-testid="btn-provision-registry">
               <Plus className="w-3.5 h-3.5" /> Provision Authority
             </Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Shield className="w-4 h-4 text-emerald-600" /> Provision Registry Authority
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3 py-2">
-              <div>
-                <label className="text-xs font-medium">Country</label>
-                <Select value={provisionForm.countryCode} onValueChange={v => setProvisionForm(f => ({ ...f, countryCode: v }))}>
-                  <SelectTrigger data-testid="select-provision-country"><SelectValue placeholder="Select country…" /></SelectTrigger>
-                  <SelectContent>
-                    {pending.map((c: any) => (
-                      <SelectItem key={c.countryCode} value={c.countryCode}>{c.countryName} ({c.countryCode}) — {c.legalRegime}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-xs font-medium">Authority Organization Name</label>
-                <Input
-                  data-testid="input-provision-org-name"
-                  placeholder="e.g. Ghana Collateral Registry Authority"
-                  value={provisionForm.organizationName}
-                  onChange={e => setProvisionForm(f => ({ ...f, organizationName: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium">Contact Email (optional)</label>
-                <Input
-                  data-testid="input-provision-email"
-                  type="email"
-                  placeholder="registry@authority.gov"
-                  value={provisionForm.contactEmail}
-                  onChange={e => setProvisionForm(f => ({ ...f, contactEmail: e.target.value }))}
-                />
-              </div>
-              {provisionForm.countryCode && (
-                <div className="rounded-lg bg-muted/50 p-3 text-xs space-y-1">
-                  {(() => {
-                    const c = countries.find((x: any) => x.countryCode === provisionForm.countryCode);
-                    return c ? (
-                      <>
-                        <div><span className="font-medium">Country:</span> {c.countryName}</div>
-                        <div><span className="font-medium">Default Authority:</span> {c.authorityName}</div>
-                        <div><span className="font-medium">Legal Regime:</span> {c.legalRegime}</div>
-                        <div><span className="font-medium">Currency:</span> {c.currency}</div>
-                      </>
-                    ) : null;
-                  })()}
+            {createdCredentials ? (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Registry Authority Provisioned
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3 py-2">
+                  <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 p-3 text-xs space-y-1">
+                    <div><span className="font-medium">Organization:</span> {createdCredentials.orgName}</div>
+                    <div><span className="font-medium">Country:</span> {createdCredentials.countryName}</div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">The authority has been linked to the country registry and marked as live. Share the credentials below with the authority administrator.</p>
+                  <div className="rounded-lg border bg-muted/40 p-3 space-y-3">
+                    <div>
+                      <div className="text-xs font-medium mb-1 text-muted-foreground">Username</div>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 rounded bg-background border px-3 py-1.5 text-xs font-mono select-all" data-testid="text-provision-username">{createdCredentials.username}</code>
+                        <Button size="sm" variant="outline" className="h-7 px-2 text-xs" data-testid="btn-copy-username" onClick={() => copyToClipboard(createdCredentials.username, "Username")}>Copy</Button>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium mb-1 text-muted-foreground">Temporary Password</div>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 rounded bg-background border px-3 py-1.5 text-xs font-mono select-all" data-testid="text-provision-password">{createdCredentials.temporaryPassword}</code>
+                        <Button size="sm" variant="outline" className="h-7 px-2 text-xs" data-testid="btn-copy-password" onClick={() => copyToClipboard(createdCredentials.temporaryPassword, "Temporary password")}>Copy</Button>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">The administrator will be required to change this password on first login. These credentials will not be shown again.</p>
                 </div>
-              )}
-            </div>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setProvisionOpen(false)}>Cancel</Button>
-              <Button
-                onClick={() => provisionMutation.mutate(provisionForm)}
-                disabled={!provisionForm.countryCode || !provisionForm.organizationName || provisionMutation.isPending}
-                data-testid="btn-confirm-provision"
-                className="bg-emerald-600 hover:bg-emerald-700"
-              >
-                {provisionMutation.isPending ? "Provisioning…" : "Create Registry Authority"}
-              </Button>
-            </div>
+                <div className="flex justify-end">
+                  <Button data-testid="btn-close-credentials" onClick={() => { setProvisionOpen(false); setCreatedCredentials(null); }} className="bg-emerald-600 hover:bg-emerald-700">Done</Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-emerald-600" /> Provision Registry Authority
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3 py-2">
+                  <div>
+                    <label className="text-xs font-medium">Country</label>
+                    <Select value={provisionForm.countryCode} onValueChange={v => setProvisionForm(f => ({ ...f, countryCode: v }))}>
+                      <SelectTrigger data-testid="select-provision-country"><SelectValue placeholder="Select country…" /></SelectTrigger>
+                      <SelectContent>
+                        {pending.map((c: any) => (
+                          <SelectItem key={c.countryCode} value={c.countryCode}>{c.countryName} ({c.countryCode}) — {c.legalRegime}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium">Authority Organization Name</label>
+                    <Input
+                      data-testid="input-provision-org-name"
+                      placeholder="e.g. Ghana Collateral Registry Authority"
+                      value={provisionForm.organizationName}
+                      onChange={e => setProvisionForm(f => ({ ...f, organizationName: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium">Contact Email (optional)</label>
+                    <Input
+                      data-testid="input-provision-email"
+                      type="email"
+                      placeholder="registry@authority.gov"
+                      value={provisionForm.contactEmail}
+                      onChange={e => setProvisionForm(f => ({ ...f, contactEmail: e.target.value }))}
+                    />
+                  </div>
+                  {provisionForm.countryCode && (
+                    <div className="rounded-lg bg-muted/50 p-3 text-xs space-y-1">
+                      {(() => {
+                        const c = countries.find((x: any) => x.countryCode === provisionForm.countryCode);
+                        return c ? (
+                          <>
+                            <div><span className="font-medium">Country:</span> {c.countryName}</div>
+                            <div><span className="font-medium">Default Authority:</span> {c.authorityName}</div>
+                            <div><span className="font-medium">Legal Regime:</span> {c.legalRegime}</div>
+                            <div><span className="font-medium">Currency:</span> {c.currency}</div>
+                          </>
+                        ) : null;
+                      })()}
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={() => setProvisionOpen(false)}>Cancel</Button>
+                  <Button
+                    onClick={() => provisionMutation.mutate(provisionForm)}
+                    disabled={!provisionForm.countryCode || !provisionForm.organizationName || provisionMutation.isPending}
+                    data-testid="btn-confirm-provision"
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    {provisionMutation.isPending ? "Provisioning…" : "Create Registry Authority"}
+                  </Button>
+                </div>
+              </>
+            )}
           </DialogContent>
         </Dialog>
       </div>

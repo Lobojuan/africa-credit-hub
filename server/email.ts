@@ -483,6 +483,34 @@ export async function sendRegistryDownEmail(
   ));
 }
 
+export async function sendRegistryAuthorityWelcomeEmail(
+  orgName: string,
+  countryName: string,
+  contactEmail: string,
+  username: string,
+  temporaryPassword: string,
+): Promise<boolean> {
+  const body = `
+    <p style="color:#333;font-size:14px;line-height:1.6;">
+      Welcome! The <strong>${esc(orgName)}</strong> has been provisioned as the official Registry Authority for <strong>${esc(countryName)}</strong> on the Pan-African Collateral Registry platform.
+    </p>
+    <div style="background:#f0fdf4;border-radius:8px;padding:16px 20px;margin:16px 0;border-left:4px solid #16a34a;">
+      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Organization:</strong> ${esc(orgName)}</p>
+      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Country:</strong> ${esc(countryName)}</p>
+      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Username:</strong> <code style="background:#e5e7eb;padding:2px 6px;border-radius:4px;">${esc(username)}</code></p>
+      <p style="margin:0;font-size:13px;color:#555;"><strong>Temporary Password:</strong> <code style="background:#e5e7eb;padding:2px 6px;border-radius:4px;">${esc(temporaryPassword)}</code></p>
+    </div>
+    <p style="color:#dc2626;font-size:13px;font-weight:600;">You will be required to change your password on first login. Keep these credentials secure and do not share them.</p>
+    <p style="color:#333;font-size:14px;line-height:1.6;">As a Registry Authority administrator, you can approve and reject lien registrations, manage collateral filings, and oversee registry operations for your country.</p>
+    <a href="https://africacredithub.com" style="display:inline-block;background:#1a1a2e;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:14px;margin-top:8px;">Access Your Dashboard</a>
+  `;
+  return sendEmail(
+    contactEmail,
+    `Registry Authority Access — ${orgName} (${countryName})`,
+    createEmailHtml("Registry Authority Provisioned", body),
+  );
+}
+
 export function isEmailConfigured(): boolean {
   return emailConfigured;
 }
