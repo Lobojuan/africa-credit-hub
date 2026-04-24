@@ -316,7 +316,7 @@ export function registerExternalApi(app: Express) {
   app.get("/api/external/v1/borrowers/:id/credit-report", requireApiKey, requirePermission("read"), async (req: Request, res: Response) => {
     try {
       const institution = (req as any).institution;
-      const borrower = await storage.getBorrower(req.params.id);
+      const borrower = await storage.getBorrower(req.params.id as string);
       if (!borrower) return res.status(404).json(wrapError("Borrower not found"));
 
       const accounts = await storage.getCreditAccountsByBorrower(borrower.id);
@@ -333,7 +333,7 @@ export function registerExternalApi(app: Express) {
         serialNumber,
       });
 
-      const { score, reasonCodes } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep);
+      const { score, reasonCodes } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep ?? undefined);
 
       await storage.createAuditLog({
         action: "API_CREDIT_REPORT", entity: "borrower", entityId: borrower.id,
@@ -358,7 +358,7 @@ export function registerExternalApi(app: Express) {
 
   app.get("/api/external/v1/credit-accounts/:borrowerId", requireApiKey, requirePermission("read"), async (req: Request, res: Response) => {
     try {
-      const accounts = await storage.getCreditAccountsByBorrower(req.params.borrowerId);
+      const accounts = await storage.getCreditAccountsByBorrower(req.params.borrowerId as string);
       res.json(wrapResponse(accounts, "Credit accounts retrieved"));
     } catch (e: any) {
       res.status(500).json(wrapError("Failed to retrieve accounts", e.message));
@@ -380,7 +380,6 @@ export function registerExternalApi(app: Express) {
         kycLevel: kycLevel || "basic",
         simRegistrationDate: simRegistrationDate || new Date().toISOString().split("T")[0],
         deviceType: deviceType || "Smartphone",
-        deviceModel,
       });
       await storage.createAuditLog({
         action: "API_TELCO_PROFILE_CREATED", entity: "telco_profile", entityId: profile.id,
@@ -395,7 +394,7 @@ export function registerExternalApi(app: Express) {
 
   app.get("/api/external/v1/telco/profiles/:msisdn", requireApiKey, requirePermission("read", "full"), async (req: Request, res: Response) => {
     try {
-      const profile = await storage.getTelcoProfileByMsisdn(req.params.msisdn);
+      const profile = await storage.getTelcoProfileByMsisdn(req.params.msisdn as string);
       if (!profile) return res.status(404).json(wrapError("Profile not found"));
       res.json(wrapResponse(profile, "Profile retrieved"));
     } catch (e: any) {
@@ -510,7 +509,7 @@ export function registerExternalApi(app: Express) {
         aiProvider: aiResult.aiProvider,
         evaluationPeriodDays: period,
         transactionsAnalyzed: transactions.length,
-        scoredAt: score.createdAt,
+        scoredAt: (score as any).createdAt,
       }, "Credit score generated"));
     } catch (e: any) {
       console.error("[ExternalAPI] Telco score error:", e.message);
@@ -753,7 +752,7 @@ export function registerExternalApi(app: Express) {
 
   app.post("/api/external/v1/borrowers/:id/affordability", requireApiKey, requirePermission("submit"), affordabilityLimiter, async (req: Request, res: Response) => {
     try {
-      const borrower = await storage.getBorrower(req.params.id);
+      const borrower = await storage.getBorrower(req.params.id as string);
       if (!borrower) return res.status(404).json(wrapError("Borrower not found"));
       const institution = (req as any).institution;
       // Cross-tenant isolation: API key may only compute for borrowers within its own institution/org.

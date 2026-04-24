@@ -41,11 +41,11 @@ router.post("/api/users", requireRole("admin", "super_admin"), async (req, res) 
 
 router.patch("/api/users/:id", requireRole("admin", "super_admin"), async (req, res) => {
   try {
-    if (req.params.id === req.session?.userId && req.body.role) {
+    if (req.params.id as string === req.session?.userId && req.body.role) {
       return res.status(400).json({ message: "Cannot change your own role" });
     }
 
-    const targetUser = await storage.getUser(req.params.id);
+    const targetUser = await storage.getUser(req.params.id as string);
     if (!targetUser) return res.status(404).json({ message: "User not found" });
 
     if (req.session?.userRole !== "super_admin") {
@@ -63,17 +63,17 @@ router.patch("/api/users/:id", requireRole("admin", "super_admin"), async (req, 
 
     if (data.password) {
       const { checkPasswordHistory, pushPasswordHistory } = await import("../security-hardening");
-      const historyCheck = await checkPasswordHistory(req.params.id, data.password);
+      const historyCheck = await checkPasswordHistory(req.params.id as string, data.password);
       if (historyCheck.reused) {
         return res.status(400).json({ message: historyCheck.message });
       }
       const oldHash = targetUser.password;
       data.password = await bcrypt.hash(data.password, 12);
       if (oldHash) {
-        await pushPasswordHistory(req.params.id, oldHash);
+        await pushPasswordHistory(req.params.id as string, oldHash);
       }
     }
-    const user = await storage.updateUser(req.params.id, data);
+    const user = await storage.updateUser(req.params.id as string, data);
     if (!user) return res.status(404).json({ message: "User not found" });
     await storage.createAuditLog({
       action: "UPDATE", entity: "user", entityId: user.id, userId: req.session?.userId,
@@ -88,14 +88,14 @@ router.patch("/api/users/:id", requireRole("admin", "super_admin"), async (req, 
 
 router.delete("/api/users/:id", requireRole("admin"), async (req, res) => {
   try {
-    if (req.params.id === req.session?.userId) {
+    if (req.params.id as string === req.session?.userId) {
       return res.status(400).json({ message: "Cannot delete your own account" });
     }
-    const deleted = await storage.deleteUser(req.params.id);
+    const deleted = await storage.deleteUser(req.params.id as string);
     if (!deleted) return res.status(404).json({ message: "User not found" });
     await storage.createAuditLog({
-      action: "DELETE", entity: "user", entityId: req.params.id, userId: req.session?.userId,
-      details: `Deleted user ID: ${req.params.id}`,
+      action: "DELETE", entity: "user", entityId: req.params.id as string, userId: req.session?.userId,
+      details: `Deleted user ID: ${req.params.id as string}`,
       ipAddress: req.ip || null,
     });
     res.json({ message: "User deleted" });

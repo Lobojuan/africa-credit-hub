@@ -38,7 +38,7 @@ export async function ensureDemoSandbox(): Promise<{ userId: string; organizatio
     const accountTypes = ["personal_loan", "mortgage", "credit_card", "business_loan", "auto_loan"];
     const statuses: Array<"current" | "closed" | "delinquent"> = ["current", "current", "current", "closed", "current"];
     for (let i = 0; i < createdBorrowers.length; i++) {
-      await db.insert(creditAccounts).values({
+      await (db.insert(creditAccounts) as any).values({
         borrowerId: createdBorrowers[i].id,
         institutionName: "Demo Bank Ghana",
         accountType: accountTypes[i] as any,
@@ -61,7 +61,7 @@ export async function ensureDemoSandbox(): Promise<{ userId: string; organizatio
 
   if (!demoUser) {
     const hashedPw = await bcrypt.hash("demo-readonly-2026", 12);
-    [demoUser] = await db.insert(users).values({
+    [demoUser] = await (db.insert(users) as any).values({
       username: DEMO_USERNAME,
       password: hashedPw,
       email: "demo-viewer@example.com",

@@ -44,7 +44,7 @@ export default function PortalPage() {
               <button
                 onClick={(e) => { e.stopPropagation(); navigate("/login"); }}
                 className="w-full h-12 rounded-xl font-semibold text-sm text-white transition-opacity hover:opacity-90"
-                style={{ background: brandColors.primary || "#8b5cf6" }}
+                style={{ background: brandColors.accent || "#8b5cf6" }}
                 data-testid="button-portal-business-login"
               >
                 Sign In as Institution

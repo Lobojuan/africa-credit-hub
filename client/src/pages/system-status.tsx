@@ -349,7 +349,6 @@ interface RegistryHealthConfigData {
   retentionDays: number | null;
   defaultRetentionDays: number;
   effectiveRetentionDays: number;
-  defaultRetentionDays: number;
   currentIntervalMinutes: number;
   cleanupTimeUtc: string;
   currentCleanupTimeUtc: string;
@@ -540,7 +539,7 @@ function RegistryHealthConfigPanel() {
 
   function handleConfirmSave() {
     if (!retentionConfirm) return;
-    saveMutation.mutate(retentionConfirm.payload);
+    saveMutation.mutate(retentionConfirm.payload as any);
     setRetentionConfirm(null);
   }
 

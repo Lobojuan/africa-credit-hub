@@ -142,7 +142,7 @@ export default function CourtJudgmentsPage() {
                       <TableCell className="text-sm capitalize">{judgment.judgmentType?.replace(/_/g, " ") || "—"}</TableCell>
                       <TableCell className="text-sm">{judgment.judgmentDate || "—"}</TableCell>
                       <TableCell className="text-right text-sm font-medium">
-                        {formatCurrency(judgment.amount, judgment.currency || judgment.judgmentCurrency || "GHS")}
+                        {formatCurrency((judgment.amount || 0), judgment.currency || judgment.judgmentCurrency || "GHS")}
                       </TableCell>
                       <TableCell>
                         <Badge variant={getStatusVariant(judgment.status)} className="text-[10px] capitalize">

@@ -64,8 +64,8 @@ async function seedLargeTelco() {
 
       for (let i = batch; i < batchEnd; i++) {
         const profileId = `tp-${country.name.toLowerCase().replace(/ /g, "")}-${String(i).padStart(6, "0")}`;
-        const kycLevel = pick(KYC_LEVELS);
-        const deviceType = pick(DEVICE_TYPES);
+        const kycLevel = pick([...KYC_LEVELS]) as string;
+        const deviceType = pick([...DEVICE_TYPES]);
         const simDate = genDate(5);
         const provider = pick(country.providers);
         const isActive = Math.random() > 0.05;
@@ -86,7 +86,7 @@ async function seedLargeTelco() {
 
         const txCount = rand(5, 30);
         for (let t = 0; t < txCount; t++) {
-          const txType = pick(TX_TYPES);
+          const txType = pick([...TX_TYPES]) as string;
           const isSend = ["cash_out", "p2p_send", "bill_payment", "merchant_payment", "airtime_purchase", "loan_repayment"].includes(txType);
           const baseAmount = txType === "bill_payment" ? rand(5, 200) :
                             txType === "merchant_payment" ? rand(1, 500) :
@@ -105,7 +105,7 @@ async function seedLargeTelco() {
             counterpartyMsisdn: Math.random() > 0.3 ? genPhone(country.prefix) : null,
             counterpartyName: Math.random() > 0.5 ? `User-${rand(1000, 9999)}` : null,
             isMerchant: txType === "merchant_payment",
-            category: pick(CATEGORIES),
+            category: pick([...CATEGORIES]),
             narration: `${txType.replace(/_/g, " ")} #${rand(10000, 99999)}`,
             balanceAfter: (rand(50, 5000) + Math.random() * 100).toFixed(2),
             transactionDate: genDate(1),

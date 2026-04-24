@@ -1,6 +1,20 @@
 import { db } from "../../db";
-import { conversations, messages } from "@shared/schema";
+import { pgTable, text, integer, serial, timestamp } from "drizzle-orm/pg-core";
 import { eq, desc } from "drizzle-orm";
+
+export const conversations = pgTable("conversations", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull().default("New Conversation"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const messages = pgTable("messages", {
+  id: serial("id").primaryKey(),
+  conversationId: integer("conversation_id").notNull(),
+  role: text("role").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
 
 export interface IChatStorage {
   getConversation(id: number): Promise<typeof conversations.$inferSelect | undefined>;
@@ -40,4 +54,3 @@ export const chatStorage: IChatStorage = {
     return message;
   },
 };
-

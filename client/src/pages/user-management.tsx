@@ -448,7 +448,7 @@ export default function UserManagementPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredUsers.map((user) => {
-                    const ts = formatTimestamp(user.createdAt as string | undefined);
+                    const ts = formatTimestamp((user.createdAt as unknown) as string | undefined);
                     return (
                       <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
                         <TableCell>

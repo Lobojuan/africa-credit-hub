@@ -143,8 +143,8 @@ router.get("/api/dashboard/chart-data", requireAuth, async (req, res) => {
       for (const r of (rows as any).rows ?? rows) map.set(r.m, Number(r.c) || 0);
       return map;
     }
-    const bMap = toTrendMap(bTrend);
-    const aMap = toTrendMap(aTrend);
+    const bMap = toTrendMap(bTrend as any);
+    const aMap = toTrendMap(aTrend as any);
     const monthlyTrend = [];
     for (let i = 11; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);

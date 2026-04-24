@@ -174,7 +174,7 @@ export default function InstitutionBrandingPage() {
                     </div>
                   )}
                   <div>
-                    <div className="text-white font-bold text-sm">{user?.organizationName || "Your Institution"}</div>
+                    <div className="text-white font-bold text-sm">{(user?.organization as any)?.name || user?.organization || "Your Institution"}</div>
                     {form.tagline && <div className="text-white/80 text-xs">{form.tagline}</div>}
                   </div>
                 </div>

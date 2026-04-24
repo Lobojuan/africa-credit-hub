@@ -348,7 +348,7 @@ export async function fetchOpenBankingTransactions(
       type OkraResponse = { data?: { transaction?: OkraTxn[] } };
       const okraData = await okraRes.json() as OkraResponse;
       const txnList: OkraTxn[] = okraData?.data?.transaction ?? [];
-      const transactions: NormalisedTxn[] = txnList.map(t => ({
+      const transactions: NormalisedTxn[] = txnList.map((t: any) => ({
         date: new Date(t.date),
         amount: Math.abs(t.amount || 0),
         currency,
@@ -468,7 +468,7 @@ function mulberry32(a: number) {
 export async function parseBankStatementPdf(pdfBuffer: Buffer, currency: string = "GHS"): Promise<NormalisedTxn[]> {
   let text = "";
   try {
-    const pdfParse: any = (await import("pdf-parse")).default || (await import("pdf-parse"));
+    const pdfParse: any = ((await import("pdf-parse")) as any).default || (await import("pdf-parse") as any);
     const result = await pdfParse(pdfBuffer);
     text = (result.text || "").slice(0, 30000);
   } catch (err: any) {
@@ -713,7 +713,7 @@ export async function hasAffordabilityConsent(borrowerId: string, borrower?: Bor
   if (active) return { ok: true, consentId: active.id, source: "consent_record" };
 
   // 2. Legacy fallback: check borrower.consentProvided (for borrowers without explicit ConsentRecords)
-  if (borrower?.consentProvided) {
+  if ((borrower as any)?.consentProvided) {
     return { ok: true, source: "legacy_borrower_flag" };
   }
   // If borrower object not passed, fetch the flag directly
@@ -721,8 +721,8 @@ export async function hasAffordabilityConsent(borrowerId: string, borrower?: Bor
     const { db } = await import("./db");
     const { borrowers } = await import("@shared/schema");
     const { eq } = await import("drizzle-orm");
-    const [b] = await db.select({ consentProvided: borrowers.consentProvided }).from(borrowers).where(eq(borrowers.id, borrowerId)).limit(1);
-    if (b?.consentProvided) return { ok: true, source: "legacy_borrower_flag" };
+    const [b] = await db.select({ consentProvided: (borrowers as any).consentProvided }).from(borrowers).where(eq(borrowers.id, borrowerId)).limit(1);
+    if ((b as any)?.consentProvided) return { ok: true, source: "legacy_borrower_flag" };
   }
 
   return { ok: false, reason: "Borrower has not granted an active consent record for affordability / credit / financial-data analysis." };

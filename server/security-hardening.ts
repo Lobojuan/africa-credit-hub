@@ -133,8 +133,8 @@ export async function runSecurityHealthCheck(): Promise<{
       WHERE created_at > NOW() - INTERVAL '7 days'
     `);
     const { total, chained } = chainResult.rows[0];
-    const intTotal = parseInt(total);
-    const intChained = parseInt(chained || "0");
+    const intTotal = parseInt(String(total));
+    const intChained = parseInt(String(chained || "0"));
     if (intTotal === 0) {
       checks.push({ name: "Audit Trail Integrity", status: "warn", details: "No audit logs in the last 7 days" });
     } else {
@@ -168,7 +168,7 @@ export async function runSecurityHealthCheck(): Promise<{
       SELECT COUNT(*) as total, SUM(CASE WHEN mfa_enabled THEN 1 ELSE 0 END) as mfa_on FROM users WHERE status = 'active'
     `);
     const { total, mfa_on } = mfaResult.rows[0];
-    const mfaRate = parseInt(total) > 0 ? (parseInt(mfa_on || "0") / parseInt(total) * 100).toFixed(0) : "0";
+    const mfaRate = parseInt(String(total)) > 0 ? (parseInt(String(mfa_on || "0")) / parseInt(String(total)) * 100).toFixed(0) : "0";
     checks.push({
       name: "MFA Adoption",
       status: parseInt(mfaRate) >= 50 ? "pass" : "warn",

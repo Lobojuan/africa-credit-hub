@@ -161,7 +161,7 @@ export default function BusinessDetailPage() {
               <CardContent className="p-4 text-center">
                 <p className="text-xs text-muted-foreground mb-1">Credit Score</p>
                 {creditScore ? (
-                  <CreditScoreGauge score={creditScore} size="sm" />
+                  <CreditScoreGauge score={Number(creditScore)} />
                 ) : (
                   <p className="text-2xl font-bold text-muted-foreground" data-testid="text-no-score">N/A</p>
                 )}
@@ -181,7 +181,7 @@ export default function BusinessDetailPage() {
             </Card>
           </div>
 
-          {fraudRisk && <FraudRiskIndicator fraudRisk={fraudRisk} />}
+          {fraudRisk && <FraudRiskIndicator data={fraudRisk} />}
 
           {scoreFactors && <ScoreFactors factors={scoreFactors} />}
 
@@ -266,7 +266,7 @@ export default function BusinessDetailPage() {
                       <TableRow key={j.id} data-testid={`row-judgment-${j.id}`}>
                         <TableCell className="text-xs">{j.caseNumber}</TableCell>
                         <TableCell className="text-xs font-medium">{formatCurrency(Number(j.amount || 0), currency)}</TableCell>
-                        <TableCell><Badge variant={j.status === "satisfied" ? "default" : "destructive"} className="text-[10px] capitalize">{j.status}</Badge></TableCell>
+                        <TableCell><Badge variant={( j.status as string) === "satisfied" ? "default" : "destructive"} className="text-[10px] capitalize">{j.status}</Badge></TableCell>
                         <TableCell className="text-xs">{j.judgmentDate ? new Date(j.judgmentDate).toLocaleDateString() : "-"}</TableCell>
                       </TableRow>
                     ))}

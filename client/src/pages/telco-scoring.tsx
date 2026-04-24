@@ -1223,7 +1223,7 @@ function ProfileScoreHistory({ profileId, onScore, scorePending }: { profileId: 
               <div className="flex items-center gap-2">
                 {score.creditLimit && Number(score.creditLimit) > 0 && (
                   <Badge variant="outline" className="text-[10px]">
-                    <Wallet className="w-3 h-3 mr-1" />{getCountryCurrency(score.country).symbol}{Number(score.creditLimit).toLocaleString()}
+                    <Wallet className="w-3 h-3 mr-1" />{getCountryCurrency(score.country ?? undefined).symbol}{Number(score.creditLimit).toLocaleString()}
                   </Badge>
                 )}
                 {score.approvalRecommendation ? (
@@ -2017,7 +2017,7 @@ export default function TelcoScoringPage() {
                         <div className="flex items-center gap-2">
                           {score.creditLimit && Number(score.creditLimit) > 0 && (
                             <Badge variant="outline" className="text-[10px]">
-                              <Wallet className="w-3 h-3 mr-1" />{getCountryCurrency(score.country).symbol}{Number(score.creditLimit).toLocaleString()}
+                              <Wallet className="w-3 h-3 mr-1" />{getCountryCurrency(score.country ?? undefined).symbol}{Number(score.creditLimit).toLocaleString()}
                             </Badge>
                           )}
                           {score.approvalRecommendation ? (
@@ -2050,7 +2050,7 @@ export default function TelcoScoringPage() {
                           {(() => {
                             const kpi = score.kpiSnapshot ? JSON.parse(score.kpiSnapshot) : null;
                             if (!kpi) return null;
-                            const cur = getCountryCurrency(score.country).symbol;
+                            const cur = getCountryCurrency(score.country ?? undefined).symbol;
                             return (
                               <div>
                                 <div className="flex items-center gap-2 mb-3">

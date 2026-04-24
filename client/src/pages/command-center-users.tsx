@@ -807,7 +807,7 @@ export function CommandCenterUsersTab() {
                               </div>
                             </td>
                             <td className="p-3 text-center"><StatusBadge status={o.status} /></td>
-                            <td className="p-3 text-center text-muted-foreground">{o.userCount ?? "—"}</td>
+                            <td className="p-3 text-center text-muted-foreground">{(o as any).userCount ?? "—"}</td>
                             <td className="p-3 text-center">
                               <Badge variant="outline" className={`text-[9px] h-5 capitalize ${
                                 o.subscriptionTier === "enterprise" ? "border-purple-500/30 text-purple-400 bg-purple-500/10" :

@@ -670,7 +670,7 @@ export default function PartnerDocsPage() {
                         </div>
                         <p className="text-xs">{item.desc}</p>
                         {item.link && (
-                          <Button asChild variant="link" size="sm" className="h-auto p-0 mt-0.5 text-teal-500 text-xs" data-testid={`link-onboarding-step-${item.step}`}>
+                          <Button asChild variant="ghost" size="sm" className="h-auto p-0 mt-0.5 text-teal-500 text-xs" data-testid={`link-onboarding-step-${item.step}`}>
                             <Link href={item.link}>{item.linkText} →</Link>
                           </Button>
                         )}

@@ -19,7 +19,7 @@ router.get("/api/platform/wallets", requireAuth, requireSuperAdmin, async (_req,
 
 router.get("/api/platform/wallets/:id/transactions", requireAuth, requireSuperAdmin, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params["id"] as string;
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
     const txs = await db.select().from(walletTransactions).where(eq(walletTransactions.walletId, id)).orderBy(desc(walletTransactions.createdAt)).limit(limit);
     res.json(txs);
@@ -90,7 +90,7 @@ router.post("/api/platform/wallets/create", requireAuth, requireSuperAdmin, asyn
 
 router.patch("/api/platform/wallets/:id/settings", requireAuth, requireSuperAdmin, async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params["id"] as string;
     const { lowBalanceThresholdCents, autoTopupEnabled, autoTopupAmountCents } = req.body;
     const updates: any = { updatedAt: new Date() };
     if (lowBalanceThresholdCents !== undefined) {

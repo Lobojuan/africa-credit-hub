@@ -106,8 +106,8 @@ async function requireCrossBorderAccess(req: Request, res: Response, next: NextF
       and(
         eq(dataSharingAgreements.status, "active"),
         or(
-          eq(dataSharingAgreements.sourceCountry, orgCountry),
-          eq(dataSharingAgreements.targetCountry, orgCountry)
+          eq(dataSharingAgreements.sourceCountry, orgCountry as any),
+          eq(dataSharingAgreements.targetCountry, orgCountry as any)
         )
       )
     );
@@ -940,7 +940,7 @@ export async function registerRoutes(
 
   app.post("/api/admin/approve-registration/:orgId", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      const { orgId } = req.params;
+      const orgId = req.params["orgId"] as string;
       const org = await storage.getOrganization(orgId);
       if (!org) return res.status(404).json({ message: "Organization not found" });
       if (org.status !== "pending") return res.status(400).json({ message: "Organization is not pending review" });
@@ -974,7 +974,7 @@ export async function registerRoutes(
 
   app.post("/api/admin/reject-registration/:orgId", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      const { orgId } = req.params;
+      const orgId = req.params["orgId"] as string;
       const { reason } = req.body;
       const org = await storage.getOrganization(orgId);
       if (!org) return res.status(404).json({ message: "Organization not found" });
@@ -1223,7 +1223,7 @@ export async function registerRoutes(
 
   app.get("/api/borrowers/:id", requireAuth, requireRole("admin", "lender", "regulator", "super_admin"), async (req, res) => {
     try {
-      const borrower = await storage.getBorrower(req.params.id);
+      const borrower = await storage.getBorrower(req.params.id as string);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
       const country = getCountryFilter(req);
       if (country && borrower.country !== country) {
@@ -1291,7 +1291,7 @@ export async function registerRoutes(
 
   app.patch("/api/borrowers/:id", requireRole("admin", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
-      const existing = await storage.getBorrower(req.params.id);
+      const existing = await storage.getBorrower(req.params.id as string);
       if (!existing) return res.status(404).json({ message: "Borrower not found" });
       const userCountry = getCountryFilter(req);
       if (userCountry && existing.country && existing.country !== userCountry) {
@@ -1300,14 +1300,14 @@ export async function registerRoutes(
       const validatedBody = insertBorrowerSchema.partial().parse(req.body);
       const approval = await storage.createPendingApproval({
         entityType: "borrower",
-        entityId: req.params.id,
+        entityId: req.params.id as string,
         action: "UPDATE",
         payload: JSON.stringify(validatedBody),
         requestedBy: req.session?.userId!,
-        country: requireWriteCountry(userCountry || existing.country, "createPendingApproval:borrower_update"),
+        country: requireWriteCountry(userCountry || existing.country || "", "createPendingApproval:borrower_update"),
       });
       await storage.createAuditLog({
-        action: "SUBMIT_APPROVAL", entity: "borrower", entityId: req.params.id, userId: req.session?.userId,
+        action: "SUBMIT_APPROVAL", entity: "borrower", entityId: req.params.id as string, userId: req.session?.userId,
         details: `Submitted borrower update for approval: ${existing.firstName || existing.companyName}`,
         ipAddress: req.ip || null,
       });
@@ -1328,14 +1328,14 @@ export async function registerRoutes(
 
   app.post("/api/borrowers/:id/photo", requireRole("admin", "super_admin", "lender"), memoryUpload.single("photo"), async (req, res) => {
     try {
-      const borrower = await storage.getBorrower(req.params.id);
+      const borrower = await storage.getBorrower(req.params.id as string);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       const base64 = req.file.buffer.toString("base64");
       const photoUrl = `data:${req.file.mimetype};base64,${base64}`;
-      await storage.updateBorrower(req.params.id, { photoUrl });
+      await storage.updateBorrower(req.params.id as string, { photoUrl });
       await storage.createAuditLog({
-        action: "UPLOAD_PHOTO", entity: "borrower", entityId: req.params.id, userId: req.session?.userId,
+        action: "UPLOAD_PHOTO", entity: "borrower", entityId: req.params.id as string, userId: req.session?.userId,
         details: `Uploaded ID photo for borrower: ${borrower.firstName || borrower.companyName}`,
         ipAddress: req.ip || null,
       });
@@ -1347,14 +1347,14 @@ export async function registerRoutes(
 
   app.post("/api/borrowers/:id/id-document", requireRole("admin", "super_admin", "lender"), memoryUploadDoc.single("document"), async (req, res) => {
     try {
-      const borrower = await storage.getBorrower(req.params.id);
+      const borrower = await storage.getBorrower(req.params.id as string);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
       if (!req.file) return res.status(400).json({ message: "No file uploaded" });
       const base64 = req.file.buffer.toString("base64");
       const idDocumentUrl = `data:${req.file.mimetype};base64,${base64}`;
-      await storage.updateBorrower(req.params.id, { idDocumentUrl });
+      await storage.updateBorrower(req.params.id as string, { idDocumentUrl });
       await storage.createAuditLog({
-        action: "UPLOAD_ID_DOCUMENT", entity: "borrower", entityId: req.params.id, userId: req.session?.userId,
+        action: "UPLOAD_ID_DOCUMENT", entity: "borrower", entityId: req.params.id as string, userId: req.session?.userId,
         details: `Uploaded ID document for borrower: ${borrower.firstName || borrower.companyName}`,
         ipAddress: req.ip || null,
       });
@@ -1386,7 +1386,7 @@ export async function registerRoutes(
 
   app.get("/api/credit-accounts/:id", requireAuth, requireRole("admin", "lender", "regulator", "super_admin"), async (req, res) => {
     try {
-      const account = await storage.getCreditAccount(req.params.id);
+      const account = await storage.getCreditAccount(req.params.id as string);
       if (!account) return res.status(404).json({ message: "Account not found" });
       const country = getCountryFilter(req);
       if (country) {
@@ -1438,7 +1438,7 @@ export async function registerRoutes(
 
   app.patch("/api/credit-accounts/:id", requireRole("admin", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
-      const existing = await storage.getCreditAccount(req.params.id);
+      const existing = await storage.getCreditAccount(req.params.id as string);
       if (!existing) return res.status(404).json({ message: "Account not found" });
       if (!(await validateBorrowerCountry(existing.borrowerId, req))) {
         return res.status(403).json({ message: "Data sovereignty violation: cannot modify account for borrower in a different country" });
@@ -1453,14 +1453,14 @@ export async function registerRoutes(
       const validatedBody = insertCreditAccountSchema.partial().parse(normalizedBody);
       const approval = await storage.createPendingApproval({
         entityType: "credit_account",
-        entityId: req.params.id,
+        entityId: req.params.id as string,
         action: "UPDATE",
         payload: JSON.stringify(validatedBody),
         requestedBy: req.session?.userId!,
         country: requireWriteCountry(getCountryFilter(req), "createPendingApproval:credit_account_update"),
       });
       await storage.createAuditLog({
-        action: "SUBMIT_APPROVAL", entity: "credit_account", entityId: req.params.id, userId: req.session?.userId,
+        action: "SUBMIT_APPROVAL", entity: "credit_account", entityId: req.params.id as string, userId: req.session?.userId,
         details: `Submitted credit account update for approval: ${existing.accountNumber}`,
         ipAddress: req.ip || null,
       });
@@ -1513,7 +1513,7 @@ export async function registerRoutes(
             accessedBy: user?.fullName || "Unknown",
             institution: inquiry.institution,
             purpose: inquiry.purpose,
-            organizationId: borrower.organizationId,
+            organizationId: borrower.organizationId ?? undefined,
           });
         }
       } catch {}
@@ -1525,32 +1525,32 @@ export async function registerRoutes(
 
   app.get("/api/borrowers/:id/credit-report", requireAuth, requireRole("admin", "super_admin", "lender", "regulator"), async (req, res) => {
     try {
-      const borrower = await storage.getBorrower(req.params.id);
+      const borrower = await storage.getBorrower(req.params.id as string);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
       const country = getCountryFilter(req);
       if (country && borrower.country !== country) {
         return res.status(403).json({ message: "Access denied: borrower belongs to a different country" });
       }
-      const accounts = await storage.getCreditAccountsByBorrower(req.params.id);
-      const inquiries = await storage.getCreditInquiriesByBorrower(req.params.id);
+      const accounts = await storage.getCreditAccountsByBorrower(req.params.id as string);
+      const inquiries = await storage.getCreditInquiriesByBorrower(req.params.id as string);
 
-      const judgments = await storage.getCourtJudgmentsByBorrower(req.params.id);
-      const altData = await db.select().from(alternativeData).where(eq(alternativeData.borrowerId, parseInt(req.params.id)));
+      const judgments = await storage.getCourtJudgmentsByBorrower(req.params.id as string);
+      const altData = await db.select().from(alternativeData).where(eq(alternativeData.borrowerId, req.params["id"] as string));
       const totalDebt = accounts.reduce((sum, a) => sum + parseFloat(a.currentBalance || "0"), 0);
       const delinquentCount = accounts.filter(a => a.status === "delinquent" || a.status === "default").length;
       const writtenOffCount = accounts.filter(a => a.status === "written_off").length;
-      const { score: creditScore, reasonCodes, factors: scoreFactors } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep, altData);
+      const { score: creditScore, reasonCodes, factors: scoreFactors } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep ?? undefined, altData);
 
       await storage.createAuditLog({
-        action: "VIEW", entity: "credit_report", entityId: req.params.id, userId: req.session?.userId,
+        action: "VIEW", entity: "credit_report", entityId: req.params.id as string, userId: req.session?.userId,
         details: `Generated credit report for ${borrower.firstName || borrower.companyName}`,
         ipAddress: req.ip || null,
       });
 
       // Include latest affordability assessment (non-blocking)
-      const latestAffordability = await storage.getLatestAffordabilityAssessment(req.params.id).catch(() => undefined);
-      const incomeSources = latestAffordability ? await storage.getIncomeSourcesByBorrower(req.params.id).catch(() => []) : [];
-      const expenses = latestAffordability ? await storage.getExpenseCategorisationsByBorrower(req.params.id).catch(() => []) : [];
+      const latestAffordability = await storage.getLatestAffordabilityAssessment(req.params.id as string).catch(() => undefined);
+      const incomeSources = latestAffordability ? await storage.getIncomeSourcesByBorrower(req.params.id as string).catch(() => []) : [];
+      const expenses = latestAffordability ? await storage.getExpenseCategorisationsByBorrower(req.params.id as string).catch(() => []) : [];
 
       res.json({
         borrower,
@@ -1582,11 +1582,11 @@ export async function registerRoutes(
 
   app.get("/api/borrowers/:id/fraud-risk", requireRole("admin", "super_admin", "regulator", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
-      const borrower = await storage.getBorrower(req.params.id);
+      const borrower = await storage.getBorrower(req.params.id as string);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
-      const accounts = await storage.getCreditAccountsByBorrower(req.params.id);
-      const inquiries = await storage.getCreditInquiriesByBorrower(req.params.id);
-      const judgments = await storage.getCourtJudgmentsByBorrower(req.params.id);
+      const accounts = await storage.getCreditAccountsByBorrower(req.params.id as string);
+      const inquiries = await storage.getCreditInquiriesByBorrower(req.params.id as string);
+      const judgments = await storage.getCourtJudgmentsByBorrower(req.params.id as string);
       const duplicateIdCount = await storage.countBorrowersByNationalId(borrower.nationalId);
       const now = new Date();
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -1599,7 +1599,7 @@ export async function registerRoutes(
       const writtenOffCount = accounts.filter(a => a.status === "written_off").length;
 
       const fraudRisk = calculateFraudRisk({
-        borrowerId: req.params.id,
+        borrowerId: req.params.id as string,
         nationalId: borrower.nationalId,
         phone: borrower.phone,
         email: borrower.email,
@@ -1623,12 +1623,12 @@ export async function registerRoutes(
 
   app.get("/api/borrowers/:id/identity-status", requireRole("admin", "super_admin", "regulator", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
-      const borrower = await storage.getBorrower(req.params.id);
+      const borrower = await storage.getBorrower(req.params.id as string);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
       const [verifications, hits, alerts] = await Promise.all([
-        storage.getIdentityVerifications(req.params.id),
-        storage.getWatchlistHits(req.params.id),
-        storage.getFraudAlerts(req.params.id),
+        storage.getIdentityVerifications(req.params.id as string),
+        storage.getWatchlistHits(req.params.id as string),
+        storage.getFraudAlerts(req.params.id as string),
       ]);
       const latestIdLookup = verifications.find(v => v.method === "id_lookup");
       const latestBiometric = verifications.find(v => v.method === "biometric_match");
@@ -1652,10 +1652,10 @@ export async function registerRoutes(
 
   app.post("/api/borrowers/:id/verify-identity", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
-      const borrower = await storage.getBorrower(req.params.id);
+      const borrower = await storage.getBorrower(req.params.id as string);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
       const { runFullIdentityCheck } = await import("./identity-service");
-      const result = await runFullIdentityCheck(borrower, req.session?.userId, borrower.organizationId || undefined);
+      const result = await runFullIdentityCheck(borrower, req.session?.userId, (borrower.organizationId ?? undefined) || undefined);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -1664,10 +1664,10 @@ export async function registerRoutes(
 
   app.post("/api/borrowers/:id/rescreen-watchlist", requireRole("admin", "super_admin", "regulator"), enforceDataSovereignty, async (req, res) => {
     try {
-      const borrower = await storage.getBorrower(req.params.id);
+      const borrower = await storage.getBorrower(req.params.id as string);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
       const { screenWatchlist } = await import("./identity-service");
-      const result = await screenWatchlist(borrower, req.session?.userId, borrower.organizationId || undefined);
+      const result = await screenWatchlist(borrower, req.session?.userId, (borrower.organizationId ?? undefined) || undefined);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -1678,11 +1678,11 @@ export async function registerRoutes(
 
   app.get("/api/borrowers/:id/affordability", requireRole("admin", "super_admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
     try {
-      const borrower = await storage.getBorrower(req.params.id);
+      const borrower = await storage.getBorrower(req.params.id as string);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
-      const latest = await storage.getLatestAffordabilityAssessment(req.params.id);
-      const incomeSources = await storage.getIncomeSourcesByBorrower(req.params.id);
-      const expenses = await storage.getExpenseCategorisationsByBorrower(req.params.id);
+      const latest = await storage.getLatestAffordabilityAssessment(req.params.id as string);
+      const incomeSources = await storage.getIncomeSourcesByBorrower(req.params.id as string);
+      const expenses = await storage.getExpenseCategorisationsByBorrower(req.params.id as string);
       res.json({ assessment: latest || null, incomeSources, expenses });
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -1691,7 +1691,7 @@ export async function registerRoutes(
 
   app.post("/api/borrowers/:id/affordability", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
-      const borrower = await storage.getBorrower(req.params.id);
+      const borrower = await storage.getBorrower(req.params.id as string);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
       const { computeAffordability } = await import("./affordability-service");
       const { source, periodDays, useLlmFallback } = req.body || {};
@@ -1702,7 +1702,7 @@ export async function registerRoutes(
         computedBy: req.session?.userId,
       });
       await storage.createAuditLog({
-        action: "COMPUTE_AFFORDABILITY", entity: "borrower", entityId: req.params.id, userId: req.session?.userId,
+        action: "COMPUTE_AFFORDABILITY", entity: "borrower", entityId: req.params.id as string, userId: req.session?.userId,
         details: `Affordability computed (${out.result.dataSource}): gross=${out.result.grossIncomeMonthly} ${out.result.currency}, max=${out.result.maxRecommendedNewCredit}`,
         ipAddress: req.ip || null,
       });
@@ -1716,7 +1716,7 @@ export async function registerRoutes(
 
   app.post("/api/borrowers/:id/affordability/bank-statement", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, memoryUploadDoc.single("statement"), async (req, res) => {
     try {
-      const borrower = await storage.getBorrower(req.params.id);
+      const borrower = await storage.getBorrower(req.params.id as string);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
       if (!req.file) return res.status(400).json({ message: "No statement uploaded" });
       const { computeAffordability } = await import("./affordability-service");
@@ -1727,7 +1727,7 @@ export async function registerRoutes(
         useLlmFallback: true,
       });
       await storage.createAuditLog({
-        action: "AFFORDABILITY_PDF_UPLOAD", entity: "borrower", entityId: req.params.id, userId: req.session?.userId,
+        action: "AFFORDABILITY_PDF_UPLOAD", entity: "borrower", entityId: req.params.id as string, userId: req.session?.userId,
         details: `Bank statement parsed (${req.file.originalname}, ${req.file.size}B); gross=${out.result.grossIncomeMonthly}`,
         ipAddress: req.ip || null,
       });
@@ -1753,7 +1753,7 @@ export async function registerRoutes(
    */
   app.post("/api/borrowers/:id/affordability/link-session", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
-      const borrower = await storage.getBorrower(req.params.id);
+      const borrower = await storage.getBorrower(req.params.id as string);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
 
       // Consent gate: borrower must have an active consent record before any open-banking data
@@ -1861,7 +1861,7 @@ export async function registerRoutes(
    */
   app.post("/api/borrowers/:id/affordability/link-session/callback", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
-      const borrower = await storage.getBorrower(req.params.id);
+      const borrower = await storage.getBorrower(req.params.id as string);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
 
       // Consent gate: re-verify at callback time before persisting any linked account record.
@@ -1966,7 +1966,7 @@ export async function registerRoutes(
 
   app.post("/api/borrowers/:id/affordability/connect-bank", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
-      const borrower = await storage.getBorrower(req.params.id);
+      const borrower = await storage.getBorrower(req.params.id as string);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
       const { computeAffordability } = await import("./affordability-service");
       const { provider, accountId: bodyAccountId, periodDays } = req.body || {};
@@ -1984,13 +1984,13 @@ export async function registerRoutes(
 
       const out = await computeAffordability(borrower, {
         source: "open_banking",
-        openBankingProvider: resolvedProvider,
+        openBankingProvider: resolvedProvider as any,
         openBankingAccountId: resolvedAccountId,
         periodDays: periodDays ? Number(periodDays) : undefined,
         computedBy: req.session?.userId,
       });
       await storage.createAuditLog({
-        action: "AFFORDABILITY_OPEN_BANKING", entity: "borrower", entityId: req.params.id, userId: req.session?.userId,
+        action: "AFFORDABILITY_OPEN_BANKING", entity: "borrower", entityId: req.params.id as string, userId: req.session?.userId,
         details: `Open banking (${provider || "auto"}); gross=${out.result.grossIncomeMonthly}`,
         ipAddress: req.ip || null,
       });
@@ -2009,11 +2009,11 @@ export async function registerRoutes(
    */
   app.delete("/api/borrowers/:id/affordability/connect-bank", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
-      const borrower = await storage.getBorrower(req.params.id);
+      const borrower = await storage.getBorrower(req.params.id as string);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
 
       // Find active consent records with open-banking/financial scope
-      const records = await storage.getConsentRecordsByBorrower(req.params.id);
+      const records = await storage.getConsentRecordsByBorrower(req.params.id as string);
       const openBankingRecord = records.find(r => {
         if (r.status !== "active") return false;
         const t = (r.consentType || "").toLowerCase().replace(/[\s_-]/g, "");
@@ -2025,12 +2025,12 @@ export async function registerRoutes(
       }
 
       // Also revoke all persisted linked open-banking accounts for this borrower
-      const linkedAccounts = await storage.getLinkedOpenBankingAccounts(req.params.id);
+      const linkedAccounts = await storage.getLinkedOpenBankingAccounts(req.params.id as string);
       const activeLinked = linkedAccounts.filter(a => a.status === "active");
       await Promise.all(activeLinked.map(a => storage.revokeLinkedOpenBankingAccount(a.id)));
 
       await storage.createAuditLog({
-        action: "AFFORDABILITY_BANK_REVOKE", entity: "borrower", entityId: req.params.id, userId: req.session?.userId,
+        action: "AFFORDABILITY_BANK_REVOKE", entity: "borrower", entityId: req.params.id as string, userId: req.session?.userId,
         details: `Open-banking consent revoked for borrower ${borrower.firstName || borrower.companyName}${openBankingRecord ? ` (consent record: ${openBankingRecord.id})` : " (no active record found)"}; ${activeLinked.length} linked account(s) revoked`,
         ipAddress: req.ip || null,
       });
@@ -2086,7 +2086,7 @@ export async function registerRoutes(
       if (!["resolved", "false_positive", "investigating", "escalated"].includes(status)) {
         return res.status(400).json({ message: "Invalid status" });
       }
-      const hit = await storage.getWatchlistHit(req.params.id);
+      const hit = await storage.getWatchlistHit(req.params.id as string);
       if (!hit) return res.status(404).json({ message: "Watchlist hit not found" });
       const isSuper = req.session?.userRole === "super_admin";
       if (!isSuper && hit.organizationId && req.session?.organizationId && hit.organizationId !== req.session.organizationId) {
@@ -2095,14 +2095,14 @@ export async function registerRoutes(
       const access = await assertComplianceAccess(req, hit.borrowerId);
       if (!access.ok) return res.status(access.status).json({ message: access.message });
 
-      const updated = await storage.updateWatchlistHit(req.params.id, {
+      const updated = await storage.updateWatchlistHit(req.params.id as string, {
         status,
         reviewNotes: notes || null,
         reviewedBy: req.session?.userId,
         resolvedAt: status === "resolved" || status === "false_positive" ? new Date() : undefined,
       } as any);
       if (!updated) return res.status(500).json({ message: "Update failed" });
-      await storage.createAuditLog({ action: "RESOLVE_WATCHLIST_HIT", entity: "watchlist_hit", entityId: req.params.id, userId: req.session?.userId, details: JSON.stringify({ status, notes, borrowerId: hit.borrowerId }), ipAddress: req.ip || null } as any);
+      await storage.createAuditLog({ action: "RESOLVE_WATCHLIST_HIT", entity: "watchlist_hit", entityId: req.params.id as string, userId: req.session?.userId, details: JSON.stringify({ status, notes, borrowerId: hit.borrowerId }), ipAddress: req.ip || null } as any);
       res.json(updated);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -2113,7 +2113,7 @@ export async function registerRoutes(
       if (!["resolved", "false_positive", "investigating", "escalated"].includes(status)) {
         return res.status(400).json({ message: "Invalid status" });
       }
-      const alert = await storage.getFraudAlert(req.params.id);
+      const alert = await storage.getFraudAlert(req.params.id as string);
       if (!alert) return res.status(404).json({ message: "Fraud alert not found" });
       const isSuper = req.session?.userRole === "super_admin";
       if (!isSuper && alert.organizationId && req.session?.organizationId && alert.organizationId !== req.session.organizationId) {
@@ -2122,14 +2122,14 @@ export async function registerRoutes(
       const access = await assertComplianceAccess(req, alert.borrowerId);
       if (!access.ok) return res.status(access.status).json({ message: access.message });
 
-      const updated = await storage.updateFraudAlert(req.params.id, {
+      const updated = await storage.updateFraudAlert(req.params.id as string, {
         status,
         reviewNotes: notes || null,
         reviewedBy: req.session?.userId,
         resolvedAt: status === "resolved" || status === "false_positive" ? new Date() : undefined,
       } as any);
       if (!updated) return res.status(500).json({ message: "Update failed" });
-      await storage.createAuditLog({ action: "RESOLVE_FRAUD_ALERT", entity: "fraud_alert", entityId: req.params.id, userId: req.session?.userId, details: JSON.stringify({ status, notes, borrowerId: alert.borrowerId }), ipAddress: req.ip || null } as any);
+      await storage.createAuditLog({ action: "RESOLVE_FRAUD_ALERT", entity: "fraud_alert", entityId: req.params.id as string, userId: req.session?.userId, details: JSON.stringify({ status, notes, borrowerId: alert.borrowerId }), ipAddress: req.ip || null } as any);
       res.json(updated);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -2144,7 +2144,7 @@ export async function registerRoutes(
       const assignee = await storage.getUser(assigneeUserId);
       if (!assignee) return res.status(404).json({ message: "Assignee user not found" });
 
-      const alert = await storage.getFraudAlert(req.params.id);
+      const alert = await storage.getFraudAlert(req.params.id as string);
       if (!alert) return res.status(404).json({ message: "Fraud alert not found" });
       const isSuper = req.session?.userRole === "super_admin";
       if (!isSuper && alert.organizationId && req.session?.organizationId && alert.organizationId !== req.session.organizationId) {
@@ -2153,13 +2153,13 @@ export async function registerRoutes(
       const access = await assertComplianceAccess(req, alert.borrowerId);
       if (!access.ok) return res.status(access.status).json({ message: access.message });
 
-      const updated = await storage.updateFraudAlert(req.params.id, {
+      const updated = await storage.updateFraudAlert(req.params.id as string, {
         assignedTo: assigneeUserId,
         status: alert.status === "open" ? "investigating" : alert.status,
       } as any);
       if (!updated) return res.status(500).json({ message: "Update failed" });
       await storage.createAuditLog({
-        action: "ASSIGN_FRAUD_ALERT", entity: "fraud_alert", entityId: req.params.id,
+        action: "ASSIGN_FRAUD_ALERT", entity: "fraud_alert", entityId: req.params.id as string,
         userId: req.session?.userId,
         details: JSON.stringify({ assigneeUserId, borrowerId: alert.borrowerId }),
         ipAddress: req.ip || null,
@@ -2170,7 +2170,7 @@ export async function registerRoutes(
 
   app.get("/api/borrowers/:id/alternative-data", requireRole("admin", "super_admin", "regulator", "lender"), async (req, res) => {
     try {
-      const borrowerId = req.params.id;
+      const borrowerId = req.params.id as string;
       const data = await db.select().from(alternativeData).where(eq(alternativeData.borrowerId, borrowerId));
       res.json(data);
     } catch (e: any) {
@@ -2180,8 +2180,8 @@ export async function registerRoutes(
 
   app.post("/api/borrowers/:id/alternative-data", requireRole("admin", "super_admin", "lender"), async (req, res) => {
     try {
-      const borrowerId = req.params.id;
-      const borrower = await storage.getBorrower(req.params.id);
+      const borrowerId = req.params.id as string;
+      const borrower = await storage.getBorrower(req.params.id as string);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
       const parsed = insertAlternativeDataSchema.parse({ ...req.body, borrowerId });
       const [created] = await db.insert(alternativeData).values(parsed).returning();
@@ -2889,7 +2889,7 @@ export async function registerRoutes(
           emailTokenExpiresAt: account.email ? new Date(Date.now() + 24 * 60 * 60 * 1000) : null,
         }).where(eq(consumerAccounts.id, account.id));
 
-        const smsSent = await sendOtpSms(account.phone, otp);
+        const smsSent = await sendOtpSms(account.phone || "", otp);
         let emailSent = false;
         if (account.email) {
           emailSent = await sendConsumerVerificationLink(account.email, emailToken, `${req.protocol}://${req.get("host")}`);
@@ -2961,7 +2961,7 @@ export async function registerRoutes(
       } else if (smsSent) {
         message = "A 6-digit code has been sent to your phone by SMS.";
       } else if (emailSent) {
-        message = `SMS unavailable — a 6-digit code has been sent to your email address instead (${account.email.replace(/(.{2}).+(@.+)/, "$1***$2")}).`;
+        message = `SMS unavailable — a 6-digit code has been sent to your email address instead (${account.email!.replace(/(.{2}).+(@.+)/, "$1***$2")}).`;
       } else {
         message = "SMS and email delivery unavailable — use the code shown on screen.";
       }
@@ -3086,7 +3086,7 @@ export async function registerRoutes(
         emailTokenExpiresAt: account.email ? new Date(Date.now() + 24 * 60 * 60 * 1000) : null,
       }).where(eq(consumerAccounts.id, account.id));
 
-      const smsSent = await sendOtpSms(account.phone, otp);
+      const smsSent = await sendOtpSms(account.phone || "", otp);
       let emailSent = false;
       if (account.email) {
         emailSent = await sendConsumerVerificationLink(account.email, emailToken, `${req.protocol}://${req.get("host")}`);
@@ -3138,7 +3138,7 @@ export async function registerRoutes(
       try {
         altData = await db.select().from(alternativeData).where(sql`borrower_id::text = ${borrower.id}`);
       } catch {}
-      const { score: creditScore } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep, altData);
+      const { score: creditScore } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep ?? undefined, altData);
 
       // Include affordability snapshot (if previously computed) — privacy-safe subset
       const consumerAffordability = await storage.getLatestAffordabilityAssessment(borrower.id).catch(() => undefined);
@@ -3258,7 +3258,7 @@ export async function registerRoutes(
       const currentUserId = req.session?.userId;
       if (!currentUserId) return res.status(401).json({ message: "Not authenticated" });
 
-      const approval = await storage.getPendingApproval(req.params.id);
+      const approval = await storage.getPendingApproval(req.params.id as string);
       if (!approval) return res.status(404).json({ message: "Approval not found" });
 
       if (approval.requestedBy === currentUserId) {
@@ -3274,7 +3274,7 @@ export async function registerRoutes(
         return res.status(400).json({ message: "This request has already been reviewed" });
       }
 
-      const updated = await storage.updateApprovalStatus(req.params.id, status, currentUserId, reviewNotes);
+      const updated = await storage.updateApprovalStatus(req.params.id as string, status, currentUserId, reviewNotes);
 
       if (status === "approved" && updated) {
         try {
@@ -3317,7 +3317,7 @@ export async function registerRoutes(
       }
 
       await storage.createAuditLog({
-        action: status === "approved" ? "APPROVE" : "REJECT", entity: "pending_approval", entityId: req.params.id, userId: currentUserId,
+        action: status === "approved" ? "APPROVE" : "REJECT", entity: "pending_approval", entityId: req.params.id as string, userId: currentUserId,
         details: `${status === "approved" ? "Approved" : "Rejected"} ${approval.action} for ${approval.entityType}${reviewNotes ? `: ${reviewNotes}` : ""}`,
         ipAddress: req.ip || null,
       });
@@ -3353,7 +3353,7 @@ export async function registerRoutes(
 
   app.get("/api/disputes/:id", requireAuth, async (req, res) => {
     try {
-      const dispute = await storage.getDispute(req.params.id);
+      const dispute = await storage.getDispute(req.params.id as string);
       if (!dispute) return res.status(404).json({ message: "Dispute not found" });
       if (!(await validateBorrowerCountry(dispute.borrowerId, req))) {
         return res.status(403).json({ message: "Access denied" });
@@ -3396,9 +3396,9 @@ export async function registerRoutes(
       try {
         const borrower = await storage.getBorrower(dispute.borrowerId);
         if (borrower?.organizationId) {
-          const org = await storage.getOrganization(borrower.organizationId);
+          const org = await storage.getOrganization(borrower.organizationId ?? undefined);
           if (org?.contactEmail) {
-            sendDisputeNotification(org.name, org.contactEmail, dispute.id, `${borrower.firstName} ${borrower.lastName}`, dispute.disputeType || "general").catch(() => {});
+            sendDisputeNotification(org.name || "", org.contactEmail!, 0, `${borrower.firstName} ${borrower.lastName}`, dispute.disputeType || "general").catch(() => {});
           }
         }
         recordUsageEvent({
@@ -3420,7 +3420,7 @@ export async function registerRoutes(
   app.patch("/api/disputes/:id", requireRole("admin", "regulator"), async (req, res) => {
     try {
       const validatedBody = insertDisputeSchema.partial().parse(req.body);
-      const dispute = await storage.updateDispute(req.params.id, validatedBody);
+      const dispute = await storage.updateDispute(req.params["id"] as string, { status: (validatedBody as any).status, resolution: (validatedBody as any).resolution });
       if (!dispute) return res.status(404).json({ message: "Dispute not found" });
       await storage.createAuditLog({
         action: "UPDATE_DISPUTE", entity: "dispute", entityId: dispute.id, userId: req.session?.userId,
@@ -3575,7 +3575,7 @@ export async function registerRoutes(
     results: { successCount: number; errorCount: number; updatedCount?: number; rejectedCount?: number; errors: Array<{ index: number; message: string; type?: string }> },
     orgId?: string
   ) {
-    if (!results.updatedCount) results.updatedCount = 0;
+    if (!(results as any).updatedCount) (results as any).updatedCount = 0;
 
     for (const item of validated) {
       try {
@@ -3642,7 +3642,7 @@ export async function registerRoutes(
     for (const item of toUpdate) {
       try {
         await db.update(creditAccounts).set({ ...item.data, updatedAt: new Date() }).where(eq(creditAccounts.id, item.id));
-        results.updatedCount!++;
+        (results as any).updatedCount!++;
         results.successCount++;
       } catch (innerErr: any) {
         results.errorCount++;
@@ -3708,11 +3708,11 @@ export async function registerRoutes(
       const batchMeta = JSON.stringify({
         totalRecords: results.totalSubmitted,
         successCount: results.successCount,
-        updatedCount: results.updatedCount || 0,
+        updatedCount: (results as any).updatedCount || 0,
         errorCount: results.errorCount,
         errors: results.errors.slice(0, 50),
       });
-      const batchSummary = `Batch upload: ${results.successCount} succeeded (${results.updatedCount || 0} updated), ${results.errorCount} failed out of ${results.totalSubmitted}`;
+      const batchSummary = `Batch upload: ${results.successCount} succeeded (${(results as any).updatedCount || 0} updated), ${results.errorCount} failed out of ${results.totalSubmitted}`;
       await storage.createAuditLog({
         action: "BATCH_UPLOAD", entity: "credit_account", userId: req.session?.userId,
         details: `${batchSummary}\n---JSON---\n${batchMeta}`,
@@ -3796,10 +3796,10 @@ export async function registerRoutes(
       }
       await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
 
-      const xbrlMeta = JSON.stringify({ totalRecords: results.totalSubmitted, successCount: results.successCount, updatedCount: results.updatedCount || 0, errorCount: results.errorCount, errors: results.errors.slice(0, 50) });
+      const xbrlMeta = JSON.stringify({ totalRecords: results.totalSubmitted, successCount: results.successCount, updatedCount: (results as any).updatedCount || 0, errorCount: results.errorCount, errors: results.errors.slice(0, 50) });
       await storage.createAuditLog({
         action: "BATCH_UPLOAD_XBRL", entity: "credit_account", userId: req.session?.userId,
-        details: `XBRL upload: ${results.successCount} succeeded (${results.updatedCount || 0} updated), ${results.errorCount} failed out of ${results.totalSubmitted}\n---JSON---\n${xbrlMeta}`,
+        details: `XBRL upload: ${results.successCount} succeeded (${(results as any).updatedCount || 0} updated), ${results.errorCount} failed out of ${results.totalSubmitted}\n---JSON---\n${xbrlMeta}`,
         ipAddress: req.ip || null,
       });
 
@@ -3929,10 +3929,10 @@ export async function registerRoutes(
       await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
 
       const processedCount = results.successCount;
-      const bogMeta = JSON.stringify({ totalSubmitted: results.totalSubmitted, processedCount, successCount: results.successCount, updatedCount: results.updatedCount || 0, rejectedCount: results.rejectedCount, errorCount: results.errorCount, errors: results.errors.slice(0, 100) });
+      const bogMeta = JSON.stringify({ totalSubmitted: results.totalSubmitted, processedCount, successCount: results.successCount, updatedCount: (results as any).updatedCount || 0, rejectedCount: results.rejectedCount, errorCount: results.errorCount, errors: results.errors.slice(0, 100) });
       await storage.createAuditLog({
         action: "BATCH_UPLOAD_BOG", entity: "credit_account", userId: req.session?.userId,
-        details: `BoG pipe-delimited upload: ${results.successCount} processed (${results.updatedCount || 0} updated), ${results.rejectedCount} rejected, ${results.errorCount - results.rejectedCount} errors, out of ${results.totalSubmitted} submitted\n---JSON---\n${bogMeta}`,
+        details: `BoG pipe-delimited upload: ${results.successCount} processed (${(results as any).updatedCount || 0} updated), ${results.rejectedCount} rejected, ${results.errorCount - results.rejectedCount} errors, out of ${results.totalSubmitted} submitted\n---JSON---\n${bogMeta}`,
         ipAddress: req.ip || null,
       });
 
@@ -4017,10 +4017,10 @@ export async function registerRoutes(
       }
       await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
 
-      const csvMeta = JSON.stringify({ totalRecords: results.totalSubmitted, successCount: results.successCount, updatedCount: results.updatedCount || 0, errorCount: results.errorCount, errors: results.errors.slice(0, 50) });
+      const csvMeta = JSON.stringify({ totalRecords: results.totalSubmitted, successCount: results.successCount, updatedCount: (results as any).updatedCount || 0, errorCount: results.errorCount, errors: results.errors.slice(0, 50) });
       await storage.createAuditLog({
         action: "BATCH_UPLOAD_CSV", entity: "credit_account", userId: req.session?.userId,
-        details: `CSV upload: ${results.successCount} succeeded (${results.updatedCount || 0} updated), ${results.errorCount} failed out of ${results.totalSubmitted}\n---JSON---\n${csvMeta}`,
+        details: `CSV upload: ${results.successCount} succeeded (${(results as any).updatedCount || 0} updated), ${results.errorCount} failed out of ${results.totalSubmitted}\n---JSON---\n${csvMeta}`,
         ipAddress: req.ip || null,
       });
 
@@ -4280,10 +4280,10 @@ export async function registerRoutes(
       await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
 
       const processedCount = results.successCount;
-      const lbMeta = JSON.stringify({ institutionType: instType, lenderInstitution: lender, totalSubmitted: results.totalSubmitted, processedCount, successCount: results.successCount, updatedCount: results.updatedCount, rejectedCount: results.rejectedCount, errorCount: results.errorCount, errors: results.errors.slice(0, 100) });
+      const lbMeta = JSON.stringify({ institutionType: instType, lenderInstitution: lender, totalSubmitted: results.totalSubmitted, processedCount, successCount: results.successCount, updatedCount: (results as any).updatedCount, rejectedCount: results.rejectedCount, errorCount: results.errorCount, errors: results.errors.slice(0, 100) });
       await storage.createAuditLog({
         action: "BATCH_UPLOAD_LIBERIA_CRS", entity: "credit_account", userId: req.session?.userId,
-        details: `Liberia CRS upload (${instType}): ${results.successCount} processed (${results.updatedCount} updated), ${results.rejectedCount} rejected, ${results.errorCount - results.rejectedCount} errors, out of ${results.totalSubmitted} submitted\n---JSON---\n${lbMeta}`,
+        details: `Liberia CRS upload (${instType}): ${results.successCount} processed (${(results as any).updatedCount} updated), ${results.rejectedCount} rejected, ${results.errorCount - results.rejectedCount} errors, out of ${results.totalSubmitted} submitted\n---JSON---\n${lbMeta}`,
         ipAddress: req.ip || null,
       });
 
@@ -4444,8 +4444,8 @@ export async function registerRoutes(
 
   app.get("/api/batch-upload/history/:id/records", requireRole("admin", "lender"), async (req, res) => {
     try {
-      const logId = parseInt(req.params.id, 10);
-      if (isNaN(logId)) return res.status(400).json({ message: "Invalid log ID" });
+      const logId = req.params["id"] as string;
+      
 
       const [log] = await db.select({ details: auditLogs.details }).from(auditLogs).where(eq(auditLogs.id, logId)).limit(1);
       if (!log) return res.status(404).json({ message: "Upload log not found" });
@@ -4586,7 +4586,7 @@ export async function registerRoutes(
   });
 
   app.get("/api/batch/jobs/:jobId", requireAuth, async (req, res) => {
-    const job = getJobStatus(req.params.jobId);
+    const job = getJobStatus(req.params.jobId as string);
     if (!job) return res.status(404).json({ message: "Job not found" });
     res.json(job);
   });
@@ -4891,14 +4891,14 @@ export async function registerRoutes(
         userId: req.session?.userId,
         organizationId: req.session?.organizationId,
         ipAddress: req.ip || null,
-        details: `Generic CRS upload (${country}): ${results.successCount} processed (${results.updatedCount} updated), ${results.rejectedCount} rejected, ${results.errorCount - results.rejectedCount} errors, out of ${results.totalSubmitted} submitted\n---JSON---\n${meta}`,
+        details: `Generic CRS upload (${country}): ${results.successCount} processed (${(results as any).updatedCount} updated), ${results.rejectedCount} rejected, ${results.errorCount - results.rejectedCount} errors, out of ${results.totalSubmitted} submitted\n---JSON---\n${meta}`,
       });
 
       return res.json({
         totalSubmitted: results.totalSubmitted,
         successCount: results.successCount,
         processedCount: results.successCount,
-        updatedCount: results.updatedCount,
+        updatedCount: (results as any).updatedCount,
         rejectedCount: results.rejectedCount,
         errorCount: results.errorCount,
         errors: results.errors,
@@ -4909,7 +4909,7 @@ export async function registerRoutes(
   });
 
   app.get("/api/batch-upload/generic/template/:country", (_req, res) => {
-    const country = decodeURIComponent(_req.params.country);
+    const country = decodeURIComponent(_req.params.country as string);
     const cfg = genericCountryConfigs[country];
     if (!cfg) return res.status(400).json({ message: `Unsupported country. Supported: ${GENERIC_COUNTRIES.join(", ")}` });
 
@@ -4944,7 +4944,7 @@ export async function registerRoutes(
   });
 
   app.get("/api/batch-upload/template/:format", (_req, res) => {
-    const format = _req.params.format;
+    const format = _req.params.format as string;
     if (format === "csv") {
       const csvTemplate = `borrowerId,borrowerName,dateOfBirth,address,nationalId,phoneNumber,reportingDate,lenderInstitution,accountNumber,accountType,creditCategory,originalAmount,currentBalance,currency,interestRate,disbursementDate,maturityDate,status,daysInArrears
 BORROWER_ID_1,John Doe,1985-03-15,"12 Independence Ave, Accra",GHA-123456789,+233201234567,2025-01-31,Commercial Bank,CB-LN-2025-001,Personal Loan,personal,500000.00,450000.00,ETB,12.50,2025-01-15,2028-01-15,current,0
@@ -5205,9 +5205,9 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
               .where(and(eq(dishonouredCheques.chequeNumber, chequeNumber), eq(dishonouredCheques.borrowerId, borrowerId)))
               .limit(1);
             if (existing.length > 0) {
-              const { id: _id, ...updateData } = parsed;
+              const { id: _id, ...updateData } = parsed as any;
               await db.update(dishonouredCheques).set(updateData).where(eq(dishonouredCheques.id, existing[0].id));
-              results.updatedCount++;
+              (results as any).updatedCount++;
               results.successCount++;
               continue;
             }
@@ -5220,10 +5220,10 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
         }
       }
 
-      const chequeMeta = JSON.stringify({ totalRecords: results.totalSubmitted, successCount: results.successCount, updatedCount: results.updatedCount, errorCount: results.errorCount, errors: results.errors.slice(0, 50) });
+      const chequeMeta = JSON.stringify({ totalRecords: results.totalSubmitted, successCount: results.successCount, updatedCount: (results as any).updatedCount, errorCount: results.errorCount, errors: results.errors.slice(0, 50) });
       await storage.createAuditLog({
         action: "BATCH_UPLOAD", entity: "dishonoured_cheque", userId: req.session?.userId,
-        details: `Batch cheque upload: ${results.successCount} succeeded (${results.updatedCount} updated), ${results.errorCount} failed\n---JSON---\n${chequeMeta}`,
+        details: `Batch cheque upload: ${results.successCount} succeeded (${(results as any).updatedCount} updated), ${results.errorCount} failed\n---JSON---\n${chequeMeta}`,
         ipAddress: req.ip || null,
       });
 
@@ -5251,9 +5251,9 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
               .where(and(eq(courtJudgments.caseNumber, caseNumber), eq(courtJudgments.borrowerId, borrowerId)))
               .limit(1);
             if (existing.length > 0) {
-              const { id: _id, ...updateData } = parsed;
+              const { id: _id, ...updateData } = parsed as any;
               await db.update(courtJudgments).set(updateData).where(eq(courtJudgments.id, existing[0].id));
-              results.updatedCount++;
+              (results as any).updatedCount++;
               results.successCount++;
               continue;
             }
@@ -5266,10 +5266,10 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
         }
       }
 
-      const judgMeta = JSON.stringify({ totalRecords: results.totalSubmitted, successCount: results.successCount, updatedCount: results.updatedCount, errorCount: results.errorCount, errors: results.errors.slice(0, 50) });
+      const judgMeta = JSON.stringify({ totalRecords: results.totalSubmitted, successCount: results.successCount, updatedCount: (results as any).updatedCount, errorCount: results.errorCount, errors: results.errors.slice(0, 50) });
       await storage.createAuditLog({
         action: "BATCH_UPLOAD", entity: "court_judgment", userId: req.session?.userId,
-        details: `Batch judgment upload: ${results.successCount} succeeded (${results.updatedCount} updated), ${results.errorCount} failed\n---JSON---\n${judgMeta}`,
+        details: `Batch judgment upload: ${results.successCount} succeeded (${(results as any).updatedCount} updated), ${results.errorCount} failed\n---JSON---\n${judgMeta}`,
         ipAddress: req.ip || null,
       });
 
@@ -5281,7 +5281,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.get("/api/guarantors/:creditAccountId", requireRole("admin", "lender", "regulator"), async (req, res) => {
     try {
-      const list = await storage.getGuarantorsByAccount(req.params.creditAccountId);
+      const list = await storage.getGuarantorsByAccount(req.params.creditAccountId as string);
       res.json(list);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -5308,7 +5308,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const country = getCountryFilter(req);
       enforceCountryScopeForNonSuperAdmin(req, country, "/api/borrowers/:id/guarantors");
       await logCrossCountryAccess(req, country, "/api/borrowers/:id/guarantors");
-      const list = await storage.getGuarantorsByBorrower(req.params.id, country);
+      const list = await storage.getGuarantorsByBorrower(req.params.id as string, country);
       res.json(list);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -5358,7 +5358,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
   app.patch("/api/notifications/:id/read", async (req, res) => {
     try {
       if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
-      await storage.markNotificationRead(req.params.id);
+      await storage.markNotificationRead(req.params.id as string);
       res.json({ message: "Marked as read" });
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -5377,10 +5377,10 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.get("/api/borrowers/:id/related", requireAuth, requireRole("admin", "lender", "regulator", "super_admin"), async (req, res) => {
     try {
-      if (!(await validateBorrowerCountry(req.params.id, req))) {
+      if (!(await validateBorrowerCountry(req.params.id as string, req))) {
         return res.status(403).json({ message: "Access denied" });
       }
-      const related = await storage.getRelatedBorrowers(req.params.id);
+      const related = await storage.getRelatedBorrowers(req.params.id as string);
       res.json(related);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -5457,7 +5457,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.post("/api/consent-records/:id/revoke", requireRole("admin", "lender", "regulator"), async (req, res) => {
     try {
-      const record = await storage.revokeConsent(req.params.id);
+      const record = await storage.revokeConsent(req.params.id as string);
       if (!record) return res.status(404).json({ message: "Consent record not found" });
       await storage.createAuditLog({
         action: "REVOKE_CONSENT", entity: "consent_record", entityId: record.id, userId: req.session?.userId,
@@ -5598,7 +5598,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.get("/api/consent-requests/:id/status", requireAuth, async (req, res) => {
     try {
-      const record = await storage.getConsentRecord(req.params.id);
+      const record = await storage.getConsentRecord(req.params.id as string);
       if (!record) return res.status(404).json({ message: "Consent request not found" });
       const orgId = req.session?.organizationId;
       if (orgId && record.organizationId && record.organizationId !== orgId) {
@@ -5620,7 +5620,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.get("/api/consent/respond/:token", async (req, res) => {
     try {
-      const [record] = await db.select().from(consentRecords).where(eq((consentRecords as any).consentToken, req.params.token));
+      const [record] = await db.select().from(consentRecords).where(eq((consentRecords as any).consentToken, req.params.token as string));
       if (!record) return res.status(404).json({ message: "Consent request not found or expired" });
 
       if ((record as any).tokenExpiresAt && new Date() > new Date((record as any).tokenExpiresAt)) {
@@ -5656,7 +5656,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
         return res.status(400).json({ message: "decision must be 'approved' or 'denied'" });
       }
 
-      const [record] = await db.select().from(consentRecords).where(eq((consentRecords as any).consentToken, req.params.token));
+      const [record] = await db.select().from(consentRecords).where(eq((consentRecords as any).consentToken, req.params.token as string));
       if (!record) return res.status(404).json({ message: "Consent request not found" });
 
       if ((record as any).borrowerResponse !== "pending") {
@@ -5700,7 +5700,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
     try {
       const country = getCountryFilter(req);
       if (country) {
-        const account = await storage.getCreditAccount(req.params.creditAccountId);
+        const account = await storage.getCreditAccount(req.params.creditAccountId as string);
         if (account) {
           const borrower = await storage.getBorrower(account.borrowerId);
           if (borrower && borrower.country !== country) {
@@ -5708,7 +5708,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
           }
         }
       }
-      const history = await storage.getPaymentHistoryByAccount(req.params.creditAccountId);
+      const history = await storage.getPaymentHistoryByAccount(req.params.creditAccountId as string);
       res.json(history);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -5719,7 +5719,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
     try {
       const parsed = insertPaymentHistorySchema.parse({
         ...req.body,
-        creditAccountId: req.params.creditAccountId,
+        creditAccountId: req.params.creditAccountId as string,
       });
       const entry = await storage.createPaymentHistory(parsed);
       res.status(201).json(entry);
@@ -5758,7 +5758,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.patch("/api/institutions/:id", requireRole("admin"), async (req, res) => {
     try {
-      const inst = await storage.updateInstitution(req.params.id, req.body);
+      const inst = await storage.updateInstitution(req.params.id as string, req.body);
       if (!inst) return res.status(404).json({ message: "Institution not found" });
       await storage.createAuditLog({
         action: "UPDATE", entity: "institution", entityId: inst.id, userId: req.session?.userId,
@@ -5773,7 +5773,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.post("/api/institutions/:id/approve", requireRole("admin"), async (req, res) => {
     try {
-      const inst = await storage.approveInstitution(req.params.id, req.session?.userId!);
+      const inst = await storage.approveInstitution(req.params.id as string, req.session?.userId!);
       if (!inst) return res.status(404).json({ message: "Institution not found" });
       await storage.createAuditLog({
         action: "APPROVE", entity: "institution", entityId: inst.id, userId: req.session?.userId,
@@ -5815,7 +5815,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.patch("/api/billing/:id/status", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
     try {
-      const { id } = req.params;
+      const id = req.params["id"] as string;
       const { status } = req.body;
       if (!["pending", "paid", "overdue"].includes(status)) {
         return res.status(400).json({ message: "Invalid status. Must be pending, paid, or overdue." });
@@ -5840,7 +5840,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.post("/api/billing/:id/send-reminder", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
     try {
-      const { id } = req.params;
+      const id = req.params["id"] as string;
       const record = await storage.getBillingRecord(id);
       if (!record) return res.status(404).json({ message: "Billing record not found" });
       if (record.status === "paid") return res.status(400).json({ message: "Cannot send reminder for paid invoices" });
@@ -5853,7 +5853,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       let recipientEmail = req.body.email;
       if (!recipientEmail && record.organizationId) {
         const org = await storage.getOrganization(record.organizationId);
-        recipientEmail = org?.contactEmail;
+        recipientEmail = org?.contactEmail ?? undefined;
       }
       if (!recipientEmail) {
         recipientEmail = process.env.PLATFORM_SUPPORT_EMAIL || "support@africacredithub.com";
@@ -5891,7 +5891,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
         let recipientEmail: string | undefined;
         if (record.organizationId) {
           const org = await storage.getOrganization(record.organizationId);
-          recipientEmail = org?.contactEmail;
+          recipientEmail = org?.contactEmail ?? undefined;
         }
         if (!recipientEmail) {
           recipientEmail = process.env.PLATFORM_SUPPORT_EMAIL || "support@africacredithub.com";
@@ -6027,7 +6027,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const writtenOffCount = accounts.filter(a => a.status === "written_off").length;
       const restructuredCount = accounts.filter(a => a.status === "restructured").length;
 
-      const { score: creditScore, reasonCodes, factors: scoreFactors } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep, altData);
+      const { score: creditScore, reasonCodes, factors: scoreFactors } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep ?? undefined, altData);
 
       let xdsBureauData: any = null;
       if (includeXds) {
@@ -6074,7 +6074,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
       if (includeAI) {
         mlResult = calculateMLCreditScore(
-          accounts.map(a => ({ status: a.status || "current", currentBalance: a.currentBalance, currency: a.currency, openedDate: a.disbursementDate, lastPaymentDate: a.lastPaymentDate, creditLimit: a.originalAmount, monthlyPayment: a.monthlyInstallment })),
+          accounts.map(a => ({ status: a.status || "current", currentBalance: a.currentBalance, currency: a.currency, openedDate: a.disbursementDate, lastPaymentDate: a.lastPaymentDate, creditLimit: a.originalAmount, monthlyPayment: a.scheduledInstallmentAmount })),
           inquiries.length, judgments.length, borrower.isPep ?? false,
           altData.map(d => ({ source: d.source || "", totalTransactions: d.totalTransactions, onTimePayments: d.onTimePayments, latePayments: d.latePayments, status: d.status || "active" }))
         );
@@ -6107,7 +6107,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       });
 
       recordUsageEvent({
-        organizationId: borrower.organizationId || req.session?.organizationId,
+        organizationId: (borrower.organizationId ?? undefined) || req.session?.organizationId,
         eventType: "credit_report_pull",
         country: borrower.country || getCountryFilter(req) || null,
         metadata: JSON.stringify({ serialNumber, borrowerId, purpose }),
@@ -6126,7 +6126,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
           accessedBy: user?.fullName || "Unknown",
           institution: user?.institution || "Unknown",
           purpose,
-          organizationId: borrower.organizationId,
+          organizationId: borrower.organizationId ?? undefined,
         });
       } catch {}
 
@@ -7889,10 +7889,10 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
   app.get("/api/backups/:id/download", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
       const { getBackupFilePath, listBackups } = await import("./backup-service");
-      const filepath = getBackupFilePath(req.params.id);
+      const filepath = getBackupFilePath(req.params.id as string);
       if (!filepath) return res.status(404).json({ message: "Backup not found" });
       const backups = listBackups();
-      const record = backups.find((b: any) => b.id === req.params.id);
+      const record = backups.find((b: any) => b.id === req.params.id as string);
       const filename = record?.filename || "backup.sql.gz";
       res.setHeader("Content-Type", "application/gzip");
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
@@ -7908,7 +7908,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
     try {
       const { restoreBackup } = await import("./backup-service");
       const userId = req.session?.userId || "unknown";
-      const result = await restoreBackup(req.params.id, String(userId));
+      const result = await restoreBackup(req.params.id as string, String(userId));
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -7918,7 +7918,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
   app.delete("/api/backups/:id", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
       const { deleteBackup } = await import("./backup-service");
-      const deleted = deleteBackup(req.params.id);
+      const deleted = deleteBackup(req.params.id as string);
       if (!deleted) return res.status(404).json({ message: "Backup not found" });
       res.json({ success: true });
     } catch (e: any) {
@@ -7929,7 +7929,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
   app.post("/api/backups/:id/verify", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
       const { verifyBackupIntegrity } = await import("./backup-service");
-      const result = await verifyBackupIntegrity(req.params.id);
+      const result = await verifyBackupIntegrity(req.params.id as string);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -8325,7 +8325,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.get("/api/bog/export/:fileType", requireRole("admin", "regulator", "super_admin"), exportLimiter, async (req, res) => {
     try {
-      const fileType = req.params.fileType.toUpperCase() as BogFileType;
+      const fileType = (req.params["fileType"] as string).toUpperCase() as BogFileType;
       const validTypes: BogFileType[] = ["CONC", "BUSC", "CONJ", "BUSJ", "COND", "BUSD"];
       if (!validTypes.includes(fileType)) {
         return res.status(400).json({ message: `Invalid file type: ${fileType}. Must be one of: ${validTypes.join(", ")}` });
@@ -8370,7 +8370,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.get("/api/bog/export-preview/:fileType", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
     try {
-      const fileType = req.params.fileType.toUpperCase() as BogFileType;
+      const fileType = (req.params["fileType"] as string).toUpperCase() as BogFileType;
       const validTypes: BogFileType[] = ["CONC", "BUSC", "CONJ", "BUSJ", "COND", "BUSD"];
       if (!validTypes.includes(fileType)) {
         return res.status(400).json({ message: `Invalid file type` });
@@ -8388,7 +8388,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.get("/api/bsl/export/:fileType", requireRole("admin", "regulator", "super_admin"), exportLimiter, async (req, res) => {
     try {
-      const fileType = req.params.fileType.toUpperCase() as BslFileType;
+      const fileType = (req.params["fileType"] as string).toUpperCase() as BslFileType;
       const validTypes: BslFileType[] = ["CONC", "BUSC", "CONJ", "BUSJ", "COND", "BUSD"];
       if (!validTypes.includes(fileType)) {
         return res.status(400).json({ message: `Invalid file type: ${fileType}. Must be one of: ${validTypes.join(", ")}` });
@@ -8433,7 +8433,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.get("/api/bsl/export-preview/:fileType", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
     try {
-      const fileType = req.params.fileType.toUpperCase() as BslFileType;
+      const fileType = (req.params["fileType"] as string).toUpperCase() as BslFileType;
       const validTypes: BslFileType[] = ["CONC", "BUSC", "CONJ", "BUSJ", "COND", "BUSD"];
       if (!validTypes.includes(fileType)) {
         return res.status(400).json({ message: `Invalid file type` });
@@ -8508,7 +8508,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.post("/api/api-keys/:id/revoke", requireAuth, requireRole("admin"), async (req, res) => {
     try {
-      const revoked = await storage.revokeApiKey(req.params.id);
+      const revoked = await storage.revokeApiKey(req.params.id as string);
       if (!revoked) return res.status(404).json({ message: "API key not found" });
 
       await storage.createAuditLog({
@@ -8735,7 +8735,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
   });
 
   app.get("/api/ghana-docs/:id", requireAuth, async (req, res) => {
-    const doc = GHANA_DOCS_LIST.find(d => d.id === req.params.id);
+    const doc = GHANA_DOCS_LIST.find(d => d.id === req.params.id as string);
     if (!doc) return res.status(404).json({ message: "Document not found" });
     try {
       const lang = (req.query.lang as string) || "en";
@@ -8751,7 +8751,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
   });
 
   app.get("/api/ghana-docs/:id/pdf", requireAuth, async (req, res) => {
-    const doc = GHANA_DOCS_LIST.find(d => d.id === req.params.id);
+    const doc = GHANA_DOCS_LIST.find(d => d.id === req.params.id as string);
     if (!doc) return res.status(404).json({ message: "Document not found" });
     try {
       const lang = (req.query.lang as string) || "en";
@@ -8772,7 +8772,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
   });
 
   app.get("/api/ghana-docs/:id/download", requireAuth, (req, res) => {
-    const doc = GHANA_DOCS_LIST.find(d => d.id === req.params.id);
+    const doc = GHANA_DOCS_LIST.find(d => d.id === req.params.id as string);
     if (!doc) return res.status(404).json({ message: "Document not found" });
     try {
       const filePath = path.join(GHANA_DOCS_DIR, doc.filename);
@@ -8801,7 +8801,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
   });
 
   app.get("/api/docs/:id", requireAuth, async (req, res) => {
-    const doc = DOCS_LIST.find(d => d.id === req.params.id);
+    const doc = DOCS_LIST.find(d => d.id === req.params.id as string);
     if (!doc) return res.status(404).json({ message: "Document not found" });
     try {
       const lang = (req.query.lang as string) || "en";
@@ -8817,7 +8817,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
   });
 
   app.get("/api/docs/:id/pdf", requireAuth, async (req, res) => {
-    const doc = DOCS_LIST.find(d => d.id === req.params.id);
+    const doc = DOCS_LIST.find(d => d.id === req.params.id as string);
     if (!doc) return res.status(404).json({ message: "Document not found" });
     try {
       const lang = (req.query.lang as string) || "en";
@@ -8905,18 +8905,18 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.patch("/api/exchange-rates/:id", requireRole("admin"), async (req, res) => {
     try {
-      const rate = await storage.updateExchangeRate(req.params.id, req.body);
+      const rate = await storage.updateExchangeRate(req.params.id as string, req.body);
       if (!rate) return res.status(404).json({ message: "Rate not found" });
-      await storage.createAuditLog({ userId: req.session?.userId, action: "UPDATE", entity: "exchange_rate", entityId: req.params.id, details: JSON.stringify(req.body), ipAddress: req.ip });
+      await storage.createAuditLog({ userId: req.session?.userId, action: "UPDATE", entity: "exchange_rate", entityId: req.params.id as string, details: JSON.stringify(req.body), ipAddress: req.ip });
       res.json(rate);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.delete("/api/exchange-rates/:id", requireRole("admin"), async (req, res) => {
     try {
-      const deleted = await storage.deleteExchangeRate(req.params.id);
+      const deleted = await storage.deleteExchangeRate(req.params.id as string);
       if (!deleted) return res.status(404).json({ message: "Rate not found" });
-      await storage.createAuditLog({ userId: req.session?.userId, action: "DELETE", entity: "exchange_rate", entityId: req.params.id, details: "Deleted exchange rate", ipAddress: req.ip });
+      await storage.createAuditLog({ userId: req.session?.userId, action: "DELETE", entity: "exchange_rate", entityId: req.params.id as string, details: "Deleted exchange rate", ipAddress: req.ip });
       res.json({ message: "Deleted" });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -8984,18 +8984,18 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.patch("/api/retention-policies/:id", requireRole("admin"), async (req, res) => {
     try {
-      const policy = await storage.updateRetentionPolicy(req.params.id, req.body);
+      const policy = await storage.updateRetentionPolicy(req.params.id as string, req.body);
       if (!policy) return res.status(404).json({ message: "Policy not found" });
-      await storage.createAuditLog({ userId: req.session?.userId!, action: "UPDATE", entity: "retention_policy", entityId: req.params.id, details: JSON.stringify(req.body), ipAddress: req.ip });
+      await storage.createAuditLog({ userId: req.session?.userId!, action: "UPDATE", entity: "retention_policy", entityId: req.params.id as string, details: JSON.stringify(req.body), ipAddress: req.ip });
       res.json(policy);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.delete("/api/retention-policies/:id", requireRole("admin"), async (req, res) => {
     try {
-      const deleted = await storage.deleteRetentionPolicy(req.params.id);
+      const deleted = await storage.deleteRetentionPolicy(req.params.id as string);
       if (!deleted) return res.status(404).json({ message: "Policy not found" });
-      await storage.createAuditLog({ userId: req.session?.userId!, action: "DELETE", entity: "retention_policy", entityId: req.params.id, details: "Deleted retention policy", ipAddress: req.ip });
+      await storage.createAuditLog({ userId: req.session?.userId!, action: "DELETE", entity: "retention_policy", entityId: req.params.id as string, details: "Deleted retention policy", ipAddress: req.ip });
       res.json({ message: "Deleted" });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -9103,7 +9103,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.get("/api/api-configurations/:id", requireRole("admin"), async (req, res) => {
     try {
-      const config = await storage.getApiConfiguration(req.params.id);
+      const config = await storage.getApiConfiguration(req.params.id as string);
       if (!config) return res.status(404).json({ message: "Configuration not found" });
       res.json(config);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
@@ -9123,25 +9123,25 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.patch("/api/api-configurations/:id", requireRole("admin"), async (req, res) => {
     try {
-      const config = await storage.updateApiConfiguration(req.params.id, req.body);
+      const config = await storage.updateApiConfiguration(req.params.id as string, req.body);
       if (!config) return res.status(404).json({ message: "Configuration not found" });
-      await storage.createAuditLog({ userId: req.session?.userId, action: "UPDATE", entity: "api_configuration", entityId: req.params.id, details: JSON.stringify(req.body), ipAddress: req.ip });
+      await storage.createAuditLog({ userId: req.session?.userId, action: "UPDATE", entity: "api_configuration", entityId: req.params.id as string, details: JSON.stringify(req.body), ipAddress: req.ip });
       res.json(config);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.delete("/api/api-configurations/:id", requireRole("admin"), async (req, res) => {
     try {
-      const deleted = await storage.deleteApiConfiguration(req.params.id);
+      const deleted = await storage.deleteApiConfiguration(req.params.id as string);
       if (!deleted) return res.status(404).json({ message: "Configuration not found" });
-      await storage.createAuditLog({ userId: req.session?.userId, action: "DELETE", entity: "api_configuration", entityId: req.params.id, details: "Deleted API configuration", ipAddress: req.ip });
+      await storage.createAuditLog({ userId: req.session?.userId, action: "DELETE", entity: "api_configuration", entityId: req.params.id as string, details: "Deleted API configuration", ipAddress: req.ip });
       res.json({ message: "Deleted" });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.post("/api/api-configurations/:id/test", requireRole("admin"), async (req, res) => {
     try {
-      const config = await storage.getApiConfiguration(req.params.id);
+      const config = await storage.getApiConfiguration(req.params.id as string);
       if (!config) return res.status(404).json({ message: "Configuration not found" });
       let testStatus = "success";
       let testMessage = "Connection test passed";
@@ -9168,7 +9168,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
         testStatus = "unreachable";
         testMessage = "Endpoint unreachable - this is expected for stub configurations";
       }
-      await storage.updateApiConfiguration(req.params.id, { lastTestedAt: new Date() as any, lastTestStatus: testStatus } as any);
+      await storage.updateApiConfiguration(req.params.id as string, { lastTestedAt: new Date() as any, lastTestStatus: testStatus } as any);
       res.json({ status: testStatus, message: testMessage });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -9216,8 +9216,8 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.get("/api/admin/organizations/:id", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      if (!(await validateOrgCountry(req.params.id, req))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
-      const org = await storage.getOrganization(req.params.id);
+      if (!(await validateOrgCountry(req.params.id as string, req))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
+      const org = await storage.getOrganization(req.params.id as string);
       if (!org) return res.status(404).json({ message: "Organization not found" });
       const orgCountry = org.country || getCountryFilter(req);
       const users = await storage.getUsers(org.id, orgCountry);
@@ -9270,10 +9270,10 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.patch("/api/admin/organizations/:id", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      if (!(await validateOrgCountry(req.params.id, req))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
+      if (!(await validateOrgCountry(req.params.id as string, req))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
       const updateSchema = insertOrganizationSchema.partial();
       const parsed = updateSchema.parse(req.body);
-      const org = await storage.updateOrganization(req.params.id, parsed);
+      const org = await storage.updateOrganization(req.params.id as string, parsed);
       if (!org) return res.status(404).json({ message: "Organization not found" });
       await storage.createAuditLog({
         action: "UPDATE", entity: "organization", entityId: org.id, userId: req.session?.userId,
@@ -9288,25 +9288,25 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.delete("/api/admin/organizations/:id", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      if (!(await validateOrgCountry(req.params.id, req))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
-      const delOrg = await storage.getOrganization(req.params.id);
+      if (!(await validateOrgCountry(req.params.id as string, req))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
+      const delOrg = await storage.getOrganization(req.params.id as string);
       const delOrgCountry = delOrg?.country || getCountryFilter(req);
-      const users = await storage.getUsers(req.params.id, delOrgCountry);
+      const users = await storage.getUsers(req.params.id as string, delOrgCountry);
       if (users.length > 0) {
         for (const u of users) {
           await storage.deleteUser(u.id);
         }
         await storage.createAuditLog({
-          action: "DELETE", entity: "user", entityId: req.params.id, userId: req.session?.userId,
+          action: "DELETE", entity: "user", entityId: req.params.id as string, userId: req.session?.userId,
           details: `Auto-removed ${users.length} user(s) from organization before deletion`,
           ipAddress: req.ip || null,
         });
       }
-      const deleted = await storage.deleteOrganization(req.params.id);
+      const deleted = await storage.deleteOrganization(req.params.id as string);
       if (!deleted) return res.status(404).json({ message: "Organization not found" });
       await storage.createAuditLog({
-        action: "DELETE", entity: "organization", entityId: req.params.id, userId: req.session?.userId,
-        details: `Deleted organization: ${req.params.id}`,
+        action: "DELETE", entity: "organization", entityId: req.params.id as string, userId: req.session?.userId,
+        details: `Deleted organization: ${req.params.id as string}`,
         ipAddress: req.ip || null,
       });
       res.json({ message: "Organization deleted" });
@@ -9317,9 +9317,9 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.get("/api/admin/organizations/:id/users", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      if (!(await validateOrgCountry(req.params.id, req))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
-      const listOrg = await storage.getOrganization(req.params.id);
-      const users = await storage.getUsers(req.params.id, listOrg?.country || getCountryFilter(req));
+      if (!(await validateOrgCountry(req.params.id as string, req))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
+      const listOrg = await storage.getOrganization(req.params.id as string);
+      const users = await storage.getUsers(req.params.id as string, listOrg?.country || getCountryFilter(req));
       res.json(users.map(stripPassword));
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -9328,10 +9328,10 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.get("/api/admin/organizations/:id/stats", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      if (!(await validateOrgCountry(req.params.id, req))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
-      const org = await storage.getOrganization(req.params.id);
+      if (!(await validateOrgCountry(req.params.id as string, req))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
+      const org = await storage.getOrganization(req.params.id as string);
       const orgCountry = org?.country || getCountryFilter(req);
-      const stats = await storage.getDashboardStats(req.params.id, orgCountry);
+      const stats = await storage.getDashboardStats(req.params.id as string, orgCountry);
       res.json(stats);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -9959,7 +9959,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.get("/api/platform/country-settings/:code", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      const [setting] = await db.select().from(countrySettings).where(eq(countrySettings.countryCode, req.params.code));
+      const [setting] = await db.select().from(countrySettings).where(eq(countrySettings.countryCode, req.params.code as string));
       if (!setting) return res.status(404).json({ message: "Country settings not found" });
       res.json(setting);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
@@ -9979,7 +9979,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const parsed = countrySettingsUpdateSchema.safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ message: "Invalid payload", errors: parsed.error.flatten().fieldErrors });
       const { countryName, regulatoryBody, dataProtectionLaw, dataProtectionStatus, sataReadiness, enabledFeatures } = parsed.data;
-      const [existing] = await db.select().from(countrySettings).where(eq(countrySettings.countryCode, req.params.code));
+      const [existing] = await db.select().from(countrySettings).where(eq(countrySettings.countryCode, req.params.code as string));
       if (existing) {
         const [updated] = await db.update(countrySettings).set({
           countryName: countryName ?? existing.countryName,
@@ -9989,13 +9989,13 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
           sataReadiness: sataReadiness ?? existing.sataReadiness,
           enabledFeatures: enabledFeatures ?? existing.enabledFeatures,
           updatedAt: new Date(),
-        }).where(eq(countrySettings.countryCode, req.params.code)).returning();
+        }).where(eq(countrySettings.countryCode, req.params.code as string)).returning();
         await storage.createAuditLog({ userId: req.session.userId!, action: "UPDATE", entity: "country_settings", entityId: updated.id, details: `Updated country settings for ${updated.countryName}`, ipAddress: req.ip, organizationId: null });
         res.json(updated);
       } else {
         const [created] = await db.insert(countrySettings).values({
-          countryCode: req.params.code,
-          countryName: countryName || req.params.code,
+          countryCode: req.params.code as string,
+          countryName: countryName || req.params.code as string,
           regulatoryBody: regulatoryBody || null,
           dataProtectionLaw: dataProtectionLaw || null,
           dataProtectionStatus: dataProtectionStatus || "none",
@@ -10082,7 +10082,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.post("/api/platform/api-keys/:id/revoke", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      const [updated] = await db.update(apiKeys).set({ status: "revoked", revokedAt: new Date() }).where(eq(apiKeys.id, req.params.id)).returning();
+      const [updated] = await db.update(apiKeys).set({ status: "revoked", revokedAt: new Date() }).where(eq(apiKeys.id, req.params.id as string)).returning();
       if (!updated) return res.status(404).json({ message: "Key not found" });
       await storage.createAuditLog({ userId: req.session.userId!, action: "REVOKE", entity: "api_key", entityId: updated.id, details: `Revoked API key ${updated.keyPrefix}...`, ipAddress: req.ip, organizationId: null });
       res.json(updated);
@@ -10286,7 +10286,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.patch("/api/platform/organizations/:id/license", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      const { id } = req.params;
+      const id = req.params["id"] as string;
       const { platformFeePercent, monthlyLicenseFeeCents, licenseCurrency } = req.body;
       const updates: any = {};
       if (platformFeePercent !== undefined) {
@@ -10330,7 +10330,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.patch("/api/platform/settlement-accounts/:id", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      const { id } = req.params;
+      const id = req.params["id"] as string;
       const allowed = ["accountLabel", "method", "bankName", "bankBranch", "accountNumber", "accountName", "swiftCode", "momoProvider", "momoNumber", "momoName", "currency", "isDefault", "isActive"];
       const updates: any = {};
       for (const key of allowed) {
@@ -10345,7 +10345,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.delete("/api/platform/settlement-accounts/:id", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      const [deactivated] = await db.update(settlementAccounts).set({ isActive: false, updatedAt: new Date() }).where(eq(settlementAccounts.id, req.params.id)).returning();
+      const [deactivated] = await db.update(settlementAccounts).set({ isActive: false, updatedAt: new Date() }).where(eq(settlementAccounts.id, req.params.id as string)).returning();
       if (!deactivated) return res.status(404).json({ message: "Account not found" });
       res.json({ success: true });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
@@ -10361,7 +10361,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
   app.post("/api/platform/settlement-schedules", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
       const parsed = insertSettlementScheduleSchema.parse(req.body);
-      const nextRun = calculateNextRun(parsed.frequency, parsed.dayOfWeek ?? 5, parsed.dayOfMonth ?? 1);
+      const nextRun = calculateNextRun(parsed.frequency || "", Number(parsed.dayOfWeek ?? 5), Number(parsed.dayOfMonth ?? 1));
       const [schedule] = await db.insert(settlementSchedules).values({ ...parsed, nextRunAt: nextRun }).returning();
       res.json(schedule);
     } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e) }); }
@@ -10369,7 +10369,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.patch("/api/platform/settlement-schedules/:id", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      const { id } = req.params;
+      const id = req.params["id"] as string;
       const allowed = ["frequency", "dayOfWeek", "dayOfMonth", "minimumPayoutCents", "isActive"];
       const updates: any = {};
       for (const key of allowed) {
@@ -10399,7 +10399,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.get("/api/platform/payout-batches/:id", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      const [batch] = await db.select().from(payoutBatches).where(eq(payoutBatches.id, req.params.id));
+      const [batch] = await db.select().from(payoutBatches).where(eq(payoutBatches.id, req.params.id as string));
       if (!batch) return res.status(404).json({ message: "Batch not found" });
       const items = await db.select({
         item: payoutItems,
@@ -10512,7 +10512,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.post("/api/platform/payout-batches/:id/approve", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      const { id } = req.params;
+      const id = req.params["id"] as string;
       const [batch] = await db.select().from(payoutBatches).where(eq(payoutBatches.id, id));
       if (!batch) return res.status(404).json({ message: "Batch not found" });
       if (batch.status !== "pending") return res.status(400).json({ message: "Batch is not in pending status" });
@@ -10533,7 +10533,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.post("/api/platform/payout-batches/:id/complete", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      const { id } = req.params;
+      const id = req.params["id"] as string;
       const [batch] = await db.select().from(payoutBatches).where(eq(payoutBatches.id, id));
       if (!batch) return res.status(404).json({ message: "Batch not found" });
       if (batch.status !== "processing") return res.status(400).json({ message: "Batch must be in processing status" });
@@ -10617,7 +10617,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const updates: any = {};
       if (unitPriceCents !== undefined) updates.unitPriceCents = unitPriceCents;
       if (isActive !== undefined) updates.isActive = isActive;
-      const [updated] = await db.update(pricingTiers).set(updates).where(eq(pricingTiers.id, req.params.id)).returning();
+      const [updated] = await db.update(pricingTiers).set(updates).where(eq(pricingTiers.id, req.params.id as string)).returning();
       if (!updated) return res.status(404).json({ message: "Tier not found" });
       await storage.createAuditLog({ userId: req.session.userId!, action: "UPDATE", entity: "pricing_tier", entityId: updated.id, details: `Updated pricing tier "${updated.name}"`, ipAddress: req.ip, organizationId: null });
       res.json(updated);
@@ -10661,7 +10661,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       if (archiveAfterYears !== undefined) updates.archiveAfterYears = archiveAfterYears;
       if (isActive !== undefined) updates.isActive = isActive;
       if (description !== undefined) updates.description = description;
-      const [updated] = await db.update(retentionPolicies).set(updates).where(eq(retentionPolicies.id, req.params.id)).returning();
+      const [updated] = await db.update(retentionPolicies).set(updates).where(eq(retentionPolicies.id, req.params.id as string)).returning();
       if (!updated) return res.status(404).json({ message: "Policy not found" });
       res.json(updated);
     } catch (e: any) { res.status(400).json({ message: e.message }); }
@@ -10692,8 +10692,8 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.post("/api/admin/organizations/:orgId/billing", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      if (!(await validateOrgCountry(req.params.orgId, req))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
-      const org = await storage.getOrganization(req.params.orgId);
+      if (!(await validateOrgCountry(req.params.orgId as string, req))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
+      const org = await storage.getOrganization(req.params.orgId as string);
       if (!org) return res.status(404).json({ message: "Organization not found" });
 
       const invoiceNumber = `INV-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
@@ -10720,11 +10720,11 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.get("/api/admin/organizations/:orgId/billing/:billingId/pdf", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      if (!(await validateOrgCountry(req.params.orgId, req))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
-      const org = await storage.getOrganization(req.params.orgId);
+      if (!(await validateOrgCountry(req.params.orgId as string, req))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
+      const org = await storage.getOrganization(req.params.orgId as string);
       if (!org) return res.status(404).json({ message: "Organization not found" });
 
-      const billing = await storage.getBillingRecord(req.params.billingId);
+      const billing = await storage.getBillingRecord(req.params.billingId as string);
       if (!billing) return res.status(404).json({ message: "Billing record not found" });
 
       const PDFDocument = (await import("pdfkit")).default;
@@ -11137,7 +11137,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.post("/api/ai-demo/:feature", aiDemoLimiter, async (req, res) => {
     try {
-      const { feature } = req.params;
+      const feature = req.params["feature"] as string;
       const { provider: providerRaw, query, country, borrowerScenario, loanAmount, loanType, customData, customPortfolio } = req.body || {};
       const provider = parseOptionalProvider(providerRaw);
 
@@ -11214,7 +11214,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
   app.post("/api/ai/credit-risk/:borrowerId", aiLimiter, requireAuth, async (req, res) => {
     try {
       const provider = parseOptionalProvider(req.body?.provider);
-      const result = await analyzeCreditRisk(req.params.borrowerId, provider);
+      const result = await analyzeCreditRisk(req.params.borrowerId as string, provider);
       if (!res.headersSent) res.json(result);
     } catch (e: any) {
       if (!res.headersSent) res.status(500).json({ message: safeErrorMessage(e) });
@@ -11225,7 +11225,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
     try {
       const provider = parseOptionalProvider(req.body?.provider);
       const language = (req.body?.language || req.query.lang || "en") as string;
-      const result = await generateReportSummary(req.params.borrowerId, provider, language);
+      const result = await generateReportSummary(req.params.borrowerId as string, provider, language);
       if (!res.headersSent) res.json(result);
     } catch (e: any) {
       if (!res.headersSent) res.status(500).json({ message: safeErrorMessage(e) });
@@ -11235,7 +11235,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
   const collateralVerifyLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, message: { message: "Too many verification requests. Please try again in a minute." } });
   app.get("/api/public/collateral/verify/:code", collateralVerifyLimiter, async (req, res) => {
     try {
-      const { code } = req.params;
+      const code = req.params["code"] as string;
       if (!code) return res.status(400).json({ valid: false, message: "Verification code required" });
       const items = await db.select().from(collateralItems)
         .where(and(eq(collateralItems.verificationCode, code), eq(collateralItems.approvalStatus, "approved")))
@@ -11999,7 +11999,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     try {
       const provider = parseOptionalProvider(req.body?.provider);
       const language = (req.body?.language || req.query.lang || "en") as string;
-      const result = await generateCreditNarrative(req.params.borrowerId, provider, language);
+      const result = await generateCreditNarrative(req.params.borrowerId as string, provider, language);
       res.json(result);
     } catch (e: any) {
       if (e.message === "Borrower not found") return res.status(404).json({ message: e.message });
@@ -12060,7 +12060,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (!isFinite(parsedAmount) || parsedAmount <= 0) return res.status(400).json({ message: "loanAmount must be a positive number" });
       const validTypes = ["personal_loan", "business_loan", "mortgage", "agriculture_loan", "trade_finance", "microfinance", "auto_loan", "education_loan", "overdraft"];
       if (!validTypes.includes(loanType)) return res.status(400).json({ message: "Invalid loan type" });
-      const result = await generateLoanRecommendation(req.params.borrowerId, parsedAmount, loanType, provider);
+      const result = await generateLoanRecommendation(req.params.borrowerId as string, parsedAmount, loanType, provider);
       res.json(result);
     } catch (e: any) {
       if (e.message === "Borrower not found") return res.status(404).json({ message: e.message });
@@ -12072,7 +12072,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     try {
       const { provider: reqProvider } = req.body || {};
       const provider = parseOptionalProvider(reqProvider);
-      const result = await generateCreditInsights(req.params.borrowerId, provider);
+      const result = await generateCreditInsights(req.params.borrowerId as string, provider);
       res.json(result);
     } catch (e: any) {
       if (e.message === "Borrower not found") return res.status(404).json({ message: e.message });
@@ -12107,13 +12107,13 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.get("/api/borrower-alerts/:borrowerId", requireAuth, async (req, res) => {
     try {
-      const borrower = await storage.getBorrower(req.params.borrowerId);
+      const borrower = await storage.getBorrower(req.params.borrowerId as string);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
       const user = await storage.getUser(req.session?.userId!);
-      if (user?.role !== "super_admin" && borrower.organizationId && user?.organizationId !== borrower.organizationId) {
+      if (user?.role !== "super_admin" && (borrower.organizationId ?? undefined) && user?.organizationId !== (borrower.organizationId ?? undefined)) {
         return res.status(403).json({ message: "Access denied" });
       }
-      const alerts = await storage.getBorrowerAlertsByBorrower(req.params.borrowerId);
+      const alerts = await storage.getBorrowerAlertsByBorrower(req.params.borrowerId as string);
       res.json(alerts);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -12294,7 +12294,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const activeAgreements = await db.select().from(dataSharingAgreements).where(
         and(
           eq(dataSharingAgreements.status, "active"),
-          or(eq(dataSharingAgreements.sourceCountry, orgCountry), eq(dataSharingAgreements.targetCountry, orgCountry))
+          or(eq(dataSharingAgreements.sourceCountry, orgCountry as any), eq(dataSharingAgreements.targetCountry, orgCountry as any))
         )
       );
 
@@ -12320,7 +12320,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.get("/api/sata/agreements/:id", requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
     try {
-      const [row] = await db.select().from(dataSharingAgreements).where(eq(dataSharingAgreements.id, req.params.id));
+      const [row] = await db.select().from(dataSharingAgreements).where(eq(dataSharingAgreements.id, req.params.id as string));
       if (!row) return res.status(404).json({ message: "Agreement not found" });
       res.json(row);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
@@ -12342,7 +12342,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (status) updates.status = status;
       if (status === "active") updates.approvedBy = req.session.userId;
       if (status === "suspended" && suspendedReason) updates.suspendedReason = suspendedReason;
-      const [updated] = await db.update(dataSharingAgreements).set(updates).where(eq(dataSharingAgreements.id, req.params.id)).returning();
+      const [updated] = await db.update(dataSharingAgreements).set(updates).where(eq(dataSharingAgreements.id, req.params.id as string)).returning();
       if (!updated) return res.status(404).json({ message: "Agreement not found" });
       await storage.createAuditLog({ userId: req.session.userId!, action: "UPDATE", entity: "data_sharing_agreement", entityId: updated.id, details: `Updated SATA agreement status to ${updated.status}: ${updated.sourceCountry} → ${updated.targetCountry}`, ipAddress: req.ip, organizationId: null });
       res.json(updated);
@@ -12351,7 +12351,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.delete("/api/sata/agreements/:id", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      const [deleted] = await db.delete(dataSharingAgreements).where(eq(dataSharingAgreements.id, req.params.id)).returning();
+      const [deleted] = await db.delete(dataSharingAgreements).where(eq(dataSharingAgreements.id, req.params.id as string)).returning();
       if (!deleted) return res.status(404).json({ message: "Agreement not found" });
       await storage.createAuditLog({ userId: req.session.userId!, action: "DELETE", entity: "data_sharing_agreement", entityId: deleted.id, details: `Deleted SATA agreement: ${deleted.sourceCountry} → ${deleted.targetCountry}`, ipAddress: req.ip, organizationId: null });
       res.json({ message: "Agreement deleted" });
@@ -12360,7 +12360,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.get("/api/sata/agreements/country/:country", requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
     try {
-      const country = req.params.country;
+      const country = req.params.country as string;
       const rows = await db.select().from(dataSharingAgreements).where(
         and(
           eq(dataSharingAgreements.status, "active"),
@@ -12384,7 +12384,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const orgCountry = org.country || getActiveCountryName();
       const orgName = org.name;
       const active = await db.select().from(dataSharingAgreements).where(
-        and(eq(dataSharingAgreements.status, "active"), or(eq(dataSharingAgreements.sourceCountry, orgCountry), eq(dataSharingAgreements.targetCountry, orgCountry)))
+        and(eq(dataSharingAgreements.status, "active"), or(eq(dataSharingAgreements.sourceCountry, orgCountry as any), eq(dataSharingAgreements.targetCountry, orgCountry as any)))
       );
       const accessible = active.filter(a => {
         const srcInsts = a.sourceInstitutions || [];
@@ -12522,7 +12522,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.get("/api/papss/settlements/:id", requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
     try {
-      const [row] = await db.select().from(papssSettlements).where(eq(papssSettlements.id, req.params.id));
+      const [row] = await db.select().from(papssSettlements).where(eq(papssSettlements.id, req.params.id as string));
       if (!row) return res.status(404).json({ message: "Settlement not found" });
       res.json(row);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
@@ -12544,7 +12544,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (status) updates.status = status;
       if (status === "completed") updates.completedAt = new Date();
       if (status === "failed" && failureReason) updates.failureReason = failureReason;
-      const [updated] = await db.update(papssSettlements).set(updates).where(eq(papssSettlements.id, req.params.id)).returning();
+      const [updated] = await db.update(papssSettlements).set(updates).where(eq(papssSettlements.id, req.params.id as string)).returning();
       if (!updated) return res.status(404).json({ message: "Settlement not found" });
       await storage.createAuditLog({ userId: req.session.userId!, action: "UPDATE", entity: "papss_settlement", entityId: updated.id, details: `Updated PAPSS settlement status to ${updated.status}`, ipAddress: req.ip, organizationId: null });
       res.json(updated);
@@ -12561,7 +12561,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.get("/api/borrowers/:id/ml-score", requireAuth, requireRole("admin", "lender", "super_admin"), async (req, res) => {
     try {
-      const borrower = await storage.getBorrower(req.params.id);
+      const borrower = await storage.getBorrower(req.params.id as string);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
 
       const accounts = await storage.getCreditAccountsByBorrower(borrower.id);
@@ -12588,10 +12588,10 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         status: a.status,
         currentBalance: a.currentBalance,
         currency: a.currency,
-        openedDate: a.openedDate,
+        openedDate: a.disbursementDate,
         lastPaymentDate: a.lastPaymentDate,
-        creditLimit: a.creditLimit,
-        monthlyPayment: a.monthlyPayment,
+        creditLimit: a.originalAmount,
+        monthlyPayment: a.scheduledInstallmentAmount,
       }));
 
       const activeJudgments = judgments.filter((j: any) => j.status === "active").length;
@@ -12624,7 +12624,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         mlScore: result.mlScore,
         traditionalScore,
         modelVersion: result.modelVersion,
-      }, borrower.organizationId).catch(() => {});
+      }, borrower.organizationId ?? undefined).catch(() => {});
 
       res.json({
         ...result,
@@ -12676,7 +12676,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.get("/api/blockchain/anchors/:id/verify", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
     try {
-      const result = await verifyAuditAgainstAnchor(req.params.id);
+      const result = await verifyAuditAgainstAnchor(req.params.id as string);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -12736,10 +12736,10 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     try {
       const orgId = req.session?.organizationId || "global";
       const [sub] = await db.select().from(webhookSubscriptions).where(
-        and(eq(webhookSubscriptions.id, req.params.id), eq(webhookSubscriptions.organizationId, orgId))
+        and(eq(webhookSubscriptions.id, req.params.id as string), eq(webhookSubscriptions.organizationId, orgId))
       );
       if (!sub) return res.status(404).json({ message: "Webhook not found" });
-      await db.delete(webhookSubscriptions).where(eq(webhookSubscriptions.id, req.params.id));
+      await db.delete(webhookSubscriptions).where(eq(webhookSubscriptions.id, req.params.id as string));
       res.json({ success: true });
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -12750,10 +12750,10 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     try {
       const orgId = req.session?.organizationId || "global";
       const [sub] = await db.select().from(webhookSubscriptions).where(
-        and(eq(webhookSubscriptions.id, req.params.id), eq(webhookSubscriptions.organizationId, orgId))
+        and(eq(webhookSubscriptions.id, req.params.id as string), eq(webhookSubscriptions.organizationId, orgId))
       );
       if (!sub) return res.status(404).json({ message: "Webhook not found" });
-      const logs = await getWebhookDeliveryHistory(req.params.id, 50);
+      const logs = await getWebhookDeliveryHistory(req.params.id as string, 50);
       res.json(logs);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -12764,7 +12764,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     try {
       const orgId = req.session?.organizationId || "global";
       const [sub] = await db.select().from(webhookSubscriptions).where(
-        and(eq(webhookSubscriptions.id, req.params.id), eq(webhookSubscriptions.organizationId, orgId))
+        and(eq(webhookSubscriptions.id, req.params.id as string), eq(webhookSubscriptions.organizationId, orgId))
       );
       if (!sub) return res.status(404).json({ message: "Webhook not found" });
 
@@ -12814,15 +12814,15 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   }
 
   app.get("/api/export/progress/:jobId", requireAuth, async (req, res) => {
-    const job = exportJobs.get(req.params.jobId);
+    const job = exportJobs.get(req.params.jobId as string);
     if (!job) return res.status(404).json({ message: "Export job not found" });
     if (!verifyJobOwnership(req, job)) return res.status(403).json({ message: "Access denied" });
     const pct = job.total > 0 ? Math.round((job.processed / job.total) * 100) : 0;
-    res.json({ jobId: req.params.jobId, total: job.total, processed: job.processed, percent: pct, status: job.status, elapsedMs: Date.now() - job.startedAt });
+    res.json({ jobId: req.params.jobId as string, total: job.total, processed: job.processed, percent: pct, status: job.status, elapsedMs: Date.now() - job.startedAt });
   });
 
   app.get("/api/export/download/:jobId", requireAuth, async (req, res) => {
-    const job = exportJobs.get(req.params.jobId);
+    const job = exportJobs.get(req.params.jobId as string);
     if (!job) return res.status(404).json({ message: "Export job not found" });
     if (!verifyJobOwnership(req, job)) return res.status(403).json({ message: "Access denied" });
     if (job.status !== "completed" || !job.encFilePath) return res.status(400).json({ message: `Export not ready. Status: ${job.status}` });
@@ -12842,7 +12842,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       encReadStream.pipe(res);
       encReadStream.on("end", () => {
         try { fs.unlinkSync(job.encFilePath!); } catch {}
-        setTimeout(() => exportJobs.delete(req.params.jobId), 60000);
+        setTimeout(() => exportJobs.delete(req.params.jobId as string), 60000);
       });
     } catch (e: any) {
       res.status(500).json({ message: "Download failed" });
@@ -12850,7 +12850,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   });
 
   app.get("/api/export/key/:jobId", requireAuth, async (req, res) => {
-    const job = exportJobs.get(req.params.jobId);
+    const job = exportJobs.get(req.params.jobId as string);
     if (!job) return res.status(404).json({ message: "Export job not found" });
     if (!verifyJobOwnership(req, job)) return res.status(403).json({ message: "Access denied" });
     if (job.status !== "completed") return res.status(400).json({ message: `Export not ready. Status: ${job.status}` });
@@ -12865,8 +12865,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       userId: req.session?.userId,
       action: "EXPORT_KEY_RETRIEVED",
       entity: "export_job",
-      entityId: req.params.jobId,
-      details: JSON.stringify({ jobId: req.params.jobId, retrievedAt: new Date().toISOString() }),
+      entityId: req.params.jobId as string,
+      details: JSON.stringify({ jobId: req.params.jobId as string, retrievedAt: new Date().toISOString() }),
       ipAddress: req.ip || "unknown",
     });
 
@@ -12875,7 +12875,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.post("/api/admin/export/:orgId", requireAuth, requireRole("admin", "super_admin"), exportLimiter, async (req, res) => {
     try {
-      const orgId = req.params.orgId;
+      const orgId = req.params.orgId as string;
       if (!orgId) return res.status(400).json({ message: "Invalid organization ID" });
 
       if (req.session.userRole !== "super_admin" && req.session.organizationId !== orgId) {
@@ -13026,7 +13026,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.get("/api/export/sha256/:hash", requireAuth, async (req, res) => {
     try {
-      const { hash } = req.params;
+      const hash = req.params["hash"] as string;
       if (!hash || hash.length !== 64 || !/^[a-f0-9]{64}$/i.test(hash)) return res.status(400).json({ message: "Invalid SHA-256 hash" });
       const content = `${hash}  export_file\n`;
       res.setHeader("Content-Type", "text/plain; charset=utf-8");
@@ -13138,11 +13138,11 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.post("/api/data-management/cascade-erasure/:borrowerId", requireAuth, requireRole("super_admin"), async (req, res) => {
     try {
-      const { borrowerId } = req.params;
+      const borrowerId = req.params["borrowerId"] as string;
       const borrower = await storage.getBorrower(borrowerId);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
 
-      const orgId = borrower.organizationId || req.session.organizationId || "";
+      const orgId = (borrower.organizationId ?? undefined) || req.session.organizationId || "";
       const country = borrower.country || req.session.userCountry || "";
       const allApprovals = await storage.getPendingApprovals(orgId, country);
       const approvedErasure = allApprovals.find((a: any) => {
@@ -13252,7 +13252,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   app.get("/api/open-banking/:borrowerId", requireAuth, async (req, res) => {
     try {
       const profiles = await db.select().from(openBankingProfiles)
-        .where(eq(openBankingProfiles.borrowerId, req.params.borrowerId))
+        .where(eq(openBankingProfiles.borrowerId, req.params.borrowerId as string))
         .orderBy(desc(openBankingProfiles.createdAt));
       res.json(profiles);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
@@ -13298,13 +13298,13 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     try {
       const [updated] = await db.update(decisionRules)
         .set({ ...req.body, updatedAt: new Date() })
-        .where(eq(decisionRules.id, req.params.id)).returning();
+        .where(eq(decisionRules.id, req.params.id as string)).returning();
       res.json(updated);
     } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e) }); }
   });
   app.delete("/api/decision-rules/:id", requireAuth, async (req, res) => {
     try {
-      await db.delete(decisionRules).where(eq(decisionRules.id, req.params.id));
+      await db.delete(decisionRules).where(eq(decisionRules.id, req.params.id as string));
       res.json({ success: true });
     } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e) }); }
   });
@@ -13359,7 +13359,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   app.get("/api/esg/:borrowerId", requireAuth, async (req, res) => {
     try {
       const [latest] = await db.select().from(esgScores)
-        .where(eq(esgScores.borrowerId, req.params.borrowerId))
+        .where(eq(esgScores.borrowerId, req.params.borrowerId as string))
         .orderBy(desc(esgScores.assessedAt)).limit(1);
       res.json(latest || null);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
@@ -13410,7 +13410,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (userCountry && borrower.country && borrower.country === userCountry) return { ok: true, borrower };
       return { ok: false, status: 403, message: "Not authorized for this borrower" };
     }
-    if (orgId && borrower.organizationId && borrower.organizationId === orgId) return { ok: true, borrower };
+    if (orgId && (borrower.organizationId ?? undefined) && (borrower.organizationId ?? undefined) === orgId) return { ok: true, borrower };
     return { ok: false, status: 403, message: "Not authorized for this borrower" };
   }
 
@@ -13467,7 +13467,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   app.get("/api/trace/borrower/:id/history", requireRole("admin", "super_admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
     try {
       if (!requireTraceReason(req, res)) return;
-      const { id } = req.params;
+      const id = req.params["id"] as string;
       const acl = await ensureBorrowerAccess(req, id);
       if (!acl.ok) return res.status(acl.status).json({ message: acl.message });
       const events = await getBorrowerContactEvents(id);
@@ -13492,7 +13492,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   app.get("/api/trace/borrower/:id/links", requireRole("admin", "super_admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
     try {
       if (!requireTraceReason(req, res)) return;
-      const { id } = req.params;
+      const id = req.params["id"] as string;
       const acl = await ensureBorrowerAccess(req, id);
       if (!acl.ok) return res.status(acl.status).json({ message: acl.message });
       const country = getCountryFilter(req);
@@ -13589,10 +13589,10 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   app.get("/api/trace/borrower/:id/assets", requireRole("admin", "super_admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
     try {
       if (!requireTraceReason(req, res)) return;
-      const acl = await ensureBorrowerAccess(req, req.params.id);
+      const acl = await ensureBorrowerAccess(req, req.params.id as string);
       if (!acl.ok) return res.status(acl.status).json({ message: acl.message });
-      const list = await getAssetTracesByBorrower(req.params.id);
-      await logTraceAudit(req, "TRACE_ASSET_LIST", req.params.id, `Listed ${list.length} asset trace records`);
+      const list = await getAssetTracesByBorrower(req.params.id as string);
+      await logTraceAudit(req, "TRACE_ASSET_LIST", req.params.id as string, `Listed ${list.length} asset trace records`);
       res.json(list);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -13600,7 +13600,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   app.post("/api/trace/borrower/:id/assets", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
       if (!requireTraceReason(req, res)) return;
-      const { id } = req.params;
+      const id = req.params["id"] as string;
       const { provider, reference } = req.body || {};
       if (!provider) return res.status(400).json({ message: "provider is required" });
       if (reference !== undefined && (typeof reference !== "string" || reference.length > 100)) {
@@ -13612,11 +13612,11 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const record = await executeAssetTrace({
         borrowerId: id, provider, reference,
         requestedBy: (req as any).session?.userId,
-        organizationId: borrower.organizationId,
+        organizationId: borrower.organizationId ?? undefined,
         country: borrower.country,
       });
       await logTraceAudit(req, "TRACE_ASSET_LOOKUP", id, `provider=${provider} ref=${reference || ""} status=${record.status}`);
-      try { broadcastEvent("trace:asset", { borrowerId: id, provider, status: record.status }); } catch {}
+      try { (broadcastEvent as any)("trace:asset", { borrowerId: id, provider, status: record.status }); } catch {}
       res.json(record);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -13631,7 +13631,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // cookie.  Authentication is performed via the X-Api-Key header instead.
   app.post("/api/registry-sandbox/:provider/lookup", async (req, res) => {
     try {
-      const { provider } = req.params;
+      const provider = req.params["provider"] as string;
       const { reference } = req.body || {};
       const suppliedKey = req.headers["x-api-key"] as string | undefined;
 
@@ -13761,7 +13761,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.put("/api/admin/registry-threshold-overrides/:provider", requireRole("admin", "super_admin"), async (req, res) => {
     try {
-      const { provider } = req.params;
+      const provider = req.params["provider"] as string;
       const schema = z.object({
         criticalFail7d: z.number().int().min(1).max(999).nullable(),
         criticalStreak30d: z.number().int().min(1).max(999).nullable(),
@@ -13811,7 +13811,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // Test connectivity for a specific registry (probe with synthetic reference)
   app.post("/api/trace/registry-status/:provider/test", requireRole("admin", "super_admin"), async (req, res) => {
     try {
-      const rawProvider = req.params.provider;
+      const rawProvider = req.params.provider as string;
       const { testRegistryCredentials, TESTABLE_PROVIDERS } = await import("./asset-trace");
       const matched = TESTABLE_PROVIDERS.find(p => p === rawProvider);
       if (!matched) {
@@ -13890,8 +13890,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       });
 
       recordUsageEvent({
-        organizationId: borrower.organizationId || req.session?.organizationId,
-        eventType: "bureau_query",
+        organizationId: (borrower.organizationId ?? undefined) || req.session?.organizationId,
+        eventType: "bureau_query" as any,
         country: borrower.country || "GH",
         metadata: JSON.stringify({ provider: "xds_ghana", found: result.found, source: result.source }),
       });
@@ -13904,7 +13904,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     try {
       const { xdsBureauQueries } = await import("@shared/schema");
       const rows = await db.select().from(xdsBureauQueries)
-        .where(eq(xdsBureauQueries.borrowerId, req.params.id))
+        .where(eq(xdsBureauQueries.borrowerId, req.params.id as string))
         .orderBy(desc(xdsBureauQueries.createdAt));
       res.json(rows);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
@@ -13913,7 +13913,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // Skip-trace PDF report
   app.post("/api/trace/borrower/:id/skip-trace-pdf", requireRole("admin", "super_admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
     try {
-      const { id } = req.params;
+      const id = req.params["id"] as string;
       const { reason } = req.body || {};
       if (!reason || typeof reason !== "string" || reason.length < 5) {
         return res.status(400).json({ message: "Permissible-purpose reason is required" });
@@ -13989,45 +13989,45 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const { organizationId: _ignoredOrg, country: _ignoredCountry, createdBy: _ignoredCreatedBy, ...safeBody } = body;
       const created = await storage.createCollectionAssignment({
         ...safeBody,
-        organizationId: borrower.organizationId,
+        organizationId: borrower.organizationId ?? undefined,
         country: borrower.country,
         createdBy: req.session?.userId,
       });
       await logTraceAudit(req, "TRACE_COLLECTION_OPEN", created.id, `borrower=${body.borrowerId} priority=${body.priority || "medium"}`);
-      try { broadcastEvent("collection:created", { id: created.id, borrowerId: body.borrowerId }); } catch {}
+      try { (broadcastEvent as any)("collection:created", { id: created.id, borrowerId: body.borrowerId }); } catch {}
       res.json(created);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.patch("/api/collections/assignments/:id", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
-      const acl = await ensureAssignmentAccess(req, req.params.id);
+      const acl = await ensureAssignmentAccess(req, req.params.id as string);
       if (!acl.ok) return res.status(acl.status).json({ message: acl.message });
-      const updated = await storage.updateCollectionAssignment(req.params.id, req.body || {});
+      const updated = await storage.updateCollectionAssignment(req.params.id as string, req.body || {});
       if (!updated) return res.status(404).json({ message: "Not found" });
-      await logTraceAudit(req, "TRACE_COLLECTION_UPDATE", req.params.id, `status=${req.body?.status || ""}`);
+      await logTraceAudit(req, "TRACE_COLLECTION_UPDATE", req.params.id as string, `status=${req.body?.status || ""}`);
       res.json(updated);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.get("/api/collections/assignments/:id/attempts", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
-      const acl = await ensureAssignmentAccess(req, req.params.id);
+      const acl = await ensureAssignmentAccess(req, req.params.id as string);
       if (!acl.ok) return res.status(acl.status).json({ message: acl.message });
-      const list = await storage.getCollectionAttempts(req.params.id);
+      const list = await storage.getCollectionAttempts(req.params.id as string);
       res.json(list);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.post("/api/collections/assignments/:id/attempts", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
-      const acl = await ensureAssignmentAccess(req, req.params.id);
+      const acl = await ensureAssignmentAccess(req, req.params.id as string);
       if (!acl.ok) return res.status(acl.status).json({ message: acl.message });
       const assignment = acl.assignment;
       const body = req.body || {};
       const attempt = await storage.createCollectionAttempt({
         ...body,
-        assignmentId: req.params.id,
+        assignmentId: req.params.id as string,
         attemptedBy: (req as any).session?.userId,
         attemptedAt: new Date(),
       });
@@ -14048,15 +14048,15 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         }
       }
 
-      await logTraceAudit(req, "TRACE_COLLECTION_ATTEMPT", req.params.id, `channel=${body.channel} outcome=${body.outcome}`);
+      await logTraceAudit(req, "TRACE_COLLECTION_ATTEMPT", req.params.id as string, `channel=${body.channel} outcome=${body.outcome}`);
 
       // Auto-update assignment status based on outcome
       if (body.outcome === "promise_to_pay") {
-        await storage.updateCollectionAssignment(req.params.id, { status: "promised" });
+        await storage.updateCollectionAssignment(req.params.id as string, { status: "promised" });
       } else if (body.outcome === "paid") {
-        await storage.updateCollectionAssignment(req.params.id, { status: "resolved" });
+        await storage.updateCollectionAssignment(req.params.id as string, { status: "resolved" });
       } else if (assignment.status === "open") {
-        await storage.updateCollectionAssignment(req.params.id, { status: "in_progress" });
+        await storage.updateCollectionAssignment(req.params.id as string, { status: "in_progress" });
       }
 
       res.json(attempt);
@@ -14117,14 +14117,14 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.delete("/api/collections/sla-settings/:id", requireRole("admin", "super_admin"), async (req, res) => {
     try {
-      const existing = await storage.getCollectionSlaSettingsById(req.params.id);
+      const existing = await storage.getCollectionSlaSettingsById(req.params.id as string);
       if (!existing) return res.status(404).json({ message: "SLA profile not found" });
       const role = req.session.userRole;
       const orgId = req.session.organizationId;
       if (role !== "super_admin" && existing.organizationId !== (orgId ?? null)) {
         return res.status(403).json({ message: "Not authorized to delete this SLA profile" });
       }
-      await storage.deleteCollectionSlaSettings(req.params.id);
+      await storage.deleteCollectionSlaSettings(req.params.id as string);
       res.json({ success: true });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -14177,6 +14177,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         }
       }
       const uniqueBreachIds = [...new Set(breachIds)];
+      const profiles: any[] = [];
       const defaultProfile = profiles.find(p => !p.segment) ?? profiles[0];
       const defaultThresholds: Record<string, number> = defaultProfile
         ? { urgent: defaultProfile.urgentThresholdDays, high: defaultProfile.highThresholdDays, medium: defaultProfile.mediumThresholdDays, low: defaultProfile.lowThresholdDays }
@@ -14231,7 +14232,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.get("/api/loan-applications/:id", requireAuth, async (req, res) => {
     try {
-      const loan = await storage.getLoanApplication(req.params.id);
+      const loan = await storage.getLoanApplication(req.params.id as string);
       if (!loan) return res.status(404).json({ message: "Not found" });
       res.json(loan);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
@@ -14256,7 +14257,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.patch("/api/loan-applications/:id", requireRole("admin", "super_admin", "lender"), async (req, res) => {
     try {
-      const updated = await storage.updateLoanApplication(req.params.id, req.body);
+      const updated = await storage.updateLoanApplication(req.params.id as string, req.body);
       if (!updated) return res.status(404).json({ message: "Not found" });
       res.json(updated);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
@@ -14265,7 +14266,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   app.post("/api/loan-applications/:id/approve", requireRole("admin", "super_admin"), async (req, res) => {
     try {
       const { approvedAmount, interestRate, notes } = req.body;
-      const updated = await storage.updateLoanApplication(req.params.id, {
+      const updated = await storage.updateLoanApplication(req.params.id as string, {
         status: "approved",
         approvedAmount,
         interestRate,
@@ -14281,7 +14282,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.post("/api/loan-applications/:id/reject", requireRole("admin", "super_admin"), async (req, res) => {
     try {
-      const updated = await storage.updateLoanApplication(req.params.id, {
+      const updated = await storage.updateLoanApplication(req.params.id as string, {
         status: "rejected",
         checkerUserId: req.session?.userId,
         checkerAction: "rejected",
@@ -14295,7 +14296,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.post("/api/loan-applications/:id/disburse", requireRole("admin", "super_admin"), async (req, res) => {
     try {
-      const updated = await storage.updateLoanApplication(req.params.id, {
+      const updated = await storage.updateLoanApplication(req.params.id as string, {
         status: "disbursed",
         disbursedAt: new Date(),
         disbursementReference: req.body.reference || `DISB-${Date.now()}`,
@@ -14307,14 +14308,14 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.get("/api/loan-applications/:id/schedule", requireAuth, async (req, res) => {
     try {
-      const schedule = await storage.getRepaymentSchedule(req.params.id);
+      const schedule = await storage.getRepaymentSchedule(req.params.id as string);
       res.json(schedule);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.post("/api/loan-applications/:id/schedule", requireRole("admin", "super_admin"), async (req, res) => {
     try {
-      const loan = await storage.getLoanApplication(req.params.id);
+      const loan = await storage.getLoanApplication(req.params.id as string);
       if (!loan) return res.status(404).json({ message: "Not found" });
       const principal = parseFloat(String(loan.approvedAmount || loan.requestedAmount));
       const rate = parseFloat(String(loan.interestRate || "0.15")) / 12;
@@ -14349,7 +14350,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.patch("/api/loan-repayments/:id/pay", requireRole("admin", "super_admin"), async (req, res) => {
     try {
-      const updated = await storage.markInstallmentPaid(req.params.id, req.body.paidAmount);
+      const updated = await storage.markInstallmentPaid(req.params.id as string, req.body.paidAmount);
       res.json(updated);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -14519,8 +14520,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const enriched = items.map(item => ({
         ...item,
         lenderInstitutionName: item.lenderOrganizationId
-          ? (orgMap.get(item.lenderOrganizationId) ?? item.lenderInstitution ?? "Unknown Institution")
-          : (item.lenderInstitution ?? null),
+          ? (orgMap.get(item.lenderOrganizationId) ?? (item as any).lenderInstitution ?? "Unknown Institution")
+          : ((item as any).lenderInstitution ?? null),
       }));
       res.json(enriched);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
@@ -14547,8 +14548,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const enriched = items.map(item => ({
         ...item,
         lenderInstitutionName: item.lenderOrganizationId
-          ? (orgMap.get(item.lenderOrganizationId) || item.lenderInstitution || "Unknown Institution")
-          : (item.lenderInstitution || "Unknown Institution"),
+          ? (orgMap.get(item.lenderOrganizationId) || (item as any).lenderInstitution || "Unknown Institution")
+          : ((item as any).lenderInstitution || "Unknown Institution"),
       }));
       res.json(enriched);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
@@ -14572,7 +14573,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // Certificate preview data endpoint — returns JSON with all certificate fields
   app.get("/api/collateral/:id/certificate-preview", requireAuth, async (req, res) => {
     try {
-      const item = await storage.getCollateralItem(req.params.id);
+      const item = await storage.getCollateralItem(req.params.id as string);
       if (!item) return res.status(404).json({ message: "Not found" });
       const orgId = req.session?.organizationId;
       const isSuperAdmin = req.session?.userRole === "super_admin";
@@ -14710,7 +14711,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // PDF certificate download endpoint — lender (owner) or RA of same country
   app.get("/api/collateral/:id/certificate", requireAuth, async (req, res) => {
     try {
-      const item = await storage.getCollateralItem(req.params.id);
+      const item = await storage.getCollateralItem(req.params.id as string);
       if (!item) return res.status(404).json({ message: "Not found" });
       // Access check: must be the lender or an RA of the same country or super_admin
       const orgId = req.session?.organizationId;
@@ -14735,7 +14736,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.get("/api/collateral/:id", requireAuth, async (req, res) => {
     try {
-      const item = await storage.getCollateralItem(req.params.id);
+      const item = await storage.getCollateralItem(req.params.id as string);
       if (!item) return res.status(404).json({ message: "Not found" });
       // Lender can see own items; RA can see items for their country; super_admin sees all
       const orgId = req.session?.organizationId;
@@ -14810,7 +14811,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // Update financing statement — only the lender that owns it
   app.patch("/api/collateral/:id", requireRole("admin", "super_admin", "lender"), async (req, res) => {
     try {
-      const item = await storage.getCollateralItem(req.params.id);
+      const item = await storage.getCollateralItem(req.params.id as string);
       if (!item) return res.status(404).json({ message: "Not found" });
       const orgId = req.session?.organizationId;
       const isSuperAdmin = req.session?.userRole === "super_admin";
@@ -14845,7 +14846,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (isSuperAdmin && req.body.approvalStatus === "rejected") {
         const reason = req.body.rejectionReason as string | undefined;
         if (!reason) return res.status(400).json({ message: "rejectionReason required when approvalStatus is 'rejected'" });
-        const rejected = await storage.rejectCollateralItem(req.params.id, reason, req.session?.userId);
+        const rejected = await storage.rejectCollateralItem(req.params.id as string, reason, req.session?.userId);
         if (!rejected) return res.status(404).json({ message: "Not found" });
         // Fire-and-forget rejection email to lender
         if (item.lenderOrganizationId) {
@@ -14859,11 +14860,11 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
                 assetDesc,
                 getBaseUrl(),
               ).catch((err: any) => {
-                console.error(`[LienEmail] PATCH rejection email failed for collateral ${req.params.id}:`, err?.message || err);
+                console.error(`[LienEmail] PATCH rejection email failed for collateral ${req.params.id as string}:`, err?.message || err);
               });
             }
           }).catch((err: any) => {
-            console.error(`[LienEmail] PATCH: Failed to fetch lender org for rejection email (collateral ${req.params.id}):`, err?.message || err);
+            console.error(`[LienEmail] PATCH: Failed to fetch lender org for rejection email (collateral ${req.params.id as string}):`, err?.message || err);
           });
         }
         return res.json(rejected);
@@ -14885,7 +14886,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
           Object.entries(req.body).filter(([k]) => LENDER_EDITABLE_FIELDS.includes(k))
         );
       }
-      const updated = await storage.updateCollateralItem(req.params.id, patchData);
+      const updated = await storage.updateCollateralItem(req.params.id as string, patchData);
       if (!updated) return res.status(404).json({ message: "Not found" });
       res.json(updated);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
@@ -14897,7 +14898,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const isSuperAdmin = req.session?.userRole === "super_admin";
       const isRA = await isRegistryAuthority(req);
       if (!isRA && !isSuperAdmin) return res.status(403).json({ message: "Registry Authority access required" });
-      const item = await storage.getCollateralItem(req.params.id);
+      const item = await storage.getCollateralItem(req.params.id as string);
       if (!item) return res.status(404).json({ message: "Not found" });
       if (item.approvalStatus === "approved") {
         return res.status(409).json({ message: "This financing statement has already been approved" });
@@ -14914,7 +14915,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       // Priority is determined by submission timestamp order (first-to-file wins, PPSR style).
       // Count all filings for the same asset (any status) ordered by createdAt.
       const priority = await storage.getSubmissionRankForAsset(
-        req.params.id,
+        req.params.id as string,
         item.panAfricanAssetId || null,
         item.assetLocalIdentifier || null,
         item.countryCode || ""
@@ -14923,9 +14924,9 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       // Ensure registryAuthorityId is set before approving (items submitted before RA provisioned may lack it)
       const approverOrgId = req.session?.organizationId;
       if (!item.registryAuthorityId && approverOrgId && !isSuperAdmin) {
-        await storage.updateCollateralItem(req.params.id, { registryAuthorityId: approverOrgId });
+        await storage.updateCollateralItem(req.params.id as string, { registryAuthorityId: approverOrgId });
       }
-      const updated = await storage.approveCollateralItem(req.params.id, userId, certNum, priority);
+      const updated = await storage.approveCollateralItem(req.params.id as string, userId, certNum, priority);
 
       // Send approval email to the lender organisation (fire-and-forget, non-blocking)
       if (item.lenderOrganizationId) {
@@ -14937,15 +14938,15 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
               lenderOrg.name,
               certNum,
               priority,
-              req.params.id,
+              req.params.id as string,
               assetDesc,
               getBaseUrl(),
             ).catch((err: any) => {
-              console.error(`[LienEmail] Failed to send approval email for collateral ${req.params.id}:`, err?.message || err);
+              console.error(`[LienEmail] Failed to send approval email for collateral ${req.params.id as string}:`, err?.message || err);
             });
           }
         }).catch((err: any) => {
-          console.error(`[LienEmail] Failed to fetch lender org for approval email (collateral ${req.params.id}):`, err?.message || err);
+          console.error(`[LienEmail] Failed to fetch lender org for approval email (collateral ${req.params.id as string}):`, err?.message || err);
         });
       }
 
@@ -14958,11 +14959,11 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
             const assetDesc = item.description || item.collateralType || "Registered Asset";
             const resolvedCountry = item.countryCode || lenderOrg?.country;
             if (!resolvedCountry) {
-              console.warn(`[LienNotify] Could not resolve country for collateral ${req.params.id} — falling back to GH for notification storage`);
+              console.warn(`[LienNotify] Could not resolve country for collateral ${req.params.id as string} — falling back to GH for notification storage`);
             }
             const notifCountry = resolvedCountry || "GH";
             if (lenderUsers.length === 0) {
-              console.warn(`[LienNotify] No users found in lender org ${item.lenderOrganizationId} for collateral ${req.params.id} — notification not delivered in-app`);
+              console.warn(`[LienNotify] No users found in lender org ${item.lenderOrganizationId} for collateral ${req.params.id as string} — notification not delivered in-app`);
             }
             await Promise.all(lenderUsers.map(lu =>
               storage.createNotification({
@@ -14980,13 +14981,13 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
               type: "lien_approved",
               title: "Lien Registration Approved",
               message: `Lien registration for "${assetDesc}" approved. Certificate: ${certNum}, Priority rank: ${priority}.`,
-              entityId: req.params.id,
+              entityId: req.params.id as string,
               entityType: "collateral_item",
               severity: "info",
               timestamp: new Date().toISOString(),
             }, { organizationId: item.lenderOrganizationId });
           } catch (err: any) {
-            console.error(`[LienNotify] Failed to create approval in-app notification for collateral ${req.params.id}:`, err?.message || err);
+            console.error(`[LienNotify] Failed to create approval in-app notification for collateral ${req.params.id as string}:`, err?.message || err);
           }
         })();
       }
@@ -15040,7 +15041,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const isSuperAdmin = req.session?.userRole === "super_admin";
       const isRA = await isRegistryAuthority(req);
       if (!isRA && !isSuperAdmin) return res.status(403).json({ message: "Registry Authority access required" });
-      const item = await storage.getCollateralItem(req.params.id);
+      const item = await storage.getCollateralItem(req.params.id as string);
       if (!item) return res.status(404).json({ message: "Not found" });
       const callerCountry = await getCallerCountry(req);
       if (!isSuperAdmin) {
@@ -15051,7 +15052,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       }
       const { reason } = req.body;
       if (!reason) return res.status(400).json({ message: "Rejection reason required" });
-      const updated = await storage.rejectCollateralItem(req.params.id, reason, req.session?.userId);
+      const updated = await storage.rejectCollateralItem(req.params.id as string, reason, req.session?.userId);
       if (!updated) return res.status(404).json({ message: "Not found" });
 
       // Send rejection email to the lender organisation (fire-and-forget, non-blocking)
@@ -15066,11 +15067,11 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
               assetDesc,
               getBaseUrl(),
             ).catch((err: any) => {
-              console.error(`[LienEmail] Failed to send rejection email for collateral ${req.params.id}:`, err?.message || err);
+              console.error(`[LienEmail] Failed to send rejection email for collateral ${req.params.id as string}:`, err?.message || err);
             });
           }
         }).catch((err: any) => {
-          console.error(`[LienEmail] Failed to fetch lender org for rejection email (collateral ${req.params.id}):`, err?.message || err);
+          console.error(`[LienEmail] Failed to fetch lender org for rejection email (collateral ${req.params.id as string}):`, err?.message || err);
         });
       }
 
@@ -15083,11 +15084,11 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
             const assetDesc = item.description || item.collateralType || "Registered Asset";
             const resolvedCountry = item.countryCode || lenderOrg?.country;
             if (!resolvedCountry) {
-              console.warn(`[LienNotify] Could not resolve country for collateral ${req.params.id} — falling back to GH for notification storage`);
+              console.warn(`[LienNotify] Could not resolve country for collateral ${req.params.id as string} — falling back to GH for notification storage`);
             }
             const notifCountry = resolvedCountry || "GH";
             if (lenderUsers.length === 0) {
-              console.warn(`[LienNotify] No users found in lender org ${item.lenderOrganizationId} for collateral ${req.params.id} — notification not delivered in-app`);
+              console.warn(`[LienNotify] No users found in lender org ${item.lenderOrganizationId} for collateral ${req.params.id as string} — notification not delivered in-app`);
             }
             await Promise.all(lenderUsers.map(lu =>
               storage.createNotification({
@@ -15105,13 +15106,13 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
               type: "lien_rejected",
               title: "Lien Registration Rejected",
               message: `Lien registration for "${assetDesc}" was rejected. Reason: ${reason}`,
-              entityId: req.params.id,
+              entityId: req.params.id as string,
               entityType: "collateral_item",
               severity: "warning",
               timestamp: new Date().toISOString(),
             }, { organizationId: item.lenderOrganizationId });
           } catch (err: any) {
-            console.error(`[LienNotify] Failed to create rejection in-app notification for collateral ${req.params.id}:`, err?.message || err);
+            console.error(`[LienNotify] Failed to create rejection in-app notification for collateral ${req.params.id as string}:`, err?.message || err);
           }
         })();
       }
@@ -15123,7 +15124,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // Get rejection history for a collateral item — lender (owner), RA (same country), or super_admin
   app.get("/api/collateral/:id/rejection-history", requireAuth, async (req, res) => {
     try {
-      const item = await storage.getCollateralItem(req.params.id);
+      const item = await storage.getCollateralItem(req.params.id as string);
       if (!item) return res.status(404).json({ message: "Not found" });
 
       const isSuperAdmin = req.session?.userRole === "super_admin";
@@ -15143,7 +15144,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         }
       }
 
-      const history = await storage.getCollateralRejectionHistory(req.params.id);
+      const history = await storage.getCollateralRejectionHistory(req.params.id as string);
       res.json(history);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -15154,7 +15155,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const isSuperAdmin = req.session?.userRole === "super_admin";
       const isRA = await isRegistryAuthority(req);
       if (!isRA && !isSuperAdmin) return res.status(403).json({ message: "Registry Authority access required" });
-      const item = await storage.getCollateralItem(req.params.id);
+      const item = await storage.getCollateralItem(req.params.id as string);
       if (!item) return res.status(404).json({ message: "Not found" });
       const callerCountry = await getCallerCountry(req);
       if (!isSuperAdmin) {
@@ -15163,7 +15164,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
           return res.status(403).json({ message: "Cross-country action not permitted" });
         }
       }
-      const updated = await storage.enforceCollateralItem(req.params.id);
+      const updated = await storage.enforceCollateralItem(req.params.id as string);
       if (!updated) return res.status(404).json({ message: "Not found" });
       // Fire-and-forget enforcement email to lender
       if (item.lenderOrganizationId) {
@@ -15176,11 +15177,11 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
               assetDesc,
               getBaseUrl(),
             ).catch((err: any) => {
-              console.error(`[LienEmail] Failed to send enforcement email for collateral ${req.params.id}:`, err?.message || err);
+              console.error(`[LienEmail] Failed to send enforcement email for collateral ${req.params.id as string}:`, err?.message || err);
             });
           }
         }).catch((err: any) => {
-          console.error(`[LienEmail] Failed to fetch lender org for enforcement email (collateral ${req.params.id}):`, err?.message || err);
+          console.error(`[LienEmail] Failed to fetch lender org for enforcement email (collateral ${req.params.id as string}):`, err?.message || err);
         });
       }
       res.json(updated);
@@ -15195,7 +15196,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       // Discharge is a government-registry lifecycle action — restricted to Registry Authority
       // and super_admin only. Lenders cannot self-discharge; they must apply to the RA.
       if (!isRA && !isSuperAdmin) return res.status(403).json({ message: "Registry Authority access required" });
-      const item = await storage.getCollateralItem(req.params.id);
+      const item = await storage.getCollateralItem(req.params.id as string);
       if (!item) return res.status(404).json({ message: "Not found" });
       // RA must operate within their country (fail closed if country unresolvable)
       const callerCountry = await getCallerCountry(req);
@@ -15205,7 +15206,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
           return res.status(403).json({ message: "Cross-country discharge not permitted" });
         }
       }
-      const updated = await storage.dischargeCollateralItem(req.params.id);
+      const updated = await storage.dischargeCollateralItem(req.params.id as string);
       if (!updated) return res.status(404).json({ message: "Not found" });
       // Fire-and-forget release/discharge email to lender
       if (item.lenderOrganizationId) {
@@ -15218,11 +15219,11 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
               assetDesc,
               getBaseUrl(),
             ).catch((err: any) => {
-              console.error(`[LienEmail] Failed to send release email for collateral ${req.params.id}:`, err?.message || err);
+              console.error(`[LienEmail] Failed to send release email for collateral ${req.params.id as string}:`, err?.message || err);
             });
           }
         }).catch((err: any) => {
-          console.error(`[LienEmail] Failed to fetch lender org for release email (collateral ${req.params.id}):`, err?.message || err);
+          console.error(`[LienEmail] Failed to fetch lender org for release email (collateral ${req.params.id as string}):`, err?.message || err);
         });
       }
       res.json(updated);
@@ -15236,13 +15237,13 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (!channel || !recipient) return res.status(400).json({ message: "channel and recipient are required" });
       if (channel !== "email" && channel !== "sms") return res.status(400).json({ message: "channel must be 'email' or 'sms'" });
 
-      const item = await storage.getCollateralItem(req.params.id);
+      const item = await storage.getCollateralItem(req.params.id as string);
       if (!item) return res.status(404).json({ message: "Not found" });
       if (item.approvalStatus !== "approved") return res.status(400).json({ message: "Collateral is not approved" });
       if (!item.verificationCode) return res.status(400).json({ message: "No verification code available" });
 
       const orgId = (req.session as any)?.organizationId;
-      if (item.organizationId && orgId && String(item.organizationId) !== String(orgId)) {
+      if ((item as any).organizationId && orgId && String((item as any).organizationId) !== String(orgId)) {
         return res.status(403).json({ message: "Access denied" });
       }
 
@@ -15283,7 +15284,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (sent) {
         const sentById = (req.session as any)?.userId as string | undefined;
         await storage.createCollateralShareLog({
-          collateralItemId: req.params.id,
+          collateralItemId: req.params.id as string,
           channel,
           maskedRecipient,
           sentBy: sentById || null,
@@ -15297,15 +15298,15 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // Get share history for a collateral item
   app.get("/api/collateral/:id/share-log", requireRole("admin", "super_admin", "lender"), async (req, res) => {
     try {
-      const item = await storage.getCollateralItem(req.params.id);
+      const item = await storage.getCollateralItem(req.params.id as string);
       if (!item) return res.status(404).json({ message: "Not found" });
 
       const orgId = (req.session as any)?.organizationId;
-      if (item.organizationId && orgId && String(item.organizationId) !== String(orgId)) {
+      if ((item as any).organizationId && orgId && String((item as any).organizationId) !== String(orgId)) {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      const log = await storage.getCollateralShareLog(req.params.id);
+      const log = await storage.getCollateralShareLog(req.params.id as string);
       res.json(log);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -15313,15 +15314,15 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // Export share history for a collateral item as CSV
   app.get("/api/collateral/:id/share-log/export", requireRole("admin", "super_admin", "lender"), async (req, res) => {
     try {
-      const item = await storage.getCollateralItem(req.params.id);
+      const item = await storage.getCollateralItem(req.params.id as string);
       if (!item) return res.status(404).json({ message: "Not found" });
 
       const orgId = (req.session as any)?.organizationId;
-      if (item.organizationId && orgId && String(item.organizationId) !== String(orgId)) {
+      if ((item as any).organizationId && orgId && String((item as any).organizationId) !== String(orgId)) {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      const log = await storage.getCollateralShareLog(req.params.id);
+      const log = await storage.getCollateralShareLog(req.params.id as string);
 
       const csvQ = (val: unknown) => csvSafe(val).replace(/"/g, '""');
       let csv = "Timestamp,Channel,Masked Recipient,Sender Name\n";
@@ -15330,7 +15331,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         csv += `"${csvQ(ts)}","${csvQ(entry.channel)}","${csvQ(entry.maskedRecipient)}","${csvQ(entry.senderName ?? "")}"\n`;
       }
 
-      const filename = `share-history-${req.params.id}-${Date.now()}.csv`;
+      const filename = `share-history-${req.params.id as string}-${Date.now()}.csv`;
       res.setHeader("Content-Type", "text/csv");
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
       return res.send(csv);
@@ -15377,8 +15378,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         email: contactEmail || `admin@${slug}.registry`,
         role: "admin",
         organizationId: org.id,
-        mustChangePassword: true,
-        status: "active",
+                status: "active",
       });
 
       // Send welcome email with credentials if a contact email was provided
@@ -15582,7 +15582,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.patch("/api/portfolio-triggers/:id", requireRole("admin", "super_admin", "lender"), async (req, res) => {
     try {
-      const updated = await storage.updatePortfolioTriggerSubscription(req.params.id, req.body);
+      const updated = await storage.updatePortfolioTriggerSubscription(req.params.id as string, req.body);
       if (!updated) return res.status(404).json({ message: "Subscription not found" });
       res.json(updated);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
@@ -15590,7 +15590,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.delete("/api/portfolio-triggers/:id", requireRole("admin", "super_admin", "lender"), async (req, res) => {
     try {
-      const ok = await storage.deletePortfolioTriggerSubscription(req.params.id);
+      const ok = await storage.deletePortfolioTriggerSubscription(req.params.id as string);
       if (!ok) return res.status(404).json({ message: "Subscription not found" });
       res.json({ message: "Unsubscribed" });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
@@ -15614,7 +15614,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.patch("/api/portfolio-trigger-events/:id/acknowledge", requireAuth, async (req, res) => {
     try {
-      const updated = await storage.acknowledgePortfolioTriggerEvent(req.params.id);
+      const updated = await storage.acknowledgePortfolioTriggerEvent(req.params.id as string);
       if (!updated) return res.status(404).json({ message: "Event not found" });
       res.json(updated);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
@@ -15636,7 +15636,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
       const accounts = await storage.getCreditAccountsByBorrower(borrowerId);
       const inquiries = await storage.getCreditInquiriesByBorrower(borrowerId);
-      const scoreResult = calculateCreditScore(borrower, accounts, inquiries.filter(i => !(i as any).isSoftPull));
+      const scoreResult = (calculateCreditScore as any)(borrower, accounts, inquiries.filter(i => !(i as any).isSoftPull));
       const trendSummary = await storage.getBorrowerTrendSummary(borrowerId);
 
       const hardInquiriesLast6Mo = inquiries.filter(i => {
@@ -15691,7 +15691,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.get("/api/credit-accounts/:id/trends", requireAuth, async (req, res) => {
     try {
-      const trends = await storage.getAccountTrends(req.params.id);
+      const trends = await storage.getAccountTrends(req.params.id as string);
       if (!trends.length) return res.json({ periods: [], insights: { trend: "insufficient_data", message: "Less than 2 months of payment data available." } });
       const onTime = trends.filter(t => t.status === "on_time").length;
       const late = trends.filter(t => t.status === "late").length;
@@ -15717,7 +15717,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.get("/api/borrowers/:id/trend-summary", requireAuth, async (req, res) => {
     try {
-      const summary = await storage.getBorrowerTrendSummary(req.params.id);
+      const summary = await storage.getBorrowerTrendSummary(req.params.id as string);
       res.json(summary);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -15760,7 +15760,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     try {
       const consumerAccountId = (req.session as any)?.consumerAccountId;
       if (!consumerAccountId) return res.status(401).json({ message: "Consumer session required" });
-      const ok = await storage.markConsumerMonitoringAlertRead(req.params.id);
+      const ok = await storage.markConsumerMonitoringAlertRead(req.params.id as string);
       res.json({ success: ok });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -15808,7 +15808,7 @@ async function seedOrganizations() {
         if (!acc.organizationId) {
           const borrower = await storage.getBorrower(acc.borrowerId);
           if (borrower?.organizationId) {
-            await storage.updateCreditAccount(acc.id, { organizationId: borrower.organizationId } as any);
+            await storage.updateCreditAccount(acc.id, { organizationId: borrower.organizationId ?? undefined } as any);
           }
         }
       }
@@ -15946,7 +15946,7 @@ async function seedOrganizations() {
     if (!acc.organizationId) {
       const borrower = await storage.getBorrower(acc.borrowerId);
       if (borrower?.organizationId) {
-        await storage.updateCreditAccount(acc.id, { organizationId: borrower.organizationId } as any);
+        await storage.updateCreditAccount(acc.id, { organizationId: borrower.organizationId ?? undefined } as any);
       }
     }
   }

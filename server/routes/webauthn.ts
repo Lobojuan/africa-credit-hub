@@ -5,7 +5,7 @@ import { db } from "../db";
 import { eq, and } from "drizzle-orm";
 import { webauthnCredentials } from "@shared/schema";
 import { broadcastEvent } from "../websocket";
-import type { AuthenticatorTransport } from "@simplewebauthn/types";
+import type { AuthenticatorTransport } from "@simplewebauthn/server";
 
 const router = Router();
 
@@ -232,7 +232,7 @@ router.delete("/api/auth/webauthn/credentials/:id", requireAuth, async (req, res
   try {
     if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
     await db.delete(webauthnCredentials).where(
-      and(eq(webauthnCredentials.id, req.params.id), eq(webauthnCredentials.userId, req.session.userId))
+      and(eq(webauthnCredentials.id, req.params.id as string), eq(webauthnCredentials.userId, req.session.userId))
     );
     res.json({ deleted: true });
   } catch (e: any) {

@@ -116,7 +116,7 @@ function ApproveDialog({ item, countryCode }: { item: PendingItem; countryCode: 
           <div><span className="font-medium">Reg #:</span> {item.registrationNumber}</div>
           <div><span className="font-medium">Asset:</span> {ASSET_TYPE_LABELS[item.collateralType] || item.collateralType}</div>
           <div><span className="font-medium">Description:</span> {item.description}</div>
-          <div><span className="font-medium">Value:</span> {formatCurrency(item.estimatedValue, item.currency)}</div>
+          <div><span className="font-medium">Value:</span> {formatCurrency(item.estimatedValue ?? null, item.currency ?? undefined)}</div>
           {item.panAfricanAssetId && <div><span className="font-medium">Pan-African ID:</span> {item.panAfricanAssetId}</div>}
         </div>
         <div className="flex gap-2 justify-end pt-2">
@@ -272,7 +272,7 @@ function PendingQueue({ orgId, countryCode }: { orgId: string; countryCode: stri
                   </TableCell>
                   <TableCell className="font-mono text-xs text-muted-foreground">{item.panAfricanAssetId || "—"}</TableCell>
                   <TableCell className="text-sm max-w-[180px] truncate">{item.description}</TableCell>
-                  <TableCell className="text-right text-sm">{formatCurrency(item.estimatedValue, item.currency)}</TableCell>
+                  <TableCell className="text-right text-sm">{formatCurrency(item.estimatedValue ?? null, item.currency ?? undefined)}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">{item.createdAt ? format(new Date(item.createdAt), "dd MMM yyyy") : "—"}</TableCell>
                   <TableCell>
                     {item.legalRegime ? (
@@ -349,12 +349,12 @@ function ActiveLiensLedger({ countryCode }: { countryCode: string }) {
             <TableBody>
               {filtered.map((item) => (
                 <TableRow key={item.id} data-testid={`row-lien-${item.id}`}>
-                  <TableCell><PriorityBadge rank={item.lienPriority} /></TableCell>
+                  <TableCell><PriorityBadge rank={item.lienPriority ?? null} /></TableCell>
                   <TableCell className="font-mono text-xs">{item.certificateNumber || "—"}</TableCell>
                   <TableCell className="font-mono text-xs text-muted-foreground">{item.panAfricanAssetId || item.assetLocalIdentifier || "—"}</TableCell>
                   <TableCell className="text-sm">{ASSET_TYPE_LABELS[item.collateralType] || item.collateralType}</TableCell>
                   <TableCell className="text-sm">{item.borrowerName || item.borrowerId}</TableCell>
-                  <TableCell className="text-right text-sm">{formatCurrency(item.estimatedValue, item.currency)}</TableCell>
+                  <TableCell className="text-right text-sm">{formatCurrency(item.estimatedValue ?? null, item.currency ?? undefined)}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">{item.approvalDate || "—"}</TableCell>
                   <TableCell>
                     <Badge className={`text-xs ${item.enforcementStatus === "in_enforcement" ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>
@@ -476,7 +476,7 @@ function RegulatoryReports({ countryCode }: { countryCode: string }) {
                 <p className="text-xs text-muted-foreground">No data</p>
               ) : report.byAssetType.map((r) => (
                 <div key={r.type} className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{ASSET_TYPE_LABELS[r.type] || r.type}</span>
+                  <span className="text-muted-foreground">{ASSET_TYPE_LABELS[r.type as string] || r.type}</span>
                   <span className="font-medium">{r.count}</span>
                 </div>
               ))}
@@ -494,7 +494,7 @@ function RegulatoryReports({ countryCode }: { countryCode: string }) {
             <div className="space-y-2">
               {report.bySector.length === 0 ? (
                 <p className="text-xs text-muted-foreground">No data</p>
-              ) : report.bySector.map((r: { sector: string; count: number; value: number }) => (
+              ) : report.bySector.map((r: any) => (
                 <div key={r.sector} className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{r.sector}</span>
                   <span className="font-medium">{r.count}</span>

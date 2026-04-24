@@ -1022,7 +1022,7 @@ export class DatabaseStorage implements IStorage {
           )
         ORDER BY ca.priority DESC, last_attempt_at ASC NULLS FIRST
       `);
-      for (const row of (rows.rows || []) as BreachRow[]) {
+      for (const row of (rows.rows || []) as unknown as BreachRow[]) {
         const lastAttemptAt = row.last_attempt_at ? new Date(row.last_attempt_at) : null;
         const fallbackDate = row.created_at ? new Date(row.created_at) : new Date(now);
         const daysSinceContact = lastAttemptAt
@@ -1344,7 +1344,7 @@ export class DatabaseStorage implements IStorage {
       if (organizationId) conditions.push(eq(telcoProfiles.organizationId, organizationId));
       if (country) conditions.push(eq(telcoProfiles.country, country));
       if (params.msisdn) conditions.push(ilike(telcoProfiles.msisdn, `%${params.msisdn}%`));
-      if (params.provider) conditions.push(eq(telcoProfiles.provider, params.provider));
+      if (params.provider) conditions.push(eq(telcoProfiles.provider, params.provider as any));
       if (params.accountStatus) conditions.push(eq(telcoProfiles.accountStatus, params.accountStatus));
 
       if (conditions.length === 0) {
@@ -2458,13 +2458,13 @@ export class DatabaseStorage implements IStorage {
 
     const countryBreakdown: Record<string, { profiles: number; scored: number; approved: number; totalVolume: number }> = {};
     for (const r of profilesByCountry) {
-      countryBreakdown[r.country] = { profiles: r.cnt, scored: 0, approved: 0, totalVolume: 0 };
+      countryBreakdown[r.country ?? ""] = { profiles: r.cnt, scored: 0, approved: 0, totalVolume: 0 };
     }
     for (const r of scoresByCountry) {
-      if (!countryBreakdown[r.country]) countryBreakdown[r.country] = { profiles: 0, scored: 0, approved: 0, totalVolume: 0 };
-      countryBreakdown[r.country].scored = r.scored;
-      countryBreakdown[r.country].approved = Number(r.approved);
-      countryBreakdown[r.country].totalVolume = Number(r.totalVolume);
+      if (!countryBreakdown[r.country ?? ""]) countryBreakdown[r.country ?? ""] = { profiles: 0, scored: 0, approved: 0, totalVolume: 0 };
+      countryBreakdown[r.country ?? ""].scored = r.scored;
+      countryBreakdown[r.country ?? ""].approved = Number(r.approved);
+      countryBreakdown[r.country ?? ""].totalVolume = Number(r.totalVolume);
     }
 
     const providerBreakdown: Record<string, number> = {};

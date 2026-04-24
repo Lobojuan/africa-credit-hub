@@ -1477,13 +1477,13 @@ export default function CreditReportPage() {
                       ))}
                       <tr className="bg-muted/30 font-semibold">
                         <TableCell>Total Number of Institutions</TableCell>
-                        <TableCell className="text-right" colSpan={liabilitySummary.currencies.length}>
+                        <TableCell className="text-right" {...{ colSpan: liabilitySummary.currencies.length } as any}>
                           {new Set(report.accounts.map(a => a.lenderInstitution)).size}
                         </TableCell>
                       </tr>
                       <tr className="bg-muted/30 font-semibold">
                         <TableCell>Total Number of Credit Facilities</TableCell>
-                        <TableCell className="text-right" colSpan={liabilitySummary.currencies.length}>
+                        <TableCell className="text-right" {...{ colSpan: liabilitySummary.currencies.length } as any}>
                           {report.accounts.length}
                         </TableCell>
                       </tr>

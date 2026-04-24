@@ -469,10 +469,10 @@ process.stderr?.on?.("error", () => {});
 const origStdoutWrite = process.stdout.write.bind(process.stdout);
 const origStderrWrite = process.stderr.write.bind(process.stderr);
 process.stdout.write = function (...args: any[]) {
-  try { return origStdoutWrite(...args); } catch { return false; }
+  try { return (origStdoutWrite as any)(...args); } catch { return false; }
 } as any;
 process.stderr.write = function (...args: any[]) {
-  try { return origStderrWrite(...args); } catch { return false; }
+  try { return (origStderrWrite as any)(...args); } catch { return false; }
 } as any;
 
 (async () => {

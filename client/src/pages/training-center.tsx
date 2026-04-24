@@ -772,7 +772,7 @@ export default function TrainingCenter() {
   const totalModules = TRAINING_MODULES.length;
   const passedCount = progressData.filter((a) => a.passed).length;
   const isCertified = passedCount === totalModules && totalModules > 0;
-  const userName = user?.name || user?.username || "Analyst";
+  const userName = user?.fullName || user?.username || "Analyst";
   const issuedDate = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 
   const achievements = useMemo(() => computeAchievements(progressData, totalModules), [progressData, totalModules]);

@@ -60,6 +60,7 @@ function MobileLogin({ onLogin }: { onLogin: (u: string, p: string) => Promise<v
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [mounted, setMounted] = useState(false);
+  const brandColors = useBrandColors();
 
   useEffect(() => {
     requestAnimationFrame(() => setMounted(true));

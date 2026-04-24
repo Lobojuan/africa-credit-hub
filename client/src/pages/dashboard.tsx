@@ -48,9 +48,9 @@ function getDisplayCurrencies(detectedCode: string) {
 function buildRateMap(rates: ExchangeRate[]): Map<string, number> {
   const map = new Map<string, number>();
   for (const r of rates) {
-    map.set(`${r.fromCurrency}-${r.toCurrency}`, parseFloat(r.rate));
+    map.set(`${r.baseCurrency}-${r.targetCurrency}`, parseFloat(r.rate));
     const inv = parseFloat(r.rate);
-    if (inv > 0) map.set(`${r.toCurrency}-${r.fromCurrency}`, 1 / inv);
+    if (inv > 0) map.set(`${r.targetCurrency}-${r.baseCurrency}`, 1 / inv);
   }
   return map;
 }
@@ -670,7 +670,7 @@ export default function Dashboard() {
                 <div className="flex items-center gap-2 mt-1">
                   <greeting.Icon className="w-4 h-4 text-white/50" />
                   <p className="text-sm text-white/60 font-medium" data-testid="text-dashboard-greeting">
-                    {greeting.text}{user?.firstName ? `, ${user.firstName}` : ""}. {t('dashboard.subtitle')}
+                    {greeting.text}{user?.fullName ? `, ${user.fullName.split(" ")[0]}` : ""}. {t('dashboard.subtitle')}
                   </p>
                 </div>
               </div>
@@ -748,7 +748,7 @@ export default function Dashboard() {
               colorIndex={2}
               onClick={() => setSelectedDetail("outstanding")}
               subtitle={usdOutstanding !== null ? `≈ ${formatCurrency(usdOutstanding, "USD", { compact: true })}` : undefined}
-              sparklineData={trends?.outstanding}
+              sparklineData={(trends as any)?.outstanding}
             />
             <StatCard title={t('dashboard.delinquent')} value={stats.delinquentAccounts.toLocaleString()} icon={AlertTriangle} testId="stat-delinquent" subtitle={t('dashboard.delinquentSub')} colorIndex={3} onClick={() => setSelectedDetail("delinquent")} sparklineData={trends?.delinquent} />
             <StatCard title={t('dashboard.defaults')} value={stats.defaultAccounts.toLocaleString()} icon={ShieldAlert} testId="stat-defaults" subtitle={t('dashboard.defaultsSub')} colorIndex={4} onClick={() => setSelectedDetail("defaults")} sparklineData={trends?.defaults} />

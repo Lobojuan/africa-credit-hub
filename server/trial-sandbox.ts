@@ -37,7 +37,7 @@ export async function seedTrialData(organizationId: string, userId: string, coun
     for (let i = 0; i < TRIAL_BORROWERS.length; i++) {
       const b = TRIAL_BORROWERS[i];
       const nationalIdSuffix = `${organizationId.substring(0, 6)}-${String(i + 1).padStart(3, "0")}`;
-      const [created] = await db.insert(borrowers).values({
+      const [created] = await (db.insert(borrowers) as any).values({
         ...b,
         nationalId: `TRIAL-${nationalIdSuffix}`,
         organizationId,

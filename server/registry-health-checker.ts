@@ -160,7 +160,7 @@ async function persistEvent(provider: string, status: "ok" | "fail", latencyMs?:
 async function runHealthChecks(): Promise<void> {
   const statuses = registryStatus();
   const dbCfg = await getDbConfig().catch(() => ({}));
-  const failureThreshold = dbCfg.alertConsecutiveFailures ?? FAILURE_THRESHOLD;
+  const failureThreshold = (dbCfg as any).alertConsecutiveFailures ?? FAILURE_THRESHOLD;
 
   let overridesByProvider: Map<string, { criticalFail7d: number | null; criticalStreak30d: number | null }>;
   try {

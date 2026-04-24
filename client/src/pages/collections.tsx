@@ -28,7 +28,6 @@ interface Assignment {
   dueDate?: string;
   notes?: string;
   assignedTo?: string;
-  segment?: string | null;
   createdAt: string;
 }
 

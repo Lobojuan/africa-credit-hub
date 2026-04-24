@@ -1,13 +1,13 @@
 import { Router } from "express";
 import { storage } from "../storage";
 import { db } from "../db";
-import { sql, eq, and, desc, inArray } from "drizzle-orm";
-import { telcoProfiles, telcoLoans, telcoLoanRepayments } from "@shared/schema";
+import { sql, eq, and, desc, inArray, ilike } from "drizzle-orm";
+import { telcoProfiles, telcoLoans, telcoLoanRepayments, organizations } from "@shared/schema";
 import { calculateMLCreditScore } from "../ml-credit-score";
 import { createLogger } from "../logger";
 import {
   requireRole, enforceDataSovereignty, idempotencyMiddleware,
-  getOrgScope, getCountryFilter, safeErrorMessage, enforceCountryScopeForNonSuperAdmin,
+  getOrgScope, getCountryFilter, safeErrorMessage, enforceCountryScopeForNonSuperAdmin, logCrossCountryAccess,
 } from "./middleware";
 import { computeTelcoKPIs, generateTelcoCreditScore, computeRuleBasedTelcoScore } from "../telco-scoring";
 
@@ -33,7 +33,7 @@ router.get("/api/telco/profiles", requireRole("admin", "lender", "regulator"), e
 
 router.get("/api/telco/profiles/:id", requireRole("admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
     try {
-      const profile = await storage.getTelcoProfile(req.params.id);
+      const profile = await storage.getTelcoProfile(req.params.id as string);
       if (!profile) return res.status(404).json({ message: "Profile not found" });
       const orgId = getOrgScope(req);
       if (orgId && profile.organizationId && profile.organizationId !== orgId) {
@@ -64,13 +64,13 @@ router.post("/api/telco/profiles", requireRole("admin", "lender"), async (req, r
 
 router.get("/api/telco/transactions/:profileId", requireRole("admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
     try {
-      const profile = await storage.getTelcoProfile(req.params.profileId);
+      const profile = await storage.getTelcoProfile(req.params.profileId as string);
       if (!profile) return res.status(404).json({ message: "Profile not found" });
       const orgId = getOrgScope(req);
       if (orgId && profile.organizationId && profile.organizationId !== orgId) {
         return res.status(403).json({ message: "Access denied" });
       }
-      const txns = await storage.getMomoTransactions(req.params.profileId);
+      const txns = await storage.getMomoTransactions(req.params.profileId as string);
       res.json(txns);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -104,7 +104,7 @@ router.post("/api/telco/transactions/import", requireRole("admin", "lender"), as
 router.post("/api/telco/score/:profileId", requireRole("admin", "lender"), async (req, res) => {
     try {
       
-      const profile = await storage.getTelcoProfile(req.params.profileId);
+      const profile = await storage.getTelcoProfile(req.params.profileId as string);
       if (!profile) return res.status(404).json({ message: "Profile not found" });
       const orgId = getOrgScope(req);
       if (orgId && profile.organizationId && profile.organizationId !== orgId) {
@@ -122,7 +122,7 @@ router.post("/api/telco/score/:profileId", requireRole("admin", "lender"), async
         : computeRuleBasedTelcoScore(profile, kpis);
 
       const validTiers = ["very_low", "low", "medium", "high", "very_high"] as const;
-      const normalizedTier = validTiers.includes(aiResult.riskTier) ? aiResult.riskTier : "medium";
+      const normalizedTier = validTiers.includes(aiResult.riskTier as any) ? aiResult.riskTier : "medium";
       const normalizedScore = Math.max(1, Math.min(5, Math.round(aiResult.riskScore)));
 
       const score = await storage.createTelcoCreditScore({
@@ -176,7 +176,7 @@ router.get("/api/telco/scores", requireRole("admin", "lender", "regulator"), enf
 
 router.get("/api/telco/scores/:profileId", requireRole("admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
     try {
-      const scores = await storage.getTelcoCreditScoresByProfile(req.params.profileId);
+      const scores = await storage.getTelcoCreditScoresByProfile(req.params.profileId as string);
       res.json(scores);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -462,13 +462,13 @@ router.post("/api/telco/decision-rules", requireRole("admin", "super_admin"), as
 
 router.put("/api/telco/decision-rules/:id", requireRole("admin", "super_admin"), async (req, res) => {
     try {
-      const existing = await storage.getDecisionRule(req.params.id);
+      const existing = await storage.getDecisionRule(req.params.id as string);
       if (!existing) return res.status(404).json({ message: "Rule not found" });
       const orgId = getOrgScope(req);
       if (orgId && existing.organizationId && existing.organizationId !== orgId) {
         return res.status(403).json({ message: "Access denied" });
       }
-      const updated = await storage.updateDecisionRule(req.params.id, req.body);
+      const updated = await storage.updateDecisionRule(req.params.id as string, req.body);
       await storage.createAuditLog({
         action: "UPDATE", entity: "telco_decision_rule", entityId: updated.id,
         userId: req.session.userId,
@@ -497,7 +497,7 @@ router.get("/api/telco/decision-logs", requireRole("admin", "lender", "super_adm
 router.post("/api/telco/decision-engine/:profileId", requireRole("admin", "lender", "super_admin"), idempotencyMiddleware, async (req, res) => {
     try {
       
-      const profile = await storage.getTelcoProfile(req.params.profileId);
+      const profile = await storage.getTelcoProfile(req.params.profileId as string);
       if (!profile) return res.status(404).json({ message: "Profile not found" });
       const orgId = getOrgScope(req);
       if (orgId && profile.organizationId && profile.organizationId !== orgId) {
@@ -522,7 +522,7 @@ router.post("/api/telco/decision-engine/:profileId", requireRole("admin", "lende
         : computeRuleBasedTelcoScore(profile, kpis);
 
       const validTiers = ["very_low", "low", "medium", "high", "very_high"] as const;
-      const normalizedTier = validTiers.includes(aiResult.riskTier) ? aiResult.riskTier : "medium";
+      const normalizedTier = validTiers.includes(aiResult.riskTier as any) ? aiResult.riskTier : "medium";
       const normalizedScore = Math.max(1, Math.min(5, Math.round(aiResult.riskScore)));
 
       const score = await storage.createTelcoCreditScore({
@@ -669,7 +669,7 @@ router.post("/api/telco/decision-engine/bulk/run", requireRole("admin", "lender"
       const periodDays = parseInt(rawPeriod as string) || 90;
       const includeAI = rawIncludeAI !== false;
       const country = getCountryFilter(req);
-      enforceCountryScopeForNonSuperAdmin(req, country);
+      enforceCountryScopeForNonSuperAdmin(req, country, req.path);
 
       const rule = await storage.getActiveDecisionRule(orgId, country);
       if (!rule) {
@@ -702,7 +702,7 @@ router.post("/api/telco/decision-engine/bulk/run", requireRole("admin", "lender"
           const transactions = await storage.getMomoTransactions(profile.id);
           if (transactions.length === 0) {
             results.skipped++;
-            results.decisions.push({ profileId: profile.id, msisdn: profile.msisdn, status: "skipped", reason: "No transactions" });
+            results.decisions.push({ profileId: profileId, msisdn: "unknown", status: "skipped", reason: "No transactions" });
             continue;
           }
 
@@ -712,7 +712,7 @@ router.post("/api/telco/decision-engine/bulk/run", requireRole("admin", "lender"
             : computeRuleBasedTelcoScore(profile, kpis);
 
           const validTiers = ["very_low", "low", "medium", "high", "very_high"] as const;
-          const normalizedTier = validTiers.includes(aiResult.riskTier) ? aiResult.riskTier : "medium";
+          const normalizedTier = validTiers.includes(aiResult.riskTier as any) ? aiResult.riskTier : "medium";
           const normalizedScore = Math.max(1, Math.min(5, Math.round(aiResult.riskScore)));
 
           const score = await storage.createTelcoCreditScore({
@@ -835,7 +835,7 @@ router.post("/api/telco/decision-engine/bulk/run", requireRole("admin", "lender"
           });
         } catch (err: any) {
           results.errors++;
-          results.decisions.push({ profileId: profile.id, msisdn: profile.msisdn, status: "error", reason: err.message });
+          results.decisions.push({ profileId: profileId, msisdn: "unknown", status: "error", reason: err.message });
         }
       }
 
@@ -1103,7 +1103,7 @@ router.get("/api/telco/operations-dashboard", requireRole("admin", "lender", "re
 
 router.get("/api/telco/loans/:id", requireRole("admin", "lender", "super_admin"), async (req, res) => {
     try {
-      const loan = await storage.getTelcoLoan(req.params.id);
+      const loan = await storage.getTelcoLoan(req.params.id as string);
       if (!loan) return res.status(404).json({ message: "Loan not found" });
       const orgId = getOrgScope(req);
       if (orgId && loan.organizationId && loan.organizationId !== orgId) {
@@ -1133,12 +1133,12 @@ router.post("/api/telco/loans", requireRole("admin", "super_admin"), async (req,
 router.patch("/api/telco/loans/:id", requireRole("admin", "super_admin"), async (req, res) => {
     try {
       const orgId = getOrgScope(req);
-      const existing = await storage.getTelcoLoan(req.params.id);
+      const existing = await storage.getTelcoLoan(req.params.id as string);
       if (!existing) return res.status(404).json({ message: "Loan not found" });
       if (orgId && existing.organizationId && existing.organizationId !== orgId) {
         return res.status(403).json({ message: "Access denied" });
       }
-      const loan = await storage.updateTelcoLoan(req.params.id, req.body);
+      const loan = await storage.updateTelcoLoan(req.params.id as string, req.body);
       await storage.createAuditLog({
         action: "TELCO_LOAN_UPDATED",
         entity: "telco_loans",
@@ -1153,7 +1153,7 @@ router.patch("/api/telco/loans/:id", requireRole("admin", "super_admin"), async 
 
 router.post("/api/telco/loans/:id/disburse", requireRole("admin", "super_admin"), idempotencyMiddleware, async (req, res) => {
     try {
-      const loan = await storage.getTelcoLoan(req.params.id);
+      const loan = await storage.getTelcoLoan(req.params.id as string);
       if (!loan) return res.status(404).json({ message: "Loan not found" });
       const orgId = getOrgScope(req);
       if (orgId && loan.organizationId && loan.organizationId !== orgId) {
@@ -1188,20 +1188,20 @@ router.post("/api/telco/loans/:id/disburse", requireRole("admin", "super_admin")
   // ── Telco Loan Repayments ──────────────────────────────
 router.get("/api/telco/loans/:loanId/repayments", requireRole("admin", "lender", "super_admin"), async (req, res) => {
     try {
-      const loan = await storage.getTelcoLoan(req.params.loanId);
+      const loan = await storage.getTelcoLoan(req.params.loanId as string);
       if (!loan) return res.status(404).json({ message: "Loan not found" });
       const orgId = getOrgScope(req);
       if (orgId && loan.organizationId && loan.organizationId !== orgId) {
         return res.status(403).json({ message: "Access denied" });
       }
-      const repayments = await storage.getTelcoLoanRepayments(req.params.loanId);
+      const repayments = await storage.getTelcoLoanRepayments(req.params.loanId as string);
       res.json(repayments);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
 router.post("/api/telco/loans/:loanId/repayments", requireRole("admin", "super_admin"), async (req, res) => {
     try {
-      const loan = await storage.getTelcoLoan(req.params.loanId);
+      const loan = await storage.getTelcoLoan(req.params.loanId as string);
       if (!loan) return res.status(404).json({ message: "Loan not found" });
       const orgId = getOrgScope(req);
       if (orgId && loan.organizationId && loan.organizationId !== orgId) {
@@ -1246,7 +1246,7 @@ router.post("/api/telco/loans/:loanId/repayments", requireRole("admin", "super_a
   // ── Telco Consent Management ───────────────────────────
 router.get("/api/telco/consent/:profileId", requireRole("admin", "lender", "super_admin"), async (req, res) => {
     try {
-      const events = await storage.getTelcoConsentEvents(req.params.profileId);
+      const events = await storage.getTelcoConsentEvents(req.params.profileId as string);
       res.json(events);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });

@@ -613,7 +613,7 @@ export default function BusinessCreditReportPage() {
                             <TableCell colSpan={3} className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground">Totals ({facilityCurrency})</TableCell>
                             <TableCell className="text-right font-bold">{formatCurrency(totalOriginal.toFixed(2), facilityCurrency)}</TableCell>
                             <TableCell className="text-right font-bold">{formatCurrency(totalBalance.toFixed(2), facilityCurrency)}</TableCell>
-                            <TableCell colSpan={2} />
+                            <TableCell colSpan={2}>{""}</TableCell>
                           </tr>
                         </tfoot>
                       </table>

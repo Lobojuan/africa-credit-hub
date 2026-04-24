@@ -199,7 +199,7 @@ export function registerPlatformControlRoutes(app: Express) {
 
   app.patch("/api/platform-control/deployments/:id", requireMasterAuth, async (req: Request, res: Response) => {
     try {
-      const { id } = req.params;
+      const id = req.params["id"] as string;
       const { updateNote, ...body } = req.body || {};
       const parsed = updateDeploymentSchema.parse(body);
       const now = new Date();
@@ -216,9 +216,9 @@ export function registerPlatformControlRoutes(app: Express) {
       const currentLog = Array.isArray(existing.updateLog) ? existing.updateLog : [];
       const newLog = [logEntry, ...currentLog].slice(0, 100);
 
-      const updates = { ...parsed, updatedAt: now, updateLog: newLog };
+      const updates = { ...parsed, updatedAt: now, updateLog: newLog as unknown };
       const [updated] = await db.update(platformDeployments)
-        .set(updates)
+        .set(updates as any)
         .where(eq(platformDeployments.id, id))
         .returning();
 
@@ -232,7 +232,7 @@ export function registerPlatformControlRoutes(app: Express) {
 
   app.delete("/api/platform-control/deployments/:id", requireMasterAuth, async (req: Request, res: Response) => {
     try {
-      const { id } = req.params;
+      const id = req.params["id"] as string;
       const [deleted] = await db.delete(platformDeployments).where(eq(platformDeployments.id, id)).returning();
       if (!deleted) return res.status(404).json({ message: "Deployment not found" });
       logger.info("Deployment deleted", { id });
@@ -616,7 +616,7 @@ export function registerPlatformControlRoutes(app: Express) {
   // --- Heartbeat: ping a client deployment's /api/heartbeat endpoint ---
   app.post("/api/platform-control/heartbeat-check/:id", requireMasterAuth, async (req: Request, res: Response) => {
     try {
-      const { id } = req.params;
+      const id = req.params["id"] as string;
       const [deployment] = await db.select().from(platformDeployments).where(eq(platformDeployments.id, id));
       if (!deployment) return res.status(404).json({ message: "Deployment not found" });
 
@@ -850,7 +850,7 @@ export function registerPlatformControlRoutes(app: Express) {
   });
 
   app.patch("/api/platform-control/registry-credentials/:provider", requireMasterAuth, async (req: Request, res: Response) => {
-    const { provider } = req.params;
+    const provider = req.params["provider"] as string;
     if (!REGISTRY_PROVIDERS.find(p => p.provider === provider)) {
       return res.status(400).json({ message: "Unknown registry provider" });
     }
@@ -899,7 +899,7 @@ export function registerPlatformControlRoutes(app: Express) {
   });
 
   app.delete("/api/platform-control/registry-credentials/:provider", requireMasterAuth, async (req: Request, res: Response) => {
-    const { provider } = req.params;
+    const provider = req.params["provider"] as string;
     if (!REGISTRY_PROVIDERS.find(p => p.provider === provider)) {
       return res.status(400).json({ message: "Unknown registry provider" });
     }
@@ -914,7 +914,7 @@ export function registerPlatformControlRoutes(app: Express) {
   });
 
   app.post("/api/platform-control/registry-credentials/:provider/test", requireMasterAuth, async (req: Request, res: Response) => {
-    const { provider } = req.params;
+    const provider = req.params["provider"] as string;
     const entry = REGISTRY_PROVIDERS.find(p => p.provider === provider);
     if (!entry) {
       return res.status(400).json({ message: "Unknown registry provider" });
@@ -1009,9 +1009,9 @@ export function registerPlatformControlRoutes(app: Express) {
 
   // Spec-compatible aliases: /api/admin/registry-credentials/* mirrors the platform-control routes
   app.get("/api/admin/registry-credentials", requireMasterAuth, (_req, res) => res.redirect(307, "/api/platform-control/registry-credentials"));
-  app.patch("/api/admin/registry-credentials/:provider", requireMasterAuth, (req, res) => res.redirect(307, `/api/platform-control/registry-credentials/${req.params.provider}`));
-  app.delete("/api/admin/registry-credentials/:provider", requireMasterAuth, (req, res) => res.redirect(307, `/api/platform-control/registry-credentials/${req.params.provider}`));
-  app.post("/api/admin/registry-credentials/:provider/test", requireMasterAuth, (req, res) => res.redirect(307, `/api/platform-control/registry-credentials/${req.params.provider}/test`));
+  app.patch("/api/admin/registry-credentials/:provider", requireMasterAuth, (req, res) => res.redirect(307, `/api/platform-control/registry-credentials/${req.params.provider as string}`));
+  app.delete("/api/admin/registry-credentials/:provider", requireMasterAuth, (req, res) => res.redirect(307, `/api/platform-control/registry-credentials/${req.params.provider as string}`));
+  app.post("/api/admin/registry-credentials/:provider/test", requireMasterAuth, (req, res) => res.redirect(307, `/api/platform-control/registry-credentials/${req.params.provider as string}/test`));
 
   // Load DB-stored registry credentials into in-memory cache at startup
   loadRegistryCredentialsFromDb().catch((err: Error) => {

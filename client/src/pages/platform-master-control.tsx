@@ -1185,7 +1185,7 @@ function HeartbeatPanel() {
                     <p className="text-[10px] text-muted-foreground">
                       {d.heartbeatUrl || d.deploymentUrl || "No URL"}{" "}
                       {hb && <span>&middot; Last: {new Date(hb.checkedAt).toLocaleString()} &middot; {hb.latencyMs}ms</span>}
-                      {hbData?.version && <span> &middot; v{String(hbData.version)}</span>}
+                      {!!(hbData?.version) && <span> &middot; v{String(hbData.version)}</span>}
                     </p>
                   </div>
                 </div>
@@ -1627,7 +1627,7 @@ function RegistryCredentialsPanel() {
                         {tResult.statusCode != null && <span className="text-muted-foreground font-normal">HTTP {tResult.statusCode}</span>}
                       </div>
                       {tResult.error && <p className="text-xs opacity-80">{tResult.error}</p>}
-                      {tResult.response && <pre className="mt-1 text-[10px] overflow-x-auto bg-black/5 rounded p-1">{JSON.stringify(tResult.response, null, 2).slice(0, 400)}</pre>}
+                      {!!(tResult.response) && <pre className="mt-1 text-[10px] overflow-x-auto bg-black/5 rounded p-1">{JSON.stringify(tResult.response, null, 2).slice(0, 400)}</pre>}
                     </div>
                   )}
                 </div>

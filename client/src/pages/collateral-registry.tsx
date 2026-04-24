@@ -1072,7 +1072,6 @@ function RegisterCollateralDialog({
         verificationCode,
         grantorIdentifier: grantorIdRef || undefined,
         loanApplicationId: loanApplicationId || undefined,
-        resubmittedFromId: resubmittedFromId || undefined,
       });
     }
   };
@@ -1423,7 +1422,7 @@ function LienDetailSheet({ lien, open, onClose }: { lien: SearchResultItem | nul
               <Field
                 icon={<TrendingUp className="w-3 h-3" />}
                 label="Estimated Value"
-                value={formatCurrency(lien.estimatedValue, lien.currency)}
+                value={formatCurrency(lien.estimatedValue ?? null, lien.currency ?? undefined)}
               />
               <Field
                 icon={<Zap className="w-3 h-3" />}
@@ -1526,11 +1525,11 @@ function LienSearchPanel() {
                         className="cursor-pointer hover:bg-muted/60 transition-colors"
                         onClick={() => setSelectedLien(r)}
                       >
-                        <TableCell><PriorityBadge rank={r.lienPriority} /></TableCell>
+                        <TableCell><PriorityBadge rank={r.lienPriority ?? null} /></TableCell>
                         <TableCell className="font-mono text-xs">{r.certificateNumber || "—"}</TableCell>
                         <TableCell className="text-sm font-medium">{r.lenderInstitutionName || r.lenderOrganizationId}</TableCell>
                         <TableCell className="text-sm capitalize">{r.collateralType?.replace(/_/g, " ")}</TableCell>
-                        <TableCell className="text-right text-sm">{formatCurrency(r.estimatedValue, r.currency)}</TableCell>
+                        <TableCell className="text-right text-sm">{formatCurrency(r.estimatedValue ?? null, r.currency ?? undefined)}</TableCell>
                         <TableCell>{r.isPmsi ? <PmsiTag /> : <span className="text-muted-foreground text-xs">—</span>}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">{r.registrationDate}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">{r.expiryDate || "No expiry"}</TableCell>
@@ -1810,13 +1809,13 @@ function CertificateDetailSheet({
               </p>
             </div>
             <div className="flex-shrink-0">
-              <PriorityBadge rank={item.lienPriority} />
+              <PriorityBadge rank={item.lienPriority ?? null} />
             </div>
           </div>
 
           {/* Approval / Status badges */}
           <div className="flex gap-2 flex-wrap">
-            <Badge className={`text-xs ${APPROVAL_COLORS[item.approvalStatus] || "bg-gray-100 text-gray-600"}`} data-testid="detail-approval-status">
+            <Badge className={`text-xs ${APPROVAL_COLORS[item.approvalStatus!] || "bg-gray-100 text-gray-600"}`} data-testid="detail-approval-status">
               {item.approvalStatus === "approved" ? <CheckCircle2 className="w-3 h-3 mr-1 inline" /> :
                item.approvalStatus === "rejected" ? <XCircle className="w-3 h-3 mr-1 inline" /> :
                <Clock className="w-3 h-3 mr-1 inline" />}
@@ -1851,7 +1850,7 @@ function CertificateDetailSheet({
               <DetailRow label="Security Interest" value={siLabel} />
               <DetailRow
                 label="Estimated Value"
-                value={formatCurrency(item.estimatedValue, item.currency)}
+                value={formatCurrency(item.estimatedValue ?? null, item.currency ?? undefined)}
               />
               <DetailRow label="Asset Identifier" value={item.assetLocalIdentifier} />
               {item.panAfricanAssetId && (
@@ -2118,7 +2117,7 @@ function MyRegistrations() {
                       className="cursor-pointer hover:bg-muted/60 transition-colors"
                       onClick={() => setSelectedItem(item)}
                     >
-                      <TableCell><PriorityBadge rank={item.lienPriority} /></TableCell>
+                      <TableCell><PriorityBadge rank={item.lienPriority ?? null} /></TableCell>
                       <TableCell className="font-mono text-xs">
                         <div>{item.registrationNumber}</div>
                         {item.resubmittedFromId && (
@@ -2143,14 +2142,14 @@ function MyRegistrations() {
                         {item.panAfricanAssetId && <div className="font-mono text-xs text-blue-600 dark:text-blue-400" data-testid={`paca-id-${item.id}`}>{item.panAfricanAssetId}</div>}
                         {!item.assetLocalIdentifier && !item.panAfricanAssetId && <span className="text-muted-foreground">—</span>}
                       </TableCell>
-                      <TableCell className="text-right text-sm">{formatCurrency(item.estimatedValue, item.currency)}</TableCell>
+                      <TableCell className="text-right text-sm">{formatCurrency(item.estimatedValue ?? null, item.currency ?? undefined)}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {item.financingDuration === "perpetual" ? "No expiry" :
                           item.expiryDate || (item.financingDuration === "7_years" ? "7 yr" : item.financingDuration?.replace("_", " ") || "—")}
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1.5">
-                          <Badge className={`text-xs ${APPROVAL_COLORS[item.approvalStatus] || "bg-gray-100 text-gray-600"}`}>
+                          <Badge className={`text-xs ${APPROVAL_COLORS[item.approvalStatus!] || "bg-gray-100 text-gray-600"}`}>
                             {item.approvalStatus === "approved" ? <CheckCircle2 className="w-3 h-3 inline mr-1" /> :
                               item.approvalStatus === "rejected" ? <XCircle className="w-3 h-3 inline mr-1" /> :
                               <Clock className="w-3 h-3 inline mr-1" />}

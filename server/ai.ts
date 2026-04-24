@@ -164,11 +164,11 @@ export async function dualAIEnsemble(
 }
 
 export async function analyzeCreditRisk(borrowerId: string | number, provider?: AIProvider) {
-  const borrower = await storage.getBorrower(borrowerId);
+  const borrower = await storage.getBorrower(String(borrowerId));
   if (!borrower) throw new Error("Borrower not found");
 
-  const accounts = await storage.getCreditAccountsByBorrower(borrowerId);
-  const disputes = await storage.getDisputesByBorrower(borrowerId);
+  const accounts = await storage.getCreditAccountsByBorrower(String(borrowerId));
+  const disputes = await storage.getDisputesByBorrower(String(borrowerId));
   const defaultCurrency = getDefaultCurrencyCode();
 
   const totalBalance = accounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
@@ -178,9 +178,9 @@ export async function analyzeCreditRisk(borrowerId: string | number, provider?: 
 
   const borrowerProfile = `
 Borrower: ${borrower.firstName} ${borrower.lastName}
-Type: ${borrower.borrowerType || "individual"}
+Type: ${borrower.type || "individual"}
 Country: ${borrower.country || "Unknown"}
-Employment: ${borrower.employmentStatus || "Unknown"}
+Employment: ${borrower.occupation || "Unknown"}
 Monthly Income: ${borrower.monthlyIncome || "Not reported"}
 PEP Status: ${borrower.isPep ? "Yes" : "No"}
 Number of Credit Accounts: ${accounts.length}
@@ -189,7 +189,7 @@ Delinquent/Default Accounts: ${delinquentCount}
 Total Outstanding Balance: ${defaultCurrency} ${totalBalance.toLocaleString()}
 Open Disputes: ${openDisputeCount}
 Account Details:
-${accounts.map(a => `  - ${a.accountType}: ${a.currency || defaultCurrency} ${parseFloat(a.currentBalance || "0").toLocaleString()} | Status: ${a.status} | Opened: ${a.dateOpened || "Unknown"}`).join("\n")}
+${accounts.map(a => `  - ${a.accountType}: ${a.currency || defaultCurrency} ${parseFloat(a.currentBalance || "0").toLocaleString()} | Status: ${a.status} | Opened: ${a.disbursementDate || "Unknown"}`).join("\n")}
   `.trim();
 
   const systemPrompt = `You are an expert credit risk analyst for the Pan-African Credit Registry. Analyze borrower profiles and provide structured risk assessments. All monetary amounts are in ${defaultCurrency} (${defaultCurrency === "GHS" ? "Ghana Cedis" : defaultCurrency}). You must respond in valid JSON format with these fields:
@@ -222,23 +222,23 @@ ${accounts.map(a => `  - ${a.accountType}: ${a.currency || defaultCurrency} ${pa
   });
 }
 
-export async function generateReportSummary(borrowerId: string | number, provider?: AIProvider, language?: string) {
-  const borrower = await storage.getBorrower(borrowerId);
+export async function generateReportSummary(borrowerId: string, provider?: AIProvider, language?: string) {
+  const borrower = await storage.getBorrower(String(borrowerId));
   if (!borrower) throw new Error("Borrower not found");
 
-  const accounts = await storage.getCreditAccountsByBorrower(borrowerId);
-  const disputes = await storage.getDisputesByBorrower(borrowerId);
+  const accounts = await storage.getCreditAccountsByBorrower(String(borrowerId));
+  const disputes = await storage.getDisputesByBorrower(String(borrowerId));
   const defaultCurrency = getDefaultCurrencyCode();
 
   const totalBalance = accounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
 
   const reportData = `
-Borrower: ${borrower.firstName} ${borrower.lastName} (${borrower.borrowerType || "individual"})
+Borrower: ${borrower.firstName} ${borrower.lastName} (${borrower.type || "individual"})
 Country: ${borrower.country || "Unknown"} | ID: ${borrower.nationalId || "N/A"}
-Employment: ${borrower.employmentStatus || "Unknown"} | Income: ${borrower.monthlyIncome || "Not reported"}
+Employment: ${borrower.occupation || "Unknown"} | Income: ${borrower.monthlyIncome || "Not reported"}
 
 Credit Accounts (${accounts.length}):
-${accounts.map(a => `  ${a.accountType} — ${a.currency || defaultCurrency} ${parseFloat(a.currentBalance || "0").toLocaleString()} — Status: ${a.status} — Opened: ${a.dateOpened || "Unknown"}`).join("\n")}
+${accounts.map(a => `  ${a.accountType} — ${a.currency || defaultCurrency} ${parseFloat(a.currentBalance || "0").toLocaleString()} — Status: ${a.status} — Opened: ${a.disbursementDate || "Unknown"}`).join("\n")}
 
 Total Outstanding: ${defaultCurrency} ${totalBalance.toLocaleString()}
 Disputes: ${disputes.length} total, ${disputes.filter(d => d.status === "open").length} open
@@ -282,7 +282,7 @@ async function buildPortfolioData(country: string) {
     storage.getInstitutions(1, 100, undefined, country),
   ]);
 
-  const accountsByBorrower: Record<string, typeof allAccounts> = {};
+  const accountsByBorrower: Record<string, any[]> = {};
   for (const acc of allAccounts) {
     const bid = String(acc.borrowerId);
     if (!accountsByBorrower[bid]) accountsByBorrower[bid] = [];
@@ -304,22 +304,22 @@ async function buildPortfolioData(country: string) {
     const writtenOff = bAccounts.filter(a => a.status === "written_off").length;
     const current = bAccounts.filter(a => a.status === "current").length;
     const closed = bAccounts.filter(a => a.status === "closed").length;
-    const maxArrears = Math.max(0, ...bAccounts.map(a => parseInt(a.daysInArrears || "0") || 0));
+    const maxArrears = Math.max(0, ...bAccounts.map(a => parseInt(String(a.daysInArrears || 0)) || 0));
     const disputeCount = disputesByBorrower[String(b.id)] || 0;
-    const name = b.borrowerType === "corporate" ? (b.companyName || "Unknown Corp") : `${b.firstName || ""} ${b.lastName || ""}`.trim();
+    const name = b.type === "corporate" ? (b.companyName || "Unknown Corp") : `${b.firstName || ""} ${b.lastName || ""}`.trim();
 
     return {
-      name, id: b.id, type: b.borrowerType || "individual", nationalId: b.nationalId,
+      name, id: b.id, type: b.type || "individual", nationalId: b.nationalId,
       phone: b.phone, email: b.email, address: b.address, city: b.city, region: b.region,
       accountCount: bAccounts.length, totalBalance, originalTotal,
       current, delinquent, defaulted, writtenOff, closed,
       maxArrears, disputeCount, isPep: b.isPep || false,
-      employmentStatus: b.employmentStatus, monthlyIncome: b.monthlyIncome,
+      employmentStatus: b.occupation, monthlyIncome: b.monthlyIncome,
       accounts: bAccounts.map(a => ({
         type: a.accountType, balance: parseFloat(a.currentBalance || "0"),
         original: parseFloat(a.originalAmount || "0"), status: a.status,
-        arrears: parseInt(a.daysInArrears || "0") || 0, lender: a.lenderInstitution,
-        dateOpened: a.dateOpened, interestRate: a.interestRate,
+        arrears: parseInt(String(a.daysInArrears || 0)) || 0, lender: a.lenderInstitution,
+        dateOpened: a.disbursementDate, interestRate: a.interestRate,
       })),
     };
   });
@@ -530,13 +530,13 @@ async function buildLiveContext(): Promise<string> {
       const contactStr = orgContact.length > 0 ? orgContact.join(" | ") : "No contact info";
       return `  - ${sanitizeForPrompt(o.name)} (${sanitizeForPrompt(o.type) || "other"}, ${sanitizeForPrompt(o.status) || "active"}, ${sanitizeForPrompt(o.country) || "Ghana"})\n    Contact: ${contactStr}`;
     }).join("\n");
-    const retentionList = retentionPolicies.map(r => `  - ${sanitizeForPrompt(r.jurisdiction)}: ${r.retentionYears} years`).join("\n");
+    const retentionList = retentionPolicies.map(r => `  - ${sanitizeForPrompt(r.country)}: ${r.retentionYears} years`).join("\n");
 
     const usdGhsRate = exchangeRates.find(r => r.baseCurrency === "USD" && r.targetCurrency === "GHS");
     const rateInfo = usdGhsRate ? `USD/GHS: ${usdGhsRate.rate} (as of ${usdGhsRate.effectiveDate})` : "Exchange rates available";
     const allRates = exchangeRates.slice(0, 20).map(r => `  - ${r.baseCurrency}/${r.targetCurrency}: ${r.rate}`).join("\n");
 
-    const accountsByBorrower: Record<string, typeof allAccounts> = {};
+    const accountsByBorrower: Record<string, any[]> = {};
     for (const acc of allAccounts) {
       const bid = String(acc.borrowerId);
       if (!accountsByBorrower[bid]) accountsByBorrower[bid] = [];
@@ -555,9 +555,9 @@ async function buildLiveContext(): Promise<string> {
       const delinquent = bAccounts.filter(a => a.status === "delinquent").length;
       const defaulted = bAccounts.filter(a => a.status === "default").length;
       const writtenOff = bAccounts.filter(a => a.status === "written_off").length;
-      const maxArrears = Math.max(0, ...bAccounts.map(a => parseInt(a.daysInArrears || "0") || 0));
+      const maxArrears = Math.max(0, ...bAccounts.map(a => parseInt(String(a.daysInArrears || 0)) || 0));
       const disputeCount = disputesByBorrower[String(b.id)] || 0;
-      const name = b.borrowerType === "corporate" ? sanitizeForPrompt(b.companyName) : `${sanitizeForPrompt(b.firstName)} ${sanitizeForPrompt(b.lastName)}`;
+      const name = b.type === "corporate" ? sanitizeForPrompt(b.companyName) : `${sanitizeForPrompt(b.firstName)} ${sanitizeForPrompt(b.lastName)}`;
       const statusFlags = [];
       if (delinquent > 0) statusFlags.push(`${delinquent} delinquent`);
       if (defaulted > 0) statusFlags.push(`${defaulted} defaulted`);
@@ -579,11 +579,11 @@ async function buildLiveContext(): Promise<string> {
 
       return {
         name,
-        type: b.borrowerType || "individual",
+        type: b.type || "individual",
         country: b.country || "Ghana",
         nationalId: b.nationalId || "N/A",
         tinNumber: b.tinNumber || "",
-        creditScore: b.creditScore,
+        creditScore: (b as any).creditScore,
         contact: contactParts.join(" | ") || "No contact info",
         address: addressParts.join(", ") || "No address",
         accountCount: bAccounts.length,
@@ -594,11 +594,11 @@ async function buildLiveContext(): Promise<string> {
         maxArrears,
         disputeCount,
         isPep: b.isPep || false,
-        employmentStatus: b.employmentStatus || "Unknown",
+        employmentStatus: b.occupation || "Unknown",
         monthlyIncome: b.monthlyIncome || "Not reported",
         sector: (b as any).sector || "",
         flags: statusFlags,
-        accountDetails: bAccounts.map(a => `${a.accountType}: ${a.currency || "GHS"} ${parseFloat(a.currentBalance || "0").toLocaleString()} (${a.status}${parseInt(a.daysInArrears || "0") > 0 ? `, ${a.daysInArrears}d arrears` : ""}) at ${a.lenderInstitution || "unknown"}`).join("; "),
+        accountDetails: bAccounts.map(a => `${a.accountType}: ${a.currency || "GHS"} ${parseFloat(a.currentBalance || "0").toLocaleString()} (${a.status}${parseInt(String(a.daysInArrears || 0)) > 0 ? `, ${a.daysInArrears}d arrears` : ""}) at ${a.lenderInstitution || "unknown"}`).join("; "),
       };
     });
 
@@ -627,13 +627,13 @@ async function buildLiveContext(): Promise<string> {
     }
 
     const countryCounts: Record<string, number> = {};
-    const individualCount = borrowersResult.data.filter(b => b.type === "individual" || b.borrowerType === "individual").length;
-    const corporateCount = borrowersResult.data.filter(b => b.type === "corporate" || b.borrowerType === "corporate").length;
+    const individualCount = borrowersResult.data.filter(b => b.type === "individual").length;
+    const corporateCount = borrowersResult.data.filter(b => b.type === "corporate").length;
     for (const b of borrowersResult.data) {
       const c = b.country || "Unknown";
       countryCounts[c] = (countryCounts[c] || 0) + 1;
     }
-    const creditScores = borrowersResult.data.filter(b => b.creditScore != null).map(b => b.creditScore as number);
+    const creditScores = borrowersResult.data.filter(b => (b as any).creditScore != null).map(b => (b as any).creditScore as number);
     const avgScore = creditScores.length > 0 ? Math.round(creditScores.reduce((a, b) => a + b, 0) / creditScores.length) : 0;
 
     const inquiryPurposes: Record<string, number> = {};
@@ -658,7 +658,7 @@ async function buildLiveContext(): Promise<string> {
     }).join("\n");
 
     const approvalList = pendingApprovals.slice(0, 20).map(a => {
-      return `  - ${a.entityType} | Action: ${a.action} | Status: ${a.status} | By: ${a.submittedBy || "system"} | ${a.createdAt ? new Date(a.createdAt).toLocaleDateString() : ""}`;
+      return `  - ${a.entityType} | Action: ${a.action} | Status: ${a.status} | By: ${(a as any).submittedBy || "system"} | ${a.createdAt ? new Date(a.createdAt).toLocaleDateString() : ""}`;
     }).join("\n");
 
     const userList = users.slice(0, 50).map(u => {
@@ -678,11 +678,11 @@ async function buildLiveContext(): Promise<string> {
       return `  - [${l.createdAt ? new Date(l.createdAt).toLocaleString() : ""}] ${sanitizeForPrompt(l.action)} on ${sanitizeForPrompt(l.entity)} | ${safeDetails}`;
     }).join("\n");
 
-    const telcoProfileList = telcoProfiles.slice(0, 50).map(p => {
+    const telcoProfileList = (telcoProfiles as any[]).slice(0, 50).map(p => {
       return `  - ${sanitizeForPrompt((p as any).subscriberName || "Unknown")} (${(p as any).msisdn || "N/A"}) | Provider: ${(p as any).provider || "N/A"} | Country: ${(p as any).country || "N/A"} | KYC: ${(p as any).kycLevel || "basic"} | Tenure: ${(p as any).accountTenureMonths || 0} months`;
     }).join("\n");
 
-    const telcoScoreList = telcoScores.slice(0, 30).map(s => {
+    const telcoScoreList = (telcoScores as any[]).slice(0, 30).map(s => {
       return `  - Profile: ${s.profileId} | Risk: ${(s as any).riskScore || "N/A"}/5 | Tier: ${(s as any).tier || "N/A"} | Credit Limit: ${(s as any).recommendedCreditLimit || 0} | Score: ${(s as any).aiScore || "N/A"}`;
     }).join("\n");
 
@@ -1094,26 +1094,26 @@ export function parseJSON(raw: string, fallback: Record<string, unknown> = {}) {
 }
 
 export async function generateCreditNarrative(borrowerId: string | number, provider?: AIProvider, language?: string) {
-  const borrower = await storage.getBorrower(borrowerId);
+  const borrower = await storage.getBorrower(String(borrowerId));
   if (!borrower) throw new Error("Borrower not found");
-  const accounts = await storage.getCreditAccountsByBorrower(borrowerId);
-  const disputes = await storage.getDisputesByBorrower(borrowerId);
+  const accounts = await storage.getCreditAccountsByBorrower(String(borrowerId));
+  const disputes = await storage.getDisputesByBorrower(String(borrowerId));
   const defaultCurrency = getDefaultCurrencyCode();
   const totalBalance = accounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
   const delinquentCount = accounts.filter(a => a.status === "delinquent" || a.status === "default").length;
-  const name = borrower.borrowerType === "corporate" ? (borrower.companyName || "Unknown") : `${borrower.firstName} ${borrower.lastName}`;
+  const name = borrower.type === "corporate" ? (borrower.companyName || "Unknown") : `${borrower.firstName} ${borrower.lastName}`;
 
   const profile = `
-Borrower: ${name} (${borrower.borrowerType || "individual"})
+Borrower: ${name} (${borrower.type || "individual"})
 Country: ${borrower.country || "Unknown"} | National ID: ${borrower.nationalId || "N/A"}
-Employment: ${borrower.employmentStatus || "Unknown"} | Monthly Income: ${borrower.monthlyIncome || "Not reported"}
+Employment: ${borrower.occupation || "Unknown"} | Monthly Income: ${borrower.monthlyIncome || "Not reported"}
 PEP Status: ${borrower.isPep ? "Yes — Politically Exposed Person" : "No"}
 Credit Accounts: ${accounts.length} total
 Active: ${accounts.filter(a => a.status === "current").length} | Delinquent: ${delinquentCount} | Closed: ${accounts.filter(a => a.status === "closed").length}
 Total Outstanding: ${defaultCurrency} ${totalBalance.toLocaleString()}
 Open Disputes: ${disputes.filter(d => d.status === "open" || d.status === "under_review").length}
 Account Details:
-${accounts.map(a => `  - ${a.accountType} at ${a.lenderInstitution || "Unknown"}: ${a.currency || defaultCurrency} ${parseFloat(a.currentBalance || "0").toLocaleString()} (original ${a.currency || defaultCurrency} ${parseFloat(a.originalAmount || "0").toLocaleString()}) | Status: ${a.status} | Rate: ${a.interestRate || "N/A"}% | Opened: ${a.dateOpened || "Unknown"} | Arrears: ${a.daysInArrears || "0"} days`).join("\n")}
+${accounts.map(a => `  - ${a.accountType} at ${a.lenderInstitution || "Unknown"}: ${a.currency || defaultCurrency} ${parseFloat(a.currentBalance || "0").toLocaleString()} (original ${a.currency || defaultCurrency} ${parseFloat(a.originalAmount || "0").toLocaleString()}) | Status: ${a.status} | Rate: ${a.interestRate || "N/A"}% | Opened: ${a.disbursementDate || "Unknown"} | Arrears: ${a.daysInArrears || "0"} days`).join("\n")}
 Dispute History:
 ${disputes.length > 0 ? disputes.map(d => `  - ${d.disputeType}: ${d.status} — ${d.description || "No details"}`).join("\n") : "  No disputes on record"}
   `.trim();
@@ -1271,7 +1271,7 @@ ${data.borrowerProfiles.slice(0, 100).map(b => `${b.name} | ${b.type} | accounts
 }
 
 export async function analyzeCrossBorderRisk(provider?: AIProvider) {
-  const data = await buildPortfolioData();
+  const data = await buildPortfolioData("");
   const defaultCurrency = getDefaultCurrencyCode();
 
   const borrowersByCountry: Record<string, typeof data.borrowerProfiles> = {};
@@ -1337,14 +1337,14 @@ ${data.borrowerProfiles.sort((a, b) => b.totalBalance - a.totalBalance).slice(0,
 }
 
 export async function generateLoanRecommendation(borrowerId: string | number, loanAmount: number, loanType: string, provider?: AIProvider) {
-  const borrower = await storage.getBorrower(borrowerId);
+  const borrower = await storage.getBorrower(String(borrowerId));
   if (!borrower) throw new Error("Borrower not found");
-  const accounts = await storage.getCreditAccountsByBorrower(borrowerId);
-  const disputes = await storage.getDisputesByBorrower(borrowerId);
+  const accounts = await storage.getCreditAccountsByBorrower(String(borrowerId));
+  const disputes = await storage.getDisputesByBorrower(String(borrowerId));
   const defaultCurrency = getDefaultCurrencyCode();
   const totalBalance = accounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
   const totalOriginal = accounts.reduce((s, a) => s + parseFloat(a.originalAmount || "0"), 0);
-  const name = borrower.borrowerType === "corporate" ? (borrower.companyName || "Unknown") : `${borrower.firstName} ${borrower.lastName}`;
+  const name = borrower.type === "corporate" ? (borrower.companyName || "Unknown") : `${borrower.firstName} ${borrower.lastName}`;
 
   const profile = `
 LOAN APPLICATION:
@@ -1352,9 +1352,9 @@ Requested Amount: ${defaultCurrency} ${loanAmount.toLocaleString()}
 Loan Type: ${loanType}
 
 APPLICANT PROFILE:
-Name: ${name} (${borrower.borrowerType || "individual"})
+Name: ${name} (${borrower.type || "individual"})
 Country: ${borrower.country || "Unknown"}
-Employment: ${borrower.employmentStatus || "Unknown"}
+Employment: ${borrower.occupation || "Unknown"}
 Monthly Income: ${borrower.monthlyIncome || "Not reported"}
 PEP Status: ${borrower.isPep ? "Yes" : "No"}
 
@@ -1365,7 +1365,7 @@ Delinquent: ${accounts.filter(a => a.status === "delinquent").length}
 Defaulted: ${accounts.filter(a => a.status === "default").length}
 Total Outstanding Balance: ${defaultCurrency} ${totalBalance.toLocaleString()}
 Total Original Credit Extended: ${defaultCurrency} ${totalOriginal.toLocaleString()}
-Max Days in Arrears: ${Math.max(0, ...accounts.map(a => parseInt(a.daysInArrears || "0") || 0))}
+Max Days in Arrears: ${Math.max(0, ...accounts.map(a => parseInt(String(a.daysInArrears || 0)) || 0))}
 
 ACCOUNT DETAILS:
 ${accounts.map(a => `  ${a.accountType} at ${a.lenderInstitution || "N/A"}: ${a.currency || defaultCurrency} ${parseFloat(a.currentBalance || "0").toLocaleString()} | Status: ${a.status} | Rate: ${a.interestRate || "N/A"}% | Arrears: ${a.daysInArrears || "0"}d`).join("\n")}
@@ -1402,16 +1402,16 @@ DEBT-TO-INCOME: ${borrower.monthlyIncome ? `${((totalBalance / (parseFloat(borro
 }
 
 export async function generateCreditInsights(borrowerId: string | number, provider?: AIProvider) {
-  const borrower = await storage.getBorrower(borrowerId);
+  const borrower = await storage.getBorrower(String(borrowerId));
   if (!borrower) throw new Error("Borrower not found");
 
-  const accounts = await storage.getCreditAccountsByBorrower(borrowerId);
-  const disputes = await storage.getDisputesByBorrower(borrowerId);
+  const accounts = await storage.getCreditAccountsByBorrower(String(borrowerId));
+  const disputes = await storage.getDisputesByBorrower(String(borrowerId));
   const judgments = await storage.getCourtJudgmentsByBorrower(String(borrowerId));
   const defaultCurrency = getDefaultCurrencyCode();
   const countryName = getActiveCountryName();
 
-  const isIndividual = (borrower.borrowerType || borrower.type) !== "corporate";
+  const isIndividual = (borrower.type || borrower.type) !== "corporate";
   const name = !isIndividual ? (borrower.companyName || "Unknown") : `${borrower.firstName || ""} ${borrower.lastName || ""}`.trim();
 
   const totalBalance = accounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
@@ -1438,7 +1438,7 @@ Closed: ${closedAccounts.length}
 Total Outstanding Balance: ${defaultCurrency} ${totalBalance.toLocaleString()}
 Maximum Days in Arrears (any account): ${maxArrears}
 Account Details:
-${accounts.map(a => `  - ${a.accountType} at ${a.lenderInstitution || "Unknown"}: Balance ${a.currency || defaultCurrency} ${parseFloat(a.currentBalance || "0").toLocaleString()} | Original ${a.currency || defaultCurrency} ${parseFloat(a.originalAmount || "0").toLocaleString()} | Status: ${a.status} | Rate: ${a.interestRate || "N/A"}% | Opened: ${a.dateOpened || "Unknown"} | Arrears: ${a.daysInArrears || 0} days`).join("\n") || "  No accounts on record"}
+${accounts.map(a => `  - ${a.accountType} at ${a.lenderInstitution || "Unknown"}: Balance ${a.currency || defaultCurrency} ${parseFloat(a.currentBalance || "0").toLocaleString()} | Original ${a.currency || defaultCurrency} ${parseFloat(a.originalAmount || "0").toLocaleString()} | Status: ${a.status} | Rate: ${a.interestRate || "N/A"}% | Opened: ${a.disbursementDate || "Unknown"} | Arrears: ${a.daysInArrears || 0} days`).join("\n") || "  No accounts on record"}
 
 OPEN DISPUTES: ${openDisputes.length} (total ${disputes.length})
 

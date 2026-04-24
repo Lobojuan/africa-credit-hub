@@ -2077,7 +2077,7 @@ interface LinkedBorrower {
 interface AssetTraceRow {
   id: string; assetType: string; provider: string; reference?: string;
   description?: string; estimatedValue?: string; currency?: string; status: string;
-  createdAt: string;
+  createdAt: string; rawResponse?: string;
 }
 
 const ASSET_PROVIDERS = [

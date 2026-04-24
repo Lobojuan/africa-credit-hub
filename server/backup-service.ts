@@ -2,7 +2,7 @@ import { execSync, exec } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import { sql } from "drizzle-orm";
-import { db } from "./db";
+import { db, pool } from "./db";
 
 const BACKUP_DIR = path.resolve(process.cwd(), "backups");
 const MAX_BACKUPS = 30;

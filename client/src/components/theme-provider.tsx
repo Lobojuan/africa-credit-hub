@@ -1,11 +1,7 @@
 import { useState, useEffect, createContext, useContext } from "react";
 import { flushSync } from "react-dom";
 
-declare global {
-  interface Document {
-    startViewTransition?: (callback: () => void) => void;
-  }
-}
+declare global {}
 
 type Theme = "light" | "dark";
 type VisualStyle = "pan-african" | "scandinavian";

@@ -811,7 +811,7 @@ export const alternativeData = pgTable("alternative_data", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const insertAlternativeDataSchema = createInsertSchema(alternativeData).omit({ id: true, createdAt: true });
+export const insertAlternativeDataSchema = createInsertSchema(alternativeData).omit({ createdAt: true });
 export type InsertAlternativeData = z.infer<typeof insertAlternativeDataSchema>;
 export type AlternativeData = typeof alternativeData.$inferSelect;
 
