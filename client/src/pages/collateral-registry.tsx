@@ -12,12 +12,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Building, Plus, Search, RefreshCw, MapPin, FileText,
   Award, Clock, CheckCircle2, XCircle, AlertTriangle,
   Download, Shield, Zap, Star, TrendingUp, Package, Link2,
+  Eye, CheckCircle, Building2, User, Tag, Calendar,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -565,6 +567,124 @@ function LienSearchPanel() {
   );
 }
 
+// ─── Verification Preview Popover ────────────────────────────────────────────
+
+function VerifyInfoField({ icon, label, value }: { icon: React.ReactNode; label: string; value?: string | null }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <div className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
+        {icon}
+        <span>{label}</span>
+      </div>
+      <div className="text-sm font-medium text-slate-800 dark:text-slate-200">
+        {value || "—"}
+      </div>
+    </div>
+  );
+}
+
+function VerificationPreviewPopover({ item }: { item: CollateralRegistryItem }) {
+  const collateralLabel = item.collateralType
+    ? item.collateralType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+    : undefined;
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          title="Preview borrower verification page"
+          data-testid={`btn-preview-verify-${item.id}`}
+        >
+          <Eye className="w-4 h-4 text-primary" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-[360px] p-0 shadow-xl rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700"
+        align="end"
+        data-testid={`popover-verify-preview-${item.id}`}
+      >
+        <div className="bg-white dark:bg-slate-800">
+          <div className="text-center px-4 pt-4 pb-2">
+            <div className="inline-flex items-center gap-1.5 bg-slate-50 dark:bg-slate-700 rounded-full px-3 py-1 border border-slate-200 dark:border-slate-600 mb-2">
+              <Shield className="w-3 h-3 text-blue-600" />
+              <span className="text-xs font-medium text-slate-600 dark:text-slate-300">Pan-African Collateral Registry</span>
+            </div>
+            <div className="text-sm font-bold text-slate-900 dark:text-white">Lien Verification</div>
+            <div className="text-xs text-slate-400 dark:text-slate-500">Preview — what borrowers will see</div>
+          </div>
+
+          <div className="bg-green-50 dark:bg-green-900/20 border-y border-green-100 dark:border-green-800 px-4 py-3 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center shrink-0">
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+            </div>
+            <div>
+              <div className="text-sm font-bold text-green-800 dark:text-green-300">Verified — Active Lien</div>
+              <div className="text-xs text-green-600 dark:text-green-400 mt-0.5">This financing statement is valid and registered.</div>
+            </div>
+          </div>
+
+          <div className="p-4 space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <VerifyInfoField
+                icon={<FileText className="w-3 h-3" />}
+                label="Registration No."
+                value={item.registrationNumber}
+              />
+              <VerifyInfoField
+                icon={<Shield className="w-3 h-3" />}
+                label="Certificate No."
+                value={item.certificateNumber}
+              />
+              <VerifyInfoField
+                icon={<Building2 className="w-3 h-3" />}
+                label="Secured Party"
+                value={item.borrowerId}
+              />
+              <VerifyInfoField
+                icon={<User className="w-3 h-3" />}
+                label="Grantor"
+                value={item.borrowerName}
+              />
+              <VerifyInfoField
+                icon={<Tag className="w-3 h-3" />}
+                label="Collateral Type"
+                value={collateralLabel}
+              />
+              {item.lienPriority != null && (
+                <VerifyInfoField
+                  icon={<Shield className="w-3 h-3" />}
+                  label="Lien Priority Rank"
+                  value={`#${item.lienPriority}`}
+                />
+              )}
+              {item.expiryDate && (
+                <VerifyInfoField
+                  icon={<Calendar className="w-3 h-3" />}
+                  label="Expiry Date"
+                  value={item.expiryDate}
+                />
+              )}
+            </div>
+
+            {item.verificationCode && (
+              <div className="rounded-lg bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 px-3 py-2 flex items-center gap-3">
+                <div className="font-mono text-xs font-semibold text-slate-400 dark:text-slate-500 shrink-0">CODE</div>
+                <div className="font-mono text-xs font-bold text-slate-700 dark:text-slate-200 tracking-widest truncate">{item.verificationCode}</div>
+              </div>
+            )}
+          </div>
+
+          <div className="px-4 pb-4 text-xs text-slate-400 dark:text-slate-500 text-center border-t border-slate-100 dark:border-slate-700 pt-2">
+            Verified against the Pan-African Collateral Registry · {new Date().toLocaleDateString("en", { year: "numeric", month: "long", day: "numeric" })}
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 // ─── My Registrations Tab ─────────────────────────────────────────────────────
 
 function MyRegistrations() {
@@ -763,15 +883,18 @@ function MyRegistrations() {
                                 Certificate
                               </Button>
                               {item.verificationCode && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => copyVerificationLink(item)}
-                                  title="Copy verification link"
-                                  data-testid={`btn-copy-verify-link-${item.id}`}
-                                >
-                                  <Link2 className="w-4 h-4 text-primary" />
-                                </Button>
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => copyVerificationLink(item)}
+                                    title="Copy verification link"
+                                    data-testid={`btn-copy-verify-link-${item.id}`}
+                                  >
+                                    <Link2 className="w-4 h-4 text-primary" />
+                                  </Button>
+                                  <VerificationPreviewPopover item={item} />
+                                </>
                               )}
                             </>
                           )}
