@@ -373,7 +373,7 @@ export interface IStorage {
   enforceCollateralItem(id: string): Promise<CollateralItem | undefined>;
   dischargeCollateralItem(id: string): Promise<CollateralItem | undefined>;
   createCollateralShareLog(data: InsertCollateralShareLog): Promise<CollateralShareLog>;
-  getCollateralShareLog(collateralItemId: string): Promise<CollateralShareLog[]>;
+  getCollateralShareLog(collateralItemId: string): Promise<(CollateralShareLog & { senderName: string | null })[]>;
   getCollateralRegulatoryReport(countryCode: string): Promise<{
     totalActive: number; totalValue: number;
     byInstitution: { orgId: string; orgName: string; count: number; value: number }[];
@@ -3072,10 +3072,22 @@ export class DatabaseStorage implements IStorage {
     return row;
   }
 
-  async getCollateralShareLog(collateralItemId: string): Promise<CollateralShareLog[]> {
-    return db.select().from(collateralShareLog)
+  async getCollateralShareLog(collateralItemId: string): Promise<(CollateralShareLog & { senderName: string | null })[]> {
+    const rows = await db
+      .select({
+        id: collateralShareLog.id,
+        collateralItemId: collateralShareLog.collateralItemId,
+        channel: collateralShareLog.channel,
+        maskedRecipient: collateralShareLog.maskedRecipient,
+        sentBy: collateralShareLog.sentBy,
+        sentAt: collateralShareLog.sentAt,
+        senderName: users.fullName,
+      })
+      .from(collateralShareLog)
+      .leftJoin(users, eq(collateralShareLog.sentBy, users.id))
       .where(eq(collateralShareLog.collateralItemId, collateralItemId))
       .orderBy(desc(collateralShareLog.sentAt));
+    return rows;
   }
 
   async getCollateralRegulatoryReport(countryCode: string): Promise<{

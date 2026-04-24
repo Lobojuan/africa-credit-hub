@@ -198,6 +198,7 @@ interface ShareLogEntry {
   channel: string;
   maskedRecipient: string;
   sentBy: string | null;
+  senderName: string | null;
   sentAt: string;
 }
 
@@ -341,18 +342,25 @@ function ShareVerificationLinkDialog({ item }: { item: CollateralRegistryItem })
                 {shareLog.map(entry => (
                   <div
                     key={entry.id}
-                    className="flex items-center justify-between text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1.5"
+                    className="flex flex-col gap-0.5 text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1.5"
                     data-testid={`share-log-entry-${entry.id}`}
                   >
-                    <div className="flex items-center gap-1.5">
-                      {entry.channel === "email"
-                        ? <Mail className="w-3 h-3 shrink-0" />
-                        : <MessageSquare className="w-3 h-3 shrink-0" />}
-                      <span className="font-mono">{entry.maskedRecipient}</span>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        {entry.channel === "email"
+                          ? <Mail className="w-3 h-3 shrink-0" />
+                          : <MessageSquare className="w-3 h-3 shrink-0" />}
+                        <span className="font-mono">{entry.maskedRecipient}</span>
+                      </div>
+                      <span className="text-muted-foreground/70 shrink-0 ml-2">
+                        {format(new Date(entry.sentAt), "dd MMM yyyy, HH:mm")}
+                      </span>
                     </div>
-                    <span className="text-muted-foreground/70 shrink-0 ml-2">
-                      {format(new Date(entry.sentAt), "dd MMM yyyy, HH:mm")}
-                    </span>
+                    {(entry.senderName || entry.sentBy) && (
+                      <span className="text-muted-foreground/60 pl-[18px]" data-testid={`share-log-sender-${entry.id}`}>
+                        Sent by {entry.senderName ?? "Unknown user"}
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
