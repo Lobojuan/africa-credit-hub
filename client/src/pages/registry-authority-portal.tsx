@@ -57,6 +57,7 @@ interface PendingItem {
   borrowerId?: string;
   lenderOrganizationId?: string;
   lenderInstitution?: string;
+  lenderInstitutionName?: string;
   estimatedValue?: string;
   currency?: string;
   countryCode?: string;
@@ -218,11 +219,17 @@ function PendingQueue({ orgId, countryCode }: { orgId: string; countryCode: stri
     queryKey: ["/api/collateral/pending"],
     queryFn: () => fetch("/api/collateral/pending", { credentials: "include" }).then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json(); }),
   });
-  const filtered = items.filter(i =>
-    !search || i.registrationNumber?.toLowerCase().includes(search.toLowerCase()) ||
-    i.description?.toLowerCase().includes(search.toLowerCase()) ||
-    i.assetLocalIdentifier?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = items.filter(i => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      i.registrationNumber?.toLowerCase().includes(q) ||
+      i.description?.toLowerCase().includes(q) ||
+      i.assetLocalIdentifier?.toLowerCase().includes(q) ||
+      i.lenderInstitutionName?.toLowerCase().includes(q) ||
+      i.lenderInstitution?.toLowerCase().includes(q)
+    );
+  });
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
@@ -246,6 +253,7 @@ function PendingQueue({ orgId, countryCode }: { orgId: string; countryCode: stri
               <TableRow>
                 <TableHead>Reg #</TableHead>
                 <TableHead>Asset Type</TableHead>
+                <TableHead>Submitted By</TableHead>
                 <TableHead>Pan-African ID</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead className="text-right">Value</TableHead>
@@ -259,6 +267,9 @@ function PendingQueue({ orgId, countryCode }: { orgId: string; countryCode: stri
                 <TableRow key={item.id} data-testid={`row-pending-${item.id}`}>
                   <TableCell className="font-mono text-xs">{item.registrationNumber}</TableCell>
                   <TableCell className="text-sm">{ASSET_TYPE_LABELS[item.collateralType] || item.collateralType}</TableCell>
+                  <TableCell className="text-sm" data-testid={`text-lender-${item.id}`}>
+                    {item.lenderInstitutionName || item.lenderInstitution || <span className="text-muted-foreground">—</span>}
+                  </TableCell>
                   <TableCell className="font-mono text-xs text-muted-foreground">{item.panAfricanAssetId || "—"}</TableCell>
                   <TableCell className="text-sm max-w-[180px] truncate">{item.description}</TableCell>
                   <TableCell className="text-right text-sm">{formatCurrency(item.estimatedValue, item.currency)}</TableCell>

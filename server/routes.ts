@@ -14512,7 +14512,17 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       // Also pass country code so items without registryAuthorityId set can be found
       const countryCode = await getCallerCountry(req);
       const items = await storage.getPendingCollateralItems(orgId, countryCode || undefined);
-      res.json(items);
+      // Enrich with lender institution name so RA staff can see who submitted each lien
+      const uniqueOrgIds = [...new Set(items.map(i => i.lenderOrganizationId).filter(Boolean))] as string[];
+      const orgLookups = await Promise.all(uniqueOrgIds.map(id => storage.getOrganization(id)));
+      const orgMap = new Map(orgLookups.filter(Boolean).map(o => [o!.id, o!.name]));
+      const enriched = items.map(item => ({
+        ...item,
+        lenderInstitutionName: item.lenderOrganizationId
+          ? (orgMap.get(item.lenderOrganizationId) ?? item.lenderInstitution ?? "Unknown Institution")
+          : (item.lenderInstitution ?? null),
+      }));
+      res.json(enriched);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
