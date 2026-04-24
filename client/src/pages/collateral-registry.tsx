@@ -49,6 +49,7 @@ interface CollateralRegistryItem {
   lenderOrganizationId?: string;
   lenderInstitutionName?: string;
   collateralType?: string;
+  collateralClass?: string;
   assetLocalIdentifier?: string;
   panAfricanAssetId?: string;
   estimatedValue?: string;
@@ -64,6 +65,12 @@ interface CollateralRegistryItem {
   securityInterestType?: string;
   description?: string;
   verificationCode?: string;
+  location?: string;
+  documentReference?: string;
+  notes?: string;
+  legalRegime?: string;
+  countryCode?: string;
+  debtorType?: string;
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -609,34 +616,83 @@ function CertificatePreviewDialog({ item }: { item: { id: string; registrationNu
 
 // ─── Register Collateral Dialog ───────────────────────────────────────────────
 
-function RegisterCollateralDialog({ onSuccess }: { onSuccess: () => void }) {
+type CollateralFormData = {
+  borrowerId: string;
+  borrowerName: string;
+  debtorType: string;
+  loanApplicationId: string;
+  collateralType: string;
+  collateralClass: string;
+  description: string;
+  estimatedValue: string;
+  currency: string;
+  location: string;
+  registrationDate: string;
+  expiryDate: string;
+  documentReference: string;
+  notes: string;
+  assetLocalIdentifier: string;
+  legalRegime: string;
+  countryCode: string;
+  isPmsi: boolean;
+  securityInterestType: string;
+  financingDuration: string;
+};
+
+type RegisterCollateralDialogProps = {
+  onSuccess: () => void;
+  prefillData?: Partial<CollateralFormData>;
+  rejectionReason?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  triggerButton?: React.ReactNode;
+};
+
+function RegisterCollateralDialog({
+  onSuccess,
+  prefillData,
+  rejectionReason,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+  triggerButton,
+}: RegisterCollateralDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const org = user?.organization;
 
-  const [form, setForm] = useState({
-    borrowerId: "",
-    borrowerName: "",
-    debtorType: "individual",
-    loanApplicationId: "",
-    collateralType: "real_estate",
-    collateralClass: "other",
-    description: "",
-    estimatedValue: "",
-    currency: org?.country === "Nigeria" ? "NGN" : org?.country === "Kenya" ? "KES" : "GHS",
-    location: "",
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = isControlled
+    ? (v: boolean) => controlledOnOpenChange?.(v)
+    : setInternalOpen;
+
+  const defaultCurrency = org?.country === "Nigeria" ? "NGN" : org?.country === "Kenya" ? "KES" : "GHS";
+
+  const buildInitialForm = (): CollateralFormData => ({
+    borrowerId: prefillData?.borrowerId ?? "",
+    borrowerName: prefillData?.borrowerName ?? "",
+    debtorType: prefillData?.debtorType ?? "individual",
+    loanApplicationId: prefillData?.loanApplicationId ?? "",
+    collateralType: prefillData?.collateralType ?? "real_estate",
+    collateralClass: prefillData?.collateralClass ?? "other",
+    description: prefillData?.description ?? "",
+    estimatedValue: prefillData?.estimatedValue ?? "",
+    currency: prefillData?.currency ?? defaultCurrency,
+    location: prefillData?.location ?? "",
     registrationDate: today(),
-    expiryDate: "",
-    documentReference: "",
-    notes: "",
-    assetLocalIdentifier: "",
-    legalRegime: "",
-    countryCode: "GH",
-    isPmsi: false,
-    securityInterestType: "loan_security",
-    financingDuration: "custom",
+    expiryDate: prefillData?.expiryDate ?? "",
+    documentReference: prefillData?.documentReference ?? "",
+    notes: prefillData?.notes ?? "",
+    assetLocalIdentifier: prefillData?.assetLocalIdentifier ?? "",
+    legalRegime: prefillData?.legalRegime ?? "",
+    countryCode: prefillData?.countryCode ?? "GH",
+    isPmsi: prefillData?.isPmsi ?? false,
+    securityInterestType: prefillData?.securityInterestType ?? "loan_security",
+    financingDuration: prefillData?.financingDuration ?? "custom",
   });
+
+  const [form, setForm] = useState<CollateralFormData>(buildInitialForm);
 
   const [step, setStep] = useState(1);
 
@@ -673,16 +729,20 @@ function RegisterCollateralDialog({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) setStep(1); }}>
-      <DialogTrigger asChild>
-        <Button data-testid="btn-register-collateral" className="gap-2">
-          <Plus className="w-4 h-4" /> New Financing Statement
-        </Button>
-      </DialogTrigger>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          {triggerButton ?? (
+            <Button data-testid="btn-register-collateral" className="gap-2">
+              <Plus className="w-4 h-4" /> New Financing Statement
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Shield className="w-5 h-5 text-primary" />
-            Register Financing Statement
+            {prefillData ? "Fix & Resubmit Financing Statement" : "Register Financing Statement"}
           </DialogTitle>
           <p className="text-xs text-muted-foreground">Step {step} of 3 — {step === 1 ? "Grantor & Borrower" : step === 2 ? "Collateral Details" : "Security Interest & Duration"}</p>
         </DialogHeader>
@@ -693,6 +753,19 @@ function RegisterCollateralDialog({ onSuccess }: { onSuccess: () => void }) {
             <div key={s} className={`h-1 flex-1 rounded-full transition-colors ${s <= step ? "bg-primary" : "bg-muted"}`} />
           ))}
         </div>
+
+        {prefillData && (
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 mb-1" data-testid="resubmit-notice">
+            <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="text-xs text-amber-800 dark:text-amber-200 space-y-1">
+              <p className="font-semibold">Resubmission — review and correct the information below</p>
+              {rejectionReason && (
+                <p><span className="font-medium">Rejection reason:</span> {rejectionReason}</p>
+              )}
+              <p className="text-amber-700 dark:text-amber-300">This form is pre-filled with your previous submission. Fix the flagged issues and submit again as a new statement.</p>
+            </div>
+          </div>
+        )}
 
         {step === 1 && (
           <div className="grid grid-cols-2 gap-4 py-2">
@@ -1152,6 +1225,7 @@ function MyRegistrations() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [resubmitItem, setResubmitItem] = useState<CollateralRegistryItem | null>(null);
   const { toast } = useToast();
 
   const copyVerificationLink = (item: CollateralRegistryItem) => {
@@ -1329,7 +1403,7 @@ function MyRegistrations() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 flex-wrap">
                           {item.approvalStatus === "approved" && (
                             <>
                               <CertificatePreviewDialog item={item} />
@@ -1350,6 +1424,18 @@ function MyRegistrations() {
                               )}
                             </>
                           )}
+                          {item.approvalStatus === "rejected" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setResubmitItem(item)}
+                              data-testid={`btn-fix-resubmit-${item.id}`}
+                              className="gap-1.5 text-xs h-7 px-2 text-amber-700 border-amber-300 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-700 dark:hover:bg-amber-950/30"
+                            >
+                              <RefreshCw className="w-3.5 h-3.5" />
+                              Fix &amp; Resubmit
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -1360,6 +1446,38 @@ function MyRegistrations() {
           )}
         </CardContent>
       </Card>
+      {resubmitItem && (
+        <RegisterCollateralDialog
+          onSuccess={() => {
+            setResubmitItem(null);
+            refetch();
+            queryClient.invalidateQueries({ queryKey: ["/api/collateral"] });
+          }}
+          prefillData={{
+            borrowerId: resubmitItem.borrowerId,
+            borrowerName: resubmitItem.borrowerName,
+            debtorType: resubmitItem.debtorType,
+            collateralType: resubmitItem.collateralType,
+            collateralClass: resubmitItem.collateralClass,
+            description: resubmitItem.description,
+            estimatedValue: resubmitItem.estimatedValue,
+            currency: resubmitItem.currency,
+            assetLocalIdentifier: resubmitItem.assetLocalIdentifier,
+            location: resubmitItem.location,
+            documentReference: resubmitItem.documentReference,
+            notes: resubmitItem.notes,
+            legalRegime: resubmitItem.legalRegime,
+            countryCode: resubmitItem.countryCode,
+            isPmsi: resubmitItem.isPmsi,
+            securityInterestType: resubmitItem.securityInterestType,
+            financingDuration: resubmitItem.financingDuration,
+            expiryDate: resubmitItem.expiryDate,
+          }}
+          rejectionReason={resubmitItem.rejectionReason}
+          open={true}
+          onOpenChange={(v) => { if (!v) setResubmitItem(null); }}
+        />
+      )}
     </div>
   );
 }
