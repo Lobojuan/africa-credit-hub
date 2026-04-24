@@ -19,7 +19,7 @@ import {
   Building, Plus, Search, RefreshCw, MapPin, FileText,
   Award, Clock, CheckCircle2, XCircle, AlertTriangle,
   Download, Shield, Zap, Star, TrendingUp, Package, Link2,
-  Eye, CheckCircle, Building2, User, Tag, Calendar,
+  Eye, CheckCircle, Building2, User, Tag, Calendar, ExternalLink,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -675,6 +675,23 @@ function VerificationPreviewPopover({ item }: { item: CollateralRegistryItem }) 
               </div>
             )}
           </div>
+
+          {item.verificationCode && (
+            <div className="px-4 pb-3 pt-2 border-t border-slate-100 dark:border-slate-700">
+              <a
+                href={`${window.location.origin}/verify/${item.verificationCode}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-testid={`link-open-verify-${item.id}`}
+                className="flex items-center justify-between gap-2 w-full rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors group"
+              >
+                <span className="font-mono text-xs text-blue-700 dark:text-blue-300 truncate">
+                  {window.location.origin}/verify/{item.verificationCode}
+                </span>
+                <ExternalLink className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 shrink-0 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors" />
+              </a>
+            </div>
+          )}
 
           <div className="px-4 pb-4 text-xs text-slate-400 dark:text-slate-500 text-center border-t border-slate-100 dark:border-slate-700 pt-2">
             Verified against the Pan-African Collateral Registry · {new Date().toLocaleDateString("en", { year: "numeric", month: "long", day: "numeric" })}
