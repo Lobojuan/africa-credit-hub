@@ -46,6 +46,7 @@ import {
   payoutItems, insertPayoutItemSchema,
   wallets, walletTransactions,
   registryCountryConfig,
+  collateralItems,
 } from "@shared/schema";
 import { processIFFData, detectIFFType, type IFFType } from "./iff-processor";
 import bcrypt from "bcryptjs";
@@ -11230,6 +11231,34 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
     }
   });
 
+  const collateralVerifyLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, message: { message: "Too many verification requests. Please try again in a minute." } });
+  app.get("/api/public/collateral/verify/:code", collateralVerifyLimiter, async (req, res) => {
+    try {
+      const { code } = req.params;
+      if (!code) return res.status(400).json({ valid: false, message: "Verification code required" });
+      const items = await db.select().from(collateralItems)
+        .where(and(eq(collateralItems.verificationCode, code), eq(collateralItems.approvalStatus, "approved")))
+        .limit(1);
+      const item = items[0];
+      if (!item) return res.json({ valid: false });
+      const lenderOrg = item.lenderOrganizationId ? await storage.getOrganization(item.lenderOrganizationId) : null;
+      return res.json({
+        valid: true,
+        registrationNumber: item.registrationNumber,
+        certificateNumber: item.certificateNumber || undefined,
+        borrowerName: item.borrowerName || undefined,
+        lenderName: lenderOrg?.name || undefined,
+        collateralType: item.collateralType || undefined,
+        collateralClass: item.collateralClass || undefined,
+        approvalDate: item.approvalDate || undefined,
+        lienPriority: item.lienPriority ?? null,
+        expiryDate: item.expiryDate || null,
+        countryCode: item.countryCode || undefined,
+        verificationCode: item.verificationCode || undefined,
+      });
+    } catch (e: any) { res.status(500).json({ valid: false, message: safeErrorMessage(e) }); }
+  });
+
   const publicChatLimiter = rateLimit({ windowMs: 60 * 1000, max: 15, message: { message: "Too many chat requests. Please wait a moment." } });
   app.post("/api/public/chat", publicChatLimiter, async (req, res) => {
     try {
@@ -14539,6 +14568,16 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         ? await db.select().from(registryCountryConfig).where(eq(registryCountryConfig.countryCode, item.countryCode)).limit(1).then(r => r[0])
         : null;
 
+      // Build verification URL and generate QR code
+      const baseUrl = getBaseUrl();
+      const verificationCode = item.verificationCode || "";
+      const verifyUrl = `${baseUrl}/verify/${verificationCode}`;
+      const QRCode = (await import("qrcode")).default;
+      let qrBuffer: Buffer | null = null;
+      try {
+        qrBuffer = await QRCode.toBuffer(verifyUrl, { type: "png", width: 120, margin: 1, errorCorrectionLevel: "M" });
+      } catch (_) { /* skip QR if generation fails */ }
+
       // Generate PDF with pdfkit
       const PDFDocument = (await import("pdfkit")).default;
       const doc = new PDFDocument({ margin: 60, size: "A4" });
@@ -14585,6 +14624,22 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       field("Expiry Date", item.expiryDate || "Perpetual / As specified");
       doc.moveDown();
       field("Verification Code", item.verificationCode || "—");
+
+      // QR Code section
+      doc.moveDown().moveTo(60, doc.y).lineTo(535, doc.y).stroke().moveDown();
+      const qrSectionY = doc.y;
+      if (qrBuffer) {
+        doc.image(qrBuffer, 60, qrSectionY, { width: 90, height: 90 });
+        doc.fontSize(9).font("Helvetica-Bold").text("Scan to Verify Lien", 160, qrSectionY);
+        doc.fontSize(8).font("Helvetica").text("Debtors and third parties can verify this lien registration by scanning the QR code or visiting:", 160, qrSectionY + 14, { width: 315 });
+        doc.fontSize(7).font("Helvetica").fillColor("#1a56db").text(verifyUrl, 160, doc.y + 4, { width: 315 });
+        doc.fillColor("#000000");
+        doc.y = Math.max(doc.y, qrSectionY + 100);
+      } else {
+        doc.fontSize(9).font("Helvetica-Bold").text("Verify this certificate at:");
+        doc.fontSize(8).font("Helvetica").fillColor("#1a56db").text(verifyUrl);
+        doc.fillColor("#000000");
+      }
 
       doc.moveDown().moveTo(60, doc.y).lineTo(535, doc.y).stroke().moveDown();
       doc.fontSize(8).font("Helvetica").text(

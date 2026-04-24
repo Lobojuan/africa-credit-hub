@@ -132,6 +132,7 @@ const ComplianceQueuePage = lazy(() => import("@/pages/compliance-queue"));
 const LoanOriginationPage = lazy(() => import("@/pages/loan-origination"));
 const CollateralRegistryPage = lazy(() => import("@/pages/collateral-registry"));
 const RegistryAuthorityPortalPage = lazy(() => import("@/pages/registry-authority-portal"));
+const CollateralVerifyPage = lazy(() => import("@/pages/collateral-verify"));
 const InstitutionAnalyticsPage = lazy(() => import("@/pages/institution-analytics"));
 const InstitutionBrandingPage = lazy(() => import("@/pages/institution-branding"));
 
@@ -422,7 +423,7 @@ function AuthenticatedApp() {
     if (currentPath === "/login") {
       return <LoginPage />;
     }
-    if (publicPaths.includes(currentPath)) {
+    if (publicPaths.includes(currentPath) || currentPath.startsWith("/verify/")) {
       return doRedirect(currentPath);
     }
     return doRedirect("/login");
@@ -831,6 +832,11 @@ function App() {
             <Route path="/partner-docs" component={() => <Suspense fallback={<LazyFallback />}><PartnerDocsPage /></Suspense>} />
             <Route path="/portal" component={() => <Suspense fallback={<LazyFallback />}><PortalPage /></Suspense>} />
             <Route path="/platform-control-9x7k" component={() => <Suspense fallback={<LazyFallback />}><PlatformMasterControlPage /></Suspense>} />
+            <Route path="/verify/:code">
+              <Suspense fallback={<LazyFallback />}>
+                <CollateralVerifyPage />
+              </Suspense>
+            </Route>
             <Route path="/consent/respond">
               <Suspense fallback={<LazyFallback />}>
                 <ConsentRespondPage />
