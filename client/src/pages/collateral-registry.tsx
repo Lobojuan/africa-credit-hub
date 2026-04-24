@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
@@ -13,10 +13,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import QRCode from "react-qr-code";
 import {
   Building, Plus, Search, RefreshCw, MapPin, FileText,
@@ -59,7 +60,7 @@ interface CollateralRegistryItem {
   approvalStatus?: string;
   certificateNumber?: string;
   rejectionReason?: string;
-  lienPriority?: number;
+  lienPriority?: number | null;
   isPmsi?: boolean;
   status?: string;
   securityInterestType?: string;
@@ -1071,7 +1072,7 @@ function LienSearchPanel() {
 
 // ─── Verification Preview Popover ────────────────────────────────────────────
 
-function VerifyInfoField({ icon, label, value }: { icon: React.ReactNode; label: string; value?: string | null }) {
+function VerifyInfoField({ icon, label, value }: { icon: ReactNode; label: string; value?: string | null }) {
   return (
     <div className="flex flex-col gap-0.5">
       <div className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
@@ -1081,6 +1082,17 @@ function VerifyInfoField({ icon, label, value }: { icon: React.ReactNode; label:
       <div className="text-sm font-medium text-slate-800 dark:text-slate-200">
         {value || "—"}
       </div>
+    </div>
+  );
+}
+
+// ─── Certificate Detail Sheet ─────────────────────────────────────────────────
+
+function DetailRow({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className="text-sm font-medium">{value ?? "—"}</span>
     </div>
   );
 }
@@ -1227,6 +1239,165 @@ function VerificationPreviewPopover({ item }: { item: CollateralRegistryItem }) 
   );
 }
 
+function CertificateDetailSheet({
+  item,
+  open,
+  onClose,
+}: {
+  item: CollateralRegistryItem | null;
+  open: boolean;
+  onClose: () => void;
+}) {
+  if (!item) return null;
+
+  const collateralLabel = COLLATERAL_TYPES.find(t => t.value === item.collateralType)?.label ?? item.collateralType;
+  const siLabel = SECURITY_INTEREST_TYPES.find(t => t.value === item.securityInterestType)?.label ?? item.securityInterestType;
+
+  const expiryDisplay =
+    item.financingDuration === "perpetual"
+      ? "No expiry (Perpetual)"
+      : item.expiryDate
+      ? format(new Date(item.expiryDate), "dd MMM yyyy")
+      : item.financingDuration?.replace(/_/g, " ") || "—";
+
+  return (
+    <Sheet open={open} onOpenChange={v => { if (!v) onClose(); }}>
+      <SheetContent
+        side="right"
+        className="w-full sm:max-w-md overflow-y-auto"
+        data-testid="sheet-certificate-detail"
+      >
+        <SheetHeader className="mb-4">
+          <SheetTitle className="flex items-center gap-2 text-base">
+            <Shield className="w-4 h-4 text-primary" />
+            Financing Statement Details
+          </SheetTitle>
+        </SheetHeader>
+
+        {/* Certificate & Priority */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border">
+            <Award className="w-5 h-5 text-green-600 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-muted-foreground">Certificate Number</p>
+              <p className="font-mono text-sm font-semibold truncate" data-testid="detail-cert-number">
+                {item.certificateNumber || "Not yet issued"}
+              </p>
+            </div>
+            <div className="flex-shrink-0">
+              <PriorityBadge rank={item.lienPriority} />
+            </div>
+          </div>
+
+          {/* Approval / Status badges */}
+          <div className="flex gap-2 flex-wrap">
+            <Badge className={`text-xs ${APPROVAL_COLORS[item.approvalStatus] || "bg-gray-100 text-gray-600"}`} data-testid="detail-approval-status">
+              {item.approvalStatus === "approved" ? <CheckCircle2 className="w-3 h-3 mr-1 inline" /> :
+               item.approvalStatus === "rejected" ? <XCircle className="w-3 h-3 mr-1 inline" /> :
+               <Clock className="w-3 h-3 mr-1 inline" />}
+              {item.approvalStatus}
+            </Badge>
+            {item.status && (
+              <Badge className={`text-xs ${STATUS_COLORS[item.status] || "bg-gray-100 text-gray-600"}`} data-testid="detail-status">
+                {item.status.replace(/_/g, " ")}
+              </Badge>
+            )}
+            {item.isPmsi && <PmsiTag />}
+          </div>
+
+          <Separator />
+
+          {/* Grantor / Borrower */}
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Grantor (Borrower)</p>
+            <div className="grid grid-cols-2 gap-3">
+              <DetailRow label="Name" value={item.borrowerName} />
+              <DetailRow label="Grantor ID" value={item.borrowerId} />
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Collateral */}
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Collateral</p>
+            <div className="grid grid-cols-2 gap-3">
+              <DetailRow label="Type" value={collateralLabel?.replace(/_/g, " ")} />
+              <DetailRow label="Security Interest" value={siLabel} />
+              <DetailRow
+                label="Estimated Value"
+                value={formatCurrency(item.estimatedValue, item.currency)}
+              />
+              <DetailRow label="Asset Identifier" value={item.assetLocalIdentifier} />
+              {item.panAfricanAssetId && (
+                <div className="col-span-2">
+                  <DetailRow
+                    label="Pan-African Asset ID"
+                    value={
+                      <span className="text-blue-600 dark:text-blue-400 font-mono text-xs">
+                        {item.panAfricanAssetId}
+                      </span>
+                    }
+                  />
+                </div>
+              )}
+              {item.description && (
+                <div className="col-span-2">
+                  <DetailRow label="Description" value={item.description} />
+                </div>
+              )}
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Registration */}
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Registration</p>
+            <div className="grid grid-cols-2 gap-3">
+              <DetailRow label="Reg Number" value={<span className="font-mono text-xs">{item.registrationNumber}</span>} />
+              <DetailRow label="Expiry" value={expiryDisplay} />
+              {item.verificationCode && (
+                <div className="col-span-2">
+                  <DetailRow
+                    label="Verification Code"
+                    value={<span className="font-mono text-xs">{item.verificationCode}</span>}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {item.approvalStatus === "rejected" && item.rejectionReason && (
+            <>
+              <Separator />
+              <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 text-sm text-red-700 dark:text-red-400">
+                <p className="text-xs font-semibold mb-1">Rejection Reason</p>
+                {item.rejectionReason}
+              </div>
+            </>
+          )}
+
+          {/* Actions */}
+          {item.approvalStatus === "approved" && item.certificateNumber && (
+            <>
+              <Separator />
+              <Button
+                className="w-full gap-2"
+                onClick={() => downloadCertificate(item)}
+                data-testid="detail-btn-download-cert"
+              >
+                <Download className="w-4 h-4" />
+                Download Certificate PDF
+              </Button>
+            </>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 // ─── My Registrations Tab ─────────────────────────────────────────────────────
 
 function MyRegistrations() {
@@ -1234,6 +1405,7 @@ function MyRegistrations() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [resubmitItem, setResubmitItem] = useState<CollateralRegistryItem | null>(null);
+  const [selectedItem, setSelectedItem] = useState<CollateralRegistryItem | null>(null);
   const { toast } = useToast();
 
   const copyVerificationLink = (item: CollateralRegistryItem) => {
@@ -1272,6 +1444,11 @@ function MyRegistrations() {
 
   return (
     <div className="space-y-6">
+      <CertificateDetailSheet
+        item={selectedItem}
+        open={!!selectedItem}
+        onClose={() => setSelectedItem(null)}
+      />
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <Card><CardContent className="pt-5">
           <div className="text-2xl font-bold">{stats.total}</div>
@@ -1350,7 +1527,12 @@ function MyRegistrations() {
                 </TableHeader>
                 <TableBody>
                   {filtered.map((item) => (
-                    <TableRow key={item.id} data-testid={`row-collateral-${item.id}`}>
+                    <TableRow
+                      key={item.id}
+                      data-testid={`row-collateral-${item.id}`}
+                      className="cursor-pointer hover:bg-muted/60 transition-colors"
+                      onClick={() => setSelectedItem(item)}
+                    >
                       <TableCell><PriorityBadge rank={item.lienPriority} /></TableCell>
                       <TableCell className="font-mono text-xs">{item.registrationNumber}</TableCell>
                       <TableCell className="text-sm">
@@ -1414,29 +1596,46 @@ function MyRegistrations() {
                         <div className="flex gap-1 flex-wrap">
                           {item.approvalStatus === "approved" && (
                             <>
-                              <CertificatePreviewDialog item={item} />
+                              <div onClick={e => e.stopPropagation()}>
+                                <CertificatePreviewDialog item={item} />
+                              </div>
                               {item.verificationCode && (
                                 <>
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => copyVerificationLink(item)}
+                                    onClick={(e) => { e.stopPropagation(); copyVerificationLink(item); }}
                                     title="Copy verification link"
                                     data-testid={`btn-copy-verify-link-${item.id}`}
                                   >
                                     <Link2 className="w-4 h-4 text-primary" />
                                   </Button>
-                                  <VerificationPreviewPopover item={item} />
-                                  <ShareVerificationLinkDialog item={item} />
+                                  <div onClick={e => e.stopPropagation()}>
+                                    <VerificationPreviewPopover item={item} />
+                                  </div>
+                                  <div onClick={e => e.stopPropagation()}>
+                                    <ShareVerificationLinkDialog item={item} />
+                                  </div>
                                 </>
                               )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => { e.stopPropagation(); downloadCertificate(item); }}
+                                title="Download PDF Certificate"
+                                data-testid={`btn-download-cert-${item.id}`}
+                                className="gap-1.5 text-xs h-7 px-2 text-primary border-primary/30 hover:bg-primary/5"
+                              >
+                                <Download className="w-3.5 h-3.5" />
+                                Certificate
+                              </Button>
                             </>
                           )}
                           {item.approvalStatus === "rejected" && (
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => setResubmitItem(item)}
+                              onClick={(e) => { e.stopPropagation(); setResubmitItem(item); }}
                               data-testid={`btn-fix-resubmit-${item.id}`}
                               className="gap-1.5 text-xs h-7 px-2 text-amber-700 border-amber-300 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-700 dark:hover:bg-amber-950/30"
                             >
