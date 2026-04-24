@@ -15155,10 +15155,13 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const description = (item as any).description || (item as any).collateralType || "Registered Security Interest";
 
       let sent = false;
+      let maskedRecipient = "";
       if (channel === "email") {
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
           return res.status(400).json({ message: "Invalid email address" });
         }
+        const [local, domain] = recipient.split("@");
+        maskedRecipient = `${local[0]}***@${domain}`;
         sent = await sendCollateralVerificationLinkEmail(recipient, lenderName, verificationUrl, description, borrowerName, message);
         if (!sent) {
           console.log(`[Collateral Share][Email Stub] Would send to ${recipient}: ${verificationUrl}`);
@@ -15169,6 +15172,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         if (!/^\+?[0-9]{7,15}$/.test(phone)) {
           return res.status(400).json({ message: "Invalid phone number" });
         }
+        maskedRecipient = `${phone.slice(0, Math.min(4, phone.length - 3))}***${phone.slice(-3)}`;
         const personalNote = message ? `\n\nMessage from ${lenderName}: ${message}` : "";
         const smsText = `${lenderName} shared a collateral verification link with you.\n\nBorrower: ${borrowerName}\nCollateral: ${description.substring(0, 60)}${personalNote}\n\nVerify at: ${verificationUrl}\n\n- Africa Credit Hub`;
         sent = await sendSms(phone, smsText);
@@ -15178,7 +15182,33 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         }
       }
 
+      if (sent) {
+        const sentById = (req.session as any)?.userId as string | undefined;
+        await storage.createCollateralShareLog({
+          collateralItemId: req.params.id,
+          channel,
+          maskedRecipient,
+          sentBy: sentById || null,
+        });
+      }
+
       res.json({ success: sent, channel, recipient });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // Get share history for a collateral item
+  app.get("/api/collateral/:id/share-log", requireRole("admin", "super_admin", "lender"), async (req, res) => {
+    try {
+      const item = await storage.getCollateralItem(req.params.id);
+      if (!item) return res.status(404).json({ message: "Not found" });
+
+      const orgId = (req.session as any)?.organizationId;
+      if (item.organizationId && orgId && String(item.organizationId) !== String(orgId)) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const log = await storage.getCollateralShareLog(req.params.id);
+      res.json(log);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 

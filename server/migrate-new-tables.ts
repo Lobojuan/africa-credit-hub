@@ -730,5 +730,15 @@ export async function migrateNewTables() {
     sent_at timestamp NOT NULL DEFAULT now()
   )`);
 
+  // Collateral Share Log — audit trail for verification link sharing
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS collateral_share_log (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    collateral_item_id varchar NOT NULL REFERENCES collateral_items(id) ON DELETE CASCADE,
+    channel text NOT NULL,
+    masked_recipient text NOT NULL,
+    sent_by varchar REFERENCES users(id),
+    sent_at timestamp NOT NULL DEFAULT now()
+  )`);
+
   console.log('[NewTables] Migration complete');
 }

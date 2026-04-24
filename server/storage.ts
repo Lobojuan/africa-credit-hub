@@ -62,11 +62,12 @@ import {
   type RegistryHealthEvent, type InsertRegistryHealthEvent,
   trainingAttempts,
   type TrainingAttempt, type InsertTrainingAttempt,
-  loanApplications, loanRepaymentSchedules, collateralItems, institutionBranding,
+  loanApplications, loanRepaymentSchedules, collateralItems, collateralShareLog, institutionBranding,
   registryCountryConfig,
   type LoanApplication, type InsertLoanApplication,
   type LoanRepaymentSchedule, type InsertLoanRepaymentSchedule,
   type CollateralItem, type InsertCollateralItem,
+  type CollateralShareLog, type InsertCollateralShareLog,
   type InstitutionBranding, type InsertInstitutionBranding,
   type RegistryCountryConfig, type InsertRegistryCountryConfig,
   portfolioTriggerSubscriptions, portfolioTriggerEvents,
@@ -371,6 +372,8 @@ export interface IStorage {
   rejectCollateralItem(id: string, rejectionReason: string): Promise<CollateralItem | undefined>;
   enforceCollateralItem(id: string): Promise<CollateralItem | undefined>;
   dischargeCollateralItem(id: string): Promise<CollateralItem | undefined>;
+  createCollateralShareLog(data: InsertCollateralShareLog): Promise<CollateralShareLog>;
+  getCollateralShareLog(collateralItemId: string): Promise<CollateralShareLog[]>;
   getCollateralRegulatoryReport(countryCode: string): Promise<{
     totalActive: number; totalValue: number;
     byInstitution: { orgId: string; orgName: string; count: number; value: number }[];
@@ -3062,6 +3065,17 @@ export class DatabaseStorage implements IStorage {
       .where(eq(collateralItems.id, id))
       .returning();
     return updated;
+  }
+
+  async createCollateralShareLog(data: InsertCollateralShareLog): Promise<CollateralShareLog> {
+    const [row] = await db.insert(collateralShareLog).values(data).returning();
+    return row;
+  }
+
+  async getCollateralShareLog(collateralItemId: string): Promise<CollateralShareLog[]> {
+    return db.select().from(collateralShareLog)
+      .where(eq(collateralShareLog.collateralItemId, collateralItemId))
+      .orderBy(desc(collateralShareLog.sentAt));
   }
 
   async getCollateralRegulatoryReport(countryCode: string): Promise<{

@@ -1862,6 +1862,23 @@ export type InsertCollateralItem = z.infer<typeof insertCollateralItemSchema>;
 export type CollateralItem = typeof collateralItems.$inferSelect;
 
 // ---------------------------------------------------------------------------
+// Collateral Share Log — tracks who received verification links and when
+// ---------------------------------------------------------------------------
+
+export const collateralShareLog = pgTable("collateral_share_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  collateralItemId: varchar("collateral_item_id").notNull().references(() => collateralItems.id, { onDelete: "cascade" }),
+  channel: text("channel").notNull(), // "email" | "sms"
+  maskedRecipient: text("masked_recipient").notNull(),
+  sentBy: varchar("sent_by").references(() => users.id),
+  sentAt: timestamp("sent_at").notNull().defaultNow(),
+});
+
+export const insertCollateralShareLogSchema = createInsertSchema(collateralShareLog).omit({ id: true, sentAt: true });
+export type InsertCollateralShareLog = z.infer<typeof insertCollateralShareLogSchema>;
+export type CollateralShareLog = typeof collateralShareLog.$inferSelect;
+
+// ---------------------------------------------------------------------------
 // Registry Country Config — 54 African countries pre-configured
 // ---------------------------------------------------------------------------
 

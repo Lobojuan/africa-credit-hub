@@ -24,7 +24,7 @@ import {
   Award, Clock, CheckCircle2, XCircle, AlertTriangle,
   Download, Shield, Zap, Star, TrendingUp, Package, Link2,
   Eye, CheckCircle, Building2, User, Tag, Calendar, ExternalLink, Copy, Check,
-  Share2, Mail, MessageSquare, Printer,
+  Share2, Mail, MessageSquare, Printer, History,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -192,12 +192,27 @@ function PmsiTag() {
 
 // ─── Share Verification Link Dialog ──────────────────────────────────────────
 
+interface ShareLogEntry {
+  id: string;
+  collateralItemId: string;
+  channel: string;
+  maskedRecipient: string;
+  sentBy: string | null;
+  sentAt: string;
+}
+
 function ShareVerificationLinkDialog({ item }: { item: CollateralRegistryItem }) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [channel, setChannel] = useState<"email" | "sms">("email");
   const [recipient, setRecipient] = useState("");
   const [personalMessage, setPersonalMessage] = useState("");
+
+  const shareLogQuery = useQuery<ShareLogEntry[]>({
+    queryKey: ["/api/collateral", item.id, "share-log"],
+    queryFn: () => apiRequest("GET", `/api/collateral/${item.id}/share-log`).then(r => r.json()),
+    enabled: open,
+  });
 
   const shareMutation = useMutation({
     mutationFn: ({ channel, recipient, message }: { channel: "email" | "sms"; recipient: string; message?: string }) =>
@@ -209,7 +224,7 @@ function ShareVerificationLinkDialog({ item }: { item: CollateralRegistryItem })
           ? `Email sent to ${recipient}`
           : `SMS sent to ${recipient}`,
       });
-      setOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/collateral", item.id, "share-log"] });
       setRecipient("");
       setPersonalMessage("");
     },
@@ -223,6 +238,8 @@ function ShareVerificationLinkDialog({ item }: { item: CollateralRegistryItem })
     }
     shareMutation.mutate({ channel, recipient: recipient.trim(), message: personalMessage.trim() || undefined });
   };
+
+  const shareLog = shareLogQuery.data ?? [];
 
   return (
     <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) { setRecipient(""); setPersonalMessage(""); } }}>
@@ -313,6 +330,40 @@ function ShareVerificationLinkDialog({ item }: { item: CollateralRegistryItem })
               {shareMutation.isPending ? "Sending…" : `Send via ${channel === "email" ? "Email" : "SMS"}`}
             </Button>
           </div>
+
+          {shareLog.length > 0 && (
+            <div className="border-t pt-3 space-y-2" data-testid="share-history">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <History className="w-4 h-4" />
+                Share history ({shareLog.length} recipient{shareLog.length !== 1 ? "s" : ""})
+              </div>
+              <div className="space-y-1 max-h-40 overflow-y-auto">
+                {shareLog.map(entry => (
+                  <div
+                    key={entry.id}
+                    className="flex items-center justify-between text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1.5"
+                    data-testid={`share-log-entry-${entry.id}`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      {entry.channel === "email"
+                        ? <Mail className="w-3 h-3 shrink-0" />
+                        : <MessageSquare className="w-3 h-3 shrink-0" />}
+                      <span className="font-mono">{entry.maskedRecipient}</span>
+                    </div>
+                    <span className="text-muted-foreground/70 shrink-0 ml-2">
+                      {format(new Date(entry.sentAt), "dd MMM yyyy, HH:mm")}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {shareLogQuery.isLoading && (
+            <div className="text-xs text-muted-foreground flex items-center gap-1">
+              <RefreshCw className="w-3 h-3 animate-spin" /> Loading history…
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
