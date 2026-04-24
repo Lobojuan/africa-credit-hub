@@ -632,6 +632,73 @@ export async function sendRegistryAuthorityWelcomeEmail(
   );
 }
 
+export async function sendLienApprovalEmail(
+  lenderEmail: string,
+  lenderOrgName: string,
+  certificateNumber: string,
+  priorityRank: number,
+  collateralId: string,
+  assetDescription: string,
+  baseUrl: string,
+): Promise<boolean> {
+  const certUrl = `${baseUrl}/api/collateral/${collateralId}/certificate`;
+  const body = `
+    <p style="color:#333;font-size:14px;line-height:1.6;">
+      Good news! Your lien registration has been <strong style="color:#16a34a;">approved</strong> by the Registry Authority.
+    </p>
+    <div style="background:#f0fdf4;border-radius:8px;padding:16px 20px;margin:16px 0;border-left:4px solid #16a34a;">
+      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Organisation:</strong> ${esc(lenderOrgName)}</p>
+      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Certificate Number:</strong> <code style="background:#e5e7eb;padding:2px 6px;border-radius:4px;">${esc(certificateNumber)}</code></p>
+      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Priority Rank:</strong> #${priorityRank}</p>
+      <p style="margin:0;font-size:13px;color:#555;"><strong>Asset:</strong> ${esc(assetDescription)}</p>
+    </div>
+    <p style="color:#333;font-size:14px;line-height:1.6;">
+      Your lien has been registered and is now publicly searchable in the Pan-African Collateral Registry. You can download your certificate of registration using the link below.
+    </p>
+    <div style="text-align:center;margin:24px 0;">
+      <a href="${esc(certUrl)}" style="display:inline-block;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:600;">Download Certificate (PDF)</a>
+    </div>
+    <p style="color:#888;font-size:12px;margin-top:16px;">Keep this certificate as proof of your registered security interest. If you have any questions, please contact support.</p>
+  `;
+  return sendEmail(
+    lenderEmail,
+    `Lien Registration Approved — Certificate ${certificateNumber}`,
+    createEmailHtml("Lien Registration Approved", body),
+  );
+}
+
+export async function sendLienRejectionEmail(
+  lenderEmail: string,
+  lenderOrgName: string,
+  rejectionReason: string,
+  assetDescription: string,
+  baseUrl: string,
+): Promise<boolean> {
+  const portalUrl = `${baseUrl}/collateral`;
+  const body = `
+    <p style="color:#333;font-size:14px;line-height:1.6;">
+      We regret to inform you that your lien registration has been <strong style="color:#dc2626;">rejected</strong> by the Registry Authority.
+    </p>
+    <div style="background:#fff5f5;border-radius:8px;padding:16px 20px;margin:16px 0;border-left:4px solid #dc2626;">
+      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Organisation:</strong> ${esc(lenderOrgName)}</p>
+      <p style="margin:0 0 8px;font-size:13px;color:#555;"><strong>Asset:</strong> ${esc(assetDescription)}</p>
+      <p style="margin:0;font-size:13px;color:#555;"><strong>Reason for Rejection:</strong> ${esc(rejectionReason)}</p>
+    </div>
+    <p style="color:#333;font-size:14px;line-height:1.6;">
+      Please review the rejection reason above, correct any issues with your submission, and re-submit your registration through the portal.
+    </p>
+    <div style="text-align:center;margin:24px 0;">
+      <a href="${esc(portalUrl)}" style="display:inline-block;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:600;">Go to Collateral Portal</a>
+    </div>
+    <p style="color:#888;font-size:12px;margin-top:16px;">If you believe this rejection was made in error, please contact the Registry Authority or support for assistance.</p>
+  `;
+  return sendEmail(
+    lenderEmail,
+    `Lien Registration Rejected — Action Required`,
+    createEmailHtml("Lien Registration Rejected", body),
+  );
+}
+
 export function isEmailConfigured(): boolean {
   return emailConfigured;
 }

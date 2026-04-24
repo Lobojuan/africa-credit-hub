@@ -67,7 +67,7 @@ import * as OTPAuth from "otpauth";
 import multer from "multer";
 import rateLimit from "express-rate-limit";
 import { isGhanaMode, getActiveCountryName, isSingleCountryMode, COUNTRY_REGISTRY, getSupportedCountries } from "./country-mode";
-import { sendWelcomeEmail, sendBillingNotification, sendDisputeNotification, sendNewRegistrationAlert, sendConsumerOtpEmail, sendConsumerVerificationLink, sendContactSalesEmail, sendRegistryAuthorityWelcomeEmail, sendCertificateEmail } from "./email";
+import { sendWelcomeEmail, sendBillingNotification, sendDisputeNotification, sendNewRegistrationAlert, sendConsumerOtpEmail, sendConsumerVerificationLink, sendContactSalesEmail, sendRegistryAuthorityWelcomeEmail, sendCertificateEmail, sendLienApprovalEmail, sendLienRejectionEmail } from "./email";
 import { sendSms, sendOtpSms, isSmsConfigured } from "./sms";
 import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport, generatePortfolioIntelligence, parseProvider, parseOptionalProvider, generateCreditNarrative, detectAnomalies, generateRegulatoryReport, naturalLanguageQuery, analyzeCrossBorderRisk, generateLoanRecommendation, generateCreditInsights, callAI, parseJSON, generateAIResponse } from "./ai";
 import { BOG_EXPORT_GENERATORS } from "./bog-export";
@@ -14815,6 +14815,29 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         await storage.updateCollateralItem(req.params.id, { registryAuthorityId: approverOrgId });
       }
       const updated = await storage.approveCollateralItem(req.params.id, userId, certNum, priority);
+
+      // Send approval email to the lender organisation (fire-and-forget, non-blocking)
+      if (item.lenderOrganizationId) {
+        storage.getOrganization(item.lenderOrganizationId).then((lenderOrg) => {
+          if (lenderOrg?.contactEmail) {
+            const assetDesc = item.description || item.collateralType || "Registered Asset";
+            sendLienApprovalEmail(
+              lenderOrg.contactEmail,
+              lenderOrg.name,
+              certNum,
+              priority,
+              req.params.id,
+              assetDesc,
+              getBaseUrl(),
+            ).catch((err: any) => {
+              console.error(`[LienEmail] Failed to send approval email for collateral ${req.params.id}:`, err?.message || err);
+            });
+          }
+        }).catch((err: any) => {
+          console.error(`[LienEmail] Failed to fetch lender org for approval email (collateral ${req.params.id}):`, err?.message || err);
+        });
+      }
+
       res.json(updated);
 
       // Fire-and-forget: generate PDF and email the certificate to the lender (and optionally borrower)
@@ -14877,6 +14900,27 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (!reason) return res.status(400).json({ message: "Rejection reason required" });
       const updated = await storage.rejectCollateralItem(req.params.id, reason);
       if (!updated) return res.status(404).json({ message: "Not found" });
+
+      // Send rejection email to the lender organisation (fire-and-forget, non-blocking)
+      if (item.lenderOrganizationId) {
+        storage.getOrganization(item.lenderOrganizationId).then((lenderOrg) => {
+          if (lenderOrg?.contactEmail) {
+            const assetDesc = item.description || item.collateralType || "Registered Asset";
+            sendLienRejectionEmail(
+              lenderOrg.contactEmail,
+              lenderOrg.name,
+              reason,
+              assetDesc,
+              getBaseUrl(),
+            ).catch((err: any) => {
+              console.error(`[LienEmail] Failed to send rejection email for collateral ${req.params.id}:`, err?.message || err);
+            });
+          }
+        }).catch((err: any) => {
+          console.error(`[LienEmail] Failed to fetch lender org for rejection email (collateral ${req.params.id}):`, err?.message || err);
+        });
+      }
+
       res.json(updated);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
