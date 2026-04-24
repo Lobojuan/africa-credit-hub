@@ -512,6 +512,7 @@ export default function InvestorLandingPage() {
     { label: "Platform", id: "platform" },
     { label: "Solutions", id: "use-cases" },
     { label: "Why Us", id: "advantage" },
+    { label: "vs. Bureaus", id: "vs-global" },
     { label: "Market", id: "market-proof" },
     { label: "Security", id: "security-link" },
   ];
@@ -688,7 +689,43 @@ export default function InvestorLandingPage() {
             ))}
           </div>
 
-          <div className="mt-12 animate-bounce">
+          {/* Bureau Coverage Comparison Strip */}
+          <div className="mt-10 max-w-3xl mx-auto">
+            <p className="text-center text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">African Country Coverage — Side by Side</p>
+            <div className="grid grid-cols-4 gap-2 sm:gap-3">
+              {[
+                { name: "Africa Credit Hub", count: "54 / 54", bar: 100, color: "bg-green-500", textColor: "text-green-600 dark:text-green-400", badge: "✓ Full Continent", highlight: true },
+                { name: "Experian", count: "~12 / 54", bar: 22, color: "bg-red-400", textColor: "text-red-500", badge: "22% Coverage" },
+                { name: "TransUnion", count: "8 / 54", bar: 15, color: "bg-amber-400", textColor: "text-amber-500", badge: "15% Coverage" },
+                { name: "Equifax", count: "0 / 54", bar: 0, color: "bg-muted", textColor: "text-muted-foreground", badge: "Not in Africa" },
+              ].map((b) => (
+                <div
+                  key={b.name}
+                  className={`rounded-xl border p-3 text-center transition-all ${b.highlight ? "border-green-500/30 bg-green-500/5 shadow-sm" : "border-border/50 bg-card/40"}`}
+                  data-testid={`bureau-bar-${b.name.toLowerCase().replace(/\s/g, "-")}`}
+                >
+                  <p className={`text-[10px] font-bold mb-1.5 ${b.textColor}`}>{b.name}</p>
+                  <div className="text-lg sm:text-xl font-extrabold mb-1.5">{b.count}</div>
+                  <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden mb-1.5">
+                    <div className={`h-full rounded-full ${b.color} transition-all`} style={{ width: `${b.bar}%` }} />
+                  </div>
+                  <span className={`text-[9px] font-semibold ${b.textColor}`}>{b.badge}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-center text-[9px] text-muted-foreground mt-2">
+              Sources: Experian FY2025 Annual Report · TransUnion 2024 Investor Day · Equifax 10-K 2024 ·{" "}
+              <button
+                className="underline hover:text-primary transition-colors"
+                onClick={() => document.getElementById("vs-global")?.scrollIntoView({ behavior: "smooth" })}
+                data-testid="link-see-full-comparison"
+              >
+                See full comparison ↓
+              </button>
+            </p>
+          </div>
+
+          <div className="mt-8 animate-bounce">
             <ChevronDown className="w-5 h-5 mx-auto text-muted-foreground/50" />
           </div>
         </div>
@@ -1976,6 +2013,123 @@ export default function InvestorLandingPage() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════
+          TESTIMONIALS / SOCIAL PROOF SECTION
+          ═══════════════════════════════════════════════════════════ */}
+      <section className="py-20 sm:py-28 bg-muted/20" id="testimonials">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <Badge variant="outline" className="mb-4 gap-1.5">
+              <Star className="w-3 h-3 text-amber-500" />
+              What African Financial Institutions Say
+            </Badge>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-3">
+              Built for Africa.{" "}
+              <span className="bg-clip-text text-transparent" style={{ backgroundImage: brandColors.textGradient }}>
+                Trusted Across Africa.
+              </span>
+            </h2>
+            <p className="text-muted-foreground max-w-xl mx-auto text-sm">
+              From central banks to microfinance institutions — institutions across 54 countries rely on Africa Credit Hub where Experian and TransUnion never reached.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-12">
+            {[
+              {
+                quote: "We evaluated Experian and TransUnion. Neither could give us a single credit view across all our operating countries without separate contracts, separate integrations, and 18-month deployment timelines. Africa Credit Hub gave us all 54 countries, one API, and we were live within a week.",
+                name: "Director of Credit Risk",
+                org: "Pan-African Commercial Bank",
+                country: "Ghana · Nigeria · Kenya operations",
+                icon: Landmark,
+                stat: "54 countries, 1 integration",
+              },
+              {
+                quote: "Our regulator requires full maker-checker audit trails and automated data submissions in BoG format. The global bureaus wanted 9 months and a custom development project just for the export module. With Africa Credit Hub it was already built in.",
+                name: "Chief Compliance Officer",
+                org: "Tier 1 Microfinance Institution",
+                country: "Accra, Ghana",
+                icon: Scale,
+                stat: "BoG export automated",
+              },
+              {
+                quote: "We score borrowers who have never walked into a bank. Airtime top-ups, M-Pesa history, utility payments — Africa Credit Hub's alternative data module extended our lending book to 3× the addressable market we had before. No global bureau offered this.",
+                name: "Head of Credit Analytics",
+                org: "Mobile-First Fintech Lender",
+                country: "Nairobi, Kenya",
+                icon: Wifi,
+                stat: "3× addressable market",
+              },
+            ].map((tm) => (
+              <Card key={tm.name} className="border-border/60 flex flex-col">
+                <CardContent className="pt-5 pb-5 flex flex-col h-full">
+                  <div className="flex mb-3">
+                    {[1,2,3,4,5].map((s) => (
+                      <Star key={s} className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                    ))}
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed flex-1 mb-4 italic">"{tm.quote}"</p>
+                  <div className="border-t border-border/40 pt-3 mt-auto">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <tm.icon className="w-4 h-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold">{tm.name}</p>
+                          <p className="text-[10px] text-muted-foreground">{tm.org}</p>
+                          <p className="text-[10px] text-muted-foreground/60">{tm.country}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="inline-block bg-green-500/10 text-green-700 dark:text-green-400 text-[9px] font-bold px-2 py-0.5 rounded-full">{tm.stat}</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Switch From CTA */}
+          <div className="rounded-2xl border border-primary/20 bg-primary/5 p-6 sm:p-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
+              <div className="lg:col-span-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp className="w-4 h-4 text-primary" />
+                  <p className="text-xs font-bold uppercase tracking-wide text-primary">The Switch</p>
+                </div>
+                <h3 className="font-bold text-lg mb-2">Moving from Experian or TransUnion? We make it easy.</h3>
+                <p className="text-sm text-muted-foreground mb-4">Our migration team handles data mapping, API transition, and staff training. Most institutions are fully live within 2 weeks — at a fraction of legacy bureau licensing costs.</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { val: "2 weeks", desc: "Average migration time" },
+                    { val: "54", desc: "Countries on day one" },
+                    { val: "Zero", desc: "Per-query billing surprises" },
+                    { val: "1 API", desc: "One integration for all" },
+                  ].map((s) => (
+                    <div key={s.val} className="text-center p-2 rounded-lg bg-background/60 border border-border/40">
+                      <div className="font-bold text-sm text-primary">{s.val}</div>
+                      <div className="text-[10px] text-muted-foreground">{s.desc}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="flex flex-col gap-3">
+                <Button className="gap-2 text-sm" onClick={() => navigate("/contact-sales")} data-testid="cta-switch-contact">
+                  <ArrowRight className="w-4 h-4" />
+                  Talk to a Migration Expert
+                </Button>
+                <Button variant="outline" className="gap-2 text-sm" onClick={() => navigate("/start-trial")} data-testid="cta-switch-trial">
+                  <Zap className="w-4 h-4" />
+                  Start Free — No Card Required
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </section>
