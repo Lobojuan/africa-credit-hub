@@ -42,6 +42,8 @@ interface CollateralRegistryItem {
   registrationNumber?: string;
   borrowerName?: string;
   borrowerId?: string;
+  lenderOrganizationId?: string;
+  lenderInstitutionName?: string;
   collateralType?: string;
   assetLocalIdentifier?: string;
   panAfricanAssetId?: string;
@@ -640,7 +642,7 @@ function VerificationPreviewPopover({ item }: { item: CollateralRegistryItem }) 
               <VerifyInfoField
                 icon={<Building2 className="w-3 h-3" />}
                 label="Secured Party"
-                value={item.borrowerId}
+                value={item.lenderInstitutionName}
               />
               <VerifyInfoField
                 icon={<User className="w-3 h-3" />}

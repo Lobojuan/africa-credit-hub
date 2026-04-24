@@ -14457,7 +14457,21 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       // Registry authority sees nothing in the lender portal (use /api/collateral/pending)
       const orgId = isSuperAdmin ? undefined : req.session?.organizationId;
       const items = await storage.getCollateralItems(orgId, borrowerId);
-      res.json(items);
+      // Enrich each item with the lender institution name from the organization record
+      const uniqueOrgIds = [...new Set(items.map(i => i.lenderOrganizationId).filter(Boolean))];
+      const orgResults = await Promise.allSettled(uniqueOrgIds.map(id => storage.getOrganization(id as string)));
+      const orgMap = new Map(
+        orgResults
+          .map((r, i) => (r.status === "fulfilled" && r.value ? [uniqueOrgIds[i], r.value.name] : null))
+          .filter((entry): entry is [string, string] => entry !== null)
+      );
+      const enriched = items.map(item => ({
+        ...item,
+        lenderInstitutionName: item.lenderOrganizationId
+          ? (orgMap.get(item.lenderOrganizationId) || "Unknown Institution")
+          : "Unknown Institution",
+      }));
+      res.json(enriched);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
