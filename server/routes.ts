@@ -14835,6 +14835,34 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         "dischargeDate", "rejectionReason", "status", "countryCode",
         "lenderOrganizationId",
       ];
+      // Super admin can reject via PATCH by supplying approvalStatus=rejected + rejectionReason
+      if (isSuperAdmin && req.body.approvalStatus === "rejected") {
+        const reason = req.body.rejectionReason as string | undefined;
+        if (!reason) return res.status(400).json({ message: "rejectionReason required when approvalStatus is 'rejected'" });
+        const rejected = await storage.rejectCollateralItem(req.params.id, reason);
+        if (!rejected) return res.status(404).json({ message: "Not found" });
+        // Fire-and-forget rejection email to lender
+        if (item.lenderOrganizationId) {
+          storage.getOrganization(item.lenderOrganizationId).then((lenderOrg) => {
+            if (lenderOrg?.contactEmail) {
+              const assetDesc = item.description || item.collateralType || "Registered Asset";
+              sendLienRejectionEmail(
+                lenderOrg.contactEmail,
+                lenderOrg.name,
+                reason,
+                assetDesc,
+                getBaseUrl(),
+              ).catch((err: any) => {
+                console.error(`[LienEmail] PATCH rejection email failed for collateral ${req.params.id}:`, err?.message || err);
+              });
+            }
+          }).catch((err: any) => {
+            console.error(`[LienEmail] PATCH: Failed to fetch lender org for rejection email (collateral ${req.params.id}):`, err?.message || err);
+          });
+        }
+        return res.json(rejected);
+      }
+
       let patchData: Record<string, unknown>;
       if (isSuperAdmin) {
         // Super admin can patch any field except explicit blocks
