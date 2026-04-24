@@ -631,6 +631,7 @@ export async function migrateNewTables() {
   // grantorNationalId: stores the borrower/grantor's government-issued national ID for audit/search
   // Placed here — after CREATE TABLE collateral_items — to be safe in fresh environments
   await db.execute(sql`ALTER TABLE collateral_items ADD COLUMN IF NOT EXISTS grantor_national_id text`);
+  await db.execute(sql`ALTER TABLE collateral_items ADD COLUMN IF NOT EXISTS resubmitted_from_id varchar REFERENCES collateral_items(id)`);
 
   // Registry Country Config — 54 African countries
   await db.execute(sql`CREATE TABLE IF NOT EXISTS registry_country_config (

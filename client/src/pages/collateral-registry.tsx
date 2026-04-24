@@ -73,6 +73,7 @@ interface CollateralRegistryItem {
   countryCode?: string;
   debtorType?: string;
   shareCount?: number;
+  resubmittedFromId?: string;
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -921,6 +922,7 @@ type RegisterCollateralDialogProps = {
   onSuccess: () => void;
   prefillData?: Partial<CollateralFormData>;
   rejectionReason?: string;
+  resubmittedFromId?: string;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   triggerButton?: React.ReactNode;
@@ -930,6 +932,7 @@ function RegisterCollateralDialog({
   onSuccess,
   prefillData,
   rejectionReason,
+  resubmittedFromId,
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
   triggerButton,
@@ -1000,6 +1003,7 @@ function RegisterCollateralDialog({
       verificationCode,
       grantorIdentifier: grantorIdRef || undefined,
       loanApplicationId: loanApplicationId || undefined,
+      resubmittedFromId: resubmittedFromId || undefined,
     });
   };
 
@@ -1884,6 +1888,8 @@ function MyRegistrations() {
     pmsiCount: items.filter(i => i.isPmsi).length,
   };
 
+  const itemById = Object.fromEntries(items.map(i => [i.id, i]));
+
   const filtered = items.filter(i => {
     if (typeFilter !== "all" && i.collateralType !== typeFilter) return false;
     if (statusFilter !== "all" && i.approvalStatus !== statusFilter) return false;
@@ -1986,7 +1992,17 @@ function MyRegistrations() {
                       onClick={() => setSelectedItem(item)}
                     >
                       <TableCell><PriorityBadge rank={item.lienPriority} /></TableCell>
-                      <TableCell className="font-mono text-xs">{item.registrationNumber}</TableCell>
+                      <TableCell className="font-mono text-xs">
+                        <div>{item.registrationNumber}</div>
+                        {item.resubmittedFromId && (
+                          <div
+                            className="text-xs text-amber-700 dark:text-amber-400 font-sans font-normal mt-0.5"
+                            data-testid={`resubmission-label-${item.id}`}
+                          >
+                            Resubmission of #{itemById[item.resubmittedFromId]?.registrationNumber ?? item.resubmittedFromId}
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className="text-sm">
                         <div>{item.borrowerName || "—"}</div>
                         <div className="text-xs text-muted-foreground">{item.borrowerId}</div>
@@ -2128,6 +2144,7 @@ function MyRegistrations() {
             refetch();
             queryClient.invalidateQueries({ queryKey: ["/api/collateral"] });
           }}
+          resubmittedFromId={resubmitItem.id}
           prefillData={{
             borrowerId: resubmitItem.borrowerId,
             borrowerName: resubmitItem.borrowerName,

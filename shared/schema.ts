@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, decimal, boolean, timestamp, pgEnum, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, decimal, boolean, timestamp, pgEnum, jsonb, AnyPgColumn } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -1853,6 +1853,7 @@ export const collateralItems = pgTable("collateral_items", {
   financingDuration: text("financing_duration").notNull().default("custom"),
   debtorType: text("debtor_type").notNull().default("individual"),
   verificationCode: text("verification_code"),
+  resubmittedFromId: varchar("resubmitted_from_id").references((): AnyPgColumn => collateralItems.id),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
