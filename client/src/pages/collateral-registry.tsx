@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import QRCode from "react-qr-code";
 import {
   Building, Plus, Search, RefreshCw, MapPin, FileText,
@@ -393,8 +394,93 @@ function CertificatePreviewDialog({ item }: { item: { id: string; registrationNu
         </DialogHeader>
 
         {isLoading && (
-          <div className="flex items-center justify-center py-12 text-muted-foreground">
-            Loading certificate data…
+          <div className="space-y-4" data-testid="certificate-preview-skeleton">
+            {/* Header skeleton */}
+            <div className="border rounded-lg p-4 bg-muted/30 flex flex-col items-center gap-2">
+              <Skeleton className="h-4 w-56" />
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-3 w-44" />
+            </div>
+
+            <Separator />
+
+            {/* Registration Details skeleton */}
+            <div>
+              <Skeleton className="h-3 w-36 mb-3" />
+              <div className="grid grid-cols-2 gap-3">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="flex flex-col gap-1">
+                    <Skeleton className="h-2.5 w-24" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Parties skeleton */}
+            <div>
+              <Skeleton className="h-3 w-16 mb-3" />
+              <div className="grid grid-cols-2 gap-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="flex flex-col gap-1">
+                    <Skeleton className="h-2.5 w-24" />
+                    <Skeleton className="h-4 w-28" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Collateral Details skeleton */}
+            <div>
+              <Skeleton className="h-3 w-32 mb-3" />
+              <div className="grid grid-cols-2 gap-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="flex flex-col gap-1">
+                    <Skeleton className="h-2.5 w-24" />
+                    <Skeleton className="h-4 w-36" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Legal & Financial skeleton */}
+            <div>
+              <Skeleton className="h-3 w-32 mb-3" />
+              <div className="grid grid-cols-2 gap-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="flex flex-col gap-1">
+                    <Skeleton className="h-2.5 w-24" />
+                    <Skeleton className="h-4 w-28" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Verification skeleton */}
+            <div>
+              <Skeleton className="h-3 w-24 mb-3" />
+              <div className="flex gap-6 items-start">
+                <Skeleton className="h-24 w-24 shrink-0 rounded" />
+                <div className="space-y-3 flex-1">
+                  <div className="flex flex-col gap-1">
+                    <Skeleton className="h-2.5 w-28" />
+                    <Skeleton className="h-4 w-40" />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Skeleton className="h-2.5 w-20" />
+                    <Skeleton className="h-3 w-52" />
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
