@@ -735,7 +735,7 @@ process.stderr.write = function (...args: any[]) {
     console.log("║     Pan-African Credit Registry — Status         ║");
     console.log("╠══════════════════════════════════════════════════╣");
     console.log(`║  Mode:          ${isProduction ? "PRODUCTION" : "DEVELOPMENT"}${isProduction ? "              " : "             "}║`);
-    console.log(`║  Author:         Uffe Jon Carlson (CDH-IP-2026-UJC-001)  ║`);
+    console.log(`║  Platform:       ${process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub"} — CDH v2.6         ║`);
     console.log(`║  Email:         ${isEmailConfigured() ? "✓ Configured" : "✗ Not configured"}${isEmailConfigured() ? "              " : "          "}║`);
     console.log(`║  SMS:           ${isSmsConfigured() ? "✓ Configured" : "✗ Not configured"}${isSmsConfigured() ? "              " : "          "}║`);
     console.log(`║  Database:      ${process.env.DATABASE_URL ? "✓ Connected" : "✗ Not connected"}${process.env.DATABASE_URL ? "               " : "           "}║`);

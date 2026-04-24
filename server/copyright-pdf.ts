@@ -5,25 +5,25 @@ function getCompanyName(): string {
 }
 
 function getPrimaryAuthor(): string {
-  return process.env.PLATFORM_ADMIN_NAME || "Uffe Jon Carlson";
+  return process.env.PLATFORM_ADMIN_NAME || "Platform Administrator";
 }
 
 function getAuthorTitle(): string {
-  return "Founder, Lead Architect & Principal Developer";
+  return process.env.PLATFORM_ADMIN_TITLE || "Founder, Lead Architect & Principal Developer";
 }
 
 function getAuthorEmail(): string {
-  return process.env.PLATFORM_ADMIN_EMAIL || "uffe@africacredithub.com";
+  return process.env.PLATFORM_ADMIN_EMAIL || process.env.PLATFORM_SUPPORT_EMAIL || "admin@africacredithub.com";
 }
 
 const PLATFORM_BUILD_IDENTITY = {
-  originalAuthor: "Uffe Jon Carlson",
-  originalCompany: "Carlson Capital & Systems In Motion Limited",
-  country: "Republic of Ghana",
+  originalAuthor: process.env.PLATFORM_ADMIN_NAME || "Platform Administrator",
+  originalCompany: process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub",
+  country: process.env.PLATFORM_COUNTRY || "Republic of Ghana",
   creationYear: 2026,
-  platformName: "Africa Credit Hub (CDH)",
-  registryRef: "CDH-IP-2026-UJC-001",
-} as const;
+  platformName: `${process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub"} (CDH)`,
+  registryRef: process.env.PLATFORM_REGISTRY_REF || "CDH-2026-001",
+};
 
 const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
   en: {

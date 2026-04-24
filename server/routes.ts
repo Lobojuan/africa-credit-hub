@@ -1099,7 +1099,7 @@ export async function registerRoutes(
   registerPlatformControlRoutes(app);
 
 
-  app.get("/api/global-search", async (req, res) => {
+  app.get("/api/global-search", requireAuth, async (req, res) => {
     try {
       const orgId = getOrgScope(req);
       const country = await getAccessibleCountriesForReq(req);
@@ -3339,7 +3339,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/disputes", async (req, res) => {
+  app.get("/api/disputes", requireAuth, async (req, res) => {
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
@@ -3351,7 +3351,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/disputes/:id", async (req, res) => {
+  app.get("/api/disputes/:id", requireAuth, async (req, res) => {
     try {
       const dispute = await storage.getDispute(req.params.id);
       if (!dispute) return res.status(404).json({ message: "Dispute not found" });
@@ -5164,7 +5164,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
     }
   });
 
-  app.get("/api/dishonoured-cheques", async (req, res) => {
+  app.get("/api/dishonoured-cheques", requireAuth, async (req, res) => {
     try {
       const borrowerId = req.query.borrowerId as string;
       const orgId = getOrgScope(req);
@@ -5387,7 +5387,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
     }
   });
 
-  app.get("/api/court-judgments", async (req, res) => {
+  app.get("/api/court-judgments", requireAuth, async (req, res) => {
     try {
       const borrowerId = req.query.borrowerId as string;
       const orgId = getOrgScope(req);
@@ -5421,7 +5421,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
     }
   });
 
-  app.get("/api/consent-records", async (req, res) => {
+  app.get("/api/consent-records", requireAuth, async (req, res) => {
     try {
       const borrowerId = req.query.borrowerId as string;
       const orgId = getOrgScope(req);
@@ -5696,7 +5696,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
     }
   });
 
-  app.get("/api/payment-history/:creditAccountId", async (req, res) => {
+  app.get("/api/payment-history/:creditAccountId", requireAuth, async (req, res) => {
     try {
       const country = getCountryFilter(req);
       if (country) {
@@ -5728,7 +5728,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
     }
   });
 
-  app.get("/api/institutions", async (req, res) => {
+  app.get("/api/institutions", requireAuth, async (req, res) => {
     try {
       const page = Math.max(1, parseInt(req.query.page as string) || 1);
       const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50));
@@ -12639,7 +12639,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     }
   });
 
-  app.get("/api/blockchain/anchors", async (_req, res) => {
+  app.get("/api/blockchain/anchors", requireAuth, requireRole("admin", "super_admin"), async (_req, res) => {
     try {
       const anchors = await getAnchors(50);
       res.json(anchors);
@@ -12674,7 +12674,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     }
   });
 
-  app.get("/api/blockchain/anchors/:id/verify", async (req, res) => {
+  app.get("/api/blockchain/anchors/:id/verify", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
     try {
       const result = await verifyAuditAgainstAnchor(req.params.id);
       res.json(result);
@@ -12780,7 +12780,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     }
   });
 
-  app.get("/api/websocket/status", async (_req, res) => {
+  app.get("/api/websocket/status", requireAuth, requireSuperAdmin, async (_req, res) => {
     const { getConnectedClientsCount } = await import("./websocket");
     res.json({ connectedClients: getConnectedClientsCount() });
   });
