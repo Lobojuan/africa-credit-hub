@@ -63,7 +63,7 @@ import {
   trainingAttempts,
   type TrainingAttempt, type InsertTrainingAttempt,
   loanApplications, loanRepaymentSchedules, collateralItems, collateralShareLog, collateralRejectionHistory, institutionBranding,
-  registryCountryConfig,
+  registryCountryConfig, collateralAmendmentRequests,
   type LoanApplication, type InsertLoanApplication,
   type LoanRepaymentSchedule, type InsertLoanRepaymentSchedule,
   type CollateralItem, type InsertCollateralItem,
@@ -71,6 +71,7 @@ import {
   type CollateralRejectionHistory, type InsertCollateralRejectionHistory,
   type InstitutionBranding, type InsertInstitutionBranding,
   type RegistryCountryConfig, type InsertRegistryCountryConfig,
+  type CollateralAmendmentRequest, type InsertCollateralAmendmentRequest,
   portfolioTriggerSubscriptions, portfolioTriggerEvents,
   consumerMonitoringPrefs, consumerMonitoringAlerts, consumerAccounts,
   type PortfolioTriggerSubscription, type InsertPortfolioTriggerSubscription,
@@ -418,6 +419,13 @@ export interface IStorage {
   markConsumerMonitoringAlertRead(id: string): Promise<boolean>;
   markAllConsumerMonitoringAlertsRead(consumerAccountId: string): Promise<number>;
   fireConsumerMonitoringAlerts(borrowerId: string, alertType: string, title: string, message: string, details?: object): Promise<number>;
+
+  // Collateral Amendment Requests
+  createCollateralAmendmentRequest(data: InsertCollateralAmendmentRequest): Promise<CollateralAmendmentRequest>;
+  getCollateralAmendmentRequests(countryCode?: string, lenderOrganizationId?: string): Promise<(CollateralAmendmentRequest & { registrationNumber?: string; collateralType?: string; lenderOrgName?: string; requesterName?: string })[]>;
+  getCollateralAmendmentRequestsForItem(collateralItemId: string): Promise<CollateralAmendmentRequest[]>;
+  approveCollateralAmendmentRequest(requestId: string, reviewedBy: string): Promise<CollateralAmendmentRequest | { error: "not_found" | "not_pending" | "invalid_data" | "collateral_not_approved" }>;
+  rejectCollateralAmendmentRequest(requestId: string, reviewedBy: string, reviewNotes: string): Promise<CollateralAmendmentRequest | { error: "not_found" | "not_pending" }>;
 }
 
 export interface OverdueAssignmentDetail {
@@ -3439,6 +3447,120 @@ export class DatabaseStorage implements IStorage {
       }
     }
     return fired;
+  }
+
+  async createCollateralAmendmentRequest(data: InsertCollateralAmendmentRequest): Promise<CollateralAmendmentRequest> {
+    const [row] = await db.insert(collateralAmendmentRequests).values(data).returning();
+    return row;
+  }
+
+  async getCollateralAmendmentRequests(countryCode?: string, lenderOrganizationId?: string): Promise<(CollateralAmendmentRequest & { registrationNumber?: string; collateralType?: string; lenderOrgName?: string; requesterName?: string })[]> {
+    const rows = await db
+      .select({
+        id: collateralAmendmentRequests.id,
+        collateralItemId: collateralAmendmentRequests.collateralItemId,
+        requestedBy: collateralAmendmentRequests.requestedBy,
+        lenderOrganizationId: collateralAmendmentRequests.lenderOrganizationId,
+        proposedChanges: collateralAmendmentRequests.proposedChanges,
+        amendmentReason: collateralAmendmentRequests.amendmentReason,
+        status: collateralAmendmentRequests.status,
+        reviewedBy: collateralAmendmentRequests.reviewedBy,
+        reviewNotes: collateralAmendmentRequests.reviewNotes,
+        reviewedAt: collateralAmendmentRequests.reviewedAt,
+        createdAt: collateralAmendmentRequests.createdAt,
+        updatedAt: collateralAmendmentRequests.updatedAt,
+        registrationNumber: collateralItems.registrationNumber,
+        collateralType: collateralItems.collateralType,
+        itemCountryCode: collateralItems.countryCode,
+        lenderOrgName: organizations.name,
+        requesterName: users.fullName,
+      })
+      .from(collateralAmendmentRequests)
+      .leftJoin(collateralItems, eq(collateralAmendmentRequests.collateralItemId, collateralItems.id))
+      .leftJoin(organizations, eq(collateralAmendmentRequests.lenderOrganizationId, organizations.id))
+      .leftJoin(users, eq(collateralAmendmentRequests.requestedBy, users.id))
+      .where(
+        and(
+          lenderOrganizationId ? eq(collateralAmendmentRequests.lenderOrganizationId, lenderOrganizationId) : undefined,
+          countryCode ? eq(collateralItems.countryCode, countryCode) : undefined,
+        )
+      )
+      .orderBy(desc(collateralAmendmentRequests.createdAt));
+    return rows.map(({ itemCountryCode: _cc, ...rest }) => ({
+      ...rest,
+      registrationNumber: rest.registrationNumber ?? undefined,
+      collateralType: rest.collateralType ?? undefined,
+      lenderOrgName: rest.lenderOrgName ?? undefined,
+      requesterName: rest.requesterName ?? undefined,
+    }));
+  }
+
+  async getCollateralAmendmentRequestsForItem(collateralItemId: string): Promise<CollateralAmendmentRequest[]> {
+    return db.select()
+      .from(collateralAmendmentRequests)
+      .where(eq(collateralAmendmentRequests.collateralItemId, collateralItemId))
+      .orderBy(desc(collateralAmendmentRequests.createdAt));
+  }
+
+  async approveCollateralAmendmentRequest(requestId: string, reviewedBy: string): Promise<CollateralAmendmentRequest | { error: "not_found" | "not_pending" | "invalid_data" | "collateral_not_approved" }> {
+    const [req] = await db.select().from(collateralAmendmentRequests).where(eq(collateralAmendmentRequests.id, requestId));
+    if (!req) return { error: "not_found" };
+    if (req.status !== "pending") return { error: "not_pending" };
+    let proposed: Record<string, unknown>;
+    try {
+      proposed = JSON.parse(req.proposedChanges) as Record<string, unknown>;
+    } catch {
+      return { error: "invalid_data" };
+    }
+    const ALLOWED_FIELDS: readonly string[] = [
+      "borrowerName", "borrowerId", "collateralType", "collateralClass", "description",
+      "estimatedValue", "currency", "documentReference", "grantorNationalId",
+      "assetLocalIdentifier", "panAfricanAssetId", "securityInterestType",
+      "financingDuration", "expiryDate", "registrationDate", "debtorType",
+      "isPmsi", "location", "notes", "legalRegime",
+      "vehicleChassis", "vehicleMake", "vehicleModel", "yearOfManufacture",
+      "engineNumber", "chassisNumber", "titleDeedNumber", "plotNumber",
+      "landRegistryRef", "surfaceAreaSqm", "serialNumber", "equipmentMake",
+      "equipmentModel", "purchaseDate", "assetDescription",
+      "grantorBusinessRegistryNumber", "grantorIdNumber",
+    ];
+    const safeChanges = Object.fromEntries(
+      Object.entries(proposed).filter(([k, v]) => ALLOWED_FIELDS.includes(k) && v !== undefined)
+    ) as Partial<typeof collateralItems.$inferInsert>;
+    let updated: typeof collateralAmendmentRequests.$inferSelect | undefined;
+    try {
+      updated = await db.transaction(async (tx) => {
+        const [claimed] = await tx.update(collateralAmendmentRequests)
+          .set({ status: "approved", reviewedBy, reviewedAt: new Date(), updatedAt: new Date() })
+          .where(and(eq(collateralAmendmentRequests.id, requestId), eq(collateralAmendmentRequests.status, "pending")))
+          .returning();
+        if (!claimed) return undefined;
+        const [collateralUpdated] = await tx.update(collateralItems)
+          .set({ ...safeChanges, updatedAt: new Date() })
+          .where(and(eq(collateralItems.id, req.collateralItemId), eq(collateralItems.approvalStatus, "approved")))
+          .returning({ id: collateralItems.id });
+        if (!collateralUpdated) throw new Error("COLLATERAL_NOT_APPROVED");
+        return claimed;
+      });
+    } catch (e: unknown) {
+      if (e instanceof Error && e.message === "COLLATERAL_NOT_APPROVED") {
+        return { error: "collateral_not_approved" };
+      }
+      throw e;
+    }
+    if (!updated) return { error: "not_pending" };
+    return updated;
+  }
+
+  async rejectCollateralAmendmentRequest(requestId: string, reviewedBy: string, reviewNotes: string): Promise<CollateralAmendmentRequest | { error: "not_found" | "not_pending" }> {
+    const [req] = await db.select().from(collateralAmendmentRequests).where(eq(collateralAmendmentRequests.id, requestId));
+    if (!req) return { error: "not_found" };
+    if (req.status !== "pending") return { error: "not_pending" };
+    const [updated] = await db.update(collateralAmendmentRequests)
+      .set({ status: "rejected", reviewedBy, reviewNotes, reviewedAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(collateralAmendmentRequests.id, requestId), eq(collateralAmendmentRequests.status, "pending")))
+      .returning();
+    return updated;
   }
 }
 

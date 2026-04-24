@@ -769,5 +769,30 @@ export async function migrateNewTables() {
       )
   `);
 
+  // Collateral Amendment Requests — formal amendment workflow for approved liens
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS collateral_amendment_requests (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    collateral_item_id varchar NOT NULL REFERENCES collateral_items(id) ON DELETE CASCADE,
+    requested_by varchar NOT NULL REFERENCES users(id),
+    lender_organization_id varchar NOT NULL REFERENCES organizations(id),
+    proposed_changes text NOT NULL,
+    amendment_reason text NOT NULL,
+    status text NOT NULL DEFAULT 'pending',
+    reviewed_by varchar REFERENCES users(id),
+    review_notes text,
+    reviewed_at timestamp,
+    created_at timestamp NOT NULL DEFAULT now(),
+    updated_at timestamp NOT NULL DEFAULT now()
+  )`);
+
+  await db.execute(sql`
+    DO $$ BEGIN
+      ALTER TABLE collateral_amendment_requests
+        ADD CONSTRAINT chk_amendment_status
+        CHECK (status IN ('pending', 'approved', 'rejected'));
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$;
+  `);
+
   console.log('[NewTables] Migration complete');
 }

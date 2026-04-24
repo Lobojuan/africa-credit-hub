@@ -1775,6 +1775,270 @@ interface RejectionHistoryEntry {
   rejectedAt: string;
 }
 
+interface AmendmentRequest {
+  id: string;
+  collateralItemId: string;
+  requestedBy: string;
+  lenderOrganizationId: string;
+  proposedChanges: string;
+  amendmentReason: string;
+  status: string;
+  reviewedBy: string | null;
+  reviewNotes: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+}
+
+function AmendmentRequestDialog({
+  item,
+  open,
+  onOpenChange,
+  onSuccess,
+}: {
+  item: CollateralRegistryItem;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onSuccess: () => void;
+}) {
+  const { toast } = useToast();
+  const [reason, setReason] = useState("");
+  const [form, setForm] = useState<Partial<CollateralFormData>>({
+    borrowerName: item.borrowerName ?? "",
+    description: item.description ?? "",
+    estimatedValue: item.estimatedValue ?? "",
+    currency: item.currency ?? "GHS",
+    location: item.location ?? "",
+    documentReference: item.documentReference ?? "",
+    notes: item.notes ?? "",
+    expiryDate: item.expiryDate ?? "",
+    collateralType: item.collateralType ?? "",
+    assetLocalIdentifier: item.assetLocalIdentifier ?? "",
+  });
+
+  const set = (k: keyof CollateralFormData, v: string | boolean) =>
+    setForm(f => ({ ...f, [k]: v }));
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      apiRequest("POST", `/api/collateral/${item.id}/amendment`, {
+        amendmentReason: reason.trim(),
+        proposedChanges: form,
+      }),
+    onSuccess: () => {
+      toast({
+        title: "Amendment Request Submitted",
+        description: "Your amendment request has been submitted for Registry Authority review.",
+      });
+      onOpenChange(false);
+      setReason("");
+      onSuccess();
+    },
+    onError: (err: any) => {
+      toast({
+        title: "Submission failed",
+        description: err?.message || "Could not submit the amendment request.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmit = () => {
+    if (!reason.trim()) {
+      toast({ title: "Reason required", description: "Please provide a reason for the amendment.", variant: "destructive" });
+      return;
+    }
+    mutation.mutate();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Pencil className="w-5 h-5 text-primary" />
+            Submit Amendment Request
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="flex items-start gap-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 mb-2" data-testid="amendment-request-notice">
+          <AlertTriangle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+          <div className="text-xs text-blue-800 dark:text-blue-200 space-y-1">
+            <p className="font-semibold">This registration is approved — changes require RA review</p>
+            <p className="text-blue-700 dark:text-blue-300">Your proposed changes will be reviewed by the Registry Authority before being applied. The record will remain unchanged until approved.</p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <Label>Reason for Amendment <span className="text-red-500">*</span></Label>
+            <Textarea
+              data-testid="input-amendment-reason"
+              placeholder="Explain why this amendment is needed…"
+              value={reason}
+              onChange={e => setReason(e.target.value)}
+              className="mt-1"
+              rows={3}
+            />
+          </div>
+
+          <div className="border-t pt-4">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Proposed Changes</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Borrower Name</Label>
+                <Input data-testid="input-amend-borrower-name" value={form.borrowerName ?? ""} onChange={e => set("borrowerName", e.target.value)} />
+              </div>
+              <div>
+                <Label>Collateral Type</Label>
+                <Select value={form.collateralType ?? ""} onValueChange={v => set("collateralType", v)}>
+                  <SelectTrigger data-testid="select-amend-col-type"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {COLLATERAL_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Asset Identifier</Label>
+                <Input data-testid="input-amend-asset-id" value={form.assetLocalIdentifier ?? ""} onChange={e => set("assetLocalIdentifier", e.target.value)} />
+              </div>
+              <div>
+                <Label>Estimated Value</Label>
+                <div className="flex gap-2">
+                  <Select value={form.currency ?? "GHS"} onValueChange={v => set("currency", v)}>
+                    <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {CURRENCIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Input data-testid="input-amend-value" type="number" placeholder="0.00" value={form.estimatedValue ?? ""} onChange={e => set("estimatedValue", e.target.value)} />
+                </div>
+              </div>
+              <div>
+                <Label>Location</Label>
+                <Input data-testid="input-amend-location" value={form.location ?? ""} onChange={e => set("location", e.target.value)} />
+              </div>
+              <div>
+                <Label>Document Reference</Label>
+                <Input data-testid="input-amend-doc-ref" value={form.documentReference ?? ""} onChange={e => set("documentReference", e.target.value)} />
+              </div>
+              <div>
+                <Label>Expiry Date</Label>
+                <Input type="date" data-testid="input-amend-expiry" value={form.expiryDate ?? ""} onChange={e => set("expiryDate", e.target.value)} />
+              </div>
+              <div className="col-span-2">
+                <Label>Description</Label>
+                <Textarea data-testid="input-amend-description" value={form.description ?? ""} onChange={e => set("description", e.target.value)} rows={2} />
+              </div>
+              <div className="col-span-2">
+                <Label>Notes</Label>
+                <Textarea data-testid="input-amend-notes" value={form.notes ?? ""} onChange={e => set("notes", e.target.value)} rows={2} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-2 justify-end pt-4 border-t">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button
+            data-testid="btn-submit-amendment-request"
+            onClick={handleSubmit}
+            disabled={mutation.isPending}
+            className="gap-2"
+          >
+            <Send className="w-4 h-4" />
+            {mutation.isPending ? "Submitting…" : "Submit for RA Review"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PendingAmendmentsSheet({
+  item,
+  open,
+  onOpenChange,
+}: {
+  item: CollateralRegistryItem;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
+  const { data: requests = [], isLoading } = useQuery<AmendmentRequest[]>({
+    queryKey: ["/api/collateral", item.id, "amendment-requests"],
+    queryFn: async () => {
+      const res = await fetch(`/api/collateral/${item.id}/amendment-requests`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: open,
+  });
+
+  const STATUS_COLORS: Record<string, string> = {
+    pending: "bg-amber-100 text-amber-700",
+    approved: "bg-green-100 text-green-700",
+    rejected: "bg-red-100 text-red-700",
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <History className="w-5 h-5 text-primary" />
+            Amendment Requests — {item.registrationNumber}
+          </DialogTitle>
+        </DialogHeader>
+        {isLoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+          </div>
+        ) : requests.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-6">No amendment requests submitted yet.</p>
+        ) : (
+          <div className="space-y-3">
+            {requests.map(r => {
+              let parsed: Record<string, unknown> = {};
+              try { parsed = JSON.parse(r.proposedChanges); } catch {}
+              return (
+                <div key={r.id} className="border rounded-lg p-3 space-y-2" data-testid={`amendment-request-row-${r.id}`}>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS[r.status] || "bg-gray-100 text-gray-600"}`}>{r.status}</span>
+                    <span className="text-xs text-muted-foreground">{format(new Date(r.createdAt), "dd MMM yyyy")}</span>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Reason</p>
+                    <p className="text-sm">{r.amendmentReason}</p>
+                  </div>
+                  {Object.keys(parsed).length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Proposed Changes</p>
+                      <div className="text-xs space-y-0.5">
+                        {Object.entries(parsed).filter(([, v]) => v !== null && v !== "").map(([k, v]) => (
+                          <div key={k} className="flex gap-2">
+                            <span className="text-muted-foreground w-28 shrink-0">{k}</span>
+                            <span className="font-medium">{String(v)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {r.reviewNotes && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground">RA Notes</p>
+                      <p className="text-sm text-muted-foreground">{r.reviewNotes}</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function CertificateDetailSheet({
   item,
   open,
@@ -1793,14 +2057,27 @@ function CertificateDetailSheet({
     },
     enabled: open && !!item?.id,
   });
+  const { data: itemAmendments = [] } = useQuery<AmendmentRequest[]>({
+    queryKey: ["/api/collateral", item?.id, "amendment-requests"],
+    queryFn: async () => {
+      const res = await fetch(`/api/collateral/${item!.id}/amendment-requests`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: open && !!item?.id && item?.approvalStatus === "approved",
+  });
   const [amendOpen, setAmendOpen] = useState(false);
+  const [amendRequestOpen, setAmendRequestOpen] = useState(false);
+  const [amendHistoryOpen, setAmendHistoryOpen] = useState(false);
 
   if (!item) return null;
 
   const collateralLabel = COLLATERAL_TYPES.find(t => t.value === item.collateralType)?.label ?? item.collateralType;
   const siLabel = SECURITY_INTEREST_TYPES.find(t => t.value === item.securityInterestType)?.label ?? item.securityInterestType;
 
-  const canAmend = item.approvalStatus === "pending" || item.approvalStatus === "approved";
+  const canEditDraft = item.approvalStatus === "pending";
+  const canAmendApproved = item.approvalStatus === "approved";
+  const pendingAmendmentCount = itemAmendments.filter(r => r.status === "pending").length;
 
   const prefillForAmend: Partial<CollateralFormData> = {
     borrowerId: item.borrowerId,
@@ -1987,7 +2264,7 @@ function CertificateDetailSheet({
           {/* Actions */}
           <Separator />
           <div className="flex flex-col gap-2">
-            {canAmend && (
+            {canEditDraft && (
               <Button
                 variant="outline"
                 className="w-full gap-2"
@@ -1995,7 +2272,34 @@ function CertificateDetailSheet({
                 data-testid="detail-btn-amend"
               >
                 <Pencil className="w-4 h-4" />
-                Amend Statement
+                Edit Draft Statement
+              </Button>
+            )}
+            {canAmendApproved && (
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                onClick={() => setAmendRequestOpen(true)}
+                data-testid="detail-btn-amend-request"
+              >
+                <Pencil className="w-4 h-4" />
+                Request Amendment
+              </Button>
+            )}
+            {canAmendApproved && (
+              <Button
+                variant="ghost"
+                className="w-full gap-2 text-muted-foreground"
+                onClick={() => setAmendHistoryOpen(true)}
+                data-testid="detail-btn-view-amendments"
+              >
+                <History className="w-4 h-4" />
+                View Amendment Requests
+                {pendingAmendmentCount > 0 && (
+                  <span className="ml-auto bg-amber-100 text-amber-700 text-xs font-semibold px-1.5 py-0.5 rounded-full" data-testid="badge-pending-amendments">
+                    {pendingAmendmentCount} pending
+                  </span>
+                )}
               </Button>
             )}
             {item.approvalStatus === "approved" && item.certificateNumber && (
@@ -2021,6 +2325,21 @@ function CertificateDetailSheet({
           queryClient.invalidateQueries({ queryKey: ["/api/collateral"] });
           setAmendOpen(false);
         }}
+      />
+
+      <AmendmentRequestDialog
+        item={item}
+        open={amendRequestOpen}
+        onOpenChange={setAmendRequestOpen}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["/api/collateral"] });
+        }}
+      />
+
+      <PendingAmendmentsSheet
+        item={item}
+        open={amendHistoryOpen}
+        onOpenChange={setAmendHistoryOpen}
       />
     </Sheet>
   );

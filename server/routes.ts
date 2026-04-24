@@ -47,6 +47,7 @@ import {
   wallets, walletTransactions,
   registryCountryConfig,
   collateralItems,
+  collateralAmendmentRequests,
   type InsertCollateralItem,
 } from "@shared/schema";
 import { processIFFData, detectIFFType, type IFFType } from "./iff-processor";
@@ -14734,6 +14735,40 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
+  // List amendment requests — RA sees their country's requests; lenders see their own
+  // IMPORTANT: This route must be defined BEFORE GET /api/collateral/:id to avoid path conflict
+  app.get("/api/collateral/amendment-requests", requireRole("admin", "super_admin", "lender", "regulator"), async (req, res) => {
+    try {
+      const isSuperAdmin = req.session?.userRole === "super_admin";
+      const isRA = await isRegistryAuthority(req);
+      const orgId = req.session?.organizationId;
+      const role = req.session?.userRole;
+
+      let countryCode: string | undefined;
+      let lenderOrganizationId: string | undefined;
+
+      if (isSuperAdmin) {
+        // Super admin sees all — no scope filter applied
+      } else if (isRA) {
+        // RA sees requests for their country — fail closed if country cannot be resolved
+        const callerCountry = await getCallerCountry(req);
+        if (!callerCountry) {
+          return res.status(400).json({ message: "Could not determine your country — check organisation record" });
+        }
+        countryCode = callerCountry;
+      } else if (role === "lender" || role === "admin") {
+        // Lenders/admins only see their own org's requests — fail closed if orgId missing
+        if (!orgId) return res.status(400).json({ message: "Could not determine your organisation" });
+        lenderOrganizationId = orgId;
+      } else {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const requests = await storage.getCollateralAmendmentRequests(countryCode, lenderOrganizationId);
+      res.json(requests);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
   app.get("/api/collateral/:id", requireAuth, async (req, res) => {
     try {
       const item = await storage.getCollateralItem(req.params.id as string);
@@ -14910,6 +14945,160 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const updated = await storage.updateCollateralItem(req.params.id as string, patchData);
       if (!updated) return res.status(404).json({ message: "Not found" });
       res.json(updated);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // Submit an amendment request for an approved (active) collateral item — lenders only
+  app.post("/api/collateral/:id/amendment", requireRole("lender", "admin", "super_admin"), async (req, res) => {
+    try {
+      const item = await storage.getCollateralItem(req.params.id);
+      if (!item) return res.status(404).json({ message: "Not found" });
+      const orgId = req.session?.organizationId;
+      const isSuperAdmin = req.session?.userRole === "super_admin";
+      if (!isSuperAdmin && item.lenderOrganizationId !== orgId) {
+        return res.status(403).json({ message: "Access denied — not your registration" });
+      }
+      if (item.approvalStatus !== "approved") {
+        return res.status(400).json({ message: "Amendment requests can only be submitted for approved registrations. Edit pending drafts directly." });
+      }
+      const { amendmentReason, proposedChanges } = req.body;
+      if (!amendmentReason || typeof amendmentReason !== "string" || !amendmentReason.trim()) {
+        return res.status(400).json({ message: "amendmentReason is required" });
+      }
+      if (!proposedChanges || typeof proposedChanges !== "object" || Array.isArray(proposedChanges)) {
+        return res.status(400).json({ message: "proposedChanges (object) is required" });
+      }
+      const SUBMIT_ALLOWED_FIELDS = new Set([
+        "borrowerName", "borrowerId", "collateralType", "collateralClass", "description",
+        "estimatedValue", "currency", "documentReference", "grantorNationalId",
+        "assetLocalIdentifier", "panAfricanAssetId", "securityInterestType",
+        "financingDuration", "expiryDate", "registrationDate", "debtorType",
+        "isPmsi", "location", "notes", "legalRegime",
+        "vehicleChassis", "vehicleMake", "vehicleModel", "yearOfManufacture",
+        "engineNumber", "chassisNumber", "titleDeedNumber", "plotNumber",
+        "landRegistryRef", "surfaceAreaSqm", "serialNumber", "equipmentMake",
+        "equipmentModel", "purchaseDate", "assetDescription",
+        "grantorBusinessRegistryNumber", "grantorIdNumber",
+      ]);
+      const effectiveFields = Object.entries(proposedChanges as Record<string, unknown>)
+        .filter(([k, v]) => SUBMIT_ALLOWED_FIELDS.has(k) && v !== null && v !== undefined && v !== "");
+      if (effectiveFields.length === 0) {
+        return res.status(400).json({ message: "proposedChanges must include at least one non-empty allowed field to amend" });
+      }
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+      const existingRequests = await storage.getCollateralAmendmentRequestsForItem(item.id);
+      if (existingRequests.some(r => r.status === "pending")) {
+        return res.status(409).json({ message: "A pending amendment request already exists for this registration. Wait for RA review before submitting another." });
+      }
+      const lenderOrgId = item.lenderOrganizationId;
+      const request = await storage.createCollateralAmendmentRequest({
+        collateralItemId: item.id,
+        requestedBy: userId,
+        lenderOrganizationId: lenderOrgId,
+        proposedChanges: JSON.stringify(proposedChanges),
+        amendmentReason: amendmentReason.trim(),
+        status: "pending",
+        reviewedBy: null,
+        reviewNotes: null,
+        reviewedAt: null,
+      });
+      res.status(201).json(request);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // List amendment requests for a specific collateral item
+  app.get("/api/collateral/:id/amendment-requests", requireRole("admin", "super_admin", "lender", "regulator"), async (req, res) => {
+    try {
+      const item = await storage.getCollateralItem(req.params.id);
+      if (!item) return res.status(404).json({ message: "Not found" });
+      const orgId = req.session?.organizationId;
+      const isSuperAdmin = req.session?.userRole === "super_admin";
+      const isRA = await isRegistryAuthority(req);
+      if (!isSuperAdmin) {
+        if (isRA) {
+          // RA can only read amendment history for items in their own country — fail closed
+          const callerCountry = await getCallerCountry(req);
+          if (!callerCountry) {
+            return res.status(400).json({ message: "Could not determine your country — check organisation record" });
+          }
+          if (!item.countryCode || item.countryCode !== callerCountry) {
+            return res.status(403).json({ message: "Access denied — cross-country" });
+          }
+        } else if (item.lenderOrganizationId !== orgId) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+      }
+      const requests = await storage.getCollateralAmendmentRequestsForItem(req.params.id);
+      res.json(requests);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // Approve an amendment request — RA or super_admin only, same-country scope
+  app.post("/api/collateral/amendment-requests/:requestId/approve", requireAuth, async (req, res) => {
+    try {
+      const isSuperAdmin = req.session?.userRole === "super_admin";
+      const isRA = await isRegistryAuthority(req);
+      if (!isSuperAdmin && !isRA) return res.status(403).json({ message: "Registry Authority access required" });
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+      // Enforce country scope: RA may only approve requests for items in their own country
+      if (!isSuperAdmin) {
+        const [amReq] = await db.select({ collateralItemId: collateralAmendmentRequests.collateralItemId })
+          .from(collateralAmendmentRequests)
+          .where(eq(collateralAmendmentRequests.id, req.params.requestId));
+        if (!amReq) return res.status(404).json({ message: "Amendment request not found" });
+        const item = await storage.getCollateralItem(amReq.collateralItemId);
+        if (!item) return res.status(404).json({ message: "Collateral item not found" });
+        const callerCountry = await getCallerCountry(req);
+        if (!callerCountry) return res.status(400).json({ message: "Could not determine your country — check organisation record" });
+        if (!item.countryCode || item.countryCode !== callerCountry) {
+          return res.status(403).json({ message: "Cross-country approval not permitted" });
+        }
+      }
+      const result = await storage.approveCollateralAmendmentRequest(req.params.requestId, userId);
+      if ("error" in result) {
+        if (result.error === "not_found") return res.status(404).json({ message: "Amendment request not found" });
+        if (result.error === "not_pending") return res.status(409).json({ message: "Only pending amendment requests can be approved" });
+        if (result.error === "invalid_data") return res.status(422).json({ message: "Proposed changes contain invalid JSON and cannot be applied" });
+        if (result.error === "collateral_not_approved") return res.status(409).json({ message: "The underlying collateral registration is no longer in approved status" });
+      }
+      res.json(result);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // Reject an amendment request — RA or super_admin only, same-country scope
+  app.post("/api/collateral/amendment-requests/:requestId/reject", requireAuth, async (req, res) => {
+    try {
+      const isSuperAdmin = req.session?.userRole === "super_admin";
+      const isRA = await isRegistryAuthority(req);
+      if (!isSuperAdmin && !isRA) return res.status(403).json({ message: "Registry Authority access required" });
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+      const { reviewNotes } = req.body;
+      if (!reviewNotes || typeof reviewNotes !== "string" || !reviewNotes.trim()) {
+        return res.status(400).json({ message: "reviewNotes is required when rejecting an amendment request" });
+      }
+      // Enforce country scope: RA may only reject requests for items in their own country
+      if (!isSuperAdmin) {
+        const [amReq] = await db.select({ collateralItemId: collateralAmendmentRequests.collateralItemId })
+          .from(collateralAmendmentRequests)
+          .where(eq(collateralAmendmentRequests.id, req.params.requestId));
+        if (!amReq) return res.status(404).json({ message: "Amendment request not found" });
+        const item = await storage.getCollateralItem(amReq.collateralItemId);
+        if (!item) return res.status(404).json({ message: "Collateral item not found" });
+        const callerCountry = await getCallerCountry(req);
+        if (!callerCountry) return res.status(400).json({ message: "Could not determine your country — check organisation record" });
+        if (!item.countryCode || item.countryCode !== callerCountry) {
+          return res.status(403).json({ message: "Cross-country rejection not permitted" });
+        }
+      }
+      const result = await storage.rejectCollateralAmendmentRequest(req.params.requestId, userId, reviewNotes.trim());
+      if ("error" in result) {
+        if (result.error === "not_found") return res.status(404).json({ message: "Amendment request not found" });
+        if (result.error === "not_pending") return res.status(409).json({ message: "Only pending amendment requests can be rejected" });
+      }
+      res.json(result);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 

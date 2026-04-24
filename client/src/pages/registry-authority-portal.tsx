@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   Shield, CheckCircle2, XCircle, Clock, Search, Building2, FileText,
   BarChart3, TrendingUp, AlertTriangle, Download, RefreshCw, Gavel,
-  Award,
+  Award, CheckCircle, Pencil,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -208,6 +208,223 @@ function EnforceDischargeButtons({ item, countryCode }: { item: ActiveLienItem; 
           title="Discharge lien" data-testid={`btn-discharge-${item.id}`}>
           <CheckCircle2 className="w-4 h-4 text-green-600" />
         </Button>
+      )}
+    </div>
+  );
+}
+
+interface AmendmentRequestItem {
+  id: string;
+  collateralItemId: string;
+  requestedBy: string;
+  lenderOrganizationId: string;
+  proposedChanges: string;
+  amendmentReason: string;
+  status: string;
+  reviewedBy: string | null;
+  reviewNotes: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  registrationNumber?: string;
+  collateralType?: string;
+  lenderOrgName?: string;
+  requesterName?: string;
+}
+
+function ApproveAmendmentDialog({ req }: { req: AmendmentRequestItem }) {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  let proposed: Record<string, unknown> = {};
+  try { proposed = JSON.parse(req.proposedChanges); } catch {}
+
+  const mutation = useMutation({
+    mutationFn: () => apiRequest("POST", `/api/collateral/amendment-requests/${req.id}/approve`, {}),
+    onSuccess: () => {
+      toast({ title: "Amendment approved", description: "The collateral record has been updated." });
+      setOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/collateral/amendment-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/collateral", req.collateralItemId, "amendment-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/collateral/active-liens"] });
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="gap-1 text-green-600 border-green-200" data-testid={`btn-approve-amendment-${req.id}`}>
+          <CheckCircle2 className="w-3.5 h-3.5" /> Approve
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Approve Amendment Request</DialogTitle></DialogHeader>
+        <p className="text-sm text-muted-foreground">Approving this request will immediately apply the proposed changes to the active registration.</p>
+        <div className="bg-muted/50 rounded-lg p-3 text-sm space-y-1">
+          <div><span className="font-medium">Reg #:</span> {req.registrationNumber}</div>
+          <div><span className="font-medium">Institution:</span> {req.lenderOrgName}</div>
+          <div><span className="font-medium">Reason:</span> {req.amendmentReason}</div>
+        </div>
+        {Object.keys(proposed).length > 0 && (
+          <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-3 text-sm space-y-1">
+            <p className="font-medium text-blue-800 dark:text-blue-200 text-xs mb-2">Proposed Changes</p>
+            {Object.entries(proposed).filter(([, v]) => v !== null && v !== "").map(([k, v]) => (
+              <div key={k} className="flex gap-2 text-xs">
+                <span className="text-muted-foreground w-32 shrink-0">{k}</span>
+                <span className="font-medium">{String(v)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="flex gap-2 justify-end pt-2">
+          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button onClick={() => mutation.mutate()} disabled={mutation.isPending} className="gap-2 bg-green-600 hover:bg-green-700">
+            <CheckCircle2 className="w-4 h-4" /> {mutation.isPending ? "Approving..." : "Approve & Apply Changes"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function RejectAmendmentDialog({ req }: { req: AmendmentRequestItem }) {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [notes, setNotes] = useState("");
+
+  const mutation = useMutation({
+    mutationFn: () => apiRequest("POST", `/api/collateral/amendment-requests/${req.id}/reject`, { reviewNotes: notes }),
+    onSuccess: () => {
+      toast({ title: "Amendment rejected" });
+      setOpen(false);
+      setNotes("");
+      queryClient.invalidateQueries({ queryKey: ["/api/collateral/amendment-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/collateral", req.collateralItemId, "amendment-requests"] });
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="gap-1 text-red-600 border-red-200" data-testid={`btn-reject-amendment-${req.id}`}>
+          <XCircle className="w-3.5 h-3.5" /> Reject
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Reject Amendment Request</DialogTitle></DialogHeader>
+        <div className="bg-muted/50 rounded-lg p-3 text-sm space-y-1">
+          <div><span className="font-medium">Reg #:</span> {req.registrationNumber}</div>
+          <div><span className="font-medium">Institution:</span> {req.lenderOrgName}</div>
+          <div><span className="font-medium">Reason requested:</span> {req.amendmentReason}</div>
+        </div>
+        <div>
+          <Label>Rejection Notes <span className="text-red-500">*</span></Label>
+          <Textarea
+            data-testid="input-amendment-rejection-notes"
+            placeholder="Explain why this amendment is being rejected…"
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            className="mt-1"
+          />
+        </div>
+        <div className="flex gap-2 justify-end pt-2">
+          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button variant="destructive" onClick={() => mutation.mutate()} disabled={!notes.trim() || mutation.isPending}>
+            {mutation.isPending ? "Rejecting..." : "Confirm Rejection"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AmendmentQueue() {
+  const [statusFilter, setStatusFilter] = useState("pending");
+  const { data: requests = [], isLoading } = useQuery<AmendmentRequestItem[]>({
+    queryKey: ["/api/collateral/amendment-requests"],
+  });
+
+  const filtered = requests.filter(r => statusFilter === "all" || r.status === statusFilter);
+  const pendingCount = requests.filter(r => r.status === "pending").length;
+
+  const STATUS_COLORS: Record<string, string> = {
+    pending: "bg-amber-100 text-amber-700",
+    approved: "bg-green-100 text-green-700",
+    rejected: "bg-red-100 text-red-700",
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2 items-center">
+        <Button
+          size="sm"
+          variant={statusFilter === "pending" ? "default" : "outline"}
+          onClick={() => setStatusFilter("pending")}
+          data-testid="filter-amendments-pending"
+        >
+          Pending {pendingCount > 0 && <span className="ml-1 bg-amber-500 text-white text-xs rounded-full px-1.5 py-0.5">{pendingCount}</span>}
+        </Button>
+        <Button size="sm" variant={statusFilter === "approved" ? "default" : "outline"} onClick={() => setStatusFilter("approved")} data-testid="filter-amendments-approved">Approved</Button>
+        <Button size="sm" variant={statusFilter === "rejected" ? "default" : "outline"} onClick={() => setStatusFilter("rejected")} data-testid="filter-amendments-rejected">Rejected</Button>
+        <Button size="sm" variant={statusFilter === "all" ? "default" : "outline"} onClick={() => setStatusFilter("all")} data-testid="filter-amendments-all">All</Button>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-3">
+          {[1,2,3].map(i => <div key={i} className="h-24 bg-muted/40 rounded-lg animate-pulse" />)}
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground">
+          <CheckCircle className="w-8 h-8 mx-auto mb-2 opacity-30" />
+          <p>No {statusFilter !== "all" ? statusFilter : ""} amendment requests.</p>
+        </div>
+      ) : (
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Registration</TableHead>
+                <TableHead>Institution</TableHead>
+                <TableHead>Reason</TableHead>
+                <TableHead>Submitted</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map(req => {
+                let proposed: Record<string, unknown> = {};
+                try { proposed = JSON.parse(req.proposedChanges); } catch {}
+                const fieldCount = Object.keys(proposed).filter(k => proposed[k] !== null && proposed[k] !== "").length;
+                return (
+                  <TableRow key={req.id} data-testid={`row-amendment-${req.id}`}>
+                    <TableCell className="font-mono text-xs">{req.registrationNumber || req.collateralItemId.slice(0, 8)}</TableCell>
+                    <TableCell className="text-sm">{req.lenderOrgName || "—"}</TableCell>
+                    <TableCell className="text-sm max-w-xs">
+                      <p className="truncate">{req.amendmentReason}</p>
+                      <p className="text-xs text-muted-foreground">{fieldCount} field{fieldCount !== 1 ? "s" : ""} proposed</p>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{format(new Date(req.createdAt), "dd MMM yyyy")}</TableCell>
+                    <TableCell>
+                      <Badge className={`text-xs ${STATUS_COLORS[req.status] || "bg-gray-100 text-gray-600"}`}>{req.status}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {req.status === "pending" && (
+                        <div className="flex gap-1 justify-end">
+                          <ApproveAmendmentDialog req={req} />
+                          <RejectAmendmentDialog req={req} />
+                        </div>
+                      )}
+                      {req.status !== "pending" && req.reviewNotes && (
+                        <span className="text-xs text-muted-foreground italic truncate max-w-[120px] block">{req.reviewNotes}</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
       )}
     </div>
   );
@@ -569,6 +786,9 @@ export default function RegistryAuthorityPortal() {
             <TabsTrigger value="pending" data-testid="tab-pending-queue">
               <Clock className="w-4 h-4 mr-2" /> Pending Queue
             </TabsTrigger>
+            <TabsTrigger value="amendments" data-testid="tab-amendments">
+              <Pencil className="w-4 h-4 mr-2" /> Amendment Requests
+            </TabsTrigger>
             <TabsTrigger value="ledger" data-testid="tab-active-ledger">
               <FileText className="w-4 h-4 mr-2" /> Active Liens Ledger
             </TabsTrigger>
@@ -587,6 +807,20 @@ export default function RegistryAuthorityPortal() {
               </CardHeader>
               <CardContent>
                 <PendingQueue orgId={org?.id || ""} countryCode={countryCode} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="amendments">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Pencil className="w-5 h-5 text-blue-500" /> Amendment Requests
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">Review amendment requests submitted by lenders for approved registrations. Approving a request applies the changes to the active record.</p>
+              </CardHeader>
+              <CardContent>
+                <AmendmentQueue />
               </CardContent>
             </Card>
           </TabsContent>

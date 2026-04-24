@@ -2020,3 +2020,26 @@ export const consumerMonitoringAlerts = pgTable("consumer_monitoring_alerts", {
 export const insertConsumerMonitoringAlertSchema = createInsertSchema(consumerMonitoringAlerts).omit({ id: true, sentAt: true });
 export type InsertConsumerMonitoringAlert = z.infer<typeof insertConsumerMonitoringAlertSchema>;
 export type ConsumerMonitoringAlert = typeof consumerMonitoringAlerts.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Collateral Amendment Requests — formal amendment workflow for approved liens
+// ---------------------------------------------------------------------------
+
+export const collateralAmendmentRequests = pgTable("collateral_amendment_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  collateralItemId: varchar("collateral_item_id").notNull().references(() => collateralItems.id, { onDelete: "cascade" }),
+  requestedBy: varchar("requested_by").notNull().references(() => users.id),
+  lenderOrganizationId: varchar("lender_organization_id").notNull().references(() => organizations.id),
+  proposedChanges: text("proposed_changes").notNull(),
+  amendmentReason: text("amendment_reason").notNull(),
+  status: text("status").notNull().default("pending"),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewNotes: text("review_notes"),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertCollateralAmendmentRequestSchema = createInsertSchema(collateralAmendmentRequests).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertCollateralAmendmentRequest = z.infer<typeof insertCollateralAmendmentRequestSchema>;
+export type CollateralAmendmentRequest = typeof collateralAmendmentRequests.$inferSelect;
