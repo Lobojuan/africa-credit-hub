@@ -12039,7 +12039,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.post("/api/ai/credit-insights/:borrowerId", aiLimiter, requireAuth, async (req, res) => {
     try {
-      const { provider: reqProvider } = req.body;
+      const { provider: reqProvider } = req.body || {};
       const provider = parseOptionalProvider(reqProvider);
       const result = await generateCreditInsights(req.params.borrowerId, provider);
       res.json(result);
