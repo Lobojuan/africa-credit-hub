@@ -1352,23 +1352,23 @@ export default function InvestorLandingPage() {
               Global Competitive Intelligence
             </Badge>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-4">
-              Why We Outperform Experian, TransUnion & Equifax<br className="hidden sm:block" />
+              Why African Institutions Choose Us Over Experian, TransUnion & Equifax<br className="hidden sm:block" />
               <span className="bg-clip-text text-transparent" style={{ backgroundImage: brandColors.textGradient }}>
                 {" "}Across All of Africa
               </span>
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base">
-              The global credit bureau giants built empires in North America and Europe — then stopped. Experian covers ~12 of 54 African countries. TransUnion covers 8. Equifax covers <strong>zero</strong>. We were built from day one for every African nation.
+              The global credit bureau giants built empires in North America and Europe — then stopped. Experian has direct operations in roughly 12 African countries. TransUnion operates in 8. Equifax has no African operations. Africa Credit Hub was designed from the ground up to serve every African nation.
             </p>
           </div>
 
           {/* Industry Snapshot Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-14">
             {[
-              { val: "$7.5B", label: "Experian Annual Revenue", sub: "Yet covers just ~22% of Africa", icon: DollarSign, color: "text-red-500" },
-              { val: "8 / 54", label: "African Countries (TransUnion)", sub: "The largest Africa-focused bureau still misses 46 nations", icon: Globe, color: "text-amber-500" },
-              { val: "0 / 54", label: "African Countries (Equifax)", sub: "The second-largest global bureau has no African presence", icon: XCircle, color: "text-red-500" },
-              { val: "1.3 / 5", label: "Experian Customer Rating", sub: "SiteJabber — 488K+ CFPB complaints filed against Big 3", icon: AlertTriangle, color: "text-amber-500" },
+              { val: "$7.5B", label: "Experian Annual Revenue (FY2025)", sub: "Yet direct operations in only ~12 of 54 African nations", icon: DollarSign, color: "text-red-500" },
+              { val: "8 / 54", label: "African Countries (TransUnion)", sub: "The most Africa-focused global bureau still misses 46 nations", icon: Globe, color: "text-amber-500" },
+              { val: "0 / 54", label: "African Countries (Equifax)", sub: "The world's No.2 bureau by market cap has no African operations", icon: XCircle, color: "text-red-500" },
+              { val: "488K+", label: "CFPB Consumer Complaints", sub: "Filed against Big 3 bureaus 2021–2024 — CFPB public database", icon: AlertTriangle, color: "text-amber-500" },
             ].map((item) => (
               <Card key={item.label} className="text-center p-4 border-border/60">
                 <CardContent className="pt-2">
@@ -1551,7 +1551,7 @@ export default function InvestorLandingPage() {
               </table>
             </div>
             <p className="text-[10px] text-muted-foreground text-center mt-3">
-              Sources: Experian Annual Report FY2025, TransUnion 2024 Investor Day, Equifax 10-K 2024, GSMA 2025, World Bank Findex 2024, SiteJabber, CFPB Complaint Database.
+              Sources: Experian Annual Report FY2025, TransUnion 2024 Investor Day, Equifax 10-K 2024, GSMA 2025, World Bank Findex 2024, CFPB Complaint Database. Feature comparisons reflect publicly documented product capabilities.
             </p>
           </div>
 
@@ -1560,9 +1560,9 @@ export default function InvestorLandingPage() {
             {[
               {
                 icon: Globe,
-                title: "6.75x More Coverage",
-                sub: "Than the Next Best Competitor",
-                desc: "TransUnion — the largest Africa-focused bureau — covers 8 countries. We cover 54. That's every nation on the continent, all from one platform with zero additional licensing.",
+                title: "54 vs. 8 Countries",
+                sub: "Widest Pan-African Footprint",
+                desc: "TransUnion — the most Africa-focused global bureau — operates in 8 countries. Africa Credit Hub's platform and regulatory frameworks are configured for all 54 African nations, from one system with one API and zero per-country licensing overhead.",
                 accent: "from-blue-500/10 to-blue-600/5",
                 iconColor: "text-blue-500",
               },
@@ -1576,17 +1576,17 @@ export default function InvestorLandingPage() {
               },
               {
                 icon: Wifi,
-                title: "Scores the Other 70%",
-                sub: "Unbanked & Thin-File Borrowers",
-                desc: "African lenders can't score 70% of customers using traditional bureau data (Credolab). Our Telco Scoring uses airtime usage, M-Pesa transactions, and top-up frequency to lend safely to the unbanked.",
+                title: "Built to Score the Unbanked",
+                sub: "Alternative Data Module Included",
+                desc: "Studies show African lenders cannot score 70%+ of applicants using traditional bureau data alone (Credolab, 2024). Our Telco Scoring module is built to ingest airtime, M-Pesa, and top-up data — extending credit visibility to thin-file borrowers incumbents can't assess.",
                 accent: "from-green-500/10 to-green-600/5",
                 iconColor: "text-green-500",
               },
               {
                 icon: Zap,
-                title: "Instant. Not 24 Months.",
+                title: "Hours. Not 24 Months.",
                 sub: "Deployment Speed Advantage",
-                desc: "Legacy bureau deployments take 18–24 months per new country. Regulations change, deals die. Africa Credit Hub is live across all 54 jurisdictions today — sign up and start filing data within hours.",
+                desc: "Legacy bureau deployments typically take 18–24 months per new country. Africa Credit Hub's regulatory frameworks and platform are pre-configured for all 54 jurisdictions — institutions can begin filing data within hours of onboarding.",
                 accent: "from-amber-500/10 to-amber-600/5",
                 iconColor: "text-amber-500",
               },
@@ -1612,15 +1612,15 @@ export default function InvestorLandingPage() {
                 revenue: "$7.52B revenue (FY2025)",
                 hq: "Dublin, Ireland",
                 africaCount: "~12 countries",
-                rating: "1.3 / 5 (SiteJabber)",
+                rating: "Limited Africa footprint",
                 weaknesses: [
-                  "South Africa is the only country with real direct operations",
-                  "Remaining African presence is via 2019 Compuscan acquisition",
+                  "South Africa is the only country with substantial direct operations",
+                  "Additional African presence primarily via 2019 Compuscan acquisition",
                   "Legacy on-premise architecture dominates many deployments",
                   "No pan-African multi-currency credit view",
                   "No Islamic finance or PAPSS integration",
-                  "English-first; limited African language support",
-                  "488K+ CFPB consumer complaints (shared with Big 3)",
+                  "English-first platform; limited African language support",
+                  "No AI Command Center or natural-language portfolio queries",
                 ],
               },
               {
@@ -1628,15 +1628,15 @@ export default function InvestorLandingPage() {
                 revenue: "$4.0B revenue (2024)",
                 hq: "Chicago, USA",
                 africaCount: "8 countries",
-                rating: "1.0 / 5 (SiteJabber)",
+                rating: "Most Africa-focused global bureau",
                 weaknesses: [
-                  "Only 8 of 54 African countries — misses 85% of the continent",
-                  "No presence in West, Central, or North Africa",
-                  "Fragmented country-by-country deployments with different data models",
-                  "No AI Command Center or portfolio-level intelligence",
-                  "Telco alternative scoring is pilot-stage only",
+                  "Only 8 of 54 African countries — West, Central, North Africa uncovered",
+                  "No presence in Nigeria, Ethiopia, Egypt, Tanzania, Ghana, or DRC",
+                  "Fragmented country-by-country deployments with inconsistent data models",
+                  "No AI Command Center or portfolio-level natural-language intelligence",
+                  "Telco alternative scoring is pilot-stage only, not production-ready",
                   "No PAPSS integration or cross-border settlement tracking",
-                  "No Islamic finance product support",
+                  "No Islamic finance product support built into the platform",
                 ],
               },
               {
@@ -1644,15 +1644,15 @@ export default function InvestorLandingPage() {
                 revenue: "$5.53B revenue (2024)",
                 hq: "Atlanta, USA",
                 africaCount: "0 countries",
-                rating: "No Africa ops",
+                rating: "No African operations",
                 weaknesses: [
-                  "Zero African presence — entirely absent from the continent",
-                  "Focus is Americas (US, Canada, Brazil) and select European markets",
-                  "2017 mega-breach (147M records) exposed deep security legacy debt",
-                  "Mainframe-first legacy architecture with multi-year modernisation lag",
-                  "No multi-currency African credit view",
-                  "No language support for Arabic, Swahili, French (Africa context)",
-                  "Not an option for African financial institutions — full stop",
+                  "Zero African presence — entirely absent from all 54 nations",
+                  "Strategic focus is Americas (US, Canada, Brazil) and select European markets",
+                  "2017 breach (147M records) highlighted legacy mainframe security risks",
+                  "Mainframe-first architecture with an acknowledged multi-year modernisation lag",
+                  "No multi-currency African credit view or regional data model",
+                  "No Arabic, Swahili, or French (Africa context) platform support",
+                  "Not a viable option for African financial institutions by design",
                 ],
               },
             ].map((comp) => (
@@ -1667,9 +1667,9 @@ export default function InvestorLandingPage() {
                       <span className="inline-block bg-red-500/10 text-red-600 dark:text-red-400 text-[10px] font-semibold px-2 py-0.5 rounded-full">{comp.africaCount}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5 mb-3 p-2 rounded-lg bg-amber-500/10">
-                    <AlertTriangle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
-                    <span className="text-[10px] text-amber-700 dark:text-amber-400 font-medium">Customer rating: {comp.rating}</span>
+                  <div className="flex items-center gap-1.5 mb-3 p-2 rounded-lg bg-muted/50">
+                    <Globe className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                    <span className="text-[10px] text-muted-foreground font-medium">Africa status: {comp.rating}</span>
                   </div>
                   <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Why They Fall Short in Africa</p>
                   <ul className="space-y-1.5">
@@ -1791,8 +1791,8 @@ export default function InvestorLandingPage() {
             </h3>
             <div className="space-y-3">
               {[
-                { name: "Experian Africa (~12 countries)", gap: "Primary African base is South Africa only, with ~11 more countries via 2019 Compuscan acquisition. No coverage across West, Central, East, or North Africa. Legacy architecture, no AI Command Center, no Islamic finance, no PAPSS. Customer rating: 1.3/5.", solve: "Africa Credit Hub covers all 54 countries natively. AI-native from day one, 8 languages, 42+ currencies, PAPSS integration, Islamic finance support — built for the full continent, not retrofitted." },
-                { name: "TransUnion Africa (8 countries)", gap: "Only 8 of 54 African countries: Botswana, Kenya, Namibia, Rwanda, SA, eSwatini, Zambia, Malawi. Zero presence in Nigeria, Ethiopia, Egypt, Tanzania, Ghana, DRC — 85% of the continent is uncovered. No AI Command Center or portfolio intelligence. Customer rating: 1.0/5.", solve: "One platform, 54 countries, instant cross-border entity resolution. Portfolio Intelligence covers your entire book — not one country at a time. No separate contracts per jurisdiction." },
+                { name: "Experian Africa (~12 countries)", gap: "Direct operations primarily in South Africa, with ~11 additional countries via the 2019 Compuscan acquisition. No presence across West, Central, or North Africa. Legacy architecture with no AI Command Center, no Islamic finance module, and no PAPSS integration.", solve: "Africa Credit Hub's platform and regulatory frameworks are configured for all 54 countries. AI-native from day one, 8 languages, 42+ currencies, PAPSS integration, Islamic finance support — built for the full continent, not retrofitted." },
+                { name: "TransUnion Africa (8 countries)", gap: "Operates in 8 of 54 African countries: Botswana, Kenya, Namibia, Rwanda, South Africa, eSwatini, Zambia, Malawi. No presence in Nigeria, Ethiopia, Egypt, Tanzania, Ghana, or DRC. No AI Command Center, no portfolio-level intelligence, and no PAPSS or Islamic finance support.", solve: "One platform, 54 countries, instant cross-border entity resolution. Portfolio Intelligence covers your entire book — not one country at a time. No separate contracts per jurisdiction." },
                 { name: "Equifax (0 African Countries)", gap: "Zero African operations. Entirely absent from all 54 African nations. Builds for Americas and Europe only. Also suffered a 2017 breach of 147M records, exposing systemic security debt in legacy mainframe architecture.", solve: "Not a viable option for African institutions — but included here to illustrate the gap. Africa Credit Hub provides what the world's No.2 bureau cannot: a purpose-built, cloud-native, fully-compliant pan-African credit registry." },
                 { name: "Country-Specific Bureaus (e.g. CRB Kenya, CreditInfo)", gap: "Single-country systems with no cross-border capability. Each jurisdiction requires a separate contract, separate integration, separate data model, and separate staff training. Fails for any cross-border lender.", solve: "One platform across all jurisdictions with unified data models. Your team learns one system, one API, and one workflow — regardless of how many African countries you operate in." },
                 { name: "Building In-House", gap: "18–24 months of development per country. No data sharing across institutions. Regulatory compliance automation must be custom-built and updated constantly. Estimated cost: $10M–$50M+ per country.", solve: "Production-ready today with 16 integrated modules, full regulatory compliance engine, automated SLA monitoring, and pre-built BoG/BSL/CBN export formats. Go live within hours." },
